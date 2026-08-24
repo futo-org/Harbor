@@ -313,7 +313,9 @@ pub fn search_posts(
     };
 
     let sort = sort_by.unwrap_or(SearchPostsSort::Default);
-    let merge_fn = move |values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>| {
+    let merge_fn = move |values: &[Vec<u8>],
+                         _previous: Option<&Vec<u8>>,
+                         client: &Arc<Mutex<PolycentricClient>>| {
         do_search_merge::<SearchPostsResponse>(values, client, |results| match sort {
             SearchPostsSort::Default => sort_by_rank(results),
             SearchPostsSort::Latest => sort_by_created_at(results),
@@ -378,7 +380,9 @@ pub fn search_users(
     };
 
     let sort = sort_by.unwrap_or(SearchUsersSort::Default);
-    let merge_fn = move |values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>| {
+    let merge_fn = move |values: &[Vec<u8>],
+                         _previous: Option<&Vec<u8>>,
+                         client: &Arc<Mutex<PolycentricClient>>| {
         do_search_merge::<SearchUsersResponse>(values, client, |results| match sort {
             SearchUsersSort::Default => sort_by_rank(results),
             SearchUsersSort::Alpha => sort_by_profile_name(results),

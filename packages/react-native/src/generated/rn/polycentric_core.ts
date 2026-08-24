@@ -322,7 +322,11 @@ export type GetAttributionFeedArgs = {
     limit?: number,
     backwardToken?: string,
     forwardToken?: string,
-    omitLabels: Array<string>
+    omitLabels: Array<string>,
+    /**
+     * Posts the emission may carry; the rest is held back.
+     */
+    windowSize?: number
 }
 
 /**
@@ -350,7 +354,8 @@ const FfiConverterTypeGetAttributionFeedArgs = (() => {
                 limit: FfiConverterOptionalInt32.read(from), 
                 backwardToken: FfiConverterOptionalString.read(from), 
                 forwardToken: FfiConverterOptionalString.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from)
+                omitLabels: FfiConverterSequenceString.read(from), 
+                windowSize: FfiConverterOptionalInt32.read(from)
             };
         }
         write(value: TypeName, into: RustBuffer): void {
@@ -359,13 +364,15 @@ const FfiConverterTypeGetAttributionFeedArgs = (() => {
             FfiConverterOptionalString.write(value.backwardToken, into);
             FfiConverterOptionalString.write(value.forwardToken, into);
             FfiConverterSequenceString.write(value.omitLabels, into);
+            FfiConverterOptionalInt32.write(value.windowSize, into);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterArrayBuffer.allocationSize(value.attributedTo) +
              FfiConverterOptionalInt32.allocationSize(value.limit) +
              FfiConverterOptionalString.allocationSize(value.backwardToken) +
              FfiConverterOptionalString.allocationSize(value.forwardToken) +
-             FfiConverterSequenceString.allocationSize(value.omitLabels);
+             FfiConverterSequenceString.allocationSize(value.omitLabels) +
+             FfiConverterOptionalInt32.allocationSize(value.windowSize);
             
         }
     };
@@ -461,7 +468,11 @@ export type GetExploreFeedArgs = {
     limit?: number,
     backwardToken?: string,
     forwardToken?: string,
-    omitLabels: Array<string>
+    omitLabels: Array<string>,
+    /**
+     * Posts the emission may carry; the rest is held back.
+     */
+    windowSize?: number
 }
 
 /**
@@ -490,7 +501,8 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
                 limit: FfiConverterOptionalInt32.read(from), 
                 backwardToken: FfiConverterOptionalString.read(from), 
                 forwardToken: FfiConverterOptionalString.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from)
+                omitLabels: FfiConverterSequenceString.read(from), 
+                windowSize: FfiConverterOptionalInt32.read(from)
             };
         }
         write(value: TypeName, into: RustBuffer): void {
@@ -500,6 +512,7 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
             FfiConverterOptionalString.write(value.backwardToken, into);
             FfiConverterOptionalString.write(value.forwardToken, into);
             FfiConverterSequenceString.write(value.omitLabels, into);
+            FfiConverterOptionalInt32.write(value.windowSize, into);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalString.allocationSize(value.identity) +
@@ -507,7 +520,8 @@ const FfiConverterTypeGetExploreFeedArgs = (() => {
              FfiConverterOptionalInt32.allocationSize(value.limit) +
              FfiConverterOptionalString.allocationSize(value.backwardToken) +
              FfiConverterOptionalString.allocationSize(value.forwardToken) +
-             FfiConverterSequenceString.allocationSize(value.omitLabels);
+             FfiConverterSequenceString.allocationSize(value.omitLabels) +
+             FfiConverterOptionalInt32.allocationSize(value.windowSize);
             
         }
     };
@@ -520,7 +534,11 @@ export type GetFollowingFeedArgs = {
     limit?: number,
     backwardToken?: string,
     forwardToken?: string,
-    omitLabels: Array<string>
+    omitLabels: Array<string>,
+    /**
+     * Posts the emission may carry; the rest is held back.
+     */
+    windowSize?: number
 }
 
 /**
@@ -549,7 +567,8 @@ const FfiConverterTypeGetFollowingFeedArgs = (() => {
                 limit: FfiConverterOptionalInt32.read(from), 
                 backwardToken: FfiConverterOptionalString.read(from), 
                 forwardToken: FfiConverterOptionalString.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from)
+                omitLabels: FfiConverterSequenceString.read(from), 
+                windowSize: FfiConverterOptionalInt32.read(from)
             };
         }
         write(value: TypeName, into: RustBuffer): void {
@@ -559,6 +578,7 @@ const FfiConverterTypeGetFollowingFeedArgs = (() => {
             FfiConverterOptionalString.write(value.backwardToken, into);
             FfiConverterOptionalString.write(value.forwardToken, into);
             FfiConverterSequenceString.write(value.omitLabels, into);
+            FfiConverterOptionalInt32.write(value.windowSize, into);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.followerIdentity) +
@@ -566,7 +586,8 @@ const FfiConverterTypeGetFollowingFeedArgs = (() => {
              FfiConverterOptionalInt32.allocationSize(value.limit) +
              FfiConverterOptionalString.allocationSize(value.backwardToken) +
              FfiConverterOptionalString.allocationSize(value.forwardToken) +
-             FfiConverterSequenceString.allocationSize(value.omitLabels);
+             FfiConverterSequenceString.allocationSize(value.omitLabels) +
+             FfiConverterOptionalInt32.allocationSize(value.windowSize);
             
         }
     };
@@ -578,7 +599,11 @@ export type GetIdentityFeedArgs = {
     limit?: number,
     backwardToken?: string,
     forwardToken?: string,
-    omitLabels: Array<string>
+    omitLabels: Array<string>,
+    /**
+     * Posts the emission may carry; the rest is held back.
+     */
+    windowSize?: number
 }
 
 /**
@@ -606,7 +631,8 @@ const FfiConverterTypeGetIdentityFeedArgs = (() => {
                 limit: FfiConverterOptionalInt32.read(from), 
                 backwardToken: FfiConverterOptionalString.read(from), 
                 forwardToken: FfiConverterOptionalString.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from)
+                omitLabels: FfiConverterSequenceString.read(from), 
+                windowSize: FfiConverterOptionalInt32.read(from)
             };
         }
         write(value: TypeName, into: RustBuffer): void {
@@ -615,13 +641,15 @@ const FfiConverterTypeGetIdentityFeedArgs = (() => {
             FfiConverterOptionalString.write(value.backwardToken, into);
             FfiConverterOptionalString.write(value.forwardToken, into);
             FfiConverterSequenceString.write(value.omitLabels, into);
+            FfiConverterOptionalInt32.write(value.windowSize, into);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.identity) +
              FfiConverterOptionalInt32.allocationSize(value.limit) +
              FfiConverterOptionalString.allocationSize(value.backwardToken) +
              FfiConverterOptionalString.allocationSize(value.forwardToken) +
-             FfiConverterSequenceString.allocationSize(value.omitLabels);
+             FfiConverterSequenceString.allocationSize(value.omitLabels) +
+             FfiConverterOptionalInt32.allocationSize(value.windowSize);
             
         }
     };

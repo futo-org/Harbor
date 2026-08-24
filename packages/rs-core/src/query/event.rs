@@ -182,7 +182,9 @@ pub fn get_event(
     let merge_fn = {
         let identity = identity.clone();
 
-        move |_values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>| {
+        move |_values: &[Vec<u8>],
+              _previous: Option<&Vec<u8>>,
+              client: &Arc<Mutex<PolycentricClient>>| {
             let bundle = client
                 .clone()
                 .lock()

@@ -65,10 +65,13 @@ export const Post = memo(function Post({
     router.push(Routes.tabs.profile(authorIdentity));
   }, [authorIdentity]);
 
-  const time = useMemo(() => timeAgo(Number(post.createdAt)), [post.createdAt]);
+  // A repost sits in the feed at the time it was made, so that is the time
+  // the row shows.
+  const shownAt = post.repostedAt ?? post.createdAt;
+  const time = useMemo(() => timeAgo(Number(shownAt)), [shownAt]);
   const fullTimestamp = useMemo(() => {
-    if (!post.createdAt) return '';
-    const date = new Date(Number(post.createdAt));
+    if (!shownAt) return '';
+    const date = new Date(Number(shownAt));
     const timePart = date.toLocaleTimeString(undefined, {
       hour: 'numeric',
       minute: '2-digit',
@@ -79,7 +82,7 @@ export const Post = memo(function Post({
       day: 'numeric',
     });
     return `${timePart} · ${datePart}`;
-  }, [post.createdAt]);
+  }, [shownAt]);
 
   const { hasWarnContent, warnLabels } = usePostModeration(post.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);

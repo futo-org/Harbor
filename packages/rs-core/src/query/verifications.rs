@@ -107,6 +107,7 @@ impl ClaimBundleResponse for ResolveVerifiedClaimsResponse {
 /// targets and verifies; dedupe and drop invalid bundles throughout.
 fn merge_claim_bundle_responses<T: ClaimBundleResponse>(
     values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
     client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
 ) -> Vec<u8> {
     let mut merged: Vec<VerificationClaimBundle> = Vec::new();

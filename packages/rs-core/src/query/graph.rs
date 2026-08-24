@@ -45,7 +45,11 @@ pub struct SuggestFollowArgs {
 
 /// Concatenate per-server pages, dedupe by `EventKey`, drop invalid
 /// bundles, and keep newest-first order.
-fn merge_follows_responses(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+fn merge_follows_responses(
+    values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
+    client: &Arc<Mutex<PolycentricClient>>,
+) -> Vec<u8> {
     let mut merged = ListFollowsResponse::default();
 
     for v in values {
@@ -131,6 +135,7 @@ fn retain_first_valid_per_identity(
 /// invalid bundles, and keep the best-connected suggestions first.
 fn merge_suggest_follow_responses(
     values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
     client: &Arc<Mutex<PolycentricClient>>,
 ) -> Vec<u8> {
     let mut merged = SuggestFollowResponse::default();
@@ -409,6 +414,7 @@ mod tests {
                 response_from("server-a", true),
                 response_from("server-b", false),
             ],
+            None,
             &client(),
         );
         let response = ListFollowsResponse::decode(merged.as_slice()).unwrap();
@@ -427,7 +433,8 @@ mod tests {
 
     #[test]
     fn merge_ignores_undecodable_responses() {
-        let merged = merge_follows_responses(&[vec![0xff], response_from("s", false)], &client());
+        let merged =
+            merge_follows_responses(&[vec![0xff], response_from("s", false)], None, &client());
         let response = ListFollowsResponse::decode(merged.as_slice()).unwrap();
         assert!(response.page_info.is_some());
         assert!(response.event_bundles.is_empty());
