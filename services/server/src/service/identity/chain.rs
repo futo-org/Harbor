@@ -3,7 +3,7 @@
 
 use polycentric_common::models::identity::{IdentityCandidate, resolve_latest};
 
-use crate::service::feeds::repository::EventWithContentRow;
+use crate::data::EventWithContentRow;
 use crate::service::proto::Identity;
 
 /// Returns the latest valid identity state for `identity` that can be obtained from

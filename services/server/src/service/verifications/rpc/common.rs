@@ -13,15 +13,12 @@ pub(crate) fn map_db_err(e: sea_orm::DbErr) -> Status {
 /// Stages producing `VerificationClaimBundle`s: each claim wrapped with the
 /// targets and verifies referencing it.
 pub(crate) mod claim_bundles {
-    use crate::data::hydration::HydrationState;
+    use crate::data::hydration::{HydrationState, collect_identities};
+    use crate::data::{EventWithContentRow, assemble_bundles, row_into_bundle};
     use crate::service::context::ServiceContext;
     use crate::service::events::TargetEventKey;
-    use crate::service::events::tombstone::{
-        self, EventWithContentRow, HasEventKey,
-    };
-    use crate::service::identity::service::{
-        collect_identities, list_identity_and_profile_events, rows_to_bundles,
-    };
+    use crate::service::events::tombstone::{self, HasEventKey};
+    use crate::service::identity::service::list_identity_and_profile_events;
     use crate::service::proofs::service::attach_proofs;
     use crate::service::proto::{EventHint, VerificationClaimBundle};
     use crate::service::verifications::repository::{
@@ -80,7 +77,11 @@ pub(crate) mod claim_bundles {
         let deletes_by_target =
             tombstone::validated_tombstones(ctx, &keys).await?;
 
-        let identities = collect_identities(
+        let identities = collect_identities::<(
+            &entity::event_model::Model,
+            Option<&entity::content_model::Model>,
+        )>(
+            ctx.trusted_moderator.as_deref(),
             fetched
                 .claims
                 .iter()
@@ -173,12 +174,14 @@ pub(crate) mod claim_bundles {
         for row in filtered.claims {
             let key = row.event_key();
             claim_bundles.push(VerificationClaimBundle {
-                claim: rows_to_bundles(vec![row]).pop(),
-                targets: rows_to_bundles(
+                claim: Some(row_into_bundle(row)),
+                targets: assemble_bundles(
                     targets_by_claim.remove(&key).unwrap_or_default(),
+                    &hydration.stats,
                 ),
-                verifies: rows_to_bundles(
+                verifies: assemble_bundles(
                     verifies_by_claim.remove(&key).unwrap_or_default(),
+                    &hydration.stats,
                 ),
             });
         }
@@ -199,15 +202,12 @@ pub(crate) mod claim_bundles {
 
 /// Stages producing a flat `EventBundle` list.
 pub(crate) mod event_list {
-    use crate::data::hydration::HydrationState;
+    use crate::data::hydration::{HydrationState, collect_identities};
+    use crate::data::{EventWithContentRow, assemble_bundles};
     use crate::service::context::ServiceContext;
     use crate::service::events::TargetEventKey;
-    use crate::service::events::tombstone::{
-        self, EventWithContentRow, HasEventKey,
-    };
-    use crate::service::identity::service::{
-        collect_identities, list_identity_and_profile_events, rows_to_bundles,
-    };
+    use crate::service::events::tombstone::{self, HasEventKey};
+    use crate::service::identity::service::list_identity_and_profile_events;
     use crate::service::proofs::service::attach_proofs;
     use crate::service::proto::{EventBundle, EventHint};
     use tonic::Status;
@@ -225,10 +225,8 @@ pub(crate) mod event_list {
         let deletes_by_target =
             tombstone::validated_tombstones(ctx, &keys).await?;
 
-        let identities = collect_identities(
-            rows.iter()
-                .map(|(event, content)| (event, content.as_ref())),
-        );
+        let identities =
+            collect_identities(ctx.trusted_moderator.as_deref(), rows.iter());
         let (identity_events, profile_events) =
             list_identity_and_profile_events(ctx, identities).await?;
 
@@ -269,7 +267,7 @@ pub(crate) mod event_list {
         rows: Vec<EventWithContentRow>,
         hydration: HydrationState,
     ) -> Result<View, Status> {
-        let mut event_bundles = rows_to_bundles(rows);
+        let mut event_bundles = assemble_bundles(rows, &hydration.stats);
         attach_proofs(ctx, &mut event_bundles).await?;
         Ok(View {
             event_bundles,

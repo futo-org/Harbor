@@ -1,7 +1,7 @@
 use crate::config;
+use crate::data::EventWithContentRow;
 use crate::data::{Cursor, CursorFilter};
 use crate::service::events::TargetEventKey;
-pub use crate::service::events::tombstone::EventWithContentRow;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use ::entity::{
     content_label_model as ContentLabelModel, content_model as ContentModel,

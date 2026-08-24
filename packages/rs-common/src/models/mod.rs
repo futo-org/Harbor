@@ -22,6 +22,7 @@ pub mod content_digest;
 pub mod event;
 pub mod event_key;
 pub mod identity;
+pub mod moderation_label;
 pub mod moderation_tag;
 pub mod pointer;
 pub mod public_key;

@@ -2,23 +2,22 @@
 //! the query produced, **including tombstoned ones** — callers
 //! (sync clients, debug tools) need the unfiltered stream.
 
-use crate::data::hydration::HydrationState;
-use crate::data::pipeline;
-use crate::service::context::ServiceContext;
-use crate::service::events::TargetEventKey;
-use crate::service::events::repository::Query as EventsRepository;
-use crate::service::events::tombstone::{
-    self as tombstone, EventWithContentRow,
+use crate::data::hydration::{HydrationState, collect_identities};
+use crate::data::{
+    EventWithContentRow, assemble_bundles, assemble_hint, bundle_into_hint,
+    pipeline,
 };
+use crate::service::context::ServiceContext;
+use crate::service::events::repository::Query as EventsRepository;
+use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::identity::service::{
-    bundles_to_hints, collect_identities, list_identity_events,
-    list_profile_events, rows_to_hints,
+    list_identity_events, list_profile_events,
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{
     EventHint, EventKey, ListEventsRequest, ListEventsResponse, PublicKey,
 };
-use crate::service::stats::service::{assemble_bundles, gather_stats_for};
+use crate::service::stats::service::gather_stats_for;
 use polycentric_common::models::protos_v2::EventBundle;
 use sea_orm::DbErr;
 use tonic::Status;
@@ -94,10 +93,8 @@ async fn hydrate(
     _params: &Params,
     rows: &Vec<EventWithContentRow>,
 ) -> Result<HydrationState, Status> {
-    let identities = collect_identities(
-        rows.iter()
-            .map(|(event, content)| (event, content.as_ref())),
-    );
+    let identities =
+        collect_identities(ctx.trusted_moderator.as_deref(), rows.iter());
 
     let keys = rows
         .iter()
@@ -158,11 +155,12 @@ async fn view(
         attach_proofs(ctx, &mut tombstone_bundles),
     )?;
 
-    let mut event_hints = rows_to_hints(
-        identity_events.into_iter().chain(profile_events).collect(),
-    );
-
-    event_hints.extend(bundles_to_hints(tombstone_bundles));
+    let mut event_hints = identity_events
+        .into_iter()
+        .chain(profile_events)
+        .map(|row| assemble_hint(row, &stats))
+        .collect::<Vec<_>>();
+    event_hints.extend(tombstone_bundles.into_iter().map(bundle_into_hint));
 
     Ok(View {
         event_bundles,

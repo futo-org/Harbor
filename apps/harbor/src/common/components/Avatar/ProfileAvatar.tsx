@@ -46,7 +46,7 @@ export function ProfileAvatar({
       source={uri ? { uri } : undefined}
       // The identity, not the URL
       recyclingKey={identityKey}
-      onError={onError}
+      onError={uri ? () => onError(uri) : undefined}
     />
   );
 }

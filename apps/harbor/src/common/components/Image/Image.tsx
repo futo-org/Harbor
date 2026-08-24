@@ -17,7 +17,7 @@ export function Image({ uris, recyclingKey, ...rest }: Props) {
       {...rest}
       source={uri ? { uri } : undefined}
       recyclingKey={recyclingKey ?? uris[0]}
-      onError={onError}
+      onError={uri ? () => onError(uri) : undefined}
     />
   );
 }

@@ -13,11 +13,14 @@ name = "integration"
 path = "src/tests.rs"
 
 [dependencies]
+base64.workspace = true
 ed25519-dalek.workspace = true
 getrandom.workspace = true
+hex.workspace = true
 polycentric-common = { workspace = true, features = ["transport"] }
 prost = { version = "0.14", default-features = false }
+rand = { version = "0.10", default-features = false, features = ["std", "std_rng", "thread_rng"] }
+serde_json = { version = "1", default-features = false, features = ["std"] }
 sha2 = { version = "0.10", default-features = false }
 tokio.workspace = true
 tonic = { workspace = true, features = ["transport"] }
-rand = { version = "0.10", default-features = false, features = ["std", "std_rng", "thread_rng"] }

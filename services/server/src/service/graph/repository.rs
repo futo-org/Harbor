@@ -2,24 +2,80 @@ use ::entity::block_model as BlockModel;
 use ::entity::content_follow_model as ContentFollowModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
+use ::entity::follow_model as FollowModel;
 use polycentric_common::models::collections;
 use prost::Message;
-use sea_orm::sea_query::Expr;
-use sea_orm::sea_query::extension::postgres::PgFunc;
 use sea_orm::*;
+use sea_query::{
+    Asterisk, CommonTableExpression, Expr, Func, PgFunc, SelectStatement,
+    WithClause,
+};
 use std::collections::HashSet;
 use std::sync::Arc;
 use tonic::Status;
 
-use crate::data::{Cursor, CursorFilter};
+use crate::data::EventWithContentRow;
+use crate::data::hydration::event_identities;
+use crate::data::{Cursor, CursorFilter, EventRow};
 use crate::service::context::{RequestContext, ServiceContext};
-use crate::service::events::TargetEventKey;
-use crate::service::events::tombstone::{self, EventWithContentRow};
+use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
 use crate::service::proto::Content;
 use crate::service::proto::content::ContentBody;
+use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 
-const GRAPH_COLLECTION: i16 = collections::SOCIAL_GRAPH as i16;
+#[derive(Debug)]
+pub struct FollowSuggestionEvent {
+    pub event: EventModel::Model,
+    pub content: ContentModel::Model,
+    pub followers: Vec<String>,
+}
+
+impl TryGetableMany for FollowSuggestionEvent {
+    fn try_get_many(
+        res: &QueryResult,
+        _: &str,
+        _: &[String],
+    ) -> Result<Self, TryGetError> {
+        Self::try_get_many_by_index(res)
+    }
+
+    fn try_get_many_by_index(res: &QueryResult) -> Result<Self, TryGetError> {
+        Ok(FollowSuggestionEvent {
+            event: FromQueryResult::from_query_result(res, EVENT_PREFIX)?,
+            content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
+            followers: TryGetable::try_get_by(res, FOLLOWERS_COLUMN)?,
+        })
+    }
+}
+
+impl EventRow for FollowSuggestionEvent {
+    fn as_event_with_content(
+        &self,
+    ) -> (&EventModel::Model, Option<&ContentModel::Model>) {
+        (&self.event, Some(&self.content))
+    }
+
+    fn as_event(&self) -> &EventModel::Model {
+        &self.event
+    }
+
+    fn as_content(&self) -> Option<&ContentModel::Model> {
+        Some(&self.content)
+    }
+
+    /// Collects all identities in the event and adds them to `identities`.
+    fn collect_identities(&self, identities: &mut HashSet<String>) {
+        let (event, content) = self.as_event_with_content();
+        event_identities(event, content, identities);
+        identities.extend(self.followers.iter().cloned());
+    }
+}
+
+const FOLLOWERS_COLUMN: &str = "followers";
+
+/// Data to sort [`FollowSuggestionEvent`].
+pub type FollowSuggestionsSortedBy = i32;
 
 pub struct Query;
 
@@ -205,6 +261,197 @@ impl Query {
             .filter(ContentFollowModel::Column::IdentityId.eq(identity));
         page_follow_events(db, query, limit, cursor_filter).await
     }
+
+    pub async fn suggest_follow(
+        db: &DbConn,
+        identity: &str,
+        cursor_filter: Option<&CursorFilter<FollowSuggestionsSortedBy>>,
+        limit: u32,
+    ) -> Result<Vec<FollowSuggestionEvent>, DbErr> {
+        let cursor_filter =
+            cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
+
+        // List of identities the `identity` is following.
+        const FOLLOWING_TABLE: &str = "following";
+        let mut following = SelectStatement::new();
+        following
+            .column(FollowModel::Column::Followee)
+            .from(FollowModel::Entity)
+            .and_where(FollowModel::Column::Follower.eq(identity));
+        let mut select_following = SelectStatement::new();
+        select_following
+            .column(FollowModel::Column::Followee)
+            .from(FOLLOWING_TABLE);
+        // List of identities that are followed by identities that `identity`
+        // follows. Are you following this? In other words if you follow Alice,
+        // and Alice follows Bob, this list will include Bob.
+        const SUGGESTIONS_TABLE: &str = "suggestions";
+        let mut suggestions = SelectStatement::new();
+        suggestions
+            .column(FollowModel::Column::Followee)
+            // NOTE: the tuple (followee, follower) is not unique in the follow
+            // table because the user can create multiple valid events that
+            // follow the same identity. As a result we can return duplicate
+            // identities here.
+            //
+            // If this becomes an issue we can fix this by calling
+            // `array_agg(DISTINCT followers)`, except currently SeaORM doesn't
+            // allow use to do this easily as it doesn't expose
+            // `FunctionCall::arg_with` or a similar function to set DISTINCT in
+            // the function call.
+            .expr_as(
+                PgFunc::array_agg(Expr::col(FollowModel::Column::Follower)),
+                FOLLOWERS_COLUMN,
+            )
+            .from(FollowModel::Entity)
+            .and_where(
+                FollowModel::Column::Follower
+                    .in_subquery(select_following.clone()),
+            )
+            // Don't suggest ourselves.
+            .and_where(FollowModel::Column::Followee.ne(identity))
+            // Don't suggest identities the identity is already following.
+            .and_where(
+                FollowModel::Column::Followee.not_in_subquery(select_following),
+            )
+            .group_by_col(FollowModel::Column::Followee);
+
+        let mut query = EventModel::Entity::find().select_only();
+        QuerySelect::query(&mut query).with_cte({
+            let mut c = WithClause::new();
+            let mut following_cte = CommonTableExpression::new();
+            following_cte.table_name(FOLLOWING_TABLE).query(following);
+            let mut suggestions_cte = CommonTableExpression::new();
+            suggestions_cte
+                .table_name(SUGGESTIONS_TABLE)
+                .query(suggestions);
+            c.recursive(false).cte(following_cte).cte(suggestions_cte);
+            c
+        });
+        query = select_model_columns(
+            query,
+            EVENT_PREFIX,
+            EventModel::Column::iter(),
+        );
+        query = select_model_columns(
+            query,
+            CONTENT_PREFIX,
+            ContentModel::Column::iter(),
+        );
+        query = query.join(JoinType::InnerJoin, content_join());
+        QuerySelect::query(&mut query)
+            .inner_join(
+                SUGGESTIONS_TABLE,
+                Expr::col(EventModel::Column::Identity.as_column_ref()).eq(
+                    Expr::col((
+                        SUGGESTIONS_TABLE,
+                        FollowModel::Column::Followee,
+                    )),
+                ),
+            )
+            .expr_as(
+                Expr::col((SUGGESTIONS_TABLE, FOLLOWERS_COLUMN)),
+                FOLLOWERS_COLUMN,
+            )
+            .cond_where(
+                Expr::col(EventModel::Column::Collection.as_column_ref())
+                    .eq(Expr::Constant(collections::IDENTITY.into())),
+            );
+
+        // NOTE: this ordering isn't very stable, as users following and
+        // unfollowing users it will break this ordering between calls.
+        let order_column = Expr::from(
+            Func::cust("array_length")
+                .arg(Expr::col((SUGGESTIONS_TABLE, FOLLOWERS_COLUMN)))
+                .arg(Expr::Constant(1.into())),
+        );
+        QuerySelect::query(&mut query)
+            .order_by_expr(order_column.clone(), Order::Desc)
+            .order_by_expr(
+                Expr::col(EventModel::Column::Id.as_column_ref()),
+                Order::Asc,
+            );
+
+        match cursor_filter {
+            CursorFilter::Forward(cur) => match cur {
+                Cursor::Start => { /* No filtering. */ }
+                Cursor::Mid(marker) => {
+                    query = query.filter(
+                        Expr::tuple([
+                            order_column,
+                            Expr::col(EventModel::Column::Id.as_column_ref()),
+                        ])
+                        .lt(Expr::tuple([
+                            Expr::from(marker.sorted_by),
+                            Expr::from(marker.event_id),
+                        ])),
+                    );
+                }
+                Cursor::End => return Ok(Vec::new()),
+            },
+            CursorFilter::Backward(cur) => match cur {
+                Cursor::Start => return Ok(Vec::new()),
+                Cursor::Mid(marker) => {
+                    query = query.filter(
+                        Expr::tuple([
+                            order_column,
+                            Expr::col(EventModel::Column::Id.as_column_ref()),
+                        ])
+                        .gt(Expr::tuple([
+                            Expr::from(marker.sorted_by),
+                            Expr::from(marker.event_id),
+                        ])),
+                    );
+                }
+                Cursor::End => { /* No filtering. */ }
+            },
+        }
+        query = query.limit(Some((limit + 1).into())); // + 1 for pagination.
+
+        query.into_tuple().all(db).await
+    }
+
+    /// `follows` is (followee, follower).
+    pub async fn follow_events(
+        db: &DbConn,
+        // NOTE: we should use an iterator here, but that triggers a "known
+        // limitation" in the compiler:
+        // > lifetime bound not satisfied
+        // > note: this is a known limitation that will be removed in the future
+        // > (see issue #100014 <https://github.com/rust-lang/rust/issues/100013>
+        // > for more information)
+        //follows: impl Iterator<Item = (&str, &str)>,
+        follows: Vec<(&str, &str)>,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        if follows.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut values = SelectStatement::new();
+        values
+            .expr(Expr::col(Asterisk))
+            .from_values(follows, "follows");
+
+        EventModel::Entity::find()
+            .select_also(ContentModel::Entity)
+            .join(JoinType::InnerJoin, content_join())
+            .join(
+                JoinType::InnerJoin,
+                FollowModel::Relation::EventModel.def().rev(),
+            )
+            .filter(
+                EventModel::Column::Collection.eq(collections::SOCIAL_GRAPH),
+            )
+            .filter(
+                Expr::tuple([
+                    Expr::col(FollowModel::Column::Followee),
+                    Expr::col(FollowModel::Column::Follower),
+                ])
+                .eq(Expr::any(values)),
+            )
+            .all(db)
+            .await
+    }
 }
 
 /// Obtains the targets of graph events authored by `caller`. The `extract`
@@ -217,7 +464,7 @@ async fn list_graph_targets(
     let rows: Vec<EventWithContentRow> = EventModel::Entity::find()
         .select_also(ContentModel::Entity)
         .join(JoinType::InnerJoin, content_join())
-        .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
+        .filter(EventModel::Column::Collection.eq(collections::SOCIAL_GRAPH))
         .filter(EventModel::Column::Identity.eq(caller))
         .all(&ctx.db)
         .await
@@ -259,7 +506,7 @@ fn follow_events_query() -> SelectTwo<EventModel::Entity, ContentModel::Entity>
         .select_also(ContentModel::Entity)
         .join(JoinType::InnerJoin, content_join())
         .join(JoinType::InnerJoin, follow_join())
-        .filter(EventModel::Column::Collection.eq(GRAPH_COLLECTION))
+        .filter(EventModel::Column::Collection.eq(collections::SOCIAL_GRAPH))
 }
 
 /// Relation joining a content row to its Follow row.
@@ -356,7 +603,7 @@ mod tests {
     fn event_row(id: i64, identity: &str, sequence: i64) -> EventModel::Model {
         EventModel::Model {
             id,
-            collection: GRAPH_COLLECTION,
+            collection: collections::SOCIAL_GRAPH as i16,
             identity: identity.to_string(),
             public_key_type: 1,
             public_key: vec![0xaa],

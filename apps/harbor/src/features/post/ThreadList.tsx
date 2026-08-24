@@ -5,6 +5,7 @@ import {
   View,
   type LayoutChangeEvent,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Post } from './Post';
 import { useOrderedThread } from './hooks/useOrderedThread';
@@ -41,6 +42,7 @@ export function ThreadList({
 
   // Native scrolls the subject to the top. Fill only the shortfall.
   const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const rowHeights = useRef(new Map<string, number>());
   const [, setMeasureTick] = useState(0);
   const measureRow = useCallback((id: string, event: LayoutChangeEvent) => {
@@ -58,7 +60,10 @@ export function ThreadList({
       : items
           .slice(subjectIndex)
           .reduce((sum, p) => sum + (rowHeights.current.get(p.id) ?? 0), 0);
-  const filler = isWeb ? 0 : Math.max(0, windowHeight - belowHeight);
+
+  const filler = isWeb
+    ? 0
+    : Math.max(insets.bottom, windowHeight - belowHeight);
 
   // Parents shift the subject by a height the list can only estimate, so
   // cover the list until it has placed.

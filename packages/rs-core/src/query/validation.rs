@@ -53,7 +53,7 @@ pub(crate) fn retain_validated_hints(client: &PolycentricClient, hints: &mut Vec
 }
 
 /// Emit a single aggregated line when a pass dropped anything.
-fn log_dropped(kind: &str, count: usize, first_error: Option<String>) {
+pub(crate) fn log_dropped(kind: &str, count: usize, first_error: Option<String>) {
     if count == 0 {
         return;
     }

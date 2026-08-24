@@ -1,6 +1,6 @@
 # NOTE: scaffold versions — bump to current before first real build.
 [versions]
-agp = "8.13.0"
+agp = "8.13.2"
 kotlin = "2.2.21"
 coroutines = "1.10.1"
 wire = "5.2.1"

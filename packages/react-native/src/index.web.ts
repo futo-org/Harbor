@@ -8,6 +8,8 @@ export {
   EmitMode,
   FeedSort,
   FetchMode,
+  isModerationLabel,
+  moderationLabels,
   PolycentricCore,
   Query,
   QueryStatus,

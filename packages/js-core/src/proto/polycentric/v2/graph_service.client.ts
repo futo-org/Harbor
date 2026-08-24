@@ -4,6 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { GraphService } from "./graph_service";
+import type { SuggestFollowResponse } from "./graph_service";
+import type { SuggestFollowRequest } from "./graph_service";
 import type { ListFollowersRequest } from "./graph_service";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import type { ListFollowsResponse } from "./graph_service";
@@ -26,6 +28,12 @@ export interface IGraphServiceClient {
      * @generated from protobuf rpc: ListFollowers
      */
     listFollowers(input: ListFollowersRequest, options?: RpcOptions): UnaryCall<ListFollowersRequest, ListFollowsResponse>;
+    /**
+     * Suggestion what identities to follow.
+     *
+     * @generated from protobuf rpc: SuggestFollow
+     */
+    suggestFollow(input: SuggestFollowRequest, options?: RpcOptions): UnaryCall<SuggestFollowRequest, SuggestFollowResponse>;
 }
 /**
  * @generated from protobuf service polycentric.v2.GraphService
@@ -53,5 +61,14 @@ export class GraphServiceClient implements IGraphServiceClient, ServiceInfo {
     listFollowers(input: ListFollowersRequest, options?: RpcOptions): UnaryCall<ListFollowersRequest, ListFollowsResponse> {
         const method = this.methods[1], opt = this._transport.mergeOptions(options);
         return stackIntercept<ListFollowersRequest, ListFollowsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Suggestion what identities to follow.
+     *
+     * @generated from protobuf rpc: SuggestFollow
+     */
+    suggestFollow(input: SuggestFollowRequest, options?: RpcOptions): UnaryCall<SuggestFollowRequest, SuggestFollowResponse> {
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        return stackIntercept<SuggestFollowRequest, SuggestFollowResponse>("unary", this._transport, method, opt, input);
     }
 }

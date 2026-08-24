@@ -686,7 +686,7 @@ async fn process_moderator_report(
         return Outcome::Commit;
     };
 
-    let labels = vec![label.to_string()];
+    let labels = vec![label.value().to_string()];
     let digest = polycentric::labels_content(&target, &labels).1;
     match repository::created_content_exists(&ctx.db, digest.r#type, digest.value).await {
         Ok(true) => {

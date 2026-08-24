@@ -17,11 +17,11 @@ use prost::Message as _;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::{ActiveModelTrait, NotSet, Set};
 
+use crate::data::row_into_bundle;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::graph::repository::Query as GraphRepository;
-use crate::service::identity::service::rows_to_bundles;
 use crate::service::proofs::service::attach_proofs;
 use crate::service::verifications::repository::Query as VerificationsRepository;
 use crate::workers::{MessageHandler, Outcome, WorkerError, run_consumer};
@@ -73,7 +73,7 @@ impl NotificationWorker {
             return Ok(None);
         };
 
-        let mut bundles = rows_to_bundles(vec![row]);
+        let mut bundles = vec![row_into_bundle(row)];
         attach_proofs(&self.ctx, &mut bundles).await?;
         Ok(bundles.into_iter().next())
     }

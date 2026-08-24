@@ -20,6 +20,20 @@ const uniffiIsDebug =
 // Public interface members begin here.
 
 /**
+ * Whether `value` is one of the defined moderation labels.
+ */
+export function isModerationLabel(value: string): boolean {
+    return FfiConverterBool.lift(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_is_moderation_label(
+        FfiConverterString.lower(value, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
  * Whether two label sets differ, ignoring order. Empty and absent are
  * considered equivalent.
  */
@@ -132,6 +146,25 @@ export function mergeLabels(orig: Array<PostLabel>, latest: Array<PostLabel>): A
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_func_merge_labels(
         FfiConverterSequenceTypePostLabel.lower(orig, nativeModule().rustbuffer_alloc),
         FfiConverterSequenceTypePostLabel.lower(latest, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ));
+    }
+
+/**
+ * Every moderation label value in canonical order.
+ */
+export function moderationLabels(): Array<string> {
+    return ((__rb: Uint8Array) => {
+        try {
+            return FfiConverterSequenceString.lift(__rb);
+        } finally {
+            nativeModule().rustbuffer_free(__rb);
+        }
+    })(uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_moderation_labels(
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
@@ -2004,6 +2037,57 @@ const FfiConverterTypeSearchUsersArgs = (() => {
     return new FFIConverter();
 })();
 
+/**
+ * The server suggests for the authenticated caller, so the identity comes
+ * from the auth token rather than the args.
+ */
+export type SuggestFollowArgs = {
+    limit?: number,
+    backwardToken?: string,
+    forwardToken?: string
+}
+
+/**
+ * Generated factory for {@link SuggestFollowArgs} record objects.
+ */
+export const SuggestFollowArgs = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<SuggestFollowArgs, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<SuggestFollowArgs>,
+    });
+})();
+
+const FfiConverterTypeSuggestFollowArgs = (() => {
+    type TypeName = SuggestFollowArgs;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        read(from: RustBuffer): TypeName {
+            return {
+                limit: FfiConverterOptionalInt32.read(from), 
+                backwardToken: FfiConverterOptionalString.read(from), 
+                forwardToken: FfiConverterOptionalString.read(from)
+            };
+        }
+        write(value: TypeName, into: RustBuffer): void {
+            FfiConverterOptionalInt32.write(value.limit, into);
+            FfiConverterOptionalString.write(value.backwardToken, into);
+            FfiConverterOptionalString.write(value.forwardToken, into);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterOptionalInt32.allocationSize(value.limit) +
+             FfiConverterOptionalString.allocationSize(value.backwardToken) +
+             FfiConverterOptionalString.allocationSize(value.forwardToken);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
 
 // Flat error type: CoreError
 export enum CoreError_Tags {
@@ -2353,6 +2437,7 @@ export enum Query_Tags {
     ResolveVerifiedClaims = "ResolveVerifiedClaims",
     ListFollowing = "ListFollowing",
     ListFollowers = "ListFollowers",
+    SuggestFollow = "SuggestFollow",
     SearchPosts = "SearchPosts",
     SearchUsers = "SearchUsers",
     IsModerator = "IsModerator",
@@ -2929,6 +3014,39 @@ Readonly<
 
     }
 
+    type SuggestFollow__interface = {
+        tag: Query_Tags.SuggestFollow;
+        inner: 
+Readonly<
+[SuggestFollowArgs
+]>
+    };
+    class SuggestFollow_ extends UniffiEnum implements SuggestFollow__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "Query";
+        readonly tag = Query_Tags.SuggestFollow;
+        readonly inner: 
+Readonly<
+[SuggestFollowArgs
+]>;
+        constructor(v0: SuggestFollowArgs) {
+            super("Query", "SuggestFollow");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SuggestFollowArgs): SuggestFollow_ {
+            return new SuggestFollow_(v0);
+        }
+
+        static instanceOf(obj: any): obj is SuggestFollow_ {
+            return obj.tag === Query_Tags.SuggestFollow;
+        }
+
+    }
+
     type SearchPosts__interface = {
         tag: Query_Tags.SearchPosts;
         inner: 
@@ -3150,6 +3268,7 @@ Readonly<
   ResolveVerifiedClaims: ResolveVerifiedClaims_, 
   ListFollowing: ListFollowing_, 
   ListFollowers: ListFollowers_, 
+  SuggestFollow: SuggestFollow_, 
   SearchPosts: SearchPosts_, 
   SearchUsers: SearchUsers_, 
   IsModerator: IsModerator_, 
@@ -3166,7 +3285,7 @@ Readonly<
  * match arm in `fetch_query` — no new FFI method required.
  */
 export type Query = InstanceType<
-    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetRecommendedFeed' | 'GetExploreFeed' | 'GetAttributionFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ResolveVerifiedClaims' | 'ListFollowing' | 'ListFollowers' | 'SearchPosts' | 'SearchUsers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
+    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetRecommendedFeed' | 'GetExploreFeed' | 'GetAttributionFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ResolveVerifiedClaims' | 'ListFollowing' | 'ListFollowers' | 'SuggestFollow' | 'SearchPosts' | 'SearchUsers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
 >;
 
 // FfiConverter for enum Query
@@ -3193,12 +3312,13 @@ const FfiConverterTypeQuery = (() => {
                 case 15: return new Query.ResolveVerifiedClaims(FfiConverterTypeResolveVerifiedClaimsArgs.read(from));
                 case 16: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.read(from));
                 case 17: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.read(from));
-                case 18: return new Query.SearchPosts(FfiConverterTypeSearchPostsArgs.read(from));
-                case 19: return new Query.SearchUsers(FfiConverterTypeSearchUsersArgs.read(from));
-                case 20: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.read(from));
-                case 21: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.read(from));
-                case 22: return new Query.ListBans(FfiConverterTypeListBansArgs.read(from));
-                case 23: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.read(from));
+                case 18: return new Query.SuggestFollow(FfiConverterTypeSuggestFollowArgs.read(from));
+                case 19: return new Query.SearchPosts(FfiConverterTypeSearchPostsArgs.read(from));
+                case 20: return new Query.SearchUsers(FfiConverterTypeSearchUsersArgs.read(from));
+                case 21: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.read(from));
+                case 22: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.read(from));
+                case 23: return new Query.ListBans(FfiConverterTypeListBansArgs.read(from));
+                case 24: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.read(from));
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
@@ -3306,38 +3426,44 @@ const FfiConverterTypeQuery = (() => {
                     FfiConverterTypeListFollowersArgs.write(inner[0], into);
                     return;
                 }
-                case Query_Tags.SearchPosts: {
+                case Query_Tags.SuggestFollow: {
                     ordinalConverter.write(18, into);
+                    const inner = value.inner;
+                    FfiConverterTypeSuggestFollowArgs.write(inner[0], into);
+                    return;
+                }
+                case Query_Tags.SearchPosts: {
+                    ordinalConverter.write(19, into);
                     const inner = value.inner;
                     FfiConverterTypeSearchPostsArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.SearchUsers: {
-                    ordinalConverter.write(19, into);
+                    ordinalConverter.write(20, into);
                     const inner = value.inner;
                     FfiConverterTypeSearchUsersArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.IsModerator: {
-                    ordinalConverter.write(20, into);
+                    ordinalConverter.write(21, into);
                     const inner = value.inner;
                     FfiConverterTypeIsModeratorArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.IsBanned: {
-                    ordinalConverter.write(21, into);
+                    ordinalConverter.write(22, into);
                     const inner = value.inner;
                     FfiConverterTypeIsBannedArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.ListBans: {
-                    ordinalConverter.write(22, into);
+                    ordinalConverter.write(23, into);
                     const inner = value.inner;
                     FfiConverterTypeListBansArgs.write(inner[0], into);
                     return;
                 }
                 case Query_Tags.GetReactions: {
-                    ordinalConverter.write(23, into);
+                    ordinalConverter.write(24, into);
                     const inner = value.inner;
                     FfiConverterTypeGetReactionsArgs.write(inner[0], into);
                     return;
@@ -3451,39 +3577,45 @@ const FfiConverterTypeQuery = (() => {
                     size += FfiConverterTypeListFollowersArgs.allocationSize(inner[0]);
                     return size;
                 }
-                case Query_Tags.SearchPosts: {
+                case Query_Tags.SuggestFollow: {
                     const inner = value.inner;
                     let size = ordinalConverter.allocationSize(18);
+                    size += FfiConverterTypeSuggestFollowArgs.allocationSize(inner[0]);
+                    return size;
+                }
+                case Query_Tags.SearchPosts: {
+                    const inner = value.inner;
+                    let size = ordinalConverter.allocationSize(19);
                     size += FfiConverterTypeSearchPostsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.SearchUsers: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(19);
+                    let size = ordinalConverter.allocationSize(20);
                     size += FfiConverterTypeSearchUsersArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.IsModerator: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(20);
+                    let size = ordinalConverter.allocationSize(21);
                     size += FfiConverterTypeIsModeratorArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.IsBanned: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(21);
+                    let size = ordinalConverter.allocationSize(22);
                     size += FfiConverterTypeIsBannedArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListBans: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(22);
+                    let size = ordinalConverter.allocationSize(23);
                     size += FfiConverterTypeListBansArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetReactions: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(23);
+                    let size = ordinalConverter.allocationSize(24);
                     size += FfiConverterTypeGetReactionsArgs.allocationSize(inner[0]);
                     return size;
                 }
@@ -5977,6 +6109,9 @@ function uniffiEnsureInitialized() {
     if (bindingsContractVersion !== scaffoldingContractVersion) {
         throw new UniffiInternalError.ContractVersionMismatch(scaffoldingContractVersion, bindingsContractVersion);
     }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_is_moderation_label() !== 26201) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_is_moderation_label");
+    }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_changed() !== 39783) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_changed");
     }
@@ -5994,6 +6129,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_merge_labels() !== 35796) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_merge_labels");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_moderation_labels() !== 13965) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_moderation_labels");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_set_log_level() !== 1521) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_set_log_level");
@@ -6207,6 +6345,7 @@ export default Object.freeze({
     FfiConverterTypeSearchUsersSort,
     FfiConverterTypeSignBytesCallback,
     FfiConverterTypeSubscription,
+    FfiConverterTypeSuggestFollowArgs,
     FfiConverterTypeUpdateMode,
   }
 });
