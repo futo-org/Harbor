@@ -5,7 +5,7 @@ use crate::service::events::tombstone::{self, EventWithContentRow};
 use crate::service::feeds::repository::{self as feeds_repository};
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{
-    collect_identities, list_identity_events, list_profile_events,
+    list_identity_events, list_profile_events,
 };
 use crate::service::stats::service::{EventStats, gather_stats_for};
 use polycentric_common::models::protos_v2::content::ContentBody;
@@ -73,12 +73,13 @@ where
         .iter()
         .map(|row| TargetEventKey::of(row.as_event()))
         .collect();
-    let mut identities =
-        collect_identities(rows.iter().map(Row::as_event_with_content));
     let (ref_keys, quote_set, repost_set) =
         collect_referenced_keys(rows, config);
     let mut target_event_keys = to_target_event_keys(&ref_keys);
 
+    let mut identities = HashSet::new();
+    rows.iter()
+        .for_each(|row| row.collect_identities(&mut identities));
     // Add moderation service identity to every request, such that clients can
     // verify label events. This ships the identity events more times than the
     // client needs, and even when labels aren't present in the feed page -- can
@@ -86,8 +87,9 @@ where
     if let Some(moderator) = &ctx.service.trusted_moderator
         && !identities.is_empty()
     {
-        identities.push(moderator.clone())
+        identities.insert(moderator.clone());
     }
+    let identities: Vec<String> = identities.into_iter().collect();
 
     // Event keys for all referenced post events that may be displayed by the client.
     // Fetch labels and additional metadata for these.

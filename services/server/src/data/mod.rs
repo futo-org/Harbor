@@ -1,8 +1,10 @@
+use crate::service::identity::service::content_identities;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use entity::{content_model, event_model};
 use polycentric_common::models::protos_v2 as proto;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use tonic::Status;
 
 pub mod hydration;
@@ -23,6 +25,13 @@ pub trait EventRow {
     /// Returns the content of the event, if any.
     fn as_content(&self) -> Option<&content_model::Model> {
         self.as_event_with_content().1
+    }
+
+    /// Collects all identities in the event and adds them to `identities`.
+    fn collect_identities(&self, identities: &mut HashSet<String>) {
+        if let Some(content) = self.as_content() {
+            content_identities(content, identities)
+        }
     }
 }
 

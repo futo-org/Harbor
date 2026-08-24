@@ -41,7 +41,7 @@ pub fn collect_identities<'a>(
 }
 
 /// Identities named inside a content body, added to `out`.
-fn content_identities(
+pub fn content_identities(
     content: &::entity::content_model::Model,
     out: &mut std::collections::HashSet<String>,
 ) {
