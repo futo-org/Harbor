@@ -35,6 +35,29 @@ pub trait EventRow {
     }
 }
 
+impl<T> EventRow for &T
+where
+    T: EventRow,
+{
+    fn as_event_with_content(
+        &self,
+    ) -> (&event_model::Model, Option<&content_model::Model>) {
+        T::as_event_with_content(self)
+    }
+
+    fn as_event(&self) -> &event_model::Model {
+        T::as_event(self)
+    }
+
+    fn as_content(&self) -> Option<&content_model::Model> {
+        T::as_content(self)
+    }
+
+    fn collect_identities(&self, identities: &mut HashSet<String>) {
+        T::collect_identities(self, identities)
+    }
+}
+
 const DEFAULT_LIMIT: u32 = 50;
 
 /// Parameters for pagination.
