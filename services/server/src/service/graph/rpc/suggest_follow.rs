@@ -1,16 +1,13 @@
 //! `suggest_follow`: profile (update events) the identity could follow.
 
-use std::slice;
-
 use tonic::Status;
 
-use crate::data::hydration::HydrationState;
+use crate::data::hydration::{self, HydrateConfig, HydrationState};
 use crate::data::{Marker, PageInfo, PaginationParams, pipeline};
 use crate::service::context::RequestContext;
 use crate::service::graph::repository::{
     FollowSuggestionEvent, FollowSuggestionsSortedBy, Query,
 };
-use crate::service::identity::service::list_profile_events;
 use crate::service::identity::service::{row_to_bundle, rows_to_hints};
 use crate::service::proto::{
     FollowSuggestion, SuggestFollowRequest, SuggestFollowResponse,
@@ -77,31 +74,7 @@ async fn hydrate(
     _: &Params,
     fetched: &Fetched,
 ) -> Result<HydrationState, Status> {
-    let identities = fetched
-        .rows
-        .iter()
-        .flat_map(|row| {
-            [
-                slice::from_ref(&row.event.identity),
-                row.followers.as_slice(),
-            ]
-            .into_iter()
-            .flatten()
-            .map(Clone::clone)
-        })
-        .collect();
-    let profile_events_fut = list_profile_events(ctx.service, identities);
-
-    let blocked_fut = Query::blocked_set_for_caller(ctx);
-
-    let (profile_events, blocked_identities) =
-        tokio::try_join!(profile_events_fut, blocked_fut,)?;
-
-    Ok(HydrationState {
-        profile_events,
-        blocked_identities,
-        ..Default::default()
-    })
+    hydration::hydrate(ctx, &fetched.rows, &HydrateConfig::default()).await
 }
 
 struct Filtered {

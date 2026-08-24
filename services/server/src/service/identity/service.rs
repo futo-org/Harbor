@@ -63,6 +63,9 @@ pub fn content_identities(
                 out.insert(follow.identity);
             }
         }
+        Some(ContentBody::Identity(identity)) => {
+            out.insert(identity.derive_hex_key());
+        }
         Some(ContentBody::Repost(repost)) => {
             if let Some(post) = repost.post
                 && !post.identity.is_empty()
