@@ -1,13 +1,16 @@
 //! gRPC `GraphService` impl: paginated follow-edge listings.
 
 pub mod list_follows;
+pub mod suggest_follow;
 
-use crate::service::context::ServiceContext;
+use crate::service::auth::authenticated_identity;
+use crate::service::context::{RequestContext, ServiceContext};
 use crate::service::proto::graph_service_server::{
     GraphService, GraphServiceServer,
 };
 use crate::service::proto::{
     ListFollowersRequest, ListFollowingRequest, ListFollowsResponse,
+    SuggestFollowRequest, SuggestFollowResponse,
 };
 use list_follows::Direction;
 use std::sync::Arc;
@@ -48,6 +51,17 @@ impl GraphService for GraphServiceImpl {
                 Direction::Followers,
             )
             .await?,
+        ))
+    }
+
+    async fn suggest_follow(
+        &self,
+        request: Request<SuggestFollowRequest>,
+    ) -> Result<Response<SuggestFollowResponse>, Status> {
+        let caller = authenticated_identity(&request);
+        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
+        Ok(Response::new(
+            suggest_follow::handle(&ctx, request.into_inner()).await?,
         ))
     }
 }

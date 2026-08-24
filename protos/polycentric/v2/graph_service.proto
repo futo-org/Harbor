@@ -16,6 +16,10 @@ message ListFollowersRequest {
   optional PageParams page_params = 2;
 }
 
+message SuggestFollowRequest {
+  optional PageParams page_params = 1;
+}
+
 message ListFollowsResponse {
   // The active (non-tombstoned) Follow events, newest first.
   repeated EventBundle event_bundles = 1;
@@ -24,9 +28,27 @@ message ListFollowsResponse {
   repeated EventHint event_hints = 3;
 }
 
+message SuggestFollowResponse {
+  repeated FollowSuggestion suggestions = 1;
+  optional PageInfo page_info = 2;
+  // Contains profile update events for the suggested to-follow identities and
+  // the identities of those who already follow those identities
+  // (`suggestion.followers`).
+  repeated EventHint event_hints = 3;
+}
+
+message FollowSuggestion {
+  // Identity (event) to follow.
+  EventBundle suggestion = 1;
+  // Identities that are following the suggested identity.
+  repeated string followers = 2;
+}
+
 service GraphService {
   // Follow events authored by `identity` — who they follow.
   rpc ListFollowing(ListFollowingRequest) returns (ListFollowsResponse);
   // Follow events targeting `identity` — who follows them.
   rpc ListFollowers(ListFollowersRequest) returns (ListFollowsResponse);
+  // Suggestion what identities to follow.
+  rpc SuggestFollow(SuggestFollowRequest) returns (SuggestFollowResponse);
 }

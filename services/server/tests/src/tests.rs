@@ -10,7 +10,9 @@ use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::*;
-use polycentric_common::models::protos_v2::{SearchPostsRequest, SortUsersBy};
+use polycentric_common::models::protos_v2::{
+    SearchPostsRequest, SortUsersBy, SuggestFollowRequest,
+};
 use prost::Message as ProstMessage;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -2702,7 +2704,6 @@ async fn check_following(
         .into_inner();
     assert_eq!(result.event_bundles.len(), expected.len());
     for event in &result.event_bundles {
-        dbg!(&event);
         let signed_event =
             Event::decode(&*event.signed_event.as_ref().unwrap().event_bytes)
                 .unwrap();
@@ -3331,5 +3332,359 @@ where
                 .unwrap();
         let key = event.key.as_ref().unwrap();
         assert_eq!(key, expected, "expected: {expected:?}, event: {event:?}");
+    }
+}
+
+#[tokio::test]
+async fn suggest_follow_no_profile_updates() {
+    let mut client = TestClient::new().await;
+    client.submit_events().await;
+    let suggested = client.identity();
+
+    let mut followees = Vec::with_capacity(2);
+    for _ in 0..followees.capacity() {
+        let mut client = TestClient::new().await;
+        client.follow_identity(suggested.to_owned(), DEFAULT_CREATED_AT);
+        client.submit_events().await;
+        followees.push(client.identity().to_owned());
+    }
+
+    let mut client = TestClient::new().await;
+    for followee in followees.iter() {
+        client.follow_identity(followee.clone(), DEFAULT_CREATED_AT);
+    }
+    client.submit_events().await;
+
+    let expected_suggestions = vec![ExpectedFollowSuggestion {
+        suggestion: suggested.to_owned(),
+        followers: followees,
+    }];
+    // Since none of the identities updated their profile we get no hints.
+    let expected_hints = Vec::new();
+
+    suggest_follow(&client, expected_suggestions, expected_hints).await;
+}
+
+#[tokio::test]
+async fn suggest_follow_with_profile_updates() {
+    let mut client = TestClient::new().await;
+    client.profile_update(
+        ProfileUpdate {
+            name: Some(random_string()),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        },
+        DEFAULT_CREATED_AT,
+    );
+    client.submit_events().await;
+    let suggested = client.identity();
+
+    let mut followees = Vec::with_capacity(2);
+    for _ in 0..followees.capacity() {
+        let mut client = TestClient::new().await;
+        client.profile_update(
+            ProfileUpdate {
+                name: Some(random_string()),
+                avatar: None,
+                banner: None,
+                description: None,
+                alias: None,
+            },
+            DEFAULT_CREATED_AT,
+        );
+        client.follow_identity(suggested.to_owned(), DEFAULT_CREATED_AT);
+        client.submit_events().await;
+        followees.push(client.identity().to_owned());
+    }
+
+    let mut client = TestClient::new().await;
+    for followee in followees.iter() {
+        client.follow_identity(followee.clone(), DEFAULT_CREATED_AT);
+    }
+    client.submit_events().await;
+
+    let expected_hints = vec![
+        ExpectedHint {
+            identity: suggested.to_owned(),
+            expect_profile: true,
+        },
+        ExpectedHint {
+            identity: followees[0].clone(),
+            expect_profile: true,
+        },
+        ExpectedHint {
+            identity: followees[1].clone(),
+            expect_profile: true,
+        },
+    ];
+    let expected_suggestions = vec![ExpectedFollowSuggestion {
+        suggestion: suggested.to_owned(),
+        followers: followees,
+    }];
+
+    suggest_follow(&client, expected_suggestions, expected_hints).await;
+}
+
+#[tokio::test]
+async fn suggest_follow_pagination() {
+    let mut suggested = Vec::with_capacity(3);
+    for _ in 0..suggested.capacity() {
+        let mut client = TestClient::new().await;
+        client.profile_update(
+            ProfileUpdate {
+                name: Some(random_string()),
+                avatar: None,
+                banner: None,
+                description: None,
+                alias: None,
+            },
+            DEFAULT_CREATED_AT,
+        );
+        client.submit_events().await;
+        suggested.push(client.identity().to_owned());
+    }
+
+    let mut followees = Vec::with_capacity(3);
+    for n in 0..followees.capacity() {
+        let mut client = TestClient::new().await;
+        client.profile_update(
+            ProfileUpdate {
+                name: Some(random_string()),
+                avatar: None,
+                banner: None,
+                description: None,
+                alias: None,
+            },
+            DEFAULT_CREATED_AT,
+        );
+        for identity in &suggested[0..suggested.len() - n] {
+            client.follow_identity(identity.to_owned(), DEFAULT_CREATED_AT);
+        }
+        client.submit_events().await;
+        followees.push(client.identity().to_owned());
+    }
+
+    let mut client = TestClient::new().await;
+    for followee in followees.iter() {
+        client.follow_identity(followee.clone(), DEFAULT_CREATED_AT);
+    }
+    client.submit_events().await;
+
+    let expected = vec![
+        (
+            ExpectedFollowSuggestion {
+                suggestion: suggested[0].clone(),
+                followers: vec![
+                    followees[0].clone(),
+                    followees[1].clone(),
+                    followees[2].clone(),
+                ],
+            },
+            vec![
+                ExpectedHint {
+                    identity: suggested[0].clone(),
+                    expect_profile: true,
+                },
+                ExpectedHint {
+                    identity: followees[0].clone(),
+                    expect_profile: true,
+                },
+                ExpectedHint {
+                    identity: followees[1].clone(),
+                    expect_profile: true,
+                },
+                ExpectedHint {
+                    identity: followees[2].clone(),
+                    expect_profile: true,
+                },
+            ],
+        ),
+        (
+            ExpectedFollowSuggestion {
+                suggestion: suggested[1].clone(),
+                followers: vec![followees[0].clone(), followees[1].clone()],
+            },
+            vec![
+                ExpectedHint {
+                    identity: suggested[1].clone(),
+                    expect_profile: true,
+                },
+                ExpectedHint {
+                    identity: followees[0].clone(),
+                    expect_profile: true,
+                },
+                ExpectedHint {
+                    identity: followees[1].clone(),
+                    expect_profile: true,
+                },
+            ],
+        ),
+        (
+            ExpectedFollowSuggestion {
+                suggestion: suggested[2].clone(),
+                followers: vec![followees[0].clone()],
+            },
+            vec![
+                ExpectedHint {
+                    identity: suggested[2].clone(),
+                    expect_profile: true,
+                },
+                ExpectedHint {
+                    identity: followees[0].clone(),
+                    expect_profile: true,
+                },
+            ],
+        ),
+    ];
+
+    let auth_token = client.create_auth_token();
+    let mut client = graph_service().await;
+
+    let mut page_info: Option<PageInfo> = None;
+    for (expected_suggestion, expected_hints) in expected {
+        suggest_follow2(
+            async {
+                let mut request = tonic::Request::new(SuggestFollowRequest {
+                    page_params: Some(PageParams {
+                        limit: Some(1),
+                        backward_token: None,
+                        forward_token: page_info.take().map(|i| i.end_cursor),
+                    }),
+                });
+                request.metadata_mut().insert(
+                    "authorization",
+                    auth_token.clone().try_into().unwrap(),
+                );
+                let mut result =
+                    client.suggest_follow(request).await.unwrap().into_inner();
+                page_info = result.page_info.take();
+                result
+            },
+            vec![expected_suggestion],
+            expected_hints,
+        )
+        .await;
+    }
+}
+
+#[derive(Debug)]
+struct ExpectedFollowSuggestion {
+    suggestion: String,
+    followers: Vec<String>,
+}
+
+#[derive(Debug)]
+struct ExpectedHint {
+    identity: String,
+    expect_profile: bool,
+}
+
+async fn suggest_follow(
+    identity: &TestClient,
+    expected_suggestions: Vec<ExpectedFollowSuggestion>,
+    expected_hints: Vec<ExpectedHint>,
+) {
+    suggest_follow2(
+        async {
+            let mut client = graph_service().await;
+            let auth_token = identity.create_auth_token();
+            let mut request =
+                tonic::Request::new(SuggestFollowRequest { page_params: None });
+            request
+                .metadata_mut()
+                .insert("authorization", auth_token.try_into().unwrap());
+            client.suggest_follow(request).await.unwrap().into_inner()
+        },
+        expected_suggestions,
+        expected_hints,
+    )
+    .await;
+}
+
+async fn suggest_follow2<Fut>(
+    request: Fut,
+    expected_suggestions: Vec<ExpectedFollowSuggestion>,
+    expected_hints: Vec<ExpectedHint>,
+) where
+    Fut: Future<Output = SuggestFollowResponse>,
+{
+    eprintln!("expected suggestions: {expected_suggestions:#?}");
+    let result = request.await;
+    eprintln!("actual suggestions: {:#?}", &result.suggestions);
+
+    assert_eq!(result.suggestions.len(), expected_suggestions.len());
+    for (mut got, mut expected) in
+        result.suggestions.into_iter().zip(expected_suggestions)
+    {
+        let suggestion = got.suggestion.unwrap();
+
+        let content = Content::decode(
+            &*suggestion
+                .serialized_content
+                .as_ref()
+                .unwrap()
+                .content_bytes,
+        )
+        .unwrap();
+        if !matches!(&content.content_body, Some(ContentBody::Identity(_))) {
+            panic!("unexpected event content: {content:?}");
+        };
+
+        let event = Event::decode(
+            &*suggestion.signed_event.as_ref().unwrap().event_bytes,
+        )
+        .unwrap();
+        let got_identity = event.key.unwrap().identity;
+        assert_eq!(got_identity, expected.suggestion);
+
+        // The ordering of the followers is not stable, sort the actual and
+        // expected value before comparing.
+        got.followers.sort();
+        expected.followers.sort();
+        assert_eq!(got.followers, expected.followers);
+    }
+
+    eprintln!("expected hints: {expected_hints:#?}");
+    eprintln!("actual hints: {:#?}", &result.event_hints);
+
+    for ExpectedHint {
+        identity,
+        expect_profile,
+    } in expected_hints
+    {
+        assert!(expect_profile, "no expectations");
+
+        let mut found_profile_hint = !expect_profile;
+
+        for hint in &result.event_hints {
+            let bundle = hint.event_bundle.as_ref().unwrap();
+
+            let event = Event::decode(
+                &*bundle.signed_event.as_ref().unwrap().event_bytes,
+            )
+            .unwrap();
+            let got_identity = event.key.unwrap().identity;
+            if got_identity != identity {
+                continue;
+            }
+
+            let content = Content::decode(
+                &*bundle.serialized_content.as_ref().unwrap().content_bytes,
+            )
+            .unwrap();
+            match &content.content_body {
+                Some(ContentBody::ProfileUpdate(_)) => {
+                    found_profile_hint = true;
+                }
+                _ => panic!("unexpected event content: {content:?}"),
+            }
+        }
+
+        assert!(
+            found_profile_hint,
+            "didn't get a profile hint for {identity}"
+        );
     }
 }
