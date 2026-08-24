@@ -13,8 +13,8 @@ keys, which is why servers can't forge or edit your content.
 ## Adding a device
 
 Use `Settings > Pair Identity` to add another device to your identity. Your
-existing device shows a QR code and a short pairing code; the new device
-scans or types it, and both sides confirm a matching emoji fingerprint
+existing device shows a QR code and a button to copy the pairing code; the new
+device scans or pastes it, and both sides confirm a matching emoji fingerprint
 before the new device is approved.
 
 ## Recovering when you have no devices logged in
