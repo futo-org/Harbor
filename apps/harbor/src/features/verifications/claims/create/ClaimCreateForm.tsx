@@ -79,6 +79,7 @@ export function ClaimCreateForm({
           onChange={(text) =>
             setValues((prev) => ({ ...prev, [field.key]: text }))
           }
+          disabled={isPending}
         />
       ))}
 
@@ -96,11 +97,13 @@ function FieldInput({
   value,
   autoFocus,
   onChange,
+  disabled,
 }: {
   field: FormField;
   value: string;
   autoFocus?: boolean;
   onChange: (text: string) => void;
+  disabled?: boolean;
 }) {
   const { theme } = useTheme();
   const multiline = field.kind === 'multiline';
@@ -123,6 +126,7 @@ function FieldInput({
         autoCapitalize={isDate ? 'none' : 'sentences'}
         multiline={multiline}
         numberOfLines={multiline ? 4 : undefined}
+        disabled={disabled}
       />
     </View>
   );

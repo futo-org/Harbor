@@ -3,7 +3,7 @@ import { Text } from '@/src/common/components/primitives/Text';
 import { TextArea } from '@/src/common/components/TextArea';
 import { Sheet } from '@/src/common/components/sheet';
 import useReportOptions, { type ReportOptions } from './hooks/useReportOptions';
-import { ActivityIndicator, View } from 'react-native';
+import { StyleSheet, ActivityIndicator, View } from 'react-native';
 import { Atoms, useTheme } from '@/src/common/theme';
 import RadioGroup from '@/src/common/components/form/RadioGroup';
 import { useState } from 'react';
@@ -75,6 +75,7 @@ export default function ReportSheet({
             isOption ? 'What are you reporting?' : 'Additional information'
           }
           closeIcon={isOption ? undefined : 'chevronBack'}
+          disabled={isPending}
           onClose={onBackPress}
         />
       }
@@ -101,7 +102,11 @@ export default function ReportSheet({
     >
       <Sheet.Content style={[Atoms.gap_md]}>
         {isOption ? (
-          <RadioGroup value={selected} onValueChange={setSelected}>
+          <RadioGroup
+            value={selected}
+            onValueChange={setSelected}
+            disabled={isPending}
+          >
             <View style={[Atoms.gap_md]}>
               {options.map((option) => (
                 <ReportOption key={option.value} option={option} />
@@ -114,6 +119,7 @@ export default function ReportSheet({
             placeholder="Please provide any additional information that you think may be helpful."
             value={additionalInfo}
             onChangeText={setAdditionalInfo}
+            disabled={isPending}
           />
         )}
       </Sheet.Content>

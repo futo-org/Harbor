@@ -164,11 +164,12 @@ export function ComposerFields({
             numberOfLines={isWeb ? 1 : undefined}
             scrollEnabled={false}
             style={[Atoms.px_0, Atoms.py_0, Atoms.pt_sm, Atoms.text_lg]}
+            disabled={submitting}
           />
           {attachments.length > 0 && (
             <AttachmentGrid
               attachments={attachments}
-              submitting={submitting}
+              disabled={submitting}
               onRemoveAttachment={onRemoveAttachment}
             />
           )}
@@ -272,11 +273,11 @@ function ComposerLinkPreview({
  */
 function AttachmentGrid({
   attachments,
-  submitting,
+  disabled,
   onRemoveAttachment,
 }: {
   attachments: Attachment[];
-  submitting: boolean;
+  disabled: boolean;
   onRemoveAttachment: (id: string) => void;
 }) {
   const [containerWidth, setContainerWidth] = useState(0);
@@ -303,7 +304,7 @@ function AttachmentGrid({
           status={a.status}
           width={single ? '100%' : gridItemWidth}
           aspectRatio={single ? singleImageAspectRatio(a) : 1}
-          disabled={submitting}
+          disabled={disabled}
           onRemove={() => onRemoveAttachment(a.id)}
         />
       ))}
