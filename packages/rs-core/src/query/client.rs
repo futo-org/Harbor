@@ -137,6 +137,15 @@ pub struct QueryResponseInfo<T> {
 }
 
 impl<T> QueryResponseInfo<T> {
+    /// A server that has not answered yet. Epoch 0 is older than every
+    /// fan-out, so the first response is never mistaken for a late one.
+    fn empty() -> Self {
+        Self {
+            pages: Vec::new(),
+            epoch: 0,
+        }
+    }
+
     /// Take a new response from this server.
     fn update(&mut self, response: T, epoch: u64, update_mode: UpdateMode) {
         match update_mode {
@@ -215,10 +224,7 @@ impl<T> QueryState<T> {
 
         self.data
             .entry(server.to_string())
-            .or_insert_with(|| QueryResponseInfo {
-                pages: Vec::new(),
-                epoch,
-            })
+            .or_insert_with(QueryResponseInfo::empty)
             .update(value, epoch, update_mode);
     }
 
@@ -750,6 +756,63 @@ mod tests {
         qc.invalidate(&key);
         let third = run_anchored_fanout(&qc, &key, "9,5,3").await;
         assert_eq!(third.last().unwrap(), "9,5,3");
+    }
+
+    /// `run_fanout` in the default (replace) update mode.
+    async fn run_replace_fanout(
+        qc: &QueryClient<Vec<u8>>,
+        key: &QueryKey,
+        response: &'static str,
+    ) -> Vec<String> {
+        let obs = qc.fetch(
+            Some(key.clone()),
+            move |_server| async move { Ok(response.as_bytes().to_vec()) },
+            merge_join,
+            None,
+        );
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let tx_complete = tx.clone();
+        let _sub = obs.subscribe(
+            move |r: QueryResult<Vec<u8>>| {
+                let _ = tx.send(Ev::Next(r.data.unwrap_or_default()));
+            },
+            |_e| {},
+            move || {
+                let _ = tx_complete.send(Ev::Complete);
+            },
+        );
+
+        let mut out = Vec::new();
+        while let Some(ev) = rx.recv().await {
+            match ev {
+                Ev::Next(d) => out.push(String::from_utf8_lossy(&d).into_owned()),
+                Ev::Complete => break,
+            }
+        }
+        out
+    }
+
+    #[tokio::test]
+    async fn a_replace_fanout_emits_the_first_response() {
+        let client = Arc::new(Mutex::new(PolycentricClient::new()));
+        client.lock().unwrap().set_servers(vec!["s1".to_string()]);
+        let qc: QueryClient<Vec<u8>> = QueryClient::new(client);
+        let key: QueryKey = vec!["events".to_string()];
+
+        let first = run_replace_fanout(&qc, &key, "1,2").await;
+        assert_eq!(
+            first.last().map(String::as_str),
+            Some("1,2"),
+            "a server's first response is not a late one"
+        );
+
+        let second = run_replace_fanout(&qc, &key, "3,4").await;
+        assert_eq!(
+            second.last().map(String::as_str),
+            Some("3,4"),
+            "a later fan-out replaces what the server said before"
+        );
     }
 
     #[tokio::test]
