@@ -13,12 +13,12 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use tonic::Status;
 
+use crate::data::hydration::event_identities;
 use crate::data::{Cursor, CursorFilter, EventRow};
 use crate::service::context::{RequestContext, ServiceContext};
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{self, EventWithContentRow};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
-use crate::service::identity::service::content_identities;
 use crate::service::proto::Content;
 use crate::service::proto::content::ContentBody;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
@@ -67,7 +67,8 @@ impl EventRow for FollowSuggestionEvent {
 
     /// Collects all identities in the event and adds them to `identities`.
     fn collect_identities(&self, identities: &mut HashSet<String>) {
-        content_identities(&self.content, identities);
+        let (event, content) = self.as_event_with_content();
+        event_identities(event, content, identities);
         identities.extend(self.followers.iter().cloned());
     }
 }
