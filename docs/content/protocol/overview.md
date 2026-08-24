@@ -36,6 +36,10 @@ An **identity** is not a server account. It is a document
 - **Revocation bounds** — when a key is revoked, the identity records the key's last
   valid position in each collection, so events it signed before revocation remain
   verifiable.
+- **Recovery signature** — a signature that can authorize an identity event as a
+  valid identity recovery with a new rotation key.
+- **Recovery key** — a public key that can be used to verify a recovery signature
+  in a subsequent identity event.
 
 The identity is itself the first thing written, in a reserved collection (see below).
 An identity is referred to by its `identity` key — the SHA-256 hash of that initial

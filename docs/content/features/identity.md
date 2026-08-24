@@ -12,18 +12,29 @@ keys, which is why servers can't forge or edit your content.
 
 ## Adding a device
 
-Use Settings, Pair Identity to add another device to your identity. Your
-existing device shows a QR code and a short pairing code; the new device
-scans or types it, and both sides confirm a matching emoji fingerprint
+Use `Settings > Pair Identity` to add another device to your identity. Your
+existing device shows a QR code and a button to copy the pairing code; the new
+device scans or pastes it, and both sides confirm a matching emoji fingerprint
 before the new device is approved.
 
-There is currently no export or backup file for an identity, so pairing a
-second device is the recommended way to make sure you don't lose access.
+## Recovering when you have no devices logged in
 
-## Multiple identities
+The preferred way to add a new device to your identity is pairing. However,
+there is a backup system in case you no longer have an existing device that can
+pair new devices. This may happen if you have only one device with Harbor and
+its data gets cleared, or if the device malfunctions and no longer works.
 
-You can hold more than one identity on a device and switch between them
-from the identity switcher, for example a personal and a project identity.
+A backup can be created using `Settings > Back Up Identity`. You will be given a
+file to save and store securely. If you still have an older backup file and
+create a new one, then you should prefer the new one since the old one may not
+work anymore. Still never share any backup files, even if a newer one has been
+created.
+
+You can check your backup file in `Settings > Test Backup` to ensure that you
+have created a backup successfully.
+
+On your new device, press `Recover using backup` and select the latest backup
+file to add the device without relying on an existing session.
 
 ## Choosing your servers
 
