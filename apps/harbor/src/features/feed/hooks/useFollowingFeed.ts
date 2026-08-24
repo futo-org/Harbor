@@ -4,11 +4,13 @@ import {
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
 import { useChainedExtend } from './useChainedExtend';
+import { useFeedWindow } from './useFeedWindow';
 import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import {
   type FeedSortOption,
+  FEED_PAGE_SIZE,
   feedQueryKeys,
   feedSortBy,
   useFeedPageInfo,
@@ -27,6 +29,8 @@ export function useFollowingFeed(options?: {
   const queryKey = feedQueryKeys.following(followerIdentity, sort);
   const omitLabels = useOmitLabels();
 
+  const window = useFeedWindow(queryKey);
+
   const query = useQuery(
     queryKey,
     (status, data) => {
@@ -35,9 +39,10 @@ export function useFollowingFeed(options?: {
       return new Query.GetFollowingFeed({
         followerIdentity,
         sortBy: feedSortBy(sort),
-        limit: options?.limit,
+        limit: options?.limit ?? FEED_PAGE_SIZE,
         forwardToken,
         omitLabels,
+        windowSize: window.size,
       });
     },
     { updateMode: UpdateMode.Merge },
@@ -54,9 +59,15 @@ export function useFollowingFeed(options?: {
     isLoading: query.status === QueryStatus.Loading,
     isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
-    loadMore: async () => requestMore(),
+    loadMore: async () => {
+      window.increase();
+      requestMore();
+    },
     hasMore: hasNext,
-    refresh: () => query.refresh(RefreshStrategy.Lazy),
+    refresh: () => {
+      window.reset();
+      query.refresh(RefreshStrategy.Lazy);
+    },
     queryKey,
   };
 }

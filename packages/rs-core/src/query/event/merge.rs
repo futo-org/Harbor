@@ -24,17 +24,26 @@ pub type EventDedupKey = (i32, String, i32, Vec<u8>, u64);
 /// callers typically retain such bundles unconditionally rather than
 /// trying to dedupe them.
 pub fn event_dedup_key(bundle: &EventBundle) -> Option<EventDedupKey> {
-    let signed = bundle.signed_event.as_ref()?;
-    let event = Event::decode(signed.event_bytes.as_slice()).ok()?;
-    let key = event.key?;
-    let signed_by = key.signed_by?;
+    dedup_key(&decode_event(bundle)?)
+}
+
+/// The dedup key of an already-decoded event, for callers holding one.
+pub fn dedup_key(event: &Event) -> Option<EventDedupKey> {
+    let key = event.key.as_ref()?;
+    let signed_by = key.signed_by.as_ref()?;
     Some((
         key.collection,
-        key.identity,
+        key.identity.clone(),
         signed_by.key_type,
-        signed_by.key,
+        signed_by.key.clone(),
         key.sequence,
     ))
+}
+
+/// The bundle's event, when it decodes.
+pub fn decode_event(bundle: &EventBundle) -> Option<Event> {
+    let signed = bundle.signed_event.as_ref()?;
+    Event::decode(signed.event_bytes.as_slice()).ok()
 }
 
 /// The `created_at` of the bundle's event, when it decodes.
@@ -76,6 +85,7 @@ pub trait EventBundleResponse: Message + Default {
 /// Concatenate per-server bundles, merge by `EventKey`, drop invalid ones.
 pub fn merge_bundle_responses<T: EventBundleResponse>(
     values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
     client: &Arc<Mutex<PolycentricClient>>,
 ) -> Vec<u8> {
     merge_bundle_response::<T>(values, client).encode_to_vec()

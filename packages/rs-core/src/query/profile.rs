@@ -22,6 +22,7 @@ pub struct GetProfileArgs {
 /// the largest counters — the best-informed server wins.
 fn merge_profile_responses(
     values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
     client: &std::sync::Arc<std::sync::Mutex<crate::client::PolycentricClient>>,
 ) -> Vec<u8> {
     let mut merged = GetProfileResponse::default();
@@ -196,7 +197,7 @@ mod tests {
 
     #[test]
     fn merge_takes_the_largest_counters() {
-        let merged = merge_profile_responses(&[response(3, 7), response(5, 2)], &client());
+        let merged = merge_profile_responses(&[response(3, 7), response(5, 2)], None, &client());
         let decoded = GetProfileResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.following_count, 5);
         assert_eq!(decoded.followers_count, 7);
@@ -204,7 +205,7 @@ mod tests {
 
     #[test]
     fn merge_ignores_undecodable_responses() {
-        let merged = merge_profile_responses(&[vec![0xff], response(1, 2)], &client());
+        let merged = merge_profile_responses(&[vec![0xff], response(1, 2)], None, &client());
         let decoded = GetProfileResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.following_count, 1);
         assert_eq!(decoded.followers_count, 2);
@@ -212,7 +213,7 @@ mod tests {
 
     #[test]
     fn merge_of_nothing_reports_zero_counters() {
-        let merged = merge_profile_responses(&[], &client());
+        let merged = merge_profile_responses(&[], None, &client());
         let decoded = GetProfileResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.following_count, 0);
         assert_eq!(decoded.followers_count, 0);

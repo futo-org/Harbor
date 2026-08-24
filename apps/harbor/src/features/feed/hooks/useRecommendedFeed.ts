@@ -4,10 +4,12 @@ import {
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
 import { useChainedExtend } from './useChainedExtend';
+import { useFeedWindow } from './useFeedWindow';
 import type { FeedHookResult } from './types';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import {
+  FEED_PAGE_SIZE,
   feedQueryKeys,
   feedSortBy,
   useFeedPageInfo,
@@ -28,6 +30,8 @@ export function useRecommendedFeed(options?: {
   const queryKey = feedQueryKeys.recommended(followerIdentity);
   const omitLabels = useOmitLabels();
 
+  const window = useFeedWindow(queryKey);
+
   const query = useQuery(
     queryKey,
     (status, data) => {
@@ -36,9 +40,10 @@ export function useRecommendedFeed(options?: {
       return new Query.GetRecommendedFeed({
         followerIdentity,
         sortBy: feedSortBy('top'),
-        limit: options?.limit,
+        limit: options?.limit ?? FEED_PAGE_SIZE,
         forwardToken,
         omitLabels,
+        windowSize: window.size,
       });
     },
     { updateMode: UpdateMode.Merge },
@@ -55,9 +60,15 @@ export function useRecommendedFeed(options?: {
     isLoading: query.status === QueryStatus.Loading,
     isRefreshing: query.hasPendingRefresh,
     error: query.error ? new Error(query.error) : null,
-    loadMore: async () => requestMore(),
+    loadMore: async () => {
+      window.increase();
+      requestMore();
+    },
     hasMore: hasNext,
-    refresh: () => query.refresh(RefreshStrategy.Lazy),
+    refresh: () => {
+      window.reset();
+      query.refresh(RefreshStrategy.Lazy);
+    },
     queryKey,
   };
 }

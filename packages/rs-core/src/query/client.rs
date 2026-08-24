@@ -115,12 +115,12 @@ pub type QueryFutureBox<T> = Pin<Box<dyn Future<Output = Result<T, String>> + 's
 /// Type-erased per-server `query_fn`.
 pub type QueryFnBox<T> = Arc<dyn Fn(String) -> QueryFutureBox<T> + Send + Sync + 'static>;
 
-/// Type-erased `merge_fn`. Receives every server's most-recent
-/// response plus a handle to the local `PolycentricClient` (so
-/// validating merges can call `validate_event` without capturing a
-/// clone in a closure) and reduces them to a single emitted value.
+/// Type-erased `merge_fn`. Reduces every page held for this key, plus the
+/// value last emitted, to the value to emit next. The client handle lets a
+/// merge call `validate_event`. `previous` is `None` until something has been
+/// emitted, and again after an invalidation.
 pub type MergeFn<T> =
-    Arc<dyn Fn(&[T], &Arc<Mutex<PolycentricClient>>) -> T + Send + Sync + 'static>;
+    Arc<dyn Fn(&[T], Option<&T>, &Arc<Mutex<PolycentricClient>>) -> T + Send + Sync + 'static>;
 
 /// Query keys are an array of strings and assist with caching, retry strategies etc.
 pub type QueryKey = Vec<String>;
@@ -130,46 +130,36 @@ pub type QueryKey = Vec<String>;
 /// (subscriber, pending count) is local to each subscribe call.
 pub type QueryStateHandle<T> = Arc<Mutex<QueryState<T>>>;
 
-/// Contains all of the per-server info we need in the query state.
+/// Every page a server has answered with, newest last.
 pub struct QueryResponseInfo<T> {
-    response: T,
+    pages: Vec<T>,
     epoch: u64,
 }
 
 impl<T> QueryResponseInfo<T> {
-    /// Update this server's state info with newly received data.
-    pub fn update(
-        mut self,
-        response: T,
-        epoch: u64,
-        merge_fn: &MergeFn<T>,
-        client: &Arc<Mutex<PolycentricClient>>,
-        update_mode: UpdateMode,
-    ) -> Self {
+    /// Take a new response from this server.
+    fn update(&mut self, response: T, epoch: u64, update_mode: UpdateMode) {
         match update_mode {
             UpdateMode::Replace => {
                 // Only replace with responses from a newer fan-out
                 if self.epoch >= epoch {
-                    return self;
+                    return;
                 }
 
-                self.response = response;
+                self.pages = vec![response];
                 self.epoch = epoch;
             }
             UpdateMode::Merge => {
-                self.response = merge_fn(&[self.response, response], client);
+                self.pages.push(response);
                 self.epoch = max(self.epoch, epoch);
             }
         }
-
-        self
     }
 }
 
-/// Per-key cache of each server's most-recent successful response.
+/// Per-key cache of the pages each server has answered with.
 pub struct QueryState<T> {
-    /// Each server's most-recent successful response, keyed by
-    /// `server_url`.
+    /// Each server's pages, keyed by `server_url`.
     pub data: HashMap<String, QueryResponseInfo<T>>,
 
     /// Incrementing integer for each fan-out for this state instance.
@@ -180,6 +170,10 @@ pub struct QueryState<T> {
     /// The epoch of the latest fan-out with a `Replace` update mode.
     /// We discard a merge response if its epoch is from before this one.
     pub latest_replace_epoch: u64,
+
+    /// The value last handed to a subscriber, passed back to `merge_fn`.
+    /// Cleared on invalidation, so a refresh reorders from scratch.
+    pub emitted: Option<T>,
 }
 
 impl<T> Default for QueryState<T> {
@@ -189,6 +183,7 @@ impl<T> Default for QueryState<T> {
             data: HashMap::new(),
             epoch: 0,
             latest_replace_epoch: 0,
+            emitted: None,
         }
     }
 }
@@ -210,15 +205,7 @@ impl<T> QueryState<T> {
     }
 
     /// Update the query state with new newly received data.
-    pub fn update(
-        &mut self,
-        server: &str,
-        value: T,
-        epoch: u64,
-        merge_fn: &MergeFn<T>,
-        client: &Arc<Mutex<PolycentricClient>>,
-        update_mode: UpdateMode,
-    ) {
+    pub fn update(&mut self, server: &str, value: T, epoch: u64, update_mode: UpdateMode) {
         // Doing a replace fan-out means we want to discard any data from before.
         // Don't even merge data if a replace fan-out has started after this data
         // was requested.
@@ -226,18 +213,13 @@ impl<T> QueryState<T> {
             return;
         }
 
-        if let Some((server, mut info)) = self.data.remove_entry(server) {
-            info = info.update(value, epoch, merge_fn, client, update_mode);
-            self.data.insert(server, info);
-        } else {
-            self.data.insert(
-                server.to_string(),
-                QueryResponseInfo {
-                    response: value,
-                    epoch,
-                },
-            );
-        }
+        self.data
+            .entry(server.to_string())
+            .or_insert_with(|| QueryResponseInfo {
+                pages: Vec::new(),
+                epoch,
+            })
+            .update(value, epoch, update_mode);
     }
 
     /// Derive the query status from the current state data.
@@ -250,10 +232,11 @@ impl<T> QueryState<T> {
     }
 }
 
-/// Reduce the per-server cache into a single emitted value via
-/// `merge_fn`. Returns `None` when no server has responded yet.
+/// Reduce every cached page into one value. `None` when no server has
+/// responded yet.
 fn compute_merged<T: Clone>(
     data: &HashMap<String, QueryResponseInfo<T>>,
+    previous: Option<&T>,
     merge_fn: &MergeFn<T>,
     client: &Arc<Mutex<PolycentricClient>>,
 ) -> Option<T> {
@@ -261,15 +244,31 @@ fn compute_merged<T: Clone>(
         return None;
     }
 
-    // Merge in a fixed server order; HashMap iteration order is arbitrary.
-    let mut entries: Vec<(&String, &QueryResponseInfo<T>)> = data.iter().collect();
-    entries.sort_unstable_by_key(|(a, _)| *a);
-    let values: Vec<T> = entries
+    // Fixed server order; HashMap iteration order is arbitrary.
+    let mut entries: Vec<&QueryResponseInfo<T>> = Vec::with_capacity(data.len());
+    let mut servers: Vec<&String> = data.keys().collect();
+    servers.sort_unstable();
+    for server in servers {
+        entries.push(&data[server]);
+    }
+
+    let pages: Vec<T> = entries
         .into_iter()
-        .map(|(_, info)| info.response.clone())
+        .flat_map(|info| info.pages.iter().cloned())
         .collect();
 
-    Some(merge_fn(&values, client))
+    Some(merge_fn(&pages, previous, client))
+}
+
+/// Merge, emit, and remember what was emitted.
+fn compute_emission<T: Clone>(
+    state: &mut QueryState<T>,
+    merge_fn: &MergeFn<T>,
+    client: &Arc<Mutex<PolycentricClient>>,
+) -> Option<T> {
+    let emission = compute_merged(&state.data, state.emitted.as_ref(), merge_fn, client)?;
+    state.emitted = Some(emission.clone());
+    Some(emission)
 }
 
 /// Client to fetch and invalidate queries.
@@ -313,7 +312,7 @@ where
     where
         F: Fn(String) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Result<T, String>> + MaybeSend + 'static,
-        M: Fn(&[T], &Arc<Mutex<PolycentricClient>>) -> T + Send + Sync + 'static,
+        M: Fn(&[T], Option<&T>, &Arc<Mutex<PolycentricClient>>) -> T + Send + Sync + 'static,
     {
         let queries = self.queries.clone();
         let client = self.client.clone();
@@ -345,8 +344,8 @@ where
             let state = get_or_create_state(&queries, &query_key);
 
             let cached = {
-                let s = state.lock().unwrap();
-                compute_merged(&s.data, &merge_fn, &client)
+                let mut s = state.lock().unwrap();
+                compute_emission(&mut s, &merge_fn, &client)
             };
 
             let needs_fetch = match fetch_mode {
@@ -406,6 +405,7 @@ where
 
             // Clear cached server responses
             state.data.clear();
+            state.emitted = None;
 
             // Create a dummy replace epoch so that any pending merge requests have
             // their responses discarded.
@@ -420,6 +420,7 @@ where
         for state in self.queries.lock().unwrap().values() {
             let mut state = state.lock().unwrap();
             state.data.clear();
+            state.emitted = None;
             state.next_fanout(UpdateMode::Replace);
         }
     }
@@ -524,7 +525,7 @@ fn spawn_fanout<T>(
 
                 let error_msg = match result {
                     Ok(value) => {
-                        s.update(&server_url, value, epoch, &merge_fn, &client, update_mode);
+                        s.update(&server_url, value, epoch, update_mode);
                         None
                     }
                     Err(msg) => Some(msg),
@@ -538,9 +539,10 @@ fn spawn_fanout<T>(
                 let snapshot = if emit_mode == EmitMode::Default && !is_last {
                     None
                 } else {
+                    let status = s.status(pending_servers);
                     Some(QueryResult {
-                        data: compute_merged(&s.data, &merge_fn, &client),
-                        status: s.status(pending_servers),
+                        data: compute_emission(&mut s, &merge_fn, &client),
+                        status,
                         successful_servers,
                         pending_servers,
                     })
@@ -576,7 +578,11 @@ mod tests {
     }
 
     /// Parse comma-joined numbers from every response, dedup, and re-join.
-    fn merge_join(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+    fn merge_join(
+        values: &[Vec<u8>],
+        _previous: Option<&Vec<u8>>,
+        _client: &Arc<Mutex<PolycentricClient>>,
+    ) -> Vec<u8> {
         let mut items: Vec<u32> = values
             .iter()
             .flat_map(|v| {
@@ -635,6 +641,115 @@ mod tests {
             }
         }
         out
+    }
+
+    /// `merge_join` with the biggest number first, standing in for a rank.
+    fn merge_ranked(
+        values: &[Vec<u8>],
+        _previous: Option<&Vec<u8>>,
+        client: &Arc<Mutex<PolycentricClient>>,
+    ) -> Vec<u8> {
+        let joined = merge_join(values, None, client);
+        let mut items: Vec<u32> = String::from_utf8_lossy(&joined)
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse::<u32>().unwrap())
+            .collect();
+        items.sort_unstable_by_key(|n| std::cmp::Reverse(*n));
+        items
+            .iter()
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+            .into_bytes()
+    }
+
+    /// Ranked merge that keeps the order it last emitted.
+    fn merge_anchored(
+        values: &[Vec<u8>],
+        previous: Option<&Vec<u8>>,
+        client: &Arc<Mutex<PolycentricClient>>,
+    ) -> Vec<u8> {
+        let split = |bytes: &[u8]| -> Vec<String> {
+            String::from_utf8_lossy(bytes)
+                .split(',')
+                .filter(|item| !item.is_empty())
+                .map(str::to_string)
+                .collect()
+        };
+        let ranked = split(&merge_ranked(values, None, client));
+        let mut out: Vec<String> = match previous {
+            Some(previous) => split(previous)
+                .into_iter()
+                .filter(|item| ranked.contains(item))
+                .collect(),
+            None => Vec::new(),
+        };
+        for item in ranked {
+            if !out.contains(&item) {
+                out.push(item);
+            }
+        }
+        out.join(",").into_bytes()
+    }
+
+    /// `run_fanout` with the order-holding merge.
+    async fn run_anchored_fanout(
+        qc: &QueryClient<Vec<u8>>,
+        key: &QueryKey,
+        response: &'static str,
+    ) -> Vec<String> {
+        let opts = QueryOpts {
+            update_mode: Some(UpdateMode::Merge),
+            ..Default::default()
+        };
+        let obs = qc.fetch(
+            Some(key.clone()),
+            move |_server| async move { Ok(response.as_bytes().to_vec()) },
+            merge_anchored,
+            Some(opts),
+        );
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let tx_complete = tx.clone();
+        let _sub = obs.subscribe(
+            move |r: QueryResult<Vec<u8>>| {
+                let _ = tx.send(Ev::Next(r.data.unwrap_or_default()));
+            },
+            |_e| {},
+            move || {
+                let _ = tx_complete.send(Ev::Complete);
+            },
+        );
+
+        let mut out = Vec::new();
+        while let Some(ev) = rx.recv().await {
+            match ev {
+                Ev::Next(d) => out.push(String::from_utf8_lossy(&d).into_owned()),
+                Ev::Complete => break,
+            }
+        }
+        out
+    }
+
+    #[tokio::test]
+    async fn a_merge_can_keep_the_order_it_emitted() {
+        let client = Arc::new(Mutex::new(PolycentricClient::new()));
+        client.lock().unwrap().set_servers(vec!["s1".to_string()]);
+        let qc: QueryClient<Vec<u8>> = QueryClient::new(client);
+        let key: QueryKey = vec!["feed".to_string()];
+
+        let first = run_anchored_fanout(&qc, &key, "5,3").await;
+        assert_eq!(first.last().unwrap(), "5,3");
+
+        // Outranks both, but they are already emitted, so it goes last.
+        let second = run_anchored_fanout(&qc, &key, "9").await;
+        assert_eq!(second.last().unwrap(), "5,3,9");
+
+        // Invalidation drops the anchor, so a refresh ranks from scratch.
+        qc.invalidate(&key);
+        let third = run_anchored_fanout(&qc, &key, "9,5,3").await;
+        assert_eq!(third.last().unwrap(), "9,5,3");
     }
 
     #[tokio::test]

@@ -110,22 +110,6 @@ impl FakeCursorToken {
     }
 }
 
-/// The oldest timestamp every server with more data has paged past.
-/// Items below it may still be preceded by a later page, so merges hold
-/// them back. `None` when no server has more data.
-pub fn pagination_horizon(
-    oldest_by_server: &BTreeMap<String, u64>,
-    merged_end_cursor: &str,
-) -> Option<u64> {
-    let token = FakeCursorToken::decode(merged_end_cursor).ok()?;
-    token
-        .map
-        .iter()
-        .filter(|(_, info)| info.more_data)
-        .filter_map(|(server, _)| oldest_by_server.get(server).copied())
-        .max()
-}
-
 /// Empty map
 impl Default for FakeCursorToken {
     fn default() -> Self {

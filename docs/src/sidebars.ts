@@ -40,7 +40,11 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Developer',
-      items: ['developer/setup', 'developer/project-structure'],
+      items: [
+        'developer/setup',
+        'developer/project-structure',
+        'developer/feed-paging',
+      ],
     },
     {
       type: 'category',
