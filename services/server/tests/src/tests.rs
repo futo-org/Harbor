@@ -3678,6 +3678,7 @@ async fn suggest_follow2<Fut>(
                 Some(ContentBody::ProfileUpdate(_)) => {
                     found_profile_hint = true;
                 }
+                Some(ContentBody::Identity(_)) => {}
                 _ => panic!("unexpected event content: {content:?}"),
             }
         }
