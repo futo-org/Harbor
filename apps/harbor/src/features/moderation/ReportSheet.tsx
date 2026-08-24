@@ -3,7 +3,7 @@ import { Text } from '@/src/common/components/primitives/Text';
 import { TextArea } from '@/src/common/components/TextArea';
 import { Sheet } from '@/src/common/components/sheet';
 import useReportOptions, { type ReportOptions } from './hooks/useReportOptions';
-import { StyleSheet, ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { Atoms, useTheme } from '@/src/common/theme';
 import RadioGroup from '@/src/common/components/form/RadioGroup';
 import { useState } from 'react';
