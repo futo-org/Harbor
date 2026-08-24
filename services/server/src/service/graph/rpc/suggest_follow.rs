@@ -4,7 +4,7 @@ use tonic::Status;
 
 use crate::data::hydration::{self, HydrateConfig, HydrationState};
 use crate::data::{
-    EventRow, Marker, PageInfo, PaginationParams, pipeline, row_to_bundle,
+    EventRow, Marker, PageInfo, PaginationParams, assemble_bundle, pipeline,
 };
 use crate::service::context::RequestContext;
 use crate::service::graph::repository::{
@@ -114,7 +114,7 @@ async fn view(
         .live_rows
         .into_iter()
         .map(|row| FollowSuggestion {
-            suggestion: Some(row_to_bundle(
+            suggestion: Some(assemble_bundle(
                 (row.event, Some(row.content)),
                 &hydration.stats,
             )),

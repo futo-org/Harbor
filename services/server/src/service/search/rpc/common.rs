@@ -1,20 +1,17 @@
-use crate::data::EventWithContentRow;
-use crate::data::PaginationParams;
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline::Fetched;
-use crate::data::{CursorFilter, EventRow, PageInfo};
+use crate::data::{
+    CursorFilter, EventRow, EventWithContentRow, PageInfo, PaginationParams,
+    assemble_bundle, assemble_bundles, assemble_hint, bundle_into_hint,
+};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::rpc::common::{
     Referenced, has_matching_label, referenced_target2,
 };
-use crate::service::identity::service::row_to_bundle;
-use crate::service::identity::service::{bundles_to_hints, rows_to_bundles};
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{EventBundle, EventHint, PageParams, SearchResult};
-use crate::service::stats::service::{
-    EventStats, assemble_bundles, include_stats,
-};
+use crate::service::stats::service::EventStats;
 use entity::{content_model, event_model};
 use serde::Deserialize;
 use std::collections::HashSet;
@@ -273,7 +270,7 @@ pub async fn view<SortedBy>(
         .iter_mut()
         .map(|result| result.event_bundle.as_mut().unwrap());
 
-    let mut label_bundles = rows_to_bundles(label_events);
+    let mut label_bundles = assemble_bundles(label_events, &stats);
 
     tokio::try_join!(
         attach_proofs(ctx, results_iter),
@@ -283,21 +280,15 @@ pub async fn view<SortedBy>(
 
     // Identity, profile, referenced (quote / repost) posts, tombstones,
     // and moderation labels all ship as hints.
-    let hint_rows: Vec<EventWithContentRow> = identity_events
+    let mut event_hints = identity_events
         .into_iter()
         .chain(profile_events)
         .chain(event_hints)
-        .collect();
-
-    let mut event_hints = assemble_bundles(hint_rows, &stats)
-        .into_iter()
-        .map(|bundle| EventHint {
-            event_bundle: Some(bundle),
-        })
+        .map(|row| assemble_hint(row, &stats))
         .collect::<Vec<_>>();
 
-    event_hints.extend(bundles_to_hints(tombstone_bundles));
-    event_hints.extend(bundles_to_hints(label_bundles));
+    event_hints.extend(tombstone_bundles.into_iter().map(bundle_into_hint));
+    event_hints.extend(label_bundles.into_iter().map(bundle_into_hint));
 
     Ok(SearchResponseView {
         results,
@@ -313,9 +304,7 @@ pub fn assemble_results(
 ) -> Vec<SearchResult> {
     rows.into_iter()
         .map(|(event, content, rank)| {
-            let key = TargetEventKey::of(&event);
-            let mut event = row_to_bundle((event, Some(content)));
-            include_stats(&mut event.meta, &key, stats);
+            let event = assemble_bundle((event, Some(content)), stats);
             SearchResult {
                 event_bundle: Some(event),
                 rank,

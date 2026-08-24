@@ -100,13 +100,50 @@ where
     }
 }
 
-pub fn row_to_bundle(
-    (event, content): EventWithContentRow,
+/// Assemble multiple rows into bundles.
+pub fn assemble_bundles(
+    rows: impl IntoIterator<Item = EventWithContentRow>,
+    stats: &EventStats,
+) -> Vec<proto::EventBundle> {
+    rows.into_iter()
+        .map(|row| assemble_bundle(row, stats))
+        .collect::<Vec<_>>()
+}
+
+/// Assemble a single row into a bundle.
+pub fn assemble_bundle(
+    row: EventWithContentRow,
     stats: &EventStats,
 ) -> proto::EventBundle {
-    let mut meta = None;
-    let key = TargetEventKey::of(&event);
-    include_stats(&mut meta, &key, stats);
+    let key = TargetEventKey::of(&row.0);
+    let mut bundle = row_into_bundle(row);
+    include_stats(&mut bundle.meta, &key, stats);
+    bundle
+}
+
+/// Assemble a single row into an event hint.
+pub fn assemble_hint(
+    row: EventWithContentRow,
+    stats: &EventStats,
+) -> proto::EventHint {
+    bundle_into_hint(assemble_bundle(row, stats))
+}
+
+/// Convert multiple rows into bundles, without adding metadata.
+///
+/// See [`assemble_bundles`] to attached stats.
+pub fn rows_into_bundles(
+    rows: impl IntoIterator<Item = EventWithContentRow>,
+) -> Vec<proto::EventBundle> {
+    rows.into_iter().map(row_into_bundle).collect::<Vec<_>>()
+}
+
+/// Convert a row into a bundle, without adding metadata.
+///
+/// See [`assemble_bundle`] to attached stats.
+pub fn row_into_bundle(
+    (event, content): EventWithContentRow,
+) -> proto::EventBundle {
     proto::EventBundle {
         signed_event: Some(proto::SignedEvent {
             event_bytes: event.event_bytes,
@@ -116,21 +153,31 @@ pub fn row_to_bundle(
             content_bytes: c.serialized_bytes,
         }),
         event_proofs: Vec::new(),
-        meta,
+        meta: None,
     }
 }
 
-pub fn bundle_to_hint(bundle: proto::EventBundle) -> proto::EventHint {
+/// Convert multiple rows into event hints, without adding metadata.
+///
+/// See [`assemble_hint`] to attached stats.
+pub fn rows_into_hints(
+    rows: impl IntoIterator<Item = EventWithContentRow>,
+) -> Vec<proto::EventHint> {
+    rows.into_iter()
+        .map(|row| bundle_into_hint(row_into_bundle(row)))
+        .collect::<Vec<_>>()
+}
+
+/// Convert a single row into an event hint.
+fn row_into_hint(row: EventWithContentRow) -> proto::EventHint {
+    bundle_into_hint(row_into_bundle(row))
+}
+
+/// Convert a bundle into an event hint.
+pub fn bundle_into_hint(bundle: proto::EventBundle) -> proto::EventHint {
     proto::EventHint {
         event_bundle: Some(bundle),
     }
-}
-
-pub fn row_to_hint(
-    row: EventWithContentRow,
-    stats: &EventStats,
-) -> proto::EventHint {
-    bundle_to_hint(row_to_bundle(row, stats))
 }
 
 const DEFAULT_LIMIT: u32 = 50;

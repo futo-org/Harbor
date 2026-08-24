@@ -1,4 +1,6 @@
-use crate::data::{EventRow, EventWithContentRow, row_to_hint};
+use crate::data::{
+    EventRow, EventWithContentRow, assemble_hint, row_into_hint,
+};
 use crate::service::context::RequestContext;
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{self as feeds_repository};
@@ -36,12 +38,11 @@ impl HydrationState {
     /// clients can validate and render the referenced identities without
     /// extra queries.
     pub fn identity_profile_hints(self) -> Vec<EventHint> {
-        crate::service::identity::service::rows_to_hints(
-            self.identity_events
-                .into_iter()
-                .chain(self.profile_events)
-                .collect(),
-        )
+        self.identity_events
+            .into_iter()
+            .chain(self.profile_events)
+            .map(row_into_hint)
+            .collect()
     }
 
     /// # Notes
@@ -53,11 +54,11 @@ impl HydrationState {
     pub fn into_hints(self) -> Vec<EventHint> {
         self.identity_events
             .into_iter()
-            .chain(self.profile_events.into_iter())
-            .chain(self.quote_post_events.into_iter())
-            .chain(self.repost_events.into_iter())
-            .chain(self.label_events.into_iter())
-            .map(|row| row_to_hint(row, &self.stats))
+            .chain(self.profile_events)
+            .chain(self.quote_post_events)
+            .chain(self.repost_events)
+            .chain(self.label_events)
+            .map(|row| assemble_hint(row, &self.stats))
             .collect()
     }
 }
