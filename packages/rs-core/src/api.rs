@@ -89,6 +89,7 @@ pub enum Query {
     ResolveVerifiedClaims(crate::query::verifications::ResolveVerifiedClaimsArgs),
     ListFollowing(crate::query::graph::ListFollowingArgs),
     ListFollowers(crate::query::graph::ListFollowersArgs),
+    SuggestFollow(crate::query::graph::SuggestFollowArgs),
     SearchPosts(crate::query::search::SearchPostsArgs),
     SearchUsers(crate::query::search::SearchUsersArgs),
     IsModerator(crate::query::moderation::IsModeratorArgs),
@@ -473,6 +474,9 @@ impl PolycentricCore {
             }
             Query::ListFollowers(args) => {
                 crate::query::graph::list_followers(&self.query_client, query_key, args, opts)
+            }
+            Query::SuggestFollow(args) => {
+                crate::query::graph::suggest_follow(&self.query_client, query_key, args, opts)
             }
             Query::SearchPosts(args) => {
                 crate::query::search::search_posts(&self.query_client, query_key, args, opts)

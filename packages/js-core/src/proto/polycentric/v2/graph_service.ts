@@ -46,6 +46,15 @@ export interface ListFollowersRequest {
     pageParams?: PageParams;
 }
 /**
+ * @generated from protobuf message polycentric.v2.SuggestFollowRequest
+ */
+export interface SuggestFollowRequest {
+    /**
+     * @generated from protobuf field: optional polycentric.v2.PageParams page_params = 1
+     */
+    pageParams?: PageParams;
+}
+/**
  * @generated from protobuf message polycentric.v2.ListFollowsResponse
  */
 export interface ListFollowsResponse {
@@ -65,6 +74,44 @@ export interface ListFollowsResponse {
      * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 3
      */
     eventHints: EventHint[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.SuggestFollowResponse
+ */
+export interface SuggestFollowResponse {
+    /**
+     * @generated from protobuf field: repeated polycentric.v2.FollowSuggestion suggestions = 1
+     */
+    suggestions: FollowSuggestion[];
+    /**
+     * @generated from protobuf field: optional polycentric.v2.PageInfo page_info = 2
+     */
+    pageInfo?: PageInfo;
+    /**
+     * Contains profile update events for the suggested to-follow identities and
+     * the identities of those who already follow those identities
+     * (`suggestion.followers`).
+     *
+     * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 3
+     */
+    eventHints: EventHint[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.FollowSuggestion
+ */
+export interface FollowSuggestion {
+    /**
+     * Identity (event) to follow.
+     *
+     * @generated from protobuf field: polycentric.v2.EventBundle suggestion = 1
+     */
+    suggestion?: EventBundle;
+    /**
+     * Identities that are following the suggested identity.
+     *
+     * @generated from protobuf field: repeated string followers = 2
+     */
+    followers: string[];
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class ListFollowingRequest$Type extends MessageType<ListFollowingRequest> {
@@ -175,6 +222,52 @@ class ListFollowersRequest$Type extends MessageType<ListFollowersRequest> {
  */
 export const ListFollowersRequest = new ListFollowersRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class SuggestFollowRequest$Type extends MessageType<SuggestFollowRequest> {
+    constructor() {
+        super("polycentric.v2.SuggestFollowRequest", [
+            { no: 1, name: "page_params", kind: "message", T: () => PageParams }
+        ]);
+    }
+    create(value?: PartialMessage<SuggestFollowRequest>): SuggestFollowRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<SuggestFollowRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SuggestFollowRequest): SuggestFollowRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* optional polycentric.v2.PageParams page_params */ 1:
+                    message.pageParams = PageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: SuggestFollowRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional polycentric.v2.PageParams page_params = 1; */
+        if (message.pageParams)
+            PageParams.internalBinaryWrite(message.pageParams, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.SuggestFollowRequest
+ */
+export const SuggestFollowRequest = new SuggestFollowRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class ListFollowsResponse$Type extends MessageType<ListFollowsResponse> {
     constructor() {
         super("polycentric.v2.ListFollowsResponse", [
@@ -236,10 +329,127 @@ class ListFollowsResponse$Type extends MessageType<ListFollowsResponse> {
  * @generated MessageType for protobuf message polycentric.v2.ListFollowsResponse
  */
 export const ListFollowsResponse = new ListFollowsResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class SuggestFollowResponse$Type extends MessageType<SuggestFollowResponse> {
+    constructor() {
+        super("polycentric.v2.SuggestFollowResponse", [
+            { no: 1, name: "suggestions", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => FollowSuggestion },
+            { no: 2, name: "page_info", kind: "message", T: () => PageInfo },
+            { no: 3, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
+        ]);
+    }
+    create(value?: PartialMessage<SuggestFollowResponse>): SuggestFollowResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.suggestions = [];
+        message.eventHints = [];
+        if (value !== undefined)
+            reflectionMergePartial<SuggestFollowResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SuggestFollowResponse): SuggestFollowResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated polycentric.v2.FollowSuggestion suggestions */ 1:
+                    message.suggestions.push(FollowSuggestion.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* optional polycentric.v2.PageInfo page_info */ 2:
+                    message.pageInfo = PageInfo.internalBinaryRead(reader, reader.uint32(), options, message.pageInfo);
+                    break;
+                case /* repeated polycentric.v2.EventHint event_hints */ 3:
+                    message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: SuggestFollowResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.FollowSuggestion suggestions = 1; */
+        for (let i = 0; i < message.suggestions.length; i++)
+            FollowSuggestion.internalBinaryWrite(message.suggestions[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* optional polycentric.v2.PageInfo page_info = 2; */
+        if (message.pageInfo)
+            PageInfo.internalBinaryWrite(message.pageInfo, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventHint event_hints = 3; */
+        for (let i = 0; i < message.eventHints.length; i++)
+            EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.SuggestFollowResponse
+ */
+export const SuggestFollowResponse = new SuggestFollowResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class FollowSuggestion$Type extends MessageType<FollowSuggestion> {
+    constructor() {
+        super("polycentric.v2.FollowSuggestion", [
+            { no: 1, name: "suggestion", kind: "message", T: () => EventBundle },
+            { no: 2, name: "followers", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<FollowSuggestion>): FollowSuggestion {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.followers = [];
+        if (value !== undefined)
+            reflectionMergePartial<FollowSuggestion>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FollowSuggestion): FollowSuggestion {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.EventBundle suggestion */ 1:
+                    message.suggestion = EventBundle.internalBinaryRead(reader, reader.uint32(), options, message.suggestion);
+                    break;
+                case /* repeated string followers */ 2:
+                    message.followers.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: FollowSuggestion, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventBundle suggestion = 1; */
+        if (message.suggestion)
+            EventBundle.internalBinaryWrite(message.suggestion, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated string followers = 2; */
+        for (let i = 0; i < message.followers.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.followers[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.FollowSuggestion
+ */
+export const FollowSuggestion = new FollowSuggestion$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.GraphService
  */
 export const GraphService = new ServiceType("polycentric.v2.GraphService", [
     { name: "ListFollowing", options: {}, I: ListFollowingRequest, O: ListFollowsResponse },
-    { name: "ListFollowers", options: {}, I: ListFollowersRequest, O: ListFollowsResponse }
+    { name: "ListFollowers", options: {}, I: ListFollowersRequest, O: ListFollowsResponse },
+    { name: "SuggestFollow", options: {}, I: SuggestFollowRequest, O: SuggestFollowResponse }
 ]);

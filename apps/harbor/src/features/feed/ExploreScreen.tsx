@@ -2,7 +2,6 @@ import { Fab } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { Screen } from '@/src/common/components/layout';
 import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
-import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { PagerView } from '@/src/common/components/PagerView';
 import { TabFilterSheet } from '@/src/common/components/tabs';
 import { openCompose } from '@/src/common/constants';
@@ -13,6 +12,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
+import { SuggestedFollowList } from '../follow/SuggestedFollowList';
 import { SearchBar } from '../search/SearchBar';
 import { FeedPage } from './FeedPage';
 import {
@@ -121,7 +121,7 @@ export default function ExploreScreen() {
             renderTabBar={renderTabBar}
           >
             <ExplorePage sort={sort} active={tab === 'posts'} ready={ready} />
-            <ListEmpty>No people to suggest yet</ListEmpty>
+            <SuggestedFollowList active={ready && tab === 'people'} />
           </PagerView>
         ) : null}
 
