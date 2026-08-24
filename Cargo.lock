@@ -3198,6 +3198,7 @@ dependencies = [
 name = "moderation-migration"
 version = "0.1.0"
 dependencies = [
+ "common-dotenv",
  "moderation-entity",
  "sea-orm",
  "sea-orm-migration",
@@ -3948,6 +3949,7 @@ dependencies = [
 name = "push-notifications-migration"
 version = "0.1.0"
 dependencies = [
+ "common-dotenv",
  "push-notifications-entity",
  "sea-orm",
  "sea-orm-migration",
@@ -4984,6 +4986,7 @@ dependencies = [
 name = "server-migration"
 version = "0.1.0"
 dependencies = [
+ "common-dotenv",
  "entity",
  "polycentric-common",
  "prost",

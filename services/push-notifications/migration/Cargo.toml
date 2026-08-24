@@ -10,6 +10,7 @@ name = "push_notifications_migration"
 path = "src/lib.rs"
 
 [dependencies]
+common-dotenv.workspace = true
 push-notifications-entity = { path = "../entity" }
 sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio", "macros", "mock"] }
 sea-orm-migration = { workspace = true, features = ["cli", "sqlx-postgres", "runtime-tokio"] }

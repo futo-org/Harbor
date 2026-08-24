@@ -8,7 +8,10 @@ members = [
     "services/server/tests",
     "services/moderation",
     "services/push-notifications",
-    "services/common/*",
+    "services/common/dotenv",
+    "services/common/kafka",
+    "services/common/object-store",
+    "services/common/telemetry",
     "tools/identity",
 ]
 exclude = ["legacy/"]
@@ -17,6 +20,7 @@ resolver = "2"
 [workspace.dependencies]
 # Internal crates
 polycentric-common = { path = "packages/rs-common" }
+common-dotenv = { path = "services/common/dotenv" }
 
 # Async runtime / service frameworks
 tokio = { version = "1.50.0", default-features = false }

@@ -10,6 +10,7 @@ name = "migration"
 path = "src/lib.rs"
 
 [dependencies]
+common-dotenv.workspace = true
 entity = { path = "../entity" }
 polycentric-common.workspace = true
 prost.workspace = true

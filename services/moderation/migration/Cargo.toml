@@ -10,6 +10,7 @@ name = "moderation_migration"
 path = "src/lib.rs"
 
 [dependencies]
+common-dotenv.workspace = true
 moderation-entity = { path = "../entity" }
 sea-orm = { workspace = true, features = [ "sqlx-postgres", "runtime-tokio", "macros", "mock" ] }
 sea-orm-migration = { workspace = true, features = ["cli", "sqlx-postgres", "runtime-tokio"] }
