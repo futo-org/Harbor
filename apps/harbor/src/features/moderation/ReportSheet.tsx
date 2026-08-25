@@ -75,6 +75,7 @@ export default function ReportSheet({
             isOption ? 'What are you reporting?' : 'Additional information'
           }
           closeIcon={isOption ? undefined : 'chevronBack'}
+          disabled={isPending}
           onClose={onBackPress}
         />
       }
@@ -101,7 +102,11 @@ export default function ReportSheet({
     >
       <Sheet.Content style={[Atoms.gap_md]}>
         {isOption ? (
-          <RadioGroup value={selected} onValueChange={setSelected}>
+          <RadioGroup
+            value={selected}
+            onValueChange={setSelected}
+            disabled={isPending}
+          >
             <View style={[Atoms.gap_md]}>
               {options.map((option) => (
                 <ReportOption key={option.value} option={option} />
@@ -114,6 +119,7 @@ export default function ReportSheet({
             placeholder="Please provide any additional information that you think may be helpful."
             value={additionalInfo}
             onChangeText={setAdditionalInfo}
+            disabled={isPending}
           />
         )}
       </Sheet.Content>

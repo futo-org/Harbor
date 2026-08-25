@@ -1,7 +1,10 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
-import { decodeIdentityBackup } from '@/src/features/identity-backup/backup';
+import {
+  decodeIdentityBackup,
+  isStaleBackup,
+} from '@/src/features/identity-backup/backup';
 import {
   BackupFilePicker,
   type PickedBackupFile,
@@ -12,9 +15,13 @@ import { router } from 'expo-router';
 import { type ReactNode, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { v2 } from '@polycentric/react-native';
 
-/** Indicates a stage in the check backup flow. */
-type CheckStage = 'input' | 'success' | 'failure';
+/** State for the current stage in the check backup flow */
+type CheckState =
+  | { stage: 'input' }
+  | { stage: 'success' }
+  | { stage: 'failure'; message?: string };
 
 /**
  * Whether `backupData` is a backup that could restore `identityKey`.
@@ -22,11 +29,10 @@ type CheckStage = 'input' | 'success' | 'failure';
 function matchesBackup(
   client: PolycentricClient,
   identityKey: string | undefined,
-  backupData: string,
+  backup: v2.IdentityBackup,
 ): boolean {
   if (!identityKey) return false;
 
-  const backup = decodeIdentityBackup(backupData);
   if (!backup?.recoveryKey) return false;
   if (backup.identityKey !== identityKey) return false;
 
@@ -38,6 +44,31 @@ function matchesBackup(
   );
 }
 
+/** Derive the new state from the picked file */
+function checkBackup(
+  client: PolycentricClient,
+  identityKey: string | undefined,
+  backupContents: string,
+): CheckState {
+  const backup = decodeIdentityBackup(backupContents);
+  if (!backup) return { stage: 'failure' };
+
+  const matches = matchesBackup(client, identityKey, backup);
+
+  if (matches) {
+    return { stage: 'success' };
+  }
+
+  if (identityKey === backup.identityKey && isStaleBackup(client, backup)) {
+    return {
+      stage: 'failure',
+      message: 'This backup file is outdated and should not be used.',
+    };
+  } else {
+    return { stage: 'failure' };
+  }
+}
+
 /**
  * Checks a backup file against the identity it claims to restore.
  */
@@ -47,36 +78,29 @@ export default function CheckBackupScreen() {
 
   const { client, currentIdentity } = usePolycentricContext();
 
-  const [stage, setStage] = useState<CheckStage>('input');
-  const [picked, setPicked] = useState<PickedBackupFile>();
+  const [state, setState] = useState<CheckState>({ stage: 'input' });
 
-  const onPress = () => {
-    if (stage !== 'input') return router.back();
-    if (!picked) return;
-
-    setStage(
-      matchesBackup(client, currentIdentity?.identityKey, picked.contents)
-        ? 'success'
-        : 'failure',
-    );
+  const onPicked = (file: PickedBackupFile) => {
+    setState(checkBackup(client, currentIdentity?.identityKey, file.contents));
   };
 
-  const buttonTitle = stage === 'input' ? 'Check' : 'Done';
-  const buttonDisabled = stage === 'input' && !picked;
+  const stage = state.stage;
+  const buttonTitle = stage === 'input' ? 'Cancel' : 'Done';
 
   let innerContent: ReactNode = null;
   if (stage === 'input') {
-    innerContent = <BackupFilePicker picked={picked} onPicked={setPicked} />;
+    innerContent = <BackupFilePicker onPicked={onPicked} />;
   } else {
+    let message: string;
+    if (stage === 'success') {
+      message = 'This backup file can restore your identity.';
+    } else {
+      message =
+        state.message ?? 'This backup file is unable to restore your identity.';
+    }
+
     innerContent = (
-      <BackupStatus
-        successful={stage === 'success'}
-        message={
-          stage === 'success'
-            ? 'This backup file can restore your identity.'
-            : 'This backup file is unable to restore your identity.'
-        }
-      />
+      <BackupStatus successful={stage === 'success'} message={message} />
     );
   }
 
@@ -119,8 +143,7 @@ export default function CheckBackupScreen() {
                 title={buttonTitle}
                 variant="tertiary"
                 fullWidth
-                disabled={buttonDisabled}
-                onPress={onPress}
+                onPress={() => router.back()}
               />
             </View>
           </ScrollView>

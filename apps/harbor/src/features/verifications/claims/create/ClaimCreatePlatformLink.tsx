@@ -56,6 +56,7 @@ export function ClaimCreatePlatformLink({
         keyboardType="url"
         autoCapitalize="none"
         autoCorrect={false}
+        disabled={verify.isPending}
       />
 
       {/* Loop-back link the user adds to their profile. */}

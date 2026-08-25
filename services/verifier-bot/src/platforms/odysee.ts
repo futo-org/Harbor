@@ -8,7 +8,19 @@ import {
 } from '../verifier.js';
 
 class OdyseeTextVerifier extends TextVerifier {
-  protected testDataVerification: TextVerifierVerificationTestData[] = [];
+  protected testDataVerification: TextVerifierVerificationTestData[] = [
+    // Both claim types resolve the same channel, one by name, one by claim id.
+    {
+      expectedText: 'The only Kino Youtuber.',
+      claimFields: <ClaimField[]>[{ key: 0, value: '@TheKinoCorner' }],
+    },
+    {
+      expectedText: 'The only Kino Youtuber.',
+      claimFields: <ClaimField[]>[
+        { key: 1, value: '273163260bceb95fa98d97d33d377c55395e329a' },
+      ],
+    },
+  ];
   protected testDataGetClaimFields: TextVerifierGetClaimFieldsTestData[] = [
     {
       url: 'https://odysee.com/@TheKinoCorner:2',

@@ -50,6 +50,8 @@ message Identity {
   repeated PublicKey signing_keys = 2;
   repeated RevocationBound revocation_bounds = 3;
   ServerList servers = 4;
+  optional PublicKey recovery_key = 5;
+  optional bytes recovery_signature = 6;
 }
 
 message RevocationBound {

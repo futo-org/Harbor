@@ -43,12 +43,12 @@ release-android-apk:
     - crane auth login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
     - crane tag $CI_REGISTRY_IMAGE/$IMAGE:$CI_COMMIT_SHA $CI_COMMIT_TAG
 
-release-tag-app-image:
+release-tag-web-image:
   extends: .release-tag-image
   variables:
-    IMAGE: app
+    IMAGE: web
   needs:
-    - job: app-web-image
+    - job: web-image
       artifacts: false
 
 release-tag-server-image:
@@ -160,7 +160,7 @@ release:
       artifacts: false
     - job: release-publish-npm
       artifacts: false
-    - job: release-tag-app-image
+    - job: release-tag-web-image
       artifacts: false
     - job: release-tag-server-image
       artifacts: false

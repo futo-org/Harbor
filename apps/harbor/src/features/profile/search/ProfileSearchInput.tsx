@@ -49,6 +49,7 @@ export function ProfileSearchInput({
           onChangeText={setQuery}
           placeholder={placeholder}
           editable={!disabled}
+          disabled={disabled}
           autoFocus={autoFocus}
           autoCapitalize="none"
           autoCorrect={false}
@@ -145,7 +146,8 @@ function SuggestionRow({
   return (
     <ProfileRow
       identity={suggestion.identity}
-      onPress={disabled ? undefined : onPress}
+      onPress={onPress}
+      disabled={disabled}
       // Followed profiles read from cache like every other list; alias/id
       // matches are usually strangers, so fetch their profile to show a name.
       fetchMode={

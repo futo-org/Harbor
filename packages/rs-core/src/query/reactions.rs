@@ -55,7 +55,11 @@ fn retain_newest_reaction_per_identity(bundles: &mut Vec<EventBundle>) {
 }
 
 /// Merge event bundles as normal, except we also remove reactions that are superseded by newer ones.
-fn merge_reaction_responses(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+fn merge_reaction_responses(
+    values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
+    client: &Arc<Mutex<PolycentricClient>>,
+) -> Vec<u8> {
     let mut merged = GetReactionsResponse::default();
 
     for v in values {

@@ -23,6 +23,7 @@ export function ProfileRow({
   fetchMode,
   fallbackName,
   fallbackAlias,
+  disabled,
   style,
 }: {
   identity: string;
@@ -33,6 +34,7 @@ export function ProfileRow({
   /** Shown when the profile has no cached name/alias yet. */
   fallbackName?: string | null;
   fallbackAlias?: string | null;
+  disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const { theme } = useTheme();
@@ -43,10 +45,12 @@ export function ProfileRow({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={({ hovered, pressed }) => [
         (hovered || pressed) && {
           backgroundColor: theme.palette.neutral_25,
         },
+        disabled && { opacity: 0.5 },
       ]}
     >
       <View

@@ -75,6 +75,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               placeholder="Display name"
               maxLength={MAX_NAME_LENGTH}
               autoFocus
+              disabled={edit.saving}
             />
             <CharCount count={edit.nameDraft.length} max={MAX_NAME_LENGTH} />
           </View>
@@ -89,6 +90,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               placeholder="Bio"
               maxLength={MAX_BIO_LENGTH}
               numberOfLines={3}
+              disabled={edit.saving}
             />
             <CharCount
               count={edit.descriptionDraft.length}
@@ -117,6 +119,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
+              disabled={edit.saving}
             />
             {edit.aliasError ? (
               <Text variant="small" color="negative_500">
@@ -124,7 +127,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               </Text>
             ) : null}
             <Link
-              href="https://join.harbor.social/docs/setting-up-an-alias"
+              href="https://join.harbor.social/docs/guides/setting-up-an-alias"
               accessibilityRole="link"
             >
               <Text variant="small" color="neutral_500">

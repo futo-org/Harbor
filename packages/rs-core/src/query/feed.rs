@@ -1,7 +1,7 @@
 //! Feed-service RPCs surfaced as observables via `Query`.
 
 use std::cmp::Reverse;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
@@ -22,12 +22,12 @@ use crate::{
         event::{
             key::EventKey,
             merge::{
-                EventBundleResponse, EventDedupKey, bundle_created_at, bundle_upvote_count,
-                copy_hints, event_dedup_key, merge_bundle_response, merge_event_bundles,
+                EventBundleResponse, EventDedupKey, bundle_upvote_count, copy_hints, decode_event,
+                dedup_key, event_dedup_key, merge_bundle_response, merge_event_bundles,
                 merge_event_hints,
             },
         },
-        pagination::{FakeCursorToken, merge_page_info, pagination_horizon, prepare_page_info},
+        pagination::{FakeCursorToken, merge_page_info, prepare_page_info},
         validation::{retain_validated_bundles, retain_validated_hints},
     },
 };
@@ -39,6 +39,8 @@ pub struct GetIdentityFeedArgs {
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
     pub omit_labels: Vec<String>,
+    /// Posts the emission may carry; the rest is held back.
+    pub window_size: Option<i32>,
 }
 
 /// Order a sortable feed is returned in. `Top` ranks by reaction count,
@@ -68,6 +70,8 @@ pub struct GetFollowingFeedArgs {
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
     pub omit_labels: Vec<String>,
+    /// Posts the emission may carry; the rest is held back.
+    pub window_size: Option<i32>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -78,6 +82,8 @@ pub struct GetExploreFeedArgs {
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
     pub omit_labels: Vec<String>,
+    /// Posts the emission may carry; the rest is held back.
+    pub window_size: Option<i32>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -97,6 +103,8 @@ pub struct GetAttributionFeedArgs {
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
     pub omit_labels: Vec<String>,
+    /// Posts the emission may carry; the rest is held back.
+    pub window_size: Option<i32>,
 }
 
 /// The key servers ordered a feed by. Merging has to order pages by the
@@ -112,10 +120,10 @@ enum FeedOrder {
 const FEED_GRAVITY: f64 = 1.8;
 
 impl FeedOrder {
-    fn key(self, bundle: &EventBundle, now_ms: u64) -> Option<u64> {
+    fn key(self, bundle: &EventBundle, created_at: Option<u64>, now_ms: u64) -> Option<u64> {
         match self {
-            Self::CreatedAt => bundle_created_at(bundle),
-            Self::Upvotes => Some(decayed_upvote_key(bundle, now_ms)),
+            Self::CreatedAt => created_at,
+            Self::Upvotes => Some(decayed_upvote_key(bundle, created_at, now_ms)),
         }
     }
 }
@@ -123,9 +131,9 @@ impl FeedOrder {
 /// The score servers rank top feeds by: `count / (hours + 2) ^ gravity`
 /// (the server's `reaction_count_decay`). `to_bits` preserves the order
 /// of non-negative floats.
-fn decayed_upvote_key(bundle: &EventBundle, now_ms: u64) -> u64 {
+fn decayed_upvote_key(bundle: &EventBundle, created_at: Option<u64>, now_ms: u64) -> u64 {
     let count = bundle_upvote_count(bundle) as f64;
-    let age_ms = bundle_created_at(bundle).map_or(0, |created| now_ms.saturating_sub(created));
+    let age_ms = created_at.map_or(0, |created| now_ms.saturating_sub(created));
     let hours = age_ms as f64 / 3_600_000.0;
     (count / (hours + 2.0).powf(FEED_GRAVITY)).to_bits()
 }
@@ -153,82 +161,52 @@ impl From<FeedSort> for FeedOrder {
 }
 
 /// Merge function for every feed-RPC observable
+#[allow(clippy::type_complexity)] // It is `MergeFn`'s shape, unboxed.
 fn validated_feed_merge(
     order: FeedOrder,
-) -> impl Fn(&[Vec<u8>], &Arc<Mutex<PolycentricClient>>) -> Vec<u8> + Send + Sync + 'static {
-    move |values, client| do_feed_merge(values, client, true, order)
+    window_size: Option<i32>,
+) -> impl Fn(&[Vec<u8>], Option<&Vec<u8>>, &Arc<Mutex<PolycentricClient>>) -> Vec<u8>
++ Send
++ Sync
++ 'static {
+    move |values, previous, client| {
+        do_feed_merge(values, previous, client, true, order, window_size)
+    }
 }
 
 /// TODO: remove.
 /// currently only used in tests.
 #[allow(dead_code)]
-fn merge_feed_responses(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
-    do_feed_merge(values, client, false, FeedOrder::CreatedAt)
+fn merge_feed_responses(
+    values: &[Vec<u8>],
+    previous: Option<&Vec<u8>>,
+    client: &Arc<Mutex<PolycentricClient>>,
+) -> Vec<u8> {
+    do_feed_merge(values, previous, client, false, FeedOrder::CreatedAt, None)
 }
 
 fn do_feed_merge(
     values: &[Vec<u8>],
+    previous: Option<&Vec<u8>>,
     client: &Arc<Mutex<PolycentricClient>>,
     validate: bool,
     order: FeedOrder,
+    window_size: Option<i32>,
 ) -> Vec<u8> {
     // Every bundle decays against the same moment.
     let now_ms = now_ms();
 
     let mut response = GetFeedResponse::default();
-    let mut oldest_by_server: BTreeMap<String, u64> = BTreeMap::new();
     for v in values {
         if let Ok(incoming) = GetFeedResponse::decode(v.as_slice()) {
-            let server = incoming
-                .page_info
-                .as_ref()
-                .and_then(|i| FakeCursorToken::decode(&i.end_cursor).ok())
-                .and_then(|t| t.sole_server().map(str::to_string));
-            let oldest = incoming
-                .event_bundles
-                .iter()
-                .filter_map(|bundle| order.key(bundle, now_ms))
-                .min();
-            if let (Some(server), Some(oldest)) = (server, oldest) {
-                oldest_by_server
-                    .entry(server)
-                    .and_modify(|o| *o = (*o).min(oldest))
-                    .or_insert(oldest);
-            }
-
             response.event_bundles.extend(incoming.event_bundles);
             response.event_hints.extend(incoming.event_hints);
             response.page_info = merge_page_info(response.page_info, incoming.page_info);
         }
     }
 
-    // Freeze ranked ordering keys at the first-seen count so rows don't
-    // move when a later page carries a newer count. Re-encoded into the
-    // blob, so it sticks until the next refresh.
-    let mut frozen: HashMap<EventDedupKey, Option<i32>> = HashMap::new();
-    if matches!(order, FeedOrder::Upvotes) {
-        for bundle in &response.event_bundles {
-            if let Some(key) = event_dedup_key(bundle) {
-                frozen
-                    .entry(key)
-                    .or_insert_with(|| bundle.meta.as_ref().and_then(|m| m.upvote_count));
-            }
-        }
-    }
-
     merge_event_bundles(&mut response.event_bundles);
     merge_event_hints(&mut response.event_hints);
-
-    if !frozen.is_empty() {
-        for bundle in &mut response.event_bundles {
-            let Some(count) = event_dedup_key(bundle).and_then(|k| frozen.get(&k).copied()) else {
-                continue;
-            };
-            if let Some(meta) = bundle.meta.as_mut() {
-                meta.upvote_count = count;
-            }
-        }
-    }
 
     {
         let c = client.lock().unwrap();
@@ -242,34 +220,57 @@ fn do_feed_merge(
         retain_unblocked_hints(&blocked, &mut response.event_hints);
     }
 
-    // Highest key first; keyless events sort last. created_at and the
-    // event key break ties so input order can't affect the result.
+    // Rank only what nobody has seen; anything else moves the feed.
+    let anchor = anchored_positions(previous);
+    let anchored = anchor.len();
+
+    // Anchored first, then rank; created_at and the key break ties. One
+    // decode per bundle: the whole key comes from the same event.
     response.event_bundles.sort_by_cached_key(|bundle| {
+        let event = decode_event(bundle);
+        let key = event.as_ref().and_then(dedup_key);
+        let created_at = event.map(|event| event.created_at);
         (
-            Reverse(order.key(bundle, now_ms)),
-            Reverse(bundle_created_at(bundle)),
-            event_dedup_key(bundle),
+            key.as_ref()
+                .and_then(|key| anchor.get(key).copied())
+                .unwrap_or(usize::MAX),
+            Reverse(order.key(bundle, created_at, now_ms)),
+            Reverse(created_at),
+            key,
         )
     });
 
-    // Hold back items that servers with more data haven't paged past yet,
-    // so later pages never insert above already-emitted items.
-    let horizon = response
-        .page_info
-        .as_ref()
-        .and_then(|i| pagination_horizon(&oldest_by_server, &i.end_cursor));
-    if let Some(horizon) = horizon {
-        response
-            .event_bundles
-            .retain(|b| order.key(b, now_ms).is_some_and(|k| k >= horizon));
+    // Held-back posts stay in the cache and rerank until they are reached.
+    let keep = (window_size.unwrap_or(i32::MAX).max(0) as usize).max(anchored);
+    if response.event_bundles.len() > keep {
+        response.event_bundles.truncate(keep);
+        // Held back is still more to read.
+        response.page_info.get_or_insert_default().has_next_page = true;
     }
 
     response.encode_to_vec()
 }
 
+/// Where each post sat in the last emission.
+fn anchored_positions(previous: Option<&Vec<u8>>) -> HashMap<EventDedupKey, usize> {
+    let Some(Ok(previous)) = previous.map(|p| GetFeedResponse::decode(p.as_slice())) else {
+        return HashMap::new();
+    };
+    previous
+        .event_bundles
+        .iter()
+        .enumerate()
+        .filter_map(|(position, bundle)| Some((event_dedup_key(bundle)?, position)))
+        .collect()
+}
+
 /// Merge function for the thread RPC. Blocked posts take their descending
 /// replies with them, as they do server-side.
-fn merge_thread_responses(values: &[Vec<u8>], client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+fn merge_thread_responses(
+    values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
+    client: &Arc<Mutex<PolycentricClient>>,
+) -> Vec<u8> {
     let mut response = merge_bundle_response::<GetPostThreadResponse>(values, client);
 
     let blocked = client.lock().unwrap().blocked_identities();
@@ -314,6 +315,7 @@ pub fn get_identity_feed(
         limit,
         backward_token,
         forward_token,
+        window_size,
         omit_labels,
     } = args;
     let client = query_client.client().clone();
@@ -364,7 +366,7 @@ pub fn get_identity_feed(
     Arc::new(query_client.fetch(
         query_key,
         query_fn,
-        validated_feed_merge(FeedOrder::CreatedAt),
+        validated_feed_merge(FeedOrder::CreatedAt, window_size),
         opts,
     ))
 }
@@ -381,6 +383,7 @@ pub fn get_attribution_feed(
         limit,
         backward_token,
         forward_token,
+        window_size,
         omit_labels,
     } = args;
     let client = query_client.client().clone();
@@ -434,7 +437,7 @@ pub fn get_attribution_feed(
     Arc::new(query_client.fetch(
         query_key,
         query_fn,
-        validated_feed_merge(FeedOrder::CreatedAt),
+        validated_feed_merge(FeedOrder::CreatedAt, window_size),
         opts,
     ))
 }
@@ -452,6 +455,7 @@ pub fn get_following_feed(
         limit,
         backward_token,
         forward_token,
+        window_size,
         omit_labels,
     } = args;
     let client = query_client.client().clone();
@@ -501,7 +505,12 @@ pub fn get_following_feed(
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge(order), opts))
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        validated_feed_merge(order, window_size),
+        opts,
+    ))
 }
 
 /// Returns posts the follower or the identities they follow created, reacted
@@ -519,6 +528,7 @@ pub fn get_recommended_feed(
         limit,
         backward_token,
         forward_token,
+        window_size,
         omit_labels,
     } = args;
     let client = query_client.client().clone();
@@ -568,7 +578,12 @@ pub fn get_recommended_feed(
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge(order), opts))
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        validated_feed_merge(order, window_size),
+        opts,
+    ))
 }
 
 /// Server-curated explore feed of posts relevant to `identity`.
@@ -584,6 +599,7 @@ pub fn get_explore_feed(
         limit,
         backward_token,
         forward_token,
+        window_size,
         omit_labels,
     } = args;
     let client = query_client.client().clone();
@@ -633,7 +649,12 @@ pub fn get_explore_feed(
         }
     };
 
-    Arc::new(query_client.fetch(query_key, query_fn, validated_feed_merge(order), opts))
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        validated_feed_merge(order, window_size),
+        opts,
+    ))
 }
 
 /// Fetch a parent post and its direct replies. `event_key` identifies
@@ -681,7 +702,7 @@ pub fn get_post_thread(
 
 #[cfg(test)]
 mod tests {
-    use crate::query::event::merge::event_dedup_key;
+    use crate::query::event::merge::{bundle_created_at, event_dedup_key};
 
     use super::*;
     use polycentric_common::models::protos_v2::{
@@ -783,7 +804,7 @@ mod tests {
         let prev = encode_response(vec![make_bundle(2, "a", 1, vec![1], 1)], vec![]);
         let new = encode_response(vec![make_bundle(2, "b", 1, vec![2], 1)], vec![]);
 
-        let merged = merge_feed_responses(&[prev, new], &test_client());
+        let merged = merge_feed_responses(&[prev, new], None, &test_client());
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 2);
     }
@@ -797,7 +818,7 @@ mod tests {
             vec![],
         );
 
-        let merged = merge_feed_responses(&[prev, new], &test_client());
+        let merged = merge_feed_responses(&[prev, new], None, &test_client());
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 2);
         let seqs: Vec<u64> = decoded
@@ -814,7 +835,7 @@ mod tests {
         let prev = encode_response(vec![], vec![dup.clone()]);
         let new = encode_response(vec![], vec![dup.clone()]);
 
-        let merged = merge_feed_responses(&[prev, new], &test_client());
+        let merged = merge_feed_responses(&[prev, new], None, &test_client());
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_hints.len(), 1);
     }
@@ -822,7 +843,7 @@ mod tests {
     #[test]
     fn merge_handles_no_prior_value() {
         let new = encode_response(vec![make_bundle(2, "a", 1, vec![1], 1)], vec![]);
-        let merged = merge_feed_responses(&[new], &test_client());
+        let merged = merge_feed_responses(&[new], None, &test_client());
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 1);
     }
@@ -840,7 +861,7 @@ mod tests {
             meta: None,
         };
         let new = encode_response(vec![parseable, unparseable.clone(), unparseable], vec![]);
-        let merged = merge_feed_responses(&[new], &test_client());
+        let merged = merge_feed_responses(&[new], None, &test_client());
         // Parseable + both unparseables retained (no dedup key to compare).
         let decoded = GetFeedResponse::decode(merged.as_slice()).unwrap();
         assert_eq!(decoded.event_bundles.len(), 3);
@@ -866,6 +887,22 @@ mod tests {
             .event_bundles
             .iter()
             .filter_map(bundle_created_at)
+            .collect()
+    }
+
+    /// Authoring identity of every bundle, in emitted order.
+    fn ids(merged: &[u8]) -> Vec<String> {
+        GetFeedResponse::decode(merged)
+            .unwrap()
+            .event_bundles
+            .iter()
+            .filter_map(|bundle| {
+                let signed = bundle.signed_event.as_ref()?;
+                Event::decode(signed.event_bytes.as_slice())
+                    .ok()?
+                    .key
+                    .map(|key| key.identity)
+            })
             .collect()
     }
 
@@ -900,22 +937,30 @@ mod tests {
         let response = encode_response(bundles, vec![]);
 
         let by_top = do_feed_merge(
-            &[response.clone()],
+            std::slice::from_ref(&response),
+            None,
             &test_client(),
             false,
             FeedOrder::Upvotes,
+            None,
         );
         assert_eq!(upvotes(&by_top), vec![9, 4, 0]);
         assert_eq!(created_ats(&by_top), vec![10, 50, 99]);
 
-        let by_age = do_feed_merge(&[response], &test_client(), false, FeedOrder::CreatedAt);
+        let by_age = do_feed_merge(
+            &[response],
+            None,
+            &test_client(),
+            false,
+            FeedOrder::CreatedAt,
+            None,
+        );
         assert_eq!(created_ats(&by_age), vec![99, 50, 10]);
     }
 
     #[test]
-    fn top_order_freezes_a_reserved_posts_count() {
-        // A later page re-serves Y with a higher count; the frozen key
-        // keeps it below X.
+    fn a_later_page_updates_a_count_without_moving_the_row() {
+        // Y comes back with a count that outranks X.
         let page1 = encode_response(
             vec![
                 make_bundle_voted("x", 10, Some(5)),
@@ -925,9 +970,185 @@ mod tests {
         );
         let page2 = encode_response(vec![make_bundle_voted("y", 20, Some(9))], vec![]);
 
-        let merged = do_feed_merge(&[page1, page2], &test_client(), false, FeedOrder::Upvotes);
-        assert_eq!(upvotes(&merged), vec![5, 4]);
-        assert_eq!(created_ats(&merged), vec![10, 20]);
+        let client = test_client();
+        let first = do_feed_merge(
+            std::slice::from_ref(&page1),
+            None,
+            &client,
+            false,
+            FeedOrder::Upvotes,
+            None,
+        );
+        assert_eq!(ids(&first), ["x", "y"]);
+
+        let pages = [page1, page2];
+        let second = do_feed_merge(
+            &pages,
+            Some(&first),
+            &client,
+            false,
+            FeedOrder::Upvotes,
+            None,
+        );
+        assert_eq!(ids(&second), ["x", "y"]);
+        assert_eq!(upvotes(&second), vec![5, 9]);
+
+        // Unanchored, the fresher count would have taken the lead.
+        let unanchored = do_feed_merge(&pages, None, &client, false, FeedOrder::Upvotes, None);
+        assert_eq!(ids(&unanchored), ["y", "x"]);
+    }
+
+    #[test]
+    fn paging_never_moves_a_row_the_reader_already_has() {
+        let now = now_ms();
+        let hour = 3_600_000;
+        let client = test_client();
+
+        let a = encode_response(
+            vec![
+                make_bundle_voted("a-hot", now - 2 * hour, Some(50)),
+                make_bundle_voted("a-mid", now - 10 * hour, Some(60)),
+                make_bundle_voted("a-low", now - 30 * hour, Some(80)),
+            ],
+            vec![],
+        );
+        let first = do_feed_merge(
+            std::slice::from_ref(&a),
+            None,
+            &client,
+            false,
+            FeedOrder::Upvotes,
+            None,
+        );
+        assert_eq!(ids(&first), ["a-hot", "a-mid", "a-low"]);
+
+        // A second server answers on the next fan-out, outranking everything.
+        let b = encode_response(
+            vec![make_bundle_voted("b-hot", now - hour, Some(500))],
+            vec![],
+        );
+        let pages = [a, b];
+        let unanchored = do_feed_merge(&pages, None, &client, false, FeedOrder::Upvotes, None);
+        let second = do_feed_merge(
+            &pages,
+            Some(&first),
+            &client,
+            false,
+            FeedOrder::Upvotes,
+            None,
+        );
+
+        assert_eq!(ids(&unanchored), ["b-hot", "a-hot", "a-mid", "a-low"]);
+        assert_eq!(ids(&second), ["a-hot", "a-mid", "a-low", "b-hot"]);
+    }
+
+    #[test]
+    fn only_what_the_client_asked_for_is_emitted() {
+        let client = test_client();
+        let page = encode_response(
+            vec![
+                make_bundle_voted("first", 30, Some(9)),
+                make_bundle_voted("second", 20, Some(8)),
+                make_bundle_voted("third", 10, Some(7)),
+            ],
+            vec![],
+        );
+
+        let merged = do_feed_merge(
+            std::slice::from_ref(&page),
+            None,
+            &client,
+            false,
+            FeedOrder::Upvotes,
+            Some(2),
+        );
+
+        assert_eq!(ids(&merged), ["first", "second"]);
+        // Rows held back are more to read, whatever the servers' cursors say.
+        let page_info = GetFeedResponse::decode(merged.as_slice())
+            .unwrap()
+            .page_info
+            .unwrap();
+        assert!(page_info.has_next_page);
+    }
+
+    #[test]
+    fn a_held_back_row_reranks_until_it_is_reached() {
+        // A late post outranks everything unseen, so it leads the next
+        // window rather than trailing the pool it arrived in.
+        let client = test_client();
+        let a = encode_response(
+            vec![
+                make_bundle_voted("shown", 30, Some(9)),
+                make_bundle_voted("waiting", 20, Some(3)),
+            ],
+            vec![],
+        );
+        let first = do_feed_merge(
+            std::slice::from_ref(&a),
+            None,
+            &client,
+            false,
+            FeedOrder::Upvotes,
+            Some(1),
+        );
+        assert_eq!(ids(&first), ["shown"]);
+
+        let b = encode_response(vec![make_bundle_voted("late", 10, Some(8))], vec![]);
+        let second = do_feed_merge(
+            &[a, b],
+            Some(&first),
+            &client,
+            false,
+            FeedOrder::Upvotes,
+            Some(3),
+        );
+
+        assert_eq!(ids(&second), ["shown", "late", "waiting"]);
+    }
+
+    #[test]
+    fn a_row_the_merge_drops_does_not_come_back() {
+        // Absence means blocked, deleted or unvalidated.
+        let first = encode_response(
+            vec![
+                make_bundle_voted("gone", 10, Some(5)),
+                make_bundle_voted("kept", 20, Some(4)),
+            ],
+            vec![],
+        );
+        let page = encode_response(vec![make_bundle_voted("kept", 20, Some(4))], vec![]);
+
+        let merged = do_feed_merge(
+            std::slice::from_ref(&page),
+            Some(&first),
+            &test_client(),
+            false,
+            FeedOrder::Upvotes,
+            None,
+        );
+        assert_eq!(ids(&merged), ["kept"]);
+    }
+
+    #[test]
+    fn a_refresh_ranks_from_scratch() {
+        // Invalidation drops the anchor, so a refresh is free to reorder.
+        let merged = encode_response(
+            vec![
+                make_bundle_voted("low", 10, Some(1)),
+                make_bundle_voted("high", 10, Some(9)),
+            ],
+            vec![],
+        );
+        let merged = do_feed_merge(
+            &[merged],
+            None,
+            &test_client(),
+            false,
+            FeedOrder::Upvotes,
+            None,
+        );
+        assert_eq!(ids(&merged), ["high", "low"]);
     }
 
     #[test]
@@ -941,7 +1162,14 @@ mod tests {
         ];
         let response = encode_response(bundles, vec![]);
 
-        let merged = do_feed_merge(&[response], &test_client(), false, FeedOrder::Upvotes);
+        let merged = do_feed_merge(
+            &[response],
+            None,
+            &test_client(),
+            false,
+            FeedOrder::Upvotes,
+            None,
+        );
         assert_eq!(upvotes(&merged), vec![1, 2]);
     }
 
@@ -953,11 +1181,20 @@ mod tests {
 
         let ab = do_feed_merge(
             &[a.clone(), b.clone()],
+            None,
             &test_client(),
             false,
             FeedOrder::Upvotes,
+            None,
         );
-        let ba = do_feed_merge(&[b, a], &test_client(), false, FeedOrder::Upvotes);
+        let ba = do_feed_merge(
+            &[b, a],
+            None,
+            &test_client(),
+            false,
+            FeedOrder::Upvotes,
+            None,
+        );
         assert_eq!(ab, ba);
         assert_eq!(created_ats(&ab), vec![20, 10]);
     }
@@ -972,9 +1209,9 @@ mod tests {
     }
 
     #[test]
-    fn holds_back_items_below_the_pagination_horizon() {
-        // server-a has more data but has only paged down to t=90;
-        // server-b is exhausted with much older items.
+    fn a_still_paging_server_no_longer_holds_back_another_servers_page() {
+        // server-a has more data but has only paged to t=90. The anchor
+        // stops b's older posts displacing anything, so they can all emit.
         let a = paged_response(
             "server-a",
             vec![
@@ -992,8 +1229,8 @@ mod tests {
             false,
         );
 
-        let merged = merge_feed_responses(&[a, b], &test_client());
-        assert_eq!(created_ats(&merged), vec![100, 90]);
+        let merged = merge_feed_responses(&[a, b], None, &test_client());
+        assert_eq!(created_ats(&merged), vec![100, 90, 50, 40]);
     }
 
     #[test]
@@ -1015,7 +1252,7 @@ mod tests {
             false,
         );
 
-        let merged = merge_feed_responses(&[a, b], &test_client());
+        let merged = merge_feed_responses(&[a, b], None, &test_client());
         assert_eq!(created_ats(&merged), vec![100, 90, 50, 40]);
     }
 
@@ -1040,7 +1277,7 @@ mod tests {
             true,
         );
 
-        let merged = merge_feed_responses(&[page1, page2], &test_client());
+        let merged = merge_feed_responses(&[page1, page2], None, &test_client());
         assert_eq!(created_ats(&merged), vec![100, 90, 80, 70]);
     }
 }

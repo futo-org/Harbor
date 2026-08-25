@@ -7,9 +7,9 @@ const MIN_REVEAL = 8;
 const MAX_ROUNDS = 3;
 
 /**
- * Extend a feed until at least `MIN_REVEAL` new items surface. The
- * multi-server pagination horizon can make a single extend reveal only
- * an item or two, so a load-more chains up to `MAX_ROUNDS` fan-outs.
+ * Extend a feed until at least `MIN_REVEAL` new items surface. A server
+ * page can be short enough to leave a load-more looking unanswered, so it
+ * chains up to `MAX_ROUNDS` fan-outs.
  */
 export function useChainedExtend(
   query: UseQueryResult,
