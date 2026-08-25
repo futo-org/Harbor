@@ -1,9 +1,8 @@
 import {
   decodeFeedItems,
-  decodeLabelsBundle,
+  labelMapFromSets,
   decodePostBundle,
   type PostData,
-  type PostLabel,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
   isUnderQueryKey,
@@ -17,7 +16,12 @@ import {
   type PostEntry,
   type PostOverlay,
 } from './overlayTypes';
-import { FeedSort, v2 } from '@polycentric/react-native';
+import {
+  FeedSort,
+  labelsFromFeedResponse,
+  labelsFromThreadResponse,
+  v2,
+} from '@polycentric/react-native';
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import {
@@ -189,7 +193,10 @@ function decodeFeedResponse(
   data: ArrayBuffer,
 ): [PostData[], v2.PageInfo | undefined] {
   const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));
-  return [decodeFeedItems(response), response.pageInfo];
+  return [
+    decodeFeedItems(response, labelMapFromSets(labelsFromFeedResponse(data))),
+    response.pageInfo,
+  ];
 }
 
 function decodeThreadResponse(
@@ -197,18 +204,7 @@ function decodeThreadResponse(
 ): [PostData[], v2.PageInfo | undefined] {
   const response = v2.GetPostThreadResponse.fromBinary(new Uint8Array(data));
 
-  const labelMap = new Map<string, PostLabel[]>();
-  for (const hint of response.eventHints) {
-    if (!hint.eventBundle) continue;
-    const labels = decodeLabelsBundle(hint.eventBundle);
-    if (labels) {
-      const existing = labelMap.get(labels.targetPostId);
-      labelMap.set(
-        labels.targetPostId,
-        existing ? [...existing, ...labels.labels] : labels.labels,
-      );
-    }
-  }
+  const labelMap = labelMapFromSets(labelsFromThreadResponse(data));
 
   const decoded: PostData[] = [];
   for (const bundle of response.thread) {

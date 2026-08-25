@@ -14,6 +14,9 @@ jest.mock('@polycentric/react-native', () => ({
   QueryStatus: { Loading: 'loading' },
   UpdateMode: { Merge: 'merge' },
   SearchPostsSort: { Default: 'default', Latest: 'latest' },
+  // Mocked responses don't carry event hints, so we should return
+  // an empty set of labels
+  labelsFromSearchResponse: () => [],
 }));
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({

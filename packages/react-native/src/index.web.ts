@@ -9,6 +9,12 @@ export {
   FeedSort,
   FetchMode,
   isModerationLabel,
+  labelsChanged,
+  labelsFromFeedResponse,
+  labelsFromNotificationsResponse,
+  labelsFromSearchResponse,
+  labelsFromThreadResponse,
+  mergeLabels,
   moderationLabels,
   PolycentricCore,
   Query,
@@ -21,6 +27,8 @@ export type {
   EventKey,
   QueryResultFfi,
   QueryOpts,
+  LabelSet,
+  PostLabel,
 } from '@polycentric/rs-core-uniffi-web';
 
 export * from '@polycentric/js-core';

@@ -1,5 +1,6 @@
 import {
   decodeFeedItems,
+  labelMapFromSets,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
@@ -11,6 +12,7 @@ import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import {
   Query,
   QueryStatus,
+  labelsFromSearchResponse,
   SearchPostsSort,
   UpdateMode,
   v2,
@@ -52,7 +54,13 @@ function decodeSearchPostsResponse(
     eventHints: response.eventHints,
     pageInfo: response.pageInfo,
   });
-  return [decodeFeedItems(feedShaped), response.pageInfo];
+  return [
+    decodeFeedItems(
+      feedShaped,
+      labelMapFromSets(labelsFromSearchResponse(data)),
+    ),
+    response.pageInfo,
+  ];
 }
 
 /**

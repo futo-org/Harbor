@@ -11,6 +11,12 @@ export {
   FeedSort,
   FetchMode,
   isModerationLabel,
+  labelsChanged,
+  labelsFromFeedResponse,
+  labelsFromNotificationsResponse,
+  labelsFromSearchResponse,
+  labelsFromThreadResponse,
+  mergeLabels,
   PolycentricCore,
   Query,
   QueryStatus,
@@ -28,6 +34,8 @@ export type {
   QueryObserver,
   QueryResultFfi,
   QueryOpts,
+  LabelSet,
+  PostLabel,
 } from './generated/rn/polycentric_core';
 
 export {
