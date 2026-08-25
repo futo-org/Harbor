@@ -17,12 +17,13 @@ use crate::service::{
 use ::entity::{content_model as ContentModel, event_model as EventModel};
 use chrono::{DateTime, Utc};
 use common_kafka::FutureRecord;
+use std::collections::HashMap;
 use polycentric_common::models::{collections, protos_v2::Blob};
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::{
     ActiveValue::{NotSet, Set},
-    TransactionTrait,
+    TransactionTrait, AccessMode,
 };
 use std::{collections::HashSet, time::Duration};
 use tonic::Status;
@@ -36,8 +37,9 @@ pub async fn handle(
     let mut errors: Vec<PutEventError> = Vec::new();
     let mut all_blobs = HashSet::<Blob>::new();
 
+    let mut banned_cache = HashMap::new();
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
-        match process_event(ctx, event_bundle).await {
+        match process_event(ctx, event_bundle, &mut banned_cache).await {
             Ok(blobs) => {
                 all_blobs.extend(blobs);
             }
@@ -77,6 +79,7 @@ pub async fn handle(
 async fn process_event(
     ctx: &ServiceContext,
     event_bundle: EventBundle,
+    banned_cache: &mut HashMap<Box<str>, bool>,
 ) -> Result<Vec<Blob>, Status> {
     let mut blobs = Vec::<Blob>::new();
 
@@ -97,6 +100,14 @@ async fn process_event(
     let key = event
         .key
         .ok_or_else(|| Status::invalid_argument("event missing key"))?;
+
+    // Early banned check based on the chache.
+    let is_banned = banned_cache.get(&*key.identity).copied();
+    match is_banned {
+        Some(true) => return Err(banned_error()),
+        Some(false) => { /* Ok to continue. */},
+        None => { /* Not in the cache yet, checked below once we start the transaction. */ },
+    }
 
     // Kafka partition/message key: the serialized protobuf event key.
     // Encoded here while `key` is whole — its fields are moved out below.
@@ -121,16 +132,17 @@ async fn process_event(
     })?;
 
     // Banned identities' events are refused outright.
-    let banned = IdentityRepository::is_banned(&txn, &key.identity)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = %e, "put_events ban check db error");
-            Status::internal("internal server error")
-        })?;
-    if banned {
-        return Err(Status::permission_denied(
-            "identity is banned on this server",
-        ));
+    if let None = is_banned {
+        let banned = IdentityRepository::is_banned(&txn, &key.identity)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, "put_events ban check db error");
+                Status::internal("internal server error")
+            })?;
+        banned_cache.insert(Box::from(&*key.identity), banned);
+        if banned {
+            return Err(banned_error());
+        }
     }
 
     // Authorize the signer against the target identity's chain.
@@ -293,6 +305,10 @@ async fn process_event(
     }
 
     Ok(blobs)
+}
+
+fn banned_error() -> Status {
+    Status::permission_denied("identity is banned on this server")
 }
 
 /// Check if the `event` is authorised to perform its mutation.
