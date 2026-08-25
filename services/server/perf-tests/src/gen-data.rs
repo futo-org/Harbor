@@ -47,6 +47,7 @@ async fn main() {
             "--amount" => next = 1,
             "--clients" => next = 2,
             "post" => return Some(EventKind::Post),
+            "delete" => return Some(EventKind::Delete),
             "profile" | "profile_update" | "profile-update" => return Some(EventKind::ProfileUpdate),
             arg => panic!("unexpect data to generate '{arg}'"),
         }
@@ -80,8 +81,8 @@ async fn main() {
 #[derive(Copy, Clone, Debug)]
 enum EventKind {
     Post,
-    /*
     Delete,
+    /*
     Follow,
     Block,
     Reaction,
@@ -103,6 +104,7 @@ async fn gen_data(address: String, kind: EventKind, amount: usize) {
     let client = Client::new(address).await;
     match kind {
         EventKind::Post => gen_post(client, amount).await,
+        EventKind::Delete => gen_delete(client, amount).await,
         EventKind::ProfileUpdate => gen_profile_update(client, amount).await,
     }
 }
@@ -134,6 +136,30 @@ async fn gen_post(mut client: Client, amount: usize) {
             current_timestamp(),
         );
         last = Some(client.get_last_event_key());
+
+        if client.pending.len() > MAX_EVENTS_PER_REQUEST {
+            client.submit_events().await
+        }
+    }
+    client.submit_events().await
+}
+
+async fn gen_delete(mut client: Client, amount: usize) {
+    for _ in 0..amount {
+        client.post(
+            Post {
+                text: random_string(10, 1000),
+                reply: None,
+                images: Vec::new(),
+                quote: None,
+                links: Vec::new(),
+                labels: Vec::new(),
+                attributed_to: Vec::new(),
+            },
+            current_timestamp(),
+        );
+        let event_key = client.get_last_event_key();
+        client.delete_key(event_key, current_timestamp());
 
         if client.pending.len() > MAX_EVENTS_PER_REQUEST {
             client.submit_events().await
