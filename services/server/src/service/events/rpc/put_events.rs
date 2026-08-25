@@ -17,14 +17,14 @@ use crate::service::{
 use ::entity::{content_model as ContentModel, event_model as EventModel};
 use chrono::{DateTime, Utc};
 use common_kafka::FutureRecord;
-use std::collections::HashMap;
 use polycentric_common::models::{collections, protos_v2::Blob};
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::{
     ActiveValue::{NotSet, Set},
-    TransactionTrait, AccessMode,
+    TransactionTrait,
 };
+use std::collections::HashMap;
 use std::{collections::HashSet, time::Duration};
 use tonic::Status;
 
@@ -105,8 +105,8 @@ async fn process_event(
     let is_banned = banned_cache.get(&*key.identity).copied();
     match is_banned {
         Some(true) => return Err(banned_error()),
-        Some(false) => { /* Ok to continue. */},
-        None => { /* Not in the cache yet, checked below once we start the transaction. */ },
+        Some(false) => { /* Ok to continue. */ }
+        None => { /* Not in the cache, checked below. */ }
     }
 
     // Kafka partition/message key: the serialized protobuf event key.
@@ -133,11 +133,10 @@ async fn process_event(
             .map_err(|err| Status::invalid_argument(err.to_string()))?;
 
         let bytes = serialized_content.content_bytes.as_slice();
-        let content = Content::decode(bytes)
-            .map_err(|e| {
-                tracing::debug!(error = %e, "put_events content decode error");
-                Status::invalid_argument("invalid content_bytes")
-            })?;
+        let content = Content::decode(bytes).map_err(|e| {
+            tracing::debug!(error = %e, "put_events content decode error");
+            Status::invalid_argument("invalid content_bytes")
+        })?;
 
         content
             .blobs()
@@ -157,13 +156,13 @@ async fn process_event(
     })?;
 
     // Banned identities' events are refused outright.
-    if let None = is_banned {
+    if is_banned.is_none() {
         let banned = IdentityRepository::is_banned(&txn, &key.identity)
             .await
             .map_err(|e| {
-                tracing::error!(error = %e, "put_events ban check db error");
-                Status::internal("internal server error")
-            })?;
+            tracing::error!(error = %e, "put_events ban check db error");
+            Status::internal("internal server error")
+        })?;
         banned_cache.insert(Box::from(&*key.identity), banned);
         if banned {
             return Err(banned_error());
@@ -229,8 +228,12 @@ async fn process_event(
         public_key_type: Set(signed_by.key_type as i16),
         public_key: Set(signed_by.key),
         sequence: Set(key.sequence as i64),
-        content_digest_type: Set(event.content_digest.as_ref().map(|d| d.r#type)),
-        content_digest_bytes: Set(event.content_digest
+        content_digest_type: Set(event
+            .content_digest
+            .as_ref()
+            .map(|d| d.r#type)),
+        content_digest_bytes: Set(event
+            .content_digest
             .as_ref()
             .map(|d| d.value.clone())),
         signature: Set(signed_event.signature),

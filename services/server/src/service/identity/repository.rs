@@ -99,9 +99,7 @@ impl Query {
         db: &C,
         identity: &str,
     ) -> Result<bool, DbErr> {
-        BanModel::Entity::find_by_id(identity)
-            .exists(db)
-            .await
+        BanModel::Entity::find_by_id(identity).exists(db).await
     }
 
     /// A page of banned identities, most recently banned first. Ordered
