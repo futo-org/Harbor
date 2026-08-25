@@ -1,1 +1,1 @@
-export { default } from '@/src/features/identity-pairing/screens/PairIdentityClaimerScreen';
+export { default } from '@/src/features/onboarding/LoginScreen';

@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const CONTENT_WIDTH = 600;
 
 /** Flow starts, so there is nothing to go back to. */
-const FLOW_ENTRY_ROUTES = ['/signup', '/login', '/recover'];
+const FLOW_ENTRY_ROUTES = ['/signup', '/login'];
 
 /** Signup and pairing run without app chrome and share this padding. */
 export default function OnboardingLayout() {
@@ -31,7 +31,8 @@ export default function OnboardingLayout() {
   const showScene = width > Breakpoints.md;
   // A flow's end offers its own way onward, so it takes no controls.
   const isFlowEnd = pathname.endsWith('/success');
-  const showBack = !isFlowEnd && !FLOW_ENTRY_ROUTES.includes(pathname);
+  const showBack =
+    !isFlowEnd && !FLOW_ENTRY_ROUTES.includes(pathname) && router.canGoBack();
 
   return (
     <View

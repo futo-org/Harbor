@@ -1,5 +1,4 @@
 import { Button, Text } from '@/src/common/components';
-import { RETURN_TO_PARAM, safeReturnTo } from '@/src/common/constants';
 import {
   usePolycentric,
   usePolycentricContext,
@@ -14,7 +13,8 @@ import {
   type PickedBackupFile,
 } from '@/src/features/identity-backup/components/BackupFilePicker';
 import { BackupStatus } from '@/src/features/identity-backup/components/BackupStatus';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
+import { router } from 'expo-router';
 import { type ReactNode, useState } from 'react';
 import { View } from 'react-native';
 
@@ -30,9 +30,7 @@ type RecoverState =
 export default function RecoverIdentityScreen() {
   const client = usePolycentric();
   const { refreshCurrentIdentity } = usePolycentricContext();
-  const returnTo = safeReturnTo(
-    useLocalSearchParams()[RETURN_TO_PARAM] as string | undefined,
-  );
+  const { to } = useOnboardingLinks();
 
   const [state, setState] = useState<RecoverState>({ stage: 'input' });
   const stage = state.stage;
@@ -66,14 +64,7 @@ export default function RecoverIdentityScreen() {
     }
 
     await refreshCurrentIdentity();
-    router.replace(
-      returnTo
-        ? {
-            pathname: '/recover/success',
-            params: { [RETURN_TO_PARAM]: returnTo },
-          }
-        : '/recover/success',
-    );
+    router.replace(to('/login/recover/success'));
   };
 
   let buttonTitle: string;

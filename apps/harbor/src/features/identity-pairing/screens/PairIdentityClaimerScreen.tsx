@@ -1,5 +1,4 @@
 import { Button, Text } from '@/src/common/components/primitives';
-import { RETURN_TO_PARAM, safeReturnTo } from '@/src/common/constants';
 import {
   publicKeyToString,
   usePolycentric,
@@ -9,7 +8,8 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { PairIdentityCamera } from '@/src/features/identity-pairing/components/PairIdentityCamera';
 import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { decodePairingCode, type PairingSessionInfo } from '../pairingCode';
@@ -18,9 +18,7 @@ export default function PairIdentityClaimerScreen() {
   const { theme } = useTheme();
   const client = usePolycentric();
   const { refreshCurrentIdentity } = usePolycentricContext();
-  const returnTo = safeReturnTo(
-    useLocalSearchParams()[RETURN_TO_PARAM] as string | undefined,
-  );
+  const { to } = useOnboardingLinks();
 
   // Error state is managed by `usePairIdentityClaimer()`, so we use `null`
   // to mean that the pairing code was invalid and couldn't be parsed and
@@ -44,16 +42,9 @@ export default function PairIdentityClaimerScreen() {
     void (async () => {
       await refreshCurrentIdentity();
       // Carry the origin route through to the success screen.
-      router.replace(
-        returnTo
-          ? {
-              pathname: '/login/success',
-              params: { [RETURN_TO_PARAM]: returnTo },
-            }
-          : '/login/success',
-      );
+      router.replace(to('/login/pair/success'));
     })();
-  }, [approved, refreshCurrentIdentity, returnTo]);
+  }, [approved, refreshCurrentIdentity, to]);
 
   const renderBody = () => {
     if (sessionInfo === undefined) {
