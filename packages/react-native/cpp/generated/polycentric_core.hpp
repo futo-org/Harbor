@@ -95,6 +95,12 @@ class NativePolycentricCore : public jsi::HostObject {
     jsi::Value cpp_uniffi_polycentric_core_fn_func_set_log_level(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_func_set_logger(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_func_is_moderation_label(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_fn_func_labels_changed(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_fn_func_labels_from_feed_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_fn_func_labels_from_notifications_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_fn_func_labels_from_search_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_fn_func_labels_from_thread_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_fn_func_merge_labels(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_fn_func_moderation_labels(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_ffi_polycentric_core_rust_future_poll_u8(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_ffi_polycentric_core_rust_future_cancel_u8(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
@@ -147,6 +153,12 @@ class NativePolycentricCore : public jsi::HostObject {
     jsi::Value cpp_uniffi_polycentric_core_checksum_func_set_log_level(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_func_set_logger(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_func_is_moderation_label(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_checksum_func_labels_changed(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_checksum_func_labels_from_feed_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_checksum_func_labels_from_notifications_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_checksum_func_labels_from_search_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_checksum_func_labels_from_thread_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
+    jsi::Value cpp_uniffi_polycentric_core_checksum_func_merge_labels(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_func_moderation_labels(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);
     jsi::Value cpp_uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count);

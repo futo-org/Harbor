@@ -27,6 +27,8 @@ const OTHER =
 const makeProfile = (alias: string | null = 'me@domain.com') => ({
   description: 'bio',
   alias,
+  avatar: null,
+  banner: null,
   refresh: jest.fn(),
 });
 

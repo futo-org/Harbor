@@ -15,8 +15,8 @@ use std::collections::HashMap;
 use std::mem::take;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
-use tokio::sync::OnceCell;
 use std::time::SystemTime;
+use tokio::sync::OnceCell;
 
 mod event_sync;
 mod feeds;
@@ -817,18 +817,20 @@ pub fn make_labels_bundle(
 static MODERATOR_READY: OnceCell<()> = OnceCell::const_new();
 
 async fn ensure_moderator_setup() {
-    MODERATOR_READY.get_or_init(|| async {
-        let mut event = connect_event_sync().await;
-        let mod_key = test_moderator_key();
-        let mod_identity = test_moderator_identity();
-        publish_genesis(
-            &mut event,
-            &mod_identity,
-            &mod_key,
-            DEFAULT_CREATED_AT,
-        )
+    MODERATOR_READY
+        .get_or_init(|| async {
+            let mut event = connect_event_sync().await;
+            let mod_key = test_moderator_key();
+            let mod_identity = test_moderator_identity();
+            publish_genesis(
+                &mut event,
+                &mod_identity,
+                &mod_key,
+                DEFAULT_CREATED_AT,
+            )
+            .await;
+        })
         .await;
-    }).await;
 }
 
 /// Monotonic sequence number for the moderator's Labels events — each test

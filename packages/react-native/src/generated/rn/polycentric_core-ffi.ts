@@ -89,6 +89,12 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_init_callback_vtable_queryobserver(vtable: UniffiVTableCallbackInterfacePolycentricCoreQueryObserver): void;
     ubrn_uniffi_polycentric_core_fn_init_callback_vtable_signbytescallback(vtable: UniffiVTableCallbackInterfacePolycentricCoreSignBytesCallback): void;
     ubrn_uniffi_polycentric_core_fn_func_is_moderation_label(value: Uint8Array, uniffi_out_err: UniffiRustCallStatus): number;
+    ubrn_uniffi_polycentric_core_fn_func_labels_changed(a: Uint8Array, b: Uint8Array, uniffi_out_err: UniffiRustCallStatus): number;
+    ubrn_uniffi_polycentric_core_fn_func_labels_from_feed_response(response: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+    ubrn_uniffi_polycentric_core_fn_func_labels_from_notifications_response(response: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+    ubrn_uniffi_polycentric_core_fn_func_labels_from_search_response(response: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+    ubrn_uniffi_polycentric_core_fn_func_labels_from_thread_response(response: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+    ubrn_uniffi_polycentric_core_fn_func_merge_labels(orig: Uint8Array, latest: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_func_moderation_labels(uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_func_set_log_level(level: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_func_set_logger(logger: bigint, uniffi_out_err: UniffiRustCallStatus): void;
@@ -143,6 +149,12 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_method_subscription_unsubscribe(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_ffi_polycentric_core_uniffi_contract_version(): number;
     ubrn_uniffi_polycentric_core_checksum_func_is_moderation_label(): number;
+    ubrn_uniffi_polycentric_core_checksum_func_labels_changed(): number;
+    ubrn_uniffi_polycentric_core_checksum_func_labels_from_feed_response(): number;
+    ubrn_uniffi_polycentric_core_checksum_func_labels_from_notifications_response(): number;
+    ubrn_uniffi_polycentric_core_checksum_func_labels_from_search_response(): number;
+    ubrn_uniffi_polycentric_core_checksum_func_labels_from_thread_response(): number;
+    ubrn_uniffi_polycentric_core_checksum_func_merge_labels(): number;
     ubrn_uniffi_polycentric_core_checksum_func_moderation_labels(): number;
     ubrn_uniffi_polycentric_core_checksum_func_set_log_level(): number;
     ubrn_uniffi_polycentric_core_checksum_func_set_logger(): number;

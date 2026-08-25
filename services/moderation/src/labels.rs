@@ -201,7 +201,7 @@ mod tests {
             assert_eq!(
                 label_from_report_category(category as i32),
                 Some(label),
-                "{category:?} should map to {label}"
+                "{category:?} should map to {label:?}"
             );
         }
     }

@@ -1,4 +1,4 @@
-use entity:: default_follow_suggestion_model;
+use entity::default_follow_suggestion_model;
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -7,7 +7,10 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        if manager.has_table(default_follow_suggestion_model::Entity.unquoted()).await? {
+        if manager
+            .has_table(default_follow_suggestion_model::Entity.unquoted())
+            .await?
+        {
             return Ok(());
         }
 
@@ -15,13 +18,19 @@ impl MigrationTrait for Migration {
         create_table
             .table(default_follow_suggestion_model::Entity.unquoted())
             .col({
-                let mut def = ColumnDef::new(default_follow_suggestion_model::Column::Identity);
+                let mut def = ColumnDef::new(
+                    default_follow_suggestion_model::Column::Identity,
+                );
                 def.text().primary_key().not_null();
                 def
             })
             .col({
-                let mut def = ColumnDef::new(default_follow_suggestion_model::Column::CreatedAt);
-                def.timestamp_with_time_zone().not_null().default(Expr::current_timestamp());
+                let mut def = ColumnDef::new(
+                    default_follow_suggestion_model::Column::CreatedAt,
+                );
+                def.timestamp_with_time_zone()
+                    .not_null()
+                    .default(Expr::current_timestamp());
                 def
             });
 
