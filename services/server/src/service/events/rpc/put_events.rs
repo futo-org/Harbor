@@ -292,16 +292,16 @@ async fn process_event(
                 }
             });
         }
-        Err(ref e) if is_unique_violation(e) => {
+        Err(ref err) if is_unique_violation(err) => {
             // Duplicate event — already stored, treat as success, but revert
             // the content changes.
-            txn.rollback().await.map_err(|e| {
-                tracing::error!(error = %e, "put_events txn abort error");
+            txn.rollback().await.map_err(|err| {
+                tracing::error!(error = %err, "put_events txn abort error");
                 Status::internal("internal server error")
             })?;
         }
-        Err(e) => {
-            tracing::error!(error = ?e, "put_events db error");
+        Err(err) => {
+            tracing::error!(error = %err, "put_events db error");
             return Err(Status::internal("internal server error"));
         }
     }
