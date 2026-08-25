@@ -177,6 +177,7 @@ export function ClaimCreateSheet({
           title={stepTitle(step)}
           closeIcon={canGoBack ? 'chevronBack' : 'close'}
           onClose={canGoBack ? pop : close}
+          disabled={form?.isPending}
           right={
             step.kind === 'form' ? (
               form?.isPending ? (

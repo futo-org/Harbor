@@ -75,6 +75,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               placeholder="Display name"
               maxLength={MAX_NAME_LENGTH}
               autoFocus
+              disabled={edit.saving}
             />
             <CharCount count={edit.nameDraft.length} max={MAX_NAME_LENGTH} />
           </View>
@@ -89,6 +90,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               placeholder="Bio"
               maxLength={MAX_BIO_LENGTH}
               numberOfLines={3}
+              disabled={edit.saving}
             />
             <CharCount
               count={edit.descriptionDraft.length}
@@ -117,6 +119,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
+              disabled={edit.saving}
             />
             {edit.aliasError ? (
               <Text variant="small" color="negative_500">

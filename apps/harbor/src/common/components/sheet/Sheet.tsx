@@ -124,6 +124,7 @@ export type SheetHeaderProps = {
   onClose: () => void;
   left?: ReactNode;
   right?: ReactNode;
+  disabled?: boolean;
 };
 
 function SheetHeader({
@@ -132,6 +133,7 @@ function SheetHeader({
   onClose,
   left,
   right,
+  disabled,
 }: SheetHeaderProps) {
   // Native sheets dismiss by swiping down, so the close button is redundant
   // there — hide it. Web modals keep it, and back chevrons show everywhere.
@@ -146,7 +148,8 @@ function SheetHeader({
         accessibilityLabel="Go back"
         onPress={onClose}
         hitSlop={Spacing['lg']}
-        style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+        disabled={disabled}
+        style={({ pressed }) => [(disabled || pressed) && { opacity: 0.5 }]}
       >
         <Icon name={closeIcon} size={24} color="neutral_900" />
       </Pressable>

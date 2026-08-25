@@ -34,6 +34,7 @@ export function AddServerForm({ isBusy, error, onSubmit }: AddServerFormProps) {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
+            disabled={isBusy}
           />
         </View>
         {isBusy ? (

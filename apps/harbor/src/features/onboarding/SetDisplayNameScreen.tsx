@@ -40,6 +40,7 @@ export default function SetDisplayNameScreen() {
             maxLength={MAX_NAME_LENGTH}
             autoCapitalize="words"
             autoFocus
+            disabled={submitting}
           />
           <CharCount count={data.displayName.length} max={MAX_NAME_LENGTH} />
           {error && (
