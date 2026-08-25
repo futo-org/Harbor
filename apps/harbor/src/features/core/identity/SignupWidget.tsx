@@ -1,22 +1,11 @@
 import { Button, Text } from '@/src/common/components/primitives';
-import { RETURN_TO_PARAM, Routes } from '@/src/common/constants';
 import { useIsStoragePersistent } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
+import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { Image } from 'expo-image';
 import { usePathname } from 'expo-router';
 import { View } from 'react-native';
 import SCENE_SPLASH from '../../../common/assets/images/harbor-scene-splash.svg';
-
-/** Carries the current route so onboarding returns here. A param, not
- *  state, so it survives a reload or open-in-new-tab. */
-function useSignupLinks() {
-  const returnTo = usePathname();
-  const params = { [RETURN_TO_PARAM]: returnTo };
-  return {
-    create: { pathname: Routes.onboarding.signup.index, params },
-    login: { pathname: Routes.onboarding.login, params },
-  } as const;
-}
 
 export const PRIVATE_BROWSING_NOTICE =
   'Sign up is unavailable in private browsing: this browser cannot store identity keys.';
@@ -30,7 +19,7 @@ type SignupWidgetProps = {
 export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
   const { theme } = useTheme();
   const isStoragePersistent = useIsStoragePersistent();
-  const links = useSignupLinks();
+  const links = useOnboardingLinks(usePathname());
 
   return (
     <View
@@ -59,7 +48,7 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
               title="Create new identity"
               variant="primary"
               fullWidth
-              href={links.create}
+              href={links.signup}
               onPress={onAction}
             />
             <Button
@@ -87,7 +76,7 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
 export function SignupBar() {
   const { theme } = useTheme();
   const isStoragePersistent = useIsStoragePersistent();
-  const links = useSignupLinks();
+  const links = useOnboardingLinks(usePathname());
 
   return (
     <View
@@ -118,7 +107,7 @@ export function SignupBar() {
       </View>
       {isStoragePersistent ? (
         <View style={[Atoms.flex_row, Atoms.gap_sm]}>
-          <Button title="Sign up" variant="primary" href={links.create} />
+          <Button title="Sign up" variant="primary" href={links.signup} />
           <Button title="Log in" variant="tertiary" href={links.login} />
         </View>
       ) : null}

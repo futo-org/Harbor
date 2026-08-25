@@ -3,11 +3,11 @@ import {
   ProfileAvatar,
   Text,
 } from '@/src/common/components/primitives';
-import { RETURN_TO_PARAM, Routes, safeReturnTo } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { type Href, router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { View } from 'react-native';
 
 export default function LoginSuccessScreen({
@@ -20,9 +20,7 @@ export default function LoginSuccessScreen({
   const { theme } = useTheme();
   const { identityKey } = useCurrentIdentity();
   const profile = useProfile(identityKey);
-  const returnTo = safeReturnTo(
-    useLocalSearchParams()[RETURN_TO_PARAM] as string | undefined,
-  );
+  const links = useOnboardingLinks();
 
   if (!identityKey) return null;
   const displayName = profile.name ?? 'Anon';
@@ -64,9 +62,7 @@ export default function LoginSuccessScreen({
           title="Continue"
           variant="primary"
           fullWidth
-          onPress={() =>
-            router.dismissTo((returnTo ?? Routes.tabs.explore.index) as Href)
-          }
+          onPress={() => router.dismissTo(links.landing)}
         />
       </View>
     </View>

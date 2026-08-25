@@ -1,8 +1,7 @@
-import type { Href } from 'expo-router';
-import { router, useLocalSearchParams, usePathname } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { create } from 'zustand';
-import { RETURN_TO_PARAM, Routes, safeReturnTo } from '@/src/common/constants';
+import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { createIdentity } from '@polycentric/react-native';
 import { getNextStep, isLastStep, type SignupRoute } from './flow';
 import {
@@ -63,9 +62,7 @@ export function useSignup() {
   const pathname = usePathname();
   const [submitting, setSubmitting] = useState(false);
   // Where the signup prompt was opened from, carried across the steps.
-  const returnTo = safeReturnTo(
-    useLocalSearchParams()[RETURN_TO_PARAM] as string | undefined,
-  );
+  const links = useOnboardingLinks();
   const { client, refreshCurrentIdentity } = usePolycentricContext();
   const { data, setDisplayName, setAbout, setAvatarUri, setModeration, reset } =
     useSignupStore();
@@ -76,11 +73,7 @@ export function useSignup() {
   const goToNextStep = () => {
     const nextStep = getNextStep(currentStep);
     if (nextStep) {
-      router.push(
-        returnTo
-          ? { pathname: nextStep, params: { [RETURN_TO_PARAM]: returnTo } }
-          : nextStep,
-      );
+      router.push(links.to(nextStep));
     }
   };
 
@@ -108,7 +101,7 @@ export function useSignup() {
       invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       reset();
       // Back to the screen the signup prompt was opened from, if any.
-      router.dismissTo((returnTo ?? Routes.tabs.explore.index) as Href);
+      router.dismissTo(links.landing);
     } catch (error) {
       console.error('Failed to create identity:', error);
       setSubmitting(false);
