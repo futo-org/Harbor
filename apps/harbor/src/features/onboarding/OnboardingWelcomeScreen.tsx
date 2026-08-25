@@ -84,16 +84,10 @@ export default function OnboardingWelcomeScreen() {
               href={Routes.onboarding.signup.index}
             />
             <Button
-              title="Pair existing identity"
+              title="I already have an identity"
               variant="tertiary"
               fullWidth
               href={Routes.onboarding.login}
-            />
-            <Button
-              title="Recover using backup"
-              variant="tertiary"
-              fullWidth
-              href={Routes.onboarding.recover}
             />
           </>
         ) : (

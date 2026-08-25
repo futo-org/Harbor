@@ -95,7 +95,8 @@ export const Routes = {
   onboarding: {
     index: '/',
     login: '/login',
-    recover: '/recover',
+    pair: '/login/pair',
+    recover: '/login/recover',
     signup: {
       index: '/signup',
       about: '/signup/about',

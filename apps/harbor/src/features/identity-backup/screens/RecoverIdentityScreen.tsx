@@ -69,10 +69,10 @@ export default function RecoverIdentityScreen() {
     router.replace(
       returnTo
         ? {
-            pathname: '/recover/success',
+            pathname: '/login/recover/success',
             params: { [RETURN_TO_PARAM]: returnTo },
           }
-        : '/recover/success',
+        : '/login/recover/success',
     );
   };
 

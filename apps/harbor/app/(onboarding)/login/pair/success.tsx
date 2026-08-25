@@ -1,6 +1,6 @@
 import LoginSuccessScreen from '@/src/features/onboarding/LoginSuccessScreen';
 
-export default function LoginSuccessRoute() {
+export default function PairSuccessRoute() {
   return (
     <LoginSuccessScreen
       title="Pair Successful!"

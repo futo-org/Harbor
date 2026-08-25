@@ -14,8 +14,7 @@ function useSignupLinks() {
   const params = { [RETURN_TO_PARAM]: returnTo };
   return {
     create: { pathname: Routes.onboarding.signup.index, params },
-    pair: { pathname: Routes.onboarding.login, params },
-    recover: { pathname: Routes.onboarding.recover, params },
+    login: { pathname: Routes.onboarding.login, params },
   } as const;
 }
 
@@ -64,17 +63,10 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
               onPress={onAction}
             />
             <Button
-              title="Pair existing identity"
+              title="I already have an identity"
               variant="tertiary"
               fullWidth
-              href={links.pair}
-              onPress={onAction}
-            />
-            <Button
-              title="Recover using backup"
-              variant="tertiary"
-              fullWidth
-              href={links.recover}
+              href={links.login}
               onPress={onAction}
             />
           </View>
@@ -127,8 +119,7 @@ export function SignupBar() {
       {isStoragePersistent ? (
         <View style={[Atoms.flex_row, Atoms.gap_sm]}>
           <Button title="Sign up" variant="primary" href={links.create} />
-          <Button title="Pair" variant="tertiary" href={links.pair} />
-          <Button title="Recover" variant="tertiary" href={links.recover} />
+          <Button title="Log in" variant="tertiary" href={links.login} />
         </View>
       ) : null}
     </View>

@@ -47,10 +47,10 @@ export default function PairIdentityClaimerScreen() {
       router.replace(
         returnTo
           ? {
-              pathname: '/login/success',
+              pathname: '/login/pair/success',
               params: { [RETURN_TO_PARAM]: returnTo },
             }
-          : '/login/success',
+          : '/login/pair/success',
       );
     })();
   }, [approved, refreshCurrentIdentity, returnTo]);
