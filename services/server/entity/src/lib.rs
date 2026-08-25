@@ -78,6 +78,7 @@ pub mod content_repost_model;
 pub mod content_verification_claim_model;
 pub mod content_verification_target_model;
 pub mod content_verification_verify_model;
+pub mod default_follow_suggestion_model;
 pub mod event_model;
 pub mod follow_model;
 pub mod moderator_model;

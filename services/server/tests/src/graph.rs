@@ -109,6 +109,20 @@ async fn check_followers(
 }
 
 #[tokio::test]
+async fn suggest_follow_not_following_anyone() {
+    let mut client = TestClient::new().await;
+    client.submit_events().await;
+
+    let expected_suggestions = Vec::new();
+    let expected_hints = Vec::new();
+
+    eprintln!(
+        "NOTE: if you have any rows in `default_follow_suggestion` this will fail"
+    );
+    suggest_follow(&client, expected_suggestions, expected_hints).await;
+}
+
+#[tokio::test]
 async fn suggest_follow_no_profile_updates() {
     let mut client = TestClient::new().await;
     client.submit_events().await;
