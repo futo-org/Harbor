@@ -62,7 +62,7 @@ app-tests:
     - job: rs-core-uniffi-web-build
       artifacts: true
 
-app-web-image:
+web-image:
   extends: .app-build-base
   rules:
     - !reference [.app-workflow, rules]
@@ -83,10 +83,10 @@ app-web-image:
         --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS \
         --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS \
         --opt build-arg:SKIP_WORKSPACE_BUILD=1 \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:cache-$CI_DEFAULT_BRANCH \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:cache-$CI_COMMIT_REF_SLUG \
-        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/app:cache-$CI_COMMIT_REF_SLUG,mode=max \
-        --output type=image,name=$CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA,push=true
+        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/web:cache-$CI_DEFAULT_BRANCH \
+        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/web:cache-$CI_COMMIT_REF_SLUG \
+        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/web:cache-$CI_COMMIT_REF_SLUG,mode=max \
+        --output type=image,name=$CI_REGISTRY_IMAGE/web:$CI_COMMIT_SHA,push=true
 
 .app-build-expo:
   extends: .app-build-base
