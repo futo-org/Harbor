@@ -1,14 +1,15 @@
 use ::entity::block_model as BlockModel;
 use ::entity::content_follow_model as ContentFollowModel;
 use ::entity::content_model as ContentModel;
+use ::entity::default_follow_suggestion_model as DefaultFollowSuggestionModel;
 use ::entity::event_model as EventModel;
 use ::entity::follow_model as FollowModel;
 use polycentric_common::models::collections;
 use prost::Message;
 use sea_orm::*;
 use sea_query::{
-    Asterisk, CommonTableExpression, Expr, Func, PgFunc, SelectStatement,
-    WithClause,
+    Asterisk, CommonTableExpression, Expr, Func, IntoColumnRef, PgFunc,
+    SelectStatement, UnionType, WithClause,
 };
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -282,12 +283,12 @@ impl Query {
         select_following
             .column(FollowModel::Column::Followee)
             .from(FOLLOWING_TABLE);
+        const SUGGESTIONS_TABLE: &str = "suggestions";
         // List of identities that are followed by identities that `identity`
         // follows. Are you following this? In other words if you follow Alice,
         // and Alice follows Bob, this list will include Bob.
-        const SUGGESTIONS_TABLE: &str = "suggestions";
-        let mut suggestions = SelectStatement::new();
-        suggestions
+        let mut followee_suggestions = SelectStatement::new();
+        followee_suggestions
             .column(FollowModel::Column::Followee)
             // NOTE: the tuple (followee, follower) is not unique in the follow
             // table because the user can create multiple valid events that
@@ -308,13 +309,44 @@ impl Query {
                 FollowModel::Column::Follower
                     .in_subquery(select_following.clone()),
             )
+            .group_by_col(FollowModel::Column::Followee);
+        // All default suggestions.
+        let mut default_suggestions = SelectStatement::new();
+        default_suggestions
+            .column(DefaultFollowSuggestionModel::Column::Identity)
+            // By using an empty array for the followers we ensure the default
+            // suggestions always come last.
+            .expr_as(Expr::cust("ARRAY[]::TEXT[]"), FOLLOWERS_COLUMN)
+            .from(DefaultFollowSuggestionModel::Entity);
+        // Combined followee and default suggestions.
+        let mut suggestions = SelectStatement::new();
+        suggestions
+            .column(FollowModel::Column::Followee)
+            .column(FOLLOWERS_COLUMN)
+            .from_subquery(
+                {
+                    let mut q = SelectStatement::new();
+                    q.column(FollowModel::Column::Followee)
+                        .column(FOLLOWERS_COLUMN)
+                        .from_subquery(
+                            followee_suggestions,
+                            "followee_suggestions",
+                        )
+                        .union(UnionType::All, default_suggestions);
+                    q
+                },
+                "all_suggestions",
+            )
             // Don't suggest ourselves.
-            .and_where(FollowModel::Column::Followee.ne(identity))
+            .and_where(
+                Expr::col(FollowModel::Column::Followee.into_column_ref())
+                    .ne(identity),
+            )
             // Don't suggest identities the identity is already following.
             .and_where(
-                FollowModel::Column::Followee.not_in_subquery(select_following),
-            )
-            .group_by_col(FollowModel::Column::Followee);
+                Expr::col(FollowModel::Column::Followee.into_column_ref())
+                    .not_in_subquery(select_following),
+            );
 
         let mut query = EventModel::Entity::find().select_only();
         QuerySelect::query(&mut query).with_cte({
@@ -603,7 +635,7 @@ mod tests {
     fn event_row(id: i64, identity: &str, sequence: i64) -> EventModel::Model {
         EventModel::Model {
             id,
-            collection: collections::SOCIAL_GRAPH,
+            collection: collections::SOCIAL_GRAPH as _,
             identity: identity.to_string(),
             public_key_type: 1,
             public_key: vec![0xaa],
