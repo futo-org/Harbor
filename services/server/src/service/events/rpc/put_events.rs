@@ -258,6 +258,11 @@ async fn process_event(
                     })?;
             }
 
+            txn.commit().await.map_err(|err| {
+                tracing::error!(error = %err, "put_events txn commit error");
+                Status::internal("internal server error")
+            })?;
+
             ctx.proof_cache
                 .invalidate_canonical(&event_identity, event_collection)
                 .await;
@@ -286,11 +291,6 @@ async fn process_event(
                     tracing::warn!(error = %e, "put_events kafka publish error");
                 }
             });
-
-            txn.commit().await.map_err(|e| {
-                tracing::error!(error = %e, "put_events txn commit error");
-                Status::internal("internal server error")
-            })?;
         }
         Err(ref e) if is_unique_violation(e) => {
             // Duplicate event — already stored, treat as success, but revert
