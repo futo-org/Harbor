@@ -603,7 +603,7 @@ mod tests {
     fn event_row(id: i64, identity: &str, sequence: i64) -> EventModel::Model {
         EventModel::Model {
             id,
-            collection: collections::SOCIAL_GRAPH,
+            collection: collections::SOCIAL_GRAPH as _,
             identity: identity.to_string(),
             public_key_type: 1,
             public_key: vec![0xaa],
