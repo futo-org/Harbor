@@ -1,36 +1,87 @@
+diff --git a/ios/ExpoUITouchHandlerHelper.h b/ios/ExpoUITouchHandlerHelper.h
+index 54918d4c5fe43f882c6b9a35156ee11acec90077..b3192b777edb8b50213cc02510341bc10a2273cb 100644
+--- a/ios/ExpoUITouchHandlerHelper.h
++++ b/ios/ExpoUITouchHandlerHelper.h
+@@ -13,6 +13,10 @@ NS_ASSUME_NONNULL_BEGIN
+ 
+ + (void)detachTouchHandler:(UIGestureRecognizer *)touchHandler fromView:(UIView *)view;
+ 
+++ (nullable UIGestureRecognizer *)ancestorSurfaceTouchHandlerForView:(UIView *)view;
++
+++ (void)cancelTouchHandler:(UIGestureRecognizer *)touchHandler;
++
+ @end
+ 
+ NS_ASSUME_NONNULL_END
 diff --git a/ios/ExpoUITouchHandlerHelper.mm b/ios/ExpoUITouchHandlerHelper.mm
-index eb34427..d5447ac 100644
+index eb3442740e2c92364acef9a6fb4880b8a9c38fa4..d2cd0d283383ca633ca23640fa545c49649f6294 100644
 --- a/ios/ExpoUITouchHandlerHelper.mm
 +++ b/ios/ExpoUITouchHandlerHelper.mm
-@@ -7,10 +7,20 @@
+@@ -7,16 +7,48 @@
  @implementation ExpoUITouchHandlerHelper
  
  + (nullable UIGestureRecognizer *)createAndAttachTouchHandlerForView:(UIView *)view {
 -  for (UIGestureRecognizer *recognizer in [view.gestureRecognizers copy]) {
 -    if ([recognizer isKindOfClass:[RCTSurfaceTouchHandler class]]) {
 -      return nil;
+-    }
 +  // Skip when a surface touch handler already covers this view — its own or an
 +  // ancestor's. An inline-hosted view sits under the root surface's handler;
 +  // adding a second one streams every touch twice, and the duplicate start
 +  // re-runs the responder negotiation, terminating the pressed child in
 +  // favour of its pressable ancestor. Presented hierarchies (sheets, menus)
 +  // have no ancestor handler and still get their own.
++  if ([self ancestorSurfaceTouchHandlerForView:view] != nil) {
++    return nil;
+   }
+   RCTSurfaceTouchHandler *touchHandler = [[RCTSurfaceTouchHandler alloc] init];
+   [touchHandler attachToView:view];
+   return touchHandler;
+ }
+ 
+++ (nullable UIGestureRecognizer *)ancestorSurfaceTouchHandlerForView:(UIView *)view {
 +  UIView *current = view;
 +  while (current != nil) {
 +    for (UIGestureRecognizer *recognizer in [current.gestureRecognizers copy]) {
 +      if ([recognizer isKindOfClass:[RCTSurfaceTouchHandler class]]) {
-+        return nil;
++        return recognizer;
 +      }
-     }
++    }
 +    current = current.superview;
-   }
-   RCTSurfaceTouchHandler *touchHandler = [[RCTSurfaceTouchHandler alloc] init];
-   [touchHandler attachToView:view];
++  }
++  return nil;
++}
++
+++ (void)cancelTouchHandler:(UIGestureRecognizer *)touchHandler {
++  // Only while actively tracking touches — every mounted page observes the
++  // same scroll pan, so observers after the first would pointlessly re-toggle
++  // an already-reset handler.
++  UIGestureRecognizerState state = touchHandler.state;
++  if (state != UIGestureRecognizerStateBegan && state != UIGestureRecognizerStateChanged) {
++    return;
++  }
++  // The public-API equivalent of RCTSurfaceTouchHandler's private
++  // `_cancelTouches`: disabling a recognizer mid-gesture cancels its tracked
++  // touches, which reaches JS as a touch cancel and clears active presses.
++  touchHandler.enabled = NO;
++  touchHandler.enabled = YES;
++}
++
+ + (void)detachTouchHandler:(UIGestureRecognizer *)touchHandler fromView:(UIView *)view {
+   if ([touchHandler isKindOfClass:[RCTSurfaceTouchHandler class]]) {
+     [(RCTSurfaceTouchHandler *)touchHandler detachFromView:view];
 diff --git a/ios/RNHostView.swift b/ios/RNHostView.swift
-index 4cf3893..368bc42 100644
+index 4cf38939895933c713e1f2c609dd7d1e135f0f99..ad4b69ee8b8b5e1916a3548a90fef9df2f0fdfe0 100644
 --- a/ios/RNHostView.swift
 +++ b/ios/RNHostView.swift
-@@ -61,8 +61,16 @@ private final class RNHostTouchHandler: ObservableObject {
+@@ -55,14 +55,30 @@ struct RNHostView: ExpoSwiftUI.View {
+ private final class RNHostTouchHandler: ObservableObject {
+   private weak var touchHandler: UIGestureRecognizer?
+   private weak var attachedView: UIView?
++  private var scrollDragCanceller: ScrollDragTouchCanceller?
+ 
+   func attach(to view: UIView) {
+     if attachedView === view, touchHandler != nil {
        return
      }
      detach()
@@ -44,12 +95,68 @@ index 4cf3893..368bc42 100644
 +        return
 +      }
 +      self.touchHandler = ExpoUITouchHandlerHelper.createAndAttachTouchHandler(for: view)
++      if self.touchHandler == nil {
++        // Inline-hosted: the root surface's touch handler covers this view.
++        // SwiftUI's scroll gesture never cancels UIKit touch delivery to
++        // hosted RN views, so without help a page-swipe leaves the pressed
++        // Pressable active and it fires onPress on finger lift.
++        self.scrollDragCanceller = ScrollDragTouchCanceller(hostedView: view)
++      }
 +    }
    }
  
    func detach() {
+@@ -71,6 +87,7 @@ private final class RNHostTouchHandler: ObservableObject {
+     }
+     touchHandler = nil
+     attachedView = nil
++    scrollDragCanceller = nil
+   }
+ 
+   deinit {
+@@ -78,6 +95,40 @@ private final class RNHostTouchHandler: ObservableObject {
+   }
+ }
+ 
++// Cancels in-flight RN touches when the nearest ancestor SwiftUI scroll view
++// (e.g. the pager) begins dragging — the same behavior UIKit provides natively
++// for RN's own scroll views.
++private final class ScrollDragTouchCanceller {
++  private weak var scrollView: UIScrollView?
++  private weak var hostedView: UIView?
++
++  init?(hostedView: UIView) {
++    var current = hostedView.superview
++    while let view = current, !(view is UIScrollView) {
++      current = view.superview
++    }
++    guard let scrollView = current as? UIScrollView else {
++      return nil
++    }
++    self.hostedView = hostedView
++    self.scrollView = scrollView
++    scrollView.panGestureRecognizer.addTarget(self, action: #selector(panStateChanged(_:)))
++  }
++
++  @objc private func panStateChanged(_ recognizer: UIGestureRecognizer) {
++    guard recognizer.state == .began, let hostedView else {
++      return
++    }
++    if let handler = ExpoUITouchHandlerHelper.ancestorSurfaceTouchHandler(for: hostedView) {
++      ExpoUITouchHandlerHelper.cancelTouchHandler(handler)
++    }
++  }
++
++  deinit {
++    scrollView?.panGestureRecognizer.removeTarget(self, action: nil)
++  }
++}
++
+ // Sets SwiftUI view size from Yoga node size
+ // Listens to Yoga node size changes and updates the SwiftUI view size
+ private struct ApplySizeFromYogaNode<Content: SwiftUI.View>: SwiftUI.View {
 diff --git a/src/community/pager-view/PagerView.ios.tsx b/src/community/pager-view/PagerView.ios.tsx
-index 9af0dc6..8f619e9 100644
+index 9af0dc68331db516169df5e8706b717d631eff13..8f619e9c1ffd19e7b203c5d3d081d6c67c97d476 100644
 --- a/src/community/pager-view/PagerView.ios.tsx
 +++ b/src/community/pager-view/PagerView.ios.tsx
 @@ -9,7 +9,7 @@ import {
