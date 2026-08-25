@@ -1,0 +1,6 @@
+# pnpm patch files are whitespace-sensitive: empty context lines in the
+# unified diff are a single space, and stripping them breaks
+# `pnpm install` with "hunk header integrity check failed".
+[patches/*.patch]
+trim_trailing_whitespace = false
+insert_final_newline = false
