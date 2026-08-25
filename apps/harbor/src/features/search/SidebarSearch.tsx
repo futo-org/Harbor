@@ -28,6 +28,7 @@ export function SidebarSearch() {
   // Explore and search carry their own search field.
   if (
     pathname === Routes.tabs.explore.index ||
+    pathname === Routes.tabs.explore.people ||
     pathname === Routes.tabs.explore.search
   ) {
     return null;

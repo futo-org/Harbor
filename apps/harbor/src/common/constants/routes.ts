@@ -48,6 +48,7 @@ export const Routes = {
     search: '/search',
     explore: {
       index: '/explore',
+      people: '/explore/people',
       search: '/explore/search',
     },
     claims: '/claims',
