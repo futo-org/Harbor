@@ -124,6 +124,31 @@ async fn process_event(
     )
     .map_err(|e| Status::unauthenticated(e.to_string()))?;
 
+    // Decode the event before we begin the transaction.
+    let decoded_content = if let (Some(serialized_content), Some(digest)) =
+        (&event_bundle.serialized_content, &event.content_digest)
+    {
+        digest
+            .verify_against(&serialized_content.content_bytes)
+            .map_err(|err| Status::invalid_argument(err.to_string()))?;
+
+        let bytes = serialized_content.content_bytes.as_slice();
+        let content = Content::decode(bytes)
+            .map_err(|e| {
+                tracing::debug!(error = %e, "put_events content decode error");
+                Status::invalid_argument("invalid content_bytes")
+            })?;
+
+        content
+            .blobs()
+            .into_iter()
+            .for_each(|blob| blobs.push(blob.clone()));
+
+        Some((bytes, content, digest))
+    } else {
+        None
+    };
+
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
     let txn = ctx.db.begin().await.map_err(|e| {
@@ -166,35 +191,14 @@ async fn process_event(
         .await?;
     }
 
-    let content_digest = event.content_digest;
-
-    let content = if let (Some(serialized_content), Some(digest)) =
-        (&event_bundle.serialized_content, &content_digest)
-    {
-        digest
-            .verify_against(&serialized_content.content_bytes)
-            .map_err(|e| Status::invalid_argument(e.to_string()))?;
-
-        let content = Content::decode(
-            serialized_content.content_bytes.as_slice(),
-        )
-        .map_err(|e| {
-            tracing::debug!(error = %e, "put_events content decode error");
-            Status::invalid_argument("invalid content_bytes")
-        })?;
-
-        content
-            .blobs()
-            .into_iter()
-            .for_each(|blob| blobs.push(blob.clone()));
-
+    if let Some((bytes, content, digest)) = decoded_content.as_ref() {
         let content_row = ContentRepository::Mutation::add_content(
             &txn,
             ContentModel::ActiveModel {
                 id: NotSet,
                 digest_type: Set(digest.r#type),
                 digest_bytes: Set(digest.value.clone()),
-                serialized_bytes: Set(serialized_content.content_bytes.clone()),
+                serialized_bytes: Set(Vec::from(*bytes)),
                 synced_at: Set(Utc::now().fixed_offset()),
             },
         )
@@ -213,10 +217,7 @@ async fn process_event(
             )
             .await?;
         }
-        Some(content)
-    } else {
-        None
-    };
+    }
 
     let event_identity = key.identity.clone();
     let event_collection = key.collection;
@@ -228,8 +229,8 @@ async fn process_event(
         public_key_type: Set(signed_by.key_type as i16),
         public_key: Set(signed_by.key),
         sequence: Set(key.sequence as i64),
-        content_digest_type: Set(content_digest.as_ref().map(|d| d.r#type)),
-        content_digest_bytes: Set(content_digest
+        content_digest_type: Set(event.content_digest.as_ref().map(|d| d.r#type)),
+        content_digest_bytes: Set(event.content_digest
             .as_ref()
             .map(|d| d.value.clone())),
         signature: Set(signed_event.signature),
@@ -246,6 +247,7 @@ async fn process_event(
 
     match EventsRepository::Mutation::add_event(&txn, active_model).await {
         Ok(event) => {
+            let content = decoded_content.map(|(_, c, _)| c);
             let is_authorised = event_is_authorised(&event, content.as_ref());
             if is_authorised {
                 EventsRepository::Mutation::update_cache(&txn, &event, content.as_ref())
