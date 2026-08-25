@@ -1,4 +1,4 @@
-import type { PostData } from '@/src/common/lib/polycentric-hooks';
+import type { PostData, PostLabel } from '@/src/common/lib/polycentric-hooks';
 import {
   type CounterOverlay,
   EMPTY_POST_OVERLAY,
@@ -6,7 +6,7 @@ import {
   type PostOverlay,
   type Reaction,
 } from './overlayTypes';
-import type { v2 } from '@polycentric/react-native';
+import { labelsChanged, type v2 } from '@polycentric/react-native';
 
 /** Apply the patch to the overlay or return `undefined` if all of the overlays are undefined now. */
 export function patchPostOverlay(
@@ -134,6 +134,18 @@ export function talliesChanged(
 }
 
 /**
+ * Check whether two label sets differ, calling helper from `rs-core`.
+ */
+export function labelsetChanged(
+  a: PostLabel[] = [],
+  b: PostLabel[] = [],
+): boolean {
+  // Skip call to `rs-core` for empty label sets for better performance/less overhead
+  if (a === b || (a.length === 0 && b.length === 0)) return false;
+  return labelsChanged(a, b);
+}
+
+/**
  * Assume that `orig` and `updated` have the same post id and check whether any
  * metadata has changed.
  */
@@ -144,6 +156,7 @@ export function postChanged(orig: PostData, updated: PostData): boolean {
   if (orig.downvoteCount !== updated.downvoteCount) return true;
   if (talliesChanged(orig.reactionTallies, updated.reactionTallies))
     return true;
+  if (labelsetChanged(orig.labels, updated.labels)) return true;
 
   return false;
 }
