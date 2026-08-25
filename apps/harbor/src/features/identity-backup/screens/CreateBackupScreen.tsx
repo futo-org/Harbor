@@ -276,8 +276,9 @@ function BackupInfo({
           <Text variant="body" color="neutral_500">
             The backup file can be used to restore your Harbor identity if you
             are ever logged out on all of your devices. Remember to store it
-            somewhere safe and private. Press "Recover using backup" from a
-            clean session to use it.
+            somewhere safe and private. To use the backup file, press "I already
+            have an identity" and then "Recover using backup" when logging in on
+            a new device.
           </Text>
 
           {hasExisting ? (

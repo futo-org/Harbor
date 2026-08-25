@@ -33,8 +33,9 @@ created.
 You can check your backup file in `Settings > Test Backup` to ensure that you
 have created a backup successfully.
 
-On your new device, press `Recover using backup` and select the latest backup
-file to add the device without relying on an existing session.
+On your new device, press `I already have an identity > Recover using backup`
+and select the latest backup file to add the device without relying on an
+existing session.
 
 ## Choosing your servers
 

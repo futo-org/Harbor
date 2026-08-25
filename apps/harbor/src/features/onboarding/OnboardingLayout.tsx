@@ -31,7 +31,8 @@ export default function OnboardingLayout() {
   const showScene = width > Breakpoints.md;
   // A flow's end offers its own way onward, so it takes no controls.
   const isFlowEnd = pathname.endsWith('/success');
-  const showBack = !isFlowEnd && !FLOW_ENTRY_ROUTES.includes(pathname);
+  const showBack =
+    !isFlowEnd && !FLOW_ENTRY_ROUTES.includes(pathname) && router.canGoBack();
 
   return (
     <View
