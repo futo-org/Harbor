@@ -435,7 +435,7 @@ export const RightSidebar = memo(function RightSidebar() {
 
             {!identity && <SignupWidget />}
 
-            {isWeb && <SuggestedFollowWidget />}
+            {!!identity && isWeb && <SuggestedFollowWidget />}
           </View>
           <AppFooter />
         </View>
