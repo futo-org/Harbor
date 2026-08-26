@@ -37,8 +37,9 @@ export function SuggestedFollowWidget() {
         Atoms.p_lg,
         Atoms.w_full,
         Atoms.gap_md,
+        Atoms.flex_shrink_1,
+        Atoms.overflow_hidden,
         { borderWidth: 1, borderColor: theme.palette.neutral_25 },
-        { flexShrink: 1, overflow: 'hidden' },
       ]}
     >
       <Text fontSize="lg" fontWeight="bold">
@@ -69,6 +70,7 @@ export function SuggestedFollowWidget() {
               onPress={showMore}
               fontWeight="regular"
               underlineOnHover
+              containerStyle={Atoms.self_start}
             />
           )}
         </>
