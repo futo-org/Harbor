@@ -7,7 +7,6 @@ import { router, usePathname } from 'expo-router';
 import { Routes } from '@/src/common/constants';
 import FollowButton from '@/src/features/follow/FollowButton';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
-import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { useSuggestedFollows } from '@/src/features/follow/hooks/useSuggestedFollows';
 
 const SUGGESTIONS_LIMIT = 5;
@@ -17,7 +16,7 @@ export function SuggestedFollowWidget() {
   const pathname = usePathname();
 
   const { isLoading, entries, hasMore } = useSuggestedFollows(
-    useEagerLoad(),
+    true,
     SUGGESTIONS_LIMIT,
   );
 
