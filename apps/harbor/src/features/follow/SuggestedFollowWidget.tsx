@@ -10,7 +10,7 @@ import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { useSuggestedFollows } from '@/src/features/follow/hooks/useSuggestedFollows';
 
-const SUGGESTIONS_LIMIT = 4;
+const SUGGESTIONS_LIMIT = 5;
 
 export function SuggestedFollowWidget() {
   const { theme } = useTheme();
