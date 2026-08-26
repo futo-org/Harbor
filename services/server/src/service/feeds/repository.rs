@@ -416,9 +416,8 @@ impl Query {
         })
     }
 
-    /// Same as [`list_feed_events`] restricted to events authored by
-    /// any of `identities`. Short-circuits with an empty Vec when
-    /// the identity list is empty.
+    /// List events restricted to events authored by any of `identities`.
+    /// Short-circuits with an empty Vec when the identity list is empty.
     pub async fn list_feed_events_by_identities(
         db: &DbConn,
         identities: Vec<String>,
@@ -435,9 +434,9 @@ impl Query {
         .await
     }
 
-    /// Same as [`list_feed_events`] restricted to Feed posts attributed
-    /// to `url` (via `Post.attributed_to[].link`). "Attributed to a URL"
-    /// means an exact URL match, ignoring the other Link metadata.
+    /// List events restricted to Feed posts attributed to `url` (via
+    /// `Post.attributed_to[].link`). "Attributed to a URL" means an exact URL
+    /// match, ignoring the other Link metadata.
     /// Short-circuits with an empty Vec when `url` is empty.
     pub async fn list_feed_events_by_attributed_url(
         db: &DbConn,
