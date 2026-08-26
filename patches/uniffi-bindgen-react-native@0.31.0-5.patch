@@ -1,0 +1,10 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index f5f99d2d4609cdc39d563c070d710fa9fa9af4ec..506977ad72d5776aa9684c3fa268ca37cf5e2d94 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -32,4 +32,4 @@ ubrn_fixture_testing = { path = "crates/ubrn_fixture_testing" }
+ ubrn_macros = { path = "crates/ubrn_macros" }
+ uniffi-runtime-wasm = { path = "runtimes/wasm/helper-crate" }
+ walrus = "0.23"
+-wasm-bindgen-cli-support = "=0.2.100"
++wasm-bindgen-cli-support = "=0.2.125"
