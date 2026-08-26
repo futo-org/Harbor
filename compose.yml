@@ -59,6 +59,8 @@ services:
   # reads. Same image and env as the server (prod runs it the same way, see
   # deploy/charts/harbor-server/templates/workers-deployment.yaml).
   server-workers:
+    profiles:
+      - push
     build:
       context: .
       dockerfile: services/server/Dockerfile
@@ -123,7 +125,11 @@ services:
       postgres:
         condition: service_healthy
 
+  # Opt-in, like moderation: `docker compose --profile push up -d`. Without
+  # the profile the app logs a harmless connection-refused on registration.
   push-notifications:
+    profiles:
+      - push
     build:
       context: .
       dockerfile: services/push-notifications/Dockerfile
