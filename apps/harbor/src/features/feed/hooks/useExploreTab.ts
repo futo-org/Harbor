@@ -4,7 +4,7 @@ import { isWeb } from '@/src/common/util/platform';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { Routes } from '@/src/common/constants';
 import type { FeedTab } from '@/src/features/feed/hooks/feedCache';
-import type { ExploreTab } from '@/src/features/feed/FeedTabs';
+import { type ExploreTab, isExploreTab } from '@/src/features/feed/FeedTabs';
 
 /**
  * Explore page tabs are not persisted
@@ -21,6 +21,9 @@ export function useExploreTab(routeTab: ExploreTab) {
       emitFocusedRefresh();
       return;
     }
+
+    // needed as a type guard
+    if (!isExploreTab(next)) return;
 
     if (isWeb) {
       router.push(
