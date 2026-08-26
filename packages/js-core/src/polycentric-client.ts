@@ -26,15 +26,12 @@ import { toDigestKey } from './utils/hex';
 import { CryptoManager } from './crypto/crypto-manager';
 import { createServerJwt, DEFAULT_EXPIRY_SECONDS } from './crypto/server-jwt';
 
-import type {
-  PolycentricCoreLike,
-  EventKey,
-} from '@polycentric/rs-core-uniffi-web';
+import type { PolycentricCoreLike, EventKey } from '@polycentric/rs-core-wasm';
 // `./generated` is the pure-JS bindings subpath; it exposes the Query
 // class and QueryStatus enum without dragging in the wasm asset. The
 // uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
 // externalised in webpack.config.js so consumers resolve it at runtime.
-import { Query, QueryStatus } from '@polycentric/rs-core-uniffi-web/generated';
+import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
 
 type CoreType = PolycentricCoreLike;
 

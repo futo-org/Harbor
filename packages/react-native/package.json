@@ -108,7 +108,7 @@
     "@polycentric/js-browser": "workspace:*",
     "@polycentric/js-core": "workspace:*",
     "@polycentric/js-storage-sqlite": "workspace:*",
-    "@polycentric/rs-core-uniffi-web": "workspace:*",
+    "@polycentric/rs-core-wasm": "workspace:*",
     "@ubjs/core": "catalog:",
     "drizzle-orm": "^0.45.2",
     "fast-text-encoding": "^1.0.6",

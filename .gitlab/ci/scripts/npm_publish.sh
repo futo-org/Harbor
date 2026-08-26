@@ -30,7 +30,7 @@ echo "Using npm dist-tag: ${DIST_TAG}"
 pnpm -r --filter "@polycentric/*" exec npm version "${VERSION}" --no-git-tag-version --allow-same-version
 
 # Topological order; pnpm rewrites workspace:* -> ${VERSION} on publish.
-PACKAGES="@polycentric/rs-core-uniffi-web @polycentric/js-storage-sqlite @polycentric/js-core @polycentric/js-browser @polycentric/js-node @polycentric/react-native"
+PACKAGES="@polycentric/rs-core-wasm @polycentric/js-storage-sqlite @polycentric/js-core @polycentric/js-browser @polycentric/js-node @polycentric/react-native"
 
 publish_all() {
   registry_url="$1"

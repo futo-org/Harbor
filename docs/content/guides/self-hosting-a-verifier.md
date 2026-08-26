@@ -12,7 +12,7 @@ The verifier bot lives at `services/verifier-bot` in the Harbor monorepo.
 
 The repo's root `compose.yml` includes a `verifier-bot` service built from
 `services/verifier-bot/Dockerfile.dev`. That image is **self-contained**: it
-builds every dependency from source (the Rust→wasm `rs-core-uniffi-web`, the JS
+builds every dependency from source (the Rust→wasm `rs-core-wasm`, the JS
 SDKs, and the bot), so no prebuilt artifacts are needed.
 
 ```bash
@@ -26,7 +26,7 @@ The bot listens on port `3002` by default (`POLYCENTRIC_VERIFIER_BOT_PORT`).
 ## Production image
 
 `services/verifier-bot/Dockerfile` is the production image built in CI. Unlike
-the dev image, it consumes the `js-core` / `js-node` / `rs-core-uniffi-web`
+the dev image, it consumes the `js-core` / `js-node` / `rs-core-wasm`
 `dist/` produced by the CI SDK jobs rather than building them. Both images
 compile the bot with `tsc` and run it with `node dist/app.js` (no tsx at
 runtime).

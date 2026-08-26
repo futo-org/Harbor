@@ -33,8 +33,8 @@ scripts fan out across them.
 | ----------------------------- | -------------------------------------------------------------------------------------------- |
 | `packages/rs-core`            | The Rust protocol core: event signing and validation, queries, sync, and the local store. Everything else is a binding over this. |
 | `packages/rs-common`          | Shared Rust code — protocol models and the generated protobuf types — used by `rs-core` and the services. |
-| `packages/rs-core-uniffi-web` | `rs-core` compiled to WASM with `uniffi-bindgen-react-native` bindings, for the web build.    |
-| `packages/react-native`       | React Native SDK. Wraps `rs-core` through uniffi (native) or the WASM build (web).            |
+| `packages/rs-core-wasm`     | `uniffi-bindgen-react-native` bindings for `rs-core`: the shared TypeScript API plus a WASM build for web and Node. |
+| `packages/react-native`       | React Native SDK. The JSI TurboModule that wraps `rs-core` natively, over `rs-core-wasm` on web, plus the Expo storage drivers. |
 | `packages/js-core`            | Core JavaScript library holding the protocol logic and generated protobuf types.               |
 | `packages/js-browser`         | Browser SDK, storing data in SQLite WASM.                                                     |
 | `packages/js-node`            | Node.js SDK, storing data in sqlite3.                                                         |
@@ -59,8 +59,9 @@ cause confusing build failures:
 
 - **Protobuf types** are generated from `protos/` at build time (`prost` and
   `tonic` for Rust, `protobuf-ts` for TypeScript).
-- **uniffi bindings** expose `rs-core` to TypeScript. The React Native bindings
-  are committed under `packages/react-native/src/generated/`; the web bindings
-  are built into `packages/rs-core-uniffi-web/dist/`. Regenerate them with
+- **uniffi bindings** expose `rs-core` to TypeScript. The React Native
+  TurboModule bindings are committed under
+  `packages/react-native/src/generated/rn/`; the wasm bindings are built into
+  `packages/rs-core-wasm/src/generated/wasm/`. Regenerate them with
   `pnpm ubrn:clean && pnpm build` — see
   [Clearing stale build caches](./setup.md#clearing-stale-build-caches).

@@ -1,0 +1,9 @@
+---
+rust:
+  directory: ../rs-core
+  manifestPath: Cargo.toml
+wasm2:
+  ts: src/generated/wasm
+  # Drops rs-core's default `native-transport` feature so the wasm build only
+  # pulls in the wasm32-compatible `tonic-web-wasm-client` transport.
+  defaultFeatures: false

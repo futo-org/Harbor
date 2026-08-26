@@ -113,7 +113,7 @@ rn-ios-tart-prune:
       artifacts: true
     - job: rn-ios-build
       artifacts: true
-    - job: rs-core-uniffi-web-build
+    - job: rs-core-wasm-build
       artifacts: true
 
 rn-sdk-build:
