@@ -20,6 +20,7 @@ import {
   EXPLORE_TAB_VALUES,
   FeedTabs,
   SORT_OPTIONS,
+  type ExploreTab,
 } from './FeedTabs';
 import type { FeedSortOption } from './hooks/feedCache';
 import { useExploreFeed } from './hooks/useExploreFeed';
@@ -27,7 +28,7 @@ import {
   useFeedSettingsHydrated,
   useFeedSettingsStore,
 } from './hooks/useFeedSettingsStore';
-import { useExploreTab, type ExploreTab } from './hooks/useExploreTab';
+import { useExploreTab } from './hooks/useExploreTab';
 
 function ExplorePage({
   sort,

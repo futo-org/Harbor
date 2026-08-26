@@ -1,11 +1,10 @@
-import type { FeedTab } from '@/src/features/feed/hooks/feedCache';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { isWeb } from '@/src/common/util/platform';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { Routes } from '@/src/common/constants';
-
-export type ExploreTab = 'posts' | 'people';
+import type { FeedTab } from '@/src/features/feed/hooks/feedCache';
+import type { ExploreTab } from '@/src/features/feed/FeedTabs';
 
 /**
  * Explore page tabs are not persisted
@@ -22,8 +21,6 @@ export function useExploreTab(routeTab: ExploreTab) {
       emitFocusedRefresh();
       return;
     }
-
-    if (next !== 'posts' && next !== 'people') return;
 
     if (isWeb) {
       router.push(
