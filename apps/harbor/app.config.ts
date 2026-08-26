@@ -21,6 +21,8 @@ const ID = IS_DEV
     ? 'org.futo.polycentric.staging'
     : 'org.futo.polycentric';
 
+const SCHEME = IS_DEV ? 'harbor.dev' : IS_STAGING ? 'harbor.staging' : 'harbor';
+
 // Play builds get their own package so the store channel can never
 // entangle with sideloaded installs (versionCodes and signatures stay
 // fully independent). iOS keeps `ID` — the App Store app is bound to it.
@@ -51,7 +53,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: process.env.APP_VERSION ?? PKG_VERSION ?? '0.0.1',
   orientation: 'default',
   icon: './src/common/assets/images/app-icons/android-icon-foreground.png',
-  scheme: 'harbor',
+  scheme: SCHEME,
   web: {
     output: 'server',
   },
@@ -111,6 +113,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-dev-client',
       {
         launchMode: 'most-recent',
+        // The generated scheme is slug-based, so all variants would claim it.
+        addGeneratedScheme: false,
       },
     ],
     [

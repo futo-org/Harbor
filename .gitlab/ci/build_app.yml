@@ -88,6 +88,33 @@ web-image:
         --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/web:cache-$CI_COMMIT_REF_SLUG,mode=max \
         --output type=image,name=$CI_REGISTRY_IMAGE/web:$CI_COMMIT_SHA,push=true
 
+# Web e2e: drives the image this pipeline built, started as a job service,
+# with a headless Chromium.
+app-web-e2e:
+  extends: .app-check-base
+  stage: test
+  needs:
+    - job: app-web-image
+      artifacts: false
+  services:
+    - name: $CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA
+      alias: web
+  variables:
+    MAESTRO_WEB_URL: http://web:8080
+    MAESTRO_BROWSER: chromium
+    # The sandbox cannot start as root in a container.
+    CHROMIUM_FLAGS: --no-sandbox
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends chromium chromium-driver
+    - !reference [.app-check-base, before_script]
+  script:
+    - pnpm --filter harbor-e2e test:web
+  artifacts:
+    when: always
+    paths:
+      - e2e/reports
+    expire_in: 1 week
+
 .app-build-expo:
   extends: .app-build-base
   stage: build
@@ -138,7 +165,7 @@ web-image:
   script:
     - npx eas-cli build --platform android --profile ${EAS_PROFILE} --non-interactive --wait --json > eas-build.json
     # eas only builds remotely; download the resulting APK so it is a CI artifact.
-    - node "$CI_PROJECT_DIR/tools/expo/download-apk.js" eas-build.json harbor.apk
+    - node "$CI_PROJECT_DIR/tools/expo/download-build.js" eas-build.json harbor.apk
   artifacts:
     paths:
       - apps/harbor/harbor.apk
@@ -228,3 +255,47 @@ app-ios-production:
   variables:
     EAS_PLATFORM: ios
     EAS_PROFILE: production
+
+# iOS e2e: re-signs the store archive ad-hoc and drives it on a real device.
+# Runs on the self-hosted macOS runner tagged `ios-device`, set up once with
+# the distribution certificate in its keychain, the ad-hoc profile on disk
+# (IOS_ADHOC_PROFILE) and Maestro installed. See the e2e-testing docs.
+.app-ios-e2e:
+  stage: test
+  interruptible: false
+  # Manual and non-blocking: needs the self-hosted runner and a device.
+  rules:
+    - when: manual
+      allow_failure: true
+  tags:
+    - ios-device
+  before_script:
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+    - cd ./apps/harbor
+  script:
+    # The store build was queued with --no-wait; resign-build waits for it.
+    - BUILD_ID=$(node -p "[].concat(JSON.parse(require('fs').readFileSync('eas-build.json', 'utf8')))[0].id")
+    - node "$CI_PROJECT_DIR/tools/expo/resign-build.js" "$BUILD_ID" --output harbor.ipa
+    - MAESTRO_APP_FILE="$PWD/harbor.ipa" pnpm --filter harbor-e2e test:ios
+  artifacts:
+    when: always
+    paths:
+      - e2e/reports
+    expire_in: 1 week
+
+app-ios-e2e-staging:
+  extends: .app-ios-e2e
+  needs:
+    - job: app-ios-staging
+      artifacts: true
+  variables:
+    MAESTRO_APP_ID: org.futo.polycentric.staging
+
+app-ios-e2e-production:
+  extends: .app-ios-e2e
+  needs:
+    - job: app-ios-production
+      artifacts: true
+  variables:
+    MAESTRO_APP_ID: org.futo.polycentric

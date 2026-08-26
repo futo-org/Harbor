@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Downloads the APK produced by an EAS build.
+// Downloads the application archive produced by an EAS build.
 //
-// Usage: node tools/expo/download-apk.js [eas-build.json] [output.apk]
+// Usage: node tools/expo/download-build.js [eas-build.json] [output-file]
 //
 // Reads the JSON emitted by `eas-cli build --json`, extracts the application
 // archive URL and downloads it. Defaults: ./eas-build.json -> ./polycentric.apk.
@@ -17,7 +17,7 @@ const artifacts = (build && build.artifacts) || {};
 const url = artifacts.applicationArchiveUrl || artifacts.buildUrl;
 
 if (!url) {
-  console.error(`No APK URL found in ${inputPath}`);
+  console.error(`No application archive URL found in ${inputPath}`);
   process.exit(1);
 }
 
@@ -26,7 +26,7 @@ console.error(`Downloading ${url} -> ${outputPath}`);
 fetch(url)
   .then((res) => {
     if (!res.ok) {
-      throw new Error(`Failed to download APK: HTTP ${res.status}`);
+      throw new Error(`Failed to download archive: HTTP ${res.status}`);
     }
     return res.arrayBuffer();
   })
