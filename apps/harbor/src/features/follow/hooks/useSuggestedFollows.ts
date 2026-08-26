@@ -64,7 +64,7 @@ export function useSuggestedFollows(
   const { identityKey } = useCurrentIdentity();
 
   const query = useQuery(
-    ['suggest-follow', identityKey ?? ''],
+    ['suggest-follow', identityKey ?? '', `${limit}`],
     (_status, data) =>
       new Query.SuggestFollow({ limit, forwardToken: extractToken(data) }),
     { updateMode: UpdateMode.Merge },

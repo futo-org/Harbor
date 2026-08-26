@@ -8,7 +8,7 @@ import { Routes } from '@/src/common/constants';
 import FollowButton from '@/src/features/follow/FollowButton';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
-import { useAbbreviatedSuggestedFollows } from '@/src/features/follow/hooks/useAbbreviatedSuggestedFollows';
+import { useSuggestedFollows } from '@/src/features/follow/hooks/useSuggestedFollows';
 
 const SUGGESTIONS_LIMIT = 4;
 
@@ -17,7 +17,7 @@ export function SuggestedFollowWidget() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const { isLoading, entries, hasMore } = useAbbreviatedSuggestedFollows(
+  const { isLoading, entries, hasMore } = useSuggestedFollows(
     useEagerLoad(),
     SUGGESTIONS_LIMIT,
   );
@@ -39,6 +39,7 @@ export function SuggestedFollowWidget() {
         Atoms.w_full,
         Atoms.gap_md,
         { borderWidth: 1, borderColor: theme.palette.neutral_25 },
+        { flexShrink: 1, overflow: 'hidden' },
       ]}
     >
       <Text fontSize="lg" fontWeight="bold">
