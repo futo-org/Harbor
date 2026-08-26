@@ -19,8 +19,8 @@ catalogs:
       specifier: ^24.0.0
       version: 24.13.1
     '@ubjs/core':
-      specifier: 0.31.0-3
-      version: 0.31.0-3
+      specifier: 0.31.0-5
+      version: 0.31.0-5
     jest:
       specifier: ^29.7.0
       version: 29.7.0
@@ -37,8 +37,8 @@ catalogs:
       specifier: ^5.9.3
       version: 5.9.3
     uniffi-bindgen-react-native:
-      specifier: 0.31.0-3
-      version: 0.31.0-3
+      specifier: 0.31.0-5
+      version: 0.31.0-5
 
 overrides:
   serialize-javascript@<7.0.5: '>=7.0.5'
@@ -55,9 +55,9 @@ patchedDependencies:
   '@rn-primitives/hooks@1.5.2':
     hash: d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78
     path: patches/@rn-primitives__hooks@1.5.2.patch
-  uniffi-bindgen-react-native@0.31.0-3:
-    hash: 03a7e6a0053c9a40440261b0258c952d7eb61ddbe5ed2f7d6df0bb1344757197
-    path: patches/uniffi-bindgen-react-native@0.31.0-3.patch
+  uniffi-bindgen-react-native@0.31.0-5:
+    hash: e64ad5ab8abbc7c223e11c807046aa7beb9498422f2fe6e4b42848f61bc62494
+    path: patches/uniffi-bindgen-react-native@0.31.0-5.patch
 
 importers:
 
@@ -604,7 +604,7 @@ importers:
         version: link:../rs-core-uniffi-web
       '@ubjs/core':
         specifier: 'catalog:'
-        version: 0.31.0-3
+        version: 0.31.0-5
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@op-engineering/op-sqlite@15.2.5(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(@types/pg@8.21.0)(better-sqlite3@12.10.1)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(pg@8.23.0)
@@ -616,7 +616,7 @@ importers:
         version: 1.11.0(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
-        version: 0.31.0-3(patch_hash=03a7e6a0053c9a40440261b0258c952d7eb61ddbe5ed2f7d6df0bb1344757197)
+        version: 0.31.0-5(patch_hash=e64ad5ab8abbc7c223e11c807046aa7beb9498422f2fe6e4b42848f61bc62494)
     devDependencies:
       '@react-native/babel-preset':
         specifier: 0.83.0
@@ -656,14 +656,14 @@ importers:
     dependencies:
       '@ubjs/core':
         specifier: 'catalog:'
-        version: 0.31.0-3
+        version: 0.31.0-5
     devDependencies:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
-        version: 0.31.0-3(patch_hash=03a7e6a0053c9a40440261b0258c952d7eb61ddbe5ed2f7d6df0bb1344757197)
+        version: 0.31.0-5(patch_hash=e64ad5ab8abbc7c223e11c807046aa7beb9498422f2fe6e4b42848f61bc62494)
 
   services/scraper:
     dependencies:
@@ -5352,8 +5352,8 @@ packages:
     peerDependencies:
       typescript: '*'
 
-  '@ubjs/core@0.31.0-3':
-    resolution: {integrity: sha512-39XrJgUZ2VVb561sSnkXPhczNoeBsNiSRArecsV0JE7CJq69ajFkcn9/tBAUS2NpgHkLIDU+z6Ks2+1wXnboxg==}
+  '@ubjs/core@0.31.0-5':
+    resolution: {integrity: sha512-oRBRtyYOhaodiOY3rLMZFgAHGFMmD44XefMpsAx4Ja0/rO+45kVdQB1VZsblQMLYxP965i3IHm56eymgo3I5eQ==}
 
   '@ungap/structured-clone@1.3.3':
     resolution: {integrity: sha512-60YRaenCQcVjYEKOcG824+DRGGIQ3VKErcBoAEDJZz5bKIs2ZG+X/H9Nk+Q6EVkwJk5QNApxbrc5QtBSwtrXAg==}
@@ -11839,8 +11839,8 @@ packages:
     resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}
     engines: {node: '>=18'}
 
-  uniffi-bindgen-react-native@0.31.0-3:
-    resolution: {integrity: sha512-br7giBJRr/j00rdMXhOZGMGuDWMAVUcxC9O3lco0KRqzEAxUz00+gegPW5tKamvKbrnj7NB682XUCYrcagtxFA==}
+  uniffi-bindgen-react-native@0.31.0-5:
+    resolution: {integrity: sha512-YtL3gTe+RVXAQx/2P2Iuypic/CunRZC65Cs47v//YRfwWNYU4Ufd1jT3rqxSrH5b5QFCYblP89Nf/9ssZRvNgg==}
     hasBin: true
 
   unified@11.0.5:
@@ -14325,9 +14325,9 @@ snapshots:
       browserslist: 4.28.4
       lightningcss: 1.32.0
       semver: 7.8.5
-      swc-loader: 0.2.7(@swc/core@1.15.40)(webpack@5.108.4(@swc/core@1.15.40)(postcss@8.5.16))
+      swc-loader: 0.2.7(@swc/core@1.15.40)(webpack@5.108.4(@swc/core@1.15.40)(@swc/html@1.15.40)(lightningcss@1.32.0)(postcss@8.5.16))
       tslib: 2.8.1
-      webpack: 5.108.4(@swc/core@1.15.40)(@swc/html@1.15.40)(lightningcss@1.32.0)(postcss@8.5.16)
+      webpack: 5.108.4(@swc/core@1.15.40)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.16))(html-minifier-terser@7.2.0)(postcss@8.5.16)
     transitivePeerDependencies:
       - '@minify-html/node'
       - '@swc/css'
@@ -19175,7 +19175,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@ubjs/core@0.31.0-3': {}
+  '@ubjs/core@0.31.0-5': {}
 
   '@ungap/structured-clone@1.3.3': {}
 
@@ -24655,19 +24655,6 @@ snapshots:
 
   minimist@1.2.8: {}
 
-  minimizer-webpack-plugin@5.6.1(@swc/core@1.15.40)(@swc/html@1.15.40)(lightningcss@1.32.0)(postcss@8.5.16)(webpack@5.108.4(@swc/core@1.15.40)(postcss@8.5.16)):
-    dependencies:
-      '@jridgewell/trace-mapping': 0.3.31
-      jest-worker: 27.5.1
-      schema-utils: 4.3.3
-      terser: 5.48.0
-      webpack: 5.108.4(@swc/core@1.15.40)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.16))(html-minifier-terser@7.2.0)(postcss@8.5.16)
-    optionalDependencies:
-      '@swc/core': 1.15.40
-      '@swc/html': 1.15.40
-      lightningcss: 1.32.0
-      postcss: 8.5.16
-
   minimizer-webpack-plugin@5.6.1(@swc/core@1.15.40)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.16))(html-minifier-terser@7.2.0)(postcss@8.5.16)(webpack@5.108.4(@swc/core@1.15.40)(postcss@8.5.16)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
@@ -27373,7 +27360,7 @@ snapshots:
       picocolors: 1.1.1
       sax: 1.6.0
 
-  swc-loader@0.2.7(@swc/core@1.15.40)(webpack@5.108.4(@swc/core@1.15.40)(postcss@8.5.16)):
+  swc-loader@0.2.7(@swc/core@1.15.40)(webpack@5.108.4(@swc/core@1.15.40)(@swc/html@1.15.40)(lightningcss@1.32.0)(postcss@8.5.16)):
     dependencies:
       '@swc/core': 1.15.40
       '@swc/counter': 0.1.3
@@ -27665,7 +27652,7 @@ snapshots:
 
   unicorn-magic@0.3.0: {}
 
-  uniffi-bindgen-react-native@0.31.0-3(patch_hash=03a7e6a0053c9a40440261b0258c952d7eb61ddbe5ed2f7d6df0bb1344757197): {}
+  uniffi-bindgen-react-native@0.31.0-5(patch_hash=e64ad5ab8abbc7c223e11c807046aa7beb9498422f2fe6e4b42848f61bc62494): {}
 
   unified@11.0.5:
     dependencies:
@@ -28138,44 +28125,6 @@ snapshots:
       wildcard: 2.0.1
 
   webpack-sources@3.5.0: {}
-
-  webpack@5.108.4(@swc/core@1.15.40)(@swc/html@1.15.40)(lightningcss@1.32.0)(postcss@8.5.16):
-    dependencies:
-      '@types/estree': 1.0.9
-      '@types/json-schema': 7.0.15
-      '@webassemblyjs/ast': 1.14.1
-      '@webassemblyjs/wasm-edit': 1.14.1
-      '@webassemblyjs/wasm-parser': 1.14.1
-      acorn: 8.17.0
-      acorn-import-phases: 1.0.4(acorn@8.17.0)
-      browserslist: 4.28.4
-      chrome-trace-event: 1.0.4
-      enhanced-resolve: 5.24.1
-      es-module-lexer: 2.3.0
-      eslint-scope: 5.1.1
-      events: 3.3.0
-      graceful-fs: 4.2.11
-      loader-runner: 4.3.2
-      mime-db: 1.54.0
-      minimizer-webpack-plugin: 5.6.1(@swc/core@1.15.40)(@swc/html@1.15.40)(lightningcss@1.32.0)(postcss@8.5.16)(webpack@5.108.4(@swc/core@1.15.40)(postcss@8.5.16))
-      neo-async: 2.6.2
-      schema-utils: 4.3.3
-      tapable: 2.3.3
-      watchpack: 2.5.2
-      webpack-sources: 3.5.0
-    transitivePeerDependencies:
-      - '@minify-html/node'
-      - '@swc/core'
-      - '@swc/css'
-      - '@swc/html'
-      - clean-css
-      - cssnano
-      - csso
-      - esbuild
-      - html-minifier-terser
-      - lightningcss
-      - postcss
-      - uglify-js
 
   webpack@5.108.4(@swc/core@1.15.40)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.16))(html-minifier-terser@7.2.0)(postcss@8.5.16):
     dependencies:

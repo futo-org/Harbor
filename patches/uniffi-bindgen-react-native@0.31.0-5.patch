@@ -1,0 +1,26 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index f5f99d2d4609cdc39d563c070d710fa9fa9af4ec..506977ad72d5776aa9684c3fa268ca37cf5e2d94 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -32,4 +32,4 @@ ubrn_fixture_testing = { path = "crates/ubrn_fixture_testing" }
+ ubrn_macros = { path = "crates/ubrn_macros" }
+ uniffi-runtime-wasm = { path = "runtimes/wasm/helper-crate" }
+ walrus = "0.23"
+-wasm-bindgen-cli-support = "=0.2.100"
++wasm-bindgen-cli-support = "=0.2.125"
+diff --git a/crates/ubrn_cli/src/wasm/commands.rs b/crates/ubrn_cli/src/wasm/commands.rs
+index 2f2a5482ed9d26e2230521d02c26c59259dd0940..9e51a17d378796147fc5320ae1c93c9f241a8998 100644
+--- a/crates/ubrn_cli/src/wasm/commands.rs
++++ b/crates/ubrn_cli/src/wasm/commands.rs
+@@ -171,6 +171,11 @@ impl WebBuildArgs {
+         bindgen.input_path(library_path.as_std_path());
+         bindgen.out_name("index");
+         bindgen.omit_default_module_path(true);
++        // `Bindgen::new()` defaults typescript off, where the `wasm-bindgen`
++        // CLI defaults it on. The generated entrypoint imports the wasm as a
++        // module, which only type checks against the `index_bg.wasm.d.ts` this
++        // writes. `--no-typescript` below still turns it back off.
++        bindgen.typescript(true);
+         match target {
+             WasmTarget::Bundler => bindgen.bundler(true)?,
+             WasmTarget::Nodejs => bindgen.nodejs(true)?,
