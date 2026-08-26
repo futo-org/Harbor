@@ -23,7 +23,8 @@ export function SuggestedFollowWidget() {
   );
 
   const showMore = () => {
-    // This works because entire component is web-only
+    // This wouldn't work on the native side as explore.people is not mounted as
+    // a native route, but it works on web and this widget is web-only
     router.push(Routes.tabs.explore.people);
   };
 
