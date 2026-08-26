@@ -378,6 +378,12 @@ importers:
         specifier: ~6.0.2
         version: 6.0.3
 
+  e2e:
+    devDependencies:
+      maestro-runner:
+        specifier: ^1.1.25
+        version: 1.1.25
+
   packages/js-browser:
     dependencies:
       '@noble/curves':
@@ -2174,6 +2180,26 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       postcss: ^8.4
+
+  '@devicelab/maestro-runner-darwin-arm64@1.1.25':
+    resolution: {integrity: sha512-OqWzJ1GOv+KFLOyAJfonrKM1TdX7lmyvvKvdWSkkRXQjUd/7jHr3vk8E6CeL1vVg02jny5xlNV0AqF0frQ5QYQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@devicelab/maestro-runner-darwin-x64@1.1.25':
+    resolution: {integrity: sha512-Zd6fQQsJwgzMi4bJQ5ZMbGJnFe7hSFDfJtw5Ot2dH3nqCm0cfb/401G2pp9hzLOBT+FRGLiGarw96/KyFegbiA==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@devicelab/maestro-runner-linux-arm64@1.1.25':
+    resolution: {integrity: sha512-2RL041szGf29HvG5yygdX3G654+xHuWeH7PIOVkuIkw2XlK0voxnaAjdX/oQPdUYaH3MtzzYdz1eK2WBW+gpfA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@devicelab/maestro-runner-linux-x64@1.1.25':
+    resolution: {integrity: sha512-0oWGR4xS7QfJinpTk3ZKfKR8qTTq/bJQOGgIXSMPD9H34cQYsmmrWh9qOD0J9K9LM7yEC/0bWgz2NyHK52czBA==}
+    cpu: [x64]
+    os: [linux]
 
   '@discoveryjs/json-ext@0.5.7':
     resolution: {integrity: sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==}
@@ -8869,6 +8895,11 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
+  maestro-runner@1.1.25:
+    resolution: {integrity: sha512-McGf8a6l234iTHEvU+D/eTAjUTVWdmfib75HITyQIUuiU644xHSCSvbGKWiaPI4/XmrN48Jr/xttbDfGAppFCg==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
@@ -14146,6 +14177,18 @@ snapshots:
   '@csstools/utilities@2.0.0(postcss@8.5.16)':
     dependencies:
       postcss: 8.5.16
+
+  '@devicelab/maestro-runner-darwin-arm64@1.1.25':
+    optional: true
+
+  '@devicelab/maestro-runner-darwin-x64@1.1.25':
+    optional: true
+
+  '@devicelab/maestro-runner-linux-arm64@1.1.25':
+    optional: true
+
+  '@devicelab/maestro-runner-linux-x64@1.1.25':
+    optional: true
 
   '@discoveryjs/json-ext@0.5.7': {}
 
@@ -23650,6 +23693,13 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  maestro-runner@1.1.25:
+    optionalDependencies:
+      '@devicelab/maestro-runner-darwin-arm64': 1.1.25
+      '@devicelab/maestro-runner-darwin-x64': 1.1.25
+      '@devicelab/maestro-runner-linux-arm64': 1.1.25
+      '@devicelab/maestro-runner-linux-x64': 1.1.25
 
   magic-string@0.30.21:
     dependencies:

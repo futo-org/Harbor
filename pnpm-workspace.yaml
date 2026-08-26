@@ -7,6 +7,7 @@ packages:
   - services/verifier-bot
   - tools/*
   - docs/
+  - e2e
 
 catalog:
   "@noble/curves": ^2.2.0
@@ -28,6 +29,8 @@ minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
   - react-native-screens
+  - maestro-runner
+  - "@devicelab/*"
 
 onlyBuiltDependencies:
   - better-sqlite3

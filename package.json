@@ -15,6 +15,10 @@
     "run:ios": "turbo run ios --filter=polycentric-app",
     "run:android": "turbo run android --filter=polycentric-app",
     "run:web": "turbo run web --filter=polycentric-app",
+    "test:e2e": "pnpm --filter harbor-e2e test",
+    "test:e2e:android": "pnpm --filter harbor-e2e test:android",
+    "test:e2e:ios": "pnpm --filter harbor-e2e test:ios",
+    "test:e2e:web": "pnpm --filter harbor-e2e test:web",
     "ubrn:clean": "pnpm -C packages/react-native ubrn:clean && pnpm -C packages/rs-core-wasm clean",
     "prepare": "husky"
   },

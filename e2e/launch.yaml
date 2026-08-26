@@ -1,0 +1,8 @@
+appId: ${MAESTRO_APP_ID}
+---
+- launchApp:
+    appId: ${MAESTRO_APP_ID}
+    clearState: true
+- extendedWaitUntil:
+    visible: 'Create new identity'
+    timeout: 120000
