@@ -101,7 +101,7 @@ async fn process_event(
         .key
         .ok_or_else(|| Status::invalid_argument("event missing key"))?;
 
-    // Early banned check based on the chache.
+    // Early banned check based on the cache.
     let is_banned = banned_cache.get(&*key.identity).copied();
     match is_banned {
         Some(true) => return Err(banned_error()),
