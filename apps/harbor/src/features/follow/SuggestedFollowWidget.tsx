@@ -8,17 +8,22 @@ import { Routes } from '@/src/common/constants';
 import FollowButton from '@/src/features/follow/FollowButton';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { useSuggestedFollows } from '@/src/features/follow/hooks/useSuggestedFollows';
+import { FetchMode } from '@polycentric/react-native';
 
 const SUGGESTIONS_LIMIT = 5;
 
 export function SuggestedFollowWidget() {
   const { theme } = useTheme();
   const pathname = usePathname();
+  // Avoid duplication of the same content.
+  // This check is only valid on the web, but the component is web-only
+  const active = pathname !== Routes.tabs.explore.people;
 
-  const { isLoading, entries, hasMore } = useSuggestedFollows(
-    true,
-    SUGGESTIONS_LIMIT,
-  );
+  const { isLoading, entries, hasMore } = useSuggestedFollows({
+    enabled: active,
+    limit: SUGGESTIONS_LIMIT,
+    fetchMode: FetchMode.OfflineFirst,
+  });
 
   const showMore = () => {
     // This wouldn't work on the native side as explore.people is not mounted as
@@ -26,9 +31,7 @@ export function SuggestedFollowWidget() {
     router.push(Routes.tabs.explore.people);
   };
 
-  // Avoid duplication of the same content.
-  // This check is only valid on the web, but the component is web-only
-  if (pathname === Routes.tabs.explore.people) return null;
+  if (!active) return null;
 
   return (
     <View
