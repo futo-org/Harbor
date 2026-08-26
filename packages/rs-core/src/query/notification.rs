@@ -60,6 +60,7 @@ fn retain_validated_notifications(
 /// fails validation, and keep the latest non-empty `page_info`.
 fn merge_notification_responses(
     values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
     client: &Arc<Mutex<PolycentricClient>>,
 ) -> Vec<u8> {
     let mut merged = ListNotificationsResponse::default();

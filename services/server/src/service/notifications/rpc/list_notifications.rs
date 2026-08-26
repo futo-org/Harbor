@@ -1,25 +1,23 @@
-use crate::data::EventWithContentRow;
-use crate::{
-    data::pipeline,
-    service::{
-        context::RequestContext,
-        events::TargetEventKey,
-        feeds::{
-            repository::Query as FeedsRepository,
-            rpc::common::has_matching_label, util::map_db_err,
-        },
-        graph::repository::Query as GraphRepository,
-        identity::service::{
-            list_identity_events, list_profile_events, rows_to_bundles,
-        },
-        notifications::repository::Query as NotificationRepository,
-        proofs::service::attach_proofs,
-        proto::{
-            EventBundle, EventHint, EventKey, ListNotificationsRequest,
-            ListNotificationsResponse, Notification, PageInfo, PublicKey,
-        },
-        stats::service::{gather_stats_for, include_stats},
+use crate::data::{
+    EventWithContentRow, assemble_hint, bundle_into_hint, pipeline,
+    rows_into_bundles,
+};
+use crate::service::{
+    context::RequestContext,
+    events::TargetEventKey,
+    feeds::{
+        repository::Query as FeedsRepository, rpc::common::has_matching_label,
+        util::map_db_err,
     },
+    graph::repository::Query as GraphRepository,
+    identity::service::{list_identity_events, list_profile_events},
+    notifications::repository::Query as NotificationRepository,
+    proofs::service::attach_proofs,
+    proto::{
+        EventBundle, EventHint, EventKey, ListNotificationsRequest,
+        ListNotificationsResponse, Notification, PageInfo, PublicKey,
+    },
+    stats::service::gather_stats_for,
 };
 use ::entity::notification;
 use std::collections::{HashMap, HashSet};
@@ -136,10 +134,10 @@ async fn hydrate(
             .map_err(map_db_err)?;
     let fetched_keys: Vec<TargetEventKey> =
         fetched.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
-    let mut fetched_bundles = rows_to_bundles(fetched);
+    let mut fetched_bundles = rows_into_bundles(fetched);
     attach_proofs(ctx.service, &mut fetched_bundles).await?;
 
-    let mut bundles: HashMap<TargetEventKey, EventBundle> =
+    let bundles: HashMap<TargetEventKey, EventBundle> =
         fetched_keys.iter().cloned().zip(fetched_bundles).collect();
 
     let stats_fut = async {
@@ -182,24 +180,16 @@ async fn hydrate(
         blocked_fut,
     )?;
 
-    let mut label_bundles = rows_to_bundles(label_rows.clone());
+    let mut label_bundles = rows_into_bundles(label_rows.clone());
     attach_proofs(ctx.service, &mut label_bundles).await?;
 
-    let mut event_hints: Vec<EventHint> = rows_to_bundles(
-        identity_events.into_iter().chain(profile_events).collect(),
-    )
-    .into_iter()
-    .map(|event_bundle| EventHint {
-        event_bundle: Some(event_bundle),
-    })
-    .collect();
-    event_hints.extend(label_bundles.into_iter().map(|b| EventHint {
-        event_bundle: Some(b),
-    }));
+    let mut event_hints = identity_events
+        .into_iter()
+        .chain(profile_events)
+        .map(|row| assemble_hint(row, &stats))
+        .collect::<Vec<_>>();
 
-    for (key, bundle) in bundles.iter_mut() {
-        include_stats(&mut bundle.meta, key, &stats);
-    }
+    event_hints.extend(label_bundles.into_iter().map(bundle_into_hint));
 
     Ok(Hydrated {
         bundles,

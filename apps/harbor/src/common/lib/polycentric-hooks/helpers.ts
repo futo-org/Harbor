@@ -52,6 +52,9 @@ export type PostData = {
   /** Hex of the repost event's own EventKey — used as the feed list
    *  key so a repost is distinct from the original post. */
   repostId?: string;
+  /** When the repost was made. Feeds rank a repost by this, so it is the
+   *  time the row shows. */
+  repostedAt?: number;
 
   // --- Metadata that may change ---
   // Events and content are immutable, but metadata can be updated over time.
@@ -238,6 +241,7 @@ function decodeRepostBundle(bundle: v2.EventBundle): {
   repostedBy: string;
   targetId: string;
   repostId: string;
+  repostedAt: number;
 } | null {
   const decoded = decodeBundle(bundle, 'repost');
   if (!decoded) return null;
@@ -250,6 +254,7 @@ function decodeRepostBundle(bundle: v2.EventBundle): {
       repostedBy: key.identity,
       targetId: eventKeyId(target),
       repostId: eventKeyId(key),
+      repostedAt: Number(decoded.event.createdAt ?? 0),
     };
   } catch {
     return null;
@@ -299,6 +304,7 @@ export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
           labels: repostLabels ?? target.labels,
           repostedBy: repost.repostedBy,
           repostId: repost.repostId,
+          repostedAt: repost.repostedAt,
         });
       }
     }

@@ -73,6 +73,7 @@ export function RequestVerificationSheet({
             onSelect={(identity) => void onSelect(identity)}
             exclude={identityKey ? [identityKey] : undefined}
             pendingIdentity={pendingIdentity}
+            disabled={request.isPending}
           />
         </ScrollView>
       </Sheet.Content>

@@ -5,17 +5,24 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
-import { decodeIdentityBackup } from '@/src/features/identity-backup/backup';
+import {
+  decodeIdentityBackup,
+  isStaleBackup,
+} from '@/src/features/identity-backup/backup';
 import {
   BackupFilePicker,
   type PickedBackupFile,
 } from '@/src/features/identity-backup/components/BackupFilePicker';
 import { BackupStatus } from '@/src/features/identity-backup/components/BackupStatus';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { View } from 'react-native';
 
-type RecoverStage = 'input' | 'submitting' | 'failure';
+/** State for the current stage in the recovery flow */
+type RecoverState =
+  | { stage: 'input' }
+  | { stage: 'recovering' }
+  | { stage: 'failure'; message?: string };
 
 /**
  * Sign in to an identity using a backup file.
@@ -27,23 +34,35 @@ export default function RecoverIdentityScreen() {
     useLocalSearchParams()[RETURN_TO_PARAM] as string | undefined,
   );
 
-  const [stage, setStage] = useState<RecoverStage>('input');
+  const [state, setState] = useState<RecoverState>({ stage: 'input' });
+  const stage = state.stage;
+
   const [picked, setPicked] = useState<PickedBackupFile>();
 
   const onPress = async () => {
-    if (stage === 'failure') return setStage('input');
+    if (stage === 'failure') return setState({ stage: 'input' });
     if (stage !== 'input' || !picked) return;
 
-    setStage('submitting');
+    setState({ stage: 'recovering' });
+
+    const backup = decodeIdentityBackup(picked.contents);
+    if (!backup) {
+      console.warn('Recovery failed: unable to decode backup file');
+      setState({ stage: 'failure' });
+      return;
+    }
 
     try {
-      const backup = decodeIdentityBackup(picked.contents);
-      if (!backup) throw new Error('Unable to decode backup file');
-
       await client.identityManager.recoverIdentity(backup);
     } catch (err: unknown) {
       console.warn('Recovery failed:', err);
-      return setStage('failure');
+
+      const message = isStaleBackup(client, backup)
+        ? 'Recovery failed because the backup file is outdated.'
+        : undefined;
+
+      setState({ stage: 'failure', message });
+      return;
     }
 
     await refreshCurrentIdentity();
@@ -59,35 +78,39 @@ export default function RecoverIdentityScreen() {
 
   let buttonTitle: string;
   if (stage === 'input') buttonTitle = 'Recover';
-  else if (stage === 'submitting') buttonTitle = 'Recovering…';
+  else if (stage === 'recovering') buttonTitle = 'Recovering…';
   else buttonTitle = 'Try again';
 
   const buttonDisabled =
-    stage === 'submitting' || (stage === 'input' && !picked);
+    stage === 'recovering' || (stage === 'input' && !picked);
+
+  let innerContent: ReactNode;
+  if (stage === 'failure') {
+    const message =
+      state.message ?? 'Unable to recover identity from this backup file.';
+
+    innerContent = <BackupStatus successful={false} message={message} />;
+  } else {
+    innerContent = (
+      <>
+        <Text variant="title">Recover using backup</Text>
+        <Text variant="body" color="neutral_500">
+          Recover your identity using a backup file exported from Harbor. Use
+          this only if none of your devices are logged in to Harbor. Otherwise,
+          use the pairing feature instead.
+        </Text>
+        <BackupFilePicker
+          picked={picked}
+          disabled={stage !== 'input'}
+          onPicked={setPicked}
+        />
+      </>
+    );
+  }
 
   return (
     <View style={[Atoms.flex_col, Atoms.flex_1, Atoms.gap_lg]}>
-      {stage === 'failure' ? (
-        <BackupStatus
-          successful={false}
-          message="Unable to recover identity from this backup file."
-        />
-      ) : (
-        <>
-          <Text variant="title">Recover using backup</Text>
-          <Text variant="body" color="neutral_500">
-            Recover your identity using a backup file exported from Harbor. Use
-            this only if none of your devices are logged in to Harbor.
-            Otherwise, use the pairing feature instead.
-          </Text>
-          <BackupFilePicker
-            picked={picked}
-            disabled={stage !== 'input'}
-            onPicked={setPicked}
-          />
-        </>
-      )}
-
+      {innerContent}
       <Button
         title={buttonTitle}
         variant="primary"

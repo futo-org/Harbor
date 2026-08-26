@@ -1,14 +1,11 @@
-use crate::data::EventWithContentRow;
 use crate::data::hydration::HydrationState;
-use crate::data::pipeline;
+use crate::data::{EventWithContentRow, assemble_bundles, pipeline};
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{self, HasEventKey};
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::feeds::util::{map_db_err, page_limit};
-use crate::service::identity::service::{
-    list_identity_and_profile_events, rows_to_bundles,
-};
+use crate::service::identity::service::list_identity_and_profile_events;
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{GetReactionsRequest, GetReactionsResponse};
 
@@ -104,7 +101,7 @@ async fn view(
     rows: Vec<EventWithContentRow>,
     hydration: HydrationState,
 ) -> Result<GetReactionsResponse, Status> {
-    let mut event_bundles = rows_to_bundles(rows);
+    let mut event_bundles = assemble_bundles(rows, &hydration.stats);
     attach_proofs(ctx, &mut event_bundles).await?;
 
     Ok(GetReactionsResponse {

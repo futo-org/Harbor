@@ -39,6 +39,19 @@ export function feedSortBy(sort: FeedSortOption): FeedSort {
   return sort === 'top' ? FeedSort.Top : FeedSort.Latest;
 }
 
+/** Posts asked of each server per page, giving the merge a pool to rank. */
+export const FEED_PAGE_SIZE = 50;
+
+/** Posts each `loadMore` adds to the window. */
+export const FEED_WINDOW_STEP = 15;
+
+/**
+ * Posts the first emission carries. `FeedList` asks for more until it holds
+ * `onEndReachedThreshold` viewports past the screen, so one step would cost a
+ * round of fetches before the reader has scrolled.
+ */
+export const FEED_INITIAL_WINDOW = FEED_WINDOW_STEP * 2;
+
 /** Every feed lives under the `feed` prefix, so `['feed']` covers them all. */
 export const feedQueryKeys = {
   /** Omit `sort` for the partition covering every sort. */
@@ -252,6 +265,7 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
         ...repost,
         repostId: undefined,
         repostedBy: undefined,
+        repostedAt: undefined,
       };
 
       const upstreamEntry = updatePostEntry(posts.get(repost.id), asNonRepost);

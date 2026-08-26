@@ -44,7 +44,11 @@ pub struct ListBansArgs {
 
 /// Union every server's one-entry `{server_url: bool}` JSON object into a
 /// single `{server_url: bool}` map, re-encoded as JSON.
-fn merge_status_by_server(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+fn merge_status_by_server(
+    values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
+    _client: &Arc<Mutex<PolycentricClient>>,
+) -> Vec<u8> {
     let mut by_server: BTreeMap<String, bool> = BTreeMap::new();
     for v in values {
         if let Ok(entry) = serde_json::from_slice::<BTreeMap<String, bool>>(v) {
@@ -58,7 +62,11 @@ fn merge_status_by_server(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricCli
 /// first responding server's `page_info`. Pagination only makes sense
 /// against a single (pinned) server, which is how this query is meant to
 /// be called; the union is just a well-defined fallback.
-fn merge_list_bans(values: &[Vec<u8>], _client: &Arc<Mutex<PolycentricClient>>) -> Vec<u8> {
+fn merge_list_bans(
+    values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
+    _client: &Arc<Mutex<PolycentricClient>>,
+) -> Vec<u8> {
     let mut merged = ListBansResponse::default();
     let mut seen = std::collections::HashSet::new();
     for v in values {
@@ -181,6 +189,7 @@ mod tests {
                 status_entry("https://a", true),
                 status_entry("https://b", false),
             ],
+            None,
             &client(),
         );
         let decoded: BTreeMap<String, bool> = serde_json::from_slice(&merged).unwrap();
@@ -190,8 +199,11 @@ mod tests {
 
     #[test]
     fn merge_status_ignores_undecodable_entries() {
-        let merged =
-            merge_status_by_server(&[vec![0xff], status_entry("https://a", true)], &client());
+        let merged = merge_status_by_server(
+            &[vec![0xff], status_entry("https://a", true)],
+            None,
+            &client(),
+        );
         let decoded: BTreeMap<String, bool> = serde_json::from_slice(&merged).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded.get("https://a"), Some(&true));
@@ -201,6 +213,7 @@ mod tests {
     fn merge_list_bans_unions_and_dedupes_identities() {
         let merged = merge_list_bans(
             &[list_bans_bytes(&["a", "b"]), list_bans_bytes(&["b", "c"])],
+            None,
             &client(),
         );
         let decoded = ListBansResponse::decode(merged.as_slice()).unwrap();
