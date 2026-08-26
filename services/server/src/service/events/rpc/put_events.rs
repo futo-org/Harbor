@@ -24,6 +24,7 @@ use sea_orm::{
     ActiveValue::{NotSet, Set},
     TransactionTrait,
 };
+use std::collections::HashMap;
 use std::{collections::HashSet, time::Duration};
 use tonic::Status;
 
@@ -36,8 +37,9 @@ pub async fn handle(
     let mut errors: Vec<PutEventError> = Vec::new();
     let mut all_blobs = HashSet::<Blob>::new();
 
+    let mut banned_cache = HashMap::new();
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
-        match process_event(ctx, event_bundle).await {
+        match process_event(ctx, event_bundle, &mut banned_cache).await {
             Ok(blobs) => {
                 all_blobs.extend(blobs);
             }
@@ -77,6 +79,7 @@ pub async fn handle(
 async fn process_event(
     ctx: &ServiceContext,
     event_bundle: EventBundle,
+    banned_cache: &mut HashMap<Box<str>, bool>,
 ) -> Result<Vec<Blob>, Status> {
     let mut blobs = Vec::<Blob>::new();
 
@@ -98,6 +101,28 @@ async fn process_event(
         .key
         .ok_or_else(|| Status::invalid_argument("event missing key"))?;
 
+    // Early banned check based on the cache.
+    let is_banned = banned_cache.get(&*key.identity).copied();
+    match is_banned {
+        Some(true) => return Err(banned_error()),
+        Some(false) => { /* Ok to continue. */ }
+        None => {
+            let is_banned = IdentityRepository::is_banned(
+                &ctx.db,
+                &key.identity,
+            )
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, "put_events ban check db error");
+                Status::internal("internal server error")
+            })?;
+            banned_cache.insert(Box::from(&*key.identity), is_banned);
+            if is_banned {
+                return Err(banned_error());
+            }
+        }
+    }
+
     // Kafka partition/message key: the serialized protobuf event key.
     // Encoded here while `key` is whole — its fields are moved out below.
     let event_key_bytes = key.encode_to_vec();
@@ -113,25 +138,36 @@ async fn process_event(
     )
     .map_err(|e| Status::unauthenticated(e.to_string()))?;
 
+    // Decode the event before we begin the transaction.
+    let decoded_content = if let (Some(serialized_content), Some(digest)) =
+        (&event_bundle.serialized_content, &event.content_digest)
+    {
+        digest
+            .verify_against(&serialized_content.content_bytes)
+            .map_err(|err| Status::invalid_argument(err.to_string()))?;
+
+        let bytes = serialized_content.content_bytes.as_slice();
+        let content = Content::decode(bytes).map_err(|e| {
+            tracing::debug!(error = %e, "put_events content decode error");
+            Status::invalid_argument("invalid content_bytes")
+        })?;
+
+        content
+            .blobs()
+            .into_iter()
+            .for_each(|blob| blobs.push(blob.clone()));
+
+        Some((bytes, content, digest))
+    } else {
+        None
+    };
+
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
     let txn = ctx.db.begin().await.map_err(|e| {
         tracing::error!(error = %e, "put_events txn begin error");
         Status::internal("internal server error")
     })?;
-
-    // Banned identities' events are refused outright.
-    let banned = IdentityRepository::is_banned(&txn, &key.identity)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = %e, "put_events ban check db error");
-            Status::internal("internal server error")
-        })?;
-    if banned {
-        return Err(Status::permission_denied(
-            "identity is banned on this server",
-        ));
-    }
 
     // Authorize the signer against the target identity's chain.
     // Identity events are chain-validated at read time (see
@@ -154,35 +190,14 @@ async fn process_event(
         .await?;
     }
 
-    let content_digest = event.content_digest;
-
-    let content = if let (Some(serialized_content), Some(digest)) =
-        (&event_bundle.serialized_content, &content_digest)
-    {
-        digest
-            .verify_against(&serialized_content.content_bytes)
-            .map_err(|e| Status::invalid_argument(e.to_string()))?;
-
-        let content = Content::decode(
-            serialized_content.content_bytes.as_slice(),
-        )
-        .map_err(|e| {
-            tracing::debug!(error = %e, "put_events content decode error");
-            Status::invalid_argument("invalid content_bytes")
-        })?;
-
-        content
-            .blobs()
-            .into_iter()
-            .for_each(|blob| blobs.push(blob.clone()));
-
+    if let Some((bytes, content, digest)) = decoded_content.as_ref() {
         let content_row = ContentRepository::Mutation::add_content(
             &txn,
             ContentModel::ActiveModel {
                 id: NotSet,
                 digest_type: Set(digest.r#type),
                 digest_bytes: Set(digest.value.clone()),
-                serialized_bytes: Set(serialized_content.content_bytes.clone()),
+                serialized_bytes: Set(Vec::from(*bytes)),
                 synced_at: Set(Utc::now().fixed_offset()),
             },
         )
@@ -201,10 +216,7 @@ async fn process_event(
             )
             .await?;
         }
-        Some(content)
-    } else {
-        None
-    };
+    }
 
     let event_identity = key.identity.clone();
     let event_collection = key.collection;
@@ -216,8 +228,12 @@ async fn process_event(
         public_key_type: Set(signed_by.key_type as i16),
         public_key: Set(signed_by.key),
         sequence: Set(key.sequence as i64),
-        content_digest_type: Set(content_digest.as_ref().map(|d| d.r#type)),
-        content_digest_bytes: Set(content_digest
+        content_digest_type: Set(event
+            .content_digest
+            .as_ref()
+            .map(|d| d.r#type)),
+        content_digest_bytes: Set(event
+            .content_digest
             .as_ref()
             .map(|d| d.value.clone())),
         signature: Set(signed_event.signature),
@@ -234,6 +250,7 @@ async fn process_event(
 
     match EventsRepository::Mutation::add_event(&txn, active_model).await {
         Ok(event) => {
+            let content = decoded_content.map(|(_, c, _)| c);
             let is_authorised = event_is_authorised(&event, content.as_ref());
             if is_authorised {
                 EventsRepository::Mutation::update_cache(&txn, &event, content.as_ref())
@@ -243,6 +260,11 @@ async fn process_event(
                         Status::internal("internal server error")
                     })?;
             }
+
+            txn.commit().await.map_err(|err| {
+                tracing::error!(error = %err, "put_events txn commit error");
+                Status::internal("internal server error")
+            })?;
 
             ctx.proof_cache
                 .invalidate_canonical(&event_identity, event_collection)
@@ -272,27 +294,26 @@ async fn process_event(
                     tracing::warn!(error = %e, "put_events kafka publish error");
                 }
             });
-
-            txn.commit().await.map_err(|e| {
-                tracing::error!(error = %e, "put_events txn commit error");
-                Status::internal("internal server error")
-            })?;
         }
-        Err(ref e) if is_unique_violation(e) => {
+        Err(ref err) if is_unique_violation(err) => {
             // Duplicate event — already stored, treat as success, but revert
             // the content changes.
-            txn.rollback().await.map_err(|e| {
-                tracing::error!(error = %e, "put_events txn abort error");
+            txn.rollback().await.map_err(|err| {
+                tracing::error!(error = %err, "put_events txn abort error");
                 Status::internal("internal server error")
             })?;
         }
-        Err(e) => {
-            tracing::error!(error = ?e, "put_events db error");
+        Err(err) => {
+            tracing::error!(error = %err, "put_events db error");
             return Err(Status::internal("internal server error"));
         }
     }
 
     Ok(blobs)
+}
+
+fn banned_error() -> Status {
+    Status::permission_denied("identity is banned on this server")
 }
 
 /// Check if the `event` is authorised to perform its mutation.
