@@ -144,8 +144,6 @@ services:
       - POLYCENTRIC_MAIN_SERVER=${POLYCENTRIC_SERVER_NAME:-http://localhost:3000}
       # Queried at push time for the sender's profile (name/avatar).
       - POLYCENTRIC_QUERY_SERVERS=http://server:3000
-      # EXPO_ACCESS_TOKEN deliberately unset — only needed when the Expo
-      # project has enhanced push security enabled.
     depends_on:
       postgres:
         condition: service_healthy
