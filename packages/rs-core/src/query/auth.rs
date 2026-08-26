@@ -19,8 +19,11 @@ pub struct AuthToken {
 
 /// Mints auth tokens. Implemented by the embedder, called only when no
 /// unexpired token is cached for the server.
+// wasm32 runs uniffi single-threaded, where the generated foreign impl returns
+// non-Send futures, so the trait must be declared the same way.
 #[uniffi::export(with_foreign)]
-#[async_trait::async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 pub trait AuthTokenProvider: Send + Sync {
     /// A fresh token for `server_url`, or `None` to send requests to it
     /// unauthenticated.

@@ -1,15 +1,14 @@
 import path from 'path';
 
-// `@polycentric/rs-core-uniffi-web` is the wasm-backed bindings
+// `@polycentric/rs-core-wasm` is the wasm-backed bindings
 // package; pulling it into js-core's bundle would also drag in its
 // uniffi runtime (whose CJS index has relative requires that don't
 // survive webpack cleanly) and the wasm asset. Externalising it
 // leaves a clean bare import in the dist — consumers (apps' Metro /
 // vite bundler) resolve the workspace package at runtime.
 const externals = {
-  '@polycentric/rs-core-uniffi-web': '@polycentric/rs-core-uniffi-web',
-  '@polycentric/rs-core-uniffi-web/generated':
-    '@polycentric/rs-core-uniffi-web/generated',
+  '@polycentric/rs-core-wasm': '@polycentric/rs-core-wasm',
+  '@polycentric/rs-core-wasm/generated': '@polycentric/rs-core-wasm/generated',
 };
 
 export default [

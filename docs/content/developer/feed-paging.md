@@ -176,8 +176,8 @@ hints into the local store, and passes `validated_feed_merge(order, window_size)
 to `query_client.fetch`. Add a `Query` variant in `api.rs` and a match arm in
 `fetch_query`.
 
-**3. Bindings.** Regenerate with `pnpm ubrn:android` for native and
-`pnpm -C packages/rs-core-uniffi-web build` for web. A new `Query` variant
+**3. Bindings.** Regenerate with `pnpm -C packages/react-native ubrn:android`
+for native and `pnpm -C packages/rs-core-wasm build` for web. A new `Query` variant
 shifts the enum ordinals, so the JS bindings and the native library must ship
 together.
 

@@ -1,11 +1,11 @@
 # Production image (built in CI). Build context is the repo root (see
 # build_services.yml — buildkit `context=.`).
 #
-# The js SDKs (js-core, js-node, js-storage-sqlite) and rs-core-uniffi-web are
+# The js SDKs (js-core, js-node, js-storage-sqlite) and rs-core-wasm are
 # built by CI and their `dist/` is pulled into the context as artifacts (the
-# verifier-bot image job `needs: [js-sdks-build, rs-core-uniffi-web-build]`), so
+# verifier-bot image job `needs: [js-sdks-build, rs-core-wasm-wasm-build]`), so
 # this image does NOT build them. For a self-contained local build that builds
-# the SDKs itself, use Dockerfile.dev. rs-core-uniffi-web ships a compiled `.js`
+# the SDKs itself, use Dockerfile.dev. rs-core-wasm ships a compiled `.js`
 # (node export condition), so the bot tsc-compiles to dist/ and runs under node.
 
 # Stage 1: Base — Node + pnpm
@@ -30,13 +30,13 @@ RUN apt-get update \
 COPY .npmrc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY patches patches
 COPY tools tools
-# Prebuilt by CI (js-sdks-build, rs-core-uniffi-web-build); dist/ arrives via
+# Prebuilt by CI (js-sdks-build, rs-core-wasm-wasm-build); dist/ arrives via
 # the job's artifacts.
 COPY packages/js-core packages/js-core
 COPY packages/js-storage-sqlite packages/js-storage-sqlite
 COPY packages/js-storage-postgres packages/js-storage-postgres
 COPY packages/js-node packages/js-node
-COPY packages/rs-core-uniffi-web packages/rs-core-uniffi-web
+COPY packages/rs-core-wasm packages/rs-core-wasm
 COPY services/verifier-bot services/verifier-bot
 
 # allowUnusedPatches: the workspace's patchedDependencies target frontend
@@ -62,7 +62,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # The self-contained deploy (node_modules + package.json) plus the bot's
-# tsc-compiled dist/. rs-core-uniffi-web's node export resolves to compiled .js,
+# tsc-compiled dist/. rs-core-wasm's node export resolves to compiled .js,
 # so the whole chain runs under plain node.
 COPY --from=build /deploy/node_modules ./node_modules
 COPY --from=build /deploy/package.json ./package.json

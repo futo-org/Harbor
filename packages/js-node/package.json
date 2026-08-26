@@ -22,7 +22,7 @@
     "@polycentric/js-core": "workspace:*",
     "@polycentric/js-storage-postgres": "workspace:*",
     "@polycentric/js-storage-sqlite": "workspace:*",
-    "@polycentric/rs-core-uniffi-web": "workspace:*",
+    "@polycentric/rs-core-wasm": "workspace:*",
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.22.0"

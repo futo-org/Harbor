@@ -310,7 +310,7 @@ scraper-image:
         - tools/**/*
         - patches/**/*
         - packages/js-*/**/*
-        - packages/rs-core-uniffi-web/**/*
+        - packages/rs-core-wasm/**/*
         - services/verifier-bot/**/*
         - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
@@ -326,7 +326,7 @@ scraper-image:
         - tools/**/*
         - patches/**/*
         - packages/js-*/**/*
-        - packages/rs-core-uniffi-web/**/*
+        - packages/rs-core-wasm/**/*
         - services/verifier-bot/**/*
         - deploy/charts/**/*
         - .gitlab/ci/build_services.yml
@@ -360,7 +360,7 @@ verifier-bot-tests:
   needs:
     - job: js-sdks-build
       artifacts: true
-    - job: rs-core-uniffi-web-build
+    - job: rs-core-wasm-build
       artifacts: true
   variables:
     PUPPETEER_SKIP_DOWNLOAD: '1'
@@ -404,8 +404,8 @@ verifier-bot-integration-prod:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
 
-# The bot consumes the CI-built js SDKs and rs-core-uniffi-web dist (pulled in
-# as artifacts); the image build typechecks the bot (see Dockerfile).
+# The bot consumes the CI-built js SDKs and rs-core-wasm wasm build (pulled
+# in as artifacts); the image build typechecks the bot (see Dockerfile).
 verifier-bot-image:
   extends:
     - .verifier-bot-workflow
@@ -413,7 +413,7 @@ verifier-bot-image:
   needs:
     - job: js-sdks-build
       artifacts: true
-    - job: rs-core-uniffi-web-build
+    - job: rs-core-wasm-build
       artifacts: true
   rules:
     - !reference [.verifier-bot-workflow, rules]

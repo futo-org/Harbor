@@ -216,7 +216,7 @@ scraper-deploy-image-staging:
         - tools/**/*
         - patches/**/*
         - packages/js-*/**/*
-        - packages/rs-core-uniffi-web/**/*
+        - packages/rs-core-wasm/**/*
         - services/verifier-bot/**/*
         - deploy/charts/**/*
         - .gitlab/ci/build_services.yml

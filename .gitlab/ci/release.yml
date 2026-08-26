@@ -68,7 +68,7 @@ release-publish-npm:
   stage: publish
   image: node:24-slim
   needs:
-    - job: rs-core-uniffi-web-build
+    - job: rs-core-wasm-build
       artifacts: true
     - job: js-sdks-build
       artifacts: true

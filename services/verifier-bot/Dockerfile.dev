@@ -2,10 +2,10 @@
 # is the repo root.
 #
 # Self-contained: unlike the production Dockerfile (which consumes the js SDK
-# and rs-core-uniffi-web dist built by CI), this image builds EVERYTHING from
-# source, including the Rust->wasm rs-core-uniffi-web package — so no host
+# and rs-core-wasm dist built by CI), this image builds EVERYTHING from
+# source, including the Rust->wasm rs-core-wasm package — so no host
 # prebuild or CI artifacts are needed. The bot is tsc-compiled to dist/ and runs
-# under plain node (rs-core-uniffi-web ships a compiled .js via its node export).
+# under plain node (rs-core-wasm ships a compiled .js via its node export).
 
 # Stage 1: Build — Rust + Node toolchain, compile rs-core to wasm, build JS SDKs
 FROM rust:slim-bookworm AS build
@@ -43,7 +43,7 @@ COPY tools tools
 # leaving them out keeps their (huge) Expo/RN deps out of node_modules.
 COPY .npmrc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY patches patches
-COPY packages/rs-core-uniffi-web packages/rs-core-uniffi-web
+COPY packages/rs-core-wasm packages/rs-core-wasm
 COPY packages/js-core packages/js-core
 COPY packages/js-storage-sqlite packages/js-storage-sqlite
 COPY packages/js-storage-postgres packages/js-storage-postgres
@@ -55,7 +55,7 @@ RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
 # Build the Rust->wasm core (its postbuild compiles the generated bindings to
 # .js so plain node can load them), then the JS SDKs, then typecheck and
 # tsc-compile the bot to dist/.
-RUN pnpm --filter @polycentric/rs-core-uniffi-web build
+RUN pnpm --filter @polycentric/rs-core-wasm build
 RUN pnpm --filter @polycentric/js-core \
          --filter @polycentric/js-storage-sqlite \
          --filter @polycentric/js-storage-postgres \
@@ -83,7 +83,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # The self-contained deploy (node_modules + package.json) plus the bot's
-# tsc-compiled dist/. rs-core-uniffi-web's node export resolves to compiled .js,
+# tsc-compiled dist/. rs-core-wasm's node export resolves to compiled .js,
 # so the whole chain runs under plain node.
 COPY --from=build /deploy/node_modules ./node_modules
 COPY --from=build /deploy/package.json ./package.json

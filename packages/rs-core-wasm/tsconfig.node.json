@@ -4,13 +4,12 @@
     "moduleResolution": "Bundler",
     "target": "ES2022",
     "lib": ["ES2022"],
-    "types": [],
+    "types": ["node"],
     "declaration": false,
     "sourceMap": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "rootDir": "src",
+    "outDir": "dist/node"
   },
-  "include": [
-    "dist/generated/polycentric_core.ts",
-    "dist/generated/polycentric_core-ffi.ts"
-  ]
+  "include": ["src/index.node.ts"]
 }
