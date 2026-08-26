@@ -106,7 +106,21 @@ async fn process_event(
     match is_banned {
         Some(true) => return Err(banned_error()),
         Some(false) => { /* Ok to continue. */ }
-        None => { /* Not in the cache, checked below. */ }
+        None => {
+            let is_banned = IdentityRepository::is_banned(
+                &ctx.db,
+                &key.identity,
+            )
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, "put_events ban check db error");
+                Status::internal("internal server error")
+            })?;
+            banned_cache.insert(Box::from(&*key.identity), is_banned);
+            if is_banned {
+                return Err(banned_error());
+            }
+        }
     }
 
     // Kafka partition/message key: the serialized protobuf event key.
@@ -154,20 +168,6 @@ async fn process_event(
         tracing::error!(error = %e, "put_events txn begin error");
         Status::internal("internal server error")
     })?;
-
-    // Banned identities' events are refused outright.
-    if is_banned.is_none() {
-        let banned = IdentityRepository::is_banned(&txn, &key.identity)
-            .await
-            .map_err(|e| {
-            tracing::error!(error = %e, "put_events ban check db error");
-            Status::internal("internal server error")
-        })?;
-        banned_cache.insert(Box::from(&*key.identity), banned);
-        if banned {
-            return Err(banned_error());
-        }
-    }
 
     // Authorize the signer against the target identity's chain.
     // Identity events are chain-validated at read time (see
