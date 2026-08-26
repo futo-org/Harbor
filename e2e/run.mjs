@@ -7,6 +7,10 @@ const PLATFORMS = ['ios', 'android', 'web'];
 const APP_ID = process.env.MAESTRO_APP_ID ?? 'org.futo.polycentric.dev';
 const FLOWS = new URL('.', import.meta.url).pathname;
 const WEB_URL = process.env.MAESTRO_WEB_URL ?? 'http://localhost:8081';
+// A fixed report directory instead of a timestamped one, for CI artifacts.
+const OUTPUT = process.env.MAESTRO_OUTPUT
+  ? [`--output=${process.env.MAESTRO_OUTPUT}`, '--flatten']
+  : [];
 
 const platform = process.argv[2];
 if (platform && !PLATFORMS.includes(platform)) {
@@ -180,6 +184,7 @@ if (platform === 'web') {
   run('maestro-runner', [
     '--platform=web',
     'test',
+    ...OUTPUT,
     '-e',
     `MAESTRO_WEB_URL=${WEB_URL}`,
     `${FLOWS}web`,
@@ -187,9 +192,16 @@ if (platform === 'web') {
 }
 
 const device = chooseDevice();
-const flags = ['test', '-e', `MAESTRO_APP_ID=${APP_ID}`, FLOWS];
+const flags = ['-e', `MAESTRO_APP_ID=${APP_ID}`, FLOWS];
 if (device.platform === 'android') {
   setupJava();
-  run('maestro', ['--platform', 'android', '--device', device.id, ...flags]);
+  run('maestro', [
+    '--platform',
+    'android',
+    '--device',
+    device.id,
+    'test',
+    ...flags,
+  ]);
 }
-run('maestro-runner', [...iosArgs(device), ...flags]);
+run('maestro-runner', [...iosArgs(device), 'test', ...OUTPUT, ...flags]);

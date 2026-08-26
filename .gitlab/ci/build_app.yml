@@ -102,6 +102,7 @@ app-web-e2e:
   variables:
     MAESTRO_WEB_URL: http://web:8080
     MAESTRO_BROWSER: /usr/local/bin/e2e-chromium
+    MAESTRO_OUTPUT: reports
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends chromium
     - |
@@ -112,8 +113,12 @@ app-web-e2e:
     - pnpm --filter harbor-e2e test:web
   artifacts:
     when: always
+    expose_as: 'e2e web report'
     paths:
+      - e2e/reports/report.html
       - e2e/reports
+    reports:
+      junit: e2e/reports/junit-report.xml
     expire_in: 1 week
 
 .app-build-expo:
@@ -264,6 +269,8 @@ app-ios-production:
 .app-ios-e2e:
   stage: test
   interruptible: false
+  variables:
+    MAESTRO_OUTPUT: reports
   tags:
     - ios-device
   before_script:
@@ -279,6 +286,8 @@ app-ios-production:
     when: always
     paths:
       - e2e/reports
+    reports:
+      junit: e2e/reports/junit-report.xml
     expire_in: 1 week
 
 # Manual and non-blocking, created only when the build job they need exists.
