@@ -101,11 +101,11 @@ app-web-e2e:
       alias: web
   variables:
     MAESTRO_WEB_URL: http://web:8080
-    MAESTRO_BROWSER: chromium
+    MAESTRO_BROWSER: /usr/bin/chromium
     # The sandbox cannot start as root in a container.
     CHROMIUM_FLAGS: --no-sandbox
   before_script:
-    - apt-get update && apt-get install -y --no-install-recommends chromium chromium-driver
+    - apt-get update && apt-get install -y --no-install-recommends chromium
     - !reference [.app-check-base, before_script]
   script:
     - pnpm --filter harbor-e2e test:web
