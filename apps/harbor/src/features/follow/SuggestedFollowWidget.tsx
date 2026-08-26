@@ -3,7 +3,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { Text, LinkButton } from '@/src/common/components';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { router, usePathname, useRouter } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { Routes } from '@/src/common/constants';
 import FollowButton from '@/src/features/follow/FollowButton';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
@@ -15,7 +15,6 @@ const SUGGESTIONS_LIMIT = 5;
 export function SuggestedFollowWidget() {
   const { theme } = useTheme();
   const pathname = usePathname();
-  const router = useRouter();
 
   const { isLoading, entries, hasMore } = useSuggestedFollows(
     useEagerLoad(),

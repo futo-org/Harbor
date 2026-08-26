@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { isWeb } from '@/src/common/util/platform';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
@@ -12,7 +12,6 @@ import { type ExploreTab, isExploreTab } from '@/src/features/feed/FeedTabs';
  * On native it is a plain screen state seeded from the route.
  */
 export function useExploreTab(routeTab: ExploreTab) {
-  const router = useRouter();
   const [nativeTab, setNativeTab] = useState<ExploreTab>(routeTab);
   const tab = isWeb ? routeTab : nativeTab;
 
