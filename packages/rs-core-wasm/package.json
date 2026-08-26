@@ -1,0 +1,44 @@
+{
+  "name": "@polycentric/rs-core-wasm",
+  "version": "0.0.0",
+  "description": "uniffi-bindgen-react-native bindings for rs-core: the shared TypeScript API plus a wasm build for web and Node.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.futo.org/polycentric/polycentric.git"
+  },
+  "type": "module",
+  "main": "./src/index.web.ts",
+  "types": "./src/index.web.ts",
+  "browser": "./src/index.web.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.web.ts",
+      "node": "./dist/node/index.node.js",
+      "default": "./src/index.web.ts"
+    },
+    "./web": "./src/index.web.ts",
+    "./generated": {
+      "types": "./src/generated/wasm/polycentric_core.ts",
+      "node": "./dist/node/generated/wasm/polycentric_core.js",
+      "default": "./src/generated/wasm/polycentric_core.ts"
+    },
+    "./polycentric_core.wasm": "./src/generated/wasm/polycentric_core.wasm",
+    "./package.json": "./package.json"
+  },
+  "files": ["src", "dist", "tools", "ubrn.config.yaml"],
+  "scripts": {
+    "dev": "ubrn build wasm2",
+    "build": "ubrn build wasm2",
+    "postbuild": "tsc -p tsconfig.node.json && node tools/finish-node-build.mjs",
+    "clean": "rm -rfv dist/ src/generated/wasm/"
+  },
+  "dependencies": {
+    "@ubjs/core": "catalog:",
+    "@ubjs/wasm": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "uniffi-bindgen-react-native": "catalog:"
+  }
+}

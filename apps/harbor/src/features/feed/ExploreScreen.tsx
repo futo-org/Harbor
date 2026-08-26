@@ -20,11 +20,15 @@ import {
   EXPLORE_TAB_VALUES,
   FeedTabs,
   SORT_OPTIONS,
+  type ExploreTab,
 } from './FeedTabs';
 import type { FeedSortOption } from './hooks/feedCache';
 import { useExploreFeed } from './hooks/useExploreFeed';
-import { useFeedSettingsStore } from './hooks/useFeedSettingsStore';
-import { useFeedTabs } from './hooks/useFeedTabs';
+import {
+  useFeedSettingsHydrated,
+  useFeedSettingsStore,
+} from './hooks/useFeedSettingsStore';
+import { useExploreTab } from './hooks/useExploreTab';
 
 function ExplorePage({
   sort,
@@ -41,15 +45,20 @@ function ExplorePage({
   return <FeedPage feed={feed} active={active} />;
 }
 
-export default function ExploreScreen() {
+export default function ExploreScreen({
+  tab: routeTab = 'posts',
+}: {
+  tab?: ExploreTab;
+}) {
   // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
   const showComposeFab = !isWeb && !isIOS;
   const { theme } = useTheme();
 
-  usePageTitle('Explore');
+  usePageTitle(routeTab === 'people' ? 'People' : 'Explore');
 
   const ready = useEagerLoad();
-  const { tab, hydrated, onTabPress } = useFeedTabs('explore');
+  const { tab, onTabPress } = useExploreTab(routeTab);
+  const hydrated = useFeedSettingsHydrated();
   const sort = useFeedSettingsStore((state) => state.feeds.explore.sort);
 
   const onSortChange = (next: FeedSortOption) => {
@@ -112,7 +121,7 @@ export default function ExploreScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        {/* Held back so the pager does not open on the default tab first. */}
+        {/* Held back so posts don't fetch with the default sort first. */}
         {hydrated ? (
           <PagerView
             values={EXPLORE_TAB_VALUES}

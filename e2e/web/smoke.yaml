@@ -1,0 +1,5 @@
+url: ${MAESTRO_WEB_URL}
+---
+- assertVisible: 'Join Harbor'
+- assertVisible: 'Create new identity'
+- assertVisible: 'I already have an identity'

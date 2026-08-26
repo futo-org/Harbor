@@ -14,8 +14,8 @@ WORKDIR /app
 ARG EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS
 ENV EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS
 
-# CI populates packages/js-*/dist, packages/react-native/lib, and
-# packages/rs-core-wasm-browser from upstream artifacts and sets this
+# CI populates packages/js-*/dist, packages/react-native/lib, and the
+# packages/rs-core-wasm wasm build from upstream artifacts and sets this
 # to skip the redundant `pnpm run build`. Local builds leave it unset
 # and fall through to a full workspace build.
 ARG SKIP_WORKSPACE_BUILD=

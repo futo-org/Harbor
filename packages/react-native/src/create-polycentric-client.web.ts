@@ -11,7 +11,7 @@ import {
   PolycentricCore,
   setLogger,
   uniffiInitAsync,
-} from '@polycentric/rs-core-uniffi-web';
+} from '@polycentric/rs-core-wasm/web';
 import {
   createBatchingLogSink,
   createIdentity,

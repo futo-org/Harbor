@@ -1,4 +1,4 @@
-appId: org.futo.polycentric.dev
+appId: ${MAESTRO_APP_ID}
 ---
 - runFlow: ../launch.yaml
 - assertVisible: 'Create new identity'

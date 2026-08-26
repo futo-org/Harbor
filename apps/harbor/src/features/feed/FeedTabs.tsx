@@ -11,16 +11,16 @@ export type FeedTabEntry = {
 };
 
 /** Home selects between the recommended feed and the following feed. */
-export const HOME_TABS: readonly FeedTabEntry[] = [
+export const HOME_TABS = [
   { value: 'for-you', label: 'For you' },
   { value: 'following', label: 'Following', menu: true },
-];
+] as const satisfies readonly FeedTabEntry[];
 
 /** Explore selects between the posts feed and people. */
-export const EXPLORE_TABS: readonly FeedTabEntry[] = [
+export const EXPLORE_TABS = [
   { value: 'posts', label: 'Posts', menu: true },
   { value: 'people', label: 'People' },
-];
+] as const satisfies readonly FeedTabEntry[];
 
 /** The sort filter behind the menu tabs above. */
 export const SORT_OPTIONS: readonly TabFilterOption<FeedSortOption>[] = [
@@ -29,12 +29,14 @@ export const SORT_OPTIONS: readonly TabFilterOption<FeedSortOption>[] = [
 ];
 
 /** Tab order for the rows above, for `PagerView`. */
-export const HOME_TAB_VALUES: readonly FeedTab[] = HOME_TABS.map(
+export const HOME_TAB_VALUES = HOME_TABS.map(
   (tab) => tab.value,
-);
+) satisfies readonly FeedTab[];
 export const EXPLORE_TAB_VALUES: readonly FeedTab[] = EXPLORE_TABS.map(
   (tab) => tab.value,
-);
+) satisfies readonly FeedTab[];
+
+export type ExploreTab = (typeof EXPLORE_TAB_VALUES)[number];
 
 type FeedTabsProps = {
   tabs: readonly FeedTabEntry[];

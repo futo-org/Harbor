@@ -88,7 +88,7 @@ services:
     build:
       context: .
       # Dockerfile.dev is self-contained: it builds every dependency from source
-      # inside the image — the Rust->wasm rs-core-uniffi-web and the JS SDKs — so
+      # inside the image — the Rust->wasm rs-core-wasm and the JS SDKs — so
       # no host prebuild or CI artifacts are needed.
       dockerfile: services/verifier-bot/Dockerfile.dev
     ports:

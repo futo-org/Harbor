@@ -1,0 +1,16 @@
+appId: ${MAESTRO_APP_ID}
+---
+- runFlow: ../launch.yaml
+- tapOn: 'Create new identity'
+- tapOn: 'Enter display name'
+- inputText: 'Maestro'
+- hideKeyboard
+- tapOn: 'Continue'
+# Registering for push prompts once per install.
+- tapOn:
+    text: 'Allow'
+    optional: true
+# Creating the identity publishes to the server, so give it room.
+- extendedWaitUntil:
+    visible: 'Explore'
+    timeout: 120000

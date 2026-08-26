@@ -1,7 +1,0 @@
-dist/
-node_modules/
-
-# uniffi-bindgen-react-native
-rust_modules/
-*.a
-*.so

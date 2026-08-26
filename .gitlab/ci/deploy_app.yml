@@ -41,13 +41,13 @@
 web-deploy-image-staging:
   extends: .web-deploy-image
   environment:
-    name: staging/app
+    name: staging/web
 
 web-deploy-image-production:
   extends: .web-deploy-image
   when: manual
   environment:
-    name: production/app
+    name: production/web
 
 ###########################################
 # Store submissions and APK update feed   #

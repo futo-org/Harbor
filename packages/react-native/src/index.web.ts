@@ -22,14 +22,14 @@ export {
   SearchPostsSort,
   SearchUsersSort,
   UpdateMode,
-} from '@polycentric/rs-core-uniffi-web';
+} from '@polycentric/rs-core-wasm/web';
 export type {
   EventKey,
   QueryResultFfi,
   QueryOpts,
   LabelSet,
   PostLabel,
-} from '@polycentric/rs-core-uniffi-web';
+} from '@polycentric/rs-core-wasm/web';
 
 export * from '@polycentric/js-core';
 export * as types from '@polycentric/js-core';

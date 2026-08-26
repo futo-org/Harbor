@@ -32,21 +32,23 @@ corepack prepare yarn@latest --activate
 
 ## E2E tests (Maestro)
 
-UI end-to-end flows live in `.maestro/` and run with
-[Maestro](https://maestro.mobile.dev) against the dev app
-(`org.futo.polycentric.dev`) on a connected emulator or device.
+UI end-to-end flows live in `e2e/` at the repo root and run with
+[Maestro](https://maestro.mobile.dev) against a build that carries its own
+JavaScript bundle, on a connected device or emulator.
 
 ```bash
-# One-time: install the Maestro CLI.
+# One-time: install the Maestro CLI and the JDK it runs on.
 curl -fsSL "https://get.maestro.mobile.dev" | bash
+brew install openjdk
+export PATH="$PATH:$HOME/.maestro/bin"
 
-# Build and install the dev app, then run all flows.
-pnpm android
-pnpm test:e2e
-
-# Run a single flow.
-maestro test .maestro/onboarding-create-identity.yaml
+# Build, install, then run all flows.
+pnpm ios:e2e
+pnpm -w test:e2e:ios
 ```
 
 Flows launch with `clearState: true`, so they are repeatable and each run
 starts from the onboarding welcome screen.
+
+Full instructions, including Android and CI, are in the
+[End-to-End Testing](../../docs/content/developer/e2e-testing.md) docs.

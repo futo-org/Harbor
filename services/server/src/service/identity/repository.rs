@@ -89,10 +89,9 @@ impl Query {
         db: &DbConn,
         identity: &str,
     ) -> Result<bool, DbErr> {
-        Ok(ModeratorModel::Entity::find_by_id(identity)
-            .one(db)
-            .await?
-            .is_some())
+        ModeratorModel::Entity::find_by_id(identity)
+            .exists(db)
+            .await
     }
 
     /// True when `identity` has a row in the `ban` table.
@@ -100,10 +99,7 @@ impl Query {
         db: &C,
         identity: &str,
     ) -> Result<bool, DbErr> {
-        Ok(BanModel::Entity::find_by_id(identity)
-            .one(db)
-            .await?
-            .is_some())
+        BanModel::Entity::find_by_id(identity).exists(db).await
     }
 
     /// A page of banned identities, most recently banned first. Ordered

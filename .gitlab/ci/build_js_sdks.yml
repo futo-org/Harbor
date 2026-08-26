@@ -53,7 +53,7 @@ js-sdks-build:
       - packages/js-*/dist
     expire_in: 1 week
   needs:
-    - job: rs-core-uniffi-web-build
+    - job: rs-core-wasm-build
       artifacts: true
   rules:
     - !reference [.js-sdk-workflow, rules]

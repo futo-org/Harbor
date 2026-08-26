@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 
-import { QueryStatus } from '@polycentric/rs-core-uniffi-web/generated';
+import { QueryStatus } from '@polycentric/rs-core-wasm/generated';
 import { PolycentricClient } from './polycentric-client';
 import { StorageHandle } from './datastore/storage-handle';
 import { COLLECTION, SyncStrategy } from './constants';
