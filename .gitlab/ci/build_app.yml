@@ -94,10 +94,10 @@ app-web-e2e:
   extends: .app-check-base
   stage: test
   needs:
-    - job: app-web-image
+    - job: web-image
       artifacts: false
   services:
-    - name: $CI_REGISTRY_IMAGE/app:$CI_COMMIT_SHA
+    - name: $CI_REGISTRY_IMAGE/web:$CI_COMMIT_SHA
       alias: web
   variables:
     MAESTRO_WEB_URL: http://web:8080
@@ -263,10 +263,6 @@ app-ios-production:
 .app-ios-e2e:
   stage: test
   interruptible: false
-  # Manual and non-blocking: needs the self-hosted runner and a device.
-  rules:
-    - when: manual
-      allow_failure: true
   tags:
     - ios-device
   before_script:
@@ -284,11 +280,23 @@ app-ios-production:
       - e2e/reports
     expire_in: 1 week
 
+# Manual and non-blocking, created only when the build job they need exists.
 app-ios-e2e-staging:
   extends: .app-ios-e2e
   needs:
     - job: app-ios-staging
       artifacts: true
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - pnpm-lock.yaml
+        - apps/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
+      when: manual
+      allow_failure: true
   variables:
     MAESTRO_APP_ID: org.futo.polycentric.staging
 
@@ -297,5 +305,17 @@ app-ios-e2e-production:
   needs:
     - job: app-ios-production
       artifacts: true
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^(v\d+\.\d+\.\d+|app-)/
+      when: manual
+      allow_failure: true
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - pnpm-lock.yaml
+        - apps/**/*
+        - .gitlab/ci/build_app.yml
+        - .gitlab/ci/deploy_app.yml
+      when: manual
+      allow_failure: true
   variables:
     MAESTRO_APP_ID: org.futo.polycentric
