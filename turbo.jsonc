@@ -23,5 +23,23 @@
       "dependsOn": ["^build"],
       "outputs": [],
     },
+    // App launch tasks (see the root `run:*` scripts). Each builds the
+    // uniffi/wasm output the platform needs before Expo starts: Android and
+    // iOS compile rs-core to native libraries via ubrn; web builds the wasm.
+    "android": {
+      "dependsOn": ["@polycentric/react-native#ubrn:android"],
+      "cache": false,
+      "persistent": true,
+    },
+    "ios": {
+      "dependsOn": ["@polycentric/react-native#ubrn:ios"],
+      "cache": false,
+      "persistent": true,
+    },
+    "web": {
+      "dependsOn": ["@polycentric/rs-core-wasm#build"],
+      "cache": false,
+      "persistent": true,
+    },
   },
 }

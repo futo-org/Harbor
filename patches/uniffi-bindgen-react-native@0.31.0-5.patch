@@ -8,6 +8,27 @@ index f5f99d2d4609cdc39d563c070d710fa9fa9af4ec..506977ad72d5776aa9684c3fa268ca37
  walrus = "0.23"
 -wasm-bindgen-cli-support = "=0.2.100"
 +wasm-bindgen-cli-support = "=0.2.125"
+diff --git a/crates/ubrn_bindgen/src/bindings/gen_typescript/templates/index.ts b/crates/ubrn_bindgen/src/bindings/gen_typescript/templates/index.ts
+index 8b1f38b6ea4a4818b1f8985806543ff1cd16756b..bf84fbb418e7803469b5aebcd30c5b20d9966efb 100644
+--- a/crates/ubrn_bindgen/src/bindings/gen_typescript/templates/index.ts
++++ b/crates/ubrn_bindgen/src/bindings/gen_typescript/templates/index.ts
+@@ -33,6 +33,7 @@ import {
+ // imports glue that only wasm-bindgen can write. Importing it here keeps it in
+ // the bundler's graph; the alternative is fetching it at runtime, which no
+ // bundler can see and which needs the file served beside the wasm.
++// @ts-ignore -- wasm-bindgen writes plain JS, with no declarations beside it.
+ import * as wasmBindgenGlue from './{{ wasm_stem }}_bg.js';
+ {%- endif %}
+ 
+@@ -59,7 +60,7 @@ export function uniffiInitAsync(source: WasmSource): Promise<void> {
+             : undefined,
+       }{% endif %});
+       {%- for m in modules %}
+-      setNativeModule_{{ m.ts() }}(wasmModule.registerSync(PLAYER_DEFINITIONS_{{ m.ts() }}));
++      setNativeModule_{{ m.ts() }}(wasmModule.registerSync(PLAYER_DEFINITIONS_{{ m.ts() }} as any));
+       {{ m.ts() }}.default.initialize();
+       {%- endfor %}
+     })();
 diff --git a/crates/ubrn_cli/src/wasm/commands.rs b/crates/ubrn_cli/src/wasm/commands.rs
 index 2f2a5482ed9d26e2230521d02c26c59259dd0940..9e51a17d378796147fc5320ae1c93c9f241a8998 100644
 --- a/crates/ubrn_cli/src/wasm/commands.rs

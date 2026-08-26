@@ -12,13 +12,10 @@
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
     "test": "turbo run test --filter='!@polycentric/js-browser' --filter='!@polycentric/react-native'",
-    "run:ios": "pnpm -C apps/harbor run ios",
-    "run:android": "pnpm -C apps/harbor run android",
-    "run:web": "pnpm -C apps/harbor run web",
-    "ubrn:android": "pnpm -C packages/react-native ubrn:android",
-    "ubrn:ios": "sh -c 'if [ \"$(uname -s)\" = Darwin ]; then pnpm -C packages/react-native ubrn:ios; else echo Skipping ubrn:ios: macOS-only build; fi'",
-    "ubrn": "pnpm ubrn:android && pnpm ubrn:ios",
-    "ubrn:clean": "pnpm -C packages/react-native ubrn:clean && pnpm -C packages/rs-core-uniffi-web clean",
+    "run:ios": "turbo run ios --filter=polycentric-app",
+    "run:android": "turbo run android --filter=polycentric-app",
+    "run:web": "turbo run web --filter=polycentric-app",
+    "ubrn:clean": "pnpm -C packages/react-native ubrn:clean && pnpm -C packages/rs-core-wasm clean",
     "prepare": "husky"
   },
   "devDependencies": {

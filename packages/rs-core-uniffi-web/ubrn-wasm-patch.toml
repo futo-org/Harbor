@@ -1,6 +1,0 @@
-# Merged into the auto-generated rust_modules/wasm/Cargo.toml by ubrn.
-# Disables rs-core's default `native-transport` feature so the wasm crate
-# only pulls in the wasm32-compatible `tonic-web-wasm-client` transport.
-[dependencies]
-polycentric-core = { default-features = false }
-wasm-bindgen = "=0.2.125"

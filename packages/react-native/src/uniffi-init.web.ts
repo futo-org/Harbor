@@ -1,1 +1,1 @@
-export * from '@polycentric/rs-core-uniffi-web';
+export * from '@polycentric/rs-core-wasm/web';

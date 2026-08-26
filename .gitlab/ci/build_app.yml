@@ -59,7 +59,7 @@ app-tests:
       artifacts: true
     - job: js-sdks-build
       artifacts: true
-    - job: rs-core-uniffi-web-build
+    - job: rs-core-wasm-build
       artifacts: true
 
 web-image:

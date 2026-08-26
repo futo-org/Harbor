@@ -1,8 +1,9 @@
 **/node_modules
 **/dist
-# The prod image consumes the js SDK + rs-core-uniffi-web dist built by CI (and
-# rs-core can't be built in-image at all); keep those dist dirs in the context.
+# The prod image consumes the js SDK dist + rs-core-wasm wasm build from CI
+# (rs-core can't be built in-image at all); keep those dirs in the context.
 !packages/*/dist
+!packages/rs-core-wasm/src/generated/wasm
 **/build
 **/.git
 **/.env*

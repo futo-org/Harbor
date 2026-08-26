@@ -98,8 +98,10 @@ pub enum Query {
     GetReactions(crate::query::reactions::GetReactionsArgs),
 }
 
+// See AuthTokenProvider: single-threaded wasm32 wants non-Send futures.
 #[uniffi::export(with_foreign)]
-#[async_trait::async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 pub trait SignBytesCallback: Send + Sync {
     async fn sign(&self, bytes: Vec<u8>) -> Result<Vec<u8>, CoreError>;
 }

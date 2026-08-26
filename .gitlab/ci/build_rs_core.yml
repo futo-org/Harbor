@@ -95,11 +95,17 @@ rs-common-tests:
 #   script:
 #     - cargo build
 
-# Build the uniffi-web package (wasm)
-rs-core-uniffi-web-build:
+# Build the rs-core-wasm wasm bindings (web + Node). The native TurboModule
+# libraries are built by the rn-android-build / rn-ios-build jobs instead.
+rs-core-wasm-build:
   extends: .rs-core-workflow
   stage: build
   rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - pnpm-lock.yaml
+        - patches/**/*
+        - packages/rs-core-wasm/**/*
     - !reference [.rs-core-workflow, rules]
     - !reference [.js-sdk-workflow, rules]
     - !reference [.rn-sdk-workflow, rules]
@@ -121,7 +127,7 @@ rs-core-uniffi-web-build:
       - .sccache
     policy: pull-push
   script:
-    - cd packages/rs-core-uniffi-web
+    - cd packages/rs-core-wasm
     - |
       rustup target add \
         wasm32-unknown-unknown
@@ -129,5 +135,6 @@ rs-core-uniffi-web-build:
     - pnpm build --release
   artifacts:
     paths:
-      - packages/rs-core-uniffi-web/dist
+      - packages/rs-core-wasm/src/generated/wasm
+      - packages/rs-core-wasm/dist
     expire_in: 1 week
