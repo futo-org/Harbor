@@ -46,8 +46,8 @@ export function SuggestedFollowWidget() {
         Who to follow
       </Text>
 
-      {isLoading ? (
-        <View style={[Atoms.items_center, Atoms.p_lg]}>
+      {entries.length === 0 && isLoading ? (
+        <View style={Atoms.p_lg}>
           <ActivityIndicator
             size="small"
             color={theme.palette.neutral_500}
