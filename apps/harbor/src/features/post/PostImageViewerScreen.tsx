@@ -2,6 +2,8 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { ImageViewerScreen } from '@/src/common/components/ImageViewer/ImageViewerScreen';
 import { Routes } from '@/src/common/constants/routes';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { openWithReturn } from '@/src/common/lib/navigation/openWithReturn';
 import { MAX_ATTACHMENTS } from '@/src/features/composer/hooks/useComposer';
 import { usePostById } from './hooks/usePostById';
@@ -66,21 +68,23 @@ export default function PostImageViewerScreen() {
  * Parse the 1-based `index` URL param into a 0-based array index,
  * clamping junk (and out-of-range values) to the nearest valid image.
  */
-function parseImageIndex(param: string, count: number): number {
+export function parseImageIndex(param: string, count: number): number {
   const parsed = Number.parseInt(param, 10);
   if (Number.isNaN(parsed)) return 0;
   return Math.min(Math.max(parsed - 1, 0), Math.max(count - 1, 0));
 }
 
 /** Open the viewer for a post's images; `index` is the 0-based tap index. */
-export function openPostImage(
-  identityId: string,
-  keyFingerprint: string,
-  sequence: string,
-  index: number,
-) {
+export function openPostImage(post: PostData, index: number) {
+  const keyFingerprint = getKeyFingerprint(post.signedBy);
+  if (!keyFingerprint) return;
   // URLs count images from 1.
   openWithReturn(
-    Routes.tabs.postImage(identityId, keyFingerprint, sequence, index + 1),
+    Routes.tabs.postImage(
+      post.identity,
+      keyFingerprint,
+      post.sequence,
+      index + 1,
+    ),
   );
 }

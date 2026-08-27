@@ -1,5 +1,8 @@
-import { resolveImageSources, VIEWER_TARGET } from './resolveImageSources';
-import type { ImageViewerInput } from './useImageViewerStore';
+import {
+  resolveImageSources,
+  VIEWER_TARGET,
+  type ImageViewerInput,
+} from './resolveImageSources';
 
 // `v2` is only used as types here and in the helpers; a stub keeps the
 // real (native-backed) package out of the test.

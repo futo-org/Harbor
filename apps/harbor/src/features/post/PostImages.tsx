@@ -1,9 +1,8 @@
 import {
-  pickImageVariant,
   usePolycentric,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
-import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
+import { resolveImageSources } from '@/src/common/components/ImageViewer';
 import { Atoms } from '@/src/common/theme';
 import {
   MAX_ASPECT_RATIO,
@@ -23,11 +22,6 @@ const GRID_ASPECT = 16 / 9;
 const GRID_GAP = 2;
 const TILE_BG = 'rgba(0,0,0,0.04)';
 
-type PostImageSource = {
-  uris: string[];
-  aspectRatio: number;
-};
-
 /**
  * Image grid for a post. Twitter-style layouts for 1–4 images; extras
  * are dropped (matches the composer's `MAX_ATTACHMENTS`). Tapping any
@@ -43,31 +37,17 @@ export const PostImages = memo(function PostImages({
     () => post.images.slice(0, MAX_ATTACHMENTS),
     [post.images],
   );
-  const sources = useMemo<PostImageSource[]>(
+  const sources = useMemo(
     () =>
-      capped
-        .map((imageSet) => {
-          const variant = pickImageVariant(imageSet, POST_IMAGE_TARGET);
-          const digest = variant?.blob?.digest;
-          if (!digest) return null;
-          const uris = client.blobUrls(digest);
-          if (uris.length === 0) return null;
-          const w = variant.width || 1;
-          const h = variant.height || 1;
-          return { uris, aspectRatio: w / h };
-        })
-        .filter((s): s is PostImageSource => s != null),
+      resolveImageSources(
+        capped,
+        (digest) => client.blobUrls(digest),
+        POST_IMAGE_TARGET,
+      ),
     [client, capped],
   );
 
-  const openViewer = useCallback(
-    (i: number) => {
-      const keyFingerprint = getKeyFingerprint(post.signedBy);
-      if (!keyFingerprint) return;
-      openPostImage(post.identity, keyFingerprint, post.sequence, i);
-    },
-    [post.identity, post.signedBy, post.sequence],
-  );
+  const openViewer = useCallback((i: number) => openPostImage(post, i), [post]);
 
   if (sources.length === 0) return null;
 
@@ -97,7 +77,7 @@ export const PostImages = memo(function PostImages({
             {
               aspectRatio: Math.min(
                 MAX_ASPECT_RATIO,
-                Math.max(sources[0].aspectRatio, MIN_ASPECT_RATIO),
+                Math.max(sources[0].aspectRatio ?? 1, MIN_ASPECT_RATIO),
               ),
               backgroundColor: TILE_BG,
             },
