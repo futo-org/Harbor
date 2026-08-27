@@ -1,3 +1,4 @@
+import { ImageViewerHost } from '@/src/common/components/ImageViewer';
 import { Toaster } from '@/src/common/components/toast';
 import { AppUpdater } from '@/src/features/core/apk-update';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
@@ -156,6 +157,7 @@ export default function RootLayout() {
                 <ModerationStatusPrefetch />
                 <TrueSheetProvider>
                   <RootStack />
+                  <ImageViewerHost />
                   <PortalHost />
                   <Toaster />
                   <AuthGateSheet />

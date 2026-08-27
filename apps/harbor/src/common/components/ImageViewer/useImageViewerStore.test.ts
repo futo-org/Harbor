@@ -22,6 +22,13 @@ describe('useImageViewerStore', () => {
     expect(get().index).toBe(1);
   });
 
+  it('hide() clears the viewer', () => {
+    get().show([{ uri: 'a' }], 1);
+    get().hide();
+    expect(get().images).toEqual([]);
+    expect(get().index).toBe(0);
+  });
+
   it('show() replaces a previous set entirely', () => {
     get().show([{ uri: 'a' }, { uri: 'b' }], 1);
     get().show([{ uri: 'c' }], 0);
