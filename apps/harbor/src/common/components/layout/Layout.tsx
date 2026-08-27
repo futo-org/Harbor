@@ -50,8 +50,11 @@ type MainProps = {
 function Main({ children, style }: MainProps) {
   const { width: deviceWidth } = useWindowDimensions();
   const containerWidth = deviceWidth <= Breakpoints.sm ? '100%' : undefined;
-  const innerWidth =
-    deviceWidth <= Breakpoints.sm
+  // Native always gets the phone layout: a single column capped at the
+  // feed width and centered, regardless of device size.
+  const innerWidth = !isWeb
+    ? Math.min(deviceWidth, 700)
+    : deviceWidth <= Breakpoints.sm
       ? '100%'
       : deviceWidth <= Breakpoints.md
         ? 600
@@ -61,7 +64,7 @@ function Main({ children, style }: MainProps) {
             ? 990
             : 1050;
 
-  const showRightSidebar = deviceWidth > Breakpoints.md;
+  const showRightSidebar = isWeb && deviceWidth > Breakpoints.md;
 
   return (
     <View
@@ -69,6 +72,7 @@ function Main({ children, style }: MainProps) {
         Atoms.flex_shrink_1,
         Atoms.flex_grow_1,
         { width: containerWidth },
+        !isWeb && Atoms.align_center,
       ]}
       role="main"
     >
