@@ -443,6 +443,7 @@ async fn suggest_follow_pagination() {
         )
         .await;
     }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
 }
 
 #[derive(Debug)]
