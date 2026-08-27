@@ -1,104 +1,144 @@
-use super::{ChildContext, map_db_err};
+use super::deconstruct_event_key;
 use crate::service::proto::{Post, attributed_to::To};
-use ::entity::content_post_attributed_url_model as ContentPostAttributedUrlModel;
-use ::entity::content_post_model as ContentPostModel;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ConnectionTrait, DbErr, EntityTrait,
-    sea_query::OnConflict,
+use entity::content_post_attributed_url_model as ContentPostAttributedUrlModel;
+use entity::content_post_model as ContentPostModel;
+use sea_orm::DbErr;
+use sea_orm::sea_query::{
+    CommonTableExpression, DynIden, Expr, InsertStatement, OnConflict,
+    SelectStatement, WithClause,
 };
-use tonic::Status;
 
-pub(super) async fn add<C: ConnectionTrait>(
-    db: &C,
-    ctx: &ChildContext<'_>,
+pub(super) fn add_query(
+    with: &mut WithClause,
     post: Post,
-) -> Result<(), Status> {
-    let (reply_root, reply_parent) = match post.reply {
-        Some(reply) => (reply.root, reply.parent),
-        None => (None, None),
+    content_id: (DynIden, DynIden),
+) -> Result<InsertStatement, DbErr> {
+    let Post {
+        text,
+        reply,
+        images: _,
+        quote,
+        links: _,
+        labels: _,
+        attributed_to,
+    } = post;
+    let (reply_root, reply_parent) = match reply {
+        Some(reply) => (
+            deconstruct_event_key(reply.root),
+            deconstruct_event_key(reply.parent),
+        ),
+        None => (deconstruct_event_key(None), deconstruct_event_key(None)),
     };
-    let quote = post.quote;
+    let quote = deconstruct_event_key(quote);
 
-    ContentPostModel::ActiveModel {
-        content_id: Set(ctx.content_id),
-        text: Set(post.text),
-        reply_root_collection: Set(reply_root
-            .as_ref()
-            .map(|k| k.collection as i16)),
-        reply_root_identity: Set(reply_root
-            .as_ref()
-            .map(|k| k.identity.clone())),
-        reply_root_public_key_type: Set(reply_root
-            .as_ref()
-            .and_then(|k| k.signed_by.as_ref().map(|s| s.key_type as i16))),
-        reply_root_public_key: Set(reply_root
-            .as_ref()
-            .and_then(|k| k.signed_by.as_ref().map(|s| s.key.clone()))),
-        reply_root_sequence: Set(reply_root
-            .as_ref()
-            .map(|k| k.sequence as i64)),
-        reply_parent_collection: Set(reply_parent
-            .as_ref()
-            .map(|k| k.collection as i16)),
-        reply_parent_identity: Set(reply_parent
-            .as_ref()
-            .map(|k| k.identity.clone())),
-        reply_parent_public_key_type: Set(reply_parent
-            .as_ref()
-            .and_then(|k| k.signed_by.as_ref().map(|s| s.key_type as i16))),
-        reply_parent_public_key: Set(reply_parent
-            .as_ref()
-            .and_then(|k| k.signed_by.as_ref().map(|s| s.key.clone()))),
-        reply_parent_sequence: Set(reply_parent
-            .as_ref()
-            .map(|k| k.sequence as i64)),
-        quote_collection: Set(quote.as_ref().map(|k| k.collection as i16)),
-        quote_identity: Set(quote.as_ref().map(|k| k.identity.clone())),
-        quote_public_key_type: Set(quote
-            .as_ref()
-            .and_then(|k| k.signed_by.as_ref().map(|s| s.key_type as i16))),
-        quote_public_key: Set(quote
-            .as_ref()
-            .and_then(|k| k.signed_by.as_ref().map(|s| s.key.clone()))),
-        quote_sequence: Set(quote.as_ref().map(|k| k.sequence as i64)),
+    let mut query = InsertStatement::new();
+    query
+        .into_table(ContentPostModel::Entity)
+        .columns([
+            ContentPostModel::Column::ContentId,
+            ContentPostModel::Column::Text,
+            ContentPostModel::Column::ReplyRootCollection,
+            ContentPostModel::Column::ReplyRootIdentity,
+            ContentPostModel::Column::ReplyRootPublicKeyType,
+            ContentPostModel::Column::ReplyRootPublicKey,
+            ContentPostModel::Column::ReplyRootSequence,
+            ContentPostModel::Column::ReplyParentCollection,
+            ContentPostModel::Column::ReplyParentIdentity,
+            ContentPostModel::Column::ReplyParentPublicKeyType,
+            ContentPostModel::Column::ReplyParentPublicKey,
+            ContentPostModel::Column::ReplyParentSequence,
+            ContentPostModel::Column::QuoteCollection,
+            ContentPostModel::Column::QuoteIdentity,
+            ContentPostModel::Column::QuotePublicKeyType,
+            ContentPostModel::Column::QuotePublicKey,
+            ContentPostModel::Column::QuoteSequence,
+        ])
+        .select_from({
+            let mut q = SelectStatement::new();
+            q.from(content_id.0.clone())
+                .expr(Expr::col(content_id.clone()))
+                .expr(Expr::from(text))
+                .expr(Expr::from(reply_root.collection))
+                .expr(Expr::from(reply_root.identity))
+                .expr(Expr::from(reply_root.public_key_type))
+                .expr(Expr::from(reply_root.public_key))
+                .expr(Expr::from(reply_root.sequence))
+                .expr(Expr::from(reply_parent.collection))
+                .expr(Expr::from(reply_parent.identity))
+                .expr(Expr::from(reply_parent.public_key_type))
+                .expr(Expr::from(reply_parent.public_key))
+                .expr(Expr::from(reply_parent.sequence))
+                .expr(Expr::from(quote.collection))
+                .expr(Expr::from(quote.identity))
+                .expr(Expr::from(quote.public_key_type))
+                .expr(Expr::from(quote.public_key))
+                .expr(Expr::from(quote.sequence));
+            q
+        })
+        .map_err(|err| {
+            DbErr::Custom(format!("incorrect amount of values: {err}"))
+        })?;
+
+    if attributed_to.is_empty() {
+        // SeaORM gets unhappy when we don't have any values to pass.
+        return Ok(query);
     }
-    .insert(db)
-    .await
-    .map_err(map_db_err)?;
+
+    const POST_ATTRIBUTED_TO_LINK: &str = "post_attributed_to_links";
+    let mut post_attributed_to_links = SelectStatement::new();
+    post_attributed_to_links
+        .expr_as(Expr::col(("values", "column1")), "url")
+        .from_values(
+            attributed_to.into_iter().filter_map(|attributed_to| {
+                let Some(To::Link(link)) = attributed_to.to else {
+                    return None;
+                };
+                if link.url.is_empty() {
+                    return None;
+                }
+                Some(link.url)
+            }),
+            "values",
+        );
+    let mut cte = CommonTableExpression::new();
+    cte.table_name(POST_ATTRIBUTED_TO_LINK)
+        .query(post_attributed_to_links);
+    with.cte(cte);
 
     // Index each URL the post is attributed to so GetAttributionFeed can
     // find it. The (content_id, url) primary key makes a given
     // attribution unique per post, so a repeated URL just no-ops on
     // conflict rather than failing the ingest. Empty URLs are skipped.
-    for attributed_to in post.attributed_to {
-        let Some(To::Link(link)) = attributed_to.to else {
-            continue;
-        };
-        if link.url.is_empty() {
-            continue;
-        }
-        let insert = ContentPostAttributedUrlModel::Entity::insert(
-            ContentPostAttributedUrlModel::ActiveModel {
-                content_id: Set(ctx.content_id),
-                url: Set(link.url),
-            },
-        )
-        .on_conflict(
-            OnConflict::columns([
+    let mut post_attributed_to = InsertStatement::new();
+    post_attributed_to
+        .into_table(ContentPostAttributedUrlModel::Entity)
+        .columns([
+            ContentPostAttributedUrlModel::Column::ContentId,
+            ContentPostAttributedUrlModel::Column::Url,
+        ])
+        .select_from({
+            let mut q = SelectStatement::new();
+            q.from(content_id.0.clone())
+                .from(POST_ATTRIBUTED_TO_LINK)
+                .expr(Expr::col(content_id))
+                .expr(Expr::col((POST_ATTRIBUTED_TO_LINK, "url")));
+            q
+        })
+        .map_err(|err| {
+            DbErr::Custom(format!("incorrect amount of values: {err}"))
+        })?
+        .on_conflict({
+            let mut c = OnConflict::columns([
                 ContentPostAttributedUrlModel::Column::ContentId,
                 ContentPostAttributedUrlModel::Column::Url,
-            ])
-            .do_nothing()
-            .to_owned(),
-        )
-        .exec(db)
-        .await;
-        match insert {
-            Ok(_)
-            | Err(DbErr::RecordNotInserted | DbErr::RecordNotFound(_)) => {}
-            Err(e) => return Err(map_db_err(e)),
-        }
-    }
+            ]);
+            c.do_nothing();
+            c
+        });
+    let mut cte = CommonTableExpression::new();
+    cte.table_name("post_attributed_to")
+        .query(post_attributed_to);
+    with.cte(cte);
 
-    Ok(())
+    Ok(query)
 }

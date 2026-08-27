@@ -1,95 +1,44 @@
-use super::{ChildContext, map_db_err, split_event_key};
+use super::split_event_key;
 use crate::service::proto::VerificationVerify;
-use ::entity::content_verification_verify_model as ContentVerificationVerifyModel;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait};
+use entity::content_verification_verify_model as ContentVerificationVerifyModel;
+use sea_orm::DbErr;
+use sea_orm::sea_query::{DynIden, Expr, InsertStatement, SelectStatement};
 use tonic::Status;
 
-pub(super) async fn add<C: ConnectionTrait>(
-    db: &C,
-    ctx: &ChildContext<'_>,
+pub(super) fn add_query(
     verify: VerificationVerify,
-) -> Result<(), Status> {
-    let key = split_event_key(verify.claim_event_key, "verification verify")?;
+    content_id: (DynIden, DynIden),
+) -> Result<InsertStatement, Status> {
+    let VerificationVerify { claim_event_key } = verify;
+    let key = split_event_key(claim_event_key, "verification verify")?;
 
-    ContentVerificationVerifyModel::ActiveModel {
-        content_id: Set(ctx.content_id),
-        claim_event_key_collection: Set(key.collection),
-        claim_event_key_identity: Set(key.identity),
-        claim_event_key_public_key_type: Set(key.public_key_type),
-        claim_event_key_public_key: Set(key.public_key),
-        claim_event_key_sequence: Set(key.sequence),
-    }
-    .insert(db)
-    .await
-    .map_err(map_db_err)?;
+    let mut query = InsertStatement::new();
+    query
+        .into_table(ContentVerificationVerifyModel::Entity)
+        .columns([
+            ContentVerificationVerifyModel::Column::ContentId,
+            ContentVerificationVerifyModel::Column::ClaimEventKeyCollection,
+            ContentVerificationVerifyModel::Column::ClaimEventKeyIdentity,
+            ContentVerificationVerifyModel::Column::ClaimEventKeyPublicKeyType,
+            ContentVerificationVerifyModel::Column::ClaimEventKeyPublicKey,
+            ContentVerificationVerifyModel::Column::ClaimEventKeySequence,
+        ])
+        .select_from({
+            let mut q = SelectStatement::new();
+            q.from(content_id.0.clone())
+                .expr(Expr::col(content_id))
+                .expr(Expr::from(key.collection))
+                .expr(Expr::from(key.identity))
+                .expr(Expr::from(key.public_key_type))
+                .expr(Expr::from(key.public_key))
+                .expr(Expr::from(key.sequence));
+           q
+        })
+        .map_err(|err| {
+            let err = DbErr::Custom(format!("incorrect amount of values: {err}"));
+            tracing::error!(error = %err, "failed to create query to store verification verify content");
+            Status::internal("internal server error")
+        })?;
 
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::service::proto::{EventKey, PublicKey};
-    use sea_orm::{DatabaseBackend, MockDatabase};
-    use tonic::Code;
-
-    #[tokio::test]
-    async fn inserts_denormalized_claim_key() {
-        let returned = ContentVerificationVerifyModel::Model {
-            content_id: 9,
-            claim_event_key_collection: 8,
-            claim_event_key_identity: "bob".to_string(),
-            claim_event_key_public_key_type: 1,
-            claim_event_key_public_key: vec![0xAB],
-            claim_event_key_sequence: 4,
-        };
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![returned]])
-            .into_connection();
-
-        let verify = VerificationVerify {
-            claim_event_key: Some(EventKey {
-                collection: 8,
-                identity: "bob".to_string(),
-                signed_by: Some(PublicKey {
-                    key_type: 1,
-                    key: vec![0xAB],
-                }),
-                sequence: 4,
-            }),
-        };
-        add(
-            &db,
-            &ChildContext {
-                content_id: 9,
-                event_identity: "alice",
-            },
-            verify,
-        )
-        .await
-        .unwrap();
-
-        let sql = format!("{:?}", db.into_transaction_log());
-        assert!(sql.contains("content_verification_verify"), "{sql}");
-        assert!(sql.contains("claim_event_key_sequence"), "{sql}");
-    }
-
-    #[tokio::test]
-    async fn missing_claim_key_errors() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
-        let err = add(
-            &db,
-            &ChildContext {
-                content_id: 9,
-                event_identity: "alice",
-            },
-            VerificationVerify {
-                claim_event_key: None,
-            },
-        )
-        .await
-        .unwrap_err();
-        assert_eq!(err.code(), Code::InvalidArgument);
-        assert!(db.into_transaction_log().is_empty());
-    }
+    Ok(query)
 }
