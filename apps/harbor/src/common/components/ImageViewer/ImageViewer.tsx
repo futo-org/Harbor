@@ -235,7 +235,7 @@ export function ImageViewer({
   });
 
   const safeIndex = Math.min(index, sources.length - 1);
-  const current = safeIndex >= 0 ? sources[safeIndex] : undefined;
+  const current = sources[safeIndex];
   const hasPrev = safeIndex > 0;
   const hasNext = safeIndex < sources.length - 1;
 
