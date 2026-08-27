@@ -2,20 +2,18 @@ import {
   Atoms,
   Breakpoints,
   Spacing,
-  typography,
   useTheme,
   withHexOpacity,
   ZIndex,
 } from '@/src/common/theme';
-import { isIOS, isWeb } from '@/src/common/util/platform';
+import { isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
-import { type ExternalPathString, Link, usePathname } from 'expo-router';
+import { Link, usePathname } from 'expo-router';
 import {
   type ComponentProps,
   memo,
   type ReactElement,
   type ReactNode,
-  useCallback,
   useEffect,
   useState,
 } from 'react';
@@ -43,6 +41,7 @@ import { Button } from '../primitives';
 import { AppFooter } from './AppFooter';
 import { VerticalNav } from './nav/VerticalNav';
 import Topbar from './Topbar';
+import { SuggestedFollowWidget } from '@/src/features/follow/SuggestedFollowWidget';
 
 type MainProps = {
   children: ReactElement | ReactElement[];
@@ -435,6 +434,8 @@ export const RightSidebar = memo(function RightSidebar() {
             <SidebarSearch />
 
             {!identity && <SignupWidget />}
+
+            {!!identity && isWeb && <SuggestedFollowWidget />}
           </View>
           <AppFooter />
         </View>

@@ -392,16 +392,27 @@ impl Query {
 
         // NOTE: this ordering isn't very stable, as users following and
         // unfollowing users it will break this ordering between calls.
-        let order_column = Expr::from(
+        //
+        // COALESCE: array_length of an empty array is NULL, which would sort
+        // default suggestions (empty followers) first under DESC and make
+        // every cursor tuple comparison against them NULL (never matching).
+        // Mapping to 0 keeps them last and paginatable.
+        let order_column = Expr::from(Func::coalesce([
             Func::cust("array_length")
                 .arg(Expr::col((SUGGESTIONS_TABLE, FOLLOWERS_COLUMN)))
-                .arg(Expr::Constant(1.into())),
-        );
+                .arg(Expr::Constant(1.into()))
+                .into(),
+            Expr::Constant(0.into()),
+        ]));
+        // Both columns DESC: the cursor filters below compare the whole
+        // (order, id) tuple with </>, which is only correct when the sort
+        // direction is uniform. With id ASC, pages of tied follower counts
+        // would repeat forever.
         QuerySelect::query(&mut query)
             .order_by_expr(order_column.clone(), Order::Desc)
             .order_by_expr(
                 Expr::col(EventModel::Column::Id.as_column_ref()),
-                Order::Asc,
+                Order::Desc,
             );
 
         match cursor_filter {

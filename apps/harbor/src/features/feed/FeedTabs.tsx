@@ -32,11 +32,15 @@ export const SORT_OPTIONS: readonly TabFilterOption<FeedSortOption>[] = [
 export const HOME_TAB_VALUES = HOME_TABS.map(
   (tab) => tab.value,
 ) satisfies readonly FeedTab[];
-export const EXPLORE_TAB_VALUES: readonly FeedTab[] = EXPLORE_TABS.map(
+export const EXPLORE_TAB_VALUES = EXPLORE_TABS.map(
   (tab) => tab.value,
 ) satisfies readonly FeedTab[];
 
 export type ExploreTab = (typeof EXPLORE_TAB_VALUES)[number];
+
+export function isExploreTab(tab: FeedTab): tab is ExploreTab {
+  return EXPLORE_TAB_VALUES.includes(tab as ExploreTab);
+}
 
 type FeedTabsProps = {
   tabs: readonly FeedTabEntry[];

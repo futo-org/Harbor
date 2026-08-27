@@ -1,10 +1,10 @@
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { isWeb } from '@/src/common/util/platform';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { Routes } from '@/src/common/constants';
 import type { FeedTab } from '@/src/features/feed/hooks/feedCache';
-import type { ExploreTab } from '@/src/features/feed/FeedTabs';
+import { type ExploreTab, isExploreTab } from '@/src/features/feed/FeedTabs';
 
 /**
  * Explore page tabs are not persisted
@@ -12,7 +12,6 @@ import type { ExploreTab } from '@/src/features/feed/FeedTabs';
  * On native it is a plain screen state seeded from the route.
  */
 export function useExploreTab(routeTab: ExploreTab) {
-  const router = useRouter();
   const [nativeTab, setNativeTab] = useState<ExploreTab>(routeTab);
   const tab = isWeb ? routeTab : nativeTab;
 
@@ -21,6 +20,9 @@ export function useExploreTab(routeTab: ExploreTab) {
       emitFocusedRefresh();
       return;
     }
+
+    // needed as a type guard
+    if (!isExploreTab(next)) return;
 
     if (isWeb) {
       router.push(
