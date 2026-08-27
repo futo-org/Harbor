@@ -241,10 +241,10 @@ export function ImageViewer({
 
   const chipBg = withHexOpacity(theme.palette.black, 'b0');
 
-  // Rendered as a full-screen route (app/image-viewer.tsx) declaring
-  // `screenOrientation: 'all'`, so it rotates to landscape and fills the
-  // screen while the rest of the app stays portrait. The route provides
-  // the (transparent-modal) presentation; here we just fill it.
+  // Rendered by the image-viewer routes (post images, profile photo),
+  // declared with `orientation: 'all'`, so it rotates to landscape and
+  // fills the screen while the rest of the app stays portrait. The route
+  // provides the (transparent-modal) presentation; here we just fill it.
   return (
     <GestureHandlerRootView style={Atoms.flex_1}>
       <Animated.View
