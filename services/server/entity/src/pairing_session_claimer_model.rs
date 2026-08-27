@@ -13,6 +13,10 @@ pub struct Model {
     pub claimer_key_type: i32,
     #[sea_orm(primary_key, auto_increment = false)]
     pub claimer_key: Vec<u8>,
+
+    /// Indexed column of the issuer's identity for efficient lookup.
+    #[sea_orm(indexed)]
+    pub issuer_identity: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

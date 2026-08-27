@@ -17,6 +17,8 @@ const OLD_SESSION: &str = "pair_identity_session";
 const OLD_CLAIMER: &str = "pair_identity_session_claimer";
 
 const DIGEST_INDEX: &str = "pairing_session_digest_sha256_idx";
+const CLAIMER_IDENTITY_INDEX: &str =
+    "pairing_session_claimer_issuer_identity_idx";
 
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
@@ -67,6 +69,7 @@ impl MigrationTrait for Migration {
             .col(binary(Alias::new("digest_sha256")))
             .col(integer(Alias::new("claimer_key_type")))
             .col(binary(Alias::new("claimer_key")))
+            .col(string(Alias::new("issuer_identity")))
             .primary_key(
                 Index::create()
                     .col(Alias::new("digest_sha256"))
@@ -75,6 +78,17 @@ impl MigrationTrait for Migration {
             );
 
         manager.create_table(claimer.to_owned()).await?;
+
+        manager
+            .create_index(
+                Index::create()
+                    .if_not_exists()
+                    .name(CLAIMER_IDENTITY_INDEX)
+                    .table(Alias::new(CLAIMER))
+                    .col(Alias::new("issuer_identity"))
+                    .to_owned(),
+            )
+            .await?;
 
         Ok(())
     }
