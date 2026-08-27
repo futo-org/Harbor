@@ -3,10 +3,10 @@ use crate::media::process_image;
 use crate::sync;
 use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
-    ContentDigest, CreatePairingSessionRequest, Event, GetAttributedToReactionCountsRequest,
-    GetPairingSessionRequest, GetServerInfoRequest, Identity, JoinPairingSessionRequest,
-    ListEventsResponse, PublicKey, PutEventsRequest, SetBanStatusRequest, SignedEvent,
-    SignedMessage, UploadBlobRequest, UrlInfoRequest, content_service_client::ContentServiceClient,
+    ContentDigest, Event, GetAttributedToReactionCountsRequest, GetPairingSessionRequest,
+    GetServerInfoRequest, Identity, JoinPairingSessionRequest, ListEventsResponse, PublicKey,
+    PutEventsRequest, PutPairingSessionRequest, SetBanStatusRequest, SignedEvent, SignedMessage,
+    UploadBlobRequest, UrlInfoRequest, content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     identity_service_client::IdentityServiceClient,
     notification_service_client::NotificationServiceClient,
@@ -664,73 +664,80 @@ impl PolycentricCore {
         Ok(response.into_inner().encode_to_vec())
     }
 
-    /// Create a pairing session on the server. `signed_message_bytes` is a
-    /// serialized `SignedMessage` wrapping an `InitialPairingSession`.
-    /// Returns serialized `PairingSession` proto bytes.
-    pub async fn create_pairing_session(
+    /// Create or update a pairing session on the server.
+    /// `signed_message_bytes` should be a serialized `SignedMessage` wrapping a
+    /// serialized `IssuerPairingState` message.
+    /// Returns serialized a `PairingSessionState` message.
+    pub async fn put_pairing_session(
         &self,
         server_url: String,
         signed_message_bytes: Vec<u8>,
     ) -> Result<Vec<u8>, CoreError> {
         let signed = SignedMessage::decode(signed_message_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+
         let mut client = PairingServiceClient::new(channel(&server_url).await?);
+
         let response = client
-            .create_pairing_session(CreatePairingSessionRequest {
+            .put_pairing_session(PutPairingSessionRequest {
                 signed_message: Some(signed),
             })
             .await
-            .map_err(|e| CoreError::Network(format!("create_pairing_session: {e}")))?;
-        let session = response
-            .into_inner()
-            .session
-            .ok_or_else(|| CoreError::Network("create_pairing_session: missing session".into()))?;
-        Ok(session.encode_to_vec())
+            .map_err(|e| CoreError::Network(format!("put_pairing_session: {e}")))?;
+
+        let session_state = response.into_inner().session_state.ok_or_else(|| {
+            CoreError::Network("put_pairing_session: missing session state".into())
+        })?;
+
+        Ok(session_state.encode_to_vec())
     }
 
-    /// Fetch a pairing session by its signature. Returns serialized
-    /// `PairingSession` proto bytes.
+    /// Fetch a pairing session by the SHA256 hash of its digest.
+    /// Returns a serialized `PairingSessionState` message.
     pub async fn get_pairing_session(
         &self,
         server_url: String,
-        pairing_session_signature: String,
+        digest_sha256: Vec<u8>,
     ) -> Result<Vec<u8>, CoreError> {
         let mut client = PairingServiceClient::new(channel(&server_url).await?);
+
         let response = client
-            .get_pairing_session(GetPairingSessionRequest {
-                pairing_session_signature,
-            })
+            .get_pairing_session(GetPairingSessionRequest { digest_sha256 })
             .await
             .map_err(|e| CoreError::Network(format!("get_pairing_session: {e}")))?;
-        let session = response
-            .into_inner()
-            .session
-            .ok_or_else(|| CoreError::Network("get_pairing_session: missing session".into()))?;
-        Ok(session.encode_to_vec())
+
+        let session_state = response.into_inner().session_state.ok_or_else(|| {
+            CoreError::Network("get_pairing_session: missing session state".into())
+        })?;
+
+        Ok(session_state.encode_to_vec())
     }
 
-    /// Join an existing pairing session. `signed_message_bytes` is a
-    /// serialized `SignedMessage` wrapping a `JoinPairingSessionBody`.
-    /// Returns serialized `PairingSession` proto bytes.
+    /// Register a claimer key to a pairing session.
+    /// `request_bytes` should be a serialized `JoinPairingSessionRequest`
+    /// protobuf message.
+    /// Returns a serialized `PairingSessionState` message.
     pub async fn join_pairing_session(
         &self,
         server_url: String,
-        signed_message_bytes: Vec<u8>,
+        request_bytes: Vec<u8>,
     ) -> Result<Vec<u8>, CoreError> {
-        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
-            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let request = JoinPairingSessionRequest::decode(request_bytes.as_slice()).map_err(|e| {
+            CoreError::Decode(format!("Failed to decode JoinPairingSessionRequest: {e}"))
+        })?;
+
         let mut client = PairingServiceClient::new(channel(&server_url).await?);
+
         let response = client
-            .join_pairing_session(JoinPairingSessionRequest {
-                signed_message: Some(signed),
-            })
+            .join_pairing_session(request)
             .await
             .map_err(|e| CoreError::Network(format!("join_pairing_session: {e}")))?;
-        let session = response
-            .into_inner()
-            .session
-            .ok_or_else(|| CoreError::Network("join_pairing_session: missing session".into()))?;
-        Ok(session.encode_to_vec())
+
+        let session_state = response.into_inner().session_state.ok_or_else(|| {
+            CoreError::Network("join_pairing_session: missing session state".into())
+        })?;
+
+        Ok(session_state.encode_to_vec())
     }
 
     /// Register a push notification token. `signed_message_bytes` is a
