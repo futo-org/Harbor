@@ -123,9 +123,6 @@ function RootStack() {
           }
         />
 
-        {/* Image viewers: transparent modals over whatever pushed them,
-            free to rotate to landscape while the rest of the app stays
-            portrait. */}
         <Stack.Screen
           name="[identityId]/post/[keyFingerprint]/[sequence]/image/[index]"
           options={imageViewerScreenOptions}

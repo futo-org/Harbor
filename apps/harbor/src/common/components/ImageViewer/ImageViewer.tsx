@@ -234,9 +234,6 @@ export function ImageViewer({
     };
   });
 
-  // With no sources (the route is still loading its data) render just
-  // the backdrop and close button, so the viewer holds its place and can
-  // still be dismissed.
   const safeIndex = Math.min(index, sources.length - 1);
   const current = safeIndex >= 0 ? sources[safeIndex] : undefined;
   const hasPrev = safeIndex > 0;
