@@ -388,6 +388,47 @@ impl Query {
             .cond_where(
                 Expr::col(EventModel::Column::Collection.as_column_ref())
                     .eq(Expr::Constant(collections::IDENTITY.into())),
+            )
+            // One row per identity: represent each suggestion by its newest
+            // identity event. An identity has one event per identity change,
+            // and without this the pagination limit counts identity *events*,
+            // so an identity with a long chain can fill a whole page that
+            // clients then dedupe to a single suggestion. Picking the global
+            // max id also keeps the representative stable across pages, which
+            // the keyset cursor below relies on.
+            .cond_where(
+                Expr::col(EventModel::Column::Id.as_column_ref()).in_subquery(
+                    {
+                        const LATEST: &str = "latest_identity_event";
+                        let mut latest = SelectStatement::new();
+                        latest
+                            .expr(Func::max(Expr::col((
+                                LATEST,
+                                EventModel::Column::Id,
+                            ))))
+                            .from_as(EventModel::Entity, LATEST)
+                            .and_where(
+                                Expr::col((
+                                    LATEST,
+                                    EventModel::Column::Collection,
+                                ))
+                                .eq(collections::IDENTITY),
+                            )
+                            .and_where(
+                                Expr::col((
+                                    LATEST,
+                                    EventModel::Column::Identity,
+                                ))
+                                .eq(
+                                    Expr::col(
+                                        EventModel::Column::Identity
+                                            .as_column_ref(),
+                                    ),
+                                ),
+                            );
+                        latest
+                    },
+                ),
             );
 
         // NOTE: this ordering isn't very stable, as users following and

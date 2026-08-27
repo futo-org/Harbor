@@ -446,6 +446,139 @@ async fn suggest_follow_pagination() {
     assert!(!page_info.as_ref().unwrap().has_next_page);
 }
 
+/// An identity has one identity event per identity change (added keys,
+/// rotations, …). Pagination must count identities, not identity events —
+/// otherwise a suggestion with a long chain fills a whole page by itself
+/// and clients dedupe it down to a single suggestion.
+#[tokio::test]
+async fn suggest_follow_multi_event_identity_counts_once() {
+    let mut suggested = Vec::with_capacity(3);
+    for _ in 0..2 {
+        let mut client = TestClient::new().await;
+        client.profile_update(
+            ProfileUpdate {
+                name: Some(random_string()),
+                avatar: None,
+                banner: None,
+                description: None,
+                alias: None,
+            },
+            DEFAULT_CREATED_AT,
+        );
+        client.submit_events().await;
+        suggested.push(client.identity().to_owned());
+    }
+
+    // The last suggested identity grows a 3-event chain by adding signing
+    // keys. Created last, its events are the newest, so it sorts first
+    // among the equal-follower-count suggestions.
+    let mut chained = TestClient::new().await;
+    chained.profile_update(
+        ProfileUpdate {
+            name: Some(random_string()),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        },
+        DEFAULT_CREATED_AT,
+    );
+    let mut signing_keys = Vec::new();
+    for n in 0..2u64 {
+        signing_keys.push(public_key_of(&generate_signing_key()));
+        chained.set_identity(
+            Identity {
+                rotation_keys: vec![public_key_of(&chained.key)],
+                signing_keys: signing_keys.clone(),
+                revocation_bounds: vec![],
+                servers: None,
+                recovery_key: None,
+                recovery_signature: None,
+            },
+            DEFAULT_CREATED_AT + 1 + n,
+        );
+    }
+    chained.submit_events().await;
+    suggested.push(chained.identity().to_owned());
+
+    let mut followee = TestClient::new().await;
+    followee.profile_update(
+        ProfileUpdate {
+            name: Some(random_string()),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        },
+        DEFAULT_CREATED_AT,
+    );
+    for identity in &suggested {
+        followee.follow_identity(identity.to_owned(), DEFAULT_CREATED_AT);
+    }
+    followee.submit_events().await;
+    let followee_identity = followee.identity().to_owned();
+
+    let mut client = TestClient::new().await;
+    client.follow_identity(followee_identity.clone(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
+
+    // Newest representative event first: the chained identity, then the
+    // plain ones in reverse creation order.
+    let expected_suggestions = vec![
+        ExpectedFollowSuggestion {
+            suggestion: suggested[2].clone(),
+            followers: vec![followee_identity.clone()],
+        },
+        ExpectedFollowSuggestion {
+            suggestion: suggested[1].clone(),
+            followers: vec![followee_identity.clone()],
+        },
+        ExpectedFollowSuggestion {
+            suggestion: suggested[0].clone(),
+            followers: vec![followee_identity.clone()],
+        },
+    ];
+    let mut expected_hints: Vec<ExpectedHint> = suggested
+        .iter()
+        .map(|identity| ExpectedHint {
+            identity: identity.clone(),
+            expect_profile: true,
+            expect_follow: Vec::new(),
+        })
+        .collect();
+    expected_hints.push(ExpectedHint {
+        identity: followee_identity,
+        expect_profile: true,
+        expect_follow: suggested.clone(),
+    });
+
+    let auth_token = client.create_auth_token();
+    let mut client = graph_service().await;
+    let mut page_info: Option<PageInfo> = None;
+    suggest_follow2(
+        async {
+            let mut request = tonic::Request::new(SuggestFollowRequest {
+                page_params: Some(PageParams {
+                    limit: Some(3),
+                    backward_token: None,
+                    forward_token: None,
+                }),
+            });
+            request
+                .metadata_mut()
+                .insert("authorization", auth_token.try_into().unwrap());
+            let mut result =
+                client.suggest_follow(request).await.unwrap().into_inner();
+            page_info = result.page_info.take();
+            result
+        },
+        expected_suggestions,
+        expected_hints,
+    )
+    .await;
+    assert!(!page_info.unwrap().has_next_page);
+}
+
 #[derive(Debug)]
 struct ExpectedFollowSuggestion {
     suggestion: String,
