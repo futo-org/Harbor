@@ -6,7 +6,7 @@
 import nativeModule from "./polycentric_core-ffi";
 import { type UniffiRustFutureContinuationCallback, type UniffiForeignFutureDroppedCallback, type UniffiForeignFutureDroppedCallbackStruct, type UniffiForeignFutureResultRustBuffer, type UniffiForeignFutureCompleterustBuffer, type UniffiVTableCallbackInterfacePolycentricCoreAuthTokenProvider, type UniffiVTableCallbackInterfacePolycentricCoreLogger, type UniffiVTableCallbackInterfacePolycentricCoreObserver, type UniffiVTableCallbackInterfacePolycentricCoreQueryObserver, type UniffiVTableCallbackInterfacePolycentricCoreSignBytesCallback,
 } from "./polycentric_core-ffi";
-import { type FfiConverter, type UniffiByteArray, type UniffiGcObject, type UniffiHandle, type UniffiObjectFactory, type UniffiReferenceHolder, type UniffiRustCallStatus, AbstractFfiConverterByteArray, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterInt64, FfiConverterMap, FfiConverterObject, FfiConverterObjectWithCallbacks, FfiConverterOptional, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiAbstractObject, UniffiEnum, UniffiError, UniffiInternalError, UniffiResult, UniffiRustCaller, destructorGuardSymbol, pointerLiteralSymbol, uniffiCreateFfiConverterString, uniffiCreateRecord, uniffiRustCallAsync, uniffiTraitInterfaceCall, uniffiTraitInterfaceCallAsync, uniffiTraitInterfaceCallAsyncWithError, uniffiTypeNameSymbol, variantOrdinalSymbol,
+import { type FfiConverter, type UniffiByteArray, type UniffiGcObject, type UniffiHandle, type UniffiObjectFactory, type UniffiReferenceHolder, type UniffiRustCallStatus, AbstractFfiConverterByteArray, Cursor, FfiConverterArray, FfiConverterArrayBuffer, FfiConverterBool, FfiConverterInt32, FfiConverterInt64, FfiConverterMap, FfiConverterObject, FfiConverterObjectWithCallbacks, FfiConverterOptional, FfiConverterUInt32, FfiConverterUInt64, FfiConverterUInt8, RustBuffer, UniffiAbstractObject, UniffiEnum, UniffiError, UniffiInternalError, UniffiResult, UniffiRustCaller, destructorGuardSymbol, pointerLiteralSymbol, uniffiCreateFfiConverterString, uniffiCreateRecord, uniffiRustCallAsync, uniffiTraitInterfaceCall, uniffiTraitInterfaceCallAsync, uniffiTraitInterfaceCallAsyncWithError, uniffiTypeNameSymbol, variantOrdinalSymbol,
 } from "@ubjs/core";
 const uniffiCaller = new UniffiRustCaller(() => ({ code: 0 }));
 
@@ -53,20 +53,19 @@ export function labelsChanged(a: Array<PostLabel>, b: Array<PostLabel>): boolean
  * Return the labels from the `event_hints` field of a feed response
  */
 export function labelsFromFeedResponse(response: ArrayBuffer): Array<LabelSet> {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterSequenceTypeLabelSet.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_from_feed_response(
         FfiConverterArrayBuffer.lower(response, nativeModule().rustbuffer_alloc),
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterSequenceTypeLabelSet.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
 
 /**
@@ -74,60 +73,57 @@ export function labelsFromFeedResponse(response: ArrayBuffer): Array<LabelSet> {
  * response.
  */
 export function labelsFromNotificationsResponse(response: ArrayBuffer): Array<LabelSet> {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterSequenceTypeLabelSet.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_from_notifications_response(
         FfiConverterArrayBuffer.lower(response, nativeModule().rustbuffer_alloc),
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterSequenceTypeLabelSet.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
 
 /**
  * Return the labels from the `event_hints` field of a search posts response.
  */
 export function labelsFromSearchResponse(response: ArrayBuffer): Array<LabelSet> {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterSequenceTypeLabelSet.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_from_search_response(
         FfiConverterArrayBuffer.lower(response, nativeModule().rustbuffer_alloc),
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterSequenceTypeLabelSet.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
 
 /**
  * Return the labels from the `event_hints` field of a thread response
  */
 export function labelsFromThreadResponse(response: ArrayBuffer): Array<LabelSet> {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterSequenceTypeLabelSet.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_from_thread_response(
         FfiConverterArrayBuffer.lower(response, nativeModule().rustbuffer_alloc),
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterSequenceTypeLabelSet.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
 
 /**
@@ -135,13 +131,7 @@ export function labelsFromThreadResponse(response: ArrayBuffer): Array<LabelSet>
  * (does not check for labels being deleted).
  */
 export function mergeLabels(orig: Array<PostLabel>, latest: Array<PostLabel>): Array<PostLabel> {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterSequenceTypePostLabel.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_func_merge_labels(
         FfiConverterSequenceTypePostLabel.lower(orig, nativeModule().rustbuffer_alloc),
@@ -149,26 +139,30 @@ export function mergeLabels(orig: Array<PostLabel>, latest: Array<PostLabel>): A
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterSequenceTypePostLabel.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
 
 /**
  * Every moderation label value in canonical order.
  */
 export function moderationLabels(): Array<string> {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterSequenceString.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_func_moderation_labels(
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterSequenceString.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
 
 /**
@@ -275,15 +269,15 @@ export const AuthToken = (() => {
 const FfiConverterTypeAuthToken = (() => {
     type TypeName = AuthToken;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                token: FfiConverterString.read(from), 
-                expiresAt: FfiConverterUInt64.read(from)
+                token: FfiConverterString.readFromCursor(c), 
+                expiresAt: FfiConverterUInt64.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.token, into);
-            FfiConverterUInt64.write(value.expiresAt, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.token, c);
+            FfiConverterUInt64.writeIntoCursor(value.expiresAt, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.token) +
@@ -318,15 +312,15 @@ export const ContentEntry = (() => {
 const FfiConverterTypeContentEntry = (() => {
     type TypeName = ContentEntry;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                digestBytes: FfiConverterArrayBuffer.read(from), 
-                contentBytes: FfiConverterArrayBuffer.read(from)
+                digestBytes: FfiConverterArrayBuffer.readFromCursor(c), 
+                contentBytes: FfiConverterArrayBuffer.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterArrayBuffer.write(value.digestBytes, into);
-            FfiConverterArrayBuffer.write(value.contentBytes, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterArrayBuffer.writeIntoCursor(value.digestBytes, c);
+            FfiConverterArrayBuffer.writeIntoCursor(value.contentBytes, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterArrayBuffer.allocationSize(value.digestBytes) +
@@ -361,15 +355,15 @@ export const PublicKey = (() => {
 const FfiConverterTypePublicKey = (() => {
     type TypeName = PublicKey;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                keyType: FfiConverterInt32.read(from), 
-                key: FfiConverterArrayBuffer.read(from)
+                keyType: FfiConverterInt32.readFromCursor(c), 
+                key: FfiConverterArrayBuffer.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterInt32.write(value.keyType, into);
-            FfiConverterArrayBuffer.write(value.key, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterInt32.writeIntoCursor(value.keyType, c);
+            FfiConverterArrayBuffer.writeIntoCursor(value.key, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterInt32.allocationSize(value.keyType) +
@@ -406,19 +400,19 @@ export const EventKey = (() => {
 const FfiConverterTypeEventKey = (() => {
     type TypeName = EventKey;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                collection: FfiConverterInt32.read(from), 
-                identity: FfiConverterString.read(from), 
-                signedBy: FfiConverterTypePublicKey.read(from), 
-                sequence: FfiConverterUInt64.read(from)
+                collection: FfiConverterInt32.readFromCursor(c), 
+                identity: FfiConverterString.readFromCursor(c), 
+                signedBy: FfiConverterTypePublicKey.readFromCursor(c), 
+                sequence: FfiConverterUInt64.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterInt32.write(value.collection, into);
-            FfiConverterString.write(value.identity, into);
-            FfiConverterTypePublicKey.write(value.signedBy, into);
-            FfiConverterUInt64.write(value.sequence, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterInt32.writeIntoCursor(value.collection, c);
+            FfiConverterString.writeIntoCursor(value.identity, c);
+            FfiConverterTypePublicKey.writeIntoCursor(value.signedBy, c);
+            FfiConverterUInt64.writeIntoCursor(value.sequence, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterInt32.allocationSize(value.collection) +
@@ -467,23 +461,23 @@ export const GetAttributionFeedArgs = (() => {
 const FfiConverterTypeGetAttributionFeedArgs = (() => {
     type TypeName = GetAttributionFeedArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                attributedTo: FfiConverterArrayBuffer.read(from), 
-                limit: FfiConverterOptionalInt32.read(from), 
-                backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from), 
-                windowSize: FfiConverterOptionalInt32.read(from)
+                attributedTo: FfiConverterArrayBuffer.readFromCursor(c), 
+                limit: FfiConverterOptionalInt32.readFromCursor(c), 
+                backwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                forwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                omitLabels: FfiConverterSequenceString.readFromCursor(c), 
+                windowSize: FfiConverterOptionalInt32.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterArrayBuffer.write(value.attributedTo, into);
-            FfiConverterOptionalInt32.write(value.limit, into);
-            FfiConverterOptionalString.write(value.backwardToken, into);
-            FfiConverterOptionalString.write(value.forwardToken, into);
-            FfiConverterSequenceString.write(value.omitLabels, into);
-            FfiConverterOptionalInt32.write(value.windowSize, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterArrayBuffer.writeIntoCursor(value.attributedTo, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.backwardToken, c);
+            FfiConverterOptionalString.writeIntoCursor(value.forwardToken, c);
+            FfiConverterSequenceString.writeIntoCursor(value.omitLabels, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.windowSize, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterArrayBuffer.allocationSize(value.attributedTo) +
@@ -523,17 +517,17 @@ export const GetEventArgs = (() => {
 const FfiConverterTypeGetEventArgs = (() => {
     type TypeName = GetEventArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                identity: FfiConverterString.read(from), 
-                collection: FfiConverterInt32.read(from), 
-                sequence: FfiConverterUInt64.read(from)
+                identity: FfiConverterString.readFromCursor(c), 
+                collection: FfiConverterInt32.readFromCursor(c), 
+                sequence: FfiConverterUInt64.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.identity, into);
-            FfiConverterInt32.write(value.collection, into);
-            FfiConverterUInt64.write(value.sequence, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.identity, c);
+            FfiConverterInt32.writeIntoCursor(value.collection, c);
+            FfiConverterUInt64.writeIntoCursor(value.sequence, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.identity) +
@@ -556,26 +550,25 @@ export enum FeedSort {
 }
 
 const FfiConverterTypeFeedSort = (() => {
-    const ordinalConverter = FfiConverterInt32;
     type TypeName = FeedSort;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            switch (ordinalConverter.read(from)) {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
                 case 1: return FeedSort.Default;
                 case 2: return FeedSort.Top;
                 case 3: return FeedSort.Latest;
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
             switch (value) {
-                case FeedSort.Default: return ordinalConverter.write(1, into);
-                case FeedSort.Top: return ordinalConverter.write(2, into);
-                case FeedSort.Latest: return ordinalConverter.write(3, into);
+                case FeedSort.Default: return c.writeI32(1);
+                case FeedSort.Top: return c.writeI32(2);
+                case FeedSort.Latest: return c.writeI32(3);
             }
         }
         allocationSize(value: TypeName): number {
-            return ordinalConverter.allocationSize(0);
+            return 4;
         }
     }
     return new FFIConverter();
@@ -613,25 +606,25 @@ export const GetExploreFeedArgs = (() => {
 const FfiConverterTypeGetExploreFeedArgs = (() => {
     type TypeName = GetExploreFeedArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                identity: FfiConverterOptionalString.read(from), 
-                sortBy: FfiConverterOptionalTypeFeedSort.read(from), 
-                limit: FfiConverterOptionalInt32.read(from), 
-                backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from), 
-                windowSize: FfiConverterOptionalInt32.read(from)
+                identity: FfiConverterOptionalString.readFromCursor(c), 
+                sortBy: FfiConverterOptionalTypeFeedSort.readFromCursor(c), 
+                limit: FfiConverterOptionalInt32.readFromCursor(c), 
+                backwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                forwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                omitLabels: FfiConverterSequenceString.readFromCursor(c), 
+                windowSize: FfiConverterOptionalInt32.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterOptionalString.write(value.identity, into);
-            FfiConverterOptionalTypeFeedSort.write(value.sortBy, into);
-            FfiConverterOptionalInt32.write(value.limit, into);
-            FfiConverterOptionalString.write(value.backwardToken, into);
-            FfiConverterOptionalString.write(value.forwardToken, into);
-            FfiConverterSequenceString.write(value.omitLabels, into);
-            FfiConverterOptionalInt32.write(value.windowSize, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterOptionalString.writeIntoCursor(value.identity, c);
+            FfiConverterOptionalTypeFeedSort.writeIntoCursor(value.sortBy, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.backwardToken, c);
+            FfiConverterOptionalString.writeIntoCursor(value.forwardToken, c);
+            FfiConverterSequenceString.writeIntoCursor(value.omitLabels, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.windowSize, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalString.allocationSize(value.identity) +
@@ -679,25 +672,25 @@ export const GetFollowingFeedArgs = (() => {
 const FfiConverterTypeGetFollowingFeedArgs = (() => {
     type TypeName = GetFollowingFeedArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                followerIdentity: FfiConverterString.read(from), 
-                sortBy: FfiConverterOptionalTypeFeedSort.read(from), 
-                limit: FfiConverterOptionalInt32.read(from), 
-                backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from), 
-                windowSize: FfiConverterOptionalInt32.read(from)
+                followerIdentity: FfiConverterString.readFromCursor(c), 
+                sortBy: FfiConverterOptionalTypeFeedSort.readFromCursor(c), 
+                limit: FfiConverterOptionalInt32.readFromCursor(c), 
+                backwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                forwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                omitLabels: FfiConverterSequenceString.readFromCursor(c), 
+                windowSize: FfiConverterOptionalInt32.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.followerIdentity, into);
-            FfiConverterOptionalTypeFeedSort.write(value.sortBy, into);
-            FfiConverterOptionalInt32.write(value.limit, into);
-            FfiConverterOptionalString.write(value.backwardToken, into);
-            FfiConverterOptionalString.write(value.forwardToken, into);
-            FfiConverterSequenceString.write(value.omitLabels, into);
-            FfiConverterOptionalInt32.write(value.windowSize, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.followerIdentity, c);
+            FfiConverterOptionalTypeFeedSort.writeIntoCursor(value.sortBy, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.backwardToken, c);
+            FfiConverterOptionalString.writeIntoCursor(value.forwardToken, c);
+            FfiConverterSequenceString.writeIntoCursor(value.omitLabels, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.windowSize, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.followerIdentity) +
@@ -744,23 +737,23 @@ export const GetIdentityFeedArgs = (() => {
 const FfiConverterTypeGetIdentityFeedArgs = (() => {
     type TypeName = GetIdentityFeedArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                identity: FfiConverterString.read(from), 
-                limit: FfiConverterOptionalInt32.read(from), 
-                backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from), 
-                windowSize: FfiConverterOptionalInt32.read(from)
+                identity: FfiConverterString.readFromCursor(c), 
+                limit: FfiConverterOptionalInt32.readFromCursor(c), 
+                backwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                forwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                omitLabels: FfiConverterSequenceString.readFromCursor(c), 
+                windowSize: FfiConverterOptionalInt32.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.identity, into);
-            FfiConverterOptionalInt32.write(value.limit, into);
-            FfiConverterOptionalString.write(value.backwardToken, into);
-            FfiConverterOptionalString.write(value.forwardToken, into);
-            FfiConverterSequenceString.write(value.omitLabels, into);
-            FfiConverterOptionalInt32.write(value.windowSize, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.identity, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.backwardToken, c);
+            FfiConverterOptionalString.writeIntoCursor(value.forwardToken, c);
+            FfiConverterSequenceString.writeIntoCursor(value.omitLabels, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.windowSize, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.identity) +
@@ -800,17 +793,17 @@ export const GetPostThreadArgs = (() => {
 const FfiConverterTypeGetPostThreadArgs = (() => {
     type TypeName = GetPostThreadArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                eventKey: FfiConverterTypeEventKey.read(from), 
-                limit: FfiConverterInt32.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from)
+                eventKey: FfiConverterTypeEventKey.readFromCursor(c), 
+                limit: FfiConverterInt32.readFromCursor(c), 
+                omitLabels: FfiConverterSequenceString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterTypeEventKey.write(value.eventKey, into);
-            FfiConverterInt32.write(value.limit, into);
-            FfiConverterSequenceString.write(value.omitLabels, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterTypeEventKey.writeIntoCursor(value.eventKey, c);
+            FfiConverterInt32.writeIntoCursor(value.limit, c);
+            FfiConverterSequenceString.writeIntoCursor(value.omitLabels, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterTypeEventKey.allocationSize(value.eventKey) +
@@ -845,13 +838,13 @@ export const GetProfileArgs = (() => {
 const FfiConverterTypeGetProfileArgs = (() => {
     type TypeName = GetProfileArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                identity: FfiConverterString.read(from)
+                identity: FfiConverterString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.identity, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.identity, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.identity);
@@ -892,17 +885,17 @@ export const GetReactionsArgs = (() => {
 const FfiConverterTypeGetReactionsArgs = (() => {
     type TypeName = GetReactionsArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                target: FfiConverterTypeEventKey.read(from), 
-                emojiFilter: FfiConverterOptionalString.read(from), 
-                limit: FfiConverterOptionalInt32.read(from)
+                target: FfiConverterTypeEventKey.readFromCursor(c), 
+                emojiFilter: FfiConverterOptionalString.readFromCursor(c), 
+                limit: FfiConverterOptionalInt32.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterTypeEventKey.write(value.target, into);
-            FfiConverterOptionalString.write(value.emojiFilter, into);
-            FfiConverterOptionalInt32.write(value.limit, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterTypeEventKey.writeIntoCursor(value.target, c);
+            FfiConverterOptionalString.writeIntoCursor(value.emojiFilter, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterTypeEventKey.allocationSize(value.target) +
@@ -937,13 +930,13 @@ export const IsBannedArgs = (() => {
 const FfiConverterTypeIsBannedArgs = (() => {
     type TypeName = IsBannedArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                targetIdentity: FfiConverterString.read(from)
+                targetIdentity: FfiConverterString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.targetIdentity, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.targetIdentity, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.targetIdentity);
@@ -975,11 +968,11 @@ export const IsModeratorArgs = (() => {
 const FfiConverterTypeIsModeratorArgs = (() => {
     type TypeName = IsModeratorArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
         }
         allocationSize(value: TypeName): number {
             return 0;
@@ -1015,15 +1008,15 @@ export const PostLabel = (() => {
 const FfiConverterTypePostLabel = (() => {
     type TypeName = PostLabel;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                value: FfiConverterString.read(from), 
-                labeledBy: FfiConverterString.read(from)
+                value: FfiConverterString.readFromCursor(c), 
+                labeledBy: FfiConverterString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.value, into);
-            FfiConverterString.write(value.labeledBy, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.value, c);
+            FfiConverterString.writeIntoCursor(value.labeledBy, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.value) +
@@ -1061,15 +1054,15 @@ export const LabelSet = (() => {
 const FfiConverterTypeLabelSet = (() => {
     type TypeName = LabelSet;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                target: FfiConverterTypeEventKey.read(from), 
-                labels: FfiConverterSequenceTypePostLabel.read(from)
+                target: FfiConverterTypeEventKey.readFromCursor(c), 
+                labels: FfiConverterSequenceTypePostLabel.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterTypeEventKey.write(value.target, into);
-            FfiConverterSequenceTypePostLabel.write(value.labels, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterTypeEventKey.writeIntoCursor(value.target, c);
+            FfiConverterSequenceTypePostLabel.writeIntoCursor(value.labels, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterTypeEventKey.allocationSize(value.target) +
@@ -1105,17 +1098,17 @@ export const ListBansArgs = (() => {
 const FfiConverterTypeListBansArgs = (() => {
     type TypeName = ListBansArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                limit: FfiConverterOptionalUInt32.read(from), 
-                after: FfiConverterOptionalString.read(from), 
-                query: FfiConverterOptionalString.read(from)
+                limit: FfiConverterOptionalUInt32.readFromCursor(c), 
+                after: FfiConverterOptionalString.readFromCursor(c), 
+                query: FfiConverterOptionalString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterOptionalUInt32.write(value.limit, into);
-            FfiConverterOptionalString.write(value.after, into);
-            FfiConverterOptionalString.write(value.query, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterOptionalUInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.after, c);
+            FfiConverterOptionalString.writeIntoCursor(value.query, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalUInt32.allocationSize(value.limit) +
@@ -1156,25 +1149,25 @@ export const ListEventsArgs = (() => {
 const FfiConverterTypeListEventsArgs = (() => {
     type TypeName = ListEventsArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                size: FfiConverterOptionalInt32.read(from), 
-                identity: FfiConverterOptionalString.read(from), 
-                collection: FfiConverterOptionalInt32.read(from), 
-                signedBy: FfiConverterOptionalTypePublicKey.read(from), 
-                sequenceGt: FfiConverterOptionalInt64.read(from), 
-                sequenceLt: FfiConverterOptionalInt64.read(from), 
-                heads: FfiConverterOptionalSequenceTypeEventKey.read(from)
+                size: FfiConverterOptionalInt32.readFromCursor(c), 
+                identity: FfiConverterOptionalString.readFromCursor(c), 
+                collection: FfiConverterOptionalInt32.readFromCursor(c), 
+                signedBy: FfiConverterOptionalTypePublicKey.readFromCursor(c), 
+                sequenceGt: FfiConverterOptionalInt64.readFromCursor(c), 
+                sequenceLt: FfiConverterOptionalInt64.readFromCursor(c), 
+                heads: FfiConverterOptionalSequenceTypeEventKey.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterOptionalInt32.write(value.size, into);
-            FfiConverterOptionalString.write(value.identity, into);
-            FfiConverterOptionalInt32.write(value.collection, into);
-            FfiConverterOptionalTypePublicKey.write(value.signedBy, into);
-            FfiConverterOptionalInt64.write(value.sequenceGt, into);
-            FfiConverterOptionalInt64.write(value.sequenceLt, into);
-            FfiConverterOptionalSequenceTypeEventKey.write(value.heads, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterOptionalInt32.writeIntoCursor(value.size, c);
+            FfiConverterOptionalString.writeIntoCursor(value.identity, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.collection, c);
+            FfiConverterOptionalTypePublicKey.writeIntoCursor(value.signedBy, c);
+            FfiConverterOptionalInt64.writeIntoCursor(value.sequenceGt, c);
+            FfiConverterOptionalInt64.writeIntoCursor(value.sequenceLt, c);
+            FfiConverterOptionalSequenceTypeEventKey.writeIntoCursor(value.heads, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalInt32.allocationSize(value.size) +
@@ -1216,19 +1209,19 @@ export const ListFollowersArgs = (() => {
 const FfiConverterTypeListFollowersArgs = (() => {
     type TypeName = ListFollowersArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                identity: FfiConverterString.read(from), 
-                limit: FfiConverterOptionalInt32.read(from), 
-                backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from)
+                identity: FfiConverterString.readFromCursor(c), 
+                limit: FfiConverterOptionalInt32.readFromCursor(c), 
+                backwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                forwardToken: FfiConverterOptionalString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.identity, into);
-            FfiConverterOptionalInt32.write(value.limit, into);
-            FfiConverterOptionalString.write(value.backwardToken, into);
-            FfiConverterOptionalString.write(value.forwardToken, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.identity, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.backwardToken, c);
+            FfiConverterOptionalString.writeIntoCursor(value.forwardToken, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.identity) +
@@ -1267,19 +1260,19 @@ export const ListFollowingArgs = (() => {
 const FfiConverterTypeListFollowingArgs = (() => {
     type TypeName = ListFollowingArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                identity: FfiConverterString.read(from), 
-                limit: FfiConverterOptionalInt32.read(from), 
-                backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from)
+                identity: FfiConverterString.readFromCursor(c), 
+                limit: FfiConverterOptionalInt32.readFromCursor(c), 
+                backwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                forwardToken: FfiConverterOptionalString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.identity, into);
-            FfiConverterOptionalInt32.write(value.limit, into);
-            FfiConverterOptionalString.write(value.backwardToken, into);
-            FfiConverterOptionalString.write(value.forwardToken, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.identity, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.backwardToken, c);
+            FfiConverterOptionalString.writeIntoCursor(value.forwardToken, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.identity) +
@@ -1327,19 +1320,19 @@ export const ListNotificationsArgs = (() => {
 const FfiConverterTypeListNotificationsArgs = (() => {
     type TypeName = ListNotificationsArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                identity: FfiConverterString.read(from), 
-                first: FfiConverterOptionalUInt32.read(from), 
-                after: FfiConverterOptionalString.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from)
+                identity: FfiConverterString.readFromCursor(c), 
+                first: FfiConverterOptionalUInt32.readFromCursor(c), 
+                after: FfiConverterOptionalString.readFromCursor(c), 
+                omitLabels: FfiConverterSequenceString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.identity, into);
-            FfiConverterOptionalUInt32.write(value.first, into);
-            FfiConverterOptionalString.write(value.after, into);
-            FfiConverterSequenceString.write(value.omitLabels, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.identity, c);
+            FfiConverterOptionalUInt32.writeIntoCursor(value.first, c);
+            FfiConverterOptionalString.writeIntoCursor(value.after, c);
+            FfiConverterSequenceString.writeIntoCursor(value.omitLabels, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.identity) +
@@ -1375,13 +1368,13 @@ export const ListTargetedVerificationClaimsArgs = (() => {
 const FfiConverterTypeListTargetedVerificationClaimsArgs = (() => {
     type TypeName = ListTargetedVerificationClaimsArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                targetIdentity: FfiConverterString.read(from)
+                targetIdentity: FfiConverterString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.targetIdentity, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.targetIdentity, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.targetIdentity);
@@ -1414,13 +1407,13 @@ export const ListVerificationClaimsArgs = (() => {
 const FfiConverterTypeListVerificationClaimsArgs = (() => {
     type TypeName = ListVerificationClaimsArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                claimedByIdentity: FfiConverterString.read(from)
+                claimedByIdentity: FfiConverterString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.claimedByIdentity, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.claimedByIdentity, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.claimedByIdentity);
@@ -1453,13 +1446,13 @@ export const ListVerificationTargetsArgs = (() => {
 const FfiConverterTypeListVerificationTargetsArgs = (() => {
     type TypeName = ListVerificationTargetsArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                claimEventKey: FfiConverterTypeEventKey.read(from)
+                claimEventKey: FfiConverterTypeEventKey.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterTypeEventKey.write(value.claimEventKey, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterTypeEventKey.writeIntoCursor(value.claimEventKey, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterTypeEventKey.allocationSize(value.claimEventKey);
@@ -1492,13 +1485,13 @@ export const ListVerificationVerifiesArgs = (() => {
 const FfiConverterTypeListVerificationVerifiesArgs = (() => {
     type TypeName = ListVerificationVerifiesArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                claimEventKey: FfiConverterTypeEventKey.read(from)
+                claimEventKey: FfiConverterTypeEventKey.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterTypeEventKey.write(value.claimEventKey, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterTypeEventKey.writeIntoCursor(value.claimEventKey, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterTypeEventKey.allocationSize(value.claimEventKey);
@@ -1536,17 +1529,17 @@ export const ProcessedImage = (() => {
 const FfiConverterTypeProcessedImage = (() => {
     type TypeName = ProcessedImage;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                bytes: FfiConverterArrayBuffer.read(from), 
-                width: FfiConverterUInt32.read(from), 
-                height: FfiConverterUInt32.read(from)
+                bytes: FfiConverterArrayBuffer.readFromCursor(c), 
+                width: FfiConverterUInt32.readFromCursor(c), 
+                height: FfiConverterUInt32.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterArrayBuffer.write(value.bytes, into);
-            FfiConverterUInt32.write(value.width, into);
-            FfiConverterUInt32.write(value.height, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterArrayBuffer.writeIntoCursor(value.bytes, c);
+            FfiConverterUInt32.writeIntoCursor(value.width, c);
+            FfiConverterUInt32.writeIntoCursor(value.height, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterArrayBuffer.allocationSize(value.bytes) +
@@ -1578,26 +1571,25 @@ export enum FetchMode {
 }
 
 const FfiConverterTypeFetchMode = (() => {
-    const ordinalConverter = FfiConverterInt32;
     type TypeName = FetchMode;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            switch (ordinalConverter.read(from)) {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
                 case 1: return FetchMode.Default;
                 case 2: return FetchMode.OfflineFirst;
                 case 3: return FetchMode.OfflineOnly;
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
             switch (value) {
-                case FetchMode.Default: return ordinalConverter.write(1, into);
-                case FetchMode.OfflineFirst: return ordinalConverter.write(2, into);
-                case FetchMode.OfflineOnly: return ordinalConverter.write(3, into);
+                case FetchMode.Default: return c.writeI32(1);
+                case FetchMode.OfflineFirst: return c.writeI32(2);
+                case FetchMode.OfflineOnly: return c.writeI32(3);
             }
         }
         allocationSize(value: TypeName): number {
-            return ordinalConverter.allocationSize(0);
+            return 4;
         }
     }
     return new FFIConverter();
@@ -1619,24 +1611,23 @@ export enum UpdateMode {
 }
 
 const FfiConverterTypeUpdateMode = (() => {
-    const ordinalConverter = FfiConverterInt32;
     type TypeName = UpdateMode;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            switch (ordinalConverter.read(from)) {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
                 case 1: return UpdateMode.Replace;
                 case 2: return UpdateMode.Merge;
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
             switch (value) {
-                case UpdateMode.Replace: return ordinalConverter.write(1, into);
-                case UpdateMode.Merge: return ordinalConverter.write(2, into);
+                case UpdateMode.Replace: return c.writeI32(1);
+                case UpdateMode.Merge: return c.writeI32(2);
             }
         }
         allocationSize(value: TypeName): number {
-            return ordinalConverter.allocationSize(0);
+            return 4;
         }
     }
     return new FFIConverter();
@@ -1658,24 +1649,23 @@ export enum EmitMode {
 }
 
 const FfiConverterTypeEmitMode = (() => {
-    const ordinalConverter = FfiConverterInt32;
     type TypeName = EmitMode;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            switch (ordinalConverter.read(from)) {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
                 case 1: return EmitMode.Default;
                 case 2: return EmitMode.Eager;
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
             switch (value) {
-                case EmitMode.Default: return ordinalConverter.write(1, into);
-                case EmitMode.Eager: return ordinalConverter.write(2, into);
+                case EmitMode.Default: return c.writeI32(1);
+                case EmitMode.Eager: return c.writeI32(2);
             }
         }
         allocationSize(value: TypeName): number {
-            return ordinalConverter.allocationSize(0);
+            return 4;
         }
     }
     return new FFIConverter();
@@ -1720,21 +1710,21 @@ export const QueryOpts = (() => {
 const FfiConverterTypeQueryOpts = (() => {
     type TypeName = QueryOpts;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                fetchMode: FfiConverterOptionalTypeFetchMode.read(from), 
-                updateMode: FfiConverterOptionalTypeUpdateMode.read(from), 
-                servers: FfiConverterOptionalSequenceString.read(from), 
-                emitMode: FfiConverterOptionalTypeEmitMode.read(from), 
-                serverTimeoutMs: FfiConverterOptionalUInt32.read(from)
+                fetchMode: FfiConverterOptionalTypeFetchMode.readFromCursor(c), 
+                updateMode: FfiConverterOptionalTypeUpdateMode.readFromCursor(c), 
+                servers: FfiConverterOptionalSequenceString.readFromCursor(c), 
+                emitMode: FfiConverterOptionalTypeEmitMode.readFromCursor(c), 
+                serverTimeoutMs: FfiConverterOptionalUInt32.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterOptionalTypeFetchMode.write(value.fetchMode, into);
-            FfiConverterOptionalTypeUpdateMode.write(value.updateMode, into);
-            FfiConverterOptionalSequenceString.write(value.servers, into);
-            FfiConverterOptionalTypeEmitMode.write(value.emitMode, into);
-            FfiConverterOptionalUInt32.write(value.serverTimeoutMs, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterOptionalTypeFetchMode.writeIntoCursor(value.fetchMode, c);
+            FfiConverterOptionalTypeUpdateMode.writeIntoCursor(value.updateMode, c);
+            FfiConverterOptionalSequenceString.writeIntoCursor(value.servers, c);
+            FfiConverterOptionalTypeEmitMode.writeIntoCursor(value.emitMode, c);
+            FfiConverterOptionalUInt32.writeIntoCursor(value.serverTimeoutMs, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalTypeFetchMode.allocationSize(value.fetchMode) +
@@ -1759,26 +1749,25 @@ export enum QueryStatus {
 }
 
 const FfiConverterTypeQueryStatus = (() => {
-    const ordinalConverter = FfiConverterInt32;
     type TypeName = QueryStatus;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            switch (ordinalConverter.read(from)) {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
                 case 1: return QueryStatus.Loading;
                 case 2: return QueryStatus.Success;
                 case 3: return QueryStatus.Error;
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
             switch (value) {
-                case QueryStatus.Loading: return ordinalConverter.write(1, into);
-                case QueryStatus.Success: return ordinalConverter.write(2, into);
-                case QueryStatus.Error: return ordinalConverter.write(3, into);
+                case QueryStatus.Loading: return c.writeI32(1);
+                case QueryStatus.Success: return c.writeI32(2);
+                case QueryStatus.Error: return c.writeI32(3);
             }
         }
         allocationSize(value: TypeName): number {
-            return ordinalConverter.allocationSize(0);
+            return 4;
         }
     }
     return new FFIConverter();
@@ -1810,19 +1799,19 @@ export const QueryResultFfi = (() => {
 const FfiConverterTypeQueryResultFfi = (() => {
     type TypeName = QueryResultFfi;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                data: FfiConverterOptionalBytes.read(from), 
-                status: FfiConverterTypeQueryStatus.read(from), 
-                successfulServers: FfiConverterUInt32.read(from), 
-                pendingServers: FfiConverterUInt32.read(from)
+                data: FfiConverterOptionalBytes.readFromCursor(c), 
+                status: FfiConverterTypeQueryStatus.readFromCursor(c), 
+                successfulServers: FfiConverterUInt32.readFromCursor(c), 
+                pendingServers: FfiConverterUInt32.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterOptionalBytes.write(value.data, into);
-            FfiConverterTypeQueryStatus.write(value.status, into);
-            FfiConverterUInt32.write(value.successfulServers, into);
-            FfiConverterUInt32.write(value.pendingServers, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterOptionalBytes.writeIntoCursor(value.data, c);
+            FfiConverterTypeQueryStatus.writeIntoCursor(value.status, c);
+            FfiConverterUInt32.writeIntoCursor(value.successfulServers, c);
+            FfiConverterUInt32.writeIntoCursor(value.pendingServers, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalBytes.allocationSize(value.data) +
@@ -1871,17 +1860,17 @@ export const ResolveVerifiedClaimsArgs = (() => {
 const FfiConverterTypeResolveVerifiedClaimsArgs = (() => {
     type TypeName = ResolveVerifiedClaimsArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                schemaDigest: FfiConverterOptionalBytes.read(from), 
-                fields: FfiConverterMapStringString.read(from), 
-                verifiedByIdentities: FfiConverterSequenceString.read(from)
+                schemaDigest: FfiConverterOptionalBytes.readFromCursor(c), 
+                fields: FfiConverterMapStringString.readFromCursor(c), 
+                verifiedByIdentities: FfiConverterSequenceString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterOptionalBytes.write(value.schemaDigest, into);
-            FfiConverterMapStringString.write(value.fields, into);
-            FfiConverterSequenceString.write(value.verifiedByIdentities, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterOptionalBytes.writeIntoCursor(value.schemaDigest, c);
+            FfiConverterMapStringString.writeIntoCursor(value.fields, c);
+            FfiConverterSequenceString.writeIntoCursor(value.verifiedByIdentities, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalBytes.allocationSize(value.schemaDigest) +
@@ -1899,24 +1888,23 @@ export enum SearchPostsSort {
 }
 
 const FfiConverterTypeSearchPostsSort = (() => {
-    const ordinalConverter = FfiConverterInt32;
     type TypeName = SearchPostsSort;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            switch (ordinalConverter.read(from)) {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
                 case 1: return SearchPostsSort.Default;
                 case 2: return SearchPostsSort.Latest;
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
             switch (value) {
-                case SearchPostsSort.Default: return ordinalConverter.write(1, into);
-                case SearchPostsSort.Latest: return ordinalConverter.write(2, into);
+                case SearchPostsSort.Default: return c.writeI32(1);
+                case SearchPostsSort.Latest: return c.writeI32(2);
             }
         }
         allocationSize(value: TypeName): number {
-            return ordinalConverter.allocationSize(0);
+            return 4;
         }
     }
     return new FFIConverter();
@@ -1950,23 +1938,23 @@ export const SearchPostsArgs = (() => {
 const FfiConverterTypeSearchPostsArgs = (() => {
     type TypeName = SearchPostsArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                query: FfiConverterString.read(from), 
-                sortBy: FfiConverterOptionalTypeSearchPostsSort.read(from), 
-                limit: FfiConverterOptionalInt32.read(from), 
-                backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from), 
-                omitLabels: FfiConverterSequenceString.read(from)
+                query: FfiConverterString.readFromCursor(c), 
+                sortBy: FfiConverterOptionalTypeSearchPostsSort.readFromCursor(c), 
+                limit: FfiConverterOptionalInt32.readFromCursor(c), 
+                backwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                forwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                omitLabels: FfiConverterSequenceString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.query, into);
-            FfiConverterOptionalTypeSearchPostsSort.write(value.sortBy, into);
-            FfiConverterOptionalInt32.write(value.limit, into);
-            FfiConverterOptionalString.write(value.backwardToken, into);
-            FfiConverterOptionalString.write(value.forwardToken, into);
-            FfiConverterSequenceString.write(value.omitLabels, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.query, c);
+            FfiConverterOptionalTypeSearchPostsSort.writeIntoCursor(value.sortBy, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.backwardToken, c);
+            FfiConverterOptionalString.writeIntoCursor(value.forwardToken, c);
+            FfiConverterSequenceString.writeIntoCursor(value.omitLabels, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.query) +
@@ -1987,24 +1975,23 @@ export enum SearchUsersSort {
 }
 
 const FfiConverterTypeSearchUsersSort = (() => {
-    const ordinalConverter = FfiConverterInt32;
     type TypeName = SearchUsersSort;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            switch (ordinalConverter.read(from)) {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
                 case 1: return SearchUsersSort.Default;
                 case 2: return SearchUsersSort.Alpha;
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
             switch (value) {
-                case SearchUsersSort.Default: return ordinalConverter.write(1, into);
-                case SearchUsersSort.Alpha: return ordinalConverter.write(2, into);
+                case SearchUsersSort.Default: return c.writeI32(1);
+                case SearchUsersSort.Alpha: return c.writeI32(2);
             }
         }
         allocationSize(value: TypeName): number {
-            return ordinalConverter.allocationSize(0);
+            return 4;
         }
     }
     return new FFIConverter();
@@ -2037,21 +2024,21 @@ export const SearchUsersArgs = (() => {
 const FfiConverterTypeSearchUsersArgs = (() => {
     type TypeName = SearchUsersArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                query: FfiConverterString.read(from), 
-                sortBy: FfiConverterOptionalTypeSearchUsersSort.read(from), 
-                limit: FfiConverterOptionalInt32.read(from), 
-                backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from)
+                query: FfiConverterString.readFromCursor(c), 
+                sortBy: FfiConverterOptionalTypeSearchUsersSort.readFromCursor(c), 
+                limit: FfiConverterOptionalInt32.readFromCursor(c), 
+                backwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                forwardToken: FfiConverterOptionalString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterString.write(value.query, into);
-            FfiConverterOptionalTypeSearchUsersSort.write(value.sortBy, into);
-            FfiConverterOptionalInt32.write(value.limit, into);
-            FfiConverterOptionalString.write(value.backwardToken, into);
-            FfiConverterOptionalString.write(value.forwardToken, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.query, c);
+            FfiConverterOptionalTypeSearchUsersSort.writeIntoCursor(value.sortBy, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.backwardToken, c);
+            FfiConverterOptionalString.writeIntoCursor(value.forwardToken, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.query) +
@@ -2094,17 +2081,17 @@ export const SuggestFollowArgs = (() => {
 const FfiConverterTypeSuggestFollowArgs = (() => {
     type TypeName = SuggestFollowArgs;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
+        readFromCursor(c: Cursor): TypeName {
             return {
-                limit: FfiConverterOptionalInt32.read(from), 
-                backwardToken: FfiConverterOptionalString.read(from), 
-                forwardToken: FfiConverterOptionalString.read(from)
+                limit: FfiConverterOptionalInt32.readFromCursor(c), 
+                backwardToken: FfiConverterOptionalString.readFromCursor(c), 
+                forwardToken: FfiConverterOptionalString.readFromCursor(c)
             };
         }
-        write(value: TypeName, into: RustBuffer): void {
-            FfiConverterOptionalInt32.write(value.limit, into);
-            FfiConverterOptionalString.write(value.backwardToken, into);
-            FfiConverterOptionalString.write(value.forwardToken, into);
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.backwardToken, c);
+            FfiConverterOptionalString.writeIntoCursor(value.forwardToken, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalInt32.allocationSize(value.limit) +
@@ -2345,53 +2332,52 @@ export type CoreError = InstanceType<
 >;
 
 const FfiConverterTypeCoreError = (() => {
-    const intConverter = FfiConverterInt32;
     type TypeName = CoreError;
     class FfiConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            switch (intConverter.read(from)) {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
                 case 1: return new CoreError.Decode(
-                    FfiConverterString.read(from)
+                    FfiConverterString.readFromCursor(c)
                 );
             
                 case 2: return new CoreError.Encode(
-                    FfiConverterString.read(from)
+                    FfiConverterString.readFromCursor(c)
                 );
             
                 case 3: return new CoreError.Crypto(
-                    FfiConverterString.read(from)
+                    FfiConverterString.readFromCursor(c)
                 );
             
                 case 4: return new CoreError.Store(
-                    FfiConverterString.read(from)
+                    FfiConverterString.readFromCursor(c)
                 );
             
                 case 5: return new CoreError.Image(
-                    FfiConverterString.read(from)
+                    FfiConverterString.readFromCursor(c)
                 );
             
                 case 6: return new CoreError.Network(
-                    FfiConverterString.read(from)
+                    FfiConverterString.readFromCursor(c)
                 );
             
                 case 7: return new CoreError.Callback(
-                    FfiConverterString.read(from)
+                    FfiConverterString.readFromCursor(c)
                 );
             
                 case 8: return new CoreError.InvalidInput(
-                    FfiConverterString.read(from)
+                    FfiConverterString.readFromCursor(c)
                 );
             
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
             const obj = value as any;
             const index = obj[variantOrdinalSymbol] as number;
-            intConverter.write(index, into);
+            c.writeI32(index);
         }
         allocationSize(value: TypeName): number {
-            return intConverter.allocationSize(0);
+            return 4;
         }
     }
     return new FfiConverter();
@@ -2414,11 +2400,10 @@ export enum LogLevel {
 }
 
 const FfiConverterTypeLogLevel = (() => {
-    const ordinalConverter = FfiConverterInt32;
     type TypeName = LogLevel;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            switch (ordinalConverter.read(from)) {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
                 case 1: return LogLevel.Trace;
                 case 2: return LogLevel.Debug;
                 case 3: return LogLevel.Info;
@@ -2428,18 +2413,18 @@ const FfiConverterTypeLogLevel = (() => {
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
             switch (value) {
-                case LogLevel.Trace: return ordinalConverter.write(1, into);
-                case LogLevel.Debug: return ordinalConverter.write(2, into);
-                case LogLevel.Info: return ordinalConverter.write(3, into);
-                case LogLevel.Warn: return ordinalConverter.write(4, into);
-                case LogLevel.Error: return ordinalConverter.write(5, into);
-                case LogLevel.Off: return ordinalConverter.write(6, into);
+                case LogLevel.Trace: return c.writeI32(1);
+                case LogLevel.Debug: return c.writeI32(2);
+                case LogLevel.Info: return c.writeI32(3);
+                case LogLevel.Warn: return c.writeI32(4);
+                case LogLevel.Error: return c.writeI32(5);
+                case LogLevel.Off: return c.writeI32(6);
             }
         }
         allocationSize(value: TypeName): number {
-            return ordinalConverter.allocationSize(0);
+            return 4;
         }
     }
     return new FFIConverter();
@@ -3318,182 +3303,181 @@ export type Query = InstanceType<
 
 // FfiConverter for enum Query
 const FfiConverterTypeQuery = (() => {
-    const ordinalConverter = FfiConverterInt32;
     type TypeName = Query;
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        read(from: RustBuffer): TypeName {
-            switch (ordinalConverter.read(from)) {
-                case 1: return new Query.GetProfile(FfiConverterTypeGetProfileArgs.read(from));
-                case 2: return new Query.GetEvent(FfiConverterTypeGetEventArgs.read(from));
-                case 3: return new Query.GetPostThread(FfiConverterTypeGetPostThreadArgs.read(from));
-                case 4: return new Query.GetIdentityFeed(FfiConverterTypeGetIdentityFeedArgs.read(from));
-                case 5: return new Query.GetFollowingFeed(FfiConverterTypeGetFollowingFeedArgs.read(from));
-                case 6: return new Query.GetRecommendedFeed(FfiConverterTypeGetFollowingFeedArgs.read(from));
-                case 7: return new Query.GetExploreFeed(FfiConverterTypeGetExploreFeedArgs.read(from));
-                case 8: return new Query.GetAttributionFeed(FfiConverterTypeGetAttributionFeedArgs.read(from));
-                case 9: return new Query.ListNotifications(FfiConverterTypeListNotificationsArgs.read(from));
-                case 10: return new Query.ListEvents(FfiConverterTypeListEventsArgs.read(from));
-                case 11: return new Query.ListVerificationClaims(FfiConverterTypeListVerificationClaimsArgs.read(from));
-                case 12: return new Query.ListVerificationTargets(FfiConverterTypeListVerificationTargetsArgs.read(from));
-                case 13: return new Query.ListVerificationVerifies(FfiConverterTypeListVerificationVerifiesArgs.read(from));
-                case 14: return new Query.ListTargetedVerificationClaims(FfiConverterTypeListTargetedVerificationClaimsArgs.read(from));
-                case 15: return new Query.ResolveVerifiedClaims(FfiConverterTypeResolveVerifiedClaimsArgs.read(from));
-                case 16: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.read(from));
-                case 17: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.read(from));
-                case 18: return new Query.SuggestFollow(FfiConverterTypeSuggestFollowArgs.read(from));
-                case 19: return new Query.SearchPosts(FfiConverterTypeSearchPostsArgs.read(from));
-                case 20: return new Query.SearchUsers(FfiConverterTypeSearchUsersArgs.read(from));
-                case 21: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.read(from));
-                case 22: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.read(from));
-                case 23: return new Query.ListBans(FfiConverterTypeListBansArgs.read(from));
-                case 24: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.read(from));
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
+                case 1: return new Query.GetProfile(FfiConverterTypeGetProfileArgs.readFromCursor(c));
+                case 2: return new Query.GetEvent(FfiConverterTypeGetEventArgs.readFromCursor(c));
+                case 3: return new Query.GetPostThread(FfiConverterTypeGetPostThreadArgs.readFromCursor(c));
+                case 4: return new Query.GetIdentityFeed(FfiConverterTypeGetIdentityFeedArgs.readFromCursor(c));
+                case 5: return new Query.GetFollowingFeed(FfiConverterTypeGetFollowingFeedArgs.readFromCursor(c));
+                case 6: return new Query.GetRecommendedFeed(FfiConverterTypeGetFollowingFeedArgs.readFromCursor(c));
+                case 7: return new Query.GetExploreFeed(FfiConverterTypeGetExploreFeedArgs.readFromCursor(c));
+                case 8: return new Query.GetAttributionFeed(FfiConverterTypeGetAttributionFeedArgs.readFromCursor(c));
+                case 9: return new Query.ListNotifications(FfiConverterTypeListNotificationsArgs.readFromCursor(c));
+                case 10: return new Query.ListEvents(FfiConverterTypeListEventsArgs.readFromCursor(c));
+                case 11: return new Query.ListVerificationClaims(FfiConverterTypeListVerificationClaimsArgs.readFromCursor(c));
+                case 12: return new Query.ListVerificationTargets(FfiConverterTypeListVerificationTargetsArgs.readFromCursor(c));
+                case 13: return new Query.ListVerificationVerifies(FfiConverterTypeListVerificationVerifiesArgs.readFromCursor(c));
+                case 14: return new Query.ListTargetedVerificationClaims(FfiConverterTypeListTargetedVerificationClaimsArgs.readFromCursor(c));
+                case 15: return new Query.ResolveVerifiedClaims(FfiConverterTypeResolveVerifiedClaimsArgs.readFromCursor(c));
+                case 16: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.readFromCursor(c));
+                case 17: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.readFromCursor(c));
+                case 18: return new Query.SuggestFollow(FfiConverterTypeSuggestFollowArgs.readFromCursor(c));
+                case 19: return new Query.SearchPosts(FfiConverterTypeSearchPostsArgs.readFromCursor(c));
+                case 20: return new Query.SearchUsers(FfiConverterTypeSearchUsersArgs.readFromCursor(c));
+                case 21: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.readFromCursor(c));
+                case 22: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.readFromCursor(c));
+                case 23: return new Query.ListBans(FfiConverterTypeListBansArgs.readFromCursor(c));
+                case 24: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.readFromCursor(c));
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
-        write(value: TypeName, into: RustBuffer): void {
+        writeIntoCursor(value: TypeName, c: Cursor): void {
             switch (value.tag) {
                 case Query_Tags.GetProfile: {
-                    ordinalConverter.write(1, into);
+                    c.writeI32(1);
                     const inner = value.inner;
-                    FfiConverterTypeGetProfileArgs.write(inner[0], into);
+                    FfiConverterTypeGetProfileArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetEvent: {
-                    ordinalConverter.write(2, into);
+                    c.writeI32(2);
                     const inner = value.inner;
-                    FfiConverterTypeGetEventArgs.write(inner[0], into);
+                    FfiConverterTypeGetEventArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetPostThread: {
-                    ordinalConverter.write(3, into);
+                    c.writeI32(3);
                     const inner = value.inner;
-                    FfiConverterTypeGetPostThreadArgs.write(inner[0], into);
+                    FfiConverterTypeGetPostThreadArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetIdentityFeed: {
-                    ordinalConverter.write(4, into);
+                    c.writeI32(4);
                     const inner = value.inner;
-                    FfiConverterTypeGetIdentityFeedArgs.write(inner[0], into);
+                    FfiConverterTypeGetIdentityFeedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetFollowingFeed: {
-                    ordinalConverter.write(5, into);
+                    c.writeI32(5);
                     const inner = value.inner;
-                    FfiConverterTypeGetFollowingFeedArgs.write(inner[0], into);
+                    FfiConverterTypeGetFollowingFeedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetRecommendedFeed: {
-                    ordinalConverter.write(6, into);
+                    c.writeI32(6);
                     const inner = value.inner;
-                    FfiConverterTypeGetFollowingFeedArgs.write(inner[0], into);
+                    FfiConverterTypeGetFollowingFeedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetExploreFeed: {
-                    ordinalConverter.write(7, into);
+                    c.writeI32(7);
                     const inner = value.inner;
-                    FfiConverterTypeGetExploreFeedArgs.write(inner[0], into);
+                    FfiConverterTypeGetExploreFeedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetAttributionFeed: {
-                    ordinalConverter.write(8, into);
+                    c.writeI32(8);
                     const inner = value.inner;
-                    FfiConverterTypeGetAttributionFeedArgs.write(inner[0], into);
+                    FfiConverterTypeGetAttributionFeedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListNotifications: {
-                    ordinalConverter.write(9, into);
+                    c.writeI32(9);
                     const inner = value.inner;
-                    FfiConverterTypeListNotificationsArgs.write(inner[0], into);
+                    FfiConverterTypeListNotificationsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListEvents: {
-                    ordinalConverter.write(10, into);
+                    c.writeI32(10);
                     const inner = value.inner;
-                    FfiConverterTypeListEventsArgs.write(inner[0], into);
+                    FfiConverterTypeListEventsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListVerificationClaims: {
-                    ordinalConverter.write(11, into);
+                    c.writeI32(11);
                     const inner = value.inner;
-                    FfiConverterTypeListVerificationClaimsArgs.write(inner[0], into);
+                    FfiConverterTypeListVerificationClaimsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListVerificationTargets: {
-                    ordinalConverter.write(12, into);
+                    c.writeI32(12);
                     const inner = value.inner;
-                    FfiConverterTypeListVerificationTargetsArgs.write(inner[0], into);
+                    FfiConverterTypeListVerificationTargetsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListVerificationVerifies: {
-                    ordinalConverter.write(13, into);
+                    c.writeI32(13);
                     const inner = value.inner;
-                    FfiConverterTypeListVerificationVerifiesArgs.write(inner[0], into);
+                    FfiConverterTypeListVerificationVerifiesArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListTargetedVerificationClaims: {
-                    ordinalConverter.write(14, into);
+                    c.writeI32(14);
                     const inner = value.inner;
-                    FfiConverterTypeListTargetedVerificationClaimsArgs.write(inner[0], into);
+                    FfiConverterTypeListTargetedVerificationClaimsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ResolveVerifiedClaims: {
-                    ordinalConverter.write(15, into);
+                    c.writeI32(15);
                     const inner = value.inner;
-                    FfiConverterTypeResolveVerifiedClaimsArgs.write(inner[0], into);
+                    FfiConverterTypeResolveVerifiedClaimsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListFollowing: {
-                    ordinalConverter.write(16, into);
+                    c.writeI32(16);
                     const inner = value.inner;
-                    FfiConverterTypeListFollowingArgs.write(inner[0], into);
+                    FfiConverterTypeListFollowingArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListFollowers: {
-                    ordinalConverter.write(17, into);
+                    c.writeI32(17);
                     const inner = value.inner;
-                    FfiConverterTypeListFollowersArgs.write(inner[0], into);
+                    FfiConverterTypeListFollowersArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.SuggestFollow: {
-                    ordinalConverter.write(18, into);
+                    c.writeI32(18);
                     const inner = value.inner;
-                    FfiConverterTypeSuggestFollowArgs.write(inner[0], into);
+                    FfiConverterTypeSuggestFollowArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.SearchPosts: {
-                    ordinalConverter.write(19, into);
+                    c.writeI32(19);
                     const inner = value.inner;
-                    FfiConverterTypeSearchPostsArgs.write(inner[0], into);
+                    FfiConverterTypeSearchPostsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.SearchUsers: {
-                    ordinalConverter.write(20, into);
+                    c.writeI32(20);
                     const inner = value.inner;
-                    FfiConverterTypeSearchUsersArgs.write(inner[0], into);
+                    FfiConverterTypeSearchUsersArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.IsModerator: {
-                    ordinalConverter.write(21, into);
+                    c.writeI32(21);
                     const inner = value.inner;
-                    FfiConverterTypeIsModeratorArgs.write(inner[0], into);
+                    FfiConverterTypeIsModeratorArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.IsBanned: {
-                    ordinalConverter.write(22, into);
+                    c.writeI32(22);
                     const inner = value.inner;
-                    FfiConverterTypeIsBannedArgs.write(inner[0], into);
+                    FfiConverterTypeIsBannedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListBans: {
-                    ordinalConverter.write(23, into);
+                    c.writeI32(23);
                     const inner = value.inner;
-                    FfiConverterTypeListBansArgs.write(inner[0], into);
+                    FfiConverterTypeListBansArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetReactions: {
-                    ordinalConverter.write(24, into);
+                    c.writeI32(24);
                     const inner = value.inner;
-                    FfiConverterTypeGetReactionsArgs.write(inner[0], into);
+                    FfiConverterTypeGetReactionsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 default:
@@ -3505,145 +3489,145 @@ const FfiConverterTypeQuery = (() => {
             switch (value.tag) {
                 case Query_Tags.GetProfile: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(1);
+                    let size = 4;
                     size += FfiConverterTypeGetProfileArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetEvent: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(2);
+                    let size = 4;
                     size += FfiConverterTypeGetEventArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetPostThread: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(3);
+                    let size = 4;
                     size += FfiConverterTypeGetPostThreadArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetIdentityFeed: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(4);
+                    let size = 4;
                     size += FfiConverterTypeGetIdentityFeedArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetFollowingFeed: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(5);
+                    let size = 4;
                     size += FfiConverterTypeGetFollowingFeedArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetRecommendedFeed: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(6);
+                    let size = 4;
                     size += FfiConverterTypeGetFollowingFeedArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetExploreFeed: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(7);
+                    let size = 4;
                     size += FfiConverterTypeGetExploreFeedArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetAttributionFeed: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(8);
+                    let size = 4;
                     size += FfiConverterTypeGetAttributionFeedArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListNotifications: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(9);
+                    let size = 4;
                     size += FfiConverterTypeListNotificationsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListEvents: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(10);
+                    let size = 4;
                     size += FfiConverterTypeListEventsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListVerificationClaims: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(11);
+                    let size = 4;
                     size += FfiConverterTypeListVerificationClaimsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListVerificationTargets: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(12);
+                    let size = 4;
                     size += FfiConverterTypeListVerificationTargetsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListVerificationVerifies: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(13);
+                    let size = 4;
                     size += FfiConverterTypeListVerificationVerifiesArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListTargetedVerificationClaims: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(14);
+                    let size = 4;
                     size += FfiConverterTypeListTargetedVerificationClaimsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ResolveVerifiedClaims: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(15);
+                    let size = 4;
                     size += FfiConverterTypeResolveVerifiedClaimsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListFollowing: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(16);
+                    let size = 4;
                     size += FfiConverterTypeListFollowingArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListFollowers: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(17);
+                    let size = 4;
                     size += FfiConverterTypeListFollowersArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.SuggestFollow: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(18);
+                    let size = 4;
                     size += FfiConverterTypeSuggestFollowArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.SearchPosts: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(19);
+                    let size = 4;
                     size += FfiConverterTypeSearchPostsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.SearchUsers: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(20);
+                    let size = 4;
                     size += FfiConverterTypeSearchUsersArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.IsModerator: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(21);
+                    let size = 4;
                     size += FfiConverterTypeIsModeratorArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.IsBanned: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(22);
+                    let size = 4;
                     size += FfiConverterTypeIsBannedArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.ListBans: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(23);
+                    let size = 4;
                     size += FfiConverterTypeListBansArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetReactions: {
                     const inner = value.inner;
-                    let size = ordinalConverter.allocationSize(24);
+                    let size = 4;
                     size += FfiConverterTypeGetReactionsArgs.allocationSize(inner[0]);
                     return size;
                 }
@@ -3710,7 +3694,16 @@ private constructor(pointer: UniffiHandle) {
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterOptionalTypeAuthToken.lift.bind(FfiConverterOptionalTypeAuthToken),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterOptionalTypeAuthToken.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             
@@ -4699,7 +4692,16 @@ private constructor(pointer: UniffiHandle) {
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5072,13 +5074,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * `public_key` should be a serialized `PublicKey` protobuf.
  */
     assembleRecoveryPayload(identity: string, publicKey: ArrayBuffer): ArrayBuffer /*throws*/ {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterArrayBuffer.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCallWithError(
+    const __rb: Uint8Array = uniffiCaller.rustCallWithError(
             /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_assemble_recovery_payload(
@@ -5088,7 +5084,12 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterArrayBuffer.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 /**
@@ -5096,20 +5097,19 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * social graph events.
  */
     blockedIdentities(): Array<string> {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterSequenceString.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_blocked_identities(
                 uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterSequenceString.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 /**
@@ -5119,13 +5119,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * For other events, leave it `None`.
  */
     buildVectorClock(identity: string, collection: number, identitySequence: bigint, signedBy: ArrayBuffer, currentSequence: bigint, identityContent: ArrayBuffer | undefined): ArrayBuffer /*throws*/ {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterArrayBuffer.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCallWithError(
+    const __rb: Uint8Array = uniffiCaller.rustCallWithError(
             /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock(
@@ -5139,7 +5133,12 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterArrayBuffer.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 /**
@@ -5207,7 +5206,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5268,7 +5276,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5286,13 +5303,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * or `None` if this signer has no identity events.
  */
     getIdentitySequence(identity: string, signer: ArrayBuffer): bigint | undefined /*throws*/ {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterOptionalUInt64.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCallWithError(
+    const __rb: Uint8Array = uniffiCaller.rustCallWithError(
             /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence(
@@ -5302,7 +5313,12 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterOptionalUInt64.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 /**
@@ -5328,7 +5344,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5364,7 +5389,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5381,20 +5415,19 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * Return a snapshot of the currently configured servers.
  */
     getServers(): Array<string> {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterSequenceString.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_servers(
                 uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterSequenceString.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 /**
@@ -5460,7 +5493,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5495,7 +5537,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5513,13 +5564,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * non-tombstoned events on (identity, collection).
  */
     listValidEvents(identity: string, collection: number): ArrayBuffer /*throws*/ {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterArrayBuffer.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCallWithError(
+    const __rb: Uint8Array = uniffiCaller.rustCallWithError(
             /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_list_valid_events(
@@ -5529,7 +5574,12 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterArrayBuffer.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
     nextSequence(identity: string, collection: number): bigint {
@@ -5550,13 +5600,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * `(identity, collection)`. Empty when no events exist.
  */
     previousRoot(identity: string, collection: number): ArrayBuffer {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterArrayBuffer.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_root(
                 uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
@@ -5565,7 +5609,12 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterArrayBuffer.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 /**
@@ -5573,13 +5622,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * Empty when no events exist.
  */
     previousSignature(identity: string, collection: number): ArrayBuffer {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterArrayBuffer.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(
                 uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
@@ -5588,7 +5631,12 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterArrayBuffer.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 /**
@@ -5596,13 +5644,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * "fit"), encode as JPEG.
  */
     processImageToJpeg(image: ArrayBuffer, width: number, height: number, mode: string): ProcessedImage /*throws*/ {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterTypeProcessedImage.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCallWithError(
+    const __rb: Uint8Array = uniffiCaller.rustCallWithError(
             /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(
@@ -5614,7 +5656,12 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterTypeProcessedImage.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 /**
@@ -5643,7 +5690,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterOptionalBytes.lift.bind(FfiConverterOptionalBytes),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterOptionalBytes.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5679,7 +5735,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5729,13 +5794,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * Derived purely from the local in-memory event and content stores.
  */
     resolveIdentity(identity: string): ArrayBuffer | undefined {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterOptionalBytes.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCall(
+    const __rb: Uint8Array = uniffiCaller.rustCall(
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity(
                 uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
@@ -5743,7 +5802,12 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterOptionalBytes.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 /**
@@ -5751,13 +5815,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * `ListEventsResponse`.
  */
     resolveIdentityChain(identity: string): ArrayBuffer /*throws*/ {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterArrayBuffer.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCallWithError(
+    const __rb: Uint8Array = uniffiCaller.rustCallWithError(
             /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity_chain(
@@ -5766,7 +5824,12 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterArrayBuffer.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 /**
@@ -5822,7 +5885,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5874,7 +5946,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5941,7 +6022,16 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // RustBuffer comes back via the shared `rust_future_complete_*`
             // export. The bytes the runtime hands back must be deserialized
             // here using the per-callable return-type converter.
-            /*liftFunc:*/ FfiConverterArrayBuffer.lift.bind(FfiConverterArrayBuffer),
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
             /*asyncOpts:*/ asyncOpts_,
             /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
@@ -5958,13 +6048,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * Decode + verify a `SignedEvent`, returning its canonical bytes.
  */
     verifySignedEvent(signedEvent: ArrayBuffer): ArrayBuffer /*throws*/ {
-    return ((__rb: Uint8Array) => {
-        try {
-            return FfiConverterArrayBuffer.lift(__rb);
-        } finally {
-            nativeModule().rustbuffer_free(__rb);
-        }
-    })(uniffiCaller.rustCallWithError(
+    const __rb: Uint8Array = uniffiCaller.rustCallWithError(
             /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
             /*caller:*/ (callStatus) => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_verify_signed_event(
@@ -5973,7 +6057,12 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
                 callStatus);
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    ));
+    );
+    try {
+        return FfiConverterArrayBuffer.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
     }
     
 

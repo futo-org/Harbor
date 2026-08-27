@@ -29,13 +29,7 @@ function ThreadHeader() {
   const { theme } = useTheme();
   return (
     <View style={[Atoms.flex_row, Atoms.gap_md]}>
-      <View
-        style={[
-          Atoms.align_center,
-          Atoms.mb_xs,
-          { flexBasis: LEFT_COL_FLEX_BASIS },
-        ]}
-      >
+      <View style={[Atoms.align_center, { flexBasis: LEFT_COL_FLEX_BASIS }]}>
         <View
           style={[
             Atoms.flex_1,
