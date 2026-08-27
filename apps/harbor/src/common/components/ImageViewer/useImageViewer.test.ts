@@ -11,10 +11,6 @@ jest.mock('expo-router', () => ({
   router: { push: jest.fn() },
 }));
 
-// Mutable so individual tests can flip the platform.
-const platform = { isWeb: false };
-jest.mock('@/src/common/util/platform', () => platform);
-
 /** Render the hook in a throwaway component and hand back its callback. */
 function renderUseImageViewer() {
   let open!: ReturnType<typeof useImageViewer>;
@@ -30,7 +26,6 @@ function renderUseImageViewer() {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  platform.isWeb = false;
   useImageViewerStore.setState({ images: [], index: 0 });
 });
 
@@ -52,17 +47,6 @@ describe('useImageViewer', () => {
     act(() => open([{ uri: 'a' }]));
 
     expect(useImageViewerStore.getState().index).toBe(0);
-  });
-
-  it('on web, stores the images without touching the router', () => {
-    platform.isWeb = true;
-    const open = renderUseImageViewer();
-    const images = [{ uri: 'a' }];
-
-    act(() => open(images));
-
-    expect(useImageViewerStore.getState().images).toBe(images);
-    expect(router.push).not.toHaveBeenCalled();
   });
 
   it('does nothing for an empty image list', () => {

@@ -18,8 +18,6 @@ type ImageViewerState = {
 type ImageViewerActions = {
   /** Set the images + starting index for the image-viewer route to read. */
   show: (images: ImageViewerInput[], index: number) => void;
-  /** Clear the viewer — closes the web overlay, which renders while non-empty. */
-  hide: () => void;
 };
 
 export const useImageViewerStore = create<
@@ -28,5 +26,4 @@ export const useImageViewerStore = create<
   images: [],
   index: 0,
   show: (images, index) => set({ images, index }),
-  hide: () => set({ images: [], index: 0 }),
 }));

@@ -1,5 +1,8 @@
-import { router } from 'expo-router';
-import { useCallback, useRef } from 'react';
+import { Redirect, router } from 'expo-router';
+import { useCallback, useEffect, useRef } from 'react';
+import { View } from 'react-native';
+import { Atoms, ZIndex } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
 import { ImageViewer } from './ImageViewer';
 import { useImageViewerStore } from './useImageViewerStore';
 
@@ -12,6 +15,7 @@ import { useImageViewerStore } from './useImageViewerStore';
 export default function ImageViewerScreen() {
   const images = useImageViewerStore((s) => s.images);
   const index = useImageViewerStore((s) => s.index);
+  const open = images.length > 0;
 
   // Guard against double-dismiss: simultaneous pinch + pan can both fire
   // close, and `router.canGoBack()` may still read true before the first
@@ -23,6 +27,44 @@ export default function ImageViewerScreen() {
     if (router.canGoBack()) router.back();
   }, []);
 
-  if (images.length === 0) return null;
-  return <ImageViewer images={images} initialIndex={index} onClose={onClose} />;
+  useBodyScrollLock(isWeb && open);
+
+  // Images only exist in memory, so just send the user home (happens if page
+  // is refreshed while on /image-viewer route)
+  if (isWeb && !open) return <Redirect href="/" />;
+
+  const viewer = (
+    <ImageViewer images={images} initialIndex={index} onClose={onClose} />
+  );
+
+  return isWeb ? (
+    <View style={[Atoms.fixed, Atoms.inset_0, { zIndex: ZIndex.modal }]}>
+      {viewer}
+    </View>
+  ) : (
+    viewer
+  );
+}
+
+function useBodyScrollLock(locked: boolean) {
+  useEffect(() => {
+    if (!locked) return;
+
+    const body = document.body;
+    const y = window.scrollY;
+
+    body.style.position = 'fixed';
+    body.style.top = `-${y}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+
+    return () => {
+      body.style.position = '';
+      body.style.top = '';
+      body.style.left = '';
+      body.style.right = '';
+
+      window.scrollTo(0, y);
+    };
+  }, [locked]);
 }
