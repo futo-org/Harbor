@@ -1,0 +1,18 @@
+[package]
+name    = "perf-tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "gen-data"
+path = "src/gen-data.rs"
+
+[dependencies]
+ed25519-dalek.workspace = true
+polycentric-common = { workspace = true, features = ["transport"] }
+prost = { version = "0.14", default-features = false }
+rand = { version = "0.10", default-features = false, features = ["std", "std_rng", "thread_rng"] }
+sha2 = { version = "0.10", default-features = false }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+tonic = { workspace = true, features = ["transport"] }
