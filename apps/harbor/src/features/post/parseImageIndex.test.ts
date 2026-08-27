@@ -5,7 +5,7 @@ jest.mock('expo-router', () => ({
   Redirect: () => null,
   useLocalSearchParams: () => ({}),
 }));
-jest.mock('@/src/common/components/ImageViewer/ImageViewerScreen', () => ({
+jest.mock('@/src/common/components/ImageViewer', () => ({
   ImageViewerScreen: () => null,
 }));
 jest.mock('@/src/common/constants/routes', () => ({ Routes: { tabs: {} } }));

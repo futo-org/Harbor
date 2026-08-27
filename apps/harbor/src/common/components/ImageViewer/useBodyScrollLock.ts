@@ -7,9 +7,9 @@ import { isWeb } from '@/src/common/util/platform';
  * in place — plain `overflow: hidden` clamps the document scroll back to
  * 0 — and the saved offset is restored on unlock.
  */
-export function useBodyScrollLock(locked: boolean) {
+export function useBodyScrollLock(enabled: boolean) {
   useEffect(() => {
-    if (!isWeb || !locked) return;
+    if (!isWeb || !enabled) return;
 
     const body = document.body;
     const y = window.scrollY;
@@ -27,5 +27,5 @@ export function useBodyScrollLock(locked: boolean) {
 
       window.scrollTo(0, y);
     };
-  }, [locked]);
+  }, [enabled]);
 }

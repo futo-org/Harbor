@@ -1,6 +1,6 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
-import { ImageViewerScreen } from '@/src/common/components/ImageViewer/ImageViewerScreen';
+import { ImageViewerScreen } from '@/src/common/components/ImageViewer';
 import { Routes } from '@/src/common/constants/routes';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
@@ -20,7 +20,7 @@ export default function PostImageViewerScreen() {
     identityId,
     keyFingerprint,
     sequence = '',
-    index = '1',
+    index,
   } = useLocalSearchParams<{
     identityId: string;
     keyFingerprint: string;
@@ -34,11 +34,7 @@ export default function PostImageViewerScreen() {
     BigInt(sequence),
   );
 
-  const postRoute = Routes.tabs.post(
-    identityId ?? '',
-    keyFingerprint ?? '',
-    sequence,
-  );
+  const postRoute = Routes.tabs.post(identityId, keyFingerprint, sequence);
 
   const onIndexChange = useCallback((i: number) => {
     router.setParams({ index: String(i + 1) });

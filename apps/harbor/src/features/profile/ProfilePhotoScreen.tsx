@@ -1,5 +1,5 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { ImageViewerScreen } from '@/src/common/components/ImageViewer/ImageViewerScreen';
+import { ImageViewerScreen } from '@/src/common/components/ImageViewer';
 import { Routes } from '@/src/common/constants/routes';
 import { identiconUrl } from '@/src/common/lib/polycentric-hooks';
 import { openWithReturn } from '@/src/common/lib/navigation/openWithReturn';
@@ -17,11 +17,11 @@ export default function ProfilePhotoScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
   const profile = useProfile(identityId, { fetchMode: FetchMode.Default });
 
-  const profileRoute = Routes.tabs.profile(identityId ?? '');
+  const profileRoute = Routes.tabs.profile(identityId);
 
   // The URL slot may hold an alias (user@domain) instead of a key; the
   // profile page knows how to resolve those, so let it.
-  if (!identityId || !isIdentityKey(identityId)) {
+  if (!isIdentityKey(identityId)) {
     return <Redirect href={profileRoute} />;
   }
 
