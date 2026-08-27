@@ -1,6 +1,9 @@
 import { pickImageVariant } from '@/src/common/lib/polycentric-hooks/helpers';
 import type { v2 } from '@polycentric/react-native';
-import type { ImageViewerInput } from './useImageViewerStore';
+
+export type ImageViewerInput =
+  | v2.ImageSet
+  | { uri: string; aspectRatio?: number };
 
 /** Pull the largest available variant for the viewer. */
 export const VIEWER_TARGET = 2048;

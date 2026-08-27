@@ -1,14 +1,16 @@
 import {
   pickImageVariant,
   usePolycentric,
+  type PostData,
 } from '@/src/common/lib/polycentric-hooks';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms } from '@/src/common/theme';
-import { useImageViewer } from '@/src/common/components/ImageViewer';
 import {
   MAX_ASPECT_RATIO,
   MIN_ASPECT_RATIO,
 } from '@/src/features/composer/utils/attachmentLayout';
-import type { v2 } from '@polycentric/react-native';
+import { MAX_ATTACHMENTS } from '@/src/features/composer/hooks/useComposer';
+import { openPostImage } from '@/src/features/post/PostImageViewerScreen';
 import { memo, useCallback, useMemo } from 'react';
 import { Image } from '@/src/common/components/Image';
 import { Pressable, View } from 'react-native';
@@ -32,12 +34,15 @@ type PostImageSource = {
  * tile opens the full-screen `ImageViewer`.
  */
 export const PostImages = memo(function PostImages({
-  images,
+  post,
 }: {
-  images: v2.ImageSet[];
+  post: PostData;
 }) {
   const client = usePolycentric();
-  const capped = useMemo(() => images.slice(0, 4), [images]);
+  const capped = useMemo(
+    () => post.images.slice(0, MAX_ATTACHMENTS),
+    [post.images],
+  );
   const sources = useMemo<PostImageSource[]>(
     () =>
       capped
@@ -55,10 +60,13 @@ export const PostImages = memo(function PostImages({
     [client, capped],
   );
 
-  const showViewer = useImageViewer();
   const openViewer = useCallback(
-    (i: number) => showViewer(capped, i),
-    [showViewer, capped],
+    (i: number) => {
+      const keyFingerprint = getKeyFingerprint(post.signedBy);
+      if (!keyFingerprint) return;
+      openPostImage(post.identity, keyFingerprint, post.sequence, i);
+    },
+    [post.identity, post.signedBy, post.sequence],
   );
 
   if (sources.length === 0) return null;

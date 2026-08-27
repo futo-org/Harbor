@@ -2,9 +2,12 @@ import { Text } from '@/src/common/components/primitives';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import Icon from '@/src/common/components/Icon';
+import { useUpdateEffect } from '@/src/common/lib/useUpdateEffect';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { resolveImageSources } from './resolveImageSources';
-import type { ImageViewerInput } from './useImageViewerStore';
+import {
+  resolveImageSources,
+  type ImageViewerInput,
+} from './resolveImageSources';
 import { Image } from '@/src/common/components/Image';
 import {
   Platform,
@@ -48,10 +51,12 @@ export function ImageViewer({
   images,
   initialIndex,
   onClose,
+  onIndexChange,
 }: {
   images: ImageViewerInput[];
   initialIndex: number;
   onClose: () => void;
+  onIndexChange?: (index: number) => void;
 }) {
   const client = usePolycentric();
   const { theme } = useTheme();
@@ -72,6 +77,11 @@ export function ImageViewer({
     () => setIndex((i) => Math.min(sources.length - 1, i + 1)),
     [sources.length],
   );
+
+  // Report arrow/keyboard navigation, skipping the mount-time index.
+  useUpdateEffect(() => {
+    onIndexChange?.(index);
+  }, [index, onIndexChange]);
 
   // Web: Esc closes, arrow keys navigate.
   useEffect(() => {
@@ -224,9 +234,11 @@ export function ImageViewer({
     };
   });
 
-  if (sources.length === 0) return null;
+  // With no sources (the route is still loading its data) render just
+  // the backdrop and close button, so the viewer holds its place and can
+  // still be dismissed.
   const safeIndex = Math.min(index, sources.length - 1);
-  const current = sources[safeIndex];
+  const current = safeIndex >= 0 ? sources[safeIndex] : undefined;
   const hasPrev = safeIndex > 0;
   const hasNext = safeIndex < sources.length - 1;
 
@@ -250,33 +262,38 @@ export function ImageViewer({
         onPress={onClose}
         style={[Atoms.flex_1, Atoms.items_center, Atoms.justify_center]}
       >
-        <GestureDetector gesture={gesture}>
-          <Animated.View
-            style={[
-              Atoms.items_center,
-              Atoms.justify_center,
-              { width: '100%', height: '88%' },
-              imageStyle,
-            ]}
-          >
-            {/* Swallow taps on the image itself so they don't dismiss;
-                  taps on the surrounding letterbox fall through to the
-                  backdrop and close. */}
-            <Pressable
-              onPress={(e) => e.stopPropagation?.()}
+        {/* With no sources (the route is still loading its data) render just
+        the backdrop and close button, so the viewer holds its place and can
+        still be dismissed.*/}
+        {current && (
+          <GestureDetector gesture={gesture}>
+            <Animated.View
               style={[
-                Atoms.w_full,
-                { aspectRatio: current.aspectRatio ?? 1, maxHeight: '100%' },
+                Atoms.items_center,
+                Atoms.justify_center,
+                { width: '100%', height: '88%' },
+                imageStyle,
               ]}
             >
-              <Image
-                uris={current.uris}
-                contentFit="contain"
-                style={[Atoms.w_full, Atoms.h_full]}
-              />
-            </Pressable>
-          </Animated.View>
-        </GestureDetector>
+              {/* Swallow taps on the image itself so they don't dismiss;
+                  taps on the surrounding letterbox fall through to the
+                  backdrop and close. */}
+              <Pressable
+                onPress={(e) => e.stopPropagation?.()}
+                style={[
+                  Atoms.w_full,
+                  { aspectRatio: current.aspectRatio ?? 1, maxHeight: '100%' },
+                ]}
+              >
+                <Image
+                  uris={current.uris}
+                  contentFit="contain"
+                  style={[Atoms.w_full, Atoms.h_full]}
+                />
+              </Pressable>
+            </Animated.View>
+          </GestureDetector>
+        )}
 
         <Pressable
           onPress={(e) => {
