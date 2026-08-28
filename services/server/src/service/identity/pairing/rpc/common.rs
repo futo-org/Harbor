@@ -7,25 +7,6 @@ use ::entity::pairing_session_model as PairingSessionModel;
 use sea_orm::DbConn;
 use tonic::Status;
 
-/// Verifies a signed pairing request and returns the signer public key.
-pub fn verify_signed_message(
-    msg: &SignedMessage,
-) -> Result<Proto::PublicKey, Status> {
-    let public_key = msg
-        .public_key
-        .as_ref()
-        .ok_or_else(|| Status::invalid_argument("public_key is required"))?;
-
-    polycentric_common::signing::verify_signature(
-        &public_key.key,
-        &msg.signature,
-        &msg.message_bytes,
-    )
-    .map_err(|e| Status::unauthenticated(e.to_string()))?;
-
-    Ok(public_key.clone())
-}
-
 /// Assembles the aggregated state from a stored session row and its claimers.
 pub fn session_state(
     session: &PairingSessionModel::Model,

@@ -8,51 +8,27 @@ use prost::Message;
 use std::fmt;
 
 impl SignedEvent {
-    pub fn verify_signature(&self) -> std::result::Result<(), CoreError> {
+    /// Verify the signature and then return the decoded event.
+    pub fn open(&self) -> std::result::Result<Event, CoreError> {
         let event = Event::from_bytes(&self.event_bytes[..]).map_err(|e| {
             CoreError::DeserializationError(format!("Unable to deserialize event: {:?}", e))
         })?;
 
-        let key = event.key.ok_or_else(|| {
+        let key = event.key.as_ref().ok_or_else(|| {
             CoreError::DeserializationError("Deserialized event has no key".to_owned())
         })?;
 
-        let signed_by = key.signed_by.ok_or_else(|| {
+        let signed_by = key.signed_by.as_ref().ok_or_else(|| {
             CoreError::DeserializationError("Event key has no signed_by".to_owned())
         })?;
 
-        // TODO take into account key type
+        if !signed_by.sig_matches(&self.signature, &self.event_bytes) {
+            return Err(CoreError::SignatureError(
+                "event signature is invalid".to_owned(),
+            ));
+        }
 
-        let public_key_bytes: [u8; 32] = signed_by.key.try_into().map_err(|e: Vec<u8>| {
-            CoreError::DeserializationError(format!(
-                "Incorrect public key length: expected 32, got {}",
-                e.len()
-            ))
-        })?;
-
-        let public_key =
-            ed25519_dalek::VerifyingKey::from_bytes(&public_key_bytes).map_err(|e| {
-                CoreError::DeserializationError(format!(
-                    "Unable to deserialize system public key: {:?}",
-                    e
-                ))
-            })?;
-
-        let signature_bytes: [u8; 64] =
-            self.signature.clone().try_into().map_err(|e: Vec<u8>| {
-                CoreError::DeserializationError(format!(
-                    "Incorrect signature length: expected 64, got {}",
-                    e.len()
-                ))
-            })?;
-
-        let signature = ed25519_dalek::Signature::from_bytes(&signature_bytes);
-
-        public_key
-            .verify_strict(&self.event_bytes, &signature)
-            .map_err(|e| CoreError::SignatureError(format!("Invalid signature {:?}", e)))?;
-
-        Ok(())
+        Ok(event)
     }
 }
 
@@ -69,7 +45,7 @@ impl Serializable for SignedEvent {
             .map_err(|e| Error::Platform(PlatformError::DeserializationError(e.to_string())))?;
 
         result
-            .verify_signature()
+            .open()
             .map_err(|e| Error::Platform(PlatformError::DeserializationError(e.to_string())))?;
 
         Ok(result)

@@ -1,9 +1,7 @@
 //! `put_pairing_session`: creates or updates a pairing session.
 
 use crate::service::identity::pairing::repository as pair_repo;
-use crate::service::identity::pairing::rpc::common::{
-    load_session_state, verify_signed_message,
-};
+use crate::service::identity::pairing::rpc::common::load_session_state;
 use crate::service::identity::repository as id_repo;
 use crate::service::proto as Proto;
 use crate::service::proto::{
@@ -92,11 +90,15 @@ fn extract_and_validate_input(
     let msg = req.signed_message.ok_or_else(|| {
         Status::invalid_argument("signed_message is required")
     })?;
-    let issuer_key = verify_signed_message(&msg)?;
+
+    let (issuer_key, issuer_state_bytes, issuer_state_signature) = msg
+        .open_with_sig()
+        .ok_or_else(|| Status::unauthenticated("invalid signature"))?;
 
     let issuer_state =
-        Proto::IssuerPairingState::decode(msg.message_bytes.as_slice())
+        Proto::IssuerPairingState::decode(issuer_state_bytes.as_slice())
             .map_err(|_| Status::invalid_argument("invalid issuer state"))?;
+
     let digest = Proto::PairingSessionDigest::decode(
         issuer_state.session_digest.as_slice(),
     )
@@ -111,9 +113,9 @@ fn extract_and_validate_input(
     Ok(Input {
         issuer_identity: digest.issuer_identity,
         digest_sha256,
-        issuer_state_bytes: msg.message_bytes,
+        issuer_state_bytes,
         issuer_key,
-        issuer_state_signature: msg.signature,
+        issuer_state_signature,
         initial_timestamp,
         sequence: issuer_state.sequence,
     })

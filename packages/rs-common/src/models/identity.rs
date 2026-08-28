@@ -9,14 +9,9 @@ use prost::Message;
 use sha2::{Digest, Sha256};
 
 use crate::models::protos_v2::{RevocationBound, ServerList};
-use crate::{
-    models::{
-        collections,
-        protos_v2::{
-            Content, Event, EventProofTarget, Identity, KeyType, PublicKey, content::ContentBody,
-        },
-    },
-    signing,
+use crate::models::{
+    collections,
+    protos_v2::{Content, Event, EventProofTarget, Identity, PublicKey, content::ContentBody},
 };
 
 impl Identity {
@@ -217,7 +212,7 @@ fn preprocess_candidate(identity: &str, candidate: &IdentityCandidate) -> Option
     }?;
 
     // Validate event signature
-    if !signature_matches(&signer, candidate.signature, candidate.event_bytes) {
+    if !signer.sig_matches(candidate.signature, candidate.event_bytes) {
         return None;
     }
 
@@ -321,7 +316,7 @@ fn justify_succession(
     let signature = candidate.document.recovery_signature.as_deref()?;
     let payload = assemble_recovery_payload(identity, &candidate.signer);
 
-    if signature_matches(key, signature, &payload) {
+    if key.sig_matches(signature, &payload) {
         Some(SuccessionReason::Recovery)
     } else {
         None
@@ -420,16 +415,6 @@ fn compare_successors(
                 .derive_hex_key()
                 .cmp(&e2.document.derive_hex_key())
         })
-}
-
-fn signature_matches(key: &PublicKey, sig: &[u8], data: &[u8]) -> bool {
-    match key.key_type {
-        t if t == KeyType::Ed25519 as i32 => {
-            let key = &key.key;
-            signing::verify_signature(key, sig, data).is_ok()
-        }
-        _ => false,
-    }
 }
 
 #[cfg(test)]
