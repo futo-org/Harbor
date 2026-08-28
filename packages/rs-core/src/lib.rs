@@ -20,4 +20,5 @@ pub mod query;
 pub mod rx;
 pub mod store;
 pub mod sync;
+pub mod time;
 pub mod vector_clock;

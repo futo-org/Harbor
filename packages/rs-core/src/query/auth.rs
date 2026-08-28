@@ -8,6 +8,7 @@ use tonic::metadata::AsciiMetadataValue;
 use tonic::{Request, Status};
 
 use crate::lock::RwLockRecover;
+use crate::time::now_secs;
 
 /// Stop reusing a cached token this many seconds before it expires.
 const EXPIRY_MARGIN_SECONDS: u64 = 60;
@@ -97,19 +98,6 @@ async fn bearer_for(server_url: &str) -> Option<AsciiMetadataValue> {
         },
     );
     Some(bearer)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn now_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
-}
-
-#[cfg(target_arch = "wasm32")]
-fn now_secs() -> u64 {
-    (js_sys::Date::now() / 1000.0) as u64
 }
 
 #[cfg(test)]
