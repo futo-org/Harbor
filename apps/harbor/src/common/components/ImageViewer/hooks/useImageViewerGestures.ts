@@ -33,7 +33,7 @@ export function useImageViewerGestures({
   dismissY,
   containerSize,
 }: {
-  onClose: (source: string) => void;
+  onClose: () => void;
   index: number;
   safeIndex: number;
   setIndex: Dispatch<SetStateAction<number>>;
@@ -91,7 +91,7 @@ export function useImageViewerGestures({
           if (scale.value < PINCH_CLOSE_SCALE) {
             // Pinched in far enough — shrink away and dismiss.
             scale.value = withTiming(0.3, { duration: 180 }, (finished) => {
-              if (finished) runOnJS(onClose)('PINCH_CLOSE_SCALE');
+              if (finished) runOnJS(onClose)();
             });
           } else if (scale.value <= 1) {
             scale.value = withTiming(1);
@@ -202,17 +202,12 @@ export function useImageViewerGestures({
               Math.abs(e.velocityY) > CLOSE_VELOCITY;
 
             if (dismiss) {
-              const dreason =
-                Math.abs(e.translationY) > CLOSE_DISTANCE
-                  ? 'CLOSE_DISTANCE'
-                  : 'CLOSE_VELOCITY';
-
               const target = e.translationY >= 0 ? height : -height;
               dismissY.value = withTiming(
                 target,
                 { duration: 180 },
                 (finished) => {
-                  if (finished) runOnJS(onClose)(dreason);
+                  if (finished) runOnJS(onClose)();
                 },
               );
             } else {
@@ -269,7 +264,7 @@ export function useImageViewerGestures({
           Math.abs(e.x - imgCenterX) <= (fittedWidth * currentScale) / 2 &&
           Math.abs(e.y - imgCenterY) <= (fittedHeight * currentScale) / 2;
 
-        if (!tappedOnImage) runOnJS(onClose)('backdrop tap');
+        if (!tappedOnImage) runOnJS(onClose)();
       }),
     [
       aspectRatio,

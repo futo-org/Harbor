@@ -34,7 +34,7 @@ export function ImageViewer({
 }: {
   images: ImageViewerInput[];
   initialIndex: number;
-  onClose: (source: string) => void;
+  onClose: () => void;
   onIndexChange?: (index: number) => void;
 }) {
   const client = usePolycentric();
@@ -101,7 +101,7 @@ export function ImageViewer({
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose('esc');
+      if (e.key === 'Escape') onClose();
       else if (e.key === 'ArrowLeft') goPrev();
       else if (e.key === 'ArrowRight') goNext();
     };
@@ -176,7 +176,7 @@ export function ImageViewer({
       </GestureDetector>
 
       <Pressable
-        onPress={() => onClose('close button press')}
+        onPress={onClose}
         accessibilityLabel="Close image viewer"
         hitSlop={12}
         style={[
