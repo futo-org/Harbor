@@ -1,8 +1,10 @@
 import {
   createServer,
   type IncomingMessage,
+  type Server,
   type ServerResponse,
 } from 'node:http';
+import { fileURLToPath } from 'node:url';
 import createBrowserless from 'browserless';
 import getHTML from 'html-get';
 import metascraper from 'metascraper';
@@ -19,36 +21,61 @@ const httpRequests = new Counter({
   labelNames: ['path', 'status'],
 });
 
-// A real desktop Chrome UA. Headless Chromium's default `HeadlessChrome` UA
-// gets some sites (e.g. YouTube) to redirect to an "unsupported browser" gate
-// instead of serving the page, so we present a normal browser identity.
+// A real desktop Chrome UA for the headless-prerender path (JS-heavy SPAs that
+// only inject their meta tags client-side). Headless Chromium's default
+// `HeadlessChrome` UA trips some sites' "unsupported browser" gate, so we
+// present a normal browser identity for the browser process.
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
-// Spawn the Chromium process once for the lifetime of the service. The
-// `--user-agent` flag sets the UA browser-wide for the prerender path.
-//
-// Passing `args` replaces browserless's defaultArgs entirely, so we must
-// re-add the sandbox flags it would otherwise supply. Without `--no-sandbox` /
-// `--disable-setuid-sandbox`, Chromium can't launch as our non-root user in a
-// container that lacks CAP_SYS_ADMIN or unprivileged user namespaces.
-// `--disable-dev-shm-usage` avoids crashes when `/dev/shm` is small.
-const browserlessFactory = await createBrowserless({
-  launchOpts: {
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      `--user-agent=${USER_AGENT}`,
-    ],
-  },
-});
+// Social-crawler UA for the plain-fetch path. Sites like YouTube, Google, X,
+// etc. serve their Open Graph / Twitter-card tags directly to link-preview
+// crawlers (that's how Facebook/Slack/Discord unfurl them) while showing a
+// normal browser a consent / "unsupported browser" interstitial that carries no
+// tags. Identifying as a crawler is what makes metascraper actually have
+// something to read — no per-site code, no oEmbed, no cookies.
+export const CRAWLER_USER_AGENT =
+  'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 
-// Tear the Chromium process down when Node exits.
-process.on('exit', () => {
-  console.log('closing resources!');
-  browserlessFactory.close();
-});
+// Domains that serve crawler metadata on a plain request and don't need (and
+// often reject) a headless browser. For these we fetch directly as the crawler;
+// everything else is prerendered to cover client-rendered pages.
+const FETCH_DIRECT_DOMAINS = [
+  'youtube',
+  'youtu',
+  'google',
+  'vimeo',
+  'twitter',
+  'x.com',
+  'soundcloud',
+  'spotify',
+  'reddit',
+  'tiktok',
+  'instagram',
+  'facebook',
+  'nytimes',
+  'bbc',
+  'imdb',
+  'github',
+  'wikipedia',
+  'twitch',
+  'bitchute',
+  'rumble',
+  'dailymotion',
+  'nebula',
+];
+
+/** Route a URL to a plain fetch (crawler-friendly hosts) or headless prerender. */
+export const fetchMode = (targetUrl: string): 'fetch' | 'prerender' => {
+  try {
+    const host = new URL(targetUrl).hostname;
+    return FETCH_DIRECT_DOMAINS.some((d) => host.includes(d))
+      ? 'fetch'
+      : 'prerender';
+  } catch {
+    return 'prerender';
+  }
+};
 
 // Extract only the fields that map onto a polycentric `Link`.
 const scrapeMetadata = metascraper([
@@ -65,39 +92,80 @@ export type LinkMetadata = {
   url: string | null;
 };
 
+/** Fetches a page's (post-redirect URL + possibly-prerendered) HTML. */
+export type HtmlFetcher = (
+  targetUrl: string,
+) => Promise<{ html: string; url: string; statusCode: number }>;
+
 /**
- * Fetch `targetUrl` and extract its Open Graph / HTML metadata.
- *
- * `html-get` decides whether a plain fetch suffices or the page needs to be
- * prerendered through headless Chromium (e.g. client-side apps that inject
- * their tags via JS), so callers don't have to. Each call runs in its own
- * browser context, which is always torn down afterwards.
- *
- * Throws when the target responds with a non-2xx status.
+ * Build the production HTML fetcher: a long-lived Chromium process (via
+ * browserless) that either plain-fetches as a crawler or prerenders, per
+ * [`fetchMode`]. Returns the fetcher plus a `close` to tear Chromium down.
  */
-export const scrape = async (targetUrl: string): Promise<LinkMetadata> => {
-  const context = browserlessFactory.createContext();
-  try {
-    // `html-get` returns the post-redirect URL alongside the (possibly
-    // prerendered) HTML; metascraper needs both.
-    const { html, url, statusCode } = await getHTML(targetUrl, {
-      getBrowserless: () => context,
-      // Same UA on the plain-fetch path (html-get may skip the browser).
-      headers: { 'user-agent': USER_AGENT },
-    });
-    if (statusCode < 200 || statusCode >= 300) {
-      throw new Error(`target responded with status ${statusCode}`);
+export const createBrowserlessFetcher = async (): Promise<{
+  fetchHtml: HtmlFetcher;
+  close: () => Promise<void>;
+}> => {
+  // Passing `args` replaces browserless's defaultArgs entirely, so we must
+  // re-add the sandbox flags it would otherwise supply. Without `--no-sandbox` /
+  // `--disable-setuid-sandbox`, Chromium can't launch as our non-root user in a
+  // container that lacks CAP_SYS_ADMIN or unprivileged user namespaces.
+  // `--disable-dev-shm-usage` avoids crashes when `/dev/shm` is small.
+  const browserlessFactory = await createBrowserless({
+    launchOpts: {
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        `--user-agent=${USER_AGENT}`,
+      ],
+    },
+  });
+
+  const fetchHtml: HtmlFetcher = async (targetUrl) => {
+    const context = browserlessFactory.createContext();
+    try {
+      const { html, url, statusCode } = await getHTML(targetUrl, {
+        getBrowserless: () => context,
+        // Identify as a link-preview crawler so sites serve their OG tags rather
+        // than a consent/unsupported-browser page.
+        headers: { 'user-agent': CRAWLER_USER_AGENT },
+        // Crawler-friendly hosts (e.g. YouTube) are fetched directly; the rest
+        // are prerendered to catch client-rendered metadata.
+        getMode: () => fetchMode(targetUrl),
+      });
+      return {
+        html: html ?? '',
+        url: url ?? targetUrl,
+        statusCode: statusCode ?? 0,
+      };
+    } finally {
+      await (await context).destroyContext();
     }
-    const meta = await scrapeMetadata({ html, url });
-    return {
-      title: meta.title ?? null,
-      description: meta.description ?? null,
-      image: meta.image ?? null,
-      url: meta.url ?? null,
-    };
-  } finally {
-    await (await context).destroyContext();
+  };
+
+  return { fetchHtml, close: () => browserlessFactory.close() };
+};
+
+/**
+ * Fetch `targetUrl` (via the injected `fetchHtml`) and extract its Open Graph /
+ * HTML metadata. Throws when the target responds with a non-2xx status.
+ */
+export const scrape = async (
+  targetUrl: string,
+  fetchHtml: HtmlFetcher,
+): Promise<LinkMetadata> => {
+  const { html, url, statusCode } = await fetchHtml(targetUrl);
+  if (statusCode < 200 || statusCode >= 300) {
+    throw new Error(`target responded with status ${statusCode}`);
   }
+  const meta = await scrapeMetadata({ html, url });
+  return {
+    title: meta.title ?? null,
+    description: meta.description ?? null,
+    image: meta.image ?? null,
+    url: meta.url ?? null,
+  };
 };
 
 const PORT = Number(process.env.PORT ?? 8855);
@@ -116,7 +184,7 @@ const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
   res.end(JSON.stringify(body));
 };
 
-const isValidHttpUrl = (target: string): boolean => {
+export const isValidHttpUrl = (target: string): boolean => {
   try {
     const { protocol } = new URL(target);
     return protocol === 'http:' || protocol === 'https:';
@@ -133,6 +201,7 @@ const isValidHttpUrl = (target: string): boolean => {
 const handleScrape = async (
   target: string,
   res: ServerResponse,
+  scrapeUrl: (url: string) => Promise<LinkMetadata>,
 ): Promise<void> => {
   if (!isValidHttpUrl(target)) {
     sendJson(res, 400, { error: 'url must be http or https' });
@@ -140,7 +209,7 @@ const handleScrape = async (
   }
 
   try {
-    sendJson(res, 200, await scrape(target));
+    sendJson(res, 200, await scrapeUrl(target));
   } catch (error) {
     console.error('scrape failed:', error);
     sendJson(res, 502, { error: 'failed to scrape url' });
@@ -206,74 +275,95 @@ const handleImage = async (
   }
 };
 
-// Internal-only HTTP API the polycentric server calls. Must not be exposed
-// publicly (it fetches arbitrary URLs).
-const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-  const { pathname, searchParams } = new URL(
-    req.url ?? '/',
-    'http://localhost',
-  );
-
-  // Known paths only, so label cardinality stays bounded.
-  const KNOWN_PATHS = ['/health', '/scrape', '/image', '/metrics'];
-  res.on('finish', () => {
-    httpRequests.inc({
-      path: KNOWN_PATHS.includes(pathname) ? pathname : 'other',
-      status: res.statusCode,
-    });
-  });
-
-  if (req.method === 'GET' && pathname === '/health') {
-    sendJson(res, 200, { status: 'ok' });
-    return;
-  }
-
-  if (req.method === 'GET' && pathname === '/metrics') {
-    void register.metrics().then(
-      (body) => {
-        res.writeHead(200, { 'content-type': register.contentType });
-        res.end(body);
-      },
-      () => {
-        res.writeHead(500);
-        res.end();
-      },
+/**
+ * Build the internal HTTP API the polycentric server calls. `scrapeUrl` is
+ * injected so tests can drive `/scrape` without a real browser. Must not be
+ * exposed publicly (it fetches arbitrary URLs).
+ */
+export const buildServer = (
+  scrapeUrl: (url: string) => Promise<LinkMetadata>,
+): Server => {
+  return createServer((req: IncomingMessage, res: ServerResponse) => {
+    const { pathname, searchParams } = new URL(
+      req.url ?? '/',
+      'http://localhost',
     );
-    return;
-  }
 
-  if (req.method === 'GET' && pathname === '/scrape') {
-    const target = searchParams.get('url');
-    if (!target) {
-      sendJson(res, 400, { error: 'missing url parameter' });
+    // Known paths only, so label cardinality stays bounded.
+    const KNOWN_PATHS = ['/health', '/scrape', '/image', '/metrics'];
+    res.on('finish', () => {
+      httpRequests.inc({
+        path: KNOWN_PATHS.includes(pathname) ? pathname : 'other',
+        status: res.statusCode,
+      });
+    });
+
+    if (req.method === 'GET' && pathname === '/health') {
+      sendJson(res, 200, { status: 'ok' });
       return;
     }
-    void handleScrape(target, res);
-    return;
-  }
 
-  if (req.method === 'GET' && pathname === '/image') {
-    const target = searchParams.get('url');
-    if (!target) {
-      sendJson(res, 400, { error: 'missing url parameter' });
+    if (req.method === 'GET' && pathname === '/metrics') {
+      void register.metrics().then(
+        (body) => {
+          res.writeHead(200, { 'content-type': register.contentType });
+          res.end(body);
+        },
+        () => {
+          res.writeHead(500);
+          res.end();
+        },
+      );
       return;
     }
-    void handleImage(target, res);
-    return;
-  }
 
-  sendJson(res, 404, { error: 'not found' });
-});
+    if (req.method === 'GET' && pathname === '/scrape') {
+      const target = searchParams.get('url');
+      if (!target) {
+        sendJson(res, 400, { error: 'missing url parameter' });
+        return;
+      }
+      void handleScrape(target, res, scrapeUrl);
+      return;
+    }
 
-server.listen(PORT, () => {
-  console.log(`scraper listening on :${PORT}`);
-});
+    if (req.method === 'GET' && pathname === '/image') {
+      const target = searchParams.get('url');
+      if (!target) {
+        sendJson(res, 400, { error: 'missing url parameter' });
+        return;
+      }
+      void handleImage(target, res);
+      return;
+    }
 
-// Graceful shutdown: stop accepting requests, then tear down Chromium.
-const shutdown = (): void => {
-  server.close(() => {
-    void browserlessFactory.close().finally(() => process.exit(0));
+    sendJson(res, 404, { error: 'not found' });
   });
 };
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+
+/** Bootstrap: spawn Chromium, wire the server, and listen. */
+const main = async (): Promise<void> => {
+  const { fetchHtml, close } = await createBrowserlessFetcher();
+  const server = buildServer((url) => scrape(url, fetchHtml));
+
+  server.listen(PORT, () => {
+    console.log(`scraper listening on :${PORT}`);
+  });
+
+  // Graceful shutdown: stop accepting requests, then tear down Chromium.
+  const shutdown = (): void => {
+    server.close(() => {
+      void close().finally(() => process.exit(0));
+    });
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+  process.on('exit', () => {
+    void close();
+  });
+};
+
+// Only bootstrap when run directly (not when imported by tests).
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  void main();
+}
