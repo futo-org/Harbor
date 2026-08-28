@@ -107,7 +107,7 @@ mod tests {
             .await
             .expect_err("expected an error for missing public_key");
 
-        assert_eq!(status.code(), Code::InvalidArgument);
+        assert_eq!(status.code(), Code::Unauthenticated);
     }
 
     #[tokio::test]
