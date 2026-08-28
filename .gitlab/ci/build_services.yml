@@ -396,7 +396,7 @@ verifier-bot-tests:
   needs:
     - job: js-sdks-build
       artifacts: true
-    - job: rs-core-wasm-build
+    - job: rs-core-libraries
       artifacts: true
   variables:
     PUPPETEER_SKIP_DOWNLOAD: '1'
@@ -449,7 +449,7 @@ verifier-bot-image:
   needs:
     - job: js-sdks-build
       artifacts: true
-    - job: rs-core-wasm-build
+    - job: rs-core-libraries
       artifacts: true
   rules:
     - !reference [.verifier-bot-workflow, rules]
