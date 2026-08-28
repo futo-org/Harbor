@@ -12,6 +12,7 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
+use crate::lock::LockRecover;
 use crate::query::event::key::EventKey;
 use crate::query::event::merge::{
     EventBundleResponse, EventDedupKey, event_dedup_key, merge_bundle, merge_bundle_responses,
@@ -145,7 +146,7 @@ fn merge_claim_bundle_responses<T: ClaimBundleResponse>(
     merge_event_hints(&mut hints);
 
     {
-        let c = client.lock().unwrap();
+        let c = client.lock_recover();
         retain_validated_hints(&c, &mut hints);
         merged.retain_mut(|group| {
             let mut claim = Vec::from_iter(group.claim.take());
@@ -210,7 +211,7 @@ pub fn list_verification_claims(
                 .filter_map(|h| h.event_bundle)
                 .collect();
             {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(all_bundles(&response.claim_bundles));
             }
@@ -256,7 +257,7 @@ pub fn list_verification_targets(
                 .filter_map(|h| h.event_bundle)
                 .collect();
             {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
             }
@@ -301,7 +302,7 @@ pub fn list_verification_verifies(
                 .filter_map(|h| h.event_bundle)
                 .collect();
             {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
             }
@@ -347,7 +348,7 @@ pub fn list_targeted_verification_claims(
                 .filter_map(|h| h.event_bundle)
                 .collect();
             {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(all_bundles(&response.claim_bundles));
             }
@@ -398,7 +399,7 @@ pub fn resolve_verified_claims(
                 .filter_map(|h| h.event_bundle)
                 .collect();
             {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(all_bundles(&response.claim_bundles));
             }
