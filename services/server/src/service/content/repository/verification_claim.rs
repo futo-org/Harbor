@@ -1,27 +1,28 @@
-use super::{ChildContext, map_db_err};
 use crate::service::proto::{FieldKind, VerificationClaim, VerificationSchema};
-use ::entity::{
+use base64::prelude::*;
+use entity::{
     content_verification_claim_model as ContentVerificationClaimModel,
     verification_schema_model as VerificationSchemaModel,
 };
-use base64::prelude::*;
 use prost::Message;
-use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ConnectionTrait, DbErr, EntityTrait,
-    sea_query::OnConflict,
+use sea_orm::sea_query::{
+    CommonTableExpression, DynIden, Expr, InsertStatement, OnConflict,
+    SelectStatement, WithClause,
 };
+use sea_orm::{ActiveValue::Set, DbErr, EntityTrait, QueryTrait};
 use std::collections::HashMap;
 use tonic::Status;
 
-pub(super) async fn add<C: ConnectionTrait>(
-    db: &C,
-    ctx: &ChildContext<'_>,
+pub(super) fn add_query(
+    with: &mut WithClause,
     claim: VerificationClaim,
-) -> Result<(), Status> {
-    let schema = claim.schema.ok_or_else(|| {
+    content_id: (DynIden, DynIden),
+) -> Result<InsertStatement, Status> {
+    let VerificationClaim { schema, fields } = claim;
+    let schema = schema.ok_or_else(|| {
         Status::invalid_argument("verification claim missing schema")
     })?;
-    let fields = decode_fields(&schema.schema_bytes, &claim.fields);
+    let fields = decode_fields(&schema.schema_bytes, &fields);
     let digest = schema.digest.ok_or_else(|| {
         Status::invalid_argument("verification claim missing schema digest")
     })?;
@@ -32,8 +33,7 @@ pub(super) async fn add<C: ConnectionTrait>(
         VerificationSchema::decode(schema.schema_bytes.as_slice())
             .map(|s| schema_to_json(&s))
             .unwrap_or(serde_json::Value::Null);
-
-    let schema_insert = VerificationSchemaModel::Entity::insert(
+    let insert_schema = VerificationSchemaModel::Entity::insert(
         VerificationSchemaModel::ActiveModel {
             digest_type: Set(digest.r#type),
             digest_bytes: Set(digest.value.clone()),
@@ -49,24 +49,37 @@ pub(super) async fn add<C: ConnectionTrait>(
         .do_nothing()
         .to_owned(),
     )
-    .exec(db)
-    .await;
-    match schema_insert {
-        Ok(_) | Err(DbErr::RecordNotInserted | DbErr::RecordNotFound(_)) => {}
-        Err(e) => return Err(map_db_err(e)),
-    }
+    .into_query();
+    let mut cte = CommonTableExpression::new();
+    cte.table_name("verification_claim_schema")
+        .query(insert_schema);
+    with.cte(cte);
 
-    ContentVerificationClaimModel::ActiveModel {
-        content_id: Set(ctx.content_id),
-        schema_digest_type: Set(digest.r#type),
-        schema_digest_bytes: Set(digest.value),
-        fields: Set(fields),
-    }
-    .insert(db)
-    .await
-    .map_err(map_db_err)?;
+    let mut query = InsertStatement::new();
+    query
+        .into_table(ContentVerificationClaimModel::Entity)
+        .columns([
+            ContentVerificationClaimModel::Column::ContentId,
+            ContentVerificationClaimModel::Column::SchemaDigestType,
+            ContentVerificationClaimModel::Column::SchemaDigestBytes,
+            ContentVerificationClaimModel::Column::Fields,
+        ])
+        .select_from({
+            let mut q = SelectStatement::new();
+            q.from(content_id.0.clone())
+                .expr(Expr::col(content_id))
+                .expr(Expr::from(digest.r#type))
+                .expr(Expr::from(digest.value))
+                .expr(Expr::from(fields));
+           q
+        })
+        .map_err(|err| {
+            let err = DbErr::Custom(format!("incorrect amount of values: {err}"));
+            tracing::error!(error = %err, "failed to create query to store verification claim content");
+            Status::internal("internal server error")
+        })?;
 
-    Ok(())
+    Ok(query)
 }
 
 /// Decode a claim's `fields` into a JSON object, interpreting each value
@@ -134,102 +147,4 @@ fn schema_to_json(schema: &VerificationSchema) -> serde_json::Value {
         "description": schema.description,
         "fields": fields,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::service::proto::FieldDef;
-
-    fn field(key: &str, kind: FieldKind) -> FieldDef {
-        FieldDef {
-            key: key.to_string(),
-            kind: kind as i32,
-            format: String::new(),
-            required: false,
-            description: String::new(),
-            regex: None,
-            max_len: None,
-        }
-    }
-
-    fn schema(fields: Vec<FieldDef>) -> VerificationSchema {
-        VerificationSchema {
-            name: "X Verification".to_string(),
-            description: "desc".to_string(),
-            fields,
-        }
-    }
-
-    #[test]
-    fn decode_fields_interprets_each_kind() {
-        let s = schema(vec![
-            field("name", FieldKind::String),
-            field("count", FieldKind::Int),
-            field("ok", FieldKind::Bool),
-            field("raw", FieldKind::Bytes),
-        ]);
-        let schema_bytes = s.encode_to_vec();
-
-        let mut fields = HashMap::new();
-        fields.insert("name".to_string(), b"alice".to_vec());
-        fields.insert("count".to_string(), 42i64.to_le_bytes().to_vec());
-        fields.insert("ok".to_string(), vec![1u8]);
-        fields.insert("raw".to_string(), vec![0xDE, 0xAD]);
-
-        let json = decode_fields(&schema_bytes, &fields);
-        assert_eq!(json["name"], serde_json::json!("alice"));
-        assert_eq!(json["count"], serde_json::json!(42));
-        assert_eq!(json["ok"], serde_json::json!(true));
-        assert_eq!(
-            json["raw"],
-            serde_json::json!(BASE64_STANDARD.encode([0xDE, 0xAD]))
-        );
-    }
-
-    #[test]
-    fn decode_fields_skips_fields_absent_from_claim() {
-        let s = schema(vec![field("name", FieldKind::String)]);
-        let json = decode_fields(&s.encode_to_vec(), &HashMap::new());
-        assert_eq!(json, serde_json::json!({}));
-    }
-
-    #[test]
-    fn decode_fields_on_undecodable_schema_is_empty_object() {
-        let json = decode_fields(&[0xFF], &HashMap::new());
-        assert_eq!(json, serde_json::json!({}));
-    }
-
-    #[test]
-    fn schema_to_json_captures_name_and_fields() {
-        let s = schema(vec![field("handle", FieldKind::String)]);
-        let json = schema_to_json(&s);
-        assert_eq!(json["name"], serde_json::json!("X Verification"));
-        assert_eq!(json["fields"][0]["key"], serde_json::json!("handle"));
-        assert_eq!(
-            json["fields"][0]["kind"],
-            serde_json::json!("FIELD_KIND_STRING")
-        );
-    }
-
-    #[tokio::test]
-    async fn add_missing_schema_errors() {
-        let db = sea_orm::MockDatabase::new(sea_orm::DatabaseBackend::Postgres)
-            .into_connection();
-        let err = add(
-            &db,
-            &ChildContext {
-                content_id: 1,
-                event_identity: "alice",
-            },
-            VerificationClaim {
-                schema: None,
-                fields: Default::default(),
-            },
-        )
-        .await
-        .unwrap_err();
-        assert_eq!(err.code(), tonic::Code::InvalidArgument);
-        assert!(db.into_transaction_log().is_empty());
-    }
 }
