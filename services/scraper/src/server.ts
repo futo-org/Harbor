@@ -4,21 +4,25 @@ import {
   type ServerResponse,
   createServer,
 } from 'node:http';
-import { Counter, collectDefaultMetrics, register } from 'prom-client';
+import { type Fields, hostOf, log } from './log.js';
+import {
+  httpDuration,
+  httpInFlight,
+  httpRequests,
+  imageBytes,
+  imageDuration,
+  imageFetches,
+  register,
+} from './metrics.js';
 import { type LinkMetadata, UpstreamStatusError } from './scrape.js';
-
-collectDefaultMetrics();
-const httpRequests = new Counter({
-  name: 'http_requests_total',
-  help: 'Requests handled, by path and status.',
-  labelNames: ['path', 'status'],
-});
 
 // Bounds the memory a proxied image can use.
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 // Caps the scraper's outbound hop to an arbitrary image host; the Rust caller's
 // timeout only covers the server->scraper hop.
 const IMAGE_FETCH_TIMEOUT_MS = 10_000;
+
+const KNOWN_PATHS = ['/health', '/scrape', '/image', '/metrics'];
 
 const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
   res.writeHead(status, { 'content-type': 'application/json' });
@@ -34,17 +38,24 @@ export const isValidHttpUrl = (target: string): boolean => {
   }
 };
 
+// Per-request fields the handlers add to; emitted as the `target:access` line.
+type RequestContext = Fields;
+
 const handleScrape = async (
   target: string,
   res: ServerResponse,
+  ctx: RequestContext,
   scrapeUrl: (url: string) => Promise<LinkMetadata>,
 ): Promise<void> => {
   if (!isValidHttpUrl(target)) {
+    ctx.outcome = 'invalid_url';
     sendJson(res, 400, { error: 'url must be http or https' });
     return;
   }
   try {
-    sendJson(res, 200, await scrapeUrl(target));
+    const meta = await scrapeUrl(target);
+    ctx.outcome = 'ok';
+    sendJson(res, 200, meta);
   } catch (error) {
     // Report a target-side failure with the target's own status; reserve 502
     // for the scraper itself failing to fetch.
@@ -53,12 +64,15 @@ const handleScrape = async (
       error.status >= 400 &&
       error.status <= 599
     ) {
+      ctx.outcome = 'upstream_status';
+      ctx.upstream_status = error.status;
       sendJson(res, error.status, {
         error: `target responded with status ${error.status}`,
       });
       return;
     }
-    console.error('scrape failed:', error);
+    ctx.outcome = 'error';
+    ctx.error = error;
     sendJson(res, 502, { error: 'failed to scrape url' });
   }
 };
@@ -66,25 +80,38 @@ const handleScrape = async (
 const handleImage = async (
   target: string,
   res: ServerResponse,
+  ctx: RequestContext,
 ): Promise<void> => {
   if (!isValidHttpUrl(target)) {
+    ctx.outcome = 'invalid_url';
     sendJson(res, 400, { error: 'url must be http or https' });
     return;
   }
+  const started = performance.now();
+  const finish = (outcome: string): void => {
+    ctx.outcome = outcome;
+    imageFetches.inc({ outcome });
+    imageDuration.observe({ outcome }, (performance.now() - started) / 1000);
+  };
   try {
     const upstream = await fetch(target, {
       signal: AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS),
     });
+    ctx.upstream_status = upstream.status;
     if (!upstream.ok) {
+      finish('upstream_status');
       sendJson(res, 502, { error: `upstream returned ${upstream.status}` });
       return;
     }
     const contentType = upstream.headers.get('content-type') ?? '';
+    ctx.content_type = contentType;
     if (!contentType.startsWith('image/')) {
+      finish('not_image');
       sendJson(res, 415, { error: 'not an image' });
       return;
     }
     if (Number(upstream.headers.get('content-length') ?? 0) > MAX_IMAGE_BYTES) {
+      finish('too_large');
       sendJson(res, 413, { error: 'image too large' });
       return;
     }
@@ -100,19 +127,24 @@ const handleImage = async (
         total += value.byteLength;
         if (total > MAX_IMAGE_BYTES) {
           await reader.cancel();
+          finish('too_large');
           sendJson(res, 413, { error: 'image too large' });
           return;
         }
         chunks.push(Buffer.from(value));
       }
     }
+    ctx.bytes = total;
+    imageBytes.observe(total);
+    finish('ok');
     res.writeHead(200, {
       'content-type': contentType,
       'cache-control': 'public, max-age=86400',
     });
     res.end(Buffer.concat(chunks));
   } catch (error) {
-    console.error('image fetch failed:', error);
+    ctx.error = error;
+    finish('error');
     sendJson(res, 502, { error: 'failed to fetch image' });
   }
 };
@@ -124,17 +156,30 @@ export const buildServer = (
   scrapeUrl: (url: string) => Promise<LinkMetadata>,
 ): Server =>
   createServer((req: IncomingMessage, res: ServerResponse) => {
+    const started = performance.now();
     const { pathname, searchParams } = new URL(
       req.url ?? '/',
       'http://localhost',
     );
+    const path = KNOWN_PATHS.includes(pathname) ? pathname : 'other';
+    const target = searchParams.get('url');
+    const ctx: RequestContext = { method: req.method, path: pathname };
+    if (target) ctx.host = hostOf(target);
 
-    const KNOWN_PATHS = ['/health', '/scrape', '/image', '/metrics'];
+    httpInFlight.inc({ path });
     res.on('finish', () => {
-      httpRequests.inc({
-        path: KNOWN_PATHS.includes(pathname) ? pathname : 'other',
-        status: res.statusCode,
-      });
+      const latencyMs = Math.round(performance.now() - started);
+      httpInFlight.dec({ path });
+      httpRequests.inc({ path, status: res.statusCode });
+      httpDuration.observe({ path }, latencyMs / 1000);
+      // Probes and scrapes are noisy at INFO; failures always surface.
+      const quiet = pathname === '/health' || pathname === '/metrics';
+      const fields = { ...ctx, status: res.statusCode, latency_ms: latencyMs };
+      if (res.statusCode >= 500) log.error('access', 'request failed', fields);
+      else if (res.statusCode >= 400)
+        log.warn('access', 'request rejected', fields);
+      else if (!quiet) log.info('access', 'request', fields);
+      else log.debug('access', 'request', fields);
     });
 
     if (req.method !== 'GET') {
@@ -162,14 +207,14 @@ export const buildServer = (
     }
 
     if (pathname === '/scrape' || pathname === '/image') {
-      const target = searchParams.get('url');
       if (!target) {
+        ctx.outcome = 'missing_url';
         sendJson(res, 400, { error: 'missing url parameter' });
         return;
       }
       void (pathname === '/scrape'
-        ? handleScrape(target, res, scrapeUrl)
-        : handleImage(target, res));
+        ? handleScrape(target, res, ctx, scrapeUrl)
+        : handleImage(target, res, ctx));
       return;
     }
 

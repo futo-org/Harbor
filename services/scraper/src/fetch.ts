@@ -1,5 +1,10 @@
 import createBrowserless from 'browserless';
 import getHTML from 'html-get';
+import { hostOf, log } from './log.js';
+import { browserContexts, throttleWait } from './metrics.js';
+import { fetchMode } from './mode.js';
+
+export { fetchMode, type FetchMode } from './mode.js';
 
 // Browser identity for the prerender path (JS-rendered pages). Chromium's
 // default HeadlessChrome UA trips some "unsupported browser" gates.
@@ -11,33 +16,6 @@ const BROWSER_USER_AGENT =
 export const CRAWLER_USER_AGENT =
   'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 
-// Hosts that serve crawler metadata on a plain request; fetched directly rather
-// than through a headless browser (faster, and some reject the browser).
-const FETCH_DIRECT_DOMAINS = [
-  'youtube',
-  'youtu',
-  'google',
-  'vimeo',
-  'twitter',
-  'x.com',
-  'soundcloud',
-  'spotify',
-  'reddit',
-  'tiktok',
-  'instagram',
-  'facebook',
-  'nytimes',
-  'bbc',
-  'imdb',
-  'github',
-  'wikipedia',
-  'twitch',
-  'bitchute',
-  'rumble',
-  'dailymotion',
-  'nebula',
-];
-
 // Minimum spacing between requests to the same host; 0 disables it. Set it for
 // bulk runs so a single platform is not burst into rate-limiting us.
 const HOST_MIN_INTERVAL_MS = Number(
@@ -46,17 +24,6 @@ const HOST_MIN_INTERVAL_MS = Number(
 
 export type FetchedPage = { html: string; url: string; statusCode: number };
 export type HtmlFetcher = (targetUrl: string) => Promise<FetchedPage>;
-
-export const fetchMode = (targetUrl: string): 'fetch' | 'prerender' => {
-  try {
-    const host = new URL(targetUrl).hostname;
-    return FETCH_DIRECT_DOMAINS.some((d) => host.includes(d))
-      ? 'fetch'
-      : 'prerender';
-  } catch {
-    return 'prerender';
-  }
-};
 
 // Guarantees at least `intervalMs` between requests to the same host while
 // letting different hosts run concurrently. Slots are reserved synchronously,
@@ -70,18 +37,11 @@ export const createHostThrottle = (intervalMs: number) => {
     const now = Date.now();
     const start = Math.max(now, nextFreeAt.get(host) ?? 0);
     nextFreeAt.set(host, start + intervalMs);
+    throttleWait.observe((start - now) / 1000);
     if (start > now) {
       await new Promise((resolve) => setTimeout(resolve, start - now));
     }
   };
-};
-
-const hostOf = (url: string): string => {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
 };
 
 // The production fetcher: a long-lived Chromium process that plain-fetches as a
@@ -102,11 +62,16 @@ export const createBrowserlessFetcher = async (): Promise<{
       ],
     },
   });
+  log.info('browser', 'chromium launched', {
+    executable: process.env.PUPPETEER_EXECUTABLE_PATH ?? 'bundled',
+    host_min_interval_ms: HOST_MIN_INTERVAL_MS,
+  });
   const throttle = createHostThrottle(HOST_MIN_INTERVAL_MS);
 
   const fetchHtml: HtmlFetcher = async (targetUrl) => {
     await throttle(hostOf(targetUrl));
     const context = factory.createContext();
+    browserContexts.inc();
     try {
       const { html, url, statusCode } = await getHTML(targetUrl, {
         getBrowserless: () => context,
@@ -119,9 +84,15 @@ export const createBrowserlessFetcher = async (): Promise<{
         statusCode: statusCode ?? 0,
       };
     } finally {
+      browserContexts.dec();
       await (await context).destroyContext();
     }
   };
 
-  return { fetchHtml, close: () => factory.close() };
+  const close = async (): Promise<void> => {
+    log.info('browser', 'closing chromium');
+    await factory.close();
+  };
+
+  return { fetchHtml, close };
 };

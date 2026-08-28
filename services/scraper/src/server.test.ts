@@ -86,6 +86,21 @@ describe('server /scrape + /health', () => {
   test('unknown path -> 404', async () => {
     assert.equal((await fetch(`${base}/nope`)).status, 404);
   });
+
+  test('GET /metrics exposes the scraper series', async () => {
+    const res = await fetch(`${base}/metrics`);
+    assert.equal(res.status, 200);
+    const body = await res.text();
+    for (const name of [
+      'scraper_http_requests_total{',
+      'scraper_http_request_duration_seconds_bucket{',
+      'scraper_http_requests_in_flight{',
+      'process_resident_memory_bytes{service="scraper"}',
+    ]) {
+      assert.ok(body.includes(name), `missing ${name}`);
+    }
+    assert.match(body, /scraper_http_requests_total\{[^}]*status="502"/);
+  });
 });
 
 describe('server /image proxy', () => {
