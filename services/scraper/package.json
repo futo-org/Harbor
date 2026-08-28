@@ -8,11 +8,14 @@
     "build": "tsc -p .",
     "dev": "tsc -p . --watch",
     "start": "node --env-file-if-exists=.env dist/index.js",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "test:ci": "tsx --test --test-skip-pattern=\"^LOCAL:\" --test-reporter=junit --test-reporter-destination=./junit.xml --test-reporter=spec --test-reporter-destination=stdout \"src/**/*.test.ts\"",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
     "@polycentric/tsconfig": "workspace:*",
     "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
     "typescript": "catalog:"
   },
   "dependencies": {
