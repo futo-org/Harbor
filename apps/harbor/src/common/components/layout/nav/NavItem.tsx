@@ -90,6 +90,7 @@ export function NavItem({
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       href={href!}
+      accessibilityLabel={label}
       onPress={(e) => {
         e.preventDefault();
         // Re-tapping the current route only refreshes; navigating again

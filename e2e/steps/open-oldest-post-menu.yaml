@@ -1,0 +1,22 @@
+# Opens the repost menu of the last post in the feed, the oldest. The web
+# driver has no relative selectors, so a script first marks that post.
+- evalBrowserScript:
+    script: |
+      const posts = document.querySelectorAll('[role="article"]');
+      const post = posts[posts.length - 1];
+      post.id = 'oldestPost';
+      post.scrollIntoView({ block: 'center' });
+      return window.scrollY;
+    output: scrollBefore
+# The post must be down the page for the last check to mean anything.
+- assertTrue: ${scrollBefore > 0}
+- tapOn:
+    css: '#oldestPost [aria-label="${output.post.menu}"]'
+- assertVisible:
+    role: menuitem
+    text: ${output.post.quote}
+# Opening the menu leaves the page where it was.
+- evalBrowserScript:
+    script: return window.scrollY
+    output: scrollAfter
+- assertTrue: ${scrollAfter == scrollBefore}
