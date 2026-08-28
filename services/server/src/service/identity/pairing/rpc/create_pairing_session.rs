@@ -2,7 +2,6 @@
 //! verifying the caller is a rotation key.
 
 use crate::service::identity::pairing::repository as pair_repo;
-use crate::service::identity::pairing::rpc::common::verify_signed_message;
 use crate::service::identity::repository as id_repo;
 use crate::service::proto as Proto;
 use crate::service::proto::{
@@ -20,10 +19,13 @@ pub async fn handle(
     let msg = req.signed_message.ok_or_else(|| {
         Status::invalid_argument("signed_message is required")
     })?;
-    let public_key = verify_signed_message(&msg)?;
+
+    let (public_key, message_bytes, msg_sig) = msg
+        .open_with_sig()
+        .ok_or_else(|| Status::unauthenticated("invalid signature"))?;
 
     let initial_session =
-        Proto::InitialPairingSession::decode(&msg.message_bytes[..])
+        Proto::InitialPairingSession::decode(message_bytes.as_slice())
             .map_err(|_| Status::invalid_argument("invalid session"))?;
 
     let now = Utc::now();
@@ -41,7 +43,7 @@ pub async fn handle(
         );
 
     let issuer_identity = initial_session.issuer_identity.clone();
-    let pairing_session_signature = hex::encode(&msg.signature);
+    let pairing_session_signature = hex::encode(msg_sig);
 
     let is_rotation_key = id_repo::Query::is_rotation_key(
         db,

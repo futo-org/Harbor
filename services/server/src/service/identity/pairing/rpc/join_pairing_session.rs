@@ -3,9 +3,7 @@
 //! are deleted before returning an expiry error.
 
 use crate::service::identity::pairing::repository as pair_repo;
-use crate::service::identity::pairing::rpc::common::{
-    build_pairing_session, verify_signed_message,
-};
+use crate::service::identity::pairing::rpc::common::build_pairing_session;
 use crate::service::proto::{
     JoinPairingSessionBody, JoinPairingSessionRequest,
     JoinPairingSessionResponse,
@@ -21,9 +19,12 @@ pub async fn handle(
     let msg = req.signed_message.ok_or_else(|| {
         Status::invalid_argument("signed_message is required")
     })?;
-    let public_key = verify_signed_message(&msg)?;
 
-    let body = JoinPairingSessionBody::decode(&msg.message_bytes[..])
+    let (public_key, msg_bytes) = msg
+        .open()
+        .ok_or_else(|| Status::unauthenticated("invalid signature"))?;
+
+    let body = JoinPairingSessionBody::decode(msg_bytes.as_slice())
         .map_err(|_| Status::invalid_argument("invalid body"))?;
 
     let session = pair_repo::Query::get_pairing_session(

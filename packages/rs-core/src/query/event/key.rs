@@ -55,6 +55,15 @@ impl From<PublicKey> for proto::PublicKey {
     }
 }
 
+impl From<proto::PublicKey> for PublicKey {
+    fn from(k: proto::PublicKey) -> Self {
+        Self {
+            key_type: k.key_type,
+            key: k.key,
+        }
+    }
+}
+
 impl From<EventKey> for proto::EventKey {
     fn from(k: EventKey) -> Self {
         Self {
