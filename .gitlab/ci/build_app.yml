@@ -99,6 +99,8 @@ app-web-e2e:
   services:
     - name: $CI_REGISTRY_IMAGE/web:$CI_COMMIT_SHA
       alias: web
+      variables:
+        EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS: https://srv.staging.harbor.social,https://srv.staging.polycentric.io
   variables:
     MAESTRO_WEB_URL: http://web:8080
     MAESTRO_BROWSER: /usr/local/bin/e2e-chromium

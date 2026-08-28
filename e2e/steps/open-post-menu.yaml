@@ -1,0 +1,29 @@
+# Opens the repost menu of the post in the middle of the screen. The web
+# driver has no relative selectors, so a script first marks that post. The
+# feed is virtualised, so only a post already on screen is safe to target.
+- evalBrowserScript:
+    script: |
+      const middle = window.innerHeight / 2;
+      const distance = (rect) => Math.abs(rect.top + rect.height / 2 - middle);
+      const posts = [...document.querySelectorAll('[role="article"]')]
+        .map((el) => ({ el, rect: el.getBoundingClientRect() }))
+        .filter(({ rect }) => rect.height > 0);
+      const onScreen = posts.filter(
+        ({ rect }) => rect.top >= 0 && rect.bottom <= window.innerHeight,
+      );
+      (onScreen.length ? onScreen : posts)
+        .sort((a, b) => distance(a.rect) - distance(b.rect))[0].el.id = 'menuPost';
+      return window.scrollY;
+    output: scrollBefore
+# The page must be scrolled for the last check to mean anything.
+- assertTrue: ${scrollBefore > 0}
+- tapOn:
+    css: '#menuPost [aria-label="${output.post.menu}"]'
+- assertVisible:
+    role: menuitem
+    text: ${output.post.quote}
+# Opening the menu leaves the page where it was.
+- evalBrowserScript:
+    script: return window.scrollY
+    output: scrollAfter
+- assertTrue: ${scrollAfter == scrollBefore}

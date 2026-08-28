@@ -3,27 +3,38 @@ name: I can quote a post
 ---
 - runFlow: ../elements/load.yaml
 - runFlow: ../steps/fresh-start.yaml
-- runFlow: ../steps/profile-with-posts.yaml
-- scrollUntilVisible:
-    element: Maestro post 1
-    direction: DOWN
-- runFlow: ../steps/open-oldest-post-menu.yaml
+- runFlow: ../steps/create-identity.yaml
+- runFlow: ../steps/scroll-down.yaml
+- runFlow: ../steps/open-post-menu.yaml
 - tapOn:
     role: menuitem
     text: ${output.post.quote}
+# The composer previews the quoted post under "Quoting <author>".
+- assertVisible: ${output.composer.quoting}
+- evalBrowserScript:
+    script: |
+      const heading = [...document.querySelectorAll('div')].find(
+        (el) => el.childElementCount === 0 && el.textContent.startsWith('Quoting '),
+      );
+      return heading.textContent.slice('Quoting '.length).replace(/…$/, '');
+    output: quotedAuthor
 - tapOn: ${output.composer.input}
-- inputText: Quoting my first post
+- inputText: Sharing this one
 - tapOn:
     id: ${output.composer.submit}
 - extendedWaitUntil:
     notVisible:
       id: ${output.composer.submit}
     timeout: 30000
-# The quote is the newest post, so it heads the profile. Its thread shows
-# it with the post it quotes.
-- scrollUntilVisible:
-    element: Quoting my first post
-    direction: UP
-- tapOn: Quoting my first post
-- assertVisible: Quoting my first post
-- assertVisible: Maestro post 1
+# The quote heads the profile; its thread shows the quoted post with it.
+- tapOn:
+    id: ${output.nav.profile}
+- extendedWaitUntil:
+    visible: Sharing this one
+    timeout: 30000
+- tapOn: Sharing this one
+- assertVisible: Sharing this one
+- evalBrowserScript:
+    script: return document.body.innerText
+    output: threadText
+- assertTrue: ${threadText.includes(quotedAuthor)}

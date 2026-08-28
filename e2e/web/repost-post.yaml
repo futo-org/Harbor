@@ -3,19 +3,13 @@ name: I can repost a post
 ---
 - runFlow: ../elements/load.yaml
 - runFlow: ../steps/fresh-start.yaml
-- runFlow: ../steps/profile-with-posts.yaml
-- scrollUntilVisible:
-    element: Maestro post 1
-    direction: DOWN
-- runFlow: ../steps/open-oldest-post-menu.yaml
+- runFlow: ../steps/create-identity.yaml
+- runFlow: ../steps/scroll-down.yaml
+- runFlow: ../steps/open-post-menu.yaml
 - tapOn:
     role: menuitem
     text: ${output.post.repost}
-# The repost joins the profile as its newest item.
-- extendedWaitUntil:
-    visible: ${output.post.reposted}
-    timeout: 30000
-- runFlow: ../steps/open-oldest-post-menu.yaml
+- runFlow: ../steps/open-post-menu.yaml
 - assertVisible:
     role: menuitem
     text: ${output.post.undoRepost}

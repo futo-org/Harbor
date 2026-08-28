@@ -160,17 +160,19 @@ a different certificate with `--identity`.
 ## Web
 
 Web flows name a `url` instead of an `appId`, so they need no device and
-Maestro drives its own Chromium.
+Maestro drives its own Chromium. The flows create an identity and act on
+real posts, so the app they drive should talk to the staging servers:
 
 ```bash
-pnpm run:web        # serves on localhost:8081
+EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=https://srv.staging.harbor.social,https://srv.staging.polycentric.io \
+  pnpm -C apps/harbor web        # serves on localhost:8081
 pnpm test:e2e:web
 ```
 
-Point them at a deployed environment with `MAESTRO_WEB_URL`:
+Point them at another web build with `MAESTRO_WEB_URL`:
 
 ```bash
-MAESTRO_WEB_URL=https://harbor.social pnpm test:e2e:web
+MAESTRO_WEB_URL=https://staging.harbor.social pnpm test:e2e:web
 ```
 
 These run through `maestro-runner` like the native flows. Maestro's own web
@@ -187,7 +189,10 @@ The web driver has no relative selectors and passes nothing into
 `evalBrowserScript` or `runBrowserScript`, so a step that needs "the button
 inside this post" marks the post from a script and targets it with a `css`
 selector. Its visibility checks are about the DOM, not the viewport: an
-element scrolled off screen still counts as visible.
+element scrolled off screen still counts as visible. Its `scroll` and `swipe`
+don't move the page either, so `steps/scroll-down.yaml` scrolls from a
+script. Avoid `--artifacts always` when debugging: its full-page screenshot
+after each step resets the scroll position.
 
 ## In CI
 
