@@ -11,6 +11,7 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
+use crate::time::now_millis;
 use crate::{
     client::PolycentricClient,
     query::{
@@ -138,19 +139,6 @@ fn decayed_upvote_key(bundle: &EventBundle, created_at: Option<u64>, now_ms: u64
     (count / (hours + 2.0).powf(FEED_GRAVITY)).to_bits()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn now_ms() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64
-}
-
-#[cfg(target_arch = "wasm32")]
-fn now_ms() -> u64 {
-    js_sys::Date::now() as u64
-}
-
 impl From<FeedSort> for FeedOrder {
     fn from(sort: FeedSort) -> Self {
         match sort {
@@ -194,7 +182,7 @@ fn do_feed_merge(
     window_size: Option<i32>,
 ) -> Vec<u8> {
     // Every bundle decays against the same moment.
-    let now_ms = now_ms();
+    let now_ms = now_millis();
 
     let mut response = GetFeedResponse::default();
     for v in values {
@@ -1000,7 +988,7 @@ mod tests {
 
     #[test]
     fn paging_never_moves_a_row_the_reader_already_has() {
-        let now = now_ms();
+        let now = now_millis();
         let hour = 3_600_000;
         let client = test_client();
 
@@ -1154,7 +1142,7 @@ mod tests {
     #[test]
     fn top_order_decays_counts_by_age() {
         // A fresh post with one vote outranks an old post with two.
-        let now = now_ms();
+        let now = now_millis();
         let two_months_ms = 60 * 24 * 3_600_000;
         let bundles = vec![
             make_bundle_voted("old", now - two_months_ms, Some(2)),
