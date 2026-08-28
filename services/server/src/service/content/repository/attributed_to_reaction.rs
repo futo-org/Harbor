@@ -1,35 +1,47 @@
-use super::{ChildContext, map_db_err};
 use crate::service::proto::{AttributedToReaction, attributed_to::To};
-use ::entity::content_attributed_to_reaction_model as Model;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait};
+use entity::content_attributed_to_reaction_model as Model;
+use sea_orm::DbErr;
+use sea_orm::sea_query::{DynIden, Expr, InsertStatement, SelectStatement};
 use tonic::Status;
 
-/// Persist an out-of-network reaction (a reaction to a URL, e.g. a video
-/// like/dislike) as a typed row keyed by the attributed URL, so per-URL
-/// reaction counts can be maintained.
-pub(super) async fn add<C: ConnectionTrait>(
-    db: &C,
-    ctx: &ChildContext<'_>,
+pub(super) fn add_query(
     reaction: AttributedToReaction,
-) -> Result<(), Status> {
-    let url = match reaction.attributed_to.and_then(|a| a.to) {
-        Some(To::Link(link)) => link.url,
-        _ => {
-            return Err(Status::invalid_argument(
-                "attributed_to_reaction must attribute to a link url",
-            ));
-        }
+    content_id: (DynIden, DynIden),
+) -> Result<InsertStatement, Status> {
+    let AttributedToReaction {
+        attributed_to,
+        emoji,
+        positive,
+    } = reaction;
+    let Some(To::Link(link)) = attributed_to.and_then(|a| a.to) else {
+        return Err(Status::invalid_argument(
+            "attributed_to_reaction must attribute to a link url",
+        ));
     };
 
-    Model::ActiveModel {
-        content_id: Set(ctx.content_id),
-        url: Set(url),
-        emoji: Set(reaction.emoji),
-        positive: Set(reaction.positive),
-    }
-    .insert(db)
-    .await
-    .map_err(map_db_err)?;
+    let mut query = InsertStatement::new();
+    query
+        .into_table(Model::Entity)
+        .columns([
+            Model::Column::ContentId,
+            Model::Column::Url,
+            Model::Column::Emoji,
+            Model::Column::Positive,
+        ])
+        .select_from({
+            let mut q = SelectStatement::new();
+            q.from(content_id.0.clone())
+                .expr(Expr::col(content_id))
+                .expr(Expr::from(link.url))
+                .expr(Expr::from(emoji))
+                .expr(Expr::from(positive));
+           q
+        })
+        .map_err(|err| {
+            let err = DbErr::Custom(format!("incorrect amount of values: {err}"));
+            tracing::error!(error = %err, "failed to create query to store attributed to reaction content");
+            Status::internal("internal server error")
+        })?;
 
-    Ok(())
+    Ok(query)
 }

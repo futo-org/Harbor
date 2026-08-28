@@ -212,6 +212,7 @@ async fn search_users_pagination_order_by_rank() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
         assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
     }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
     expected.reverse();
@@ -246,6 +247,7 @@ async fn search_users_pagination_order_by_rank() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
         assert_eq!(page_info.has_next_page, true);
     }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
 #[tokio::test]
@@ -300,6 +302,7 @@ async fn search_users_pagination_order_by_alpha() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
         assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
     }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
     expected.reverse();
@@ -334,6 +337,7 @@ async fn search_users_pagination_order_by_alpha() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
         assert_eq!(page_info.has_next_page, true);
     }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
 async fn expect_searched_users(
@@ -599,6 +603,7 @@ async fn search_posts_pagination_order_by_rank() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
         assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
     }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
     expected.reverse();
@@ -633,6 +638,7 @@ async fn search_posts_pagination_order_by_rank() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
         assert_eq!(page_info.has_next_page, true);
     }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
 #[tokio::test]
@@ -690,6 +696,7 @@ async fn search_posts_pagination_order_by_latest() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
         assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
     }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
     expected.reverse();
@@ -724,6 +731,7 @@ async fn search_posts_pagination_order_by_latest() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
         assert_eq!(page_info.has_next_page, true);
     }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
 async fn expect_searched_posts(

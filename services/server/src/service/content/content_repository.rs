@@ -2,12 +2,11 @@ use crate::service::proto::Blob;
 use ::entity::{
     content_blob_model as ContentBlobModel, content_model as ContentModel,
 };
-use chrono::{DateTime, FixedOffset};
+use chrono::Utc;
 use polycentric_common::models::protos_v2::{ContentDigest, ContentDigestType};
 use prost::Message;
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::sea_query::Expr;
-use sea_orm::sea_query::OnConflict;
+use sea_orm::sea_query::{Expr, InsertStatement, OnConflict};
 use sea_orm::*;
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
@@ -67,35 +66,48 @@ impl Query {
 pub struct Mutation;
 
 impl Mutation {
-    pub async fn add_content<C: ConnectionTrait>(
+    async fn add_content<C: ConnectionTrait>(
         db: &C,
-        active_model: ContentModel::ActiveModel,
-    ) -> Result<Option<ContentModel::Model>, DbErr> {
-        let result = ContentModel::Entity::insert(active_model)
-            .on_conflict(
-                OnConflict::columns([
+        serialized_bytes: &[u8],
+        digest: &ContentDigest,
+    ) -> Result<Option<i64>, DbErr> {
+        let query = Mutation::add_content_query(serialized_bytes, digest);
+        let row = db.query_one(&query).await?;
+        match row {
+            Some(row) => Ok(Some(i64::try_get_by(&row, 0)?)),
+            None => Ok(None),
+        }
+    }
+
+    /// Returns a query to store the event content, returns the id.
+    pub fn add_content_query(
+        serialized_bytes: &[u8],
+        digest: &ContentDigest,
+    ) -> InsertStatement {
+        let content_row = ContentModel::ActiveModel {
+            id: NotSet,
+            digest_type: Set(digest.r#type),
+            digest_bytes: Set(digest.value.clone()),
+            serialized_bytes: Set(serialized_bytes.into()),
+            synced_at: Set(Utc::now().fixed_offset()),
+        };
+        let mut query = ContentModel::Entity::insert(content_row)
+            .on_conflict({
+                let mut c = OnConflict::columns([
                     ContentModel::Column::DigestType,
                     ContentModel::Column::DigestBytes,
-                ])
-                .do_nothing()
-                .to_owned(),
-            )
-            .exec_with_returning(db)
-            .await;
-
-        match result {
-            Ok(model) => Ok(Some(model)),
-            Err(DbErr::RecordNotInserted | DbErr::RecordNotFound(_)) => {
-                Ok(None)
-            }
-            Err(e) => Err(e),
-        }
+                ]);
+                c.do_nothing();
+                c
+            })
+            .into_query();
+        query.returning_col(ContentModel::Column::Id);
+        query
     }
 
     pub async fn save_blob<C: ConnectionTrait>(
         db: &C,
         blob: &Blob,
-        synced_at: DateTime<FixedOffset>,
     ) -> Result<(), DbErr> {
         // Digest for the actual blob data
         let digest = match &blob.digest {
@@ -107,19 +119,17 @@ impl Mutation {
         let blob_bytes = blob.encode_to_vec();
         let blob_bytes_digest = Sha256::digest(&blob_bytes).to_vec();
 
-        let content_row = Self::add_content(
+        let content_id = Self::add_content(
             db,
-            ContentModel::ActiveModel {
-                id: NotSet,
-                digest_type: Set(ContentDigestType::Sha256 as i32),
-                digest_bytes: Set(blob_bytes_digest),
-                serialized_bytes: Set(blob_bytes),
-                synced_at: Set(synced_at),
+            &blob_bytes,
+            &ContentDigest {
+                r#type: ContentDigestType::Sha256 as i32,
+                value: blob_bytes_digest,
             },
         )
         .await?;
 
-        let Some(content_row) = content_row else {
+        let Some(content_id) = content_id else {
             // Content with this digest already tracked — the blob child row
             // would have been written then; nothing to do.
             return Ok(());
@@ -127,7 +137,7 @@ impl Mutation {
 
         let blob_insert =
             ContentBlobModel::Entity::insert(ContentBlobModel::ActiveModel {
-                content_id: Set(content_row.id),
+                content_id: Set(content_id),
                 digest_type: Set(digest.r#type as i16),
                 digest_bytes: Set(digest.value.clone()),
                 mime_type: Set(blob.mime_type.clone()),

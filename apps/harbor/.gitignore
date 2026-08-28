@@ -77,3 +77,7 @@ ios/
 .gradle
 local.properties
 android/
+
+# EAS credential export: a signing certificate and its password.
+credentials.json
+credentials/

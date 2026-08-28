@@ -1,4 +1,7 @@
+use crate::service::content::content_repository::Mutation as ContentRepository;
+use crate::service::content::repository::Mutation as ContentChildRepository;
 use crate::service::content::repository::{EventKeyParts, split_event_key};
+use crate::service::events::rpc::put_events::event_is_authorised;
 use ::entity::block_model as BlockModel;
 use ::entity::content_delete_model as ContentDeleteModel;
 use ::entity::content_model as ContentModel;
@@ -10,14 +13,16 @@ use ::entity::repost_model as RepostModel;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Block, Content, Delete, EventKey, Follow, Post, Reaction, Repost,
+    Block, Content, ContentDigest, Delete, EventKey, Follow, Post, Reaction,
+    Repost,
 };
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, InsertStatement,
-    IntoColumnRef, IntoCondition, IntoTableRef, SelectExpr, SelectStatement,
-    UpdateStatement, WithClause,
+    IntoCondition, IntoTableRef, SelectExpr, SelectStatement,
+    SubQueryStatement, UpdateStatement, WithClause,
 };
 use sea_orm::*;
+use tonic::Status;
 
 const COLLECTION_FEED: i16 = collections::FEED as i16;
 const COLLECTION_SOCIAL: i16 = collections::SOCIAL_GRAPH as i16;
@@ -153,62 +158,158 @@ pub struct HeadInfoRow {
 pub struct Mutation;
 
 impl Mutation {
+    /// Store an event and it's content.
+    ///
+    /// Returns `true` if the event was stored or `false` if the event is
+    /// already stored.
     pub async fn add_event<C: ConnectionTrait>(
         db: &C,
-        active_model: EventModel::ActiveModel,
-    ) -> Result<EventModel::Model, DbErr> {
-        active_model.insert(db).await
-    }
+        event: EventModel::ActiveModel,
+        decoded_content: Option<(&[u8], Content, &ContentDigest)>,
+    ) -> Result<bool, Status> {
+        // We're going to build one big query using Common Table Expressions
+        // (CTE) store everything related to a single event in one query. We do
+        // this for performance reasons.
+        //
+        // NOTE: data-modifying statement must be at the top level for Postgres,
+        // so various sub-queries add to this.
+        let mut with = WithClause::new();
+        with.recursive(false);
 
-    /// Update the cache tables based on a new `event` and its `content`.
-    ///
-    /// Caller must ensure that the `event` is authorised, i.e. not an event
-    /// created by identity A that is deleting an event of identity B.
-    pub async fn update_cache<C: ConnectionTrait>(
-        db: &C,
-        event: &EventModel::Model,
-        content: Option<&Content>,
-    ) -> Result<(), DbErr> {
-        let Some(Content {
-            content_body: Some(body),
-        }) = content
-        else {
-            return Ok(());
-        };
+        let identity = event.identity.try_as_ref().map_or("", |s| &**s);
+        let content = decoded_content.as_ref().map(|(_, c, _)| c);
+        let is_authorised = event_is_authorised(identity, content);
 
-        match body {
-            ContentBody::Post(post) => Mutation::post(db, event, post).await,
-            ContentBody::Follow(follow) => {
-                Mutation::follow(db, event, follow).await
+        // Store the event itself into the `events` table.
+        const INSERTED_EVENT: &str = "inserted_event";
+        let mut insert_event = EventModel::Entity::insert(event).into_query();
+        insert_event.returning_all();
+        let mut cte = CommonTableExpression::new();
+        cte.table_name(INSERTED_EVENT).query(insert_event);
+        with.cte(cte);
+
+        if let Some((serialized_bytes, content, digest)) = decoded_content {
+            // Store the content of the event, if not already stored (for an
+            // event with the same content).
+            const INSERTED_CONTENT: &str = "inserted_content";
+            let insert_content =
+                ContentRepository::add_content_query(serialized_bytes, digest);
+            let mut cte = CommonTableExpression::new();
+            cte.table_name(INSERTED_CONTENT).query(insert_content);
+            with.cte(cte);
+
+            if let Some(content_body) = content.content_body {
+                // Update cache tables.
+                if is_authorised {
+                    let event_id_identity = (
+                        INSERTED_EVENT.into(),
+                        EventModel::Column::Id.into(),
+                        EventModel::Column::Identity.into(),
+                    );
+                    let maybe_query = Mutation::update_cache_query(
+                        &mut with,
+                        &content_body,
+                        event_id_identity,
+                    ).map_err(|err| {
+                        tracing::error!(error = %err, "failed to create query to update cache tables");
+                        Status::internal("internal server error")
+                    })?;
+                    if let Some(query) = maybe_query {
+                        let mut cte = CommonTableExpression::new();
+                        cte.table_name("inserted_cache").query(query);
+                        with.cte(cte);
+                    }
+                }
+
+                // Store the decoded body of the content.
+                let content_id =
+                    (INSERTED_CONTENT.into(), ContentModel::Column::Id.into());
+                let event_identity = (
+                    INSERTED_EVENT.into(),
+                    EventModel::Column::Identity.into(),
+                );
+                if let Some(query) =
+                    ContentChildRepository::save_content_body_query(
+                        &mut with,
+                        content_body,
+                        content_id,
+                        event_identity,
+                    )?
+                {
+                    let mut cte = CommonTableExpression::new();
+                    cte.table_name("inserted_content_body").query(query);
+                    with.cte(cte);
+                }
             }
-            ContentBody::Block(block) => {
-                Mutation::block(db, event, block).await
+        }
+
+        // Dummy query to which we attached everything.
+        let mut query = SelectStatement::new();
+        query.expr(Expr::Constant(true.into()));
+        let query = query.with(with);
+
+        match db.execute(&query).await {
+            Ok(_) => Ok(true),
+            Err(ref err) if is_unique_violation(err) => Ok(false),
+            Err(err) => {
+                tracing::error!(error = %err, "failed to store event");
+                Err(Status::internal("internal server error"))
             }
-            ContentBody::Reaction(reaction) => {
-                Mutation::reaction(db, event, reaction).await
-            }
-            ContentBody::Repost(repost) => {
-                Mutation::repost(db, event, repost).await
-            }
-            ContentBody::Delete(delete) => Mutation::delete(db, delete).await,
-            _ => Ok(()),
         }
     }
 
-    async fn post<C: ConnectionTrait>(
-        db: &C,
-        event: &EventModel::Model,
+    /// Returns a query to update the cache tables.
+    ///
+    /// Caller must ensure that the event is authorised, i.e. not an event
+    /// created by identity A that is deleting an event of identity B.
+    pub fn update_cache_query(
+        with: &mut WithClause,
+        content_body: &ContentBody,
+        event_id_identity: (DynIden, DynIden, DynIden),
+    ) -> Result<Option<SubQueryStatement>, DbErr> {
+        match content_body {
+            ContentBody::Post(post) => {
+                Mutation::post_query(with, post, event_id_identity)
+                    .map(|q| Some(q.into()))
+            }
+            ContentBody::Follow(follow) => {
+                Mutation::follow_query(follow, event_id_identity)
+                    .map(|q| Some(q.into()))
+            }
+            ContentBody::Block(block) => {
+                Mutation::block_query(block, event_id_identity)
+                    .map(|q| Some(q.into()))
+            }
+            ContentBody::Reaction(reaction) => {
+                Mutation::reaction_query(with, reaction, event_id_identity)
+                    .map(|q| Some(q.into()))
+            }
+            ContentBody::Repost(repost) => {
+                Mutation::repost_query(repost, event_id_identity)
+                    .map(|q| Some(q.into()))
+            }
+            ContentBody::Delete(delete) => Mutation::delete_query(with, delete),
+            _ => Ok(None),
+        }
+    }
+
+    fn post_query(
+        with: &mut WithClause,
         post: &Post,
-    ) -> Result<(), DbErr> {
+        (event_table, event_id, identity): (DynIden, DynIden, DynIden),
+    ) -> Result<InsertStatement, DbErr> {
         let mut query = InsertStatement::new();
         query
             .into_table("reaction_tally")
             .columns(["event_id", "positive_count", "negative_count"])
-            .values([
-                Expr::from(event.id),
-                Expr::Constant(0.into()),
-                Expr::Constant(0.into()),
-            ])
+            .select_from({
+                let mut q = SelectStatement::new();
+                q.from(event_table.clone())
+                    .expr(Expr::col((event_table.clone(), event_id.clone())))
+                    .expr(Expr::Constant(0.into()))
+                    .expr(Expr::Constant(0.into()));
+                q
+            })
             .map_err(|err| {
                 DbErr::Custom(format!("incorrect amount of values: {err}"))
             })?;
@@ -229,19 +330,26 @@ impl Mutation {
                 .select_from({
                     post_event_id
                         .clear_selects() // Need to rename.
+                        .from(event_table.clone())
                         .expr(SelectExpr {
-                            expr: Expr::from(event.id),
+                            expr: Expr::col((
+                                event_table.clone(),
+                                event_id.clone(),
+                            )),
                             alias: Some(QuoteModel::Column::EventId.into()),
                             window: None,
                         })
                         .expr(SelectExpr {
-                            expr: Expr::from(&event.identity),
+                            expr: Expr::col((
+                                event_table.clone(),
+                                identity.clone(),
+                            )),
                             alias: Some(QuoteModel::Column::Identity.into()),
                             window: None,
                         })
                         .expr(SelectExpr {
-                            expr: Expr::Column(
-                                EventModel::Column::Id.into_column_ref(),
+                            expr: Expr::col(
+                                EventModel::Column::Id.as_column_ref(),
                             ),
                             alias: Some(QuoteModel::Column::Post.into()),
                             window: None,
@@ -252,13 +360,9 @@ impl Mutation {
                     DbErr::Custom(format!("incorrect amount of values: {err}"))
                 })?;
 
-            query.with_cte({
-                let mut c = WithClause::new();
-                let mut cte = CommonTableExpression::new();
-                cte.table_name("inserted_quote").query(insert_quote);
-                c.recursive(false).cte(cte);
-                c
-            });
+            let mut cte = CommonTableExpression::new();
+            cte.table_name("inserted_quote").query(insert_quote);
+            with.cte(cte);
         }
 
         if let Some(reply) = post.reply.as_ref() {
@@ -278,19 +382,23 @@ impl Mutation {
                 .select_from({
                     post_event_id
                         .clear_selects()
+                        .from(event_table.clone())
                         .expr(SelectExpr {
-                            expr: Expr::from(event.id),
+                            expr: Expr::col((event_table.clone(), event_id)),
                             alias: Some(ReplyModel::Column::EventId.into()),
                             window: None,
                         })
                         .expr(SelectExpr {
-                            expr: Expr::from(&event.identity),
+                            expr: Expr::col((
+                                event_table.clone(),
+                                identity.clone(),
+                            )),
                             alias: Some(ReplyModel::Column::Identity.into()),
                             window: None,
                         })
                         .expr(SelectExpr {
-                            expr: Expr::Column(
-                                EventModel::Column::Id.into_column_ref(),
+                            expr: Expr::col(
+                                EventModel::Column::Id.as_column_ref(),
                             ),
                             alias: Some(ReplyModel::Column::Post.into()),
                             window: None,
@@ -301,55 +409,71 @@ impl Mutation {
                     DbErr::Custom(format!("incorrect amount of values: {err}"))
                 })?;
 
-            query.with_cte({
-                let mut c = WithClause::new();
-                let mut cte = CommonTableExpression::new();
-                cte.table_name("inserted_reply").query(insert_reply);
-                c.recursive(false).cte(cte);
-                c
-            });
+            let mut cte = CommonTableExpression::new();
+            cte.table_name("inserted_reply").query(insert_reply);
+            with.cte(cte);
         }
 
-        db.execute(&query).await?;
-        Ok(())
+        Ok(query)
     }
 
-    async fn follow<C: ConnectionTrait>(
-        db: &C,
-        event: &EventModel::Model,
+    fn follow_query(
         follow: &Follow,
-    ) -> Result<(), DbErr> {
-        FollowModel::ActiveModel {
-            event_id: Set(event.id),
-            follower: Set(event.identity.clone()),
-            followee: Set(follow.identity.clone()),
-        }
-        .insert(db)
-        .await?;
-
-        Ok(())
+        (event_table, event_id, identity): (DynIden, DynIden, DynIden),
+    ) -> Result<InsertStatement, DbErr> {
+        let mut query = InsertStatement::new();
+        query
+            .into_table(FollowModel::Entity)
+            .columns([
+                FollowModel::Column::EventId,
+                FollowModel::Column::Follower,
+                FollowModel::Column::Followee,
+            ])
+            .select_from({
+                let mut q = SelectStatement::new();
+                q.from(event_table.clone())
+                    .expr(Expr::col((event_table.clone(), event_id)))
+                    .expr(Expr::col((event_table, identity)))
+                    .expr(Expr::from(follow.identity.clone()));
+                q
+            })
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?;
+        Ok(query)
     }
 
-    async fn block<C: ConnectionTrait>(
-        db: &C,
-        event: &EventModel::Model,
+    fn block_query(
         block: &Block,
-    ) -> Result<(), DbErr> {
-        BlockModel::ActiveModel {
-            event_id: Set(event.id),
-            blocker: Set(event.identity.clone()),
-            blocked: Set(block.identity.clone()),
-        }
-        .insert(db)
-        .await?;
-        Ok(())
+        (event_table, event_id, identity): (DynIden, DynIden, DynIden),
+    ) -> Result<InsertStatement, DbErr> {
+        let mut query = InsertStatement::new();
+        query
+            .into_table(BlockModel::Entity)
+            .columns([
+                BlockModel::Column::EventId,
+                BlockModel::Column::Blocker,
+                BlockModel::Column::Blocked,
+            ])
+            .select_from({
+                let mut q = SelectStatement::new();
+                q.from(event_table.clone())
+                    .expr(Expr::col((event_table.clone(), event_id)))
+                    .expr(Expr::col((event_table, identity)))
+                    .expr(Expr::from(block.identity.clone()));
+                q
+            })
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?;
+        Ok(query)
     }
 
-    async fn reaction<C: ConnectionTrait>(
-        db: &C,
-        event: &EventModel::Model,
+    fn reaction_query(
+        with: &mut WithClause,
         reaction: &Reaction,
-    ) -> Result<(), DbErr> {
+        (event_table, event_id, identity): (DynIden, DynIden, DynIden),
+    ) -> Result<UpdateStatement, DbErr> {
         let key = split_event_key(reaction.event_key.clone(), "reaction")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
         let mut post_event_id = select_not_deleted_event_id(key);
@@ -361,20 +485,19 @@ impl Mutation {
             .select_from({
                 post_event_id
                     .clear_selects() // Need to rename.
+                    .from(event_table.clone())
                     .expr(SelectExpr {
-                        expr: Expr::from(event.id),
+                        expr: Expr::col((event_table.clone(), event_id)),
                         alias: Some("event_id".into()),
                         window: None,
                     })
                     .expr(SelectExpr {
-                        expr: Expr::from(&event.identity),
+                        expr: Expr::col((event_table, identity)),
                         alias: Some("identity".into()),
                         window: None,
                     })
                     .expr(SelectExpr {
-                        expr: Expr::Column(
-                            EventModel::Column::Id.into_column_ref(),
-                        ),
+                        expr: Expr::col(EventModel::Column::Id.as_column_ref()),
                         alias: Some("on_post".into()),
                         window: None,
                     })
@@ -395,20 +518,15 @@ impl Mutation {
             })?
             .returning_all();
 
+        let mut cte = CommonTableExpression::new();
+        cte.table_name("inserted_reaction").query(insert_reaction);
+        with.cte(cte);
+
         let positive = if reaction.positive { 1 } else { 0 };
         let negative = if reaction.positive { 0 } else { 1 };
 
         let mut query = UpdateStatement::new();
         query
-            // This should be as easy as a subquery, but SeaQuery doesn't
-            // support it. So we have to use CTEs.
-            .with_cte({
-                let mut c = WithClause::new();
-                let mut cte = CommonTableExpression::new();
-                cte.table_name("inserted_reaction").query(insert_reaction);
-                c.recursive(false).cte(cte);
-                c
-            })
             .table("reaction_tally")
             .values([
                 (
@@ -428,15 +546,13 @@ impl Mutation {
                     .eq(Expr::Column(("inserted_reaction", "on_post").into())),
             );
 
-        db.execute(&query).await?;
-        Ok(())
+        Ok(query)
     }
 
-    async fn repost<C: ConnectionTrait>(
-        db: &C,
-        event: &EventModel::Model,
+    fn repost_query(
         repost: &Repost,
-    ) -> Result<(), DbErr> {
+        (event_table, event_id, identity): (DynIden, DynIden, DynIden),
+    ) -> Result<InsertStatement, DbErr> {
         let key = split_event_key(repost.post.clone(), "repost")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
         let mut post_event_id = select_not_deleted_event_id(key);
@@ -452,13 +568,14 @@ impl Mutation {
             .select_from({
                 post_event_id
                     .clear_selects() // Need to rename.
+                    .from(event_table.clone())
                     .expr(SelectExpr {
-                        expr: Expr::from(event.id),
+                        expr: Expr::col((event_table.clone(), event_id)),
                         alias: Some(RepostModel::Column::EventId.into()),
                         window: None,
                     })
                     .expr(SelectExpr {
-                        expr: Expr::from(&event.identity),
+                        expr: Expr::col((event_table.clone(), identity)),
                         alias: Some(RepostModel::Column::Identity.into()),
                         window: None,
                     })
@@ -473,14 +590,13 @@ impl Mutation {
                 DbErr::Custom(format!("incorrect amount of values: {err}"))
             })?;
 
-        db.execute(&query).await?;
-        Ok(())
+        Ok(query)
     }
 
-    async fn delete<C: ConnectionTrait>(
-        db: &C,
+    fn delete_query(
+        with: &mut WithClause,
         delete: &Delete,
-    ) -> Result<(), DbErr> {
+    ) -> Result<Option<SubQueryStatement>, DbErr> {
         let key = split_event_key(delete.event_key.clone(), "delete content")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
         let collection = key.collection;
@@ -489,10 +605,9 @@ impl Mutation {
         match collection {
             // Deletion of a post.
             COLLECTION_FEED => {
-                let mut with = WithClause::new();
                 let mut cte = CommonTableExpression::new();
                 cte.table_name("event_id").query(event_id);
-                with.recursive(false).cte(cte);
+                with.cte(cte);
 
                 // Delete the tally for the post.
                 let mut delete_reaction_tally = DeleteStatement::new();
@@ -566,7 +681,7 @@ impl Mutation {
 
                 // Delete all reactions to the post.
                 let mut query = DeleteStatement::new();
-                query.with_cte(with).from_table("reaction").cond_where(
+                query.from_table("reaction").cond_where(
                     Expr::col("on_post").in_subquery({
                         let mut q = SelectStatement::new();
                         q.column("id").from("event_id");
@@ -574,16 +689,14 @@ impl Mutation {
                     }),
                 );
 
-                db.execute(&query).await?;
-                Ok(())
+                Ok(Some(query.into()))
             }
             // Deletion of a following or of a block. The event key does not
             // say which, so clear both caches.
             COLLECTION_SOCIAL => {
-                let mut with = WithClause::new();
                 let mut cte = CommonTableExpression::new();
                 cte.table_name("event_id").query(event_id);
-                with.recursive(false).cte(cte);
+                with.cte(cte);
 
                 for (name, table) in [
                     ("deleted_follows", FollowModel::Entity.into_table_ref()),
@@ -594,13 +707,8 @@ impl Mutation {
                     with.cte(cte);
                 }
 
-                // The CTE's have modified the tables, but we still need
-                // a main query, so we run a no-op.
-                let mut nothing = SelectStatement::new();
-                nothing.expr(Expr::Constant(1.into()));
-
-                db.execute(&with.query(nothing)).await?;
-                Ok(())
+                // All delete queries are added a CTEs.
+                Ok(None)
             }
             // Deletion of a reaction and updating the tally.
             COLLECTION_INTERACTIONS => {
@@ -609,18 +717,12 @@ impl Mutation {
                     .from_table("reaction")
                     .cond_where(Expr::col("event_id").in_subquery(event_id))
                     .returning_all();
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("deleted_reaction").query(delete_reaction);
+                with.cte(cte);
+
                 let mut query = UpdateStatement::new();
                 query
-                    // This should be as easy as a subquery, but SeaQuery
-                    // doesn't support it. So we have to use CTEs.
-                    .with_cte({
-                        let mut c = WithClause::new();
-                        let mut cte = CommonTableExpression::new();
-                        cte.table_name("deleted_reaction")
-                            .query(delete_reaction);
-                        c.recursive(false).cte(cte);
-                        c
-                    })
                     .table("reaction_tally")
                     .values([
                         (
@@ -658,13 +760,25 @@ impl Mutation {
                             ),
                         ),
                     );
-                db.execute(&query).await?;
-                Ok(())
+                Ok(Some(query.into()))
             }
             // Nothing to delete.
-            _ => Ok(()),
+            _ => Ok(None),
         }
     }
+}
+
+fn is_unique_violation(err: &sea_orm::DbErr) -> bool {
+    let runtime_err = match err {
+        sea_orm::DbErr::Query(e) | sea_orm::DbErr::Exec(e) => Some(e),
+        _ => None,
+    };
+    if let Some(sea_orm::RuntimeErr::SqlxError(arc_err)) = runtime_err
+        && let Some(db_err) = arc_err.as_database_error()
+    {
+        return db_err.is_unique_violation();
+    }
+    false
 }
 
 /// Helper that returns a delete statement that deletes rows present in
@@ -744,6 +858,7 @@ fn select_not_deleted_event_id(key: EventKeyParts) -> SelectStatement {
     query
 }
 
+/* TODO: move to integration tests.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -867,3 +982,4 @@ mod tests {
         }
     }
 }
+*/

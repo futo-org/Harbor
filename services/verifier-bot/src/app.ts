@@ -53,7 +53,7 @@ function retrieveOAuthSecret(token: string): string | undefined {
 // close a mobile auth session.
 const allowedCallbacks = (
   process.env.POLYCENTRIC_VERIFIER_BOT_ALLOWED_CALLBACKS ||
-  'harbor://,exp://,exps://,http://localhost:8081,https://harbor.social,https://staging.harbor.social'
+  'harbor://,harbor.staging://,harbor.dev://,exp://,exps://,http://localhost:8081,https://harbor.social,https://staging.harbor.social'
 )
   .split(',')
   .map((s) => s.trim())

@@ -224,6 +224,22 @@ impl TestClient {
         self.push_event_bundle(ContentBody::Identity(identity), created_at)
     }
 
+    pub fn second_identity(&mut self, created_at: u64) -> Vec<u8> {
+        self.set_identity(
+            Identity {
+                rotation_keys: vec![public_key_of(&self.key)],
+                signing_keys: vec![],
+                revocation_bounds: vec![],
+                servers: Some(ServerList {
+                    urls: vec![audience()],
+                }),
+                recovery_key: None,
+                recovery_signature: None,
+            },
+            created_at,
+        )
+    }
+
     pub fn profile_update(
         &mut self,
         update: ProfileUpdate,
@@ -436,10 +452,26 @@ impl TestClient {
             return;
         }
 
-        self.event_sync_client
-            .put_events(PutEventsRequest { event_bundles })
+        let response = self
+            .event_sync_client
+            .put_events(PutEventsRequest {
+                event_bundles: event_bundles.clone(),
+            })
             .await
-            .expect("put_events failed");
+            .expect("put_events failed")
+            .into_inner();
+
+        if !response.errors.is_empty() {
+            eprintln!("{} unexpected errors:", response.errors.len());
+            for (n, err) in response.errors.iter().enumerate() {
+                eprintln!("Error {}:", n + 1);
+                eprintln!(
+                    "Error in {:?}",
+                    event_bundles[err.event_bundle_index as usize]
+                );
+                eprintln!("Error: {}", err.message);
+            }
+        }
     }
 
     pub fn create_auth_token(&self) -> String {

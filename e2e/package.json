@@ -1,0 +1,16 @@
+{
+  "name": "harbor-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Maestro end-to-end flows for the Harbor app",
+  "scripts": {
+    "test": "node run.mjs",
+    "test:android": "node run.mjs android",
+    "test:ios": "node run.mjs ios",
+    "test:web": "node run.mjs web",
+    "devices": "maestro-runner devices"
+  },
+  "devDependencies": {
+    "maestro-runner": "^1.1.25"
+  }
+}

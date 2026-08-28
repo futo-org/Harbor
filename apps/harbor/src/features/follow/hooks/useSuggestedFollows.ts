@@ -3,7 +3,13 @@ import {
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { Query, QueryStatus, UpdateMode, v2 } from '@polycentric/react-native';
+import {
+  Query,
+  QueryStatus,
+  UpdateMode,
+  v2,
+  type FetchMode,
+} from '@polycentric/react-native';
 import { useMemo } from 'react';
 
 export interface FollowSuggestionEntry {
@@ -56,18 +62,23 @@ function decodeEntries(
  * identities it already follows. The server reads the caller from the auth
  * token, so this holds until an identity exists.
  */
-export function useSuggestedFollows(
-  /** Set false to hold the query, e.g. for a tab page that is off screen. */
+export function useSuggestedFollows({
   enabled = true,
-  limit?: number,
-) {
+  limit,
+  fetchMode,
+}: {
+  /** Set false to hold the query, e.g. for a tab page that is off screen. */
+  enabled?: boolean;
+  limit?: number;
+  fetchMode?: FetchMode;
+}) {
   const { identityKey } = useCurrentIdentity();
 
   const query = useQuery(
-    ['suggest-follow', identityKey ?? ''],
+    ['suggest-follow', identityKey ?? '', `${limit}`],
     (_status, data) =>
       new Query.SuggestFollow({ limit, forwardToken: extractToken(data) }),
-    { updateMode: UpdateMode.Merge },
+    { fetchMode, updateMode: UpdateMode.Merge },
     enabled && !!identityKey,
   );
 

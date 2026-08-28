@@ -1158,6 +1158,7 @@ async fn following_feed_pagination() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
         assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
     }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
     let mut expected_iter = [post2_key, post3_key].into_iter();
@@ -1188,6 +1189,7 @@ async fn following_feed_pagination() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
         assert_eq!(page_info.has_next_page, true);
     }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
 async fn following_feed(for_identity: &str, expected: &[EventKey]) {
@@ -1504,6 +1506,7 @@ async fn recommended_feed_pagination() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
         assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
     }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
     let mut expected_iter = [post2_key, post3_key].into_iter();
@@ -1534,6 +1537,7 @@ async fn recommended_feed_pagination() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
         assert_eq!(page_info.has_next_page, true);
     }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
 async fn recommended_feed(for_identity: &str, expected: &[EventKey]) {

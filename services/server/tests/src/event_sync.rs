@@ -694,3 +694,40 @@ async fn put_verification_claim_is_ingested_and_listable() {
         "stored verification claim not returned",
     )
 }
+
+#[tokio::test]
+async fn events_submitted_twice_are_ignored() {
+    let mut client = TestClient::new().await;
+    let post_signature = client.post_text("hello", DEFAULT_CREATED_AT + HOUR);
+    let pending = client.pending.clone();
+    // Submit everything.
+    client.submit_events().await;
+
+    // And again.
+    client.pending = pending;
+    client.submit_events().await;
+
+    let identity = client.identity().to_owned();
+    let response = client
+        .event_sync_client()
+        .list_events(ListEventsRequest {
+            size: Some(100),
+            filters: Some(ListEventsFilters {
+                identity: Some(identity),
+                ..Default::default()
+            }),
+        })
+        .await
+        .expect("list_events failed");
+
+    let bundles = response.into_inner().event_bundles;
+    assert_eq!(bundles.len(), 2); // Identity & post.
+    assert!(
+        bundles.iter().any(|b| b
+            .signed_event
+            .as_ref()
+            .map(|se| se.signature == post_signature)
+            .unwrap_or(false)),
+        "expected our post in the list response",
+    );
+}

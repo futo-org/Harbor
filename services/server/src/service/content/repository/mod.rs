@@ -17,63 +17,49 @@ mod verification_claim;
 mod verification_target;
 mod verification_verify;
 
-use crate::service::proto::{Content, EventKey, content::ContentBody};
-use sea_orm::ConnectionTrait;
+use crate::service::proto::{EventKey, PublicKey, content::ContentBody};
+use sea_orm::sea_query::{DynIden, SubQueryStatement, WithClause};
 use tonic::Status;
 
 pub struct Mutation;
 
 impl Mutation {
-    /// Persist the normalized child row(s) for a content body.
-    pub async fn save_content_child<C: ConnectionTrait>(
-        db: &C,
-        content_id: i64,
-        content: Content,
-        event_identity: &str,
-    ) -> Result<(), Status> {
-        let ctx = ChildContext {
-            content_id,
-            event_identity,
-        };
-        match content.content_body {
-            Some(ContentBody::Post(x)) => post::add(db, &ctx, x).await,
-            Some(ContentBody::Delete(x)) => delete::add(db, &ctx, x).await,
-            Some(ContentBody::Follow(x)) => follow::add(db, &ctx, x).await,
-            Some(ContentBody::Block(x)) => block::add(db, &ctx, x).await,
-            Some(ContentBody::Reaction(x)) => reaction::add(db, &ctx, x).await,
-            Some(ContentBody::AttributedToReaction(x)) => {
-                attributed_to_reaction::add(db, &ctx, x).await
-            }
-            Some(ContentBody::ProfileUpdate(x)) => {
-                profile_update::add(db, &ctx, x).await
-            }
-            Some(ContentBody::Identity(x)) => identity::add(db, &ctx, x).await,
-            Some(ContentBody::Repost(x)) => repost::add(db, &ctx, x).await,
-            Some(ContentBody::Report(x)) => report::add(db, &ctx, x).await,
-            Some(ContentBody::Labels(x)) => labels::add(db, &ctx, x).await,
-            Some(ContentBody::VerificationClaim(x)) => {
-                verification_claim::add(db, &ctx, x).await
-            }
-            Some(ContentBody::VerificationTarget(x)) => {
-                verification_target::add(db, &ctx, x).await
-            }
-            Some(ContentBody::VerificationVerify(x)) => {
-                verification_verify::add(db, &ctx, x).await
-            }
-            None => Ok(()),
-        }
+    /// Returns a query to store the content body.
+    ///
+    /// Expects the content id and event identity to be passed as (table,
+    /// column) references.
+    pub fn save_content_body_query(
+        with: &mut WithClause,
+        content_body: ContentBody,
+        content_id: (DynIden, DynIden),
+        event_identity: (DynIden, DynIden),
+    ) -> Result<Option<SubQueryStatement>, Status> {
+        Ok(Some(match content_body {
+            ContentBody::Post(post) => post::add_query(with, post, content_id).map_err(|err| {
+                tracing::error!(error = %err, "failed to create query to store post content");
+                Status::internal("internal server error")
+            })?.into(),
+            ContentBody::Delete(delete) => delete::add_query(delete, content_id)?.into(),
+            ContentBody::Follow(follow) => follow::add_query(follow, content_id).map_err(|err| {
+                tracing::error!(error = %err, "failed to create query to store follow content");
+                Status::internal("internal server error")
+            })?.into(),
+            ContentBody::Block(block) => block::add_query(block, content_id).map_err(|err| {
+                tracing::error!(error = %err, "failed to create query to store block content");
+                Status::internal("internal server error")
+            })?.into(),
+            ContentBody::Reaction(reaction) => reaction::add_query(reaction, content_id)?.into(),
+            ContentBody::AttributedToReaction(reaction) => attributed_to_reaction::add_query(reaction, content_id)?.into(),
+            ContentBody::ProfileUpdate(update) => profile_update::add_query(update, content_id)?.into(),
+            ContentBody::Identity(identity) => identity::add_query(identity, content_id, event_identity)?.into(),
+            ContentBody::Repost(repost) => return repost::add_query(repost, content_id).map(|q| q.map(Into::into)),
+            ContentBody::Report(report) => report::add_query(report, content_id)?.into(),
+            ContentBody::Labels(labels) => labels::add_query(with, labels, content_id)?.into(),
+            ContentBody::VerificationClaim(claim) => verification_claim::add_query(with, claim, content_id)?.into(),
+            ContentBody::VerificationTarget(target) => return verification_target::add_query(with, target, content_id).map(|q| q.map(Into::into)),
+            ContentBody::VerificationVerify(verify) => verification_verify::add_query(verify, content_id)?.into(),
+        }))
     }
-}
-
-struct ChildContext<'a> {
-    content_id: i64,
-    event_identity: &'a str,
-}
-
-/// Log a DB error and map it to an opaque internal status.
-fn map_db_err(e: sea_orm::DbErr) -> Status {
-    tracing::error!(error = %e, "save_content_child db error");
-    Status::internal("internal server error")
 }
 
 /// The five denormalized `EventKey` columns shared by several tables.
@@ -109,11 +95,53 @@ pub fn split_event_key(
     })
 }
 
+/// Deconstructed [`EventKey`].
+pub struct DeconstructedEventKey {
+    collection: Option<i32>,
+    identity: Option<String>,
+    public_key_type: Option<i32>,
+    public_key: Option<Vec<u8>>,
+    sequence: Option<u64>,
+}
+
+/// Deconstruct an optional `EventKey` into its fields (all optional).
+/// Use [`split_event_key`] if the key is required.
+fn deconstruct_event_key(event_key: Option<EventKey>) -> DeconstructedEventKey {
+    if let Some(EventKey {
+        collection,
+        identity,
+        signed_by,
+        sequence,
+    }) = event_key
+    {
+        let (key_type, key) =
+            if let Some(PublicKey { key_type, key }) = signed_by {
+                (Some(key_type), Some(key))
+            } else {
+                (None, None)
+            };
+        DeconstructedEventKey {
+            collection: Some(collection),
+            identity: Some(identity),
+            public_key_type: key_type,
+            public_key: key,
+            sequence: Some(sequence),
+        }
+    } else {
+        DeconstructedEventKey {
+            collection: None,
+            identity: None,
+            public_key_type: None,
+            public_key: None,
+            sequence: None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::proto::{Delete, PublicKey};
-    use sea_orm::{DatabaseBackend, MockDatabase};
+    use crate::service::proto::PublicKey;
     use tonic::Code;
 
     fn event_key() -> EventKey {
@@ -152,28 +180,5 @@ mod tests {
         let err = split_event_key(Some(key), "delete content").unwrap_err();
         assert_eq!(err.code(), Code::InvalidArgument);
         assert!(err.message().contains("missing signed_by"));
-    }
-
-    #[tokio::test]
-    async fn save_content_child_none_is_noop() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
-        let content = Content { content_body: None };
-        Mutation::save_content_child(&db, 1, content, "alice")
-            .await
-            .unwrap();
-        assert!(db.into_transaction_log().is_empty());
-    }
-
-    #[tokio::test]
-    async fn save_content_child_validates_before_touching_db() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
-        let content = Content {
-            content_body: Some(ContentBody::Delete(Delete { event_key: None })),
-        };
-        let err = Mutation::save_content_child(&db, 1, content, "alice")
-            .await
-            .unwrap_err();
-        assert_eq!(err.code(), Code::InvalidArgument);
-        assert!(db.into_transaction_log().is_empty());
     }
 }

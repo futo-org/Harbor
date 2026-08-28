@@ -23,6 +23,7 @@ interface LinkButtonProps extends Omit<PressableProps, 'style'> {
   color?: PaletteColorToken;
   icon?: IconRenderFn;
   style?: StyleProp<ViewStyle>;
+  containerStyle?: StyleProp<ViewStyle>;
   variant?: TextVariant;
   fontWeight?: FontWeightToken;
   italic?: boolean;
@@ -35,6 +36,7 @@ export function LinkButton({
   color = 'primary_500',
   icon,
   style,
+  containerStyle,
   variant = 'body',
   fontWeight = 'semibold',
   italic,
@@ -49,7 +51,7 @@ export function LinkButton({
   const textColor = theme.palette[color];
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={[animatedStyle, containerStyle]}>
       <Pressable
         onPress={onPress}
         onPressIn={onPressIn}
