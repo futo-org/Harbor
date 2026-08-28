@@ -261,7 +261,6 @@ async fn suggest_follow_no_duplicate_identities() {
     client.submit_events().await;
     let suggested = client.identity();
 
-
     let mut client = TestClient::new().await;
     client.profile_update(
         ProfileUpdate {

@@ -720,7 +720,6 @@ async fn events_submitted_twice_are_ignored() {
         .await
         .expect("list_events failed");
 
-
     let bundles = response.into_inner().event_bundles;
     assert_eq!(bundles.len(), 2); // Identity & post.
     assert!(

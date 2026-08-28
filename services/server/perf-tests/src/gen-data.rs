@@ -1,17 +1,22 @@
-use std::{env, panic};
 use std::mem::take;
 use std::process::exit;
-use std::time::{SystemTime, Instant};
+use std::time::{Instant, SystemTime};
+use std::{env, panic};
 
 use ed25519_dalek::{Signer, SigningKey};
-use tokio::task::JoinSet;
+use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
-use rand::distr::{SampleString, Alphabetic};
+use tokio::task::JoinSet;
 
-use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
-use polycentric_common::models::protos_v2::{Identity, EventBundle, PublicKey, KeyType, SignedEvent, SerializedContent, Event, PutEventsRequest, Content, ContentDigest, EventKey, VectorClock, ContentDigestType, Repost, Delete, Follow, Reaction, Post, PostReply, Labels, ProfileUpdate};
-use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::collections;
+use polycentric_common::models::protos_v2::content::ContentBody;
+use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
+use polycentric_common::models::protos_v2::{
+    Content, ContentDigest, ContentDigestType, Delete, Event, EventBundle,
+    EventKey, Follow, Identity, KeyType, Labels, Post, PostReply,
+    ProfileUpdate, PublicKey, PutEventsRequest, Reaction, Repost,
+    SerializedContent, SignedEvent, VectorClock,
+};
 use prost::Message;
 
 const COLLECTION_MAX: i32 = collections::VERIFICATIONS;
@@ -34,33 +39,38 @@ async fn main() {
     let mut amount = 100;
     let mut clients = 1;
     let mut next = 0; // 1 next is amount, 2 next is clients.
-    let to_generate = args.filter_map(|arg| {
-        match arg.as_str() {
-            _ if next == 1 => {
-                amount = arg.parse().expect("invalid amount");
-                next = 0;
-            },
-            _ if next == 2 => {
-                clients = arg.parse().expect("invalid amount of clients");
-                next = 0;
-            },
-            "--amount" => next = 1,
-            "--clients" => next = 2,
-            "post" => return Some(EventKind::Post),
-            "delete" => return Some(EventKind::Delete),
-            "profile" | "profile_update" | "profile-update" => return Some(EventKind::ProfileUpdate),
-            arg => panic!("unexpect data to generate '{arg}'"),
-        }
-        None
-    })
-    .collect::<Vec<_>>();
+    let to_generate = args
+        .filter_map(|arg| {
+            match arg.as_str() {
+                _ if next == 1 => {
+                    amount = arg.parse().expect("invalid amount");
+                    next = 0;
+                }
+                _ if next == 2 => {
+                    clients = arg.parse().expect("invalid amount of clients");
+                    next = 0;
+                }
+                "--amount" => next = 1,
+                "--clients" => next = 2,
+                "post" => return Some(EventKind::Post),
+                "delete" => return Some(EventKind::Delete),
+                "profile" | "profile_update" | "profile-update" => {
+                    return Some(EventKind::ProfileUpdate);
+                }
+                arg => panic!("unexpect data to generate '{arg}'"),
+            }
+            None
+        })
+        .collect::<Vec<_>>();
 
     let start = Instant::now();
     println!("Connecting to {address}");
     let mut set = JoinSet::new();
     for kind in to_generate {
-        println!("Generating {amount} {kind:?} events using {clients} clients...");
-        let amount_per = amount /clients;
+        println!(
+            "Generating {amount} {kind:?} events using {clients} clients..."
+        );
+        let amount_per = amount / clients;
         for _ in 0..clients {
             set.spawn(gen_data(address.clone(), kind, amount_per));
         }
@@ -68,8 +78,10 @@ async fn main() {
 
     while let Some(res) = set.join_next().await {
         match res {
-            Ok(()) => {},
-            Err(err) if err.is_panic() => panic::resume_unwind(err.into_panic()),
+            Ok(()) => {}
+            Err(err) if err.is_panic() => {
+                panic::resume_unwind(err.into_panic())
+            }
             Err(err) => panic!("Unexpected error: {err}"),
         }
     }
@@ -115,7 +127,9 @@ async fn gen_post(mut client: Client, amount: usize) {
         client.post(
             Post {
                 text: random_string(10, 1000),
-                reply: if let Some(last) = last.as_ref() && rand::random() {
+                reply: if let Some(last) = last.as_ref()
+                    && rand::random()
+                {
                     Some(PostReply {
                         root: Some(last.clone()),
                         parent: Some(last.clone()),
@@ -124,13 +138,17 @@ async fn gen_post(mut client: Client, amount: usize) {
                     None
                 },
                 images: Vec::new(), //Vec<ImageSet>,
-                quote: if let Some(last) = last.as_ref() && rand::random() {
+                quote: if let Some(last) = last.as_ref()
+                    && rand::random()
+                {
                     Some(last.clone())
                 } else {
                     None
                 },
                 links: Vec::new(), // Vec<Link>,
-                labels: random_strings(/* amount. */ 0, 10, /* label length*/ 3, 30),
+                labels: random_strings(
+                    /* amount. */ 0, 10, /* label length*/ 3, 30,
+                ),
                 attributed_to: Vec::new(), // Vec<AttributedTo>,
             },
             current_timestamp(),
@@ -187,7 +205,6 @@ async fn gen_profile_update(mut client: Client, amount: usize) {
     }
     client.submit_events().await
 }
-
 
 #[derive(Debug)]
 struct Client {
@@ -254,11 +271,7 @@ impl Client {
     // All these methods push an event bundle to the list of pending events to
     // sync. `submit_events` submits all the events to the server.
 
-    fn set_identity(
-        &mut self,
-        identity: Identity,
-        created_at: u64,
-    ) -> Vec<u8> {
+    fn set_identity(&mut self, identity: Identity, created_at: u64) -> Vec<u8> {
         self.push_event_bundle(ContentBody::Identity(identity), created_at)
     }
 
@@ -372,11 +385,7 @@ impl Client {
         self.push_event_bundle(ContentBody::Repost(repost), created_at)
     }
 
-    fn repost_key(
-        &mut self,
-        event_key: EventKey,
-        created_at: u64,
-    ) -> Vec<u8> {
+    fn repost_key(&mut self, event_key: EventKey, created_at: u64) -> Vec<u8> {
         let repost = Repost {
             post: Some(event_key),
         };
@@ -387,11 +396,7 @@ impl Client {
         self.push_event_bundle(ContentBody::Delete(delete), created_at)
     }
 
-    fn delete_key(
-        &mut self,
-        event_key: EventKey,
-        created_at: u64,
-    ) -> Vec<u8> {
+    fn delete_key(&mut self, event_key: EventKey, created_at: u64) -> Vec<u8> {
         let delete = Delete {
             event_key: Some(event_key),
         };
@@ -529,7 +534,8 @@ fn content_with_digest(content: Content) -> (Vec<u8>, ContentDigest) {
 }
 
 fn bundle_signature(bundle: &EventBundle) -> Vec<u8> {
-    bundle.signed_event
+    bundle
+        .signed_event
         .as_ref()
         .expect("bundle missing signed_event")
         .signature
@@ -555,18 +561,27 @@ fn bundle(signed_event: SignedEvent, content_bytes: Vec<u8>) -> EventBundle {
 }
 
 fn current_timestamp() -> u64 {
-        SystemTime::UNIX_EPOCH.elapsed().unwrap().as_secs()
+    SystemTime::UNIX_EPOCH.elapsed().unwrap().as_secs()
 }
 
-fn random_strings(min_length: usize, max_length: usize, str_min_length: usize, str_max_length: usize) -> Vec<String> {
-    let mut strings = Vec::with_capacity(rand::random_range(min_length..=max_length));
+fn random_strings(
+    min_length: usize,
+    max_length: usize,
+    str_min_length: usize,
+    str_max_length: usize,
+) -> Vec<String> {
+    let mut strings =
+        Vec::with_capacity(rand::random_range(min_length..=max_length));
     for _ in 0..strings.capacity() {
         strings.push(random_string(str_min_length, str_max_length));
     }
     strings
 }
 
-fn optional_random_string(min_length: usize, max_length: usize) -> Option<String> {
+fn optional_random_string(
+    min_length: usize,
+    max_length: usize,
+) -> Option<String> {
     if rand::random() {
         Some(random_string(min_length, max_length))
     } else {
