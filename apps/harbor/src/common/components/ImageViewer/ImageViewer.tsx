@@ -2,8 +2,7 @@ import { Text } from '@/src/common/components/primitives';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import Icon from '@/src/common/components/Icon';
-import { useUpdateEffect } from '@/src/common/lib/useUpdateEffect';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   resolveImageSources,
   type ImageViewerInput,
@@ -79,7 +78,12 @@ export function ImageViewer({
   );
 
   // Report arrow/keyboard navigation, skipping the mount-time index.
-  useUpdateEffect(() => {
+  const firstMount = useRef(true);
+  useEffect(() => {
+    if (firstMount.current) {
+      firstMount.current = false;
+      return;
+    }
     onIndexChange?.(index);
   }, [index, onIndexChange]);
 
