@@ -13,6 +13,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
+use crate::lock::LockRecover;
 use crate::query::blocks::{is_blocked_bundle, retain_unblocked_hints};
 use crate::query::event::merge::{
     EventDedupKey, copy_hints, event_dedup_key, merge_bundle, merge_event_hints,
@@ -77,7 +78,7 @@ fn copy_result_bundles(client: &Arc<Mutex<PolycentricClient>>, results: &[Search
         .collect();
 
     if !bundles.is_empty() {
-        client.lock().unwrap().copy_bundles(bundles);
+        client.lock_recover().copy_bundles(bundles);
     }
 }
 
@@ -242,7 +243,7 @@ fn do_search_merge<T: SearchResponse>(
     merge_event_hints(merged.hints_mut());
 
     {
-        let c = client.lock().unwrap();
+        let c = client.lock_recover();
         retain_validated_results(&c, merged.results_mut());
         retain_validated_hints(&c, merged.hints_mut());
 

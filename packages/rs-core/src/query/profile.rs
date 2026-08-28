@@ -6,6 +6,7 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
+use crate::lock::LockRecover;
 use crate::query::event::merge::{merge_event_bundles, merge_event_hints};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{
@@ -39,7 +40,7 @@ fn merge_profile_responses(
     merge_event_hints(&mut merged.event_hints);
 
     {
-        let c = client.lock().unwrap();
+        let c = client.lock_recover();
         retain_validated_bundles(&c, &mut merged.event_bundles);
         retain_validated_hints(&c, &mut merged.event_hints);
     }
@@ -54,8 +55,7 @@ fn merge_profile_responses(
 fn local_profile_bytes(query_client: &QueryClient<Vec<u8>>, identity: &str) -> Option<Vec<u8>> {
     let bundles = query_client
         .client()
-        .lock()
-        .unwrap()
+        .lock_recover()
         .list_valid_events(identity, collections::PROFILE)
         .unwrap_or_default();
     if bundles.is_empty() {
@@ -129,7 +129,7 @@ pub fn get_profile(
                 .filter_map(|h| h.event_bundle)
                 .collect();
             {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
             }

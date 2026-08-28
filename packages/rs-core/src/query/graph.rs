@@ -13,6 +13,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
+use crate::lock::LockRecover;
 use crate::query::event::merge::{EventDedupKey, event_dedup_key};
 use crate::query::pagination::{FakeCursorToken, merge_page_info, prepare_page_info};
 use crate::query::validation::{log_dropped, retain_validated_bundles, retain_validated_hints};
@@ -87,7 +88,7 @@ fn merge_follows_responses(
         },
     );
 
-    let c = client.lock().unwrap();
+    let c = client.lock_recover();
     retain_validated_bundles(&c, &mut merged.event_bundles);
     retain_validated_hints(&c, &mut merged.event_hints);
     drop(c);
@@ -171,7 +172,7 @@ fn merge_suggest_follow_responses(
         },
     );
 
-    let c = client.lock().unwrap();
+    let c = client.lock_recover();
     retain_first_valid_per_identity(&c, &mut merged.suggestions);
     retain_validated_hints(&c, &mut merged.event_hints);
     drop(c);
@@ -231,7 +232,7 @@ pub fn list_following(
                 .filter_map(|h| h.event_bundle)
                 .collect();
             {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
             }
@@ -294,7 +295,7 @@ pub fn list_followers(
                 .filter_map(|h| h.event_bundle)
                 .collect();
             {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
             }
@@ -360,7 +361,7 @@ pub fn suggest_follow(
                         .filter_map(|s| s.suggestion),
                 )
                 .collect();
-            client.lock().unwrap().copy_bundles(bundles);
+            client.lock_recover().copy_bundles(bundles);
             Ok(bytes)
         }
     };

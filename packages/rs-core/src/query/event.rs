@@ -12,6 +12,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
+use crate::lock::LockRecover;
 use crate::query::event::key::{EventKey, PublicKey};
 use crate::query::event::merge::{EventBundleResponse, merge_bundle_responses};
 use crate::query::{
@@ -114,7 +115,7 @@ pub fn list_events(
                 .filter_map(|h| h.event_bundle)
                 .collect();
             {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
             }
@@ -145,8 +146,7 @@ pub fn get_event(
 
     if let Some(bundle) = query_client
         .client()
-        .lock()
-        .unwrap()
+        .lock_recover()
         .find_event_bundle_by_sequence(&identity, collection, sequence)
     {
         let bytes = bundle.encode_to_vec();
@@ -187,8 +187,7 @@ pub fn get_event(
               client: &Arc<Mutex<PolycentricClient>>| {
             let bundle = client
                 .clone()
-                .lock()
-                .unwrap()
+                .lock_recover()
                 .find_event_bundle_by_sequence(&identity, collection, sequence);
 
             bundle
@@ -219,7 +218,7 @@ pub fn get_event(
             // Copy events and content to local stores so that we can rely on
             // the client to handle tombstone checking logic
             let bundle = {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
                 c.find_event_bundle_by_sequence(&identity, collection, sequence)
