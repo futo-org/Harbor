@@ -1,0 +1,29 @@
+url: ${MAESTRO_WEB_URL}
+name: I can quote a post
+---
+- runFlow: ../elements/load.yaml
+- runFlow: ../steps/fresh-start.yaml
+- runFlow: ../steps/profile-with-posts.yaml
+- scrollUntilVisible:
+    element: Maestro post 1
+    direction: DOWN
+- runFlow: ../steps/open-oldest-post-menu.yaml
+- tapOn:
+    role: menuitem
+    text: ${output.post.quote}
+- tapOn: ${output.composer.input}
+- inputText: Quoting my first post
+- tapOn:
+    id: ${output.composer.submit}
+- extendedWaitUntil:
+    notVisible:
+      id: ${output.composer.submit}
+    timeout: 30000
+# The quote is the newest post, so it heads the profile. Its thread shows
+# it with the post it quotes.
+- scrollUntilVisible:
+    element: Quoting my first post
+    direction: UP
+- tapOn: Quoting my first post
+- assertVisible: Quoting my first post
+- assertVisible: Maestro post 1

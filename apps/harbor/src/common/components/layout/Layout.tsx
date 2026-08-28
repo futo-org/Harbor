@@ -284,6 +284,7 @@ function SidebarContent({
           {identity && (
             <Button
               title={narrow ? '' : 'Post'}
+              accessibilityLabel="New post"
               variant="primary"
               size="md"
               fullWidth={!narrow}
