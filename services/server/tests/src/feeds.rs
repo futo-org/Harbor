@@ -1090,8 +1090,10 @@ async fn following_feed_ordering() {
 
 #[tokio::test]
 async fn following_feed_pagination() {
-    // Followee 1, post 1.
+    // Followee 1, post 0 and 1.
     let mut client1 = TestClient::new().await;
+    client1.post_text("Post 0", DEFAULT_CREATED_AT);
+    let post0_key = client1.get_last_event_key();
     client1.post_text("Post 1", DEFAULT_CREATED_AT);
     let post1_key = client1.get_last_event_key();
     client1.submit_events().await;
@@ -1113,6 +1115,8 @@ async fn following_feed_pagination() {
     client3.submit_events().await;
     let follower = client3.identity().to_owned();
 
+    // Post 0, 1 reaction.
+    client2.thumbs_up(post1_key.clone(), DEFAULT_CREATED_AT + 5);
     // Post 1, 1 reaction.
     client3.thumbs_up(post1_key.clone(), DEFAULT_CREATED_AT + 5);
     // Post 2, 2 reactions.
@@ -1131,7 +1135,7 @@ async fn following_feed_pagination() {
     // Forward.
     let mut page_info: Option<PageInfo> = None;
     let mut expected_iter =
-        [post3_key.clone(), post2_key.clone(), post1_key.clone()].into_iter();
+        [post3_key.clone(), post2_key.clone(), post1_key.clone(), post0_key].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let request = GetFollowingFeedRequest {
@@ -1155,13 +1159,13 @@ async fn following_feed_pagination() {
         explore_feed(request, &[expected]).await;
 
         let page_info = page_info.as_ref().unwrap();
-        assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
+        assert_eq!(page_info.has_previous_page, expected_iter.len() != 3);
         assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
     }
     assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
-    let mut expected_iter = [post2_key, post3_key].into_iter();
+    let mut expected_iter = [post1_key, post2_key, post3_key].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let mut feeds = connect_feeds().await;
@@ -1376,7 +1380,7 @@ async fn recommended_feed_includes_posts_quoted_by_followee() {
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[post1_key, reply1_key]).await;
+    recommended_feed(follower, &[reply1_key, post1_key]).await;
 }
 
 #[tokio::test]
@@ -1414,7 +1418,7 @@ async fn recommended_feed_includes_posts_replies_by_followee() {
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[post1_key, reply1_key]).await;
+    recommended_feed(follower, &[reply1_key, post1_key]).await;
 }
 
 #[tokio::test]
@@ -1438,8 +1442,10 @@ async fn recommended_feed_ordering() {
 
 #[tokio::test]
 async fn recommended_feed_pagination() {
-    // Followee 1, post 1.
+    // Followee 1, post 0 and 1.
     let mut client1 = TestClient::new().await;
+    client1.post_text("Post 0", DEFAULT_CREATED_AT);
+    let post0_key = client1.get_last_event_key();
     client1.post_text("Post 1", DEFAULT_CREATED_AT);
     let post1_key = client1.get_last_event_key();
     client1.submit_events().await;
@@ -1461,6 +1467,8 @@ async fn recommended_feed_pagination() {
     client3.submit_events().await;
     let follower = client3.identity().to_owned();
 
+    // Post 0, 1 reaction.
+    client2.thumbs_up(post0_key.clone(), DEFAULT_CREATED_AT + 5);
     // Post 1, 1 reaction.
     client3.thumbs_up(post1_key.clone(), DEFAULT_CREATED_AT + 5);
     // Post 2, 2 reactions.
@@ -1479,7 +1487,7 @@ async fn recommended_feed_pagination() {
     // Forward.
     let mut page_info: Option<PageInfo> = None;
     let mut expected_iter =
-        [post3_key.clone(), post2_key.clone(), post1_key.clone()].into_iter();
+        [post3_key.clone(), post2_key.clone(), post1_key.clone(), post0_key.clone()].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let request = GetFollowingFeedRequest {
@@ -1503,13 +1511,13 @@ async fn recommended_feed_pagination() {
         explore_feed(request, &[expected]).await;
 
         let page_info = page_info.as_ref().unwrap();
-        assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
+        assert_eq!(page_info.has_previous_page, expected_iter.len() != 3);
         assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
     }
     assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
-    let mut expected_iter = [post2_key, post3_key].into_iter();
+    let mut expected_iter = [post1_key, post2_key, post3_key].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let mut feeds = connect_feeds().await;

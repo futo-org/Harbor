@@ -356,12 +356,12 @@ impl Query {
 
         // NOTE: SeaORM cursor only works with one of the entities used, but we
         // need to order/filter etc. by the tally, so we can't use it.
-        let (order_column, order) = sort_posts_by_column(sort_by);
+        let order_column = sort_posts_by_column(sort_by);
         QueryOrder::query(&mut query)
-            .order_by_expr(order_column.clone(), order)
+            .order_by_expr(order_column.clone(), Order::Desc)
             .order_by_expr(
                 Expr::col(EventModel::Column::Id.as_column_ref()),
-                Order::Asc,
+                Order::Desc,
             );
 
         match cursor_filter {
@@ -939,13 +939,12 @@ pub(crate) fn content_join() -> RelationDef {
         .into()
 }
 
-fn sort_posts_by_column(sort_by: SortPostsBy) -> (Expr, Order) {
+fn sort_posts_by_column(sort_by: SortPostsBy) -> Expr {
     match sort_by {
-        SortPostsBy::Default | SortPostsBy::Latest => (
-            Expr::col(EventModel::Column::CreatedAt.as_column_ref()),
-            Order::Desc,
-        ),
-        SortPostsBy::Top => (Expr::col(REACTION_COUNT_COLUMN), Order::Desc),
+        SortPostsBy::Default | SortPostsBy::Latest => {
+            Expr::col(EventModel::Column::CreatedAt.as_column_ref())
+        }
+        SortPostsBy::Top => Expr::col(REACTION_COUNT_COLUMN),
     }
 }
 
