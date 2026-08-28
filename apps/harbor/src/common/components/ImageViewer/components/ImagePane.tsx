@@ -66,6 +66,7 @@ export function ImagePane({
           <Image
             uris={source.uris}
             contentFit="contain"
+            priority={isCurrent ? 'high' : 'low'}
             style={[Atoms.w_full, Atoms.h_full]}
           />
         </View>
