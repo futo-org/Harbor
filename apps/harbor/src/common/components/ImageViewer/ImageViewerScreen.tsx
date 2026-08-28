@@ -34,14 +34,18 @@ export function ImageViewerScreen({
   // close, and `router.canGoBack()` may still read true before the first
   // back() settles — popping an extra screen (notably on Android).
   const closing = useRef(false);
-  const onClose = useCallback(() => {
-    if (closing.current) return;
-    closing.current = true;
-    // Opened in-session: return to wherever the user was. Cold load:
-    // land on the content the image belongs to.
-    if (canReturn && router.canGoBack()) router.back();
-    else router.replace(fallbackHref);
-  }, [canReturn, fallbackHref]);
+  const onClose = useCallback(
+    (source: string) => {
+      console.log('closing image viewer:', source);
+      if (closing.current) return;
+      closing.current = true;
+      // Opened in-session: return to wherever the user was. Cold load:
+      // land on the content the image belongs to.
+      if (canReturn && router.canGoBack()) router.back();
+      else router.replace(fallbackHref);
+    },
+    [canReturn, fallbackHref],
+  );
 
   const content = (
     <ImageViewer

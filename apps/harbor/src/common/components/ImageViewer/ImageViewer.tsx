@@ -11,9 +11,9 @@ import { Image } from '@/src/common/components/Image';
 import {
   Platform,
   Pressable,
-  StyleSheet,
   useWindowDimensions,
   View,
+  StyleSheet,
 } from 'react-native';
 import {
   Gesture,
@@ -54,7 +54,7 @@ export function ImageViewer({
 }: {
   images: ImageViewerInput[];
   initialIndex: number;
-  onClose: () => void;
+  onClose: (source: string) => void;
   onIndexChange?: (index: number) => void;
 }) {
   const client = usePolycentric();
@@ -91,7 +91,7 @@ export function ImageViewer({
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onClose('esc');
       else if (e.key === 'ArrowLeft') goPrev();
       else if (e.key === 'ArrowRight') goNext();
     };
@@ -139,7 +139,7 @@ export function ImageViewer({
           if (scale.value < PINCH_CLOSE_SCALE) {
             // Pinched in far enough — shrink away and dismiss.
             scale.value = withTiming(0.3, { duration: 180 }, (finished) => {
-              if (finished) runOnJS(onClose)();
+              if (finished) runOnJS(onClose)('PINCH_CLOSE_SCALE');
             });
           } else if (scale.value <= 1) {
             scale.value = withTiming(1);
@@ -192,13 +192,19 @@ export function ImageViewer({
           const dismiss =
             Math.abs(e.translationY) > CLOSE_DISTANCE ||
             Math.abs(e.velocityY) > CLOSE_VELOCITY;
+
           if (dismiss) {
+            const dreason =
+              Math.abs(e.translationY) > CLOSE_DISTANCE
+                ? 'CLOSE_DISTANCE'
+                : 'CLOSE_VELOCITY';
+
             const target = e.translationY >= 0 ? height : -height;
             dismissY.value = withTiming(
               target,
               { duration: 180 },
               (finished) => {
-                if (finished) runOnJS(onClose)();
+                if (finished) runOnJS(onClose)(dreason);
               },
             );
           } else {
@@ -260,7 +266,7 @@ export function ImageViewer({
         ]}
       />
       <Pressable
-        onPress={onClose}
+        onPress={() => onClose('backdrop press')}
         style={[Atoms.flex_1, Atoms.items_center, Atoms.justify_center]}
       >
         {/* With no sources (the route is still loading its data) render just
@@ -280,7 +286,10 @@ export function ImageViewer({
                   taps on the surrounding letterbox fall through to the
                   backdrop and close. */}
               <Pressable
-                onPress={(e) => e.stopPropagation?.()}
+                onPress={(e) => {
+                  console.log('swallowed image tap');
+                  e.stopPropagation?.();
+                }}
                 style={[
                   Atoms.w_full,
                   { aspectRatio: current.aspectRatio ?? 1, maxHeight: '100%' },
@@ -299,7 +308,7 @@ export function ImageViewer({
         <Pressable
           onPress={(e) => {
             e.stopPropagation?.();
-            onClose();
+            onClose('close button press');
           }}
           accessibilityLabel="Close image viewer"
           hitSlop={12}
