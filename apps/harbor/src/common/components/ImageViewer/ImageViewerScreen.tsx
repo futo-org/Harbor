@@ -6,7 +6,7 @@ import { Atoms, ZIndex } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { ImageViewer } from './ImageViewer';
 import type { ImageViewerInput } from './resolveImageSources';
-import { useBodyScrollLock } from './useBodyScrollLock';
+import { RemoveScroll } from 'react-remove-scroll';
 
 /**
  * Shared shell for the image-viewer routes (post images, profile photo):
@@ -43,8 +43,6 @@ export function ImageViewerScreen({
     else router.replace(fallbackHref);
   }, [canReturn, fallbackHref]);
 
-  useBodyScrollLock(true);
-
   const content = (
     <ImageViewer
       images={images}
@@ -55,9 +53,12 @@ export function ImageViewerScreen({
   );
 
   return isWeb ? (
-    <View style={[Atoms.fixed, Atoms.inset_0, { zIndex: ZIndex.modal }]}>
-      {content}
-    </View>
+    // RemoveScroll matches the scroll lock behavior of @rn-primitives/dropdown-menu
+    <RemoveScroll>
+      <View style={[Atoms.fixed, Atoms.inset_0, { zIndex: ZIndex.modal }]}>
+        {content}
+      </View>
+    </RemoveScroll>
   ) : (
     content
   );
