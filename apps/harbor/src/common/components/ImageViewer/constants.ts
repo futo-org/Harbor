@@ -12,3 +12,7 @@ export const SWIPE_VELOCITY = 500;
 export const AXIS_LOCK_SLOP = 10;
 /** Image pane height as a fraction of the viewer */
 export const PANE_HEIGHT = 0.88;
+/** Zoom threshold that determines double-tap zoom direction */
+export const DOUBLE_TAP_ZOOM_THRESHOLD = 1.1;
+/** Zoom level for double-tap zoom */
+export const DOUBLE_TAP_ZOOM_MAX = 2;

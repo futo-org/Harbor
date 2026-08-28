@@ -14,6 +14,7 @@ import {
   PANE_HEIGHT,
   PINCH_CLOSE_SCALE,
   SWIPE_VELOCITY,
+  DOUBLE_TAP_ZOOM_THRESHOLD,
 } from '../constants';
 
 export function useImageViewerGestures({
@@ -284,8 +285,39 @@ export function useImageViewerGestures({
     ],
   );
 
+  const doubleTap = useMemo(
+    () =>
+      Gesture.Tap()
+        .numberOfTaps(2)
+        .onEnd(() => {
+          if (scale.value === 1) return;
+
+          if (scale.value >= DOUBLE_TAP_ZOOM_THRESHOLD) {
+            // todo: extract into function?
+            scale.value = withTiming(1);
+            savedScale.value = 1;
+            translateX.value = withTiming(0);
+            translateY.value = withTiming(0);
+            savedTranslateX.value = 0;
+            savedTranslateY.value = 0;
+          }
+        }),
+    [
+      savedScale,
+      savedTranslateX,
+      savedTranslateY,
+      scale,
+      translateX,
+      translateY,
+    ],
+  );
+
   return useMemo(
-    () => Gesture.Race(tap, Gesture.Simultaneous(pinch, pan)),
-    [tap, pinch, pan],
+    () =>
+      Gesture.Race(
+        Gesture.Exclusive(doubleTap, tap),
+        Gesture.Simultaneous(pinch, pan),
+      ),
+    [tap, pinch, pan, doubleTap],
   );
 }
