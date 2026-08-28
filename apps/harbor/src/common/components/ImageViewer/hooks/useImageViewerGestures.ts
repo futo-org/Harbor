@@ -81,6 +81,9 @@ export function useImageViewerGestures({
     () =>
       Gesture.Pinch()
         .onUpdate((e) => {
+          // If we're swiping, prohibit zooming
+          if (axis.value === 'x') return;
+
           scale.value = Math.min(savedScale.value * e.scale, MAX_SCALE);
         })
         .onEnd(() => {
@@ -108,6 +111,7 @@ export function useImageViewerGestures({
       translateY,
       savedTranslateX,
       savedTranslateY,
+      axis,
     ],
   );
 
