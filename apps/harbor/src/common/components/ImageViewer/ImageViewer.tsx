@@ -223,7 +223,54 @@ export function ImageViewer({
     ],
   );
 
-  const gesture = useMemo(() => Gesture.Simultaneous(pinch, pan), [pinch, pan]);
+  const safeIndex = Math.min(index, sources.length - 1);
+  const current = sources[safeIndex];
+  const aspectRatio = current?.aspectRatio ?? 1;
+
+  // Original layouts, for the backdrop-tap hit test: the detector's full-screen
+  // view and the aspect-ratio box around the image.
+  const containerSize = useSharedValue({ w: 0, h: 0 });
+  const imageBoxSize = useSharedValue({ w: 0, h: 0 });
+
+  const tap = useMemo(
+    () =>
+      Gesture.Tap().onEnd((e) => {
+        // Contain-fit rect of the image inside its aspect box (the box's
+        // height can be clamped by maxHeight, letterboxing inside it),
+        // mapped through the current transform: scale about the center,
+        // then translate. Taps outside that rect dismiss the viewer.
+        const fittedWidth = Math.min(
+          imageBoxSize.value.w,
+          imageBoxSize.value.h * aspectRatio,
+        );
+        const fittedHeight = fittedWidth / aspectRatio;
+        const currentScale = scale.value;
+        const imgCenterX = containerSize.value.w / 2 + translateX.value;
+        const imgCenterY =
+          containerSize.value.h / 2 + translateY.value + dismissY.value;
+
+        const tappedOnImage =
+          Math.abs(e.x - imgCenterX) <= (fittedWidth * currentScale) / 2 &&
+          Math.abs(e.y - imgCenterY) <= (fittedHeight * currentScale) / 2;
+
+        if (!tappedOnImage) runOnJS(onClose)('backdrop tap');
+      }),
+    [
+      aspectRatio,
+      imageBoxSize,
+      containerSize,
+      onClose,
+      scale,
+      translateX,
+      translateY,
+      dismissY,
+    ],
+  );
+
+  const gesture = useMemo(
+    () => Gesture.Race(tap, Gesture.Simultaneous(pinch, pan)),
+    [tap, pinch, pan],
+  );
 
   const imageStyle = useAnimatedStyle(() => ({
     transform: [
@@ -244,8 +291,6 @@ export function ImageViewer({
     };
   });
 
-  const safeIndex = Math.min(index, sources.length - 1);
-  const current = sources[safeIndex];
   const hasPrev = safeIndex > 0;
   const hasNext = safeIndex < sources.length - 1;
 
@@ -265,15 +310,17 @@ export function ImageViewer({
           backdropStyle,
         ]}
       />
-      <Pressable
-        onPress={() => onClose('backdrop press')}
-        style={[Atoms.flex_1, Atoms.items_center, Atoms.justify_center]}
-      >
-        {/* With no sources (the route is still loading its data) render just
-        the backdrop and close button, so the viewer holds its place and can
-        still be dismissed. */}
-        {current && (
-          <GestureDetector gesture={gesture}>
+      <GestureDetector gesture={gesture}>
+        <View
+          style={[Atoms.flex_1, Atoms.items_center, Atoms.justify_center]}
+          onLayout={(e) => {
+            containerSize.value = {
+              w: e.nativeEvent.layout.width,
+              h: e.nativeEvent.layout.height,
+            };
+          }}
+        >
+          {current && (
             <Animated.View
               style={[
                 Atoms.items_center,
@@ -282,13 +329,12 @@ export function ImageViewer({
                 imageStyle,
               ]}
             >
-              {/* Swallow taps on the image itself so they don't dismiss;
-                  taps on the surrounding letterbox fall through to the
-                  backdrop and close. */}
-              <Pressable
-                onPress={(e) => {
-                  console.log('swallowed image tap');
-                  e.stopPropagation?.();
+              <View
+                onLayout={(e) => {
+                  imageBoxSize.value = {
+                    w: e.nativeEvent.layout.width,
+                    h: e.nativeEvent.layout.height,
+                  };
                 }}
                 style={[
                   Atoms.w_full,
@@ -300,62 +346,59 @@ export function ImageViewer({
                   contentFit="contain"
                   style={[Atoms.w_full, Atoms.h_full]}
                 />
-              </Pressable>
+              </View>
             </Animated.View>
-          </GestureDetector>
-        )}
+          )}
+        </View>
+      </GestureDetector>
 
-        <Pressable
-          onPress={(e) => {
-            e.stopPropagation?.();
-            onClose('close button press');
-          }}
-          accessibilityLabel="Close image viewer"
-          hitSlop={12}
+      <Pressable
+        onPress={() => onClose('close button press')}
+        accessibilityLabel="Close image viewer"
+        hitSlop={12}
+        style={[
+          Atoms.absolute,
+          Atoms.items_center,
+          Atoms.justify_center,
+          Atoms.rounded_full,
+          {
+            top: insets.top,
+            right: 16,
+            width: 40,
+            height: 40,
+            backgroundColor: chipBg,
+          },
+        ]}
+      >
+        <Icon name="close" size={24} color="white" />
+      </Pressable>
+
+      {hasPrev && <NavArrow side="left" onPress={goPrev} bg={chipBg} />}
+      {hasNext && <NavArrow side="right" onPress={goNext} bg={chipBg} />}
+
+      {sources.length > 1 && (
+        <View
+          pointerEvents="none"
           style={[
             Atoms.absolute,
             Atoms.items_center,
-            Atoms.justify_center,
-            Atoms.rounded_full,
-            {
-              top: insets.top,
-              right: 16,
-              width: 40,
-              height: 40,
-              backgroundColor: chipBg,
-            },
+            { top: 20, left: 0, right: 0 },
           ]}
         >
-          <Icon name="close" size={24} color="white" />
-        </Pressable>
-
-        {hasPrev && <NavArrow side="left" onPress={goPrev} bg={chipBg} />}
-        {hasNext && <NavArrow side="right" onPress={goNext} bg={chipBg} />}
-
-        {sources.length > 1 && (
           <View
-            pointerEvents="none"
             style={[
-              Atoms.absolute,
-              Atoms.items_center,
-              { top: 20, left: 0, right: 0 },
+              Atoms.px_sm,
+              Atoms.py_xs,
+              Atoms.rounded_lg,
+              { backgroundColor: chipBg },
             ]}
           >
-            <View
-              style={[
-                Atoms.px_sm,
-                Atoms.py_xs,
-                Atoms.rounded_lg,
-                { backgroundColor: chipBg },
-              ]}
-            >
-              <Text variant="small" style={{ color: theme.palette.white }}>
-                {safeIndex + 1} / {sources.length}
-              </Text>
-            </View>
+            <Text variant="small" style={{ color: theme.palette.white }}>
+              {safeIndex + 1} / {sources.length}
+            </Text>
           </View>
-        )}
-      </Pressable>
+        </View>
+      )}
     </GestureHandlerRootView>
   );
 }
@@ -371,10 +414,7 @@ function NavArrow({
 }) {
   return (
     <Pressable
-      onPress={(e) => {
-        e.stopPropagation?.();
-        onPress();
-      }}
+      onPress={onPress}
       hitSlop={12}
       accessibilityLabel={side === 'left' ? 'Previous image' : 'Next image'}
       style={[
