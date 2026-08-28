@@ -10,6 +10,7 @@
     "start": "node --env-file-if-exists=.env dist/index.js",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "test:ci": "tsx --test --test-skip-pattern=\"^LOCAL:\" --test-reporter=junit --test-reporter-destination=./junit.xml --test-reporter=spec --test-reporter-destination=stdout \"src/**/*.test.ts\"",
+    "test:integration": "tsx --test --test-name-pattern=\"^LOCAL:\" --test-reporter=junit --test-reporter-destination=./junit.xml --test-reporter=spec --test-reporter-destination=stdout \"src/**/*.test.ts\"",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
