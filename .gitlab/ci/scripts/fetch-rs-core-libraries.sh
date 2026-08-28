@@ -8,8 +8,19 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 download() {
-  curl -fsSL -o "$2" \
-    "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/jobs/artifacts/${CI_DEFAULT_BRANCH}/download?job=$1&job_token=${CI_JOB_TOKEN}"
+  url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/jobs/artifacts/${CI_DEFAULT_BRANCH}/download?job=$1"
+  status=$(curl -sSL -o "$2" -w '%{http_code}' --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "$url")
+  # A job token from an unprotected ref can't read a protected ref's
+  # artifacts; the project is public, so fetch them without one.
+  if [ "$status" != 200 ]; then
+    echo "$url: $status with job token, retrying anonymously" >&2
+    status=$(curl -sSL -o "$2" -w '%{http_code}' "$url")
+  fi
+  if [ "$status" != 200 ]; then
+    echo "$url: $status" >&2
+    rm -f "$2"
+    return 1
+  fi
 }
 
 # restore JOB PATH...
