@@ -1,6 +1,6 @@
 .charts-workflow:
   image:
-    name: alpine/helm:3.17.3
+    name: alpine/helm:3.21.4
     entrypoint: ['']
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
