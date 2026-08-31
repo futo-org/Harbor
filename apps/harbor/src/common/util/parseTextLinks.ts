@@ -77,38 +77,16 @@ export function parseTextLinks(text: string): TextSegment[] {
     }
 
     // A curly mention ends at its `}`; don't strip that as punctuation.
-    const isCurly = isMention && raw[1] === '{' && raw.endsWith('}');
+    const isCurlyMention = isMention && raw[1] === '{' && raw.endsWith('}');
 
-    if (!isCurly) {
+    if (!isCurlyMention) {
       const trail = raw.match(TRAILING_PUNCT)?.[0] ?? '';
       if (trail) raw = raw.slice(0, raw.length - trail.length);
       if (!raw) continue;
     }
 
-    let segment: TextSegment;
-
-    if (isCurly) {
-      const inner = raw.slice(2, -1);
-      const comma = inner.indexOf(',');
-      const identity = comma === -1 ? inner : inner.slice(0, comma);
-      if (!HEX64.test(identity)) continue;
-      // With a display name, render it bare; `@` is only shown for the
-      // identity/alias forms.
-      const value = comma === -1 ? `@${identity}` : inner.slice(comma + 1);
-      segment = { type: 'identity', value, identity };
-    } else if (isMention) {
-      const body = raw.slice(1);
-      if (HEX64.test(body)) {
-        segment = { type: 'identity', value: raw, identity: body };
-      } else if (body.includes('.')) {
-        segment = { type: 'alias', value: raw, alias: body };
-      } else {
-        continue;
-      }
-    } else {
-      const url = HAS_SCHEME.test(raw) ? raw : `https://${raw}`;
-      segment = { type: 'link', value: raw, url };
-    }
+    const segment = parseSegment(raw, isCurlyMention);
+    if (!segment) continue;
 
     if (start > lastIndex) {
       segments.push({ type: 'text', value: text.slice(lastIndex, start) });
@@ -127,4 +105,42 @@ export function parseTextLinks(text: string): TextSegment[] {
   }
 
   return segments;
+}
+
+function parseSegment(raw: string, isCurly: boolean): TextSegment | null {
+  if (isCurly) {
+    const content = raw.slice(2, -1);
+    const separatorIndex = content.indexOf(',');
+    const identity = ~separatorIndex
+      ? content.slice(0, separatorIndex)
+      : content;
+
+    if (!HEX64.test(identity)) return null;
+
+    return {
+      type: 'identity',
+      // With a display name, render it bare; `@` is only shown for the identity/alias forms.
+      value: ~separatorIndex
+        ? content.slice(separatorIndex + 1)
+        : `@${identity}`,
+      identity,
+    };
+  }
+
+  if (raw[0] === '@') {
+    const body = raw.slice(1);
+
+    if (HEX64.test(body))
+      return { type: 'identity', value: raw, identity: body };
+
+    if (body.includes('.')) return { type: 'alias', value: raw, alias: body };
+
+    return null;
+  }
+
+  return {
+    type: 'link',
+    value: raw,
+    url: HAS_SCHEME.test(raw) ? raw : `https://${raw}`,
+  };
 }
