@@ -284,6 +284,7 @@ export function useImageViewerGestures({
     () =>
       Gesture.Tap()
         .numberOfTaps(2)
+        .maxDelay(150)
         .onEnd(() => {
           if (scale.value === 1) return;
 
