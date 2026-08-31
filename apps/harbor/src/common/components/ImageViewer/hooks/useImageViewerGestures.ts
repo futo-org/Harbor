@@ -288,7 +288,6 @@ export function useImageViewerGestures({
           if (scale.value === 1) return;
 
           if (scale.value >= DOUBLE_TAP_ZOOM_THRESHOLD) {
-            // todo: extract into function?
             scale.value = withTiming(1);
             savedScale.value = 1;
             translateX.value = withTiming(0);
