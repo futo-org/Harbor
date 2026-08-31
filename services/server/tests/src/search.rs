@@ -95,6 +95,37 @@ async fn search_users_match_alias() {
 }
 
 #[tokio::test]
+async fn search_users_match_on_hashtags() {
+    let mut client = TestClient::new().await;
+
+    let profile_name = "#a #some";
+    let profile_update = ProfileUpdate {
+        name: Some(profile_name.into()),
+        avatar: None,
+        banner: None,
+        description: None,
+        alias: None,
+    };
+    client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
+
+    expect_searched_users(
+        SearchUsersRequest {
+            query: profile_name.into(),
+            sort_by: None,
+            // Limit to 1 post as each time we test we create another. All we're
+            // interested in is that one of them is returned, not which one.
+            page_params: Some(PageParams {
+                limit: Some(1),
+                ..Default::default()
+            }),
+        },
+        vec![profile_update],
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn search_users_order_by_rank() {
     let query = random_string();
 
@@ -420,6 +451,39 @@ async fn search_posts_match_text() {
         },
         vec![Post {
             text: post_text,
+            reply: None,
+            images: vec![],
+            quote: None,
+            links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
+        }],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn search_posts_match_on_hashtags() {
+    let mut client = TestClient::new().await;
+
+    let post_text = "#a #some";
+    client.post_text(&post_text, DEFAULT_CREATED_AT);
+    client.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query: post_text.into(),
+            sort_by: None,
+            // Limit to 1 post as each time we test we create another. All we're
+            // interested in is that one of them is returned, not which one.
+            page_params: Some(PageParams {
+                limit: Some(1),
+                ..Default::default()
+            }),
+            omit_labels: Vec::new(),
+        },
+        vec![Post {
+            text: post_text.into(),
             reply: None,
             images: vec![],
             quote: None,
