@@ -2,7 +2,8 @@ export type TextSegment =
   | { type: 'text'; value: string }
   | { type: 'link'; value: string; url: string }
   | { type: 'alias'; value: string; alias: string }
-  | { type: 'identity'; value: string; identity: string };
+  | { type: 'identity'; value: string; identity: string }
+  | { type: 'hashtag'; value: string; tag: string };
 
 // Common TLDs accepted for bare (scheme-less, non-www) domains. Keeping
 // this curated avoids turning things like "node.js" or "e.g." into links.
@@ -17,32 +18,42 @@ const HEX64 = /^[0-9a-fA-F]{64}$/;
 
 // Matches, in order: curly mentions (`@{identity,displayName}` — braces so the
 // display name may contain spaces), any other standalone `@…` run (classified
-// as identity/alias or rejected in code below), http(s) URLs, `www.` domains,
-// and bare domains that end in a known TLD (optionally followed by a
-// path/query). The `@` alternatives come first so a mention is taken whole
-// instead of the bare domain inside it.
+// as identity/alias or rejected in code below), hashtags (word chars only, so
+// `#foo.bar` matches just `#foo`), http(s) URLs, `www.` domains, and bare
+// domains that end in a known TLD (optionally followed by a path/query). The
+// `@` alternatives come first so a mention is taken whole instead of the bare
+// domain inside it.
 const LINK_REGEX = new RegExp(
   [
     '@\\{[^}]+\\}',
     '@[^\\s]+',
+    '#[\\p{L}\\p{N}_]+',
     'https?:\\/\\/[^\\s]+',
     'www\\.[^\\s]+',
     `${DOMAIN}(?:\\/[^\\s]*)?`,
   ].join('|'),
-  'gi',
+  'giu',
 );
 
 // Punctuation that commonly trails a URL in prose but isn't part of it.
 const TRAILING_PUNCT = /[.,!?;:'")\]}]+$/;
 
-// A char that glues an `@` to the preceding word — an email's local part
-// (`a@b.com`, in any script) or another `@` — disqualifying it as a mention.
-const MENTION_PRECEDER = /[\p{L}\p{N}_@]/u;
+// A char that glues an `@`/`#` to the preceding word — an email's local part
+// (`a@b.com`, in any script), `foo#bar`, another `@` — disqualifying it as a
+// mention or hashtag.
+const TOKEN_PRECEDER = /[\p{L}\p{N}_@]/u;
+
+// A hashtag needs at least one non-digit, so prose like "we're #1" (and HTML
+// entities like `&#39;`) stays plain text.
+const DIGITS_ONLY = /^[0-9]+$/;
 
 const HAS_SCHEME = /^https?:\/\//i;
 
 /**
- * Splits `text` into plain-text, link, and mention segments.
+ * Splits `text` into plain-text, link, mention, and hashtag segments.
+ *
+ * A standalone `#` followed by word characters (at least one non-digit) is a
+ * hashtag.
  *
  * A standalone `@` (not preceded by a word character, so an email's `@` never
  * starts one) begins a mention:
@@ -68,16 +79,18 @@ export function parseTextLinks(text: string): TextSegment[] {
   ) {
     const start = match.index;
     let raw = match[0];
-    const isMention = raw[0] === '@';
+    const isToken = raw[0] === '@' || raw[0] === '#';
 
-    // Mentions must be standalone: skip an email's `@` (`a@b.com`), which also
-    // keeps its domain part from being linkified (the skip consumes the run).
-    if (isMention && start > 0 && MENTION_PRECEDER.test(text[start - 1])) {
+    // Mentions and hashtags must be standalone: skip an email's `@`
+    // (`a@b.com`, which also keeps its domain part from being linkified — the
+    // skip consumes the run) and `foo#bar`.
+    if (isToken && start > 0 && TOKEN_PRECEDER.test(text[start - 1])) {
       continue;
     }
 
     // A curly mention ends at its `}`; don't strip that as punctuation.
-    const isCurlyMention = isMention && raw[1] === '{' && raw.endsWith('}');
+    const isCurlyMention =
+      raw[0] === '@' && raw[1] === '{' && raw.endsWith('}');
 
     if (!isCurlyMention) {
       const trail = raw.match(TRAILING_PUNCT)?.[0] ?? '';
@@ -136,6 +149,11 @@ function parseSegment(raw: string, isCurly: boolean): TextSegment | null {
     if (body.includes('.')) return { type: 'alias', value: raw, alias: body };
 
     return null;
+  }
+
+  if (raw[0] === '#') {
+    const tag = raw.slice(1);
+    return DIGITS_ONLY.test(tag) ? null : { type: 'hashtag', value: raw, tag };
   }
 
   return {

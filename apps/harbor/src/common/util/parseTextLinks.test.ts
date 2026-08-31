@@ -307,6 +307,57 @@ describe('parseTextLinks', () => {
     });
   });
 
+  describe('hashtags', () => {
+    it('detects a hashtag within surrounding text', () => {
+      expect(parseTextLinks('hey #some bye')).toEqual([
+        { type: 'text', value: 'hey ' },
+        { type: 'hashtag', value: '#some', tag: 'some' },
+        { type: 'text', value: ' bye' },
+      ]);
+    });
+
+    it('ends the hashtag at the first non-word character', () => {
+      expect(parseTextLinks('#foo.bar')).toEqual([
+        { type: 'hashtag', value: '#foo', tag: 'foo' },
+        { type: 'text', value: '.bar' },
+      ]);
+    });
+
+    it('allows underscores and digits', () => {
+      expect(parseTextLinks('#foo_bar2')).toEqual([
+        { type: 'hashtag', value: '#foo_bar2', tag: 'foo_bar2' },
+      ]);
+    });
+
+    it('detects a unicode hashtag', () => {
+      expect(parseTextLinks('#日本語')).toEqual([
+        { type: 'hashtag', value: '#日本語', tag: '日本語' },
+      ]);
+    });
+
+    it('leaves an all-digit hashtag as plain text', () => {
+      expect(parseTextLinks("we're #1 fans")).toEqual([
+        { type: 'text', value: "we're #1 fans" },
+      ]);
+    });
+
+    it('requires the hashtag to be standalone', () => {
+      expect(parseTextLinks('foo#bar and &#39;')).toEqual([
+        { type: 'text', value: 'foo#bar and &#39;' },
+      ]);
+    });
+
+    it('does not break a URL fragment', () => {
+      expect(parseTextLinks('https://example.com/a#frag')).toEqual([
+        {
+          type: 'link',
+          value: 'https://example.com/a#frag',
+          url: 'https://example.com/a#frag',
+        },
+      ]);
+    });
+  });
+
   describe('multiple links & surrounding text', () => {
     it('detects several links with text between them', () => {
       const segs = parseTextLinks(
@@ -352,6 +403,7 @@ describe('parseTextLinks', () => {
       'hey @user@domain.com and a@b.com and example.net',
       `mention @${HEX64} mid sentence`,
       'multi https://x.com www.y.org example.net z',
+      'tags #some and #foo.bar, plus foo#bar and #1',
       '',
     ])('rejoining all segment values reproduces the input: %s', (input) => {
       const joined = parseTextLinks(input)
