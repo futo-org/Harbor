@@ -12,18 +12,19 @@ const TLD =
 // A dotted hostname whose final label is a known TLD.
 const DOMAIN = `(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+${TLD}`;
 
-// A polycentric identity: exactly 64 hex chars (a SHA-256 hash). The lookahead
-// rejects a longer hex run rather than matching a 64-char prefix of it.
-const IDENTITY = '[0-9a-fA-F]{64}(?![0-9a-fA-F])';
+// A polycentric identity: exactly 64 hex chars (a SHA-256 hash).
+const HEX64 = /^[0-9a-fA-F]{64}$/;
 
-// Matches, in order: alias mentions (`@user@domain.tld`), identity mentions
-// (`@<64-hex>`), http(s) URLs, `www.` domains, and bare domains that end in a
-// known TLD (optionally followed by a path/query). Mention alternatives come
-// first so `@user@domain.com` is taken whole instead of the bare domain inside.
+// Matches, in order: curly mentions (`@{identity,displayName}` — braces so the
+// display name may contain spaces), any other standalone `@…` run (classified
+// as identity/alias or rejected in code below), http(s) URLs, `www.` domains,
+// and bare domains that end in a known TLD (optionally followed by a
+// path/query). The `@` alternatives come first so a mention is taken whole
+// instead of the bare domain inside it.
 const LINK_REGEX = new RegExp(
   [
-    `@[a-z0-9._-]+@${DOMAIN}`,
-    `@${IDENTITY}`,
+    '@\\{[^}]+\\}',
+    '@[^\\s]+',
     'https?:\\/\\/[^\\s]+',
     'www\\.[^\\s]+',
     `${DOMAIN}(?:\\/[^\\s]*)?`,
@@ -34,12 +35,26 @@ const LINK_REGEX = new RegExp(
 // Punctuation that commonly trails a URL in prose but isn't part of it.
 const TRAILING_PUNCT = /[.,!?;:'")\]}]+$/;
 
+// A char that glues an `@` to the preceding word — an email's local part
+// (`a@b.com`, in any script) or another `@` — disqualifying it as a mention.
+const MENTION_PRECEDER = /[\p{L}\p{N}_@]/u;
+
+const HAS_SCHEME = /^https?:\/\//i;
+
 /**
- * Splits `text` into plain-text, link, and mention segments. Detects alias
- * mentions (`@user@domain.com`), identity mentions (`@<64-hex>`), http(s) URLs,
- * `www.` domains, and bare domains with a known TLD. Trailing sentence
- * punctuation is excluded, and a bare domain preceded by `@` (an email's domain
- * part) is left as plain text.
+ * Splits `text` into plain-text, link, and mention segments.
+ *
+ * A standalone `@` (not preceded by a word character, so an email's `@` never
+ * starts one) begins a mention:
+ * - `@{identity,displayName}` / `@{identity}` — identity mention rendered as
+ *   the bare display name; identity must be 64 hex chars. The default form.
+ * - `@<64-hex>` — identity mention.
+ * - anything else containing a dot (`@user@domain.com`, `@domain.com`) — alias
+ *   mention.
+ * - otherwise it's left as plain text.
+ *
+ * Links are http(s) URLs, `www.` domains, and bare domains with a known TLD.
+ * Trailing sentence punctuation is excluded.
  */
 export function parseTextLinks(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
@@ -55,30 +70,51 @@ export function parseTextLinks(text: string): TextSegment[] {
     let raw = match[0];
     const isMention = raw[0] === '@';
 
-    // Skip an email's domain part; mentions start with `@` themselves.
-    if (!isMention && start > 0 && text[start - 1] === '@') continue;
+    // Mentions must be standalone: skip an email's `@` (`a@b.com`), which also
+    // keeps its domain part from being linkified (the skip consumes the run).
+    if (isMention && start > 0 && MENTION_PRECEDER.test(text[start - 1])) {
+      continue;
+    }
 
-    const trail = raw.match(TRAILING_PUNCT)?.[0] ?? '';
-    if (trail) raw = raw.slice(0, raw.length - trail.length);
-    if (!raw) continue;
+    // A curly mention ends at its `}`; don't strip that as punctuation.
+    const isCurly = isMention && raw[1] === '{' && raw.endsWith('}');
+
+    if (!isCurly) {
+      const trail = raw.match(TRAILING_PUNCT)?.[0] ?? '';
+      if (trail) raw = raw.slice(0, raw.length - trail.length);
+      if (!raw) continue;
+    }
+
+    let segment: TextSegment;
+
+    if (isCurly) {
+      const inner = raw.slice(2, -1);
+      const comma = inner.indexOf(',');
+      const identity = comma === -1 ? inner : inner.slice(0, comma);
+      if (!HEX64.test(identity)) continue;
+      // With a display name, render it bare; `@` is only shown for the
+      // identity/alias forms.
+      const value = comma === -1 ? `@${identity}` : inner.slice(comma + 1);
+      segment = { type: 'identity', value, identity };
+    } else if (isMention) {
+      const body = raw.slice(1);
+      if (HEX64.test(body)) {
+        segment = { type: 'identity', value: raw, identity: body };
+      } else if (body.includes('.')) {
+        segment = { type: 'alias', value: raw, alias: body };
+      } else {
+        continue;
+      }
+    } else {
+      const url = HAS_SCHEME.test(raw) ? raw : `https://${raw}`;
+      segment = { type: 'link', value: raw, url };
+    }
 
     if (start > lastIndex) {
       segments.push({ type: 'text', value: text.slice(lastIndex, start) });
     }
 
-    if (isMention) {
-      // Drop the leading `@` for routing; keep it in `value` for display. A
-      // second `@` distinguishes an alias (`@user@domain`) from an identity.
-      const body = raw.slice(1);
-      if (body.includes('@')) {
-        segments.push({ type: 'alias', value: raw, alias: body });
-      } else {
-        segments.push({ type: 'identity', value: raw, identity: body });
-      }
-    } else {
-      const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-      segments.push({ type: 'link', value: raw, url });
-    }
+    segments.push(segment);
 
     // Resume scanning after the match, leaving any trailing punctuation
     // to be picked up as plain text.

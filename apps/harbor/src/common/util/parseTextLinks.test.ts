@@ -202,8 +202,72 @@ describe('parseTextLinks', () => {
       expect(aliases('reach me@example.com please')).toEqual([]);
     });
 
-    it('does not match `@user@` with no TLD', () => {
+    it('does not treat a non-ASCII email as a mention', () => {
+      expect(aliases('reach andré@example.com or 漢字@example.com')).toEqual(
+        [],
+      );
+    });
+
+    it('allows punctuation directly before a mention', () => {
+      expect(aliases('(@user@domain.com)').map((a) => a.alias)).toEqual([
+        'user@domain.com',
+      ]);
+    });
+
+    it('does not match `@user@localhost` (no dot)', () => {
       expect(aliases('@user@localhost here')).toEqual([]);
+    });
+
+    it('detects a bare `@domain.com` mention', () => {
+      expect(aliases('hi @domain.com')).toEqual([
+        { type: 'alias', value: '@domain.com', alias: 'domain.com' },
+      ]);
+    });
+
+    it('does not require a known TLD', () => {
+      expect(aliases('@user@some.internal')).toEqual([
+        {
+          type: 'alias',
+          value: '@user@some.internal',
+          alias: 'user@some.internal',
+        },
+      ]);
+    });
+
+    it('leaves a dotless `@word` as plain text', () => {
+      expect(parseTextLinks('hey @everyone hi')).toEqual([
+        { type: 'text', value: 'hey @everyone hi' },
+      ]);
+    });
+  });
+
+  describe('curly mentions', () => {
+    it('detects `@{identity,displayName}` and renders the display name', () => {
+      expect(parseTextLinks(`hi @{${HEX64},Jane Doe} bye`)).toEqual([
+        { type: 'text', value: 'hi ' },
+        { type: 'identity', value: 'Jane Doe', identity: HEX64 },
+        { type: 'text', value: ' bye' },
+      ]);
+    });
+
+    it('detects `@{identity}` without a display name', () => {
+      expect(parseTextLinks(`@{${HEX64}}`)).toEqual([
+        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
+      ]);
+    });
+
+    it('keeps trailing punctuation outside the braces as text', () => {
+      expect(parseTextLinks(`see @{${HEX64},Jane}.`)).toEqual([
+        { type: 'text', value: 'see ' },
+        { type: 'identity', value: 'Jane', identity: HEX64 },
+        { type: 'text', value: '.' },
+      ]);
+    });
+
+    it('rejects a non-hex identity', () => {
+      expect(parseTextLinks('@{notanidentity,Jane}')).toEqual([
+        { type: 'text', value: '@{notanidentity,Jane}' },
+      ]);
     });
   });
 
