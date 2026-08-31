@@ -142,7 +142,7 @@ export function ImageViewer({
   });
 
   const hasPrev = safeIndex > 0;
-  const hasNext = safeIndex < sources.length - 1;
+  const hasNext = safeIndex < count - 1;
 
   const chipBg = withHexOpacity(theme.palette.black, 'b0');
 
@@ -208,7 +208,7 @@ export function ImageViewer({
         </>
       )}
 
-      {sources.length > 1 && (
+      {count > 1 && (
         <View
           style={[
             Atoms.absolute,
@@ -217,7 +217,7 @@ export function ImageViewer({
           ]}
           pointerEvents="none"
         >
-          <NavDots count={sources.length} offset={offsetX} width={width} />
+          <NavDots count={count} offset={offsetX} width={width} />
         </View>
       )}
     </GestureHandlerRootView>
