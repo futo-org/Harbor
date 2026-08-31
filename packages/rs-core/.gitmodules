@@ -1,3 +1,0 @@
-[submodule "proto"]
-	path = proto
-	url = https://gitlab.futo.org/polycentric/lib-polycentric/protobuf-types.git
