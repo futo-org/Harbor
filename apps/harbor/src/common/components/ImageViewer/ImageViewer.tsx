@@ -1,6 +1,5 @@
-import { Text } from '@/src/common/components/primitives';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme, withHexOpacity, Spacing } from '@/src/common/theme';
 import Icon from '@/src/common/components/Icon';
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
@@ -18,6 +17,8 @@ import { Backdrop } from './components/Backdrop';
 import { ImagePane } from './components/ImagePane';
 import { NavArrow } from './components/NavArrow';
 import { useImageViewerGestures } from './hooks/useImageViewerGestures';
+import { NavDots } from '@/src/common/components/ImageViewer/components/NavDots';
+import { isWeb } from '@/src/common/util/platform';
 
 /**
  * Full-screen viewer for any `ImageSet`s (post attachments, avatars,
@@ -37,6 +38,10 @@ export function ImageViewer({
   onClose: () => void;
   onIndexChange?: (index: number) => void;
 }) {
+  const [showNavArrows] = useState(
+    () => isWeb && !matchMedia('(pointer: coarse)').matches,
+  );
+
   const client = usePolycentric();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -196,30 +201,23 @@ export function ImageViewer({
         <Icon name="close" size={24} color="white" />
       </Pressable>
 
-      {hasPrev && <NavArrow side="left" onPress={goPrev} bg={chipBg} />}
-      {hasNext && <NavArrow side="right" onPress={goNext} bg={chipBg} />}
+      {showNavArrows && (
+        <>
+          {hasPrev && <NavArrow side="left" onPress={goPrev} bg={chipBg} />}
+          {hasNext && <NavArrow side="right" onPress={goNext} bg={chipBg} />}
+        </>
+      )}
 
       {sources.length > 1 && (
         <View
-          pointerEvents="none"
           style={[
             Atoms.absolute,
             Atoms.items_center,
-            { top: 20, left: 0, right: 0 },
+            { bottom: insets.bottom + Spacing.lg, left: 0, right: 0 },
           ]}
+          pointerEvents="none"
         >
-          <View
-            style={[
-              Atoms.px_sm,
-              Atoms.py_xs,
-              Atoms.rounded_lg,
-              { backgroundColor: chipBg },
-            ]}
-          >
-            <Text variant="small" style={{ color: theme.palette.white }}>
-              {safeIndex + 1} / {sources.length}
-            </Text>
-          </View>
+          <NavDots count={sources.length} offset={offsetX} width={width} />
         </View>
       )}
     </GestureHandlerRootView>
