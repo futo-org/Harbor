@@ -1,6 +1,9 @@
 import { pickImageVariant } from '@/src/common/lib/polycentric-hooks/helpers';
 import type { v2 } from '@polycentric/react-native';
-import type { ImageViewerInput } from './useImageViewerStore';
+
+export type ImageViewerInput =
+  | v2.ImageSet
+  | { uri: string; aspectRatio?: number };
 
 /** Pull the largest available variant for the viewer. */
 export const VIEWER_TARGET = 2048;
@@ -11,18 +14,20 @@ type BlobDigest = NonNullable<NonNullable<v2.Image['blob']>['digest']>;
 export type ResolvedImageSource = { uris: string[]; aspectRatio?: number };
 
 /**
- * Resolve the image source from an array of mixed inputs
+ * Resolve the image source from an array of mixed inputs. `target` picks
+ * the variant size (defaults to the full-screen viewer's).
  */
 export function resolveImageSources(
   images: ImageViewerInput[],
   blobUrls: (digest: BlobDigest) => string[],
+  target: number = VIEWER_TARGET,
 ): ResolvedImageSource[] {
   return images
     .map((image): ResolvedImageSource | null => {
       if ('uri' in image) {
         return { uris: [image.uri], aspectRatio: image.aspectRatio };
       }
-      const variant = pickImageVariant(image, VIEWER_TARGET);
+      const variant = pickImageVariant(image, target);
       const digest = variant?.blob?.digest;
       if (!digest) return null;
       const uris = blobUrls(digest);

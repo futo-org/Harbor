@@ -124,7 +124,7 @@ export function PostContentQuote({
       ) : null}
       {post.images?.length > 0 ? (
         <View style={Atoms.mt_xs}>
-          <PostImages images={post.images} />
+          <PostImages post={post} />
         </View>
       ) : null}
     </Pressable>

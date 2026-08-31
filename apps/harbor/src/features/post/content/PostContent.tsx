@@ -59,7 +59,7 @@ export const PostContent = memo(function PostContent({
       {post.links?.[0] ? (
         <LinkPreviewCard link={post.links[0]} compact={compactLinkPreview} />
       ) : null}
-      {post.images?.length > 0 && <PostImages images={post.images} />}
+      {post.images?.length > 0 && <PostImages post={post} />}
       {post.quoteId ? (
         <PostContentQuote quoteId={post.quoteId} quotePost={post.quotePost} />
       ) : null}
