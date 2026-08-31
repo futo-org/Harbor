@@ -1,0 +1,6 @@
+# Loads every page object, so flows reference ${output.<screen>.<element>}
+# rather than the labels themselves.
+- runScript: onboarding.js
+- runScript: nav.js
+- runScript: composer.js
+- runScript: post.js

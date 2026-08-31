@@ -220,10 +220,20 @@ async fn fetch_metadata(
         })?;
 
     if !resp.status().is_success() {
-        return Err(ScrapeFailure::Reported(Status::unavailable(format!(
-            "scraper returned status {}",
-            resp.status()
-        ))));
+        let status = resp.status();
+        // The scraper now propagates the *target's* status: a 4xx is the target's
+        // own response (gone/forbidden/rate-limited) — a property of the URL, so
+        // cacheable; a 5xx means the scraper itself failed to fetch — transient
+        // infra trouble, so never cached and surfaced as unreachable.
+        return Err(if status.is_server_error() {
+            ScrapeFailure::Unreachable(Status::unavailable(format!(
+                "scraper failed to fetch target (status {status})"
+            )))
+        } else {
+            ScrapeFailure::Reported(Status::unavailable(format!(
+                "target responded with status {status}"
+            )))
+        });
     }
 
     let raw = resp.text().await.map_err(|e| {

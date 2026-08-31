@@ -268,10 +268,6 @@ push-notifications-image:
     SERVICE_NAME: scraper
     SERVICE_DIR: scraper
 
-# Fast-feedback typecheck. The scraper's `build` script is `tsc -p .`; the image
-# build also compiles, so this just surfaces type errors before the heavier
-# image job. PUPPETEER_SKIP_DOWNLOAD stops `pnpm install` from fetching Chromium
-# (the runtime image provides a system one).
 scraper-typecheck:
   extends: .scraper-workflow
   image: node:24-slim
@@ -284,6 +280,46 @@ scraper-typecheck:
     - pnpm install
   script:
     - pnpm --filter @polycentric/scraper build
+
+scraper-test:
+  extends: .scraper-workflow
+  image: node:24-slim
+  stage: test
+  variables:
+    PUPPETEER_SKIP_DOWNLOAD: '1'
+  before_script:
+    - npm install -g pnpm@10
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+  script:
+    - pnpm --filter @polycentric/scraper test:ci
+  artifacts:
+    when: always
+    reports:
+      junit: services/scraper/junit.xml
+
+scraper-integration:
+  extends: .scraper-workflow
+  image: node:24-slim
+  stage: test
+  allow_failure: true
+  variables:
+    PUPPETEER_SKIP_DOWNLOAD: '1'
+    PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends chromium && rm -rf /var/lib/apt/lists/*
+    - npm install -g pnpm@10
+    - pnpm config set @polycentric:registry https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/
+    - pnpm install
+  script:
+    - pnpm --filter @polycentric/scraper test:integration
+  artifacts:
+    when: always
+    reports:
+      junit: services/scraper/junit.xml
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - !reference [.scraper-workflow, rules]
 
 scraper-image:
   extends:
@@ -360,7 +396,7 @@ verifier-bot-tests:
   needs:
     - job: js-sdks-build
       artifacts: true
-    - job: rs-core-wasm-build
+    - job: rs-core-libraries
       artifacts: true
   variables:
     PUPPETEER_SKIP_DOWNLOAD: '1'
@@ -413,7 +449,7 @@ verifier-bot-image:
   needs:
     - job: js-sdks-build
       artifacts: true
-    - job: rs-core-wasm-build
+    - job: rs-core-libraries
       artifacts: true
   rules:
     - !reference [.verifier-bot-workflow, rules]

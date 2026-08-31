@@ -11,6 +11,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
+use crate::lock::LockRecover;
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 
 /// Tuple that uniquely identifies an `EventBundle` by its underlying
@@ -72,7 +73,7 @@ pub fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>)
     let bundles: Vec<EventBundle> = hints.into_iter().filter_map(|h| h.event_bundle).collect();
 
     if !bundles.is_empty() {
-        client.lock().unwrap().copy_bundles(bundles);
+        client.lock_recover().copy_bundles(bundles);
     }
 }
 
@@ -109,7 +110,7 @@ pub fn merge_bundle_response<T: EventBundleResponse>(
     merge_event_hints(merged.hints_mut());
 
     {
-        let c = client.lock().unwrap();
+        let c = client.lock_recover();
         retain_validated_bundles(&c, merged.bundles_mut());
         retain_validated_hints(&c, merged.hints_mut());
     }

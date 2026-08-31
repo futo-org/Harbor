@@ -8,6 +8,10 @@ publish = false
 name = "gen-data"
 path = "src/gen-data.rs"
 
+[[bin]]
+name = "time"
+path = "src/time.rs"
+
 [dependencies]
 ed25519-dalek.workspace = true
 polycentric-common = { workspace = true, features = ["transport"] }

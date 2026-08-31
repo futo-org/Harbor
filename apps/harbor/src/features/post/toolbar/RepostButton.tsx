@@ -57,6 +57,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
       icon="repost"
       active={hasReposted}
       color={'positive_500'}
+      accessibilityLabel="Repost or quote"
     />
   );
 

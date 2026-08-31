@@ -6,7 +6,6 @@ import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { router, usePathname } from 'expo-router';
 import { Routes } from '@/src/common/constants';
 import FollowButton from '@/src/features/follow/FollowButton';
-import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { useSuggestedFollows } from '@/src/features/follow/hooks/useSuggestedFollows';
 import { FetchMode } from '@polycentric/react-native';
 
@@ -31,7 +30,7 @@ export function SuggestedFollowWidget() {
     router.push(Routes.tabs.explore.people);
   };
 
-  if (!active) return null;
+  if (!active || !entries.length) return null;
 
   return (
     <View
@@ -57,7 +56,7 @@ export function SuggestedFollowWidget() {
             accessibilityLabel="Loading suggestions"
           />
         </View>
-      ) : entries.length > 0 ? (
+      ) : (
         <>
           <View>
             {entries.map((item) => (
@@ -77,8 +76,6 @@ export function SuggestedFollowWidget() {
             />
           )}
         </>
-      ) : (
-        <ListEmpty>No people to suggest yet</ListEmpty>
       )}
     </View>
   );

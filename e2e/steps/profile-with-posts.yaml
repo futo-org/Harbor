@@ -1,0 +1,41 @@
+# Creates an identity, publishes eight posts and opens its profile. Eight
+# two-line posts outgrow an 800px viewport, so the oldest post, "Maestro
+# post 1", is only reachable by scrolling; the newest is "Maestro post 8".
+- runFlow: create-identity.yaml
+- runFlow:
+    file: publish-post.yaml
+    env:
+      TEXT: Maestro post 1. Long enough to wrap onto a second line so that the feed outgrows the screen.
+- runFlow:
+    file: publish-post.yaml
+    env:
+      TEXT: Maestro post 2. Long enough to wrap onto a second line so that the feed outgrows the screen.
+- runFlow:
+    file: publish-post.yaml
+    env:
+      TEXT: Maestro post 3. Long enough to wrap onto a second line so that the feed outgrows the screen.
+- runFlow:
+    file: publish-post.yaml
+    env:
+      TEXT: Maestro post 4. Long enough to wrap onto a second line so that the feed outgrows the screen.
+- runFlow:
+    file: publish-post.yaml
+    env:
+      TEXT: Maestro post 5. Long enough to wrap onto a second line so that the feed outgrows the screen.
+- runFlow:
+    file: publish-post.yaml
+    env:
+      TEXT: Maestro post 6. Long enough to wrap onto a second line so that the feed outgrows the screen.
+- runFlow:
+    file: publish-post.yaml
+    env:
+      TEXT: Maestro post 7. Long enough to wrap onto a second line so that the feed outgrows the screen.
+- runFlow:
+    file: publish-post.yaml
+    env:
+      TEXT: Maestro post 8. Long enough to wrap onto a second line so that the feed outgrows the screen.
+- tapOn:
+    id: ${output.nav.profile}
+- extendedWaitUntil:
+    visible: Maestro post 8
+    timeout: 30000

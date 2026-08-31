@@ -233,6 +233,76 @@ async fn suggest_follow_with_profile_updates() {
 }
 
 #[tokio::test]
+async fn suggest_follow_no_duplicate_identities() {
+    // Create an identity with multiple identity and profile events, ensure we
+    // only return the latests of both kinds.
+    let mut client = TestClient::new().await;
+    client.second_identity(DEFAULT_CREATED_AT);
+    client.profile_update(
+        ProfileUpdate {
+            name: Some(random_string()),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        },
+        DEFAULT_CREATED_AT,
+    );
+    client.profile_update(
+        ProfileUpdate {
+            name: Some(random_string()),
+            avatar: None,
+            banner: None,
+            description: Some(random_string()),
+            alias: None,
+        },
+        DEFAULT_CREATED_AT,
+    );
+    client.submit_events().await;
+    let suggested = client.identity();
+
+    let mut client = TestClient::new().await;
+    client.profile_update(
+        ProfileUpdate {
+            name: Some(random_string()),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        },
+        DEFAULT_CREATED_AT,
+    );
+    // Duplicate identitiy and profile events.
+    client.pending.extend(client.pending.clone());
+    client.follow_identity(suggested.to_owned(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
+    let followee = client.identity().to_owned();
+
+    let mut client = TestClient::new().await;
+    client.follow_identity(followee.clone(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
+
+    let expected_hints = vec![
+        ExpectedHint {
+            identity: suggested.to_owned(),
+            expect_profile: true,
+            expect_follow: Vec::new(),
+        },
+        ExpectedHint {
+            identity: followee.clone(),
+            expect_profile: true,
+            expect_follow: vec![suggested.to_owned()],
+        },
+    ];
+    let expected_suggestions = vec![ExpectedFollowSuggestion {
+        suggestion: suggested.to_owned(),
+        followers: vec![followee],
+    }];
+
+    suggest_follow(&client, expected_suggestions, expected_hints).await;
+}
+
+#[tokio::test]
 async fn suggest_follow_exclude_self() {
     // The client themselves.
     let mut client = TestClient::new().await;

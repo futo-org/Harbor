@@ -1,0 +1,9 @@
+- tapOn: ${output.onboarding.createIdentity}
+- tapOn: ${output.onboarding.displayName}
+- inputText: Maestro
+- tapOn: ${output.onboarding.continue}
+# Creating the identity publishes to the server, so give it room.
+- extendedWaitUntil:
+    visible:
+      id: ${output.nav.profile}
+    timeout: 120000

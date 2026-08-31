@@ -1,29 +1,52 @@
-use super::{ChildContext, map_db_err, split_event_key};
+use super::split_event_key;
 use crate::service::proto::Reaction;
-use ::entity::content_reaction_model as ContentReactionModel;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait};
+use entity::content_reaction_model as ContentReactionModel;
+use sea_orm::DbErr;
+use sea_orm::sea_query::{DynIden, Expr, InsertStatement, SelectStatement};
 use tonic::Status;
 
-pub(super) async fn add<C: ConnectionTrait>(
-    db: &C,
-    ctx: &ChildContext<'_>,
+pub(super) fn add_query(
     reaction: Reaction,
-) -> Result<(), Status> {
-    let key = split_event_key(reaction.event_key, "reaction content")?;
+    content_id: (DynIden, DynIden),
+) -> Result<InsertStatement, Status> {
+    let Reaction {
+        event_key,
+        emoji,
+        positive,
+    } = reaction;
+    let key = split_event_key(event_key, "reaction content")?;
 
-    ContentReactionModel::ActiveModel {
-        content_id: Set(ctx.content_id),
-        event_key_collection: Set(key.collection),
-        event_key_identity: Set(key.identity),
-        event_key_public_key_type: Set(key.public_key_type),
-        event_key_public_key: Set(key.public_key),
-        event_key_sequence: Set(key.sequence),
-        emoji: Set(reaction.emoji),
-        positive: Set(reaction.positive),
-    }
-    .insert(db)
-    .await
-    .map_err(map_db_err)?;
+    let mut query = InsertStatement::new();
+    query
+        .into_table(ContentReactionModel::Entity)
+        .columns([
+            ContentReactionModel::Column::ContentId,
+            ContentReactionModel::Column::EventKeyCollection,
+            ContentReactionModel::Column::EventKeyIdentity,
+            ContentReactionModel::Column::EventKeyPublicKeyType,
+            ContentReactionModel::Column::EventKeyPublicKey,
+            ContentReactionModel::Column::EventKeySequence,
+            ContentReactionModel::Column::Emoji,
+            ContentReactionModel::Column::Positive,
+        ])
+        .select_from({
+            let mut q = SelectStatement::new();
+            q.from(content_id.0.clone())
+                .expr(Expr::col(content_id))
+                .expr(Expr::from(key.collection))
+                .expr(Expr::from(key.identity))
+                .expr(Expr::from(key.public_key_type))
+                .expr(Expr::from(key.public_key))
+                .expr(Expr::from(key.sequence))
+                .expr(Expr::from(emoji))
+                .expr(Expr::from(positive));
+           q
+        })
+        .map_err(|err| {
+            let err = DbErr::Custom(format!("incorrect amount of values: {err}"));
+            tracing::error!(error = %err, "failed to create query to store reaction content");
+            Status::internal("internal server error")
+        })?;
 
-    Ok(())
+    Ok(query)
 }

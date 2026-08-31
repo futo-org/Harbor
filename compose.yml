@@ -20,7 +20,7 @@ services:
       dockerfile: services/server/Dockerfile
     ports:
       - ${POLYCENTRIC_SERVER_PORT:-3000}:3000
-    environment:
+    environment: &server-env
       - RUST_LOG=debug
       - DATABASE_URL=postgres://postgres:testing@postgres:5432
       - CONTENT_BLOB_OS_BUCKET=polycentric-blobs
@@ -52,6 +52,27 @@ services:
       kafka:
         condition: service_started
       scraper:
+        condition: service_started
+
+  # Background workers (`server workers`): consumes the `events` topic and
+  # materializes the `notifications` topic the push-notifications service
+  # reads. Same image and env as the server (prod runs it the same way, see
+  # deploy/charts/harbor-server/templates/workers-deployment.yaml).
+  server-workers:
+    profiles:
+      - push
+    build:
+      context: .
+      dockerfile: services/server/Dockerfile
+    command: ['/app/server', 'workers']
+    environment: *server-env
+    networks:
+      - default
+      - scraper_link
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
         condition: service_started
 
   scraper:
@@ -103,6 +124,33 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
+
+  # Opt-in, like moderation: `docker compose --profile push up -d`. Without
+  # the profile the app logs a harmless connection-refused on registration.
+  push-notifications:
+    profiles:
+      - push
+    build:
+      context: .
+      dockerfile: services/push-notifications/Dockerfile
+    ports:
+      - ${POLYCENTRIC_NOTIFICATIONS_PORT:-3001}:3001
+    environment:
+      - RUST_LOG=debug
+      - DATABASE_URL=postgres://postgres:testing@postgres:5432
+      - POLYCENTRIC_KAFKA_BROKERS=kafka:19092
+      # Must exactly match the server's POLYCENTRIC_SERVER_NAME — the consumer
+      # skips notifications whose Kafka SOURCE_SERVER header differs.
+      - POLYCENTRIC_MAIN_SERVER=${POLYCENTRIC_SERVER_NAME:-http://localhost:3000}
+      # Queried at push time for the sender's profile (name/avatar).
+      - POLYCENTRIC_QUERY_SERVERS=http://server:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      server:
+        condition: service_started
 
   rustfs:
     image: rustfs/rustfs:latest

@@ -55,6 +55,7 @@ export function ComposeSheet({
   ) : (
     <Button
       title={'Post'}
+      testID="composeSubmit"
       onPress={composer.handlePost}
       variant="primary"
       disabled={!composer.canPost}

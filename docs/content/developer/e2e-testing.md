@@ -17,6 +17,14 @@ pnpm test:e2e:android
 MAESTRO_APP_ID=org.futo.polycentric.staging pnpm test:e2e:android
 ```
 
+Flows name what the user does, not how the screen is built. Labels and ids
+live in page objects under `e2e/elements/`, one file per screen, loaded by
+`elements/load.yaml` at the top of every flow and referenced as
+`${output.<screen>.<element>}`; a renamed button is fixed in one place.
+Reusable actions such as creating an identity, publishing a post or opening a
+post's menu are sub-flows under `e2e/steps/`. Both directories sit outside
+`native/` and `web/`, so the runners never treat them as tests.
+
 Flows run against builds that carry their own JavaScript bundle, never a
 development build. A development build pulls its bundle from Metro over the
 local network, which iOS gates behind a permission prompt that resets on every
@@ -168,6 +176,18 @@ MAESTRO_WEB_URL=https://harbor.social pnpm test:e2e:web
 These run through `maestro-runner` like the native flows. Maestro's own web
 support is in beta and leaves its browser open once a flow ends, so the command
 never returns.
+
+Every flow starts with `steps/fresh-start.yaml`. The runner keeps one browser
+for the whole run and its `clearState` leaves IndexedDB and OPFS alone, where
+identities and events live, so the step wipes those itself before launching.
+The browser is 1280px wide, which puts the sidebar in its icon-only mode:
+its controls are matched by accessibility label, not text.
+
+The web driver has no relative selectors and passes nothing into
+`evalBrowserScript` or `runBrowserScript`, so a step that needs "the button
+inside this post" marks the post from a script and targets it with a `css`
+selector. Its visibility checks are about the DOM, not the viewport: an
+element scrolled off screen still counts as visible.
 
 ## In CI
 
