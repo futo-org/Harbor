@@ -38,6 +38,8 @@ export function ImageViewer({
   onClose: () => void;
   onIndexChange?: (index: number) => void;
 }) {
+  // Don't show nav arrows on devices where primary input is touch-based since
+  // swiping is preferable then
   const [showNavArrows] = useState(
     () => isWeb && !matchMedia('(pointer: coarse)').matches,
   );

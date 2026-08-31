@@ -41,6 +41,9 @@ export function NavDots({
   );
 }
 
+const INACTIVE_DOT_SCALE = 0.7;
+const INACTIVE_DOT_OPACITY = 0.3;
+
 function NavDot({
   index,
   offset,
@@ -50,24 +53,30 @@ function NavDot({
   offset: SharedValue<number>;
   width: number;
 }) {
-  const style = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      offset.value,
-      [(-index - 1) * width, -index * width, (-index + 1) * width],
-      [0.3, 1, 0.3],
-      'clamp',
-    ),
-    transform: [
-      {
-        scale: interpolate(
-          offset.value,
-          [(-index - 1) * width, -index * width, (-index + 1) * width],
-          [0.7, 1, 0.7],
-          'clamp',
-        ),
-      },
-    ],
-  }));
+  const style = useAnimatedStyle(() => {
+    const prev = (-index - 1) * width;
+    const target = -index * width;
+    const next = (-index + 1) * width;
+
+    return {
+      opacity: interpolate(
+        offset.value,
+        [prev, target, next],
+        [INACTIVE_DOT_OPACITY, 1, INACTIVE_DOT_OPACITY],
+        'clamp',
+      ),
+      transform: [
+        {
+          scale: interpolate(
+            offset.value,
+            [prev, target, next],
+            [INACTIVE_DOT_SCALE, 1, INACTIVE_DOT_SCALE],
+            'clamp',
+          ),
+        },
+      ],
+    };
+  });
 
   return (
     <Animated.View
