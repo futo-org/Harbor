@@ -47,6 +47,7 @@ mod m20260818_000001_qoute_table;
 mod m20260818_000002_reply_table;
 mod m20260818_000003_reaction_count_decay;
 mod m20260825_000001_default_follow_suggestions;
+mod m20260831_000001_always_include_hashtags_in_search_data;
 
 pub struct Migrator;
 
@@ -101,6 +102,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260818_000002_reply_table::Migration),
             Box::new(m20260818_000003_reaction_count_decay::Migration),
             Box::new(m20260825_000001_default_follow_suggestions::Migration),
+            Box::new(m20260831_000001_always_include_hashtags_in_search_data::Migration),
         ]
     }
 }
