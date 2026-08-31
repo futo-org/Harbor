@@ -35,9 +35,7 @@ pub fn process_image(
     height: u32,
     mode: ResizeMode,
 ) -> Result<ProcessedImage, ImageError> {
-    let src = ImageReader::new(Cursor::new(image))
-        .with_guessed_format()
-        .unwrap();
+    let src = ImageReader::new(Cursor::new(image)).with_guessed_format()?;
     let img = src.decode()?;
     let resized = match mode {
         ResizeMode::Fill => img.resize_to_fill(width, height, FilterType::Lanczos3),

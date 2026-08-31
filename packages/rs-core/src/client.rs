@@ -10,6 +10,7 @@ use polycentric_common::{
     },
 };
 
+use crate::lock::LockRecover;
 use crate::store::{
     content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
     identity_store::IdentityStore, keys::EventKey, meta_store::MetaStore,
@@ -50,30 +51,30 @@ impl PolycentricClient {
 
     /// Replace the list of gRPC servers this client knows about.
     pub fn set_servers(&self, servers: Vec<String>) {
-        *self.servers.lock().unwrap() = servers;
+        *self.servers.lock_recover() = servers;
     }
 
     /// Return a snapshot of the configured servers.
     pub fn servers(&self) -> Vec<String> {
-        self.servers.lock().unwrap().clone()
+        self.servers.lock_recover().clone()
     }
 
     /// Set the identity whose local state the client reads for viewer-specific
     /// rules, such as blocking posts from the user's blocked list
     pub fn set_active_identity(&self, identity: Option<String>) {
-        *self.active_identity.lock().unwrap() = identity;
-        self.blocked_identities.lock().unwrap().take();
+        *self.active_identity.lock_recover() = identity;
+        self.blocked_identities.lock_recover().take();
     }
 
     pub fn active_identity(&self) -> Option<String> {
-        self.active_identity.lock().unwrap().clone()
+        self.active_identity.lock_recover().clone()
     }
 
     /// Identities the active identity blocks, derived from its non-tombstoned
     /// social graph events. Empty when there is no active identity. Memoized
     /// until a copy into the event or content store invalidates it.
     pub fn blocked_identities(&self) -> Arc<HashSet<String>> {
-        if let Some(cached) = self.blocked_identities.lock().unwrap().clone() {
+        if let Some(cached) = self.blocked_identities.lock_recover().clone() {
             return cached;
         }
 
@@ -88,7 +89,7 @@ impl PolycentricClient {
             },
         });
 
-        *self.blocked_identities.lock().unwrap() = Some(Arc::clone(&blocked));
+        *self.blocked_identities.lock_recover() = Some(Arc::clone(&blocked));
         blocked
     }
 
@@ -98,7 +99,7 @@ impl PolycentricClient {
 
     /// Copy a signed event into the event store.
     pub fn copy_event(&mut self, signed_event: SignedEvent) -> Result<(), CoreError> {
-        self.blocked_identities.lock().unwrap().take();
+        self.blocked_identities.lock_recover().take();
 
         let event_key = EventKey::from_signed_event(&signed_event)?;
         let identity =
@@ -130,7 +131,7 @@ impl PolycentricClient {
             )));
         }
 
-        self.blocked_identities.lock().unwrap().take();
+        self.blocked_identities.lock_recover().take();
 
         if !self.content_store.insert(digest, content_bytes) {
             return Ok(());

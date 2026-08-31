@@ -7,8 +7,8 @@ use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use entity::{content_model, event_model};
 use sea_orm::sea_query::{Expr, Order, Value};
 use sea_orm::{
-    ConnectionTrait, EntityTrait, FromQueryResult, Iterable, JoinType,
-    QueryFilter, QueryOrder, QueryResult, QuerySelect, RelationTrait,
+    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iterable,
+    JoinType, QueryFilter, QueryOrder, QueryResult, QuerySelect, RelationTrait,
     TryGetError, TryGetableMany,
 };
 use std::collections::HashSet;
@@ -37,7 +37,7 @@ impl TryGetableMany for SearchUsersEvent {
         Ok(SearchUsersEvent {
             event: FromQueryResult::from_query_result(res, EVENT_PREFIX)?,
             content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
-            search_rank: res.try_get_by("search_rank")?,
+            search_rank: res.try_get_by(SEARCH_RANK_COLUMN)?,
             profile_name: res.try_get_by("profile_name")?,
         })
     }
@@ -65,10 +65,12 @@ impl TryGetableMany for SearchPostsEvent {
         Ok(SearchPostsEvent {
             event: FromQueryResult::from_query_result(res, EVENT_PREFIX)?,
             content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
-            search_rank: res.try_get_by("search_rank")?,
+            search_rank: res.try_get_by(SEARCH_RANK_COLUMN)?,
         })
     }
 }
+
+const SEARCH_RANK_COLUMN: &str = "search_rank";
 
 pub struct Query;
 
@@ -98,7 +100,7 @@ impl Query {
             // TODO: we can use ts_rank_cd as well here.
             .expr_as(
                 Expr::cust("ts_rank(search_data, search_query($1))"),
-                "search_rank",
+                SEARCH_RANK_COLUMN,
             )
             .expr_as(Expr::cust("content_profile_update.name"), "profile_name")
             .join(JoinType::InnerJoin, content_join())
@@ -113,8 +115,8 @@ impl Query {
 
         let (column, order) = sort_users_by_column(sort_by);
         QueryOrder::query(&mut query)
-            .order_by_expr(Expr::cust(column), order)
-            .order_by_expr(Expr::cust("events.id"), Order::Asc);
+            .order_by_expr(Expr::cust(column), order.clone())
+            .order_by_expr(Expr::cust("events.id"), order);
 
         match cursor_filter {
             CursorFilter::Forward(cur) => match cur {
@@ -220,7 +222,7 @@ impl Query {
             // TODO: we can use ts_rank_cd as well here.
             .expr_as(
                 Expr::cust("ts_rank(search_data, search_query($1))"),
-                "search_rank",
+                SEARCH_RANK_COLUMN,
             )
             .join(JoinType::InnerJoin, content_join())
             .join(
@@ -232,10 +234,10 @@ impl Query {
                 [search_query],
             ));
 
-        let (column, order) = sort_posts_by_column(sort_by);
+        let column = sort_posts_by_column(sort_by);
         QueryOrder::query(&mut query)
-            .order_by_expr(Expr::cust(column), order)
-            .order_by_expr(Expr::cust("events.id"), Order::Asc);
+            .order_by_expr(column, Order::Desc)
+            .order_by(event_model::Column::Id.as_column_ref(), Order::Desc);
 
         match cursor_filter {
             CursorFilter::Forward(cur) => match cur {
@@ -255,11 +257,11 @@ impl Query {
                             [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
-                            sorted_by: SortedPostsBy::Latest(synced_at),
+                            sorted_by: SortedPostsBy::Latest(created_at),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(content.synced_at, events.id) < ($1, $2)",
-                            [Value::from(*synced_at), Value::from(event_id)],
+                            "(events.created_at, events.id) < ($1, $2)",
+                            [Value::from(*created_at), Value::from(event_id)],
                         )),
                     };
                 }
@@ -283,11 +285,11 @@ impl Query {
                             [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
-                            sorted_by: SortedPostsBy::Latest(synced_at),
+                            sorted_by: SortedPostsBy::Latest(created_at),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(content.synced_at, events.id) > ($1, $2)",
-                            [Value::from(*synced_at), Value::from(event_id)],
+                            "(events.created_at, events.id) > ($1, $2)",
+                            [Value::from(*created_at), Value::from(event_id)],
                         )),
                     };
                 }
@@ -305,15 +307,17 @@ impl Query {
 
 fn sort_users_by_column(sort_by: SortUsersBy) -> (&'static str, Order) {
     match sort_by {
-        SortUsersBy::Default => ("search_rank", Order::Desc),
+        SortUsersBy::Default => (SEARCH_RANK_COLUMN, Order::Desc),
         SortUsersBy::Alpha => ("name", Order::Asc),
     }
 }
 
-fn sort_posts_by_column(sort_by: SortPostsBy) -> (&'static str, Order) {
+fn sort_posts_by_column(sort_by: SortPostsBy) -> Expr {
     match sort_by {
-        SortPostsBy::Default => ("search_rank", Order::Desc),
+        SortPostsBy::Default => Expr::col(SEARCH_RANK_COLUMN),
         SortPostsBy::Top => unimplemented!(),
-        SortPostsBy::Latest => ("content_synced_at", Order::Desc),
+        SortPostsBy::Latest => {
+            Expr::col(event_model::Column::CreatedAt.as_column_ref())
+        }
     }
 }

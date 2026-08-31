@@ -10,6 +10,7 @@ use futures::future::{Either, select};
 use futures_timer::Delay;
 
 use crate::client::PolycentricClient;
+use crate::lock::LockRecover;
 use crate::logging::log_warn;
 use crate::query::query_observable::{QueryResult, QueryStatus};
 use crate::rx::observable::{Observable, Subscriber};
@@ -71,15 +72,26 @@ fn spawn<F: std::future::Future<Output = ()> + 'static>(fut: F) {
     wasm_bindgen_futures::spawn_local(fut);
 }
 
-/// Lazily-initialized multi-threaded runtime used when the caller
-/// thread isn't already inside a tokio context.
+/// Lazily-initialized single-worker runtime used when the caller thread
+/// isn't already inside a tokio context. `None` if the runtime could not
+/// be built (thread or I/O driver creation failed).
 #[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
-fn fallback_runtime() -> &'static tokio::runtime::Runtime {
+fn fallback_runtime() -> Option<&'static tokio::runtime::Runtime> {
     use std::sync::OnceLock;
-    static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
-    RUNTIME.get_or_init(|| {
-        tokio::runtime::Runtime::new().expect("failed to build fallback tokio runtime")
-    })
+    static RUNTIME: OnceLock<Option<tokio::runtime::Runtime>> = OnceLock::new();
+    RUNTIME
+        .get_or_init(|| {
+            tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(1)
+                .thread_name("polycentric-core")
+                .enable_all()
+                .build()
+                .map_err(|e| {
+                    crate::logging::log_error(|| format!("failed to build tokio runtime: {e}"))
+                })
+                .ok()
+        })
+        .as_ref()
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
@@ -88,9 +100,14 @@ fn spawn<F: std::future::Future<Output = ()> + Send + 'static>(fut: F) {
         Ok(handle) => {
             handle.spawn(fut);
         }
-        Err(_) => {
-            fallback_runtime().spawn(fut);
-        }
+        Err(_) => match fallback_runtime() {
+            Some(runtime) => {
+                runtime.spawn(fut);
+            }
+            None => {
+                crate::logging::log_error(|| "no tokio runtime; dropping query task".to_string())
+            }
+        },
     }
 }
 
@@ -350,7 +367,7 @@ where
             let state = get_or_create_state(&queries, &query_key);
 
             let cached = {
-                let mut s = state.lock().unwrap();
+                let mut s = state.lock_recover();
                 compute_emission(&mut s, &merge_fn, &client)
             };
 
@@ -403,11 +420,11 @@ where
     /// Clear the data cache of every key under `prefix`, which is a key
     /// partition: `["feed"]` clears `["feed", "explore", …]` too.
     pub fn invalidate(&self, prefix: &QueryKey) {
-        for (key, state) in self.queries.lock().unwrap().iter() {
+        for (key, state) in self.queries.lock_recover().iter() {
             if !key.starts_with(prefix) {
                 continue;
             }
-            let mut state = state.lock().unwrap();
+            let mut state = state.lock_recover();
 
             // Clear cached server responses
             state.data.clear();
@@ -423,8 +440,8 @@ where
     /// notified — orchestration of in-flight observables lives outside
     /// the core.
     pub fn invalidate_all(&self) {
-        for state in self.queries.lock().unwrap().values() {
-            let mut state = state.lock().unwrap();
+        for state in self.queries.lock_recover().values() {
+            let mut state = state.lock_recover();
             state.data.clear();
             state.emitted = None;
             state.next_fanout(UpdateMode::Replace);
@@ -441,7 +458,7 @@ fn resolve_servers(
     if let Some(list) = override_servers {
         return list.to_vec();
     }
-    client.lock().unwrap().servers()
+    client.lock_recover().servers()
 }
 
 fn get_or_create_state<T>(
@@ -455,8 +472,7 @@ where
 
     if let Some(query_key) = query_key {
         queries
-            .lock()
-            .unwrap()
+            .lock_recover()
             .entry(query_key.clone())
             .or_insert_with(make_new_state)
             .clone()
@@ -484,7 +500,7 @@ fn spawn_fanout<T>(
 {
     // Initialize fan-out state
     let epoch = {
-        let mut state = state.lock().unwrap();
+        let mut state = state.lock_recover();
         state.next_fanout(update_mode)
     };
 
@@ -518,7 +534,7 @@ fn spawn_fanout<T>(
 
             // Lock the query state mutex and do what we need with it
             let (snapshot, error_msg, is_last) = {
-                let mut s = state.lock().unwrap();
+                let mut s = state.lock_recover();
 
                 // Update state
                 let pending_servers = pending.fetch_sub(1, Ordering::SeqCst) - 1;
@@ -741,7 +757,7 @@ mod tests {
     #[tokio::test]
     async fn a_merge_can_keep_the_order_it_emitted() {
         let client = Arc::new(Mutex::new(PolycentricClient::new()));
-        client.lock().unwrap().set_servers(vec!["s1".to_string()]);
+        client.lock_recover().set_servers(vec!["s1".to_string()]);
         let qc: QueryClient<Vec<u8>> = QueryClient::new(client);
         let key: QueryKey = vec!["feed".to_string()];
 
@@ -796,7 +812,7 @@ mod tests {
     #[tokio::test]
     async fn a_replace_fanout_emits_the_first_response() {
         let client = Arc::new(Mutex::new(PolycentricClient::new()));
-        client.lock().unwrap().set_servers(vec!["s1".to_string()]);
+        client.lock_recover().set_servers(vec!["s1".to_string()]);
         let qc: QueryClient<Vec<u8>> = QueryClient::new(client);
         let key: QueryKey = vec!["events".to_string()];
 
@@ -818,7 +834,7 @@ mod tests {
     #[tokio::test]
     async fn merge_fanouts_accumulate_batches() {
         let client = Arc::new(Mutex::new(PolycentricClient::new()));
-        client.lock().unwrap().set_servers(vec!["s1".to_string()]);
+        client.lock_recover().set_servers(vec!["s1".to_string()]);
         let qc: QueryClient<Vec<u8>> = QueryClient::new(client);
         let key: QueryKey = vec!["feed".to_string()];
 

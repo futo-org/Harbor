@@ -1,0 +1,21 @@
+# Opens the app with nothing stored, so onboarding shows. `clearState`
+# clears cookies, localStorage and the cache but not IndexedDB or OPFS,
+# where identities and events live. Those are wiped from a same-origin
+# page without the app on it, since the app keeps its database open.
+- openLink: ${MAESTRO_WEB_URL}/favicon.ico
+- evalBrowserScript:
+    script: |
+      for (const db of await indexedDB.databases()) {
+        await new Promise((resolve, reject) => {
+          const request = indexedDB.deleteDatabase(db.name);
+          request.onsuccess = resolve;
+          request.onerror = () => reject(request.error);
+        });
+      }
+      const root = await navigator.storage.getDirectory();
+      for await (const name of root.keys()) {
+        await root.removeEntry(name, { recursive: true });
+      }
+      return true;
+- launchApp:
+    clearState: true

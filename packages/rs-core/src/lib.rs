@@ -9,6 +9,7 @@ extern crate uniffi_runtime_wasm as _;
 pub mod api;
 pub mod client;
 pub mod identity;
+mod lock;
 pub mod logging;
 pub mod media;
 pub mod query;

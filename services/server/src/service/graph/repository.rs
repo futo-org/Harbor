@@ -8,8 +8,8 @@ use polycentric_common::models::collections;
 use prost::Message;
 use sea_orm::*;
 use sea_query::{
-    Asterisk, CommonTableExpression, Expr, Func, IntoColumnRef, PgFunc,
-    SelectStatement, UnionType, WithClause,
+    Asterisk, ColumnRef, CommonTableExpression, Expr, Func, IntoColumnRef,
+    PgFunc, SelectStatement, UnionType, WithClause,
 };
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -348,6 +348,34 @@ impl Query {
                     .not_in_subquery(select_following),
             );
 
+        // The latest identitiy events based on the follow suggestions.
+        let mut identity_events = SelectStatement::new();
+        identity_events
+            .distinct_on([EventModel::Column::Identity.as_column_ref()])
+            .expr(Expr::col(ColumnRef::Asterisk(Some(
+                EventModel::Entity.into(),
+            ))))
+            .expr_as(
+                Expr::col((SUGGESTIONS_TABLE, FOLLOWERS_COLUMN)),
+                FOLLOWERS_COLUMN,
+            )
+            .from(EventModel::Entity)
+            .inner_join(
+                SUGGESTIONS_TABLE,
+                Expr::col(EventModel::Column::Identity.as_column_ref()).eq(
+                    Expr::col((
+                        SUGGESTIONS_TABLE,
+                        FollowModel::Column::Followee,
+                    )),
+                ),
+            )
+            .cond_where(
+                Expr::col(EventModel::Column::Collection.as_column_ref())
+                    .eq(Expr::Constant(collections::IDENTITY.into())),
+            )
+            .order_by(EventModel::Column::Identity, Order::Asc)
+            .order_by(EventModel::Column::Sequence, Order::Desc);
+
         let mut query = EventModel::Entity::find().select_only();
         QuerySelect::query(&mut query).with_cte({
             let mut c = WithClause::new();
@@ -357,7 +385,16 @@ impl Query {
             suggestions_cte
                 .table_name(SUGGESTIONS_TABLE)
                 .query(suggestions);
-            c.recursive(false).cte(following_cte).cte(suggestions_cte);
+            let mut identity_events_cte = CommonTableExpression::new();
+            identity_events_cte
+                // NOTE: overwriting table name so that we don't have to rename
+                // the selects below.
+                .table_name(EventModel::Entity)
+                .query(identity_events);
+            c.recursive(false)
+                .cte(following_cte)
+                .cte(suggestions_cte)
+                .cte(identity_events_cte);
             c
         });
         query = select_model_columns(
@@ -371,37 +408,34 @@ impl Query {
             ContentModel::Column::iter(),
         );
         query = query.join(JoinType::InnerJoin, content_join());
-        QuerySelect::query(&mut query)
-            .inner_join(
-                SUGGESTIONS_TABLE,
-                Expr::col(EventModel::Column::Identity.as_column_ref()).eq(
-                    Expr::col((
-                        SUGGESTIONS_TABLE,
-                        FollowModel::Column::Followee,
-                    )),
-                ),
-            )
-            .expr_as(
-                Expr::col((SUGGESTIONS_TABLE, FOLLOWERS_COLUMN)),
-                FOLLOWERS_COLUMN,
-            )
-            .cond_where(
-                Expr::col(EventModel::Column::Collection.as_column_ref())
-                    .eq(Expr::Constant(collections::IDENTITY.into())),
-            );
+        QuerySelect::query(&mut query).expr_as(
+            Expr::col((EventModel::Entity, FOLLOWERS_COLUMN)),
+            FOLLOWERS_COLUMN,
+        );
 
         // NOTE: this ordering isn't very stable, as users following and
         // unfollowing users it will break this ordering between calls.
-        let order_column = Expr::from(
+        //
+        // COALESCE: array_length of an empty array is NULL, which would sort
+        // default suggestions (empty followers) first under DESC and make
+        // every cursor tuple comparison against them NULL (never matching).
+        // Mapping to 0 keeps them last and paginatable.
+        let order_column = Expr::from(Func::coalesce([
             Func::cust("array_length")
-                .arg(Expr::col((SUGGESTIONS_TABLE, FOLLOWERS_COLUMN)))
-                .arg(Expr::Constant(1.into())),
-        );
+                .arg(Expr::col((EventModel::Entity, FOLLOWERS_COLUMN)))
+                .arg(Expr::Constant(1.into()))
+                .into(),
+            Expr::Constant(0.into()),
+        ]));
+        // Both columns DESC: the cursor filters below compare the whole
+        // (order, id) tuple with </>, which is only correct when the sort
+        // direction is uniform. With id ASC, pages of tied follower counts
+        // would repeat forever.
         QuerySelect::query(&mut query)
             .order_by_expr(order_column.clone(), Order::Desc)
             .order_by_expr(
                 Expr::col(EventModel::Column::Id.as_column_ref()),
-                Order::Asc,
+                Order::Desc,
             );
 
         match cursor_filter {

@@ -10,6 +10,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
+use crate::lock::LockRecover;
 use crate::query::event::merge::{EventDedupKey, event_dedup_key, merge_event_hints};
 use crate::query::validation::retain_validated_hints;
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
@@ -82,7 +83,7 @@ fn merge_notification_responses(
     merge_event_hints(&mut merged.event_hints);
 
     {
-        let c = client.lock().unwrap();
+        let c = client.lock_recover();
         retain_validated_notifications(&c, &mut merged.notifications);
         retain_validated_hints(&c, &mut merged.event_hints);
     }
@@ -139,7 +140,7 @@ pub fn list_notifications(
                 bundles.extend(n.target_event);
             }
             if !bundles.is_empty() {
-                client.lock().unwrap().copy_bundles(bundles);
+                client.lock_recover().copy_bundles(bundles);
             }
             Ok(bytes)
         }

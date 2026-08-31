@@ -7,6 +7,8 @@ use std::sync::{Arc, LazyLock, RwLock};
 use tonic::metadata::AsciiMetadataValue;
 use tonic::{Request, Status};
 
+use crate::lock::RwLockRecover;
+
 /// Stop reusing a cached token this many seconds before it expires.
 const EXPIRY_MARGIN_SECONDS: u64 = 60;
 
@@ -42,13 +44,13 @@ static TOKENS: LazyLock<RwLock<HashMap<String, CachedBearer>>> = LazyLock::new(D
 
 /// Register the token provider and drop any previously cached tokens.
 pub fn set_auth_token_provider(provider: Arc<dyn AuthTokenProvider>) {
-    *PROVIDER.write().unwrap() = Some(provider);
+    *PROVIDER.write_recover() = Some(provider);
     clear_auth_tokens();
 }
 
 /// Drop all cached tokens, e.g. after an identity change.
 pub fn clear_auth_tokens() {
-    TOKENS.write().unwrap().clear();
+    TOKENS.write_recover().clear();
 }
 
 /// Adds `authorization: Bearer <token>` to each outgoing request.
@@ -78,16 +80,16 @@ pub async fn interceptor_for(server_url: &str) -> AuthInterceptor {
 /// The bearer header for `server_url`, cached until near expiry.
 async fn bearer_for(server_url: &str) -> Option<AsciiMetadataValue> {
     let now = now_secs();
-    if let Some(cached) = TOKENS.read().unwrap().get(server_url)
+    if let Some(cached) = TOKENS.read_recover().get(server_url)
         && now < cached.expires_at.saturating_sub(EXPIRY_MARGIN_SECONDS)
     {
         return Some(cached.bearer.clone());
     }
 
-    let provider = PROVIDER.read().unwrap().clone()?;
+    let provider = PROVIDER.read_recover().clone()?;
     let token = provider.auth_token(server_url.to_string()).await?;
     let bearer: AsciiMetadataValue = format!("Bearer {}", token.token).parse().ok()?;
-    TOKENS.write().unwrap().insert(
+    TOKENS.write_recover().insert(
         server_url.to_string(),
         CachedBearer {
             bearer: bearer.clone(),

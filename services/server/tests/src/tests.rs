@@ -224,6 +224,22 @@ impl TestClient {
         self.push_event_bundle(ContentBody::Identity(identity), created_at)
     }
 
+    pub fn second_identity(&mut self, created_at: u64) -> Vec<u8> {
+        self.set_identity(
+            Identity {
+                rotation_keys: vec![public_key_of(&self.key)],
+                signing_keys: vec![],
+                revocation_bounds: vec![],
+                servers: Some(ServerList {
+                    urls: vec![audience()],
+                }),
+                recovery_key: None,
+                recovery_signature: None,
+            },
+            created_at,
+        )
+    }
+
     pub fn profile_update(
         &mut self,
         update: ProfileUpdate,

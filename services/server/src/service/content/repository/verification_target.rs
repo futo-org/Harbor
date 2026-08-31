@@ -1,143 +1,82 @@
-use super::{ChildContext, map_db_err, split_event_key};
+use super::split_event_key;
 use crate::service::proto::VerificationTarget;
-use ::entity::content_verification_target_model as ContentVerificationTargetModel;
-use sea_orm::{ActiveValue::Set, ConnectionTrait, EntityTrait};
+use entity::content_verification_target_model as ContentVerificationTargetModel;
+use sea_orm::DbErr;
+use sea_orm::sea_query::{
+    CommonTableExpression, DynIden, Expr, InsertStatement, SelectStatement,
+    WithClause,
+};
 use tonic::Status;
 
-pub(super) async fn add<C: ConnectionTrait>(
-    db: &C,
-    ctx: &ChildContext<'_>,
+pub(super) fn add_query(
+    with: &mut WithClause,
     target: VerificationTarget,
-) -> Result<(), Status> {
-    let key = split_event_key(target.claim_event_key, "verification target")?;
+    content_id: (DynIden, DynIden),
+) -> Result<Option<InsertStatement>, Status> {
+    let VerificationTarget {
+        claim_event_key,
+        target_identities,
+    } = target;
+    let key = split_event_key(claim_event_key, "verification target")?;
 
-    // One row per target identity, all referencing the claim.
-    let rows: Vec<ContentVerificationTargetModel::ActiveModel> = target
-        .target_identities
-        .into_iter()
-        .map(
-            |target_identity| ContentVerificationTargetModel::ActiveModel {
-                content_id: Set(ctx.content_id),
-                target_identity: Set(target_identity),
-                claim_event_key_collection: Set(key.collection),
-                claim_event_key_identity: Set(key.identity.clone()),
-                claim_event_key_public_key_type: Set(key.public_key_type),
-                claim_event_key_public_key: Set(key.public_key.clone()),
-                claim_event_key_sequence: Set(key.sequence),
-            },
-        )
-        .collect();
-
-    if !rows.is_empty() {
-        ContentVerificationTargetModel::Entity::insert_many(rows)
-            .exec(db)
-            .await
-            .map_err(map_db_err)?;
+    if target_identities.is_empty() {
+        // SeaORM gets unhappy when we don't pass any values.
+        return Ok(None);
     }
 
-    Ok(())
-}
+    const VERIFICATION_KEY: &str = "verification_key";
+    let mut label_values_query = SelectStatement::new();
+    label_values_query
+        .expr_as(Expr::from(key.collection), "collection")
+        .expr_as(Expr::from(key.identity), "identity")
+        .expr_as(Expr::from(key.public_key_type), "public_key_type")
+        .expr_as(Expr::from(key.public_key), "public_key")
+        .expr_as(Expr::from(key.sequence), "sequence");
+    let mut cte = CommonTableExpression::new();
+    cte.table_name(VERIFICATION_KEY).query(label_values_query);
+    with.cte(cte);
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::service::proto::{EventKey, PublicKey};
-    use sea_orm::{DatabaseBackend, MockDatabase};
-    use tonic::Code;
+    const VERIFICATION_IDENTITIES: &str = "verification_identities";
+    let mut label_values_query = SelectStatement::new();
+    label_values_query
+        .expr_as(Expr::col(("identities", "column1")), "identity")
+        .from_values(target_identities, "identities");
+    let mut cte = CommonTableExpression::new();
+    cte.table_name(VERIFICATION_IDENTITIES)
+        .query(label_values_query);
+    with.cte(cte);
 
-    fn claim_key() -> EventKey {
-        EventKey {
-            collection: 8,
-            identity: "bob".to_string(),
-            signed_by: Some(PublicKey {
-                key_type: 1,
-                key: vec![0xAB],
-            }),
-            sequence: 3,
-        }
-    }
+    let mut query = InsertStatement::new();
+    query
+        .into_table(ContentVerificationTargetModel::Entity)
+        .columns([
+            ContentVerificationTargetModel::Column::ContentId,
+            ContentVerificationTargetModel::Column::TargetIdentity,
+            ContentVerificationTargetModel::Column::ClaimEventKeyCollection,
+            ContentVerificationTargetModel::Column::ClaimEventKeyIdentity,
+            ContentVerificationTargetModel::Column::ClaimEventKeyPublicKeyType,
+            ContentVerificationTargetModel::Column::ClaimEventKeyPublicKey,
+            ContentVerificationTargetModel::Column::ClaimEventKeySequence,
+        ])
+        .select_from({
+            let mut q = SelectStatement::new();
+            q.from(content_id.0.clone())
+                .from(VERIFICATION_KEY)
+                .from(VERIFICATION_IDENTITIES)
+                .expr(Expr::col(content_id))
+                .expr(Expr::col((VERIFICATION_IDENTITIES, "identity")))
+                .expr(Expr::col((VERIFICATION_KEY, "collection")))
+                .expr(Expr::col((VERIFICATION_KEY, "identity")))
+                .expr(Expr::col((VERIFICATION_KEY, "public_key_type")))
+                .expr(Expr::col((VERIFICATION_KEY, "public_key")))
+                .expr(Expr::col((VERIFICATION_KEY, "sequence")));
+            q
+        })
+        .map_err(|err| {
+            let err = DbErr::Custom(format!("incorrect amount of values: {err}"));
+            tracing::error!(error = %err, "failed to create query to store verification target content");
+            Status::internal("internal server error")
+        })?;
 
-    fn returned_row(
-        target_identity: &str,
-    ) -> ContentVerificationTargetModel::Model {
-        ContentVerificationTargetModel::Model {
-            content_id: 5,
-            target_identity: target_identity.to_string(),
-            claim_event_key_collection: 8,
-            claim_event_key_identity: "bob".to_string(),
-            claim_event_key_public_key_type: 1,
-            claim_event_key_public_key: vec![0xAB],
-            claim_event_key_sequence: 3,
-        }
-    }
-
-    #[tokio::test]
-    async fn inserts_one_row_per_target_identity() {
-        // insert_many on Postgres uses INSERT ... RETURNING, so the mock
-        // must hand back the inserted rows.
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![returned_row("x"), returned_row("y")]])
-            .into_connection();
-
-        let target = VerificationTarget {
-            claim_event_key: Some(claim_key()),
-            target_identities: vec!["x".to_string(), "y".to_string()],
-        };
-        add(
-            &db,
-            &ChildContext {
-                content_id: 5,
-                event_identity: "alice",
-            },
-            target,
-        )
-        .await
-        .unwrap();
-
-        let sql = format!("{:?}", db.into_transaction_log());
-        assert!(sql.contains("content_verification_target"), "{sql}");
-        assert!(sql.contains("claim_event_key_identity"), "{sql}");
-        assert!(sql.contains("target_identity"), "{sql}");
-    }
-
-    #[tokio::test]
-    async fn empty_targets_is_noop() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
-        let target = VerificationTarget {
-            claim_event_key: Some(claim_key()),
-            target_identities: vec![],
-        };
-        add(
-            &db,
-            &ChildContext {
-                content_id: 5,
-                event_identity: "alice",
-            },
-            target,
-        )
-        .await
-        .unwrap();
-        assert!(db.into_transaction_log().is_empty());
-    }
-
-    #[tokio::test]
-    async fn missing_claim_key_errors() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
-        let target = VerificationTarget {
-            claim_event_key: None,
-            target_identities: vec!["x".to_string()],
-        };
-        let err = add(
-            &db,
-            &ChildContext {
-                content_id: 5,
-                event_identity: "alice",
-            },
-            target,
-        )
-        .await
-        .unwrap_err();
-        assert_eq!(err.code(), Code::InvalidArgument);
-        assert!(db.into_transaction_log().is_empty());
-    }
+    Ok(Some(query))
 }

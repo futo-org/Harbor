@@ -24,6 +24,7 @@ export function ProfileRow({
   fallbackName,
   fallbackAlias,
   disabled,
+  activeStyle = 'highlight',
   style,
 }: {
   identity: string;
@@ -35,6 +36,7 @@ export function ProfileRow({
   fallbackName?: string | null;
   fallbackAlias?: string | null;
   disabled?: boolean;
+  activeStyle?: 'highlight' | 'none';
   style?: StyleProp<ViewStyle>;
 }) {
   const { theme } = useTheme();
@@ -47,9 +49,10 @@ export function ProfileRow({
       onPress={onPress}
       disabled={disabled}
       style={({ hovered, pressed }) => [
-        (hovered || pressed) && {
-          backgroundColor: theme.palette.neutral_25,
-        },
+        (hovered || pressed) &&
+          activeStyle === 'highlight' && {
+            backgroundColor: theme.palette.neutral_25,
+          },
         disabled && { opacity: 0.5 },
       ]}
     >

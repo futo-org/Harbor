@@ -205,7 +205,6 @@ export const Post = memo(function Post({
               <View
                 style={[
                   Atoms.flex_1,
-                  Atoms.mt_xs,
                   {
                     width: 2,
                     backgroundColor: withHexOpacity(

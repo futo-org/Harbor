@@ -3583,6 +3583,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
+name = "perf-tests"
+version = "0.0.0"
+dependencies = [
+ "ed25519-dalek",
+ "polycentric-common",
+ "prost",
+ "rand 0.10.1",
+ "sha2 0.10.9",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
 name = "petgraph"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

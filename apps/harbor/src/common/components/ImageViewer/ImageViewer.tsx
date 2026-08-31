@@ -2,9 +2,11 @@ import { Text } from '@/src/common/components/primitives';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import Icon from '@/src/common/components/Icon';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { resolveImageSources } from './resolveImageSources';
-import type { ImageViewerInput } from './useImageViewerStore';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import {
+  resolveImageSources,
+  type ImageViewerInput,
+} from './resolveImageSources';
 import { Image } from '@/src/common/components/Image';
 import {
   Platform,
@@ -48,10 +50,12 @@ export function ImageViewer({
   images,
   initialIndex,
   onClose,
+  onIndexChange,
 }: {
   images: ImageViewerInput[];
   initialIndex: number;
   onClose: () => void;
+  onIndexChange?: (index: number) => void;
 }) {
   const client = usePolycentric();
   const { theme } = useTheme();
@@ -72,6 +76,16 @@ export function ImageViewer({
     () => setIndex((i) => Math.min(sources.length - 1, i + 1)),
     [sources.length],
   );
+
+  // Report arrow/keyboard navigation, skipping the mount-time index.
+  const firstMount = useRef(true);
+  useEffect(() => {
+    if (firstMount.current) {
+      firstMount.current = false;
+      return;
+    }
+    onIndexChange?.(index);
+  }, [index, onIndexChange]);
 
   // Web: Esc closes, arrow keys navigate.
   useEffect(() => {
@@ -224,7 +238,6 @@ export function ImageViewer({
     };
   });
 
-  if (sources.length === 0) return null;
   const safeIndex = Math.min(index, sources.length - 1);
   const current = sources[safeIndex];
   const hasPrev = safeIndex > 0;
@@ -232,10 +245,10 @@ export function ImageViewer({
 
   const chipBg = withHexOpacity(theme.palette.black, 'b0');
 
-  // Rendered as a full-screen route (app/image-viewer.tsx) declaring
-  // `screenOrientation: 'all'`, so it rotates to landscape and fills the
-  // screen while the rest of the app stays portrait. The route provides
-  // the (transparent-modal) presentation; here we just fill it.
+  // Rendered by the image-viewer routes (post images, profile photo),
+  // declared with `orientation: 'all'`, so it rotates to landscape and
+  // fills the screen while the rest of the app stays portrait. The route
+  // provides the (transparent-modal) presentation; here we just fill it.
   return (
     <GestureHandlerRootView style={Atoms.flex_1}>
       <Animated.View
@@ -250,33 +263,38 @@ export function ImageViewer({
         onPress={onClose}
         style={[Atoms.flex_1, Atoms.items_center, Atoms.justify_center]}
       >
-        <GestureDetector gesture={gesture}>
-          <Animated.View
-            style={[
-              Atoms.items_center,
-              Atoms.justify_center,
-              { width: '100%', height: '88%' },
-              imageStyle,
-            ]}
-          >
-            {/* Swallow taps on the image itself so they don't dismiss;
-                  taps on the surrounding letterbox fall through to the
-                  backdrop and close. */}
-            <Pressable
-              onPress={(e) => e.stopPropagation?.()}
+        {/* With no sources (the route is still loading its data) render just
+        the backdrop and close button, so the viewer holds its place and can
+        still be dismissed. */}
+        {current && (
+          <GestureDetector gesture={gesture}>
+            <Animated.View
               style={[
-                Atoms.w_full,
-                { aspectRatio: current.aspectRatio ?? 1, maxHeight: '100%' },
+                Atoms.items_center,
+                Atoms.justify_center,
+                { width: '100%', height: '88%' },
+                imageStyle,
               ]}
             >
-              <Image
-                uris={current.uris}
-                contentFit="contain"
-                style={[Atoms.w_full, Atoms.h_full]}
-              />
-            </Pressable>
-          </Animated.View>
-        </GestureDetector>
+              {/* Swallow taps on the image itself so they don't dismiss;
+                  taps on the surrounding letterbox fall through to the
+                  backdrop and close. */}
+              <Pressable
+                onPress={(e) => e.stopPropagation?.()}
+                style={[
+                  Atoms.w_full,
+                  { aspectRatio: current.aspectRatio ?? 1, maxHeight: '100%' },
+                ]}
+              >
+                <Image
+                  uris={current.uris}
+                  contentFit="contain"
+                  style={[Atoms.w_full, Atoms.h_full]}
+                />
+              </Pressable>
+            </Animated.View>
+          </GestureDetector>
+        )}
 
         <Pressable
           onPress={(e) => {

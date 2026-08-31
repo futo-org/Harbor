@@ -1,5 +1,7 @@
 url: ${MAESTRO_WEB_URL}
 ---
-- assertVisible: 'Join Harbor'
-- assertVisible: 'Create new identity'
-- assertVisible: 'I already have an identity'
+- runFlow: ../elements/load.yaml
+- runFlow: ../steps/fresh-start.yaml
+- assertVisible: ${output.onboarding.title}
+- assertVisible: ${output.onboarding.createIdentity}
+- assertVisible: ${output.onboarding.haveIdentity}

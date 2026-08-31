@@ -1,21 +1,30 @@
-use super::{ChildContext, map_db_err};
 use crate::service::proto::Follow;
-use ::entity::content_follow_model as ContentFollowModel;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait};
-use tonic::Status;
+use entity::content_follow_model as ContentFollowModel;
+use sea_orm::DbErr;
+use sea_orm::sea_query::{DynIden, Expr, InsertStatement, SelectStatement};
 
-pub(super) async fn add<C: ConnectionTrait>(
-    db: &C,
-    ctx: &ChildContext<'_>,
+pub(super) fn add_query(
     follow: Follow,
-) -> Result<(), Status> {
-    ContentFollowModel::ActiveModel {
-        content_id: Set(ctx.content_id),
-        identity_id: Set(follow.identity),
-    }
-    .insert(db)
-    .await
-    .map_err(map_db_err)?;
+    content_id: (DynIden, DynIden),
+) -> Result<InsertStatement, DbErr> {
+    let Follow { identity } = follow;
+    let mut query = InsertStatement::new();
+    query
+        .into_table(ContentFollowModel::Entity)
+        .columns([
+            ContentFollowModel::Column::ContentId,
+            ContentFollowModel::Column::IdentityId,
+        ])
+        .select_from({
+            let mut q = SelectStatement::new();
+            q.from(content_id.0.clone())
+                .expr(Expr::col(content_id))
+                .expr(Expr::from(identity));
+            q
+        })
+        .map_err(|err| {
+            DbErr::Custom(format!("incorrect amount of values: {err}"))
+        })?;
 
-    Ok(())
+    Ok(query)
 }

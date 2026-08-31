@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = []
 # Enable generation of transport code.
-transport = []
+transport = ["tonic/transport"]
 
 [dependencies]
 thiserror.workspace = true

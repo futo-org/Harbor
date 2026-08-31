@@ -6,6 +6,7 @@ members = [
     "services/server/entity",
     "services/server/migration",
     "services/server/tests",
+    "services/server/perf-tests",
     "services/moderation",
     "services/push-notifications",
     "services/common/*",
