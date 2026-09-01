@@ -2,6 +2,7 @@ import {
   eventKeyId,
   decodeV2PostBundle,
   type PostData,
+  type PostLabel,
 } from '@/src/common/lib/polycentric-hooks';
 import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
@@ -9,6 +10,16 @@ import {
   type DecodedClaim,
 } from '@/src/features/verifications/hooks/useClaimById';
 import { v2 } from '@polycentric/react-native';
+
+/** Attach labels applied to `post` from the labels map. */
+function withLabels<T extends PostData | null | undefined>(
+  post: T,
+  labels: Map<string, PostLabel[]>,
+): T {
+  if (!post) return post;
+  const applied = labels.get(post.id);
+  return applied ? { ...post, labels: applied } : post;
+}
 
 /** Fields common to every notification. */
 type NotificationBase = {
@@ -111,6 +122,7 @@ function triggerInfo(
  *  when it is unparseable or of an unknown type. */
 function decodeNotification(
   notification: v2.Notification,
+  labels: Map<string, PostLabel[]>,
 ): NotificationData | null {
   const trigger = triggerInfo(notification.triggerEvent);
   if (!trigger) return null;
@@ -122,9 +134,12 @@ function decodeNotification(
   };
 
   // The post the action was taken against (your post). Follows have none.
-  const targetPost = notification.targetEvent
-    ? (decodeV2PostBundle(notification.targetEvent) ?? undefined)
-    : undefined;
+  const targetPost = withLabels(
+    notification.targetEvent
+      ? (decodeV2PostBundle(notification.targetEvent) ?? undefined)
+      : undefined,
+    labels,
+  );
 
   switch (notification.kind) {
     case v2.NotificationKind.FOLLOW:
@@ -133,7 +148,7 @@ function decodeNotification(
     case v2.NotificationKind.REPLY: {
       // The reply itself is the trigger event; drop it if it won't decode.
       const reply = notification.triggerEvent
-        ? decodeV2PostBundle(notification.triggerEvent)
+        ? withLabels(decodeV2PostBundle(notification.triggerEvent), labels)
         : null;
       if (!reply) return null;
       return { ...base, kind: 'reply', reply, targetPost };
@@ -145,7 +160,7 @@ function decodeNotification(
     case v2.NotificationKind.QUOTE: {
       // The quoting post is the trigger event; drop it if it won't decode.
       const quote = notification.triggerEvent
-        ? decodeV2PostBundle(notification.triggerEvent)
+        ? withLabels(decodeV2PostBundle(notification.triggerEvent), labels)
         : null;
       if (!quote) return null;
       return { ...base, kind: 'quote', quote, targetPost };
@@ -205,10 +220,11 @@ function decodeNotification(
 /** Decode a `ListNotificationsResponse` into renderable notifications. */
 export function decodeNotifications(
   response: v2.ListNotificationsResponse,
+  labels: Map<string, PostLabel[]>,
 ): NotificationData[] {
   const items: NotificationData[] = [];
   for (const notification of response.notifications) {
-    const decoded = decodeNotification(notification);
+    const decoded = decodeNotification(notification, labels);
     if (decoded) items.push(decoded);
   }
 

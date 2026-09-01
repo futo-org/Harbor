@@ -27,7 +27,7 @@ export {
 export {
   decodeBundle,
   decodePostBundle as decodeV2PostBundle,
-  decodeLabelsBundle,
+  labelMapFromSets,
   decodeFeedItems,
   extractFeedToken,
   shouldExtend,
@@ -57,4 +57,6 @@ export type {
   ContentKind,
   ContentBodyOf,
   DecodedBundle,
+  LabelSet,
+  PostLabel,
 } from './helpers';

@@ -9,6 +9,11 @@ export {
   FeedSort,
   FetchMode,
   isModerationLabel,
+  labelsChanged,
+  labelsFromFeedResponse,
+  labelsFromNotificationsResponse,
+  labelsFromSearchResponse,
+  labelsFromThreadResponse,
   moderationLabels,
   PolycentricCore,
   Query,
@@ -21,6 +26,8 @@ export type {
   EventKey,
   QueryResultFfi,
   QueryOpts,
+  LabelSet,
+  PostLabel,
 } from '@polycentric/rs-core-wasm/web';
 
 export * from '@polycentric/js-core';
