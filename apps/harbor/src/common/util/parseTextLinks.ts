@@ -1,9 +1,14 @@
-export type TextSegment =
+type SegmentBody =
   | { type: 'text'; value: string }
   | { type: 'link'; value: string; url: string }
   | { type: 'alias'; value: string; alias: string }
   | { type: 'identity'; value: string; identity: string }
   | { type: 'hashtag'; value: string; tag: string };
+
+// `start`/`end` are raw offsets into the source text ([start, end)). Note
+// `value` is the *rendered* text, which for curly mentions differs from the
+// raw slice — use the offsets, not value lengths, to map back to the source.
+export type TextSegment = SegmentBody & { start: number; end: number };
 
 // Common TLDs accepted for bare (scheme-less, non-www) domains. Keeping
 // this curated avoids turning things like "node.js" or "e.g." into links.
@@ -41,7 +46,7 @@ const TRAILING_PUNCT = /[.,!?;:'")\]}]+$/;
 // A char that glues an `@`/`#` to the preceding word — an email's local part
 // (`a@b.com`, in any script), `foo#bar`, another `@` — disqualifying it as a
 // mention or hashtag.
-const TOKEN_PRECEDER = /[\p{L}\p{N}_@]/u;
+export const TOKEN_PRECEDER = /[\p{L}\p{N}_@]/u;
 
 // A hashtag needs at least one non-digit, so prose like "we're #1" (and HTML
 // entities like `&#39;`) stays plain text.
@@ -102,10 +107,15 @@ export function parseTextLinks(text: string): TextSegment[] {
     if (!segment) continue;
 
     if (start > lastIndex) {
-      segments.push({ type: 'text', value: text.slice(lastIndex, start) });
+      segments.push({
+        type: 'text',
+        value: text.slice(lastIndex, start),
+        start: lastIndex,
+        end: start,
+      });
     }
 
-    segments.push(segment);
+    segments.push({ ...segment, start, end: start + raw.length });
 
     // Resume scanning after the match, leaving any trailing punctuation
     // to be picked up as plain text.
@@ -114,13 +124,18 @@ export function parseTextLinks(text: string): TextSegment[] {
   }
 
   if (lastIndex < text.length) {
-    segments.push({ type: 'text', value: text.slice(lastIndex) });
+    segments.push({
+      type: 'text',
+      value: text.slice(lastIndex),
+      start: lastIndex,
+      end: text.length,
+    });
   }
 
   return segments;
 }
 
-function parseSegment(raw: string, isCurly: boolean): TextSegment | null {
+function parseSegment(raw: string, isCurly: boolean): SegmentBody | null {
   if (isCurly) {
     const content = raw.slice(2, -1);
     const separatorIndex = content.indexOf(',');
