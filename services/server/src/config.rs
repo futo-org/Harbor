@@ -1,6 +1,7 @@
 //! Server configuration sourced from the environment.
 
 use std::sync::OnceLock;
+use std::time::Duration;
 
 pub struct Config {
     /// The canonical URL of this server (`POLYCENTRIC_SERVER_NAME`). Also
@@ -39,6 +40,8 @@ pub struct Config {
     /// The number of hours in which to consider the reactions to compute the
     /// dynamic gravity value. See `dynamic_feeds_gravity_per_reaction`.
     pub dynamic_feeds_gravity_hours: usize,
+    /// How often the decayed reaction counts should be updated.
+    pub feed_count_update_frequency: Duration,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -85,6 +88,14 @@ pub fn init() -> &'static Config {
             .ok()
             .and_then(|s| s.trim().parse().ok())
             .unwrap_or(24),
+            feed_count_update_frequency: Duration::from_secs(
+                std::env::var(
+                    "POLYCENTRIC_FEEDS_GRAVITY_COUNTS_UPDATE_FREQUENCY_SECS",
+                )
+                .ok()
+                .and_then(|s| s.trim().parse().ok())
+                .unwrap_or(5 * 60), // 5 minutes (as seconds).
+            ),
             server_name,
         }
     })
