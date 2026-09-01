@@ -53,6 +53,7 @@ function NavDot({
   offset: SharedValue<number>;
   width: number;
 }) {
+  const { theme } = useTheme();
   const style = useAnimatedStyle(() => {
     const prev = (-index - 1) * width;
     const target = -index * width;
@@ -85,7 +86,7 @@ function NavDot({
           width: 10,
           height: 10,
           borderRadius: 5,
-          backgroundColor: 'white',
+          backgroundColor: theme.palette.white,
         },
         style,
       ]}
