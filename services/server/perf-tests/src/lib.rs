@@ -9,10 +9,10 @@ use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::{
-    Content, ContentDigest, ContentDigestType, Delete, Event, EventBundle,
-    EventKey, Follow, Identity, KeyType, Labels, Post, PostReply,
-    ProfileUpdate, PublicKey, PutEventsRequest, Reaction, Repost,
-    SerializedContent, SignedEvent, VectorClock,
+    Block, Content, ContentDigest, ContentDigestType, Delete, Event,
+    EventBundle, EventKey, Follow, Identity, KeyType, Labels, Post, PostReply,
+    ProfileUpdate, PublicKey, PutEventsRequest, Reaction, Report,
+    ReportCategory, Repost, SerializedContent, SignedEvent, VectorClock,
 };
 use prost::Message;
 
@@ -158,6 +158,21 @@ impl Client {
         self.push_event_bundle(ContentBody::Labels(labels), created_at)
     }
 
+    pub fn add_labels(
+        &mut self,
+        on: EventKey,
+        labels: Vec<String>,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.label(
+            Labels {
+                event_key: Some(on),
+                label_values: labels,
+            },
+            created_at,
+        )
+    }
+
     pub fn follow(&mut self, follow: Follow, created_at: u64) -> Vec<u8> {
         self.push_event_bundle(ContentBody::Follow(follow), created_at)
     }
@@ -168,6 +183,18 @@ impl Client {
         created_at: u64,
     ) -> Vec<u8> {
         self.follow(Follow { identity }, created_at)
+    }
+
+    pub fn block(&mut self, block: Block, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Block(block), created_at)
+    }
+
+    pub fn block_identity(
+        &mut self,
+        identity: String,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.block(Block { identity }, created_at)
     }
 
     pub fn react(&mut self, reaction: Reaction, created_at: u64) -> Vec<u8> {
@@ -209,6 +236,26 @@ impl Client {
             post: Some(event_key),
         };
         self.repost(repost, created_at)
+    }
+
+    pub fn report(&mut self, report: Report, created_at: u64) -> Vec<u8> {
+        self.push_event_bundle(ContentBody::Report(report), created_at)
+    }
+
+    pub fn report_key(
+        &mut self,
+        event_key: EventKey,
+        category: ReportCategory,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.report(
+            Report {
+                event_key: Some(event_key),
+                category: category as _,
+                additional_info: String::new(),
+            },
+            created_at,
+        )
     }
 
     pub fn delete(&mut self, delete: Delete, created_at: u64) -> Vec<u8> {
@@ -344,7 +391,7 @@ impl Client {
     */
 }
 
-fn public_key_of(key: &SigningKey) -> PublicKey {
+pub fn public_key_of(key: &SigningKey) -> PublicKey {
     PublicKey {
         key_type: KeyType::Ed25519.into(),
         key: key.verifying_key().as_bytes().to_vec(),
