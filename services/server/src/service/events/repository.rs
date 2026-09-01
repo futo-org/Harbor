@@ -566,15 +566,17 @@ impl Mutation {
         ]);
 
         if reaction.positive {
-            query.value(ReactionTallyModel::Column::DecayedCount, {
+            query.value(
+                ReactionTallyModel::Column::DecayedCount,
                 reaction_count_decay(
                     Expr::col(
                         ReactionTallyModel::Column::PositiveCount
                             .as_column_ref(),
-                    ),
+                    )
+                    .add(Expr::Constant(positive.into())),
                     Expr::col(EventModel::Column::CreatedAt.as_column_ref()),
-                )
-            });
+                ),
+            );
         }
 
         query
