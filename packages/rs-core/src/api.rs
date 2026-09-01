@@ -711,7 +711,7 @@ impl PolycentricCore {
         claimer_key: crate::query::event::key::PublicKey,
     ) -> Result<(), CoreError> {
         let claimer_key: PublicKey = claimer_key.into();
-        pairing::join(&self.client, server_url, digest_sha256, claimer_key.into()).await
+        pairing::join(&self.client, server_url, digest_sha256, claimer_key).await
     }
 
     /// Poll function for the issuer.

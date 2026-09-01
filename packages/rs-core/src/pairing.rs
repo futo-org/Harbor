@@ -15,6 +15,7 @@ use std::sync::Mutex;
 
 use crate::api::CoreError;
 use crate::client::PolycentricClient;
+use crate::lock::LockRecover;
 use crate::time;
 
 // ---------- Validation Logic ----------
@@ -86,7 +87,7 @@ pub fn open_state(
 
     // Get what we need from the polycentric client
     let (identity_chain, accept_sequence) = {
-        let mut client = client.lock().unwrap();
+        let mut client = client.lock_recover();
 
         let identity_chain = if check_signer {
             client.identity_chain(&digest.issuer_identity).ok()
@@ -198,7 +199,7 @@ pub async fn fetch_session_dangerous(
     server_url: &str,
     digest_sha256: Vec<u8>,
 ) -> Result<Vec<u8>, CoreError> {
-    let session_state = fetch_session(&server_url, digest_sha256.clone()).await?;
+    let session_state = fetch_session(server_url, digest_sha256.clone()).await?;
 
     let bytes = session_state.encode_to_vec();
     open_state(
