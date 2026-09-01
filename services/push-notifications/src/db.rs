@@ -1,5 +1,6 @@
 use push_notifications_migration::{Migrator, MigratorTrait};
 use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbErr};
+use std::time::Duration;
 
 /// Connect to Postgres with the notifications schema as the search path,
 /// creating the schema if it does not yet exist. This service owns the
@@ -9,7 +10,12 @@ pub async fn connect() -> Result<DatabaseConnection, DbErr> {
     let schema = &config.database_schema;
 
     let mut opt = ConnectOptions::new(with_utc_timezone(&config.database_url));
-    opt.set_schema_search_path(schema);
+    opt.max_connections(20)
+        .min_connections(2)
+        .idle_timeout(Duration::from_secs(600))
+        .max_lifetime(Duration::from_secs(1800))
+        .sqlx_logging(false)
+        .set_schema_search_path(schema);
     let connection = Database::connect(opt).await?;
 
     connection

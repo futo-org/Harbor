@@ -57,7 +57,11 @@ impl MigrationTrait for Migration {
         //    instead of the current time.
         //  * Adds 1 to the count to ensure that new posts don't have a score of
         //    0 and thus never make it to the explore feed.
-        tx.execute_unprepared("DROP FUNCTION IF EXISTS reaction_count_decay(BIGINT, TIMESTAMPTZ)").await.unwrap();
+        tx.execute_unprepared(
+            "DROP FUNCTION IF EXISTS reaction_count_decay(BIGINT, TIMESTAMPTZ)",
+        )
+        .await
+        .unwrap();
         tx.execute_unprepared("DROP FUNCTION IF EXISTS reaction_count_decay(BIGINT, TIMESTAMPTZ, NUMERIC)").await.unwrap();
         tx.execute_unprepared("DROP FUNCTION IF EXISTS reaction_count_decay(BIGINT, TIMESTAMPTZ, NUMERIC, TIMESTAMPTZ)").await.unwrap();
 
@@ -137,7 +141,11 @@ impl MigrationTrait for Migration {
         let tx = manager.get_connection();
 
         // Reset all versions of the decay function back to the old version.
-        tx.execute_unprepared("DROP FUNCTION IF EXISTS reaction_count_decay(BIGINT, TIMESTAMPTZ)").await.unwrap();
+        tx.execute_unprepared(
+            "DROP FUNCTION IF EXISTS reaction_count_decay(BIGINT, TIMESTAMPTZ)",
+        )
+        .await
+        .unwrap();
         tx.execute_unprepared("DROP FUNCTION IF EXISTS reaction_count_decay(BIGINT, TIMESTAMPTZ, NUMERIC)").await.unwrap();
         tx.execute_unprepared("DROP FUNCTION IF EXISTS reaction_count_decay(BIGINT, TIMESTAMPTZ, NUMERIC, TIMESTAMPTZ)").await.unwrap();
         let create_function =

@@ -8,8 +8,8 @@ pub async fn build_db_client() -> Result<DatabaseConnection, sea_orm::DbErr> {
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))
         .acquire_timeout(Duration::from_secs(8))
-        .idle_timeout(Duration::from_secs(8))
-        .max_lifetime(Duration::from_secs(8))
+        .idle_timeout(Duration::from_secs(600))
+        .max_lifetime(Duration::from_secs(1800))
         .sqlx_logging(false)
         .set_schema_search_path("public");
 
