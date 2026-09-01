@@ -7,7 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { PINCH_CLOSE_SCALE } from '../constants';
 
-export function Backdrop({
+export function ImageViewerBackdrop({
   scale,
   dismissY,
 }: {

@@ -13,7 +13,7 @@ import {
 } from 'react-native-gesture-handler';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Backdrop } from './components/Backdrop';
+import { ImageViewerBackdrop } from './components/ImageViewerBackdrop';
 import { ImagePane } from './components/ImagePane';
 import { NavArrow } from './components/NavArrow';
 import { useImageViewerGestures } from './hooks/useImageViewerGestures';
@@ -154,7 +154,7 @@ export function ImageViewer({
   // provides the (transparent-modal) presentation; here we just fill it.
   return (
     <GestureHandlerRootView style={Atoms.flex_1}>
-      <Backdrop scale={scale} dismissY={dismissY} />
+      <ImageViewerBackdrop scale={scale} dismissY={dismissY} />
       <GestureDetector gesture={gesture}>
         <View
           style={[Atoms.flex_1, Atoms.overflow_hidden]}
