@@ -26,7 +26,7 @@ pub struct Model {
     ///
     /// Also a foreign key to the event (`events` table).
     pub on_post: i64,
-    pub emoji: String,
+    pub emoji: Option<String>,
     pub positive: bool,
 
     #[sea_orm(belongs_to, from = "event_id", to = "id")]
