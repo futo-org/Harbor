@@ -30,3 +30,35 @@ impl<T> RwLockRecover<T> for RwLock<T> {
         self.write().unwrap_or_else(|e| e.into_inner())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::panic::AssertUnwindSafe;
+
+    #[test]
+    fn lock_recover_serves_data_from_a_poisoned_mutex() {
+        let m = Mutex::new(vec![1u32]);
+
+        let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            let _guard = m.lock().unwrap();
+            panic!("poison while held");
+        }));
+
+        m.lock_recover().push(2);
+        assert_eq!(&*m.lock_recover(), &[1, 2]);
+    }
+
+    #[test]
+    fn rwlock_recover_serves_data_from_a_poisoned_rwlock() {
+        let rw = RwLock::new(41u32);
+
+        let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            let _guard = rw.write().unwrap();
+            panic!("poison while held");
+        }));
+
+        *rw.write_recover() += 1;
+        assert_eq!(*rw.read_recover(), 42);
+    }
+}

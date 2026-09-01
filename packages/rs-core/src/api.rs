@@ -16,6 +16,7 @@ use polycentric_common::models::protos_v2::{
 use polycentric_common::models::protos_v2::{ListHeadsRequest, PutEventsResponse};
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
+use std::sync::LazyLock;
 use std::sync::{Arc, Mutex};
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native-transport")))]
@@ -25,6 +26,22 @@ async fn channel(server_url: &str) -> Result<crate::query::GrpcChannel, CoreErro
     crate::query::channel(server_url)
         .await
         .map_err(CoreError::Network)
+}
+
+/// Install a panic hook that logs the panic message
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn install_panic_hook() {
+    let lazy = LazyLock::new(|| {
+        std::panic::set_hook(Box::new(|info| {
+            let location = info
+                .location()
+                .map(|l| format!("{}:{}", l.file(), l.line()))
+                .unwrap_or_else(|| "unknown location".to_string());
+            let msg = crate::logging::panic_payload_message(info.payload());
+            crate::logging::log_error(|| format!("panic at {location}: {msg}"));
+        }))
+    });
+    LazyLock::force(&lazy);
 }
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -120,6 +137,8 @@ impl PolycentricCore {
     pub fn new() -> Arc<Self> {
         #[cfg(target_arch = "wasm32")]
         console_error_panic_hook::set_once();
+        #[cfg(not(target_arch = "wasm32"))]
+        install_panic_hook();
 
         let client = Arc::new(Mutex::new(PolycentricClient::new()));
         Arc::new(Self {
@@ -756,5 +775,53 @@ impl PolycentricCore {
             .map_err(|e| CoreError::Decode(format!("assemble_recovery_payload: {e}")))?;
 
         Ok(assemble_recovery_payload(&identity, &public_key))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::panic::AssertUnwindSafe;
+    use std::sync::Mutex as StdMutex;
+
+    #[test]
+    fn poisoned_client_recovers() {
+        let core = PolycentricCore::new();
+
+        let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            let _guard = core.client.lock().unwrap();
+            panic!("poison the client");
+        }));
+
+        core.set_servers(vec!["s1".to_string()]);
+        assert_eq!(core.client.lock_recover().servers(), vec!["s1".to_string()]);
+    }
+
+    struct Recording(Arc<StdMutex<Vec<String>>>);
+
+    impl crate::logging::Logger for Recording {
+        fn log(&self, message: String) {
+            self.0.lock().unwrap().push(message);
+        }
+    }
+
+    #[test]
+    fn panics_cause_logs() {
+        let messages = Arc::new(StdMutex::new(Vec::new()));
+        crate::logging::set_logger(Arc::new(Recording(messages.clone())));
+        crate::logging::set_log_level(crate::logging::LogLevel::Error);
+
+        install_panic_hook();
+
+        let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            panic!("hook smoke test");
+        }));
+
+        let got = messages.lock().unwrap();
+        assert!(
+            got.iter()
+                .any(|m| m.contains("panic at") && m.contains("hook smoke test")),
+            "expected the panic hook to log, got {got:?}"
+        );
     }
 }
