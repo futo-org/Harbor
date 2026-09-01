@@ -516,6 +516,10 @@ impl Drop for TestClient {
     }
 }
 
+pub fn current_timestamp() -> u64 {
+    SystemTime::UNIX_EPOCH.elapsed().unwrap().as_millis() as u64
+}
+
 #[allow(clippy::too_many_arguments)]
 fn make_event(
     collection: i32,

@@ -25,6 +25,10 @@ pub struct Model {
     /// Total amount of positive reactions (as determined by
     /// `NOT reaction.positive`).
     pub negative_count: i64,
+    /// Decayed count calculated by `reaction_count_decay`.
+    ///
+    /// NOTE: actual type `NUMERIC(20, 11)`.
+    pub decayed_count: String,
 
     #[sea_orm(belongs_to, from = "event_id", to = "id")]
     pub parent: HasOne<super::event_model::Entity>,

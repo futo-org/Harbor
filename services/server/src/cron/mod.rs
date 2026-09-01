@@ -22,7 +22,7 @@ pub(crate) fn start_jobs(db: DatabaseConnection) -> Cron {
         cancel: CancellationToken::new(),
     };
 
-    gravity::start(&cron, db.clone());
+    gravity::update(&cron, db.clone());
 
     cron
 }
