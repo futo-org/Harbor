@@ -6,7 +6,6 @@
 use crate::manager::NotificationManager;
 use polycentric_common::models::protos_v2::UnregisterPushNotificationRequest;
 use polycentric_common::models::protos_v2::{SignedMessage, UnregisterPushNotificationResponse};
-use polycentric_common::signing::verify_signature;
 use prost::Message;
 use sea_orm::DatabaseConnection;
 use tonic::Status;
@@ -16,19 +15,12 @@ pub async fn handle(
     notification_manager: &NotificationManager,
     signed_message: SignedMessage,
 ) -> Result<UnregisterPushNotificationResponse, Status> {
-    let public_key = signed_message
-        .public_key
-        .ok_or_else(|| Status::invalid_argument("SignedMessage missing public_key"))?;
+    let (public_key, message_bytes) = signed_message
+        .open()
+        .ok_or_else(|| Status::unauthenticated("invalid signature"))?;
 
-    verify_signature(
-        &public_key.key,
-        &signed_message.signature[..],
-        &signed_message.message_bytes[..],
-    )
-    .map_err(|e| Status::unauthenticated(e.to_string()))?;
-
-    let request = UnregisterPushNotificationRequest::decode(&signed_message.message_bytes[..])
-        .map_err(|_| {
+    let request =
+        UnregisterPushNotificationRequest::decode(message_bytes.as_slice()).map_err(|_| {
             Status::invalid_argument("Argument is not an UnregisterPushNotificationRequest")
         })?;
 

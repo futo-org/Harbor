@@ -233,13 +233,7 @@ impl PolycentricClient {
         let mut prepared: Vec<(Event, EventBundle)> = bundles
             .into_iter()
             .filter_map(|bundle| {
-                let signed_event = bundle.signed_event.as_ref()?;
-
-                if signed_event.verify_signature().is_err() {
-                    return None;
-                }
-
-                let event = Event::decode(signed_event.event_bytes.as_slice()).ok()?;
+                let event = bundle.signed_event.as_ref()?.open().ok()?;
                 Some((event, bundle))
             })
             .collect();

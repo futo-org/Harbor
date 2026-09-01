@@ -130,12 +130,11 @@ async fn process_event(
         Status::invalid_argument("event key missing signed_by")
     })?;
 
-    polycentric_common::signing::verify_signature(
-        &signed_by.key,
-        &signed_event.signature,
-        &signed_event.event_bytes,
-    )
-    .map_err(|e| Status::unauthenticated(e.to_string()))?;
+    if !signed_by
+        .sig_matches(&signed_event.signature, &signed_event.event_bytes)
+    {
+        return Err(Status::unauthenticated("invalid signature"));
+    }
 
     // Decode the event before we begin the transaction.
     let decoded_content = if let (Some(serialized_content), Some(digest)) =
