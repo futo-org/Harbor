@@ -2,6 +2,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { randomBytes } from '@noble/hashes/utils.js';
 import type { KeyPair, PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
+import { IdentityManager } from './identity-manager';
 
 /**
  * Default expiration time for a pairing session.
@@ -19,7 +20,7 @@ export interface PairingSession {
   digestBytes: Uint8Array;
 
   /** The decoded digest. */
-  digest: Proto.PairingSessionDigest;
+  digest: Required<Proto.PairingSessionDigest>;
 
   /** Pairing session state verified to be from the issuer. */
   issuerState: Proto.IssuerPairingState;
@@ -66,8 +67,7 @@ export class PairingSessionManager {
     digestBytes: Uint8Array,
     sequence: bigint,
   ): Promise<PairingSession> {
-    const issuerIdentity = this.client.activeIdentityKey;
-    if (!issuerIdentity) throw new Error('No active identity');
+    const { issuerIdentity } = this.digestFrom(digestBytes, true);
 
     // Get latest identity state to push
     const chain = this.client.resolveIdentityChain(issuerIdentity);
@@ -91,19 +91,16 @@ export class PairingSessionManager {
       Proto.SignedIssuerState.toBinary(signedState).buffer as ArrayBuffer,
     );
 
-    return decodeSession(server, responseBytes);
+    return this.decodeSession(server, responseBytes);
   }
 
   /**
    * Start a new pairing session and register it on `server`.
    */
   async createPairingSession(server: string): Promise<PairingSession> {
-    const issuerIdentity = this.client.activeIdentityKey;
-    if (!issuerIdentity) throw new Error('No active identity');
-
     const digestBytes = Proto.PairingSessionDigest.toBinary(
       Proto.PairingSessionDigest.create({
-        issuerIdentity,
+        issuerIdentity: this.requireIdentityKey(),
         issuerSigner: this.requireKeyPair().publicKey,
         nonce: randomBytes(NONCE_BYTES),
         initialTimestamp: BigInt(Date.now()),
@@ -135,7 +132,7 @@ export class PairingSessionManager {
       info.server,
       toCoreBytes(info.digestSha256),
     );
-    return decodeSession(info.server, stateBytes);
+    return this.decodeSession(info.server, stateBytes);
   }
 
   /**
@@ -179,39 +176,86 @@ export class PairingSessionManager {
     if (!this.client.currentKeyPair) throw new Error('No active key pair');
     return this.client.currentKeyPair;
   }
-}
 
-/**
- * Decode a `PairingSessionState` message received from a server.
- */
-function decodeSession(
-  server: string,
-  stateBytes: ArrayBuffer,
-): PairingSession {
-  const state = Proto.PairingSessionState.fromBinary(
-    new Uint8Array(stateBytes),
-  );
-
-  const issuerState = state.issuerState;
-  if (!issuerState) {
-    throw new Error('Pairing session state has no signed issuer state');
+  /** Get the active identity key or throw. */
+  private requireIdentityKey(): string {
+    if (!this.client.activeIdentityKey) throw new Error('No active identity');
+    return this.client.activeIdentityKey;
   }
 
-  const decoded = Proto.IssuerPairingState.fromBinary(issuerState.stateBytes);
-  const digestBytes = decoded.sessionDigest.slice();
-  const digest = Proto.PairingSessionDigest.fromBinary(digestBytes);
+  /**
+   * Decode a `PairingSessionState` message received from a server.
+   * Use `assertIssuer === true` when updating a state to ensure that the
+   * polycentric client's identity and keypair match the pairing session's.
+   */
+  private digestFrom(
+    digestBytes: Uint8Array,
+    assertIssuer = false,
+  ): Required<Proto.PairingSessionDigest> {
+    const decoded = Proto.PairingSessionDigest.fromBinary(digestBytes);
 
-  return {
-    digestBytes,
-    digest,
-    issuerState: decoded,
-    claimers: state.claimers,
-    expiresAt: expiresAt(digest),
-    pairingInfo: Proto.PairingInfo.create({
-      server,
-      digestSha256: sha256(digestBytes),
-    }),
-  };
+    const { issuerSigner } = decoded;
+    if (!issuerSigner) {
+      throw new Error('Pairing session digest has no issuer signer');
+    }
+
+    // All fields are known to be present in this copy.
+    const digest = { ...decoded, issuerSigner };
+
+    if (assertIssuer) {
+      if (digest.issuerIdentity !== this.requireIdentityKey()) {
+        throw new Error(
+          `Pairing session specifies a different identity than the active identity key`,
+        );
+      }
+
+      const signerMatches = IdentityManager.keysEqual(
+        issuerSigner,
+        this.requireKeyPair().publicKey,
+      );
+
+      if (!signerMatches) {
+        throw new Error(
+          'Pairing session pins a different signer than the active key pair',
+        );
+      }
+    }
+
+    return digest;
+  }
+
+  /**
+   * Decode a `PairingSessionState` message received from a server.
+   */
+  private decodeSession(
+    server: string,
+    stateBytes: ArrayBuffer,
+  ): PairingSession {
+    const state = Proto.PairingSessionState.fromBinary(
+      new Uint8Array(stateBytes),
+    );
+
+    const issuerState = state.issuerState;
+    if (!issuerState) {
+      throw new Error('Pairing session state has no signed issuer state');
+    }
+
+    const decoded = Proto.IssuerPairingState.fromBinary(issuerState.stateBytes);
+    const digestBytes = decoded.sessionDigest.slice();
+    const digest = this.digestFrom(digestBytes);
+
+    return {
+      digestBytes,
+      digest,
+      issuerState: decoded,
+      claimers: state.claimers,
+      expiresAt: expiresAt(digest),
+      pairingInfo: Proto.PairingInfo.create({
+        server,
+        digestSha256: sha256(digestBytes),
+      }),
+    };
+  }
 }
 
 /**
