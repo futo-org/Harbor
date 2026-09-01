@@ -1,7 +1,7 @@
 package org.futo.polycentric.core
 
 import okio.ByteString.Companion.toByteString
-import org.futo.polycentric.core.platform.StoredKeyPair
+import org.futo.polycentric.core.StoredKeyPair
 import polycentric.v2.EventKey
 import polycentric.v2.KeyType
 import polycentric.v2.PublicKey

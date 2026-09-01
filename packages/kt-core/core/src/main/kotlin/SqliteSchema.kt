@@ -1,4 +1,4 @@
-package org.futo.polycentric.core.storage.sqlite
+package org.futo.polycentric.core
 
 /**
  * SQLite schema for the v2 storage driver — a direct port of
@@ -15,7 +15,7 @@ package org.futo.polycentric.core.storage.sqlite
  *
  * The Rust core owns tombstoning/validation/clocks, so nothing here
  * interprets event contents. Blobs are NOT stored here — they live in a
- * filesystem-backed [org.futo.polycentric.core.platform.IFileStoreDriver],
+ * filesystem-backed [org.futo.polycentric.core.IFileStoreDriver],
  * exactly as js keeps them out of the SQLite store.
  */
 internal object SqliteSchema {

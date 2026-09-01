@@ -1,10 +1,10 @@
-package org.futo.polycentric.core.storage.sqlite
+package org.futo.polycentric.core
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.futo.polycentric.core.platform.IContentRepository
+import org.futo.polycentric.core.IContentRepository
 import polycentric.v2.ContentDigest
 
 /**

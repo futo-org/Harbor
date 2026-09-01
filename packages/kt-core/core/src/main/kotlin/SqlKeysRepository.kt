@@ -1,11 +1,11 @@
-package org.futo.polycentric.core.storage.sqlite
+package org.futo.polycentric.core
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.futo.polycentric.core.platform.IKeysRepository
-import org.futo.polycentric.core.platform.StoredKeyPair
+import org.futo.polycentric.core.IKeysRepository
+import org.futo.polycentric.core.StoredKeyPair
 
 /**
  * Port of js-storage-sqlite `KeysRepository`. Keyed by the raw public-key

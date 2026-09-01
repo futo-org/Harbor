@@ -1,4 +1,4 @@
-# polycentric-kotlin-core (scaffold)
+# polycentric-kt-core (scaffold)
 
 Kotlin/Android SDK for Polycentric v2, structured the same way as
 `packages/js-core`: a thin platform shell around the shared Rust protocol
@@ -58,16 +58,16 @@ decodes with its own generated types — same contract js-core uses.
 | `client-internal/content-manager.ts` | `ContentManager.kt` | **ported** (buildDigest, save, collectBlobs, pullBlobs) |
 | `client-internal/keypair-manager.ts` | `KeyPairManager.kt` | **ported** (create/get/remove/switch) |
 | `client-internal/pairing-session-manager.ts` | `PairingSessionManager.kt` | **ported** (create/status/join) |
-| `crypto/crypto-manager.ts` | `crypto/Ed25519CryptoManager.kt` | done (BouncyCastle; same interface incl. param order, `derivePublicKey`, length checks) |
-| `crypto/server-jwt.ts` | `crypto/ServerJwt.kt` | **ported** — the `AuthTokenProvider` registered in the client constructor mints an EdDSA JWT per server; tokens cleared on identity switch |
+| `crypto/crypto-manager.ts` | `Ed25519CryptoManager.kt` | done (BouncyCastle; same interface incl. param order, `derivePublicKey`, length checks) |
+| `crypto/server-jwt.ts` | `ServerJwt.kt` | **ported** — the `AuthTokenProvider` registered in the client constructor mints an EdDSA JWT per server; tokens cleared on identity switch |
 | `utils/moderation.ts` | `Moderation.kt` | **ported** (`decodeStatusByServer`/`encodeStatusByServer`; `setBanStatus` on the client, `isModerator`/`isBanned`/`listBans` in `Queries.kt`) |
 | `client-internal/event-service.ts` | `EventService.kt` | **ported** (StateFlow for state/progress/hydration, SharedFlow for content-created/keypair/errors; named `client.eventService` since `client.events` is the event repository here) |
 | `errors.ts` | `Errors.kt` | **ported** (WrapperError family → PolycentricException hierarchy; WasmError has no analogue — CoreException covers FFI failures) |
 | — (apps call core.fetchQuery) | `Queries.kt` | typed one-shot wrappers for all 16 non-ListEvents Query variants (incl. the moderation trio) with response decoding |
-| `platform-interfaces/*` | `platform/PlatformInterfaces.kt` | done |
-| `js-storage-sqlite` (DrizzleStorageDriver) | `storage/sqlite/SqliteStorageDriver.kt` + repos | **ported** — same schema (events/content/keys/active_identity_for_key), no-op ack repo, raw `SQLiteOpenHelper` (no extra deps); heads query uses a correlated MAX() subquery instead of a window function (SQLite on minSdk 24 predates window fns) |
-| js-node `NodeFileStoreDriver` | `storage/AndroidFileStoreDriver.kt` | **ported** — filesystem blob store, `{type}_{hex}` names, atomic temp+rename |
-| `datastore/*` (drivers) | `storage/InMemoryStorageDriver.kt` | in-memory driver for tests |
+| `platform-interfaces/*` | `PlatformInterfaces.kt` | done |
+| `js-storage-sqlite` (DrizzleStorageDriver) | `SqliteStorageDriver.kt` + repos | **ported** — same schema (events/content/keys/active_identity_for_key), no-op ack repo, raw `SQLiteOpenHelper` (no extra deps); heads query uses a correlated MAX() subquery instead of a window function (SQLite on minSdk 24 predates window fns) |
+| js-node `NodeFileStoreDriver` | `AndroidFileStoreDriver.kt` | **ported** — filesystem blob store, `{type}_{hex}` names, atomic temp+rename |
+| `datastore/*` (drivers) | `InMemoryStorageDriver.kt` | in-memory driver for tests |
 | `http/alias-resolver.ts` | `http/AliasResolver.kt` | **ported** (parse/normalize/resolve, wildcard `*`, 10s timeout; org.json — on the Android bootclasspath) |
 | `datastore/event-ack-store.ts` | interface only | js-core's store is a vestigial v1-shaped pass-through with no call sites; the Kotlin `IEventAckRepository` is v2-shaped (server, EventKey) by design |
 | observable bridge | `QueryFlows.kt` | done (verify generated names) |
@@ -140,7 +140,7 @@ are incompatible across versions.
    `IEventAckRepository`, no v1 protos, and no `getBatch` (its only
    js-core call site is a test mock).
 2. SQLite storage driver + filesystem blob store — **done**
-   (`storage/sqlite/`, `storage/AndroidFileStoreDriver.kt`), ported from
+   (`SqliteStorageDriver.kt` + repos, `AndroidFileStoreDriver.kt`), ported from
    `@polycentric/js-storage-sqlite` and js-node's `NodeFileStoreDriver`.
 3. Port the kotlin-wrapper instrumented test scenarios as the conformance
    suite against a local dev server (`services/server`), plus JVM unit

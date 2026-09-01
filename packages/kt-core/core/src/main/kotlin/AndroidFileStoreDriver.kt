@@ -1,10 +1,10 @@
-package org.futo.polycentric.core.storage
+package org.futo.polycentric.core
 
 import java.io.File
 import java.security.SecureRandom
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.futo.polycentric.core.platform.IFileStoreDriver
+import org.futo.polycentric.core.IFileStoreDriver
 import polycentric.v2.ContentDigest
 
 /**

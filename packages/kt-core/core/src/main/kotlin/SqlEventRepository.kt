@@ -1,11 +1,11 @@
-package org.futo.polycentric.core.storage.sqlite
+package org.futo.polycentric.core
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okio.ByteString.Companion.toByteString
-import org.futo.polycentric.core.platform.IEventRepository
+import org.futo.polycentric.core.IEventRepository
 import polycentric.v2.Event
 import polycentric.v2.EventKey
 import polycentric.v2.PublicKey

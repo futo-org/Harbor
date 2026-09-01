@@ -13,7 +13,7 @@ group = "org.futo.polycentric"
 version = "0.0.0"
 
 // ── Paths ──────────────────────────────────────────────────────────────
-// Repo root is two levels up from packages/kotlin-core.
+// Repo root is two levels up from packages/kt-core.
 val repoRoot = rootProject.projectDir.parentFile.parentFile
 val protosDir = File(repoRoot, "protos")
 val uniffiOutDir = layout.buildDirectory.dir("generated/uniffi").get().asFile

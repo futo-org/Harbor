@@ -14,6 +14,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "polycentric-kotlin-core"
+rootProject.name = "polycentric-kt-core"
 
 include(":core")

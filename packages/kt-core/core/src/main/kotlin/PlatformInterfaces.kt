@@ -1,4 +1,4 @@
-package org.futo.polycentric.core.platform
+package org.futo.polycentric.core
 
 import polycentric.v2.ContentDigest
 import polycentric.v2.EventKey

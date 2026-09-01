@@ -1,4 +1,4 @@
-package org.futo.polycentric.core.crypto
+package org.futo.polycentric.core
 
 import java.security.SecureRandom
 import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator
@@ -9,8 +9,8 @@ import org.bouncycastle.crypto.signers.Ed25519Signer
 import org.futo.polycentric.core.InvalidKeyLengthException
 import org.futo.polycentric.core.InvalidSignatureException
 import org.futo.polycentric.core.KeyTypes
-import org.futo.polycentric.core.platform.ICryptoManager
-import org.futo.polycentric.core.platform.StoredKeyPair
+import org.futo.polycentric.core.ICryptoManager
+import org.futo.polycentric.core.StoredKeyPair
 
 private const val ED25519_PRIVATE_KEY_LENGTH = 32
 private const val ED25519_PUBLIC_KEY_LENGTH = 32

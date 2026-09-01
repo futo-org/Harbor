@@ -1,10 +1,10 @@
-package org.futo.polycentric.core.crypto
+package org.futo.polycentric.core
 
 import java.util.Base64
 import kotlinx.coroutines.runBlocking
 import org.futo.polycentric.core.KeyTypes
 import org.futo.polycentric.core.PolycentricException
-import org.futo.polycentric.core.platform.StoredKeyPair
+import org.futo.polycentric.core.StoredKeyPair
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows

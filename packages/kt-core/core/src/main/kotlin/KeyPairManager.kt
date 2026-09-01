@@ -1,6 +1,6 @@
 package org.futo.polycentric.core
 
-import org.futo.polycentric.core.platform.StoredKeyPair
+import org.futo.polycentric.core.StoredKeyPair
 import polycentric.v2.PublicKey
 
 /**

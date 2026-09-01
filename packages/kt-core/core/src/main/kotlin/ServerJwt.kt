@@ -1,10 +1,10 @@
-package org.futo.polycentric.core.crypto
+package org.futo.polycentric.core
 
 import okio.ByteString.Companion.toByteString
 import org.futo.polycentric.core.KeyTypes
 import org.futo.polycentric.core.PolycentricException
-import org.futo.polycentric.core.platform.ICryptoManager
-import org.futo.polycentric.core.platform.StoredKeyPair
+import org.futo.polycentric.core.ICryptoManager
+import org.futo.polycentric.core.StoredKeyPair
 
 /**
  * Port of js-core `crypto/server-jwt.ts` — the bearer token attached to

@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.futo.polycentric.core.platform.StoredKeyPair
+import org.futo.polycentric.core.StoredKeyPair
 import polycentric.v2.Content
 import polycentric.v2.SignedEvent
 

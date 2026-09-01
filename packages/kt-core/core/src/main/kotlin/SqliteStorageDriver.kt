@@ -1,22 +1,22 @@
-package org.futo.polycentric.core.storage.sqlite
+package org.futo.polycentric.core
 
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.futo.polycentric.core.platform.IContentRepository
-import org.futo.polycentric.core.platform.IEventAckRepository
-import org.futo.polycentric.core.platform.IEventRepository
-import org.futo.polycentric.core.platform.IKeysRepository
-import org.futo.polycentric.core.platform.IStorageDriver
+import org.futo.polycentric.core.IContentRepository
+import org.futo.polycentric.core.IEventAckRepository
+import org.futo.polycentric.core.IEventRepository
+import org.futo.polycentric.core.IKeysRepository
+import org.futo.polycentric.core.IStorageDriver
 import polycentric.v2.EventKey
 
 /**
  * SQLite-backed [IStorageDriver], a port of js-storage-sqlite's
  * `DrizzleStorageDriver`. Pair it with a filesystem
- * [org.futo.polycentric.core.platform.IFileStoreDriver] (e.g.
- * [org.futo.polycentric.core.storage.AndroidFileStoreDriver]) when
+ * [org.futo.polycentric.core.IFileStoreDriver] (e.g.
+ * [org.futo.polycentric.core.AndroidFileStoreDriver]) when
  * constructing a client — blobs are deliberately not kept in SQLite.
  */
 class SqliteStorageDriver(

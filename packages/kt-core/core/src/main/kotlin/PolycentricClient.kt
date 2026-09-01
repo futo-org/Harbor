@@ -12,11 +12,11 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.ByteString.Companion.toByteString
-import org.futo.polycentric.core.crypto.ServerJwt
-import org.futo.polycentric.core.platform.ICryptoManager
-import org.futo.polycentric.core.platform.IFileStoreDriver
-import org.futo.polycentric.core.platform.IStorageDriver
-import org.futo.polycentric.core.platform.StoredKeyPair
+import org.futo.polycentric.core.ServerJwt
+import org.futo.polycentric.core.ICryptoManager
+import org.futo.polycentric.core.IFileStoreDriver
+import org.futo.polycentric.core.IStorageDriver
+import org.futo.polycentric.core.StoredKeyPair
 import org.futo.polycentric.ffi.AuthToken
 import org.futo.polycentric.ffi.AuthTokenProvider
 import org.futo.polycentric.ffi.ContentEntry
@@ -52,7 +52,7 @@ class PolycentricClient(
     private val storageDriver: IStorageDriver,
     val filestore: IFileStoreDriver,
     seedServers: List<String> = emptyList(),
-    val crypto: ICryptoManager = org.futo.polycentric.core.crypto.Ed25519CryptoManager(),
+    val crypto: ICryptoManager = org.futo.polycentric.core.Ed25519CryptoManager(),
 ) {
     @Volatile
     var currentKeyPair: StoredKeyPair? = null
@@ -141,7 +141,7 @@ class PolycentricClient(
             storageDriver: IStorageDriver,
             filestore: IFileStoreDriver,
             seedServers: List<String> = emptyList(),
-            crypto: ICryptoManager = org.futo.polycentric.core.crypto.Ed25519CryptoManager(),
+            crypto: ICryptoManager = org.futo.polycentric.core.Ed25519CryptoManager(),
         ): PolycentricClient =
             PolycentricClient(core, storageDriver, filestore, seedServers, crypto)
                 .also { it.initialize() }
