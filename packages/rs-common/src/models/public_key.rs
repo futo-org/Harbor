@@ -1,7 +1,8 @@
 use crate::error::{Error, Result};
-use crate::models::protos_v2::PublicKey;
+use crate::models::protos_v2::{KeyType, PublicKey};
 use crate::models::traits::Serializable;
 use crate::platform::error::PlatformError;
+use crate::signing;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use prost::Message;
@@ -49,6 +50,16 @@ impl PublicKey {
     /// Checks if this key is equal to another
     pub fn equals(&self, other: &Self) -> bool {
         self.key == other.key && self.key_type == other.key_type
+    }
+
+    /// Returns whether `sig` is a valid signature by this key over `msg`.
+    pub fn sig_matches(&self, sig: &[u8], msg: &[u8]) -> bool {
+        match self.key_type {
+            t if t == KeyType::Ed25519 as i32 => {
+                signing::verify_ed25519_signature(&self.key, sig, msg).is_ok()
+            }
+            _ => false,
+        }
     }
 
     /// Checks if the key is empty

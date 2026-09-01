@@ -1,3 +1,7 @@
+// Disallow `unwrap` and `expect`, such that we ensure potential panic
+// conditions are not introduced
+#![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]
+
 // You must call this once
 uniffi::setup_scaffolding!();
 
@@ -16,4 +20,5 @@ pub mod query;
 pub mod rx;
 pub mod store;
 pub mod sync;
+pub mod time;
 pub mod vector_clock;

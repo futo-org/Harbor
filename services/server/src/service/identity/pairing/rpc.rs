@@ -63,7 +63,6 @@ pub fn build_pairing_service(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::service::identity::pairing::rpc::common::verify_signed_message;
     use crate::service::proto as Proto;
     use crate::service::proto::SignedMessage;
     use chrono::Utc;
@@ -103,7 +102,7 @@ mod tests {
     #[test]
     fn verify_signed_message_accepts_valid_signature() {
         let msg = make_signed_initial_session("issuer", 1_700_000_000_000);
-        let public_key = verify_signed_message(&msg).unwrap();
+        let (public_key, _) = msg.open().unwrap();
 
         assert_eq!(
             public_key.key,

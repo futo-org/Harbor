@@ -1,3 +1,4 @@
+use futures::FutureExt;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::future::Future;
@@ -11,7 +12,7 @@ use futures_timer::Delay;
 
 use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
-use crate::logging::log_warn;
+use crate::logging::{log_error, log_warn, panic_payload_message};
 use crate::query::query_observable::{QueryResult, QueryStatus};
 use crate::rx::observable::{Observable, Subscriber};
 
@@ -68,8 +69,9 @@ pub struct QueryOpts {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn spawn<F: std::future::Future<Output = ()> + 'static>(fut: F) {
+fn spawn<F: Future<Output = ()> + 'static>(fut: F) -> bool {
     wasm_bindgen_futures::spawn_local(fut);
+    true
 }
 
 /// Lazily-initialized single-worker runtime used when the caller thread
@@ -95,19 +97,37 @@ fn fallback_runtime() -> Option<&'static tokio::runtime::Runtime> {
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
-fn spawn<F: std::future::Future<Output = ()> + Send + 'static>(fut: F) {
+/// Returns `false` when the task could not be spawned (no usable tokio
+/// runtime)
+fn spawn<F: Future<Output = ()> + Send + 'static>(fut: F) -> bool {
     match tokio::runtime::Handle::try_current() {
         Ok(handle) => {
             handle.spawn(fut);
+            true
         }
         Err(_) => match fallback_runtime() {
             Some(runtime) => {
                 runtime.spawn(fut);
+                true
             }
             None => {
-                crate::logging::log_error(|| "no tokio runtime; dropping query task".to_string())
+                log_error(|| "no tokio runtime; dropping query task".to_string());
+                false
             }
         },
+    }
+}
+
+/// Degrades any panics that occur when awaiting this future to errors,
+/// for logging panics and failing gracefully.
+async fn panic_to_err<F: Future>(fut: F) -> Result<F::Output, String> {
+    match std::panic::AssertUnwindSafe(fut).catch_unwind().await {
+        Ok(output) => Ok(output),
+        Err(payload) => {
+            let msg = panic_payload_message(payload.as_ref());
+            log_error(|| msg.clone());
+            Err(msg)
+        }
     }
 }
 
@@ -119,6 +139,7 @@ impl<T: Send + ?Sized> MaybeSend for T {}
 
 #[cfg(target_arch = "wasm32")]
 pub trait MaybeSend {}
+
 #[cfg(target_arch = "wasm32")]
 impl<T: ?Sized> MaybeSend for T {}
 
@@ -403,17 +424,17 @@ where
                 return;
             }
 
-            spawn_fanout(
+            spawn_fanout(FanoutContext {
                 state,
-                target_servers,
+                servers: target_servers,
                 update_mode,
                 emit_mode,
                 server_timeout,
-                query_fn.clone(),
-                merge_fn.clone(),
-                client.clone(),
+                query_fn: query_fn.clone(),
+                merge_fn: merge_fn.clone(),
+                client: client.clone(),
                 subscriber,
-            );
+            });
         })
     }
 
@@ -481,112 +502,147 @@ where
     }
 }
 
-/// Calls each server in parallel and emits onto `subscriber` as
-/// responses land. `pending` is local to this fan-out so concurrent
-/// subscribes don't interfere with each other.
-#[allow(clippy::too_many_arguments)]
-fn spawn_fanout<T>(
+/// Required arguments to pass to [`spawn_fanout`].
+#[derive(Clone)]
+struct FanoutContext<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
     state: QueryStateHandle<T>,
     servers: Vec<String>,
+    server_timeout: Duration,
     update_mode: UpdateMode,
     emit_mode: EmitMode,
-    server_timeout: Duration,
-    query_fn: QueryFnBox<T>,
     merge_fn: MergeFn<T>,
+    query_fn: QueryFnBox<T>,
     client: Arc<Mutex<PolycentricClient>>,
     subscriber: Arc<Subscriber<QueryResult<T>>>,
+}
+
+/// Calls each server in concurrently and emits responses onto
+/// `subscriber`.
+fn spawn_fanout<T>(context: FanoutContext<T>)
+where
+    T: Clone + Send + Sync + 'static,
+{
+    let epoch = {
+        let mut state = context.state.lock_recover();
+        state.next_fanout(context.update_mode)
+    };
+    let pending = Arc::new(AtomicUsize::new(context.servers.len()));
+    let successful = Arc::new(AtomicUsize::new(0));
+
+    for server_url in context.servers.clone() {
+        // Clone task context to move into closure
+        let task_context = context.clone();
+        let task_server_url = server_url.clone();
+        let task_pending = pending.clone();
+        let task_successful = successful.clone();
+
+        let spawned = spawn(async move {
+            get_server_response(
+                &task_context,
+                task_server_url,
+                task_pending,
+                task_successful,
+                epoch,
+            )
+            .await;
+        });
+
+        // If there's an error spawning a task, then the async runtime has
+        // encountered an error and no other tasks will be spawnable. We
+        // fail early.
+        if !spawned {
+            let msg = format!("error [{server_url}]: runtime unavailable");
+            log_error(|| msg.clone());
+            if !context.subscriber.is_closed() {
+                context.subscriber.error(msg);
+                context.subscriber.complete();
+            }
+            return;
+        }
+    }
+}
+
+/// Await and record one server's response in a [`spawn_fanout`] call,
+/// updating shared counters and passing the response to subscribers
+/// when successful.
+async fn get_server_response<T>(
+    context: &FanoutContext<T>,
+    server_url: String,
+    pending: Arc<AtomicUsize>,
+    successful: Arc<AtomicUsize>,
+    epoch: u64,
 ) where
     T: Clone + Send + Sync + 'static,
 {
-    // Initialize fan-out state
-    let epoch = {
-        let mut state = state.lock_recover();
-        state.next_fanout(update_mode)
+    // Drop (cancel) the query if the server doesn't respond in time.
+    let result = match panic_to_err(select(
+        (context.query_fn)(server_url.clone()),
+        Delay::new(context.server_timeout),
+    ))
+    .await
+    {
+        Ok(Either::Left((result, _))) => result,
+        Ok(Either::Right(_)) => {
+            let msg = format!(
+                "timeout [{server_url}]: no response within {}ms",
+                context.server_timeout.as_millis()
+            );
+            log_warn(|| msg.clone());
+            Err(msg)
+        }
+        Err(panic_msg) => Err(format!("error [{server_url}]: internal panic: {panic_msg}")),
     };
 
-    let pending = Arc::new(AtomicUsize::new(servers.len()));
-    let successful = Arc::new(AtomicUsize::new(0));
+    let (snapshot, error_msg, is_last) = {
+        let mut s = context.state.lock_recover();
 
-    for server_url in servers {
-        // Copy any state we need for each server's query task
-        let state = state.clone();
-        let query_fn = query_fn.clone();
-        let merge_fn = merge_fn.clone();
-        let client = client.clone();
-        let pending = pending.clone();
-        let successful = successful.clone();
-        let subscriber = subscriber.clone();
-
-        spawn(async move {
-            // Drop (cancel) the query if the server doesn't respond in time.
-            let result =
-                match select(query_fn(server_url.clone()), Delay::new(server_timeout)).await {
-                    Either::Left((result, _)) => result,
-                    Either::Right(_) => {
-                        let msg = format!(
-                            "timeout [{server_url}]: no response within {}ms",
-                            server_timeout.as_millis()
-                        );
-                        log_warn(|| msg.clone());
-                        Err(msg)
-                    }
-                };
-
-            // Lock the query state mutex and do what we need with it
-            let (snapshot, error_msg, is_last) = {
-                let mut s = state.lock_recover();
-
-                // Update state
-                let pending_servers = pending.fetch_sub(1, Ordering::SeqCst) - 1;
-
-                let successful_servers = if result.is_ok() {
-                    successful.fetch_add(1, Ordering::SeqCst) + 1
-                } else {
-                    successful.load(Ordering::SeqCst)
-                };
-
-                let error_msg = match result {
-                    Ok(value) => {
-                        s.update(&server_url, value, epoch, update_mode);
-                        None
-                    }
-                    Err(msg) => Some(msg),
-                };
-
-                // Gather results
-                let is_last = pending_servers == 0;
-
-                // The default emit mode publishes only the settled result,
-                // so skip intermediate merges entirely.
-                let snapshot = if emit_mode == EmitMode::Default && !is_last {
-                    None
-                } else {
-                    let status = s.status(pending_servers);
-                    Some(QueryResult {
-                        data: compute_emission(&mut s, &merge_fn, &client),
-                        status,
-                        successful_servers,
-                        pending_servers,
-                    })
-                };
-
-                (snapshot, error_msg, is_last)
-            };
-
-            // Publish results
-            if subscriber.is_closed() {
-                return;
+        let pending_servers = pending.fetch_sub(1, Ordering::SeqCst) - 1;
+        let successful_servers = if result.is_ok() {
+            successful.fetch_add(1, Ordering::SeqCst) + 1
+        } else {
+            successful.load(Ordering::SeqCst)
+        };
+        let error_msg = match result {
+            Ok(value) => {
+                s.update(&server_url, value, epoch, context.update_mode);
+                None
             }
-            if let Some(snapshot) = snapshot {
-                subscriber.next(snapshot);
-            }
-            if let Some(msg) = error_msg {
-                subscriber.error(msg);
-            }
-            if is_last {
-                subscriber.complete();
-            }
-        });
+            Err(msg) => Some(msg),
+        };
+        let is_last = pending_servers == 0;
+
+        // The default emit mode publishes only the settled result,
+        // so we skip intermediate merges
+        let snapshot = if context.emit_mode == EmitMode::Default && !is_last {
+            None
+        } else {
+            let status = s.status(pending_servers);
+            Some(QueryResult {
+                data: compute_emission(&mut s, &context.merge_fn, &context.client),
+                status,
+                successful_servers,
+                pending_servers,
+            })
+        };
+
+        (snapshot, error_msg, is_last)
+    };
+
+    // Publish results
+    if context.subscriber.is_closed() {
+        return;
+    }
+    if let Some(snapshot) = snapshot {
+        context.subscriber.next(snapshot);
+    }
+    if let Some(msg) = error_msg {
+        context.subscriber.error(msg);
+    }
+    if is_last {
+        context.subscriber.complete();
     }
 }
 
@@ -596,6 +652,7 @@ mod tests {
 
     enum Ev {
         Next(Vec<u8>),
+        Error(String),
         Complete,
     }
 
@@ -659,6 +716,7 @@ mod tests {
         while let Some(ev) = rx.recv().await {
             match ev {
                 Ev::Next(d) => out.push(String::from_utf8_lossy(&d).into_owned()),
+                Ev::Error(_) => {}
                 Ev::Complete => break,
             }
         }
@@ -748,6 +806,7 @@ mod tests {
         while let Some(ev) = rx.recv().await {
             match ev {
                 Ev::Next(d) => out.push(String::from_utf8_lossy(&d).into_owned()),
+                Ev::Error(_) => {}
                 Ev::Complete => break,
             }
         }
@@ -803,6 +862,7 @@ mod tests {
         while let Some(ev) = rx.recv().await {
             match ev {
                 Ev::Next(d) => out.push(String::from_utf8_lossy(&d).into_owned()),
+                Ev::Error(_) => {}
                 Ev::Complete => break,
             }
         }
@@ -852,5 +912,60 @@ mod tests {
             Some("1,2,3,4"),
             "the new batch should merge into the history"
         );
+    }
+
+    #[tokio::test]
+    async fn fanout_panics_become_errors() {
+        let client = Arc::new(Mutex::new(PolycentricClient::new()));
+        client.lock_recover().set_servers(vec!["s1".to_string()]);
+        let qc: QueryClient<Vec<u8>> = QueryClient::new(client);
+        let key: QueryKey = vec!["panic".to_string()];
+
+        let obs = qc.fetch(
+            Some(key.clone()),
+            move |_server| async move { panic!("boom") },
+            merge_join,
+            None,
+        );
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let tx_error = tx.clone();
+        let tx_complete = tx.clone();
+        let _sub = obs.subscribe(
+            move |r: QueryResult<Vec<u8>>| {
+                let _ = tx.send(Ev::Next(r.data.unwrap_or_default()));
+            },
+            move |e| {
+                let _ = tx_error.send(Ev::Error(e));
+            },
+            move || {
+                let _ = tx_complete.send(Ev::Complete);
+            },
+        );
+
+        let mut errors = Vec::new();
+        let mut completed = false;
+        while let Some(ev) = rx.recv().await {
+            match ev {
+                Ev::Next(_) => {}
+                Ev::Error(e) => errors.push(e),
+                Ev::Complete => {
+                    completed = true;
+                    break;
+                }
+            }
+        }
+
+        assert!(completed, "a panicking server must not hang the subscriber");
+        assert_eq!(errors.len(), 1, "the panic must surface as one error");
+        assert!(
+            errors[0].contains("error [s1]: internal panic"),
+            "unexpected error message: {}",
+            errors[0]
+        );
+
+        // The core survives: a follow-up query still works.
+        let again = run_fanout(&qc, &key, "1,2").await;
+        assert_eq!(again.last().map(String::as_str), Some("1,2"));
     }
 }

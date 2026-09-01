@@ -462,7 +462,7 @@ impl TestClient {
             .into_inner();
 
         if !response.errors.is_empty() {
-            eprintln!("{} unexpected errors:", response.errors.len());
+            let n = response.errors.len();
             for (n, err) in response.errors.iter().enumerate() {
                 eprintln!("Error {}:", n + 1);
                 eprintln!(
@@ -471,6 +471,7 @@ impl TestClient {
                 );
                 eprintln!("Error: {}", err.message);
             }
+            panic!("{n} unexpected error(s)");
         }
     }
 
@@ -514,6 +515,10 @@ impl Drop for TestClient {
             }
         }
     }
+}
+
+pub fn current_timestamp() -> u64 {
+    SystemTime::UNIX_EPOCH.elapsed().unwrap().as_millis() as u64
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -6,7 +6,7 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde::{Deserialize, Serialize};
 
-use crate::signing::verify_signature;
+use crate::signing::verify_ed25519_signature;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum JwtError {
@@ -85,7 +85,7 @@ pub fn verify_jwt(token: &str) -> Result<VerifiedJwt, JwtError> {
         .decode(signature_b64)
         .map_err(|_| JwtError::Malformed)?;
     let signing_input = format!("{header_b64}.{claims_b64}");
-    verify_signature(&signed_by, &signature, signing_input.as_bytes())
+    verify_ed25519_signature(&signed_by, &signature, signing_input.as_bytes())
         .map_err(|_| JwtError::Signature)?;
 
     Ok(VerifiedJwt {

@@ -1,6 +1,6 @@
 /**
  * Run using:
- * $ cat explain.sql | psql $args | pbcopy
+ * $ cat explain.sql | make psql | pbcopy
  *
  * Paste the results into <https://explain.depesz.com> to visualise and explain
  * the plan.
