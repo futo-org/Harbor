@@ -130,7 +130,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(uniffiSelf: bigint, image: Uint8Array, width: number, height: number, mode: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_push_local_events(uniffiSelf: bigint, identity: Uint8Array, server: Uint8Array, partial: number): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_put_events(uniffiSelf: bigint, serverUrl: Uint8Array, eventBundlesBytes: Uint8Array): bigint;
-    ubrn_uniffi_polycentric_core_fn_method_polycentriccore_put_pairing_session(uniffiSelf: bigint, serverUrl: Uint8Array, signedMessageBytes: Uint8Array): bigint;
+    ubrn_uniffi_polycentric_core_fn_method_polycentriccore_put_pairing_session(uniffiSelf: bigint, serverUrl: Uint8Array, signedIssuerState: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_register_push_notifications(uniffiSelf: bigint, serverUrl: Uint8Array, signedMessageBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity(uniffiSelf: bigint, identity: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity_chain(uniffiSelf: bigint, identity: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;

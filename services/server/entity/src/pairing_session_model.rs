@@ -14,11 +14,8 @@ pub struct Model {
     /// Serialized `IssuerPairingState` message signed by the issuer.
     pub issuer_state_bytes: Vec<u8>,
 
-    // Public key that signed `issuer_state_bytes`.
-    pub issuer_key_type: i32,
-    pub issuer_key: Vec<u8>,
-
-    /// Signature over `issuer_state_bytes` by `issuer_key`.
+    /// Signature over `issuer_state_bytes` by the `issuer_signer` key in the
+    /// digest.
     pub issuer_state_signature: Vec<u8>,
 
     /// Timestamp this pairing session was created, as declared by the issuer.

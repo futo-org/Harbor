@@ -1,6 +1,3 @@
-//! Verification for `SignedMessage`, the generic signed-payload envelope used
-//! by RPCs that authenticate a request without wrapping it in an event.
-
 use crate::models::protos_v2::{PublicKey, SignedMessage};
 
 impl SignedMessage {

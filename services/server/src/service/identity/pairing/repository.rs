@@ -114,8 +114,6 @@ impl Query {
                 .update_columns([
                     PairingSessionModel::Column::DigestSha256,
                     PairingSessionModel::Column::IssuerStateBytes,
-                    PairingSessionModel::Column::IssuerKeyType,
-                    PairingSessionModel::Column::IssuerKey,
                     PairingSessionModel::Column::IssuerStateSignature,
                     PairingSessionModel::Column::InitialTimestamp,
                     PairingSessionModel::Column::Sequence,

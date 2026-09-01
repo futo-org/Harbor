@@ -2,7 +2,7 @@
 
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::proto as Proto;
-use crate::service::proto::SignedMessage;
+use crate::service::proto::SignedIssuerState;
 use ::entity::pairing_session_model as PairingSessionModel;
 use sea_orm::DbConn;
 use tonic::Status;
@@ -12,15 +12,9 @@ pub fn session_state(
     session: &PairingSessionModel::Model,
     claimers: Vec<Proto::PublicKey>,
 ) -> Proto::PairingSessionState {
-    let issuer_key = Proto::PublicKey {
-        key_type: session.issuer_key_type,
-        key: session.issuer_key.clone(),
-    };
-
-    let issuer_state = SignedMessage {
+    let issuer_state = SignedIssuerState {
         signature: session.issuer_state_signature.clone(),
-        message_bytes: session.issuer_state_bytes.clone(),
-        public_key: Some(issuer_key),
+        state_bytes: session.issuer_state_bytes.clone(),
     };
 
     Proto::PairingSessionState {

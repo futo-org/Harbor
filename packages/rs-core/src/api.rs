@@ -665,16 +665,16 @@ impl PolycentricCore {
     }
 
     /// Create or update a pairing session on the server.
-    /// `signed_message_bytes` should be a serialized `SignedMessage` wrapping a
-    /// serialized `IssuerPairingState` message.
+    /// `signed_issuer_state` should be a serialized `SignedIssuerState` wrapping
+    /// a serialized `IssuerPairingState` message.
     /// Checks that the server's response reflects the current pairing session.
     /// Returns the server's response as a serialized `PairingSessionState` message.
     pub async fn put_pairing_session(
         &self,
         server_url: String,
-        signed_message_bytes: Vec<u8>,
+        signed_issuer_state: Vec<u8>,
     ) -> Result<Vec<u8>, CoreError> {
-        pairing::put(&self.client, &server_url, signed_message_bytes).await
+        pairing::put(&self.client, &server_url, signed_issuer_state).await
     }
 
     /// Fetch a pairing session by its digest's SHA256 hash.

@@ -1,12 +1,13 @@
 //! Helper functions for identity pairing APIs
 
+use polycentric_common::error::CoreError as CommonError;
 use polycentric_common::models::protos_v2::{
     Content, GetPairingSessionRequest, IssuerPairingState, PairingSessionDigest,
     PairingSessionState, PublicKey, content::ContentBody,
     pairing_service_client::PairingServiceClient,
 };
 use polycentric_common::models::protos_v2::{
-    JoinPairingSessionRequest, PutPairingSessionRequest, SignedMessage,
+    JoinPairingSessionRequest, PutPairingSessionRequest, SignedIssuerState,
 };
 use prost::Message;
 use sha2::{Digest, Sha256};
@@ -60,15 +61,20 @@ pub fn open_state(
         .issuer_state
         .ok_or_else(|| CoreError::InvalidInput("pairing session has no issuer state".to_owned()))?;
 
-    let (signer, message_bytes) = issuer_msg.open().ok_or_else(|| {
-        CoreError::InvalidInput("pairing session issuer state signature is invalid".to_owned())
+    let (signer, digest, issuer_state) = issuer_msg.open().map_err(|e| match e {
+        CommonError::SignatureError(_) => {
+            CoreError::InvalidInput("pairing session issuer state signature is invalid".to_owned())
+        }
+        other => CoreError::Decode(format!("Failed to decode issuer pairing state: {other}")),
     })?;
 
-    let issuer_state = IssuerPairingState::decode(message_bytes.as_slice())
-        .map_err(|e| CoreError::Decode(format!("Failed to decode IssuerPairingState: {e}")))?;
-
-    let digest = PairingSessionDigest::decode(issuer_state.session_digest.as_slice())
-        .map_err(|e| CoreError::Decode(format!("Failed to decode PairingSessionDigest: {e}")))?;
+    // Validate digest
+    let derived_sha256 = Sha256::digest(&issuer_state.session_digest);
+    if digest_sha256 != derived_sha256.as_slice() {
+        return Err(CoreError::InvalidInput(
+            "pairing session digest does not match the requested session".to_owned(),
+        ));
+    }
 
     // Validate signer
     if check_signer {
@@ -92,14 +98,6 @@ pub fn open_state(
                 "pairing session signer not authorized for rotation".to_owned(),
             ));
         }
-    }
-
-    // Validate digest
-    let derived_sha256 = Sha256::digest(&issuer_state.session_digest);
-    if digest_sha256 != derived_sha256.as_slice() {
-        return Err(CoreError::InvalidInput(
-            "pairing session digest does not match the requested session".to_owned(),
-        ));
     }
 
     // Validate liveness
@@ -191,13 +189,13 @@ pub async fn fetch_session_dangerous(
 pub async fn put(
     client: &Mutex<PolycentricClient>,
     server_url: &str,
-    signed_message_bytes: Vec<u8>,
+    signed_issuer_state: Vec<u8>,
 ) -> Result<Vec<u8>, CoreError> {
-    let signed = SignedMessage::decode(signed_message_bytes.as_slice())
-        .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+    let signed = SignedIssuerState::decode(signed_issuer_state.as_slice())
+        .map_err(|e| CoreError::Decode(format!("Failed to decode SignedIssuerState: {e}")))?;
 
     let digest_sha256 = {
-        let issuer_state = IssuerPairingState::decode(signed.message_bytes.as_slice())
+        let issuer_state = IssuerPairingState::decode(signed.state_bytes.as_slice())
             .map_err(|e| CoreError::Decode(format!("Failed to decode IssuerPairingState: {e}")))?;
 
         Sha256::digest(issuer_state.session_digest)
@@ -211,7 +209,7 @@ pub async fn put(
 
     let response = rpc_client
         .put_pairing_session(PutPairingSessionRequest {
-            signed_message: Some(signed),
+            issuer_state: Some(signed),
         })
         .await
         .map_err(|e| CoreError::Network(format!("put_pairing_session: {e}")))?;

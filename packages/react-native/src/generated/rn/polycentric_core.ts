@@ -4989,12 +4989,12 @@ export interface PolycentricCoreLike {
     putEvents(serverUrl: string, eventBundlesBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
 /**
  * Create or update a pairing session on the server.
- * `signed_message_bytes` should be a serialized `SignedMessage` wrapping a
- * serialized `IssuerPairingState` message.
+ * `signed_issuer_state` should be a serialized `SignedIssuerState` wrapping
+ * a serialized `IssuerPairingState` message.
  * Checks that the server's response reflects the current pairing session.
  * Returns the server's response as a serialized `PairingSessionState` message.
  */
-    putPairingSession(serverUrl: string, signedMessageBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+    putPairingSession(serverUrl: string, signedIssuerState: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
 /**
  * Register a push notification token. `signed_message_bytes` is a
  * serialized `SignedMessage` wrapping a
@@ -5798,19 +5798,19 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     
 /**
  * Create or update a pairing session on the server.
- * `signed_message_bytes` should be a serialized `SignedMessage` wrapping a
- * serialized `IssuerPairingState` message.
+ * `signed_issuer_state` should be a serialized `SignedIssuerState` wrapping
+ * a serialized `IssuerPairingState` message.
  * Checks that the server's response reflects the current pairing session.
  * Returns the server's response as a serialized `PairingSessionState` message.
  */
-    async putPairingSession(serverUrl: string, signedMessageBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer> /*throws*/ {
+    async putPairingSession(serverUrl: string, signedIssuerState: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
     try {
         return await uniffiRustCallAsync(
             /*rustCaller:*/ uniffiCaller,
             /*rustFutureFunc:*/ () => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_put_pairing_session(
-                    uniffiTypePolycentricCoreObjectFactory.clonePointer(this),FfiConverterString.lower(serverUrl, nativeModule().rustbuffer_alloc),FfiConverterArrayBuffer.lower(signedMessageBytes, nativeModule().rustbuffer_alloc)
+                    uniffiTypePolycentricCoreObjectFactory.clonePointer(this),FfiConverterString.lower(serverUrl, nativeModule().rustbuffer_alloc),FfiConverterArrayBuffer.lower(signedIssuerState, nativeModule().rustbuffer_alloc)
                 );
             },
             /*pollFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
@@ -6442,7 +6442,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events() !== 16446) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_put_events");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_pairing_session() !== 11746) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_pairing_session() !== 38808) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_put_pairing_session");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications() !== 8128) {

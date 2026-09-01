@@ -9,7 +9,7 @@ use crate::service::proto::{
 };
 use ::entity::pairing_session_model as PairingSessionModel;
 use chrono::{DateTime, TimeDelta, Utc};
-use prost::Message;
+use polycentric_common::error::CoreError;
 use sea_orm::entity::prelude::DateTimeUtc;
 use sea_orm::{
     ActiveValue::Set, DatabaseConnection, DatabaseTransaction, TransactionTrait,
@@ -26,7 +26,7 @@ struct Input {
     issuer_identity: String,
     digest_sha256: Vec<u8>,
     issuer_state_bytes: Vec<u8>,
-    issuer_key: Proto::PublicKey,
+    issuer_signer: Proto::PublicKey,
     issuer_state_signature: Vec<u8>,
     initial_timestamp: DateTimeUtc,
     sequence: i64,
@@ -87,22 +87,17 @@ pub async fn handle(
 fn extract_and_validate_input(
     req: PutPairingSessionRequest,
 ) -> Result<Input, Status> {
-    let msg = req.signed_message.ok_or_else(|| {
-        Status::invalid_argument("signed_message is required")
-    })?;
+    let signed = req
+        .issuer_state
+        .ok_or_else(|| Status::invalid_argument("issuer_state is required"))?;
 
-    let (issuer_key, issuer_state_bytes, issuer_state_signature) = msg
-        .open_with_sig()
-        .ok_or_else(|| Status::unauthenticated("invalid signature"))?;
-
-    let issuer_state =
-        Proto::IssuerPairingState::decode(issuer_state_bytes.as_slice())
-            .map_err(|_| Status::invalid_argument("invalid issuer state"))?;
-
-    let digest = Proto::PairingSessionDigest::decode(
-        issuer_state.session_digest.as_slice(),
-    )
-    .map_err(|_| Status::invalid_argument("invalid session digest"))?;
+    let (issuer_signer, digest, issuer_state) =
+        signed.open().map_err(|e| match e {
+            CoreError::SignatureError(_) => {
+                Status::unauthenticated("invalid signature")
+            }
+            _ => Status::invalid_argument("invalid issuer state"),
+        })?;
 
     let digest_sha256 = Sha256::digest(&issuer_state.session_digest).to_vec();
     let initial_timestamp = DateTime::from_timestamp_millis(
@@ -113,9 +108,9 @@ fn extract_and_validate_input(
     Ok(Input {
         issuer_identity: digest.issuer_identity,
         digest_sha256,
-        issuer_state_bytes,
-        issuer_key,
-        issuer_state_signature,
+        issuer_state_bytes: signed.state_bytes,
+        issuer_signer,
+        issuer_state_signature: signed.signature,
         initial_timestamp,
         sequence: issuer_state.sequence,
     })
@@ -129,7 +124,7 @@ async fn verify_authorization(
     let is_authorized = id_repo::Query::is_rotation_key(
         db,
         &input.issuer_identity,
-        &input.issuer_key.key,
+        &input.issuer_signer.key,
     )
     .await
     .map_err(|e| {
@@ -138,7 +133,9 @@ async fn verify_authorization(
     })?;
 
     if !is_authorized {
-        return Err(Status::permission_denied("not authorized"));
+        return Err(Status::permission_denied(
+            "not authorized for identity rotation",
+        ));
     }
 
     Ok(())
@@ -201,8 +198,6 @@ async fn update_session(
         issuer_identity: Set(input.issuer_identity),
         digest_sha256: Set(input.digest_sha256),
         issuer_state_bytes: Set(input.issuer_state_bytes),
-        issuer_key_type: Set(input.issuer_key.key_type),
-        issuer_key: Set(input.issuer_key.key),
         issuer_state_signature: Set(input.issuer_state_signature),
         initial_timestamp: Set(input.initial_timestamp),
         sequence: Set(input.sequence),

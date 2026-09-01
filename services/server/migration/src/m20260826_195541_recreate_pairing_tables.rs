@@ -40,8 +40,6 @@ impl MigrationTrait for Migration {
             .col(string(Alias::new("issuer_identity")).primary_key())
             .col(binary(Alias::new("digest_sha256")))
             .col(binary(Alias::new("issuer_state_bytes")))
-            .col(integer(Alias::new("issuer_key_type")))
-            .col(binary(Alias::new("issuer_key")))
             .col(binary(Alias::new("issuer_state_signature")))
             .col(timestamp_with_time_zone(Alias::new("initial_timestamp")))
             .col(big_integer(Alias::new("sequence")));

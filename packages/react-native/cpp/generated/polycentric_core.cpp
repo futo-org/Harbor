@@ -376,7 +376,7 @@ extern "C" {
     /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_put_pairing_session(
         /*handle*/ uint64_t ptr, 
         RustBuffer server_url, 
-        RustBuffer signed_message_bytes
+        RustBuffer signed_issuer_state
     );
     /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_register_push_notifications(
         /*handle*/ uint64_t ptr, 

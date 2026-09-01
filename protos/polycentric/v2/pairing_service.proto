@@ -2,7 +2,6 @@ syntax = "proto3";
 package polycentric.v2;
 
 import "polycentric/v2/keypair.proto";
-import "polycentric/v2/server.proto";
 import "polycentric/v2/events.proto";
 
 // Immutable state created at the start of a pairing session that uniquely
@@ -11,16 +10,20 @@ message PairingSessionDigest {
   // Trusted source of truth for the identity being paired with.
   string issuer_identity = 1;
 
+  // Each issuer state must be signed by this key and this key must be
+  // authorized for rotation.
+  PublicKey issuer_signer = 2;
+
   // Random bitstring to add entropy and keep session identifiers unpredictable.
-  bytes nonce = 2;
+  bytes nonce = 3;
 
   // Timestamp in posix epoch millis.
   // Used for expiration and preventing replay attacks.
-  int64 initial_timestamp = 3;
+  int64 initial_timestamp = 4;
 
   // The number of milliseconds after the initial timestamp for which this
   // session is considered valid.
-  int64 ttl_millis = 4;
+  int64 ttl_millis = 5;
 }
 
 // Data to share out-of-band between the issuer and claimer.
@@ -33,11 +36,11 @@ message PairingInfo {
   bytes digest_sha256 = 2;
 }
 
-// Signed message payload from issuers.
+// Signed payload from issuers that contains pairing state information.
 // Contains authenticated information about the pairing session for claimers and
 // servers to read.
-// Clients and servers should only obtain these messages as payloads from signed
-// messages after verifying the signature.
+// Clients and servers should only obtain messages of this type from a
+// `SignedIssuerState` message and must check its signature.
 message IssuerPairingState {
   // Serialized `PairingSessionDigest` message.
   // Identifies the pairing session that this state belongs to.
@@ -61,11 +64,22 @@ message IssuerPairingState {
   int64 sequence = 3;
 }
 
+// Encapsulates an issuer's signed pairing state and its signature.
+message SignedIssuerState {
+  // Serialized `IssuerPairingState` message from the issuer.
+  bytes state_bytes = 1;
+
+  // Signature over `state_bytes`.
+  // Must use the key pair specified in the digest.
+  bytes signature = 2;
+}
+
 // Server-aggregated state for a pairing session containing input from the
 // issuer and claimers.
 message PairingSessionState {
-  // Issuer-signed `IssuerPairingState` message
-  SignedMessage issuer_state = 1;
+  SignedIssuerState issuer_state = 1;
+
+  // Server-managed list of claimers.
   repeated PublicKey claimers = 2;
 }
 
@@ -80,8 +94,7 @@ message GetPairingSessionRequest {
  * Wrapper request for PutPairingSession RPC.
  */
 message PutPairingSessionRequest {
-  // Must contain a serialized `IssuerPairingState` message as the payload.
-  SignedMessage signed_message = 1;
+  SignedIssuerState issuer_state = 1;
 }
 
 /**
