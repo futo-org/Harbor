@@ -2,20 +2,18 @@ import {
   Atoms,
   Breakpoints,
   Spacing,
-  typography,
   useTheme,
   withHexOpacity,
   ZIndex,
 } from '@/src/common/theme';
-import { isIOS, isWeb } from '@/src/common/util/platform';
+import { isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
-import { type ExternalPathString, Link, usePathname } from 'expo-router';
+import { Link, usePathname } from 'expo-router';
 import {
   type ComponentProps,
   memo,
   type ReactElement,
   type ReactNode,
-  useCallback,
   useEffect,
   useState,
 } from 'react';
@@ -43,6 +41,7 @@ import { Button } from '../primitives';
 import { AppFooter } from './AppFooter';
 import { VerticalNav } from './nav/VerticalNav';
 import Topbar from './Topbar';
+import { SuggestedFollowWidget } from '@/src/features/follow/SuggestedFollowWidget';
 
 type MainProps = {
   children: ReactElement | ReactElement[];
@@ -51,8 +50,11 @@ type MainProps = {
 function Main({ children, style }: MainProps) {
   const { width: deviceWidth } = useWindowDimensions();
   const containerWidth = deviceWidth <= Breakpoints.sm ? '100%' : undefined;
-  const innerWidth =
-    deviceWidth <= Breakpoints.sm
+  // Native always gets the phone layout: a single column capped at the
+  // feed width and centered, regardless of device size.
+  const innerWidth = !isWeb
+    ? Math.min(deviceWidth, 700)
+    : deviceWidth <= Breakpoints.sm
       ? '100%'
       : deviceWidth <= Breakpoints.md
         ? 600
@@ -62,7 +64,7 @@ function Main({ children, style }: MainProps) {
             ? 990
             : 1050;
 
-  const showRightSidebar = deviceWidth > Breakpoints.md;
+  const showRightSidebar = isWeb && deviceWidth > Breakpoints.md;
 
   return (
     <View
@@ -70,6 +72,7 @@ function Main({ children, style }: MainProps) {
         Atoms.flex_shrink_1,
         Atoms.flex_grow_1,
         { width: containerWidth },
+        !isWeb && Atoms.align_center,
       ]}
       role="main"
     >
@@ -281,6 +284,7 @@ function SidebarContent({
           {identity && (
             <Button
               title={narrow ? '' : 'Post'}
+              accessibilityLabel="New post"
               variant="primary"
               size="md"
               fullWidth={!narrow}
@@ -435,6 +439,8 @@ export const RightSidebar = memo(function RightSidebar() {
             <SidebarSearch />
 
             {!identity && <SignupWidget />}
+
+            {!!identity && isWeb && <SuggestedFollowWidget />}
           </View>
           <AppFooter />
         </View>

@@ -1,0 +1,18 @@
+# Scrolls the feed down one screen once it has loaded. The web driver's
+# swipes don't move the page, and the feed is virtualised, so wait for a
+# post to render at the new position.
+- evalBrowserScript:
+    script: |
+      const sleep = () => new Promise((resolve) => setTimeout(resolve, 100));
+      const tall = () => document.documentElement.scrollHeight > window.innerHeight * 2;
+      for (let i = 0; i < 300 && !tall(); i++) await sleep();
+      if (!tall()) throw new Error('the feed did not outgrow the screen');
+      window.scrollBy(0, window.innerHeight);
+      const onScreen = () =>
+        [...document.querySelectorAll('[role="article"]')].some((el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.top >= 0 && rect.bottom <= window.innerHeight;
+        });
+      for (let i = 0; i < 50 && !onScreen(); i++) await sleep();
+      if (!onScreen()) throw new Error('no post on screen after scrolling');
+      return window.scrollY;

@@ -23,7 +23,7 @@ export function SuggestedFollowList({
 }) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const suggestions = useSuggestedFollows(active);
+  const suggestions = useSuggestedFollows({ enabled: active });
 
   return (
     <List<FollowSuggestionEntry>

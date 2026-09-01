@@ -1,10 +1,60 @@
-use super::{ChildContext, map_db_err};
 use crate::service::proto::{Identity, PublicKey, RevocationBound};
-use ::entity::content_identity_model as ContentIdentityModel;
+use entity::content_identity_model as ContentIdentityModel;
 use prost::Message;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait};
+use sea_orm::DbErr;
+use sea_orm::sea_query::{DynIden, Expr, InsertStatement, SelectStatement};
 use serde_json::json;
 use tonic::Status;
+
+pub(super) fn add_query(
+    identity: Identity,
+    content_id: (DynIden, DynIden),
+    event_identity: (DynIden, DynIden),
+) -> Result<InsertStatement, Status> {
+    let encoded_identity = identity.encode_to_vec();
+    let Identity {
+        rotation_keys,
+        signing_keys,
+        revocation_bounds,
+        servers,
+        recovery_key: _,
+        recovery_signature: _,
+    } = identity;
+
+    let mut query = InsertStatement::new();
+    query
+        .into_table(ContentIdentityModel::Entity)
+        .columns([
+           ContentIdentityModel::Column::ContentId,
+           ContentIdentityModel::Column::Identity,
+           ContentIdentityModel::Column::IdentityBytes,
+           ContentIdentityModel::Column::RotationKeys,
+           ContentIdentityModel::Column::SigningKeys,
+           ContentIdentityModel::Column::RevocationBounds,
+           ContentIdentityModel::Column::Servers,
+        ])
+        .select_from({
+            let mut q = SelectStatement::new();
+            q
+                .from(content_id.0.clone())
+                .from(event_identity.0.clone())
+                .expr(Expr::col(content_id))
+                .expr(Expr::col(event_identity))
+                .expr(Expr::from(encoded_identity))
+                .expr(Expr::from(keys_to_json(&rotation_keys)))
+                .expr(Expr::from(keys_to_json(&signing_keys)))
+                .expr(Expr::from(revocation_bounds_to_json(&revocation_bounds)))
+                .expr(Expr::from(servers.map(|s| json!(s.urls))));
+           q
+        })
+        .map_err(|err| {
+            let err = DbErr::Custom(format!("incorrect amount of values: {err}"));
+            tracing::error!(error = %err, "failed to create query to store identity content");
+            Status::internal("internal server error")
+        })?;
+
+    Ok(query)
+}
 
 fn key_to_json(key: &PublicKey) -> serde_json::Value {
     json!({
@@ -38,27 +88,4 @@ fn revocation_bounds_to_json(bounds: &[RevocationBound]) -> serde_json::Value {
             })
             .collect(),
     )
-}
-
-pub(super) async fn add<C: ConnectionTrait>(
-    db: &C,
-    ctx: &ChildContext<'_>,
-    identity: Identity,
-) -> Result<(), Status> {
-    ContentIdentityModel::ActiveModel {
-        content_id: Set(ctx.content_id),
-        identity: Set(ctx.event_identity.to_string()),
-        identity_bytes: Set(identity.encode_to_vec()),
-        rotation_keys: Set(keys_to_json(&identity.rotation_keys)),
-        signing_keys: Set(keys_to_json(&identity.signing_keys)),
-        revocation_bounds: Set(revocation_bounds_to_json(
-            &identity.revocation_bounds,
-        )),
-        servers: Set(identity.servers.as_ref().map(|s| json!(s.urls))),
-    }
-    .insert(db)
-    .await
-    .map_err(map_db_err)?;
-
-    Ok(())
 }

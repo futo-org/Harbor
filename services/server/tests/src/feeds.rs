@@ -1012,8 +1012,8 @@ async fn explore_feed_exists() {
     let mut feeds = connect_feeds().await;
 
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
-    client.post_text("Post 2", DEFAULT_CREATED_AT + 1);
+    client.post_text("Post 1", current_timestamp());
+    client.post_text("Post 2", current_timestamp());
     client.submit_events().await;
 
     let request = GetExploreFeedRequest {
@@ -1044,7 +1044,7 @@ async fn following_feed_empty() {
 async fn following_feed_includes_own_posts() {
     let mut client = TestClient::new().await;
 
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
     let follower = client.identity();
@@ -1056,13 +1056,13 @@ async fn following_feed_includes_own_posts() {
 async fn following_feed_includes_posts_by_followee() {
     let mut client = TestClient::new().await;
 
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
     let followee = client.identity();
 
     let mut client = TestClient::new().await;
-    client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
+    client.follow_identity(followee.to_owned(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1072,16 +1072,16 @@ async fn following_feed_includes_posts_by_followee() {
 #[tokio::test]
 async fn following_feed_ordering() {
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
-    client.post_text("Post 2", DEFAULT_CREATED_AT + 1);
+    client.post_text("Post 2", current_timestamp());
     let post2_key = client.get_last_event_key();
     client.submit_events().await;
     let followee = client.identity();
 
     let mut client = TestClient::new().await;
-    client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
-    client.thumbs_up(post2_key.clone(), DEFAULT_CREATED_AT + 2);
+    client.follow_identity(followee.to_owned(), current_timestamp());
+    client.thumbs_up(post2_key.clone(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1090,38 +1090,42 @@ async fn following_feed_ordering() {
 
 #[tokio::test]
 async fn following_feed_pagination() {
-    // Followee 1, post 1.
+    // Followee 1, post 0 and 1.
     let mut client1 = TestClient::new().await;
-    client1.post_text("Post 1", DEFAULT_CREATED_AT);
+    client1.post_text("Post 0", current_timestamp());
+    let post0_key = client1.get_last_event_key();
+    client1.post_text("Post 1", current_timestamp());
     let post1_key = client1.get_last_event_key();
     client1.submit_events().await;
     let followee1 = client1.identity().to_owned();
 
     // Followee 2, post 2.
     let mut client2 = TestClient::new().await;
-    client2.post_text("Post 2", DEFAULT_CREATED_AT);
+    client2.post_text("Post 2", current_timestamp());
     let post2_key = client2.get_last_event_key();
     client2.submit_events().await;
     let followee2 = client2.identity().to_owned();
 
     // Follower, post 3.
     let mut client3 = TestClient::new().await;
-    client3.post_text("Post 3", DEFAULT_CREATED_AT);
+    client3.post_text("Post 3", current_timestamp());
     let post3_key = client3.get_last_event_key();
-    client3.follow_identity(followee1, DEFAULT_CREATED_AT);
-    client3.follow_identity(followee2, DEFAULT_CREATED_AT);
+    client3.follow_identity(followee1, current_timestamp());
+    client3.follow_identity(followee2, current_timestamp());
     client3.submit_events().await;
     let follower = client3.identity().to_owned();
 
+    // Post 0, 1 reaction.
+    client2.thumbs_up(post1_key.clone(), current_timestamp());
     // Post 1, 1 reaction.
-    client3.thumbs_up(post1_key.clone(), DEFAULT_CREATED_AT + 5);
+    client3.thumbs_up(post1_key.clone(), current_timestamp());
     // Post 2, 2 reactions.
-    client3.thumbs_up(post2_key.clone(), DEFAULT_CREATED_AT + 5);
-    client2.thumbs_up(post2_key.clone(), DEFAULT_CREATED_AT + 5);
+    client3.thumbs_up(post2_key.clone(), current_timestamp());
+    client2.thumbs_up(post2_key.clone(), current_timestamp());
     // Post 3, 3 reactions.
-    client3.thumbs_up(post3_key.clone(), DEFAULT_CREATED_AT + 5);
-    client2.thumbs_up(post3_key.clone(), DEFAULT_CREATED_AT + 5);
-    client1.thumbs_up(post3_key.clone(), DEFAULT_CREATED_AT + 5);
+    client3.thumbs_up(post3_key.clone(), current_timestamp());
+    client2.thumbs_up(post3_key.clone(), current_timestamp());
+    client1.thumbs_up(post3_key.clone(), current_timestamp());
     client1.submit_events().await;
     client2.submit_events().await;
     client3.submit_events().await;
@@ -1130,8 +1134,13 @@ async fn following_feed_pagination() {
 
     // Forward.
     let mut page_info: Option<PageInfo> = None;
-    let mut expected_iter =
-        [post3_key.clone(), post2_key.clone(), post1_key.clone()].into_iter();
+    let mut expected_iter = [
+        post3_key.clone(),
+        post2_key.clone(),
+        post1_key.clone(),
+        post0_key,
+    ]
+    .into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let request = GetFollowingFeedRequest {
@@ -1155,12 +1164,13 @@ async fn following_feed_pagination() {
         explore_feed(request, &[expected]).await;
 
         let page_info = page_info.as_ref().unwrap();
-        assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
+        assert_eq!(page_info.has_previous_page, expected_iter.len() != 3);
         assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
     }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
-    let mut expected_iter = [post2_key, post3_key].into_iter();
+    let mut expected_iter = [post1_key, post2_key, post3_key].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let mut feeds = connect_feeds().await;
@@ -1188,6 +1198,7 @@ async fn following_feed_pagination() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
         assert_eq!(page_info.has_next_page, true);
     }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
 async fn following_feed(for_identity: &str, expected: &[EventKey]) {
@@ -1222,7 +1233,7 @@ async fn recommended_feed_empty() {
 #[tokio::test]
 async fn recommended_feed_does_not_include_own_posts() {
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1232,13 +1243,13 @@ async fn recommended_feed_does_not_include_own_posts() {
 #[tokio::test]
 async fn recommended_feed_includes_posts_by_followee() {
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
     let followee = client.identity();
 
     let mut client = TestClient::new().await;
-    client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
+    client.follow_identity(followee.to_owned(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1249,12 +1260,12 @@ async fn recommended_feed_includes_posts_by_followee() {
 async fn recommended_feed_does_not_include_posts_reacted_self() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
 
     let mut client = TestClient::new().await;
-    client.thumbs_up(post1_key.clone(), DEFAULT_CREATED_AT);
+    client.thumbs_up(post1_key.clone(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1265,16 +1276,16 @@ async fn recommended_feed_does_not_include_posts_reacted_self() {
 async fn recommended_feed_does_not_include_own_posts_even_with_followee_interaction()
  {
     let mut follower_client = TestClient::new().await;
-    follower_client.post_text("Post 1", DEFAULT_CREATED_AT);
+    follower_client.post_text("Post 1", current_timestamp());
     let post1_key = follower_client.get_last_event_key();
     follower_client.submit_events().await;
 
     let mut followee_client = TestClient::new().await;
-    followee_client.thumbs_up(post1_key.clone(), DEFAULT_CREATED_AT);
+    followee_client.thumbs_up(post1_key.clone(), current_timestamp());
     followee_client.submit_events().await;
     let followee = followee_client.identity();
 
-    follower_client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
+    follower_client.follow_identity(followee.to_owned(), current_timestamp());
     follower_client.submit_events().await;
     let follower = follower_client.identity();
 
@@ -1285,17 +1296,17 @@ async fn recommended_feed_does_not_include_own_posts_even_with_followee_interact
 async fn recommended_feed_includes_posts_reacted_by_followee() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
 
     let mut client = TestClient::new().await;
-    client.thumbs_up(post1_key.clone(), DEFAULT_CREATED_AT);
+    client.thumbs_up(post1_key.clone(), current_timestamp());
     client.submit_events().await;
     let followee = client.identity();
 
     let mut client = TestClient::new().await;
-    client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
+    client.follow_identity(followee.to_owned(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1306,12 +1317,12 @@ async fn recommended_feed_includes_posts_reacted_by_followee() {
 async fn recommended_feed_does_not_include_posts_reposted_self() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
 
     let mut client = TestClient::new().await;
-    client.repost_key(post1_key.clone(), DEFAULT_CREATED_AT);
+    client.repost_key(post1_key.clone(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1322,17 +1333,17 @@ async fn recommended_feed_does_not_include_posts_reposted_self() {
 async fn recommended_feed_includes_posts_reposted_by_followee() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
 
     let mut client = TestClient::new().await;
-    client.repost_key(post1_key.clone(), DEFAULT_CREATED_AT);
+    client.repost_key(post1_key.clone(), current_timestamp());
     client.submit_events().await;
     let followee = client.identity();
 
     let mut client = TestClient::new().await;
-    client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
+    client.follow_identity(followee.to_owned(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1343,12 +1354,12 @@ async fn recommended_feed_includes_posts_reposted_by_followee() {
 async fn recommended_feed_does_not_include_posts_quoted_self() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
 
     let mut client = TestClient::new().await;
-    client.quote(post1_key.clone(), "Reply 1", DEFAULT_CREATED_AT);
+    client.quote(post1_key.clone(), "Reply 1", current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1359,34 +1370,34 @@ async fn recommended_feed_does_not_include_posts_quoted_self() {
 async fn recommended_feed_includes_posts_quoted_by_followee() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
 
     let mut client = TestClient::new().await;
-    client.quote(post1_key.clone(), "Reply 1", DEFAULT_CREATED_AT);
+    client.quote(post1_key.clone(), "Reply 1", current_timestamp());
     let reply1_key = client.get_last_event_key();
     client.submit_events().await;
     let followee = client.identity();
 
     let mut client = TestClient::new().await;
-    client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
+    client.follow_identity(followee.to_owned(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[post1_key, reply1_key]).await;
+    recommended_feed(follower, &[reply1_key, post1_key]).await;
 }
 
 #[tokio::test]
 async fn recommended_feed_does_not_include_posts_replies_self() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
 
     let mut client = TestClient::new().await;
-    client.reply(post1_key.clone(), "Reply 1", DEFAULT_CREATED_AT);
+    client.reply(post1_key.clone(), "Reply 1", current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1397,37 +1408,37 @@ async fn recommended_feed_does_not_include_posts_replies_self() {
 async fn recommended_feed_includes_posts_replies_by_followee() {
     // NOTE: not following this identity.
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
     client.submit_events().await;
 
     let mut client = TestClient::new().await;
-    client.reply(post1_key.clone(), "Reply 1", DEFAULT_CREATED_AT);
+    client.reply(post1_key.clone(), "Reply 1", current_timestamp());
     let reply1_key = client.get_last_event_key();
     client.submit_events().await;
     let followee = client.identity();
 
     let mut client = TestClient::new().await;
-    client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
+    client.follow_identity(followee.to_owned(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[post1_key, reply1_key]).await;
+    recommended_feed(follower, &[reply1_key, post1_key]).await;
 }
 
 #[tokio::test]
 async fn recommended_feed_ordering() {
     let mut client = TestClient::new().await;
-    client.post_text("Post 1", DEFAULT_CREATED_AT);
+    client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
-    client.post_text("Post 2", DEFAULT_CREATED_AT + 1);
+    client.post_text("Post 2", current_timestamp());
     let post2_key = client.get_last_event_key();
     client.submit_events().await;
     let followee = client.identity();
 
     let mut client = TestClient::new().await;
-    client.follow_identity(followee.to_owned(), DEFAULT_CREATED_AT);
-    client.thumbs_up(post2_key.clone(), DEFAULT_CREATED_AT + 2);
+    client.follow_identity(followee.to_owned(), current_timestamp());
+    client.thumbs_up(post2_key.clone(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1436,38 +1447,42 @@ async fn recommended_feed_ordering() {
 
 #[tokio::test]
 async fn recommended_feed_pagination() {
-    // Followee 1, post 1.
+    // Followee 1, post 0 and 1.
     let mut client1 = TestClient::new().await;
-    client1.post_text("Post 1", DEFAULT_CREATED_AT);
+    client1.post_text("Post 0", current_timestamp());
+    let post0_key = client1.get_last_event_key();
+    client1.post_text("Post 1", current_timestamp());
     let post1_key = client1.get_last_event_key();
     client1.submit_events().await;
     let followee1 = client1.identity().to_owned();
 
     // Followee 2, post 2.
     let mut client2 = TestClient::new().await;
-    client2.post_text("Post 2", DEFAULT_CREATED_AT);
+    client2.post_text("Post 2", current_timestamp());
     let post2_key = client2.get_last_event_key();
     client2.submit_events().await;
     let followee2 = client2.identity().to_owned();
 
     // Follower, post 3.
     let mut client3 = TestClient::new().await;
-    client3.post_text("Post 3", DEFAULT_CREATED_AT);
+    client3.post_text("Post 3", current_timestamp());
     let post3_key = client3.get_last_event_key();
-    client3.follow_identity(followee1, DEFAULT_CREATED_AT);
-    client3.follow_identity(followee2, DEFAULT_CREATED_AT);
+    client3.follow_identity(followee1, current_timestamp());
+    client3.follow_identity(followee2, current_timestamp());
     client3.submit_events().await;
     let follower = client3.identity().to_owned();
 
+    // Post 0, 1 reaction.
+    client2.thumbs_up(post0_key.clone(), current_timestamp());
     // Post 1, 1 reaction.
-    client3.thumbs_up(post1_key.clone(), DEFAULT_CREATED_AT + 5);
+    client3.thumbs_up(post1_key.clone(), current_timestamp());
     // Post 2, 2 reactions.
-    client3.thumbs_up(post2_key.clone(), DEFAULT_CREATED_AT + 5);
-    client2.thumbs_up(post2_key.clone(), DEFAULT_CREATED_AT + 5);
+    client3.thumbs_up(post2_key.clone(), current_timestamp());
+    client2.thumbs_up(post2_key.clone(), current_timestamp());
     // Post 3, 3 reactions.
-    client3.thumbs_up(post3_key.clone(), DEFAULT_CREATED_AT + 5);
-    client2.thumbs_up(post3_key.clone(), DEFAULT_CREATED_AT + 5);
-    client1.thumbs_up(post3_key.clone(), DEFAULT_CREATED_AT + 5);
+    client3.thumbs_up(post3_key.clone(), current_timestamp());
+    client2.thumbs_up(post3_key.clone(), current_timestamp());
+    client1.thumbs_up(post3_key.clone(), current_timestamp());
     client1.submit_events().await;
     client2.submit_events().await;
     client3.submit_events().await;
@@ -1476,8 +1491,13 @@ async fn recommended_feed_pagination() {
 
     // Forward.
     let mut page_info: Option<PageInfo> = None;
-    let mut expected_iter =
-        [post3_key.clone(), post2_key.clone(), post1_key.clone()].into_iter();
+    let mut expected_iter = [
+        post3_key.clone(),
+        post2_key.clone(),
+        post1_key.clone(),
+        post0_key.clone(),
+    ]
+    .into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let request = GetFollowingFeedRequest {
@@ -1501,12 +1521,13 @@ async fn recommended_feed_pagination() {
         explore_feed(request, &[expected]).await;
 
         let page_info = page_info.as_ref().unwrap();
-        assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
+        assert_eq!(page_info.has_previous_page, expected_iter.len() != 3);
         assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
     }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
-    let mut expected_iter = [post2_key, post3_key].into_iter();
+    let mut expected_iter = [post1_key, post2_key, post3_key].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let mut feeds = connect_feeds().await;
@@ -1534,6 +1555,7 @@ async fn recommended_feed_pagination() {
         assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
         assert_eq!(page_info.has_next_page, true);
     }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
 async fn recommended_feed(for_identity: &str, expected: &[EventKey]) {

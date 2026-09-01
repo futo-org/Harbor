@@ -1,4 +1,5 @@
 use crate::client::PolycentricClient;
+use crate::lock::LockRecover;
 use crate::media::process_image;
 use crate::pairing;
 use crate::sync;
@@ -15,6 +16,7 @@ use polycentric_common::models::protos_v2::{
 use polycentric_common::models::protos_v2::{ListHeadsRequest, PutEventsResponse};
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
+use std::sync::LazyLock;
 use std::sync::{Arc, Mutex};
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native-transport")))]
@@ -24,6 +26,22 @@ async fn channel(server_url: &str) -> Result<crate::query::GrpcChannel, CoreErro
     crate::query::channel(server_url)
         .await
         .map_err(CoreError::Network)
+}
+
+/// Install a panic hook that logs the panic message
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn install_panic_hook() {
+    let lazy = LazyLock::new(|| {
+        std::panic::set_hook(Box::new(|info| {
+            let location = info
+                .location()
+                .map(|l| format!("{}:{}", l.file(), l.line()))
+                .unwrap_or_else(|| "unknown location".to_string());
+            let msg = crate::logging::panic_payload_message(info.payload());
+            crate::logging::log_error(|| format!("panic at {location}: {msg}"));
+        }))
+    });
+    LazyLock::force(&lazy);
 }
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -119,6 +137,8 @@ impl PolycentricCore {
     pub fn new() -> Arc<Self> {
         #[cfg(target_arch = "wasm32")]
         console_error_panic_hook::set_once();
+        #[cfg(not(target_arch = "wasm32"))]
+        install_panic_hook();
 
         let client = Arc::new(Mutex::new(PolycentricClient::new()));
         Arc::new(Self {
@@ -130,7 +150,7 @@ impl PolycentricCore {
     /// Replace the list of gRPC servers the core's `Observable`-returning
     /// methods will fan out to.
     pub fn set_servers(&self, servers: Vec<String>) {
-        self.client.lock().unwrap().set_servers(servers);
+        self.client.lock_recover().set_servers(servers);
     }
 
     /// Register the provider consulted for the auth token attached to every
@@ -149,21 +169,20 @@ impl PolycentricCore {
 
     /// Return a snapshot of the currently configured servers.
     pub fn get_servers(&self) -> Vec<String> {
-        self.client.lock().unwrap().servers()
+        self.client.lock_recover().servers()
     }
 
     /// Set the user's identity for user-specific state (i.e. the set of identities
     /// a user blocks).
     pub fn set_active_identity(&self, identity: Option<String>) {
-        self.client.lock().unwrap().set_active_identity(identity);
+        self.client.lock_recover().set_active_identity(identity);
     }
 
     /// Identities the active identity blocks, derived from its non-tombstoned
     /// social graph events.
     pub fn blocked_identities(&self) -> Vec<String> {
         self.client
-            .lock()
-            .unwrap()
+            .lock_recover()
             .blocked_identities()
             .iter()
             .cloned()
@@ -171,13 +190,12 @@ impl PolycentricCore {
     }
 
     pub fn is_blocked(&self, identity: String) -> bool {
-        self.client.lock().unwrap().is_blocked(&identity)
+        self.client.lock_recover().is_blocked(&identity)
     }
 
     pub fn next_sequence(&self, identity: String, collection: i32) -> u64 {
         self.client
-            .lock()
-            .unwrap()
+            .lock_recover()
             .next_sequence(&identity, collection)
     }
 
@@ -192,15 +210,14 @@ impl PolycentricCore {
             .map_err(|e| CoreError::Decode(format!("Failed to decode signer: {e}")))?;
         Ok(self
             .client
-            .lock()
-            .unwrap()
+            .lock_recover()
             .get_identity_sequence(&identity, &pk))
     }
 
     /// Returns the latest known valid identity document for `identity`, if any.
     /// Derived purely from the local in-memory event and content stores.
     pub fn resolve_identity(&self, identity: String) -> Option<Vec<u8>> {
-        let client = self.client.lock().unwrap();
+        let client = self.client.lock_recover();
         let chain = client.identity_chain(&identity).ok()?;
         chain
             .latest_state()
@@ -212,8 +229,7 @@ impl PolycentricCore {
     pub fn resolve_identity_chain(&self, identity: String) -> Result<Vec<u8>, CoreError> {
         let event_bundles = self
             .client
-            .lock()
-            .unwrap()
+            .lock_recover()
             .identity_chain_bundles(&identity)
             .map_err(|e| CoreError::Store(format!("resolve_identity_chain: {e}")))?;
 
@@ -229,8 +245,7 @@ impl PolycentricCore {
     /// `(identity, collection)`. Empty when no events exist.
     pub fn previous_root(&self, identity: String, collection: i32) -> Vec<u8> {
         self.client
-            .lock()
-            .unwrap()
+            .lock_recover()
             .previous_root(&identity, collection)
     }
 
@@ -238,15 +253,14 @@ impl PolycentricCore {
     /// Empty when no events exist.
     pub fn previous_signature(&self, identity: String, collection: i32) -> Vec<u8> {
         self.client
-            .lock()
-            .unwrap()
+            .lock_recover()
             .previous_signature(&identity, collection)
     }
 
     /// Verify each `SignedEvent` (decoding implicitly verifies the
     /// signature) and copy it into the local event store.
     pub fn copy_events(&self, signed_events: Vec<Vec<u8>>) -> Result<(), CoreError> {
-        let mut client = self.client.lock().unwrap();
+        let mut client = self.client.lock_recover();
         for bytes in signed_events {
             let signed_event = SignedEvent::from_bytes(&bytes)
                 .map_err(|e| CoreError::Decode(format!("Invalid signed event: {e:?}")))?;
@@ -259,7 +273,7 @@ impl PolycentricCore {
 
     /// Insert each (digest, content) pair into the content store.
     pub fn copy_contents(&self, contents: Vec<ContentEntry>) -> Result<(), CoreError> {
-        let mut client = self.client.lock().unwrap();
+        let mut client = self.client.lock_recover();
         for entry in contents {
             let digest = ContentDigest::decode(entry.digest_bytes.as_slice())
                 .map_err(|e| CoreError::Decode(format!("Failed to decode ContentDigest: {e}")))?;
@@ -292,8 +306,7 @@ impl PolycentricCore {
             .map_err(|e| CoreError::Decode(format!("Failed to decode identity_content: {e}")))?;
         let clock = self
             .client
-            .lock()
-            .unwrap()
+            .lock_recover()
             .build_vector_clock(
                 &identity,
                 collection,
@@ -353,8 +366,7 @@ impl PolycentricCore {
     ) -> Result<Vec<u8>, CoreError> {
         let event_bundles = self
             .client
-            .lock()
-            .unwrap()
+            .lock_recover()
             .list_valid_events(&identity, collection)
             .map_err(|e| CoreError::Store(format!("list_valid_events: {e}")))?;
 
@@ -566,10 +578,10 @@ impl PolycentricCore {
     ) -> Result<Option<Vec<u8>>, CoreError> {
         let bundles = if partial {
             let heads = sync::request_heads(&identity, &server).await?;
-            let client = self.client.lock().unwrap();
+            let client = self.client.lock_recover();
             sync::bundle_unsent_events(&client, &identity, heads)?
         } else {
-            let client = self.client.lock().unwrap();
+            let client = self.client.lock_recover();
             sync::bundle_local_events(&client, &identity)?
         };
 
@@ -761,5 +773,53 @@ impl PolycentricCore {
             .map_err(|e| CoreError::Decode(format!("assemble_recovery_payload: {e}")))?;
 
         Ok(assemble_recovery_payload(&identity, &public_key))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::panic::AssertUnwindSafe;
+    use std::sync::Mutex as StdMutex;
+
+    #[test]
+    fn poisoned_client_recovers() {
+        let core = PolycentricCore::new();
+
+        let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            let _guard = core.client.lock().unwrap();
+            panic!("poison the client");
+        }));
+
+        core.set_servers(vec!["s1".to_string()]);
+        assert_eq!(core.client.lock_recover().servers(), vec!["s1".to_string()]);
+    }
+
+    struct Recording(Arc<StdMutex<Vec<String>>>);
+
+    impl crate::logging::Logger for Recording {
+        fn log(&self, message: String) {
+            self.0.lock().unwrap().push(message);
+        }
+    }
+
+    #[test]
+    fn panics_cause_logs() {
+        let messages = Arc::new(StdMutex::new(Vec::new()));
+        crate::logging::set_logger(Arc::new(Recording(messages.clone())));
+        crate::logging::set_log_level(crate::logging::LogLevel::Error);
+
+        install_panic_hook();
+
+        let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            panic!("hook smoke test");
+        }));
+
+        let got = messages.lock().unwrap();
+        assert!(
+            got.iter()
+                .any(|m| m.contains("panic at") && m.contains("hook smoke test")),
+            "expected the panic hook to log, got {got:?}"
+        );
     }
 }

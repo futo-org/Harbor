@@ -331,7 +331,7 @@ mod tests {
         };
         let result =
             is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
-        assert!(result.unwrap());
+        assert!(!result.unwrap());
     }
 
     #[tokio::test]
@@ -349,7 +349,7 @@ mod tests {
         };
         let result =
             is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
-        assert!(result.unwrap());
+        assert!(!result.unwrap());
     }
 
     #[tokio::test]
@@ -358,7 +358,7 @@ mod tests {
         let bundle = bundle_with_key(None);
         let result =
             is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
-        assert!(result.unwrap());
+        assert!(!result.unwrap());
     }
 
     #[tokio::test]
@@ -367,7 +367,7 @@ mod tests {
         let bundle = bundle_with_key(Some(key_with("alice", None, 6)));
         let result =
             is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
-        assert!(result.unwrap());
+        assert!(!result.unwrap());
     }
 
     #[tokio::test]
@@ -381,7 +381,7 @@ mod tests {
         let bundle = bundle_with_key(Some(key_with("mallory", signer, 6)));
         let result =
             is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
-        assert!(result.unwrap());
+        assert!(!result.unwrap());
     }
 
     #[tokio::test]

@@ -11,6 +11,7 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 
+use crate::lock::LockRecover;
 use crate::time::now_millis;
 use crate::{
     client::PolycentricClient,
@@ -197,7 +198,7 @@ fn do_feed_merge(
     merge_event_hints(&mut response.event_hints);
 
     {
-        let c = client.lock().unwrap();
+        let c = client.lock_recover();
         if validate {
             retain_validated_bundles(&c, &mut response.event_bundles);
             retain_validated_hints(&c, &mut response.event_hints);
@@ -261,7 +262,7 @@ fn merge_thread_responses(
 ) -> Vec<u8> {
     let mut response = merge_bundle_response::<GetPostThreadResponse>(values, client);
 
-    let blocked = client.lock().unwrap().blocked_identities();
+    let blocked = client.lock_recover().blocked_identities();
     retain_unblocked_thread_bundles(&blocked, &mut response.thread);
     retain_unblocked_hints(&blocked, &mut response.event_hints);
 
@@ -346,7 +347,7 @@ pub fn get_identity_feed(
             let bytes = response.encode_to_vec();
 
             copy_hints(&client, response.event_hints);
-            client.lock().unwrap().copy_bundles(response.event_bundles);
+            client.lock_recover().copy_bundles(response.event_bundles);
             Ok(bytes)
         }
     };
@@ -417,7 +418,7 @@ pub fn get_attribution_feed(
             let bytes = response.encode_to_vec();
 
             copy_hints(&client, response.event_hints);
-            client.lock().unwrap().copy_bundles(response.event_bundles);
+            client.lock_recover().copy_bundles(response.event_bundles);
             Ok(bytes)
         }
     };
@@ -488,7 +489,7 @@ pub fn get_following_feed(
             let bytes = response.encode_to_vec();
 
             copy_hints(&client, response.event_hints);
-            client.lock().unwrap().copy_bundles(response.event_bundles);
+            client.lock_recover().copy_bundles(response.event_bundles);
             Ok(bytes)
         }
     };
@@ -561,7 +562,7 @@ pub fn get_recommended_feed(
             let bytes = response.encode_to_vec();
 
             copy_hints(&client, response.event_hints);
-            client.lock().unwrap().copy_bundles(response.event_bundles);
+            client.lock_recover().copy_bundles(response.event_bundles);
             Ok(bytes)
         }
     };
@@ -632,7 +633,7 @@ pub fn get_explore_feed(
             let bytes = response.encode_to_vec();
 
             copy_hints(&client, response.event_hints);
-            client.lock().unwrap().copy_bundles(response.event_bundles);
+            client.lock_recover().copy_bundles(response.event_bundles);
             Ok(bytes)
         }
     };
@@ -680,7 +681,7 @@ pub fn get_post_thread(
                 .into_inner();
             let bytes = response.encode_to_vec();
             copy_hints(&client, response.event_hints);
-            client.lock().unwrap().copy_bundles(response.thread);
+            client.lock_recover().copy_bundles(response.thread);
             Ok(bytes)
         }
     };

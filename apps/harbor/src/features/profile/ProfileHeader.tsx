@@ -1,7 +1,7 @@
 import { BackButton } from '@/src/common/components/composites';
 import HoverCard from '@/src/common/components/HoverCard';
 import Icon from '@/src/common/components/Icon';
-import { useImageViewer } from '@/src/common/components/ImageViewer';
+import { openProfilePhoto } from '@/src/features/profile/ProfilePhotoScreen';
 import {
   Button,
   ProfileAvatar,
@@ -9,7 +9,6 @@ import {
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import {
-  identiconUrl,
   shortenIdentityId,
   truncateName,
   useUsername,
@@ -46,14 +45,10 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
     if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
   }, [identityKey]);
 
-  const openImageViewer = useImageViewer();
-  const avatar = profile.avatar;
   const handleAvatarPress = useCallback(() => {
     if (!identityKey) return;
-    openImageViewer([
-      avatar ?? { uri: identiconUrl(identityKey, 512), aspectRatio: 1 },
-    ]);
-  }, [avatar, identityKey, openImageViewer]);
+    openProfilePhoto(identityKey);
+  }, [identityKey]);
 
   if (profile.isLoading && !profile.name) return undefined;
 

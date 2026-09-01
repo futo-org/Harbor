@@ -1,4 +1,3 @@
-use crate::config;
 use crate::data::EventWithContentRow;
 use crate::data::{Cursor, CursorFilter};
 use crate::service::events::TargetEventKey;
@@ -21,7 +20,7 @@ use sea_orm::{
     *,
 };
 use sea_query::query::{CommonTableExpression, WithClause};
-use sea_query::{Func, SelectStatement, TableRef, UnionType};
+use sea_query::{Func, SelectStatement, UnionType};
 use serde::{Deserialize, Serialize};
 use tonic::Status;
 
@@ -316,52 +315,39 @@ impl Query {
                         ReactionTallyModel::Entity,
                         ReactionTallyModel::Relation::EventModel.def().rev(),
                     )
-                    .inner_join(
-                        TableRef::FunctionCall(
-                            {
-                                let func = Func::cust("reaction_count_decay");
-                                let positive_count = Expr::col(
-                                    ReactionTallyModel::Column::PositiveCount
-                                        .as_column_ref(),
-                                );
-                                let created_at = Expr::col(
-                                    EventModel::Column::CreatedAt
-                                        .as_column_ref(),
-                                );
-                                if let Some(gravity) =
-                                    config::get().feeds_gravity
-                                {
-                                    func.args([
-                                        positive_count,
-                                        created_at,
-                                        Expr::Constant(gravity.into()),
-                                    ])
-                                } else {
-                                    func.args([positive_count, created_at])
-                                }
-                            },
-                            REACTION_COUNT_COLUMN.into(),
-                        ),
-                        Condition::all(), // Always join.
-                    )
                     // We can't decode numerics as we don't have a type for it,
                     // so we have to use floats, but those lose precision, so
                     // use a string instead.
                     .expr_as(
-                        Expr::cust(format!("{REACTION_COUNT_COLUMN}::TEXT")),
+                        Func::cast_as(
+                            Expr::col(
+                                ReactionTallyModel::Column::DecayedCount
+                                    .as_column_ref(),
+                            ),
+                            "TEXT",
+                        ),
                         REACTION_COUNT_COLUMN,
+                    )
+                    // Filter out posts that aren't relevant (anymore).
+                    // Matches the `reaction_tally_decayed_count` index.
+                    .cond_where(
+                        Expr::col(
+                            ReactionTallyModel::Column::DecayedCount
+                                .as_column_ref(),
+                        )
+                        .gt(Expr::Constant(0.0.into())),
                     );
             }
         }
 
         // NOTE: SeaORM cursor only works with one of the entities used, but we
         // need to order/filter etc. by the tally, so we can't use it.
-        let (order_column, order) = sort_posts_by_column(sort_by);
+        let order_column = sort_posts_by_column(sort_by);
         QueryOrder::query(&mut query)
-            .order_by_expr(order_column.clone(), order)
+            .order_by_expr(order_column.clone(), Order::Desc)
             .order_by_expr(
                 Expr::col(EventModel::Column::Id.as_column_ref()),
-                Order::Asc,
+                Order::Desc,
             );
 
         match cursor_filter {
@@ -939,13 +925,14 @@ pub(crate) fn content_join() -> RelationDef {
         .into()
 }
 
-fn sort_posts_by_column(sort_by: SortPostsBy) -> (Expr, Order) {
+fn sort_posts_by_column(sort_by: SortPostsBy) -> Expr {
     match sort_by {
-        SortPostsBy::Default | SortPostsBy::Latest => (
-            Expr::col(EventModel::Column::CreatedAt.as_column_ref()),
-            Order::Desc,
-        ),
-        SortPostsBy::Top => (Expr::col(REACTION_COUNT_COLUMN), Order::Desc),
+        SortPostsBy::Default | SortPostsBy::Latest => {
+            Expr::col(EventModel::Column::CreatedAt.as_column_ref())
+        }
+        SortPostsBy::Top => {
+            Expr::col(ReactionTallyModel::Column::DecayedCount.as_column_ref())
+        }
     }
 }
 

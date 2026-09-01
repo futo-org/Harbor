@@ -10,6 +10,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
+use crate::lock::LockRecover;
 use crate::query::event::key::EventKey;
 use crate::query::event::merge::{merge_event_bundles, merge_event_hints};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
@@ -73,7 +74,7 @@ fn merge_reaction_responses(
     merge_event_hints(&mut merged.event_hints);
 
     {
-        let c = client.lock().unwrap();
+        let c = client.lock_recover();
         retain_validated_bundles(&c, &mut merged.event_bundles);
         retain_validated_hints(&c, &mut merged.event_hints);
     }
@@ -127,7 +128,7 @@ pub fn get_reactions(
                 .collect();
 
             {
-                let mut c = client.lock().unwrap();
+                let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.event_bundles);
             }

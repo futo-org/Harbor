@@ -4,7 +4,7 @@ import { BackButton } from '@/src/common/components/composites/BackButton';
 import { CloseButton } from '@/src/common/components/composites/CloseButton';
 import { Routes } from '@/src/common/constants';
 import { Atoms, Breakpoints, useTheme } from '@/src/common/theme';
-import { isIOS } from '@/src/common/util/platform';
+import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
 import { router, Slot, usePathname } from 'expo-router';
 import { KeyboardAvoidingView, useWindowDimensions, View } from 'react-native';
@@ -28,7 +28,8 @@ export default function OnboardingLayout() {
     else router.dismissTo(Routes.tabs.explore.index);
   };
 
-  const showScene = width > Breakpoints.md;
+  // Native stays phone-like at any size, so the side scene is web-only.
+  const showScene = isWeb && width > Breakpoints.md;
   // A flow's end offers its own way onward, so it takes no controls.
   const isFlowEnd = pathname.endsWith('/success');
   const showBack =

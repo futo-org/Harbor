@@ -24,7 +24,6 @@ rn-android-build:
   rules:
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.rs-core-workflow, rules]
-    - !reference [.app-workflow, rules]
     - !reference [.release-workflow, rules]
   # Self-populating per job: the first run downloads and compiles
   # everything and uploads the result; every run after starts with warm
@@ -63,7 +62,6 @@ rn-android-build:
   rules:
     - !reference [.rn-sdk-workflow, rules]
     - !reference [.rs-core-workflow, rules]
-    - !reference [.app-workflow, rules]
     - !reference [.release-workflow, rules]
   tags:
     - macscript
@@ -109,11 +107,7 @@ rn-ios-tart-prune:
   needs:
     - job: js-sdks-build
       artifacts: true
-    - job: rn-android-build
-      artifacts: true
-    - job: rn-ios-build
-      artifacts: true
-    - job: rs-core-wasm-build
+    - job: rs-core-libraries
       artifacts: true
 
 rn-sdk-build:

@@ -60,8 +60,8 @@ jest.mock('./ProfileMenu', () => ({
 jest.mock('@/src/common/components/composites', () => ({
   BackButton: () => null,
 }));
-jest.mock('@/src/common/components/ImageViewer', () => ({
-  useImageViewer: () => () => undefined,
+jest.mock('@/src/features/profile/ProfilePhotoScreen', () => ({
+  openProfilePhoto: () => undefined,
 }));
 jest.mock('@/src/common/components/primitives', () => {
   const react = require('react');

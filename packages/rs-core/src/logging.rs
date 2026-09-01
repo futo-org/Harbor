@@ -15,8 +15,11 @@
 //!   * Hosts are still expected to make their sink non-blocking (batch/drop)
 //!     for defense in depth.
 
+use std::any::Any;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
+
+use crate::lock::LockRecover;
 
 /// Severity of a log message. Hosts set a minimum threshold via
 /// [`set_log_level`]; anything below it is dropped before crossing FFI.
@@ -57,7 +60,7 @@ static MIN_LEVEL: AtomicU8 = AtomicU8::new(2);
 /// Register the foreign logger. Replaces any previously-set value.
 #[uniffi::export]
 pub fn set_logger(logger: Arc<dyn Logger>) {
-    *LOGGER.lock().unwrap() = Some(logger);
+    *LOGGER.lock_recover() = Some(logger);
 }
 
 /// Set the minimum level forwarded to the host. Messages below this are
@@ -76,7 +79,7 @@ pub(crate) fn log_at(level: LogLevel, message: impl FnOnce() -> String) {
     }
     // Clone the Arc out of the mutex before the foreign call so a
     // re-entrant logger impl can't deadlock against `set_logger`.
-    let logger = LOGGER.lock().unwrap().clone();
+    let logger = LOGGER.lock_recover().clone();
     if let Some(l) = logger {
         l.log(message());
     }
@@ -94,4 +97,20 @@ pub(crate) fn log_info(message: impl FnOnce() -> String) {
 #[allow(dead_code)]
 pub(crate) fn log_warn(message: impl FnOnce() -> String) {
     log_at(LogLevel::Warn, message);
+}
+
+#[allow(dead_code)]
+pub(crate) fn log_error(message: impl FnOnce() -> String) {
+    log_at(LogLevel::Error, message);
+}
+
+/// Best-effort message extraction from a panic payload.
+pub(crate) fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(s) = payload.downcast_ref::<&str>() {
+        (*s).to_string()
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "unknown panic".to_string()
+    }
 }

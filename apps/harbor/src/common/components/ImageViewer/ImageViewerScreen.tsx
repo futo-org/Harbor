@@ -1,17 +1,34 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useCallback, useRef } from 'react';
+import { View } from 'react-native';
+import { useCanReturn } from '@/src/common/lib/navigation/openWithReturn';
+import { Atoms, ZIndex } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
 import { ImageViewer } from './ImageViewer';
-import { useImageViewerStore } from './useImageViewerStore';
+import type { ImageViewerInput } from './resolveImageSources';
+import { RemoveScroll } from 'react-remove-scroll';
 
 /**
- * Full-screen image viewer screen, mounted by the `image-viewer` route.
- * That route is declared with `orientation: 'all'` in the root layout, so
- * this screen can rotate to landscape independently of the otherwise-
- * portrait app. Reads its images from {@link useImageViewerStore}.
+ * Shared shell for the image-viewer routes (post images, profile photo):
+ * a transparentModal screen body that locks document scroll, renders the
+ * viewer in a fixed full-viewport wrapper on web, and closes with
+ * back-or-fallback semantics. Pass `images: []` while the route's data is
+ * still loading — the viewer renders just its backdrop until they arrive.
  */
-export default function ImageViewerScreen() {
-  const images = useImageViewerStore((s) => s.images);
-  const index = useImageViewerStore((s) => s.index);
+export function ImageViewerScreen({
+  images,
+  initialIndex = 0,
+  fallbackHref,
+  onIndexChange,
+}: {
+  images: ImageViewerInput[];
+  initialIndex?: number;
+  /** Where close lands when the route was cold-loaded (refresh, shared
+   *  link) instead of pushed by an in-app tap. */
+  fallbackHref: Href;
+  onIndexChange?: (index: number) => void;
+}) {
+  const canReturn = useCanReturn();
 
   // Guard against double-dismiss: simultaneous pinch + pan can both fire
   // close, and `router.canGoBack()` may still read true before the first
@@ -20,9 +37,29 @@ export default function ImageViewerScreen() {
   const onClose = useCallback(() => {
     if (closing.current) return;
     closing.current = true;
-    if (router.canGoBack()) router.back();
-  }, []);
+    // Opened in-session: return to wherever the user was. Cold load:
+    // land on the content the image belongs to.
+    if (canReturn && router.canGoBack()) router.back();
+    else router.replace(fallbackHref);
+  }, [canReturn, fallbackHref]);
 
-  if (images.length === 0) return null;
-  return <ImageViewer images={images} initialIndex={index} onClose={onClose} />;
+  const content = (
+    <ImageViewer
+      images={images}
+      initialIndex={initialIndex}
+      onClose={onClose}
+      onIndexChange={onIndexChange}
+    />
+  );
+
+  return isWeb ? (
+    // RemoveScroll matches the scroll lock behavior of @rn-primitives/dropdown-menu
+    <RemoveScroll>
+      <View style={[Atoms.fixed, Atoms.inset_0, { zIndex: ZIndex.modal }]}>
+        {content}
+      </View>
+    </RemoveScroll>
+  ) : (
+    content
+  );
 }

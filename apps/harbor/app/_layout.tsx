@@ -24,6 +24,15 @@ import {
 } from 'react-native-safe-area-context';
 import Head from 'expo-router/head';
 
+const imageViewerScreenOptions = {
+  presentation: 'transparentModal' as const,
+  animation: 'fade' as const,
+  contentStyle: { backgroundColor: 'transparent' },
+  // Let just these screens rotate to landscape; the rest of the app
+  // stays portrait.
+  ...(isWeb ? {} : { orientation: 'all' as const }),
+};
+
 // Anchor the root stack on the tabs so that deep-linking directly
 // into a modal route (e.g. `/feed/compose`, `/settings/identity`)
 // mounts the tabs underneath — giving the modal something to sit on
@@ -115,15 +124,12 @@ function RootStack() {
         />
 
         <Stack.Screen
-          name="image-viewer"
-          options={{
-            presentation: 'transparentModal',
-            animation: 'fade',
-            contentStyle: { backgroundColor: 'transparent' },
-            // Let just this screen rotate to landscape; the rest of the
-            // app stays portrait.
-            ...(isWeb ? {} : { orientation: 'all' as const }),
-          }}
+          name="[identityId]/post/[keyFingerprint]/[sequence]/image/[index]"
+          options={imageViewerScreenOptions}
+        />
+        <Stack.Screen
+          name="[identityId]/photo"
+          options={imageViewerScreenOptions}
         />
       </Stack>
     </>

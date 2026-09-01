@@ -9,7 +9,6 @@ use crate::service::{
     },
     proto::{UploadBlobRequest, UploadBlobResponse},
 };
-use chrono::Utc;
 use sea_orm::{DatabaseConnection, TransactionTrait};
 use tonic::Status;
 
@@ -24,16 +23,12 @@ pub async fn handle(
         tracing::error!(error = %e, "upload_blob txn begin error");
         Status::internal("internal server error")
     })?;
-    ContentRepository::Mutation::save_blob(
-        &txn,
-        &blob,
-        Utc::now().fixed_offset(),
-    )
-    .await
-    .map_err(|e| {
-        tracing::error!(error = %e, "upload_blob save_blob error");
-        Status::internal("internal server error")
-    })?;
+    ContentRepository::Mutation::save_blob(&txn, &blob)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "upload_blob save_blob error");
+            Status::internal("internal server error")
+        })?;
     txn.commit().await.map_err(|e| {
         tracing::error!(error = %e, "upload_blob txn commit error");
         Status::internal("internal server error")

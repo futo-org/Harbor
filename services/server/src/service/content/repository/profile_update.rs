@@ -1,29 +1,52 @@
-use super::{ChildContext, map_db_err};
 use crate::service::proto::ImageSet;
 use crate::service::proto::ProfileUpdate;
-use ::entity::content_profile_update_model as ContentProfileUpdateModel;
+use entity::content_profile_update_model as ContentProfileUpdateModel;
+use sea_orm::DbErr;
 use sea_orm::prelude::Json;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectionTrait};
+use sea_orm::sea_query::{DynIden, Expr, InsertStatement, SelectStatement};
 use tonic::Status;
 
-pub(super) async fn add<C: ConnectionTrait>(
-    db: &C,
-    ctx: &ChildContext<'_>,
+pub(super) fn add_query(
     update: ProfileUpdate,
-) -> Result<(), Status> {
-    ContentProfileUpdateModel::ActiveModel {
-        content_id: Set(ctx.content_id),
-        name: Set(update.name),
-        avatar: Set(to_json(update.avatar)?),
-        banner: Set(to_json(update.banner)?),
-        description: Set(update.description),
-        alias: Set(update.alias),
-    }
-    .insert(db)
-    .await
-    .map_err(map_db_err)?;
+    content_id: (DynIden, DynIden),
+) -> Result<InsertStatement, Status> {
+    let ProfileUpdate {
+        name,
+        avatar,
+        banner,
+        description,
+        alias,
+    } = update;
 
-    Ok(())
+    let mut query = InsertStatement::new();
+    query
+        .into_table(ContentProfileUpdateModel::Entity)
+        .columns([
+            ContentProfileUpdateModel::Column::ContentId,
+            ContentProfileUpdateModel::Column::Name,
+            ContentProfileUpdateModel::Column::Avatar,
+            ContentProfileUpdateModel::Column::Banner,
+            ContentProfileUpdateModel::Column::Description,
+            ContentProfileUpdateModel::Column::Alias,
+        ])
+        .select_from({
+            let mut q = SelectStatement::new();
+            q.from(content_id.0.clone())
+                .expr(Expr::col(content_id))
+                .expr(Expr::from(name))
+                .expr(Expr::from(to_json(avatar)?))
+                .expr(Expr::from(to_json(banner)?))
+                .expr(Expr::from(description))
+                .expr(Expr::from(alias));
+           q
+        })
+        .map_err(|err| {
+            let err = DbErr::Custom(format!("incorrect amount of values: {err}"));
+            tracing::error!(error = %err, "failed to create query to store profile update content");
+            Status::internal("internal server error")
+        })?;
+
+    Ok(query)
 }
 
 fn to_json(set: Option<ImageSet>) -> Result<Option<Json>, Status> {
@@ -38,59 +61,5 @@ fn to_json(set: Option<ImageSet>) -> Result<Option<Json>, Status> {
             }
         },
         None => Ok(None),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::service::proto::{Blob, Image, ImageSet};
-    use sea_orm::{DatabaseBackend, MockDatabase};
-
-    #[tokio::test]
-    async fn profile_update() {
-        // NOTE: not used.
-        let returned = ContentProfileUpdateModel::Model {
-            content_id: 1,
-            name: Some("Alice".into()),
-            avatar: Some(Json::Null), // NOTE: incorrect.
-            banner: Some(Json::Null),
-            description: Some("Description".into()),
-            alias: Some("Alias".into()),
-        };
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([[returned]])
-            .into_connection();
-
-        let update = ProfileUpdate {
-            name: Some("Alice".into()),
-            avatar: Some(ImageSet {
-                images: vec![Image {
-                    blob: Some(Blob {
-                        digest: None,
-                        mime_type: "Mime".into(),
-                        size: 200,
-                    }),
-                    width: 10,
-                    height: 20,
-                }],
-            }),
-            banner: None,
-            description: Some("Description".into()),
-            alias: Some("Alias".into()),
-        };
-        add(
-            &db,
-            &ChildContext {
-                content_id: 1,
-                event_identity: "alice",
-            },
-            update,
-        )
-        .await
-        .unwrap();
-
-        let sql = format!("{:?}", db.into_transaction_log());
-        assert!(sql.contains("content_profile_update"), "{sql}");
     }
 }

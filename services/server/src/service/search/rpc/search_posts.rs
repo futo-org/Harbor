@@ -71,7 +71,7 @@ async fn fetch(
                 // Checked in handle above.
                 SortPostsBy::Top => unimplemented!(),
                 SortPostsBy::Latest => {
-                    SortedPostsBy::Latest(row.content.synced_at)
+                    SortedPostsBy::Latest(row.event.created_at)
                 }
             },
             event_id: row.event.id,
