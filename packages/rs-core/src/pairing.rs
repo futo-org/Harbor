@@ -39,12 +39,19 @@ pub struct OpenOptions {
     /// This is useful when fetching the pairing state for the first time where
     /// we haven't pulled in the issuer's identity chain yet.
     pub skip_signer_auth: bool,
+
+    /// When provided, this value is recorded as an observed sequence for this
+    /// pairing session.
+    /// It will also be used for checking for rollbacks.
+    /// This is useful when pushing a new issuer state and expecting that we
+    /// observe it.
+    pub min_sequence: Option<i64>,
 }
 
 /// Validate the pairing session state and extract its data.
 /// The digest is always verified against its expected hash.
 /// The signature is always checked against the declared signer.
-/// The validation logic and be tuned with `opts`.
+/// The validation logic can be tuned with `opts`.
 pub fn open_state(
     state: PairingSessionState,
     client: &Mutex<PolycentricClient>,
@@ -55,6 +62,7 @@ pub fn open_state(
     let opts = opts.unwrap_or_default();
     let now_millis = opts.now_millis.unwrap_or_else(|| time::now_millis() as i64);
     let check_signer = !opts.skip_signer_auth;
+    let min_sequence = opts.min_sequence;
 
     // Extract issuer state
     let issuer_msg = state
@@ -76,14 +84,35 @@ pub fn open_state(
         ));
     }
 
+    // Get what we need from the polycentric client
+    let (identity_chain, accept_sequence) = {
+        let mut client = client.lock().unwrap();
+
+        let identity_chain = if check_signer {
+            client.identity_chain(&digest.issuer_identity).ok()
+        } else {
+            None
+        };
+
+        if let Some(min_sequence) = min_sequence {
+            client.accept_pairing_sequence(digest_sha256, min_sequence);
+        }
+
+        let seq = issuer_state.sequence;
+        let accept_sequence = client.try_pairing_sequence(digest_sha256, seq);
+
+        (identity_chain, accept_sequence)
+    };
+
+    // Validate sequence
+    if !accept_sequence {
+        return Err(CoreError::InvalidInput(
+            "pairing session state sequence is stale".to_owned(),
+        ));
+    }
+
     // Validate signer
     if check_signer {
-        let identity_chain = client
-            .lock()
-            .unwrap()
-            .identity_chain(&digest.issuer_identity)
-            .ok();
-
         let identity_state = identity_chain
             .as_ref()
             .and_then(|chain| chain.latest_state())
@@ -191,16 +220,16 @@ pub async fn put(
     server_url: &str,
     signed_issuer_state: Vec<u8>,
 ) -> Result<Vec<u8>, CoreError> {
+    // Extract what we need from the caller's request
     let signed = SignedIssuerState::decode(signed_issuer_state.as_slice())
         .map_err(|e| CoreError::Decode(format!("Failed to decode SignedIssuerState: {e}")))?;
 
-    let digest_sha256 = {
-        let issuer_state = IssuerPairingState::decode(signed.state_bytes.as_slice())
-            .map_err(|e| CoreError::Decode(format!("Failed to decode IssuerPairingState: {e}")))?;
+    let issuer_state = IssuerPairingState::decode(signed.state_bytes.as_slice())
+        .map_err(|e| CoreError::Decode(format!("Failed to decode IssuerPairingState: {e}")))?;
 
-        Sha256::digest(issuer_state.session_digest)
-    };
+    let digest_sha256 = Sha256::digest(&issuer_state.session_digest);
 
+    // Send out the request
     let channel = crate::query::channel(server_url)
         .await
         .map_err(CoreError::Network)?;
@@ -214,15 +243,25 @@ pub async fn put(
         .await
         .map_err(|e| CoreError::Network(format!("put_pairing_session: {e}")))?;
 
-    let session_state = response
+    // Check that the response is what we want
+    let response_state = response
         .into_inner()
         .session_state
         .ok_or_else(|| CoreError::Network("put_pairing_session: missing session state".into()))?;
 
     // It's possible for the server to mess with the state or for our session
     // to have been superseded by a newer one.
-    let bytes = session_state.encode_to_vec();
-    open_state(session_state, client, &digest_sha256, None)?;
+    // Let's make sure we got a valid response that matches what we sent.
+    let bytes = response_state.encode_to_vec();
+    open_state(
+        response_state,
+        client,
+        &digest_sha256,
+        Some(OpenOptions {
+            min_sequence: Some(issuer_state.sequence),
+            ..OpenOptions::default()
+        }),
+    )?;
 
     Ok(bytes)
 }
