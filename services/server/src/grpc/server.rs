@@ -34,17 +34,14 @@ pub fn build_grpc_router(
     filestore: ContentFilestore,
     server_config: ServerConfig,
 ) -> Result<Router, Box<dyn std::error::Error>> {
-    let ctx = ServiceContext::new(db.clone(), kafka_producer);
+    let ctx = ServiceContext::new(db, kafka_producer);
     let feeds_service = service::feeds::rpc::build_feeds_service(ctx.clone());
     let events_service =
         service::events::rpc::build_events_service(ctx.clone());
     let content_service =
-        service::content::content_service::build_content_service(
-            db.clone(),
-            filestore,
-        );
+        service::content::rpc::build_content_service(ctx.clone(), filestore);
     let pairing_service =
-        service::identity::pairing::rpc::build_pairing_service(db.clone());
+        service::identity::pairing::rpc::build_pairing_service(ctx.clone());
     let identity_service =
         service::identity::rpc::build_identity_service(ctx.clone());
     let server_info_service =
