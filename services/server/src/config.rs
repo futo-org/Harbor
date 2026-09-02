@@ -12,7 +12,7 @@ pub struct Config {
     pub allow_hosts: Vec<String>,
     /// Postgres connection URL (`DATABASE_URL`).
     pub database_url: String,
-    /// Postgres read-only connection URL (`RO_DATABASE_URL`).
+    /// Postgres read-only connection URL (`DATABASE_URL_RO`).
     pub ro_database_url: Option<String>,
     /// Maximum size of the Postgres connection pool
     /// (`POLYCENTRIC_DATABASE_MAX_CONNECTIONS`).
@@ -70,7 +70,7 @@ pub fn init() -> &'static Config {
             database_url: std::env::var("DATABASE_URL").unwrap_or_else(|_| {
                 "postgres://postgres:testing@localhost:5432".to_string()
             }),
-            ro_database_url: std::env::var("RO_DATABASE_URL").ok(),
+            ro_database_url: std::env::var("DATABASE_URL_RO").ok(),
             database_max_connections: std::env::var(
                 "POLYCENTRIC_DATABASE_MAX_CONNECTIONS",
             )
