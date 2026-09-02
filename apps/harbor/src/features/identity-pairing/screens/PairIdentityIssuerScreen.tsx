@@ -83,7 +83,7 @@ function CountdownTimer({
 
 export default function PairIdentityIssuerScreen() {
   const { theme } = useTheme();
-  const { session, claimers, error, stage, approveClaimer } =
+  const { info, expiresAt, claimers, error, stage, approveClaimer } =
     usePairIdentityIssuer();
 
   /** Show an indicator that the pairing code has been copied when true. */
@@ -286,12 +286,9 @@ export default function PairIdentityIssuerScreen() {
                       },
                     ]}
                   >
-                    {session ? (
+                    {info ? (
                       <QRCode
-                        value={encodePairingCode(
-                          session.pairingInfo,
-                          EncodingMode.BASE64,
-                        )}
+                        value={encodePairingCode(info, EncodingMode.BASE64)}
                         size={PAIRING_BLOCK_WIDTH}
                         color={theme.palette.neutral_950}
                         backgroundColor="transparent"
@@ -308,19 +305,16 @@ export default function PairIdentityIssuerScreen() {
 
                   <Pressable
                     onPress={() => {
-                      if (!session) {
+                      if (!info) {
                         return;
                       }
 
-                      const code = encodePairingCode(
-                        session.pairingInfo,
-                        EncodingMode.HEX,
-                      );
+                      const code = encodePairingCode(info, EncodingMode.HEX);
                       void Clipboard.setStringAsync(code);
                       setJustCopied(true);
                       setTimeout(() => setJustCopied(false), 2000);
                     }}
-                    disabled={!session}
+                    disabled={!info}
                     style={({ hovered }) => [
                       Atoms.flex_row,
                       Atoms.items_center,
@@ -350,10 +344,7 @@ export default function PairIdentityIssuerScreen() {
                   </Pressable>
 
                   <View style={Atoms.items_center}>
-                    <CountdownTimer
-                      expiresAt={session?.expiresAt ?? null}
-                      onExpire={onExpire}
-                    />
+                    <CountdownTimer expiresAt={expiresAt} onExpire={onExpire} />
                   </View>
                 </View>
               )}

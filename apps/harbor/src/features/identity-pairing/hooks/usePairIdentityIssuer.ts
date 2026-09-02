@@ -7,9 +7,13 @@ import type { PairingSession, v2 } from '@polycentric/react-native';
 import { SyncStrategy } from '@polycentric/react-native';
 import { useEffect, useRef, useState } from 'react';
 
-export type PairIdentityIssuerHookResult = {
-  /** Our view of the pairing session. */
-  session: PairingSession | null;
+/** Pairing session state that we expose to the caller. */
+export type IssuerView = {
+  /** Immutable pairing data available once the session has been created. */
+  info: v2.PairingInfo | null;
+
+  /** The expiration time that we should enforce for the session. */
+  expiresAt: Date | null;
 
   /**
    * Append-only claimer array managed by us.
@@ -27,60 +31,94 @@ export type PairIdentityIssuerHookResult = {
 
   /** Indicates which stage of the pairing process we are on. */
   stage: IssuerState['stage'];
+};
 
+export type IssuerActions = {
   /**
    * Approve a claimer to be added to the active identity.
    */
   approveClaimer: (claimer: string, asRotation: boolean) => void;
 };
 
+export type PairIdentityIssuerHookResult = IssuerView & IssuerActions;
+
+// -- Internal hook state --
 type ErrorState = { message: string };
 type PollingState = { session: PairingSession; claimers: string[] };
 type ApprovingState = PollingState & { approvedClaimer: string };
 type DoneState = ApprovingState;
 
-type IssuerState =
+type StageState =
   | ({ stage: 'error' } & ErrorState)
   | { stage: 'creating' }
   | ({ stage: 'polling' } & PollingState)
   | ({ stage: 'approving' } & ApprovingState)
   | ({ stage: 'done' } & DoneState);
 
+type IssuerState = StageState & {
+  /**
+   * Stores the interval id used for polling so that we can clear it in all
+   * exit paths.
+   */
+  pollingInterval: ReturnType<typeof setInterval> | null;
+
+  /** Async functions will check this after resuming. */
+  canceled: boolean;
+};
+
 export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
   const client = usePolycentric();
 
-  const [state, setState] = useState<IssuerState>({ stage: 'creating' });
+  const initialState: IssuerState = {
+    canceled: false,
+    pollingInterval: null,
+    stage: 'creating',
+  };
 
-  // Indicates to handlers that they should stop
-  const canceledRef = useRef(false);
+  const stateRef = useRef<IssuerState>(initialState);
+
+  const [view, setView] = useState<IssuerView>(() => {
+    return viewFromState(initialState);
+  });
+
   useEffect(() => {
     return () => {
-      canceledRef.current = true;
+      stateRef.current.canceled = true;
     };
   }, []);
 
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** Refresh the view that callers see using the latest state. */
+  const updateView = () => {
+    setView(viewFromState(stateRef.current));
+  };
 
-  // Latest pairing session state sequence
-  const pairingSequenceRef = useRef<number>(0);
+  const onError = (e: unknown) => {
+    if (stateRef.current.stage === 'error') return;
 
-  const stopPolling = () => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
+    const message = e instanceof Error ? e.message : 'Identity pairing failed';
+
+    stateRef.current = {
+      ...stateRef.current,
+      stage: 'error',
+      message,
+    };
+
+    updateView();
   };
 
   const approve = async (claimer: string, asRotation: boolean) => {
-    if (state.stage !== 'polling') return;
+    if (stateRef.current.stage !== 'polling') return;
 
-    setState((state) => {
-      if (state.stage !== 'polling') return state;
-      return { ...state, stage: 'approving', approvedClaimer: claimer };
-    });
+    stateRef.current = {
+      ...stateRef.current,
+      stage: 'approving',
+      approvedClaimer: claimer,
+    };
+
+    updateView();
 
     await client.sync(SyncStrategy.PARTIAL_PULL);
-    if (canceledRef.current) return;
+    if (stateRef.current.canceled) return;
 
     const key = stringToPublicKey(claimer);
     if (asRotation) {
@@ -89,42 +127,50 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
       await client.identityManager.addSigningKey(key);
     }
 
-    const server = state.session.pairingInfo.server;
-    pairingSequenceRef.current++;
-    await client.pairingSessionManager.updatePairingSession(
-      server,
-      state.session.digestBytes,
-      BigInt(pairingSequenceRef.current),
+    const session = await client.pairingSessionManager.updatePairingSession(
+      stateRef.current.session.pairingInfo.server,
+      stateRef.current.session.digestBytes,
+      stateRef.current.session.issuerState.sequence + BigInt(1),
     );
 
-    if (canceledRef.current) return;
+    stateRef.current = {
+      ...stateRef.current,
+      stage: 'done',
+      session,
+    };
 
-    stopPolling();
-    setState((state) => {
-      if (state.stage !== 'approving') return state;
-      return { ...state, stage: 'done' };
-    });
+    if (stateRef.current.canceled) return;
+
+    updateView();
   };
 
   // Begin pairing process
   // biome-ignore lint/correctness/useExhaustiveDependencies: we never want this to run multiple times
   useEffect(() => {
     const poll = async (info: v2.PairingInfo) => {
-      if (canceledRef.current && pollIntervalRef.current) {
-        stopPolling();
+      if (stateRef.current.canceled || stateRef.current.stage !== 'polling') {
+        if (stateRef.current.pollingInterval) {
+          clearInterval(stateRef.current.pollingInterval);
+          stateRef.current.pollingInterval = null;
+        }
+
         return;
       }
 
       const latestClaimers =
         await client.pairingSessionManager.pollForClaimers(info);
-      if (canceledRef.current) return;
+      if (stateRef.current.canceled) return;
+      if (stateRef.current.stage !== 'polling') return;
 
-      setState((state) => {
-        if (state.stage !== 'polling') return state;
+      const claimers = withLatestClaimers(
+        stateRef.current.claimers,
+        latestClaimers,
+      );
 
-        const claimers = updateClaimers(state.claimers, latestClaimers);
-        return { ...state, claimers };
-      });
+      if (claimers !== stateRef.current.claimers) {
+        stateRef.current.claimers = claimers;
+        updateView();
+      }
     };
 
     const createAndWatchSession = async () => {
@@ -135,52 +181,71 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
 
       const session =
         await client.pairingSessionManager.createPairingSession(server);
-      pairingSequenceRef.current = 1;
-      if (canceledRef.current) return;
+      if (stateRef.current.canceled) return;
+      if (stateRef.current.stage !== 'creating') return;
 
-      setState({ stage: 'polling', session, claimers: [] });
-      pollIntervalRef.current = setInterval(() => {
+      stateRef.current = {
+        ...stateRef.current,
+        stage: 'polling',
+        session,
+        claimers: [],
+      };
+
+      updateView();
+
+      stateRef.current.pollingInterval = setInterval(() => {
         poll(session.pairingInfo).catch((e) => {
-          // We don't want a single failed poll to kill the pairing session,
-          // but we should still be able to discover errors when we need to.
-          console.warn(`pairing session polling error: ${e}`);
+          // Polling may fail due to race conditions if we have sent a state
+          // update for an approval while we still have an in-flight poll request.
+          // We should only error for real if we fail while still in the polling
+          // stage.
+          if (stateRef.current.stage === 'polling') {
+            onError(e);
+          } else {
+            console.warn(`pairing session polling error: ${e}`);
+          }
         });
       }, 2000);
     };
 
-    createAndWatchSession().catch((e) => {
-      setState({ stage: 'error', message: errorMessage(e) });
-    });
+    createAndWatchSession().catch(onError);
   }, []);
 
-  // Derive return value
-  const stage = state.stage;
-  const error = stage === 'error' ? state.message : null;
-
-  let session = null;
-  let claimers: string[] = [];
-
-  if (stage === 'polling' || stage === 'approving' || stage === 'done') {
-    session = state.session;
-    claimers = state.claimers;
-  }
-
+  // Return current view
   return {
-    stage,
-    error,
-    session,
-    claimers,
+    ...view,
     approveClaimer: (claimer, asRotation) => {
-      approve(claimer, asRotation).catch((e) => {
-        setState({ stage: 'error', message: errorMessage(e) });
-        stopPolling();
-      });
+      approve(claimer, asRotation).catch(onError);
     },
   };
 }
 
-/** Derive the next value for the claimers array */
-function updateClaimers(prev: string[], candidates: v2.PublicKey[]): string[] {
+function viewFromState(state: IssuerState): IssuerView {
+  const stage = state.stage;
+  const error = stage === 'error' ? state.message : null;
+
+  let info: v2.PairingInfo | null = null;
+  let expiresAt: Date | null = null;
+  let claimers: string[] = [];
+
+  if (stage === 'polling' || stage === 'approving' || stage === 'done') {
+    info = state.session.pairingInfo;
+    expiresAt = state.session.expiresAt;
+    claimers = state.claimers;
+  }
+
+  return { info, expiresAt, claimers, error, stage };
+}
+
+/**
+ * Derive the next value for the claimers array.
+ * Returns a new array if there are any new claimers.
+ * Returns `prev` if there are no new claimers.
+ */
+function withLatestClaimers(
+  prev: string[],
+  candidates: v2.PublicKey[],
+): string[] {
   const next = [...prev];
   const seen = new Set(prev);
 
@@ -192,13 +257,6 @@ function updateClaimers(prev: string[], candidates: v2.PublicKey[]): string[] {
     }
   }
 
-  return next;
-}
-
-function errorMessage(err: unknown): string {
-  if (err instanceof Error) {
-    return err.message;
-  }
-
-  return 'Identity pairing failed.';
+  if (next.length === prev.length) return prev;
+  else return next;
 }
