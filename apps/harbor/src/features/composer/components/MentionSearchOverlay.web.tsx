@@ -40,17 +40,26 @@ export function MentionSearchOverlay() {
     (state) =>
       findMentionContext(state.text, state.selection.start)?.start ?? -1,
   );
+  const caretIndex = useMentionStore((state) => state.selection.start);
+  const text = useMentionStore((state) => state.text);
 
   const { open, entries } = useMentionSearch();
 
-  // measured once per `@` (and on resize); the `@` can still drift
-  // if the page scrolls while open. Add a scroll listener if that bites.
+  // Anchored to the `@`, or to the start of the caret's line once the query
+  // wraps below it. Re-measured on text/caret change and resize; the `@` can
+  // still drift if the page scrolls while open. Add a scroll listener if that bites.
   const [anchor, setAnchor] = useState<MentionAnchor | null>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure on resize
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `text` and window size are reflow triggers
   useLayoutEffect(() => {
     if (!open || atIndex < 0 || !inputRef) return;
-    setAnchor(measureChar(inputRef as unknown as HTMLTextAreaElement, atIndex));
-  }, [open, atIndex, inputRef, win.width, win.height]);
+    setAnchor(
+      measureAnchor(
+        inputRef as unknown as HTMLTextAreaElement,
+        atIndex,
+        caretIndex,
+      ),
+    );
+  }, [open, atIndex, caretIndex, text, inputRef, win.width, win.height]);
 
   const { selectedIndex, setSelectedIndex } = useSelectionAndKeyboardControl(
     open,
@@ -190,9 +199,30 @@ function useSelectionAndKeyboardControl(
 }
 
 /**
+ * The `@` itself, or the start of the caret's line once the query has
+ * wrapped below the `@`.
+ */
+function measureAnchor(
+  node: HTMLTextAreaElement,
+  atIndex: number,
+  caretIndex: number,
+): MentionAnchor {
+  const at = measureChar(node, atIndex);
+  const caret = measureChar(node, caretIndex);
+
+  if (caret.top <= at.top) return at;
+
+  const lineStart =
+    node.getBoundingClientRect().left +
+    parseFloat(getComputedStyle(node).paddingLeft);
+
+  return { ...caret, x: lineStart };
+}
+
+/**
  * Viewport position of the character at `index` (mirror-div trick: a hidden
- * div styled like the textarea wraps identically, so a marker span placed
- * after the same prefix lands where the character is).
+ * div styled like the textarea wraps identically, so a marker span wrapping
+ * the same character lands where it is).
  */
 function measureChar(node: HTMLTextAreaElement, index: number): MentionAnchor {
   const mirror = document.createElement('div');
@@ -209,10 +239,15 @@ function measureChar(node: HTMLTextAreaElement, index: number): MentionAnchor {
     overflow: 'hidden',
     whiteSpace: 'pre-wrap',
   });
-  mirror.textContent = node.value.slice(0, index);
+  // Full text so words wrap exactly as in the textarea; the marker wraps the
+  // measured character (zero-width at the end so it doesn't affect wrapping).
   const marker = document.createElement('span');
-  marker.textContent = node.value[index] ?? '@';
-  mirror.appendChild(marker);
+  marker.textContent = node.value[index] ?? '\u200b';
+  mirror.append(
+    node.value.slice(0, index),
+    marker,
+    node.value.slice(index + 1),
+  );
   document.body.appendChild(mirror);
 
   const rect = node.getBoundingClientRect();
