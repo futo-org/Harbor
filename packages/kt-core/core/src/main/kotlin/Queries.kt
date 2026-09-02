@@ -51,9 +51,12 @@ suspend fun PolycentricClient.getIdentityFeed(
     backwardToken: String? = null,
     forwardToken: String? = null,
     omitLabels: List<String> = emptyList(),
+    windowSize: Int? = null,
 ): GetFeedResponse? =
     core.awaitQuery(
-        Query.GetIdentityFeed(GetIdentityFeedArgs(identity, limit, backwardToken, forwardToken, omitLabels)),
+        Query.GetIdentityFeed(
+            GetIdentityFeedArgs(identity, limit, backwardToken, forwardToken, omitLabels, windowSize),
+        ),
     )?.let { GetFeedResponse.ADAPTER.decode(it) }
 
 /**
@@ -68,6 +71,7 @@ suspend fun PolycentricClient.getAttributionFeed(
     backwardToken: String? = null,
     forwardToken: String? = null,
     omitLabels: List<String> = emptyList(),
+    windowSize: Int? = null,
 ): GetFeedResponse? =
     core.awaitQuery(
         Query.GetAttributionFeed(
@@ -77,6 +81,7 @@ suspend fun PolycentricClient.getAttributionFeed(
                 backwardToken,
                 forwardToken,
                 omitLabels,
+                windowSize,
             ),
         ),
     )?.let { GetFeedResponse.ADAPTER.decode(it) }

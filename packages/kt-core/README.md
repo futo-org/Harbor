@@ -78,7 +78,45 @@ tests (LWW, opinions, claims, identity, hydration, query manager). Its FFI
 layer (`jni_bindings`, sans-io protobuf loop) is obsolete — do **not**
 port it; only the storage drivers and test scenarios are worth adapting.
 
+## Using this library
+
+Intended to be consumed as an AAR: `org.futo.polycentric:core`.
+
+What your app needs:
+
+| | Required |
+|---|---|
+| `compileSdk` | 35 or newer |
+| `minSdk` | 24 or newer |
+| Kotlin | 2.2 or newer |
+| JDK, to run your build | 17 or newer |
+
+The AAR declares no minimum Gradle or AGP version, so those stay your
+choice.
+
+Library classes are Java 17 bytecode. Your app's own `jvmTarget` does not
+have to match (Java 8 is fine); `d8` will compile various versions of Java
+bytecode to the same DEX bytecode.
+
+Using this as a dependency via `includeBuild` instead of a published AAR
+means your Gradle builds this package itself, and you would need
+Gradle 9.6 or newer (required by AGP 9.4).
+
 ## Build
+
+| Toolchain | Version |
+|---|---|
+| JDK | 17 |
+| Gradle | 9.7.1, via the wrapper (9.6.0 is AGP's minimum) |
+| Android Gradle Plugin | 9.4.0 |
+| Kotlin | supplied by AGP |
+| Wire | 6.4.7 |
+| `compileSdk` / `minSdk` | 35 / 24 |
+| Android NDK | r26+ |
+
+AGP 9 has built-in Kotlin support, so there is no
+`org.jetbrains.kotlin.android` plugin and no `kotlinOptions` block.
+`jvmTarget` follows `compileOptions`.
 
 Prerequisites:
 
@@ -89,7 +127,7 @@ cargo install cargo-ndk
 export ANDROID_NDK_HOME=...   # NDK r26+
 ```
 
-Then (the wrapper bootstraps Gradle 8.13; system Gradle is not used):
+Then run the wrapper, which downloads Gradle (system Gradle is not used):
 
 ```sh
 ./gradlew :core:assembleRelease
@@ -97,21 +135,15 @@ Then (the wrapper bootstraps Gradle 8.13; system Gradle is not used):
 
 which runs, in order:
 
-1. `cargoNdkBuild` — cross-compiles `polycentric-core` (cdylib) for the
+1. `cargoNdkBuild` cross-compiles `polycentric-core` (cdylib) for the
    four Android ABIs into `core/src/main/jniLibs/` via cargo-ndk.
-2. `cargoHostBuild` + `uniffiGenerate` — builds a host cdylib and runs
+2. `cargoHostBuild` + `uniffiGenerate` builds a host cdylib and runs
    `tools/uniffi-bindgen` (`uniffi-bindgen generate --library ... --language
    kotlin --config core/uniffi.toml`) into `core/build/generated/uniffi/`.
    The generated package is `org.futo.polycentric.ffi`.
 3. Wire proto generation + normal Kotlin/AAR build.
 
-Iterate on Kotlin without rebuilding Rust: `./gradlew build -PskipRust=true`.
-
-`tools/uniffi-bindgen` is intentionally standalone (own `[workspace]`);
-to adopt it into the root workspace, add it to the members list and switch
-its dependency to `uniffi.workspace = true`. Its uniffi version **must**
-stay identical to the workspace pin (`=0.31.0`) — bindings and scaffolding
-are incompatible across versions.
+To rebuild Kotlin components without rebuilding Rust: `./gradlew build -PskipRust=true`.
 
 ## FFI contract notes (learned from js-core — keep these invariants)
 
@@ -150,3 +182,7 @@ are incompatible across versions.
    as a new `Query` variant it appears here automatically on regeneration —
    only a small Kotlin convenience wrapper will be needed.
 5. Measure per-ABI .so size (tokio + tonic + TLS + image crate).
+6. No publishing setup yet — there is no `maven-publish` plugin or
+   `singleVariant` declaration, so the AAR at
+   `core/build/outputs/aar/core-release.aar` cannot be published to a
+   repository; consumers have to use `includeBuild` until that lands.

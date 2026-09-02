@@ -3,15 +3,83 @@
 //! so the pipeline's hydrate stage can fan them out in parallel.
 
 use crate::data::EventWithContentRow;
+use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::ServiceContext;
 use crate::service::feeds::repository::{self as FeedsRepository};
 use crate::service::identity::chain;
-use crate::service::identity::repository::Query as IdentityRepo;
+use crate::service::identity::repository::{
+    Erased, EventsSelector, Mutation as IdentityMutation, Query as IdentityRepo,
+};
 use crate::service::proofs::cache::ProofCache;
-use crate::service::proto::PublicKey;
-use sea_orm::ConnectionTrait;
+use crate::service::proto::{ContentDigest, PublicKey};
+use polycentric_common::models::collections;
+use sea_orm::{ConnectionTrait, DatabaseConnection, DbErr, TransactionTrait};
 use std::collections::HashMap;
 use tonic::Status;
+
+const ALL_COLLECTIONS: [i32; 8] = [
+    collections::IDENTITY,
+    collections::FEED,
+    collections::PROFILE,
+    collections::INTERACTIONS,
+    collections::SOCIAL_GRAPH,
+    collections::REPORTS,
+    collections::LABELS,
+    collections::VERIFICATIONS,
+];
+
+/// Erases matching events, deletes blobs nothing references any more, and
+/// drops cached chain state. Used by bans and the operator command.
+pub async fn erase_events(
+    db: &DatabaseConnection,
+    filestore: Option<&ContentFilestore>,
+    proof_cache: Option<&ProofCache>,
+    selector: &EventsSelector<'_>,
+) -> Result<Erased, DbErr> {
+    let txn = db.begin().await?;
+    let erased = IdentityMutation::erase_events(&txn, selector).await?;
+    txn.commit().await?;
+
+    delete_blobs(filestore, &erased.blobs).await;
+    if let Some(cache) = proof_cache {
+        for identity in &erased.identities {
+            cache.invalidate_identity(identity).await;
+            for collection in ALL_COLLECTIONS {
+                cache.invalidate_canonical(identity, collection).await;
+            }
+        }
+    }
+    Ok(erased)
+}
+
+/// Deletes content rows no event references, and their blob bodies.
+pub async fn prune_content(
+    db: &DatabaseConnection,
+    filestore: Option<&ContentFilestore>,
+) -> Result<Erased, DbErr> {
+    let txn = db.begin().await?;
+    let pruned = IdentityMutation::prune_orphan_content(&txn).await?;
+    txn.commit().await?;
+
+    delete_blobs(filestore, &pruned.blobs).await;
+    Ok(pruned)
+}
+
+async fn delete_blobs(
+    filestore: Option<&ContentFilestore>,
+    blobs: &[ContentDigest],
+) {
+    let Some(filestore) = filestore else { return };
+    for digest in blobs {
+        if let Err(error) = filestore.delete_blob(digest).await {
+            tracing::warn!(
+                %error,
+                digest = hex::encode(&digest.value),
+                "failed to delete blob"
+            );
+        }
+    }
+}
 
 /// The identity-chain and profile events for `identities`. Fetched
 /// sequentially so MockDatabase-backed tests stay deterministic; skips the
@@ -35,10 +103,11 @@ pub async fn list_identity_events(
     ctx: &ServiceContext,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
-    let rows =
-        IdentityRepo::list_identity_events_for_identities(&ctx.db, identities)
-            .await
-            .map_err(map_db_err)?;
+    let rows = IdentityRepo::list_identity_events_for_identities(
+        &ctx.ro_db, identities,
+    )
+    .await
+    .map_err(map_db_err)?;
     warm_identity_cache(ctx, &rows).await;
     Ok(rows)
 }
@@ -50,7 +119,7 @@ pub async fn list_profile_events(
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     FeedsRepository::Query::list_latest_profiles_for_identities(
-        &ctx.db, identities,
+        &ctx.ro_db, identities,
     )
     .await
     .map_err(map_db_err)

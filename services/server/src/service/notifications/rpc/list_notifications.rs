@@ -84,7 +84,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<Fetched, Status> {
     let raw = NotificationRepository::list_for_identity(
-        &ctx.service.db,
+        &ctx.service.ro_db,
         &params.identity,
         params.limit + 1, // over-fetch for pagination
         params.after_id,
@@ -129,7 +129,7 @@ async fn hydrate(
     // them by their comparable key for the view stage.
     let proto_keys: Vec<EventKey> = cmp_keys.iter().map(to_proto_key).collect();
     let fetched =
-        FeedsRepository::list_events_by_keys(&ctx.service.db, &proto_keys)
+        FeedsRepository::list_events_by_keys(&ctx.service.ro_db, &proto_keys)
             .await
             .map_err(map_db_err)?;
     let fetched_keys: Vec<TargetEventKey> =
@@ -141,7 +141,7 @@ async fn hydrate(
         fetched_keys.iter().cloned().zip(fetched_bundles).collect();
 
     let stats_fut = async {
-        gather_stats_for(&ctx.service.db, &fetched_keys)
+        gather_stats_for(&ctx.service.ro_db, &fetched_keys)
             .await
             .map_err(map_db_err)
     };
@@ -150,7 +150,7 @@ async fn hydrate(
     // author and does not object to their own posts.
     let label_fut = async {
         FeedsRepository::list_labels_for_event_keys(
-            &ctx.service.db,
+            &ctx.service.ro_db,
             &trigger_keys,
             ctx.service.trusted_moderator.as_deref(),
         )
@@ -392,6 +392,7 @@ mod tests {
                 signature: vec![row.id as u8],
                 previous_signature: vec![],
                 previous_root: vec![],
+                application_id: None,
                 event_bytes: vec![row.id as u8],
                 created_at: ts,
                 synced_at: ts,

@@ -1,11 +1,11 @@
 //! gRPC `PairingService` impl. Each method delegates to a handler
 //! under `pairing/rpc/`.
 
-pub mod common;
-pub mod create_pairing_session;
-pub mod get_pairing_session;
-pub mod join_pairing_session;
+use std::sync::Arc;
 
+use tonic::{Request, Response, Status};
+
+use crate::service::context::ServiceContext;
 use crate::service::proto::pairing_service_server::{
     PairingService, PairingServiceServer,
 };
@@ -14,11 +14,14 @@ use crate::service::proto::{
     GetPairingSessionRequest, GetPairingSessionResponse,
     JoinPairingSessionRequest, JoinPairingSessionResponse,
 };
-use sea_orm::DatabaseConnection;
-use tonic::{Request, Response, Status};
+
+pub mod common;
+pub mod create_pairing_session;
+pub mod get_pairing_session;
+pub mod join_pairing_session;
 
 pub struct PairingServiceImpl {
-    db: DatabaseConnection,
+    ctx: Arc<ServiceContext>,
 }
 
 #[tonic::async_trait]
@@ -28,7 +31,7 @@ impl PairingService for PairingServiceImpl {
         request: Request<CreatePairingSessionRequest>,
     ) -> Result<Response<CreatePairingSessionResponse>, Status> {
         Ok(Response::new(
-            create_pairing_session::handle(&self.db, request.into_inner())
+            create_pairing_session::handle(&self.ctx, request.into_inner())
                 .await?,
         ))
     }
@@ -38,7 +41,8 @@ impl PairingService for PairingServiceImpl {
         request: Request<GetPairingSessionRequest>,
     ) -> Result<Response<GetPairingSessionResponse>, Status> {
         Ok(Response::new(
-            get_pairing_session::handle(&self.db, request.into_inner()).await?,
+            get_pairing_session::handle(&self.ctx, request.into_inner())
+                .await?,
         ))
     }
 
@@ -47,7 +51,7 @@ impl PairingService for PairingServiceImpl {
         request: Request<JoinPairingSessionRequest>,
     ) -> Result<Response<JoinPairingSessionResponse>, Status> {
         Ok(Response::new(
-            join_pairing_session::handle(&self.db, request.into_inner())
+            join_pairing_session::handle(&self.ctx, request.into_inner())
                 .await?,
         ))
     }
@@ -55,26 +59,32 @@ impl PairingService for PairingServiceImpl {
 
 /// Creates the gRPC service implementation for pairing sessions.
 pub fn build_pairing_service(
-    db: DatabaseConnection,
+    ctx: Arc<ServiceContext>,
 ) -> PairingServiceServer<PairingServiceImpl> {
-    PairingServiceServer::new(PairingServiceImpl { db })
+    PairingServiceServer::new(PairingServiceImpl { ctx })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::proto as Proto;
-    use crate::service::proto::SignedMessage;
     use chrono::Utc;
+    use common_kafka::build_producer;
     use ed25519_dalek::{Signer, SigningKey};
     use prost::Message;
     use sea_orm::{DbBackend, MockDatabase};
     use tonic::Code;
 
-    fn impl_for_testing() -> PairingServiceImpl {
-        PairingServiceImpl {
-            db: MockDatabase::new(DbBackend::Postgres).into_connection(),
-        }
+    use crate::service::proto as Proto;
+    use crate::service::proto::SignedMessage;
+
+    use super::*;
+
+    async fn impl_for_testing() -> PairingServiceImpl {
+        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let kafka_producer = build_producer()
+            .await
+            .expect("failed to build Kafka producer");
+        let ctx = ServiceContext::new(db, kafka_producer);
+        PairingServiceImpl { ctx }
     }
 
     fn make_signed_initial_session(
@@ -116,7 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_pairing_session_rejects_missing_signed_message() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let err = service
             .create_pairing_session(Request::new(CreatePairingSessionRequest {
                 signed_message: None,
@@ -129,7 +139,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_pairing_session_rejects_timestamp_too_far_in_future() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let msg = make_signed_initial_session(
             "issuer",
             Utc::now().timestamp_millis() + 60 * 60 * 1000,
@@ -147,7 +157,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_pairing_session_rejects_timestamp_too_far_in_past() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let msg = make_signed_initial_session(
             "issuer",
             Utc::now().timestamp_millis() - 60 * 60 * 1000,
@@ -165,7 +175,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_pairing_session_rejects_invalid_signature() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let mut msg = make_signed_initial_session("issuer", 1_700_000_000_000);
         msg.signature[0] ^= 1;
 
@@ -181,7 +191,7 @@ mod tests {
 
     #[tokio::test]
     async fn join_pairing_session_rejects_missing_signed_message() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let err = service
             .join_pairing_session(Request::new(JoinPairingSessionRequest {
                 signed_message: None,
@@ -194,7 +204,7 @@ mod tests {
 
     #[tokio::test]
     async fn join_pairing_session_rejects_invalid_body() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let signing_key = SigningKey::from_bytes(&[7u8; 32]);
         let body_bytes = vec![1, 2, 3];
         let signature = signing_key.sign(&body_bytes);
@@ -219,7 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn join_pairing_session_rejects_invalid_signature() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let mut msg = make_signed_initial_session("issuer", 1_700_000_000_000);
         msg.signature[0] ^= 1;
 

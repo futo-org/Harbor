@@ -1,9 +1,10 @@
 //! Helpers shared across the pairing RPC handlers.
 
-use crate::service::identity::pairing::repository as pair_repo;
-use crate::service::proto as Proto;
 use sea_orm::DatabaseConnection;
 use tonic::Status;
+
+use crate::service::identity::pairing::repository as pair_repo;
+use crate::service::proto as Proto;
 
 /// Builds `PairingSession` from the stored session row and current claimers.
 /// Expired sessions are deleted and reported as not found.
