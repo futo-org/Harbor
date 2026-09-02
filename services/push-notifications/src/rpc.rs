@@ -75,6 +75,7 @@ mod tests {
     async fn impl_for_testing() -> NotificationServiceImpl {
         let ctx = Arc::new(Context {
             db: MockDatabase::new(DbBackend::Postgres).into_connection(),
+            ro_db: MockDatabase::new(DbBackend::Postgres).into_connection(),
             notification_manager: NotificationManager::new(None),
             polycentric: PolycentricClient::new(vec![]),
             main_server: String::new(),
@@ -150,7 +151,8 @@ mod tests {
             .into_connection();
 
         let ctx = Arc::new(Context {
-            db,
+            db: db.clone(),
+            ro_db: db,
             notification_manager: NotificationManager::new(None),
             polycentric: PolycentricClient::new(vec![]),
             main_server: String::new(),
