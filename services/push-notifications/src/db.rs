@@ -10,13 +10,17 @@ pub async fn connect() -> Result<DatabaseConnection, DbErr> {
     let schema = &config.database_schema;
 
     let mut opt = ConnectOptions::new(with_utc_timezone(&config.database_url));
-    opt.max_connections(20)
+    opt.max_connections(config.database_max_connections)
         .min_connections(2)
         .idle_timeout(Duration::from_secs(600))
         .max_lifetime(Duration::from_secs(1800))
         .sqlx_logging(false)
         .set_schema_search_path(schema);
     let connection = Database::connect(opt).await?;
+    common_telemetry::observe_db_pool(
+        "push-notifications",
+        connection.get_postgres_connection_pool().clone(),
+    );
 
     connection
         .execute_unprepared(&format!("CREATE SCHEMA IF NOT EXISTS \"{schema}\""))

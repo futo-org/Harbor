@@ -2,9 +2,9 @@ use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::time::Duration;
 
 pub async fn build_db_client() -> Result<DatabaseConnection, sea_orm::DbErr> {
-    let database_url = &crate::config::get().database_url;
-    let mut opt = ConnectOptions::new(with_utc_timezone(database_url));
-    opt.max_connections(100)
+    let config = crate::config::get();
+    let mut opt = ConnectOptions::new(with_utc_timezone(&config.database_url));
+    opt.max_connections(config.database_max_connections)
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))
         .acquire_timeout(Duration::from_secs(8))
@@ -14,6 +14,10 @@ pub async fn build_db_client() -> Result<DatabaseConnection, sea_orm::DbErr> {
         .set_schema_search_path("public");
 
     let db = Database::connect(opt).await?;
+    common_telemetry::observe_db_pool(
+        "server",
+        db.get_postgres_connection_pool().clone(),
+    );
     Ok(db)
 }
 

@@ -9,6 +9,9 @@ pub struct Config {
     /// Schema owning this service's tables
     /// (`POLYCENTRIC_NOTIFICATIONS_DATABASE_SCHEMA`).
     pub database_schema: String,
+    /// Maximum size of the Postgres connection pool
+    /// (`POLYCENTRIC_DATABASE_MAX_CONNECTIONS`).
+    pub database_max_connections: u32,
     /// Expo access token (`EXPO_ACCESS_TOKEN`). Blank is treated as unset —
     /// Expo rejects an empty bearer token but accepts no auth header.
     pub expo_access_token: Option<String>,
@@ -33,6 +36,10 @@ pub fn init() -> Result<&'static Config, String> {
             .unwrap_or_else(|_| "postgres://postgres:testing@localhost:5432".to_string()),
         database_schema: std::env::var("POLYCENTRIC_NOTIFICATIONS_DATABASE_SCHEMA")
             .unwrap_or_else(|_| "notifications".to_string()),
+        database_max_connections: std::env::var("POLYCENTRIC_DATABASE_MAX_CONNECTIONS")
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(20),
         expo_access_token: std::env::var("EXPO_ACCESS_TOKEN")
             .ok()
             .filter(|t| !t.is_empty()),

@@ -46,6 +46,7 @@ All service variables are read and validated once at startup by
 | Variable | Default | Description |
 |---|---|---|
 | `DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | Postgres connection URL. |
+| `POLYCENTRIC_DATABASE_MAX_CONNECTIONS` | `100` | Maximum size of the Postgres connection pool. |
 | `POLYCENTRIC_SERVER_NAME` | `http://localhost:3000` | Canonical URL of this server. Stamped as the source on produced Kafka events. |
 | `POLYCENTRIC_ALLOW_HOSTS` | `POLYCENTRIC_SERVER_NAME` | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens. |
 | `CDN_URL` | `http://localhost:3000` | Public URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`. |

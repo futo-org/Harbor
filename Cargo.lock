@@ -1317,6 +1317,7 @@ dependencies = [
  "opentelemetry-prometheus",
  "opentelemetry_sdk",
  "prometheus",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
