@@ -58,10 +58,6 @@ export function MentionSearchOverlay() {
     insertMention,
   );
 
-  useEffect(() => {
-    console.log(open, anchor);
-  }, [anchor, open]);
-
   if (!open || !anchor) return null;
 
   return (
@@ -170,8 +166,10 @@ function useSelectionAndKeyboardControl(
         setSelectedIndex((safeSelectedIndex + 1) % count);
       else if (e.key === 'ArrowUp')
         setSelectedIndex((safeSelectedIndex - 1 + count) % count);
-      else if (e.key === 'Enter' || e.key === 'Tab')
-        if (selectedIdentity) insertMention(selectedIdentity, selectedProfile);
+      else if ((e.key === 'Enter' || e.key === 'Tab') && selectedIdentity)
+        insertMention(selectedIdentity, selectedProfile);
+      // Any other key is handled normally
+      else return;
 
       e.preventDefault();
     };
