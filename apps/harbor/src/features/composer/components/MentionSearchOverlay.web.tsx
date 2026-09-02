@@ -62,7 +62,7 @@ export function MentionSearchOverlay() {
     );
   }, [open, atIndex, caretIndex, text, inputRef, win.width, win.height]);
 
-  const { selectedIndex, setSelectedIndex } = useSelectionAndKeyboardControl(
+  const { selectedIndex, setSelectedIndex } = useKeyboardControls(
     open,
     entries.map((e) => e.identity),
     insertMention,
@@ -152,7 +152,7 @@ function MentionRow({
  * Arrow up/down moves the selection (wrapping), Enter/Tab inserts it.
  * Selection resets whenever the result set changes.
  */
-function useSelectionAndKeyboardControl(
+function useKeyboardControls(
   open: boolean,
   identities: string[],
   insertMention: MentionStore['insertMention'],
