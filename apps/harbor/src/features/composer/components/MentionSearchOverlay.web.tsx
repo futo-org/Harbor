@@ -18,10 +18,11 @@ import {
   useMentionStore,
 } from '../hooks/useMentionStore';
 import { useMentionSearch } from '../hooks/useMentionSearch';
+import { placeMentionOverlay } from '../utils/placeMentionOverlay';
 import {
+  measureWebMentionAnchor,
   type MentionAnchor,
-  placeMentionOverlay,
-} from '../utils/placeMentionOverlay';
+} from '@/src/features/composer/utils/measureWebMentionAnchor';
 
 /**
  * Web mention autocomplete: a fixed popover portaled above everything,
@@ -53,7 +54,7 @@ export function MentionSearchOverlay() {
   useLayoutEffect(() => {
     if (!open || atIndex < 0 || !inputRef) return;
     setAnchor(
-      measureAnchor(
+      measureWebMentionAnchor(
         inputRef as unknown as HTMLTextAreaElement,
         atIndex,
         caretIndex,
@@ -196,67 +197,4 @@ function useSelectionAndKeyboardControl(
   ]);
 
   return { selectedIndex: safeSelectedIndex, setSelectedIndex };
-}
-
-/**
- * The `@` itself, or the start of the caret's line once the query has
- * wrapped below the `@`.
- */
-function measureAnchor(
-  node: HTMLTextAreaElement,
-  atIndex: number,
-  caretIndex: number,
-): MentionAnchor {
-  const at = measureChar(node, atIndex);
-  const caret = measureChar(node, caretIndex);
-
-  if (caret.top <= at.top) return at;
-
-  const lineStart =
-    node.getBoundingClientRect().left +
-    parseFloat(getComputedStyle(node).paddingLeft);
-
-  return { ...caret, x: lineStart };
-}
-
-/**
- * Viewport position of the character at `index` (mirror-div trick: a hidden
- * div styled like the textarea wraps identically, so a marker span wrapping
- * the same character lands where it is).
- */
-function measureChar(node: HTMLTextAreaElement, index: number): MentionAnchor {
-  const mirror = document.createElement('div');
-  const computed = getComputedStyle(node);
-  for (const prop of Array.from(computed)) {
-    mirror.style.setProperty(prop, computed.getPropertyValue(prop));
-  }
-  Object.assign(mirror.style, {
-    position: 'absolute',
-    visibility: 'hidden',
-    top: '0',
-    left: '-9999px',
-    height: 'auto',
-    overflow: 'hidden',
-    whiteSpace: 'pre-wrap',
-  });
-  // Full text so words wrap exactly as in the textarea; the marker wraps the
-  // measured character (zero-width at the end so it doesn't affect wrapping).
-  const marker = document.createElement('span');
-  marker.textContent = node.value[index] ?? '\u200b';
-  mirror.append(
-    node.value.slice(0, index),
-    marker,
-    node.value.slice(index + 1),
-  );
-  document.body.appendChild(mirror);
-
-  const rect = node.getBoundingClientRect();
-  const top = rect.top + marker.offsetTop - node.scrollTop;
-  const anchor = {
-    x: rect.left + marker.offsetLeft - node.scrollLeft,
-    top,
-    bottom: top + marker.offsetHeight,
-  };
-  mirror.remove();
-  return anchor;
 }

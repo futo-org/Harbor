@@ -1,10 +1,9 @@
 import { Spacing } from '@/src/common/theme';
 
+import type { MentionAnchor } from '@/src/features/composer/utils/measureWebMentionAnchor';
+
 export const MENTION_OVERLAY_WIDTH = 320;
 const MARGIN = Spacing.md;
-
-/** Viewport box of the `@` being completed. */
-export type MentionAnchor = { x: number; top: number; bottom: number };
 
 /**
  * Fixed-position box for the web mention overlay: top-left corner under the
