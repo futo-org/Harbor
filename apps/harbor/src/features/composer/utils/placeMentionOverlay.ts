@@ -2,8 +2,9 @@ import { Spacing } from '@/src/common/theme';
 
 import type { MentionAnchor } from '@/src/features/composer/utils/measureWebMentionAnchor';
 
-export const MENTION_OVERLAY_WIDTH = 320;
+const MENTION_OVERLAY_WIDTH = 320;
 const MARGIN = Spacing.md;
+const DISTANCE_FROM_ANCHOR = Spacing.sm;
 
 /**
  * Fixed-position box for the web mention overlay: top-left corner under the
@@ -20,13 +21,13 @@ export function placeMentionOverlay(
     ? {
         left,
         width,
-        top: anchor.bottom + Spacing.sm,
+        top: anchor.bottom + DISTANCE_FROM_ANCHOR,
         maxHeight: win.height - anchor.bottom - MARGIN,
       }
     : {
         left,
         width,
-        bottom: win.height - anchor.top + Spacing.sm,
+        bottom: win.height - anchor.top + DISTANCE_FROM_ANCHOR,
         maxHeight: anchor.top - MARGIN,
       };
 }
