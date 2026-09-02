@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AVATAR_SIZE_MAP } from '@/src/common/components';
+import { Text } from '@/src/common/components/primitives';
 import { ScrollView } from '@/src/common/components/ScrollView';
-import { Atoms, Spacing, useTheme } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme, ZIndex } from '@/src/common/theme';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
-import { useSearchUsers } from '@/src/features/search/hooks/useSearchUsers';
-import { selectMentionQuery, useMentionStore } from '../hooks/useMentionStore';
-import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
+import { useMentionStore } from '../hooks/useMentionStore';
+import { useMentionSearch } from '../hooks/useMentionSearch';
 
 /**
  * Mention autocomplete results, anchored below the composer's input. Fully
@@ -19,30 +19,12 @@ export function MentionSearchOverlay() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const rawQuery = useMentionStore(selectMentionQuery);
   const inputHeight = useMentionStore((state) => state.inputLayout.height);
   const inputPageY = useMentionStore((state) => state.inputPageY);
   const insertMention = useMentionStore((state) => state.insertMention);
-
-  const query = useDebouncedValue(rawQuery?.trim());
-
-  const users = useSearchUsers(query ?? '', {
-    limit: 10,
-    enabled: !!query,
-    queryKey: ['mentions_autocomplete'],
-  });
-
-  // Stable key + manual refresh. Keying by the search string gives an empty
-  // `entries` frame on every query change while the new request is in flight,
-  // which closes the overlay. Under a stable key useQuery never refetches on
-  // its own, so refresh on each query change.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only react to query change
-  useEffect(() => {
-    users.refresh();
-  }, [query]);
+  const { open, entries } = useMentionSearch();
 
   const measureInput = useMentionStore((state) => state.measureInput);
-  const open = !!query && users.entries.length > 0;
 
   // Measure when opening, not at input mount: by now the layout above the
   // input (reply preview) has settled, so the anchor is correct.
@@ -55,31 +37,33 @@ export function MentionSearchOverlay() {
   return (
     <View
       style={[
-        Atoms.absolute,
-        Atoms.rounded_xl,
+        StyleSheet.absoluteFill,
         {
-          backgroundColor: theme.palette.neutral_0,
-          borderWidth: 1,
-          borderColor: theme.palette.neutral_50,
-          left: Spacing.md,
-          right: Spacing.md,
-          bottom: Spacing.md,
           top:
             Math.max(inputHeight, AVATAR_SIZE_MAP.md) +
             Spacing.md +
             (inputPageY - insets.top),
-          zIndex: 1,
+          zIndex: ZIndex.raised,
+        },
+        {
+          backgroundColor: theme.palette.neutral_0,
+          borderTopWidth: 1,
+          borderColor: theme.palette.neutral_25,
         },
       ]}
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={Atoms.gap_md}
-        style={{ flex: 1, padding: 10 }}
+        contentContainerStyle={Atoms.gap_lg}
+        style={[Atoms.flex_1, Atoms.p_lg]}
       >
-        {users.entries.map((user) => (
+        {entries.length === 0 && (
+          <Text variant="secondary" color="neutral_500">
+            No results
+          </Text>
+        )}
+        {entries.map((user) => (
           <ProfileRow
-            size="sm"
             key={user.identity}
             identity={user.identity}
             onPress={insertMention}

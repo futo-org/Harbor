@@ -7,6 +7,7 @@ import {
   TOKEN_PRECEDER,
 } from '@/src/common/util/parseTextLinks';
 import type { ProfileHookResult } from '@/src/features/profile/hooks/useProfile';
+import { isWeb } from '@/src/common/util/platform';
 
 // Chars the autocomplete searches through: unicode letters, numbers,
 // underscores, and spaces (multi-word name search). Anything else between the
@@ -112,12 +113,34 @@ export function createMentionStore(): StoreApi<MentionStore> {
         lastNativeText: newText,
       });
 
-      inputRef?.setNativeProps({
-        text: newText,
-        selection: { start: newCaret, end: newCaret },
-      });
+      pushTextToInput(inputRef, newText, newCaret);
     },
   }));
+}
+
+/**
+ * Push text + caret into the input. Web has no `setNativeProps`: set the DOM
+ * value through the native setter (so React's value tracker notices) and
+ * dispatch `input`, which runs the same onChangeText path as typing — that's
+ * what re-runs TextArea's auto-grow.
+ */
+function pushTextToInput(
+  inputRef: TextInput | null,
+  text: string,
+  caret: number,
+) {
+  if (!inputRef) return;
+  if (!isWeb) {
+    inputRef.setNativeProps({ text, selection: { start: caret, end: caret } });
+    return;
+  }
+  const node = inputRef as unknown as HTMLTextAreaElement;
+  Object.getOwnPropertyDescriptor(
+    HTMLTextAreaElement.prototype,
+    'value',
+  )?.set?.call(node, text);
+  node.dispatchEvent(new Event('input', { bubbles: true }));
+  node.setSelectionRange(caret, caret);
 }
 
 /**
