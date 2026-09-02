@@ -83,7 +83,7 @@ function CountdownTimer({
 
 export default function PairIdentityIssuerScreen() {
   const { theme } = useTheme();
-  const { session, claimers, error, stage, createSession, approveClaimer } =
+  const { session, claimers, error, stage, approveClaimer } =
     usePairIdentityIssuer();
 
   /** Show an indicator that the pairing code has been copied when true. */
@@ -99,11 +99,6 @@ export default function PairIdentityIssuerScreen() {
   const rejectClaimer = () => {
     setRejectedCount((count) => (count === rejectedCount ? count + 1 : count));
   };
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: we only want to run this once at mount
-  useEffect(() => {
-    createSession();
-  }, []);
 
   useEffect(() => {
     if (stage === 'done') {
