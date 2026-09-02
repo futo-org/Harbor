@@ -29,7 +29,17 @@ export function MentionSearchOverlay() {
   const users = useSearchUsers(query ?? '', {
     limit: 10,
     enabled: !!query,
+    queryKey: ['mentions_autocomplete'],
   });
+
+  // Stable key + manual refresh. Keying by the search string gives an empty
+  // `entries` frame on every query change while the new request is in flight,
+  // which closes the overlay. Under a stable key useQuery never refetches on
+  // its own, so refresh on each query change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only react to query change
+  useEffect(() => {
+    users.refresh();
+  }, [query]);
 
   const measureInput = useMentionStore((state) => state.measureInput);
   const open = !!query && users.entries.length > 0;

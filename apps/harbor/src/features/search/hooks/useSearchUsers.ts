@@ -1,5 +1,9 @@
 import { shouldExtend } from '@/src/common/lib/polycentric-hooks';
-import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
+import {
+  RefreshStrategy,
+  useQuery,
+  type QueryKey,
+} from '@/src/common/query/hooks/useQuery';
 import { Query, QueryStatus, UpdateMode, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import { searchQueryKeys } from './useSearchPosts';
@@ -51,12 +55,12 @@ function decodeEntries(
 
 export function useSearchUsers(
   searchQuery: string,
-  options?: { limit?: number; enabled?: boolean },
+  options?: { limit?: number; enabled?: boolean; queryKey?: QueryKey },
 ) {
   const enabled = (options?.enabled ?? true) && searchQuery.length > 0;
 
   const query = useQuery(
-    searchQueryKeys.users(searchQuery),
+    options?.queryKey ?? searchQueryKeys.users(searchQuery),
     (_status, data) =>
       new Query.SearchUsers({
         query: searchQuery,
