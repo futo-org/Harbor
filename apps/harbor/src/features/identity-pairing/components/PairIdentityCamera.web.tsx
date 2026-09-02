@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
-import { hexToBytes } from '@polycentric/react-native';
 import { decodePairingCode, EncodingMode } from '../pairingCode';
 
 function supportsGetUserMedia() {
