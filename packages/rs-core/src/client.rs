@@ -722,6 +722,7 @@ mod tests {
             previous_root: Vec::new(),
             content_digest: Some(content_digest),
             created_at: 0,
+            application: None,
         };
         let event_bytes = event.encode_to_vec();
         let signature = signer.signing.sign(&event_bytes).to_bytes().to_vec();

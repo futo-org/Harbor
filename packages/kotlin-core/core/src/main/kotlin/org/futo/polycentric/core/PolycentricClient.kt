@@ -53,6 +53,8 @@ class PolycentricClient(
     val filestore: IFileStoreDriver,
     seedServers: List<String> = emptyList(),
     val crypto: ICryptoManager = org.futo.polycentric.core.crypto.Ed25519CryptoManager(),
+    /** Stamped on every event this client builds. */
+    val application: polycentric.v2.Application? = null,
 ) {
     @Volatile
     var currentKeyPair: StoredKeyPair? = null
@@ -281,6 +283,7 @@ class PolycentricClient(
             previous_root = core.previousRoot(identity, collection).toByteString(),
             content_digest = digest,
             created_at = System.currentTimeMillis(),
+            application = application,
         )
     }
 

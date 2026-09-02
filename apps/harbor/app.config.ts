@@ -141,6 +141,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     router: {},
     variant: VARIANT,
     distribution: DISTRIBUTION,
+    webApplicationId: `${ID}.web`,
     eas: {
       projectId: '4db035ec-2de9-448a-a6cf-07347d6ae8b9',
     },

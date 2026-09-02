@@ -209,6 +209,16 @@ async fn process_event(
         signature: Set(signed_event.signature),
         previous_signature: Set(event.previous_signature),
         previous_root: Set(event.previous_root),
+        application_name: Set(event
+            .application
+            .as_ref()
+            .map(|a| a.name.clone())),
+        application_id: Set(event.application.as_ref().map(|a| a.id.clone())),
+        application_version: Set(event
+            .application
+            .as_ref()
+            .map(|a| a.version.clone())),
+        application_url: Set(event.application.map(|a| a.url)),
         event_bytes: Set(signed_event.event_bytes),
         created_at: Set(DateTime::from_timestamp_secs(
             (event.created_at / 1000) as i64,
