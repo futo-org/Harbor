@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AVATAR_SIZE_MAP } from '@/src/common/components';
 import { Text } from '@/src/common/components/primitives';
-import { ScrollView } from '@/src/common/components/ScrollView';
 import { Atoms, Spacing, useTheme, ZIndex } from '@/src/common/theme';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { useMentionStore } from '../hooks/useMentionStore';
