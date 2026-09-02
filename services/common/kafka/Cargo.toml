@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 rdkafka = { workspace = true, default-features = false, features = ["tokio", "sasl"] }
+tracing.workspace = true

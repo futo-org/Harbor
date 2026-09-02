@@ -21,10 +21,12 @@ use common_kafka::build_producer;
 use sea_orm::DatabaseConnection;
 
 /// Connect to the database, retrying with backoff.
-async fn connect_db_with_retry() -> (DatabaseConnection, DatabaseConnection) {
+async fn connect_db_with_retry(
+    durable_commits: bool,
+) -> (DatabaseConnection, DatabaseConnection) {
     let mut delay = std::time::Duration::from_secs(1);
     loop {
-        match build_db_clients().await {
+        match build_db_clients(durable_commits).await {
             Ok((db, ro_db)) => return (db, ro_db),
             Err(e) => {
                 tracing::warn!(
@@ -79,7 +81,7 @@ async fn main() {
 /// Run the API server: gRPC + HTTP merged onto a single port.
 async fn run_server() {
     common_telemetry::init_metrics("server");
-    let (db, ro_db) = connect_db_with_retry().await;
+    let (db, ro_db) = connect_db_with_retry(true).await;
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");
@@ -120,7 +122,8 @@ async fn run_server() {
 async fn run_workers(only: Vec<String>) {
     workers::validate_worker_names(&only);
     common_telemetry::init_metrics("server-workers");
-    let (db, ro_db) = connect_db_with_retry().await;
+    // Workers write rebuildable caches; skip the WAL flush wait per commit.
+    let (db, ro_db) = connect_db_with_retry(false).await;
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");

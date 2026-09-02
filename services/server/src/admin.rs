@@ -92,7 +92,7 @@ pub async fn prune_content(args: Vec<String>) {
 }
 
 async fn connect() -> DatabaseConnection {
-    build_db_clients()
+    build_db_clients(true)
         .await
         .expect("failed to connect to database")
         .0
