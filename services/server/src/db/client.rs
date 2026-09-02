@@ -8,12 +8,12 @@ use crate::config;
 pub async fn build_db_clients()
 -> Result<(DatabaseConnection, DatabaseConnection), sea_orm::DbErr> {
     let config = config::get();
+    let max = config.database_max_connections;
 
-    let db = create_pool(&config.database_url, config.database_max_connections)
-        .await?;
+    let db = create_pool("server-rw", &config.database_url, max).await?;
 
     let ro_db = if let Some(url) = config.ro_database_url.as_deref() {
-        create_pool(url, config.database_max_connections).await?
+        create_pool("server-ro", url, max).await?
     } else {
         // If no read-only instance is available reuse the read-write pool.
         db.clone()
@@ -23,6 +23,7 @@ pub async fn build_db_clients()
 }
 
 async fn create_pool(
+    name: &'static str,
     url: &str,
     max: u32,
 ) -> Result<DatabaseConnection, sea_orm::DbErr> {
@@ -39,7 +40,7 @@ async fn create_pool(
     let db = Database::connect(opt).await?;
 
     common_telemetry::observe_db_pool(
-        "server",
+        name,
         db.get_postgres_connection_pool().clone(),
     );
 
