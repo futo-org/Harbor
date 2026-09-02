@@ -30,11 +30,12 @@ fn build_reflection_service() -> Result<
 /// the HTTP router and served on a single port.
 pub fn build_grpc_router(
     db: DatabaseConnection,
+    ro_db: DatabaseConnection,
     kafka_producer: FutureProducer,
     filestore: ContentFilestore,
     server_config: ServerConfig,
 ) -> Result<Router, Box<dyn std::error::Error>> {
-    let ctx = ServiceContext::new(db, kafka_producer);
+    let ctx = ServiceContext::new(db, ro_db, kafka_producer);
     let feeds_service = service::feeds::rpc::build_feeds_service(ctx.clone());
     let events_service =
         service::events::rpc::build_events_service(ctx.clone());
