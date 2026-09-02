@@ -5,7 +5,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import type { PairingSession, v2 } from '@polycentric/react-native';
 import { SyncStrategy } from '@polycentric/react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export type PairIdentityIssuerHookResult = {
   /** Our view of the pairing session. */
@@ -68,6 +68,9 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Latest pairing session state sequence
+  const pairingSequenceRef = useRef<number>(0);
+
   const stopPolling = () => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
@@ -82,6 +85,7 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
   const poll = async (info: v2.PairingInfo) => {
     if (canceledRef.current && pollIntervalRef.current) {
       stopPolling();
+      return;
     }
 
     const latestClaimers =
@@ -96,7 +100,7 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
     });
   };
 
-  const createSession = async () => {
+  const createAndWatchSession = async () => {
     const server = client.servers.at(0);
     if (!server) {
       throw new Error('No servers configured');
@@ -106,30 +110,43 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
 
     const session =
       await client.pairingSessionManager.createPairingSession(server);
-    if (canceledRef) return;
+    pairingSequenceRef.current = 1;
+    if (canceledRef.current) return;
 
     setState({ stage: 'polling', session, claimers: [] });
     pollIntervalRef.current = setInterval(() => {
-      try {
-        void poll(session.pairingInfo);
-      } catch {
+      poll(session.pairingInfo).catch(() => {
         // TODO: use setter and have real message
         setState({ stage: 'error', message: 'TODO' });
-      }
+      });
     }, 2000);
   };
 
   const approve = async (claimer: string, asRotation: boolean) => {
-    const key = stringToPublicKey(claimer);
+    if (state.stage !== 'polling') return;
+
+    setState((state) => {
+      if (state.stage !== 'polling') return state;
+      return { ...state, stage: 'approving', approvedClaimer: claimer };
+    });
 
     await client.sync(SyncStrategy.PARTIAL_PULL);
     if (canceledRef.current) return;
 
+    const key = stringToPublicKey(claimer);
     if (asRotation) {
       await client.identityManager.addRotationKey(key);
     } else {
       await client.identityManager.addSigningKey(key);
     }
+
+    const server = state.session.pairingInfo.server;
+    pairingSequenceRef.current++;
+    await client.pairingSessionManager.updatePairingSession(
+      server,
+      state.session.digestBytes,
+      BigInt(pairingSequenceRef.current),
+    );
 
     if (canceledRef.current) return;
 
@@ -158,18 +175,14 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
     session,
     claimers,
     createSession: () => {
-      try {
-        void createSession();
-      } catch {
+      createAndWatchSession().catch(() => {
         setState({ stage: 'error', message: 'TODO' });
-      }
+      });
     },
     approveClaimer: (claimer, asRotation) => {
-      try {
-        void approve(claimer, asRotation);
-      } catch {
+      approve(claimer, asRotation).catch(() => {
         setState({ stage: 'error', message: 'TODO' });
-      }
+      });
     },
   };
 }
