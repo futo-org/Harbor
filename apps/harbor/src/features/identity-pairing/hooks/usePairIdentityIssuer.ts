@@ -115,9 +115,8 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
 
     setState({ stage: 'polling', session, claimers: [] });
     pollIntervalRef.current = setInterval(() => {
-      poll(session.pairingInfo).catch(() => {
-        // TODO: use setter and have real message
-        setState({ stage: 'error', message: 'TODO' });
+      poll(session.pairingInfo).catch((e) => {
+        setState({ stage: 'error', message: errorMessage(e) });
       });
     }, 2000);
   };
@@ -175,13 +174,13 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
     session,
     claimers,
     createSession: () => {
-      createAndWatchSession().catch(() => {
-        setState({ stage: 'error', message: 'TODO' });
+      createAndWatchSession().catch((e) => {
+        setState({ stage: 'error', message: errorMessage(e) });
       });
     },
     approveClaimer: (claimer, asRotation) => {
-      approve(claimer, asRotation).catch(() => {
-        setState({ stage: 'error', message: 'TODO' });
+      approve(claimer, asRotation).catch((e) => {
+        setState({ stage: 'error', message: errorMessage(e) });
       });
     },
   };
@@ -200,4 +199,12 @@ function updateClaimers(prev: string[], candidates: v2.PublicKey[]): string[] {
   }
 
   return next;
+}
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+
+  return 'Identity pairing failed.';
 }
