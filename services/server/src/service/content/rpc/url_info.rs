@@ -176,19 +176,19 @@ pub async fn handle(
     ctx: &ServiceContext,
     req: UrlInfoRequest,
 ) -> Result<UrlInfoResponse, Status> {
-    lookup(&ctx.db, &scraper::scrape_url(), &req.url).await
+    lookup(ctx, &scraper::scrape_url(), &req.url).await
 }
 
 /// Serve from cache, scraping on a miss. Concurrent misses for the
 /// same key may each scrape; the last result wins.
 async fn lookup(
-    db: &DbConn,
+    ctx: &ServiceContext,
     scrape_url: &str,
     target_url: &str,
 ) -> Result<UrlInfoResponse, Status> {
     let key = target_url.trim();
 
-    if let Some(outcome) = get_cached(db, key).await {
+    if let Some(outcome) = get_cached(&ctx.ro_db, key).await {
         return outcome.map_err(|(code, message)| Status::new(code, message));
     }
 
@@ -200,7 +200,7 @@ async fn lookup(
         }
     };
 
-    insert_cached(db, key, &outcome, raw_response).await;
+    insert_cached(&ctx.db, key, &outcome, raw_response).await;
     outcome.map_err(|(code, message)| Status::new(code, message))
 }
 

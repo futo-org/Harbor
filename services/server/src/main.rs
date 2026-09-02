@@ -88,13 +88,13 @@ async fn run_server() {
 
     let grpc_router = build_grpc_router(
         db.clone(),
-        ro_db,
+        ro_db.clone(),
         kafka_producer,
         filestore.clone(),
         server_cfg,
     )
     .expect("failed to build gRPC router");
-    let http_router = build_routes(db, filestore);
+    let http_router = build_routes(db, ro_db, filestore);
 
     let app = http_router
         .merge(grpc_router)

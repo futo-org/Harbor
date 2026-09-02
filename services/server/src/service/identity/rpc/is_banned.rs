@@ -15,7 +15,7 @@ pub async fn handle(
 
     let body = request.into_inner();
 
-    let is_banned = id_repo::Query::is_banned(&ctx.db, &body.target_identity)
+    let is_banned = id_repo::Query::is_banned(&ctx.ro_db, &body.target_identity)
         .await
         .map_err(|_| Status::internal("internal server error"))?;
 
