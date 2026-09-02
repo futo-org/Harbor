@@ -8,7 +8,7 @@ mod service;
 mod util;
 mod workers;
 
-use crate::db::client::build_db_client;
+use crate::db::client::build_db_clients;
 use crate::grpc::server::build_grpc_router;
 use crate::routes::build_routes;
 use crate::service::content::content_filestore::{
@@ -20,11 +20,11 @@ use common_kafka::build_producer;
 use sea_orm::DatabaseConnection;
 
 /// Connect to the database, retrying with backoff.
-async fn connect_db_with_retry() -> DatabaseConnection {
+async fn connect_db_with_retry() -> (DatabaseConnection, DatabaseConnection) {
     let mut delay = std::time::Duration::from_secs(1);
     loop {
-        match build_db_client().await {
-            Ok(db) => return db,
+        match build_db_clients().await {
+            Ok((db, ro_db)) => return (db, ro_db),
             Err(e) => {
                 tracing::warn!(
                     error = %e,
@@ -75,7 +75,7 @@ async fn main() {
 /// Run the API server: gRPC + HTTP merged onto a single port.
 async fn run_server() {
     common_telemetry::init_metrics("server");
-    let db = connect_db_with_retry().await;
+    let (db, ro_db) = connect_db_with_retry().await;
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");
@@ -88,6 +88,7 @@ async fn run_server() {
 
     let grpc_router = build_grpc_router(
         db.clone(),
+        ro_db,
         kafka_producer,
         filestore.clone(),
         server_cfg,
@@ -115,11 +116,11 @@ async fn run_server() {
 async fn run_workers(only: Vec<String>) {
     workers::validate_worker_names(&only);
     common_telemetry::init_metrics("server-workers");
-    let db = connect_db_with_retry().await;
+    let (db, ro_db) = connect_db_with_retry().await;
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");
-    let ctx = ServiceContext::new(db, kafka_producer);
+    let ctx = ServiceContext::new(db, ro_db, kafka_producer);
 
     workers::run_all_workers(ctx, only).await;
 }
