@@ -24,6 +24,15 @@ React Native, Kotlin).
 > camelCase with plain Int/ByteArray. Kotlin block comments NEST — never
 > write `/*` inside a KDoc comment.
 
+`js-core` feature parity is complete at the source level (all managers,
+client surface incl. auth JWTs and moderation, event bus, alias
+resolver, errors, typed queries). Deliberate divergences from js-core,
+all documented inline: no `StorageHandle` (repositories hang off the
+client; the event bus is `client.eventService`), Kotlin Flows instead
+of eventemitter3, byte-oriented repository payloads, a v2-shaped
+`IEventAckRepository`, no v1 protos, and no `getBatch` (its only
+js-core call site is a test mock).
+
 ## Architecture
 
 ```
@@ -80,16 +89,25 @@ port it; only the storage drivers and test scenarios are worth adapting.
 
 ## Using this library
 
-Intended to be consumed as an AAR: `org.futo.polycentric:core`.
+Published to this project's GitLab Maven registry on release tags as
+`org.futo:polycentric-core` (version = release tag, e.g. `v1.2.3` →
+`1.2.3`). Add the registry to your repositories:
+
+```kotlin
+maven {
+    url = uri("https://<gitlab-host>/api/v4/projects/<project-id>/packages/maven")
+}
+```
+
+Until then, consume via `includeBuild` (Grayjay's composite build
+substitutes `org.futo.polycentric:core` with this project).
 
 What your app needs:
 
-| | Required |
-|---|---|
-| `compileSdk` | 35 or newer |
-| `minSdk` | 24 or newer |
-| Kotlin | 2.2 or newer |
-| JDK, to run your build | 17 or newer |
+- `compileSdk` >= 35
+- `minSdk` >= 24
+- Kotlin >= 2.2
+- JDK (for building, not runtime) >= 17
 
 The AAR declares no minimum Gradle or AGP version, so those stay your
 choice.
@@ -160,29 +178,3 @@ To rebuild Kotlin components without rebuilding Rust: `./gradlew build -PskipRus
 - Async FFI methods run on the core's tokio runtime
   (`uniffi::export(async_runtime = "tokio")`) — call from coroutines, no
   main-thread blocking.
-
-## Known gaps / next steps
-
-1. js-core feature parity is complete at the source level (all managers,
-   client surface incl. auth JWTs and moderation, event bus, alias
-   resolver, errors, typed queries). Deliberate divergences from js-core,
-   all documented inline: no `StorageHandle` (repositories hang off the
-   client; the event bus is `client.eventService`), Kotlin Flows instead
-   of eventemitter3, byte-oriented repository payloads, a v2-shaped
-   `IEventAckRepository`, no v1 protos, and no `getBatch` (its only
-   js-core call site is a test mock).
-2. SQLite storage driver + filesystem blob store — **done**
-   (`SqliteStorageDriver.kt` + repos, `AndroidFileStoreDriver.kt`), ported from
-   `@polycentric/js-storage-sqlite` and js-node's `NodeFileStoreDriver`.
-3. Port the kotlin-wrapper instrumented test scenarios as the conformance
-   suite against a local dev server (`services/server`), plus JVM unit
-   tests for the pure-Kotlin pieces (ServerJwt, AliasResolver parsing,
-   Moderation codec — js-core has suites for all three).
-4. Grayjay needs URL-anchored comment queries; when that lands in rs-core
-   as a new `Query` variant it appears here automatically on regeneration —
-   only a small Kotlin convenience wrapper will be needed.
-5. Measure per-ABI .so size (tokio + tonic + TLS + image crate).
-6. No publishing setup yet — there is no `maven-publish` plugin or
-   `singleVariant` declaration, so the AAR at
-   `core/build/outputs/aar/core-release.aar` cannot be published to a
-   repository; consumers have to use `includeBuild` until that lands.

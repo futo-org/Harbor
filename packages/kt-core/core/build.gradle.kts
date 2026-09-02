@@ -3,13 +3,12 @@ import org.gradle.api.tasks.Exec
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.wire)
+    id("maven-publish")
 }
 
-// Maven coordinate consumers depend on. Grayjay's composite build substitutes
-// `org.futo.polycentric:core` with this project; a real deployment would
-// publish the AAR under the same coordinate.
-group = "org.futo.polycentric"
-version = "0.0.0"
+group = "org.futo"
+// Release CI passes -PktCoreVersion=<tag minus v>; default stays 0.0.0.
+version = (findProperty("ktCoreVersion") as? String) ?: "0.0.0"
 
 // ── Paths ──────────────────────────────────────────────────────────────
 // Repo root is two levels up from packages/kt-core.
@@ -47,6 +46,10 @@ android {
         // its code is statically linked into libpolycentric_core.so
         // (readelf -d shows no NEEDED entry for it) — don't ship it.
         jniLibs.excludes += listOf("**/libpolycentric_common.so")
+    }
+
+    publishing {
+        singleVariant("release")
     }
 }
 
@@ -145,4 +148,37 @@ dependencies {
     // that exercise Moderation (and decode JWT segments) need the real one.
     testImplementation(libs.orgjson)
     androidTestImplementation(libs.androidx.test.runner)
+}
+
+// ── Publishing ─────────────────────────────────────────────────────────
+// Publishes the release AAR to the GitLab Maven registry from the
+// kt-core-publish CI job on release tags.
+afterEvaluate {
+    publishing {
+        publications {
+            register<MavenPublication>("release") {
+                from(components["release"])
+                groupId = "org.futo"
+                artifactId = "polycentric-core"
+            }
+        }
+        if (System.getenv("CI_JOB_TOKEN") != null) {
+            repositories {
+                maven {
+                    name = "GitLab"
+                    url = uri(
+                        "${System.getenv("CI_API_V4_URL")}/projects/" +
+                            "${System.getenv("CI_PROJECT_ID")}/packages/maven",
+                    )
+                    credentials(HttpHeaderCredentials::class) {
+                        name = "Job-Token"
+                        value = System.getenv("CI_JOB_TOKEN")
+                    }
+                    authentication {
+                        create<HttpHeaderAuthentication>("header")
+                    }
+                }
+            }
+        }
+    }
 }
