@@ -68,8 +68,11 @@ export const DEFAULT_SEED_SERVERS: string[] = (() => {
 export const DEFAULT_SERVER = DEFAULT_SEED_SERVERS[0]!;
 
 const HARBOR_APPLICATION = {
-  name: 'Grayjay',
-  id: 'oof',
+  name: 'Harbor',
+  id:
+    Application.applicationId ??
+    Constants.expoConfig?.extra?.webApplicationId ??
+    '',
   version:
     Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '',
   url: 'https://harbor.social',
