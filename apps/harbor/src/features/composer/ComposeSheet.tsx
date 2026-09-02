@@ -12,7 +12,7 @@ import { ActivityIndicator, Pressable, ScrollView } from 'react-native';
 import { ComposeSheetFooterBar } from './ComposeSheetFooterBar';
 import { ComposerFields } from './ComposerFields';
 import { useComposer } from './hooks/useComposer';
-import { MentionSearchOverlay } from '@/src/features/composer/components/MentionSearchOverlay';
+import { MentionSearchOverlay } from './components/MentionSearchOverlay';
 import { MentionProvider } from './hooks/useMentionStore';
 
 type ComposeSheetProps = {

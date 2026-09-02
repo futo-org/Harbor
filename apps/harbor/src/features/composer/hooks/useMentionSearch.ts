@@ -9,21 +9,27 @@ import { selectMentionQuery, useMentionStore } from './useMentionStore';
  */
 export function useMentionSearch() {
   const rawQuery = useMentionStore(selectMentionQuery)?.trim() ?? null;
-  const query = useDebouncedValue(rawQuery?.trim());
+  const query = useDebouncedValue(rawQuery);
 
   const users = useSearchUsers(query ?? '', {
     limit: 10,
     enabled: !!query,
-    queryKey: ['mentions_autocomplete'],
+    // Per host (useId): the compose tab stays mounted under a reply sheet, and
+    // a shared key would let the two overwrite each other's results.
+    queryKey: ['mentions_autocomplete', useId()],
   });
 
   // Stable queryKey + manual refresh. Keying by the search string gives an empty
   // `entries` frame on every query change while the new request is in flight,
   // which closes the overlay. Under a stable key useQuery never refetches on
-  // its own, so refresh on each query change.
+  // its own, so refresh on each query change — except the first non-empty one,
+  // where `enabled` flipping already subscribed and fetched.
+  const prevQuery = useRef(query);
   // biome-ignore lint/correctness/useExhaustiveDependencies: only react to query change
   useEffect(() => {
-    users.refresh();
+    const wasEnabled = !!prevQuery.current;
+    prevQuery.current = query;
+    if (wasEnabled && query) users.refresh();
   }, [query]);
 
   return {

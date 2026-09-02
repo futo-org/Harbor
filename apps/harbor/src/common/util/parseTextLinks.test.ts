@@ -263,6 +263,12 @@ describe('parseTextLinks', () => {
       ]);
     });
 
+    it('falls back to the identity when the display name is empty', () => {
+      expect(parse(`@{${HEX64},}`)).toEqual([
+        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
+      ]);
+    });
+
     it('keeps trailing punctuation outside the braces as text', () => {
       expect(parse(`see @{${HEX64},Jane}.`)).toEqual([
         { type: 'text', value: 'see ' },

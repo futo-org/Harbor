@@ -1,3 +1,4 @@
+import { Spacing } from '@/src/common/theme';
 import { placeMentionOverlay } from './placeMentionOverlay';
 
 const win = { width: 1000, height: 800 };
@@ -7,14 +8,19 @@ describe('placeMentionOverlay', () => {
     expect(placeMentionOverlay({ x: 100, top: 90, bottom: 110 }, win)).toEqual({
       left: 100,
       width: 320,
-      top: 110,
+      top: 110 + Spacing.sm,
       maxHeight: 800 - 110 - 12,
     });
   });
 
   it('opens above an @ in the lower half', () => {
     expect(placeMentionOverlay({ x: 100, top: 690, bottom: 710 }, win)).toEqual(
-      { left: 100, width: 320, bottom: 800 - 690, maxHeight: 690 - 12 },
+      {
+        left: 100,
+        width: 320,
+        bottom: 800 - 690 + Spacing.sm,
+        maxHeight: 690 - 12,
+      },
     );
   });
 

@@ -145,14 +145,10 @@ function parseSegment(raw: string, isCurly: boolean): SegmentBody | null {
 
     if (!HEX64.test(identity)) return null;
 
-    return {
-      type: 'identity',
-      // With a display name, render it bare; `@` is only shown for the identity/alias forms.
-      value: ~separatorIndex
-        ? content.slice(separatorIndex + 1)
-        : `@${identity}`,
-      identity,
-    };
+    // With a display name, render it bare; `@` is only shown for the
+    // identity/alias forms (and when the name is empty: `@{id,}`).
+    const name = ~separatorIndex ? content.slice(separatorIndex + 1) : '';
+    return { type: 'identity', value: name || `@${identity}`, identity };
   }
 
   if (raw[0] === '@') {
