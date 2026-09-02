@@ -130,7 +130,7 @@ export function usePairIdentityClaimer(
       };
     };
 
-    const whenClaiming = ({ info, session }: ClaimingState): StageResult => {
+    const whenClaiming = ({ session }: ClaimingState): StageResult => {
       let canceled = false;
 
       void (async () => {
@@ -142,7 +142,7 @@ export function usePairIdentityClaimer(
           if (identityState) {
             setState({ stage: 'done' });
           } else {
-            setState({ stage: 'polling', info, session });
+            setState({ stage: 'error', message: 'Failed to claim identity' });
           }
         } catch (err) {
           if (!canceled) {
