@@ -4,7 +4,7 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import type { PairingSession, v2 } from '@polycentric/react-native';
-import { SyncStrategy } from '@polycentric/react-native';
+import { IdentityManager, SyncStrategy } from '@polycentric/react-native';
 import { useEffect, useRef, useState } from 'react';
 
 /** Pairing session state that we expose to the caller. */
@@ -120,11 +120,33 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
     await client.sync(SyncStrategy.PARTIAL_PULL);
     if (stateRef.current.canceled) return;
 
+    // Check for prior authorization.
+    const identityKey = client.activeIdentityKey;
+    if (!identityKey) throw new Error('No active identity');
+
+    const identityState = client.identityManager.resolveIdentity(identityKey);
+    if (!identityState)
+      throw new Error('No identity chain available for this identity.');
+
     const key = stringToPublicKey(claimer);
-    if (asRotation) {
-      await client.identityManager.addRotationKey(key);
-    } else {
-      await client.identityManager.addSigningKey(key);
+
+    let alreadyAuthorized = false;
+    for (const otherKey of [
+      ...identityState.rotationKeys,
+      ...identityState.signingKeys,
+    ]) {
+      if (IdentityManager.keysEqual(key, otherKey)) {
+        alreadyAuthorized = true;
+        break;
+      }
+    }
+
+    if (!alreadyAuthorized) {
+      if (asRotation) {
+        await client.identityManager.addRotationKey(key);
+      } else {
+        await client.identityManager.addSigningKey(key);
+      }
     }
 
     const session = await client.pairingSessionManager.updatePairingSession(
