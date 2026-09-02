@@ -141,7 +141,9 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
       setState({ stage: 'polling', session, claimers: [] });
       pollIntervalRef.current = setInterval(() => {
         poll(session.pairingInfo).catch((e) => {
-          setState({ stage: 'error', message: errorMessage(e) });
+          // We don't want a single failed poll to kill the pairing session,
+          // but we should still be able to discover errors when we need to.
+          console.warn(`pairing session polling error: ${e}`);
         });
       }, 2000);
     };
@@ -171,6 +173,7 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
     approveClaimer: (claimer, asRotation) => {
       approve(claimer, asRotation).catch((e) => {
         setState({ stage: 'error', message: errorMessage(e) });
+        stopPolling();
       });
     },
   };
@@ -185,6 +188,7 @@ function updateClaimers(prev: string[], candidates: v2.PublicKey[]): string[] {
     const claimer = publicKeyToString(candidate);
     if (!seen.has(claimer)) {
       next.push(claimer);
+      seen.add(claimer);
     }
   }
 

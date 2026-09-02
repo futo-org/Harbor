@@ -69,7 +69,7 @@ export function usePairIdentityClaimer(
 
           // TODO: handle servers more robustly
           if (!client.servers.includes(info.server)) {
-            client.servers = [...client.servers];
+            client.servers = [...client.servers, info.server];
             client.core.setServers(client.servers);
           }
 
@@ -113,8 +113,9 @@ export function usePairIdentityClaimer(
           if (canceled || !isAuthorized) return;
 
           setState({ stage: 'claiming', info, session });
-        } catch {
+        } catch (e) {
           // polling failed, will retry on next interval
+          console.warn(`pairing session polling error: ${e}`);
         }
       };
 
