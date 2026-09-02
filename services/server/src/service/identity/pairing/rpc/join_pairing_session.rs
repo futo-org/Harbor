@@ -29,7 +29,7 @@ pub async fn handle(
         .map_err(|_| Status::invalid_argument("invalid body"))?;
 
     let session = pair_repo::Query::get_pairing_session(
-        &ctx.db,
+        &ctx.ro_db,
         &body.pairing_session_signature,
     )
     .await

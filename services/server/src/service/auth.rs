@@ -116,7 +116,7 @@ pub async fn verify_auth_token(
         key: verified.signed_by,
     };
     let identity_content = cached_identity_content(
-        &ctx.db,
+        &ctx.ro_db,
         &ctx.proof_cache,
         &verified.claims.iss,
     )

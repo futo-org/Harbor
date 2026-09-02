@@ -10,7 +10,6 @@ pub struct ServiceContext {
     /// Read/write database connection pool.
     pub db: DatabaseConnection,
     /// Read-only database connection pool.
-    #[allow(dead_code)] // TODO(#292): remove.
     pub ro_db: DatabaseConnection,
     pub proof_cache: Arc<ProofCache>,
     pub kafka_producer: FutureProducer,

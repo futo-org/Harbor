@@ -107,7 +107,7 @@ async fn process_event(
         Some(false) => { /* Ok to continue. */ }
         None => {
             let is_banned = IdentityRepository::is_banned(
-                &ctx.db,
+                &ctx.ro_db,
                 &key.identity,
             )
             .await
@@ -337,7 +337,7 @@ async fn remove_present_blobs(
         .collect();
 
     let already_present =
-        ContentRepository::Query::find_digests_in_db(&ctx.db, &digests)
+        ContentRepository::Query::find_digests_in_db(&ctx.ro_db, &digests)
             .await
             .map_err(|e| {
                 tracing::error!(error = %e, "put_events blob db error");

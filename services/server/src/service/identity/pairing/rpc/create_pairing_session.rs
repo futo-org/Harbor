@@ -47,7 +47,7 @@ pub async fn handle(
     let pairing_session_signature = hex::encode(msg_sig);
 
     let is_rotation_key = id_repo::Query::is_rotation_key(
-        &ctx.db,
+        &ctx.ro_db,
         &issuer_identity,
         public_key.key.as_slice(),
     )
