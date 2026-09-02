@@ -50,7 +50,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: NAME,
   slug: 'polycentric',
-  version: process.env.APP_VERSION ?? PKG_VERSION ?? '0.0.1',
+  version: process.env.APP_VERSION || PKG_VERSION || '0.0.1',
   orientation: 'default',
   icon: './src/common/assets/images/app-icons/android-icon-foreground.png',
   scheme: SCHEME,
@@ -141,7 +141,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     router: {},
     variant: VARIANT,
     distribution: DISTRIBUTION,
-    webApplicationId: `${ID}.web`,
     eas: {
       projectId: '4db035ec-2de9-448a-a6cf-07347d6ae8b9',
     },

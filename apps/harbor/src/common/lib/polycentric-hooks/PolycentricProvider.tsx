@@ -10,8 +10,7 @@ import {
   type types,
   type IdentityState,
 } from '@polycentric/react-native';
-import * as Application from 'expo-application';
-import Constants from 'expo-constants';
+import { HARBOR_APPLICATION } from '@/src/common/util/application';
 import {
   useCallback,
   useEffect,
@@ -66,17 +65,6 @@ export const DEFAULT_SEED_SERVERS: string[] = (() => {
 
 /** First seed server — used by identity onboarding helpers. */
 export const DEFAULT_SERVER = DEFAULT_SEED_SERVERS[0]!;
-
-const HARBOR_APPLICATION = {
-  name: 'Harbor',
-  id:
-    Application.applicationId ??
-    Constants.expoConfig?.extra?.webApplicationId ??
-    '',
-  version:
-    Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '',
-  url: 'https://harbor.social',
-};
 
 /**
  * Comma-separated list of gRPC-web URLs for the notification service the
