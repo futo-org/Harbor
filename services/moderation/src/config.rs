@@ -27,6 +27,8 @@ pub struct AzureConfig {
 pub struct Config {
     /// Postgres connection URL (`DATABASE_URL`).
     pub database_url: String,
+    /// Postgres read-only connection URL (`DATABASE_URL_RO`).
+    pub ro_database_url: Option<String>,
     /// Schema owning this service's tables
     /// (`POLYCENTRIC_MODERATION_DATABASE_SCHEMA`).
     pub database_schema: String,
@@ -67,6 +69,7 @@ pub fn init() -> Result<&'static Config, String> {
     let config = Config {
         database_url: std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:testing@localhost:5432".to_string()),
+        ro_database_url: std::env::var("DATABASE_URL_RO").ok(),
         database_schema: std::env::var("POLYCENTRIC_MODERATION_DATABASE_SCHEMA")
             .unwrap_or_else(|_| "moderation".to_string()),
         database_max_connections: std::env::var("POLYCENTRIC_DATABASE_MAX_CONNECTIONS")
