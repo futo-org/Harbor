@@ -38,12 +38,7 @@ impl NotificationService for NotificationServiceImpl {
         request: Request<SignedMessage>,
     ) -> Result<Response<RegisterPushNotificationResponse>, Status> {
         Ok(Response::new(
-            register_push_notifications::handle(
-                &self.ctx.db,
-                &self.ctx.notification_manager,
-                request.into_inner(),
-            )
-            .await?,
+            register_push_notifications::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 
@@ -52,12 +47,7 @@ impl NotificationService for NotificationServiceImpl {
         request: Request<SignedMessage>,
     ) -> Result<Response<UnregisterPushNotificationResponse>, Status> {
         Ok(Response::new(
-            unregister_push_notifications::handle(
-                &self.ctx.db,
-                &self.ctx.notification_manager,
-                request.into_inner(),
-            )
-            .await?,
+            unregister_push_notifications::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 }
