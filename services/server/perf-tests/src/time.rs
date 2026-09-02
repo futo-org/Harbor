@@ -152,7 +152,7 @@ async fn time_following_feed(
             follower_identity: follower_identity.clone(),
             page_params: None,
             omit_labels: Vec::new(),
-            sort_by: Some(SortPostsBy::Default as i32),
+            sort_by: Some(SortPostsBy::Top as i32),
         };
         let start = Instant::now();
         client.get_following_feed(request).await.unwrap();
@@ -174,7 +174,7 @@ async fn time_recommended_feed(
             follower_identity: follower_identity.clone(),
             page_params: None,
             omit_labels: Vec::new(),
-            sort_by: Some(SortPostsBy::Default as i32),
+            sort_by: Some(SortPostsBy::Top as i32),
         };
         let start = Instant::now();
         client.get_recommended_feed(request).await.unwrap();
@@ -192,7 +192,7 @@ async fn time_explore_feed(address: String, amount: usize) {
             identity: None,
             page_params: None,
             omit_labels: Vec::new(),
-            sort_by: Some(SortPostsBy::Default as i32),
+            sort_by: Some(SortPostsBy::Top as i32),
         };
         let start = Instant::now();
         client.get_explore_feed(request).await.unwrap();
