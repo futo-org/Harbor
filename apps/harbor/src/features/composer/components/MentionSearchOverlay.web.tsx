@@ -1,11 +1,22 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { Portal } from '@rn-primitives/portal';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
 import { Text } from '@/src/common/components/primitives';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { findMentionContext, useMentionStore } from '../hooks/useMentionStore';
+import {
+  findMentionContext,
+  type MentionStore,
+  useMentionStore,
+} from '../hooks/useMentionStore';
 import { useMentionSearch } from '../hooks/useMentionSearch';
 import {
   type MentionAnchor,
@@ -41,45 +52,11 @@ export function MentionSearchOverlay() {
     setAnchor(measureChar(inputRef as unknown as HTMLTextAreaElement, atIndex));
   }, [open, atIndex, inputRef, win.width, win.height]);
 
-  // Keyboard selection; reset whenever the result set changes.
-  const [selected, setSelected] = useState(0);
-  const entriesKey = entries.map((e) => e.identity).join(',');
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on result change
-  useEffect(() => setSelected(0), [entriesKey]);
-  const index = Math.min(selected, entries.length - 1);
-  const selectedIdentity = open ? entries[index]?.identity : undefined;
-  const selectedProfile = useProfile(selectedIdentity);
-
-  useEffect(() => {
-    if (!open) return;
-    const count = entries.length;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (count === 0) return;
-      if (e.key === 'ArrowDown') setSelected((index + 1) % count);
-      else if (e.key === 'ArrowUp') setSelected((index - 1 + count) % count);
-      else if ((e.key === 'Enter' || e.key === 'Tab') && selectedIdentity)
-        insertMention(selectedIdentity, selectedProfile);
-      else return;
-      e.preventDefault();
-    };
-    // Capture phase: RN-web's TextInput stops keydown propagation at the root.
-    document.addEventListener('keydown', onKeyDown, true);
-    return () => document.removeEventListener('keydown', onKeyDown, true);
-  }, [
+  const { selectedIndex, setSelectedIndex } = useSelectionAndKeyboardControl(
     open,
-    entries.length,
-    index,
-    selectedIdentity,
-    selectedProfile,
+    entries.map((e) => e.identity),
     insertMention,
-  ]);
-
-  const rowRefs = useRef<(View | null)[]>([]);
-  useEffect(() => {
-    (
-      rowRefs.current[index] as unknown as HTMLElement | undefined
-    )?.scrollIntoView?.({ block: 'nearest' });
-  }, [index]);
+  );
 
   useEffect(() => {
     console.log(open, anchor);
@@ -115,27 +92,103 @@ export function MentionSearchOverlay() {
             No results
           </Text>
         )}
-        {entries.map((user, i) => (
-          <View
-            key={user.identity}
-            ref={(el) => {
-              rowRefs.current[i] = el;
-            }}
-            onPointerEnter={() => setSelected(i)}
-            style={i === index && { backgroundColor: theme.palette.neutral_25 }}
-          >
-            <ProfileRow
-              size="sm"
-              identity={user.identity}
-              onPress={insertMention}
-              activeStyle="none"
-              style={[Atoms.px_sm]}
-            />
-          </View>
+        {entries.map(({ identity }, i) => (
+          <MentionRow
+            key={identity}
+            identity={identity}
+            selected={i === selectedIndex}
+            onHover={() => setSelectedIndex(i)}
+            onPress={insertMention}
+          />
         ))}
       </ScrollView>
     </Portal>
   );
+}
+
+function MentionRow({
+  identity,
+  selected,
+  onHover,
+  onPress,
+}: {
+  identity: string;
+  selected: boolean;
+  onHover: () => void;
+  onPress: MentionStore['insertMention'];
+}) {
+  const { theme } = useTheme();
+  const ref = useRef<HTMLElement>(null);
+
+  // Scroll currently selecte item into view
+  useEffect(() => {
+    if (selected) ref.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [selected]);
+
+  return (
+    <View
+      ref={ref as RefObject<View | null>}
+      onPointerEnter={onHover}
+      style={selected && { backgroundColor: theme.palette.neutral_25 }}
+    >
+      <ProfileRow
+        size="sm"
+        identity={identity}
+        onPress={onPress}
+        activeStyle="none"
+        style={[Atoms.px_sm]}
+      />
+    </View>
+  );
+}
+
+/**
+ * Arrow up/down moves the selection (wrapping), Enter/Tab inserts it.
+ * Selection resets whenever the result set changes.
+ */
+function useSelectionAndKeyboardControl(
+  open: boolean,
+  identities: string[],
+  insertMention: MentionStore['insertMention'],
+) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const key = identities.join(',');
+  const count = identities.length;
+
+  const safeSelectedIndex = Math.min(selectedIndex, count - 1);
+  const selectedIdentity = open ? identities[safeSelectedIndex] : undefined;
+  const selectedProfile = useProfile(selectedIdentity);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset on result change
+  useEffect(() => setSelectedIndex(0), [key]);
+
+  useEffect(() => {
+    if (!open || count === 0) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown')
+        setSelectedIndex((safeSelectedIndex + 1) % count);
+      else if (e.key === 'ArrowUp')
+        setSelectedIndex((safeSelectedIndex - 1 + count) % count);
+      else if (e.key === 'Enter' || e.key === 'Tab')
+        if (selectedIdentity) insertMention(selectedIdentity, selectedProfile);
+
+      e.preventDefault();
+    };
+
+    // Capture phase: RN-web's TextInput stops keydown propagation at the root.
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [
+    open,
+    count,
+    safeSelectedIndex,
+    selectedIdentity,
+    selectedProfile,
+    insertMention,
+  ]);
+
+  return { selectedIndex: safeSelectedIndex, setSelectedIndex };
 }
 
 /**
