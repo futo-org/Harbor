@@ -84,7 +84,8 @@ const client = await createPolycentricClient({
 ```
 
 `expo-application` reports no id or version on the web, so fall back to values you
-embed in your build. Harbor keeps its web id in the Expo config as `extra`.
+embed in your build. Harbor's web image serves every environment, so it derives the
+web id from an `EXPO_PUBLIC_APP_VARIANT` runtime variable.
 
 ### Kotlin
 
@@ -117,8 +118,10 @@ server stores the exact bytes that were signed.
 | iOS | `org.futo.polycentric` |
 | Web | `org.futo.polycentric.web` |
 
-Dev and staging builds append `.dev` or `.staging` to the base id. The name is always
-`Harbor` and the url is `https://harbor.social`.
+Dev and staging builds insert `.dev` or `.staging` before any `.store` or `.web`
+suffix. The name is always `Harbor` and the url is `https://harbor.social`. Release
+builds carry the release version; other builds carry the next patch version plus the
+commit, e.g. `1.2.1+ab12cd34`.
 
 ## How it is used
 
