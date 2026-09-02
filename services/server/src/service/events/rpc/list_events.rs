@@ -101,8 +101,11 @@ async fn hydrate(
         .map(|(event, _)| TargetEventKey::of(event))
         .collect::<Vec<_>>();
 
-    let stats_fut =
-        async { gather_stats_for(&ctx.ro_db, &keys).await.map_err(map_db_err) };
+    let stats_fut = async {
+        gather_stats_for(&ctx.ro_db, &keys)
+            .await
+            .map_err(map_db_err)
+    };
 
     let (identity_events, profile_events, deletes_by_target, stats) = tokio::try_join!(
         list_identity_events(ctx, identities.clone()),

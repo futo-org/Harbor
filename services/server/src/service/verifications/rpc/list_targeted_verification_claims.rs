@@ -54,10 +54,12 @@ async fn fetch(
     ctx: &ServiceContext,
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
-    let targets =
-        Repository::list_targets_for_identity(&ctx.ro_db, &params.target_identity)
-            .await
-            .map_err(map_db_err)?;
+    let targets = Repository::list_targets_for_identity(
+        &ctx.ro_db,
+        &params.target_identity,
+    )
+    .await
+    .map_err(map_db_err)?;
 
     let target_keys: Vec<TargetEventKey> =
         targets.iter().map(|t| t.target_key.clone()).collect();

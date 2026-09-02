@@ -35,10 +35,11 @@ pub async fn list_identity_events(
     ctx: &ServiceContext,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
-    let rows =
-        IdentityRepo::list_identity_events_for_identities(&ctx.ro_db, identities)
-            .await
-            .map_err(map_db_err)?;
+    let rows = IdentityRepo::list_identity_events_for_identities(
+        &ctx.ro_db, identities,
+    )
+    .await
+    .map_err(map_db_err)?;
     warm_identity_cache(ctx, &rows).await;
     Ok(rows)
 }
