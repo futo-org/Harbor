@@ -124,4 +124,4 @@ Dev and staging builds append `.dev` or `.staging` to the base id. The name is a
 
 Harbor shows "Posted with" and the app name above any post whose id does not start
 with `org.futo.polycentric`, linking the name to the url when there is one. Servers
-store the four fields alongside each event so operators can query them.
+record which application each event came from so operators can query it.
