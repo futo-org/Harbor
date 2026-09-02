@@ -188,6 +188,16 @@ async fn process_event(
         .await?;
     }
 
+    let application_id = match &event.application {
+        Some(app) => {
+            Some(EventsRepository::Mutation::application_id(&txn, app).await.map_err(|e| {
+                tracing::error!(error = %e, "put_events application db error");
+                Status::internal("internal server error")
+            })?)
+        }
+        None => None,
+    };
+
     let event_identity = key.identity.clone();
     let event_collection = key.collection;
 
@@ -209,6 +219,7 @@ async fn process_event(
         signature: Set(signed_event.signature),
         previous_signature: Set(event.previous_signature),
         previous_root: Set(event.previous_root),
+        application_id: Set(application_id),
         event_bytes: Set(signed_event.event_bytes),
         created_at: Set(DateTime::from_timestamp_secs(
             (event.created_at / 1000) as i64,

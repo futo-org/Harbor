@@ -1134,8 +1134,13 @@ async fn following_feed_pagination() {
 
     // Forward.
     let mut page_info: Option<PageInfo> = None;
-    let mut expected_iter =
-        [post3_key.clone(), post2_key.clone(), post1_key.clone(), post0_key].into_iter();
+    let mut expected_iter = [
+        post3_key.clone(),
+        post2_key.clone(),
+        post1_key.clone(),
+        post0_key,
+    ]
+    .into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let request = GetFollowingFeedRequest {
@@ -1486,8 +1491,13 @@ async fn recommended_feed_pagination() {
 
     // Forward.
     let mut page_info: Option<PageInfo> = None;
-    let mut expected_iter =
-        [post3_key.clone(), post2_key.clone(), post1_key.clone(), post0_key.clone()].into_iter();
+    let mut expected_iter = [
+        post3_key.clone(),
+        post2_key.clone(),
+        post1_key.clone(),
+        post0_key.clone(),
+    ]
+    .into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
             let request = GetFollowingFeedRequest {

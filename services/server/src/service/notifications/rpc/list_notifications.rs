@@ -392,6 +392,7 @@ mod tests {
                 signature: vec![row.id as u8],
                 previous_signature: vec![],
                 previous_root: vec![],
+                application_id: None,
                 event_bytes: vec![row.id as u8],
                 created_at: ts,
                 synced_at: ts,

@@ -155,6 +155,7 @@ pub fn authored_bundle(author: &str, content: Content) -> EventBundle {
         content_digest: None,
         created_at: 0,
         previous_root: vec![],
+        application: None,
     };
     EventBundle {
         signed_event: Some(SignedEvent {

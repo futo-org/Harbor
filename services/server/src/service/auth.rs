@@ -304,6 +304,7 @@ mod tests {
             signature: vec![1],
             previous_signature: vec![],
             previous_root: vec![],
+            application_id: None,
             event_bytes: vec![1],
             created_at: now,
             synced_at: now,

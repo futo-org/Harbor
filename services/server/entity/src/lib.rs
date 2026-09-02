@@ -57,6 +57,7 @@
 //! [`events`]: event_model
 //! [`content`]: content_model
 
+pub mod application_model;
 pub mod attributed_to_reaction_summary_model;
 pub mod ban_model;
 pub mod block_model;

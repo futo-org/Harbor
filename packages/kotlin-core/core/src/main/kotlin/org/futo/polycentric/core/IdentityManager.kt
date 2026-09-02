@@ -176,6 +176,7 @@ class IdentityManager(private val client: PolycentricClient) {
                 previous_signature = ByteString.EMPTY,
                 content_digest = digest,
                 created_at = System.currentTimeMillis(),
+                application = client.application,
             )
         } else {
             client.buildEvent(content, Collections.IDENTITY)
