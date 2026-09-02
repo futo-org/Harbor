@@ -179,6 +179,7 @@ export function ComposerFields({
             onSelectionChange={mentionInput.onSelectionChange}
             onFocus={mentionInput.onFocus}
             onBlur={mentionInput.onBlur}
+            onContentSizeChange={mentionInput.onContentSizeChange}
           />
 
           {attachments.length > 0 && (

@@ -32,6 +32,8 @@ export type MentionStore = {
   onChangeText: ((next: string) => void) | null;
   inputLayout: LayoutRectangle;
   inputPageY: number;
+  /** Text last pushed into the native field by `insertMention`. */
+  lastNativeText: string | null;
 
   setSelection: (selection: MentionStore['selection']) => void;
   setIsFocused: (isFocused: boolean) => void;
@@ -60,6 +62,7 @@ export function createMentionStore(): StoreApi<MentionStore> {
     onChangeText: null,
     inputLayout: { x: 0, y: 0, width: 0, height: 0 },
     inputPageY: 0,
+    lastNativeText: null,
 
     setSelection: (selection) => set({ selection }),
     setIsFocused: (isFocused) => set({ isFocused }),
@@ -103,7 +106,12 @@ export function createMentionStore(): StoreApi<MentionStore> {
       // caret goes explicitly after the mention's trailing space. `text` is
       // set eagerly so the store is consistent before the prop mirror runs.
       onChangeText(newText);
-      set({ text: newText, selection: { start: newCaret, end: newCaret } });
+      set({
+        text: newText,
+        selection: { start: newCaret, end: newCaret },
+        lastNativeText: newText,
+      });
+
       inputRef?.setNativeProps({
         text: newText,
         selection: { start: newCaret, end: newCaret },
@@ -130,6 +138,7 @@ export function findMentionContext(text: string, caret: number) {
   const query = text.slice(at + 1, caret);
   if (!QUERY_CHARS.test(query) || query.startsWith(' ')) return null;
 
+  // If it's an already resolved mention, skip
   if (
     parseTextLinks(text).some(
       (s) => s.start === at && (s.type === 'alias' || s.type === 'identity'),
