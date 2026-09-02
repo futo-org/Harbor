@@ -1,19 +1,20 @@
 //! `create_pairing_session`: registers a new pairing session after
 //! verifying the caller is a rotation key.
 
+use chrono::Utc;
+use prost::Message;
+use tonic::Status;
+
+use crate::service::context::ServiceContext;
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::identity::repository as id_repo;
 use crate::service::proto as Proto;
 use crate::service::proto::{
     CreatePairingSessionRequest, CreatePairingSessionResponse,
 };
-use chrono::Utc;
-use prost::Message;
-use sea_orm::DatabaseConnection;
-use tonic::Status;
 
 pub async fn handle(
-    db: &DatabaseConnection,
+    ctx: &ServiceContext,
     req: CreatePairingSessionRequest,
 ) -> Result<CreatePairingSessionResponse, Status> {
     let msg = req.signed_message.ok_or_else(|| {
@@ -46,7 +47,7 @@ pub async fn handle(
     let pairing_session_signature = hex::encode(msg_sig);
 
     let is_rotation_key = id_repo::Query::is_rotation_key(
-        db,
+        &ctx.db,
         &issuer_identity,
         public_key.key.as_slice(),
     )
@@ -58,7 +59,7 @@ pub async fn handle(
     }
 
     let row = pair_repo::Query::create_pairing_session(
-        db,
+        &ctx.db,
         &issuer_identity,
         &pairing_session_signature,
         &public_key,

@@ -1,11 +1,11 @@
 //! gRPC `PairingService` impl. Each method delegates to a handler
 //! under `pairing/rpc/`.
 
-pub mod common;
-pub mod create_pairing_session;
-pub mod get_pairing_session;
-pub mod join_pairing_session;
+use std::sync::Arc;
 
+use tonic::{Request, Response, Status};
+
+use crate::service::context::ServiceContext;
 use crate::service::proto::pairing_service_server::{
     PairingService, PairingServiceServer,
 };
@@ -14,11 +14,14 @@ use crate::service::proto::{
     GetPairingSessionRequest, GetPairingSessionResponse,
     JoinPairingSessionRequest, JoinPairingSessionResponse,
 };
-use sea_orm::DatabaseConnection;
-use tonic::{Request, Response, Status};
+
+pub mod common;
+pub mod create_pairing_session;
+pub mod get_pairing_session;
+pub mod join_pairing_session;
 
 pub struct PairingServiceImpl {
-    db: DatabaseConnection,
+    ctx: Arc<ServiceContext>,
 }
 
 #[tonic::async_trait]
@@ -28,7 +31,7 @@ impl PairingService for PairingServiceImpl {
         request: Request<CreatePairingSessionRequest>,
     ) -> Result<Response<CreatePairingSessionResponse>, Status> {
         Ok(Response::new(
-            create_pairing_session::handle(&self.db, request.into_inner())
+            create_pairing_session::handle(&self.ctx, request.into_inner())
                 .await?,
         ))
     }
@@ -38,7 +41,8 @@ impl PairingService for PairingServiceImpl {
         request: Request<GetPairingSessionRequest>,
     ) -> Result<Response<GetPairingSessionResponse>, Status> {
         Ok(Response::new(
-            get_pairing_session::handle(&self.db, request.into_inner()).await?,
+            get_pairing_session::handle(&self.ctx, request.into_inner())
+                .await?,
         ))
     }
 
@@ -47,7 +51,7 @@ impl PairingService for PairingServiceImpl {
         request: Request<JoinPairingSessionRequest>,
     ) -> Result<Response<JoinPairingSessionResponse>, Status> {
         Ok(Response::new(
-            join_pairing_session::handle(&self.db, request.into_inner())
+            join_pairing_session::handle(&self.ctx, request.into_inner())
                 .await?,
         ))
     }
@@ -55,9 +59,9 @@ impl PairingService for PairingServiceImpl {
 
 /// Creates the gRPC service implementation for pairing sessions.
 pub fn build_pairing_service(
-    db: DatabaseConnection,
+    ctx: Arc<ServiceContext>,
 ) -> PairingServiceServer<PairingServiceImpl> {
-    PairingServiceServer::new(PairingServiceImpl { db })
+    PairingServiceServer::new(PairingServiceImpl { ctx })
 }
 
 #[cfg(test)]
