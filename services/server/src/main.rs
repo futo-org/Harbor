@@ -1,3 +1,4 @@
+mod admin;
 mod config;
 mod cron;
 mod data;
@@ -57,15 +58,18 @@ async fn main() {
     // `server`                  -> run the API (gRPC + HTTP) server (default)
     // `server workers [name…]`  -> run the named workers (`all` or no
     //                              names = every worker)
+    // `server delete-events|prune-content …` -> operator commands, see `admin::USAGE`
+    let rest: Vec<String> = std::env::args().skip(2).collect();
     match std::env::args().nth(1).as_deref() {
         None | Some("serve") => run_server().await,
-        Some("workers") => {
-            run_workers(std::env::args().skip(2).collect()).await
-        }
+        Some("workers") => run_workers(rest).await,
+        Some("delete-events") => admin::delete_events(rest).await,
+        Some("prune-content") => admin::prune_content(rest).await,
         Some(other) => {
             // Startup CLI misuse — plain stderr, logging may not matter yet.
             eprintln!(
-                "unknown subcommand: {other}\nusage: server [serve|workers [name…]]"
+                "unknown subcommand: {other}\nusage: server [serve|workers [name…]]\n{}",
+                admin::USAGE
             );
             std::process::exit(2);
         }
