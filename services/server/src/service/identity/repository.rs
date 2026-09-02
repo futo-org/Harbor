@@ -1,13 +1,21 @@
 use crate::data::EventWithContentRow;
 use crate::service::feeds::repository::content_join;
 use crate::service::identity::chain;
-use crate::service::proto::{Identity, PublicKey};
+use crate::service::proto::{ContentDigest, Identity, PublicKey};
 use ::entity::{
-    ban_model as BanModel, content_model as ContentModel,
-    event_model as EventModel, moderator_model as ModeratorModel,
-    notification as NotificationModel, reply_count_model as ReplyCountModel,
+    ban_model as BanModel, block_model as BlockModel,
+    content_model as ContentModel, event_model as EventModel,
+    follow_model as FollowModel, moderator_model as ModeratorModel,
+    notification as NotificationModel, quote_model as QuoteModel,
+    reaction_model as ReactionModel,
+    reaction_summary_model as ReactionSummaryModel,
+    reaction_tally_model as ReactionTalliesModel,
+    reaction_tally_model2 as ReactionTallyModel,
+    reply_count_model as ReplyCountModel, reply_model as ReplyModel,
+    repost_model as RepostModel,
 };
 use polycentric_common::models::collections;
+use sea_orm::sea_query::IntoCondition;
 use sea_orm::*;
 use std::collections::HashSet;
 
@@ -92,6 +100,36 @@ impl Query {
         ModeratorModel::Entity::find_by_id(identity)
             .exists(db)
             .await
+    }
+
+    /// Number of events `selector` matches.
+    pub async fn count_events<C: ConnectionTrait>(
+        db: &C,
+        selector: &EventsSelector<'_>,
+    ) -> Result<u64, DbErr> {
+        EventModel::Entity::find()
+            .filter(selector.condition())
+            .count(db)
+            .await
+    }
+
+    /// Ids of content rows no event references.
+    pub async fn orphan_content_ids<C: ConnectionTrait>(
+        db: &C,
+    ) -> Result<Vec<i64>, DbErr> {
+        let rows = db
+            .query_all_raw(Statement::from_sql_and_values(
+                DbBackend::Postgres,
+                r#"SELECT c.id FROM content c
+                   WHERE NOT EXISTS (
+                     SELECT 1 FROM events e
+                     WHERE e.content_digest_type = c.digest_type
+                       AND e.content_digest_bytes = c.digest_bytes
+                   )"#,
+                [],
+            ))
+            .await?;
+        rows.iter().map(|row| row.try_get("", "id")).collect()
     }
 
     /// True when `identity` has a row in the `ban` table.
@@ -202,73 +240,218 @@ impl Mutation {
         Ok(())
     }
 
-    /// Erases everything `identity` published to this server: its
-    /// events, any content rows no other identity's events still
-    /// reference (plus their per-kind child rows), its notifications,
-    /// and its reply-count rows. Content is deduplicated by digest and
-    /// content bytes are public, so rows another identity's events
-    /// still reference are kept — otherwise getting banned on purpose
-    /// after referencing a victim's digests would erase the victim's
-    /// content. Blob bodies in the filestore are not touched; they
-    /// become unreachable once their `content_blob` rows are gone.
-    pub async fn erase_identity_content<C: ConnectionTrait>(
+    /// Erases matching events and everything derived from them. Content
+    /// another event still references is kept, otherwise an identity could
+    /// erase a victim's content by referencing its digests. Blobs are left
+    /// for the caller; see `service::erase_events`.
+    pub async fn erase_events<C: ConnectionTrait>(
         db: &C,
-        identity: &str,
-    ) -> Result<(), DbErr> {
-        // Content rows referenced by the identity's events, collected
-        // before the events are deleted.
-        let candidate_ids =
-            content_ids_for_identity_events(db, identity).await?;
-
-        EventModel::Entity::delete_many()
-            .filter(EventModel::Column::Identity.eq(identity))
-            .exec(db)
+        selector: &EventsSelector<'_>,
+    ) -> Result<Erased, DbErr> {
+        let event_ids: Vec<i64> = EventModel::Entity::find()
+            .select_only()
+            .column(EventModel::Column::Id)
+            .filter(selector.condition())
+            .into_tuple()
+            .all(db)
             .await?;
+        let identities: Vec<String> = EventModel::Entity::find()
+            .select_only()
+            .column(EventModel::Column::Identity)
+            .distinct()
+            .filter(selector.condition())
+            .into_tuple()
+            .all(db)
+            .await?;
+        let candidate_ids = content_ids_for_events(db, &event_ids).await?;
+
+        delete_cache_rows(db, &event_ids).await?;
+
+        let events = EventModel::Entity::delete_many()
+            .filter(selector.condition())
+            .exec(db)
+            .await?
+            .rows_affected;
 
         let kept_ids = still_referenced_content_ids(db, &candidate_ids).await?;
         let orphan_ids: Vec<i64> = candidate_ids
             .into_iter()
             .filter(|id| !kept_ids.contains(id))
             .collect();
-        delete_content_rows(db, &orphan_ids).await?;
+        let blobs = delete_content_rows(db, &orphan_ids).await?;
 
-        NotificationModel::Entity::delete_many()
-            .filter(
-                Condition::any()
-                    .add(NotificationModel::Column::FromIdentity.eq(identity))
-                    .add(NotificationModel::Column::ToIdentity.eq(identity)),
-            )
-            .exec(db)
-            .await?;
+        // Counts on other events that include their interactions are left as-is.
+        match selector {
+            EventsSelector::Identity(identity) => {
+                NotificationModel::Entity::delete_many()
+                    .filter(
+                        Condition::any()
+                            .add(
+                                NotificationModel::Column::FromIdentity
+                                    .eq(*identity),
+                            )
+                            .add(
+                                NotificationModel::Column::ToIdentity
+                                    .eq(*identity),
+                            ),
+                    )
+                    .exec(db)
+                    .await?;
+                ReplyCountModel::Entity::delete_many()
+                    .filter(
+                        ReplyCountModel::Column::EventKeyIdentity.eq(*identity),
+                    )
+                    .exec(db)
+                    .await?;
+                ReactionSummaryModel::Entity::delete_many()
+                    .filter(
+                        ReactionSummaryModel::Column::EventKeyIdentity
+                            .eq(*identity),
+                    )
+                    .exec(db)
+                    .await?;
+                ReactionTalliesModel::Entity::delete_many()
+                    .filter(
+                        ReactionTalliesModel::Column::EventKeyIdentity
+                            .eq(*identity),
+                    )
+                    .exec(db)
+                    .await?;
+            }
+            EventsSelector::PublicKey(key) => {
+                let key = key.to_vec();
+                NotificationModel::Entity::delete_many()
+                    .filter(
+                        NotificationModel::Column::TriggerEventKeyPublicKey
+                            .eq(key.clone()),
+                    )
+                    .exec(db)
+                    .await?;
+                ReplyCountModel::Entity::delete_many()
+                    .filter(
+                        ReplyCountModel::Column::EventKeyPublicKey
+                            .eq(key.clone()),
+                    )
+                    .exec(db)
+                    .await?;
+                ReactionSummaryModel::Entity::delete_many()
+                    .filter(
+                        ReactionSummaryModel::Column::EventKeyPublicKey
+                            .eq(key.clone()),
+                    )
+                    .exec(db)
+                    .await?;
+                ReactionTalliesModel::Entity::delete_many()
+                    .filter(
+                        ReactionTalliesModel::Column::EventKeyPublicKey.eq(key),
+                    )
+                    .exec(db)
+                    .await?;
+            }
+        }
 
-        // Counts of replies *to* the identity's own events. Counts on
-        // other identities' events that included replies from this
-        // identity are left as-is.
-        ReplyCountModel::Entity::delete_many()
-            .filter(ReplyCountModel::Column::EventKeyIdentity.eq(identity))
-            .exec(db)
-            .await?;
+        Ok(Erased {
+            events,
+            content: orphan_ids.len(),
+            blobs,
+            identities,
+        })
+    }
 
-        Ok(())
+    /// Deletes content no event references. Blobs are left for the caller.
+    pub async fn prune_orphan_content<C: ConnectionTrait>(
+        db: &C,
+    ) -> Result<Erased, DbErr> {
+        let ids = Query::orphan_content_ids(db).await?;
+        let blobs = delete_content_rows(db, &ids).await?;
+        Ok(Erased {
+            events: 0,
+            content: ids.len(),
+            blobs,
+            identities: Vec::new(),
+        })
     }
 }
 
-/// Ids of content rows referenced by `identity`'s events.
-async fn content_ids_for_identity_events<C: ConnectionTrait>(
+pub enum EventsSelector<'a> {
+    /// Every event of an identity, whichever key signed it.
+    Identity(&'a str),
+    /// Every event signed by a key, whichever identity it acted for.
+    PublicKey(&'a [u8]),
+}
+
+impl EventsSelector<'_> {
+    fn condition(&self) -> Condition {
+        match self {
+            Self::Identity(identity) => {
+                EventModel::Column::Identity.eq(*identity).into_condition()
+            }
+            Self::PublicKey(key) => EventModel::Column::PublicKey
+                .eq(key.to_vec())
+                .into_condition(),
+        }
+    }
+}
+
+pub struct Erased {
+    pub events: u64,
+    pub content: usize,
+    /// Blobs no content references any more.
+    pub blobs: Vec<ContentDigest>,
+    /// Identities whose events were removed.
+    pub identities: Vec<String>,
+}
+
+/// Ids of content rows referenced by `event_ids`.
+async fn content_ids_for_events<C: ConnectionTrait>(
     db: &C,
-    identity: &str,
+    event_ids: &[i64],
 ) -> Result<Vec<i64>, DbErr> {
-    let rows = db
-        .query_all_raw(Statement::from_sql_and_values(
-            DbBackend::Postgres,
-            r#"SELECT DISTINCT c.id FROM content c
-               JOIN events e ON e.content_digest_type = c.digest_type
-                 AND e.content_digest_bytes = c.digest_bytes
-               WHERE e.identity = $1"#,
-            [identity.into()],
-        ))
-        .await?;
-    rows.iter().map(|row| row.try_get("", "id")).collect()
+    let mut ids = HashSet::new();
+    for chunk in event_ids.chunks(1000) {
+        let rows = db
+            .query_all_raw(Statement::from_sql_and_values(
+                DbBackend::Postgres,
+                r#"SELECT DISTINCT c.id FROM content c
+                   JOIN events e ON e.content_digest_type = c.digest_type
+                     AND e.content_digest_bytes = c.digest_bytes
+                   WHERE e.id = ANY($1)"#,
+                [chunk.to_vec().into()],
+            ))
+            .await?;
+        for row in rows {
+            ids.insert(row.try_get::<i64>("", "id")?);
+        }
+    }
+    Ok(ids.into_iter().collect())
+}
+
+/// Deletes cache rows keyed by or pointing at `event_ids`.
+async fn delete_cache_rows<C: ConnectionTrait>(
+    db: &C,
+    event_ids: &[i64],
+) -> Result<(), DbErr> {
+    for chunk in event_ids.chunks(1000) {
+        macro_rules! delete_where {
+            ($model:ident, $($column:ident),+) => {
+                $model::Entity::delete_many()
+                    .filter(
+                        Condition::any()
+                            $(.add($model::Column::$column.is_in(chunk.iter().copied())))+
+                    )
+                    .exec(db)
+                    .await?;
+            };
+        }
+        delete_where!(FollowModel, EventId);
+        delete_where!(BlockModel, EventId);
+        delete_where!(ReactionTallyModel, EventId);
+        delete_where!(ReactionModel, EventId, OnPost);
+        delete_where!(RepostModel, EventId, Post);
+        delete_where!(QuoteModel, EventId, Post);
+        delete_where!(ReplyModel, EventId, Post);
+    }
+    Ok(())
 }
 
 /// The subset of `content_ids` still referenced by some event.
@@ -295,19 +478,41 @@ async fn still_referenced_content_ids<C: ConnectionTrait>(
     Ok(kept)
 }
 
-/// Deletes content rows and their per-kind child rows.
+/// Deletes content rows and their child rows. Returns blobs no content
+/// references any more.
 async fn delete_content_rows<C: ConnectionTrait>(
     db: &C,
     content_ids: &[i64],
-) -> Result<(), DbErr> {
+) -> Result<Vec<ContentDigest>, DbErr> {
     use ::entity::{
-        content_blob_model, content_block_model, content_delete_model,
-        content_follow_model, content_identity_model, content_image_model,
-        content_label_model, content_post_model, content_profile_update_model,
-        content_reaction_model, content_report_model, content_repost_model,
+        content_attributed_to_reaction_model, content_blob_model,
+        content_block_model, content_delete_model, content_follow_model,
+        content_identity_model, content_image_model, content_label_model,
+        content_post_attributed_url_model, content_post_model,
+        content_profile_update_model, content_reaction_model,
+        content_report_model, content_repost_model,
         content_verification_claim_model, content_verification_target_model,
         content_verification_verify_model,
     };
+
+    let mut blobs: Vec<(i16, Vec<u8>)> = Vec::new();
+    for chunk in content_ids.chunks(1000) {
+        blobs.extend(
+            content_blob_model::Entity::find()
+                .select_only()
+                .column(content_blob_model::Column::DigestType)
+                .column(content_blob_model::Column::DigestBytes)
+                .filter(
+                    content_blob_model::Column::ContentId
+                        .is_in(chunk.iter().copied()),
+                )
+                .into_tuple::<(i16, Vec<u8>)>()
+                .all(db)
+                .await?,
+        );
+    }
+    blobs.sort();
+    blobs.dedup();
 
     for chunk in content_ids.chunks(1000) {
         macro_rules! delete_children {
@@ -324,6 +529,7 @@ async fn delete_content_rows<C: ConnectionTrait>(
             };
         }
         delete_children!(
+            content_attributed_to_reaction_model,
             content_blob_model,
             content_block_model,
             content_delete_model,
@@ -331,6 +537,7 @@ async fn delete_content_rows<C: ConnectionTrait>(
             content_identity_model,
             content_image_model,
             content_label_model,
+            content_post_attributed_url_model,
             content_post_model,
             content_profile_update_model,
             content_reaction_model,
@@ -345,5 +552,28 @@ async fn delete_content_rows<C: ConnectionTrait>(
             .exec(db)
             .await?;
     }
-    Ok(())
+
+    let mut orphans = Vec::new();
+    for chunk in blobs.chunks(1000) {
+        let kept: HashSet<(i16, Vec<u8>)> = content_blob_model::Entity::find()
+            .select_only()
+            .column(content_blob_model::Column::DigestType)
+            .column(content_blob_model::Column::DigestBytes)
+            .filter(
+                content_blob_model::Column::DigestBytes
+                    .is_in(chunk.iter().map(|(_, bytes)| bytes.clone())),
+            )
+            .into_tuple()
+            .all(db)
+            .await?
+            .into_iter()
+            .collect();
+        orphans.extend(chunk.iter().filter(|blob| !kept.contains(blob)).map(
+            |(digest_type, bytes)| ContentDigest {
+                r#type: i32::from(*digest_type),
+                value: bytes.clone(),
+            },
+        ));
+    }
+    Ok(orphans)
 }
