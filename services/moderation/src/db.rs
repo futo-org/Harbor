@@ -12,13 +12,13 @@ pub async fn connect() -> Result<(DatabaseConnection, DatabaseConnection), DbErr
     let schema = &config.database_schema;
     let max = config.database_max_connections;
 
-    let db = create_pool(&config.database_url, max, schema).await?;
+    let db = create_pool("moderation-rw", &config.database_url, max, schema).await?;
 
     db.execute_unprepared(&format!("CREATE SCHEMA IF NOT EXISTS \"{schema}\""))
         .await?;
 
     let ro_db = if let Some(url) = config.ro_database_url.as_deref() {
-        create_pool(url, max, schema).await?
+        create_pool("moderation-ro", url, max, schema).await?
     } else {
         // If no read-only instance is available reuse the read-write pool.
         db.clone()
@@ -28,6 +28,7 @@ pub async fn connect() -> Result<(DatabaseConnection, DatabaseConnection), DbErr
 }
 
 async fn create_pool(
+    name: &'static str,
     url: &str,
     max: u32,
     schema: &str,
@@ -42,7 +43,7 @@ async fn create_pool(
 
     let db = Database::connect(opt).await?;
 
-    common_telemetry::observe_db_pool("moderation", db.get_postgres_connection_pool().clone());
+    common_telemetry::observe_db_pool(name, db.get_postgres_connection_pool().clone());
 
     Ok(db)
 }
