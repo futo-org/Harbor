@@ -66,19 +66,25 @@ pub fn build_pairing_service(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::proto as Proto;
-    use crate::service::proto::SignedMessage;
     use chrono::Utc;
+    use common_kafka::build_producer;
     use ed25519_dalek::{Signer, SigningKey};
     use prost::Message;
     use sea_orm::{DbBackend, MockDatabase};
     use tonic::Code;
 
-    fn impl_for_testing() -> PairingServiceImpl {
-        PairingServiceImpl {
-            db: MockDatabase::new(DbBackend::Postgres).into_connection(),
-        }
+    use crate::service::proto as Proto;
+    use crate::service::proto::SignedMessage;
+
+    use super::*;
+
+    async fn impl_for_testing() -> PairingServiceImpl {
+        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let kafka_producer = build_producer()
+            .await
+            .expect("failed to build Kafka producer");
+        let ctx = ServiceContext::new(db, kafka_producer);
+        PairingServiceImpl { ctx }
     }
 
     fn make_signed_initial_session(
@@ -120,7 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_pairing_session_rejects_missing_signed_message() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let err = service
             .create_pairing_session(Request::new(CreatePairingSessionRequest {
                 signed_message: None,
@@ -133,7 +139,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_pairing_session_rejects_timestamp_too_far_in_future() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let msg = make_signed_initial_session(
             "issuer",
             Utc::now().timestamp_millis() + 60 * 60 * 1000,
@@ -151,7 +157,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_pairing_session_rejects_timestamp_too_far_in_past() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let msg = make_signed_initial_session(
             "issuer",
             Utc::now().timestamp_millis() - 60 * 60 * 1000,
@@ -169,7 +175,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_pairing_session_rejects_invalid_signature() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let mut msg = make_signed_initial_session("issuer", 1_700_000_000_000);
         msg.signature[0] ^= 1;
 
@@ -185,7 +191,7 @@ mod tests {
 
     #[tokio::test]
     async fn join_pairing_session_rejects_missing_signed_message() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let err = service
             .join_pairing_session(Request::new(JoinPairingSessionRequest {
                 signed_message: None,
@@ -198,7 +204,7 @@ mod tests {
 
     #[tokio::test]
     async fn join_pairing_session_rejects_invalid_body() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let signing_key = SigningKey::from_bytes(&[7u8; 32]);
         let body_bytes = vec![1, 2, 3];
         let signature = signing_key.sign(&body_bytes);
@@ -223,7 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn join_pairing_session_rejects_invalid_signature() {
-        let service = impl_for_testing();
+        let service = impl_for_testing().await;
         let mut msg = make_signed_initial_session("issuer", 1_700_000_000_000);
         msg.signature[0] ^= 1;
 
