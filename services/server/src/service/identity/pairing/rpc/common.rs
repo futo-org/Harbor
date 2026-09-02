@@ -1,11 +1,12 @@
 //! Helpers shared across the pairing RPC handlers.
 
+use sea_orm::DbConn;
+use tonic::Status;
+
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::proto as Proto;
 use crate::service::proto::SignedIssuerState;
 use ::entity::pairing_session_model as PairingSessionModel;
-use sea_orm::DbConn;
-use tonic::Status;
 
 /// Assembles the aggregated state from a stored session row and its claimers.
 pub fn session_state(

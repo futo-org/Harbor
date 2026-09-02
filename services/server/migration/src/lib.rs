@@ -51,6 +51,7 @@ mod m20260826_195541_recreate_pairing_tables;
 mod m20260831_000001_always_include_hashtags_in_search_data;
 mod m20260831_000002_reaction_tally_decayed_count;
 mod m20260901_000001_reaction_emoji_nullable;
+mod m20260902_000001_add_event_application;
 
 pub struct Migrator;
 
@@ -109,6 +110,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260901_000001_reaction_emoji_nullable::Migration),
             Box::new(m20260831_000001_always_include_hashtags_in_search_data::Migration),
             Box::new(m20260831_000002_reaction_tally_decayed_count::Migration),
+            Box::new(m20260902_000001_add_event_application::Migration),
         ]
     }
 }

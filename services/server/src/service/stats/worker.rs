@@ -96,7 +96,7 @@ impl StatsWorker {
 
                 // Try retrieving the content of the deleted event
                 let Some(content_body) =
-                    find_content_by_key(&self.ctx.db, target).await?
+                    find_content_by_key(&self.ctx.ro_db, target).await?
                 else {
                     return Ok(());
                 };

@@ -1,5 +1,6 @@
 //! `put_pairing_session`: creates or updates a pairing session.
 
+use crate::service::context::ServiceContext;
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::identity::pairing::rpc::common::load_session_state;
 use crate::service::identity::repository as id_repo;
@@ -33,15 +34,15 @@ struct Input {
 }
 
 pub async fn handle(
-    db: &DatabaseConnection,
+    ctx: &ServiceContext,
     req: PutPairingSessionRequest,
 ) -> Result<PutPairingSessionResponse, Status> {
     // Ensure the request is legitimate and extract content
     let input = extract_and_validate_input(req)?;
-    verify_authorization(db, &input).await?;
+    verify_authorization(&ctx.db, &input).await?;
 
     // Use a transaction to prevent TOCTOU problems
-    let txn = db.begin().await.map_err(|e| {
+    let txn = ctx.db.begin().await.map_err(|e| {
         tracing::error!(error = %e, "put_pairing_session txn begin error");
         Status::internal("internal server error")
     })?;
@@ -78,7 +79,9 @@ pub async fn handle(
 
     // Return latest session state to client
     Ok(PutPairingSessionResponse {
-        session_state: Some(load_session_state(db, &response_digest).await?),
+        session_state: Some(
+            load_session_state(&ctx.db, &response_digest).await?,
+        ),
     })
 }
 

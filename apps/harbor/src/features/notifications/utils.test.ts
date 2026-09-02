@@ -27,6 +27,7 @@ jest.mock('@noble/hashes/sha2.js', () => ({
 }));
 
 import { v2 } from '@polycentric/react-native';
+import { eventKeyId, type PostLabel } from '@/src/common/lib/polycentric-hooks';
 import { decodeNotifications } from './utils';
 
 const ACTOR = 'actoridentity';
@@ -161,11 +162,21 @@ const targetBundle = makeBundle(
   5,
 );
 
-function decodeOne(notification: v2.Notification) {
+/** Build a label map for a single labeled post. */
+function labelsFor(key: v2.EventKey): Map<string, PostLabel[]> {
+  const labelMap = new Map<string, PostLabel[]>();
+  labelMap.set(eventKeyId(key), [{ value: 'self-harm', labeledBy: ACTOR }]);
+  return labelMap;
+}
+
+function decodeOne(
+  notification: v2.Notification,
+  labels?: Map<string, PostLabel[]>,
+) {
   const response = v2.ListNotificationsResponse.create({
     notifications: [notification],
   });
-  return decodeNotifications(response);
+  return decodeNotifications(response, labels ?? new Map());
 }
 
 describe('decodeNotifications', () => {
@@ -214,6 +225,48 @@ describe('decodeNotifications', () => {
     if (item.kind === 'quote') {
       expect(item.quote.content).toBe('quoting you');
       expect(item.targetPost?.content).toBe('your original post');
+    }
+  });
+
+  it('attaches labels to the trigger post of a reply', () => {
+    const [item] = decodeOne(
+      v2.Notification.create({
+        triggerEvent: makeBundle(
+          ACTOR,
+          postContent('my reply', { reply: TARGET_KEY }),
+        ),
+        targetEvent: targetBundle,
+        kind: v2.NotificationKind.REPLY,
+      }),
+      labelsFor(makeEventKey(ACTOR)),
+    );
+    expect(item.kind).toBe('reply');
+    if (item.kind === 'reply') {
+      expect(item.reply.labels).toEqual([
+        { value: 'self-harm', labeledBy: ACTOR },
+      ]);
+      expect(item.targetPost?.labels).toBeUndefined();
+    }
+  });
+
+  it('attaches labels to the trigger post of a quote', () => {
+    const [item] = decodeOne(
+      v2.Notification.create({
+        triggerEvent: makeBundle(
+          ACTOR,
+          postContent('quoting you', { quote: TARGET_KEY }),
+        ),
+        targetEvent: targetBundle,
+        kind: v2.NotificationKind.QUOTE,
+      }),
+      labelsFor(makeEventKey(ACTOR)),
+    );
+    expect(item.kind).toBe('quote');
+    if (item.kind === 'quote') {
+      expect(item.quote.labels).toEqual([
+        { value: 'self-harm', labeledBy: ACTOR },
+      ]);
+      expect(item.targetPost?.labels).toBeUndefined();
     }
   });
 

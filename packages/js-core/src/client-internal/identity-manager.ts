@@ -180,6 +180,7 @@ export class IdentityManager {
         previousSignature: new Uint8Array(0),
         contentDigest: digest,
         createdAt: BigInt(Date.now()),
+        application: this.client.application,
       });
     } else {
       event = await this.client.buildEvent(content, COLLECTION.IDENTITY);

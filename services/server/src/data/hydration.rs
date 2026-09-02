@@ -115,16 +115,19 @@ where
         list_identity_events(ctx.service, identities.clone());
     let profile_events_fut = list_profile_events(ctx.service, identities);
     let referenced_fut = async {
-        feeds_repository::Query::list_events_by_keys(&ctx.service.db, &ref_keys)
-            .await
-            .map_err(|err| {
-                tracing::error!(error = %err, "failed to list events");
-                Status::internal("internal server error")
-            })
+        feeds_repository::Query::list_events_by_keys(
+            &ctx.service.ro_db,
+            &ref_keys,
+        )
+        .await
+        .map_err(|err| {
+            tracing::error!(error = %err, "failed to list events");
+            Status::internal("internal server error")
+        })
     };
     let labels_fut = async {
         feeds_repository::Query::list_labels_for_event_keys(
-            &ctx.service.db,
+            &ctx.service.ro_db,
             &display_keys,
             ctx.service.trusted_moderator.as_deref(),
         )
@@ -135,7 +138,7 @@ where
         })
     };
     let stats_fut = async {
-        gather_stats_for(&ctx.service.db, &display_keys)
+        gather_stats_for(&ctx.service.ro_db, &display_keys)
             .await
             .map_err(|err| {
                 tracing::error!(error = %err, "failed to gather stats");

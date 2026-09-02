@@ -1,4 +1,9 @@
-import { type QueryStatus, v2 } from '@polycentric/react-native';
+import {
+  type LabelSet,
+  type PostLabel,
+  type QueryStatus,
+  v2,
+} from '@polycentric/react-native';
 import type { UseQueryResult } from '@/src/common/query/hooks/useQuery';
 
 export function toBase64(bytes: Uint8Array): string {
@@ -24,6 +29,9 @@ export type PostData = {
 
   content: string;
   createdAt: number;
+
+  /** App that authored the event, if reported. */
+  application?: v2.Application;
 
   /** Attached image sets, in author-provided order. */
   images: v2.ImageSet[];
@@ -84,12 +92,22 @@ export type PostData = {
   labels?: PostLabel[];
 };
 
-/** A single moderation label on a post: the label value (e.g. "self-harm")
- * and the identity that applied it (a moderator, or the author). */
-export type PostLabel = {
-  value: string;
-  labeledBy: string;
-};
+export type { LabelSet, PostLabel } from '@polycentric/react-native';
+
+const OWN_APP_ID_PREFIX = 'org.futo.polycentric';
+
+/** The app a post came from; `undefined` for our own builds. */
+export function thirdPartyApplication(
+  application?: v2.Application,
+): { name: string; url?: string } | undefined {
+  if (!application || application.id.startsWith(OWN_APP_ID_PREFIX)) {
+    return undefined;
+  }
+  return {
+    name: application.name || application.id,
+    url: /^https?:\/\//i.test(application.url) ? application.url : undefined,
+  };
+}
 
 // A key fingerprint is the first 16 characters of the hex bytes of the key contents
 // It does not include the key type.
@@ -191,6 +209,7 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
       sequence: key.sequence.toString(),
       content: post.text,
       createdAt: Number(event.createdAt ?? 0),
+      application: event.application,
       images: post.images,
       links: post.links,
       reply,
@@ -209,30 +228,24 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
 }
 
 /**
- * Decode a label bundle from an event hint into its target post id and
- * label values. Returns null if the bundle isn't a Labels event.
+ * Convert rs-core `LabelSet`s (collected from a response's `event_hints`)
+ * into a mapping from event key id to label values
  */
-export function decodeLabelsBundle(
-  bundle: v2.EventBundle,
-): { targetPostId: string; labels: PostLabel[] } | null {
-  const decoded = decodeBundle(bundle, 'labels');
-  if (!decoded) return null;
-  try {
-    // The labeled event's key lives on the content; the event's own key
-    // belongs to the labeler's collection-7 chain.
-    const target = decoded.content.eventKey;
-    if (!target) return null;
-    const labeledBy = decoded.event.key?.identity ?? '';
-    return {
-      targetPostId: eventKeyId(target),
-      labels: decoded.content.labelValues.map((value: string) => ({
-        value,
-        labeledBy,
-      })),
-    };
-  } catch {
-    return null;
+export function labelMapFromSets(sets: LabelSet[]): Map<string, PostLabel[]> {
+  const labelMap = new Map<string, PostLabel[]>();
+  for (const set of sets) {
+    const target = v2.EventKey.create({
+      collection: set.target.collection,
+      identity: set.target.identity,
+      signedBy: v2.PublicKey.create({
+        keyType: set.target.signedBy.keyType,
+        key: new Uint8Array(set.target.signedBy.key),
+      }),
+      sequence: set.target.sequence,
+    });
+    labelMap.set(eventKeyId(target), set.labels);
   }
+  return labelMap;
 }
 
 /** A repost event decoded into who reposted, the target post's id, and
@@ -267,22 +280,15 @@ function decodeRepostBundle(bundle: v2.EventBundle): {
  * server ships the reposted post alongside) and surface it tagged with
  * `repostedBy`. A repost whose target isn't in the hints is dropped.
  */
-export function decodeFeedItems(response: v2.GetFeedResponse): PostData[] {
+export function decodeFeedItems(
+  response: v2.GetFeedResponse,
+  labelMap: Map<string, PostLabel[]>,
+): PostData[] {
   const hintPosts = new Map<string, PostData>();
-  const labelMap = new Map<string, PostLabel[]>();
   for (const hint of response.eventHints) {
     if (!hint.eventBundle) continue;
     const post = decodePostBundle(hint.eventBundle);
     if (post) hintPosts.set(post.id, post);
-
-    const labels = decodeLabelsBundle(hint.eventBundle);
-    if (labels) {
-      const existing = labelMap.get(labels.targetPostId);
-      labelMap.set(
-        labels.targetPostId,
-        existing ? [...existing, ...labels.labels] : labels.labels,
-      );
-    }
   }
 
   const items: PostData[] = [];
