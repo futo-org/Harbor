@@ -10,9 +10,10 @@ import type { ProfileHookResult } from '@/src/features/profile/hooks/useProfile'
 import { isWeb } from '@/src/common/util/platform';
 
 // Chars the autocomplete searches through: unicode letters, numbers,
-// underscores, and spaces (multi-word name search). Anything else between the
-// `@` and the caret means no autocomplete at that caret.
-const QUERY_CHARS = /^[\p{L}\p{N}_ ]*$/u;
+// underscores, and at most one space (a two-word name search; a second space
+// means the user has moved on and the overlay should get out of the way).
+// Anything else between the `@` and the caret means no autocomplete there.
+const QUERY_CHARS = /^[\p{L}\p{N}_]*(?: [\p{L}\p{N}_]*)?$/u;
 
 // The word-char run at the caret, for extending a mid-word replacement.
 const WORD_RUN = /^[\p{L}\p{N}_]*/u;
@@ -148,8 +149,8 @@ function pushTextToInput(
  * is open exactly when:
  * - the nearest `@` before the caret is standalone (not glued to a preceding
  *   word, see `TOKEN_PRECEDER` — an email's `@` never counts),
- * - everything between it and the caret is `QUERY_CHARS`, not starting with a
- *   space ("email me @ home" stays closed), and
+ * - everything between it and the caret is `QUERY_CHARS` (at most one
+ *   space), not starting with a space ("email me @ home" stays closed), and
  * - that `@` doesn't begin an already-recognized mention
  *   (e.g. the caret in `@al|ias.example.com`).
  */

@@ -45,6 +45,10 @@ describe('findMentionContext', () => {
     expect(findMentionContext('@an\nx', 5)).toBeNull();
   });
 
+  it('closes on a second space', () => {
+    expect(findMentionContext('@ann smith x', 12)).toBeNull();
+  });
+
   it('is closed inside an already-recognized alias mention', () => {
     expect(findMentionContext('@ann.example.com', 4)).toBeNull();
   });
