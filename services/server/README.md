@@ -44,7 +44,7 @@ The server binary also carries maintenance commands that run against `DATABASE_U
 and exit. Each prints what it would change; add `--yes` to apply it.
 
 ```sh
-# Delete every event an identity published, or every event a key signed,
+# Delete an identity, or every identity a key has signed events for,
 # plus the cache rows, counts, notifications, and now-unreferenced content
 # derived from them.
 cargo run -p server -- delete-events --identity <hex>

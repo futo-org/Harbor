@@ -8,7 +8,7 @@ use crate::service::context::ServiceContext;
 use crate::service::feeds::repository::{self as FeedsRepository};
 use crate::service::identity::chain;
 use crate::service::identity::repository::{
-    Erased, EventsSelector, Mutation as IdentityMutation, Query as IdentityRepo,
+    Erased, Mutation as IdentityMutation, Query as IdentityRepo,
 };
 use crate::service::proofs::cache::ProofCache;
 use crate::service::proto::{ContentDigest, PublicKey};
@@ -35,13 +35,13 @@ const ALL_COLLECTIONS: [i32; 8] = [
 /// with the tally cron or a worker only costs one batch.
 const ERASE_BATCH: u64 = 50_000;
 
-/// Erases matching events, deletes blobs nothing references any more, and
-/// drops cached chain state. Used by bans and the operator command.
-pub async fn erase_events(
+/// Erases an identity's events, deletes blobs nothing references any more,
+/// and drops its cached chain state. Used by bans and the operator command.
+pub async fn erase_identity(
     db: &DatabaseConnection,
     filestore: Option<&ContentFilestore>,
     proof_cache: Option<&ProofCache>,
-    selector: &EventsSelector<'_>,
+    identity: &str,
 ) -> Result<Erased, DbErr> {
     let mut total = Erased::default();
     let mut after = 0;
@@ -51,7 +51,7 @@ pub async fn erase_events(
             let txn = db.begin().await?;
             let batch = IdentityMutation::erase_events_batch(
                 &txn,
-                selector,
+                identity,
                 after,
                 ERASE_BATCH,
             )
@@ -66,9 +66,9 @@ pub async fn erase_events(
         total.events += batch.erased.events;
         total.content += batch.erased.content;
         total.blobs += batch.erased.blobs;
-        total.identities.extend(batch.erased.identities);
         after = batch.last_id;
         tracing::info!(
+            identity,
             events = total.events,
             content = total.content,
             blobs = total.blobs,
@@ -76,22 +76,17 @@ pub async fn erase_events(
             "erased batch"
         );
     }
-    total.identities.sort();
-    total.identities.dedup();
-
     retry_deadlocks(|| async {
         let txn = db.begin().await?;
-        IdentityMutation::erase_derived(&txn, selector).await?;
+        IdentityMutation::erase_derived(&txn, identity).await?;
         txn.commit().await
     })
     .await?;
 
     if let Some(cache) = proof_cache {
-        for identity in &total.identities {
-            cache.invalidate_identity(identity).await;
-            for collection in ALL_COLLECTIONS {
-                cache.invalidate_canonical(identity, collection).await;
-            }
+        cache.invalidate_identity(identity).await;
+        for collection in ALL_COLLECTIONS {
+            cache.invalidate_canonical(identity, collection).await;
         }
     }
     Ok(total)
