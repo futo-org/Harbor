@@ -99,7 +99,7 @@ async fn fetch(
     // parent → [children, newest-first]. Order is (depth ASC,
     // created_at DESC), so per-parent order is newest first.
     let mut children_by_parent: HashMap<i64, Vec<i64>> = HashMap::new();
-    for r in &descendant_refs {
+    for r in descendant_refs {
         children_by_parent
             .entry(r.parent_event_id)
             .or_default()
@@ -107,18 +107,18 @@ async fn fetch(
     }
 
     let mut descendant_order: Vec<i64> = Vec::new();
-    let mut stack: Vec<(i64, bool)> = Vec::new();
     if let Some(direct) = children_by_parent.get(&subject_id) {
-        for &id in direct.iter().rev() {
-            stack.push((id, false));
+        let mut stack: Vec<i64> = Vec::new();
+        for id in direct.iter().rev() {
+            stack.push(*id);
         }
-    }
-    while let Some((id, _)) = stack.pop() {
-        descendant_order.push(id);
-        if let Some(kids) = children_by_parent.get(&id) {
-            let take = kids.len().min(BRANCHING_FACTOR);
-            for &kid in kids.iter().take(take).rev() {
-                stack.push((kid, true));
+        while let Some(id) = stack.pop() {
+            descendant_order.push(id);
+            if let Some(kids) = children_by_parent.get(&id) {
+                let take = kids.len().min(BRANCHING_FACTOR);
+                for &kid in kids.iter().take(take).rev() {
+                    stack.push(kid);
+                }
             }
         }
     }
