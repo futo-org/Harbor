@@ -55,9 +55,7 @@ pub async fn delete_events(args: Vec<String>) {
     .expect("failed to delete events");
     println!(
         "deleted {} events, {} orphaned content rows and {} blobs",
-        erased.events,
-        erased.content,
-        erased.blobs.len()
+        erased.events, erased.content, erased.blobs
     );
 }
 
@@ -85,8 +83,7 @@ pub async fn prune_content(args: Vec<String>) {
         .expect("failed to prune content");
     println!(
         "deleted {} orphaned content rows and {} blobs",
-        pruned.content,
-        pruned.blobs.len()
+        pruned.content, pruned.blobs
     );
 }
 

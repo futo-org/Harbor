@@ -232,27 +232,41 @@ impl Mutation {
         Ok(())
     }
 
-    /// Erases matching events and everything derived from them. Content
-    /// another event still references is kept, otherwise an identity could
-    /// erase a victim's content by referencing its digests. Blobs are left
-    /// for the caller; see `service::erase_events`.
+    /// Erases up to `limit` matching events with ids above `after`, and
+    /// everything derived from them. Content another event still references
+    /// is kept, otherwise an identity could erase a victim's content by
+    /// referencing its digests. Blobs are left for the caller; see
+    /// `service::erase_events`, which loops over batches.
     ///
     /// Works through temp tables so nothing scales with the event count on
-    /// the client, hence the transaction.
-    pub async fn erase_events(
+    /// the client, hence the transaction. Returns `None` once no events match.
+    pub async fn erase_events_batch(
         db: &DatabaseTransaction,
         selector: &EventsSelector<'_>,
-    ) -> Result<Erased, DbErr> {
+        after: i64,
+        limit: u64,
+    ) -> Result<Option<ErasedBatch>, DbErr> {
         let (matches, value) = selector.sql();
         db.execute_raw(Statement::from_sql_and_values(
             DbBackend::Postgres,
             format!(
                 "CREATE TEMP TABLE erase_events ON COMMIT DROP AS \
-                 SELECT e.id FROM events e WHERE {matches}"
+                 SELECT e.id FROM events e WHERE {matches} AND e.id > $2 \
+                 ORDER BY e.id LIMIT $3"
             ),
-            [value],
+            [value, after.into(), (limit as i64).into()],
         ))
         .await?;
+        let last_id: Option<i64> = db
+            .query_one_raw(Statement::from_string(
+                DbBackend::Postgres,
+                "SELECT max(id) AS last_id FROM erase_events",
+            ))
+            .await?
+            .and_then(|row| row.try_get("", "last_id").ok());
+        let Some(last_id) = last_id else {
+            return Ok(None);
+        };
         db.execute_unprepared(
             "CREATE TEMP TABLE erase_content ON COMMIT DROP AS \
              SELECT DISTINCT c.id FROM content c \
@@ -293,7 +307,25 @@ impl Mutation {
         .await?;
         let (content, blobs) = delete_content_rows(db).await?;
 
-        // Counts on other events that include their interactions are left as-is.
+        Ok(Some(ErasedBatch {
+            erased: Erased {
+                events,
+                content,
+                blobs: blobs.len() as u64,
+                identities,
+            },
+            blobs,
+            last_id,
+        }))
+    }
+
+    /// Deletes what is keyed by the selector rather than by event: the
+    /// notifications and per-event counts. Run once after the batches.
+    /// Counts on other events that include their interactions are left as-is.
+    pub async fn erase_derived(
+        db: &DatabaseTransaction,
+        selector: &EventsSelector<'_>,
+    ) -> Result<(), DbErr> {
         match selector {
             EventsSelector::Identity(identity) => {
                 NotificationModel::Entity::delete_many()
@@ -362,31 +394,20 @@ impl Mutation {
                     .await?;
             }
         }
-
-        Ok(Erased {
-            events,
-            content,
-            blobs,
-            identities,
-        })
+        Ok(())
     }
 
-    /// Deletes content no event references. Blobs are left for the caller.
+    /// Deletes content no event references. Returns the count and the blobs
+    /// left for the caller to remove.
     pub async fn prune_orphan_content(
         db: &DatabaseTransaction,
-    ) -> Result<Erased, DbErr> {
+    ) -> Result<(u64, Vec<ContentDigest>), DbErr> {
         db.execute_unprepared(&format!(
             "CREATE TEMP TABLE erase_content ON COMMIT DROP AS \
              SELECT c.id FROM content c WHERE {ORPHAN_CONTENT}"
         ))
         .await?;
-        let (content, blobs) = delete_content_rows(db).await?;
-        Ok(Erased {
-            events: 0,
-            content,
-            blobs,
-            identities: Vec::new(),
-        })
+        delete_content_rows(db).await
     }
 }
 
@@ -458,13 +479,21 @@ impl EventsSelector<'_> {
     }
 }
 
+#[derive(Default)]
 pub struct Erased {
     pub events: u64,
     pub content: u64,
-    /// Blobs no content references any more.
-    pub blobs: Vec<ContentDigest>,
+    pub blobs: u64,
     /// Identities whose events were removed.
     pub identities: Vec<String>,
+}
+
+pub struct ErasedBatch {
+    pub erased: Erased,
+    /// Blobs no content references any more, for the caller to remove.
+    pub blobs: Vec<ContentDigest>,
+    /// Highest event id in the batch; pass as `after` for the next one.
+    pub last_id: i64,
 }
 
 /// Deletes the content rows listed in the `erase_content` temp table and
