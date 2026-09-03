@@ -16,7 +16,8 @@ import { IdentityManager, type v2 } from '@polycentric/react-native';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, type TextStyle, View } from 'react-native';
+import { isWeb } from '@/src/common/util/platform';
 import { useIdentityState } from './hooks/useIdentityState';
 
 type KeyEntry = {
@@ -204,7 +205,11 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
       <Text
         variant="secondary"
-        style={[Atoms.flex_1, { fontFamily: 'monospace' }]}
+        style={[
+          Atoms.flex_1,
+          { fontFamily: 'monospace', minWidth: 0 },
+          isWeb && ({ wordBreak: 'break-all' } as unknown as TextStyle),
+        ]}
         selectable
       >
         {value}
