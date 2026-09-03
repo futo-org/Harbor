@@ -699,7 +699,9 @@ impl PolycentricCore {
         server_url: String,
         digest_sha256: Vec<u8>,
     ) -> Result<Vec<u8>, CoreError> {
-        pairing::fetch_session_dangerous(&self.client, &server_url, digest_sha256).await
+        let session_state = pairing::fetch_session(&server_url, digest_sha256.clone()).await?;
+        let state = pairing::open_state(session_state, &self.client, &digest_sha256, None)?;
+        Ok(state.raw.encode_to_vec())
     }
 
     /// Register `claimer_key` as a claimer in the pairing session matching the digest hash.
@@ -723,7 +725,7 @@ impl PolycentricCore {
     ) -> Result<Vec<crate::query::event::key::PublicKey>, CoreError> {
         let session_state = pairing::fetch_session(&server_url, digest_sha256.clone()).await?;
         let state = pairing::open_state(session_state, &self.client, &digest_sha256, None)?;
-        Ok(state.claimers.into_iter().map(Into::into).collect())
+        Ok(state.raw.claimers.into_iter().map(Into::into).collect())
     }
 
     /// Poll function for the claimer.

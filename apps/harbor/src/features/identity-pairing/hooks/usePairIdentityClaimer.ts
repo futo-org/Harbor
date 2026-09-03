@@ -1,9 +1,5 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import {
-  COLLECTION,
-  type PairingSession,
-  type v2,
-} from '@polycentric/react-native';
+import type { PairingSession, v2 } from '@polycentric/react-native';
 import { useEffect, useState } from 'react';
 
 export type PairIdentityClaimerHookResult = {
@@ -72,12 +68,6 @@ export function usePairIdentityClaimer(
             client.servers = [...client.servers, info.server];
             client.core.setServers(client.servers);
           }
-
-          await client.listEvents({
-            identity: session.digest.issuerIdentity,
-            collection: COLLECTION.IDENTITY,
-          });
-          if (canceled) return;
 
           await client.pairingSessionManager.joinPairingSession(info);
           if (canceled) return;
