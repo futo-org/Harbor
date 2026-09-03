@@ -103,6 +103,18 @@ describe('useQueryStore data retention', () => {
     expect(useQueryStore.getState().queries.get(KEY)?.data).toBe(DATA);
   });
 
+  it('accepts a non-empty local read over existing data', () => {
+    seed();
+    const local = new Uint8Array([4, 5]);
+    latest().next({
+      data: local,
+      status: QueryStatus.Success,
+      successfulServers: 0,
+      pendingServers: 0,
+    });
+    expect(useQueryStore.getState().queries.get(KEY)?.data).toBe(local);
+  });
+
   it('accepts server data over existing data', () => {
     seed();
     const fresh = new Uint8Array([9]);

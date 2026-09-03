@@ -196,10 +196,9 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
         };
 
         const hasData = get().queries.get(key)?.data !== undefined;
-        if (
-          result.data !== undefined &&
-          !(hasData && result.successfulServers === 0)
-        ) {
+        const localEmpty =
+          result.successfulServers === 0 && result.data?.byteLength === 0;
+        if (result.data !== undefined && !(hasData && localEmpty)) {
           patch.data = result.data;
         }
 

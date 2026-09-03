@@ -10,9 +10,9 @@ import {
   hexToBytes,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { v2 } from '@polycentric/react-native';
+import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
@@ -21,6 +21,10 @@ import { usePostById } from '../hooks/usePostById';
 import { PostImages } from '../PostImages';
 
 const QUOTE_PREVIEW_LIMIT = 200;
+const PLACEHOLDER_HEADER_HEIGHT = 24;
+const PLACEHOLDER_LINE_HEIGHT = 12;
+const PLACEHOLDER_HEIGHT =
+  PLACEHOLDER_HEADER_HEIGHT + Spacing.xs + PLACEHOLDER_LINE_HEIGHT;
 
 /** Embedded preview of a quoted post. Rendered inside a parent Post
  *  when its `quoteId` is set. Tapping routes to the quoted post. */
@@ -47,6 +51,7 @@ export function PostContentQuote({
     quotePost ? undefined : eventKey?.identity,
     getKeyFingerprint(eventKey?.signedBy),
     eventKey?.sequence,
+    { fetchMode: FetchMode.OfflineFirst },
   );
   const post = quotePost ?? fetched.post;
   const isLoading = !quotePost && fetched.isLoading;
@@ -65,7 +70,7 @@ export function PostContentQuote({
     );
   }, [post]);
 
-  if (!post) return isLoading ? <QuoteSkeleton /> : null;
+  if (!post) return isLoading ? <QuoteSkeleton /> : <QuoteUnavailable />;
 
   const content = post.content ?? '';
   const preview =
@@ -131,6 +136,29 @@ export function PostContentQuote({
   );
 }
 
+function QuoteUnavailable() {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        Atoms.p_md,
+        Atoms.rounded_md,
+        Atoms.mt_sm,
+        {
+          borderWidth: 1,
+          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
+        },
+      ]}
+    >
+      <View style={[Atoms.justify_center, { height: PLACEHOLDER_HEIGHT }]}>
+        <Text variant="secondary" color="neutral_500">
+          This post is unavailable.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 /** Mirrors the quote box's header-plus-line shape at a stable height. */
 function QuoteSkeleton() {
   const { theme } = useTheme();
@@ -149,11 +177,14 @@ function QuoteSkeleton() {
       ]}
     >
       <View style={[Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}>
-        <Block width={24} height={24} />
-        <Block width={120} />
+        <Block
+          width={PLACEHOLDER_HEADER_HEIGHT}
+          height={PLACEHOLDER_HEADER_HEIGHT}
+        />
+        <Block width={120} height={PLACEHOLDER_LINE_HEIGHT} />
       </View>
       <View style={Atoms.mt_xs}>
-        <Block width="90%" />
+        <Block width="90%" height={PLACEHOLDER_LINE_HEIGHT} />
       </View>
     </Animated.View>
   );
