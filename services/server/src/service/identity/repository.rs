@@ -3,21 +3,15 @@ use crate::service::feeds::repository::content_join;
 use crate::service::identity::chain;
 use crate::service::proto::{ContentDigest, Identity, PublicKey};
 use ::entity::{
-    ban_model as BanModel, block_model as BlockModel,
-    content_model as ContentModel, event_model as EventModel,
-    follow_model as FollowModel, moderator_model as ModeratorModel,
-    notification as NotificationModel, quote_model as QuoteModel,
-    reaction_model as ReactionModel,
+    ban_model as BanModel, content_model as ContentModel,
+    event_model as EventModel, moderator_model as ModeratorModel,
+    notification as NotificationModel,
     reaction_summary_model as ReactionSummaryModel,
     reaction_tally_model as ReactionTalliesModel,
-    reaction_tally_model2 as ReactionTallyModel,
-    reply_count_model as ReplyCountModel, reply_model as ReplyModel,
-    repost_model as RepostModel,
+    reply_count_model as ReplyCountModel,
 };
 use polycentric_common::models::collections;
-use sea_orm::sea_query::IntoCondition;
 use sea_orm::*;
-use std::collections::HashSet;
 
 const IDENTITY_COLLECTION: i16 = collections::IDENTITY as i16;
 
@@ -102,34 +96,46 @@ impl Query {
             .await
     }
 
-    /// Number of events `selector` matches.
+    /// Number of events `identity` has.
     pub async fn count_events<C: ConnectionTrait>(
         db: &C,
-        selector: &EventsSelector<'_>,
+        identity: &str,
     ) -> Result<u64, DbErr> {
         EventModel::Entity::find()
-            .filter(selector.condition())
+            .filter(EventModel::Column::Identity.eq(identity))
             .count(db)
             .await
     }
 
-    /// Ids of content rows no event references.
-    pub async fn orphan_content_ids<C: ConnectionTrait>(
+    /// Identities with at least one event signed by `public_key`.
+    pub async fn identities_signed_by<C: ConnectionTrait>(
         db: &C,
-    ) -> Result<Vec<i64>, DbErr> {
-        let rows = db
-            .query_all_raw(Statement::from_sql_and_values(
+        public_key: &[u8],
+    ) -> Result<Vec<String>, DbErr> {
+        EventModel::Entity::find()
+            .select_only()
+            .column(EventModel::Column::Identity)
+            .distinct()
+            .filter(EventModel::Column::PublicKey.eq(public_key.to_vec()))
+            .into_tuple()
+            .all(db)
+            .await
+    }
+
+    /// Number of content rows no event references.
+    pub async fn count_orphan_content<C: ConnectionTrait>(
+        db: &C,
+    ) -> Result<i64, DbErr> {
+        let row = db
+            .query_one_raw(Statement::from_string(
                 DbBackend::Postgres,
-                r#"SELECT c.id FROM content c
-                   WHERE NOT EXISTS (
-                     SELECT 1 FROM events e
-                     WHERE e.content_digest_type = c.digest_type
-                       AND e.content_digest_bytes = c.digest_bytes
-                   )"#,
-                [],
+                format!(
+                    "SELECT count(*) AS n FROM content c WHERE {ORPHAN_CONTENT}"
+                ),
             ))
-            .await?;
-        rows.iter().map(|row| row.try_get("", "id")).collect()
+            .await?
+            .ok_or_else(|| DbErr::Custom("count returned no row".into()))?;
+        row.try_get("", "n")
     }
 
     /// True when `identity` has a row in the `ban` table.
@@ -240,340 +246,237 @@ impl Mutation {
         Ok(())
     }
 
-    /// Erases matching events and everything derived from them. Content
-    /// another event still references is kept, otherwise an identity could
-    /// erase a victim's content by referencing its digests. Blobs are left
-    /// for the caller; see `service::erase_events`.
-    pub async fn erase_events<C: ConnectionTrait>(
-        db: &C,
-        selector: &EventsSelector<'_>,
-    ) -> Result<Erased, DbErr> {
-        let event_ids: Vec<i64> = EventModel::Entity::find()
-            .select_only()
-            .column(EventModel::Column::Id)
-            .filter(selector.condition())
-            .into_tuple()
-            .all(db)
-            .await?;
-        let identities: Vec<String> = EventModel::Entity::find()
-            .select_only()
-            .column(EventModel::Column::Identity)
-            .distinct()
-            .filter(selector.condition())
-            .into_tuple()
-            .all(db)
-            .await?;
-        let candidate_ids = content_ids_for_events(db, &event_ids).await?;
-
-        delete_cache_rows(db, &event_ids).await?;
-
-        let events = EventModel::Entity::delete_many()
-            .filter(selector.condition())
-            .exec(db)
+    /// Erases up to `limit` matching events with ids above `after`, and
+    /// everything derived from them. Content another event still references
+    /// is kept, otherwise an identity could erase a victim's content by
+    /// referencing its digests. Blobs are left for the caller; see
+    /// `service::erase_identity`, which loops over batches.
+    ///
+    /// Works through temp tables so nothing scales with the event count on
+    /// the client, hence the transaction. Returns `None` once no events match.
+    pub async fn erase_events_batch(
+        db: &DatabaseTransaction,
+        identity: &str,
+        after: i64,
+        limit: u64,
+    ) -> Result<Option<ErasedBatch>, DbErr> {
+        db.execute_raw(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            "CREATE TEMP TABLE erase_events ON COMMIT DROP AS \
+             SELECT e.id FROM events e WHERE e.identity = $1 AND e.id > $2 \
+             ORDER BY e.id LIMIT $3",
+            [identity.into(), after.into(), (limit as i64).into()],
+        ))
+        .await?;
+        let last_id: Option<i64> = db
+            .query_one_raw(Statement::from_string(
+                DbBackend::Postgres,
+                "SELECT max(id) AS last_id FROM erase_events",
+            ))
             .await?
-            .rows_affected;
+            .and_then(|row| row.try_get("", "last_id").ok());
+        let Some(last_id) = last_id else {
+            return Ok(None);
+        };
+        db.execute_unprepared(
+            "CREATE TEMP TABLE erase_content ON COMMIT DROP AS \
+             SELECT DISTINCT c.id FROM content c \
+             JOIN events e ON e.content_digest_type = c.digest_type \
+               AND e.content_digest_bytes = c.digest_bytes \
+             JOIN erase_events x ON x.id = e.id",
+        )
+        .await?;
+        db.execute_unprepared("ANALYZE erase_events; ANALYZE erase_content")
+            .await?;
 
-        let kept_ids = still_referenced_content_ids(db, &candidate_ids).await?;
-        let orphan_ids: Vec<i64> = candidate_ids
-            .into_iter()
-            .filter(|id| !kept_ids.contains(id))
-            .collect();
-        let blobs = delete_content_rows(db, &orphan_ids).await?;
-
-        // Counts on other events that include their interactions are left as-is.
-        match selector {
-            EventsSelector::Identity(identity) => {
-                NotificationModel::Entity::delete_many()
-                    .filter(
-                        Condition::any()
-                            .add(
-                                NotificationModel::Column::FromIdentity
-                                    .eq(*identity),
-                            )
-                            .add(
-                                NotificationModel::Column::ToIdentity
-                                    .eq(*identity),
-                            ),
-                    )
-                    .exec(db)
-                    .await?;
-                ReplyCountModel::Entity::delete_many()
-                    .filter(
-                        ReplyCountModel::Column::EventKeyIdentity.eq(*identity),
-                    )
-                    .exec(db)
-                    .await?;
-                ReactionSummaryModel::Entity::delete_many()
-                    .filter(
-                        ReactionSummaryModel::Column::EventKeyIdentity
-                            .eq(*identity),
-                    )
-                    .exec(db)
-                    .await?;
-                ReactionTalliesModel::Entity::delete_many()
-                    .filter(
-                        ReactionTalliesModel::Column::EventKeyIdentity
-                            .eq(*identity),
-                    )
-                    .exec(db)
-                    .await?;
-            }
-            EventsSelector::PublicKey(key) => {
-                let key = key.to_vec();
-                NotificationModel::Entity::delete_many()
-                    .filter(
-                        NotificationModel::Column::TriggerEventKeyPublicKey
-                            .eq(key.clone()),
-                    )
-                    .exec(db)
-                    .await?;
-                ReplyCountModel::Entity::delete_many()
-                    .filter(
-                        ReplyCountModel::Column::EventKeyPublicKey
-                            .eq(key.clone()),
-                    )
-                    .exec(db)
-                    .await?;
-                ReactionSummaryModel::Entity::delete_many()
-                    .filter(
-                        ReactionSummaryModel::Column::EventKeyPublicKey
-                            .eq(key.clone()),
-                    )
-                    .exec(db)
-                    .await?;
-                ReactionTalliesModel::Entity::delete_many()
-                    .filter(
-                        ReactionTalliesModel::Column::EventKeyPublicKey.eq(key),
-                    )
-                    .exec(db)
-                    .await?;
-            }
+        for (table, column) in CACHE_EVENT_COLUMNS {
+            db.execute_unprepared(&format!(
+                "DELETE FROM {table} WHERE {column} IN (SELECT id FROM erase_events)"
+            ))
+            .await?;
         }
+        // The gravity cron rewrites every tally in one long update. Skip the
+        // rows it holds rather than wait; `erase_derived` sweeps them up.
+        db.execute_unprepared(
+            "DELETE FROM reaction_tally t USING (\
+               SELECT event_id FROM reaction_tally \
+               WHERE event_id IN (SELECT id FROM erase_events) \
+               FOR UPDATE SKIP LOCKED) l \
+             WHERE t.event_id = l.event_id",
+        )
+        .await?;
+        let events = db
+            .execute_unprepared(
+                "DELETE FROM events e USING erase_events x WHERE e.id = x.id",
+            )
+            .await?
+            .rows_affected();
+        db.execute_unprepared(
+            "DELETE FROM erase_content x USING content c, events e \
+             WHERE c.id = x.id \
+               AND e.content_digest_type = c.digest_type \
+               AND e.content_digest_bytes = c.digest_bytes",
+        )
+        .await?;
+        let (content, blobs) = delete_content_rows(db).await?;
 
-        Ok(Erased {
-            events,
-            content: orphan_ids.len(),
+        Ok(Some(ErasedBatch {
+            erased: Erased {
+                events,
+                content,
+                blobs: blobs.len() as u64,
+            },
             blobs,
-            identities,
-        })
+            last_id,
+        }))
     }
 
-    /// Deletes content no event references. Blobs are left for the caller.
-    pub async fn prune_orphan_content<C: ConnectionTrait>(
-        db: &C,
-    ) -> Result<Erased, DbErr> {
-        let ids = Query::orphan_content_ids(db).await?;
-        let blobs = delete_content_rows(db, &ids).await?;
-        Ok(Erased {
-            events: 0,
-            content: ids.len(),
-            blobs,
-            identities: Vec::new(),
-        })
+    /// Deletes what is keyed by the identity rather than by event: the
+    /// notifications and per-event counts. Run once after the batches.
+    /// Counts on other events that include their interactions are left as-is.
+    pub async fn erase_derived(
+        db: &DatabaseTransaction,
+        identity: &str,
+    ) -> Result<(), DbErr> {
+        db.execute_unprepared(
+            "DELETE FROM reaction_tally t \
+             WHERE NOT EXISTS (SELECT 1 FROM events e WHERE e.id = t.event_id)",
+        )
+        .await?;
+        NotificationModel::Entity::delete_many()
+            .filter(
+                Condition::any()
+                    .add(NotificationModel::Column::FromIdentity.eq(identity))
+                    .add(NotificationModel::Column::ToIdentity.eq(identity)),
+            )
+            .exec(db)
+            .await?;
+        ReplyCountModel::Entity::delete_many()
+            .filter(ReplyCountModel::Column::EventKeyIdentity.eq(identity))
+            .exec(db)
+            .await?;
+        ReactionSummaryModel::Entity::delete_many()
+            .filter(ReactionSummaryModel::Column::EventKeyIdentity.eq(identity))
+            .exec(db)
+            .await?;
+        ReactionTalliesModel::Entity::delete_many()
+            .filter(ReactionTalliesModel::Column::EventKeyIdentity.eq(identity))
+            .exec(db)
+            .await?;
+        Ok(())
+    }
+
+    /// Deletes content no event references. Returns the count and the blobs
+    /// left for the caller to remove.
+    pub async fn prune_orphan_content(
+        db: &DatabaseTransaction,
+    ) -> Result<(u64, Vec<ContentDigest>), DbErr> {
+        db.execute_unprepared(&format!(
+            "CREATE TEMP TABLE erase_content ON COMMIT DROP AS \
+             SELECT c.id FROM content c WHERE {ORPHAN_CONTENT}"
+        ))
+        .await?;
+        delete_content_rows(db).await
     }
 }
 
-pub enum EventsSelector<'a> {
-    /// Every event of an identity, whichever key signed it.
-    Identity(&'a str),
-    /// Every event signed by a key, whichever identity it acted for.
-    PublicKey(&'a [u8]),
-}
+const ORPHAN_CONTENT: &str = "NOT EXISTS (\
+    SELECT 1 FROM events e \
+    WHERE e.content_digest_type = c.digest_type \
+      AND e.content_digest_bytes = c.digest_bytes)";
 
-impl EventsSelector<'_> {
-    fn condition(&self) -> Condition {
-        match self {
-            Self::Identity(identity) => {
-                EventModel::Column::Identity.eq(*identity).into_condition()
-            }
-            Self::PublicKey(key) => EventModel::Column::PublicKey
-                .eq(key.to_vec())
-                .into_condition(),
-        }
-    }
-}
+/// Cache tables and the columns in them that hold event ids.
+const CACHE_EVENT_COLUMNS: [(&str, &str); 10] = [
+    ("follow", "event_id"),
+    ("block", "event_id"),
+    ("reaction", "event_id"),
+    ("reaction", "on_post"),
+    ("repost", "event_id"),
+    ("repost", "post"),
+    ("quote", "event_id"),
+    ("quote", "post"),
+    ("reply", "event_id"),
+    ("reply", "post"),
+];
 
+const CONTENT_CHILD_TABLES: [&str; 17] = [
+    "content_attributed_to_reaction",
+    "content_blob",
+    "content_block",
+    "content_delete",
+    "content_follow",
+    "content_identity",
+    "content_image",
+    "content_label",
+    "content_post_attributed_url",
+    "content_post",
+    "content_profile_update",
+    "content_reaction",
+    "content_report",
+    "content_repost",
+    "content_verification_claim",
+    "content_verification_target",
+    "content_verification_verify",
+];
+
+#[derive(Default)]
 pub struct Erased {
     pub events: u64,
-    pub content: usize,
-    /// Blobs no content references any more.
+    pub content: u64,
+    pub blobs: u64,
+}
+
+pub struct ErasedBatch {
+    pub erased: Erased,
+    /// Blobs no content references any more, for the caller to remove.
     pub blobs: Vec<ContentDigest>,
-    /// Identities whose events were removed.
-    pub identities: Vec<String>,
+    /// Highest event id in the batch; pass as `after` for the next one.
+    pub last_id: i64,
 }
 
-/// Ids of content rows referenced by `event_ids`.
-async fn content_ids_for_events<C: ConnectionTrait>(
-    db: &C,
-    event_ids: &[i64],
-) -> Result<Vec<i64>, DbErr> {
-    let mut ids = HashSet::new();
-    for chunk in event_ids.chunks(1000) {
-        let rows = db
-            .query_all_raw(Statement::from_sql_and_values(
-                DbBackend::Postgres,
-                r#"SELECT DISTINCT c.id FROM content c
-                   JOIN events e ON e.content_digest_type = c.digest_type
-                     AND e.content_digest_bytes = c.digest_bytes
-                   WHERE e.id = ANY($1)"#,
-                [chunk.to_vec().into()],
-            ))
-            .await?;
-        for row in rows {
-            ids.insert(row.try_get::<i64>("", "id")?);
-        }
-    }
-    Ok(ids.into_iter().collect())
-}
+/// Deletes the content rows listed in the `erase_content` temp table and
+/// their child rows. Returns the count and the blobs no content references
+/// any more.
+async fn delete_content_rows(
+    db: &DatabaseTransaction,
+) -> Result<(u64, Vec<ContentDigest>), DbErr> {
+    db.execute_unprepared(
+        "CREATE TEMP TABLE erase_blobs ON COMMIT DROP AS \
+         SELECT DISTINCT b.digest_type, b.digest_bytes FROM content_blob b \
+         JOIN erase_content x ON x.id = b.content_id",
+    )
+    .await?;
 
-/// Deletes cache rows keyed by or pointing at `event_ids`.
-async fn delete_cache_rows<C: ConnectionTrait>(
-    db: &C,
-    event_ids: &[i64],
-) -> Result<(), DbErr> {
-    for chunk in event_ids.chunks(1000) {
-        macro_rules! delete_where {
-            ($model:ident, $($column:ident),+) => {
-                $model::Entity::delete_many()
-                    .filter(
-                        Condition::any()
-                            $(.add($model::Column::$column.is_in(chunk.iter().copied())))+
-                    )
-                    .exec(db)
-                    .await?;
-            };
-        }
-        delete_where!(FollowModel, EventId);
-        delete_where!(BlockModel, EventId);
-        delete_where!(ReactionTallyModel, EventId);
-        delete_where!(ReactionModel, EventId, OnPost);
-        delete_where!(RepostModel, EventId, Post);
-        delete_where!(QuoteModel, EventId, Post);
-        delete_where!(ReplyModel, EventId, Post);
+    for table in CONTENT_CHILD_TABLES {
+        db.execute_unprepared(&format!(
+            "DELETE FROM {table} WHERE content_id IN (SELECT id FROM erase_content)"
+        ))
+        .await?;
     }
-    Ok(())
-}
+    let content = db
+        .execute_unprepared(
+            "DELETE FROM content c USING erase_content x WHERE c.id = x.id",
+        )
+        .await?
+        .rows_affected();
 
-/// The subset of `content_ids` still referenced by some event.
-async fn still_referenced_content_ids<C: ConnectionTrait>(
-    db: &C,
-    content_ids: &[i64],
-) -> Result<HashSet<i64>, DbErr> {
-    let mut kept = HashSet::new();
-    for chunk in content_ids.chunks(1000) {
-        let rows = db
-            .query_all_raw(Statement::from_sql_and_values(
-                DbBackend::Postgres,
-                r#"SELECT DISTINCT c.id FROM content c
-                   JOIN events e ON e.content_digest_type = c.digest_type
-                     AND e.content_digest_bytes = c.digest_bytes
-                   WHERE c.id = ANY($1)"#,
-                [chunk.to_vec().into()],
-            ))
-            .await?;
-        for row in rows {
-            kept.insert(row.try_get::<i64>("", "id")?);
-        }
-    }
-    Ok(kept)
-}
-
-/// Deletes content rows and their child rows. Returns blobs no content
-/// references any more.
-async fn delete_content_rows<C: ConnectionTrait>(
-    db: &C,
-    content_ids: &[i64],
-) -> Result<Vec<ContentDigest>, DbErr> {
-    use ::entity::{
-        content_attributed_to_reaction_model, content_blob_model,
-        content_block_model, content_delete_model, content_follow_model,
-        content_identity_model, content_image_model, content_label_model,
-        content_post_attributed_url_model, content_post_model,
-        content_profile_update_model, content_reaction_model,
-        content_report_model, content_repost_model,
-        content_verification_claim_model, content_verification_target_model,
-        content_verification_verify_model,
-    };
-
-    let mut blobs: Vec<(i16, Vec<u8>)> = Vec::new();
-    for chunk in content_ids.chunks(1000) {
-        blobs.extend(
-            content_blob_model::Entity::find()
-                .select_only()
-                .column(content_blob_model::Column::DigestType)
-                .column(content_blob_model::Column::DigestBytes)
-                .filter(
-                    content_blob_model::Column::ContentId
-                        .is_in(chunk.iter().copied()),
-                )
-                .into_tuple::<(i16, Vec<u8>)>()
-                .all(db)
-                .await?,
-        );
-    }
-    blobs.sort();
-    blobs.dedup();
-
-    for chunk in content_ids.chunks(1000) {
-        macro_rules! delete_children {
-            ($($model:ident),* $(,)?) => {
-                $(
-                    $model::Entity::delete_many()
-                        .filter(
-                            $model::Column::ContentId
-                                .is_in(chunk.iter().copied()),
-                        )
-                        .exec(db)
-                        .await?;
-                )*
-            };
-        }
-        delete_children!(
-            content_attributed_to_reaction_model,
-            content_blob_model,
-            content_block_model,
-            content_delete_model,
-            content_follow_model,
-            content_identity_model,
-            content_image_model,
-            content_label_model,
-            content_post_attributed_url_model,
-            content_post_model,
-            content_profile_update_model,
-            content_reaction_model,
-            content_report_model,
-            content_repost_model,
-            content_verification_claim_model,
-            content_verification_target_model,
-            content_verification_verify_model,
-        );
-        ContentModel::Entity::delete_many()
-            .filter(ContentModel::Column::Id.is_in(chunk.iter().copied()))
-            .exec(db)
-            .await?;
-    }
-
-    let mut orphans = Vec::new();
-    for chunk in blobs.chunks(1000) {
-        let kept: HashSet<(i16, Vec<u8>)> = content_blob_model::Entity::find()
-            .select_only()
-            .column(content_blob_model::Column::DigestType)
-            .column(content_blob_model::Column::DigestBytes)
-            .filter(
-                content_blob_model::Column::DigestBytes
-                    .is_in(chunk.iter().map(|(_, bytes)| bytes.clone())),
-            )
-            .into_tuple()
-            .all(db)
-            .await?
-            .into_iter()
-            .collect();
-        orphans.extend(chunk.iter().filter(|blob| !kept.contains(blob)).map(
-            |(digest_type, bytes)| ContentDigest {
-                r#type: i32::from(*digest_type),
-                value: bytes.clone(),
-            },
-        ));
-    }
-    Ok(orphans)
+    let blobs = db
+        .query_all_raw(Statement::from_string(
+            DbBackend::Postgres,
+            "SELECT b.digest_type, b.digest_bytes FROM erase_blobs b \
+             WHERE NOT EXISTS (\
+               SELECT 1 FROM content_blob cb \
+               WHERE cb.digest_type = b.digest_type \
+                 AND cb.digest_bytes = b.digest_bytes)",
+        ))
+        .await?
+        .iter()
+        .map(|row| {
+            Ok(ContentDigest {
+                r#type: i32::from(row.try_get::<i16>("", "digest_type")?),
+                value: row.try_get("", "digest_bytes")?,
+            })
+        })
+        .collect::<Result<Vec<_>, DbErr>>()?;
+    Ok((content, blobs))
 }

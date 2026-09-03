@@ -1,11 +1,9 @@
-//! `get_pairing_session`: returns a pairing session for an active
-//! session signature. Expired sessions are deleted and treated as
-//! not found.
+//! `get_pairing_session`: returns the aggregated state of a pairing session.
 
 use tonic::Status;
 
 use crate::service::context::ServiceContext;
-use crate::service::identity::pairing::rpc::common::build_pairing_session;
+use crate::service::identity::pairing::rpc::common::load_session_state;
 use crate::service::proto::{
     GetPairingSessionRequest, GetPairingSessionResponse,
 };
@@ -14,10 +12,9 @@ pub async fn handle(
     ctx: &ServiceContext,
     req: GetPairingSessionRequest,
 ) -> Result<GetPairingSessionResponse, Status> {
-    let session =
-        build_pairing_session(&ctx.db, &req.pairing_session_signature).await?;
+    let session_state = load_session_state(&ctx.db, &req.digest_sha256).await?;
 
     Ok(GetPairingSessionResponse {
-        session: Some(session),
+        session_state: Some(session_state),
     })
 }

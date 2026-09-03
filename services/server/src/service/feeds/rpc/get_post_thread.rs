@@ -79,27 +79,34 @@ async fn fetch(
     .ok_or_else(|| Status::not_found("event not found"))?;
     let subject_id = subject_row.0.id;
 
-    let ancestor_refs = FeedsRepository::list_ancestor_refs(
-        &ctx.service.ro_db,
-        subject_id,
-        PARENT_HEIGHT_LIMIT,
-    )
-    .await
-    .map_err(map_db_err)?;
+    let ancestor_refs_fut = async {
+        FeedsRepository::list_ancestor_refs(
+            &ctx.service.ro_db,
+            subject_id,
+            PARENT_HEIGHT_LIMIT,
+        )
+        .await
+        .map_err(map_db_err)
+    };
 
-    let descendant_refs = FeedsRepository::list_descendant_refs(
-        &ctx.service.ro_db,
-        subject_id,
-        DESCENDANT_DEPTH_LIMIT,
-        params.descendants_limit,
-    )
-    .await
-    .map_err(map_db_err)?;
+    let descendant_refs_fut = async {
+        FeedsRepository::list_descendant_refs(
+            &ctx.service.ro_db,
+            subject_id,
+            DESCENDANT_DEPTH_LIMIT,
+            params.descendants_limit,
+        )
+        .await
+        .map_err(map_db_err)
+    };
+
+    let (ancestor_refs, descendant_refs) =
+        tokio::try_join!(ancestor_refs_fut, descendant_refs_fut)?;
 
     // parent → [children, newest-first]. Order is (depth ASC,
     // created_at DESC), so per-parent order is newest first.
     let mut children_by_parent: HashMap<i64, Vec<i64>> = HashMap::new();
-    for r in &descendant_refs {
+    for r in descendant_refs {
         children_by_parent
             .entry(r.parent_event_id)
             .or_default()
@@ -107,18 +114,18 @@ async fn fetch(
     }
 
     let mut descendant_order: Vec<i64> = Vec::new();
-    let mut stack: Vec<(i64, bool)> = Vec::new();
     if let Some(direct) = children_by_parent.get(&subject_id) {
-        for &id in direct.iter().rev() {
-            stack.push((id, false));
+        let mut stack: Vec<i64> = Vec::new();
+        for id in direct.iter().rev() {
+            stack.push(*id);
         }
-    }
-    while let Some((id, _)) = stack.pop() {
-        descendant_order.push(id);
-        if let Some(kids) = children_by_parent.get(&id) {
-            let take = kids.len().min(BRANCHING_FACTOR);
-            for &kid in kids.iter().take(take).rev() {
-                stack.push((kid, true));
+        while let Some(id) = stack.pop() {
+            descendant_order.push(id);
+            if let Some(kids) = children_by_parent.get(&id) {
+                let take = kids.len().min(BRANCHING_FACTOR);
+                for &kid in kids.iter().take(take).rev() {
+                    stack.push(kid);
+                }
             }
         }
     }
@@ -161,14 +168,14 @@ async fn fetch(
 
 async fn hydrate(
     ctx: &RequestContext<'_>,
-    _params: &Params,
+    _: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
     post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(
-    _ctx: &RequestContext<'_>,
+    _: &RequestContext<'_>,
     params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -178,7 +185,7 @@ async fn filter(
 
 async fn view(
     ctx: &RequestContext<'_>,
-    _params: &Params,
+    _: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {
