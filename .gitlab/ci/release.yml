@@ -156,6 +156,8 @@ release:
       artifacts: true
     - job: release-android-apk
       artifacts: true
+    - job: kt-core-publish
+      artifacts: true
     - job: release-publish-rs-core
       artifacts: false
     - job: release-publish-npm
@@ -175,3 +177,7 @@ release:
           url: "$APK_PACKAGE_URL"
           link_type: package
           filepath: "/harbor-android.apk"
+        - name: "Kotlin SDK AAR ($CI_COMMIT_TAG)"
+          url: "$KT_CORE_PACKAGE_URL"
+          link_type: package
+          filepath: "/polycentric-core.aar"
