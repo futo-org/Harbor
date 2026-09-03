@@ -9,7 +9,6 @@ import {
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { Portal } from '@rn-primitives/portal';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
-import { Text } from '@/src/common/components/primitives';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import {
@@ -89,15 +88,6 @@ export function MentionSearchOverlay() {
           },
         ]}
       >
-        {entries.length === 0 && (
-          <Text
-            variant="secondary"
-            color="neutral_500"
-            style={[Atoms.px_md, Atoms.py_sm]}
-          >
-            No results
-          </Text>
-        )}
         {entries.map(({ identity }, i) => (
           <MentionRow
             key={identity}

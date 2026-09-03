@@ -32,11 +32,12 @@ export function useMentionSearch() {
     if (wasEnabled && query) users.refresh();
   }, [query]);
 
+  // Under the stable key the last results linger; drop them once the query
+  // is emptied (backspaced down to a bare `@`).
+  const entries = query ? users.entries : [];
+
   return {
-    /** A mention is being completed (an open `@`) — show the overlay. */
-    open: rawQuery !== null,
-    // Under the stable key the last results linger; hide them once the query
-    // is emptied (backspaced down to a bare `@`).
-    entries: query ? users.entries : [],
+    open: rawQuery !== null && entries.length > 0,
+    entries,
   };
 }

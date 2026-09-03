@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AVATAR_SIZE_MAP } from '@/src/common/components';
-import { Text } from '@/src/common/components/primitives';
 import { Atoms, Spacing, useTheme, ZIndex } from '@/src/common/theme';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { useMentionStore } from '../hooks/useMentionStore';
@@ -56,11 +55,6 @@ export function MentionSearchOverlay() {
         contentContainerStyle={Atoms.gap_lg}
         style={[Atoms.flex_1, Atoms.p_lg]}
       >
-        {entries.length === 0 && (
-          <Text variant="secondary" color="neutral_500">
-            No results
-          </Text>
-        )}
         {entries.map((user) => (
           <ProfileRow
             key={user.identity}
