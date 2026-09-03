@@ -47,6 +47,7 @@ pub struct OpenOptions {
 /// Validate the pairing session state and extract its data.
 /// The digest is always verified against its expected hash.
 /// The signature is always checked against the digest's signer.
+/// We also reject expired sessions and outdated states.
 /// The validation logic can be tuned with `opts`.
 pub fn open_state(
     state: PairingSessionState,

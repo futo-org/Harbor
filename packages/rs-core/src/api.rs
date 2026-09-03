@@ -690,10 +690,6 @@ impl PolycentricCore {
     }
 
     /// Fetch a pairing session by its digest's SHA256 hash.
-    /// We only check that the hash matches the digest and the signature matches
-    /// the signer.
-    /// The caller must pull in identity events and check that the signer is
-    /// authorized.
     pub async fn get_pairing_session(
         &self,
         server_url: String,
