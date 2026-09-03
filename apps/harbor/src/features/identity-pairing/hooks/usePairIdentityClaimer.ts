@@ -36,6 +36,16 @@ export function usePairIdentityClaimer(
       setState({ stage: 'error', message });
     };
 
+    const onError = (e: unknown, fallback?: string): void => {
+      if (e instanceof Error) {
+        error(e.message);
+      } else if (fallback) {
+        error(fallback);
+      } else {
+        error('Pairing failed.');
+      }
+    };
+
     // ---  Define handlers for each stage ---
     const whenUnstarted = (): StageResult => {
       if (info) {
@@ -70,13 +80,7 @@ export function usePairIdentityClaimer(
           setState({ stage: 'polling', info, session });
         } catch (err) {
           if (canceled) return;
-
-          const message =
-            err instanceof Error
-              ? err.message
-              : 'Failed to join pairing session.';
-
-          setState({ stage: 'error', message });
+          onError(err, 'Failed to join pairing session.');
         }
       };
 
@@ -128,9 +132,7 @@ export function usePairIdentityClaimer(
           setState({ stage: 'done' });
         } catch (err) {
           if (!canceled) {
-            const message =
-              err instanceof Error ? err.message : 'Failed to claim identity';
-            setState({ stage: 'error', message });
+            onError(err, 'Failed to claim identity');
           }
         }
       })();

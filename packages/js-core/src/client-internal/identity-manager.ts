@@ -253,9 +253,13 @@ export class IdentityManager {
       return state;
     } catch (err: unknown) {
       // Roll back changes as best we can
-      await this.client.setActiveIdentityKey(previousIdentityKey);
+      if (this.client.activeIdentityKey !== previousIdentityKey) {
+        await this.client.setActiveIdentityKey(previousIdentityKey);
+      }
+
       this.client.servers = previousServers;
       this.client.core.setServers(this.client.servers);
+
       throw err;
     }
   }
@@ -386,9 +390,13 @@ export class IdentityManager {
       });
     } catch (err: unknown) {
       // Roll back changes as best we can
-      await this.client.setActiveIdentityKey(previousIdentityKey);
+      if (this.client.activeIdentityKey !== previousIdentityKey) {
+        await this.client.setActiveIdentityKey(previousIdentityKey);
+      }
+
       this.client.servers = previousServers;
       this.client.core.setServers(this.client.servers);
+
       throw err;
     }
 
