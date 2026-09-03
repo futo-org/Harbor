@@ -33,9 +33,12 @@ suspend fun PolycentricClient.getEvent(
     identity: String,
     collection: Int,
     sequence: Long,
+    /** Hex prefix of the signing key, to disambiguate same-sequence events. */
+    signerKeyPrefix: String? = null,
 ): EventBundle? =
-    core.awaitQuery(Query.GetEvent(GetEventArgs(identity, collection, sequence.toULong())))
-        ?.let { EventBundle.ADAPTER.decode(it) }
+    core.awaitQuery(
+        Query.GetEvent(GetEventArgs(identity, collection, sequence.toULong(), signerKeyPrefix)),
+    )?.let { EventBundle.ADAPTER.decode(it) }
 
 suspend fun PolycentricClient.getPostThread(
     postKey: EventKey,
