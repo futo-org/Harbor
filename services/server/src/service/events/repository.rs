@@ -1,24 +1,29 @@
+use crate::config;
 use crate::service::content::content_repository::Mutation as ContentRepository;
 use crate::service::content::repository::Mutation as ContentChildRepository;
 use crate::service::content::repository::{EventKeyParts, split_event_key};
 use crate::service::events::rpc::put_events::event_is_authorised;
+use ::entity::application_model as ApplicationModel;
 use ::entity::block_model as BlockModel;
 use ::entity::content_delete_model as ContentDeleteModel;
 use ::entity::content_model as ContentModel;
 use ::entity::event_model as EventModel;
 use ::entity::follow_model as FollowModel;
 use ::entity::quote_model as QuoteModel;
+use ::entity::reaction_model as ReactionModel;
+use ::entity::reaction_tally_model2 as ReactionTallyModel;
 use ::entity::reply_model as ReplyModel;
 use ::entity::repost_model as RepostModel;
+use chrono::Utc;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Block, Content, ContentDigest, Delete, EventKey, Follow, Post, Reaction,
-    Repost,
+    Application, Block, Content, ContentDigest, Delete, EventKey, Follow, Post,
+    Reaction, Repost,
 };
 use sea_orm::sea_query::{
-    CommonTableExpression, DeleteStatement, Expr, InsertStatement,
-    IntoCondition, IntoTableRef, SelectExpr, SelectStatement,
+    CommonTableExpression, DeleteStatement, Expr, Func, InsertStatement,
+    IntoCondition, IntoTableRef, OnConflict, SelectExpr, SelectStatement,
     SubQueryStatement, UpdateStatement, WithClause,
 };
 use sea_orm::*;
@@ -158,6 +163,39 @@ pub struct HeadInfoRow {
 pub struct Mutation;
 
 impl Mutation {
+    /// Find or create the `application` row for `app`, returning its id.
+    pub async fn application_id<C: ConnectionTrait>(
+        db: &C,
+        app: &Application,
+    ) -> Result<i32, DbErr> {
+        // Keep client-supplied strings within the unique index's limits.
+        const MAX_LEN: usize = 256;
+        let bounded = |s: &str| s.chars().take(MAX_LEN).collect::<String>();
+
+        let row = ApplicationModel::ActiveModel {
+            id: NotSet,
+            name: Set(bounded(&app.name)),
+            identifier: Set(bounded(&app.id)),
+            version: Set(bounded(&app.version)),
+            url: Set(bounded(&app.url)),
+        };
+        // A no-op update makes the existing row's id come back on conflict.
+        let inserted = ApplicationModel::Entity::insert(row)
+            .on_conflict(
+                OnConflict::columns([
+                    ApplicationModel::Column::Name,
+                    ApplicationModel::Column::Identifier,
+                    ApplicationModel::Column::Version,
+                    ApplicationModel::Column::Url,
+                ])
+                .update_column(ApplicationModel::Column::Name)
+                .to_owned(),
+            )
+            .exec(db)
+            .await?;
+        Ok(inserted.last_insert_id)
+    }
+
     /// Store an event and it's content.
     ///
     /// Returns `true` if the event was stored or `false` if the event is
@@ -300,14 +338,25 @@ impl Mutation {
     ) -> Result<InsertStatement, DbErr> {
         let mut query = InsertStatement::new();
         query
-            .into_table("reaction_tally")
-            .columns(["event_id", "positive_count", "negative_count"])
+            .into_table(ReactionTallyModel::Entity)
+            .columns([
+                ReactionTallyModel::Column::EventId,
+                ReactionTallyModel::Column::PositiveCount,
+                ReactionTallyModel::Column::NegativeCount,
+                ReactionTallyModel::Column::DecayedCount,
+            ])
             .select_from({
                 let mut q = SelectStatement::new();
                 q.from(event_table.clone())
                     .expr(Expr::col((event_table.clone(), event_id.clone())))
                     .expr(Expr::Constant(0.into()))
-                    .expr(Expr::Constant(0.into()));
+                    .expr(Expr::Constant(0.into()))
+                    .expr(reaction_count_decay(
+                        Expr::Constant(0.into()), // Reaction count.
+                        // NOTE: this timestamp isn't 100% accurate, but for a
+                        // post without reactions that shouldn't really matter.
+                        Expr::from(Utc::now()),
+                    ));
                 q
             })
             .map_err(|err| {
@@ -365,9 +414,11 @@ impl Mutation {
             with.cte(cte);
         }
 
-        if let Some(reply) = post.reply.as_ref() {
+        if let Some(reply) = post.reply.as_ref()
+            && let Some(reply) = &reply.parent
+        {
             // NOTE: only adding a reply to the parent, not for the root.
-            let key = split_event_key(reply.parent.clone(), "reply")
+            let key = split_event_key(Some(reply.clone()), "reply")
                 .map_err(|err| DbErr::Custom(err.message().into()))?;
             let mut post_event_id = select_not_deleted_event_id(key);
 
@@ -480,8 +531,14 @@ impl Mutation {
 
         let mut insert_reaction = InsertStatement::new();
         insert_reaction
-            .into_table("reaction")
-            .columns(["event_id", "identity", "on_post", "emoji", "positive"])
+            .into_table(ReactionModel::Entity)
+            .columns([
+                ReactionModel::Column::EventId,
+                ReactionModel::Column::Identity,
+                ReactionModel::Column::OnPost,
+                ReactionModel::Column::Emoji,
+                ReactionModel::Column::Positive,
+            ])
             .select_from({
                 post_event_id
                     .clear_selects() // Need to rename.
@@ -519,31 +576,57 @@ impl Mutation {
             .returning_all();
 
         let mut cte = CommonTableExpression::new();
-        cte.table_name("inserted_reaction").query(insert_reaction);
+        const INSERTED_REACTION: &str = "inserted_reaction";
+        cte.table_name(INSERTED_REACTION).query(insert_reaction);
         with.cte(cte);
 
         let positive = if reaction.positive { 1 } else { 0 };
         let negative = if reaction.positive { 0 } else { 1 };
 
         let mut query = UpdateStatement::new();
+        query.table(ReactionTallyModel::Entity).values([
+            (
+                ReactionTallyModel::Column::PositiveCount,
+                Expr::col(
+                    ReactionTallyModel::Column::PositiveCount.as_column_ref(),
+                )
+                .add(Expr::Constant(positive.into())),
+            ),
+            (
+                ReactionTallyModel::Column::NegativeCount,
+                Expr::col(
+                    ReactionTallyModel::Column::NegativeCount.as_column_ref(),
+                )
+                .add(Expr::Constant(negative.into())),
+            ),
+        ]);
+
+        if reaction.positive {
+            query.value(
+                ReactionTallyModel::Column::DecayedCount,
+                reaction_count_decay(
+                    Expr::col(
+                        ReactionTallyModel::Column::PositiveCount
+                            .as_column_ref(),
+                    )
+                    .add(Expr::Constant(positive.into())),
+                    Expr::col(EventModel::Column::CreatedAt.as_column_ref()),
+                ),
+            );
+        }
+
         query
-            .table("reaction_tally")
-            .values([
-                (
-                    "positive_count",
-                    Expr::Column(("reaction_tally", "positive_count").into())
-                        .add(Expr::Constant(positive.into())),
-                ),
-                (
-                    "negative_count",
-                    Expr::Column(("reaction_tally", "negative_count").into())
-                        .add(Expr::Constant(negative.into())),
-                ),
-            ])
-            .from("inserted_reaction")
+            .from(INSERTED_REACTION)
+            // This should be an inner join, but SeaORM doesn't support this,
+            // see <https://github.com/SeaQL/sea-query/issues/608>.
+            .from(EventModel::Entity)
+            .and_where(
+                Expr::col(EventModel::Column::Id.as_column_ref())
+                    .eq(Expr::Column((INSERTED_REACTION, "on_post").into())),
+            )
             .and_where(
                 Expr::Column(("reaction_tally", "event_id").into())
-                    .eq(Expr::Column(("inserted_reaction", "on_post").into())),
+                    .eq(Expr::Column((INSERTED_REACTION, "on_post").into())),
             );
 
         Ok(query)
@@ -612,12 +695,15 @@ impl Mutation {
                 // Delete the tally for the post.
                 let mut delete_reaction_tally = DeleteStatement::new();
                 delete_reaction_tally
-                    .from_table("reaction_tally")
-                    .cond_where(Expr::col("event_id").in_subquery({
-                        let mut q = SelectStatement::new();
-                        q.column("id").from("event_id");
-                        q
-                    }));
+                    .from_table(ReactionTallyModel::Entity)
+                    .cond_where(
+                        Expr::col(ReactionTallyModel::Column::EventId)
+                            .in_subquery({
+                                let mut q = SelectStatement::new();
+                                q.column("id").from("event_id");
+                                q
+                            }),
+                    );
                 let mut cte = CommonTableExpression::new();
                 cte.table_name("deleted_reaction_tally")
                     .query(delete_reaction_tally);
@@ -681,8 +767,8 @@ impl Mutation {
 
                 // Delete all reactions to the post.
                 let mut query = DeleteStatement::new();
-                query.from_table("reaction").cond_where(
-                    Expr::col("on_post").in_subquery({
+                query.from_table(ReactionModel::Entity).cond_where(
+                    Expr::col(ReactionModel::Column::OnPost).in_subquery({
                         let mut q = SelectStatement::new();
                         q.column("id").from("event_id");
                         q
@@ -723,12 +809,12 @@ impl Mutation {
 
                 let mut query = UpdateStatement::new();
                 query
-                    .table("reaction_tally")
+                    .table(ReactionTallyModel::Entity)
                     .values([
                         (
-                            "positive_count",
-                            Expr::Column(
-                                ("reaction_tally", "positive_count").into(),
+                            ReactionTallyModel::Column::PositiveCount,
+                            Expr::col(
+                                ReactionTallyModel::Column::PositiveCount.as_column_ref()
                             )
                             .sub(
                                 Expr::case(
@@ -739,9 +825,9 @@ impl Mutation {
                             ),
                         ),
                         (
-                            "negative_count",
-                            Expr::Column(
-                                ("reaction_tally", "negative_count").into(),
+                            ReactionTallyModel::Column::NegativeCount,
+                            Expr::col(
+                                ReactionTallyModel::Column::NegativeCount.as_column_ref()
                             )
                             .sub(
                                 Expr::case(
@@ -751,10 +837,34 @@ impl Mutation {
                                 .finally(Expr::Constant(1.into())),
                             ),
                         ),
+                        (
+                            ReactionTallyModel::Column::DecayedCount,
+                            Expr::case(
+                                Expr::Column("positive".into()),
+                                reaction_count_decay(
+                                    Expr::col(ReactionTallyModel::Column::PositiveCount.as_column_ref()),
+                                    Expr::col(EventModel::Column::CreatedAt.as_column_ref()),
+                                )
+                            )
+                            // No change.
+                            .finally(
+                                Expr::col(
+                                    ReactionTallyModel::Column::DecayedCount.as_column_ref()
+                                )
+                            ).into(),
+                        ),
                     ])
                     .from("deleted_reaction")
+                    // This should be an inner join, but SeaORM doesn't support this,
+                    // see <https://github.com/SeaQL/sea-query/issues/608>.
+                    .from(EventModel::Entity)
                     .and_where(
-                        Expr::Column(("reaction_tally", "event_id").into()).eq(
+                        Expr::col(EventModel::Column::Id.as_column_ref())
+                            .eq(Expr::col(ReactionTallyModel::Column::EventId.as_column_ref())),
+                    )
+                    .and_where(
+                        Expr::col(ReactionTallyModel::Column::EventId.as_column_ref())
+                        .eq(
                             Expr::Column(
                                 ("deleted_reaction", "on_post").into(),
                             ),
@@ -858,6 +968,16 @@ fn select_not_deleted_event_id(key: EventKeyParts) -> SelectStatement {
     query
 }
 
+fn reaction_count_decay(positive_count: Expr, created_at: Expr) -> Expr {
+    let mut func = Func::cust("reaction_count_decay");
+    func = if let Some(gravity) = config::get().feeds_gravity {
+        func.args([positive_count, created_at, Expr::Constant(gravity.into())])
+    } else {
+        func.args([positive_count, created_at])
+    };
+    func.into()
+}
+
 /* TODO: move to integration tests.
 #[cfg(test)]
 mod tests {
@@ -896,6 +1016,7 @@ mod tests {
             signature: vec![],
             previous_signature: vec![],
             previous_root: vec![],
+            application_id: None,
             event_bytes: vec![1],
             created_at: now(),
             synced_at: now(),

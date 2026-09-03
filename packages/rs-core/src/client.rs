@@ -14,6 +14,7 @@ use crate::lock::LockRecover;
 use crate::store::{
     content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
     identity_store::IdentityStore, keys::EventKey, meta_store::MetaStore,
+    pairing_store::PairingStore,
 };
 use prost::Message;
 use std::collections::HashSet;
@@ -42,6 +43,7 @@ pub struct PolycentricClient {
     content_store: ContentStore,
     meta_store: MetaStore,
     identity_store: IdentityStore,
+    pairing_store: PairingStore,
 }
 
 impl PolycentricClient {
@@ -233,13 +235,7 @@ impl PolycentricClient {
         let mut prepared: Vec<(Event, EventBundle)> = bundles
             .into_iter()
             .filter_map(|bundle| {
-                let signed_event = bundle.signed_event.as_ref()?;
-
-                if signed_event.verify_signature().is_err() {
-                    return None;
-                }
-
-                let event = Event::decode(signed_event.event_bytes.as_slice()).ok()?;
+                let event = bundle.signed_event.as_ref()?.open().ok()?;
                 Some((event, bundle))
             })
             .collect();
@@ -512,6 +508,18 @@ impl PolycentricClient {
             .collect()
     }
 
+    /// Ensure that the pairing store considers `sequence` to be an observed sequence
+    /// for the specified pairing session.
+    pub fn accept_pairing_sequence(&mut self, digest_sha256: &[u8], sequence: i64) {
+        self.pairing_store.accept_sequence(digest_sha256, sequence);
+    }
+
+    /// Returns whether a pairing session state with this sequence should be used.
+    /// This should be called for every pairing session state we receive from a remote.
+    pub fn try_pairing_sequence(&mut self, digest_sha256: &[u8], sequence: i64) -> bool {
+        self.pairing_store.try_sequence(digest_sha256, sequence)
+    }
+
     /// Validate an event against its identity chain, identity content,
     /// revocation status, and vector clock.
     pub fn validate_event(
@@ -728,6 +736,7 @@ mod tests {
             previous_root: Vec::new(),
             content_digest: Some(content_digest),
             created_at: 0,
+            application: None,
         };
         let event_bytes = event.encode_to_vec();
         let signature = signer.signing.sign(&event_bytes).to_bytes().to_vec();

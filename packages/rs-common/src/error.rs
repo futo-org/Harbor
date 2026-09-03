@@ -20,7 +20,7 @@ pub enum CoreError {
     #[error("Deserialization error: {0}")]
     DeserializationError(String),
 
-    #[error("Deserialization error: {0}")]
+    #[error("Signature error: {0}")]
     SignatureError(String),
 
     #[error("Storage error: {0}")]

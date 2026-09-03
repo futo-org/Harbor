@@ -24,7 +24,7 @@ impl fmt::Display for SignatureError {
 }
 
 /// Verify an ed25519 signature over the given message bytes.
-pub fn verify_signature(
+pub fn verify_ed25519_signature(
     public_key_bytes: &[u8],
     signature_bytes: &[u8],
     message: &[u8],

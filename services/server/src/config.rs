@@ -1,6 +1,7 @@
 //! Server configuration sourced from the environment.
 
 use std::sync::OnceLock;
+use std::time::Duration;
 
 pub struct Config {
     /// The canonical URL of this server (`POLYCENTRIC_SERVER_NAME`). Also
@@ -11,6 +12,11 @@ pub struct Config {
     pub allow_hosts: Vec<String>,
     /// Postgres connection URL (`DATABASE_URL`).
     pub database_url: String,
+    /// Postgres read-only connection URL (`DATABASE_URL_RO`).
+    pub ro_database_url: Option<String>,
+    /// Maximum size of the Postgres connection pool
+    /// (`POLYCENTRIC_DATABASE_MAX_CONNECTIONS`).
+    pub database_max_connections: u32,
     /// Public URL clients use to fetch blob bodies (`CDN_URL`).
     pub cdn_url: String,
     /// Base URL of the internal scraper service (`POLYCENTRIC_SCRAPER_URL`).
@@ -39,6 +45,8 @@ pub struct Config {
     /// The number of hours in which to consider the reactions to compute the
     /// dynamic gravity value. See `dynamic_feeds_gravity_per_reaction`.
     pub dynamic_feeds_gravity_hours: usize,
+    /// How often the decayed reaction counts should be updated.
+    pub feed_count_update_frequency: Duration,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -62,6 +70,13 @@ pub fn init() -> &'static Config {
             database_url: std::env::var("DATABASE_URL").unwrap_or_else(|_| {
                 "postgres://postgres:testing@localhost:5432".to_string()
             }),
+            ro_database_url: std::env::var("DATABASE_URL_RO").ok(),
+            database_max_connections: std::env::var(
+                "POLYCENTRIC_DATABASE_MAX_CONNECTIONS",
+            )
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(100),
             cdn_url: std::env::var("CDN_URL")
                 .unwrap_or_else(|_| "http://localhost:3000".to_string()),
             scraper_url: std::env::var("POLYCENTRIC_SCRAPER_URL")
@@ -85,6 +100,14 @@ pub fn init() -> &'static Config {
             .ok()
             .and_then(|s| s.trim().parse().ok())
             .unwrap_or(24),
+            feed_count_update_frequency: Duration::from_secs(
+                std::env::var(
+                    "POLYCENTRIC_FEEDS_GRAVITY_COUNTS_UPDATE_FREQUENCY_SECS",
+                )
+                .ok()
+                .and_then(|s| s.trim().parse().ok())
+                .unwrap_or(5 * 60), // 5 minutes (as seconds).
+            ),
             server_name,
         }
     })

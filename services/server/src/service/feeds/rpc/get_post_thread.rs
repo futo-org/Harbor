@@ -67,7 +67,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let subject_row = FeedsRepository::find_event_by_key(
-        &ctx.service.db,
+        &ctx.service.ro_db,
         params.collection,
         &params.identity,
         params.public_key_type,
@@ -80,7 +80,7 @@ async fn fetch(
     let subject_id = subject_row.0.id;
 
     let ancestor_refs = FeedsRepository::list_ancestor_refs(
-        &ctx.service.db,
+        &ctx.service.ro_db,
         subject_id,
         PARENT_HEIGHT_LIMIT,
     )
@@ -88,7 +88,7 @@ async fn fetch(
     .map_err(map_db_err)?;
 
     let descendant_refs = FeedsRepository::list_descendant_refs(
-        &ctx.service.db,
+        &ctx.service.ro_db,
         subject_id,
         DESCENDANT_DEPTH_LIMIT,
         params.descendants_limit,
@@ -128,7 +128,7 @@ async fn fetch(
     all_ids.extend(ancestor_refs.iter().map(|r| r.event_id));
     all_ids.extend(descendant_order.iter().copied());
     let mut by_id: HashMap<i64, EventWithContentRow> =
-        FeedsRepository::list_events_by_ids(&ctx.service.db, all_ids)
+        FeedsRepository::list_events_by_ids(&ctx.service.ro_db, all_ids)
             .await
             .map_err(map_db_err)?
             .into_iter()
@@ -222,6 +222,7 @@ mod tests {
             signature: vec![id as u8],
             previous_signature: vec![],
             previous_root: vec![],
+            application_id: None,
             event_bytes: vec![id as u8],
             created_at: ts(id),
             synced_at: ts(id),

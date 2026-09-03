@@ -180,6 +180,7 @@ export class IdentityManager {
         previousSignature: new Uint8Array(0),
         contentDigest: digest,
         createdAt: BigInt(Date.now()),
+        application: this.client.application,
       });
     } else {
       event = await this.client.buildEvent(content, COLLECTION.IDENTITY);
@@ -198,40 +199,6 @@ export class IdentityManager {
     await this.client.sync(SyncStrategy.PARTIAL_PUSH);
 
     return { identityKey: resolvedIdentityKey, signedEvent };
-  }
-
-  /**
-   * Poll a specific server and return a marker for its knowledge of the identity
-   * events belonging to the specified identity.
-   * Claimers should try claiming again each time the returned value changes.
-   */
-  async pollRemoteIdentityMarker(
-    identityKey: string,
-    server?: string,
-  ): Promise<bigint | null> {
-    const targetServer = server ?? this.client.servers[0];
-    if (!targetServer) throw new Error('No servers configured');
-
-    const responseBytes = await this.client.core.listHeads(
-      targetServer,
-      Proto.ListHeadsRequest.toBinary({ identity: identityKey })
-        .buffer as ArrayBuffer,
-    );
-
-    const response = Proto.ListHeadsResponse.fromBinary(
-      new Uint8Array(responseBytes),
-    );
-
-    // The marker will be the sum of the identity heads or null if there are none
-    let marker: bigint | null = null;
-
-    for (const head of response.heads) {
-      if (head.collection !== COLLECTION.IDENTITY) continue;
-      if (head.identity !== identityKey) continue;
-      marker = (marker ?? 0n) + head.sequence;
-    }
-
-    return marker;
   }
 
   /**

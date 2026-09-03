@@ -10,6 +10,7 @@ import {
   type types,
   type IdentityState,
 } from '@polycentric/react-native';
+import { HARBOR_APPLICATION } from '@/src/common/util/application';
 import {
   useCallback,
   useEffect,
@@ -197,6 +198,7 @@ export function PolycentricProvider({
         const c = await createPolycentricClient({
           databaseName: 'polycentric.db',
           seedServers: DEFAULT_SEED_SERVERS,
+          application: HARBOR_APPLICATION,
         });
 
         if (cancelled) return;

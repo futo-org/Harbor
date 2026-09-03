@@ -39,6 +39,10 @@ pub struct Model {
     // as known at sign time. Denormalized from event_bytes for proof lookups.
     pub previous_root: Vec<u8>,
 
+    // Application that created the event (`application` table), denormalized
+    // from event_bytes.
+    pub application_id: Option<i32>,
+
     // We need to store the raw event due to non-deterministic serialization
     pub event_bytes: Vec<u8>,
 

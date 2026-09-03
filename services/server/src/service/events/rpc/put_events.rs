@@ -107,7 +107,7 @@ async fn process_event(
         Some(false) => { /* Ok to continue. */ }
         None => {
             let is_banned = IdentityRepository::is_banned(
-                &ctx.db,
+                &ctx.ro_db,
                 &key.identity,
             )
             .await
@@ -130,12 +130,11 @@ async fn process_event(
         Status::invalid_argument("event key missing signed_by")
     })?;
 
-    polycentric_common::signing::verify_signature(
-        &signed_by.key,
-        &signed_event.signature,
-        &signed_event.event_bytes,
-    )
-    .map_err(|e| Status::unauthenticated(e.to_string()))?;
+    if !signed_by
+        .sig_matches(&signed_event.signature, &signed_event.event_bytes)
+    {
+        return Err(Status::unauthenticated("invalid signature"));
+    }
 
     // Decode the event before we begin the transaction.
     let decoded_content = if let (Some(serialized_content), Some(digest)) =
@@ -189,6 +188,16 @@ async fn process_event(
         .await?;
     }
 
+    let application_id = match &event.application {
+        Some(app) => {
+            Some(EventsRepository::Mutation::application_id(&txn, app).await.map_err(|e| {
+                tracing::error!(error = %e, "put_events application db error");
+                Status::internal("internal server error")
+            })?)
+        }
+        None => None,
+    };
+
     let event_identity = key.identity.clone();
     let event_collection = key.collection;
 
@@ -210,6 +219,7 @@ async fn process_event(
         signature: Set(signed_event.signature),
         previous_signature: Set(event.previous_signature),
         previous_root: Set(event.previous_root),
+        application_id: Set(application_id),
         event_bytes: Set(signed_event.event_bytes),
         created_at: Set(DateTime::from_timestamp_secs(
             (event.created_at / 1000) as i64,
@@ -338,7 +348,7 @@ async fn remove_present_blobs(
         .collect();
 
     let already_present =
-        ContentRepository::Query::find_digests_in_db(&ctx.db, &digests)
+        ContentRepository::Query::find_digests_in_db(&ctx.ro_db, &digests)
             .await
             .map_err(|e| {
                 tracing::error!(error = %e, "put_events blob db error");

@@ -22,7 +22,7 @@ pub(crate) fn start_jobs(db: DatabaseConnection) -> Cron {
         cancel: CancellationToken::new(),
     };
 
-    gravity::start(&cron, db.clone());
+    gravity::update(&cron, db.clone());
 
     cron
 }
@@ -67,6 +67,7 @@ impl Cron {
 #[derive(Copy, Clone, Debug)]
 enum AdvisoryLock {
     Gravity = 0,
+    DecayedReactionCounts = 1,
 }
 
 impl AdvisoryLock {
@@ -91,7 +92,7 @@ impl AdvisoryLock {
     /// lot (especially if it's not needed).
     async fn try_lock(
         self,
-        db: DatabaseConnection,
+        db: &DatabaseConnection,
     ) -> Result<Option<DatabaseTransaction>, DbErr> {
         let tx = db.begin().await?;
 

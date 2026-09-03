@@ -57,6 +57,7 @@
 //! [`events`]: event_model
 //! [`content`]: content_model
 
+pub mod application_model;
 pub mod attributed_to_reaction_summary_model;
 pub mod ban_model;
 pub mod block_model;
@@ -81,6 +82,7 @@ pub mod content_verification_verify_model;
 pub mod default_follow_suggestion_model;
 pub mod event_model;
 pub mod follow_model;
+pub mod gravity_model;
 pub mod moderator_model;
 pub mod notification;
 pub mod pairing_session_claimer_model;
