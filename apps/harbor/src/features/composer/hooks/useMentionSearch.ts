@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId } from 'react';
 import { useSearchUsers } from '@/src/features/search/hooks/useSearchUsers';
 import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
 import { selectMentionQuery, useMentionStore } from './useMentionStore';
@@ -24,12 +24,9 @@ export function useMentionSearch() {
   // which closes the overlay. Under a stable key useQuery never refetches on
   // its own, so refresh on each query change — except the first non-empty one,
   // where `enabled` flipping already subscribed and fetched.
-  const prevQuery = useRef(query);
   // biome-ignore lint/correctness/useExhaustiveDependencies: only react to query change
   useEffect(() => {
-    const wasEnabled = !!prevQuery.current;
-    prevQuery.current = query;
-    if (wasEnabled && query) users.refresh();
+    if (query && !users.isLoading) users.refresh();
   }, [query]);
 
   // Under the stable key the last results linger; drop them once the query
