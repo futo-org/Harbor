@@ -9,14 +9,21 @@ import {
 import type { ProfileHookResult } from '@/src/features/profile/hooks/useProfile';
 import { isWeb } from '@/src/common/util/platform';
 
-// Chars the autocomplete searches through: unicode letters, numbers,
-// underscores, and at most one space (a two-word name search; a second space
-// means the user has moved on and the overlay should get out of the way).
-// Anything else between the `@` and the caret means no autocomplete there.
-const QUERY_CHARS = /^[\p{L}\p{N}_]*(?: [\p{L}\p{N}_]*)?$/u;
+// A word char: unicode letter, number, or underscore.
+const WORD = '[\\p{L}\\p{N}_]';
+
+// Chars the autocomplete searches through: word chars, at most one `@` glued
+// to a preceding word (a `@user@domain` alias), and at most one space (a
+// two-word name search; a second space means the user has moved on and the
+// overlay should get out of the way). Anything else between the `@` and the
+// caret means no autocomplete there.
+const QUERY_CHARS = new RegExp(
+  `^(?:${WORD}*|${WORD}+@${WORD}*)(?: ${WORD}*)?$`,
+  'u',
+);
 
 // The word-char run at the caret, for extending a mid-word replacement.
-const WORD_RUN = /^[\p{L}\p{N}_]*/u;
+const WORD_RUN = new RegExp(`^${WORD}*`, 'u');
 
 /**
  * The composer input's live state, shared between the input (ComposerFields,
@@ -147,17 +154,20 @@ function pushTextToInput(
 /**
  * The open mention context at `caret` in `text`, or null. Pure — autocomplete
  * is open exactly when:
- * - the nearest `@` before the caret is standalone (not glued to a preceding
- *   word, see `TOKEN_PRECEDER` — an email's `@` never counts),
+ * - the nearest standalone `@` before the caret (one glued to a preceding
+ *   word, see `TOKEN_PRECEDER`, is skipped over: an email's `@` never counts,
+ *   and the second `@` of `@user@domain` belongs to the query),
  * - everything between it and the caret is `QUERY_CHARS` (at most one
  *   space), not starting with a space ("email me @ home" stays closed), and
  * - that `@` doesn't begin an already-recognized mention
  *   (e.g. the caret in `@al|ias.example.com`).
  */
 export function findMentionContext(text: string, caret: number) {
-  const at = text.lastIndexOf('@', caret - 1);
+  let at = text.lastIndexOf('@', caret - 1);
+  while (at > 0 && TOKEN_PRECEDER.test(text[at - 1])) {
+    at = text.lastIndexOf('@', at - 1);
+  }
   if (at === -1 || at >= caret) return null;
-  if (at > 0 && TOKEN_PRECEDER.test(text[at - 1])) return null;
 
   const query = text.slice(at + 1, caret);
   if (!QUERY_CHARS.test(query) || query.startsWith(' ')) return null;

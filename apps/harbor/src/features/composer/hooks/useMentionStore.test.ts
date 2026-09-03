@@ -32,6 +32,21 @@ describe('findMentionContext', () => {
     expect(findMentionContext('a@b', 3)).toBeNull();
   });
 
+  it('stays open through the second @ of a @user@domain alias', () => {
+    expect(findMentionContext('@user@', 6)).toEqual({
+      start: 0,
+      query: 'user@',
+    });
+    expect(findMentionContext('hi @user@dom', 12)).toEqual({
+      start: 3,
+      query: 'user@dom',
+    });
+    // Still an email, not a mention, when no standalone @ precedes it.
+    expect(findMentionContext('foo bar@dom', 11)).toBeNull();
+    // A second @ after the space is an email following a mention.
+    expect(findMentionContext('@ann foo@dom', 12)).toBeNull();
+  });
+
   it('is closed when the query starts with a space', () => {
     expect(findMentionContext('email me @ home', 15)).toBeNull();
   });
