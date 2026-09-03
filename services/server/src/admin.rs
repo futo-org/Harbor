@@ -70,10 +70,9 @@ pub async fn prune_content(args: Vec<String>) {
 
     let db = connect().await;
     if !yes {
-        let count = Query::orphan_content_ids(&db)
+        let count = Query::count_orphan_content(&db)
             .await
-            .expect("failed to find orphaned content")
-            .len();
+            .expect("failed to count orphaned content");
         println!(
             "{count} content rows would be deleted; add --yes to delete them"
         );
