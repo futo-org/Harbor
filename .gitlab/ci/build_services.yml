@@ -43,30 +43,34 @@
     reports:
       junit: target/nextest/ci/junit.xml
 
-.service-image:
-  image:
-    name: moby/buildkit:rootless
-    entrypoint: [""]
+# Image builds run on a BuildKit builder that lives on the runner host, so
+# cached layers come from local disk instead of the registry on every job.
+# The registry cache remains the fallback for other runners.
+.buildx:
   before_script:
-    - mkdir -p ~/.docker
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - printf '[worker.oci]\n  gc = true\n  gckeepstorage = 20000\n' > buildkitd.toml
+    - docker buildx create --name ci --driver docker-container --buildkitd-config buildkitd.toml
+    - docker buildx inspect --bootstrap ci >/dev/null
+
+.service-image:
   stage: build
+  before_script:
+    - !reference [.buildx, before_script]
   script:
     # The default branch also gets a moving tag, used as the integration
     # tests' fallback image.
     - |
-      NAMES="$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA"
+      TAGS="-t $CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_COMMIT_SHA"
       if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
-        NAMES="$NAMES,$CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_DEFAULT_BRANCH"
+        TAGS="$TAGS -t $CI_REGISTRY_IMAGE/${SERVICE_NAME}:$CI_DEFAULT_BRANCH"
       fi
-      buildctl-daemonless.sh build \
-        --frontend dockerfile.v0 \
-        --local context=. \
-        --local dockerfile=./services/${SERVICE_DIR} \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_DEFAULT_BRANCH \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_COMMIT_REF_SLUG \
-        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_COMMIT_REF_SLUG,mode=max \
-        --output "type=image,\"name=$NAMES\",push=true"
+      docker buildx build --builder ci --push $TAGS \
+        -f services/${SERVICE_DIR}/Dockerfile \
+        --cache-from type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_DEFAULT_BRANCH \
+        --cache-from type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_COMMIT_REF_SLUG \
+        --cache-to type=registry,ref=$CI_REGISTRY_IMAGE/${SERVICE_NAME}:cache-$CI_COMMIT_REF_SLUG,mode=max \
+        .
 
 ########################################################################
 # server

@@ -93,27 +93,21 @@ web-image:
       artifacts: true
     - job: app-version
       artifacts: true
-  image:
-    name: moby/buildkit:rootless
-    entrypoint: [""]
-  before_script:
-    - mkdir -p ~/.docker
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
   stage: build
+  before_script:
+    - !reference [.buildx, before_script]
   script:
     - |
-      buildctl-daemonless.sh build \
-        --frontend dockerfile.v0 \
-        --local context=. \
-        --local dockerfile=./apps/harbor \
-        --opt build-arg:APP_VERSION=$APP_VERSION \
-        --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS \
-        --opt build-arg:EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS \
-        --opt build-arg:SKIP_WORKSPACE_BUILD=1 \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/web:cache-$CI_DEFAULT_BRANCH \
-        --import-cache type=registry,ref=$CI_REGISTRY_IMAGE/web:cache-$CI_COMMIT_REF_SLUG \
-        --export-cache type=registry,ref=$CI_REGISTRY_IMAGE/web:cache-$CI_COMMIT_REF_SLUG,mode=max \
-        --output type=image,name=$CI_REGISTRY_IMAGE/web:$CI_COMMIT_SHA,push=true
+      docker buildx build --builder ci --push -t $CI_REGISTRY_IMAGE/web:$CI_COMMIT_SHA \
+        -f apps/harbor/Dockerfile \
+        --build-arg APP_VERSION=$APP_VERSION \
+        --build-arg EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS \
+        --build-arg EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS \
+        --build-arg SKIP_WORKSPACE_BUILD=1 \
+        --cache-from type=registry,ref=$CI_REGISTRY_IMAGE/web:cache-$CI_DEFAULT_BRANCH \
+        --cache-from type=registry,ref=$CI_REGISTRY_IMAGE/web:cache-$CI_COMMIT_REF_SLUG \
+        --cache-to type=registry,ref=$CI_REGISTRY_IMAGE/web:cache-$CI_COMMIT_REF_SLUG,mode=max \
+        .
 
 # Web e2e: drives the image this pipeline built, started as a job service,
 # with a headless Chromium.
