@@ -1297,6 +1297,7 @@ name = "common-kafka"
 version = "0.0.1"
 dependencies = [
  "rdkafka",
+ "tracing",
 ]
 
 [[package]]
