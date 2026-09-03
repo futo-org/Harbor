@@ -1,4 +1,5 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
 import type { PairingSession, v2 } from '@polycentric/react-native';
 import { useEffect, useState } from 'react';
 
@@ -63,12 +64,6 @@ export function usePairIdentityClaimer(
             await client.pairingSessionManager.getPairingSession(info);
           if (canceled) return;
 
-          // TODO: handle servers more robustly
-          if (!client.servers.includes(info.server)) {
-            client.servers = [...client.servers, info.server];
-            client.core.setServers(client.servers);
-          }
-
           await client.pairingSessionManager.joinPairingSession(info);
           if (canceled) return;
 
@@ -120,20 +115,17 @@ export function usePairIdentityClaimer(
       };
     };
 
-    const whenClaiming = ({ session }: ClaimingState): StageResult => {
+    const whenClaiming = ({ info, session }: ClaimingState): StageResult => {
       let canceled = false;
 
       void (async () => {
         try {
           const identityKey = session.digest.issuerIdentity;
-          const identityState = await client.identityManager.claim(identityKey);
+          const claimServers = serversForClaim(session, info, client.servers);
+          await client.identityManager.claim(identityKey, claimServers);
           if (canceled) return;
 
-          if (identityState) {
-            setState({ stage: 'done' });
-          } else {
-            setState({ stage: 'error', message: 'Failed to claim identity' });
-          }
+          setState({ stage: 'done' });
         } catch (err) {
           if (!canceled) {
             const message =
@@ -171,4 +163,26 @@ export function usePairIdentityClaimer(
     approved: state.stage === 'done',
     claimInProgress: state.stage === 'joining',
   };
+}
+
+/** Servers to query identity events from while claiming the paired identity. */
+function serversForClaim(
+  session: PairingSession,
+  info: v2.PairingInfo,
+  currentServers: string[],
+): string[] {
+  const bundle = session.issuerState.identityState;
+  if (!bundle) {
+    throw new Error('Pairing session has no issuer identity state.');
+  }
+
+  const decoded = decodeBundle(bundle, 'identity');
+  if (!decoded) {
+    throw new Error('Pairing session issuer identity state is invalid.');
+  }
+
+  const declared = decoded.content.servers;
+  if (declared) return declared.urls;
+
+  return [...new Set([...currentServers, info.server])];
 }
