@@ -1,5 +1,8 @@
-import { useEffect, useId } from 'react';
-import { useSearchUsers } from '@/src/features/search/hooks/useSearchUsers';
+import { useRef } from 'react';
+import {
+  useSearchUsers,
+  type UserSearchEntry,
+} from '@/src/features/search/hooks/useSearchUsers';
 import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
 import { selectMentionQuery, useMentionStore } from './useMentionStore';
 
@@ -9,29 +12,18 @@ import { selectMentionQuery, useMentionStore } from './useMentionStore';
  */
 export function useMentionSearch() {
   const rawQuery = useMentionStore(selectMentionQuery)?.trim() ?? null;
-  const query = useDebouncedValue(rawQuery);
+  // Debounced only while typing; closing is immediate, so a fast reopen can't
+  // inherit the previous query.
+  const query = useDebouncedValue(rawQuery, rawQuery ? 300 : 0);
 
-  const users = useSearchUsers(query ?? '', {
-    limit: 10,
-    enabled: !!query,
-    // Per host (useId): the compose tab stays mounted under a reply sheet, and
-    // a shared key would let the two overwrite each other's results.
-    queryKey: ['mentions_autocomplete', useId()],
-  });
+  const users = useSearchUsers(query ?? '', { limit: 10, enabled: !!query });
 
-  // Stable queryKey + manual refresh. Keying by the search string gives an empty
-  // `entries` frame on every query change while the new request is in flight,
-  // which closes the overlay. Under a stable key useQuery never refetches on
-  // its own, so refresh on each query change — except the first non-empty one,
-  // where `enabled` flipping already subscribed and fetched.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only react to query change
-  useEffect(() => {
-    if (query && !users.isLoading) users.refresh();
-  }, [query]);
-
-  // Under the stable key the last results linger; drop them once the query
-  // is emptied (backspaced down to a bare `@`).
-  const entries = query ? users.entries : [];
+  // Keep the previous results while the next query loads, so the overlay
+  // doesn't blink between keystrokes; an empty query clears them. (A disabled
+  // search still reads as loading, hence the explicit `!query`.)
+  const shown = useRef<UserSearchEntry[]>([]);
+  if (!query || !users.isLoading) shown.current = users.entries;
+  const entries = shown.current;
 
   return {
     open: rawQuery !== null && entries.length > 0,
