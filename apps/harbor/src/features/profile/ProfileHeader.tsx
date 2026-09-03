@@ -8,11 +8,7 @@ import {
   Text,
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import {
-  shortenIdentityId,
-  truncateName,
-  useUsername,
-} from '@/src/common/lib/polycentric-hooks';
+import { truncateName, useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
@@ -39,10 +35,14 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
 
   const username = profile.name ?? fallbackUsername;
 
-  const short = identityKey ? shortenIdentityId(identityKey) : '...';
+  const displayKey = identityKey ? identityKey.slice(0, 64) : '...';
 
   const handleEdit = useCallback(() => {
     if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
+  }, [identityKey]);
+
+  const handleIdentityPress = useCallback(() => {
+    if (identityKey) router.push(Routes.tabs.profileIdentity(identityKey));
   }, [identityKey]);
 
   const handleAvatarPress = useCallback(() => {
@@ -116,12 +116,28 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           <Text variant="title" fontWeight="bold">
             {truncateName(username, 32)}
           </Text>
-          <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View identity details"
+            onPress={handleIdentityPress}
+            style={({ pressed }) => [
+              Atoms.flex_row,
+              Atoms.items_center,
+              Atoms.gap_xs,
+              pressed && { opacity: 0.5 },
+            ]}
+          >
             <Icon name="key" size={13} color="neutral_500" />
-            <Text variant="secondary" color="neutral_500">
-              {short}
+            <Text
+              variant="secondary"
+              color="neutral_500"
+              numberOfLines={1}
+              ellipsizeMode="middle"
+              style={{ flexShrink: 1 }}
+            >
+              {displayKey}
             </Text>
-          </View>
+          </Pressable>
           {alias ? <AliasLabel alias={alias} /> : null}
           {profile.description ? (
             <View style={Atoms.mt_sm}>
