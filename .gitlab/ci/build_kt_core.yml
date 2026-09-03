@@ -1,5 +1,5 @@
 # Kotlin SDK (packages/kt-core): compile the AAR on code changes and
-# publish it to the project's Maven package registry on release tags.
+# publish it to the project's Maven package registry on tag pipelines.
 .kt-core-workflow:
   rules:
     - if: $CI_COMMIT_TAG
@@ -56,11 +56,13 @@
     - rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
     - cd packages/kt-core
 
-# Compilation test for all MRs and default-branch changes to relevant code.
+# Compilation test for all MRs, default-branch changes to relevant code,
+# and tag pipelines.
 kt-core-build:
   extends: .kt-core-gradle
   stage: build
   rules:
+    - if: $CI_COMMIT_TAG
     - !reference [.kt-core-workflow, rules]
   script:
     - ./gradlew :core:assembleRelease
@@ -69,12 +71,12 @@ kt-core-build:
       - packages/kt-core/core/build/outputs/aar
     expire_in: 1 week
 
-# Publish to the GitLab Maven registry on release tags only.
+# Publish to the GitLab Maven registry on any tag pipeline.
 kt-core-publish:
   extends: .kt-core-gradle
   stage: publish
   rules:
-    - !reference [.release-workflow, rules]
+    - if: $CI_COMMIT_TAG
   script:
     - ./gradlew :core:publishReleasePublicationToGitLabRepository -PktCoreVersion="${CI_COMMIT_TAG#v}"
     # URL for the release asset link in release.yml.
