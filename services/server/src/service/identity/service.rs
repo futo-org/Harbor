@@ -17,7 +17,7 @@ use sea_orm::{
     ConnectionTrait, DatabaseConnection, DbErr, RuntimeErr, TransactionTrait,
 };
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tonic::Status;
 
 const ALL_COLLECTIONS: [i32; 8] = [
@@ -46,6 +46,7 @@ pub async fn erase_events(
     let mut total = Erased::default();
     let mut after = 0;
     loop {
+        let started = Instant::now();
         let batch = retry_deadlocks(|| async {
             let txn = db.begin().await?;
             let batch = IdentityMutation::erase_events_batch(
@@ -71,6 +72,7 @@ pub async fn erase_events(
             events = total.events,
             content = total.content,
             blobs = total.blobs,
+            batch_ms = started.elapsed().as_millis(),
             "erased batch"
         );
     }

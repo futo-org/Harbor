@@ -286,12 +286,25 @@ impl Mutation {
             .map(|row| row.try_get("", "identity"))
             .collect::<Result<Vec<String>, _>>()?;
 
+        db.execute_unprepared("ANALYZE erase_events; ANALYZE erase_content")
+            .await?;
+
         for (table, column) in CACHE_EVENT_COLUMNS {
             db.execute_unprepared(&format!(
                 "DELETE FROM {table} WHERE {column} IN (SELECT id FROM erase_events)"
             ))
             .await?;
         }
+        // The gravity cron rewrites every tally in one long update. Skip the
+        // rows it holds rather than wait; `erase_derived` sweeps them up.
+        db.execute_unprepared(
+            "DELETE FROM reaction_tally t USING (\
+               SELECT event_id FROM reaction_tally \
+               WHERE event_id IN (SELECT id FROM erase_events) \
+               FOR UPDATE SKIP LOCKED) l \
+             WHERE t.event_id = l.event_id",
+        )
+        .await?;
         let events = db
             .execute_unprepared(
                 "DELETE FROM events e USING erase_events x WHERE e.id = x.id",
@@ -326,6 +339,11 @@ impl Mutation {
         db: &DatabaseTransaction,
         selector: &EventsSelector<'_>,
     ) -> Result<(), DbErr> {
+        db.execute_unprepared(
+            "DELETE FROM reaction_tally t \
+             WHERE NOT EXISTS (SELECT 1 FROM events e WHERE e.id = t.event_id)",
+        )
+        .await?;
         match selector {
             EventsSelector::Identity(identity) => {
                 NotificationModel::Entity::delete_many()
@@ -417,10 +435,9 @@ const ORPHAN_CONTENT: &str = "NOT EXISTS (\
       AND e.content_digest_bytes = c.digest_bytes)";
 
 /// Cache tables and the columns in them that hold event ids.
-const CACHE_EVENT_COLUMNS: [(&str, &str); 11] = [
+const CACHE_EVENT_COLUMNS: [(&str, &str); 10] = [
     ("follow", "event_id"),
     ("block", "event_id"),
-    ("reaction_tally", "event_id"),
     ("reaction", "event_id"),
     ("reaction", "on_post"),
     ("repost", "event_id"),
