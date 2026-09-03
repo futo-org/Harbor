@@ -1,5 +1,10 @@
 import { useMemo } from 'react';
-import { COLLECTION, Query, v2 } from '@polycentric/react-native';
+import {
+  COLLECTION,
+  type FetchMode,
+  Query,
+  v2,
+} from '@polycentric/react-native';
 import {
   decodeV2PostBundle,
   type PostData,
@@ -21,6 +26,7 @@ export function usePostById(
   identityId: string | undefined,
   keyFingerprint: string | undefined,
   sequence: bigint | undefined,
+  options?: { fetchMode?: FetchMode },
 ): { post: PostData | null; isLoading: boolean; error: Error | null } {
   const enabled = !!identityId && sequence != null && !!keyFingerprint;
 
@@ -36,7 +42,7 @@ export function usePostById(
       collection: COLLECTION.FEED,
       sequence: sequence ?? 0n,
     }),
-    undefined,
+    options?.fetchMode ? { fetchMode: options.fetchMode } : undefined,
     enabled,
   );
 
