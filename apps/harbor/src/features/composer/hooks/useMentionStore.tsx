@@ -12,18 +12,18 @@ import { isWeb } from '@/src/common/util/platform';
 // A word char: unicode letter, number, or underscore.
 const WORD = '[\\p{L}\\p{N}_]';
 
-// Chars the autocomplete searches through: word chars, at most one `@` glued
-// to a preceding word (a `@user@domain` alias), and at most one space (a
-// two-word name search; a second space means the user has moved on and the
-// overlay should get out of the way). Anything else between the `@` and the
-// caret means no autocomplete there.
-const QUERY_CHARS = new RegExp(
-  `^(?:${WORD}*|${WORD}+@${WORD}*)(?: ${WORD}*)?$`,
+// The two query shapes the autocomplete searches through. A query containing
+// a `.` or `@` is alias-like (`some.`, `domain.com`, `user@domain.com`):
+// word chars and dots, at most one `@` glued to a preceding word char, and no
+// spaces. Anything else is name-like (`ann`, `ann smith`): word chars with at
+// most one space. So a dot followed by a space, a second space, a newline, or
+// other punctuation all mean the user has moved on and the overlay should get
+// out of the way.
+const ALIAS_QUERY = new RegExp(
+  `^[\\p{L}\\p{N}_.]*(?:${WORD}@[\\p{L}\\p{N}_.]*)?$`,
   'u',
 );
-
-// The word-char run at the caret, for extending a mid-word replacement.
-const WORD_RUN = new RegExp(`^${WORD}*`, 'u');
+const NAME_QUERY = new RegExp(`^${WORD}*(?: ${WORD}*)?$`, 'u');
 
 /**
  * The composer input's live state, shared between the input (ComposerFields,
@@ -95,12 +95,11 @@ export function createMentionStore(): StoreApi<MentionStore> {
       //   ? `@{${identity},${profile.name}}`
       //   : `@{${identity}}`;
 
-      // Replace from the `@` through the end of the word at the caret, with
-      // one space after the mention: reuse the one already there (mid-text
-      // insert) instead of doubling it.
-      const wordEnd =
-        caret + (text.slice(caret).match(WORD_RUN)?.[0].length ?? 0);
-      const after = text.slice(wordEnd);
+      // Replace the `@` + query, with one space after the mention: reuse the
+      // one already there (mid-text insert) instead of doubling it. The space
+      // also guarantees the overlay is closed afterwards (see
+      // `findMentionContext`: an alias followed by a space is no query).
+      const after = text.slice(caret);
       const newText =
         text.slice(0, ctx.start) +
         mention +
@@ -154,15 +153,23 @@ function pushTextToInput(
 /**
  * The open mention context at `caret` in `text`, or null. Pure — autocomplete
  * is open exactly when:
- * - the nearest standalone `@` before the caret (one glued to a preceding
+ * - the caret is at the end of the text or followed by a space or newline
+ *   (never mid-word, so an insert is a plain replacement of `@` + query),
+ * - there is a standalone `@` before the caret (one glued to a preceding
  *   word, see `TOKEN_PRECEDER`, is skipped over: an email's `@` never counts,
  *   and the second `@` of `@user@domain` belongs to the query),
- * - everything between it and the caret is `QUERY_CHARS` (at most one
- *   space), not starting with a space ("email me @ home" stays closed), and
- * - that `@` doesn't begin an already-recognized mention
- *   (e.g. the caret in `@al|ias.example.com`).
+ * - everything between it and the caret is an alias-like or name-like query
+ *   (`ALIAS_QUERY` / `NAME_QUERY`), not starting with a space ("email me @
+ *   home" stays closed), and
+ * - that `@` doesn't begin an already-recognized identity mention (an alias
+ *   is always also a valid alias-like query, so only the identity form —
+ *   which the trailing space wouldn't close — needs this).
  */
 export function findMentionContext(text: string, caret: number) {
+  if (caret < text.length && text[caret] !== ' ' && text[caret] !== '\n') {
+    return null;
+  }
+
   let at = text.lastIndexOf('@', caret - 1);
   while (at > 0 && TOKEN_PRECEDER.test(text[at - 1])) {
     at = text.lastIndexOf('@', at - 1);
@@ -170,13 +177,11 @@ export function findMentionContext(text: string, caret: number) {
   if (at === -1 || at >= caret) return null;
 
   const query = text.slice(at + 1, caret);
-  if (!QUERY_CHARS.test(query) || query.startsWith(' ')) return null;
+  const shape = /[.@]/.test(query) ? ALIAS_QUERY : NAME_QUERY;
+  if (!shape.test(query) || query.startsWith(' ')) return null;
 
-  // If it's an already resolved mention, skip
   if (
-    parseTextLinks(text).some(
-      (s) => s.start === at && (s.type === 'alias' || s.type === 'identity'),
-    )
+    parseTextLinks(text).some((s) => s.start === at && s.type === 'identity')
   ) {
     return null;
   }

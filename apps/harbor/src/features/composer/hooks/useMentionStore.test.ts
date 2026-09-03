@@ -1,4 +1,8 @@
-import { createMentionStore, findMentionContext } from './useMentionStore';
+import {
+  createMentionStore,
+  findMentionContext,
+  selectMentionQuery,
+} from './useMentionStore';
 import type { ProfileHookResult } from '@/src/features/profile/hooks/useProfile';
 
 const IDENTITY = 'a'.repeat(64);
@@ -20,8 +24,15 @@ describe('findMentionContext', () => {
     });
   });
 
-  it('tracks only up to the caret, not the rest of the word', () => {
-    expect(findMentionContext('@ann', 3)).toEqual({ start: 0, query: 'an' });
+  it('is open only when the caret is followed by a space, newline or the end', () => {
+    expect(findMentionContext('@an', 3)).toEqual({ start: 0, query: 'an' });
+    expect(findMentionContext('@an x', 3)).toEqual({ start: 0, query: 'an' });
+    expect(findMentionContext('@an\nx', 3)).toEqual({ start: 0, query: 'an' });
+    expect(findMentionContext('@ann', 3)).toBeNull();
+    expect(findMentionContext('@an.', 3)).toBeNull();
+    expect(findMentionContext('@an,', 3)).toBeNull();
+    // Would otherwise never close: inserting leaves the caret before the dot.
+    expect(findMentionContext('@some.other.', 11)).toBeNull();
   });
 
   it('is closed at or before the @', () => {
@@ -30,54 +41,64 @@ describe('findMentionContext', () => {
 
   it('is closed when the @ is glued to a preceding word (emails)', () => {
     expect(findMentionContext('a@b', 3)).toBeNull();
-  });
-
-  it('stays open through the second @ of a @user@domain alias', () => {
-    expect(findMentionContext('@user@', 6)).toEqual({
-      start: 0,
-      query: 'user@',
-    });
-    expect(findMentionContext('hi @user@dom', 12)).toEqual({
-      start: 3,
-      query: 'user@dom',
-    });
-    // Still an email, not a mention, when no standalone @ precedes it.
     expect(findMentionContext('foo bar@dom', 11)).toBeNull();
-    // A second @ after the space is an email following a mention.
-    expect(findMentionContext('@ann foo@dom', 12)).toBeNull();
   });
 
   it('is closed when the query starts with a space', () => {
     expect(findMentionContext('email me @ home', 15)).toBeNull();
   });
 
-  it('allows underscores but closes on other non-word chars', () => {
+  it('name-like: word chars with at most one space', () => {
     expect(findMentionContext('@an_n x', 7)).toEqual({
       start: 0,
       query: 'an_n x',
     });
-    expect(findMentionContext('@an.', 4)).toBeNull();
-    expect(findMentionContext('@an\nx', 5)).toBeNull();
-  });
-
-  it('closes on a second space', () => {
+    expect(findMentionContext('@ann ', 5)).toEqual({ start: 0, query: 'ann ' });
     expect(findMentionContext('@ann smith x', 12)).toBeNull();
+    expect(findMentionContext('@an\nx', 5)).toBeNull();
+    // A second @ after the space is an email following a mention.
+    expect(findMentionContext('@ann foo@dom', 12)).toBeNull();
   });
 
-  it('is closed inside an already-recognized alias mention', () => {
-    expect(findMentionContext('@ann.example.com', 4)).toBeNull();
+  it('alias-like: dots and one glued @, no spaces', () => {
+    expect(findMentionContext('@some.', 6)).toEqual({
+      start: 0,
+      query: 'some.',
+    });
+    expect(findMentionContext('@domain.com', 11)).toEqual({
+      start: 0,
+      query: 'domain.com',
+    });
+    expect(findMentionContext('@user@', 6)).toEqual({
+      start: 0,
+      query: 'user@',
+    });
+    expect(findMentionContext('hi @user@domain.com', 19)).toEqual({
+      start: 3,
+      query: 'user@domain.com',
+    });
+    expect(findMentionContext('@a@b@c', 6)).toBeNull();
+    expect(findMentionContext('@@foo', 5)).toBeNull();
+    expect(findMentionContext('@some. ', 7)).toBeNull();
+    expect(findMentionContext('@some. x', 8)).toBeNull();
+    expect(findMentionContext('@user@dom smith', 15)).toBeNull();
+    // Post-insert state: alias plus the trailing space.
+    expect(findMentionContext('@ann.example.com ', 17)).toBeNull();
   });
 
-  it('is closed inside a recognized identity mention', () => {
-    expect(findMentionContext(`@${IDENTITY}`, 5)).toBeNull();
+  it('is closed after a recognized identity mention', () => {
+    expect(findMentionContext(`@${IDENTITY} `, 66)).toBeNull();
   });
 
-  it('recognizes an alias even after a curly mention (raw offsets)', () => {
-    // The curly mention renders shorter than its raw text; the alias check
-    // must still line up with the real @ position.
+  it('finds the right @ after a curly mention (raw offsets)', () => {
+    // The curly mention renders shorter than its raw text; offsets must line
+    // up with the real @ position.
     const text = `@{${IDENTITY},Jane} @user.example.com`;
     const at = text.indexOf('@user');
-    expect(findMentionContext(text, at + 5)).toBeNull();
+    expect(findMentionContext(text, text.length)).toEqual({
+      start: at,
+      query: 'user.example.com',
+    });
   });
 });
 
@@ -110,10 +131,24 @@ describe('insertMention', () => {
     expect(store.getState().lastNativeText).toBe(store.getState().text);
   });
 
-  it('mid-word replaces the whole word', () => {
-    const { store, onChangeText } = setup('@an rest', 2); // "@a|n rest"
+  it('adds a space before a following newline', () => {
+    const { store, onChangeText } = setup('@an\nrest', 3);
     insert(store, { alias: 'ann.example.com' });
-    expect(onChangeText).toHaveBeenCalledWith('@ann.example.com rest');
+    expect(onChangeText).toHaveBeenCalledWith('@ann.example.com \nrest');
+  });
+
+  it('leaves the store closed after every insert', () => {
+    for (const [text, caret, alias] of [
+      ['@an', 2, 'ann.example.com'],
+      ['@an rest', 2, 'ann.example.com'],
+      ['@an\nrest', 2, 'ann.example.com'],
+      ['@', 1, null],
+    ] as const) {
+      const { store } = setup(text, caret);
+      insert(store, { alias });
+      store.setState({ isFocused: true });
+      expect(selectMentionQuery(store.getState())).toBeNull();
+    }
   });
 
   it('falls back to the identity form without an alias', () => {
