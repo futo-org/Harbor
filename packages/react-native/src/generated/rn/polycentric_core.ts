@@ -495,7 +495,12 @@ const FfiConverterTypeGetAttributionFeedArgs = (() => {
 export type GetEventArgs = {
     identity: string,
     collection: number,
-    sequence: bigint
+    sequence: bigint,
+    /**
+     * Hex prefix of the signing key, to pick between events that
+     * different keys published at the same sequence.
+     */
+    signerKeyPrefix?: string
 }
 
 /**
@@ -521,18 +526,21 @@ const FfiConverterTypeGetEventArgs = (() => {
             return {
                 identity: FfiConverterString.readFromCursor(c), 
                 collection: FfiConverterInt32.readFromCursor(c), 
-                sequence: FfiConverterUInt64.readFromCursor(c)
+                sequence: FfiConverterUInt64.readFromCursor(c), 
+                signerKeyPrefix: FfiConverterOptionalString.readFromCursor(c)
             };
         }
         writeIntoCursor(value: TypeName, c: Cursor): void {
             FfiConverterString.writeIntoCursor(value.identity, c);
             FfiConverterInt32.writeIntoCursor(value.collection, c);
             FfiConverterUInt64.writeIntoCursor(value.sequence, c);
+            FfiConverterOptionalString.writeIntoCursor(value.signerKeyPrefix, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.identity) +
              FfiConverterInt32.allocationSize(value.collection) +
-             FfiConverterUInt64.allocationSize(value.sequence);
+             FfiConverterUInt64.allocationSize(value.sequence) +
+             FfiConverterOptionalString.allocationSize(value.signerKeyPrefix);
             
         }
     };
