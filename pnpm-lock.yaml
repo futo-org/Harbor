@@ -6,9 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@noble/curves':
-      specifier: ^2.2.0
-      version: 2.2.0
     '@noble/hashes':
       specifier: ^2.2.0
       version: 2.2.0
@@ -107,7 +104,7 @@ importers:
         version: 3.11.12(cbde0b7ddcd64bcda36676f188f2c3db)
       '@noble/curves':
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.4.0
       '@noble/hashes':
         specifier: 'catalog:'
         version: 2.2.0
@@ -391,7 +388,7 @@ importers:
     dependencies:
       '@noble/curves':
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.4.0
       '@noble/hashes':
         specifier: 'catalog:'
         version: 2.2.0
@@ -437,7 +434,7 @@ importers:
     dependencies:
       '@noble/curves':
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.4.0
       '@noble/hashes':
         specifier: 'catalog:'
         version: 2.2.0
@@ -492,7 +489,7 @@ importers:
     dependencies:
       '@noble/curves':
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.4.0
       '@polycentric/js-core':
         specifier: workspace:*
         version: link:../js-core
@@ -601,7 +598,7 @@ importers:
         version: 7.29.7
       '@noble/curves':
         specifier: 'catalog:'
-        version: 2.2.0
+        version: 2.4.0
       '@polycentric/js-browser':
         specifier: workspace:*
         version: link:../js-browser
@@ -690,22 +687,22 @@ importers:
         version: 13.6.12(@types/node@24.13.1)(debug@4.4.3)(puppeteer@25.3.0)
       html-get:
         specifier: ^2.24.6
-        version: 2.26.10(@noble/hashes@2.2.0)(debug@4.4.3)
+        version: 2.26.10(@noble/hashes@2.4.0)(debug@4.4.3)
       metascraper:
         specifier: ^5.50.6
-        version: 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
+        version: 5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)
       metascraper-description:
         specifier: ^5.50.6
-        version: 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
+        version: 5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)
       metascraper-image:
         specifier: ^5.50.6
-        version: 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
+        version: 5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)
       metascraper-title:
         specifier: ^5.50.6
-        version: 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
+        version: 5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)
       metascraper-url:
         specifier: ^5.50.6
-        version: 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
+        version: 5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)
       prom-client:
         specifier: 'catalog:'
         version: 15.1.3
@@ -3503,8 +3500,8 @@ packages:
   '@napi-rs/wasm-runtime@1.0.7':
     resolution: {integrity: sha512-SeDnOO0Tk7Okiq6DbXmmBODgOAb9dp9gjlphokTUxmt8U3liIP1ZsozBahH69j/RJv+Rfs6IwUKHTgQYJ/HBAw==}
 
-  '@noble/curves@2.2.0':
-    resolution: {integrity: sha512-T/BoHgFXirb0ENSPBquzX0rcjXeM6Lo892a2jlYJkqk83LqZx0l1Of7DzlKJ6jkpvMrkHSnAcgb5JegL8SeIkQ==}
+  '@noble/curves@2.4.0':
+    resolution: {integrity: sha512-P4/62zrgfH33CneE3Dn4WhJVA22YUU0eR51wKIan4NVRvwsA0YnPTwWGpNbpuacSujmSFLvyzpyuR30+fbq2Ew==}
     engines: {node: '>= 20.19.0'}
 
   '@noble/hashes@1.4.0':
@@ -3513,6 +3510,10 @@ packages:
 
   '@noble/hashes@2.2.0':
     resolution: {integrity: sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg==}
+    engines: {node: '>= 20.19.0'}
+
+  '@noble/hashes@2.4.0':
+    resolution: {integrity: sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==}
     engines: {node: '>= 20.19.0'}
 
   '@nodelib/fs.scandir@2.1.5':
@@ -15352,6 +15353,11 @@ snapshots:
   '@exodus/bytes@1.15.1(@noble/hashes@2.2.0)':
     optionalDependencies:
       '@noble/hashes': 2.2.0
+    optional: true
+
+  '@exodus/bytes@1.15.1(@noble/hashes@2.4.0)':
+    optionalDependencies:
+      '@noble/hashes': 2.4.0
 
   '@expo-google-fonts/material-symbols@0.4.38': {}
 
@@ -16727,7 +16733,7 @@ snapshots:
       '@types/react': 19.2.17
       react: 19.2.3
 
-  '@metascraper/helpers@5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)':
+  '@metascraper/helpers@5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)':
     dependencies:
       audio-extensions: 0.0.0
       chrono-node: 2.9.1
@@ -16742,7 +16748,7 @@ snapshots:
       is-uri: 1.2.14
       iso-639-3: 3.0.1
       isostring: 0.0.1
-      jsdom: 29.1.1(@noble/hashes@2.2.0)
+      jsdom: 29.1.1(@noble/hashes@2.4.0)
       jsonrepair: 3.14.1
       lodash: 4.18.1
       memoize-one: 6.0.0
@@ -16759,7 +16765,7 @@ snapshots:
       - canvas
       - debug
 
-  '@metascraper/helpers@5.55.2(@noble/hashes@2.2.0)(debug@4.4.3)':
+  '@metascraper/helpers@5.55.2(@noble/hashes@2.4.0)(debug@4.4.3)':
     dependencies:
       audio-extensions: 0.0.0
       chrono-node: 2.10.1
@@ -16774,7 +16780,7 @@ snapshots:
       is-uri: 1.2.14
       iso-639-3: 3.0.1
       isostring: 0.0.1
-      jsdom: 30.0.1(@noble/hashes@2.2.0)
+      jsdom: 30.0.1(@noble/hashes@2.4.0)
       jsonrepair: 3.15.0
       lodash: 4.18.1
       memoize-one: 6.0.0
@@ -16826,13 +16832,15 @@ snapshots:
       '@tybys/wasm-util': 0.10.2
     optional: true
 
-  '@noble/curves@2.2.0':
+  '@noble/curves@2.4.0':
     dependencies:
-      '@noble/hashes': 2.2.0
+      '@noble/hashes': 2.4.0
 
   '@noble/hashes@1.4.0': {}
 
   '@noble/hashes@2.2.0': {}
+
+  '@noble/hashes@2.4.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -18210,7 +18218,9 @@ snapshots:
       metro-runtime: 0.84.5
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
     optional: true
 
   '@react-native/metro-config@0.86.2(@babel/core@7.29.7)':
@@ -18221,7 +18231,9 @@ snapshots:
       metro-runtime: 0.84.5
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
@@ -20617,6 +20629,14 @@ snapshots:
       whatwg-url: 16.0.1(@noble/hashes@2.2.0)
     transitivePeerDependencies:
       - '@noble/hashes'
+    optional: true
+
+  data-urls@7.0.0(@noble/hashes@2.4.0):
+    dependencies:
+      whatwg-mimetype: 5.0.0
+      whatwg-url: 16.0.1(@noble/hashes@2.4.0)
+    transitivePeerDependencies:
+      - '@noble/hashes'
 
   debounce@1.2.1: {}
 
@@ -22451,13 +22471,20 @@ snapshots:
       '@exodus/bytes': 1.15.1(@noble/hashes@2.2.0)
     transitivePeerDependencies:
       - '@noble/hashes'
+    optional: true
+
+  html-encoding-sniffer@6.0.0(@noble/hashes@2.4.0):
+    dependencies:
+      '@exodus/bytes': 1.15.1(@noble/hashes@2.4.0)
+    transitivePeerDependencies:
+      - '@noble/hashes'
 
   html-escaper@2.0.2: {}
 
-  html-get@2.26.10(@noble/hashes@2.2.0)(debug@4.4.3):
+  html-get@2.26.10(@noble/hashes@2.4.0)(debug@4.4.3):
     dependencies:
       '@kikobeats/time-span': 1.0.13
-      '@metascraper/helpers': 5.55.2(@noble/hashes@2.2.0)(debug@4.4.3)
+      '@metascraper/helpers': 5.55.2(@noble/hashes@2.4.0)(debug@4.4.3)
       cheerio: 1.2.0
       content-type: 1.0.5
       css-url-regex: 4.0.0
@@ -22465,7 +22492,7 @@ snapshots:
       execall: 2.0.0
       got: 11.8.6
       html-encode: 2.1.15
-      html-urls: 2.5.5(@noble/hashes@2.2.0)(debug@4.4.3)
+      html-urls: 2.5.5(@noble/hashes@2.4.0)(debug@4.4.3)
       is-html-content: 1.0.0
       is-local-address: 2.3.6
       lodash: 4.18.1
@@ -22502,9 +22529,9 @@ snapshots:
 
   html-tags@3.3.1: {}
 
-  html-urls@2.5.5(@noble/hashes@2.2.0)(debug@4.4.3):
+  html-urls@2.5.5(@noble/hashes@2.4.0)(debug@4.4.3):
     dependencies:
-      '@metascraper/helpers': 5.55.2(@noble/hashes@2.2.0)(debug@4.4.3)
+      '@metascraper/helpers': 5.55.2(@noble/hashes@2.4.0)(debug@4.4.3)
       cheerio: 1.2.0
       is-uri: 1.2.14
       is-url-http: 2.3.13
@@ -23423,17 +23450,17 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  jsdom@29.1.1(@noble/hashes@2.2.0):
+  jsdom@29.1.1(@noble/hashes@2.4.0):
     dependencies:
       '@asamuzakjp/css-color': 5.1.11
       '@asamuzakjp/dom-selector': 7.1.1
       '@bramus/specificity': 2.4.2
       '@csstools/css-syntax-patches-for-csstree': 1.1.6(css-tree@3.2.1)
-      '@exodus/bytes': 1.15.1(@noble/hashes@2.2.0)
+      '@exodus/bytes': 1.15.1(@noble/hashes@2.4.0)
       css-tree: 3.2.1
-      data-urls: 7.0.0(@noble/hashes@2.2.0)
+      data-urls: 7.0.0(@noble/hashes@2.4.0)
       decimal.js: 10.6.0
-      html-encoding-sniffer: 6.0.0(@noble/hashes@2.2.0)
+      html-encoding-sniffer: 6.0.0(@noble/hashes@2.4.0)
       is-potential-custom-element-name: 1.0.1
       lru-cache: 11.5.1
       parse5: 8.0.1
@@ -23444,7 +23471,7 @@ snapshots:
       w3c-xmlserializer: 5.0.0
       webidl-conversions: 8.0.1
       whatwg-mimetype: 5.0.0
-      whatwg-url: 16.0.1(@noble/hashes@2.2.0)
+      whatwg-url: 16.0.1(@noble/hashes@2.4.0)
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - '@noble/hashes'
@@ -23471,6 +23498,33 @@ snapshots:
       webidl-conversions: 8.0.1
       whatwg-mimetype: 5.0.0
       whatwg-url: 17.1.0(@noble/hashes@2.2.0)
+      xml-name-validator: 5.0.0
+    transitivePeerDependencies:
+      - '@noble/hashes'
+    optional: true
+
+  jsdom@30.0.1(@noble/hashes@2.4.0):
+    dependencies:
+      '@asamuzakjp/css-color': 6.0.7
+      '@asamuzakjp/dom-selector': 8.3.2
+      '@bramus/specificity': 2.4.2
+      '@csstools/css-syntax-patches-for-csstree': 1.1.8(css-tree@3.2.1)
+      '@exodus/bytes': 1.15.1(@noble/hashes@2.4.0)
+      css-tree: 3.2.1
+      data-urls: 7.0.0(@noble/hashes@2.4.0)
+      decimal.js: 10.6.0
+      html-encoding-sniffer: 6.0.0(@noble/hashes@2.4.0)
+      is-potential-custom-element-name: 1.0.1
+      lru-cache: 11.5.2
+      parse5: 8.0.1
+      saxes: 6.0.0
+      symbol-tree: 3.2.4
+      tough-cookie: 6.0.2
+      undici: 8.10.0
+      w3c-xmlserializer: 5.0.0
+      webidl-conversions: 8.0.1
+      whatwg-mimetype: 5.0.0
+      whatwg-url: 17.1.0(@noble/hashes@2.4.0)
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - '@noble/hashes'
@@ -23979,41 +24033,41 @@ snapshots:
 
   merge2@1.4.1: {}
 
-  metascraper-description@5.51.1(@noble/hashes@2.2.0)(debug@4.4.3):
+  metascraper-description@5.51.1(@noble/hashes@2.4.0)(debug@4.4.3):
     dependencies:
-      '@metascraper/helpers': 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
+      '@metascraper/helpers': 5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)
     transitivePeerDependencies:
       - '@noble/hashes'
       - canvas
       - debug
 
-  metascraper-image@5.51.1(@noble/hashes@2.2.0)(debug@4.4.3):
+  metascraper-image@5.51.1(@noble/hashes@2.4.0)(debug@4.4.3):
     dependencies:
-      '@metascraper/helpers': 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
+      '@metascraper/helpers': 5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)
     transitivePeerDependencies:
       - '@noble/hashes'
       - canvas
       - debug
 
-  metascraper-title@5.51.1(@noble/hashes@2.2.0)(debug@4.4.3):
+  metascraper-title@5.51.1(@noble/hashes@2.4.0)(debug@4.4.3):
     dependencies:
-      '@metascraper/helpers': 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
+      '@metascraper/helpers': 5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)
     transitivePeerDependencies:
       - '@noble/hashes'
       - canvas
       - debug
 
-  metascraper-url@5.51.1(@noble/hashes@2.2.0)(debug@4.4.3):
+  metascraper-url@5.51.1(@noble/hashes@2.4.0)(debug@4.4.3):
     dependencies:
-      '@metascraper/helpers': 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
+      '@metascraper/helpers': 5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)
     transitivePeerDependencies:
       - '@noble/hashes'
       - canvas
       - debug
 
-  metascraper@5.51.1(@noble/hashes@2.2.0)(debug@4.4.3):
+  metascraper@5.51.1(@noble/hashes@2.4.0)(debug@4.4.3):
     dependencies:
-      '@metascraper/helpers': 5.51.1(@noble/hashes@2.2.0)(debug@4.4.3)
+      '@metascraper/helpers': 5.51.1(@noble/hashes@2.4.0)(debug@4.4.3)
       cheerio: 1.2.0
       debug-logfmt: 1.4.13(debug@4.4.3)
       whoops: 5.1.2
@@ -28335,10 +28389,28 @@ snapshots:
       webidl-conversions: 8.0.1
     transitivePeerDependencies:
       - '@noble/hashes'
+    optional: true
+
+  whatwg-url@16.0.1(@noble/hashes@2.4.0):
+    dependencies:
+      '@exodus/bytes': 1.15.1(@noble/hashes@2.4.0)
+      tr46: 6.0.0
+      webidl-conversions: 8.0.1
+    transitivePeerDependencies:
+      - '@noble/hashes'
 
   whatwg-url@17.1.0(@noble/hashes@2.2.0):
     dependencies:
       '@exodus/bytes': 1.15.1(@noble/hashes@2.2.0)
+      tr46: 6.0.0
+      webidl-conversions: 8.0.1
+    transitivePeerDependencies:
+      - '@noble/hashes'
+    optional: true
+
+  whatwg-url@17.1.0(@noble/hashes@2.4.0):
+    dependencies:
+      '@exodus/bytes': 1.15.1(@noble/hashes@2.4.0)
       tr46: 6.0.0
       webidl-conversions: 8.0.1
     transitivePeerDependencies:
