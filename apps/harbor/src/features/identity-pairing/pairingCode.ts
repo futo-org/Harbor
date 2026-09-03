@@ -50,7 +50,13 @@ export function decodePairingCode(
       return undefined;
     }
 
-    return v2.PairingInfo.fromBinary(bytes);
+    const info = v2.PairingInfo.fromBinary(bytes);
+
+    // Do some sanity checks
+    if (info.digestSha256.length === 0) return undefined;
+    if (info.server.length === 0) return undefined;
+
+    return info;
   } catch {
     return undefined;
   }
