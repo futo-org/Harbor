@@ -414,9 +414,11 @@ impl Mutation {
             with.cte(cte);
         }
 
-        if let Some(reply) = post.reply.as_ref() {
+        if let Some(reply) = post.reply.as_ref()
+            && let Some(reply) = &reply.parent
+        {
             // NOTE: only adding a reply to the parent, not for the root.
-            let key = split_event_key(reply.parent.clone(), "reply")
+            let key = split_event_key(Some(reply.clone()), "reply")
                 .map_err(|err| DbErr::Custom(err.message().into()))?;
             let mut post_event_id = select_not_deleted_event_id(key);
 
