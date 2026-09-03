@@ -14,6 +14,7 @@ use crate::lock::LockRecover;
 use crate::store::{
     content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
     identity_store::IdentityStore, keys::EventKey, meta_store::MetaStore,
+    pairing_store::PairingStore,
 };
 use prost::Message;
 use std::collections::HashSet;
@@ -42,6 +43,7 @@ pub struct PolycentricClient {
     content_store: ContentStore,
     meta_store: MetaStore,
     identity_store: IdentityStore,
+    pairing_store: PairingStore,
 }
 
 impl PolycentricClient {
@@ -504,6 +506,18 @@ impl PolycentricClient {
                 self.bundle_for(&key, signed_event, true)
             })
             .collect()
+    }
+
+    /// Ensure that the pairing store considers `sequence` to be an observed sequence
+    /// for the specified pairing session.
+    pub fn accept_pairing_sequence(&mut self, digest_sha256: &[u8], sequence: i64) {
+        self.pairing_store.accept_sequence(digest_sha256, sequence);
+    }
+
+    /// Returns whether a pairing session state with this sequence should be used.
+    /// This should be called for every pairing session state we receive from a remote.
+    pub fn try_pairing_sequence(&mut self, digest_sha256: &[u8], sequence: i64) -> bool {
+        self.pairing_store.try_sequence(digest_sha256, sequence)
     }
 
     /// Validate an event against its identity chain, identity content,

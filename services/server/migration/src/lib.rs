@@ -47,6 +47,7 @@ mod m20260818_000001_qoute_table;
 mod m20260818_000002_reply_table;
 mod m20260818_000003_reaction_count_decay;
 mod m20260825_000001_default_follow_suggestions;
+mod m20260826_195541_recreate_pairing_tables;
 mod m20260831_000001_always_include_hashtags_in_search_data;
 mod m20260831_000002_reaction_tally_decayed_count;
 mod m20260901_000001_reaction_emoji_nullable;
@@ -105,6 +106,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260818_000002_reply_table::Migration),
             Box::new(m20260818_000003_reaction_count_decay::Migration),
             Box::new(m20260825_000001_default_follow_suggestions::Migration),
+            Box::new(m20260826_195541_recreate_pairing_tables::Migration),
             Box::new(m20260901_000001_reaction_emoji_nullable::Migration),
             Box::new(m20260831_000001_always_include_hashtags_in_search_data::Migration),
             Box::new(m20260831_000002_reaction_tally_decayed_count::Migration),
