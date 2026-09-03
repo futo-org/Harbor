@@ -19,8 +19,9 @@ const WORD = '[\\p{L}\\p{N}_]';
 // most one space. So a dot followed by a space, a second space, a newline, or
 // other punctuation all mean the user has moved on and the overlay should get
 // out of the way.
+const WORD_OR_DOT = `(?:${WORD}|\\.)`;
 const ALIAS_QUERY = new RegExp(
-  `^[\\p{L}\\p{N}_.]*(?:${WORD}@[\\p{L}\\p{N}_.]*)?$`,
+  `^${WORD_OR_DOT}*(?:${WORD}@${WORD_OR_DOT}*)?$`,
   'u',
 );
 const NAME_QUERY = new RegExp(`^${WORD}*(?: ${WORD}*)?$`, 'u');
