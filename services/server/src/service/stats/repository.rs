@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use entity::{
     attributed_to_reaction_summary_model as AttributedSummaryModel,
-    reaction_model, reaction_tally_model2, reply_model,
+    reaction_model, reaction_tally_model, reply_model,
 };
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{
@@ -67,30 +67,28 @@ impl Query {
 
         let mut query = SelectStatement::new();
         query
-            .from(reaction_tally_model2::Entity)
+            .from(reaction_tally_model::Entity)
             .expr_as(
                 Expr::col(
-                    reaction_tally_model2::Column::EventId.as_column_ref(),
+                    reaction_tally_model::Column::EventId.as_column_ref(),
                 ),
                 "event_id",
             )
             .expr_as(
                 Expr::col(
-                    reaction_tally_model2::Column::PositiveCount
-                        .as_column_ref(),
+                    reaction_tally_model::Column::PositiveCount.as_column_ref(),
                 ),
                 "positive_count",
             )
             .expr_as(
                 Expr::col(
-                    reaction_tally_model2::Column::NegativeCount
-                        .as_column_ref(),
+                    reaction_tally_model::Column::NegativeCount.as_column_ref(),
                 ),
                 "negative_count",
             )
             .cond_where(
                 Expr::col(
-                    reaction_tally_model2::Column::EventId.as_column_ref(),
+                    reaction_tally_model::Column::EventId.as_column_ref(),
                 )
                 .is_in(event_ids),
             );

@@ -3,7 +3,7 @@
 use std::ops::ControlFlow;
 
 use entity::{
-    event_model, gravity_model, reaction_model, reaction_tally_model2,
+    event_model, gravity_model, reaction_model, reaction_tally_model,
 };
 use sea_orm::sea_query::{
     Asterisk, Expr, Func, SelectStatement, UpdateStatement,
@@ -130,21 +130,21 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             // Update all calculated decayed counts.
             let mut query = UpdateStatement::new();
             query
-                .table(reaction_tally_model2::Entity)
+                .table(reaction_tally_model::Entity)
                 .from(gravity_model::Entity)
                 .value(
-                    reaction_tally_model2::Column::DecayedCount,
+                    reaction_tally_model::Column::DecayedCount,
                     {
                         let func = Func::cust("reaction_count_decay");
                         if let Some(feeds_gravity) = feeds_gravity {
                             func.args([
-                                Expr::col(reaction_tally_model2::Column::PositiveCount.as_column_ref()),
+                                Expr::col(reaction_tally_model::Column::PositiveCount.as_column_ref()),
                                 Expr::col(event_model::Column::CreatedAt.as_column_ref()),
                                 Expr::Constant(feeds_gravity.into()),
                             ])
                         } else {
                             func.args([
-                                Expr::col(reaction_tally_model2::Column::PositiveCount.as_column_ref()),
+                                Expr::col(reaction_tally_model::Column::PositiveCount.as_column_ref()),
                                 Expr::col(event_model::Column::CreatedAt.as_column_ref()),
                             ])
                         }
@@ -155,11 +155,11 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 .from(event_model::Entity)
                 .and_where(
                     Expr::col(event_model::Column::Id.as_column_ref())
-                        .eq(Expr::col(reaction_tally_model2::Column::EventId.as_column_ref())),
+                        .eq(Expr::col(reaction_tally_model::Column::EventId.as_column_ref())),
                 )
                 // If the decayed count was previously already zero there is no
                 // point in calculating it again as it can only go lower.
-                .and_where(Expr::col(reaction_tally_model2::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.0.into())));
+                .and_where(Expr::col(reaction_tally_model::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.0.into())));
 
             if let Err(err) = tx.execute(&query).await {
                 tracing::warn!(error = %err, "failed to update decayed reaction counts");
