@@ -13,7 +13,7 @@ use sea_orm::sea_query::{
 };
 use sea_orm::{
     ColumnTrait, Condition, ConnectionTrait, DbConn, DbErr, EntityTrait,
-    FromQueryResult, QueryFilter,
+    QueryFilter,
 };
 
 use crate::data::EventId;
@@ -146,8 +146,12 @@ impl Query {
             )
             .expr_as(Expr::from(Func::count(Expr::col(Asterisk))), "count")
             .cond_where(
-                Expr::col(reaction_model::Column::EventId.as_column_ref())
+                Expr::col(reaction_model::Column::OnPost.as_column_ref())
                     .is_in(event_ids),
+            )
+            .and_where(
+                Expr::col(reaction_model::Column::Emoji.as_column_ref())
+                    .is_not_null(),
             )
             .group_by_columns([
                 reaction_model::Column::OnPost.as_column_ref(),
@@ -183,7 +187,7 @@ impl Query {
             let tally = ReactionTally {
                 emoji: row.try_get_by(1)?,
                 positive: row.try_get_by(2)?,
-                count: row.try_get_by(2)?,
+                count: row.try_get_by(3)?,
             };
             let reactions: &mut Vec<ReactionTally> =
                 map.entry(on_post).or_default();
@@ -610,7 +614,6 @@ pub struct ReactionSummary {
     pub downvote_count: i64,
 }
 
-#[derive(FromQueryResult)]
 pub struct ReactionTally {
     pub emoji: String,
     pub positive: bool,
