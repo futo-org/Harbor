@@ -6,12 +6,8 @@ use ::entity::{
     ban_model as BanModel, content_model as ContentModel,
     event_model as EventModel, moderator_model as ModeratorModel,
     notification as NotificationModel,
-    reaction_summary_model as ReactionSummaryModel,
-    reaction_tally_model as ReactionTalliesModel,
-    reply_count_model as ReplyCountModel,
 };
 use polycentric_common::models::collections;
-use sea_orm::sea_query::IntoCondition;
 use sea_orm::*;
 
 const IDENTITY_COLLECTION: i16 = collections::IDENTITY as i16;
@@ -97,14 +93,29 @@ impl Query {
             .await
     }
 
-    /// Number of events `selector` matches.
+    /// Number of events `identity` has.
     pub async fn count_events<C: ConnectionTrait>(
         db: &C,
-        selector: &EventsSelector<'_>,
+        identity: &str,
     ) -> Result<u64, DbErr> {
         EventModel::Entity::find()
-            .filter(selector.condition())
+            .filter(EventModel::Column::Identity.eq(identity))
             .count(db)
+            .await
+    }
+
+    /// Identities with at least one event signed by `public_key`.
+    pub async fn identities_signed_by<C: ConnectionTrait>(
+        db: &C,
+        public_key: &[u8],
+    ) -> Result<Vec<String>, DbErr> {
+        EventModel::Entity::find()
+            .select_only()
+            .column(EventModel::Column::Identity)
+            .distinct()
+            .filter(EventModel::Column::PublicKey.eq(public_key.to_vec()))
+            .into_tuple()
+            .all(db)
             .await
     }
 
@@ -236,25 +247,22 @@ impl Mutation {
     /// everything derived from them. Content another event still references
     /// is kept, otherwise an identity could erase a victim's content by
     /// referencing its digests. Blobs are left for the caller; see
-    /// `service::erase_events`, which loops over batches.
+    /// `service::erase_identity`, which loops over batches.
     ///
     /// Works through temp tables so nothing scales with the event count on
     /// the client, hence the transaction. Returns `None` once no events match.
     pub async fn erase_events_batch(
         db: &DatabaseTransaction,
-        selector: &EventsSelector<'_>,
+        identity: &str,
         after: i64,
         limit: u64,
     ) -> Result<Option<ErasedBatch>, DbErr> {
-        let (matches, value) = selector.sql();
         db.execute_raw(Statement::from_sql_and_values(
             DbBackend::Postgres,
-            format!(
-                "CREATE TEMP TABLE erase_events ON COMMIT DROP AS \
-                 SELECT e.id FROM events e WHERE {matches} AND e.id > $2 \
-                 ORDER BY e.id LIMIT $3"
-            ),
-            [value, after.into(), (limit as i64).into()],
+            "CREATE TEMP TABLE erase_events ON COMMIT DROP AS \
+             SELECT e.id FROM events e WHERE e.identity = $1 AND e.id > $2 \
+             ORDER BY e.id LIMIT $3",
+            [identity.into(), after.into(), (limit as i64).into()],
         ))
         .await?;
         let last_id: Option<i64> = db
@@ -275,16 +283,8 @@ impl Mutation {
              JOIN erase_events x ON x.id = e.id",
         )
         .await?;
-        let identities = db
-            .query_all_raw(Statement::from_string(
-                DbBackend::Postgres,
-                "SELECT DISTINCT e.identity FROM events e \
-                 JOIN erase_events x ON x.id = e.id",
-            ))
-            .await?
-            .iter()
-            .map(|row| row.try_get("", "identity"))
-            .collect::<Result<Vec<String>, _>>()?;
+        db.execute_unprepared("ANALYZE erase_events; ANALYZE erase_content")
+            .await?;
 
         for (table, column) in CACHE_EVENT_COLUMNS {
             db.execute_unprepared(&format!(
@@ -292,6 +292,16 @@ impl Mutation {
             ))
             .await?;
         }
+        // The gravity cron rewrites every tally in one long update. Skip the
+        // rows it holds rather than wait; `erase_derived` sweeps them up.
+        db.execute_unprepared(
+            "DELETE FROM reaction_tally t USING (\
+               SELECT event_id FROM reaction_tally \
+               WHERE event_id IN (SELECT id FROM erase_events) \
+               FOR UPDATE SKIP LOCKED) l \
+             WHERE t.event_id = l.event_id",
+        )
+        .await?;
         let events = db
             .execute_unprepared(
                 "DELETE FROM events e USING erase_events x WHERE e.id = x.id",
@@ -312,88 +322,32 @@ impl Mutation {
                 events,
                 content,
                 blobs: blobs.len() as u64,
-                identities,
             },
             blobs,
             last_id,
         }))
     }
 
-    /// Deletes what is keyed by the selector rather than by event: the
+    /// Deletes what is keyed by the identity rather than by event: the
     /// notifications and per-event counts. Run once after the batches.
     /// Counts on other events that include their interactions are left as-is.
     pub async fn erase_derived(
         db: &DatabaseTransaction,
-        selector: &EventsSelector<'_>,
+        identity: &str,
     ) -> Result<(), DbErr> {
-        match selector {
-            EventsSelector::Identity(identity) => {
-                NotificationModel::Entity::delete_many()
-                    .filter(
-                        Condition::any()
-                            .add(
-                                NotificationModel::Column::FromIdentity
-                                    .eq(*identity),
-                            )
-                            .add(
-                                NotificationModel::Column::ToIdentity
-                                    .eq(*identity),
-                            ),
-                    )
-                    .exec(db)
-                    .await?;
-                ReplyCountModel::Entity::delete_many()
-                    .filter(
-                        ReplyCountModel::Column::EventKeyIdentity.eq(*identity),
-                    )
-                    .exec(db)
-                    .await?;
-                ReactionSummaryModel::Entity::delete_many()
-                    .filter(
-                        ReactionSummaryModel::Column::EventKeyIdentity
-                            .eq(*identity),
-                    )
-                    .exec(db)
-                    .await?;
-                ReactionTalliesModel::Entity::delete_many()
-                    .filter(
-                        ReactionTalliesModel::Column::EventKeyIdentity
-                            .eq(*identity),
-                    )
-                    .exec(db)
-                    .await?;
-            }
-            EventsSelector::PublicKey(key) => {
-                let key = key.to_vec();
-                NotificationModel::Entity::delete_many()
-                    .filter(
-                        NotificationModel::Column::TriggerEventKeyPublicKey
-                            .eq(key.clone()),
-                    )
-                    .exec(db)
-                    .await?;
-                ReplyCountModel::Entity::delete_many()
-                    .filter(
-                        ReplyCountModel::Column::EventKeyPublicKey
-                            .eq(key.clone()),
-                    )
-                    .exec(db)
-                    .await?;
-                ReactionSummaryModel::Entity::delete_many()
-                    .filter(
-                        ReactionSummaryModel::Column::EventKeyPublicKey
-                            .eq(key.clone()),
-                    )
-                    .exec(db)
-                    .await?;
-                ReactionTalliesModel::Entity::delete_many()
-                    .filter(
-                        ReactionTalliesModel::Column::EventKeyPublicKey.eq(key),
-                    )
-                    .exec(db)
-                    .await?;
-            }
-        }
+        db.execute_unprepared(
+            "DELETE FROM reaction_tally t \
+             WHERE NOT EXISTS (SELECT 1 FROM events e WHERE e.id = t.event_id)",
+        )
+        .await?;
+        NotificationModel::Entity::delete_many()
+            .filter(
+                Condition::any()
+                    .add(NotificationModel::Column::FromIdentity.eq(identity))
+                    .add(NotificationModel::Column::ToIdentity.eq(identity)),
+            )
+            .exec(db)
+            .await?;
         Ok(())
     }
 
@@ -417,10 +371,9 @@ const ORPHAN_CONTENT: &str = "NOT EXISTS (\
       AND e.content_digest_bytes = c.digest_bytes)";
 
 /// Cache tables and the columns in them that hold event ids.
-const CACHE_EVENT_COLUMNS: [(&str, &str); 11] = [
+const CACHE_EVENT_COLUMNS: [(&str, &str); 10] = [
     ("follow", "event_id"),
     ("block", "event_id"),
-    ("reaction_tally", "event_id"),
     ("reaction", "event_id"),
     ("reaction", "on_post"),
     ("repost", "event_id"),
@@ -451,41 +404,11 @@ const CONTENT_CHILD_TABLES: [&str; 17] = [
     "content_verification_verify",
 ];
 
-pub enum EventsSelector<'a> {
-    /// Every event of an identity, whichever key signed it.
-    Identity(&'a str),
-    /// Every event signed by a key, whichever identity it acted for.
-    PublicKey(&'a [u8]),
-}
-
-impl EventsSelector<'_> {
-    fn condition(&self) -> Condition {
-        match self {
-            Self::Identity(identity) => {
-                EventModel::Column::Identity.eq(*identity).into_condition()
-            }
-            Self::PublicKey(key) => EventModel::Column::PublicKey
-                .eq(key.to_vec())
-                .into_condition(),
-        }
-    }
-
-    /// The same match as `condition`, as SQL over `events e` with `$1`.
-    fn sql(&self) -> (&'static str, Value) {
-        match self {
-            Self::Identity(identity) => ("e.identity = $1", (*identity).into()),
-            Self::PublicKey(key) => ("e.public_key = $1", key.to_vec().into()),
-        }
-    }
-}
-
 #[derive(Default)]
 pub struct Erased {
     pub events: u64,
     pub content: u64,
     pub blobs: u64,
-    /// Identities whose events were removed.
-    pub identities: Vec<String>,
 }
 
 pub struct ErasedBatch {

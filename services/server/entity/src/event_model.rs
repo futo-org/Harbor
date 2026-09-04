@@ -59,7 +59,7 @@ pub struct Model {
     pub block: HasOne<super::block_model::Entity>,
     /// Only if this is a post event.
     #[sea_orm(has_one)] // Really has zero or one.
-    pub reaction_tally: HasOne<super::reaction_tally_model2::Entity>,
+    pub reaction_tally: HasOne<super::reaction_tally_model::Entity>,
     /// Only if this is a reaction event.
     #[sea_orm(has_one)] // Really has zero or one.
     pub reaction: HasOne<super::reaction_model::Entity>,

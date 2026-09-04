@@ -208,38 +208,60 @@ export class IdentityManager {
    * - Adopt the identity and pull its events
    * - Re-publish the identity event under our signing key
    *
-   * Returns the new identity state on success or `null` on recoverable
-   * failure. Throws on error.
+   * Returns the adopted identity state. Throws on any failure.
    */
-  async claim(identityKey: string): Promise<IdentityState | null> {
+  async claim(identityKey: string, servers?: string[]): Promise<IdentityState> {
     if (!this.client.currentKeyPair) throw new Error('No active key pair');
     const publicKey = this.client.currentKeyPair.publicKey;
 
-    // Hydrate all known identity events for `identityKey` to rs-core
-    await this.client.listEvents({
-      identity: identityKey,
-      collection: COLLECTION.IDENTITY,
-    });
+    // Store these in case we need to roll back
+    const previousIdentityKey = this.client.activeIdentityKey;
+    const previousServers = [...this.client.servers];
 
-    // Check that we are authorized
-    let state = this.resolveIdentity(identityKey);
-    if (!state || !this.checkAuthorized(state, publicKey)) return null;
+    try {
+      if (servers) {
+        this.client.servers = [...servers];
+        this.client.core.setServers(this.client.servers);
+      }
 
-    // Adopt the identity and pull in its events
-    await this.client.setActiveIdentityKey(identityKey);
-    await this.client.sync(SyncStrategy.PARTIAL_PULL);
+      // Hydrate all known identity events for `identityKey` to rs-core
+      await this.client.listEvents({
+        identity: identityKey,
+        collection: COLLECTION.IDENTITY,
+      });
 
-    // Ensure we are still authorized after pulling
-    state = this.resolveIdentity(identityKey);
-    if (!state || !this.checkAuthorized(state, publicKey)) {
-      throw new Error('Lost authorization');
+      // Check that we are authorized
+      let state = this.resolveIdentity(identityKey);
+      if (!state || !this.checkAuthorized(state, publicKey)) {
+        throw new Error('Unable to verify authorization');
+      }
+
+      // Adopt the identity and pull in its events
+      await this.client.setActiveIdentityKey(identityKey);
+      await this.client.sync(SyncStrategy.PARTIAL_PULL);
+
+      // Ensure we are still authorized after pulling
+      state = this.resolveIdentity(identityKey);
+      if (!state || !this.checkAuthorized(state, publicKey)) {
+        throw new Error('Lost authorization');
+      }
+
+      // Re-publish the same identity document signed by our own key,
+      // proving this key acknowledged its membership.
+      await this.publish({ ...state, isLogin: true });
+
+      return state;
+    } catch (err: unknown) {
+      // Roll back changes as best we can
+      if (this.client.activeIdentityKey !== previousIdentityKey) {
+        await this.client.setActiveIdentityKey(previousIdentityKey);
+      }
+
+      this.client.servers = previousServers;
+      this.client.core.setServers(this.client.servers);
+
+      throw err;
     }
-
-    // Re-publish the same identity document signed by our own key,
-    // proving this key acknowledged its membership.
-    await this.publish({ ...state, isLogin: true });
-
-    return state;
   }
 
   /**
@@ -368,9 +390,13 @@ export class IdentityManager {
       });
     } catch (err: unknown) {
       // Roll back changes as best we can
-      await this.client.setActiveIdentityKey(previousIdentityKey);
+      if (this.client.activeIdentityKey !== previousIdentityKey) {
+        await this.client.setActiveIdentityKey(previousIdentityKey);
+      }
+
       this.client.servers = previousServers;
       this.client.core.setServers(this.client.servers);
+
       throw err;
     }
 

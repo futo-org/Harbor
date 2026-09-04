@@ -495,7 +495,12 @@ const FfiConverterTypeGetAttributionFeedArgs = (() => {
 export type GetEventArgs = {
     identity: string,
     collection: number,
-    sequence: bigint
+    sequence: bigint,
+    /**
+     * Hex prefix of the signing key, to pick between events that
+     * different keys published at the same sequence.
+     */
+    signerKeyPrefix?: string
 }
 
 /**
@@ -521,18 +526,21 @@ const FfiConverterTypeGetEventArgs = (() => {
             return {
                 identity: FfiConverterString.readFromCursor(c), 
                 collection: FfiConverterInt32.readFromCursor(c), 
-                sequence: FfiConverterUInt64.readFromCursor(c)
+                sequence: FfiConverterUInt64.readFromCursor(c), 
+                signerKeyPrefix: FfiConverterOptionalString.readFromCursor(c)
             };
         }
         writeIntoCursor(value: TypeName, c: Cursor): void {
             FfiConverterString.writeIntoCursor(value.identity, c);
             FfiConverterInt32.writeIntoCursor(value.collection, c);
             FfiConverterUInt64.writeIntoCursor(value.sequence, c);
+            FfiConverterOptionalString.writeIntoCursor(value.signerKeyPrefix, c);
         }
         allocationSize(value: TypeName): number {
             return FfiConverterString.allocationSize(value.identity) +
              FfiConverterInt32.allocationSize(value.collection) +
-             FfiConverterUInt64.allocationSize(value.sequence);
+             FfiConverterUInt64.allocationSize(value.sequence) +
+             FfiConverterOptionalString.allocationSize(value.signerKeyPrefix);
             
         }
     };
@@ -4907,10 +4915,6 @@ export interface PolycentricCoreLike {
     getIdentitySequence(identity: string, signer: ArrayBuffer) /*throws*/: bigint | undefined;
 /**
  * Fetch a pairing session by its digest's SHA256 hash.
- * We only check that the hash matches the digest and the signature matches
- * the signer.
- * The caller must pull in identity events and check that the signer is
- * authorized.
  */
     getPairingSession(serverUrl: string, digestSha256: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
 /**
@@ -5292,10 +5296,6 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     
 /**
  * Fetch a pairing session by its digest's SHA256 hash.
- * We only check that the hash matches the digest and the signature matches
- * the signer.
- * The caller must pull in identity events and check that the signer is
- * authorized.
  */
     async getPairingSession(serverUrl: string, digestSha256: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -6391,7 +6391,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence() !== 8615) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session() !== 54022) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session() !== 39177) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info() !== 29065) {

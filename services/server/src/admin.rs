@@ -4,7 +4,7 @@ use crate::db::client::build_db_clients;
 use crate::service::content::content_filestore::{
     ContentFilestore, ContentFilestoreConfig,
 };
-use crate::service::identity::repository::{EventsSelector, Query};
+use crate::service::identity::repository::{Erased, Query};
 use crate::service::identity::service as identity_service;
 use sea_orm::DatabaseConnection;
 
@@ -24,38 +24,54 @@ pub async fn delete_events(args: Vec<String>) {
             _ => usage_error(&format!("unexpected argument: {arg}")),
         }
     }
-    let key_bytes;
-    let selector = match (identity.as_deref(), public_key.as_deref()) {
-        (Some(identity), None) => EventsSelector::Identity(identity),
+    let db = connect().await;
+    let identities = match (identity, public_key) {
+        (Some(identity), None) => vec![identity],
         (None, Some(key)) => {
-            key_bytes = hex::decode(key)
+            let key = hex::decode(key)
                 .unwrap_or_else(|_| usage_error("--public-key must be hex"));
-            EventsSelector::PublicKey(&key_bytes)
+            Query::identities_signed_by(&db, &key)
+                .await
+                .expect("failed to find identities")
         }
         _ => usage_error("pass exactly one of --identity or --public-key"),
     };
 
-    let db = connect().await;
-    let count = Query::count_events(&db, &selector)
-        .await
-        .expect("failed to count events");
+    let mut count = 0;
+    for identity in &identities {
+        count += Query::count_events(&db, identity)
+            .await
+            .expect("failed to count events");
+    }
     if !yes {
-        println!("{count} events would be deleted; add --yes to delete them");
+        println!(
+            "{count} events across {} identities would be deleted; add --yes to delete them",
+            identities.len()
+        );
         return;
     }
 
     let filestore = filestore().await;
-    let erased = identity_service::erase_events(
-        &db,
-        filestore.as_ref(),
-        None,
-        &selector,
-    )
-    .await
-    .expect("failed to delete events");
+    let mut total = Erased::default();
+    for identity in &identities {
+        let erased = identity_service::erase_identity(
+            &db,
+            filestore.as_ref(),
+            None,
+            identity,
+        )
+        .await
+        .expect("failed to delete events");
+        total.events += erased.events;
+        total.content += erased.content;
+        total.blobs += erased.blobs;
+    }
     println!(
-        "deleted {} events, {} orphaned content rows and {} blobs",
-        erased.events, erased.content, erased.blobs
+        "deleted {} events, {} orphaned content rows and {} blobs across {} identities",
+        total.events,
+        total.content,
+        total.blobs,
+        identities.len()
     );
 }
 

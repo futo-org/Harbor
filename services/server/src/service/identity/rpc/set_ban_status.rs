@@ -3,7 +3,7 @@
 //! authenticated moderator identity.
 
 use crate::service::context::ServiceContext;
-use crate::service::identity::repository::{self as id_repo, EventsSelector};
+use crate::service::identity::repository as id_repo;
 use crate::service::identity::rpc::common::require_moderator;
 use crate::service::identity::service as identity_service;
 use crate::service::proto::{SetBanStatusRequest, SetBanStatusResponse};
@@ -46,11 +46,11 @@ pub async fn handle(
     );
 
     if body.banned {
-        identity_service::erase_events(
+        identity_service::erase_identity(
             &ctx.db,
             None,
             Some(&ctx.proof_cache),
-            &EventsSelector::Identity(&body.target_identity),
+            &body.target_identity,
         )
         .await
         .map_err(|e| {
