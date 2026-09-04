@@ -61,19 +61,17 @@ impl StatsWorker {
                     return Ok(());
                 };
 
-                match content_body {
-                    // Remove the deleted URL reaction from the URL counters
-                    ContentBody::AttributedToReaction(reaction) => {
-                        if let Some(url) = attributed_reaction_url(&reaction) {
-                            Mutation::remove_attributed_reaction_for(
-                                &self.ctx.db,
-                                url,
-                                reaction.positive,
-                            )
-                            .await?;
-                        }
-                    }
-                    _ => {}
+                // Remove the deleted URL reaction from the URL counters
+                if let ContentBody::AttributedToReaction(reaction) =
+                    content_body
+                    && let Some(url) = attributed_reaction_url(&reaction)
+                {
+                    Mutation::remove_attributed_reaction_for(
+                        &self.ctx.db,
+                        url,
+                        reaction.positive,
+                    )
+                    .await?;
                 }
             }
 
