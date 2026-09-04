@@ -8,7 +8,7 @@ use ::entity::{
     content_reaction_model as ContentReactionModel, event_model as EventModel,
     follow_model as FollowModel, quote_model as QuoteModel,
     reaction_model as ReactionModel,
-    reaction_tally_model2 as ReactionTallyModel, reply_model as ReplyModel,
+    reaction_tally_model as ReactionTallyModel, reply_model as ReplyModel,
     repost_model as RepostModel,
 };
 use polycentric_common::models::collections;

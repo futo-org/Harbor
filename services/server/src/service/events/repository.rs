@@ -11,7 +11,7 @@ use ::entity::event_model as EventModel;
 use ::entity::follow_model as FollowModel;
 use ::entity::quote_model as QuoteModel;
 use ::entity::reaction_model as ReactionModel;
-use ::entity::reaction_tally_model2 as ReactionTallyModel;
+use ::entity::reaction_tally_model as ReactionTallyModel;
 use ::entity::reply_model as ReplyModel;
 use ::entity::repost_model as RepostModel;
 use chrono::Utc;

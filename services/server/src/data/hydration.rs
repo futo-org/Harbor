@@ -138,12 +138,15 @@ where
         })
     };
     let stats_fut = async {
-        gather_stats_for(&ctx.service.ro_db, &display_keys)
-            .await
-            .map_err(|err| {
-                tracing::error!(error = %err, "failed to gather stats");
-                Status::internal("internal server error")
-            })
+        gather_stats_for(
+            &ctx.service.ro_db,
+            rows.iter().map(|row| row.event_id()),
+        )
+        .await
+        .map_err(|err| {
+            tracing::error!(error = %err, "failed to gather stats");
+            Status::internal("internal server error")
+        })
     };
     let blocked_fut = GraphRepository::blocked_set_for_caller(ctx);
     let (

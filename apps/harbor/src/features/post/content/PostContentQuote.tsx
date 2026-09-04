@@ -5,6 +5,7 @@ import {
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
+import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
 import {
   getKeyFingerprint,
   hexToBytes,
@@ -72,7 +73,7 @@ export function PostContentQuote({
 
   if (!post) return isLoading ? <QuoteSkeleton /> : <QuoteUnavailable />;
 
-  const content = post.content ?? '';
+  const content = mentionsToPlainText(post.content ?? '');
   const preview =
     content.length > QUOTE_PREVIEW_LIMIT
       ? `${content.slice(0, QUOTE_PREVIEW_LIMIT)}…`
