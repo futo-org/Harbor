@@ -39,7 +39,7 @@ pub async fn handle(
 ) -> Result<PutPairingSessionResponse, Status> {
     // Ensure the request is legitimate and extract content
     let input = extract_and_validate_input(req)?;
-    verify_authorization(&ctx.db, &input).await?;
+    verify_authorization(&ctx.ro_db, &input).await?;
 
     // Use a transaction to prevent TOCTOU problems
     let txn = ctx.db.begin().await.map_err(|e| {
@@ -80,7 +80,7 @@ pub async fn handle(
     // Return latest session state to client
     Ok(PutPairingSessionResponse {
         session_state: Some(
-            load_session_state(&ctx.db, &response_digest).await?,
+            load_session_state(&ctx.ro_db, &response_digest).await?,
         ),
     })
 }

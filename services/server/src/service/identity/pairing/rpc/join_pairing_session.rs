@@ -23,7 +23,7 @@ pub async fn handle(
     }
 
     let session = pair_repo::Query::get_pairing_session(
-        &ctx.db,
+        &ctx.ro_db,
         &req.digest_sha256,
     )
     .await
@@ -45,7 +45,7 @@ pub async fn handle(
         Status::internal("internal server error")
     })?;
 
-    let claimers = list_claimers(&ctx.db, &req.digest_sha256).await?;
+    let claimers = list_claimers(&ctx.ro_db, &req.digest_sha256).await?;
 
     Ok(JoinPairingSessionResponse {
         session_state: Some(session_state(&session, claimers)),
