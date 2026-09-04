@@ -1,10 +1,7 @@
 package org.futo.polycentric.core
 
-import java.security.MessageDigest
-import java.security.SecureRandom
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
-import org.futo.polycentric.ffi.PublicKey as FfiPublicKey
 import polycentric.v2.IssuerPairingState
 import polycentric.v2.KeyType
 import polycentric.v2.PairingInfo
@@ -12,6 +9,9 @@ import polycentric.v2.PairingSessionDigest
 import polycentric.v2.PairingSessionState
 import polycentric.v2.PublicKey
 import polycentric.v2.SignedIssuerState
+import java.security.MessageDigest
+import java.security.SecureRandom
+import org.futo.polycentric.ffi.PublicKey as FfiPublicKey
 
 const val PAIRING_SESSION_TTL_MILLIS = 5 * 60 * 1000L
 private const val NONCE_BYTES = 32
@@ -22,8 +22,9 @@ private const val NONCE_BYTES = 32
  * joins, the user verifies each device displays the same emoji fingerprint for the pairing session
  * to confirm that no attacker has intercepted the pairing session.
  */
-class PairingSessionManager(private val client: PolycentricClient) {
-
+class PairingSessionManager(
+    private val client: PolycentricClient,
+) {
     class PairingSession(
         /** Canonical serialized `PairingSessionDigest` for this session. */
         val digestBytes: ByteArray,
@@ -42,15 +43,16 @@ class PairingSessionManager(private val client: PolycentricClient) {
     suspend fun createPairingSession(server: String): PairingSession {
         val keyPair = client.currentKeyPair ?: throw NoActiveKeyPairException()
         val identityKey = client.activeIdentityKey ?: throw NoActiveIdentityException()
-        val digestBytes = PairingSessionDigest.ADAPTER.encode(
-            PairingSessionDigest(
-                issuer_identity = identityKey,
-                issuer_signer = keyPair.toPublicKeyProto(),
-                nonce = randomNonce(),
-                initial_timestamp = System.currentTimeMillis(),
-                ttl_millis = PAIRING_SESSION_TTL_MILLIS,
-            ),
-        )
+        val digestBytes =
+            PairingSessionDigest.ADAPTER.encode(
+                PairingSessionDigest(
+                    issuer_identity = identityKey,
+                    issuer_signer = keyPair.toPublicKeyProto(),
+                    nonce = randomNonce(),
+                    initial_timestamp = System.currentTimeMillis(),
+                    ttl_millis = PAIRING_SESSION_TTL_MILLIS,
+                ),
+            )
         return putState(server, digestBytes, sequence = 1L)
     }
 
@@ -86,7 +88,7 @@ class PairingSessionManager(private val client: PolycentricClient) {
 
     /**
      * Check whether the issuer's published identity state authorizes our key.
-		 * Verify the full identity chain before committing.
+     * Verify the full identity chain before committing.
      */
     suspend fun pollForAuthorization(info: PairingInfo): Boolean {
         val keyPair = client.currentKeyPair ?: throw NoActiveKeyPairException()
@@ -108,24 +110,32 @@ class PairingSessionManager(private val client: PolycentricClient) {
     }
 
     /** Sign and publish new session state derived from the local identity chain. */
-    private suspend fun putState(server: String, digestBytes: ByteArray, sequence: Long): PairingSession {
+    private suspend fun putState(
+        server: String,
+        digestBytes: ByteArray,
+        sequence: Long,
+    ): PairingSession {
         val digest = digestFrom(digestBytes, assertIssuer = true)
-        val identityState = client.listValidEvents(digest.issuer_identity, Collections.IDENTITY)
-            .lastOrNull()
-            ?: throw PolycentricException("No local identity chain for ${digest.issuer_identity}")
+        val identityState =
+            client
+                .listValidEvents(digest.issuer_identity, Collections.IDENTITY)
+                .lastOrNull()
+                ?: throw PolycentricException("No local identity chain for ${digest.issuer_identity}")
 
-        val signedState = signIssuerState(
-            IssuerPairingState(
-                session_digest = digestBytes.toByteString(),
-                identity_state = identityState,
-                sequence = sequence,
-            ),
-        )
+        val signedState =
+            signIssuerState(
+                IssuerPairingState(
+                    session_digest = digestBytes.toByteString(),
+                    identity_state = identityState,
+                    sequence = sequence,
+                ),
+            )
 
-        val responseBytes = client.core.putPairingSession(
-            server,
-            SignedIssuerState.ADAPTER.encode(signedState),
-        )
+        val responseBytes =
+            client.core.putPairingSession(
+                server,
+                SignedIssuerState.ADAPTER.encode(signedState),
+            )
         return decodeSession(server, responseBytes)
     }
 
@@ -133,10 +143,14 @@ class PairingSessionManager(private val client: PolycentricClient) {
      * Decode a `PairingSessionDigest`. With [assertIssuer], verify the
      * session belongs to the active identity and key pair.
      */
-    private fun digestFrom(digestBytes: ByteArray, assertIssuer: Boolean = false): PairingSessionDigest {
+    private fun digestFrom(
+        digestBytes: ByteArray,
+        assertIssuer: Boolean = false,
+    ): PairingSessionDigest {
         val decoded = PairingSessionDigest.ADAPTER.decode(digestBytes)
-        val signer = decoded.issuer_signer
-            ?: throw PolycentricException("Pairing session digest has no issuer signer")
+        val signer =
+            decoded.issuer_signer
+                ?: throw PolycentricException("Pairing session digest has no issuer signer")
         val digest = decoded.copy(issuer_signer = signer)
 
         if (assertIssuer) {
@@ -157,10 +171,14 @@ class PairingSessionManager(private val client: PolycentricClient) {
     }
 
     /** Decode a `PairingSessionState` received from a server. */
-    private fun decodeSession(server: String, stateBytes: ByteArray): PairingSession {
+    private fun decodeSession(
+        server: String,
+        stateBytes: ByteArray,
+    ): PairingSession {
         val state = PairingSessionState.ADAPTER.decode(stateBytes)
-        val signedIssuerState = state.issuer_state
-            ?: throw PolycentricException("Pairing session state has no signed issuer state")
+        val signedIssuerState =
+            state.issuer_state
+                ?: throw PolycentricException("Pairing session state has no signed issuer state")
         val issuerState = IssuerPairingState.ADAPTER.decode(signedIssuerState.state_bytes.toByteArray())
         val digestBytes = issuerState.session_digest.toByteArray()
         val digest = digestFrom(digestBytes)
@@ -175,10 +193,11 @@ class PairingSessionManager(private val client: PolycentricClient) {
             issuerState = issuerState,
             claimers = state.claimers,
             expiresAt = expiresAt,
-            pairingInfo = PairingInfo(
-                server = server,
-                digest_sha256 = sha256(digestBytes).toByteString(),
-            ),
+            pairingInfo =
+                PairingInfo(
+                    server = server,
+                    digest_sha256 = sha256(digestBytes).toByteString(),
+                ),
         )
     }
 
@@ -188,11 +207,11 @@ class PairingSessionManager(private val client: PolycentricClient) {
         return nonce.toByteString()
     }
 
-    private fun sha256(bytes: ByteArray): ByteArray =
-        MessageDigest.getInstance("SHA-256").digest(bytes)
+    private fun sha256(bytes: ByteArray): ByteArray = MessageDigest.getInstance("SHA-256").digest(bytes)
 
-    private fun FfiPublicKey.toProto(): PublicKey = PublicKey(
-        key_type = KeyType.fromValue(keyType) ?: KeyType.KEY_TYPE_UNSPECIFIED,
-        key = key.toByteString(),
-    )
+    private fun FfiPublicKey.toProto(): PublicKey =
+        PublicKey(
+            key_type = KeyType.fromValue(keyType) ?: KeyType.KEY_TYPE_UNSPECIFIED,
+            key = key.toByteString(),
+        )
 }

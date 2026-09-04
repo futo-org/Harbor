@@ -40,6 +40,7 @@ scripts fan out across them.
 | `packages/js-node`            | Node.js SDK, storing data in sqlite3.                                                         |
 | `packages/js-storage-sqlite`  | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                  |
 | `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                             |
+| `packages/kt-core`            | Core library holding the protocol logic and generated protobuf types, for Android development. This is a Kotlin port of `js-core`. |
 
 ## Services
 

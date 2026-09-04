@@ -21,6 +21,7 @@ interface IEventRepository {
     }
 
     suspend fun getAll(): List<SignedEvent>
+
     suspend fun getByEventKey(key: EventKey): SignedEvent?
 
     /**
@@ -38,16 +39,28 @@ interface IEventRepository {
 }
 
 interface IContentRepository {
-    suspend fun save(digest: ContentDigest, contentBytes: ByteArray)
+    suspend fun save(
+        digest: ContentDigest,
+        contentBytes: ByteArray,
+    )
+
     suspend fun get(digest: ContentDigest): ByteArray?
+
     suspend fun getAll(): List<Pair<ContentDigest, ByteArray>>
 }
 
 interface IKeysRepository {
     /** Persist a keypair (private key bytes are the caller's concern to encrypt). */
-    suspend fun save(publicKey: ByteArray, keyType: Int, privateKey: ByteArray)
+    suspend fun save(
+        publicKey: ByteArray,
+        keyType: Int,
+        privateKey: ByteArray,
+    )
+
     suspend fun getAll(): List<StoredKeyPair>
+
     suspend fun getByPublicKey(publicKey: ByteArray): StoredKeyPair?
+
     suspend fun delete(publicKey: ByteArray)
 }
 
@@ -59,22 +72,38 @@ class StoredKeyPair(
 
 /** Tracks which servers have acked which events, enabling partial push. */
 interface IEventAckRepository {
-    suspend fun recordAck(server: String, key: EventKey)
-    suspend fun isAcked(server: String, key: EventKey): Boolean
+    suspend fun recordAck(
+        server: String,
+        key: EventKey,
+    )
+
+    suspend fun isAcked(
+        server: String,
+        key: EventKey,
+    ): Boolean
 }
 
 /** Content-addressed blob storage (avatar/post images), keyed by digest. */
 interface IFileStoreDriver {
-    suspend fun put(digest: ContentDigest, bytes: ByteArray)
+    suspend fun put(
+        digest: ContentDigest,
+        bytes: ByteArray,
+    )
+
     suspend fun get(digest: ContentDigest): ByteArray?
+
     suspend fun delete(digest: ContentDigest)
+
     suspend fun has(digest: ContentDigest): Boolean = get(digest) != null
 }
 
 interface IStorageDriver {
     fun createEventRepository(): IEventRepository
+
     fun createContentRepository(): IContentRepository
+
     fun createKeysRepository(): IKeysRepository
+
     fun createEventAckRepository(): IEventAckRepository
 
     /**
@@ -82,7 +111,11 @@ interface IStorageDriver {
      * and switch identities. Passing `null` removes the binding (identity
      * deleted from the device); logout does NOT go through here.
      */
-    suspend fun saveActiveIdentityKey(publicKey: ByteArray, identityKey: String?)
+    suspend fun saveActiveIdentityKey(
+        publicKey: ByteArray,
+        identityKey: String?,
+    )
+
     suspend fun loadActiveIdentityKey(publicKey: ByteArray): String?
 
     /**
@@ -91,6 +124,7 @@ interface IStorageDriver {
      * forgetting the identity.
      */
     suspend fun saveActiveSession(identityKey: String?)
+
     suspend fun loadActiveSession(): String?
 }
 
@@ -101,8 +135,24 @@ interface IStorageDriver {
  */
 interface ICryptoManager {
     fun generateKeyPair(keyType: Int): StoredKeyPair
-    fun derivePublicKey(privateKey: ByteArray, keyType: Int): ByteArray
-    suspend fun sign(privateKey: ByteArray, message: ByteArray, keyType: Int): ByteArray
-    fun verify(publicKey: ByteArray, message: ByteArray, signature: ByteArray, keyType: Int): Boolean
+
+    fun derivePublicKey(
+        privateKey: ByteArray,
+        keyType: Int,
+    ): ByteArray
+
+    suspend fun sign(
+        privateKey: ByteArray,
+        message: ByteArray,
+        keyType: Int,
+    ): ByteArray
+
+    fun verify(
+        publicKey: ByteArray,
+        message: ByteArray,
+        signature: ByteArray,
+        keyType: Int,
+    ): Boolean
+
     fun getSupportedKeyTypes(): List<Int>
 }

@@ -21,29 +21,27 @@ package org.futo.polycentric.core
 internal object SqliteSchema {
     const val VERSION = 2
 
-    val tables = listOf(
-        """CREATE TABLE IF NOT EXISTS schema_version (
+    val tables =
+        listOf(
+            """CREATE TABLE IF NOT EXISTS schema_version (
             version INTEGER NOT NULL,
             upgraded_on TEXT NOT NULL
         )""",
-
-        // The identity each device key HOLDS (durable; only removed when the
-        // key/identity is deleted). Distinct from the active session below —
-        // logging out clears the session but keeps this binding, so the
-        // identity stays listable and can be signed back into.
-        """CREATE TABLE IF NOT EXISTS active_identity_for_key (
+            // The identity each device key HOLDS (durable; only removed when the
+            // key/identity is deleted). Distinct from the active session below —
+            // logging out clears the session but keeps this binding, so the
+            // identity stays listable and can be signed back into.
+            """CREATE TABLE IF NOT EXISTS active_identity_for_key (
             public_key BLOB PRIMARY KEY,
             identity_key TEXT
         )""",
-
-        // Singleton (id = 0) pointing at the currently signed-in identity, or
-        // no/NULL row when logged out. Persists logout across restarts.
-        """CREATE TABLE IF NOT EXISTS active_session (
+            // Singleton (id = 0) pointing at the currently signed-in identity, or
+            // no/NULL row when logged out. Persists logout across restarts.
+            """CREATE TABLE IF NOT EXISTS active_session (
             id INTEGER PRIMARY KEY CHECK (id = 0),
             identity_key TEXT
         )""",
-
-        """CREATE TABLE IF NOT EXISTS keys (
+            """CREATE TABLE IF NOT EXISTS keys (
             public_key BLOB PRIMARY KEY,
             key_type INTEGER NOT NULL,
             private_key BLOB NOT NULL,
@@ -51,8 +49,7 @@ internal object SqliteSchema {
             CHECK (LENGTH(private_key) = 32),
             CHECK (LENGTH(public_key) = 32)
         )""",
-
-        """CREATE TABLE IF NOT EXISTS events (
+            """CREATE TABLE IF NOT EXISTS events (
             identity TEXT NOT NULL,
             public_key_bytes BLOB NOT NULL,
             collection INTEGER NOT NULL,
@@ -61,18 +58,18 @@ internal object SqliteSchema {
             event_bytes BLOB NOT NULL,
             PRIMARY KEY (identity, public_key_bytes, collection, sequence)
         )""",
-
-        """CREATE TABLE IF NOT EXISTS content (
+            """CREATE TABLE IF NOT EXISTS content (
             digest_bytes BLOB PRIMARY KEY,
             content_bytes BLOB NOT NULL
         )""",
-    )
+        )
 
-    val indexes = listOf(
-        "CREATE INDEX IF NOT EXISTS idx_events_identity ON events (identity)",
-        "CREATE INDEX IF NOT EXISTS idx_events_identity_signer ON events (identity, public_key_bytes)",
-        "CREATE INDEX IF NOT EXISTS idx_events_identity_signer_collection ON events (identity, public_key_bytes, collection)",
-    )
+    val indexes =
+        listOf(
+            "CREATE INDEX IF NOT EXISTS idx_events_identity ON events (identity)",
+            "CREATE INDEX IF NOT EXISTS idx_events_identity_signer ON events (identity, public_key_bytes)",
+            "CREATE INDEX IF NOT EXISTS idx_events_identity_signer_collection ON events (identity, public_key_bytes, collection)",
+        )
 }
 
 /** Uppercase hex, matching SQLite's `hex()` for BLOB equality in WHERE clauses. */

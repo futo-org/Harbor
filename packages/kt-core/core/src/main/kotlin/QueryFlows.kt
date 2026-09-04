@@ -1,6 +1,5 @@
 package org.futo.polycentric.core
 
-import java.util.logging.Logger
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -13,8 +12,11 @@ import org.futo.polycentric.ffi.QueryObserver
 import org.futo.polycentric.ffi.QueryOpts
 import org.futo.polycentric.ffi.QueryResultFfi
 import org.futo.polycentric.ffi.QueryStatus
+import java.util.logging.Logger
 
-class CoreQueryException(message: String) : Exception(message)
+class CoreQueryException(
+    message: String,
+) : Exception(message)
 
 private val log = Logger.getLogger("PolycentricCore.query")
 
@@ -40,26 +42,30 @@ fun PolycentricCore.queryFlow(
     query: Query,
     queryKey: List<String>? = null,
     opts: QueryOpts? = null,
-): Flow<QueryResultFfi> = callbackFlow {
-    val observable = fetchQuery(queryKey, query, opts)
-    val subscription = observable.subscribe(object : QueryObserver {
-        override fun next(result: QueryResultFfi) {
-            trySend(result)
-        }
+): Flow<QueryResultFfi> =
+    callbackFlow {
+        val observable = fetchQuery(queryKey, query, opts)
+        val subscription =
+            observable.subscribe(
+                object : QueryObserver {
+                    override fun next(result: QueryResultFfi) {
+                        trySend(result)
+                    }
 
-        override fun error(message: String) {
-            log.warning("Query server error (non-fatal): $message")
-        }
+                    override fun error(message: String) {
+                        log.warning("Query server error (non-fatal): $message")
+                    }
 
-        override fun complete() {
-            close()
-        }
-    })
-    awaitClose { subscription.unsubscribe() }
-    // Unbounded so the non-suspending `trySend` in `next` can never drop an
-    // emission (a dropped `Success` would hang `awaitQuery` forever). Fuses
-    // with the callbackFlow channel; emission count is bounded by the fan-out.
-}.buffer(Channel.UNLIMITED)
+                    override fun complete() {
+                        close()
+                    }
+                },
+            )
+        awaitClose { subscription.unsubscribe() }
+        // Unbounded so the non-suspending `trySend` in `next` can never drop an
+        // emission (a dropped `Success` would hang `awaitQuery` forever). Fuses
+        // with the callbackFlow channel; emission count is bounded by the fan-out.
+    }.buffer(Channel.UNLIMITED)
 
 /**
  * One-shot query: resolve on the first `Success` emission (at least one

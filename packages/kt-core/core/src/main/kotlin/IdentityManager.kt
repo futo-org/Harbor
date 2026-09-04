@@ -1,6 +1,5 @@
 package org.futo.polycentric.core
 
-import java.security.MessageDigest
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okio.ByteString
@@ -18,6 +17,7 @@ import polycentric.v2.PublicKey
 import polycentric.v2.ServerList
 import polycentric.v2.SignedEvent
 import polycentric.v2.VectorClock
+import java.security.MessageDigest
 
 /**
  * Resolved identity state from the latest Identity document.
@@ -51,11 +51,16 @@ class PublishResult(
  * rules live in rs-core; like js-core, methods here do only the local
  * bookkeeping and the "basic precaution" checks noted per method.
  */
-class IdentityManager(private val client: PolycentricClient) {
-
+class IdentityManager(
+    private val client: PolycentricClient,
+) {
     companion object {
-        fun keysEqual(a: PublicKey, b: PublicKey): Boolean =
-            a.key_type == b.key_type && a.key == b.key
+        private const val IDENTITY_CHAIN_FETCH_SIZE = 1000
+
+        fun keysEqual(
+            a: PublicKey,
+            b: PublicKey,
+        ): Boolean = a.key_type == b.key_type && a.key == b.key
     }
 
     /**
@@ -70,19 +75,13 @@ class IdentityManager(private val client: PolycentricClient) {
     private val mutationMutex = Mutex()
 
     /**
-     * How many identity-collection events to pull when resolving a remote
-     * identity's chain. Identity chains are tiny (genesis + a handful of
-     * key/server updates), so this comfortably covers the full collection.
-     */
-    private val IDENTITY_CHAIN_FETCH_SIZE = 1000
-
-    /**
      * Resolves the current identity state by finding the latest Identity
      * document on the identity collection for the active key pair.
      */
     suspend fun getCurrent(): IdentityState {
-        val activeKey = client.activeIdentityKey
-            ?: return IdentityState(null, emptyList(), emptyList(), null)
+        val activeKey =
+            client.activeIdentityKey
+                ?: return IdentityState(null, emptyList(), emptyList(), null)
 
         // TODO: Fix this so it doesn't need to go over all events
         //       (js-core has the same TODO; an (identity, collection)
@@ -102,12 +101,13 @@ class IdentityManager(private val client: PolycentricClient) {
             val identity = Content.ADAPTER.decode(contentBytes).identity ?: continue
 
             highestSequence = key.sequence
-            state = IdentityState(
-                identityKey = key.identity,
-                rotationKeys = identity.rotation_keys,
-                signingKeys = identity.signing_keys,
-                servers = identity.servers?.urls,
-            )
+            state =
+                IdentityState(
+                    identityKey = key.identity,
+                    rotationKeys = identity.rotation_keys,
+                    signingKeys = identity.signing_keys,
+                    servers = identity.servers?.urls,
+                )
         }
 
         return state
@@ -132,11 +132,12 @@ class IdentityManager(private val client: PolycentricClient) {
         val keyPair = client.currentKeyPair ?: throw NoActiveKeyPairException()
         val publicKeyProto = keyPair.toPublicKeyProto()
 
-        val identity = Identity(
-            rotation_keys = rotationKeys,
-            signing_keys = signingKeys,
-            servers = servers?.let { ServerList(urls = it) },
-        )
+        val identity =
+            Identity(
+                rotation_keys = rotationKeys,
+                signing_keys = signingKeys,
+                servers = servers?.let { ServerList(urls = it) },
+            )
         val content = Content(identity = identity)
 
         val isBootstrap = identityKey == null
@@ -156,31 +157,34 @@ class IdentityManager(private val client: PolycentricClient) {
         }
 
         val contentBytes = Content.ADAPTER.encode(content)
-        val digest = ContentDigest(
-            type = ContentDigestType.CONTENT_DIGEST_TYPE_SHA256,
-            value_ = sha256(contentBytes).toByteString(),
-        )
+        val digest =
+            ContentDigest(
+                type = ContentDigestType.CONTENT_DIGEST_TYPE_SHA256,
+                value_ = sha256(contentBytes).toByteString(),
+            )
         client.contents.save(digest, contentBytes)
         client.setActiveIdentityKey(resolvedIdentityKey)
 
-        val event = if (isBootstrap) {
-            Event(
-                key = EventKey(
-                    collection = Collections.IDENTITY,
-                    identity = resolvedIdentityKey,
-                    signed_by = publicKeyProto,
-                    sequence = 1L,
-                ),
-                identity_sequence = 1L,
-                vector_clock = VectorClock(sequence = listOf(1L)),
-                previous_signature = ByteString.EMPTY,
-                content_digest = digest,
-                created_at = System.currentTimeMillis(),
-                application = client.application,
-            )
-        } else {
-            client.buildEvent(content, Collections.IDENTITY)
-        }
+        val event =
+            if (isBootstrap) {
+                Event(
+                    key =
+                        EventKey(
+                            collection = Collections.IDENTITY,
+                            identity = resolvedIdentityKey,
+                            signed_by = publicKeyProto,
+                            sequence = 1L,
+                        ),
+                    identity_sequence = 1L,
+                    vector_clock = VectorClock(sequence = listOf(1L)),
+                    previous_signature = ByteString.EMPTY,
+                    content_digest = digest,
+                    created_at = System.currentTimeMillis(),
+                    application = client.application,
+                )
+            } else {
+                client.buildEvent(content, Collections.IDENTITY)
+            }
 
         val signedEvent = client.signEvent(event)
         client.commitEvent(signedEvent, content)
@@ -209,8 +213,9 @@ class IdentityManager(private val client: PolycentricClient) {
         identityKey: String,
         server: String? = null,
     ): IdentityState {
-        val targetServer = server ?: client.servers.firstOrNull()
-            ?: throw PolycentricException("No servers configured")
+        val targetServer =
+            server ?: client.servers.firstOrNull()
+                ?: throw PolycentricException("No servers configured")
 
         // Hydrate the identity's events from the server into the core's local
         // store so its chain can be validated as a whole. Identity chains are
@@ -285,90 +290,99 @@ class IdentityManager(private val client: PolycentricClient) {
     }
 
     /** Whether [state] authorizes [myKey] (present as a rotation or signing key). */
-    private fun isAuthorized(state: IdentityState, myKey: PublicKey): Boolean =
+    private fun isAuthorized(
+        state: IdentityState,
+        myKey: PublicKey,
+    ): Boolean =
         state.rotationKeys.any { keysEqual(it, myKey) } ||
             state.signingKeys.any { keysEqual(it, myKey) }
 
-    suspend fun isRotationKeyForIdentity(identityKey: String, publicKey: PublicKey): Boolean {
+    suspend fun isRotationKeyForIdentity(
+        identityKey: String,
+        publicKey: PublicKey,
+    ): Boolean {
         val state = getCurrent()
         if (state.identityKey != identityKey) return false
         return state.rotationKeys.any { keysEqual(it, publicKey) }
     }
 
     /** Adds a signing key to the current identity and publishes the update. */
-    suspend fun addSigningKey(publicKey: PublicKey): SignedEvent = mutationMutex.withLock {
-        val state = getCurrent()
-        val identityKey = state.identityKey ?: throw NoActiveIdentityException()
-        publish(
-            identityKey,
-            state.rotationKeys,
-            state.signingKeys + publicKey,
-            state.servers,
-        ).signedEvent
-    }
+    suspend fun addSigningKey(publicKey: PublicKey): SignedEvent =
+        mutationMutex.withLock {
+            val state = getCurrent()
+            val identityKey = state.identityKey ?: throw NoActiveIdentityException()
+            publish(
+                identityKey,
+                state.rotationKeys,
+                state.signingKeys + publicKey,
+                state.servers,
+            ).signedEvent
+        }
 
     /** Adds a rotation key to the current identity and publishes the update. */
-    suspend fun addRotationKey(publicKey: PublicKey): SignedEvent = mutationMutex.withLock {
-        val state = getCurrent()
-        val identityKey = state.identityKey ?: throw NoActiveIdentityException()
-        if (state.rotationKeys.any { keysEqual(it, publicKey) }) {
-            throw PolycentricException("Rotation key already exists")
+    suspend fun addRotationKey(publicKey: PublicKey): SignedEvent =
+        mutationMutex.withLock {
+            val state = getCurrent()
+            val identityKey = state.identityKey ?: throw NoActiveIdentityException()
+            if (state.rotationKeys.any { keysEqual(it, publicKey) }) {
+                throw PolycentricException("Rotation key already exists")
+            }
+            publish(
+                identityKey,
+                state.rotationKeys + publicKey,
+                state.signingKeys,
+                state.servers,
+            ).signedEvent
         }
-        publish(
-            identityKey,
-            state.rotationKeys + publicKey,
-            state.signingKeys,
-            state.servers,
-        ).signedEvent
-    }
 
     /**
      * Adds a server to the current identity document and publishes the
      * update. Calls the server's `GetInfo` first — an unreachable server
      * is not added.
      */
-    suspend fun addServer(url: String): SignedEvent = mutationMutex.withLock {
-        val state = getCurrent()
-        val identityKey = state.identityKey ?: throw NoActiveIdentityException()
+    suspend fun addServer(url: String): SignedEvent =
+        mutationMutex.withLock {
+            val state = getCurrent()
+            val identityKey = state.identityKey ?: throw NoActiveIdentityException()
 
-        // An identity that has never configured its list starts from the
-        // client's effective (default) servers.
-        val servers = state.servers ?: client.servers
-        if (url in servers) {
-            throw ServerAlreadyAddedException()
+            // An identity that has never configured its list starts from the
+            // client's effective (default) servers.
+            val servers = state.servers ?: client.servers
+            if (url in servers) {
+                throw ServerAlreadyAddedException()
+            }
+
+            client.core.getServerInfo(url)
+
+            publish(
+                identityKey,
+                state.rotationKeys,
+                state.signingKeys,
+                servers + url,
+            ).signedEvent
         }
-
-        client.core.getServerInfo(url)
-
-        publish(
-            identityKey,
-            state.rotationKeys,
-            state.signingKeys,
-            servers + url,
-        ).signedEvent
-    }
 
     /** Removes a server from the current identity document and publishes the update. */
-    suspend fun removeServer(url: String): SignedEvent = mutationMutex.withLock {
-        val state = getCurrent()
-        val identityKey = state.identityKey ?: throw NoActiveIdentityException()
+    suspend fun removeServer(url: String): SignedEvent =
+        mutationMutex.withLock {
+            val state = getCurrent()
+            val identityKey = state.identityKey ?: throw NoActiveIdentityException()
 
-        val current = state.servers ?: client.servers
-        val servers = current.filter { it != url }
-        if (servers.size == current.size) {
-            throw PolycentricException("Server not found")
+            val current = state.servers ?: client.servers
+            val servers = current.filter { it != url }
+            if (servers.size == current.size) {
+                throw PolycentricException("Server not found")
+            }
+
+            publish(
+                identityKey,
+                state.rotationKeys,
+                state.signingKeys,
+                servers,
+            ).signedEvent
         }
 
-        publish(
-            identityKey,
-            state.rotationKeys,
-            state.signingKeys,
-            servers,
-        ).signedEvent
-    }
-
-    private fun sha256(bytes: ByteArray): ByteArray =
-        MessageDigest.getInstance("SHA-256").digest(bytes)
+    private fun sha256(bytes: ByteArray): ByteArray = MessageDigest.getInstance("SHA-256").digest(bytes)
 
     private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
 }

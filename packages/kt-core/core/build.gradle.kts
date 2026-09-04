@@ -3,6 +3,7 @@ import org.gradle.api.tasks.Exec
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.wire)
+    alias(libs.plugins.ktlint)
     id("maven-publish")
 }
 
@@ -14,9 +15,36 @@ version = (findProperty("ktCoreVersion") as? String) ?: "0.0.0"
 // Repo root is two levels up from packages/kt-core.
 val repoRoot = rootProject.projectDir.parentFile.parentFile
 val protosDir = File(repoRoot, "protos")
-val uniffiOutDir = layout.buildDirectory.dir("generated/uniffi").get().asFile
+val uniffiOutDir =
+    layout.buildDirectory
+        .dir("generated/uniffi")
+        .get()
+        .asFile
 val jniLibsDir = File(projectDir, "src/main/jniLibs")
 val skipRust = (findProperty("skipRust") as? String) == "true"
+
+tasks.register("checkNativeLibs") {
+    group = "verification"
+    description = "Fails when skipRust=true but rs-core artifacts is missing."
+    doLast {
+        val abis = listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+        val missing =
+            abis.filter { abi ->
+                !File(jniLibsDir, "$abi/libpolycentric_core.so").exists()
+            }
+        if (skipRust && missing.isNotEmpty()) {
+            throw GradleException(
+                "skipRust=true but libpolycentric_core.so is missing for: $missing. " +
+                    "This build would produce an AAR that crashes with UnsatisfiedLinkError. " +
+                    "Populate src/main/jniLibs/<abi>/ or build with Rust enabled.",
+            )
+        }
+    }
+}
+
+tasks.named("preBuild") {
+    dependsOn("checkNativeLibs")
+}
 
 android {
     namespace = "org.futo.polycentric.core"
@@ -53,6 +81,27 @@ android {
     }
 }
 
+// The pre-commit hook (lint-staged) passes the staged files via
+// -PktlintStagedFiles so only Kotlin that is actually being committed gets
+// formatted; without the property every hand-written source is covered.
+val stagedKtFiles = (findProperty("ktlintStagedFiles") as? String)
+    ?.split(',')
+    ?.filter { it.isNotEmpty() }
+    ?.map { File(it).canonicalPath }
+    ?.toSet()
+
+// ── ktlint (format/lint check) ─────────────────────────────────────────
+ktlint {
+    // uniffi and Wire emit unformatted generated Kotlin (--no-format for
+    // uniffi); lint hand-written sources only.
+    filter {
+        if (stagedKtFiles != null) {
+            exclude { element -> element.file.canonicalPath !in stagedKtFiles }
+        }
+        exclude { element -> element.file.path.contains("generated") }
+    }
+}
+
 // ── Protobuf (Wire) ────────────────────────────────────────────────────
 // Generates Kotlin message classes from the SAME .proto files the server,
 // js-core, and rs-core are generated from. Only v2 is needed; the legacy
@@ -74,59 +123,77 @@ wire {
 // ── Rust: cross-compile rs-core for Android ────────────────────────────
 // Requires: rustup targets (aarch64/armv7/i686/x86_64-linux-android),
 // cargo-ndk (`cargo install cargo-ndk`), and $ANDROID_NDK_HOME.
-val cargoNdkBuild = tasks.register<Exec>("cargoNdkBuild") {
-    group = "rust"
-    description = "Cross-compile rs-core (cdylib) for all Android ABIs via cargo-ndk"
-    workingDir = repoRoot
-    commandLine(
-        "cargo", "ndk",
-        "-t", "arm64-v8a",
-        "-t", "armeabi-v7a",
-        "-t", "x86",
-        "-t", "x86_64",
-        "-o", jniLibsDir.absolutePath,
-        "build", "--release",
-        "-p", "polycentric-core",
-    )
-    inputs.dir(File(repoRoot, "packages/rs-core/src"))
-    inputs.dir(File(repoRoot, "packages/rs-common/src"))
-    outputs.dir(jniLibsDir)
-}
+val cargoNdkBuild =
+    tasks.register<Exec>("cargoNdkBuild") {
+        group = "rust"
+        description = "Cross-compile rs-core (cdylib) for all Android ABIs via cargo-ndk"
+        workingDir = repoRoot
+        commandLine(
+            "cargo",
+            "ndk",
+            "-t",
+            "arm64-v8a",
+            "-t",
+            "armeabi-v7a",
+            "-t",
+            "x86",
+            "-t",
+            "x86_64",
+            "-o",
+            jniLibsDir.absolutePath,
+            "build",
+            "--release",
+            "-p",
+            "polycentric-core",
+        )
+        inputs.dir(File(repoRoot, "packages/rs-core/src"))
+        inputs.dir(File(repoRoot, "packages/rs-common/src"))
+        outputs.dir(jniLibsDir)
+    }
 
 // ── Rust: host build + Kotlin binding generation ───────────────────────
 // uniffi-bindgen reads exported symbols from a HOST cdylib (any target
 // works; host is fastest), then emits Kotlin into build/generated/uniffi.
 // Package/name mapping comes from uniffi.toml next to this file.
-val cargoHostBuild = tasks.register<Exec>("cargoHostBuild") {
-    group = "rust"
-    description = "Build rs-core for the host so uniffi-bindgen can read its metadata"
-    workingDir = repoRoot
-    commandLine("cargo", "build", "--release", "-p", "polycentric-core")
-}
+val cargoHostBuild =
+    tasks.register<Exec>("cargoHostBuild") {
+        group = "rust"
+        description = "Build rs-core for the host so uniffi-bindgen can read its metadata"
+        workingDir = repoRoot
+        commandLine("cargo", "build", "--release", "-p", "polycentric-core")
+    }
 
-val uniffiGenerate = tasks.register<Exec>("uniffiGenerate") {
-    group = "rust"
-    description = "Generate Kotlin bindings for rs-core with uniffi-bindgen"
-    dependsOn(cargoHostBuild)
-    workingDir = repoRoot
-    // Linux host library name; use libpolycentric_core.dylib on macOS.
-    val hostLib = File(repoRoot, "target/release/libpolycentric_core.so")
-    commandLine(
-        "cargo", "run", "--release",
-        "--manifest-path", File(repoRoot, "tools/uniffi-bindgen/Cargo.toml").absolutePath,
-        "--",
-        "generate",
-        "--library", hostLib.absolutePath,
-        "--language", "kotlin",
-        "--config", File(projectDir, "uniffi.toml").absolutePath,
-        "--out-dir", uniffiOutDir.absolutePath,
-        "--no-format",
-    )
-    // Regenerate when the host cdylib (rs-core's exported FFI) changes;
-    // without this input the task is wrongly cached and stale bindings persist.
-    inputs.file(hostLib)
-    outputs.dir(uniffiOutDir)
-}
+val uniffiGenerate =
+    tasks.register<Exec>("uniffiGenerate") {
+        group = "rust"
+        description = "Generate Kotlin bindings for rs-core with uniffi-bindgen"
+        dependsOn(cargoHostBuild)
+        workingDir = repoRoot
+        // Linux host library name; use libpolycentric_core.dylib on macOS.
+        val hostLib = File(repoRoot, "target/release/libpolycentric_core.so")
+        commandLine(
+            "cargo",
+            "run",
+            "--release",
+            "--manifest-path",
+            File(repoRoot, "tools/uniffi-bindgen/Cargo.toml").absolutePath,
+            "--",
+            "generate",
+            "--library",
+            hostLib.absolutePath,
+            "--language",
+            "kotlin",
+            "--config",
+            File(projectDir, "uniffi.toml").absolutePath,
+            "--out-dir",
+            uniffiOutDir.absolutePath,
+            "--no-format",
+        )
+        // Regenerate when the host cdylib (rs-core's exported FFI) changes;
+        // without this input the task is wrongly cached and stale bindings persist.
+        inputs.file(hostLib)
+        outputs.dir(uniffiOutDir)
+    }
 
 if (!skipRust) {
     tasks.named("preBuild") {
@@ -166,10 +233,11 @@ afterEvaluate {
             repositories {
                 maven {
                     name = "GitLab"
-                    url = uri(
-                        "${System.getenv("CI_API_V4_URL")}/projects/" +
-                            "${System.getenv("CI_PROJECT_ID")}/packages/maven",
-                    )
+                    url =
+                        uri(
+                            "${System.getenv("CI_API_V4_URL")}/projects/" +
+                                "${System.getenv("CI_PROJECT_ID")}/packages/maven",
+                        )
                     credentials(HttpHeaderCredentials::class) {
                         name = "Job-Token"
                         value = System.getenv("CI_JOB_TOKEN")

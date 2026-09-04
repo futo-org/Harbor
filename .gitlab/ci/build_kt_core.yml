@@ -1,4 +1,4 @@
-# Kotlin SDK (packages/kt-core): compile the AAR on code changes and
+# Kotlin SDK (packages/kt-core): lint and compile the AAR on code changes and
 # publish it to the project's Maven package registry on tag pipelines.
 .kt-core-workflow:
   rules:
@@ -58,6 +58,16 @@
 
 # Compilation test for all MRs, default-branch changes to relevant code,
 # and tag pipelines.
+
+# Formatting and linting (ktlint)
+kt-core-lint:
+  extends: .kt-core-gradle
+  stage: check
+  rules:
+    - !reference [.kt-core-workflow, rules]
+  script:
+    - ./gradlew :core:ktlintCheck
+
 kt-core-build:
   extends: .kt-core-gradle
   stage: build
