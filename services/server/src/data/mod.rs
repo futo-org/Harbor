@@ -12,6 +12,8 @@ use tonic::Status;
 pub mod hydration;
 pub mod pipeline;
 
+pub type EventId = i64;
+
 /// Row that contains an event.
 pub trait EventRow {
     /// Returns the event model and optionally content for the row.
@@ -328,11 +330,11 @@ impl<SortedBy> Cursor<SortedBy> {
 pub struct Marker<SortedBy> {
     pub sorted_by: SortedBy,
     /// Event id (`events.id`) to ensure the ordering is always unique.
-    pub event_id: i64,
+    pub event_id: EventId,
 }
 
 impl<SortedBy> Marker<SortedBy> {
-    pub fn values(&self) -> (SortedBy, i64)
+    pub fn values(&self) -> (SortedBy, EventId)
     where
         SortedBy: Copy,
     {
