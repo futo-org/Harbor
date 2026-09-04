@@ -1,0 +1,33 @@
+# Opens the post nearest the middle of the screen whose centre is plain post
+# surface, since the tap lands there and an image or link would open instead.
+# The web driver has no relative selectors, so a script first marks that
+# post. The feed is virtualised, so only a post already on screen is safe to
+# target.
+- evalBrowserScript:
+    script: |
+      const middle = window.innerHeight / 2;
+      const distance = (rect) => Math.abs(rect.top + rect.height / 2 - middle);
+      const posts = [...document.querySelectorAll('[role="article"]')]
+        .map((el) => ({ el, rect: el.getBoundingClientRect() }))
+        .filter(({ rect }) => rect.height > 0)
+        .sort((a, b) => distance(a.rect) - distance(b.rect));
+      const onScreen = posts.filter(
+        ({ rect }) => rect.top >= 0 && rect.bottom <= window.innerHeight,
+      );
+      const plain = ({ el, rect }) => {
+        const hit = document.elementFromPoint(
+          rect.left + rect.width / 2,
+          rect.top + rect.height / 2,
+        );
+        return (
+          !!hit &&
+          el.contains(hit) &&
+          !hit.closest('a, img, button, [role="button"], [role="link"], [role="img"]')
+        );
+      };
+      const post = onScreen.find(plain) ?? onScreen[0] ?? posts[0];
+      post.el.id = 'openPost';
+      return true;
+- tapOn:
+    css: '#openPost'
+- assertVisible: ${output.post.replyPrompt}
