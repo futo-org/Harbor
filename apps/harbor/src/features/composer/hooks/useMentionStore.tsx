@@ -8,6 +8,7 @@ import {
 } from '@/src/common/util/parseTextLinks';
 import type { ProfileHookResult } from '@/src/features/profile/hooks/useProfile';
 import { isWeb } from '@/src/common/util/platform';
+import { useComposerStore } from '@/src/features/composer/hooks/useComposerStore';
 
 // A word char: unicode letter, number, or underscore.
 const WORD = '[\\p{L}\\p{N}_]';
@@ -89,12 +90,12 @@ export function createMentionStore(): StoreApi<MentionStore> {
       const ctx = findMentionContext(text, caret);
       if (!ctx || !onChangeText) return;
 
+      // todo: when rich text is supported, we can drop the in-memory replacer logic and just do smth like
+      //  const mention = profile.name ? `@{${identity},${profile.name}}` : `@{${identity}}`;
       const mention = `@${profile.alias ?? identity}`;
-
-      // todo: when rich text is supported
-      // const mention = profile.name
-      //   ? `@{${identity},${profile.name}}`
-      //   : `@{${identity}}`;
+      if (profile.name) {
+        useComposerStore.getState().rememberMention(identity, profile.name);
+      }
 
       // Replace the `@` + query, with one space after the mention: reuse the
       // one already there (mid-text insert) instead of doubling it. The space

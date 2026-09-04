@@ -4,6 +4,7 @@ import {
   selectMentionQuery,
 } from './useMentionStore';
 import type { ProfileHookResult } from '@/src/features/profile/hooks/useProfile';
+import { useComposerStore } from './useComposerStore';
 
 const IDENTITY = 'a'.repeat(64);
 
@@ -162,5 +163,25 @@ describe('insertMention', () => {
     insert(store, { alias: 'ann.example.com' });
     expect(onChangeText).not.toHaveBeenCalled();
     expect(store.getState().text).toBe('plain text');
+  });
+
+  describe('display name memory', () => {
+    beforeEach(() => useComposerStore.getState().reset());
+
+    it('remembers the display name of an inserted mention', () => {
+      const { store } = setup('@', 1);
+      insert(store, { alias: 'ann.example.com', name: 'Ann' });
+      expect(useComposerStore.getState().mentions).toEqual({
+        [IDENTITY]: 'Ann',
+      });
+    });
+
+    it('remembers nothing without a display name or a failed insert', () => {
+      const { store } = setup('@', 1);
+      insert(store, { alias: null, name: null });
+      const closed = setup('plain text', 5);
+      insert(closed.store, { alias: null, name: 'Ann' });
+      expect(useComposerStore.getState().mentions).toEqual({});
+    });
   });
 });
