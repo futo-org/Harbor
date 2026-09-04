@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use entity::{
     attributed_to_reaction_summary_model as AttributedSummaryModel,
-    reaction_model, reaction_tally_model2,
-    reply_count_model as ReplyCountModel, reply_model,
+    reaction_model, reaction_tally_model2, reply_model,
 };
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{
@@ -11,12 +10,11 @@ use sea_orm::sea_query::{
     SelectStatement,
 };
 use sea_orm::{
-    ColumnTrait, Condition, ConnectionTrait, DbConn, DbErr, EntityTrait,
-    FromQueryResult, QueryFilter,
+    ColumnTrait, ConnectionTrait, DbConn, DbErr, EntityTrait, FromQueryResult,
+    QueryFilter,
 };
 
 use crate::data::EventId;
-use crate::service::events::TargetEventKey;
 
 pub struct Query;
 
@@ -201,102 +199,6 @@ impl Query {
 pub struct Mutation;
 
 impl Mutation {
-    /// For a new post event, create a row with a reply count of 0.
-    pub async fn init_reply_count_for(
-        db: &DbConn,
-        key: TargetEventKey,
-    ) -> Result<(), DbErr> {
-        let result =
-            ReplyCountModel::Entity::insert(ReplyCountModel::ActiveModel {
-                event_key_collection: Set(key.collection),
-                event_key_identity: Set(key.identity),
-                event_key_public_key_type: Set(key.public_key_type),
-                event_key_public_key: Set(key.public_key),
-                event_key_sequence: Set(key.sequence),
-                reply_count: Set(0),
-            })
-            .on_conflict(
-                OnConflict::columns([
-                    ReplyCountModel::Column::EventKeyCollection,
-                    ReplyCountModel::Column::EventKeyIdentity,
-                    ReplyCountModel::Column::EventKeyPublicKeyType,
-                    ReplyCountModel::Column::EventKeyPublicKey,
-                    ReplyCountModel::Column::EventKeySequence,
-                ])
-                .do_nothing()
-                .to_owned(),
-            )
-            .exec(db)
-            .await;
-
-        match result {
-            Ok(_) => Ok(()),
-            Err(DbErr::RecordNotInserted) => Ok(()),
-            Err(e) => Err(e),
-        }
-    }
-
-    /// Increment the reply count for `key` or create a count of 1 if no
-    /// counter exists for it.
-    pub async fn count_reply_for(
-        db: &DbConn,
-        key: TargetEventKey,
-    ) -> Result<(), DbErr> {
-        // Try inserting a count of 1 if no count is present.
-        ReplyCountModel::Entity::insert(ReplyCountModel::ActiveModel {
-            event_key_collection: Set(key.collection),
-            event_key_identity: Set(key.identity),
-            event_key_public_key_type: Set(key.public_key_type),
-            event_key_public_key: Set(key.public_key),
-            event_key_sequence: Set(key.sequence),
-            reply_count: Set(1),
-        })
-        // Increment the existing count if there is one.
-        .on_conflict(
-            OnConflict::columns([
-                ReplyCountModel::Column::EventKeyCollection,
-                ReplyCountModel::Column::EventKeyIdentity,
-                ReplyCountModel::Column::EventKeyPublicKeyType,
-                ReplyCountModel::Column::EventKeyPublicKey,
-                ReplyCountModel::Column::EventKeySequence,
-            ])
-            .value(
-                ReplyCountModel::Column::ReplyCount,
-                Expr::col((
-                    ReplyCountModel::Entity,
-                    ReplyCountModel::Column::ReplyCount,
-                ))
-                .add(1),
-            )
-            .to_owned(),
-        )
-        .exec(db)
-        .await?;
-
-        Ok(())
-    }
-
-    /// Decrement the reply count for `key`, if it has a recorded reply count > 0.
-    pub async fn remove_reply_for(
-        db: &DbConn,
-        key: TargetEventKey,
-    ) -> Result<(), DbErr> {
-        // Only decrement if the reply count is greater than zero.
-        let filter = reply_key_condition(key)
-            .add(ReplyCountModel::Column::ReplyCount.gt(0));
-
-        ReplyCountModel::Entity::update_many()
-            .col_expr(
-                ReplyCountModel::Column::ReplyCount,
-                Expr::col(ReplyCountModel::Column::ReplyCount).sub(1),
-            )
-            .filter(filter)
-            .exec(db)
-            .await?;
-
-        Ok(())
-    }
-
     /// Increment the upvote/downvote count for an out-of-network (URL)
     /// reaction, creating the summary row with a count of 1 if none exists yet.
     /// Mirrors `count_reaction_for` but keyed by URL.
@@ -374,18 +276,6 @@ impl Mutation {
             .map(|r| (r.upvote_count, r.downvote_count))
             .unwrap_or((0, 0)))
     }
-}
-
-fn reply_key_condition(key: TargetEventKey) -> Condition {
-    Condition::all()
-        .add(ReplyCountModel::Column::EventKeyCollection.eq(key.collection))
-        .add(ReplyCountModel::Column::EventKeyIdentity.eq(key.identity))
-        .add(
-            ReplyCountModel::Column::EventKeyPublicKeyType
-                .eq(key.public_key_type),
-        )
-        .add(ReplyCountModel::Column::EventKeyPublicKey.eq(key.public_key))
-        .add(ReplyCountModel::Column::EventKeySequence.eq(key.sequence))
 }
 
 pub struct ReactionSummary {

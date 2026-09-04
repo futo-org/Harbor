@@ -5,7 +5,7 @@ use crate::service::proto::{ContentDigest, Identity, PublicKey};
 use ::entity::{
     ban_model as BanModel, content_model as ContentModel,
     event_model as EventModel, moderator_model as ModeratorModel,
-    notification as NotificationModel, reply_count_model as ReplyCountModel,
+    notification as NotificationModel,
 };
 use polycentric_common::models::collections;
 use sea_orm::*;
@@ -346,10 +346,6 @@ impl Mutation {
                     .add(NotificationModel::Column::FromIdentity.eq(identity))
                     .add(NotificationModel::Column::ToIdentity.eq(identity)),
             )
-            .exec(db)
-            .await?;
-        ReplyCountModel::Entity::delete_many()
-            .filter(ReplyCountModel::Column::EventKeyIdentity.eq(identity))
             .exec(db)
             .await?;
         Ok(())

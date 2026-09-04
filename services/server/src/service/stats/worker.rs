@@ -6,7 +6,6 @@
 use std::sync::Arc;
 
 use common_kafka::{BorrowedMessage, Message};
-use polycentric_common::models::protos_v2::Post;
 use polycentric_common::models::protos_v2::{
     AttributedToReaction, Content, Event, EventBundle, EventKey,
     attributed_to::To, content::ContentBody,
@@ -45,18 +44,6 @@ impl StatsWorker {
         };
 
         match input.content_body {
-            ContentBody::Post(post) => {
-                // Begin tracking the new post's reply and reaction counts.
-                Mutation::init_reply_count_for(&self.ctx.db, input.key.clone())
-                    .await?;
-
-                let parent_key = get_post_parent(post);
-
-                // Try updating parent's reply count.
-                if let Some(parent) = parent_key {
-                    Mutation::count_reply_for(&self.ctx.db, parent).await?;
-                }
-            }
             ContentBody::Delete(delete) => {
                 let Some(target) = delete.event_key else {
                     return Ok(());
@@ -75,15 +62,6 @@ impl StatsWorker {
                 };
 
                 match content_body {
-                    // Decrement parent post's reply count if needed
-                    ContentBody::Post(post) => {
-                        let Some(parent) = get_post_parent(post) else {
-                            return Ok(());
-                        };
-
-                        Mutation::remove_reply_for(&self.ctx.db, parent)
-                            .await?;
-                    }
                     // Remove the deleted URL reaction from the URL counters
                     ContentBody::AttributedToReaction(reaction) => {
                         if let Some(url) = attributed_reaction_url(&reaction) {
@@ -215,10 +193,4 @@ async fn find_content_by_key(
     };
 
     Ok(Some(content_body))
-}
-
-fn get_post_parent(post: Post) -> Option<TargetEventKey> {
-    post.reply
-        .and_then(|reply| reply.parent)
-        .and_then(to_target_key)
 }

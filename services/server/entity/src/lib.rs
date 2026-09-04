@@ -90,7 +90,6 @@ pub mod pairing_session_model;
 pub mod quote_model;
 pub mod reaction_model;
 pub mod reaction_tally_model2;
-pub mod reply_count_model;
 pub mod reply_model;
 pub mod repost_model;
 pub mod url_info_cache_model;
