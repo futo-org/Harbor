@@ -37,15 +37,15 @@ impl Query {
         query
             .from(reply_model::Entity)
             .expr_as(
-                Expr::col(reply_model::Column::EventId.as_column_ref()),
-                "event_id",
+                Expr::col(reply_model::Column::Post.as_column_ref()),
+                "post",
             )
             .expr_as(Expr::from(Func::count(Expr::col(Asterisk))), "count")
             .cond_where(
-                Expr::col(reply_model::Column::EventId.as_column_ref())
+                Expr::col(reply_model::Column::Post.as_column_ref())
                     .is_in(event_ids),
             )
-            .group_by_col(reply_model::Column::EventId.as_column_ref());
+            .group_by_col(reply_model::Column::Post.as_column_ref());
 
         let rows = db.query_all(&query).await?;
         let map = rows
