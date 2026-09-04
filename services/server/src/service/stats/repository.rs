@@ -1,14 +1,22 @@
-use std::cmp::Reverse;
 use std::collections::HashMap;
-use std::collections::HashSet;
 
-use ::entity::attributed_to_reaction_summary_model as AttributedSummaryModel;
-use ::entity::reaction_summary_model as ReactionSummaryModel;
-use ::entity::reaction_tally_model as ReactionTallyModel;
-use ::entity::reply_count_model as ReplyCountModel;
-use sea_orm::sea_query::{Expr, ExprTrait, JoinType, OnConflict};
-use sea_orm::*;
+use entity::{
+    attributed_to_reaction_summary_model as AttributedSummaryModel,
+    reaction_model, reaction_summary_model as ReactionSummaryModel,
+    reaction_tally_model as ReactionTallyModel, reaction_tally_model2,
+    reply_count_model as ReplyCountModel, reply_model,
+};
+use sea_orm::ActiveValue::Set;
+use sea_orm::sea_query::{
+    Asterisk, ColumnRef, Expr, ExprTrait, Func, OnConflict, Order,
+    SelectStatement,
+};
+use sea_orm::{
+    ColumnTrait, Condition, ConnectionTrait, DbConn, DbErr, EntityTrait,
+    FromQueryResult, QueryFilter,
+};
 
+use crate::data::EventId;
 use crate::service::events::TargetEventKey;
 
 pub struct Query;
@@ -19,47 +27,33 @@ impl Query {
     /// Events without any replies may be excluded from the output map.
     pub async fn count_replies(
         db: &DbConn,
-        events: Vec<TargetEventKey>,
-    ) -> Result<HashMap<TargetEventKey, i64>, DbErr> {
-        if events.is_empty() {
+        event_ids: impl ExactSizeIterator<Item = EventId>,
+    ) -> Result<HashMap<EventId, i64>, DbErr> {
+        if event_ids.len() == 0 {
             return Ok(HashMap::new());
         }
 
-        let key_cols = [
-            ReplyCountModel::Column::EventKeyCollection,
-            ReplyCountModel::Column::EventKeyIdentity,
-            ReplyCountModel::Column::EventKeyPublicKeyType,
-            ReplyCountModel::Column::EventKeyPublicKey,
-            ReplyCountModel::Column::EventKeySequence,
-        ];
+        let mut query = SelectStatement::new();
+        query
+            .from(reply_model::Entity)
+            .expr_as(
+                Expr::col(reply_model::Column::EventId.as_column_ref()),
+                "event_id",
+            )
+            .expr_as(Expr::from(Func::count(Expr::col(Asterisk))), "count")
+            .cond_where(
+                Expr::col(reply_model::Column::EventId.as_column_ref())
+                    .is_in(event_ids),
+            )
+            .group_by_col(reply_model::Column::EventId.as_column_ref());
 
-        // Keep only rows for event keys that we care about.
-        let filter = Expr::tuple(key_cols.map(Expr::col))
-            .in_tuples(event_key_tuples(events));
-
-        // Fetch reply counts maintained by the stats worker.
-        let rows = ReplyCountModel::Entity::find()
-            .filter(filter)
-            .all(db)
-            .await?;
-
-        // Store the reply counts as a map for efficient access.
+        let rows = db.query_all(&query).await?;
         let map = rows
             .into_iter()
-            .map(|row| {
-                (
-                    TargetEventKey {
-                        collection: row.event_key_collection,
-                        identity: row.event_key_identity,
-                        public_key_type: row.event_key_public_key_type,
-                        public_key: row.event_key_public_key,
-                        sequence: row.event_key_sequence,
-                    },
-                    row.reply_count,
-                )
+            .map(|row| -> Result<(EventId, i64), DbErr> {
+                Ok((row.try_get_by(0)?, row.try_get_by(1)?))
             })
-            .collect();
-
+            .collect::<Result<HashMap<_, _>, _>>()?;
         Ok(map)
     }
 
@@ -68,43 +62,58 @@ impl Query {
     /// Events with no reactions may be excluded from the output map.
     pub async fn summarize_reactions(
         db: &DbConn,
-        events: Vec<TargetEventKey>,
-    ) -> Result<HashMap<TargetEventKey, ReactionSummary>, DbErr> {
-        if events.is_empty() {
+        event_ids: impl ExactSizeIterator<Item = EventId>,
+    ) -> Result<HashMap<EventId, ReactionSummary>, DbErr> {
+        if event_ids.len() == 0 {
             return Ok(HashMap::new());
         }
 
-        // Keep only rows for event keys that we care about.
-        let filter = Expr::tuple(SUMMARY_KEY_COLUMNS.map(Expr::col))
-            .in_tuples(event_key_tuples(events));
+        let mut query = SelectStatement::new();
+        query
+            .from(reaction_tally_model2::Entity)
+            .expr_as(
+                Expr::col(
+                    reaction_tally_model2::Column::EventId.as_column_ref(),
+                ),
+                "event_id",
+            )
+            .expr_as(
+                Expr::col(
+                    reaction_tally_model2::Column::PositiveCount
+                        .as_column_ref(),
+                ),
+                "positive_count",
+            )
+            .expr_as(
+                Expr::col(
+                    reaction_tally_model2::Column::NegativeCount
+                        .as_column_ref(),
+                ),
+                "negative_count",
+            )
+            .cond_where(
+                Expr::col(
+                    reaction_tally_model2::Column::EventId.as_column_ref(),
+                )
+                .is_in(event_ids),
+            );
 
-        // Fetch reaction summaries maintained by the stats worker.
-        let rows = ReactionSummaryModel::Entity::find()
-            .filter(filter)
-            .all(db)
-            .await?;
-
-        // Store the summaries as a map for efficient access.
+        let rows = db.query_all(&query).await?;
         let map = rows
             .into_iter()
-            .map(|row| {
-                (
-                    TargetEventKey {
-                        collection: row.event_key_collection,
-                        identity: row.event_key_identity,
-                        public_key_type: row.event_key_public_key_type,
-                        public_key: row.event_key_public_key,
-                        sequence: row.event_key_sequence,
-                    },
+            .map(|row| -> Result<(EventId, ReactionSummary), DbErr> {
+                let event_id = row.try_get_by(0)?;
+                let positive_count = row.try_get_by(1)?;
+                let negative_count = row.try_get_by(2)?;
+                Ok((
+                    event_id,
                     ReactionSummary {
-                        reaction_count: row.upvote_count + row.downvote_count,
-                        upvote_count: row.upvote_count,
-                        downvote_count: row.downvote_count,
+                        upvote_count: positive_count,
+                        downvote_count: negative_count,
                     },
-                )
+                ))
             })
-            .collect();
-
+            .collect::<Result<HashMap<_, _>, _>>()?;
         Ok(map)
     }
 
@@ -114,105 +123,80 @@ impl Query {
     /// popular to least.
     pub async fn tally_reactions(
         db: &DbConn,
-        event_keys: &[TargetEventKey],
-        limit: u64,
-    ) -> Result<HashMap<TargetEventKey, Vec<ReactionTally>>, DbErr> {
-        if event_keys.is_empty() {
+        event_ids: impl ExactSizeIterator<Item = EventId>,
+    ) -> Result<HashMap<EventId, Vec<ReactionTally>>, DbErr> {
+        if event_ids.len() == 0 {
             return Ok(HashMap::new());
         }
 
-        // Deduplicate event keys
-        let event_keys = event_keys.iter().cloned().collect::<HashSet<_>>();
-
-        // Alias for the event keys to query for
-        let keys_table = "keys";
-
-        // Create a filter for event keys
-        let key_matches = {
-            let tally_key_cols = TALLY_EVENT_KEY_COLUMNS
-                .map(|col| Expr::col((ReactionTallyModel::Entity, col)));
-
-            let key_cols =
-                ["column1", "column2", "column3", "column4", "column5"]
-                    .map(|col| Expr::col((keys_table, col)));
-
-            Expr::tuple(tally_key_cols).eq(Expr::tuple(key_cols))
-        };
-
-        // Subquery for finding the reaction tallies for an event key
-        let find_tallies_for_key = ReactionTallyModel::Entity::find()
-            .filter(ReactionTallyModel::Column::Count.gt(0))
-            .filter(key_matches)
-            .order_by_desc(ReactionTallyModel::Column::Count)
-            .limit(limit)
-            .into_query();
-
-        // Outer query to find tallies for all event keys requested.
-        // Aliasing the join as the tally table keeps this a query for tally models.
-        let mut query = ReactionTallyModel::Entity::find();
-
-        QuerySelect::query(&mut query)
-            .from_clear()
-            .from_values(event_key_tuples(event_keys), keys_table)
-            .join_lateral(
-                JoinType::InnerJoin,
-                find_tallies_for_key,
-                ReactionTallyModel::Entity,
-                Condition::all(),
-            );
-
-        // Execute the query
-        let rows = query.all(db).await?;
-
-        // Gather into a hash map
-        let mut output: HashMap<TargetEventKey, Vec<ReactionTally>> =
-            HashMap::new();
-
-        for row in rows {
-            output
-                .entry(TargetEventKey {
-                    collection: row.event_key_collection,
-                    identity: row.event_key_identity,
-                    public_key_type: row.event_key_public_key_type,
-                    public_key: row.event_key_public_key,
-                    sequence: row.event_key_sequence,
-                })
-                .or_default()
-                .push(ReactionTally {
-                    emoji: row.emoji,
-                    positive: row.positive,
-                    count: row.count,
-                });
-        }
-
-        // Sort by most popular to least popular
-        for tallies in output.values_mut() {
-            tallies.sort_unstable_by(|a, b| {
-                let left = Reverse((a.count, &a.emoji, a.positive));
-                let right = Reverse((b.count, &b.emoji, b.positive));
-                left.cmp(&right)
-            });
-        }
-
-        Ok(output)
-    }
-}
-
-fn event_key_tuples<T: IntoIterator<Item = TargetEventKey>>(
-    event_keys: T,
-) -> Vec<EventKeyTuple> {
-    event_keys
-        .into_iter()
-        .map(|k| {
-            (
-                k.collection,
-                k.identity,
-                k.public_key_type,
-                k.public_key,
-                k.sequence,
+        let mut query = SelectStatement::new();
+        query
+            .from(reaction_model::Entity)
+            .expr_as(
+                Expr::col(reaction_model::Column::OnPost.as_column_ref()),
+                "on_post",
             )
-        })
-        .collect()
+            .expr_as(
+                Expr::col(reaction_model::Column::Emoji.as_column_ref()),
+                "emoji",
+            )
+            .expr_as(
+                Expr::col(reaction_model::Column::Positive.as_column_ref()),
+                "positive",
+            )
+            .expr_as(Expr::from(Func::count(Expr::col(Asterisk))), "count")
+            .cond_where(
+                Expr::col(reaction_model::Column::EventId.as_column_ref())
+                    .is_in(event_ids),
+            )
+            .group_by_columns([
+                reaction_model::Column::OnPost.as_column_ref(),
+                reaction_model::Column::Emoji.as_column_ref(),
+                reaction_model::Column::Positive.as_column_ref(),
+            ])
+            .order_by_columns([
+                (
+                    ColumnRef::from(
+                        reaction_model::Column::OnPost.as_column_ref(),
+                    ),
+                    Order::Desc,
+                ),
+                (ColumnRef::from("count"), Order::Desc),
+                (
+                    ColumnRef::from(
+                        reaction_model::Column::Emoji.as_column_ref(),
+                    ),
+                    Order::Desc,
+                ),
+                (
+                    ColumnRef::from(
+                        reaction_model::Column::Positive.as_column_ref(),
+                    ),
+                    Order::Desc,
+                ),
+            ]);
+
+        let rows = db.query_all(&query).await?;
+        let mut map = HashMap::new();
+        for row in rows {
+            let on_post = row.try_get_by(0)?;
+            let tally = ReactionTally {
+                emoji: row.try_get_by(1)?,
+                positive: row.try_get_by(2)?,
+                count: row.try_get_by(2)?,
+            };
+            let reactions: &mut Vec<ReactionTally> =
+                map.entry(on_post).or_default();
+            let idx = reactions.binary_search_by(|r| {
+                (tally.count, &*tally.emoji, tally.positive)
+                    .cmp(&(r.count, &*r.emoji, r.positive))
+            });
+            match idx {
+                Ok(idx) | Err(idx) => reactions.insert(idx, tally),
+            }
+        }
+        Ok(map)
+    }
 }
 
 pub struct Mutation;
@@ -609,15 +593,6 @@ const SUMMARY_KEY_COLUMNS: [ReactionSummaryModel::Column; 5] = [
     ReactionSummaryModel::Column::EventKeySequence,
 ];
 
-/// The event key columns of a reaction tally.
-const TALLY_EVENT_KEY_COLUMNS: [ReactionTallyModel::Column; 5] = [
-    ReactionTallyModel::Column::EventKeyCollection,
-    ReactionTallyModel::Column::EventKeyIdentity,
-    ReactionTallyModel::Column::EventKeyPublicKeyType,
-    ReactionTallyModel::Column::EventKeyPublicKey,
-    ReactionTallyModel::Column::EventKeySequence,
-];
-
 /// The primary key columns of a reaction tally:
 /// the target's event key + `(emoji, positive)`.
 const TALLY_KEY_COLUMNS: [ReactionTallyModel::Column; 7] = [
@@ -630,11 +605,7 @@ const TALLY_KEY_COLUMNS: [ReactionTallyModel::Column; 7] = [
     ReactionTallyModel::Column::Positive,
 ];
 
-/// Tuple representation of an event key for use in DB queries.
-type EventKeyTuple = (i16, String, i16, Vec<u8>, i64);
-
 pub struct ReactionSummary {
-    pub reaction_count: i64,
     pub upvote_count: i64,
     pub downvote_count: i64,
 }

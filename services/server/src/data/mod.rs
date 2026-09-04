@@ -26,6 +26,11 @@ pub trait EventRow {
         self.as_event_with_content().0
     }
 
+    /// Returns the event id.
+    fn event_id(&self) -> EventId {
+        self.as_event().id
+    }
+
     /// Returns the content of the event, if any.
     fn as_content(&self) -> Option<&content_model::Model> {
         self.as_event_with_content().1
@@ -117,9 +122,9 @@ pub fn assemble_bundle(
     row: EventWithContentRow,
     stats: &EventStats,
 ) -> proto::EventBundle {
-    let key = TargetEventKey::of(&row.0);
+    let event_id = row.0.id;
     let mut bundle = row_into_bundle(row);
-    include_stats(&mut bundle.meta, &key, stats);
+    include_stats(&mut bundle.meta, event_id, stats);
     bundle
 }
 

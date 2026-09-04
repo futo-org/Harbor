@@ -56,7 +56,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
 
             let mut gravity_value = SelectStatement::new();
             if let Some(gravity) = feeds_gravity {
-                gravity_value.expr_as( Expr::Constant(gravity.into()), "gravity");
+                gravity_value.expr_as(Expr::Constant(gravity.into()), "gravity");
             } else {
                 // Calculate the dynamic gravity value.
                 gravity_value
