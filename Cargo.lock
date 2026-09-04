@@ -3700,6 +3700,7 @@ dependencies = [
  "prost",
  "push-notifications-entity",
  "push-notifications-migration",
+ "regex",
  "reqwest",
  "sea-orm",
  "serde",
