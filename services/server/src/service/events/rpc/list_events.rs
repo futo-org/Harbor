@@ -102,7 +102,7 @@ async fn hydrate(
         .collect::<Vec<_>>();
 
     let stats_fut = async {
-        gather_stats_for(&ctx.ro_db, &keys)
+        gather_stats_for(&ctx.ro_db, rows.iter().map(|(e, _)| e.id))
             .await
             .map_err(map_db_err)
     };

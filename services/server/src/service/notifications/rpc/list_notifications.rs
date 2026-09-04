@@ -132,16 +132,9 @@ async fn hydrate(
         FeedsRepository::list_events_by_keys(&ctx.service.ro_db, &proto_keys)
             .await
             .map_err(map_db_err)?;
-    let fetched_keys: Vec<TargetEventKey> =
-        fetched.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
-    let mut fetched_bundles = rows_into_bundles(fetched);
-    attach_proofs(ctx.service, &mut fetched_bundles).await?;
-
-    let bundles: HashMap<TargetEventKey, EventBundle> =
-        fetched_keys.iter().cloned().zip(fetched_bundles).collect();
 
     let stats_fut = async {
-        gather_stats_for(&ctx.service.ro_db, &fetched_keys)
+        gather_stats_for(&ctx.service.ro_db, fetched.iter().map(|(e, _)| e.id))
             .await
             .map_err(map_db_err)
     };
@@ -179,6 +172,14 @@ async fn hydrate(
         stats_fut,
         blocked_fut,
     )?;
+
+    let fetched_keys: Vec<_> =
+        fetched.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
+    let mut fetched_bundles = rows_into_bundles(fetched);
+    attach_proofs(ctx.service, &mut fetched_bundles).await?;
+
+    let bundles: HashMap<TargetEventKey, EventBundle> =
+        fetched_keys.into_iter().zip(fetched_bundles).collect();
 
     let mut label_bundles = rows_into_bundles(label_rows.clone());
     attach_proofs(ctx.service, &mut label_bundles).await?;
