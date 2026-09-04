@@ -4915,10 +4915,6 @@ export interface PolycentricCoreLike {
     getIdentitySequence(identity: string, signer: ArrayBuffer) /*throws*/: bigint | undefined;
 /**
  * Fetch a pairing session by its digest's SHA256 hash.
- * We only check that the hash matches the digest and the signature matches
- * the signer.
- * The caller must pull in identity events and check that the signer is
- * authorized.
  */
     getPairingSession(serverUrl: string, digestSha256: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
 /**
@@ -5300,10 +5296,6 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     
 /**
  * Fetch a pairing session by its digest's SHA256 hash.
- * We only check that the hash matches the digest and the signature matches
- * the signer.
- * The caller must pull in identity events and check that the signer is
- * authorized.
  */
     async getPairingSession(serverUrl: string, digestSha256: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -6399,7 +6391,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence() !== 8615) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session() !== 54022) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session() !== 39177) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info() !== 29065) {

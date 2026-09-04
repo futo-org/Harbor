@@ -25,9 +25,9 @@ use crate::time;
 /// See other docs for where fields originate from and whether they can be
 /// trusted.
 pub struct SessionState {
+    pub raw: PairingSessionState,
     pub digest: PairingSessionDigest,
     pub issuer_state: IssuerPairingState,
-    pub claimers: Vec<PublicKey>,
 }
 
 #[derive(Default)]
@@ -35,11 +35,6 @@ pub struct OpenOptions {
     /// The current time to use for expiration logic.
     /// Leave as `None` to let the validator derive the current time.
     pub now_millis: Option<i64>,
-
-    /// Set this to `true` to skip checking the authorization of the signer.
-    /// This is useful when fetching the pairing state for the first time where
-    /// we haven't pulled in the issuer's identity chain yet.
-    pub skip_signer_auth: bool,
 
     /// When provided, this value is recorded as an observed sequence for this
     /// pairing session.
@@ -51,7 +46,8 @@ pub struct OpenOptions {
 
 /// Validate the pairing session state and extract its data.
 /// The digest is always verified against its expected hash.
-/// The signature is always checked against the declared signer.
+/// The signature is always checked against the digest's signer.
+/// We also reject expired sessions and outdated states.
 /// The validation logic can be tuned with `opts`.
 pub fn open_state(
     state: PairingSessionState,
@@ -62,15 +58,15 @@ pub fn open_state(
     // Get concrete values for validation options
     let opts = opts.unwrap_or_default();
     let now_millis = opts.now_millis.unwrap_or_else(|| time::now_millis() as i64);
-    let check_signer = !opts.skip_signer_auth;
     let min_sequence = opts.min_sequence;
 
     // Extract issuer state
     let issuer_msg = state
         .issuer_state
+        .as_ref()
         .ok_or_else(|| CoreError::InvalidInput("pairing session has no issuer state".to_owned()))?;
 
-    let (signer, digest, issuer_state) = issuer_msg.open().map_err(|e| match e {
+    let (_signer, digest, issuer_state) = issuer_msg.open().map_err(|e| match e {
         CommonError::SignatureError(_) => {
             CoreError::InvalidInput("pairing session issuer state signature is invalid".to_owned())
         }
@@ -86,23 +82,15 @@ pub fn open_state(
     }
 
     // Get what we need from the polycentric client
-    let (identity_chain, accept_sequence) = {
+    let accept_sequence = {
         let mut client = client.lock_recover();
-
-        let identity_chain = if check_signer {
-            client.identity_chain(&digest.issuer_identity).ok()
-        } else {
-            None
-        };
 
         if let Some(min_sequence) = min_sequence {
             client.accept_pairing_sequence(digest_sha256, min_sequence);
         }
 
         let seq = issuer_state.sequence;
-        let accept_sequence = client.try_pairing_sequence(digest_sha256, seq);
-
-        (identity_chain, accept_sequence)
+        client.try_pairing_sequence(digest_sha256, seq)
     };
 
     // Validate sequence
@@ -110,24 +98,6 @@ pub fn open_state(
         return Err(CoreError::InvalidInput(
             "pairing session state sequence is stale".to_owned(),
         ));
-    }
-
-    // Validate signer
-    if check_signer {
-        let identity_state = identity_chain
-            .as_ref()
-            .and_then(|chain| chain.latest_state())
-            .ok_or_else(|| {
-                CoreError::InvalidInput(
-                    "no valid identity chain for the pairing session issuer".to_owned(),
-                )
-            })?;
-
-        if !identity_state.authorizes_rotation(&signer) {
-            return Err(CoreError::InvalidInput(
-                "pairing session signer not authorized for rotation".to_owned(),
-            ));
-        }
     }
 
     // Validate liveness
@@ -146,9 +116,9 @@ pub fn open_state(
 
     // Return validated output
     Ok(SessionState {
+        raw: state,
         digest,
         issuer_state,
-        claimers: state.claimers,
     })
 }
 
@@ -193,28 +163,6 @@ pub async fn fetch_session(
         .ok_or_else(|| CoreError::Network("get_pairing_session: missing session state".into()))
 }
 
-/// Fetch the pairing session, but don't check the signer's authorization.
-pub async fn fetch_session_dangerous(
-    client: &Mutex<PolycentricClient>,
-    server_url: &str,
-    digest_sha256: Vec<u8>,
-) -> Result<Vec<u8>, CoreError> {
-    let session_state = fetch_session(server_url, digest_sha256.clone()).await?;
-
-    let bytes = session_state.encode_to_vec();
-    open_state(
-        session_state,
-        client,
-        &digest_sha256,
-        Some(OpenOptions {
-            skip_signer_auth: true,
-            ..OpenOptions::default()
-        }),
-    )?;
-
-    Ok(bytes)
-}
-
 /// Create or update a pairing session's state on the server.
 pub async fn put(
     client: &Mutex<PolycentricClient>,
@@ -253,8 +201,7 @@ pub async fn put(
     // It's possible for the server to mess with the state or for our session
     // to have been superseded by a newer one.
     // Let's make sure we got a valid response that matches what we sent.
-    let bytes = response_state.encode_to_vec();
-    open_state(
+    let state = open_state(
         response_state,
         client,
         &digest_sha256,
@@ -264,7 +211,7 @@ pub async fn put(
         }),
     )?;
 
-    Ok(bytes)
+    Ok(state.raw.encode_to_vec())
 }
 
 pub async fn join(
@@ -293,7 +240,7 @@ pub async fn join(
         .ok_or_else(|| CoreError::Network("join_pairing_session: missing session state".into()))?;
 
     let state = open_state(session_state, client, &digest_sha256, None)?;
-    if !state.claimers.contains(&claimer_key) {
+    if !state.raw.claimers.contains(&claimer_key) {
         return Err(CoreError::InvalidInput(
             "claimer key is not registered on the pairing session".to_owned(),
         ));

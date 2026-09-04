@@ -122,11 +122,7 @@ export class PairingSessionManager {
     return await this.putState(server, digestBytes, sequence);
   }
 
-  /**
-   * Fetch a pairing session using `info`.
-   * Keep in mind that the signer's authorization to rotate the identity
-   * named by this pairing session is *not* checked here.
-   */
+  /** Fetch a pairing session using `info`. */
   async getPairingSession(info: Proto.PairingInfo): Promise<PairingSession> {
     const stateBytes = await this.client.core.getPairingSession(
       info.server,
@@ -135,10 +131,7 @@ export class PairingSessionManager {
     return this.decodeSession(info.server, stateBytes);
   }
 
-  /**
-   * Register our key as a claimer on a session.
-   * Ensure the session is legitimate before joining.
-   */
+  /** Register our key as a claimer on a session. */
   async joinPairingSession(info: Proto.PairingInfo): Promise<void> {
     await this.client.core.joinPairingSession(
       info.server,
