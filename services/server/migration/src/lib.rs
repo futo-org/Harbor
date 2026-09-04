@@ -56,6 +56,8 @@ mod m20260903_000001_cache_post_indexes;
 mod m20260903_000001_reaction_decay_clamp_base;
 mod m20260903_000002_content_post_reply_parent_index;
 
+mod old_entity;
+
 pub struct Migrator;
 
 #[async_trait::async_trait]

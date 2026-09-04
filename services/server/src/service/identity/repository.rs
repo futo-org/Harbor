@@ -7,7 +7,6 @@ use ::entity::{
     event_model as EventModel, moderator_model as ModeratorModel,
     notification as NotificationModel,
     reaction_summary_model as ReactionSummaryModel,
-    reaction_tally_model as ReactionTalliesModel,
     reply_count_model as ReplyCountModel,
 };
 use polycentric_common::models::collections;
@@ -357,10 +356,6 @@ impl Mutation {
             .await?;
         ReactionSummaryModel::Entity::delete_many()
             .filter(ReactionSummaryModel::Column::EventKeyIdentity.eq(identity))
-            .exec(db)
-            .await?;
-        ReactionTalliesModel::Entity::delete_many()
-            .filter(ReactionTalliesModel::Column::EventKeyIdentity.eq(identity))
             .exec(db)
             .await?;
         Ok(())

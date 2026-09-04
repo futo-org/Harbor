@@ -72,17 +72,6 @@ impl StatsWorker {
                     reaction.positive,
                 )
                 .await?;
-
-                // Also tally the emoji if the reaction has one
-                if let Some(emoji) = reaction.emoji {
-                    Mutation::count_reaction_tally_for(
-                        &self.ctx.db,
-                        target,
-                        emoji,
-                        reaction.positive,
-                    )
-                    .await?;
-                }
             }
             ContentBody::Delete(delete) => {
                 let Some(target) = delete.event_key else {
@@ -127,17 +116,6 @@ impl StatsWorker {
                             reaction.positive,
                         )
                         .await?;
-
-                        // Also decrement the emoji tally if there was one
-                        if let Some(emoji) = reaction.emoji {
-                            Mutation::remove_reaction_tally_for(
-                                &self.ctx.db,
-                                target,
-                                emoji,
-                                reaction.positive,
-                            )
-                            .await?;
-                        }
                     }
 
                     // Remove the deleted URL reaction from the URL counters
