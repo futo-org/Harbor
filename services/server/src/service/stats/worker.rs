@@ -49,8 +49,6 @@ impl StatsWorker {
                 // Begin tracking the new post's reply and reaction counts.
                 Mutation::init_reply_count_for(&self.ctx.db, input.key.clone())
                     .await?;
-                Mutation::init_reaction_summary_for(&self.ctx.db, input.key)
-                    .await?;
 
                 let parent_key = get_post_parent(post);
 
@@ -58,20 +56,6 @@ impl StatsWorker {
                 if let Some(parent) = parent_key {
                     Mutation::count_reply_for(&self.ctx.db, parent).await?;
                 }
-            }
-            ContentBody::Reaction(reaction) => {
-                let Some(target) = reaction.event_key.and_then(to_target_key)
-                else {
-                    return Ok(());
-                };
-
-                // Count the reaction toward the target's upvote/downvote total
-                Mutation::count_reaction_for(
-                    &self.ctx.db,
-                    target.clone(),
-                    reaction.positive,
-                )
-                .await?;
             }
             ContentBody::Delete(delete) => {
                 let Some(target) = delete.event_key else {
@@ -100,24 +84,6 @@ impl StatsWorker {
                         Mutation::remove_reply_for(&self.ctx.db, parent)
                             .await?;
                     }
-
-                    // Remove the deleted reaction from reaction counters
-                    ContentBody::Reaction(reaction) => {
-                        let Some(target) =
-                            reaction.event_key.and_then(to_target_key)
-                        else {
-                            return Ok(());
-                        };
-
-                        // Decrement the target's upvote/downvote total
-                        Mutation::remove_reaction_for(
-                            &self.ctx.db,
-                            target.clone(),
-                            reaction.positive,
-                        )
-                        .await?;
-                    }
-
                     // Remove the deleted URL reaction from the URL counters
                     ContentBody::AttributedToReaction(reaction) => {
                         if let Some(url) = attributed_reaction_url(&reaction) {

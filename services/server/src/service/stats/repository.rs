@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use entity::{
     attributed_to_reaction_summary_model as AttributedSummaryModel,
-    reaction_model, reaction_summary_model as ReactionSummaryModel,
-    reaction_tally_model2, reply_count_model as ReplyCountModel, reply_model,
+    reaction_model, reaction_tally_model2,
+    reply_count_model as ReplyCountModel, reply_model,
 };
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{
@@ -297,103 +297,6 @@ impl Mutation {
         Ok(())
     }
 
-    /// For a new post event, create a reaction summary row with 0 reactions.
-    pub async fn init_reaction_summary_for(
-        db: &DbConn,
-        key: TargetEventKey,
-    ) -> Result<(), DbErr> {
-        let result = ReactionSummaryModel::Entity::insert(
-            ReactionSummaryModel::ActiveModel {
-                event_key_collection: Set(key.collection),
-                event_key_identity: Set(key.identity),
-                event_key_public_key_type: Set(key.public_key_type),
-                event_key_public_key: Set(key.public_key),
-                event_key_sequence: Set(key.sequence),
-                upvote_count: Set(0),
-                downvote_count: Set(0),
-            },
-        )
-        .on_conflict(
-            OnConflict::columns(SUMMARY_KEY_COLUMNS)
-                .do_nothing()
-                .to_owned(),
-        )
-        .exec(db)
-        .await;
-
-        match result {
-            Ok(_) => Ok(()),
-            Err(DbErr::RecordNotInserted) => Ok(()),
-            Err(e) => Err(e),
-        }
-    }
-
-    /// Increment the upvote or downvote count for the reaction target `key`,
-    /// creating a summary row with a count of 1 if none exists yet.
-    pub async fn count_reaction_for(
-        db: &DbConn,
-        key: TargetEventKey,
-        positive: bool,
-    ) -> Result<(), DbErr> {
-        let (upvote, downvote) = if positive { (1, 0) } else { (0, 1) };
-
-        let count_col = if positive {
-            ReactionSummaryModel::Column::UpvoteCount
-        } else {
-            ReactionSummaryModel::Column::DownvoteCount
-        };
-
-        // Try inserting a fresh count, incrementing the existing one on conflict.
-        ReactionSummaryModel::Entity::insert(
-            ReactionSummaryModel::ActiveModel {
-                event_key_collection: Set(key.collection),
-                event_key_identity: Set(key.identity),
-                event_key_public_key_type: Set(key.public_key_type),
-                event_key_public_key: Set(key.public_key),
-                event_key_sequence: Set(key.sequence),
-                upvote_count: Set(upvote),
-                downvote_count: Set(downvote),
-            },
-        )
-        .on_conflict(
-            OnConflict::columns(SUMMARY_KEY_COLUMNS)
-                .value(
-                    count_col,
-                    Expr::col((ReactionSummaryModel::Entity, count_col)).add(1),
-                )
-                .to_owned(),
-        )
-        .exec(db)
-        .await?;
-
-        Ok(())
-    }
-
-    /// Decrement the upvote or downvote count for the reaction target `key`,
-    /// only when the relevant count is greater than zero.
-    pub async fn remove_reaction_for(
-        db: &DbConn,
-        key: TargetEventKey,
-        positive: bool,
-    ) -> Result<(), DbErr> {
-        let count_col = if positive {
-            ReactionSummaryModel::Column::UpvoteCount
-        } else {
-            ReactionSummaryModel::Column::DownvoteCount
-        };
-
-        // Only decrement if the count is greater than zero.
-        let filter = summary_key_condition(key).add(count_col.gt(0));
-
-        ReactionSummaryModel::Entity::update_many()
-            .col_expr(count_col, Expr::col(count_col).sub(1))
-            .filter(filter)
-            .exec(db)
-            .await?;
-
-        Ok(())
-    }
-
     /// Increment the upvote/downvote count for an out-of-network (URL)
     /// reaction, creating the summary row with a count of 1 if none exists yet.
     /// Mirrors `count_reaction_for` but keyed by URL.
@@ -484,29 +387,6 @@ fn reply_key_condition(key: TargetEventKey) -> Condition {
         .add(ReplyCountModel::Column::EventKeyPublicKey.eq(key.public_key))
         .add(ReplyCountModel::Column::EventKeySequence.eq(key.sequence))
 }
-
-fn summary_key_condition(key: TargetEventKey) -> Condition {
-    Condition::all()
-        .add(
-            ReactionSummaryModel::Column::EventKeyCollection.eq(key.collection),
-        )
-        .add(ReactionSummaryModel::Column::EventKeyIdentity.eq(key.identity))
-        .add(
-            ReactionSummaryModel::Column::EventKeyPublicKeyType
-                .eq(key.public_key_type),
-        )
-        .add(ReactionSummaryModel::Column::EventKeyPublicKey.eq(key.public_key))
-        .add(ReactionSummaryModel::Column::EventKeySequence.eq(key.sequence))
-}
-
-/// The primary key columns of a reaction summary: the target's event key.
-const SUMMARY_KEY_COLUMNS: [ReactionSummaryModel::Column; 5] = [
-    ReactionSummaryModel::Column::EventKeyCollection,
-    ReactionSummaryModel::Column::EventKeyIdentity,
-    ReactionSummaryModel::Column::EventKeyPublicKeyType,
-    ReactionSummaryModel::Column::EventKeyPublicKey,
-    ReactionSummaryModel::Column::EventKeySequence,
-];
 
 pub struct ReactionSummary {
     pub upvote_count: i64,

@@ -7,6 +7,7 @@ pub struct Migration;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        crate::m20260720_164457_add_reaction_counters::Migration::down(manager)
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
