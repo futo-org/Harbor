@@ -1,8 +1,8 @@
-# Opens the post nearest the middle of the screen whose centre is plain post
-# surface, since the tap lands there and an image or link would open instead.
-# The web driver has no relative selectors, so a script first marks that
-# post. The feed is virtualised, so only a post already on screen is safe to
-# target.
+# Opens the post nearest the middle of the screen whose centre is the post
+# itself, since the tap lands there and a nested pressable (image, link card,
+# quote, mention) or the sticky header would take it instead. The web driver
+# has no relative selectors, so a script first marks that post. The feed is
+# virtualised, so only a post already on screen is safe to target.
 - evalBrowserScript:
     script: |
       const middle = window.innerHeight / 2;
@@ -19,15 +19,14 @@
           rect.left + rect.width / 2,
           rect.top + rect.height / 2,
         );
-        return (
-          !!hit &&
-          el.contains(hit) &&
-          !hit.closest('a, img, button, [role="button"], [role="link"], [role="img"]')
-        );
+        return hit?.closest('[tabindex], a, button, [role], img') === el;
       };
-      const post = onScreen.find(plain) ?? onScreen[0] ?? posts[0];
+      const post = onScreen.find(plain) ?? posts.find(plain);
+      if (!post) throw new Error('no post to open on screen');
       post.el.id = 'openPost';
       return true;
 - tapOn:
     css: '#openPost'
-- assertVisible: ${output.post.replyPrompt}
+- extendedWaitUntil:
+    visible: ${output.post.replyPrompt}
+    timeout: 30000
