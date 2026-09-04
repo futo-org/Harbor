@@ -1,4 +1,8 @@
-import { parseTextLinks, type TextSegment } from './parseTextLinks';
+import {
+  mentionsToPlainText,
+  parseTextLinks,
+  type TextSegment,
+} from './parseTextLinks';
 
 /**
  * parseTextLinks minus the raw offsets, so the segment assertions below stay
@@ -443,5 +447,19 @@ describe('parseTextLinks', () => {
       }
       expect(cursor).toBe(input.length);
     });
+  });
+});
+
+describe('mentionsToPlainText', () => {
+  it('renders curly mentions as their display name and keeps the rest', () => {
+    expect(
+      mentionsToPlainText(`hi @{${HEX64},Jane Doe} see @{${HEX64}} @a.b.com`),
+    ).toBe(`hi Jane Doe see @${HEX64} @a.b.com`);
+  });
+
+  it('is the identity for text without mentions', () => {
+    expect(mentionsToPlainText('plain https://x.com #tag')).toBe(
+      'plain https://x.com #tag',
+    );
   });
 });

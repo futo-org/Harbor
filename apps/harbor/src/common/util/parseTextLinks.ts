@@ -173,3 +173,14 @@ function parseSegment(raw: string, isCurly: boolean): SegmentBody | null {
     url: HAS_SCHEME.test(raw) ? raw : `https://${raw}`,
   };
 }
+
+/**
+ * `text` as it reads once rendered: curly mentions become their display name,
+ * everything else stays as typed. For plain-text surfaces that don't render
+ * segments (previews, page titles) — slice this, not the raw text.
+ */
+export function mentionsToPlainText(text: string): string {
+  return parseTextLinks(text)
+    .map((s) => s.value)
+    .join('');
+}
