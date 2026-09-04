@@ -6,9 +6,6 @@ use ::entity::{
     ban_model as BanModel, content_model as ContentModel,
     event_model as EventModel, moderator_model as ModeratorModel,
     notification as NotificationModel,
-    reaction_summary_model as ReactionSummaryModel,
-    reaction_tally_model as ReactionTalliesModel,
-    reply_count_model as ReplyCountModel,
 };
 use polycentric_common::models::collections;
 use sea_orm::*;
@@ -349,18 +346,6 @@ impl Mutation {
                     .add(NotificationModel::Column::FromIdentity.eq(identity))
                     .add(NotificationModel::Column::ToIdentity.eq(identity)),
             )
-            .exec(db)
-            .await?;
-        ReplyCountModel::Entity::delete_many()
-            .filter(ReplyCountModel::Column::EventKeyIdentity.eq(identity))
-            .exec(db)
-            .await?;
-        ReactionSummaryModel::Entity::delete_many()
-            .filter(ReactionSummaryModel::Column::EventKeyIdentity.eq(identity))
-            .exec(db)
-            .await?;
-        ReactionTalliesModel::Entity::delete_many()
-            .filter(ReactionTalliesModel::Column::EventKeyIdentity.eq(identity))
             .exec(db)
             .await?;
         Ok(())

@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use entity::{
     attributed_to_reaction_summary_model as AttributedSummaryModel,
-    reaction_model, reaction_summary_model as ReactionSummaryModel,
-    reaction_tally_model as ReactionTallyModel, reaction_tally_model2,
-    reply_count_model as ReplyCountModel, reply_model,
+    reaction_model, reaction_tally_model, reply_model,
 };
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{
@@ -12,12 +10,10 @@ use sea_orm::sea_query::{
     SelectStatement,
 };
 use sea_orm::{
-    ColumnTrait, Condition, ConnectionTrait, DbConn, DbErr, EntityTrait,
-    QueryFilter,
+    ColumnTrait, ConnectionTrait, DbConn, DbErr, EntityTrait, QueryFilter,
 };
 
 use crate::data::EventId;
-use crate::service::events::TargetEventKey;
 
 pub struct Query;
 
@@ -70,30 +66,28 @@ impl Query {
 
         let mut query = SelectStatement::new();
         query
-            .from(reaction_tally_model2::Entity)
+            .from(reaction_tally_model::Entity)
             .expr_as(
                 Expr::col(
-                    reaction_tally_model2::Column::EventId.as_column_ref(),
+                    reaction_tally_model::Column::EventId.as_column_ref(),
                 ),
                 "event_id",
             )
             .expr_as(
                 Expr::col(
-                    reaction_tally_model2::Column::PositiveCount
-                        .as_column_ref(),
+                    reaction_tally_model::Column::PositiveCount.as_column_ref(),
                 ),
                 "positive_count",
             )
             .expr_as(
                 Expr::col(
-                    reaction_tally_model2::Column::NegativeCount
-                        .as_column_ref(),
+                    reaction_tally_model::Column::NegativeCount.as_column_ref(),
                 ),
                 "negative_count",
             )
             .cond_where(
                 Expr::col(
-                    reaction_tally_model2::Column::EventId.as_column_ref(),
+                    reaction_tally_model::Column::EventId.as_column_ref(),
                 )
                 .is_in(event_ids),
             );
@@ -206,236 +200,6 @@ impl Query {
 pub struct Mutation;
 
 impl Mutation {
-    /// For a new post event, create a row with a reply count of 0.
-    pub async fn init_reply_count_for(
-        db: &DbConn,
-        key: TargetEventKey,
-    ) -> Result<(), DbErr> {
-        let result =
-            ReplyCountModel::Entity::insert(ReplyCountModel::ActiveModel {
-                event_key_collection: Set(key.collection),
-                event_key_identity: Set(key.identity),
-                event_key_public_key_type: Set(key.public_key_type),
-                event_key_public_key: Set(key.public_key),
-                event_key_sequence: Set(key.sequence),
-                reply_count: Set(0),
-            })
-            .on_conflict(
-                OnConflict::columns([
-                    ReplyCountModel::Column::EventKeyCollection,
-                    ReplyCountModel::Column::EventKeyIdentity,
-                    ReplyCountModel::Column::EventKeyPublicKeyType,
-                    ReplyCountModel::Column::EventKeyPublicKey,
-                    ReplyCountModel::Column::EventKeySequence,
-                ])
-                .do_nothing()
-                .to_owned(),
-            )
-            .exec(db)
-            .await;
-
-        match result {
-            Ok(_) => Ok(()),
-            Err(DbErr::RecordNotInserted) => Ok(()),
-            Err(e) => Err(e),
-        }
-    }
-
-    /// Increment the reply count for `key` or create a count of 1 if no
-    /// counter exists for it.
-    pub async fn count_reply_for(
-        db: &DbConn,
-        key: TargetEventKey,
-    ) -> Result<(), DbErr> {
-        // Try inserting a count of 1 if no count is present.
-        ReplyCountModel::Entity::insert(ReplyCountModel::ActiveModel {
-            event_key_collection: Set(key.collection),
-            event_key_identity: Set(key.identity),
-            event_key_public_key_type: Set(key.public_key_type),
-            event_key_public_key: Set(key.public_key),
-            event_key_sequence: Set(key.sequence),
-            reply_count: Set(1),
-        })
-        // Increment the existing count if there is one.
-        .on_conflict(
-            OnConflict::columns([
-                ReplyCountModel::Column::EventKeyCollection,
-                ReplyCountModel::Column::EventKeyIdentity,
-                ReplyCountModel::Column::EventKeyPublicKeyType,
-                ReplyCountModel::Column::EventKeyPublicKey,
-                ReplyCountModel::Column::EventKeySequence,
-            ])
-            .value(
-                ReplyCountModel::Column::ReplyCount,
-                Expr::col((
-                    ReplyCountModel::Entity,
-                    ReplyCountModel::Column::ReplyCount,
-                ))
-                .add(1),
-            )
-            .to_owned(),
-        )
-        .exec(db)
-        .await?;
-
-        Ok(())
-    }
-
-    /// Decrement the reply count for `key`, if it has a recorded reply count > 0.
-    pub async fn remove_reply_for(
-        db: &DbConn,
-        key: TargetEventKey,
-    ) -> Result<(), DbErr> {
-        // Only decrement if the reply count is greater than zero.
-        let filter = reply_key_condition(key)
-            .add(ReplyCountModel::Column::ReplyCount.gt(0));
-
-        ReplyCountModel::Entity::update_many()
-            .col_expr(
-                ReplyCountModel::Column::ReplyCount,
-                Expr::col(ReplyCountModel::Column::ReplyCount).sub(1),
-            )
-            .filter(filter)
-            .exec(db)
-            .await?;
-
-        Ok(())
-    }
-
-    /// For a new post event, create a reaction summary row with 0 reactions.
-    pub async fn init_reaction_summary_for(
-        db: &DbConn,
-        key: TargetEventKey,
-    ) -> Result<(), DbErr> {
-        let result = ReactionSummaryModel::Entity::insert(
-            ReactionSummaryModel::ActiveModel {
-                event_key_collection: Set(key.collection),
-                event_key_identity: Set(key.identity),
-                event_key_public_key_type: Set(key.public_key_type),
-                event_key_public_key: Set(key.public_key),
-                event_key_sequence: Set(key.sequence),
-                upvote_count: Set(0),
-                downvote_count: Set(0),
-            },
-        )
-        .on_conflict(
-            OnConflict::columns(SUMMARY_KEY_COLUMNS)
-                .do_nothing()
-                .to_owned(),
-        )
-        .exec(db)
-        .await;
-
-        match result {
-            Ok(_) => Ok(()),
-            Err(DbErr::RecordNotInserted) => Ok(()),
-            Err(e) => Err(e),
-        }
-    }
-
-    /// Increment the upvote or downvote count for the reaction target `key`,
-    /// creating a summary row with a count of 1 if none exists yet.
-    pub async fn count_reaction_for(
-        db: &DbConn,
-        key: TargetEventKey,
-        positive: bool,
-    ) -> Result<(), DbErr> {
-        let (upvote, downvote) = if positive { (1, 0) } else { (0, 1) };
-
-        let count_col = if positive {
-            ReactionSummaryModel::Column::UpvoteCount
-        } else {
-            ReactionSummaryModel::Column::DownvoteCount
-        };
-
-        // Try inserting a fresh count, incrementing the existing one on conflict.
-        ReactionSummaryModel::Entity::insert(
-            ReactionSummaryModel::ActiveModel {
-                event_key_collection: Set(key.collection),
-                event_key_identity: Set(key.identity),
-                event_key_public_key_type: Set(key.public_key_type),
-                event_key_public_key: Set(key.public_key),
-                event_key_sequence: Set(key.sequence),
-                upvote_count: Set(upvote),
-                downvote_count: Set(downvote),
-            },
-        )
-        .on_conflict(
-            OnConflict::columns(SUMMARY_KEY_COLUMNS)
-                .value(
-                    count_col,
-                    Expr::col((ReactionSummaryModel::Entity, count_col)).add(1),
-                )
-                .to_owned(),
-        )
-        .exec(db)
-        .await?;
-
-        Ok(())
-    }
-
-    /// Increment the tally for a specific `(emoji, positive)` reaction to the
-    /// target `key`, creating a tally row with a count of 1 if none exists yet.
-    pub async fn count_reaction_tally_for(
-        db: &DbConn,
-        key: TargetEventKey,
-        emoji: String,
-        positive: bool,
-    ) -> Result<(), DbErr> {
-        // Try inserting a count of 1, incrementing the existing one on conflict.
-        ReactionTallyModel::Entity::insert(ReactionTallyModel::ActiveModel {
-            event_key_collection: Set(key.collection),
-            event_key_identity: Set(key.identity),
-            event_key_public_key_type: Set(key.public_key_type),
-            event_key_public_key: Set(key.public_key),
-            event_key_sequence: Set(key.sequence),
-            emoji: Set(emoji),
-            positive: Set(positive),
-            count: Set(1),
-        })
-        .on_conflict(
-            OnConflict::columns(TALLY_KEY_COLUMNS)
-                .value(
-                    ReactionTallyModel::Column::Count,
-                    Expr::col((
-                        ReactionTallyModel::Entity,
-                        ReactionTallyModel::Column::Count,
-                    ))
-                    .add(1),
-                )
-                .to_owned(),
-        )
-        .exec(db)
-        .await?;
-
-        Ok(())
-    }
-
-    /// Decrement the upvote or downvote count for the reaction target `key`,
-    /// only when the relevant count is greater than zero.
-    pub async fn remove_reaction_for(
-        db: &DbConn,
-        key: TargetEventKey,
-        positive: bool,
-    ) -> Result<(), DbErr> {
-        let count_col = if positive {
-            ReactionSummaryModel::Column::UpvoteCount
-        } else {
-            ReactionSummaryModel::Column::DownvoteCount
-        };
-
-        // Only decrement if the count is greater than zero.
-        let filter = summary_key_condition(key).add(count_col.gt(0));
-
-        ReactionSummaryModel::Entity::update_many()
-            .col_expr(count_col, Expr::col(count_col).sub(1))
-            .filter(filter)
-            .exec(db)
-            .await?;
-
-        Ok(())
-    }
-
     /// Increment the upvote/downvote count for an out-of-network (URL)
     /// reaction, creating the summary row with a count of 1 if none exists yet.
     /// Mirrors `count_reaction_for` but keyed by URL.
@@ -513,101 +277,7 @@ impl Mutation {
             .map(|r| (r.upvote_count, r.downvote_count))
             .unwrap_or((0, 0)))
     }
-
-    /// Decrement the tally for a specific `(emoji, positive)` reaction to the
-    /// target `key`, only when that tally is greater than zero.
-    pub async fn remove_reaction_tally_for(
-        db: &DbConn,
-        key: TargetEventKey,
-        emoji: String,
-        positive: bool,
-    ) -> Result<(), DbErr> {
-        // Only decrement if the tally is greater than zero.
-        let filter = tally_key_condition(key, emoji, positive)
-            .add(ReactionTallyModel::Column::Count.gt(0));
-
-        ReactionTallyModel::Entity::update_many()
-            .col_expr(
-                ReactionTallyModel::Column::Count,
-                Expr::col(ReactionTallyModel::Column::Count).sub(1),
-            )
-            .filter(filter)
-            .exec(db)
-            .await?;
-
-        Ok(())
-    }
 }
-
-fn reply_key_condition(key: TargetEventKey) -> Condition {
-    Condition::all()
-        .add(ReplyCountModel::Column::EventKeyCollection.eq(key.collection))
-        .add(ReplyCountModel::Column::EventKeyIdentity.eq(key.identity))
-        .add(
-            ReplyCountModel::Column::EventKeyPublicKeyType
-                .eq(key.public_key_type),
-        )
-        .add(ReplyCountModel::Column::EventKeyPublicKey.eq(key.public_key))
-        .add(ReplyCountModel::Column::EventKeySequence.eq(key.sequence))
-}
-
-fn summary_key_condition(key: TargetEventKey) -> Condition {
-    Condition::all()
-        .add(
-            ReactionSummaryModel::Column::EventKeyCollection.eq(key.collection),
-        )
-        .add(ReactionSummaryModel::Column::EventKeyIdentity.eq(key.identity))
-        .add(
-            ReactionSummaryModel::Column::EventKeyPublicKeyType
-                .eq(key.public_key_type),
-        )
-        .add(ReactionSummaryModel::Column::EventKeyPublicKey.eq(key.public_key))
-        .add(ReactionSummaryModel::Column::EventKeySequence.eq(key.sequence))
-}
-
-/// Condition matching all tally rows for the target event `key`.
-fn tally_event_key_condition(key: TargetEventKey) -> Condition {
-    Condition::all()
-        .add(ReactionTallyModel::Column::EventKeyCollection.eq(key.collection))
-        .add(ReactionTallyModel::Column::EventKeyIdentity.eq(key.identity))
-        .add(
-            ReactionTallyModel::Column::EventKeyPublicKeyType
-                .eq(key.public_key_type),
-        )
-        .add(ReactionTallyModel::Column::EventKeyPublicKey.eq(key.public_key))
-        .add(ReactionTallyModel::Column::EventKeySequence.eq(key.sequence))
-}
-
-fn tally_key_condition(
-    key: TargetEventKey,
-    emoji: String,
-    positive: bool,
-) -> Condition {
-    tally_event_key_condition(key)
-        .add(ReactionTallyModel::Column::Emoji.eq(emoji))
-        .add(ReactionTallyModel::Column::Positive.eq(positive))
-}
-
-/// The primary key columns of a reaction summary: the target's event key.
-const SUMMARY_KEY_COLUMNS: [ReactionSummaryModel::Column; 5] = [
-    ReactionSummaryModel::Column::EventKeyCollection,
-    ReactionSummaryModel::Column::EventKeyIdentity,
-    ReactionSummaryModel::Column::EventKeyPublicKeyType,
-    ReactionSummaryModel::Column::EventKeyPublicKey,
-    ReactionSummaryModel::Column::EventKeySequence,
-];
-
-/// The primary key columns of a reaction tally:
-/// the target's event key + `(emoji, positive)`.
-const TALLY_KEY_COLUMNS: [ReactionTallyModel::Column; 7] = [
-    ReactionTallyModel::Column::EventKeyCollection,
-    ReactionTallyModel::Column::EventKeyIdentity,
-    ReactionTallyModel::Column::EventKeyPublicKeyType,
-    ReactionTallyModel::Column::EventKeyPublicKey,
-    ReactionTallyModel::Column::EventKeySequence,
-    ReactionTallyModel::Column::Emoji,
-    ReactionTallyModel::Column::Positive,
-];
 
 pub struct ReactionSummary {
     pub upvote_count: i64,

@@ -4660,6 +4660,7 @@ dependencies = [
  "entity",
  "polycentric-common",
  "prost",
+ "sea-orm",
  "sea-orm-migration",
  "serde_json",
  "tokio",
