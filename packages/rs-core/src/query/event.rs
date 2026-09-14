@@ -7,15 +7,18 @@ use std::sync::{Arc, Mutex};
 use polycentric_common::models::protos_v2;
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::{
-    EventBundle, EventHint, GetPostRequest, ListEventsFilters, ListEventsRequest,
+    EventBundle, EventHint, GetPostRequest, GetPostResponse, ListEventsFilters, ListEventsRequest,
     ListEventsResponse, event_sync_service_client::EventSyncServiceClient,
 };
 use prost::Message;
 
 use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
+use crate::query::blocks::retain_unblocked_bundles;
 use crate::query::event::key::{EventKey, PublicKey};
-use crate::query::event::merge::{EventBundleResponse, merge_bundle_responses};
+use crate::query::event::merge::{
+    EventBundleResponse, merge_bundle_response, merge_bundle_responses,
+};
 use crate::query::{
     QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
 };
@@ -46,6 +49,15 @@ pub struct GetPostArgs {
     pub collection: i32,
     pub sequence: u64,
     pub signer_key_prefix: Option<String>,
+}
+
+impl EventBundleResponse for GetPostResponse {
+    fn bundles_mut(&mut self) -> &mut Vec<EventBundle> {
+        &mut self.candidates
+    }
+    fn hints_mut(&mut self) -> &mut Vec<EventHint> {
+        &mut self.event_hints
+    }
 }
 
 impl EventBundleResponse for ListEventsResponse {
@@ -262,7 +274,31 @@ pub fn get_event(
     Arc::new(query_client.fetch(query_key, query_fn, merge_fn, opts))
 }
 
-/// Return a single event post based on its key (or partial key)
+/// Return event bundles using the local in-memory stores matching the filters.
+fn get_events_from_stores(
+    client: &Arc<Mutex<PolycentricClient>>,
+    identity: &str,
+    collection: i32,
+    sequence: u64,
+    signer_key_prefix: Option<&str>,
+) -> Vec<EventBundle> {
+    let c = client.lock_recover();
+
+    // TODO: return multiple candidates to callers.
+    // There should almost never be multiple when a signer key prefix is provided,
+    // but we should still handle the case where one isn't.
+    let mut candidates: Vec<EventBundle> = c
+        .find_event_bundle_by_sequence(identity, collection, sequence, signer_key_prefix)
+        .into_iter()
+        .collect();
+
+    retain_unblocked_bundles(&c.blocked_identities(), &mut candidates);
+    candidates
+}
+
+/// Return the candidate posts at partial event key along with the hints that
+/// the servers shipped with them.
+/// Emits serialized `GetPostResponse` proto bytes.
 pub fn get_post(
     query_client: &QueryClient<Vec<u8>>,
     query_key: Option<QueryKey>,
@@ -277,17 +313,22 @@ pub fn get_post(
     } = args;
     let signer_key_prefix = Arc::new(signer_key_prefix);
 
-    if let Some(bundle) = query_client
-        .client()
-        .lock_recover()
-        .find_event_bundle_by_sequence(
-            &identity,
-            collection,
-            sequence,
-            signer_key_prefix.as_deref(),
-        )
-    {
-        let bytes = bundle.encode_to_vec();
+    let candidates = get_events_from_stores(
+        query_client.client(),
+        &identity,
+        collection,
+        sequence,
+        signer_key_prefix.as_deref(),
+    );
+
+    if !candidates.is_empty() {
+        // TODO: add an efficient way to gather relevant labels
+        let bytes = GetPostResponse {
+            candidates,
+            event_hints: vec![],
+        }
+        .encode_to_vec();
+
         let observable: Observable<QueryResult<Vec<u8>>> = Observable::new(move |subscriber| {
             subscriber.next(QueryResult {
                 data: Some(bytes.clone()),
@@ -308,66 +349,55 @@ pub fn get_post(
 
     let client = query_client.client().clone();
 
-    // The query function will copy event bundles and hints into the local store,
-    // so we can rely on the local store to handle tombstones properly.
     let merge_fn = {
         let identity = identity.clone();
         let signer_key_prefix = signer_key_prefix.clone();
 
-        move |_values: &[Vec<u8>],
+        move |values: &[Vec<u8>],
               _previous: Option<&Vec<u8>>,
               client: &Arc<Mutex<PolycentricClient>>| {
-            let bundle = client.clone().lock_recover().find_event_bundle_by_sequence(
+            let mut merged = merge_bundle_response::<GetPostResponse>(values, client);
+
+            // Derive final candidates from local stores so that tombstoned
+            // candidates are filtered out properly.
+            merged.candidates = get_events_from_stores(
+                client,
                 &identity,
                 collection,
                 sequence,
                 signer_key_prefix.as_deref(),
             );
 
-            bundle
-                .as_ref()
-                .map(EventBundle::encode_to_vec)
-                .unwrap_or_default()
+            merged.encode_to_vec()
         }
     };
 
     let query_fn = move |server_url: String| {
         let request = request.clone();
-        let identity = identity.clone();
         let client = client.clone();
-        let signer_key_prefix = signer_key_prefix.clone();
 
         async move {
             let response = FeedsServiceClient::new(channel(&server_url).await?)
                 .get_post(request)
                 .await
-                .map_err(|e| format!("get_event [{server_url}]: {e}"))?
+                .map_err(|e| format!("get_post [{server_url}]: {e}"))?
                 .into_inner();
 
+            let bytes = response.encode_to_vec();
+
+            // Copy events and content to local stores so that the merge can
+            // rely on the client for tombstone checking logic.
             let hint_bundles: Vec<_> = response
                 .event_hints
                 .into_iter()
                 .filter_map(|h| h.event_bundle)
                 .collect();
 
-            // Copy events and content to local stores so that we can rely on
-            // the client to handle tombstone checking logic
-            let bundle = {
+            {
                 let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
                 c.copy_bundles(response.candidates);
-                c.find_event_bundle_by_sequence(
-                    &identity,
-                    collection,
-                    sequence,
-                    signer_key_prefix.as_deref(),
-                )
-            };
-
-            let bytes = bundle
-                .as_ref()
-                .map(EventBundle::encode_to_vec)
-                .unwrap_or_default();
+            }
 
             Ok(bytes)
         }
