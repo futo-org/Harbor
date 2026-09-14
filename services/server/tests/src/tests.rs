@@ -631,7 +631,6 @@ impl ExpectHint {
 pub fn expect_hints(got: &[EventHint], mut expected: Vec<ExpectHint>) {
     eprintln!("Got hints: {:#?}", got);
     eprintln!("Expected hints: {:#?}", expected);
-    assert_eq!(got.len(), expected.len());
     for got in got {
         let event_bundle = got.event_bundle.as_ref().unwrap();
         let content = Content::decode(
@@ -690,6 +689,9 @@ pub fn expect_hints(got: &[EventHint], mut expected: Vec<ExpectHint>) {
             // above.
             _ => unreachable!(),
         }
+    }
+    if !expected.is_empty() {
+        panic!("missing expected hints: {expected:#?}");
     }
 }
 
