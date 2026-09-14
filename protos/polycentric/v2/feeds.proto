@@ -50,12 +50,16 @@ message GetPostThreadResponse {
   repeated EventHint event_hints = 2;
 }
 
+// Request candidate posts matching these filters.
 message GetPostRequest {
-  EventKey event_key = 1;
+  string identity = 1;
+  uint64 sequence = 2;
+  repeated string omit_labels = 3;
 }
 
+// All candidate post events matching the request's filter.
 message GetPostResponse {
-  optional EventBundle event_bundle = 1;
+  repeated EventBundle candidates = 1;
   repeated EventHint event_hints = 2;
 }
 

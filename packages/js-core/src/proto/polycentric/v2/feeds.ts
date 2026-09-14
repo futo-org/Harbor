@@ -120,22 +120,34 @@ export interface GetPostThreadResponse {
     eventHints: EventHint[];
 }
 /**
+ * Request candidate posts matching these filters.
+ *
  * @generated from protobuf message polycentric.v2.GetPostRequest
  */
 export interface GetPostRequest {
     /**
-     * @generated from protobuf field: polycentric.v2.EventKey event_key = 1
+     * @generated from protobuf field: string identity = 1
      */
-    eventKey?: EventKey;
+    identity: string;
+    /**
+     * @generated from protobuf field: uint64 sequence = 2
+     */
+    sequence: bigint;
+    /**
+     * @generated from protobuf field: repeated string omit_labels = 3
+     */
+    omitLabels: string[];
 }
 /**
+ * All candidate post events matching the request's filter.
+ *
  * @generated from protobuf message polycentric.v2.GetPostResponse
  */
 export interface GetPostResponse {
     /**
-     * @generated from protobuf field: optional polycentric.v2.EventBundle event_bundle = 1
+     * @generated from protobuf field: repeated polycentric.v2.EventBundle candidates = 1
      */
-    eventBundle?: EventBundle;
+    candidates: EventBundle[];
     /**
      * @generated from protobuf field: repeated polycentric.v2.EventHint event_hints = 2
      */
@@ -522,11 +534,16 @@ export const GetPostThreadResponse = new GetPostThreadResponse$Type();
 class GetPostRequest$Type extends MessageType<GetPostRequest> {
     constructor() {
         super("polycentric.v2.GetPostRequest", [
-            { no: 1, name: "event_key", kind: "message", T: () => EventKey }
+            { no: 1, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "sequence", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<GetPostRequest>): GetPostRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.identity = "";
+        message.sequence = 0n;
+        message.omitLabels = [];
         if (value !== undefined)
             reflectionMergePartial<GetPostRequest>(this, message, value);
         return message;
@@ -536,8 +553,14 @@ class GetPostRequest$Type extends MessageType<GetPostRequest> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* polycentric.v2.EventKey event_key */ 1:
-                    message.eventKey = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.eventKey);
+                case /* string identity */ 1:
+                    message.identity = reader.string();
+                    break;
+                case /* uint64 sequence */ 2:
+                    message.sequence = reader.uint64().toBigInt();
+                    break;
+                case /* repeated string omit_labels */ 3:
+                    message.omitLabels.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -551,9 +574,15 @@ class GetPostRequest$Type extends MessageType<GetPostRequest> {
         return message;
     }
     internalBinaryWrite(message: GetPostRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* polycentric.v2.EventKey event_key = 1; */
-        if (message.eventKey)
-            EventKey.internalBinaryWrite(message.eventKey, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* string identity = 1; */
+        if (message.identity !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.identity);
+        /* uint64 sequence = 2; */
+        if (message.sequence !== 0n)
+            writer.tag(2, WireType.Varint).uint64(message.sequence);
+        /* repeated string omit_labels = 3; */
+        for (let i = 0; i < message.omitLabels.length; i++)
+            writer.tag(3, WireType.LengthDelimited).string(message.omitLabels[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -568,12 +597,13 @@ export const GetPostRequest = new GetPostRequest$Type();
 class GetPostResponse$Type extends MessageType<GetPostResponse> {
     constructor() {
         super("polycentric.v2.GetPostResponse", [
-            { no: 1, name: "event_bundle", kind: "message", T: () => EventBundle },
+            { no: 1, name: "candidates", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventBundle },
             { no: 2, name: "event_hints", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => EventHint }
         ]);
     }
     create(value?: PartialMessage<GetPostResponse>): GetPostResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.candidates = [];
         message.eventHints = [];
         if (value !== undefined)
             reflectionMergePartial<GetPostResponse>(this, message, value);
@@ -584,8 +614,8 @@ class GetPostResponse$Type extends MessageType<GetPostResponse> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* optional polycentric.v2.EventBundle event_bundle */ 1:
-                    message.eventBundle = EventBundle.internalBinaryRead(reader, reader.uint32(), options, message.eventBundle);
+                case /* repeated polycentric.v2.EventBundle candidates */ 1:
+                    message.candidates.push(EventBundle.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 case /* repeated polycentric.v2.EventHint event_hints */ 2:
                     message.eventHints.push(EventHint.internalBinaryRead(reader, reader.uint32(), options));
@@ -602,9 +632,9 @@ class GetPostResponse$Type extends MessageType<GetPostResponse> {
         return message;
     }
     internalBinaryWrite(message: GetPostResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* optional polycentric.v2.EventBundle event_bundle = 1; */
-        if (message.eventBundle)
-            EventBundle.internalBinaryWrite(message.eventBundle, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.EventBundle candidates = 1; */
+        for (let i = 0; i < message.candidates.length; i++)
+            EventBundle.internalBinaryWrite(message.candidates[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         /* repeated polycentric.v2.EventHint event_hints = 2; */
         for (let i = 0; i < message.eventHints.length; i++)
             EventHint.internalBinaryWrite(message.eventHints[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();

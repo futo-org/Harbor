@@ -301,14 +301,9 @@ pub fn get_post(
     }
 
     let request = GetPostRequest {
-        event_key: Some(protos_v2::EventKey {
-            collection,
-            identity: identity.clone(),
-            // We don't have the full key, so don't send it and validate it when
-            // we get the events.
-            signed_by: None,
-            sequence,
-        }),
+        identity: identity.clone(),
+        sequence,
+        omit_labels: vec![],
     };
 
     let client = query_client.client().clone();
@@ -360,9 +355,7 @@ pub fn get_post(
             let bundle = {
                 let mut c = client.lock_recover();
                 c.copy_bundles(hint_bundles);
-                if let Some(event_bundle) = response.event_bundle {
-                    c.copy_bundles(vec![event_bundle]);
-                }
+                c.copy_bundles(response.candidates);
                 c.find_event_bundle_by_sequence(
                     &identity,
                     collection,

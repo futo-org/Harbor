@@ -8,7 +8,7 @@ use ::entity::{
     reaction_tally, reply, repost,
 };
 use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::{EventKey, SortPostsBy};
+use polycentric_common::models::protos_v2::SortPostsBy;
 use sea_orm::{
     Condition, FromQueryResult,
     entity::prelude::*,
@@ -820,28 +820,25 @@ impl Query {
         DescendantRef::find_by_statement(stmt).all(db).await
     }
 
-    /// Get a single post.
-    pub(super) async fn get_post(
+    /// List feed events at a given sequence by a given identity.
+    /// This is useful when we don't know the full signing key.
+    pub(super) async fn list_events_at_sequence(
         db: &DbConn,
-        target: &EventKey,
-    ) -> Result<Option<EventWithContentRow>, Status> {
-        let mut query = event::Entity::find().select_also(content::Entity);
-        query = query
+        identity: &str,
+        sequence: u64,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        event::Entity::find()
+            .select_also(content::Entity)
             .join(JoinType::InnerJoin, content_join())
-            .filter(event::Column::Collection.eq(target.collection))
-            .filter(event::Column::Identity.eq(target.identity.clone()))
-            .filter(event::Column::Sequence.eq(target.sequence));
-
-        if let Some(signed_by) = target.signed_by.as_ref() {
-            query = query
-                .filter(event::Column::PublicKeyType.eq(signed_by.key_type))
-                .filter(event::Column::PublicKey.eq(signed_by.key.clone()))
-        }
-
-        query.one(db).await.map_err(|err| {
-            tracing::error!("failed to get post: {err}");
-            Status::internal("internal server error")
-        })
+            // Apply the requested filters.
+            .filter(event::Column::Collection.eq(FEED_COLLECTION))
+            .filter(event::Column::Identity.eq(identity))
+            .filter(event::Column::Sequence.eq(sequence))
+            // We should only be returning at most a couple candidates, but
+            // we'll add a bound just in case.
+            .limit(50)
+            .all(db)
+            .await
     }
 
     /// Get up to `limit` reaction events for the target post.
