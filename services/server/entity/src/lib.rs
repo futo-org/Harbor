@@ -56,6 +56,7 @@
 //! [`events`]: event
 //! [`content`]: content
 
+pub mod alias_cache;
 pub mod application;
 pub mod attributed_to_reaction_summary;
 pub mod ban;
