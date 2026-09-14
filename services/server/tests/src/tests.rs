@@ -564,6 +564,46 @@ pub fn current_timestamp() -> u64 {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct ExpectEvent {
+    key: EventKey,
+    kind: ExpectEventKind,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum ExpectEventKind {
+    Repost { post: EventKey },
+}
+
+pub fn expect_events(got: &[EventBundle], expected: Vec<ExpectEvent>) {
+    eprintln!("Got events: {:#?}", got);
+    eprintln!("Expected vents: {:#?}", expected);
+    assert_eq!(got.len(), expected.len());
+    for (got, expected) in got.iter().zip(expected) {
+        let event =
+            Event::decode(&*got.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap();
+
+        assert_eq!(event.key, Some(expected.key));
+
+        let content = Content::decode(
+            &*got.serialized_content.as_ref().unwrap().content_bytes,
+        )
+        .unwrap();
+        let content = content.content_body.as_ref().unwrap();
+
+        match (content, expected.kind) {
+            (ContentBody::Repost(repost), ExpectEventKind::Repost { post }) => {
+                let got = repost.post.as_ref().expect("repost is missing key");
+                assert_eq!(*got, post);
+            }
+            (content, expected) => {
+                panic!("unexpected event: {content:?}, expected: {expected:?}")
+            }
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum ExpectHint {
     Identity(String),
     Post(EventKey),
