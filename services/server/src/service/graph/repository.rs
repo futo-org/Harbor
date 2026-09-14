@@ -260,9 +260,11 @@ impl Query {
         page_follow_events(db, query, limit, cursor_filter).await
     }
 
+    /// `identity` is `None` for an anonymous caller, who follows nobody and
+    /// so only gets the default suggestions.
     pub async fn suggest_follow(
         db: &DbConn,
-        identity: &str,
+        identity: Option<&str>,
         cursor_filter: Option<&CursorFilter<FollowSuggestionsSortedBy>>,
         limit: u32,
     ) -> Result<Vec<FollowSuggestionEvent>, DbErr> {
@@ -275,7 +277,10 @@ impl Query {
         following
             .column(follow::Column::Followee)
             .from(follow::Entity)
-            .and_where(follow::Column::Follower.eq(identity));
+            .and_where(match identity {
+                Some(identity) => follow::Column::Follower.eq(identity),
+                None => Expr::value(false),
+            });
         let mut select_following = SelectStatement::new();
         select_following
             .column(follow::Column::Followee)
@@ -334,10 +339,10 @@ impl Query {
                 "all_suggestions",
             )
             // Don't suggest ourselves.
-            .and_where(
+            .and_where_option(identity.map(|identity| {
                 Expr::col(follow::Column::Followee.into_column_ref())
-                    .ne(identity),
-            )
+                    .ne(identity)
+            }))
             // Don't suggest identities the identity is already following.
             .and_where(
                 Expr::col(follow::Column::Followee.into_column_ref())
