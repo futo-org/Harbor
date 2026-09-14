@@ -681,24 +681,31 @@ async fn omit_labels_untrusted_label_does_not_hide() {
 
 #[tokio::test] // Regression test for #1492.
 async fn identity_feed_include_reply_to_identity() {
-    // Identity who doesn't have any posts in the feed, but who identity feed
-    // should still show up in the hints because of the reply below.
-    let mut other_client = TestClient::new().await;
-    other_client.post_text("Post 1", current_timestamp());
-    let post1_key = other_client.get_last_event_key();
-    other_client.submit_events().await;
-    let other_identity = other_client.identity().to_owned();
-
-    // Identity feed we're interested in.
+    // One identity makes a post.
     let mut client = TestClient::new().await;
-    client.reply(post1_key.clone(), "Reply", current_timestamp());
+    client.post_text("Post", current_timestamp());
+    let post_key = client.get_last_event_key();
     client.submit_events().await;
-    let identity = client.identity().to_owned();
+    let poster_identity = client.identity().to_owned();
+
+    // Another identity replies to the post
+    let mut client = TestClient::new().await;
+    client.reply(post_key.clone(), "Reply", current_timestamp());
+    let reply_key = client.get_last_event_key();
+    client.submit_events().await;
+    let replier_identity = client.identity().to_owned();
+
+    // And a third identity reposts that reply.
+    let mut client = TestClient::new().await;
+    client.repost_key(reply_key.clone(), current_timestamp());
+    let repost_key = client.get_last_event_key();
+    client.submit_events().await;
+    let reposter_identity = client.identity().to_owned();
 
     let response = connect_feeds()
         .await
         .get_identity_feed(GetIdentityFeedRequest {
-            identity: identity.clone(),
+            identity: reposter_identity.clone(),
             page_params: None,
             omit_labels: Vec::new(),
         })
@@ -706,12 +713,24 @@ async fn identity_feed_include_reply_to_identity() {
         .expect("get_identity_feed failed")
         .into_inner();
 
+    expect_events(
+        &response.event_bundles,
+        vec![ExpectEvent {
+            key: repost_key,
+            kind: ExpectEventKind::Repost {
+                post: reply_key.clone(),
+            },
+        }],
+    );
+
     expect_hints(
         &response.event_hints,
         vec![
+            ExpectHint::Post(reply_key),
             ExpectHint::moderator_identity(),
-            ExpectHint::Identity(identity),
-            ExpectHint::Identity(other_identity),
+            ExpectHint::Identity(poster_identity),
+            ExpectHint::Identity(replier_identity),
+            ExpectHint::Identity(reposter_identity),
         ],
     );
 }
