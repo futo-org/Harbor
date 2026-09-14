@@ -1,3 +1,6 @@
+// The server mirrors the mention rules below in
+// `packages/rs-common/src/mentions.rs` (to notify mentioned users). Keep the
+// two in sync.
 type SegmentBody =
   | { type: 'text'; value: string }
   | { type: 'link'; value: string; url: string }
@@ -172,6 +175,38 @@ function parseSegment(raw: string, isCurly: boolean): SegmentBody | null {
     value: raw,
     url: HAS_SCHEME.test(raw) ? raw : `https://${raw}`,
   };
+}
+
+/**
+ * The leading `segments` whose rendered text fits in `limit` characters. Plain
+ * text is cut mid-way; a mention, link, or hashtag that doesn't fit is dropped
+ * whole along with everything after it, so a curly mention never renders half
+ * parsed. Counts rendered `value`s, not raw text — slice segments, not the
+ * raw string, when capping post text. `truncated` says whether anything was
+ * cut.
+ */
+export function truncateSegments(
+  segments: TextSegment[],
+  limit: number,
+): { segments: TextSegment[]; truncated: boolean } {
+  const kept: TextSegment[] = [];
+  let remaining = limit;
+  for (const segment of segments) {
+    if (segment.value.length <= remaining) {
+      kept.push(segment);
+      remaining -= segment.value.length;
+      continue;
+    }
+    if (segment.type === 'text' && remaining > 0) {
+      kept.push({
+        ...segment,
+        value: segment.value.slice(0, remaining),
+        end: segment.start + remaining,
+      });
+    }
+    return { segments: kept, truncated: true };
+  }
+  return { segments: kept, truncated: false };
 }
 
 /**
