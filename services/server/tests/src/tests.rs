@@ -417,6 +417,7 @@ impl TestClient {
         self.delete(delete, created_at)
     }
 
+    #[track_caller]
     pub fn get_last_event_key(&self) -> EventKey {
         let event = self.pending.last().expect("no pending events");
         let signed_event = event.signed_event.as_ref().unwrap();
