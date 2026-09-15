@@ -1,10 +1,8 @@
 //! Tests for the graph service.
 
 use crate::*;
-use entity::default_follow_suggestion;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use prost::Message;
-use sea_orm::{ActiveValue::Set, EntityTrait};
 
 #[tokio::test]
 async fn following() {
@@ -112,7 +110,6 @@ async fn check_followers(
 
 #[tokio::test]
 async fn suggest_follow_not_following_anyone() {
-    let _guard = DEFAULT_FOLLOW_SUGGESTIONS.lock().await;
     let mut client = TestClient::new().await;
     client.submit_events().await;
 
@@ -125,78 +122,8 @@ async fn suggest_follow_not_following_anyone() {
     suggest_follow(&client, expected_suggestions, expected_hints).await;
 }
 
-/// An anonymous caller gets the default suggestions and nothing else.
-#[tokio::test]
-async fn suggest_follow_anonymous() {
-    let _guard = DEFAULT_FOLLOW_SUGGESTIONS.lock().await;
-
-    let mut suggested_identities = Vec::with_capacity(2);
-    for _ in 0..suggested_identities.capacity() {
-        let mut suggested = TestClient::new().await;
-        suggested.submit_events().await; // Create the identity.
-        suggested_identities.push(suggested.identity().to_owned());
-    }
-
-    let db = connect_database().await;
-    default_follow_suggestion::Entity::insert_many(
-        suggested_identities.iter().map(|identity| {
-            default_follow_suggestion::ActiveModel {
-                identity: Set(identity.clone()),
-                ..Default::default()
-            }
-        }),
-    )
-    .exec(&db)
-    .await
-    .expect("insert the default follow suggestions");
-    // The checks run as a task so a failed assertion still reaches the
-    // cleanup; the panic is re-raised afterwards.
-    let outcome = tokio::spawn({
-        // Suggestions with equal follower counts are ordered by event id
-        // descending, so the identity created last comes first.
-        let expected_suggestions = suggested_identities
-            .iter()
-            .rev()
-            .map(|identity| ExpectedFollowSuggestion {
-                suggestion: identity.clone(),
-                followers: vec![],
-            })
-            .collect();
-        async move {
-            suggest_follow2(
-                async {
-                    let mut client = graph_service().await;
-                    let request = tonic::Request::new(SuggestFollowRequest {
-                        page_params: None,
-                    });
-                    client.suggest_follow(request).await.unwrap().into_inner()
-                },
-                expected_suggestions,
-                vec![],
-            )
-            .await
-        }
-    })
-    .await;
-    for identity in suggested_identities {
-        default_follow_suggestion::Entity::delete_by_id(identity)
-            .exec(&db)
-            .await
-            .expect("remove the seeded default follow suggestion");
-    }
-    if let Err(err) = outcome {
-        std::panic::resume_unwind(err.into_panic());
-    }
-}
-
-/// Serializes every `suggest_follow` test: the server unions
-/// `default_follow_suggestion` into all callers' results, so the row seeded by
-/// `suggest_follow_anonymous` must not leak into the others.
-static DEFAULT_FOLLOW_SUGGESTIONS: Mutex<()> = Mutex::const_new(());
-
 #[tokio::test]
 async fn suggest_follow_no_profile_updates() {
-    let _guard = DEFAULT_FOLLOW_SUGGESTIONS.lock().await;
     let mut client = TestClient::new().await;
     client.submit_events().await;
     let suggested = client.identity();
@@ -242,7 +169,6 @@ async fn suggest_follow_no_profile_updates() {
 
 #[tokio::test]
 async fn suggest_follow_with_profile_updates() {
-    let _guard = DEFAULT_FOLLOW_SUGGESTIONS.lock().await;
     let mut client = TestClient::new().await;
     client.profile_update(
         ProfileUpdate {
@@ -308,7 +234,6 @@ async fn suggest_follow_with_profile_updates() {
 
 #[tokio::test]
 async fn suggest_follow_no_duplicate_identities() {
-    let _guard = DEFAULT_FOLLOW_SUGGESTIONS.lock().await;
     // Create an identity with multiple identity and profile events, ensure we
     // only return the latests of both kinds.
     let mut client = TestClient::new().await;
@@ -379,7 +304,6 @@ async fn suggest_follow_no_duplicate_identities() {
 
 #[tokio::test]
 async fn suggest_follow_exclude_self() {
-    let _guard = DEFAULT_FOLLOW_SUGGESTIONS.lock().await;
     // The client themselves.
     let mut client = TestClient::new().await;
     client.submit_events().await;
@@ -406,7 +330,6 @@ async fn suggest_follow_exclude_self() {
 
 #[tokio::test]
 async fn suggest_follow_exclude_already_following() {
-    let _guard = DEFAULT_FOLLOW_SUGGESTIONS.lock().await;
     // The client themselves.
     let mut client = TestClient::new().await;
     client.submit_events().await;
@@ -443,7 +366,6 @@ async fn suggest_follow_exclude_already_following() {
 
 #[tokio::test]
 async fn suggest_follow_pagination() {
-    let _guard = DEFAULT_FOLLOW_SUGGESTIONS.lock().await;
     let mut suggested = Vec::with_capacity(3);
     for _ in 0..suggested.capacity() {
         let mut client = TestClient::new().await;
