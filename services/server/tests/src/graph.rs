@@ -130,24 +130,38 @@ async fn suggest_follow_not_following_anyone() {
 async fn suggest_follow_anonymous() {
     let _guard = DEFAULT_FOLLOW_SUGGESTIONS.lock().await;
 
-    let mut suggested = TestClient::new().await;
-    suggested.submit_events().await; // Create the identity.
-    let suggested_identity = suggested.identity().to_owned();
+    let mut suggested_identities = Vec::with_capacity(2);
+    for _ in 0..suggested_identities.capacity() {
+        let mut suggested = TestClient::new().await;
+        suggested.submit_events().await; // Create the identity.
+        suggested_identities.push(suggested.identity().to_owned());
+    }
 
     let db = connect_database().await;
-    default_follow_suggestion::Entity::insert(
-        default_follow_suggestion::ActiveModel {
-            identity: Set(suggested_identity.clone()),
-            ..Default::default()
-        },
+    default_follow_suggestion::Entity::insert_many(
+        suggested_identities.iter().map(|identity| {
+            default_follow_suggestion::ActiveModel {
+                identity: Set(identity.clone()),
+                ..Default::default()
+            }
+        }),
     )
     .exec(&db)
     .await
-    .expect("insert the default follow suggestion");
+    .expect("insert the default follow suggestions");
     // The checks run as a task so a failed assertion still reaches the
     // cleanup; the panic is re-raised afterwards.
     let outcome = tokio::spawn({
-        let suggested_identity = suggested_identity.clone();
+        // Suggestions with equal follower counts are ordered by event id
+        // descending, so the identity created last comes first.
+        let expected_suggestions = suggested_identities
+            .iter()
+            .rev()
+            .map(|identity| ExpectedFollowSuggestion {
+                suggestion: identity.clone(),
+                followers: vec![],
+            })
+            .collect();
         async move {
             suggest_follow2(
                 async {
@@ -157,20 +171,19 @@ async fn suggest_follow_anonymous() {
                     });
                     client.suggest_follow(request).await.unwrap().into_inner()
                 },
-                vec![ExpectedFollowSuggestion {
-                    suggestion: suggested_identity,
-                    followers: vec![],
-                }],
+                expected_suggestions,
                 vec![],
             )
             .await
         }
     })
     .await;
-    default_follow_suggestion::Entity::delete_by_id(suggested_identity)
-        .exec(&db)
-        .await
-        .expect("remove the seeded default follow suggestion");
+    for identity in suggested_identities {
+        default_follow_suggestion::Entity::delete_by_id(identity)
+            .exec(&db)
+            .await
+            .expect("remove the seeded default follow suggestion");
+    }
     if let Err(err) = outcome {
         std::panic::resume_unwind(err.into_panic());
     }
