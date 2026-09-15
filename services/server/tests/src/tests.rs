@@ -10,6 +10,7 @@ use polycentric_common::models::protos_v2::search_service_client::SearchServiceC
 use polycentric_common::models::protos_v2::*;
 use prost::Message;
 use rand::distr::{Alphabetic, SampleString};
+use sea_orm::{Database, DatabaseConnection};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::mem::take;
@@ -26,6 +27,14 @@ mod search;
 pub fn grpc_addr() -> String {
     std::env::var("POLYCENTRIC_TEST_SERVER")
         .unwrap_or_else(|_| "http://localhost:3000".to_string())
+}
+
+/// The server's Postgres, for state that has no write API. Override with
+/// `POLYCENTRIC_TEST_DATABASE_URL` env var.
+pub fn database_url() -> String {
+    std::env::var("POLYCENTRIC_TEST_DATABASE_URL").unwrap_or_else(|_| {
+        "postgres://postgres:testing@localhost:5432".to_string()
+    })
 }
 
 /// JWT auth token audience.
@@ -109,6 +118,12 @@ pub async fn graph_service() -> GraphServiceClient<tonic::transport::Channel> {
     GraphServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
+}
+
+pub async fn connect_database() -> DatabaseConnection {
+    Database::connect(database_url())
+        .await
+        .expect("failed to connect to the database")
 }
 
 pub fn generate_signing_key() -> SigningKey {

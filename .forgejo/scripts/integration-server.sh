@@ -149,6 +149,8 @@ if [ "$CI_MODE" = true ]; then
 
   echo "==> Starting server and workers…"
   export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  # `suggest_follow_anonymous` seeds `default_follow_suggestion` directly.
+  export POLYCENTRIC_TEST_DATABASE_URL="postgres://postgres:testing@postgres:5432"
   # The mention integration test serves the alias document from a mock server
   # in this job container; the workers reach it over the stack network (see
   # ALIAS_MOCK_PORT in services/server/tests/src/notifications.rs).

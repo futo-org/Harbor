@@ -15,11 +15,13 @@ path = "src/tests.rs"
 [dev-dependencies]
 base64.workspace = true
 ed25519-dalek.workspace = true
+entity = { path = "../entity" }
 getrandom.workspace = true
 hex.workspace = true
 mockito = { version = "1", default-features = false }
 polycentric-common = { workspace = true, features = ["transport"] }
 prost = { version = "0.14", default-features = false }
+sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio"] }
 rand = { version = "0.10", default-features = false, features = ["std", "std_rng", "thread_rng"] }
 serde_json = { version = "1", default-features = false, features = ["std"] }
 sha2 = { version = "0.10", default-features = false }
