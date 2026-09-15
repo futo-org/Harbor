@@ -183,17 +183,12 @@ impl Query {
         let cursor_filter =
             cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
-        let mut query = event::Entity::find().select_only();
-        query =
-            select_model_columns(query, EVENT_PREFIX, event::Column::iter());
-        query = select_model_columns(
-            query,
+        let mut query = SelectStatement::new();
+        select_model_columns(&mut query, EVENT_PREFIX, event::Column::iter());
+        select_model_columns(
+            &mut query,
             CONTENT_PREFIX,
             content::Column::iter(),
-        );
-        query = query.join(JoinType::InnerJoin, content_join()).filter(
-            Expr::col(event::Column::Collection.as_column_ref())
-                .eq(Expr::Constant(collections::FEED.into())),
         );
 
         if let Some(for_identity) = for_identity {
@@ -215,92 +210,112 @@ impl Query {
                 });
             }
 
+            let mut with = WithClause::new();
             const FOLLOWING_TABLE: &str = "following";
-            QuerySelect::query(&mut query).with_cte({
-                let mut c = WithClause::new();
-                let mut cte = CommonTableExpression::new();
-                cte.table_name(FOLLOWING_TABLE).query(following);
-                c.recursive(false).cte(cte);
-                c
-            });
+            let mut cte = CommonTableExpression::new();
+            cte.table_name(FOLLOWING_TABLE).query(following);
+            with.cte(cte);
 
             let mut select_followee = SelectStatement::new();
             select_followee
                 .column(follow::Column::Followee)
                 .from(FOLLOWING_TABLE);
 
-            query = query.filter({
-                let mut condition = Condition::any()
-                    // Created by an identity the `for_identity` is following.
-                    .add(
-                        event::Column::Identity
-                            .in_subquery(select_followee.clone()),
-                    );
+            let mut relevant_events = SelectStatement::new();
 
-                if !posts_created_only {
-                    // Include additional interactions.
-                    condition = condition
-                        // Reacted on by an identity the `for_identity` is following.
-                        .add(event::Column::Id.in_subquery({
-                            let mut q = SelectStatement::new();
-                            q.column(reaction::Column::OnPost)
-                                .from(reaction::Entity)
-                                .and_where(
-                                    reaction::Column::Identity
-                                        .in_subquery(select_followee.clone()),
-                                );
-                            q
-                        }))
-                        // Reposted by an identity the `for_identity` is following.
-                        .add(event::Column::Id.in_subquery({
-                            let mut q = SelectStatement::new();
-                            q.column(repost::Column::Post)
-                                .from(repost::Entity)
-                                .and_where(
-                                    repost::Column::Identity
-                                        .in_subquery(select_followee.clone()),
-                                );
-                            q
-                        }))
-                        // Quoted by an identity the `for_identity` is following.
-                        .add(event::Column::Id.in_subquery({
-                            let mut q = SelectStatement::new();
-                            q.column(quote::Column::Post)
-                                .from(quote::Entity)
-                                .and_where(
-                                    quote::Column::Identity
-                                        .in_subquery(select_followee.clone()),
-                                );
-                            q
-                        }))
-                        // Replied to by an identity the `for_identity` is following.
-                        .add(event::Column::Id.in_subquery({
-                            let mut q = SelectStatement::new();
-                            q.column(reply::Column::Post)
-                                .from(reply::Entity)
-                                .and_where(
-                                    reply::Column::Identity
-                                        .in_subquery(select_followee),
-                                );
-                            q
-                        }))
-                }
+            // Created by an identity the `for_identity` is following.
+            relevant_events
+                .column(event::Column::Id)
+                .from(event::Entity)
+                .cond_where(
+                    event::Column::Identity
+                        .in_subquery(select_followee.clone()),
+                )
+                .and_where(
+                    Expr::col(event::Column::Collection.as_column_ref())
+                        .eq(Expr::Constant(collections::FEED.into())),
+                );
 
-                if !include_own_posts {
-                    // Explicitly exclude any posts made by the user themselves.
-                    condition = Condition::all()
-                        .add(event::Column::Identity.ne(for_identity))
-                        .add(condition);
-                }
+            // Include additional interactions.
+            if !posts_created_only {
+                // Reacted on by an identity the `for_identity` is following.
+                relevant_events.union(UnionType::Distinct, {
+                    let mut q = SelectStatement::new();
+                    q.column(reaction::Column::OnPost)
+                        .from(reaction::Entity)
+                        .and_where(
+                            reaction::Column::Identity
+                                .in_subquery(select_followee.clone()),
+                        );
+                    q
+                });
+                // Reposted by an identity the `for_identity` is following.
+                relevant_events.union(UnionType::Distinct, {
+                    let mut q = SelectStatement::new();
+                    q.column(repost::Column::Post)
+                        .from(repost::Entity)
+                        .and_where(
+                            repost::Column::Identity
+                                .in_subquery(select_followee.clone()),
+                        );
+                    q
+                });
+                // Quoted by an identity the `for_identity` is following.
+                relevant_events.union(UnionType::Distinct, {
+                    let mut q = SelectStatement::new();
+                    q.column(quote::Column::Post)
+                        .from(quote::Entity)
+                        .and_where(
+                            quote::Column::Identity
+                                .in_subquery(select_followee.clone()),
+                        );
+                    q
+                });
+                // Replied to by an identity the `for_identity` is following.
+                relevant_events.union(UnionType::Distinct, {
+                    let mut q = SelectStatement::new();
+                    q.column(reply::Column::Post)
+                        .from(reply::Entity)
+                        .and_where(
+                            reply::Column::Identity
+                                .in_subquery(select_followee),
+                        );
+                    q
+                });
+            }
 
-                condition
-            });
+            // Explicitly exclude any posts made by the user themselves.
+            if !include_own_posts {
+                query.cond_where(event::Column::Identity.ne(for_identity));
+            }
+
+            const RELEVANT_EVENT: &str = "relevant_event";
+            let mut cte = CommonTableExpression::new();
+            cte.table_name(RELEVANT_EVENT).query(relevant_events);
+            with.cte(cte);
+            query.with_cte(with);
+
+            query.from(RELEVANT_EVENT).inner_join(
+                event::Entity,
+                Expr::col(event::Column::Id.as_column_ref())
+                    .eq(Expr::col((RELEVANT_EVENT, "id"))),
+            );
+        } else {
+            query.from(event::Entity);
         }
+
+        let relation = content_join();
+        query
+            .inner_join(relation.to_tbl.clone(), relation)
+            .cond_where(
+                Expr::col(event::Column::Collection.as_column_ref())
+                    .eq(Expr::Constant(collections::FEED.into())),
+            );
 
         match sort_by {
             SortPostsBy::Default | SortPostsBy::Latest => {}
             SortPostsBy::Top => {
-                QuerySelect::query(&mut query)
+                query
                     .inner_join(
                         reaction_tally::Entity,
                         reaction_tally::Relation::Event.def().rev(),
@@ -333,7 +348,7 @@ impl Query {
         // NOTE: SeaORM cursor only works with one of the entities used, but we
         // need to order/filter etc. by the tally, so we can't use it.
         let order_column = sort_posts_by_column(sort_by);
-        QueryOrder::query(&mut query)
+        query
             .order_by_expr(order_column.clone(), Order::Desc)
             .order_by_expr(
                 Expr::col(event::Column::Id.as_column_ref()),
@@ -349,7 +364,7 @@ impl Query {
                             "wrong combination of sort_by and pagination parameters",
                         ));
                     }
-                    query = query.filter(
+                    query.cond_where(
                         Expr::tuple([
                             order_column,
                             Expr::col(event::Column::Id.as_column_ref()),
@@ -370,7 +385,7 @@ impl Query {
                             "wrong combination of sort_by and pagination parameters",
                         ));
                     }
-                    query = query.filter(
+                    query.cond_where(
                         Expr::tuple([
                             order_column,
                             Expr::col(event::Column::Id.as_column_ref()),
@@ -384,12 +399,22 @@ impl Query {
                 Cursor::End => { /* No filtering. */ }
             },
         }
-        query = query.limit(limit + 1); // + 1 for pagination.
+        query.limit(limit + 1); // + 1 for pagination.
 
-        query.into_tuple().all(db).await.map_err(|err| {
-            tracing::warn!(error = %err, "failed to list feed events");
-            Status::internal("internal server error")
-        })
+        db.query_all(&query)
+            .await
+            .and_then(|rows| {
+                rows.into_iter()
+                    .map(|row| {
+                        ExploreEvent::try_get_many_by_index(&row)
+                            .map_err(Into::into)
+                    })
+                    .collect()
+            })
+            .map_err(|err| {
+                tracing::warn!(error = %err, "failed to list feed events");
+                Status::internal("internal server error")
+            })
     }
 
     /// List events restricted to events authored by any of `identities`.
