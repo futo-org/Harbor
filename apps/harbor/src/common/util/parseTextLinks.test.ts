@@ -1,8 +1,10 @@
 import {
   mentionsToPlainText,
   parseTextLinks,
+  truncateSegments,
   type TextSegment,
 } from './parseTextLinks';
+import mentionFixtures from '../../../../../packages/rs-common/src/mentions.fixtures.json';
 
 /**
  * parseTextLinks minus the raw offsets, so the segment assertions below stay
@@ -24,19 +26,6 @@ const linkValues = (text: string) => links(text).map((l) => l.value);
 
 /** Resolved URLs of the link segments. */
 const linkUrls = (text: string) => links(text).map((l) => l.url);
-
-/** Just the alias segments. */
-const aliases = (text: string) =>
-  parse(text).filter(
-    (s): s is Extract<TextSegment, { type: 'alias' }> => s.type === 'alias',
-  );
-
-/** Just the identity segments. */
-const identities = (text: string) =>
-  parse(text).filter(
-    (s): s is Extract<TextSegment, { type: 'identity' }> =>
-      s.type === 'identity',
-  );
 
 const HEX64 =
   '0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722';
@@ -170,157 +159,20 @@ describe('parseTextLinks', () => {
     });
   });
 
-  describe('alias mentions', () => {
-    it('detects an `@user@domain.com` mention', () => {
-      expect(parse('@user@domain.com')).toEqual([
-        { type: 'alias', value: '@user@domain.com', alias: 'user@domain.com' },
-      ]);
-    });
-
-    it('detects a mention within surrounding text', () => {
-      expect(parse('hey @user@domain.com bye')).toEqual([
-        { type: 'text', value: 'hey ' },
-        { type: 'alias', value: '@user@domain.com', alias: 'user@domain.com' },
-        { type: 'text', value: ' bye' },
-      ]);
-    });
-
-    it('excludes trailing punctuation from the mention', () => {
-      expect(parse('see @user@domain.com.')).toEqual([
-        { type: 'text', value: 'see ' },
-        { type: 'alias', value: '@user@domain.com', alias: 'user@domain.com' },
-        { type: 'text', value: '.' },
-      ]);
-    });
-
-    it('preserves case (normalisation happens downstream)', () => {
-      expect(aliases('@User@Domain.com')).toEqual([
-        { type: 'alias', value: '@User@Domain.com', alias: 'User@Domain.com' },
-      ]);
-    });
-
-    it('allows dotted/underscored local parts', () => {
-      expect(aliases('@first.last_1@domain.io')).toEqual([
-        {
-          type: 'alias',
-          value: '@first.last_1@domain.io',
-          alias: 'first.last_1@domain.io',
-        },
-      ]);
-    });
-
-    it('does not treat a plain email as a mention', () => {
-      expect(aliases('reach me@example.com please')).toEqual([]);
-    });
-
-    it('does not treat a non-ASCII email as a mention', () => {
-      expect(aliases('reach andré@example.com or 漢字@example.com')).toEqual(
-        [],
+  // Cases shared with the server's `mentions.rs` (see the note at the top of
+  // parseTextLinks.ts), so both parsers agree on every mention form.
+  describe('mentions', () => {
+    it.each(mentionFixtures)('$name', ({ text, mentions, plain }) => {
+      type Found = { identity: string } | { alias: string };
+      const found = parse(text).flatMap((s): Found[] =>
+        s.type === 'identity'
+          ? [{ identity: s.identity }]
+          : s.type === 'alias'
+            ? [{ alias: s.alias }]
+            : [],
       );
-    });
-
-    it('allows punctuation directly before a mention', () => {
-      expect(aliases('(@user@domain.com)').map((a) => a.alias)).toEqual([
-        'user@domain.com',
-      ]);
-    });
-
-    it('does not match `@user@localhost` (no dot)', () => {
-      expect(aliases('@user@localhost here')).toEqual([]);
-    });
-
-    it('detects a bare `@domain.com` mention', () => {
-      expect(aliases('hi @domain.com')).toEqual([
-        { type: 'alias', value: '@domain.com', alias: 'domain.com' },
-      ]);
-    });
-
-    it('does not require a known TLD', () => {
-      expect(aliases('@user@some.internal')).toEqual([
-        {
-          type: 'alias',
-          value: '@user@some.internal',
-          alias: 'user@some.internal',
-        },
-      ]);
-    });
-
-    it('leaves a dotless `@word` as plain text', () => {
-      expect(parse('hey @everyone hi')).toEqual([
-        { type: 'text', value: 'hey @everyone hi' },
-      ]);
-    });
-  });
-
-  describe('curly mentions', () => {
-    it('detects `@{identity,displayName}` and renders the display name', () => {
-      expect(parse(`hi @{${HEX64},Jane Doe} bye`)).toEqual([
-        { type: 'text', value: 'hi ' },
-        { type: 'identity', value: 'Jane Doe', identity: HEX64 },
-        { type: 'text', value: ' bye' },
-      ]);
-    });
-
-    it('detects `@{identity}` without a display name', () => {
-      expect(parse(`@{${HEX64}}`)).toEqual([
-        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
-      ]);
-    });
-
-    it('falls back to the identity when the display name is empty', () => {
-      expect(parse(`@{${HEX64},}`)).toEqual([
-        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
-      ]);
-    });
-
-    it('keeps trailing punctuation outside the braces as text', () => {
-      expect(parse(`see @{${HEX64},Jane}.`)).toEqual([
-        { type: 'text', value: 'see ' },
-        { type: 'identity', value: 'Jane', identity: HEX64 },
-        { type: 'text', value: '.' },
-      ]);
-    });
-
-    it('rejects a non-hex identity', () => {
-      expect(parse('@{notanidentity,Jane}')).toEqual([
-        { type: 'text', value: '@{notanidentity,Jane}' },
-      ]);
-    });
-  });
-
-  describe('identity mentions', () => {
-    it('detects an `@<64-hex>` mention', () => {
-      expect(parse(`@${HEX64}`)).toEqual([
-        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
-      ]);
-    });
-
-    it('detects a mention within surrounding text', () => {
-      expect(parse(`hi @${HEX64} ok`)).toEqual([
-        { type: 'text', value: 'hi ' },
-        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
-        { type: 'text', value: ' ok' },
-      ]);
-    });
-
-    it('excludes trailing punctuation from the mention', () => {
-      expect(parse(`see @${HEX64}.`)).toEqual([
-        { type: 'text', value: 'see ' },
-        { type: 'identity', value: `@${HEX64}`, identity: HEX64 },
-        { type: 'text', value: '.' },
-      ]);
-    });
-
-    it('does not match fewer than 64 hex chars', () => {
-      expect(identities('@deadbeef here')).toEqual([]);
-    });
-
-    it('does not match a longer hex run (not exactly 64)', () => {
-      expect(identities(`@${HEX64}ab`)).toEqual([]);
-    });
-
-    it('does not match 64 non-hex chars', () => {
-      expect(identities(`@${'g'.repeat(64)} here`)).toEqual([]);
+      expect(found).toEqual(mentions);
+      expect(mentionsToPlainText(text)).toBe(plain);
     });
   });
 
@@ -450,16 +302,168 @@ describe('parseTextLinks', () => {
   });
 });
 
-describe('mentionsToPlainText', () => {
-  it('renders curly mentions as their display name and keeps the rest', () => {
-    expect(
-      mentionsToPlainText(`hi @{${HEX64},Jane Doe} see @{${HEX64}} @a.b.com`),
-    ).toBe(`hi Jane Doe see @${HEX64} @a.b.com`);
+describe('truncateSegments', () => {
+  const truncate = (text: string, limit: number) =>
+    truncateSegments(parseTextLinks(text), limit);
+
+  const rendered = (text: string, limit: number) =>
+    truncate(text, limit)
+      .segments.map((s) => s.value)
+      .join('');
+
+  describe('plain text', () => {
+    it('cuts mid-way, with no word-boundary snapping', () => {
+      expect(rendered('hello world', 5)).toBe('hello');
+      expect(rendered('hello world', 8)).toBe('hello wo');
+    });
+
+    it('returns everything untouched when it fits', () => {
+      const segments = parseTextLinks('hello world');
+      expect(truncate('hello world', 11)).toEqual({
+        segments,
+        truncated: false,
+      });
+      expect(truncate('hello world', 100)).toEqual({
+        segments,
+        truncated: false,
+      });
+    });
+
+    it('returns nothing for an empty input', () => {
+      expect(truncate('', 10)).toEqual({ segments: [], truncated: false });
+    });
+
+    it('returns nothing, truncated, for a zero limit', () => {
+      expect(truncate('hello', 0)).toEqual({ segments: [], truncated: true });
+    });
+
+    it('keeps raw offsets consistent on the cut segment', () => {
+      const [cut] = truncate('abcdef', 3).segments;
+      expect(cut).toEqual({ type: 'text', value: 'abc', start: 0, end: 3 });
+    });
+
+    it('keeps raw offsets consistent when the cut segment starts late', () => {
+      const text = `@{${HEX64},Jo} abcdef`;
+      const [, cut] = truncate(text, 5).segments;
+      const start = text.indexOf(' ');
+      expect(cut).toEqual({
+        type: 'text',
+        value: ' ab',
+        start,
+        end: start + 3,
+      });
+    });
   });
 
-  it('is the identity for text without mentions', () => {
-    expect(mentionsToPlainText('plain https://x.com #tag')).toBe(
-      'plain https://x.com #tag',
-    );
+  describe('curly mentions', () => {
+    it('counts by display name, not raw length', () => {
+      const text = `hi @{${HEX64},Jane} bye`;
+      expect(rendered(text, 6)).toBe('hi ');
+      expect(rendered(text, 7)).toBe('hi Jane');
+      expect(rendered(text, 8)).toBe('hi Jane ');
+      expect(rendered(text, 100)).toBe('hi Jane bye');
+    });
+
+    it('counts a nameless curly mention by its rendered @identity', () => {
+      const text = `@{${HEX64}} x`;
+      expect(rendered(text, 64)).toBe('');
+      expect(rendered(text, 65)).toBe(`@${HEX64}`);
+    });
+
+    it('is dropped whole when it does not fit', () => {
+      expect(rendered(`hi @{${HEX64},Jane Doe} bye`, 6)).toBe('hi ');
+      expect(rendered(`hi @{${HEX64},Jane Doe} bye`, 10)).toBe('hi ');
+    });
+
+    it('yields nothing when it is the first segment and wider than the limit', () => {
+      expect(truncate(`@{${HEX64},Jane Doe} bye`, 3)).toEqual({
+        segments: [],
+        truncated: true,
+      });
+    });
+
+    it('spends the budget across several mentions', () => {
+      const text = `@{${HEX64},Al} @{${HEX64},Bo} @{${HEX64},Cy}`;
+      expect(rendered(text, 5)).toBe('Al Bo');
+      expect(rendered(text, 7)).toBe('Al Bo ');
+      expect(rendered(text, 8)).toBe('Al Bo Cy');
+    });
+  });
+
+  describe('other atomic segments', () => {
+    it('drops a link that does not fit instead of splitting it', () => {
+      expect(rendered('see https://example.com now', 10)).toBe('see ');
+      expect(rendered('see https://example.com now', 23)).toBe(
+        'see https://example.com',
+      );
+    });
+
+    it('drops a hashtag that does not fit', () => {
+      expect(rendered('go #hashtag now', 5)).toBe('go ');
+      expect(rendered('go #hashtag now', 11)).toBe('go #hashtag');
+    });
+
+    it('drops an alias mention that does not fit', () => {
+      expect(rendered('cc @user.example.com now', 10)).toBe('cc ');
+      expect(rendered('cc @user.example.com now', 20)).toBe(
+        'cc @user.example.com',
+      );
+    });
+
+    it('drops a bare identity mention that does not fit', () => {
+      expect(rendered(`cc @${HEX64} now`, 67)).toBe('cc ');
+      expect(rendered(`cc @${HEX64} now`, 68)).toBe(`cc @${HEX64}`);
+    });
+
+    it('returns kept atomic segments by reference', () => {
+      const segments = parseTextLinks('see https://example.com now');
+      const kept = truncateSegments(segments, 23).segments;
+      expect(kept[1]).toBe(segments[1]);
+    });
+  });
+
+  describe('boundaries', () => {
+    it('adds no empty text segment when the budget ends at a segment boundary', () => {
+      const { segments } = truncate(`hi @{${HEX64},Jane} bye`, 7);
+      expect(segments).toHaveLength(2);
+      expect(segments.at(-1)?.type).toBe('identity');
+    });
+
+    it('reports truncated only when something was cut', () => {
+      const text = `hi @{${HEX64},Jane}`;
+      expect(truncate(text, 7).truncated).toBe(false);
+      expect(truncate(text, 6).truncated).toBe(true);
+      expect(truncate('hello', 5).truncated).toBe(false);
+      expect(truncate('hello', 4).truncated).toBe(true);
+    });
+
+    it('is exactly "rendered length exceeds limit"', () => {
+      const text = `a @{${HEX64},Jane} b https://x.com #t @u.example.com`;
+      const renderedLength = mentionsToPlainText(text).length;
+      for (const limit of [
+        0,
+        1,
+        2,
+        5,
+        6,
+        7,
+        renderedLength - 1,
+        renderedLength,
+        renderedLength + 1,
+      ]) {
+        expect(truncate(text, limit).truncated).toBe(limit < renderedLength);
+      }
+    });
+
+    it('kept segments tile a prefix of the raw text', () => {
+      const text = `a @{${HEX64},Jane} b https://x.com #t @u.example.com end`;
+      for (const limit of [0, 1, 3, 6, 7, 9, 20, 25, 40, 100]) {
+        let cursor = 0;
+        for (const s of truncate(text, limit).segments) {
+          expect(s.start).toBe(cursor);
+          cursor = s.end;
+        }
+      }
+    });
   });
 });

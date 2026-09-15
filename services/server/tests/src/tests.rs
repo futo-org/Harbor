@@ -13,14 +13,13 @@ use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::mem::take;
-use std::sync::OnceLock;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::SystemTime;
-use tokio::sync::OnceCell;
+use tokio::sync::{Mutex, MutexGuard};
 
 mod event_sync;
 mod feeds;
 mod graph;
+mod notifications;
 mod search;
 
 /// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
@@ -175,10 +174,38 @@ impl TestClient {
     }
 
     /// Create a client for the trusted moderator.
-    pub async fn trusted_moderator() -> TestClient {
-        ensure_moderator_setup().await;
-        let key = test_moderator_key();
-        TestClient::new_with_identity(key).await
+    pub async fn trusted_moderator() -> (TestClient, MutexGuard<'static, bool>)
+    {
+        // Mutex to ensure that we only use one moderator concurrently,
+        // otherwise the various sequences get messed up causing test failures.
+        //
+        // Boolean indicates if the indentity event has to be submitted or not.
+        static ONE_MODERATOR: Mutex<bool> = Mutex::const_new(true);
+
+        let mut guard = ONE_MODERATOR.lock().await;
+
+        let seed = sha256(b"polycentric-test-moderator-seed-2026");
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&seed[..32]);
+        let key = SigningKey::from_bytes(&bytes);
+
+        let mut client = TestClient::new_with_identity(key).await;
+
+        if *guard {
+            // We keep the indentity creation events.
+            *guard = false;
+        } else {
+            // Identity events already stored.
+            client.pending.clear();
+        }
+
+        // Quick way to create a unique sequence value.
+        let now = current_timestamp();
+        for collection_sequence in &mut client.collection_sequences {
+            collection_sequence.0 = now;
+        }
+
+        (client, guard)
     }
 
     async fn new_with_identity(key: SigningKey) -> TestClient {
@@ -308,6 +335,21 @@ impl TestClient {
         self.push_event_bundle(ContentBody::Labels(labels), created_at)
     }
 
+    pub fn label_key(
+        &mut self,
+        on: EventKey,
+        labels: Vec<String>,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.label(
+            Labels {
+                event_key: Some(on),
+                label_values: labels,
+            },
+            created_at,
+        )
+    }
+
     pub fn follow(&mut self, follow: Follow, created_at: u64) -> Vec<u8> {
         self.push_event_bundle(ContentBody::Follow(follow), created_at)
     }
@@ -376,6 +418,7 @@ impl TestClient {
         self.delete(delete, created_at)
     }
 
+    #[track_caller]
     pub fn get_last_event_key(&self) -> EventKey {
         let event = self.pending.last().expect("no pending events");
         let signed_event = event.signed_event.as_ref().unwrap();
@@ -519,6 +562,175 @@ impl Drop for TestClient {
 
 pub fn current_timestamp() -> u64 {
     SystemTime::UNIX_EPOCH.elapsed().unwrap().as_millis() as u64
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ExpectEvent {
+    key: EventKey,
+    kind: ExpectEventKind,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum ExpectEventKind {
+    Repost { post: EventKey },
+}
+
+pub fn expect_events(got: &[EventBundle], expected: Vec<ExpectEvent>) {
+    eprintln!("Got events: {:#?}", got);
+    eprintln!("Expected vents: {:#?}", expected);
+    assert_eq!(got.len(), expected.len());
+    for (got, expected) in got.iter().zip(expected) {
+        let event =
+            Event::decode(&*got.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap();
+
+        assert_eq!(event.key, Some(expected.key));
+
+        let content = Content::decode(
+            &*got.serialized_content.as_ref().unwrap().content_bytes,
+        )
+        .unwrap();
+        let content = content.content_body.as_ref().unwrap();
+
+        match (content, expected.kind) {
+            (ContentBody::Repost(repost), ExpectEventKind::Repost { post }) => {
+                let got = repost.post.as_ref().expect("repost is missing key");
+                assert_eq!(*got, post);
+            }
+            (content, expected) => {
+                panic!("unexpected event: {content:?}, expected: {expected:?}")
+            }
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum ExpectHint {
+    Identity(String),
+    Post(EventKey),
+    Delete(EventKey),
+    Labels {
+        post: EventKey,
+        values: Vec<String>,
+    },
+    Reaction {
+        post: EventKey,
+        emoji: String,
+        positive: bool,
+    },
+}
+
+impl ExpectHint {
+    fn moderator_identity() -> ExpectHint {
+        ExpectHint::Identity(
+            "020225a394cac01413ff43527f1644b1772d78d2cea873de1e8ae2f9c3c9f47b"
+                .to_owned(),
+        )
+    }
+}
+
+pub fn expect_hints(got: &[EventHint], mut expected: Vec<ExpectHint>) {
+    eprintln!("Got hints: {:#?}", got);
+    eprintln!("Expected hints: {:#?}", expected);
+    for got in got {
+        let event_bundle = got.event_bundle.as_ref().unwrap();
+        let content = Content::decode(
+            &*event_bundle
+                .serialized_content
+                .as_ref()
+                .unwrap()
+                .content_bytes,
+        )
+        .unwrap();
+        let hint_content = content.content_body.as_ref().unwrap();
+        let hint_event = Event::decode(
+            &*event_bundle.signed_event.as_ref().unwrap().event_bytes,
+        )
+        .unwrap();
+
+        // Ordering of the hints is not guaranteed, so we need find the hint we
+        // expect.
+        let expected = find_expected(&mut expected, hint_content, &hint_event)
+            .unwrap_or_else(|| panic!("unexpected hint: {hint_content:?}"));
+
+        match (hint_content, expected) {
+            (
+                ContentBody::Identity(identity),
+                ExpectHint::Identity(expected),
+            ) => {
+                assert_eq!(identity.derive_hex_key(), *expected);
+            }
+            (ContentBody::Delete(delete), ExpectHint::Delete(expected)) => {
+                assert_eq!(*delete.event_key.as_ref().unwrap(), expected);
+            }
+            (ContentBody::Post(_), ExpectHint::Post(expected)) => {
+                let key = hint_event.key.as_ref().unwrap();
+                assert_eq!(*key, expected);
+            }
+            (
+                ContentBody::Labels(labels),
+                ExpectHint::Labels { post, values },
+            ) => {
+                assert_eq!(*labels.event_key.as_ref().unwrap(), post);
+                assert_eq!(labels.label_values, values);
+            }
+            (
+                ContentBody::Reaction(reaction),
+                ExpectHint::Reaction {
+                    post,
+                    emoji,
+                    positive,
+                },
+            ) => {
+                assert_eq!(*reaction.event_key.as_ref().unwrap(), post);
+                assert_eq!(reaction.emoji.as_deref(), Some(emoji).as_deref());
+                assert_eq!(reaction.positive, positive);
+            }
+            // This will panic at not being able to find the expected event
+            // above.
+            _ => unreachable!(),
+        }
+    }
+    if !expected.is_empty() {
+        panic!("missing expected hints: {expected:#?}");
+    }
+}
+
+fn find_expected(
+    expected: &mut Vec<ExpectHint>,
+    hint_content: &ContentBody,
+    hint_event: &Event,
+) -> Option<ExpectHint> {
+    let idx = match hint_content {
+        ContentBody::Identity(identity) => {
+            let got = identity.derive_hex_key();
+            expected.iter().position(|e| matches!(e, ExpectHint::Identity(expected) if *expected == got))?
+        }
+        ContentBody::Delete(delete) => {
+            let got = delete.event_key.as_ref().unwrap();
+            expected.iter().position(|e| matches!(e, ExpectHint::Delete(expected) if expected == got))?
+        }
+        ContentBody::Post(_) => {
+            let got = hint_event.key.as_ref().unwrap();
+            expected.iter().position(
+                |e| matches!(e, ExpectHint::Post(expected) if expected == got),
+            )?
+        }
+        ContentBody::Labels(labels) => {
+            let got = labels.event_key.as_ref().unwrap();
+            expected.iter().position(
+                |e| matches!(e, ExpectHint::Labels { post, ..} if post == got),
+            )?
+        }
+        ContentBody::Reaction(reaction) => {
+            let got = reaction.event_key.as_ref().unwrap();
+            expected.iter().position(
+                |e| matches!(e, ExpectHint::Reaction { post, ..} if post == got),
+            )?
+        }
+        _ => return None,
+    };
+    Some(expected.swap_remove(idx))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -782,113 +994,9 @@ pub fn bundle_signature(b: &EventBundle) -> Vec<u8> {
         .clone()
 }
 
-/// Deterministic signing key for the test moderator. The server must be
-/// started with `POLYCENTRIC_MODERATION_IDENTITY` set to
-/// [`test_moderator_identity()`] for these tests to pass.
-pub fn test_moderator_key() -> SigningKey {
-    let seed = sha256(b"polycentric-test-moderator-seed-2026");
-    let mut bytes = [0u8; 32];
-    bytes.copy_from_slice(&seed[..32]);
-    SigningKey::from_bytes(&bytes)
-}
-
-/// Identity string of the test moderator — the value that must be set as
-/// `POLYCENTRIC_MODERATION_IDENTITY` when starting the server.
-pub fn test_moderator_identity() -> String {
-    let key = test_moderator_key();
-    let initial = Identity {
-        rotation_keys: vec![public_key_of(&key)],
-        signing_keys: vec![],
-        revocation_bounds: vec![],
-        servers: None,
-        recovery_key: None,
-        recovery_signature: None,
-    };
-    initial.derive_hex_key()
-}
-
-/// Build a signed Labels-collection (collection 7) event bundle targeting
-/// `target_event_key` with the given label values.
-#[allow(clippy::too_many_arguments)]
-pub fn make_labels_bundle(
-    identity: &str,
-    signing_key: &SigningKey,
-    sequence: u64,
-    identity_sequence: u64,
-    vector_clock: Vec<u64>,
-    previous_root: Vec<u8>,
-    target_event_key: EventKey,
-    label_values: Vec<String>,
-    created_at: u64,
-) -> EventBundle {
-    let content = Content {
-        content_body: Some(content::ContentBody::Labels(Labels {
-            event_key: Some(target_event_key),
-            label_values,
-        })),
-    };
-    let (content_bytes, digest) = content_with_digest(content);
-    let event = make_event(
-        COLLECTION_LABELS,
-        identity,
-        signing_key,
-        sequence,
-        identity_sequence,
-        VectorClock {
-            sequence: vector_clock,
-        },
-        vec![],
-        previous_root,
-        digest,
-        created_at,
-    );
-    bundle(sign(signing_key, event), content_bytes)
-}
-
 // Following are moderation / label integration tests: The server must
 // be started with `POLYCENTRIC_MODERATION_IDENTITY` set to the value
 // returned by `test_moderator_identity()`.
-
-/// Ensures the moderator's genesis identity event is published exactly once
-/// across all tests (the moderator identity is deterministic, so sequence
-/// collisions would silently fail on the second insert).
-static MODERATOR_READY: OnceCell<()> = OnceCell::const_new();
-
-async fn ensure_moderator_setup() {
-    MODERATOR_READY
-        .get_or_init(|| async {
-            let mut event = connect_event_sync().await;
-            let mod_key = test_moderator_key();
-            let mod_identity = test_moderator_identity();
-            publish_genesis(
-                &mut event,
-                &mod_identity,
-                &mod_key,
-                DEFAULT_CREATED_AT,
-            )
-            .await;
-        })
-        .await;
-}
-
-/// Monotonic sequence number for the moderator's Labels events — each test
-/// needs a unique (collection, identity, pub_key, sequence) tuple or the
-/// duplicate is silently dropped by the server. Seeded from the clock because
-/// test runners like nextest run each test in its own process, so a fixed
-/// initial value would collide across concurrently running tests.
-static NEXT_LABELS_SEQ: OnceLock<AtomicU64> = OnceLock::new();
-
-async fn next_labels_seq() -> u64 {
-    NEXT_LABELS_SEQ
-        .get_or_init(|| {
-            let nanos = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("clock before unix epoch")
-                .as_nanos() as u64;
-            AtomicU64::new(nanos)
-        })
-        .fetch_add(1, Ordering::Relaxed)
-}
 
 async fn publish_genesis(
     client: &mut EventSyncServiceClient<tonic::transport::Channel>,
@@ -942,36 +1050,6 @@ async fn publish_post(
         })
         .await
         .expect("post put failed");
-    sig
-}
-
-async fn publish_labels(
-    client: &mut EventSyncServiceClient<tonic::transport::Channel>,
-    identity: &str,
-    key: &SigningKey,
-    target_event_key: EventKey,
-    label_values: Vec<String>,
-    created_at: u64,
-) -> Vec<u8> {
-    let seq = next_labels_seq().await;
-    let bundle = make_labels_bundle(
-        identity,
-        key,
-        seq,
-        1,
-        vec![1],
-        vec![],
-        target_event_key,
-        label_values,
-        created_at,
-    );
-    let sig = bundle_signature(&bundle);
-    client
-        .put_events(PutEventsRequest {
-            event_bundles: vec![bundle],
-        })
-        .await
-        .expect("labels put failed");
     sig
 }
 
