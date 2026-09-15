@@ -715,7 +715,7 @@ async fn identity_feed_include_reply_to_identity() {
 
     expect_events(
         &response.event_bundles,
-        vec![ExpectEvent {
+        &[ExpectEvent {
             key: repost_key,
             kind: ExpectEventKind::Repost {
                 post: reply_key.clone(),
