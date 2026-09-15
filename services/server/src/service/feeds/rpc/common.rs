@@ -351,7 +351,6 @@ mod tests {
     use entity::{content, event};
     use sea_orm::prelude::DateTimeWithTimeZone;
     use std::collections::HashSet;
-    use std::sync::Arc;
 
     fn ts(seconds: i64) -> DateTimeWithTimeZone {
         DateTime::from_timestamp_secs(seconds)
@@ -479,9 +478,10 @@ mod tests {
 
     fn blocking(identities: &[&str]) -> HydrationState {
         HydrationState {
-            blocked_identities: Arc::new(
-                identities.iter().map(|s| s.to_string()).collect(),
-            ),
+            blocked_identities: identities
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
             ..Default::default()
         }
     }
