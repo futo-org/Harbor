@@ -1,4 +1,5 @@
-use sea_orm::{ColumnTrait, QuerySelect};
+use sea_orm::ColumnTrait;
+use sea_orm::sea_query::{DynIden, Expr, SelectStatement};
 
 pub const EVENT_PREFIX: &str = "event_";
 pub const CONTENT_PREFIX: &str = "content_";
@@ -7,15 +8,14 @@ pub const CONTENT_PREFIX: &str = "content_";
 /// using "`prefix``column_name`".
 ///
 /// See the `*_PREFIX` constant for some commonly used prefixes.
-pub fn select_model_columns<Q: QuerySelect>(
-    mut query: Q,
+pub fn select_model_columns(
+    query: &mut SelectStatement,
     prefix: &str,
     columns: impl Iterator<Item = impl ColumnTrait>,
-) -> Q {
+) {
     for column in columns {
         let (table, column) = column.as_column_ref();
-        let alias = format!("{prefix}{column}");
-        query = query.tbl_col_as((table, column), alias);
+        let alias = DynIden::from(format!("{prefix}{column}"));
+        query.expr_as(Expr::col((table, column)), alias);
     }
-    query
 }

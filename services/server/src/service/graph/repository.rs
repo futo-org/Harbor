@@ -393,10 +393,13 @@ impl Query {
                 .cte(identity_events_cte);
             c
         });
-        query =
-            select_model_columns(query, EVENT_PREFIX, event::Column::iter());
-        query = select_model_columns(
-            query,
+        select_model_columns(
+            QuerySelect::query(&mut query),
+            EVENT_PREFIX,
+            event::Column::iter(),
+        );
+        select_model_columns(
+            QuerySelect::query(&mut query),
             CONTENT_PREFIX,
             content::Column::iter(),
         );
