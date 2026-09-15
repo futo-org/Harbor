@@ -84,6 +84,11 @@ function ShowMoreToggle({ onPress }: { onPress: () => void }) {
   );
 }
 
+/**
+ * One parsed segment: plain text as-is, or a link/mention as a tappable
+ * primary-colored piece. On web it's a real anchor (hover underline, new tab
+ * for external links); on native it's a Text with an onPress.
+ */
 function Segment({
   segment,
   size,
