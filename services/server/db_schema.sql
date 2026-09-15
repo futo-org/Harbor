@@ -1054,6 +1054,13 @@ CREATE INDEX content_verification_verify_claim_event_key_idx ON public.content_v
 
 
 --
+-- Name: event_identity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX event_identity ON public.events USING btree (identity);
+
+
+--
 -- Name: events_collection_created_at_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 

@@ -1,14 +1,16 @@
 //! Notification worker.
 //!
 //! Consumes the `events` topic and turns relevant events (replies, follows,
-//! reposts, reactions) into rows in the `notification` table.
+//! reposts, reactions, mentions) into rows in the `notification` table.
 
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use chrono::Utc;
 use common_kafka::{BorrowedMessage, FutureRecord, Message};
 use entity::notification;
+use polycentric_common::mentions::{Mention, extract_mentions};
 use polycentric_common::models::protos_v2::{
     Content, Event, EventBundle, EventKey, Notification, NotificationKind,
     content::ContentBody,
@@ -22,12 +24,17 @@ use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::graph::repository::Query as GraphRepository;
+use crate::service::notifications::cached_alias_resolver;
 use crate::service::proofs::service::attach_proofs;
 use crate::service::verifications::repository::Query as VerificationsRepository;
 use crate::workers::{MessageHandler, Outcome, WorkerError, run_consumer};
 
 /// Kafka topic the materialized `Notification` messages are produced to.
 const NOTIFICATIONS_TOPIC: &str = "notifications";
+
+/// Most mention notifications (each a feed row plus a push) one post
+/// creates. The mentions in the text itself are not limited.
+const MAX_MENTION_NOTIFICATIONS_PER_POST: usize = 10;
 
 pub struct NotificationWorker {
     ctx: Arc<ServiceContext>,
@@ -108,14 +115,17 @@ impl NotificationWorker {
         .await?)
     }
 
-    /// The recipients of `notifications` that do not block `author`. A
+    /// `notifications` minus those whose recipient blocks `author`. A
     /// recipient that blocks the actor gets neither a stored notification
     /// nor a push.
-    async fn unblocked_recipients<'a>(
+    async fn drop_recipients_blocking_author(
         &self,
-        notifications: &'a [PendingNotification],
+        mut notifications: Vec<PendingNotification>,
         author: &str,
-    ) -> Result<Vec<&'a String>, WorkerError> {
+    ) -> Result<Vec<PendingNotification>, WorkerError> {
+        if notifications.is_empty() {
+            return Ok(notifications);
+        }
         // TODO: the query called in `identites_blocking` could be more
         // efficient. See the method's doc comment.
         let blockers = GraphRepository::identities_blocking(
@@ -125,11 +135,8 @@ impl NotificationWorker {
         )
         .await?;
 
-        Ok(notifications
-            .iter()
-            .map(|notification| &notification.to_identity)
-            .filter(|to_identity| !blockers.contains(*to_identity))
-            .collect())
+        notifications.retain(|n| !blockers.contains(&n.to_identity));
+        Ok(notifications)
     }
 
     // Emit a Notification event to Kafka, that can be consumed by the
@@ -169,6 +176,7 @@ impl NotificationWorker {
 #[tonic::async_trait]
 impl MessageHandler for NotificationWorker {
     async fn handle(&self, message: &BorrowedMessage<'_>) -> Outcome {
+        let start = Instant::now();
         let Some(payload) = message.payload() else {
             return Outcome::Commit;
         };
@@ -203,23 +211,41 @@ impl MessageHandler for NotificationWorker {
 
         // Not every event produces notifications (and self-actions never
         // do).
-        let notifications =
-            build_notifications(&trigger_key.identity, &content);
-        let Some(PendingNotification { kind, target, .. }) =
-            notifications.first()
-        else {
-            return Outcome::Commit;
+        let author = &trigger_key.identity;
+        let event_notifications = build_notifications(author, &content);
+
+        // A post also notifies the identities it mentions. Alias mentions
+        // resolve through their domain's `.well-known/polycentric.json`; a
+        // failed lookup drops that mention rather than retrying, so a dead
+        // domain can't stall the partition.
+        let mention_notifications = match &content.content_body {
+            Some(ContentBody::Post(post)) => {
+                let identity_by_alias_map =
+                    cached_alias_resolver::resolve_aliases(
+                        &self.ctx.db,
+                        &extract_mentioned_aliases(&post.text),
+                    )
+                    .await;
+                build_mention_notifications(
+                    author,
+                    &post.text,
+                    &identity_by_alias_map,
+                    &event_notifications,
+                )
+            }
+            _ => Vec::new(),
         };
-        let kind = *kind;
 
         // A completed verification only notifies when the claim's owner
         // actually requested it from this verifier — unsolicited verify
-        // events produce nothing.
-        if kind == NotificationKind::VerificationComplete {
-            match self
-                .verification_was_requested(target, &trigger_key.identity)
-                .await
-            {
+        // events produce nothing. (Verify events produce only that kind.)
+        if let Some(PendingNotification {
+            kind: NotificationKind::VerificationComplete,
+            target,
+            ..
+        }) = event_notifications.first()
+        {
+            match self.verification_was_requested(target, author).await {
                 Ok(true) => {}
                 Ok(false) => return Outcome::Commit,
                 Err(e) => {
@@ -233,11 +259,17 @@ impl MessageHandler for NotificationWorker {
             }
         }
 
-        let recipients = match self
-            .unblocked_recipients(&notifications, &trigger_key.identity)
+        let notifications = match self
+            .drop_recipients_blocking_author(
+                event_notifications
+                    .into_iter()
+                    .chain(mention_notifications)
+                    .collect(),
+                author,
+            )
             .await
         {
-            Ok(recipients) => recipients,
+            Ok(notifications) => notifications,
             Err(e) => {
                 tracing::warn!(
                     worker = Self::NAME,
@@ -247,33 +279,40 @@ impl MessageHandler for NotificationWorker {
                 return Outcome::Retry;
             }
         };
-        if recipients.is_empty() {
+        if notifications.is_empty() {
             return Outcome::Commit;
         }
 
+        let kinds_and_recipients: Vec<(NotificationKind, &str)> = notifications
+            .iter()
+            .map(|n| (n.kind, n.to_identity.as_str()))
+            .collect();
         tracing::info!(
             worker = Self::NAME,
-            kind = ?kind,
-            from = trigger_key.identity,
-            recipients = ?recipients,
+            from = %author,
+            notifications = ?kinds_and_recipients,
             "processing notification"
         );
 
         let trigger = KeyColumns::from(trigger_key);
-        // Follows have no target event; store an empty key for them.
-        let target_cols =
-            target.as_ref().map(KeyColumns::from).unwrap_or_default();
         let now = Utc::now();
 
-        for to_identity in &recipients {
+        for notification in &notifications {
+            // Follows and mentions have no target event; store an empty key
+            // for them.
+            let target_cols = notification
+                .target
+                .as_ref()
+                .map(KeyColumns::from)
+                .unwrap_or_default();
             // NOTE: a redelivered message (rebalance / crash before commit)
             // will insert a duplicate row until a unique dedup index exists
             // to make this an upsert.
             let row = notification::ActiveModel {
                 id: NotSet,
-                kind: Set(kind as i32),
+                kind: Set(notification.kind as i32),
                 from_identity: Set(trigger.identity.clone()),
-                to_identity: Set((*to_identity).clone()),
+                to_identity: Set(notification.to_identity.clone()),
                 trigger_event_key_collection: Set(trigger.collection),
                 trigger_event_key_identity: Set(trigger.identity.clone()),
                 trigger_event_key_public_key_type: Set(trigger.public_key_type),
@@ -304,27 +343,34 @@ impl MessageHandler for NotificationWorker {
 
         // Hydrate the target event (the post replied to / reposted / reacted
         // to, or the claim to verify) so the produced `Notification` carries
-        // it. Follows have none.
-        let target_event = match target.as_ref() {
-            Some(key) => match self.hydrate_target(key).await {
-                Ok(bundle) => bundle,
-                Err(e) => {
-                    tracing::warn!(
-                        worker = Self::NAME,
-                        error = %e,
-                        "failed to hydrate target event"
-                    );
-                    return Outcome::Retry;
-                }
-            },
-            None => None,
-        };
+        // it. Every notification an event produces refers to the same target
+        // when it has one; follows and mentions have none.
+        let target_event =
+            match notifications.iter().find_map(|n| n.target.as_ref()) {
+                Some(key) => match self.hydrate_target(key).await {
+                    Ok(bundle) => bundle,
+                    Err(e) => {
+                        tracing::warn!(
+                            worker = Self::NAME,
+                            error = %e,
+                            "failed to hydrate target event"
+                        );
+                        return Outcome::Retry;
+                    }
+                },
+                None => None,
+            };
 
         // One message per recipient — the push service reads the recipient
         // from the message key.
-        for to_identity in &recipients {
+        for notification in &notifications {
             if let Err(e) = self
-                .emit(to_identity, kind, bundle.clone(), target_event.clone())
+                .emit(
+                    &notification.to_identity,
+                    notification.kind,
+                    bundle.clone(),
+                    notification.target.as_ref().and(target_event.clone()),
+                )
                 .await
             {
                 tracing::warn!(
@@ -338,8 +384,8 @@ impl MessageHandler for NotificationWorker {
 
         tracing::info!(
             worker = Self::NAME,
-            kind = ?kind,
-            recipients = ?recipients,
+            notifications = ?kinds_and_recipients,
+            latency_ms = start.elapsed().as_millis() as u64,
             "created notification"
         );
         Outcome::Commit
@@ -354,10 +400,11 @@ struct PendingNotification {
     target: Option<EventKey>,
 }
 
-/// The notifications a single event produces, if any. `author` is the
+/// The notifications a single event's structure produces, if any (mentions
+/// in a post's text are added by `build_mention_notifications`). `author` is the
 /// identity of the triggering event; self-actions (replying to your own
-/// post, following yourself, …) produce nothing. Every notification an
-/// event produces shares its kind and target — only the recipient varies.
+/// post, following yourself, …) produce nothing. Every notification here
+/// shares its kind and target — only the recipient varies.
 fn build_notifications(
     author: &str,
     content: &Content,
@@ -445,6 +492,56 @@ fn build_notifications(
     }
 
     notifications
+}
+
+/// The distinct aliases mentioned in `text`, lowercased for lookup.
+fn extract_mentioned_aliases(text: &str) -> Vec<String> {
+    let mut seen_aliases = HashSet::new();
+    extract_mentions(text)
+        .into_iter()
+        .filter_map(|m| match m {
+            Mention::Alias(alias) => seen_aliases
+                .insert(alias.to_lowercase())
+                .then(|| alias.to_lowercase()),
+            Mention::Identity(_) => None,
+        })
+        .collect()
+}
+
+/// A Mention notification for each identity `text` mentions, in order of
+/// first mention, capped at `MAX_MENTION_NOTIFICATIONS_PER_POST`. Alias
+/// mentions resolve through `identity_by_alias_map` (lowercased alias ->
+/// identity); unresolved ones are dropped. `author` and the recipients of
+/// `event_notifications` (the post's reply/quote notifications) are skipped,
+/// so replying to someone you also mention notifies them once, as a reply.
+fn build_mention_notifications(
+    author: &str,
+    text: &str,
+    identity_by_alias_map: &HashMap<String, String>,
+    event_notifications: &[PendingNotification],
+) -> Vec<PendingNotification> {
+    let mut already_notified_identities: HashSet<&str> = event_notifications
+        .iter()
+        .map(|n| n.to_identity.as_str())
+        .chain([author])
+        .collect();
+    let mentions = extract_mentions(text);
+    mentions
+        .iter()
+        .filter_map(|m| match m {
+            Mention::Identity(identity) => Some(identity.as_str()),
+            Mention::Alias(alias) => identity_by_alias_map
+                .get(&alias.to_lowercase())
+                .map(String::as_str),
+        })
+        .filter(|identity| already_notified_identities.insert(identity))
+        .take(MAX_MENTION_NOTIFICATIONS_PER_POST)
+        .map(|identity| PendingNotification {
+            kind: NotificationKind::Mention,
+            to_identity: identity.to_string(),
+            target: None,
+        })
+        .collect()
 }
 
 /// An `EventKey` flattened into the columns the `notification` table stores.
@@ -721,19 +818,28 @@ mod tests {
         BTreeMap::from([("blocker".to_string(), Value::from(blocker))])
     }
 
+    fn recipients(notifications: &[PendingNotification]) -> Vec<&str> {
+        notifications
+            .iter()
+            .map(|n| n.to_identity.as_str())
+            .collect()
+    }
+
     #[tokio::test]
     async fn recipients_blocking_the_author_are_dropped() {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![blocker_row("bob")]])
             .into_connection();
         let worker = worker(db).await;
-        let notifications = vec![pending("bob"), pending("carol")];
 
-        let recipients = worker
-            .unblocked_recipients(&notifications, "alice")
+        let notifications = worker
+            .drop_recipients_blocking_author(
+                vec![pending("bob"), pending("carol")],
+                "alice",
+            )
             .await
             .expect("block lookup should succeed");
-        assert_eq!(recipients, [&"carol".to_string()]);
+        assert_eq!(recipients(&notifications), ["carol"]);
     }
 
     #[tokio::test]
@@ -742,13 +848,15 @@ mod tests {
             .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
             .into_connection();
         let worker = worker(db).await;
-        let notifications = vec![pending("bob"), pending("carol")];
 
-        let recipients = worker
-            .unblocked_recipients(&notifications, "alice")
+        let notifications = worker
+            .drop_recipients_blocking_author(
+                vec![pending("bob"), pending("carol")],
+                "alice",
+            )
             .await
             .expect("block lookup should succeed");
-        assert_eq!(recipients, [&"bob".to_string(), &"carol".to_string()]);
+        assert_eq!(recipients(&notifications), ["bob", "carol"]);
     }
 
     #[tokio::test]
@@ -760,7 +868,7 @@ mod tests {
 
         assert!(
             worker
-                .unblocked_recipients(&[pending("bob")], "alice")
+                .drop_recipients_blocking_author(vec![pending("bob")], "alice")
                 .await
                 .is_err()
         );
@@ -772,11 +880,106 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
         let worker = worker(db).await;
 
-        let recipients = worker
-            .unblocked_recipients(&[], "alice")
+        let notifications = worker
+            .drop_recipients_blocking_author(vec![], "alice")
             .await
             .expect("no lookup should be attempted");
-        assert!(recipients.is_empty());
+        assert!(notifications.is_empty());
+    }
+
+    /// A 64-hex identity made of `c`.
+    fn identity(c: char) -> String {
+        std::iter::repeat_n(c, 64).collect()
+    }
+
+    #[test]
+    fn mentions_notify_each_identity_once() {
+        let bob = identity('b');
+        let text = format!(
+            "hi @{{{bob},Bob}} and @{bob} and @carol@x.com, @Carol@X.com \
+             @nobody@x.com and me @{}",
+            identity('a')
+        );
+        let identity_by_alias_map =
+            HashMap::from([("carol@x.com".to_string(), "carol".to_string())]);
+
+        assert_eq!(
+            extract_mentioned_aliases(&text),
+            ["carol@x.com", "nobody@x.com"]
+        );
+
+        let notifications = build_mention_notifications(
+            &identity('a'),
+            &text,
+            &identity_by_alias_map,
+            &[],
+        );
+        assert_eq!(recipients(&notifications), [bob.as_str(), "carol"]);
+        for n in &notifications {
+            assert_eq!(n.kind, NotificationKind::Mention);
+            assert_eq!(n.target, None);
+        }
+    }
+
+    #[test]
+    fn a_mentioned_reply_parent_is_only_notified_of_the_reply() {
+        let bob = identity('b');
+        let event_notifications = vec![PendingNotification {
+            kind: NotificationKind::Reply,
+            to_identity: bob.clone(),
+            target: Some(event_key(&bob)),
+        }];
+        let text = format!("@{bob} @{}", identity('c'));
+
+        let notifications = build_mention_notifications(
+            "alice",
+            &text,
+            &HashMap::new(),
+            &event_notifications,
+        );
+        assert_eq!(recipients(&notifications), [identity('c').as_str()]);
+    }
+
+    #[test]
+    fn mention_notifications_are_capped() {
+        let text: String = (0..12).map(|i| format!("@{i:064x} ")).collect();
+        let notifications =
+            build_mention_notifications("me", &text, &HashMap::new(), &[]);
+        assert_eq!(notifications.len(), MAX_MENTION_NOTIFICATIONS_PER_POST);
+    }
+
+    #[test]
+    fn a_reply_mentioning_its_parent_author_and_a_third_identity() {
+        let parent = event_key("bob");
+        let post = Post {
+            reply: Some(PostReply {
+                root: None,
+                parent: Some(parent.clone()),
+            }),
+            text: "@bob@x.com @carol@x.com".to_string(),
+            ..Default::default()
+        };
+        let identity_by_alias_map = HashMap::from([
+            ("bob@x.com".to_string(), "bob".to_string()),
+            ("carol@x.com".to_string(), "carol".to_string()),
+        ]);
+
+        let mut notifications = build_notifications(
+            "alice",
+            &content(ContentBody::Post(post.clone())),
+        );
+        notifications.extend(build_mention_notifications(
+            "alice",
+            &post.text,
+            &identity_by_alias_map,
+            &notifications,
+        ));
+
+        assert_eq!(recipients(&notifications), ["bob", "carol"]);
+        assert_eq!(notifications[0].kind, NotificationKind::Reply);
+        assert_eq!(notifications[0].target, Some(parent));
+        assert_eq!(notifications[1].kind, NotificationKind::Mention);
+        assert_eq!(notifications[1].target, None);
     }
 
     #[test]
