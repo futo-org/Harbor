@@ -17,12 +17,13 @@ use crate::lock::LockRecover;
 use crate::query::blocks::retain_unblocked_bundles;
 use crate::query::event::key::{EventKey, PublicKey};
 use crate::query::event::merge::{
-    EventBundleResponse, merge_bundle_response, merge_bundle_responses,
+    EventBundleResponse, decode_event, merge_bundle_response, merge_bundle_responses,
 };
 use crate::query::{
     QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
 };
 use crate::rx::observable::Observable;
+use crate::store::keys::EventKey as StoreEventKey;
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListEventsArgs {
@@ -320,10 +321,23 @@ pub fn get_post(
     );
 
     if !candidates.is_empty() {
-        // TODO: add an efficient way to gather relevant labels
+        let event_hints = {
+            let client = query_client.client().lock_recover();
+
+            candidates
+                .iter()
+                .filter_map(decode_event)
+                .filter_map(|event| StoreEventKey::from_event(event).ok())
+                .flat_map(|target| client.label_bundles_for(&target))
+                .map(|bundle| EventHint {
+                    event_bundle: Some(bundle),
+                })
+                .collect()
+        };
+
         let bytes = GetPostResponse {
             candidates,
-            event_hints: vec![],
+            event_hints,
         }
         .encode_to_vec();
 
