@@ -135,7 +135,15 @@ async fn suggest_follow_anonymous() {
     let suggested_identity = suggested.identity().to_owned();
 
     let db = connect_database().await;
-    seed_default_follow_suggestion(&db, &suggested_identity).await;
+    default_follow_suggestion::Entity::insert(
+        default_follow_suggestion::ActiveModel {
+            identity: Set(suggested_identity.clone()),
+            ..Default::default()
+        },
+    )
+    .exec(&db)
+    .await
+    .expect("insert the default follow suggestion");
     // The checks run as a task so a failed assertion still reaches the
     // cleanup; the panic is re-raised afterwards.
     let outcome = tokio::spawn({
@@ -172,21 +180,6 @@ async fn suggest_follow_anonymous() {
 /// `default_follow_suggestion` into all callers' results, so the row seeded by
 /// `suggest_follow_anonymous` must not leak into the others.
 static DEFAULT_FOLLOW_SUGGESTIONS: Mutex<()> = Mutex::const_new(());
-
-async fn seed_default_follow_suggestion(
-    db: &DatabaseConnection,
-    identity: &str,
-) {
-    default_follow_suggestion::Entity::insert(
-        default_follow_suggestion::ActiveModel {
-            identity: Set(identity.to_owned()),
-            ..Default::default()
-        },
-    )
-    .exec(db)
-    .await
-    .expect("insert the default follow suggestion");
-}
 
 #[tokio::test]
 async fn suggest_follow_no_profile_updates() {
