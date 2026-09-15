@@ -4,12 +4,13 @@ import {
   type FetchMode,
   Query,
   v2,
+  labelsFromGetPostResponse,
 } from '@polycentric/react-native';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import {
-  decodeV2PostBundle,
-  type PostData,
-} from '@/src/common/lib/polycentric-hooks';
-import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
+  decodeFeedItems,
+  labelMapFromSets,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
 
 /**
@@ -33,7 +34,6 @@ export function usePostById(
     ],
     new Query.GetPost({
       identity: identityId ?? '',
-      collection: COLLECTION.FEED,
       sequence: sequence ?? 0n,
       signerKeyPrefix: keyFingerprint,
     }),
@@ -50,25 +50,24 @@ export function usePostById(
         new Uint8Array(query.data),
       );
 
-      const bundle = response.candidates.at(0);
-      if (!bundle?.signedEvent) return null;
+      // TODO: change feed decoding API to make this step unnecessary
+      const feedShaped = v2.GetFeedResponse.create({
+        eventBundles: response.candidates,
+        eventHints: response.eventHints,
+      });
 
-      const ev = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+      const labelMap = labelMapFromSets(labelsFromGetPostResponse(query.data));
+      const items = decodeFeedItems(feedShaped, labelMap);
 
-      // Verify the signer fingerprint matches the URL so a sequence
-      // collision across signers doesn't render the wrong post.
-      if (
-        getKeyFingerprint(ev.key?.signedBy) !== keyFingerprint ||
-        ev.key?.sequence !== sequence
-      ) {
-        return null;
-      }
+      // TODO: should we reject reposts here?
+      const postData = items.at(0);
+      if (!postData) return null;
 
-      return decodeV2PostBundle(bundle);
+      return postData;
     } catch {
       return null;
     }
-  }, [enabled, query.data, keyFingerprint, sequence]);
+  }, [enabled, query.data]);
 
   return {
     post,

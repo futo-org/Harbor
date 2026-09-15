@@ -4,12 +4,12 @@ pub mod merge;
 
 use std::sync::{Arc, Mutex};
 
-use polycentric_common::models::protos_v2;
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::{
     EventBundle, EventHint, GetPostRequest, GetPostResponse, ListEventsFilters, ListEventsRequest,
     ListEventsResponse, event_sync_service_client::EventSyncServiceClient,
 };
+use polycentric_common::models::{collections, protos_v2};
 use prost::Message;
 
 use crate::client::PolycentricClient;
@@ -46,7 +46,6 @@ pub struct GetEventArgs {
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetPostArgs {
     pub identity: String,
-    pub collection: i32,
     pub sequence: u64,
     pub signer_key_prefix: Option<String>,
 }
@@ -307,7 +306,6 @@ pub fn get_post(
 ) -> Arc<dyn QueryObservable> {
     let GetPostArgs {
         identity,
-        collection,
         sequence,
         signer_key_prefix,
     } = args;
@@ -316,7 +314,7 @@ pub fn get_post(
     let candidates = get_events_from_stores(
         query_client.client(),
         &identity,
-        collection,
+        collections::FEED,
         sequence,
         signer_key_prefix.as_deref(),
     );
@@ -363,7 +361,7 @@ pub fn get_post(
             merged.candidates = get_events_from_stores(
                 client,
                 &identity,
-                collection,
+                collections::FEED,
                 sequence,
                 signer_key_prefix.as_deref(),
             );

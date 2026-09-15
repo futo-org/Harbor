@@ -16,6 +16,7 @@ export {
   labelsFromNotificationsResponse,
   labelsFromSearchResponse,
   labelsFromThreadResponse,
+  labelsFromGetPostResponse,
   PolycentricCore,
   Query,
   QueryStatus,

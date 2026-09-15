@@ -69,6 +69,25 @@ export function labelsFromFeedResponse(response: ArrayBuffer): Array<LabelSet> {
     }
 
 /**
+ * Return the labels from the `event_hints` field of a get post response.
+ */
+export function labelsFromGetPostResponse(response: ArrayBuffer): Array<LabelSet> {
+    const __rb: Uint8Array = uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_from_get_post_response(
+        FfiConverterArrayBuffer.lower(response, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+    try {
+        return FfiConverterSequenceTypeLabelSet.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
+    }
+
+/**
  * Return the labels from the `event_hints` field of a list notifications
  * response.
  */
@@ -766,6 +785,53 @@ const FfiConverterTypeGetIdentityFeedArgs = (() => {
              FfiConverterOptionalString.allocationSize(value.forwardToken) +
              FfiConverterSequenceString.allocationSize(value.omitLabels) +
              FfiConverterOptionalInt32.allocationSize(value.windowSize);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
+export type GetPostArgs = {
+    identity: string,
+    sequence: bigint,
+    signerKeyPrefix?: string
+}
+
+/**
+ * Generated factory for {@link GetPostArgs} record objects.
+ */
+export const GetPostArgs = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<GetPostArgs, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<GetPostArgs>,
+    });
+})();
+
+const FfiConverterTypeGetPostArgs = (() => {
+    type TypeName = GetPostArgs;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        readFromCursor(c: Cursor): TypeName {
+            return {
+                identity: FfiConverterString.readFromCursor(c), 
+                sequence: FfiConverterUInt64.readFromCursor(c), 
+                signerKeyPrefix: FfiConverterOptionalString.readFromCursor(c)
+            };
+        }
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterString.writeIntoCursor(value.identity, c);
+            FfiConverterUInt64.writeIntoCursor(value.sequence, c);
+            FfiConverterOptionalString.writeIntoCursor(value.signerKeyPrefix, c);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterString.allocationSize(value.identity) +
+             FfiConverterUInt64.allocationSize(value.sequence) +
+             FfiConverterOptionalString.allocationSize(value.signerKeyPrefix);
             
         }
     };
@@ -2439,6 +2505,7 @@ const FfiConverterTypeLogLevel = (() => {
 export enum Query_Tags {
     GetProfile = "GetProfile",
     GetEvent = "GetEvent",
+    GetPost = "GetPost",
     GetPostThread = "GetPostThread",
     GetIdentityFeed = "GetIdentityFeed",
     GetFollowingFeed = "GetFollowingFeed",
@@ -2532,6 +2599,39 @@ Readonly<
 
         static instanceOf(obj: any): obj is GetEvent_ {
             return obj.tag === Query_Tags.GetEvent;
+        }
+
+    }
+
+    type GetPost__interface = {
+        tag: Query_Tags.GetPost;
+        inner: 
+Readonly<
+[GetPostArgs
+]>
+    };
+    class GetPost_ extends UniffiEnum implements GetPost__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "Query";
+        readonly tag = Query_Tags.GetPost;
+        readonly inner: 
+Readonly<
+[GetPostArgs
+]>;
+        constructor(v0: GetPostArgs) {
+            super("Query", "GetPost");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: GetPostArgs): GetPost_ {
+            return new GetPost_(v0);
+        }
+
+        static instanceOf(obj: any): obj is GetPost_ {
+            return obj.tag === Query_Tags.GetPost;
         }
 
     }
@@ -3270,6 +3370,7 @@ Readonly<
         instanceOf,
   GetProfile: GetProfile_, 
   GetEvent: GetEvent_, 
+  GetPost: GetPost_, 
   GetPostThread: GetPostThread_, 
   GetIdentityFeed: GetIdentityFeed_, 
   GetFollowingFeed: GetFollowingFeed_, 
@@ -3302,7 +3403,7 @@ Readonly<
  * match arm in `fetch_query` — no new FFI method required.
  */
 export type Query = InstanceType<
-    typeof Query['GetProfile' | 'GetEvent' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetRecommendedFeed' | 'GetExploreFeed' | 'GetAttributionFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ResolveVerifiedClaims' | 'ListFollowing' | 'ListFollowers' | 'SuggestFollow' | 'SearchPosts' | 'SearchUsers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
+    typeof Query['GetProfile' | 'GetEvent' | 'GetPost' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetRecommendedFeed' | 'GetExploreFeed' | 'GetAttributionFeed' | 'ListNotifications' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ResolveVerifiedClaims' | 'ListFollowing' | 'ListFollowers' | 'SuggestFollow' | 'SearchPosts' | 'SearchUsers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
 >;
 
 // FfiConverter for enum Query
@@ -3313,28 +3414,29 @@ const FfiConverterTypeQuery = (() => {
             switch (c.readI32()) {
                 case 1: return new Query.GetProfile(FfiConverterTypeGetProfileArgs.readFromCursor(c));
                 case 2: return new Query.GetEvent(FfiConverterTypeGetEventArgs.readFromCursor(c));
-                case 3: return new Query.GetPostThread(FfiConverterTypeGetPostThreadArgs.readFromCursor(c));
-                case 4: return new Query.GetIdentityFeed(FfiConverterTypeGetIdentityFeedArgs.readFromCursor(c));
-                case 5: return new Query.GetFollowingFeed(FfiConverterTypeGetFollowingFeedArgs.readFromCursor(c));
-                case 6: return new Query.GetRecommendedFeed(FfiConverterTypeGetFollowingFeedArgs.readFromCursor(c));
-                case 7: return new Query.GetExploreFeed(FfiConverterTypeGetExploreFeedArgs.readFromCursor(c));
-                case 8: return new Query.GetAttributionFeed(FfiConverterTypeGetAttributionFeedArgs.readFromCursor(c));
-                case 9: return new Query.ListNotifications(FfiConverterTypeListNotificationsArgs.readFromCursor(c));
-                case 10: return new Query.ListEvents(FfiConverterTypeListEventsArgs.readFromCursor(c));
-                case 11: return new Query.ListVerificationClaims(FfiConverterTypeListVerificationClaimsArgs.readFromCursor(c));
-                case 12: return new Query.ListVerificationTargets(FfiConverterTypeListVerificationTargetsArgs.readFromCursor(c));
-                case 13: return new Query.ListVerificationVerifies(FfiConverterTypeListVerificationVerifiesArgs.readFromCursor(c));
-                case 14: return new Query.ListTargetedVerificationClaims(FfiConverterTypeListTargetedVerificationClaimsArgs.readFromCursor(c));
-                case 15: return new Query.ResolveVerifiedClaims(FfiConverterTypeResolveVerifiedClaimsArgs.readFromCursor(c));
-                case 16: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.readFromCursor(c));
-                case 17: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.readFromCursor(c));
-                case 18: return new Query.SuggestFollow(FfiConverterTypeSuggestFollowArgs.readFromCursor(c));
-                case 19: return new Query.SearchPosts(FfiConverterTypeSearchPostsArgs.readFromCursor(c));
-                case 20: return new Query.SearchUsers(FfiConverterTypeSearchUsersArgs.readFromCursor(c));
-                case 21: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.readFromCursor(c));
-                case 22: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.readFromCursor(c));
-                case 23: return new Query.ListBans(FfiConverterTypeListBansArgs.readFromCursor(c));
-                case 24: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.readFromCursor(c));
+                case 3: return new Query.GetPost(FfiConverterTypeGetPostArgs.readFromCursor(c));
+                case 4: return new Query.GetPostThread(FfiConverterTypeGetPostThreadArgs.readFromCursor(c));
+                case 5: return new Query.GetIdentityFeed(FfiConverterTypeGetIdentityFeedArgs.readFromCursor(c));
+                case 6: return new Query.GetFollowingFeed(FfiConverterTypeGetFollowingFeedArgs.readFromCursor(c));
+                case 7: return new Query.GetRecommendedFeed(FfiConverterTypeGetFollowingFeedArgs.readFromCursor(c));
+                case 8: return new Query.GetExploreFeed(FfiConverterTypeGetExploreFeedArgs.readFromCursor(c));
+                case 9: return new Query.GetAttributionFeed(FfiConverterTypeGetAttributionFeedArgs.readFromCursor(c));
+                case 10: return new Query.ListNotifications(FfiConverterTypeListNotificationsArgs.readFromCursor(c));
+                case 11: return new Query.ListEvents(FfiConverterTypeListEventsArgs.readFromCursor(c));
+                case 12: return new Query.ListVerificationClaims(FfiConverterTypeListVerificationClaimsArgs.readFromCursor(c));
+                case 13: return new Query.ListVerificationTargets(FfiConverterTypeListVerificationTargetsArgs.readFromCursor(c));
+                case 14: return new Query.ListVerificationVerifies(FfiConverterTypeListVerificationVerifiesArgs.readFromCursor(c));
+                case 15: return new Query.ListTargetedVerificationClaims(FfiConverterTypeListTargetedVerificationClaimsArgs.readFromCursor(c));
+                case 16: return new Query.ResolveVerifiedClaims(FfiConverterTypeResolveVerifiedClaimsArgs.readFromCursor(c));
+                case 17: return new Query.ListFollowing(FfiConverterTypeListFollowingArgs.readFromCursor(c));
+                case 18: return new Query.ListFollowers(FfiConverterTypeListFollowersArgs.readFromCursor(c));
+                case 19: return new Query.SuggestFollow(FfiConverterTypeSuggestFollowArgs.readFromCursor(c));
+                case 20: return new Query.SearchPosts(FfiConverterTypeSearchPostsArgs.readFromCursor(c));
+                case 21: return new Query.SearchUsers(FfiConverterTypeSearchUsersArgs.readFromCursor(c));
+                case 22: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.readFromCursor(c));
+                case 23: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.readFromCursor(c));
+                case 24: return new Query.ListBans(FfiConverterTypeListBansArgs.readFromCursor(c));
+                case 25: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.readFromCursor(c));
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
@@ -3352,134 +3454,140 @@ const FfiConverterTypeQuery = (() => {
                     FfiConverterTypeGetEventArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
-                case Query_Tags.GetPostThread: {
+                case Query_Tags.GetPost: {
                     c.writeI32(3);
+                    const inner = value.inner;
+                    FfiConverterTypeGetPostArgs.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case Query_Tags.GetPostThread: {
+                    c.writeI32(4);
                     const inner = value.inner;
                     FfiConverterTypeGetPostThreadArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetIdentityFeed: {
-                    c.writeI32(4);
+                    c.writeI32(5);
                     const inner = value.inner;
                     FfiConverterTypeGetIdentityFeedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetFollowingFeed: {
-                    c.writeI32(5);
-                    const inner = value.inner;
-                    FfiConverterTypeGetFollowingFeedArgs.writeIntoCursor(inner[0], c);
-                    return;
-                }
-                case Query_Tags.GetRecommendedFeed: {
                     c.writeI32(6);
                     const inner = value.inner;
                     FfiConverterTypeGetFollowingFeedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
-                case Query_Tags.GetExploreFeed: {
+                case Query_Tags.GetRecommendedFeed: {
                     c.writeI32(7);
+                    const inner = value.inner;
+                    FfiConverterTypeGetFollowingFeedArgs.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case Query_Tags.GetExploreFeed: {
+                    c.writeI32(8);
                     const inner = value.inner;
                     FfiConverterTypeGetExploreFeedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetAttributionFeed: {
-                    c.writeI32(8);
+                    c.writeI32(9);
                     const inner = value.inner;
                     FfiConverterTypeGetAttributionFeedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListNotifications: {
-                    c.writeI32(9);
+                    c.writeI32(10);
                     const inner = value.inner;
                     FfiConverterTypeListNotificationsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListEvents: {
-                    c.writeI32(10);
+                    c.writeI32(11);
                     const inner = value.inner;
                     FfiConverterTypeListEventsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListVerificationClaims: {
-                    c.writeI32(11);
+                    c.writeI32(12);
                     const inner = value.inner;
                     FfiConverterTypeListVerificationClaimsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListVerificationTargets: {
-                    c.writeI32(12);
+                    c.writeI32(13);
                     const inner = value.inner;
                     FfiConverterTypeListVerificationTargetsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListVerificationVerifies: {
-                    c.writeI32(13);
+                    c.writeI32(14);
                     const inner = value.inner;
                     FfiConverterTypeListVerificationVerifiesArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListTargetedVerificationClaims: {
-                    c.writeI32(14);
+                    c.writeI32(15);
                     const inner = value.inner;
                     FfiConverterTypeListTargetedVerificationClaimsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ResolveVerifiedClaims: {
-                    c.writeI32(15);
+                    c.writeI32(16);
                     const inner = value.inner;
                     FfiConverterTypeResolveVerifiedClaimsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListFollowing: {
-                    c.writeI32(16);
+                    c.writeI32(17);
                     const inner = value.inner;
                     FfiConverterTypeListFollowingArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListFollowers: {
-                    c.writeI32(17);
+                    c.writeI32(18);
                     const inner = value.inner;
                     FfiConverterTypeListFollowersArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.SuggestFollow: {
-                    c.writeI32(18);
+                    c.writeI32(19);
                     const inner = value.inner;
                     FfiConverterTypeSuggestFollowArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.SearchPosts: {
-                    c.writeI32(19);
+                    c.writeI32(20);
                     const inner = value.inner;
                     FfiConverterTypeSearchPostsArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.SearchUsers: {
-                    c.writeI32(20);
+                    c.writeI32(21);
                     const inner = value.inner;
                     FfiConverterTypeSearchUsersArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.IsModerator: {
-                    c.writeI32(21);
+                    c.writeI32(22);
                     const inner = value.inner;
                     FfiConverterTypeIsModeratorArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.IsBanned: {
-                    c.writeI32(22);
+                    c.writeI32(23);
                     const inner = value.inner;
                     FfiConverterTypeIsBannedArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.ListBans: {
-                    c.writeI32(23);
+                    c.writeI32(24);
                     const inner = value.inner;
                     FfiConverterTypeListBansArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case Query_Tags.GetReactions: {
-                    c.writeI32(24);
+                    c.writeI32(25);
                     const inner = value.inner;
                     FfiConverterTypeGetReactionsArgs.writeIntoCursor(inner[0], c);
                     return;
@@ -3501,6 +3609,12 @@ const FfiConverterTypeQuery = (() => {
                     const inner = value.inner;
                     let size = 4;
                     size += FfiConverterTypeGetEventArgs.allocationSize(inner[0]);
+                    return size;
+                }
+                case Query_Tags.GetPost: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeGetPostArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetPostThread: {
@@ -6321,6 +6435,9 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_feed_response() !== 29678) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_feed_response");
     }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_get_post_response() !== 1471) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_get_post_response");
+    }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_notifications_response() !== 4814) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_notifications_response");
     }
@@ -6519,6 +6636,7 @@ export default Object.freeze({
     FfiConverterTypeGetExploreFeedArgs,
     FfiConverterTypeGetFollowingFeedArgs,
     FfiConverterTypeGetIdentityFeedArgs,
+    FfiConverterTypeGetPostArgs,
     FfiConverterTypeGetPostThreadArgs,
     FfiConverterTypeGetProfileArgs,
     FfiConverterTypeGetReactionsArgs,
