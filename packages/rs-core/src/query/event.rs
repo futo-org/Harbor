@@ -19,6 +19,7 @@ use crate::query::event::key::{EventKey, PublicKey};
 use crate::query::event::merge::{
     EventBundleResponse, decode_event, merge_bundle_response, merge_bundle_responses,
 };
+use crate::query::validation::retain_validated_hints;
 use crate::query::{
     QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
 };
@@ -324,7 +325,7 @@ pub fn get_post(
         let event_hints = {
             let client = query_client.client().lock_recover();
 
-            candidates
+            let mut hints: Vec<EventHint> = candidates
                 .iter()
                 .filter_map(decode_event)
                 .filter_map(|event| StoreEventKey::from_event(event).ok())
@@ -332,7 +333,10 @@ pub fn get_post(
                 .map(|bundle| EventHint {
                     event_bundle: Some(bundle),
                 })
-                .collect()
+                .collect();
+
+            retain_validated_hints(&client, &mut hints);
+            hints
         };
 
         let bytes = GetPostResponse {
