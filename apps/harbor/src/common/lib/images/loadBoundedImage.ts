@@ -1,5 +1,9 @@
-import { isWeb } from '@/src/common/util/platform';
-import { Image, type ImageRef } from 'expo-image';
+import { isAndroid, isWeb } from '@/src/common/util/platform';
+import { Image, type ImageRef as ExpoImageRef } from 'expo-image';
+import {
+  ImageManipulator,
+  type ImageRef as ManipulatorImageRef,
+} from 'expo-image-manipulator';
 import {
   type ImagePickerOptions,
   UIImagePickerPreferredAssetRepresentationMode,
@@ -14,6 +18,9 @@ export const IMAGE_PICKER_DEFAULT_OPTIONS = {
     UIImagePickerPreferredAssetRepresentationMode.Compatible,
 } satisfies ImagePickerOptions;
 
+/** A decoded image the manipulator accepts as a source, plus its dimensions. */
+export type DecodedImageRef = ExpoImageRef | ManipulatorImageRef;
+
 /**
  * Decode `uri` into an upright bitmap with longest edge at most `maxEdge`,
  * usable as an `ImageManipulator.manipulate` source on every platform.
@@ -21,7 +28,7 @@ export const IMAGE_PICKER_DEFAULT_OPTIONS = {
 export async function loadBoundedImage(
   uri: string,
   maxEdge: number,
-): Promise<ImageRef> {
+): Promise<DecodedImageRef> {
   if (isWeb) {
     // expo-image's web `loadAsync` ignores `maxWidth`/`maxHeight`.
     const boundedUri = await downscaleInBrowser(uri, maxEdge);
@@ -35,7 +42,19 @@ export async function loadBoundedImage(
   }
 
   // Native `loadAsync` downsamples while decoding.
-  return Image.loadAsync(uri, { maxWidth: maxEdge, maxHeight: maxEdge });
+  const bounded = await Image.loadAsync(uri, {
+    maxWidth: maxEdge,
+    maxHeight: maxEdge,
+  });
+
+  // Android's manipulator rejects animated refs (a GifDrawable is not a
+  // BitmapDrawable), so animated sources go through its own decode, which
+  // yields the first frame. Unbounded, but animated files are small in practice.
+  if (isAndroid && bounded.isAnimated) {
+    return ImageManipulator.manipulate(uri).renderAsync();
+  }
+
+  return bounded;
 }
 
 /**

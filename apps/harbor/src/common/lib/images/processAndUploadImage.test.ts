@@ -3,8 +3,11 @@ import { ImageUploadError } from './ImageUploadError';
 
 // --- Mocks ----------------------------------------------------------------
 
-// Force the native (expo-file-system) byte-reading path.
-jest.mock('@/src/common/util/platform', () => ({ isWeb: false }));
+// Force the native (expo-file-system) byte-reading path, on Android.
+jest.mock('@/src/common/util/platform', () => ({
+  isWeb: false,
+  isAndroid: true,
+}));
 
 // Minimal protobuf factories: just echo the input so we can assert shapes.
 jest.mock('@polycentric/react-native', () => ({
@@ -221,6 +224,24 @@ describe('processAndUploadImage', () => {
     for (const call of mockManipulate.mock.calls) {
       expect(call[0]).toBe(sourceRef);
     }
+  });
+
+  it('re-decodes an animated source through the manipulator (first frame)', async () => {
+    const sourceRef = mockSource(600, 1300);
+    Object.assign(sourceRef, { isAnimated: true });
+    const client = makeClient();
+
+    const result = await processAndUploadImage(client, 'file://in.gif', {
+      mode: 'fit',
+      sizes: [512],
+    });
+
+    // The bounded ref is animated, so the manipulator decodes the uri itself
+    // and every variant is cut from that render, never from the animated ref.
+    expect(mockManipulate.mock.calls[0][0]).toBe('file://in.gif');
+    expect(mockManipulate).toHaveBeenCalledTimes(2);
+    expect(mockManipulate.mock.calls[1][0]).not.toBe(sourceRef);
+    expect(result.images[0].height).toBe(512);
   });
 
   it('defaults to fill mode and the default variant sizes', async () => {
