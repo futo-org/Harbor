@@ -1,6 +1,6 @@
 import { Button, Text, TextInput } from '@/src/common/components';
 import { useToast } from '@/src/common/components/toast';
-import { POLYCENTRIC_APP_URL } from '@/src/common/constants';
+import { HARBOR_APP_URL } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useState } from 'react';
@@ -27,7 +27,7 @@ export function ClaimCreatePlatformLink({
   // Loop-back link the user adds to their profile to prove ownership. The
   // verifier checks the profile for the identity key it carries.
   const loopbackLink = identityKey
-    ? `${POLYCENTRIC_APP_URL}/${identityKey}`
+    ? `${HARBOR_APP_URL}/${identityKey}`
     : '';
 
   const onVerify = async () => {
