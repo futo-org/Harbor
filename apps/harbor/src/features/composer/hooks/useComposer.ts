@@ -153,7 +153,10 @@ export function useComposer({
           uploadCache.delete(id);
           if (err instanceof ImageUploadError && err.stage === 'upload') {
             // A failed upload may be transient: keep the attachment, flag the
-            // thumbnail, and let `handlePost` retry it.
+            // thumbnail, and let `handlePost` retry it. Rarely reached: the
+            // client's `uploadBlob` swallows server errors and the blob is
+            // re-sent on the next sync, so this only fires when the local
+            // blob commit itself fails.
             setAttachmentStatus(id, 'error');
           } else {
             // The image itself can't be processed: drop it and say why.
