@@ -23,6 +23,7 @@ import type {
 import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
 import { toDigestKey } from './utils/hex';
+import { bytesEqual } from './utils/bytes';
 import { CryptoManager } from './crypto/crypto-manager';
 import { createServerJwt, DEFAULT_EXPIRY_SECONDS } from './crypto/server-jwt';
 
@@ -822,7 +823,8 @@ export class PolycentricClient {
 
   /**
    * Absorb errors and return true only when the content is new and added
-   * Any discovered blobs are added to `blobs`.
+   * Any discovered blobs are added to `blobs`. Content whose bytes do not
+   * hash to the event's contentDigest is rejected.
    */
   private async trySaveContent(
     event: Proto.Event,
@@ -837,6 +839,12 @@ export class PolycentricClient {
 
       const digest = event.contentDigest;
       if (!digest) return false;
+
+      if (
+        digest.type !== Proto.ContentDigestType.SHA256 ||
+        !bytesEqual(sha256(bytes), digest.value)
+      )
+        return false;
 
       // Try finding blobs before checking content existence,
       // since we might be missing a blob referenced by content

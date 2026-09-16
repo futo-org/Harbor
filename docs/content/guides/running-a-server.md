@@ -197,11 +197,13 @@ service is `hate`, `self-harm`, `sexually-suggestive`, `sexually-explicit`, and 
 
 #### Trusting a moderation service
 Set the **single** moderation service the server trusts via an environment
-variable `HARBOR_MODERATION_IDENTITY`. It should be equal to the hex
-identity string of the trusted moderation service. Until the identity is
-set, clients will not be served label events alongside the feed events
-such that they can filter locally, nor will the labels they wish to omit
-be actually omitted by the server during feed requests.
+variable `HARBOR_MODERATION_IDENTITY`. It should be equal to the hex identity
+string of the trusted moderation service. This identity is always consider a
+moderator, even if it's not stored in the moderator table as such.
+
+Until the identity is set, clients will not be served label events alongside the
+feed events such that they can filter locally, nor will the labels they wish to
+omit be actually omitted by the server during feed requests.
 
 #### Client filtering contract
 

@@ -3602,10 +3602,8 @@ version = "0.1.0"
 dependencies = [
  "common-dotenv",
  "common-kafka",
- "common-object-store",
  "common-telemetry",
  "ed25519-dalek",
- "entity",
  "hex",
  "mockito",
  "opentelemetry",

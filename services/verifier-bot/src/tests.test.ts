@@ -23,13 +23,20 @@ import { slug } from './utility.js';
 import { TextVerifier } from './verifier.js';
 
 const TEST_SERVER = (
-  process.env.POLYCENTRIC_VERIFIER_BOT_SERVERS || 'https://east.polycentric.dev'
+  process.env.HARBOR_VERIFIER_BOT_SERVERS ??
+  (process.env.POLYCENTRIC_VERIFIER_BOT_SERVERS ||
+    'https://east.polycentric.dev')
 )
   .split(',')[0]
   .trim();
 
-// Platforms whose health check can't run in CI (needs manual creds/setup).
-const LOCAL_ONLY = new Set<string>(['Instagram']);
+// Platforms whose health check can't run in CI: Instagram needs manual
+// creds/setup; Rumble and Spreadshop seem to block our CI runner IPs
+const LOCAL_ONLY: Record<string, true> = {
+  Instagram: true,
+  Rumble: true,
+  Spreadshop: true,
+};
 
 // ── Fast unit tests (no network) ──────────────────────────────────────────
 
@@ -167,7 +174,7 @@ for (const platform of platforms) {
   describe(platform.name, () => {
     for (const verifier of platform.verifiers) {
       if (!(verifier instanceof TextVerifier)) continue;
-      const tag = LOCAL_ONLY.has(platform.name) ? 'LOCAL' : 'LIVE';
+      const tag = LOCAL_ONLY[platform.name] ? 'LOCAL' : 'LIVE';
       test(`${tag}: ${verifier.verifierType} health check`, async () => {
         await verifier.init();
         try {
