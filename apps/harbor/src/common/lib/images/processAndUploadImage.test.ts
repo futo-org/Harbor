@@ -236,6 +236,17 @@ describe('processAndUploadImage', () => {
     ]);
   });
 
+  it('rejects variant sizes above the decode bound before doing any work', async () => {
+    mockSource(4000, 3000);
+    const client = makeClient();
+
+    await expect(
+      processAndUploadImage(client, 'file://in.jpg', { sizes: [512, 4096] }),
+    ).rejects.toThrow('at most 2048px');
+    expect(mockLoadAsync).not.toHaveBeenCalled();
+    expect(client.commitBlob).not.toHaveBeenCalled();
+  });
+
   it('tags decode failures with the decode stage and keeps the cause', async () => {
     const client = makeClient();
     const cause = new Error('The browser cannot decode this image');

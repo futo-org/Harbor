@@ -6,13 +6,6 @@ import {
 } from 'expo-image-picker';
 
 /**
- * Longest edge the source is decoded at. Variants are cut from this bounded
- * bitmap, so a 300 MP photo never becomes a ~1.2 GB decode (iOS jetsam,
- * Android OOM) or a canvas past the browser's size limit (blank output).
- */
-const BOUNDED_MAX_EDGE = 2048;
-
-/**
  * Options every `launchImageLibraryAsync` call must include. iOS then hands
  * over an 8-bit representation; a 10-bit HEIC would fail in `processAndUploadImage`.
  */
@@ -22,18 +15,20 @@ export const IMAGE_PICKER_DEFAULT_OPTIONS = {
 } satisfies ImagePickerOptions;
 
 /**
- * Decode `uri` into an upright bitmap whose longest edge is at most
- * `BOUNDED_MAX_EDGE`. This is the only step that touches the original file.
- * The returned ref is a valid `ImageManipulator.manipulate` source on every
- * platform.
+ * Decode `uri` into an upright bitmap whose longest edge is at most `maxEdge`
+ * pixels. This is the only step that touches the original file. The returned
+ * ref is a valid `ImageManipulator.manipulate` source on every platform.
  */
-export async function loadBoundedImage(uri: string): Promise<ImageRef> {
+export async function loadBoundedImage(
+  uri: string,
+  maxEdge: number,
+): Promise<ImageRef> {
   if (isWeb) {
     // expo-image's web `loadAsync` ignores `maxWidth`/`maxHeight`, so the
     // bounding happens in `downscaleInBrowser` and the small PNG is handed
     // over as an object URL. Formats the browser can't decode (HEIC) reject
     // there with a real Error instead of the manipulator's bare `<canvas>`.
-    const boundedUri = await downscaleInBrowser(uri);
+    const boundedUri = await downscaleInBrowser(uri, maxEdge);
 
     try {
       // The web ref copies the blob behind its own URL, so this one can go.
@@ -45,14 +40,11 @@ export async function loadBoundedImage(uri: string): Promise<ImageRef> {
 
   // expo-image downsamples while decoding (ImageIO thumbnail on iOS, Glide
   // on Android).
-  return Image.loadAsync(uri, {
-    maxWidth: BOUNDED_MAX_EDGE,
-    maxHeight: BOUNDED_MAX_EDGE,
-  });
+  return Image.loadAsync(uri, { maxWidth: maxEdge, maxHeight: maxEdge });
 }
 
 /**
- * Decode to a bitmap no larger than `BOUNDED_MAX_EDGE` through
+ * Decode to a bitmap no larger than `maxEdge` through
  * `createImageBitmap`'s resize options, draw it to a small canvas, and return
  * a PNG object URL. The guarantee is that no canvas ever exceeds the browser's
  * size limit, which is what produced the blank variants. Whether the full-size
@@ -60,7 +52,10 @@ export async function loadBoundedImage(uri: string): Promise<ImageRef> {
  * straight to the reduced size, while PNG is always decoded in full and then
  * scaled.
  */
-async function downscaleInBrowser(uri: string): Promise<string> {
+async function downscaleInBrowser(
+  uri: string,
+  maxEdge: number,
+): Promise<string> {
   const [blob, { width, height }] = await Promise.all([
     fetch(uri).then((response) => response.blob()),
     readImageDimensions(uri),
@@ -73,8 +68,8 @@ async function downscaleInBrowser(uri: string): Promise<string> {
     imageOrientation: 'from-image',
     resizeQuality: 'high',
     ...(width >= height
-      ? { resizeWidth: Math.min(BOUNDED_MAX_EDGE, width) }
-      : { resizeHeight: Math.min(BOUNDED_MAX_EDGE, height) }),
+      ? { resizeWidth: Math.min(maxEdge, width) }
+      : { resizeHeight: Math.min(maxEdge, height) }),
   });
 
   const canvas = document.createElement('canvas');

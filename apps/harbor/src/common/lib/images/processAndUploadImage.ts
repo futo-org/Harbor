@@ -9,6 +9,14 @@ import { ImageUploadError, type ImageUploadStage } from './ImageUploadError';
 /** Default variant edge lengths. */
 export const DEFAULT_IMAGE_VARIANT_SIZES = [48, 128, 512];
 
+/**
+ * Longest edge the source is decoded at. Variants are cut from this bounded
+ * bitmap, so a 300 MP photo never becomes a ~1.2 GB decode (iOS jetsam,
+ * Android OOM) or a canvas past the browser's size limit (blank output).
+ * Every requested variant size must fit inside it.
+ */
+const SOURCE_DECODE_MAX_EDGE = 2048;
+
 /** JPEG quality for the encoded variants (0–1). */
 const JPEG_COMPRESS = 0.8;
 
@@ -33,8 +41,9 @@ async function readBytes(uri: string): Promise<Uint8Array> {
 /**
  * Decode an image from `uri`, resize it into each size in `sizes` via
  * `expo-image-manipulator`, commit each variant locally and upload to the
- * client's servers, and return the assembled `ImageSet`. Rejects only with
- * `ImageUploadError`.
+ * client's servers, and return the assembled `ImageSet`. Runtime failures
+ * reject with `ImageUploadError`; a variant size above `SOURCE_DECODE_MAX_EDGE` is a
+ * programming error and throws before any work starts.
  */
 export async function processAndUploadImage(
   client: PolycentricClient,
@@ -44,9 +53,17 @@ export async function processAndUploadImage(
   const sizes = options.sizes ?? DEFAULT_IMAGE_VARIANT_SIZES;
   const mode = options.mode ?? 'fill';
 
+  if (Math.max(...sizes) > SOURCE_DECODE_MAX_EDGE) {
+    throw new Error(
+      `Variant sizes must be at most ${SOURCE_DECODE_MAX_EDGE}px, got ${sizes.join(', ')}`,
+    );
+  }
+
   // Decode once, bounded, with EXIF orientation baked into upright pixels.
   // The result is the source for every variant so we don't re-decode per size.
-  const source = await runStage('decode', () => loadBoundedImage(uri));
+  const source = await runStage('decode', () =>
+    loadBoundedImage(uri, SOURCE_DECODE_MAX_EDGE),
+  );
 
   const variants = await runStage('encode', () =>
     Promise.all(sizes.map((size) => encodeVariant(source, size, mode))),
