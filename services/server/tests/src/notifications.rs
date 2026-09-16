@@ -2,7 +2,7 @@
 //! them, except the reply target, which gets its Reply only. Alias mentions
 //! resolve through `<domain>/.well-known/polycentric.json`, which this test
 //! serves from a local mock server, so the workers must be started with
-//! `POLYCENTRIC_ALIAS_TEST_ORIGIN=http://localhost:3999`.
+//! `HARBOR_ALIAS_TEST_ORIGIN=http://localhost:3999`.
 //! Needs the `workers` process running.
 
 use crate::*;
