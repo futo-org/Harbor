@@ -18,7 +18,8 @@ export const REPORT_BUG_URL = 'https://chat.futo.org/login/';
 export const HARBOR_APP_URL = (
   publicEnv(
     'EXPO_PUBLIC_HARBOR_APP_URL',
-    process.env.EXPO_PUBLIC_HARBOR_APP_URL ?? process.env.EXPO_PUBLIC_POLYCENTRIC_APP_URL,
+    process.env.EXPO_PUBLIC_HARBOR_APP_URL ??
+      process.env.EXPO_PUBLIC_POLYCENTRIC_APP_URL,
   ) ?? 'https://harbor.social'
 ).replace(/\/+$/, '');
 
@@ -29,6 +30,7 @@ export const HARBOR_APP_URL = (
 export const HARBOR_STATIC_URL = (
   publicEnv(
     'EXPO_PUBLIC_HARBOR_STATIC_URL',
-    process.env.EXPO_PUBLIC_HARBOR_STATIC_URL ?? process.env.EXPO_PUBLIC_POLYCENTRIC_STATIC_URL,
+    process.env.EXPO_PUBLIC_HARBOR_STATIC_URL ??
+      process.env.EXPO_PUBLIC_POLYCENTRIC_STATIC_URL,
   ) ?? 'https://static.harbor.social'
 ).replace(/\/+$/, '');

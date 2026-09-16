@@ -53,7 +53,8 @@ export const DEFAULT_SEED_SERVERS: string[] = (() => {
   const raw = (
     publicEnv(
       'EXPO_PUBLIC_HARBOR_SEED_SERVERS',
-      process.env.EXPO_PUBLIC_HARBOR_SEED_SERVERS ?? process.env.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS,
+      process.env.EXPO_PUBLIC_HARBOR_SEED_SERVERS ??
+        process.env.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS,
     ) ?? ''
   ).trim();
   const parsed = raw
@@ -77,7 +78,8 @@ export const DEFAULT_NOTIFICATION_SERVERS: string[] = (() => {
   const raw = (
     publicEnv(
       'EXPO_PUBLIC_HARBOR_NOTIFICATION_SERVERS',
-      process.env.EXPO_PUBLIC_HARBOR_NOTIFICATION_SERVERS ?? process.env.EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS,
+      process.env.EXPO_PUBLIC_HARBOR_NOTIFICATION_SERVERS ??
+        process.env.EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS,
     ) ?? ''
   ).trim();
   const parsed = raw
@@ -97,7 +99,8 @@ export const DEFAULT_VERIFIER_SERVERS: string[] = (() => {
   const raw = (
     publicEnv(
       'EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS',
-      process.env.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS ?? process.env.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS,
+      process.env.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS ??
+        process.env.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS,
     ) ?? ''
   ).trim();
   const parsed = raw

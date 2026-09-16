@@ -20,12 +20,10 @@ globalThis.__HARBOR_ENV__ = runtimeEnv;
 // Base URL for the exported bundle (e.g. the static CDN). CI uploads the
 // same /_expo and /assets tree under it and rewrites the js/css to match.
 const assetsBaseUrl = (
-  process.env.HARBOR_STATIC_ASSETS_URL
-  ?? process.env.POLYCENTRIC_STATIC_ASSETS_URL
-  ?? '').replace(
-  /\/$/,
-  '',
-);
+  process.env.HARBOR_STATIC_ASSETS_URL ??
+  process.env.POLYCENTRIC_STATIC_ASSETS_URL ??
+  ''
+).replace(/\/$/, '');
 
 // Substitute the runtime env into the +html.tsx script of every exported
 // HTML template. Matches the whole assignment, so restarts re-patch.

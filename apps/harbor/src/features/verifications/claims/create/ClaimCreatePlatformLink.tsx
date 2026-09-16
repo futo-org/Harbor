@@ -26,9 +26,7 @@ export function ClaimCreatePlatformLink({
 
   // Loop-back link the user adds to their profile to prove ownership. The
   // verifier checks the profile for the identity key it carries.
-  const loopbackLink = identityKey
-    ? `${HARBOR_APP_URL}/${identityKey}`
-    : '';
+  const loopbackLink = identityKey ? `${HARBOR_APP_URL}/${identityKey}` : '';
 
   const onVerify = async () => {
     try {
