@@ -57,9 +57,6 @@
   "author": "FUTO",
   "homepage": "https://polycentric.io",
   "license": "MIT",
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
-  },
   "devDependencies": {
     "@react-native/babel-preset": "0.83.0",
     "@types/jest": "catalog:",

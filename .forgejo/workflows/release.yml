@@ -346,6 +346,7 @@ jobs:
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     env:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      HARBOR_CI_TOKEN: ${{ secrets.HARBOR_CI_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.forgejo/actions/sdk-artifacts
@@ -367,6 +368,8 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
+    env:
+      HARBOR_CI_TOKEN: ${{ secrets.HARBOR_CI_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: Package crates
@@ -388,6 +391,25 @@ jobs:
           name: rs-core-crates
           path: target/package/*.crate
           retention-days: 7
+      - name: Publish crates to the Forgejo registry
+        if: startsWith(github.ref_name, 'v')
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          INDEX_URL="${GITHUB_SERVER_URL}/api/packages/${OWNER}/cargo/"
+          mkdir -p ~/.cargo
+          printf '[registries.harbor]\nindex = "sparse+%s"\n' "$INDEX_URL" > ~/.cargo/config.toml
+          printf '[registries.harbor]\ntoken = "Bearer %s"\n' "$HARBOR_CI_TOKEN" > ~/.cargo/credentials.toml
+          for crate in polycentric-common polycentric-core; do
+            # Skip crates already published for this version. Note that the crates.io convention is
+            # to index the first few characters before the crate name.
+            if curl -sf "${INDEX_URL}po/ly/${crate}" | grep -q "\"vers\":\"${VERSION}\""; then
+              echo "${crate} ${VERSION} is already published; skipping."
+              continue
+            fi
+            cargo publish --registry harbor -p "${crate}" --no-verify --allow-dirty
+          done
 
   tag-images:
     name: Tag images

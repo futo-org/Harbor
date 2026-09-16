@@ -15,7 +15,7 @@ WORKDIR /app
 # and fall through to a full workspace build.
 ARG SKIP_WORKSPACE_BUILD=
 
-COPY .npmrc turbo.jsonc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY turbo.jsonc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY patches patches
 COPY apps apps
 COPY packages packages
