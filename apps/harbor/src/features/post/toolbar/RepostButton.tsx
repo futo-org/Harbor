@@ -1,11 +1,7 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
-import {
-  openCompose,
-  POLYCENTRIC_APP_URL,
-  Routes,
-} from '@/src/common/constants';
+import { openCompose, HARBOR_APP_URL, Routes } from '@/src/common/constants';
 import {
   type PostData,
   useCurrentIdentity,
@@ -46,7 +42,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
       getKeyFingerprint(post.signedBy) ?? '',
       post.sequence,
     );
-    const url = `${POLYCENTRIC_APP_URL}${path}`;
+    const url = `${HARBOR_APP_URL}${path}`;
     // expo-sharing only shares local files on Android; RN Share handles URLs.
     // iOS shares `url`; Android only reads `message`.
     void Share.share(isIOS ? { url } : { message: url }).catch(() => {});

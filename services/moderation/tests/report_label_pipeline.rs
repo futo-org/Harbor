@@ -26,7 +26,7 @@ use prost::Message;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectOptions, Database};
 use sha2::{Digest, Sha256};
 use std::{
-    env::var,
+    env,
     process::Stdio,
     sync::{
         Arc,
@@ -47,17 +47,24 @@ const HOUR: u64 = 3_600_000;
 const UNTRUSTED_REPORT_GRACE: Duration = Duration::from_secs(10);
 
 fn server_endpoint() -> String {
-    var("POLYCENTRIC_TEST_SERVER").unwrap_or("http://localhost:3000".to_string())
+    env::var("HARBOR_TEST_SERVER")
+        .or_else(|_| env::var("POLYCENTRIC_TEST_SERVER"))
+        .unwrap_or("http://localhost:3000".to_string())
 }
 fn database_endpoint() -> String {
-    var("POLYCENTRIC_TEST_DATABASE_URL")
+    env::var("HARBOR_TEST_DATABASE_URL")
+        .or_else(|_| env::var("POLYCENTRIC_TEST_DATABASE_URL"))
         .unwrap_or("postgres://postgres:testing@localhost:5432".to_string())
 }
 fn os_endpoint() -> String {
-    var("POLYCENTRIC_TEST_OS_ENDPOINT").unwrap_or("http://localhost:9000".to_string())
+    env::var("HARBOR_TEST_OS_ENDPOINT")
+        .or_else(|_| env::var("POLYCENTRIC_TEST_OS_ENDPOINT"))
+        .unwrap_or("http://localhost:9000".to_string())
 }
 fn kafka_endpoint() -> String {
-    var("POLYCENTRIC_TEST_KAFKA_BROKERS").unwrap_or("localhost:9092".to_string())
+    env::var("HARBOR_TEST_KAFKA_BROKERS")
+        .or_else(|_| env::var("POLYCENTRIC_TEST_KAFKA_BROKERS"))
+        .unwrap_or("localhost:9092".to_string())
 }
 
 #[tokio::test]

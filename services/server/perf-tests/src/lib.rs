@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::mem::take;
 use std::time::SystemTime;
 
@@ -10,9 +11,11 @@ use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::{
     Block, Content, ContentDigest, ContentDigestType, Delete, Event,
-    EventBundle, EventKey, Follow, Identity, KeyType, Labels, Post, PostReply,
-    ProfileUpdate, PublicKey, PutEventsRequest, Reaction, Report,
-    ReportCategory, Repost, SerializedContent, SignedEvent, VectorClock,
+    EventBundle, EventKey, FieldDef, FieldKind, Follow, Identity, KeyType,
+    Labels, Post, PostReply, ProfileUpdate, PublicKey, PutEventsRequest,
+    Reaction, Report, ReportCategory, Repost, SerializedContent,
+    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
+    VerificationSchema,
 };
 use prost::Message;
 
@@ -273,6 +276,43 @@ impl Client {
         self.delete(delete, created_at)
     }
 
+    pub fn verification_claim(
+        &mut self,
+        claim: VerificationClaim,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(
+            ContentBody::VerificationClaim(claim),
+            created_at,
+        )
+    }
+
+    pub fn github_verification_claim(
+        &mut self,
+        login: &str,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let schema = github_verification_schema();
+        let schema_bytes = prost::Message::encode_to_vec(&schema);
+        let schema_digest = ContentDigest {
+            r#type: ContentDigestType::Sha256.into(),
+            value: Sha256::digest(&schema_bytes).to_vec(),
+        };
+        let schema = SerializedVerificationSchema {
+            schema_bytes,
+            digest: Some(schema_digest),
+        };
+
+        let mut fields = HashMap::new();
+        fields.insert("login".to_owned(), login.as_bytes().to_vec());
+
+        let claim = VerificationClaim {
+            schema: Some(schema),
+            fields,
+        };
+        self.verification_claim(claim, created_at)
+    }
+
     pub fn get_last_event_key(&self) -> EventKey {
         let event = self.pending.last().expect("no pending events");
         let signed_event = event.signed_event.as_ref().unwrap();
@@ -390,6 +430,22 @@ impl Client {
         )
     }
     */
+}
+
+fn github_verification_schema() -> VerificationSchema {
+    VerificationSchema {
+        name: "GitHub Verification".to_owned(),
+        description: String::new(),
+        fields: vec![FieldDef {
+            key: "login".to_owned(),
+            kind: FieldKind::String as i32,
+            format: String::new(),
+            required: true,
+            description: "Login".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    }
 }
 
 pub fn public_key_of(key: &SigningKey) -> PublicKey {

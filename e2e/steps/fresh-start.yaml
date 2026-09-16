@@ -1,3 +1,5 @@
+url: ${MAESTRO_WEB_URL}
+---
 # Opens the app with nothing stored, so onboarding shows. `clearState`
 # clears cookies, localStorage and the cache but not IndexedDB or OPFS,
 # where identities and events live. Those are wiped from a same-origin
