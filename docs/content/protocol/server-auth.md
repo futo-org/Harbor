@@ -69,9 +69,9 @@ cached token is about to expire. Switching identity drops the cache.
 An interceptor in front of every gRPC service checks the header:
 
 1. Verify the EdDSA signature against the key in `kid`.
-2. Check `aud` is one of the server's accepted hosts
-   (`POLYCENTRIC_ALLOW_HOSTS`, comma delimited, defaulting to
-   `POLYCENTRIC_SERVER_NAME`) and `exp` has not passed.
+2. Check `aud` is one of the server's accepted hosts (`HARBOR_ALLOW_HOSTS`,
+   comma delimited, defaulting to `HARBOR_SERVER_NAME`) and `exp` has not
+   passed.
 3. Load the latest identity document for `iss` and check the `kid` key is
    one of its rotation or signing keys.
 
