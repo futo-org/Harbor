@@ -1672,5 +1672,49 @@ describe('PolycentricClient sync', () => {
       // ...but its blob is still collected so the pull can fetch it.
       expect(blobs).toEqual([blob]);
     });
+
+    it('returns false and collects no blobs when content bytes do not hash to the event digest', async () => {
+      const { client, contentRepository } = makeClient({
+        identity: identityA,
+        signer: signerA,
+      });
+      const content = makeContent('valid');
+      const event = makeSignedEvent({
+        signer: signerA,
+        identity: identityA,
+        collection: COLLECTION.FEED,
+        sequence: 1,
+        content,
+      });
+      // Swap in different content bytes whose sha256 differs from the
+      // event's contentDigest.
+      const tampered = makeContent('tampered');
+      const bundle = Proto.EventBundle.create({
+        signedEvent: event,
+        serializedContent: Proto.SerializedContent.create({
+          contentBytes: Proto.Content.toBinary(tampered),
+        }),
+        eventProofs: [],
+      });
+
+      const blobs: Proto.Blob[] = [];
+      // Unchecked cast: trySaveContent is private; named seam for the one call.
+      const internal = client as unknown as {
+        trySaveContent(
+          event: Proto.Event,
+          bundle: Proto.EventBundle,
+          blobs: Proto.Blob[],
+        ): Promise<boolean>;
+      };
+      const saved = await internal.trySaveContent(
+        Proto.Event.fromBinary(event.eventBytes),
+        bundle,
+        blobs,
+      );
+
+      expect(saved).toBe(false);
+      expect(blobs).toHaveLength(0);
+      expect(contentRepository.saved).toHaveLength(0);
+    });
   });
 });

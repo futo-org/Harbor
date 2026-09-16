@@ -14,7 +14,7 @@ import org.futo.polycentric.ffi.QueryOpts
 import org.futo.polycentric.ffi.QueryResultFfi
 import org.futo.polycentric.ffi.QueryStatus
 
-class CoreQueryException(message: String) : Exception(message)
+class CoreQueryException(message: String) : PolycentricException(message)
 
 private val log = Logger.getLogger("PolycentricCore.query")
 
@@ -41,20 +41,22 @@ fun PolycentricCore.queryFlow(
     queryKey: List<String>? = null,
     opts: QueryOpts? = null,
 ): Flow<QueryResultFfi> = callbackFlow {
-    val observable = fetchQuery(queryKey, query, opts)
-    val subscription = observable.subscribe(object : QueryObserver {
-        override fun next(result: QueryResultFfi) {
-            trySend(result)
-        }
+    val observable = coreCall { fetchQuery(queryKey, query, opts) }
+    val subscription = coreCall {
+        observable.subscribe(object : QueryObserver {
+            override fun next(result: QueryResultFfi) {
+                trySend(result)
+            }
 
-        override fun error(message: String) {
-            log.warning("Query server error (non-fatal): $message")
-        }
+            override fun error(message: String) {
+                log.warning("Query server error (non-fatal): $message")
+            }
 
-        override fun complete() {
-            close()
-        }
-    })
+            override fun complete() {
+                close()
+            }
+        })
+    }
     awaitClose { subscription.unsubscribe() }
     // Unbounded so the non-suspending `trySend` in `next` can never drop an
     // emission (a dropped `Success` would hang `awaitQuery` forever). Fuses
