@@ -8,6 +8,8 @@
 //! don't consider valid (e.g. when a user tries to delete a post belong to
 //! another user).
 //!
+//! [`events`]: event
+//!
 //! ## Content Tables
 //!
 //! The decoded content of these events are stored in the [`content`] and related
@@ -52,9 +54,6 @@
 //! The cache tables represent the current state, meaning that a delete event
 //! will remove it from the cache table, but the original event remains in the
 //! `events` table.
-//!
-//! [`events`]: event
-//! [`content`]: content
 
 pub mod alias_cache;
 pub mod application;

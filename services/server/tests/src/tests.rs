@@ -6,6 +6,7 @@ use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
+use polycentric_common::models::protos_v2::identity_service_client::IdentityServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
@@ -17,6 +18,7 @@ use std::mem::take;
 use std::time::SystemTime;
 use tokio::sync::{Mutex, MutexGuard};
 
+mod banning;
 mod event_sync;
 mod feeds;
 mod graph;
@@ -113,6 +115,13 @@ pub async fn search_service() -> SearchServiceClient<tonic::transport::Channel>
 
 pub async fn graph_service() -> GraphServiceClient<tonic::transport::Channel> {
     GraphServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn identity_service()
+-> IdentityServiceClient<tonic::transport::Channel> {
+    IdentityServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
