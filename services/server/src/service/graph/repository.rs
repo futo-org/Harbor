@@ -9,7 +9,6 @@ use sea_query::{
     PgFunc, SelectStatement, UnionType, WithClause,
 };
 use std::collections::HashSet;
-use std::sync::Arc;
 use tonic::Status;
 
 use crate::data::EventWithContentRow;
@@ -118,13 +117,11 @@ impl Query {
     pub async fn blocked_set(
         ctx: &ServiceContext,
         identity: &str,
-    ) -> Result<Arc<HashSet<String>>, Status> {
-        Ok(Arc::new(
-            Self::list_blocked_identities(ctx, identity)
-                .await?
-                .into_iter()
-                .collect(),
-        ))
+    ) -> Result<HashSet<String>, Status> {
+        Ok(Self::list_blocked_identities(ctx, identity)
+            .await?
+            .into_iter()
+            .collect())
     }
 
     /// [`Query::blocked_set`] for the caller of a request. Empty when the
@@ -132,10 +129,10 @@ impl Query {
     /// blocks could apply.
     pub async fn blocked_set_for_caller(
         ctx: &RequestContext<'_>,
-    ) -> Result<Arc<HashSet<String>>, Status> {
+    ) -> Result<HashSet<String>, Status> {
         match ctx.caller {
             Some(caller) => Self::blocked_set(ctx.service, caller).await,
-            None => Ok(Arc::new(HashSet::new())),
+            None => Ok(HashSet::new()),
         }
     }
 
@@ -787,7 +784,7 @@ mod tests {
 
         let blocked = Query::blocked_set(&ctx, "alice").await.unwrap();
         assert_eq!(
-            *blocked,
+            blocked,
             HashSet::from(["bob".to_string(), "carol".to_string()])
         );
     }

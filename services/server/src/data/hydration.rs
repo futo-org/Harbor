@@ -16,7 +16,6 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use tonic::Status;
 
 #[derive(Default)]
@@ -31,7 +30,7 @@ pub struct HydrationState {
     pub follow_events: Vec<EventWithContentRow>,
     /// Blocked identities for the authenticated caller. Empty for anonymous
     /// requests or pipelines where blocking is not applicable.
-    pub blocked_identities: Arc<HashSet<String>>,
+    pub blocked_identities: HashSet<String>,
 }
 
 impl HydrationState {
