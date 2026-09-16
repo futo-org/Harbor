@@ -24,7 +24,10 @@ import { Keyboard } from 'react-native';
 import { useComposerStore } from './useComposerStore';
 import { rewriteIdentityMentions } from '../utils/rewriteIdentityMentions';
 import { useLinkPreview } from './useLinkPreview';
-import { formatImageUploadErrorOrFallback } from '@/src/common/lib/images/ImageUploadError';
+import {
+  ImageUploadError,
+  formatImageUploadErrorOrFallback,
+} from '@/src/common/lib/images/ImageUploadError';
 
 export const MAX_ATTACHMENTS = 4;
 export const MAX_POST_LENGTH = 2000;
@@ -138,7 +141,7 @@ export function useComposer({
   // Begin processing + uploading an attachment immediately, caching the
   // promise by id so `handlePost` can await the already-running work (it waits
   // here if the user hits Post before processing finishes). The attachment's
-  // `status` drives the thumbnail's loading overlay.
+  // `status` drives the thumbnail's loading/error overlay.
   const startUpload = useCallback(
     (id: string, uri: string) => {
       const work = processAndUploadImage(client, uri, POST_IMAGE_OPTIONS);
@@ -146,15 +149,22 @@ export function useComposer({
       work.then(
         () => setAttachmentStatus(id, 'ready'),
         (err) => {
+          // Drop the failed promise so the post path can retry from scratch.
           uploadCache.delete(id);
-          // Pick-time failure: drop the attachment and say why.
-          removeAttachment(id);
-          setError(
-            formatImageUploadErrorOrFallback(
-              err,
-              "Couldn't attach this image.",
-            ),
-          );
+          if (err instanceof ImageUploadError && err.stage === 'upload') {
+            // A failed upload may be transient: keep the attachment, flag the
+            // thumbnail, and let `handlePost` retry it.
+            setAttachmentStatus(id, 'error');
+          } else {
+            // The image itself can't be processed: drop it and say why.
+            removeAttachment(id);
+            setError(
+              formatImageUploadErrorOrFallback(
+                err,
+                "Couldn't attach this image.",
+              ),
+            );
+          }
         },
       );
     },
