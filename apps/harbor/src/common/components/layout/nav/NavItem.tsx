@@ -1,9 +1,4 @@
-import {
-  Link,
-  type LinkProps,
-  router,
-  usePathname,
-} from 'expo-router';
+import { Link, type LinkProps, router, usePathname } from 'expo-router';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import {
   cloneElement,
