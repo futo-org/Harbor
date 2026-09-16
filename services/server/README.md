@@ -81,12 +81,12 @@ The shared `services/common` crates read their own variables.
 
 | Variable | Default | Description |
 |---|---|---|
-| `CONTENT_BLOB_OS_BUCKET` | _(required)_ | S3 bucket holding uploaded blob bodies. |
-| `CONTENT_BLOB_OS_REGION` | `us-east-1` | Bucket region. |
-| `CONTENT_BLOB_OS_ENDPOINT` | _(unset)_ | Custom endpoint for S3-compatible stores; leave unset for AWS S3. |
-| `CONTENT_BLOB_OS_FORCE_PATH_STYLE` | `false` | Set `true` for path-style addressing (required by RustFS). |
-| `CONTENT_BLOB_OS_ACCESS_KEY` | _(unset)_ | Static credentials; unset uses the AWS SDK default chain. |
-| `CONTENT_BLOB_OS_SECRET_KEY` | _(unset)_ | See above. |
+| `HARBOR_CONTENT_BLOB_OS_BUCKET` | _(required)_ | S3 bucket holding uploaded blob bodies. |
+| `HARBOR_CONTENT_BLOB_OS_REGION` | `us-east-1` | Bucket region. |
+| `HARBOR_CONTENT_BLOB_OS_ENDPOINT` | _(unset)_ | Custom endpoint for S3-compatible stores; leave unset for AWS S3. |
+| `HARBOR_ONTENT_BLOB_OS_FORCE_PATH_STYLE` | `false` | Set `true` for path-style addressing (required by RustFS). |
+| `HARBOR_ONTENT_BLOB_OS_ACCESS_KEY` | _(unset)_ | Static credentials; unset uses the AWS SDK default chain. |
+| `HARBOR_ONTENT_BLOB_OS_SECRET_KEY` | _(unset)_ | See above. |
 
 
 ### Kafka Client
