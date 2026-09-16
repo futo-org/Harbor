@@ -190,7 +190,7 @@ class PolycentricClient(
                 currentKeyPair = restored
                 // Signed in only when the session resolved to a keypair we hold.
                 activeIdentityKey = if (restored === sessionKey) session else null
-                eventService.emitKeyPairChanged(restored)
+                eventService.emitKeyPairChanged(restored, activeIdentityKey)
             } else {
                 eventService.emitProgress(InitializationStep.CREATING_EPHEMERAL_IDENTITY)
                 keyPairManager.createKeyPair(setAsCurrent = true)
@@ -216,19 +216,21 @@ class PolycentricClient(
     /** js-core `copyEvents`: replay stored events into the core. */
     suspend fun copyEvents(events: List<SignedEvent>? = null) {
         val all = events ?: this.events.getAll()
-        core.copyEvents(all.map { SignedEvent.ADAPTER.encode(it) })
+        coreCall { core.copyEvents(all.map { SignedEvent.ADAPTER.encode(it) }) }
     }
 
     /** js-core `copyContents`: replay stored content into the core. */
     suspend fun copyContents() {
-        core.copyContents(
-            contents.getAll().map { (digest, contentBytes) ->
-                ContentEntry(
-                    digestBytes = ContentDigest.ADAPTER.encode(digest),
-                    contentBytes = contentBytes,
-                )
-            },
-        )
+        coreCall {
+            core.copyContents(
+                contents.getAll().map { (digest, contentBytes) ->
+                    ContentEntry(
+                        digestBytes = ContentDigest.ADAPTER.encode(digest),
+                        contentBytes = contentBytes,
+                    )
+                },
+            )
+        }
     }
 
     // ── Event construction (js-core: buildEvent / signEvent / commitEvent) ──
@@ -249,7 +251,7 @@ class PolycentricClient(
         val keyPair = requireNotNull(currentKeyPair) { "No keypair set" }
         val identity = requireNotNull(activeIdentityKey) { "No active identity" }
 
-        val sequence = core.nextSequence(identity, collection)
+        val sequence = coreCall { core.nextSequence(identity, collection) }
         val publicKeyProto = keyPair.toPublicKeyProto()
         val signedByBytes = PublicKey.ADAPTER.encode(publicKeyProto)
 
@@ -257,7 +259,7 @@ class PolycentricClient(
             if (collection == Collections.IDENTITY) {
                 sequence
             } else {
-                core.getIdentitySequence(identity, signedByBytes)
+                coreCall { core.getIdentitySequence(identity, signedByBytes) }
                     ?: error("Cannot build event: current keypair has no identity event for the active identity (broken pairing?)")
             }
 
@@ -280,15 +282,16 @@ class PolycentricClient(
             }
 
         val clockBytes =
-            core.buildVectorClock(
-                identity,
-                collection,
-                identitySequence,
-                signedByBytes,
-                sequence,
-                identityContentForVc,
-            )
-
+            coreCall {
+                core.buildVectorClock(
+                    identity,
+                    collection,
+                    identitySequence,
+                    signedByBytes,
+                    sequence,
+                    identityContentForVc,
+                )
+            }
         return Event(
             key =
                 EventKey(
@@ -299,8 +302,8 @@ class PolycentricClient(
                 ),
             identity_sequence = identitySequence.toLong(),
             vector_clock = VectorClock.ADAPTER.decode(clockBytes),
-            previous_signature = core.previousSignature(identity, collection).toByteString(),
-            previous_root = core.previousRoot(identity, collection).toByteString(),
+            previous_signature = coreCall { core.previousSignature(identity, collection) }.toByteString(),
+            previous_root = coreCall { core.previousRoot(identity, collection) }.toByteString(),
             content_digest = digest,
             created_at = System.currentTimeMillis(),
             application = application,
@@ -317,12 +320,14 @@ class PolycentricClient(
         val eventBytes = Event.ADAPTER.encode(event)
 
         val signedBytes =
-            core.signEvent(
-                eventBytes,
-                object : SignBytesCallback {
-                    override suspend fun sign(bytes: ByteArray): ByteArray = crypto.sign(keyPair.privateKey, bytes, keyPair.keyType)
-                },
-            )
+            coreCall {
+                core.signEvent(
+                    eventBytes,
+                    object : SignBytesCallback {
+                        override suspend fun sign(bytes: ByteArray): ByteArray = crypto.sign(keyPair.privateKey, bytes, keyPair.keyType)
+                    },
+                )
+            }
         return SignedEvent.ADAPTER.decode(signedBytes)
     }
 
@@ -335,21 +340,25 @@ class PolycentricClient(
         signedEvent: SignedEvent,
         content: Content? = null,
     ) {
+        // Note that `copyEvents` must be called before saving the event in local
+        // storage, because `copyEvents` may throw an error to reject invalid events.
+        coreCall { core.copyEvents(listOf(SignedEvent.ADAPTER.encode(signedEvent))) }
         events.save(signedEvent)
-        core.copyEvents(listOf(SignedEvent.ADAPTER.encode(signedEvent)))
         if (content != null) {
             val event = Event.ADAPTER.decode(signedEvent.event_bytes)
             event.content_digest?.let { digest ->
                 val contentBytes = Content.ADAPTER.encode(content)
-                contents.save(digest, contentBytes)
-                core.copyContents(
-                    listOf(
-                        ContentEntry(
-                            digestBytes = ContentDigest.ADAPTER.encode(digest),
-                            contentBytes = contentBytes,
+                coreCall {
+                    core.copyContents(
+                        listOf(
+                            ContentEntry(
+                                digestBytes = ContentDigest.ADAPTER.encode(digest),
+                                contentBytes = contentBytes,
+                            ),
                         ),
-                    ),
-                )
+                    )
+                }
+                contents.save(digest, contentBytes)
             }
         }
         eventService.emitContentCreated(ContentCreatedPayload(signedEvent, content))
@@ -393,7 +402,7 @@ class PolycentricClient(
         identity: String,
         collection: Int,
     ): List<EventBundle> {
-        val bytes = core.listValidEvents(identity, collection)
+        val bytes = coreCall { core.listValidEvents(identity, collection) }
         return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
     }
 
@@ -437,8 +446,9 @@ class PolycentricClient(
                         async {
                             try {
                                 val responseBytes =
-                                    core.pushLocalEvents(identity, server, partialPush)
-                                        ?: return@async
+                                    coreCall {
+                                        core.pushLocalEvents(identity, server, partialPush)
+                                    } ?: return@async null
                                 val response = PutEventsResponse.ADAPTER.decode(responseBytes)
                                 for (pushError in response.errors) {
                                     log.warning("Error from event push: $pushError")
@@ -448,10 +458,12 @@ class PolycentricClient(
                                     val body = filestore.get(digest) ?: continue
                                     uploadBlob(blob, body, listOf(server))
                                 }
+                                null
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Throwable) {
                                 log.warning("Sync failed for $server: $e")
+                                e
                             }
                         }
                     }
@@ -459,8 +471,14 @@ class PolycentricClient(
                     emptyList()
                 }
 
-            pushTasks.awaitAll()
-            pullTask.await().getOrThrow()
+            val pushFailures = pushTasks.awaitAll()
+            val pullResult = pullTask.await()
+            val pullError = pullResult.exceptionOrNull()
+            if (pullError != null) {
+                throw pullError
+            }
+            pushFailures.firstNotNullOfOrNull { it }?.let { throw it }
+            pullResult.getOrThrow()
         }
 
     private suspend fun pull(partial: Boolean): Int {
@@ -497,29 +515,22 @@ class PolycentricClient(
     private suspend fun trySaveBundle(
         bundle: EventBundle,
         blobs: MutableMap<String, polycentric.v2.Blob>,
-    ): Boolean =
-        runCatching {
+    ): Boolean {
+        return runCatchingExceptCancellation {
             val signed = bundle.signed_event ?: return false
             val event = Event.ADAPTER.decode(signed.event_bytes)
             val key = event.key ?: return false
             if (key.signed_by == null) return false
 
-            // Try saving content for any event that seems valid, even if the
-            // event itself may already exist.
+            // Save content (and discover its blobs) even for events the
+            // `getByEventKey` check below reports as already present, in
+            // case an earlier pull stored the event without its content
+            // or blobs.
             trySaveContent(event, bundle, blobs)
 
             if (events.getByEventKey(key) != null) return false
 
-            // Verify the signature before persisting an untrusted (server-supplied)
-            // event. On the next startup `copyEvents` replays every stored event
-            // through the core, which verifies signatures and fails the whole
-            // batch on a bad one — so persisting even one unverified event would
-            // brick every subsequent launch (ClientState.ERROR) until the DB is
-            // wiped. `runCatching` turns a bad event into skip-and-log, leaving the
-            // rest of the bundle to save. This subsumes js-core's empty-signature /
-            // empty-event-bytes guards: an empty or invalid signature, or empty
-            // event bytes, fails verification here.
-            core.verifySignedEvent(SignedEvent.ADAPTER.encode(signed))
+            coreCall { core.verifySignedEvent(SignedEvent.ADAPTER.encode(signed)) }
 
             events.save(signed)
             true
@@ -527,22 +538,30 @@ class PolycentricClient(
             log.warning("Pull event: $e")
             false
         }
+    }
 
     /**
      * Absorb errors and return true only when the content is new and
      * added. Discovered blobs are added to [blobs] BEFORE the existence
-     * check — we might be missing a blob referenced by content we already
-     * have. (js-core `trySaveContent`.)
+     * check, in case we are missing a blob referenced by content we already
+     * have. (js-core `trySaveContent`.) Content whose bytes do not hash
+     * to [Event.content_digest] is rejected.
      */
     private suspend fun trySaveContent(
         event: Event,
         bundle: EventBundle,
         blobs: MutableMap<String, polycentric.v2.Blob>,
     ): Boolean =
-        runCatching {
+        runCatchingExceptCancellation {
             val contentBytes = bundle.serialized_content?.content_bytes ?: return false
             val content = Content.ADAPTER.decode(contentBytes)
             val digest = event.content_digest ?: return false
+
+            if (digest.type != ContentDigestType.CONTENT_DIGEST_TYPE_SHA256 ||
+                sha256(contentBytes.toByteArray()).toByteString() != digest.value_
+            ) {
+                return false
+            }
 
             for (blob in ContentManager.collectBlobs(content)) {
                 val blobDigest = blob.digest ?: continue
@@ -586,7 +605,7 @@ class PolycentricClient(
         withContext(Dispatchers.IO) {
             for (url in blobUrls(digest)) {
                 val bytes =
-                    runCatching {
+                    runCatchingExceptCancellation {
                         http.newCall(Request.Builder().url(url).build()).execute().use { res ->
                             if (res.isSuccessful) res.body?.bytes() else null
                         }
@@ -606,8 +625,10 @@ class PolycentricClient(
                 UploadBlobRequest(blob = blob, body = body.toByteString()),
             )
         for (server in targets) {
-            runCatching { core.uploadBlob(server, requestBytes) }
-                .onFailure { log.warning("uploadBlob failed for $server: $it") }
+            runCatchingExceptCancellation { coreCall { core.uploadBlob(server, requestBytes) } }
+                .onFailure { e ->
+                    log.warning("uploadBlob failed for $server: $e")
+                }
         }
     }
 
@@ -620,7 +641,7 @@ class PolycentricClient(
         // session so it (and a subsequent logout) survives a restart.
         storageDriver.saveActiveSession(activeIdentityKey)
         refreshServers()
-        eventService.emitKeyPairChanged(keyPair)
+        eventService.emitKeyPairChanged(keyPair, activeIdentityKey)
     }
 
     /**

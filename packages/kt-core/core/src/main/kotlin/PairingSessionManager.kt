@@ -67,17 +67,19 @@ class PairingSessionManager(
     suspend fun getPairingSession(info: PairingInfo): PairingSession =
         decodeSession(
             info.server,
-            client.core.getPairingSession(info.server, info.digest_sha256.toByteArray()),
+            coreCall { client.core.getPairingSession(info.server, info.digest_sha256.toByteArray()) },
         )
 
     /** Register our key as a claimer on a session. Verify the session first. */
     suspend fun joinPairingSession(info: PairingInfo) {
         val keyPair = client.currentKeyPair ?: throw NoActiveKeyPairException()
-        client.core.joinPairingSession(
-            info.server,
-            info.digest_sha256.toByteArray(),
-            keyPair.toPublicKeyProto().toFfi(),
-        )
+        coreCall {
+            client.core.joinPairingSession(
+                info.server,
+                info.digest_sha256.toByteArray(),
+                keyPair.toPublicKeyProto().toFfi(),
+            )
+        }
     }
 
     /** Poll the server's list of claimer public keys. */
@@ -92,11 +94,13 @@ class PairingSessionManager(
      */
     suspend fun pollForAuthorization(info: PairingInfo): Boolean {
         val keyPair = client.currentKeyPair ?: throw NoActiveKeyPairException()
-        return client.core.pollForAuthorization(
-            info.server,
-            info.digest_sha256.toByteArray(),
-            keyPair.toPublicKeyProto().toFfi(),
-        )
+        return coreCall {
+            client.core.pollForAuthorization(
+                info.server,
+                info.digest_sha256.toByteArray(),
+                keyPair.toPublicKeyProto().toFfi(),
+            )
+        }
     }
 
     private suspend fun signIssuerState(issuerState: IssuerPairingState): SignedIssuerState {
@@ -132,10 +136,12 @@ class PairingSessionManager(
             )
 
         val responseBytes =
-            client.core.putPairingSession(
-                server,
-                SignedIssuerState.ADAPTER.encode(signedState),
-            )
+            coreCall {
+                client.core.putPairingSession(
+                    server,
+                    SignedIssuerState.ADAPTER.encode(signedState),
+                )
+            }
         return decodeSession(server, responseBytes)
     }
 

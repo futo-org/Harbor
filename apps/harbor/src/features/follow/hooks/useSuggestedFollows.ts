@@ -79,7 +79,7 @@ export function useSuggestedFollows({
     (_status, data) =>
       new Query.SuggestFollow({ limit, forwardToken: extractToken(data) }),
     { fetchMode, updateMode: UpdateMode.Merge },
-    enabled && !!identityKey,
+    enabled,
   );
 
   const [entries, hasNext] = useMemo(

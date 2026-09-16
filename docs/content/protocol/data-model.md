@@ -373,9 +373,9 @@ A `Labels` event records that a moderation service has classified content
 against a set of label values. Labels are signed events in collection 7
 (`Labels`). Like `Report`, labeling is per-server — a server indexes and
 serves only labels from its configured trusted moderation service (set via
-`POLYCENTRIC_MODERATION_IDENTITY` on the server side). Labels from any other
-identity are stored and synced as normal events but are not indexed or served
-when querying feeds.
+`HARBOR_MODERATION_IDENTITY` on the server side). Labels from any other identity
+are stored and synced as normal events but are not indexed or served when
+querying feeds.
 
 The server returns matching `Labels` events as `EventHint` entries alongside
 feed results; the client correlates each hint's event bundle to its target

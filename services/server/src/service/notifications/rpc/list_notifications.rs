@@ -21,7 +21,6 @@ use crate::service::{
 };
 use entity::notification;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use tonic::Status;
 
 const DEFAULT_LIMIT: u32 = 50;
@@ -45,7 +44,7 @@ struct Hydrated {
     event_hints: Vec<EventHint>,
     /// Label events targeting the page's trigger events, for `filter`.
     trigger_labels: Vec<EventWithContentRow>,
-    blocked_identities: Arc<HashSet<String>>,
+    blocked_identities: HashSet<String>,
 }
 
 pub async fn handle(
@@ -333,6 +332,7 @@ mod tests {
     use entity::{content, event};
     use prost::Message;
     use sea_orm::{DbBackend, MockDatabase};
+    use std::sync::Arc;
 
     fn notification_row(id: i64, from_identity: &str) -> notification::Model {
         let ts = chrono::DateTime::from_timestamp(0, 0).unwrap();
@@ -414,9 +414,7 @@ mod tests {
 
     fn hydrated_blocking(blocked: &[&str]) -> Hydrated {
         Hydrated {
-            blocked_identities: Arc::new(
-                blocked.iter().map(|s| s.to_string()).collect(),
-            ),
+            blocked_identities: blocked.iter().map(|s| s.to_string()).collect(),
             ..hydrated_with_labels(Vec::new())
         }
     }
@@ -428,7 +426,7 @@ mod tests {
             bundles: HashMap::new(),
             event_hints: Vec::new(),
             trigger_labels,
-            blocked_identities: Arc::default(),
+            blocked_identities: HashSet::new(),
         }
     }
 

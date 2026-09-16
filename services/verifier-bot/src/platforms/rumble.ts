@@ -1,5 +1,6 @@
 import type { ClaimField, Platform } from '../models.js';
 import { Result } from '../result.js';
+import { PUPPETEER_EXECUTABLE_PATH } from '../utility.js';
 import parse from 'node-html-parser';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
@@ -47,8 +48,7 @@ class RumbleTextVerifier extends TextVerifier {
     super.init();
     this.puppeteerBrowser = await puppeteer.launch({
       headless: true,
-      executablePath:
-        process.env.POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH,
+      executablePath: PUPPETEER_EXECUTABLE_PATH,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
   }

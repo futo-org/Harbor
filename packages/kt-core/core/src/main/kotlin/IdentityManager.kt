@@ -220,21 +220,30 @@ class IdentityManager(
         // Hydrate the identity's events from the server into the core's local
         // store so its chain can be validated as a whole. Identity chains are
         // small; a generous size fetches the full collection.
-        client.core.awaitQuery(
-            Query.ListEvents(
-                ListEventsArgs(
-                    size = IDENTITY_CHAIN_FETCH_SIZE,
-                    identity = identityKey,
-                    collection = Collections.IDENTITY,
-                    signedBy = null,
-                    sequenceGt = null,
-                    sequenceLt = null,
-                    heads = null,
+        coreCall {
+            client.core.awaitQuery(
+                Query.ListEvents(
+                    ListEventsArgs(
+                        size = IDENTITY_CHAIN_FETCH_SIZE,
+                        identity = identityKey,
+                        collection = Collections.IDENTITY,
+                        signedBy = null,
+                        sequenceGt = null,
+                        sequenceLt = null,
+                        heads = null,
+                    ),
                 ),
-            ),
-            queryKey = listOf("list_events_for_server", targetServer, identityKey),
-            opts = QueryOpts(fetchMode = null, updateMode = null, servers = listOf(targetServer), emitMode = null, serverTimeoutMs = null),
-        )
+                queryKey = listOf("list_events_for_server", targetServer, identityKey),
+                opts =
+                    QueryOpts(
+                        fetchMode = null,
+                        updateMode = null,
+                        servers = listOf(targetServer),
+                        emitMode = null,
+                        serverTimeoutMs = null,
+                    ),
+            )
+        }
 
         return resolveIdentity(identityKey)
             ?: throw IdentityNotFoundException(identityKey)
@@ -247,7 +256,7 @@ class IdentityManager(
      * (e.g. [fetchIdentityState] or a sync).
      */
     private fun resolveIdentity(identityKey: String): IdentityState? {
-        val bytes = client.core.resolveIdentity(identityKey) ?: return null
+        val bytes = coreCall { client.core.resolveIdentity(identityKey) } ?: return null
         val identity = Identity.ADAPTER.decode(bytes)
         return IdentityState(
             identityKey = identityKey,
@@ -352,7 +361,7 @@ class IdentityManager(
                 throw ServerAlreadyAddedException()
             }
 
-            client.core.getServerInfo(url)
+            coreCall { client.core.getServerInfo(url) }
 
             publish(
                 identityKey,

@@ -16,7 +16,7 @@ import java.util.logging.Logger
 
 class CoreQueryException(
     message: String,
-) : Exception(message)
+) : PolycentricException(message)
 
 private val log = Logger.getLogger("PolycentricCore.query")
 
@@ -44,23 +44,25 @@ fun PolycentricCore.queryFlow(
     opts: QueryOpts? = null,
 ): Flow<QueryResultFfi> =
     callbackFlow {
-        val observable = fetchQuery(queryKey, query, opts)
+        val observable = coreCall { fetchQuery(queryKey, query, opts) }
         val subscription =
-            observable.subscribe(
-                object : QueryObserver {
-                    override fun next(result: QueryResultFfi) {
-                        trySend(result)
-                    }
+            coreCall {
+                observable.subscribe(
+                    object : QueryObserver {
+                        override fun next(result: QueryResultFfi) {
+                            trySend(result)
+                        }
 
-                    override fun error(message: String) {
-                        log.warning("Query server error (non-fatal): $message")
-                    }
+                        override fun error(message: String) {
+                            log.warning("Query server error (non-fatal): $message")
+                        }
 
-                    override fun complete() {
-                        close()
-                    }
-                },
-            )
+                        override fun complete() {
+                            close()
+                        }
+                    },
+                )
+            }
         awaitClose { subscription.unsubscribe() }
         // Unbounded so the non-suspending `trySend` in `next` can never drop an
         // emission (a dropped `Success` would hang `awaitQuery` forever). Fuses
