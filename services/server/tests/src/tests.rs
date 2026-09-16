@@ -7,6 +7,7 @@ use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncS
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
+use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
 use prost::Message;
 use rand::distr::{Alphabetic, SampleString};
@@ -21,6 +22,7 @@ mod feeds;
 mod graph;
 mod notifications;
 mod search;
+mod verifications;
 
 /// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
 pub fn grpc_addr() -> String {
@@ -107,6 +109,13 @@ pub async fn search_service() -> SearchServiceClient<tonic::transport::Channel>
 
 pub async fn graph_service() -> GraphServiceClient<tonic::transport::Channel> {
     GraphServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn verifications_service()
+-> VerificationsServiceClient<tonic::transport::Channel> {
+    VerificationsServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -418,6 +427,43 @@ impl TestClient {
         self.delete(delete, created_at)
     }
 
+    pub fn verification_claim(
+        &mut self,
+        claim: VerificationClaim,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(
+            ContentBody::VerificationClaim(claim),
+            created_at,
+        )
+    }
+
+    pub fn github_verification_claim(
+        &mut self,
+        login: &str,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let schema = github_verification_schema();
+        let schema_bytes = prost::Message::encode_to_vec(&schema);
+        let schema_digest = ContentDigest {
+            r#type: ContentDigestType::Sha256.into(),
+            value: sha256(&schema_bytes),
+        };
+        let schema = SerializedVerificationSchema {
+            schema_bytes,
+            digest: Some(schema_digest),
+        };
+
+        let mut fields = HashMap::new();
+        fields.insert("login".to_owned(), login.as_bytes().to_vec());
+
+        let claim = VerificationClaim {
+            schema: Some(schema),
+            fields,
+        };
+        self.verification_claim(claim, created_at)
+    }
+
     #[track_caller]
     pub fn get_last_event_key(&self) -> EventKey {
         let event = self.pending.last().expect("no pending events");
@@ -547,6 +593,22 @@ impl TestClient {
     }
 }
 
+fn github_verification_schema() -> VerificationSchema {
+    VerificationSchema {
+        name: "GitHub Verification".to_owned(),
+        description: String::new(),
+        fields: vec![FieldDef {
+            key: "login".to_owned(),
+            kind: FieldKind::String as i32,
+            format: String::new(),
+            required: true,
+            description: "Login".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    }
+}
+
 impl Drop for TestClient {
     fn drop(&mut self) {
         const MSG: &str = "Unsubmitted events in TestClient, call submit_events to submit them";
@@ -564,27 +626,33 @@ pub fn current_timestamp() -> u64 {
     SystemTime::UNIX_EPOCH.elapsed().unwrap().as_millis() as u64
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct ExpectEvent {
+#[derive(Debug)]
+pub struct ExpectEvent<'a> {
     key: EventKey,
-    kind: ExpectEventKind,
+    kind: ExpectEventKind<'a>,
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub enum ExpectEventKind {
-    Repost { post: EventKey },
+#[derive(Debug)]
+pub enum ExpectEventKind<'a> {
+    Repost {
+        post: EventKey,
+    },
+    VerificationClaim {
+        schema: VerificationSchema,
+        fields: HashMap<&'a str, &'a str>,
+    },
 }
 
-pub fn expect_events(got: &[EventBundle], expected: Vec<ExpectEvent>) {
+pub fn expect_events(got: &[EventBundle], expected: &[ExpectEvent<'_>]) {
     eprintln!("Got events: {:#?}", got);
-    eprintln!("Expected vents: {:#?}", expected);
+    eprintln!("Expected events: {:#?}", expected);
     assert_eq!(got.len(), expected.len());
     for (got, expected) in got.iter().zip(expected) {
         let event =
             Event::decode(&*got.signed_event.as_ref().unwrap().event_bytes)
                 .unwrap();
 
-        assert_eq!(event.key, Some(expected.key));
+        assert_eq!(event.key.as_ref(), Some(&expected.key));
 
         let content = Content::decode(
             &*got.serialized_content.as_ref().unwrap().content_bytes,
@@ -592,10 +660,28 @@ pub fn expect_events(got: &[EventBundle], expected: Vec<ExpectEvent>) {
         .unwrap();
         let content = content.content_body.as_ref().unwrap();
 
-        match (content, expected.kind) {
+        match (content, &expected.kind) {
             (ContentBody::Repost(repost), ExpectEventKind::Repost { post }) => {
                 let got = repost.post.as_ref().expect("repost is missing key");
-                assert_eq!(*got, post);
+                assert_eq!(got, post);
+            }
+            (
+                ContentBody::VerificationClaim(claim),
+                ExpectEventKind::VerificationClaim { schema, fields },
+            ) => {
+                let got_schema = claim.schema.as_ref().expect("missing schema");
+                let got_schema =
+                    VerificationSchema::decode(&*got_schema.schema_bytes)
+                        .expect("invalid schema");
+                assert_eq!(got_schema, *schema);
+
+                for (key, got) in &claim.fields {
+                    let expected = fields
+                        .get(key.as_str())
+                        .unwrap_or_else(|| panic!("unexpected field '{key}'"));
+                    assert_eq!(got, expected.as_bytes());
+                }
+                assert_eq!(claim.fields.len(), fields.len());
             }
             (content, expected) => {
                 panic!("unexpected event: {content:?}, expected: {expected:?}")

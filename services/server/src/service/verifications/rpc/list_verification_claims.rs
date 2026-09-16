@@ -1,5 +1,6 @@
 //! Claims an identity has made (owns) returns relevant
-/// VerificationClaim, VerificationTarget and VerificationVerify events
+//! VerificationClaim, VerificationTarget and VerificationVerify events.
+
 use crate::data::pipeline;
 use crate::service::context::ServiceContext;
 use crate::service::proto::{
