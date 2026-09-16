@@ -230,7 +230,7 @@ afterEvaluate {
                 artifactId = "polycentric-core"
             }
         }
-        if (System.getenv("FORGEJO_PACKAGE_TOKEN") != null) {
+        if (System.getenv("HARBOR_CI_TOKEN") != null) {
             val owner = System.getenv("GITHUB_REPOSITORY")!!.substringBefore('/')
             val serverUrl = System.getenv("GITHUB_SERVER_URL")!!
             repositories {
@@ -239,7 +239,7 @@ afterEvaluate {
                     url = uri("$serverUrl/api/packages/$owner/maven")
                     credentials(HttpHeaderCredentials::class) {
                         name = "Authorization"
-                        value = "token ${System.getenv("FORGEJO_PACKAGE_TOKEN")}"
+                        value = "token ${System.getenv("HARBOR_CI_TOKEN")}"
                     }
                     authentication {
                         create<HttpHeaderAuthentication>("header")

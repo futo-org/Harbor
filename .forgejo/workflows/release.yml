@@ -121,7 +121,7 @@ jobs:
       - name: Publish the AAR to the Maven registry
         if: startsWith(github.ref_name, 'v')
         env:
-          FORGEJO_PACKAGE_TOKEN: ${{ secrets.FORGEJO_PACKAGE_TOKEN }}
+          HARBOR_CI_TOKEN: ${{ secrets.HARBOR_CI_TOKEN }}
         run: |
           cd packages/kt-core
           ./gradlew :core:publishReleasePublicationToForgejoRepository -PktCoreVersion="${GITHUB_REF_NAME#v}"
