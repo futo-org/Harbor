@@ -9,8 +9,6 @@ version      = "0.1.0"
 # Workspace
 common-dotenv = { path = "../common/dotenv" }
 common-kafka = { path = "../common/kafka" }
-common-object-store = { path = "../common/object-store" }
-entity = { path = "../server/entity" }
 push-notifications-entity = { path = "./entity" }
 push-notifications-migration = { path = "./migration" }
 polycentric-common.workspace = true

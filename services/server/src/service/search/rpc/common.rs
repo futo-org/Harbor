@@ -328,7 +328,6 @@ mod tests {
     use chrono::DateTime;
     use prost::Message;
     use sea_orm::prelude::DateTimeWithTimeZone;
-    use std::sync::Arc;
 
     fn now() -> DateTimeWithTimeZone {
         DateTime::from_timestamp(0, 0).unwrap().fixed_offset()
@@ -400,9 +399,10 @@ mod tests {
 
     fn blocking(identities: &[&str]) -> HydrationState {
         HydrationState {
-            blocked_identities: Arc::new(
-                identities.iter().map(|s| s.to_string()).collect(),
-            ),
+            blocked_identities: identities
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
             ..Default::default()
         }
     }

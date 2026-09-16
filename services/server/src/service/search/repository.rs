@@ -85,10 +85,13 @@ impl Query {
             cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
         let mut query = profile::Entity::find().select_only();
-        query =
-            select_model_columns(query, EVENT_PREFIX, event::Column::iter());
-        query = select_model_columns(
-            query,
+        select_model_columns(
+            QuerySelect::query(&mut query),
+            EVENT_PREFIX,
+            event::Column::iter(),
+        );
+        select_model_columns(
+            QuerySelect::query(&mut query),
             CONTENT_PREFIX,
             content::Column::iter(),
         );
@@ -192,10 +195,13 @@ impl Query {
             cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
 
         let mut query = event::Entity::find().select_only();
-        query =
-            select_model_columns(query, EVENT_PREFIX, event::Column::iter());
-        query = select_model_columns(
-            query,
+        select_model_columns(
+            QuerySelect::query(&mut query),
+            EVENT_PREFIX,
+            event::Column::iter(),
+        );
+        select_model_columns(
+            QuerySelect::query(&mut query),
             CONTENT_PREFIX,
             content::Column::iter(),
         );
