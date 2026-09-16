@@ -26,7 +26,7 @@ use prost::Message;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ConnectOptions, Database};
 use sha2::{Digest, Sha256};
 use std::{
-    env::var,
+    env,
     process::Stdio,
     sync::{
         Arc,
