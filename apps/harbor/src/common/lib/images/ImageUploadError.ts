@@ -1,7 +1,7 @@
 export type ImageUploadStage = 'decode' | 'encode' | 'upload';
 
 /**
- * The only error `processAndUploadImage` rejects with. `stage` says which step
+ * The only error `processAndUploadImage` should reject with. `stage` says which step
  * failed; the library's own error (developer text, sometimes not even an
  * `Error`) rides along as `cause` for logs.
  */
@@ -16,7 +16,7 @@ export class ImageUploadError extends Error {
 }
 
 const IMAGE_UPLOAD_ERROR_MESSAGE_BY_STAGE: Record<ImageUploadStage, string> = {
-  decode: "Couldn't open this image. Try a JPEG or PNG.",
+  decode: "Couldn't open this image. Try a different format.",
   encode: "Couldn't process this image. Try a different photo.",
   upload: "Couldn't upload this image. Check your connection and try again.",
 };
