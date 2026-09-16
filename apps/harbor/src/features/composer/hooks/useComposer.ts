@@ -146,11 +146,8 @@ export function useComposer({
       work.then(
         () => setAttachmentStatus(id, 'ready'),
         (err) => {
-          // Pick-time failure: drop the attachment and say why right away.
-          // `handlePost` runs its own `processAndUploadImage` and keeps the
-          // attachments on failure, so this only fires for freshly picked
-          // images.
           uploadCache.delete(id);
+          // Pick-time failure: drop the attachment and say why.
           removeAttachment(id);
           setError(
             formatImageUploadErrorOrFallback(

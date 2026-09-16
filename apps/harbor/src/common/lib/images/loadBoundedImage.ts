@@ -6,8 +6,8 @@ import {
 } from 'expo-image-picker';
 
 /**
- * Options every `launchImageLibraryAsync` call must include. iOS then hands
- * over an 8-bit representation; a 10-bit HEIC would fail in `processAndUploadImage`.
+ * Pass to every `launchImageLibraryAsync` call: iOS then hands over 8-bit
+ * pixels; 10-bit HEIC fails to decode in `processAndUploadImage`.
  */
 export const IMAGE_PICKER_DEFAULT_OPTIONS = {
   preferredAssetRepresentationMode:
@@ -15,42 +15,32 @@ export const IMAGE_PICKER_DEFAULT_OPTIONS = {
 } satisfies ImagePickerOptions;
 
 /**
- * Decode `uri` into an upright bitmap whose longest edge is at most `maxEdge`
- * pixels. This is the only step that touches the original file. The returned
- * ref is a valid `ImageManipulator.manipulate` source on every platform.
+ * Decode `uri` into an upright bitmap with longest edge at most `maxEdge`,
+ * usable as an `ImageManipulator.manipulate` source on every platform.
  */
 export async function loadBoundedImage(
   uri: string,
   maxEdge: number,
 ): Promise<ImageRef> {
   if (isWeb) {
-    // expo-image's web `loadAsync` ignores `maxWidth`/`maxHeight`, so the
-    // bounding happens in `downscaleInBrowser` and the small PNG is handed
-    // over as an object URL. Formats the browser can't decode (HEIC) reject
-    // there with a real Error instead of the manipulator's bare `<canvas>`.
+    // expo-image's web `loadAsync` ignores `maxWidth`/`maxHeight`.
     const boundedUri = await downscaleInBrowser(uri, maxEdge);
 
     try {
-      // The web ref copies the blob behind its own URL, so this one can go.
+      // The ref copies the blob, so the URL can be revoked.
       return await Image.loadAsync(boundedUri);
     } finally {
       URL.revokeObjectURL(boundedUri);
     }
   }
 
-  // expo-image downsamples while decoding (ImageIO thumbnail on iOS, Glide
-  // on Android).
+  // Native `loadAsync` downsamples while decoding.
   return Image.loadAsync(uri, { maxWidth: maxEdge, maxHeight: maxEdge });
 }
 
 /**
- * Decode to a bitmap no larger than `maxEdge` through
- * `createImageBitmap`'s resize options, draw it to a small canvas, and return
- * a PNG object URL. The guarantee is that no canvas ever exceeds the browser's
- * size limit, which is what produced the blank variants. Whether the full-size
- * pixels are ever materialised depends on the codec: Chromium decodes JPEG
- * straight to the reduced size, while PNG is always decoded in full and then
- * scaled.
+ * Decode through `createImageBitmap`'s resize options so no canvas exceeds the
+ * browser's size limit (which produced blank variants); return a PNG object URL.
  */
 async function downscaleInBrowser(
   uri: string,
@@ -62,9 +52,8 @@ async function downscaleInBrowser(
   ]);
 
   const bitmap = await createImageBitmap(blob, {
-    // Bake EXIF orientation in, like `<img>` does, so the bitmap matches the
-    // dimensions read above. Explicit because older Safari/Firefox defaulted
-    // to `none`.
+    // Match `<img>`'s EXIF handling so the bitmap agrees with the dimensions
+    // read above; older Safari/Firefox defaulted to `none`.
     imageOrientation: 'from-image',
     resizeQuality: 'high',
     ...(width >= height

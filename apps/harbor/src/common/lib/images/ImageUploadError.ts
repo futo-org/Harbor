@@ -1,9 +1,8 @@
 export type ImageUploadStage = 'decode' | 'encode' | 'upload';
 
 /**
- * The only error `processAndUploadImage` should reject with. `stage` says which step
- * failed; the library's own error (developer text, sometimes not even an
- * `Error`) rides along as `cause` for logs.
+ * The only error `processAndUploadImage` rejects with. `cause` carries the
+ * library's raw error (often not even an `Error`) for logs.
  */
 export class ImageUploadError extends Error {
   constructor(
@@ -21,10 +20,7 @@ const IMAGE_UPLOAD_ERROR_MESSAGE_BY_STAGE: Record<ImageUploadStage, string> = {
   upload: "Couldn't upload this image. Check your connection and try again.",
 };
 
-/**
- * User-facing copy for a failure that may have come from the image pipeline.
- * Anything else gets `fallback`; library messages never reach the screen.
- */
+/** User-facing copy for an `ImageUploadError`; anything else gets `fallback`. */
 export function formatImageUploadErrorOrFallback(
   error: unknown,
   fallback: string,

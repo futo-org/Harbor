@@ -10,10 +10,9 @@ import { ImageUploadError, type ImageUploadStage } from './ImageUploadError';
 export const DEFAULT_IMAGE_VARIANT_SIZES = [48, 128, 512];
 
 /**
- * Longest edge the source is decoded at. Variants are cut from this bounded
- * bitmap, so a 300 MP photo never becomes a ~1.2 GB decode (iOS jetsam,
- * Android OOM) or a canvas past the browser's size limit (blank output).
- * Every requested variant size must fit inside it.
+ * Longest edge the source is decoded at, so a huge photo never becomes a
+ * multi-GB decode (iOS jetsam, Android OOM) or an oversized canvas (blank
+ * output on web). Every variant size must fit inside it.
  */
 const SOURCE_DECODE_MAX_EDGE = 2048;
 
@@ -42,8 +41,8 @@ async function readBytes(uri: string): Promise<Uint8Array> {
  * Decode an image from `uri`, resize it into each size in `sizes` via
  * `expo-image-manipulator`, commit each variant locally and upload to the
  * client's servers, and return the assembled `ImageSet`. Runtime failures
- * reject with `ImageUploadError`; a variant size above `SOURCE_DECODE_MAX_EDGE` is a
- * programming error and throws before any work starts.
+ * reject with `ImageUploadError`; a variant size above `SOURCE_DECODE_MAX_EDGE`
+ * is a programming error and throws before any work starts.
  */
 export async function processAndUploadImage(
   client: PolycentricClient,
@@ -59,8 +58,6 @@ export async function processAndUploadImage(
     );
   }
 
-  // Decode once, bounded, with EXIF orientation baked into upright pixels.
-  // The result is the source for every variant so we don't re-decode per size.
   const source = await runStage('decode', () =>
     loadBoundedImage(uri, SOURCE_DECODE_MAX_EDGE),
   );
@@ -81,10 +78,7 @@ export async function processAndUploadImage(
   });
 }
 
-/**
- * Run one pipeline step. Whatever it throws (Glide dumps, object URLs, a bare
- * `<canvas>` on web) is logged and re-thrown tagged with the stage.
- */
+/** Log whatever the step throws (often not an `Error`) and re-throw it tagged with the stage. */
 async function runStage<T>(
   stage: ImageUploadStage,
   work: () => Promise<T>,
