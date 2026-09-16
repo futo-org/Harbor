@@ -3,6 +3,7 @@ import {
   createCookieEnabledAxios,
   getCallbackForPlatform,
   httpResponseToError,
+  OAUTH_CALLBACK_DOMAIN,
 } from '../utility.js';
 import { Result } from '../result.js';
 import { StatusCodes } from 'http-status-codes';
@@ -12,6 +13,13 @@ type InstagramTokenRequest = {
   code: string;
 };
 
+const INSTAGRAM_CLIENT_ID =
+  process.env.HARBOR_VERIFIER_BOT_INSTAGRAM_CLIENT_ID ??
+  process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_ID;
+const INSTAGRAM_CLIENT_SECRET =
+  process.env.HARBOR_VERIFIER_BOT_INSTAGRAM_CLIENT_SECRET ??
+  process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_SECRET;
+
 class InstagramOAuthVerifier extends OAuthVerifier<InstagramTokenRequest> {
   constructor() {
     super('Instagram');
@@ -19,14 +27,14 @@ class InstagramOAuthVerifier extends OAuthVerifier<InstagramTokenRequest> {
 
   public async getOAuthURL(): Promise<Result<string>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      INSTAGRAM_CLIENT_ID === undefined ||
+      OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     } else {
       const redirectUri = getCallbackForPlatform(this.platform, true);
       return Result.ok(
-        `https://api.instagram.com/oauth/authorize?client_id=${process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=user_profile`,
+        `https://api.instagram.com/oauth/authorize?client_id=${INSTAGRAM_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=user_profile`,
       );
     }
   }
@@ -35,10 +43,9 @@ class InstagramOAuthVerifier extends OAuthVerifier<InstagramTokenRequest> {
     data: InstagramTokenRequest,
   ): Promise<Result<TokenResponse>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_SECRET ===
-        undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      INSTAGRAM_CLIENT_ID === undefined ||
+      INSTAGRAM_CLIENT_SECRET === undefined ||
+      OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -46,14 +53,8 @@ class InstagramOAuthVerifier extends OAuthVerifier<InstagramTokenRequest> {
     const redirectUri = getCallbackForPlatform(this.platform);
     const client = createCookieEnabledAxios();
     const form = new FormData();
-    form.append(
-      'client_id',
-      process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_ID,
-    );
-    form.append(
-      'client_secret',
-      process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_SECRET,
-    );
+    form.append('client_id', INSTAGRAM_CLIENT_ID);
+    form.append('client_secret', INSTAGRAM_CLIENT_SECRET);
     form.append('grant_type', 'authorization_code');
     form.append('redirect_uri', redirectUri);
     form.append('code', data.code);
@@ -125,8 +126,8 @@ class InstagramOAuthVerifier extends OAuthVerifier<InstagramTokenRequest> {
 
   public async healthCheck(): Promise<Result<void>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_SECRET === undefined
+      INSTAGRAM_CLIENT_ID === undefined ||
+      INSTAGRAM_CLIENT_SECRET === undefined
     ) {
       return Result.errMsg(
         'Verifier not configured: Missing Instagram credentials',
