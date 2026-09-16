@@ -78,7 +78,7 @@ export async function processAndUploadImage(
   });
 }
 
-/** Log whatever the step throws (often not an `Error`) and re-throw it tagged with the stage. */
+/** Log whatever the step throws and re-throw it tagged with the stage. */
 async function runStage<T>(
   stage: ImageUploadStage,
   work: () => Promise<T>,
