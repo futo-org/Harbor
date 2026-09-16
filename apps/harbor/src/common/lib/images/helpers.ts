@@ -1,5 +1,9 @@
 import { isWeb } from '@/src/common/util/platform';
 import { Image, type ImageRef } from 'expo-image';
+import {
+  type ImagePickerOptions,
+  UIImagePickerPreferredAssetRepresentationMode,
+} from 'expo-image-picker';
 
 /**
  * Longest edge the source is decoded at. Variants are cut from this bounded
@@ -7,6 +11,15 @@ import { Image, type ImageRef } from 'expo-image';
  * Android OOM) or a canvas past the browser's size limit (blank output).
  */
 const BOUNDED_MAX_EDGE = 2048;
+
+/**
+ * Options every `launchImageLibraryAsync` call must include. iOS then hands
+ * over an 8-bit representation; a 10-bit HEIC would fail in `processAndUploadImage`.
+ */
+export const IMAGE_PICKER_DEFAULT_OPTIONS = {
+  preferredAssetRepresentationMode:
+    UIImagePickerPreferredAssetRepresentationMode.Compatible,
+} satisfies ImagePickerOptions;
 
 /**
  * Decode `uri` into an upright bitmap whose longest edge is at most
@@ -31,9 +44,7 @@ export async function loadBoundedImage(uri: string): Promise<ImageRef> {
   }
 
   // expo-image downsamples while decoding (ImageIO thumbnail on iOS, Glide
-  // on Android). The picker must hand over 8-bit assets (see
-  // `preferredAssetRepresentationMode` at the call sites): a 10-bit HEIC ref
-  // hangs the manipulator's orientation fixer instead of rejecting.
+  // on Android).
   return Image.loadAsync(uri, {
     maxWidth: BOUNDED_MAX_EDGE,
     maxHeight: BOUNDED_MAX_EDGE,

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/helpers';
 
 export interface UseImagePickerOptions {
   allowsEditing?: boolean;
@@ -51,9 +52,7 @@ export function useImagePicker(
         allowsEditing,
         aspect,
         quality,
-        // iOS: 8-bit representation; 10-bit HEIC hangs `processAndUploadImage`.
-        preferredAssetRepresentationMode:
-          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        ...IMAGE_PICKER_DEFAULT_OPTIONS,
       });
 
       if (result.canceled) {
