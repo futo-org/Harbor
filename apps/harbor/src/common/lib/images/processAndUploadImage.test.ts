@@ -21,6 +21,13 @@ jest.mock('expo-file-system', () => ({
   })),
 }));
 
+// `expo-image` mock: `Image.loadAsync(uri, bounds)` is the bounded decode step
+// and resolves to the source ref installed by `mockSource`.
+const mockLoadAsync = jest.fn();
+jest.mock('expo-image', () => ({
+  Image: { loadAsync: (...args: unknown[]) => mockLoadAsync(...args) },
+}));
+
 // `expo-image-manipulator` mock. `mockManipulate(source)` returns a chainable
 // context that records crop/resize; `renderAsync()` resolves to an image ref
 // whose dimensions reflect the recorded ops, and whose `saveAsync()` echoes
@@ -36,11 +43,13 @@ jest.mock('expo-image-manipulator', () => ({
 // --- Helpers --------------------------------------------------------------
 
 /**
- * Install the manipulator mock for a source of `srcWidth`x`srcHeight`.
- * Records the crop/resize on each created context and computes the resulting
- * dimensions the same way the real native module would.
+ * Install the decode + manipulator mocks for a source of `srcWidth`x`srcHeight`
+ * and return the decoded ref. Each manipulator context records its crop/resize
+ * and computes the resulting dimensions the same way the real module would.
  */
 function mockSource(srcWidth: number, srcHeight: number) {
+  const sourceRef = { width: srcWidth, height: srcHeight };
+  mockLoadAsync.mockResolvedValue(sourceRef);
   mockManipulate.mockImplementation(() => {
     let crop: { width: number; height: number } | null = null;
     let resize: { width?: number; height?: number } | null = null;
@@ -82,6 +91,7 @@ function mockSource(srcWidth: number, srcHeight: number) {
     };
     return context;
   });
+  return sourceRef;
 }
 
 function makeClient() {
@@ -95,6 +105,7 @@ function makeClient() {
 }
 
 beforeEach(() => {
+  mockLoadAsync.mockReset();
   mockManipulate.mockReset();
 });
 
@@ -164,8 +175,8 @@ describe('processAndUploadImage', () => {
     mockSource(4000, 3000);
     const client = makeClient();
 
-    // The decode context is created first, then one per variant. Capture the
-    // variant context to inspect its crop/resize calls.
+    // One manipulator context per variant. Capture it to inspect its
+    // crop/resize calls.
     const result = await processAndUploadImage(client, 'file://in.jpg', {
       mode: 'fill',
       sizes: [128],
@@ -175,8 +186,8 @@ describe('processAndUploadImage', () => {
     expect(result.images[0].width).toBe(128);
     expect(result.images[0].height).toBe(128);
 
-    // The variant context (2nd mockManipulate call) was center-cropped to 3000² .
-    const variantContext = mockManipulate.mock.results[1].value;
+    // The variant context was center-cropped to 3000².
+    const variantContext = mockManipulate.mock.results[0].value;
     expect(variantContext.crop).toHaveBeenCalledWith({
       originX: 500, // (4000 - 3000) / 2
       originY: 0,
@@ -189,8 +200,8 @@ describe('processAndUploadImage', () => {
     });
   });
 
-  it('decodes the source once and reuses it for every variant', async () => {
-    mockSource(4000, 3000);
+  it('decodes the source once, bounded, and reuses it for every variant', async () => {
+    const sourceRef = mockSource(4000, 3000);
     const client = makeClient();
 
     await processAndUploadImage(client, 'file://in.jpg', {
@@ -198,10 +209,17 @@ describe('processAndUploadImage', () => {
       sizes: [512, 1280],
     });
 
-    // 1 decode + 2 variants = 3 mockManipulate() calls.
-    expect(mockManipulate).toHaveBeenCalledTimes(3);
-    // First call is the decode (by uri); later calls reuse the decoded ref.
-    expect(mockManipulate.mock.calls[0][0]).toBe('file://in.jpg');
+    // The only decode is the bounded one; the original uri never reaches the
+    // manipulator.
+    expect(mockLoadAsync).toHaveBeenCalledTimes(1);
+    expect(mockLoadAsync).toHaveBeenCalledWith('file://in.jpg', {
+      maxWidth: 2048,
+      maxHeight: 2048,
+    });
+    expect(mockManipulate).toHaveBeenCalledTimes(2);
+    for (const call of mockManipulate.mock.calls) {
+      expect(call[0]).toBe(sourceRef);
+    }
   });
 
   it('defaults to fill mode and the default variant sizes', async () => {

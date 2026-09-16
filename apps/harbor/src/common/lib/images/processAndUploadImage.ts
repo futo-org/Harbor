@@ -1,11 +1,8 @@
 import { v2, type PolycentricClient } from '@polycentric/react-native';
-import { File } from 'expo-file-system';
-import {
-  ImageManipulator,
-  SaveFormat,
-  type ImageRef,
-} from 'expo-image-manipulator';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { loadBoundedImage, type DecodedImage } from './helpers';
 import { isWeb } from '@/src/common/util/platform';
+import { File } from 'expo-file-system';
 
 /** Default variant edge lengths. */
 export const DEFAULT_IMAGE_VARIANT_SIZES = [48, 128, 512];
@@ -44,11 +41,9 @@ export async function processAndUploadImage(
   const sizes = options.sizes ?? DEFAULT_IMAGE_VARIANT_SIZES;
   const mode = options.mode ?? 'fill';
 
-  // Decode once via the platform's native pipeline: this handles formats the
-  // core can't (HEIC/HEIF) and bakes EXIF orientation into upright pixels. The
-  // resulting `ImageRef` is reused as the source for every variant so we don't
-  // re-decode per size.
-  const source = await ImageManipulator.manipulate(uri).renderAsync();
+  // Decode once, bounded, with EXIF orientation baked into upright pixels.
+  // The result is the source for every variant so we don't re-decode per size.
+  const source = await loadBoundedImage(uri);
 
   const variants = await Promise.all(
     sizes.map(async (size) => {
@@ -75,7 +70,7 @@ export async function processAndUploadImage(
  * to `size` while preserving aspect ratio (never upscaling).
  */
 async function encodeVariant(
-  source: ImageRef,
+  source: DecodedImage,
   size: number,
   mode: 'fill' | 'fit',
 ): Promise<{ bytes: Uint8Array; width: number; height: number }> {
