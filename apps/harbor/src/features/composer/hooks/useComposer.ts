@@ -1,5 +1,5 @@
 import { toast } from '@/src/common/components/toast/useToast';
-import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/helpers';
+import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/loadBoundedImage';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
   hexToBytes,

@@ -1,7 +1,7 @@
 import { type ComponentProps, useState } from 'react';
 import { Avatar } from './Avatar';
 import * as ImagePicker from 'expo-image-picker';
-import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/helpers';
+import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/loadBoundedImage';
 
 type AvatarEditProps = {
   /** Avatar shown until the user picks a new image. */

@@ -1,7 +1,7 @@
 import { v2, type PolycentricClient } from '@polycentric/react-native';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import type { ImageRef } from 'expo-image';
-import { loadBoundedImage } from './helpers';
+import { loadBoundedImage } from './loadBoundedImage';
 import { isWeb } from '@/src/common/util/platform';
 import { File } from 'expo-file-system';
 import { ImageUploadError, type ImageUploadStage } from './ImageUploadError';
