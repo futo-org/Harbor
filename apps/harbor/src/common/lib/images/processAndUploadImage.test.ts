@@ -1,4 +1,5 @@
 import { processAndUploadImage } from './processAndUploadImage';
+import { ImageUploadError } from './helpers';
 
 // --- Mocks ----------------------------------------------------------------
 
@@ -235,13 +236,55 @@ describe('processAndUploadImage', () => {
     ]);
   });
 
-  it('propagates upload failures', async () => {
+  it('tags decode failures with the decode stage and keeps the cause', async () => {
+    const client = makeClient();
+    const cause = new Error('The browser cannot decode this image');
+    mockLoadAsync.mockRejectedValue(cause);
+
+    await expectStageFailure(
+      processAndUploadImage(client, 'file://in.heic', { sizes: [512] }),
+      'decode',
+      cause,
+    );
+  });
+
+  it('tags manipulator failures with the encode stage', async () => {
     mockSource(1000, 1000);
     const client = makeClient();
-    client.uploadBlob.mockRejectedValueOnce(new Error('network down'));
+    // The web manipulator rejects with a bare canvas, not an Error.
+    const cause = { tagName: 'CANVAS' };
+    mockManipulate.mockImplementation(() => {
+      throw cause;
+    });
 
-    await expect(
+    await expectStageFailure(
       processAndUploadImage(client, 'file://in.jpg', { sizes: [512] }),
-    ).rejects.toThrow('network down');
+      'encode',
+      cause,
+    );
   });
+
+  it('tags upload failures with the upload stage', async () => {
+    mockSource(1000, 1000);
+    const client = makeClient();
+    const cause = new Error('network down');
+    client.uploadBlob.mockRejectedValueOnce(cause);
+
+    await expectStageFailure(
+      processAndUploadImage(client, 'file://in.jpg', { sizes: [512] }),
+      'upload',
+      cause,
+    );
+  });
+
+  async function expectStageFailure(
+    failure: Promise<unknown>,
+    stage: ImageUploadError['stage'],
+    cause: unknown,
+  ) {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(failure).rejects.toBeInstanceOf(ImageUploadError);
+    await expect(failure).rejects.toHaveProperty('stage', stage);
+    await expect(failure).rejects.toHaveProperty('cause', cause);
+  }
 });

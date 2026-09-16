@@ -1,6 +1,9 @@
 import { toast } from '@/src/common/components/toast/useToast';
+import {
+  formatImageUploadErrorOrFallback,
+  IMAGE_PICKER_DEFAULT_OPTIONS,
+} from '@/src/common/lib/images/helpers';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
-import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/helpers';
 import {
   hexToBytes,
   truncateName,
@@ -137,22 +140,30 @@ export function useComposer({
   // Begin processing + uploading an attachment immediately, caching the
   // promise by id so `handlePost` can await the already-running work (it waits
   // here if the user hits Post before processing finishes). The attachment's
-  // `status` drives the thumbnail's loading/error overlay.
+  // `status` drives the thumbnail's loading overlay.
   const startUpload = useCallback(
     (id: string, uri: string) => {
       const work = processAndUploadImage(client, uri, POST_IMAGE_OPTIONS);
       uploadCache.set(id, work);
       work.then(
         () => setAttachmentStatus(id, 'ready'),
-        () => {
-          // Drop the failed promise so the post path can retry from scratch,
-          // and surface the failure on the thumbnail.
+        (err) => {
+          // Pick-time failure: drop the attachment and say why right away.
+          // `handlePost` runs its own `processAndUploadImage` and keeps the
+          // attachments on failure, so this only fires for freshly picked
+          // images.
           uploadCache.delete(id);
-          setAttachmentStatus(id, 'error');
+          removeAttachment(id);
+          setError(
+            formatImageUploadErrorOrFallback(
+              err,
+              "Couldn't attach this image.",
+            ),
+          );
         },
       );
     },
-    [client, setAttachmentStatus],
+    [client, setAttachmentStatus, removeAttachment, setError],
   );
 
   const handleClose = useCallback(() => {
@@ -168,6 +179,8 @@ export function useComposer({
     (assets: ImagePicker.ImagePickerAsset[]) => {
       const numAttachments = MAX_ATTACHMENTS - attachments.length;
       if (numAttachments <= 0) return;
+      // Picking again clears any prior error (permission, failed upload).
+      setError(null);
       const additions = assets.slice(0, numAttachments).map((asset, i) => ({
         id: `${Date.now()}-${i}-${asset.uri}`,
         uri: asset.uri,
@@ -179,7 +192,6 @@ export function useComposer({
       additions.forEach((a) => {
         startUpload(a.id, a.uri);
       });
-      setError(null);
     },
     [attachments.length, addAttachments, startUpload, setError],
   );
@@ -350,8 +362,12 @@ export function useComposer({
         });
     } catch (err) {
       console.error(err);
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
+      setError(
+        formatImageUploadErrorOrFallback(
+          err,
+          "Couldn't publish the post. Try again.",
+        ),
+      );
     } finally {
       setSubmitting(false);
     }

@@ -1,7 +1,11 @@
 import { v2, type PolycentricClient } from '@polycentric/react-native';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import type { ImageRef } from 'expo-image';
-import { loadBoundedImage } from './helpers';
+import {
+  ImageUploadError,
+  type ImageUploadStage,
+  loadBoundedImage,
+} from './helpers';
 import { isWeb } from '@/src/common/util/platform';
 import { File } from 'expo-file-system';
 
@@ -32,7 +36,8 @@ async function readBytes(uri: string): Promise<Uint8Array> {
 /**
  * Decode an image from `uri`, resize it into each size in `sizes` via
  * `expo-image-manipulator`, commit each variant locally and upload to the
- * client's servers, and return the assembled `ImageSet`.
+ * client's servers, and return the assembled `ImageSet`. Rejects only with
+ * `ImageUploadError`.
  */
 export async function processAndUploadImage(
   client: PolycentricClient,
@@ -44,25 +49,38 @@ export async function processAndUploadImage(
 
   // Decode once, bounded, with EXIF orientation baked into upright pixels.
   // The result is the source for every variant so we don't re-decode per size.
-  const source = await loadBoundedImage(uri);
+  const source = await runStage('decode', () => loadBoundedImage(uri));
 
-  const variants = await Promise.all(
-    sizes.map(async (size) => {
-      const { bytes, width, height } = await encodeVariant(source, size, mode);
-      const blob = await client.commitBlob(bytes, 'image/jpeg');
-      return { image: v2.Image.create({ blob, width, height }), body: bytes };
-    }),
+  const variants = await runStage('encode', () =>
+    Promise.all(sizes.map((size) => encodeVariant(source, size, mode))),
   );
 
-  await Promise.all(
-    variants.map((v) =>
-      v.image.blob
-        ? client.uploadBlob(v.image.blob, v.body)
-        : Promise.resolve(),
-    ),
-  );
+  return runStage('upload', async () => {
+    const images = await Promise.all(
+      variants.map(async ({ bytes, width, height }) => {
+        const blob = await client.commitBlob(bytes, 'image/jpeg');
+        if (blob) await client.uploadBlob(blob, bytes);
+        return v2.Image.create({ blob, width, height });
+      }),
+    );
+    return v2.ImageSet.create({ images });
+  });
+}
 
-  return v2.ImageSet.create({ images: variants.map((v) => v.image) });
+/**
+ * Run one pipeline step. Whatever it throws (Glide dumps, object URLs, a bare
+ * `<canvas>` on web) is logged and re-thrown tagged with the stage.
+ */
+async function runStage<T>(
+  stage: ImageUploadStage,
+  work: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await work();
+  } catch (cause) {
+    console.error(`processAndUploadImage: ${stage} failed`, cause);
+    throw new ImageUploadError(stage, cause);
+  }
 }
 
 /**
