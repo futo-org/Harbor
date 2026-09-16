@@ -297,8 +297,8 @@ fn get_events_from_stores(
     candidates
 }
 
-/// Return the candidate posts at partial event key along with the hints that
-/// the servers shipped with them.
+/// Return the candidate posts matching a partial event key along with the hints
+/// that the servers shipped with them.
 /// Emits serialized `GetPostResponse` proto bytes.
 pub fn get_post(
     query_client: &QueryClient<Vec<u8>>,
@@ -374,7 +374,7 @@ pub fn get_post(
               client: &Arc<Mutex<PolycentricClient>>| {
             let mut merged = merge_bundle_response::<GetPostResponse>(values, client);
 
-            // Derive final candidates from local stores so that tombstoned
+            // Derive the final candidates from local stores so that tombstoned
             // candidates are filtered out properly.
             merged.candidates = get_events_from_stores(
                 client,
