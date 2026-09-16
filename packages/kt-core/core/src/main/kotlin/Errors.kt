@@ -28,8 +28,10 @@ class UnauthorizedKeyException : PolycentricException("Current key is not author
  * Wraps UniFFI-generated `org.futo.polycentric.ffi.CoreException`.
  * This lets consumers only catch [PolycentricException].
  */
-class CoreFailureException(message: String, cause: Throwable? = null) :
-    PolycentricException(message, cause)
+class CoreFailureException(
+    message: String,
+    cause: Throwable? = null,
+) : PolycentricException(message, cause)
 
 class InvalidKeyLengthException(
     message: String,

@@ -88,7 +88,10 @@ class EventService {
         _hydrationStatus.value = status
     }
 
-    internal suspend fun emitKeyPairChanged(keyPair: StoredKeyPair?, identityKey: String? = null) {
+    internal suspend fun emitKeyPairChanged(
+        keyPair: StoredKeyPair?,
+        identityKey: String? = null,
+    ) {
         _keyPairChanged.emit(
             keyPair?.let {
                 KeyPairChangedPayload(
