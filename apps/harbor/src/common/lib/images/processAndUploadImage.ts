@@ -1,6 +1,7 @@
 import { v2, type PolycentricClient } from '@polycentric/react-native';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import { loadBoundedImage, type DecodedImage } from './helpers';
+import type { ImageRef } from 'expo-image';
+import { loadBoundedImage } from './helpers';
 import { isWeb } from '@/src/common/util/platform';
 import { File } from 'expo-file-system';
 
@@ -70,7 +71,7 @@ export async function processAndUploadImage(
  * to `size` while preserving aspect ratio (never upscaling).
  */
 async function encodeVariant(
-  source: DecodedImage,
+  source: ImageRef,
   size: number,
   mode: 'fill' | 'fit',
 ): Promise<{ bytes: Uint8Array; width: number; height: number }> {
