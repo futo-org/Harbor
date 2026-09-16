@@ -193,6 +193,10 @@ export function useComposer({
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsMultipleSelection: true,
       selectionLimit: MAX_ATTACHMENTS - attachments.length,
+      // iOS: hand over an 8-bit representation. A 10-bit HEIC hangs the native
+      // decode in `processAndUploadImage` instead of rejecting.
+      preferredAssetRepresentationMode:
+        ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
     });
     if (result.canceled || !result.assets?.length) return;
     ingestAssets(result.assets);

@@ -18,6 +18,7 @@ jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(),
   launchCameraAsync: jest.fn(),
   requestCameraPermissionsAsync: jest.fn(),
+  UIImagePickerPreferredAssetRepresentationMode: { Compatible: 'compatible' },
 }));
 
 const mockClient = {

@@ -51,6 +51,9 @@ export function useImagePicker(
         allowsEditing,
         aspect,
         quality,
+        // iOS: 8-bit representation; 10-bit HEIC hangs `processAndUploadImage`.
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       });
 
       if (result.canceled) {

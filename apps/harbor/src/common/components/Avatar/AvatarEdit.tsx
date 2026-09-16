@@ -16,7 +16,11 @@ export default function AvatarEdit({
   const [selectedUri, setSelectedUri] = useState<string>();
 
   const onPress = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync();
+    const result = await ImagePicker.launchImageLibraryAsync({
+      // iOS: 8-bit representation; 10-bit HEIC hangs `processAndUploadImage`.
+      preferredAssetRepresentationMode:
+        ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+    });
 
     if (result.canceled || !result.assets?.length) {
       return;
