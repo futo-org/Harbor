@@ -1,9 +1,12 @@
+use std::env;
+
 use sea_orm::{ConnectionTrait, Database};
 use sea_orm_migration::prelude::*;
 
 #[tokio::main]
 async fn main() {
-    let schema = std::env::var("POLYCENTRIC_MODERATION_DATABASE_SCHEMA")
+    let schema = env::var("HARBOR_MODERATION_DATABASE_SCHEMA")
+        .or_else(|_| env::var("POLYCENTRIC_MODERATION_DATABASE_SCHEMA"))
         .unwrap_or_else(|_| "moderation".to_string());
 
     cli::run_cli_with_connection(moderation_migration::Migrator, move |mut options| {
