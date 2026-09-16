@@ -4,7 +4,6 @@ import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Icon, { type IconName } from './Icon';
 import { Text } from './primitives';
-import { isWeb } from '@/src/common/util/platform';
 
 type SegmentData = {
   label: string;
@@ -26,8 +25,6 @@ export function SegmentedButton({
   style,
   ...props
 }: SegmentedButtonProps) {
-  const { theme } = useTheme();
-
   return (
     <View style={[Atoms.flex_row, Atoms.align_center, style]} {...props}>
       {segments.map(({ label, active, icon, onPress }, index) => (

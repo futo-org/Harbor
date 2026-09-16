@@ -3,7 +3,6 @@ import {
   type LinkProps,
   router,
   usePathname,
-  useRouter,
 } from 'expo-router';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import {

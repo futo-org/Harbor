@@ -1,7 +1,6 @@
 import { Button } from '@/src/common/components/primitives';
-import { TAB_BAR_HEIGHT } from '@/src/common/constants';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 type IconRenderFn = (props: {
   size: number;
