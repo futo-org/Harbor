@@ -4,25 +4,25 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 pub struct Config {
-    /// The canonical URL of this server (`POLYCENTRIC_SERVER_NAME`). Also
+    /// The canonical URL of this server (`HARBOR_SERVER_NAME`). Also
     /// stamped as the source on produced Kafka events.
     pub server_name: String,
-    /// Accepted auth token audiences (`POLYCENTRIC_ALLOW_HOSTS`, comma
+    /// Accepted auth token audiences (`HARBOR_ALLOW_HOSTS`, comma
     /// delimited). Defaults to [`Config::server_name`].
     pub allow_hosts: Vec<String>,
-    /// Postgres connection URL (`DATABASE_URL`).
+    /// Postgres connection URL (`HARBOR_DATABASE_URL`).
     pub database_url: String,
-    /// Postgres read-only connection URL (`DATABASE_URL_RO`).
+    /// Postgres read-only connection URL (`HARBOR_DATABASE_URL_RO`).
     pub ro_database_url: Option<String>,
     /// Maximum size of the Postgres connection pool
-    /// (`POLYCENTRIC_DATABASE_MAX_CONNECTIONS`).
+    /// (`HARBOR_DATABASE_MAX_CONNECTIONS`).
     pub database_max_connections: u32,
-    /// Public URL clients use to fetch blob bodies (`CDN_URL`).
+    /// Public URL clients use to fetch blob bodies (`HARBOR_CDN_URL`).
     pub cdn_url: String,
-    /// Base URL of the internal scraper service (`POLYCENTRIC_SCRAPER_URL`).
+    /// Base URL of the internal scraper service (`HARBOR_SCRAPER_URL`).
     pub scraper_url: String,
     /// Hex identity string of the trusted moderation service
-    /// (`POLYCENTRIC_MODERATION_IDENTITY`). `None` means no content labels.
+    /// (`HARBOR_MODERATION_IDENTITY`). `None` means no content labels.
     pub trusted_moderator: Option<String>,
     /// Gravity constant used in the reaction_count_decay function.
     ///
@@ -47,7 +47,7 @@ pub struct Config {
     pub dynamic_feeds_gravity_hours: usize,
     /// How often the decayed reaction counts should be updated.
     pub feed_count_update_frequency: Duration,
-    /// Test hook (`POLYCENTRIC_ALIAS_TEST_ORIGIN`): fetch every mention
+    /// Test hook (`HARBOR_ALIAS_TEST_ORIGIN`): fetch every mention
     /// alias domain's `/.well-known/polycentric.json` from this origin
     /// instead of `https://<domain>`, and allow plain HTTP. `None` in
     /// production.
@@ -60,10 +60,13 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 /// startup, after dotenv load.
 pub fn init() -> &'static Config {
     CONFIG.get_or_init(|| {
-        let server_name = std::env::var("POLYCENTRIC_SERVER_NAME")
+        let server_name = std::env::var("HARBOR_SERVER_NAME")
+            .or_else(|_| std::env::var("POLYCENTRIC_SERVER_NAME"))
             .unwrap_or_else(|_| "http://localhost:3000".to_string());
         Config {
-            allow_hosts: match std::env::var("POLYCENTRIC_ALLOW_HOSTS") {
+            allow_hosts: match std::env::var("HARBOR_ALLOW_HOSTS")
+                .or_else(|_| std::env::var("POLYCENTRIC_ALLOW_HOSTS"))
+            {
                 Ok(hosts) => hosts
                     .split(',')
                     .map(str::trim)
@@ -72,48 +75,51 @@ pub fn init() -> &'static Config {
                     .collect(),
                 Err(_) => vec![server_name.clone()],
             },
-            database_url: std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-                "postgres://postgres:testing@localhost:5432".to_string()
-            }),
-            ro_database_url: std::env::var("DATABASE_URL_RO").ok(),
-            database_max_connections: std::env::var(
-                "POLYCENTRIC_DATABASE_MAX_CONNECTIONS",
-            )
-            .ok()
-            .and_then(|s| s.trim().parse().ok())
-            .unwrap_or(100),
-            cdn_url: std::env::var("CDN_URL")
+            database_url: std::env::var("HARBOR_DATABASE_URL")
+                .or_else(|_| std::env::var("DATABASE_URL"))
+                .unwrap_or_else(|_| "postgres://postgres:testing@localhost:5432".to_string()),
+            ro_database_url: std::env::var("HARBOR_DATABASE_URL_RO")
+                .or_else(|_| std::env::var("DATABASE_URL_RO"))
+                .ok(),
+            database_max_connections: std::env::var("HARBOR_DATABASE_MAX_CONNECTIONS")
+                .or_else(|_| std::env::var("POLYCENTRIC_DATABASE_MAX_CONNECTIONS"))
+                .ok()
+                .and_then(|s| s.trim().parse().ok())
+                .unwrap_or(100),
+            cdn_url: std::env::var("HARBOR_CDN_URL")
+                .or_else(|_| std::env::var("CDN_URL"))
                 .unwrap_or_else(|_| "http://localhost:3000".to_string()),
-            scraper_url: std::env::var("POLYCENTRIC_SCRAPER_URL")
+            scraper_url: std::env::var("HARBOR_SCRAPER_URL")
+                .or_else(|_| std::env::var("POLYCENTRIC_SCRAPER_URL"))
                 .unwrap_or_else(|_| "http://localhost:8855".to_string()),
-            trusted_moderator: std::env::var("POLYCENTRIC_MODERATION_IDENTITY")
+            trusted_moderator: std::env::var("HARBOR_MODERATION_IDENTITY")
+                .or_else(|_| std::env::var("POLYCENTRIC_MODERATION_IDENTITY"))
                 .ok()
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),
-            feeds_gravity: std::env::var("POLYCENTRIC_FEEDS_GRAVITY")
+            feeds_gravity: std::env::var("HARBOR_FEEDS_GRAVITY")
+                .or_else(|_| std::env::var("POLYCENTRIC_FEEDS_GRAVITY"))
                 .ok()
                 .and_then(|s| s.trim().parse().ok()),
-            dynamic_feeds_gravity_per_reaction: std::env::var(
-                "POLYCENTRIC_FEEDS_GRAVITY_PER_REACTION",
-            )
-            .ok()
-            .and_then(|s| s.trim().parse().ok())
-            .unwrap_or(0.0005),
-            dynamic_feeds_gravity_hours: std::env::var(
-                "POLYCENTRIC_FEEDS_GRAVITY_HOURS",
-            )
-            .ok()
-            .and_then(|s| s.trim().parse().ok())
-            .unwrap_or(24),
+            dynamic_feeds_gravity_per_reaction: std::env::var("HARBOR_FEEDS_GRAVITY_PER_REACTION")
+                .or_else(|_| std::env::var("POLYCENTRIC_FEEDS_GRAVITY_PER_REACTION"))
+                .ok()
+                .and_then(|s| s.trim().parse().ok())
+                .unwrap_or(0.0005),
+            dynamic_feeds_gravity_hours: std::env::var("HARBOR_FEEDS_GRAVITY_HOURS")
+                .or_else(|_| std::env::var("POLYCENTRIC_FEEDS_GRAVITY_HOURS"))
+                .ok()
+                .and_then(|s| s.trim().parse().ok())
+                .unwrap_or(24),
             feed_count_update_frequency: Duration::from_secs(
-                std::env::var(
-                    "POLYCENTRIC_FEEDS_GRAVITY_COUNTS_UPDATE_FREQUENCY_SECS",
-                )
+                std::env::var("HARBOR_FEEDS_GRAVITY_COUNTS_UPDATE_FREQUENCY_SECS")
+                .or_else(|_| std::env::var("POLYCENTRIC_FEEDS_GRAVITY_COUNTS_UPDATE_FREQUENCY_SECS"))
                 .ok()
                 .and_then(|s| s.trim().parse().ok())
                 .unwrap_or(5 * 60), // 5 minutes (as seconds).
             ),
-            alias_test_origin: std::env::var("POLYCENTRIC_ALIAS_TEST_ORIGIN")
+            alias_test_origin: std::env::var("HARBOR_ALIAS_TEST_ORIGIN")
+                .or_else(|_| std::env::var("POLYCENTRIC_ALIAS_TEST_ORIGIN"))
                 .ok()
                 .map(|s| s.trim().trim_end_matches('/').to_string())
                 .filter(|s| !s.is_empty()),
