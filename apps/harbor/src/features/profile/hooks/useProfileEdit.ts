@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from '@/src/common/components/toast/useToast';
-import { formatImageUploadErrorOrFallback } from '@/src/common/lib/images/helpers';
 import { resolveAlias, type v2 } from '@polycentric/react-native';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { publishProfileUpdate } from '../lib/publishProfileUpdate';
 import { profileQueryKey } from './useProfile';
+import { formatImageUploadErrorOrFallback } from '@/src/common/lib/images/ImageUploadError';
 
 interface ProfileRef {
   description: string | null;

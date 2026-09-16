@@ -4,10 +4,10 @@ import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
 import { Keyboard } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ImageUploadError } from '@/src/common/lib/images/helpers';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import { useComposer } from './useComposer';
 import { useComposerStore } from './useComposerStore';
+import { ImageUploadError } from '@/src/common/lib/images/ImageUploadError';
 
 // --- Mocks ----------------------------------------------------------------
 

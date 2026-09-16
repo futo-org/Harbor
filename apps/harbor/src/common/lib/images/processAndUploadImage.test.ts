@@ -1,5 +1,5 @@
 import { processAndUploadImage } from './processAndUploadImage';
-import { ImageUploadError } from './helpers';
+import { ImageUploadError } from './ImageUploadError';
 
 // --- Mocks ----------------------------------------------------------------
 

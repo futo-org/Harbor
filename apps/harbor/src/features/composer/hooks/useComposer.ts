@@ -1,8 +1,5 @@
 import { toast } from '@/src/common/components/toast/useToast';
-import {
-  formatImageUploadErrorOrFallback,
-  IMAGE_PICKER_DEFAULT_OPTIONS,
-} from '@/src/common/lib/images/helpers';
+import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/helpers';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
   hexToBytes,
@@ -27,6 +24,7 @@ import { Keyboard } from 'react-native';
 import { useComposerStore } from './useComposerStore';
 import { rewriteIdentityMentions } from '../utils/rewriteIdentityMentions';
 import { useLinkPreview } from './useLinkPreview';
+import { formatImageUploadErrorOrFallback } from '@/src/common/lib/images/ImageUploadError';
 
 export const MAX_ATTACHMENTS = 4;
 export const MAX_POST_LENGTH = 2000;
