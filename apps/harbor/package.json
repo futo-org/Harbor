@@ -9,6 +9,8 @@
     "ios": "APP_VARIANT=dev expo run:ios --device",
     "ios:e2e": "npx eas-cli env:exec staging 'APP_VARIANT=dev expo run:ios --configuration Release --device'",
     "ios:simulator": "APP_VARIANT=dev expo run:ios",
+    "ios:release": "XCODE_XCCONFIG_FILE=$PWD/ios-simulator.xcconfig APP_VARIANT=dev expo run:ios --configuration Release --no-bundler",
+    "android:release": "APP_VARIANT=dev expo run:android --variant release --no-bundler",
     "android:prod": "expo run:android",
     "ios:prod": "expo run:ios",
     "web": "expo start --web",
@@ -109,6 +111,11 @@
   "expo": {
     "install": {
       "exclude": ["@shopify/flash-list"]
+    },
+    "autolinking": {
+      "ios": {
+        "exclude": ["react-native-vision-camera-barcode-scanner"]
+      }
     }
   },
   "jest-junit": {

@@ -1,4 +1,5 @@
 import { toast } from '@/src/common/components/toast/useToast';
+import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/loadBoundedImage';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
   hexToBytes,
@@ -23,6 +24,10 @@ import { Keyboard } from 'react-native';
 import { useComposerStore } from './useComposerStore';
 import { rewriteIdentityMentions } from '../utils/rewriteIdentityMentions';
 import { useLinkPreview } from './useLinkPreview';
+import {
+  ImageUploadError,
+  formatImageUploadErrorOrFallback,
+} from '@/src/common/lib/images/ImageUploadError';
 
 export const MAX_ATTACHMENTS = 4;
 export const MAX_POST_LENGTH = 2000;
@@ -143,15 +148,30 @@ export function useComposer({
       uploadCache.set(id, work);
       work.then(
         () => setAttachmentStatus(id, 'ready'),
-        () => {
-          // Drop the failed promise so the post path can retry from scratch,
-          // and surface the failure on the thumbnail.
+        (err) => {
+          // Drop the failed promise so the post path can retry from scratch.
           uploadCache.delete(id);
-          setAttachmentStatus(id, 'error');
+          if (err instanceof ImageUploadError && err.stage === 'upload') {
+            // A failed upload may be transient: keep the attachment, flag the
+            // thumbnail, and let `handlePost` retry it. Rarely reached: the
+            // client's `uploadBlob` swallows server errors and the blob is
+            // re-sent on the next sync, so this only fires when the local
+            // blob commit itself fails.
+            setAttachmentStatus(id, 'error');
+          } else {
+            // The image itself can't be processed: drop it and say why.
+            removeAttachment(id);
+            setError(
+              formatImageUploadErrorOrFallback(
+                err,
+                "Couldn't attach this image.",
+              ),
+            );
+          }
         },
       );
     },
-    [client, setAttachmentStatus],
+    [client, setAttachmentStatus, removeAttachment, setError],
   );
 
   const handleClose = useCallback(() => {
@@ -167,6 +187,8 @@ export function useComposer({
     (assets: ImagePicker.ImagePickerAsset[]) => {
       const numAttachments = MAX_ATTACHMENTS - attachments.length;
       if (numAttachments <= 0) return;
+      // Picking again clears any prior error (permission, failed upload).
+      setError(null);
       const additions = assets.slice(0, numAttachments).map((asset, i) => ({
         id: `${Date.now()}-${i}-${asset.uri}`,
         uri: asset.uri,
@@ -178,7 +200,6 @@ export function useComposer({
       additions.forEach((a) => {
         startUpload(a.id, a.uri);
       });
-      setError(null);
     },
     [attachments.length, addAttachments, startUpload, setError],
   );
@@ -193,6 +214,7 @@ export function useComposer({
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsMultipleSelection: true,
       selectionLimit: MAX_ATTACHMENTS - attachments.length,
+      ...IMAGE_PICKER_DEFAULT_OPTIONS,
     });
     if (result.canceled || !result.assets?.length) return;
     ingestAssets(result.assets);
@@ -348,8 +370,12 @@ export function useComposer({
         });
     } catch (err) {
       console.error(err);
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
+      setError(
+        formatImageUploadErrorOrFallback(
+          err,
+          "Couldn't publish the post. Try again.",
+        ),
+      );
     } finally {
       setSubmitting(false);
     }

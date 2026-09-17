@@ -4,7 +4,7 @@ jest.mock('@polycentric/react-native', () => ({
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   invalidateQuery: jest.fn(),
 }));
-jest.mock('../../../common/lib/polycentric-hooks/PolycentricProvider', () => ({
+jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   usePolycentric: () => ({}),
 }));
 jest.mock('../lib/publishProfileUpdate', () => ({

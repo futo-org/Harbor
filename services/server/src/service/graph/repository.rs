@@ -9,7 +9,6 @@ use sea_query::{
     PgFunc, SelectStatement, UnionType, WithClause,
 };
 use std::collections::HashSet;
-use std::sync::Arc;
 use tonic::Status;
 
 use crate::data::EventWithContentRow;
@@ -118,13 +117,11 @@ impl Query {
     pub async fn blocked_set(
         ctx: &ServiceContext,
         identity: &str,
-    ) -> Result<Arc<HashSet<String>>, Status> {
-        Ok(Arc::new(
-            Self::list_blocked_identities(ctx, identity)
-                .await?
-                .into_iter()
-                .collect(),
-        ))
+    ) -> Result<HashSet<String>, Status> {
+        Ok(Self::list_blocked_identities(ctx, identity)
+            .await?
+            .into_iter()
+            .collect())
     }
 
     /// [`Query::blocked_set`] for the caller of a request. Empty when the
@@ -132,10 +129,10 @@ impl Query {
     /// blocks could apply.
     pub async fn blocked_set_for_caller(
         ctx: &RequestContext<'_>,
-    ) -> Result<Arc<HashSet<String>>, Status> {
+    ) -> Result<HashSet<String>, Status> {
         match ctx.caller {
             Some(caller) => Self::blocked_set(ctx.service, caller).await,
-            None => Ok(Arc::new(HashSet::new())),
+            None => Ok(HashSet::new()),
         }
     }
 
@@ -240,7 +237,7 @@ impl Query {
         db: &DbConn,
         identity: &str,
         limit: u32,
-        cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
+        cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let query =
             follow_events_query().filter(event::Column::Identity.eq(identity));
@@ -253,7 +250,7 @@ impl Query {
         db: &DbConn,
         identity: &str,
         limit: u32,
-        cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
+        cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let query = follow_events_query()
             .filter(content_follow::Column::IdentityId.eq(identity));
@@ -265,7 +262,7 @@ impl Query {
     pub async fn suggest_follow(
         db: &DbConn,
         identity: Option<&str>,
-        cursor_filter: Option<&CursorFilter<FollowSuggestionsSortedBy>>,
+        cursor_filter: &CursorFilter<FollowSuggestionsSortedBy>,
         limit: u32,
     ) -> Result<Vec<FollowSuggestionEvent>, DbErr> {
         let suggestions = match identity {
@@ -365,11 +362,9 @@ impl Query {
     async fn page_suggestions(
         db: &DbConn,
         suggestions: SelectStatement,
-        cursor_filter: Option<&CursorFilter<FollowSuggestionsSortedBy>>,
+        cursor_filter: &CursorFilter<FollowSuggestionsSortedBy>,
         limit: u32,
     ) -> Result<Vec<FollowSuggestionEvent>, DbErr> {
-        let cursor_filter =
-            cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
         const SUGGESTIONS_TABLE: &str = "suggestions";
 
         // The latest identitiy events based on the follow suggestions.
@@ -599,11 +594,8 @@ async fn page_follow_events(
     db: &DbConn,
     query: SelectTwo<event::Entity, content::Entity>,
     limit: u32,
-    cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
+    cursor_filter: &CursorFilter<EventCreatedAt>,
 ) -> Result<Vec<EventWithContentRow>, DbErr> {
-    let cursor_filter =
-        cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
-
     let mut sea_cursor =
         query.cursor_by((event::Column::CreatedAt, event::Column::Id));
     sea_cursor.desc();
@@ -787,7 +779,7 @@ mod tests {
 
         let blocked = Query::blocked_set(&ctx, "alice").await.unwrap();
         assert_eq!(
-            *blocked,
+            blocked,
             HashSet::from(["bob".to_string(), "carol".to_string()])
         );
     }
@@ -850,7 +842,8 @@ mod tests {
             ]])
             .into_connection();
 
-        let rows = Query::list_followers_events(&db, "target", 10, None)
+        let cursor = CursorFilter::default();
+        let rows = Query::list_followers_events(&db, "target", 10, &cursor)
             .await
             .unwrap();
         let identities: Vec<&str> =
@@ -867,7 +860,7 @@ mod tests {
             &db,
             "alice",
             10,
-            Some(&CursorFilter::Forward(Cursor::End)),
+            &CursorFilter::Forward(Cursor::End),
         )
         .await
         .unwrap();
@@ -882,7 +875,7 @@ mod tests {
             &db,
             "alice",
             10,
-            Some(&CursorFilter::Backward(Cursor::Start)),
+            &CursorFilter::Backward(Cursor::Start),
         )
         .await
         .unwrap();

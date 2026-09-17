@@ -1,9 +1,13 @@
 import { processAndUploadImage } from './processAndUploadImage';
+import { ImageUploadError } from './ImageUploadError';
 
 // --- Mocks ----------------------------------------------------------------
 
-// Force the native (expo-file-system) byte-reading path.
-jest.mock('@/src/common/util/platform', () => ({ isWeb: false }));
+// Force the native (expo-file-system) byte-reading path, on Android.
+jest.mock('@/src/common/util/platform', () => ({
+  isWeb: false,
+  isAndroid: true,
+}));
 
 // Minimal protobuf factories: just echo the input so we can assert shapes.
 jest.mock('@polycentric/react-native', () => ({
@@ -21,6 +25,13 @@ jest.mock('expo-file-system', () => ({
   })),
 }));
 
+// `expo-image` mock: `Image.loadAsync(uri, bounds)` is the bounded decode step
+// and resolves to the source ref installed by `mockSource`.
+const mockLoadAsync = jest.fn();
+jest.mock('expo-image', () => ({
+  Image: { loadAsync: (...args: unknown[]) => mockLoadAsync(...args) },
+}));
+
 // `expo-image-manipulator` mock. `mockManipulate(source)` returns a chainable
 // context that records crop/resize; `renderAsync()` resolves to an image ref
 // whose dimensions reflect the recorded ops, and whose `saveAsync()` echoes
@@ -36,11 +47,13 @@ jest.mock('expo-image-manipulator', () => ({
 // --- Helpers --------------------------------------------------------------
 
 /**
- * Install the manipulator mock for a source of `srcWidth`x`srcHeight`.
- * Records the crop/resize on each created context and computes the resulting
- * dimensions the same way the real native module would.
+ * Install the decode + manipulator mocks for a source of `srcWidth`x`srcHeight`
+ * and return the decoded ref. Each manipulator context records its crop/resize
+ * and computes the resulting dimensions the same way the real module would.
  */
 function mockSource(srcWidth: number, srcHeight: number) {
+  const sourceRef = { width: srcWidth, height: srcHeight };
+  mockLoadAsync.mockResolvedValue(sourceRef);
   mockManipulate.mockImplementation(() => {
     let crop: { width: number; height: number } | null = null;
     let resize: { width?: number; height?: number } | null = null;
@@ -82,6 +95,7 @@ function mockSource(srcWidth: number, srcHeight: number) {
     };
     return context;
   });
+  return sourceRef;
 }
 
 function makeClient() {
@@ -95,6 +109,7 @@ function makeClient() {
 }
 
 beforeEach(() => {
+  mockLoadAsync.mockReset();
   mockManipulate.mockReset();
 });
 
@@ -164,8 +179,8 @@ describe('processAndUploadImage', () => {
     mockSource(4000, 3000);
     const client = makeClient();
 
-    // The decode context is created first, then one per variant. Capture the
-    // variant context to inspect its crop/resize calls.
+    // One manipulator context per variant. Capture it to inspect its
+    // crop/resize calls.
     const result = await processAndUploadImage(client, 'file://in.jpg', {
       mode: 'fill',
       sizes: [128],
@@ -175,8 +190,8 @@ describe('processAndUploadImage', () => {
     expect(result.images[0].width).toBe(128);
     expect(result.images[0].height).toBe(128);
 
-    // The variant context (2nd mockManipulate call) was center-cropped to 3000² .
-    const variantContext = mockManipulate.mock.results[1].value;
+    // The variant context was center-cropped to 3000².
+    const variantContext = mockManipulate.mock.results[0].value;
     expect(variantContext.crop).toHaveBeenCalledWith({
       originX: 500, // (4000 - 3000) / 2
       originY: 0,
@@ -189,8 +204,8 @@ describe('processAndUploadImage', () => {
     });
   });
 
-  it('decodes the source once and reuses it for every variant', async () => {
-    mockSource(4000, 3000);
+  it('decodes the source once, bounded, and reuses it for every variant', async () => {
+    const sourceRef = mockSource(4000, 3000);
     const client = makeClient();
 
     await processAndUploadImage(client, 'file://in.jpg', {
@@ -198,10 +213,35 @@ describe('processAndUploadImage', () => {
       sizes: [512, 1280],
     });
 
-    // 1 decode + 2 variants = 3 mockManipulate() calls.
-    expect(mockManipulate).toHaveBeenCalledTimes(3);
-    // First call is the decode (by uri); later calls reuse the decoded ref.
-    expect(mockManipulate.mock.calls[0][0]).toBe('file://in.jpg');
+    // The only decode is the bounded one; the original uri never reaches the
+    // manipulator.
+    expect(mockLoadAsync).toHaveBeenCalledTimes(1);
+    expect(mockLoadAsync).toHaveBeenCalledWith('file://in.jpg', {
+      maxWidth: 2048,
+      maxHeight: 2048,
+    });
+    expect(mockManipulate).toHaveBeenCalledTimes(2);
+    for (const call of mockManipulate.mock.calls) {
+      expect(call[0]).toBe(sourceRef);
+    }
+  });
+
+  it('re-decodes an animated source through the manipulator (first frame)', async () => {
+    const sourceRef = mockSource(600, 1300);
+    Object.assign(sourceRef, { isAnimated: true });
+    const client = makeClient();
+
+    const result = await processAndUploadImage(client, 'file://in.gif', {
+      mode: 'fit',
+      sizes: [512],
+    });
+
+    // The bounded ref is animated, so the manipulator decodes the uri itself
+    // and every variant is cut from that render, never from the animated ref.
+    expect(mockManipulate.mock.calls[0][0]).toBe('file://in.gif');
+    expect(mockManipulate).toHaveBeenCalledTimes(2);
+    expect(mockManipulate.mock.calls[1][0]).not.toBe(sourceRef);
+    expect(result.images[0].height).toBe(512);
   });
 
   it('defaults to fill mode and the default variant sizes', async () => {
@@ -217,13 +257,66 @@ describe('processAndUploadImage', () => {
     ]);
   });
 
-  it('propagates upload failures', async () => {
-    mockSource(1000, 1000);
+  it('rejects variant sizes above the decode bound before doing any work', async () => {
+    mockSource(4000, 3000);
     const client = makeClient();
-    client.uploadBlob.mockRejectedValueOnce(new Error('network down'));
 
     await expect(
-      processAndUploadImage(client, 'file://in.jpg', { sizes: [512] }),
-    ).rejects.toThrow('network down');
+      processAndUploadImage(client, 'file://in.jpg', { sizes: [512, 4096] }),
+    ).rejects.toThrow('at most 2048px');
+    expect(mockLoadAsync).not.toHaveBeenCalled();
+    expect(client.commitBlob).not.toHaveBeenCalled();
   });
+
+  it('tags decode failures with the decode stage and keeps the cause', async () => {
+    const client = makeClient();
+    const cause = new Error('The browser cannot decode this image');
+    mockLoadAsync.mockRejectedValue(cause);
+
+    await expectStageFailure(
+      processAndUploadImage(client, 'file://in.heic', { sizes: [512] }),
+      'decode',
+      cause,
+    );
+  });
+
+  it('tags manipulator failures with the encode stage', async () => {
+    mockSource(1000, 1000);
+    const client = makeClient();
+    // The web manipulator rejects with a bare canvas, not an Error.
+    const cause = { tagName: 'CANVAS' };
+    mockManipulate.mockImplementation(() => {
+      throw cause;
+    });
+
+    await expectStageFailure(
+      processAndUploadImage(client, 'file://in.jpg', { sizes: [512] }),
+      'encode',
+      cause,
+    );
+  });
+
+  it('tags upload failures with the upload stage', async () => {
+    mockSource(1000, 1000);
+    const client = makeClient();
+    const cause = new Error('network down');
+    client.uploadBlob.mockRejectedValueOnce(cause);
+
+    await expectStageFailure(
+      processAndUploadImage(client, 'file://in.jpg', { sizes: [512] }),
+      'upload',
+      cause,
+    );
+  });
+
+  async function expectStageFailure(
+    failure: Promise<unknown>,
+    stage: ImageUploadError['stage'],
+    cause: unknown,
+  ) {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(failure).rejects.toBeInstanceOf(ImageUploadError);
+    await expect(failure).rejects.toHaveProperty('stage', stage);
+    await expect(failure).rejects.toHaveProperty('cause', cause);
+  }
 });

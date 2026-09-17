@@ -8,6 +8,7 @@ import {
   encodeObject,
   getCallbackForPlatform,
   httpResponseToError,
+  OAUTH_CALLBACK_DOMAIN,
 } from '../utility.js';
 import { OAuthVerifier } from '../verifier.js';
 
@@ -28,6 +29,13 @@ export type XOAuthURLResult = {
   secret: string;
 };
 
+const X_API_KEY =
+  process.env.HARBOR_VERIFIER_BOT_X_API_KEY ??
+  process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY;
+const X_API_SECRET =
+  process.env.HARBOR_VERIFIER_BOT_X_API_SECRET ??
+  process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET;
+
 class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
   constructor() {
     super('X');
@@ -35,17 +43,17 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
 
   public async getOAuthURL(): Promise<Result<XOAuthURLResult>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      X_API_KEY === undefined ||
+      X_API_SECRET === undefined ||
+      OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
 
     try {
       const client = new TwitterApi({
-        appKey: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY,
-        appSecret: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET,
+        appKey: X_API_KEY,
+        appSecret: X_API_SECRET,
       });
 
       const callbackUrl = getCallbackForPlatform(this.platform);
@@ -81,10 +89,7 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
   public async getToken(
     data: XOAuthCallbackData,
   ): Promise<Result<TokenResponse>> {
-    if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET === undefined
-    ) {
+    if (X_API_KEY === undefined || X_API_SECRET === undefined) {
       return Result.errMsg('Verifier not configured');
     }
 
@@ -97,8 +102,8 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
 
     try {
       const client = new TwitterApi({
-        appKey: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY!,
-        appSecret: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET!,
+        appKey: X_API_KEY!,
+        appSecret: X_API_SECRET!,
         accessToken: data.oauth_token,
         accessSecret: data.secret,
       });
@@ -133,10 +138,7 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
     challengeResponseUrlEncodedBase64: string,
     claimFields: ClaimField[],
   ): Promise<Result<void>> {
-    if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET === undefined
-    ) {
+    if (X_API_KEY === undefined || X_API_SECRET === undefined) {
       return Result.errMsg('Verifier not configured: Missing X credentials');
     }
 
@@ -168,8 +170,8 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
     const id = claimFields[0].value;
 
     const client = new TwitterApi({
-      appKey: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY!,
-      appSecret: process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET!,
+      appKey: X_API_KEY!,
+      appSecret: X_API_SECRET!,
       accessToken: payload.token,
       accessSecret: payload.secret,
     });
@@ -205,10 +207,7 @@ class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
   }
 
   public async healthCheck(): Promise<Result<void>> {
-    if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET === undefined
-    ) {
+    if (X_API_KEY === undefined || X_API_SECRET === undefined) {
       return Result.errMsg('Verifier not configured: Missing X credentials');
     }
 
