@@ -61,7 +61,7 @@ async fn list_page(
     db: &DbConn,
     params: &Params,
     limit: u32,
-    cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
+    cursor_filter: &CursorFilter<EventCreatedAt>,
 ) -> Result<Vec<EventWithContentRow>, sea_orm::DbErr> {
     match params.direction {
         Direction::Following => {
@@ -93,14 +93,14 @@ async fn fetch(
         &ctx.ro_db,
         params,
         params.pagination.limit + 1, // Check for next page
-        params.pagination.cursor_filter.as_ref(),
+        &params.pagination.cursor_filter,
     )
     .await
     .map_err(map_db_err)?;
 
     let page_info = pipeline::finalize_fetch(
         &mut rows,
-        params.pagination.cursor_filter.as_ref(),
+        &params.pagination.cursor_filter,
         params.pagination.limit,
         feeds_pipeline::create_event_created_at_marker,
     );
