@@ -808,6 +808,106 @@ async fn search_posts_pagination_order_by_rank() {
 }
 
 #[tokio::test]
+async fn search_posts_pagination_order_by_top() {
+    let mut search = search_service().await;
+    let query = random_string();
+    let mut clients = Vec::new();
+    let mut expected = Vec::new();
+    let mut post_event_keys = Vec::new();
+    for n in 1..=3 {
+        let mut client = TestClient::new().await;
+        let text = format!("{n}. {query}.");
+        client.post_text(&text, DEFAULT_CREATED_AT + n);
+        post_event_keys.push(client.get_last_event_key());
+        expected.push(Post {
+            text,
+            reply: None,
+            images: vec![],
+            quote: None,
+            links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
+        });
+        clients.push(client);
+    }
+    for (n, mut client) in clients.into_iter().enumerate() {
+        for post in &post_event_keys[..n + 1] {
+            client.thumbs_up(post.clone(), 0);
+        }
+        client.submit_events().await;
+    }
+
+    // Forward.
+    let mut page_info: Option<PageInfo> = None;
+    let mut expected_iter = expected.clone().into_iter();
+    while let Some(expected) = expected_iter.next() {
+        expect_searched_posts2(
+            SearchPostsRequest {
+                query: query.clone(),
+                sort_by: Some(SortPostsBy::Top as _),
+                page_params: Some(PageParams {
+                    limit: Some(1),
+                    backward_token: None,
+                    forward_token: page_info.take().map(|i| i.end_cursor),
+                }),
+                omit_labels: Vec::new(),
+            },
+            vec![expected],
+            |request| async {
+                let SearchPostsResponse {
+                    results,
+                    page_info: p_i,
+                    ..
+                } = search.search_posts(request).await.unwrap().into_inner();
+                page_info = p_i;
+                results
+            },
+        )
+        .await;
+
+        let page_info = page_info.as_ref().unwrap();
+        assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
+        assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
+    }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
+
+    // Backward.
+    expected.reverse();
+    let mut expected_iter = expected.clone().into_iter();
+    let _ = expected_iter.next(); // Skip first (previously last) result.
+    while let Some(expected) = expected_iter.next() {
+        expect_searched_posts2(
+            SearchPostsRequest {
+                query: query.clone(),
+                sort_by: Some(SortPostsBy::Top as _),
+                page_params: Some(PageParams {
+                    limit: Some(1),
+                    backward_token: page_info.take().map(|i| i.start_cursor),
+                    forward_token: None,
+                }),
+                omit_labels: Vec::new(),
+            },
+            vec![expected],
+            |request| async {
+                let SearchPostsResponse {
+                    results,
+                    page_info: p_i,
+                    ..
+                } = search.search_posts(request).await.unwrap().into_inner();
+                page_info = p_i;
+                results
+            },
+        )
+        .await;
+
+        let page_info = page_info.as_ref().unwrap();
+        assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
+        assert_eq!(page_info.has_next_page, true);
+    }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
+}
+
+#[tokio::test]
 async fn search_posts_pagination_order_by_latest() {
     let mut search = search_service().await;
     let mut client = TestClient::new().await;
