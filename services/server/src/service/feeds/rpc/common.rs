@@ -21,7 +21,7 @@ use tonic::Status;
 /// Common feed parameters needed for shared pagination logic in `finalize_fetch()`.
 pub struct Params<SortedBy = EventCreatedAt> {
     pub limit: u64,
-    pub cursor_filter: Option<CursorFilter<SortedBy>>,
+    pub cursor_filter: CursorFilter<SortedBy>,
     pub omit_labels: Vec<String>,
 }
 
@@ -70,7 +70,7 @@ pub fn finalize_fetch(
 ) -> Fetched {
     let page_info = pipeline::finalize_fetch(
         &mut rows,
-        params.cursor_filter.as_ref(),
+        &params.cursor_filter,
         params.limit as u32,
         create_event_created_at_marker,
     );
