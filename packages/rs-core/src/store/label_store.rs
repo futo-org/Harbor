@@ -15,21 +15,14 @@ impl LabelStore {
 
     /// Record a label event `label` targeting the event `target`.
     pub fn insert(&mut self, target: EventKey, label: &EventKey) {
-        match self.by_target.get_mut(&target) {
-            Some(labels) => {
-                if !labels.contains(label) {
-                    labels.insert(label.clone());
-                }
-            }
-            None => {
-                self.by_target
-                    .insert(target, BTreeSet::from([label.clone()]));
-            }
+        let labels = self.by_target.entry(target).or_default();
+        if !labels.contains(label) {
+            labels.insert(label.clone());
         }
     }
 
     /// Get the event keys of any known label events targeting `target`.
-    pub fn get(&self, target: &EventKey) -> impl Iterator<Item = &EventKey> + use<'_> {
+    pub fn get(&self, target: &EventKey) -> impl Iterator<Item = &EventKey> {
         self.by_target.get(target).into_iter().flatten()
     }
 }
