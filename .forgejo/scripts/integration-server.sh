@@ -148,7 +148,7 @@ if [ "$CI_MODE" = true ]; then
   docker network connect "$NETWORK" "$(self_container)"
 
   echo "==> Starting server and workers…"
-  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   # The mention integration test serves the alias document from a mock server
   # in this job container; the workers reach it over the stack network (see
   # ALIAS_MOCK_PORT in services/server/tests/src/notifications.rs).
@@ -210,7 +210,7 @@ else
   echo "    migrations applied"
 
   echo "==> Starting server…"
-  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   export RUST_LOG="${RUST_LOG:-info}"
   export DATABASE_URL="${DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
   export CONTENT_BLOB_OS_BUCKET="${CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}"
