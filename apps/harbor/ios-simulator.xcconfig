@@ -1,5 +1,5 @@
-// Applied to every target of local simulator builds through XCODE_XCCONFIG_FILE
-// (see the ios:simulator script in package.json).
+// Applied to every target of Release simulator builds through XCODE_XCCONFIG_FILE
+// (see the ios:release script in package.json).
 //
 // Release builds default to ONLY_ACTIVE_ARCH = NO and would also build x86_64
 // for the simulator, but the Rust core xcframework ships only arm64 slices and
