@@ -71,7 +71,7 @@ decodes with its own generated types — same contract js-core uses.
 | `crypto/server-jwt.ts` | `ServerJwt.kt` | **ported** — the `AuthTokenProvider` registered in the client constructor mints an EdDSA JWT per server; tokens cleared on identity switch |
 | `utils/moderation.ts` | `Moderation.kt` | **ported** (`decodeStatusByServer`/`encodeStatusByServer`; `setBanStatus` on the client, `isModerator`/`isBanned`/`listBans` in `Queries.kt`) |
 | `client-internal/event-service.ts` | `EventService.kt` | **ported** (StateFlow for state/progress/hydration, SharedFlow for content-created/keypair/errors; named `client.eventService` since `client.events` is the event repository here) |
-| `errors.ts` | `Errors.kt` | **ported** (WrapperError family → PolycentricException hierarchy; WasmError has no analogue — CoreException covers FFI failures) |
+| `errors.ts` | `Errors.kt` | **ported** (WrapperError family → PolycentricException hierarchy; WasmError has no analogue — rs-core's UniFFI `CoreException` is folded into `CoreFailureException` (a `PolycentricException`) at every FFI call site via `coreCall`, and `CoreQueryException` extends `PolycentricException`; consumers only catch `PolycentricException`) |
 | — (apps call core.fetchQuery) | `Queries.kt` | typed one-shot wrappers for all 16 non-ListEvents Query variants (incl. the moderation trio) with response decoding |
 | `platform-interfaces/*` | `PlatformInterfaces.kt` | done |
 | `js-storage-sqlite` (DrizzleStorageDriver) | `SqliteStorageDriver.kt` + repos | **ported** — same schema (events/content/keys/active_identity_for_key), no-op ack repo, raw `SQLiteOpenHelper` (no extra deps); heads query uses a correlated MAX() subquery instead of a window function (SQLite on minSdk 24 predates window fns) |

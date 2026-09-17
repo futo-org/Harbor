@@ -79,6 +79,7 @@ export function startHealthCheckLoop(
 /** Interval from the environment; 0 disables the loop. */
 export function healthCheckIntervalMs(): number {
   const raw =
+    process.env.HARBOR_VERIFIER_BOT_HEALTH_CHECK_INTERVAL_SECONDS ??
     process.env.POLYCENTRIC_VERIFIER_BOT_HEALTH_CHECK_INTERVAL_SECONDS;
   const seconds = raw === undefined || raw === '' ? NaN : Number(raw);
   if (!Number.isFinite(seconds) || seconds < 0) {
