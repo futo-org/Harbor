@@ -7,17 +7,10 @@ import {
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import {
-  type TargetBarcodeFormat,
-  useBarcodeScannerOutput,
-} from 'react-native-vision-camera-barcode-scanner';
 import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
+import { useQrCodeOutput } from './useQrCodeOutput';
 import { decodePairingCode, EncodingMode } from '../pairingCode';
-
-// Stable reference for the barcode formats array to prevent
-// the scanner from being destroyed and recreated extra times.
-const BARCODE_FORMATS: TargetBarcodeFormat[] = ['qr-code'];
 
 export const PairIdentityCamera: PairIdentityCameraComponent = ({
   onCodeScanned,
@@ -29,20 +22,16 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
   const { theme } = useTheme();
   const scannedRef = useRef(false);
 
-  const barcodeOutput = useBarcodeScannerOutput({
-    barcodeFormats: BARCODE_FORMATS,
-    onBarcodeScanned: (barcodes) => {
+  const qrCodeOutput = useQrCodeOutput(
+    (value) => {
       if (scannedRef.current) return;
-
-      const value = barcodes.find((barcode) => barcode.rawValue)?.rawValue;
-      if (!value) return;
 
       scannedRef.current = true;
       const info = decodePairingCode(value, EncodingMode.BASE64) ?? null;
       onCodeScanned(info);
     },
-    onError: () => setCameraEnabled(false),
-  });
+    () => setCameraEnabled(false),
+  );
 
   useEffect(() => {
     if (!hasPermission && cameraEnabled) {
@@ -79,7 +68,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
             <Camera
               device={device}
               isActive={true}
-              outputs={[barcodeOutput]}
+              outputs={[qrCodeOutput]}
               style={{ flex: 1 }}
             />
           </View>
