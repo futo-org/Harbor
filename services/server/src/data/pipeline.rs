@@ -96,7 +96,7 @@ where
         Cursor::Start
     } else {
         match rows.first() {
-            Some(row) => Cursor::Mid(row_to_marker(&row)),
+            Some(row) => Cursor::Mid(row_to_marker(row)),
             None => match cursor_filter {
                 // Going forward we're at the last page, so copy the forward cursor.
                 CursorFilter::Forward(cursor) => cursor.clone(),
@@ -112,7 +112,7 @@ where
         Cursor::End
     } else {
         match rows.last() {
-            Some(row) => Cursor::Mid(row_to_marker(&row)),
+            Some(row) => Cursor::Mid(row_to_marker(row)),
             None => Cursor::End, // No rows in page, so we're at the end.
         }
     };
