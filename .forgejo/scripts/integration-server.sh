@@ -161,8 +161,8 @@ if [ "$CI_MODE" = true ]; then
   # --no-deps avoids pulling in the `scraper` dependency, which requires
   # NET_ADMIN for its nftables egress firewall and cannot start in CI's
   # Docker-in-Docker environment.
-  if [ -n "${POLYCENTRIC_SERVER_IMAGE:-}" ]; then
-    docker pull -q "$POLYCENTRIC_SERVER_IMAGE"
+  if [ -n "${HARBOR_SERVER_IMAGE:-}" ]; then
+    docker pull -q "$HARBOR_SERVER_IMAGE"
     docker compose up -d --no-deps --no-build --wait server server-workers
   else
     docker compose up -d --no-deps --build --wait server server-workers

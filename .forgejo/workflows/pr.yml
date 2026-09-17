@@ -569,8 +569,8 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust-dind:${{ needs.changes.outputs.images_tag }}
     timeout-minutes: 60
     env:
-      POLYCENTRIC_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
-      POLYCENTRIC_SERVER_FALLBACK_IMAGE: ${{ needs.changes.outputs.registry }}/server:staging
+      HARBOR_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
+      HARBOR_SERVER_FALLBACK_IMAGE: ${{ needs.changes.outputs.registry }}/server:staging
     steps:
       - uses: actions/checkout@v4
       - uses: ./.forgejo/actions/rust-env

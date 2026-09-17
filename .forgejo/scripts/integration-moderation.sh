@@ -70,11 +70,11 @@ echo "==> Building and starting the server…"
 # Build and start the server without its depends_on chain (--no-deps), so
 # the scraper container is not pulled in.  The infrastructure is already
 # running, so this is safe.
-if [ -n "${POLYCENTRIC_SERVER_IMAGE:-}" ]; then
-  if ! docker pull -q "$POLYCENTRIC_SERVER_IMAGE"; then
-    echo "    ${POLYCENTRIC_SERVER_IMAGE} not found, using ${POLYCENTRIC_SERVER_FALLBACK_IMAGE}"
-    export POLYCENTRIC_SERVER_IMAGE="$POLYCENTRIC_SERVER_FALLBACK_IMAGE"
-    docker pull -q "$POLYCENTRIC_SERVER_IMAGE"
+if [ -n "${HARBOR_SERVER_IMAGE:-}" ]; then
+  if ! docker pull -q "$HARBOR_SERVER_IMAGE"; then
+    echo "    ${HARBOR_SERVER_IMAGE} not found, using ${HARBOR_SERVER_FALLBACK_IMAGE}"
+    export HARBOR_SERVER_IMAGE="$HARBOR_SERVER_FALLBACK_IMAGE"
+    docker pull -q "$HARBOR_SERVER_IMAGE"
   fi
   docker compose up -d --no-deps --no-build --wait server
 else
