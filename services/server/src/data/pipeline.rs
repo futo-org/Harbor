@@ -92,33 +92,42 @@ where
         _ => rows.truncate(limit as usize),
     }
 
-    let backward_marker = rows.first().map(&row_to_marker);
-    let forward_marker = rows.last().map(&row_to_marker);
-
-    let backward_cursor = match (backward_marker, cursor_filter) {
-        // We have non-zero rows: navigating backward will skip the first row we fetched.
-        (Some(marker), _) => Cursor::Mid(marker),
+    let backward_cursor = if !has_previous_page {
+        // No previous page, we have to start at the start.
+        Cursor::Start
+    } else if let Some(marker) = rows.first().map(&row_to_marker) {
+        // We have non-zero rows: navigating backward will skip the first row we
+        // fetched.
+        Cursor::Mid(marker)
+    } else if let Some(CursorFilter::Backward(cursor)) = cursor_filter {
         // There are zero rows preceding the previous cursor: we stay here.
-        (None, Some(CursorFilter::Backward(cur))) => cur.clone(),
-        // Truly empty feed: we are at the end and new items will be
-        // placed preceding our cursor.
-        // OR
-        // Forward query from the end of the feed: we get the last items
-        // if we navigate backward.
-        _ => Cursor::End,
+        cursor.clone()
+    } else {
+        // Truly empty feed: we are at the end and new items will be placed
+        // preceding our cursor.
+        //
+        // Or, forward query from the end of the feed: we get the last items if
+        // we navigate backward.
+        Cursor::End
     };
 
-    let forward_cursor = match (forward_marker, cursor_filter) {
-        // We have non-zero rows: navigating forward will skip the last row we fetched.
-        (Some(marker), _) => Cursor::Mid(marker),
-        // There are zero rows preceding the previous cursor: a forward query
+    let forward_cursor = if !has_next_page {
+        Cursor::End
+    } else if let Some(marker) = rows.last().map(&row_to_marker) {
+        // We have non-zero rows: navigating forward will skip the last row we
+        // fetched.
+        Cursor::Mid(marker)
+    } else if let Some(CursorFilter::Backward(_)) = cursor_filter {
+        // There are zero rows preceding the previous cursor: a backward query
         // should return the first items in the feed.
-        (None, Some(CursorFilter::Backward(_))) => Cursor::Start,
+        Cursor::Start
+    } else if let Some(CursorFilter::Forward(cursor)) = cursor_filter {
         // There are zero rows following the previous cursor: we stay here.
-        (None, Some(CursorFilter::Forward(cur))) => cur.clone(),
+        cursor.clone()
+    } else {
         // Truly empty feed: we are at the end and a forward query will continue
         // to return no items.
-        _ => Cursor::End,
+        Cursor::End
     };
 
     PageInfo {
