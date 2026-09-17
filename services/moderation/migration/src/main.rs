@@ -9,6 +9,11 @@ async fn main() {
         .or_else(|_| env::var("POLYCENTRIC_MODERATION_DATABASE_SCHEMA"))
         .unwrap_or_else(|_| "moderation".to_string());
 
+    if let Ok(db_url) = env::var("HARBOR_DATABASE_URL") {
+        // Needed by SeaORM's CLI.
+        unsafe { env::set_var("DATABASE_URL", db_url) };
+    }
+
     cli::run_cli_with_connection(moderation_migration::Migrator, move |mut options| {
         let schema = schema.clone();
         async move {
