@@ -79,11 +79,8 @@ impl Query {
         search_query: &str,
         sort_by: SortUsersBy,
         limit: u64,
-        cursor_filter: Option<&CursorFilter<SortedUsersBy>>,
+        cursor_filter: &CursorFilter<SortedUsersBy>,
     ) -> Result<Vec<SearchUsersEvent>, Status> {
-        let cursor_filter =
-            cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
-
         let mut query = profile::Entity::find().select_only();
         select_model_columns(
             QuerySelect::query(&mut query),
@@ -189,11 +186,8 @@ impl Query {
         search_query: &str,
         sort_by: SortPostsBy,
         limit: u64,
-        cursor_filter: Option<&CursorFilter<SortedPostsBy>>,
+        cursor_filter: &CursorFilter<SortedPostsBy>,
     ) -> Result<Vec<SearchPostsEvent>, Status> {
-        let cursor_filter =
-            cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
-
         let mut query = event::Entity::find().select_only();
         select_model_columns(
             QuerySelect::query(&mut query),

@@ -24,7 +24,7 @@ use tonic::Status;
 pub struct Params<SortedBy> {
     pub query: String,
     pub limit: u64,
-    pub cursor_filter: Option<CursorFilter<SortedBy>>,
+    pub cursor_filter: CursorFilter<SortedBy>,
 }
 
 impl<SortedBy> Params<SortedBy> {
