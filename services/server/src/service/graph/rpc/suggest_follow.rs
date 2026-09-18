@@ -55,7 +55,7 @@ async fn fetch(
         &ctx.service.ro_db,
         params.identity.as_deref(),
         &params.pagination.cursor_filter,
-        params.pagination.limit,
+        params.pagination.limit + 1, // For pagination.
     )
     .await
     .map_err(|err| {

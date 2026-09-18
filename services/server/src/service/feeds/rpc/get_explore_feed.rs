@@ -50,7 +50,7 @@ async fn fetch(
     let mut rows = FeedsRepository::explore_feed(
         &ctx.service.ro_db,
         params.sort_by,
-        params.common.limit + 1,
+        params.common.limit + 1, // For pagination.
         &params.common.cursor_filter,
     )
     .await?;

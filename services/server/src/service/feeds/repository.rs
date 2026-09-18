@@ -396,7 +396,7 @@ impl Query {
                 Cursor::End => { /* No filtering. */ }
             },
         }
-        query.limit(limit + 1); // + 1 for pagination.
+        query.limit(limit);
 
         db.query_all(&query)
             .await
