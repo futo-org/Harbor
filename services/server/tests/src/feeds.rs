@@ -1090,7 +1090,7 @@ async fn following_feed_pagination() {
     let follower = client3.identity().to_owned();
 
     // Post 0, 1 reaction.
-    client2.thumbs_up(post1_key.clone(), current_timestamp());
+    client2.thumbs_up(post0_key.clone(), current_timestamp());
     // Post 1, 1 reaction.
     client3.thumbs_up(post1_key.clone(), current_timestamp());
     // Post 2, 2 reactions.
@@ -1144,10 +1144,10 @@ async fn following_feed_pagination() {
     assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
+    eprintln!("Backward:");
     let mut expected_iter = [post1_key, post2_key, post3_key].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
-            let mut feeds = connect_feeds().await;
             let request = GetFollowingFeedRequest {
                 follower_identity: follower.clone(),
                 page_params: Some(PageParams {
@@ -1501,10 +1501,10 @@ async fn recommended_feed_pagination() {
     assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
+    eprintln!("Backward:");
     let mut expected_iter = [post1_key, post2_key, post3_key].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
-            let mut feeds = connect_feeds().await;
             let request = GetFollowingFeedRequest {
                 follower_identity: follower.clone(),
                 page_params: Some(PageParams {
