@@ -31,6 +31,11 @@ const ALL_EMOJIS = categories.flatMap((c) => c.emojis);
 const keyExtractor = (item: EmojiEntry) => item.emoji;
 
 const CATEGORY_RAIL_BORDER_WIDTH = 1;
+// Icon glyph size as a fraction of its button; the rail is sized to leave a
+// quarter button at each edge so the outer glyphs sit as far from the sheet
+// edge as adjacent glyphs sit from each other.
+const CATEGORY_ICON_SCALE = 0.5;
+const CATEGORY_BUTTON_COUNT = categories.length + 0.5;
 
 /**
  * Emoji picker sheet with a search input, a category rail and a scrollable
@@ -71,7 +76,8 @@ export function EmojiPickerSheet({
   // The footer overlays the sheet content, so the grid pads for the rail's
   // visible height (square icons plus the top border); the safe-area part of
   // the footer is covered by the inset TrueSheet gives the pinned list.
-  const railHeight = gridWidth / categories.length + CATEGORY_RAIL_BORDER_WIDTH;
+  const railHeight =
+    gridWidth / CATEGORY_BUTTON_COUNT + CATEGORY_RAIL_BORDER_WIDTH;
 
   const categoryEmojis = useMemo(
     () =>
@@ -205,7 +211,7 @@ function EmojiCategoryRail({
   // Measured here: the footer is not inside `Sheet.Content`.
   const { height: windowHeight } = useWindowDimensions();
   const [railWidth, setRailWidth] = useState(0);
-  const categoryColWidth = railWidth / categories.length;
+  const categoryColWidth = railWidth / CATEGORY_BUTTON_COUNT;
 
   return (
     <View style={{ paddingBottom: insets.bottom }}>
@@ -227,6 +233,7 @@ function EmojiCategoryRail({
       <View
         style={[
           Atoms.flex_row,
+          Atoms.justify_center,
           {
             borderTopWidth: CATEGORY_RAIL_BORDER_WIDTH,
             borderColor: theme.palette.neutral_25,
@@ -246,7 +253,7 @@ function EmojiCategoryRail({
             >
               <Icon
                 name={cat.icon}
-                size={Math.round(categoryColWidth * 0.5)}
+                size={Math.round(categoryColWidth * CATEGORY_ICON_SCALE)}
                 color={
                   cat.key === selectedCategory ? 'primary_500' : 'neutral_500'
                 }
