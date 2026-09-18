@@ -1,7 +1,7 @@
 import Icon from '@/src/common/components/Icon';
 import { Text, TextInput } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -9,7 +9,7 @@ import { useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categories, getCategory, type EmojiEntry } from './emojiData';
 import { searchEmojis } from './emojiSearch';
-import { Emoji, EmojiLikeButton } from './Emoji';
+import { Emoji, EMOJI_IMAGE_SCALE, EmojiLikeButton } from './Emoji';
 
 type EmojiPickerSheetProps = {
   open: boolean;
@@ -56,7 +56,7 @@ export function EmojiPickerSheet({
   const isSearching = debouncedQuery.trim() !== '';
 
   // Derivied from the sheet width
-  const [gridWidth, setGridWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
 
   // Start over from the full grid each time the sheet is reopened.
   useEffect(() => {
@@ -66,18 +66,24 @@ export function EmojiPickerSheet({
     }
   }, [open]);
 
-  // Scale the column count with the sheet width, keeping cells near
+  // The outer glyphs sit as far from the sheet edge as the search input does
+  // (its horizontal padding), so the span between the glyphs' outer edges is
+  // the input width; scale the column count with it, keeping cells near
   // TARGET_CELL_WIDTH wide rather than stretching a fixed column count.
+  const glyphSpanWidth = contentWidth - 2 * Spacing.lg;
   const numColumns = Math.max(
     MIN_COLUMNS,
-    Math.floor(gridWidth / TARGET_CELL_WIDTH),
+    Math.floor(glyphSpanWidth / TARGET_CELL_WIDTH),
   );
-  const colWidth = gridWidth / numColumns;
+  // That span is the columns minus the glyph insets of the two outer cells.
+  const colWidth = glyphSpanWidth / (numColumns - (1 - EMOJI_IMAGE_SCALE));
+  // The grid is centered, so the leftover width splits into the two margins.
+  const gridWidth = colWidth * numColumns;
   // The footer overlays the sheet content, so the grid pads for the rail's
   // visible height (square icons plus the top border); the safe-area part of
   // the footer is covered by the inset TrueSheet gives the pinned list.
   const railHeight =
-    gridWidth / CATEGORY_BUTTON_COUNT + CATEGORY_RAIL_BORDER_WIDTH;
+    contentWidth / CATEGORY_BUTTON_COUNT + CATEGORY_RAIL_BORDER_WIDTH;
 
   const categoryEmojis = useMemo(
     () =>
@@ -138,9 +144,9 @@ export function EmojiPickerSheet({
       <Sheet.Content
         scrollable={false}
         style={Atoms.p_0}
-        onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}
+        onLayout={(e) => setContentWidth(e.nativeEvent.layout.width)}
       >
-        {gridWidth > 0 && (
+        {contentWidth > 0 && (
           <>
             <View style={[Atoms.px_lg, Atoms.py_sm]}>
               <TextInput
@@ -154,9 +160,10 @@ export function EmojiPickerSheet({
               />
             </View>
 
-            <View style={Atoms.flex_1}>
+            <View style={[Atoms.flex_1, Atoms.items_center]}>
               <FlashList
                 ref={listRef}
+                style={{ width: gridWidth }}
                 data={shownEmojis}
                 renderItem={renderItem}
                 keyExtractor={keyExtractor}
