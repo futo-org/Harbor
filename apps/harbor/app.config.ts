@@ -122,6 +122,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         android: {
           buildArchs: ['arm64-v8a'],
+          // Needed for local Release builds to be able to talk to
+          // http:// local servers on a LAN IP (e.g. for running e2e tests locally)
+          usesCleartextTraffic: IS_DEV,
         },
       },
     ],

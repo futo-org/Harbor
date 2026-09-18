@@ -109,7 +109,7 @@ impl Query {
         db: &DbConn,
         sort_by: SortPostsBy,
         limit: u64,
-        cursor_filter: Option<&CursorFilter<SortedBy>>,
+        cursor_filter: &CursorFilter<SortedBy>,
     ) -> Result<Vec<ExploreEvent>, Status> {
         Query::explore_posts(
             db,
@@ -129,7 +129,7 @@ impl Query {
         for_identity: &str,
         sort_by: SortPostsBy,
         limit: u64,
-        cursor_filter: Option<&CursorFilter<SortedBy>>,
+        cursor_filter: &CursorFilter<SortedBy>,
     ) -> Result<Vec<ExploreEvent>, Status> {
         Query::explore_posts(
             db,
@@ -149,7 +149,7 @@ impl Query {
         for_identity: &str,
         sort_by: SortPostsBy,
         limit: u64,
-        cursor_filter: Option<&CursorFilter<SortedBy>>,
+        cursor_filter: &CursorFilter<SortedBy>,
     ) -> Result<Vec<ExploreEvent>, Status> {
         Query::explore_posts(
             db,
@@ -178,11 +178,8 @@ impl Query {
         include_own_posts: bool,
         sort_by: SortPostsBy,
         limit: u64,
-        cursor_filter: Option<&CursorFilter<SortedBy>>,
+        cursor_filter: &CursorFilter<SortedBy>,
     ) -> Result<Vec<ExploreEvent>, Status> {
-        let cursor_filter =
-            cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
-
         let mut query = SelectStatement::new();
         select_model_columns(&mut query, EVENT_PREFIX, event::Column::iter());
         select_model_columns(
@@ -423,7 +420,7 @@ impl Query {
         db: &DbConn,
         identities: Vec<String>,
         limit: u64,
-        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+        cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         Self::do_list_feed_events(
             db,
@@ -443,7 +440,7 @@ impl Query {
         db: &DbConn,
         url: String,
         limit: u64,
-        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+        cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         if url.is_empty() {
             return Ok(Vec::new());
@@ -457,12 +454,8 @@ impl Query {
         limit: u64,
         only_identities: Option<Vec<String>>,
         only_attributed_url: Option<String>,
-        cursor_filter: &Option<CursorFilter<EventCreatedAt>>,
+        cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        let cursor_filter = cursor_filter
-            .as_ref()
-            .unwrap_or(&CursorFilter::Forward(Cursor::Start));
-
         let mut query = event::Entity::find()
             .select_also(content::Entity)
             .join(JoinType::LeftJoin, content_join())
