@@ -432,6 +432,7 @@ jobs:
         with:
           task: ':core:ktlintCheck'
           upload-artifact: 'false'
+          save-cache: 'false'
       - uses: ./.forgejo/actions/r2-cache
         if: always()
         continue-on-error: true
