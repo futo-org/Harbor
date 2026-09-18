@@ -219,6 +219,7 @@ function NativeSheet({
   ...props
 }: NativeInternalProps) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const sheetRef = useRef<TrueSheet>(null);
   /** Once the sheet's dismiss animation has run (or is running) we
    * shouldn't loop it again on the follow-up navigation dispatch. */
@@ -310,6 +311,8 @@ function NativeSheet({
       }}
       header={props.header}
       footer={props.footer}
+      // Prevents the inset from applying when the keyboard is up (footer rises with it)
+      footerOptions={{ keyboardOffset: -insets.bottom }}
     >
       <View style={[Atoms.w_full, Atoms.flex_1, { backgroundColor: surface }]}>
         {children}
