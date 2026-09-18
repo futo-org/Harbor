@@ -90,6 +90,21 @@ describe('searchEmojis', () => {
       expect(emojisFor('red heart')[0]).toBe('❤');
     });
 
+    it('keeps the obvious answer near the top for weaker queries', () => {
+      expect(emojisFor('heart').slice(0, 3)).toContain('❤');
+      expect(emojisFor('joy').slice(0, 3)).toContain('😂');
+      expect(emojisFor('laughing')[0]).toBe('🤣');
+      expect(emojisFor('sad').slice(0, 8)).toContain('😢');
+      expect(emojisFor('sad').slice(0, 12)).toContain('😞');
+      expect(emojisFor('smilng').slice(0, 12)).toEqual(
+        expect.arrayContaining(['🙂', '😊']),
+      );
+      expect(emojisFor('hart').slice(0, 20)).toContain('❤');
+      expect(emojisFor('lol').slice(0, 20)).toEqual(
+        expect.arrayContaining(['😂', '🤣']),
+      );
+    });
+
     it('matches multi-word names', () => {
       expect(emojisFor('grinning face')[0]).toBe('😀');
       expect(emojisFor('tears of joy').slice(0, 2)).toEqual(
@@ -112,6 +127,7 @@ describe('searchEmojis', () => {
       expect(emojisFor('coffee')[0]).toBe('☕');
       expect(emojisFor('+1')).toEqual(['👍']);
       expect(emojisFor('poop').slice(0, 2)).toContain('💩');
+      expect(emojisFor('100').slice(0, 2)).toContain('💯');
     });
   });
 
@@ -122,6 +138,11 @@ describe('searchEmojis', () => {
       expect(emojisFor('cry').slice(0, 2)).toEqual(
         expect.arrayContaining(['😢', '😿']),
       );
+    });
+
+    it('matches a prefix of each word in a multi-word query', () => {
+      expect(emojisFor('flag us')[0]).toBe('🇺🇸');
+      expect(emojisFor('flag ger')[0]).toBe('🇩🇪');
     });
 
     it('matches words with dropped letters', () => {
@@ -136,6 +157,8 @@ describe('searchEmojis', () => {
     it('matches words run together', () => {
       expect(emojisFor('thumbsup')[0]).toBe('👍');
       expect(emojisFor('thumsup')[0]).toBe('👍');
+      expect(emojisFor('thumbsdown')[0]).toBe('👎');
+      expect(emojisFor('thumsdown')[0]).toBe('👎');
       expect(emojisFor('redheart')[0]).toBe('❤');
     });
 
