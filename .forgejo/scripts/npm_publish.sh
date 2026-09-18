@@ -59,7 +59,7 @@ if [ -n "${HARBOR_CI_TOKEN:-}" ]; then
   : "${GITHUB_SERVER_URL:?GITHUB_SERVER_URL is required for Forgejo publishing}"
   : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required for Forgejo publishing}"
   forgejo_registry="${GITHUB_SERVER_URL}/api/packages/${GITHUB_REPOSITORY%%/*}/npm/"
-  forgejo_host=$(echo "${forgejo_registry}" | sed -E 's#https?://([^/]+)/.*#\1#')
+  forgejo_host=$(echo "${forgejo_registry}" | sed -E 's#https?://([^/]+).*#\1#')
   echo "//${forgejo_host}/:_authToken=${HARBOR_CI_TOKEN}" >> ~/.npmrc
   publish_all "${forgejo_registry}" "the Forgejo package registry"
 else
