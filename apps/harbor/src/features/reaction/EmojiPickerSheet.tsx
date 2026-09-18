@@ -1,3 +1,4 @@
+import Icon from '@/src/common/components/Icon';
 import { Text, TextInput } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
 import { Atoms, useTheme } from '@/src/common/theme';
@@ -8,7 +9,7 @@ import { useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categories, getCategory, type EmojiEntry } from './emojiData';
 import { searchEmojis } from './emojiSearch';
-import { Emoji } from './Emoji';
+import { Emoji, EmojiLikeButton } from './Emoji';
 
 type EmojiPickerSheetProps = {
   open: boolean;
@@ -237,20 +238,20 @@ function EmojiCategoryRail({
       >
         {railWidth > 0 &&
           categories.map((cat) => (
-            <Emoji
+            <EmojiLikeButton
               key={cat.key}
-              emoji={cat.icon}
-              value={cat.key}
               size={categoryColWidth}
-              onSelect={onSelect}
+              onPress={() => onSelect(cat.key)}
               highlightColor={theme.palette.neutral_100}
-              style={
-                cat.key === selectedCategory && {
-                  borderBottomWidth: 2,
-                  borderBottomColor: theme.palette.primary_500,
+            >
+              <Icon
+                name={cat.icon}
+                size={Math.round(categoryColWidth * 0.5)}
+                color={
+                  cat.key === selectedCategory ? 'primary_500' : 'neutral_500'
                 }
-              }
-            />
+              />
+            </EmojiLikeButton>
           ))}
       </View>
     </View>
