@@ -161,8 +161,8 @@ if [ "$CI_MODE" = true ]; then
   # --no-deps avoids pulling in the `scraper` dependency, which requires
   # NET_ADMIN for its nftables egress firewall and cannot start in CI's
   # Docker-in-Docker environment.
-  if [ -n "${POLYCENTRIC_SERVER_IMAGE:-}" ]; then
-    docker pull -q "$POLYCENTRIC_SERVER_IMAGE"
+  if [ -n "${HARBOR_SERVER_IMAGE:-}" ]; then
+    docker pull -q "$HARBOR_SERVER_IMAGE"
     docker compose up -d --no-deps --no-build --wait server server-workers
   else
     docker compose up -d --no-deps --build --wait server server-workers
@@ -212,12 +212,12 @@ else
   echo "==> Starting server…"
   export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   export RUST_LOG="${RUST_LOG:-info}"
-  export HARBOR_DATABASE_URL="${DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
-  export HARBOR_CONTENT_BLOB_OS_BUCKET="${CONTENT_BLOB_OS_BUCKET:-harbor-blobs}"
-  export HARBOR_CONTENT_BLOB_OS_ENDPOINT="${CONTENT_BLOB_OS_ENDPOINT:-http://localhost:9000}"
-  export HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE="${CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}"
-  export HARBOR_CONTENT_BLOB_OS_ACCESS_KEY="${CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}"
-  export HARBOR_CONTENT_BLOB_OS_SECRET_KEY="${CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}"
+  export HARBOR_DATABASE_URL="${HARBOR_DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
+  export HARBOR_CONTENT_BLOB_OS_BUCKET="${HARBOR_CONTENT_BLOB_OS_BUCKET:-harbor-blobs}"
+  export HARBOR_CONTENT_BLOB_OS_ENDPOINT="${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-http://localhost:9000}"
+  export HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE="${HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}"
+  export HARBOR_CONTENT_BLOB_OS_ACCESS_KEY="${HARBOR_CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}"
+  export HARBOR_CONTENT_BLOB_OS_SECRET_KEY="${HARBOR_CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}"
   # Kafka is reached on the EXTERNAL listener for local connections.
   export HARBOR_KAFKA_BROKERS="${HARBOR_KAFKA_BROKERS:-localhost:9092}"
   # The test crate reads this to know where to reach the server.
