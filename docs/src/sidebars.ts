@@ -46,6 +46,7 @@ const sidebars: SidebarsConfig = {
         'developer/feed-paging',
         'developer/unread-notifications',
         'developer/declaring-your-application',
+        'developer/submitting-events',
         'developer/e2e-testing',
       ],
     },

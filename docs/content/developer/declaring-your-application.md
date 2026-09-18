@@ -107,7 +107,9 @@ val client = PolycentricClient(
 
 If you construct `Event` messages directly, set `application` before serializing and
 signing. It is field 9 on `Event`. Anything set after signing is discarded, because the
-server stores the exact bytes that were signed.
+server stores the exact bytes that were signed. Also see [`Submitting
+Events`](/docs/developer/submitting-events) for more information about
+submitting events.
 
 ## What Harbor sends
 
