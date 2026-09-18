@@ -9,8 +9,6 @@ version      = "0.1.0"
 # Workspace
 common-dotenv = { path = "../common/dotenv" }
 common-kafka = { path = "../common/kafka" }
-common-object-store = { path = "../common/object-store" }
-entity = { path = "../server/entity" }
 push-notifications-entity = { path = "./entity" }
 push-notifications-migration = { path = "./migration" }
 polycentric-common.workspace = true
@@ -30,7 +28,6 @@ time.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tonic = { workspace = true, features = ["router", "transport"] }
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
-regex = { version = "1", default-features = false, features = ["std"] }
 serde = { version = "1", features = ["derive"] }
 
 

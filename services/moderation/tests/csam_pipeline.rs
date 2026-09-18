@@ -25,7 +25,7 @@ use polycentric_core::query::channel;
 use prost::Message;
 use sha2::{Digest, Sha256};
 use std::{
-    env::var,
+    env,
     process::Stdio,
     sync::{
         Arc,
@@ -43,17 +43,24 @@ const CREATED_AT: u64 = 1736942400000; // 2025-01-15T12:00:00Z, ms
 const HOUR: u64 = 3_600_000;
 
 fn server_endpoint() -> String {
-    var("POLYCENTRIC_TEST_SERVER").unwrap_or("http://localhost:3000".to_string())
+    env::var("HARBOR_TEST_SERVER")
+        .or_else(|_| env::var("POLYCENTRIC_TEST_SERVER"))
+        .unwrap_or("http://localhost:3000".to_string())
 }
 fn database_endpoint() -> String {
-    var("POLYCENTRIC_TEST_DATABASE_URL")
+    env::var("HARBOR_TEST_DATABASE_URL")
+        .or_else(|_| env::var("POLYCENTRIC_TEST_DATABASE_URL"))
         .unwrap_or("postgres://postgres:testing@localhost:5432".to_string())
 }
 fn os_endpoint() -> String {
-    var("POLYCENTRIC_TEST_OS_ENDPOINT").unwrap_or("http://localhost:9000".to_string())
+    env::var("HARBOR_TEST_OS_ENDPOINT")
+        .or_else(|_| env::var("POLYCENTRIC_TEST_OS_ENDPOINT"))
+        .unwrap_or("http://localhost:9000".to_string())
 }
 fn kafka_endpoint() -> String {
-    var("POLYCENTRIC_TEST_KAFKA_BROKERS").unwrap_or("localhost:9092".to_string())
+    env::var("HARBOR_TEST_KAFKA_BROKERS")
+        .or_else(|_| env::var("POLYCENTRIC_TEST_KAFKA_BROKERS"))
+        .unwrap_or("localhost:9092".to_string())
 }
 
 #[tokio::test]
@@ -161,27 +168,24 @@ fn spawn_moderation_service(
     mod_identity: &str,
 ) -> tokio::process::Child {
     tokio::process::Command::new(env!("CARGO_BIN_EXE_moderation-service"))
-        .env("DATABASE_URL", database_endpoint())
-        .env("CONTENT_BLOB_OS_BUCKET", "polycentric-blobs")
-        .env("CONTENT_BLOB_OS_ENDPOINT", os_endpoint())
-        .env("CONTENT_BLOB_OS_FORCE_PATH_STYLE", "true")
-        .env("CONTENT_BLOB_OS_ACCESS_KEY", "rustfsadmin")
-        .env("CONTENT_BLOB_OS_SECRET_KEY", "rustfsadmin")
-        .env("POLYCENTRIC_KAFKA_BROKERS", kafka_endpoint())
+        .env("HARBOR_DATABASE_URL", database_endpoint())
+        .env("HARBOR_CONTENT_BLOB_OS_BUCKET", "polycentric-blobs")
+        .env("HARBOR_CONTENT_BLOB_OS_ENDPOINT", os_endpoint())
+        .env("HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE", "true")
+        .env("HARBOR_CONTENT_BLOB_OS_ACCESS_KEY", "rustfsadmin")
+        .env("HARBOR_CONTENT_BLOB_OS_SECRET_KEY", "rustfsadmin")
+        .env("HARBOR_KAFKA_BROKERS", kafka_endpoint())
         // Read from the start of the topic so a consumer that finishes joining
         // the group after the post is produced still sees it, rather than
         // racing partition assignment against the test's fixed startup delay.
-        .env("POLYCENTRIC_KAFKA_AUTO_OFFSET_RESET", "earliest")
-        .env(
-            "POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT",
-            "http://127.0.0.1:9",
-        )
-        .env("POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY", "unused")
-        .env("POLYCENTRIC_PHOTODNA_KEY", "mock-key")
-        .env("POLYCENTRIC_PHOTODNA_ENDPOINT", photodna_url)
-        .env("POLYCENTRIC_MODERATION_SIGNING_KEY", mod_seed_hex)
-        .env("POLYCENTRIC_MODERATION_IDENTITY", mod_identity)
-        .env("POLYCENTRIC_MODERATION_SERVERS", server_endpoint())
+        .env("HARBOR_KAFKA_AUTO_OFFSET_RESET", "earliest")
+        .env("HARBOR_AZURE_CONTENT_SAFETY_ENDPOINT", "http://127.0.0.1:9")
+        .env("HARBOR_AZURE_CONTENT_SAFETY_KEY", "unused")
+        .env("HARBOR_PHOTODNA_KEY", "mock-key")
+        .env("HARBOR_PHOTODNA_ENDPOINT", photodna_url)
+        .env("HARBOR_MODERATION_SIGNING_KEY", mod_seed_hex)
+        .env("HARBOR_MODERATION_IDENTITY", mod_identity)
+        .env("HARBOR_MODERATION_SERVERS", server_endpoint())
         .env("RUST_LOG", "info")
         .stdout(Stdio::null())
         .stderr(Stdio::piped())

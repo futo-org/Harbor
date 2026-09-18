@@ -6,7 +6,9 @@ use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
+use polycentric_common::models::protos_v2::identity_service_client::IdentityServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
+use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
 use prost::Message;
 use rand::distr::{Alphabetic, SampleString};
@@ -16,28 +18,35 @@ use std::mem::take;
 use std::time::SystemTime;
 use tokio::sync::{Mutex, MutexGuard};
 
+mod banning;
 mod event_sync;
 mod feeds;
 mod graph;
+mod notifications;
 mod search;
+mod verifications;
 
-/// gRPC server address. Override with `POLYCENTRIC_TEST_SERVER` env var.
+/// gRPC server address. Override with `HARBOR_TEST_SERVER` env var.
 pub fn grpc_addr() -> String {
-    std::env::var("POLYCENTRIC_TEST_SERVER")
+    std::env::var("HARBOR_TEST_SERVER")
+        .or_else(|_| std::env::var("POLYCENTRIC_TEST_SERVER"))
         .unwrap_or_else(|_| "http://localhost:3000".to_string())
 }
 
 /// JWT auth token audience.
 fn audience() -> String {
-    match std::env::var("POLYCENTRIC_ALLOW_HOSTS") {
+    match std::env::var("HARBOR_ALLOW_HOSTS")
+        .or_else(|_| std::env::var("POLYCENTRIC_ALLOW_HOSTS"))
+    {
         Ok(hosts) => hosts
             .split(',')
             .map(str::trim)
             .filter(|host| !host.is_empty())
             .next()
-            .expect("invalid POLYCENTRIC_ALLOW_HOSTS")
+            .expect("invalid HARBOR_ALLOW_HOSTS")
             .to_owned(),
-        Err(_) => std::env::var("POLYCENTRIC_SERVER_NAME")
+        Err(_) => std::env::var("HARBOR_SERVER_NAME")
+            .or_else(|_| std::env::var("POLYCENTRIC_SERVER_NAME"))
             .unwrap_or_else(|_| "http://localhost:3000".to_string()),
     }
 }
@@ -106,6 +115,20 @@ pub async fn search_service() -> SearchServiceClient<tonic::transport::Channel>
 
 pub async fn graph_service() -> GraphServiceClient<tonic::transport::Channel> {
     GraphServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn identity_service()
+-> IdentityServiceClient<tonic::transport::Channel> {
+    IdentityServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn verifications_service()
+-> VerificationsServiceClient<tonic::transport::Channel> {
+    VerificationsServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -417,6 +440,44 @@ impl TestClient {
         self.delete(delete, created_at)
     }
 
+    pub fn verification_claim(
+        &mut self,
+        claim: VerificationClaim,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(
+            ContentBody::VerificationClaim(claim),
+            created_at,
+        )
+    }
+
+    pub fn github_verification_claim(
+        &mut self,
+        login: &str,
+        created_at: u64,
+    ) -> Vec<u8> {
+        let schema = github_verification_schema();
+        let schema_bytes = prost::Message::encode_to_vec(&schema);
+        let schema_digest = ContentDigest {
+            r#type: ContentDigestType::Sha256.into(),
+            value: sha256(&schema_bytes),
+        };
+        let schema = SerializedVerificationSchema {
+            schema_bytes,
+            digest: Some(schema_digest),
+        };
+
+        let mut fields = HashMap::new();
+        fields.insert("login".to_owned(), login.as_bytes().to_vec());
+
+        let claim = VerificationClaim {
+            schema: Some(schema),
+            fields,
+        };
+        self.verification_claim(claim, created_at)
+    }
+
+    #[track_caller]
     pub fn get_last_event_key(&self) -> EventKey {
         let event = self.pending.last().expect("no pending events");
         let signed_event = event.signed_event.as_ref().unwrap();
@@ -545,6 +606,22 @@ impl TestClient {
     }
 }
 
+fn github_verification_schema() -> VerificationSchema {
+    VerificationSchema {
+        name: "GitHub Verification".to_owned(),
+        description: String::new(),
+        fields: vec![FieldDef {
+            key: "login".to_owned(),
+            kind: FieldKind::String as i32,
+            format: String::new(),
+            required: true,
+            description: "Login".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    }
+}
+
 impl Drop for TestClient {
     fn drop(&mut self) {
         const MSG: &str = "Unsubmitted events in TestClient, call submit_events to submit them";
@@ -560,6 +637,199 @@ impl Drop for TestClient {
 
 pub fn current_timestamp() -> u64 {
     SystemTime::UNIX_EPOCH.elapsed().unwrap().as_millis() as u64
+}
+
+#[derive(Debug)]
+pub struct ExpectEvent<'a> {
+    key: EventKey,
+    kind: ExpectEventKind<'a>,
+}
+
+#[derive(Debug)]
+pub enum ExpectEventKind<'a> {
+    Repost {
+        post: EventKey,
+    },
+    VerificationClaim {
+        schema: VerificationSchema,
+        fields: HashMap<&'a str, &'a str>,
+    },
+}
+
+pub fn expect_events(got: &[EventBundle], expected: &[ExpectEvent<'_>]) {
+    eprintln!("Got events: {:#?}", got);
+    eprintln!("Expected events: {:#?}", expected);
+    assert_eq!(got.len(), expected.len());
+    for (got, expected) in got.iter().zip(expected) {
+        let event =
+            Event::decode(&*got.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap();
+
+        assert_eq!(event.key.as_ref(), Some(&expected.key));
+
+        let content = Content::decode(
+            &*got.serialized_content.as_ref().unwrap().content_bytes,
+        )
+        .unwrap();
+        let content = content.content_body.as_ref().unwrap();
+
+        match (content, &expected.kind) {
+            (ContentBody::Repost(repost), ExpectEventKind::Repost { post }) => {
+                let got = repost.post.as_ref().expect("repost is missing key");
+                assert_eq!(got, post);
+            }
+            (
+                ContentBody::VerificationClaim(claim),
+                ExpectEventKind::VerificationClaim { schema, fields },
+            ) => {
+                let got_schema = claim.schema.as_ref().expect("missing schema");
+                let got_schema =
+                    VerificationSchema::decode(&*got_schema.schema_bytes)
+                        .expect("invalid schema");
+                assert_eq!(got_schema, *schema);
+
+                for (key, got) in &claim.fields {
+                    let expected = fields
+                        .get(key.as_str())
+                        .unwrap_or_else(|| panic!("unexpected field '{key}'"));
+                    assert_eq!(got, expected.as_bytes());
+                }
+                assert_eq!(claim.fields.len(), fields.len());
+            }
+            (content, expected) => {
+                panic!("unexpected event: {content:?}, expected: {expected:?}")
+            }
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum ExpectHint {
+    Identity(String),
+    Post(EventKey),
+    Delete(EventKey),
+    Labels {
+        post: EventKey,
+        values: Vec<String>,
+    },
+    Reaction {
+        post: EventKey,
+        emoji: String,
+        positive: bool,
+    },
+}
+
+impl ExpectHint {
+    fn moderator_identity() -> ExpectHint {
+        ExpectHint::Identity(
+            "020225a394cac01413ff43527f1644b1772d78d2cea873de1e8ae2f9c3c9f47b"
+                .to_owned(),
+        )
+    }
+}
+
+pub fn expect_hints(got: &[EventHint], mut expected: Vec<ExpectHint>) {
+    eprintln!("Got hints: {:#?}", got);
+    eprintln!("Expected hints: {:#?}", expected);
+    for got in got {
+        let event_bundle = got.event_bundle.as_ref().unwrap();
+        let content = Content::decode(
+            &*event_bundle
+                .serialized_content
+                .as_ref()
+                .unwrap()
+                .content_bytes,
+        )
+        .unwrap();
+        let hint_content = content.content_body.as_ref().unwrap();
+        let hint_event = Event::decode(
+            &*event_bundle.signed_event.as_ref().unwrap().event_bytes,
+        )
+        .unwrap();
+
+        // Ordering of the hints is not guaranteed, so we need find the hint we
+        // expect.
+        let expected = find_expected(&mut expected, hint_content, &hint_event)
+            .unwrap_or_else(|| panic!("unexpected hint: {hint_content:?}"));
+
+        match (hint_content, expected) {
+            (
+                ContentBody::Identity(identity),
+                ExpectHint::Identity(expected),
+            ) => {
+                assert_eq!(identity.derive_hex_key(), *expected);
+            }
+            (ContentBody::Delete(delete), ExpectHint::Delete(expected)) => {
+                assert_eq!(*delete.event_key.as_ref().unwrap(), expected);
+            }
+            (ContentBody::Post(_), ExpectHint::Post(expected)) => {
+                let key = hint_event.key.as_ref().unwrap();
+                assert_eq!(*key, expected);
+            }
+            (
+                ContentBody::Labels(labels),
+                ExpectHint::Labels { post, values },
+            ) => {
+                assert_eq!(*labels.event_key.as_ref().unwrap(), post);
+                assert_eq!(labels.label_values, values);
+            }
+            (
+                ContentBody::Reaction(reaction),
+                ExpectHint::Reaction {
+                    post,
+                    emoji,
+                    positive,
+                },
+            ) => {
+                assert_eq!(*reaction.event_key.as_ref().unwrap(), post);
+                assert_eq!(reaction.emoji.as_deref(), Some(emoji).as_deref());
+                assert_eq!(reaction.positive, positive);
+            }
+            // This will panic at not being able to find the expected event
+            // above.
+            _ => unreachable!(),
+        }
+    }
+    if !expected.is_empty() {
+        panic!("missing expected hints: {expected:#?}");
+    }
+}
+
+fn find_expected(
+    expected: &mut Vec<ExpectHint>,
+    hint_content: &ContentBody,
+    hint_event: &Event,
+) -> Option<ExpectHint> {
+    let idx = match hint_content {
+        ContentBody::Identity(identity) => {
+            let got = identity.derive_hex_key();
+            expected.iter().position(|e| matches!(e, ExpectHint::Identity(expected) if *expected == got))?
+        }
+        ContentBody::Delete(delete) => {
+            let got = delete.event_key.as_ref().unwrap();
+            expected.iter().position(|e| matches!(e, ExpectHint::Delete(expected) if expected == got))?
+        }
+        ContentBody::Post(_) => {
+            let got = hint_event.key.as_ref().unwrap();
+            expected.iter().position(
+                |e| matches!(e, ExpectHint::Post(expected) if expected == got),
+            )?
+        }
+        ContentBody::Labels(labels) => {
+            let got = labels.event_key.as_ref().unwrap();
+            expected.iter().position(
+                |e| matches!(e, ExpectHint::Labels { post, ..} if post == got),
+            )?
+        }
+        ContentBody::Reaction(reaction) => {
+            let got = reaction.event_key.as_ref().unwrap();
+            expected.iter().position(
+                |e| matches!(e, ExpectHint::Reaction { post, ..} if post == got),
+            )?
+        }
+        _ => return None,
+    };
+    Some(expected.swap_remove(idx))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -823,9 +1093,9 @@ pub fn bundle_signature(b: &EventBundle) -> Vec<u8> {
         .clone()
 }
 
-// Following are moderation / label integration tests: The server must
-// be started with `POLYCENTRIC_MODERATION_IDENTITY` set to the value
-// returned by `test_moderator_identity()`.
+// Following are moderation / label integration tests: The server must be
+// started with `HARBOR_MODERATION_IDENTITY` set to the value returned by
+// `test_moderator_identity()`.
 
 async fn publish_genesis(
     client: &mut EventSyncServiceClient<tonic::transport::Channel>,

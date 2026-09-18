@@ -43,13 +43,13 @@ async fn fetch(
         &ctx.service.ro_db,
         &params.common.query,
         params.sort_by,
-        params.common.limit,
-        params.common.cursor_filter.as_ref(),
+        params.common.limit + 1, // For pagination.
+        &params.common.cursor_filter,
     )
     .await?;
     let page_info = finalize_fetch(
         &mut rows,
-        params.common.cursor_filter.as_ref(),
+        &params.common.cursor_filter,
         params.common.limit as u32,
         |row| Marker {
             sorted_by: match params.sort_by {

@@ -1,4 +1,5 @@
 //! `suggest_follow`: profile (update events) the identity could follow.
+//! An anonymous caller gets the default suggestions only.
 
 use tonic::Status;
 
@@ -16,17 +17,18 @@ use crate::service::proto::{
 
 struct Params {
     pagination: PaginationParams<FollowSuggestionsSortedBy>,
-    identity: String,
+    /// `None` for an anonymous caller.
+    identity: Option<String>,
 }
 
 pub async fn handle(
     ctx: &RequestContext<'_>,
     req: SuggestFollowRequest,
 ) -> Result<SuggestFollowResponse, Status> {
-    let identity = match ctx.caller {
-        Some(identity) if !identity.is_empty() => identity.to_owned(),
-        _ => return Err(Status::invalid_argument("identity is required")),
-    };
+    let identity = ctx
+        .caller
+        .filter(|identity| !identity.is_empty())
+        .map(str::to_owned);
     let pagination =
         PaginationParams::from_req_params(req.page_params.as_ref())?;
     let params = Params {
@@ -51,9 +53,9 @@ async fn fetch(
 ) -> Result<Fetched<FollowSuggestionEvent, FollowSuggestionsSortedBy>, Status> {
     let mut rows = Query::suggest_follow(
         &ctx.service.ro_db,
-        &params.identity,
-        params.pagination.cursor_filter.as_ref(),
-        params.pagination.limit,
+        params.identity.as_deref(),
+        &params.pagination.cursor_filter,
+        params.pagination.limit + 1, // For pagination.
     )
     .await
     .map_err(|err| {
@@ -63,7 +65,7 @@ async fn fetch(
 
     let page_info = pipeline::finalize_fetch(
         &mut rows,
-        params.pagination.cursor_filter.as_ref(),
+        &params.pagination.cursor_filter,
         params.pagination.limit,
         |row| Marker {
             sorted_by: row.followers.len().cast_signed() as i32,

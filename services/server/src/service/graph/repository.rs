@@ -9,7 +9,6 @@ use sea_query::{
     PgFunc, SelectStatement, UnionType, WithClause,
 };
 use std::collections::HashSet;
-use std::sync::Arc;
 use tonic::Status;
 
 use crate::data::EventWithContentRow;
@@ -118,13 +117,11 @@ impl Query {
     pub async fn blocked_set(
         ctx: &ServiceContext,
         identity: &str,
-    ) -> Result<Arc<HashSet<String>>, Status> {
-        Ok(Arc::new(
-            Self::list_blocked_identities(ctx, identity)
-                .await?
-                .into_iter()
-                .collect(),
-        ))
+    ) -> Result<HashSet<String>, Status> {
+        Ok(Self::list_blocked_identities(ctx, identity)
+            .await?
+            .into_iter()
+            .collect())
     }
 
     /// [`Query::blocked_set`] for the caller of a request. Empty when the
@@ -132,10 +129,10 @@ impl Query {
     /// blocks could apply.
     pub async fn blocked_set_for_caller(
         ctx: &RequestContext<'_>,
-    ) -> Result<Arc<HashSet<String>>, Status> {
+    ) -> Result<HashSet<String>, Status> {
         match ctx.caller {
             Some(caller) => Self::blocked_set(ctx.service, caller).await,
-            None => Ok(Arc::new(HashSet::new())),
+            None => Ok(HashSet::new()),
         }
     }
 
@@ -240,7 +237,7 @@ impl Query {
         db: &DbConn,
         identity: &str,
         limit: u32,
-        cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
+        cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let query =
             follow_events_query().filter(event::Column::Identity.eq(identity));
@@ -253,34 +250,40 @@ impl Query {
         db: &DbConn,
         identity: &str,
         limit: u32,
-        cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
+        cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let query = follow_events_query()
             .filter(content_follow::Column::IdentityId.eq(identity));
         page_follow_events(db, query, limit, cursor_filter).await
     }
 
+    /// `identity` is `None` for an anonymous caller, who follows nobody and
+    /// so only gets the default suggestions.
     pub async fn suggest_follow(
         db: &DbConn,
-        identity: &str,
-        cursor_filter: Option<&CursorFilter<FollowSuggestionsSortedBy>>,
+        identity: Option<&str>,
+        cursor_filter: &CursorFilter<FollowSuggestionsSortedBy>,
         limit: u32,
     ) -> Result<Vec<FollowSuggestionEvent>, DbErr> {
-        let cursor_filter =
-            cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
+        let suggestions = match identity {
+            Some(identity) => Self::build_suggestions_for_identity(identity),
+            None => Self::build_default_suggestions(),
+        };
+        Self::page_suggestions(db, suggestions, cursor_filter, limit).await
+    }
 
+    /// The suggestions for a signed-in `identity`: friend-of-friend
+    /// suggestions (identities followed by the identities it follows, each
+    /// with the list of those followers) `UNION ALL` the default suggestions,
+    /// minus `identity` itself and anyone it already follows. Columns:
+    /// (followee, followers).
+    fn build_suggestions_for_identity(identity: &str) -> SelectStatement {
         // List of identities the `identity` is following.
-        const FOLLOWING_TABLE: &str = "following";
-        let mut following = SelectStatement::new();
-        following
-            .column(follow::Column::Followee)
-            .from(follow::Entity)
-            .and_where(follow::Column::Follower.eq(identity));
         let mut select_following = SelectStatement::new();
         select_following
             .column(follow::Column::Followee)
-            .from(FOLLOWING_TABLE);
-        const SUGGESTIONS_TABLE: &str = "suggestions";
+            .from(follow::Entity)
+            .and_where(follow::Column::Follower.eq(identity));
         // List of identities that are followed by identities that `identity`
         // follows. Are you following this? In other words if you follow Alice,
         // and Alice follows Bob, this list will include Bob.
@@ -306,14 +309,7 @@ impl Query {
                 follow::Column::Follower.in_subquery(select_following.clone()),
             )
             .group_by_col(follow::Column::Followee);
-        // All default suggestions.
-        let mut default_suggestions = SelectStatement::new();
-        default_suggestions
-            .column(default_follow_suggestion::Column::Identity)
-            // By using an empty array for the followers we ensure the default
-            // suggestions always come last.
-            .expr_as(Expr::cust("ARRAY[]::TEXT[]"), FOLLOWERS_COLUMN)
-            .from(default_follow_suggestion::Entity);
+        let default_suggestions = Self::build_default_suggestions();
         // Combined followee and default suggestions.
         let mut suggestions = SelectStatement::new();
         suggestions
@@ -343,6 +339,33 @@ impl Query {
                 Expr::col(follow::Column::Followee.into_column_ref())
                     .not_in_subquery(select_following),
             );
+        suggestions
+    }
+
+    /// All default suggestions. Columns: (followee, followers).
+    fn build_default_suggestions() -> SelectStatement {
+        let mut default_suggestions = SelectStatement::new();
+        default_suggestions
+            .expr_as(
+                Expr::col(default_follow_suggestion::Column::Identity),
+                follow::Column::Followee,
+            )
+            // By using an empty array for the followers we ensure the default
+            // suggestions always come last.
+            .expr_as(Expr::cust("ARRAY[]::TEXT[]"), FOLLOWERS_COLUMN)
+            .from(default_follow_suggestion::Entity);
+        default_suggestions
+    }
+
+    /// The latest identity event of each row in `suggestions` (columns
+    /// (followee, followers)), most followers first, keyset-paginated.
+    async fn page_suggestions(
+        db: &DbConn,
+        suggestions: SelectStatement,
+        cursor_filter: &CursorFilter<FollowSuggestionsSortedBy>,
+        limit: u32,
+    ) -> Result<Vec<FollowSuggestionEvent>, DbErr> {
+        const SUGGESTIONS_TABLE: &str = "suggestions";
 
         // The latest identitiy events based on the follow suggestions.
         let mut identity_events = SelectStatement::new();
@@ -370,8 +393,6 @@ impl Query {
         let mut query = event::Entity::find().select_only();
         QuerySelect::query(&mut query).with_cte({
             let mut c = WithClause::new();
-            let mut following_cte = CommonTableExpression::new();
-            following_cte.table_name(FOLLOWING_TABLE).query(following);
             let mut suggestions_cte = CommonTableExpression::new();
             suggestions_cte
                 .table_name(SUGGESTIONS_TABLE)
@@ -383,15 +404,17 @@ impl Query {
                 .table_name(event::Entity)
                 .query(identity_events);
             c.recursive(false)
-                .cte(following_cte)
                 .cte(suggestions_cte)
                 .cte(identity_events_cte);
             c
         });
-        query =
-            select_model_columns(query, EVENT_PREFIX, event::Column::iter());
-        query = select_model_columns(
-            query,
+        select_model_columns(
+            QuerySelect::query(&mut query),
+            EVENT_PREFIX,
+            event::Column::iter(),
+        );
+        select_model_columns(
+            QuerySelect::query(&mut query),
             CONTENT_PREFIX,
             content::Column::iter(),
         );
@@ -460,7 +483,7 @@ impl Query {
                 Cursor::End => { /* No filtering. */ }
             },
         }
-        query = query.limit(Some((limit + 1).into())); // + 1 for pagination.
+        query = query.limit(Some(limit as u64));
 
         query.into_tuple().all(db).await
     }
@@ -571,11 +594,8 @@ async fn page_follow_events(
     db: &DbConn,
     query: SelectTwo<event::Entity, content::Entity>,
     limit: u32,
-    cursor_filter: Option<&CursorFilter<EventCreatedAt>>,
+    cursor_filter: &CursorFilter<EventCreatedAt>,
 ) -> Result<Vec<EventWithContentRow>, DbErr> {
-    let cursor_filter =
-        cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
-
     let mut sea_cursor =
         query.cursor_by((event::Column::CreatedAt, event::Column::Id));
     sea_cursor.desc();
@@ -759,7 +779,7 @@ mod tests {
 
         let blocked = Query::blocked_set(&ctx, "alice").await.unwrap();
         assert_eq!(
-            *blocked,
+            blocked,
             HashSet::from(["bob".to_string(), "carol".to_string()])
         );
     }
@@ -822,7 +842,8 @@ mod tests {
             ]])
             .into_connection();
 
-        let rows = Query::list_followers_events(&db, "target", 10, None)
+        let cursor = CursorFilter::default();
+        let rows = Query::list_followers_events(&db, "target", 10, &cursor)
             .await
             .unwrap();
         let identities: Vec<&str> =
@@ -839,7 +860,7 @@ mod tests {
             &db,
             "alice",
             10,
-            Some(&CursorFilter::Forward(Cursor::End)),
+            &CursorFilter::Forward(Cursor::End),
         )
         .await
         .unwrap();
@@ -854,7 +875,7 @@ mod tests {
             &db,
             "alice",
             10,
-            Some(&CursorFilter::Backward(Cursor::Start)),
+            &CursorFilter::Backward(Cursor::Start),
         )
         .await
         .unwrap();

@@ -91,6 +91,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_func_is_moderation_label(value: Uint8Array, uniffi_out_err: UniffiRustCallStatus): number;
     ubrn_uniffi_polycentric_core_fn_func_labels_changed(a: Uint8Array, b: Uint8Array, uniffi_out_err: UniffiRustCallStatus): number;
     ubrn_uniffi_polycentric_core_fn_func_labels_from_feed_response(response: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+    ubrn_uniffi_polycentric_core_fn_func_labels_from_get_post_response(response: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_func_labels_from_notifications_response(response: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_func_labels_from_search_response(response: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_func_labels_from_thread_response(response: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
@@ -153,6 +154,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_checksum_func_is_moderation_label(): number;
     ubrn_uniffi_polycentric_core_checksum_func_labels_changed(): number;
     ubrn_uniffi_polycentric_core_checksum_func_labels_from_feed_response(): number;
+    ubrn_uniffi_polycentric_core_checksum_func_labels_from_get_post_response(): number;
     ubrn_uniffi_polycentric_core_checksum_func_labels_from_notifications_response(): number;
     ubrn_uniffi_polycentric_core_checksum_func_labels_from_search_response(): number;
     ubrn_uniffi_polycentric_core_checksum_func_labels_from_thread_response(): number;

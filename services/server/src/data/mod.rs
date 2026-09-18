@@ -192,7 +192,7 @@ const DEFAULT_LIMIT: u32 = 50;
 ///
 /// For example used by [`pipeline::finalize_fetch`].
 pub struct PaginationParams<SortedBy> {
-    pub cursor_filter: Option<CursorFilter<SortedBy>>,
+    pub cursor_filter: CursorFilter<SortedBy>,
     pub limit: u32,
 }
 
@@ -211,7 +211,7 @@ impl<SortedBy> PaginationParams<SortedBy> {
     {
         let Some(params) = params else {
             return Ok(PaginationParams {
-                cursor_filter: None,
+                cursor_filter: CursorFilter::default(),
                 limit: DEFAULT_LIMIT,
             });
         };
@@ -229,12 +229,12 @@ impl<SortedBy> PaginationParams<SortedBy> {
                     ));
                 }
                 (Some(token), None) => {
-                    Some(CursorFilter::Backward(Cursor::decode(token)?))
+                    CursorFilter::Backward(Cursor::decode(token)?)
                 }
                 (None, Some(token)) => {
-                    Some(CursorFilter::Forward(Cursor::decode(token)?))
+                    CursorFilter::Forward(Cursor::decode(token)?)
                 }
-                (None, None) => None,
+                (None, None) => CursorFilter::default(),
             };
 
         Ok(PaginationParams {
@@ -280,6 +280,12 @@ impl<SortedBy> PageInfo<SortedBy> {
 pub enum CursorFilter<SortedBy> {
     Forward(Cursor<SortedBy>),
     Backward(Cursor<SortedBy>),
+}
+
+impl<SortedBy> Default for CursorFilter<SortedBy> {
+    fn default() -> CursorFilter<SortedBy> {
+        CursorFilter::Forward(Cursor::Start)
+    }
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]

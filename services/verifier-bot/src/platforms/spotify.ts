@@ -2,6 +2,7 @@ import {
   createCookieEnabledAxios,
   getCallbackForPlatform,
   httpResponseToError,
+  OAUTH_CALLBACK_DOMAIN,
 } from '../utility.js';
 import type { ClaimField, Platform, TokenResponse } from '../models.js';
 import { Result } from '../result.js';
@@ -13,6 +14,13 @@ type SpotifyTokenRequest = {
   code: string;
 };
 
+const SPOTIFY_CLIENT_ID =
+  process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_ID ??
+  process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID;
+const SPOTIFY_CLIENT_SECRET =
+  process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET ??
+  process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET;
+
 class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
   constructor() {
     super('Spotify');
@@ -20,8 +28,8 @@ class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
 
   public async getOAuthURL(): Promise<Result<string>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      SPOTIFY_CLIENT_ID === undefined ||
+      OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -29,7 +37,7 @@ class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
     const redirectUri = getCallbackForPlatform(this.platform, true);
     return Result.ok(
       `https://accounts.spotify.com/authorize?response_type=code&client_id=${encodeURIComponent(
-        process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID,
+        SPOTIFY_CLIENT_ID,
       )}&redirect_uri=${redirectUri}`,
     );
   }
@@ -38,10 +46,9 @@ class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
     data: SpotifyTokenRequest,
   ): Promise<Result<TokenResponse>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET ===
-        undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      SPOTIFY_CLIENT_ID === undefined ||
+      SPOTIFY_CLIENT_SECRET === undefined ||
+      OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -59,9 +66,7 @@ class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
       data: qs.stringify(fdata),
       headers: {
         Authorization: `Basic ${Buffer.from(
-          process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID +
-            ':' +
-            process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET,
+          SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET,
         ).toString('base64')}`,
         'content-type': 'application/x-www-form-urlencoded',
       },
@@ -138,8 +143,8 @@ class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
 
   public async healthCheck(): Promise<Result<void>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET === undefined
+      SPOTIFY_CLIENT_ID === undefined ||
+      SPOTIFY_CLIENT_SECRET === undefined
     ) {
       return Result.errMsg(
         'Verifier not configured: Missing Spotify credentials',

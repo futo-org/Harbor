@@ -2,13 +2,14 @@
 //! verifying the caller is a moderator. The ban is attributed to the
 //! authenticated moderator identity.
 
-use crate::service::context::ServiceContext;
-use crate::service::identity::repository as id_repo;
-use crate::service::identity::rpc::common::require_moderator;
-use crate::service::identity::service as identity_service;
-use crate::service::proto::{SetBanStatusRequest, SetBanStatusResponse};
 use sea_orm::TransactionTrait;
 use tonic::{Request, Status};
+
+use crate::service::context::ServiceContext;
+use crate::service::identity::repository;
+use crate::service::identity::rpc::common::require_moderator;
+use crate::service::identity::service::erase_identity;
+use crate::service::proto::{SetBanStatusRequest, SetBanStatusResponse};
 
 pub async fn handle(
     ctx: &ServiceContext,
@@ -22,7 +23,7 @@ pub async fn handle(
         tracing::error!(error = %e, "set_ban_status txn begin error");
         Status::internal("internal server error")
     })?;
-    id_repo::Mutation::set_banned(
+    repository::Mutation::set_banned(
         &txn,
         &body.target_identity,
         body.banned,
@@ -46,7 +47,7 @@ pub async fn handle(
     );
 
     if body.banned {
-        identity_service::erase_identity(
+        erase_identity(
             &ctx.db,
             None,
             Some(&ctx.proof_cache),

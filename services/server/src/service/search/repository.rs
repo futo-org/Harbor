@@ -4,12 +4,12 @@ use crate::service::proto::{SortPostsBy, SortUsersBy};
 use crate::service::search::rpc::search_posts::SortedPostsBy;
 use crate::service::search::rpc::search_users::SortedUsersBy;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
-use entity::{content, event, profile};
+use entity::{content, event, profile, reaction_tally};
 use sea_orm::sea_query::{Expr, Order, Value};
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iterable,
-    JoinType, QueryFilter, QueryOrder, QueryResult, QuerySelect, RelationTrait,
-    TryGetError, TryGetableMany,
+    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, IdenStatic,
+    Iterable, JoinType, QueryFilter, QueryOrder, QueryResult, QuerySelect,
+    RelationTrait, TryGetError, TryGetableMany,
 };
 use tonic::Status;
 
@@ -49,6 +49,7 @@ pub struct SearchPostsEvent {
     pub event: event::Model,
     pub content: content::Model,
     pub search_rank: f32,
+    pub positive_reactions: i64,
 }
 
 impl TryGetableMany for SearchPostsEvent {
@@ -65,6 +66,9 @@ impl TryGetableMany for SearchPostsEvent {
             event: FromQueryResult::from_query_result(res, EVENT_PREFIX)?,
             content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
             search_rank: res.try_get_by(SEARCH_RANK_COLUMN)?,
+            positive_reactions: res
+                .try_get_by(reaction_tally::Column::PositiveCount.as_str())
+                .unwrap_or(0),
         })
     }
 }
@@ -79,16 +83,16 @@ impl Query {
         search_query: &str,
         sort_by: SortUsersBy,
         limit: u64,
-        cursor_filter: Option<&CursorFilter<SortedUsersBy>>,
+        cursor_filter: &CursorFilter<SortedUsersBy>,
     ) -> Result<Vec<SearchUsersEvent>, Status> {
-        let cursor_filter =
-            cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
-
         let mut query = profile::Entity::find().select_only();
-        query =
-            select_model_columns(query, EVENT_PREFIX, event::Column::iter());
-        query = select_model_columns(
-            query,
+        select_model_columns(
+            QuerySelect::query(&mut query),
+            EVENT_PREFIX,
+            event::Column::iter(),
+        );
+        select_model_columns(
+            QuerySelect::query(&mut query),
             CONTENT_PREFIX,
             content::Column::iter(),
         );
@@ -171,7 +175,7 @@ impl Query {
                 Cursor::End => { /* No filtering. */ }
             },
         }
-        query = query.limit(limit + 1); // + 1 for pagination.
+        query = query.limit(limit);
 
         let rows: Vec<SearchUsersEvent> =
             query.into_tuple().all(db).await.map_err(|err| {
@@ -186,16 +190,16 @@ impl Query {
         search_query: &str,
         sort_by: SortPostsBy,
         limit: u64,
-        cursor_filter: Option<&CursorFilter<SortedPostsBy>>,
+        cursor_filter: &CursorFilter<SortedPostsBy>,
     ) -> Result<Vec<SearchPostsEvent>, Status> {
-        let cursor_filter =
-            cursor_filter.unwrap_or(&CursorFilter::Forward(Cursor::Start));
-
         let mut query = event::Entity::find().select_only();
-        query =
-            select_model_columns(query, EVENT_PREFIX, event::Column::iter());
-        query = select_model_columns(
-            query,
+        select_model_columns(
+            QuerySelect::query(&mut query),
+            EVENT_PREFIX,
+            event::Column::iter(),
+        );
+        select_model_columns(
+            QuerySelect::query(&mut query),
             CONTENT_PREFIX,
             content::Column::iter(),
         );
@@ -211,6 +215,15 @@ impl Query {
                 "search_data @@ search_query($1)",
                 [search_query],
             ));
+
+        if let SortPostsBy::Top = sort_by {
+            query = query
+                .join(
+                    JoinType::InnerJoin,
+                    reaction_tally::Relation::Event.def().rev(),
+                )
+                .column(reaction_tally::Column::PositiveCount);
+        }
 
         let column = sort_posts_by_column(sort_by);
         QueryOrder::query(&mut query)
@@ -233,6 +246,13 @@ impl Query {
                         } => query.filter(Expr::cust_with_values(
                             "(ts_rank(search_data, search_query($$1)), events.id) < ($1, $2)",
                             [Value::from(rank), Value::from(event_id)],
+                        )),
+                        Marker {
+                            sorted_by: SortedPostsBy::PositiveReactions(count),
+                            event_id,
+                        } => query.filter(Expr::cust_with_values(
+                            "(reaction_tally.positive_count, events.id) < ($1, $2)",
+                            [Value::from(count), Value::from(event_id)],
                         )),
                         Marker {
                             sorted_by: SortedPostsBy::Latest(created_at),
@@ -263,6 +283,13 @@ impl Query {
                             [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
+                            sorted_by: SortedPostsBy::PositiveReactions(count),
+                            event_id,
+                        } => query.filter(Expr::cust_with_values(
+                            "(reaction_tally.positive_count, events.id) > ($1, $2)",
+                            [Value::from(count), Value::from(event_id)],
+                        )),
+                        Marker {
                             sorted_by: SortedPostsBy::Latest(created_at),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
@@ -274,7 +301,7 @@ impl Query {
                 Cursor::End => { /* No filtering. */ }
             },
         }
-        query = query.limit(limit + 1); // + 1 for pagination.
+        query = query.limit(limit);
 
         query.into_tuple().all(db).await.map_err(|err| {
             tracing::error!("failed to search for users: {err}");
@@ -295,7 +322,9 @@ fn sort_users_by_column(sort_by: SortUsersBy) -> (Expr, Order) {
 fn sort_posts_by_column(sort_by: SortPostsBy) -> Expr {
     match sort_by {
         SortPostsBy::Default => Expr::col(SEARCH_RANK_COLUMN),
-        SortPostsBy::Top => unimplemented!(),
+        SortPostsBy::Top => {
+            Expr::col(reaction_tally::Column::PositiveCount.as_column_ref())
+        }
         SortPostsBy::Latest => {
             Expr::col(event::Column::CreatedAt.as_column_ref())
         }
