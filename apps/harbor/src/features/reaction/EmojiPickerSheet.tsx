@@ -5,6 +5,7 @@ import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categories, getCategory, type EmojiEntry } from './emojiData';
 import { searchEmojis } from './emojiSearch';
 import { Emoji } from './Emoji';
@@ -27,6 +28,8 @@ const MIN_COLUMNS = 8;
 const ALL_EMOJIS = categories.flatMap((c) => c.emojis);
 
 const keyExtractor = (item: EmojiEntry) => item.emoji;
+
+const CATEGORY_RAIL_BORDER_WIDTH = 1;
 
 /**
  * Emoji picker sheet with a search input, a category rail and a scrollable
@@ -64,6 +67,10 @@ export function EmojiPickerSheet({
     Math.floor(gridWidth / TARGET_CELL_WIDTH),
   );
   const colWidth = gridWidth / numColumns;
+  // The footer overlays the sheet content, so the grid pads for the rail's
+  // visible height (square icons plus the top border); the safe-area part of
+  // the footer is covered by the inset TrueSheet gives the pinned list.
+  const railHeight = gridWidth / categories.length + CATEGORY_RAIL_BORDER_WIDTH;
 
   const categoryEmojis = useMemo(
     () =>
@@ -111,6 +118,15 @@ export function EmojiPickerSheet({
       detents={[0.5]}
       maxWidth={400}
       header={<Sheet.Header title="Pick a reaction" onClose={onClose} />}
+      // A footer sits at the sheet's bottom and rises above the keyboard
+      // natively, so hiding it while searching does not resize the grid.
+      footer={
+        <EmojiCategoryRail
+          selectedCategory={selectedCategory}
+          onSelect={handleCategorySelect}
+          hidden={isSearching}
+        />
+      }
     >
       <Sheet.Content
         scrollable={false}
@@ -131,14 +147,6 @@ export function EmojiPickerSheet({
               />
             </View>
 
-            {!isSearching && (
-              <EmojiCategoryRail
-                selectedCategory={selectedCategory}
-                onSelect={handleCategorySelect}
-                width={gridWidth}
-              />
-            )}
-
             <View style={Atoms.flex_1}>
               <FlashList
                 ref={listRef}
@@ -151,6 +159,9 @@ export function EmojiPickerSheet({
                 // anchoring on the first visible item would fight the
                 // scroll-to-top and is anyway unnecesaary here
                 maintainVisibleContentPosition={{ disabled: true }}
+                contentContainerStyle={{
+                  paddingBottom: isSearching ? 0 : railHeight,
+                }}
                 ListEmptyComponent={isSearching ? NoEmojisFound : null}
               />
             </View>
@@ -173,41 +184,58 @@ function NoEmojisFound() {
   );
 }
 
+/**
+ * Sheet footer with one tappable icon per category; the selected one is
+ * underlined. `hidden` collapses it instead of unmounting: on iOS, TrueSheet
+ * only wires a footer to its keyboard observer when the sheet presents, so a
+ * footer mounted later stays at the screen bottom, behind the keyboard.
+ */
 function EmojiCategoryRail({
   selectedCategory,
   onSelect,
-  width,
+  hidden,
 }: {
   selectedCategory: string;
   onSelect: (key: string) => void;
-  width: number;
+  hidden: boolean;
 }) {
   const { theme } = useTheme();
-  const categoryColWidth = width / categories.length;
+  const insets = useSafeAreaInsets();
+  // Measured here: the footer is not inside `Sheet.Content`.
+  const [railWidth, setRailWidth] = useState(0);
+  const categoryColWidth = railWidth / categories.length;
 
   return (
     <View
       style={[
         Atoms.flex_row,
-        { borderBottomWidth: 1, borderColor: theme.palette.neutral_25 },
+        {
+          paddingBottom: insets.bottom,
+          borderTopWidth: CATEGORY_RAIL_BORDER_WIDTH,
+          borderColor: theme.palette.neutral_25,
+          backgroundColor: theme.palette.neutral_0,
+        },
+        hidden && { display: 'none' },
       ]}
+      onLayout={(e) => setRailWidth(e.nativeEvent.layout.width)}
     >
-      {categories.map((cat) => (
-        <Emoji
-          key={cat.key}
-          emoji={cat.icon}
-          value={cat.key}
-          size={categoryColWidth}
-          onSelect={onSelect}
-          highlightColor={theme.palette.neutral_100}
-          style={
-            cat.key === selectedCategory && {
-              borderBottomWidth: 2,
-              borderBottomColor: theme.palette.primary_500,
+      {railWidth > 0 &&
+        categories.map((cat) => (
+          <Emoji
+            key={cat.key}
+            emoji={cat.icon}
+            value={cat.key}
+            size={categoryColWidth}
+            onSelect={onSelect}
+            highlightColor={theme.palette.neutral_100}
+            style={
+              cat.key === selectedCategory && {
+                borderBottomWidth: 2,
+                borderBottomColor: theme.palette.primary_500,
+              }
             }
-          }
-        />
-      ))}
+          />
+        ))}
     </View>
   );
 }
