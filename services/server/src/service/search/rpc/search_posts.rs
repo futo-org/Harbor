@@ -50,7 +50,7 @@ async fn fetch(
         &ctx.service.ro_db,
         &params.common.query,
         params.sort_by,
-        params.common.limit,
+        params.common.limit + 1, // For pagination.
         &params.common.cursor_filter,
     )
     .await?;

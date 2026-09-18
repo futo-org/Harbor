@@ -483,7 +483,7 @@ impl Query {
                 Cursor::End => { /* No filtering. */ }
             },
         }
-        query = query.limit(Some((limit + 1).into())); // + 1 for pagination.
+        query = query.limit(Some(limit as u64));
 
         query.into_tuple().all(db).await
     }

@@ -92,30 +92,29 @@ where
         _ => rows.truncate(limit as usize),
     }
 
-    let backward_marker = rows.first().map(&row_to_marker);
-    let forward_marker = rows.last().map(&row_to_marker);
-
-    let backward_cursor = match (backward_marker, cursor_filter) {
-        // We have non-zero rows: navigating backward will skip the first row we fetched.
-        (Some(marker), _) => Cursor::Mid(marker),
-        // There are zero rows preceding the previous cursor: we stay here.
-        (None, CursorFilter::Backward(cur)) => cur.clone(),
-        // Truly empty feed: we are at the end and new items will be
-        // placed preceding our cursor.
-        // OR
-        // Forward query from the end of the feed: we get the last items
-        // if we navigate backward.
-        _ => Cursor::End,
+    let backward_cursor = if !has_previous_page {
+        Cursor::Start
+    } else {
+        match rows.first() {
+            Some(row) => Cursor::Mid(row_to_marker(row)),
+            None => match cursor_filter {
+                // Going forward we're at the last page, so copy the forward cursor.
+                CursorFilter::Forward(cursor) => cursor.clone(),
+                // Going backward we're at the last (backwards, so it's the
+                // first) page, which means we're at the start (which means
+                // we're done).
+                CursorFilter::Backward(_) => Cursor::Start,
+            },
+        }
     };
 
-    let forward_cursor = match (forward_marker, cursor_filter) {
-        // We have non-zero rows: navigating forward will skip the last row we fetched.
-        (Some(marker), _) => Cursor::Mid(marker),
-        // There are zero rows preceding the previous cursor: a forward query
-        // should return the first items in the feed.
-        (None, CursorFilter::Backward(_)) => Cursor::Start,
-        // There are zero rows following the previous cursor: we stay here.
-        (None, CursorFilter::Forward(cur)) => cur.clone(),
+    let forward_cursor = if !has_next_page {
+        Cursor::End
+    } else {
+        match rows.last() {
+            Some(row) => Cursor::Mid(row_to_marker(row)),
+            None => Cursor::End, // No rows in page, so we're at the end.
+        }
     };
 
     PageInfo {

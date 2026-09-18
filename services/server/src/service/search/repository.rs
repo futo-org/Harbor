@@ -175,7 +175,7 @@ impl Query {
                 Cursor::End => { /* No filtering. */ }
             },
         }
-        query = query.limit(limit + 1); // + 1 for pagination.
+        query = query.limit(limit);
 
         let rows: Vec<SearchUsersEvent> =
             query.into_tuple().all(db).await.map_err(|err| {
@@ -301,7 +301,7 @@ impl Query {
                 Cursor::End => { /* No filtering. */ }
             },
         }
-        query = query.limit(limit + 1); // + 1 for pagination.
+        query = query.limit(limit);
 
         query.into_tuple().all(db).await.map_err(|err| {
             tracing::error!("failed to search for users: {err}");
