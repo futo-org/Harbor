@@ -15,7 +15,7 @@ export function searchEmojis(query: string): EmojiEntry[] {
   if (exactEntry) return [exactEntry];
 
   return fuzzysort
-    .go(trimmedQuery, getSearchIndex(), { limit: 0, threshold: 0 })
+    .go(trimmedQuery, getSearchIndex(), { limit: 0 })
     .map((result) => result.obj.entry);
 }
 
