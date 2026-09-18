@@ -842,6 +842,27 @@ impl Query {
         DescendantRef::find_by_statement(stmt).all(db).await
     }
 
+    /// List feed events at a given sequence by a given identity.
+    /// This is useful when we don't know the full signing key.
+    pub(super) async fn list_events_at_sequence(
+        db: &DbConn,
+        identity: &str,
+        sequence: u64,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        event::Entity::find()
+            .select_also(content::Entity)
+            .join(JoinType::InnerJoin, content_join())
+            // Apply the requested filters.
+            .filter(event::Column::Collection.eq(FEED_COLLECTION))
+            .filter(event::Column::Identity.eq(identity))
+            .filter(event::Column::Sequence.eq(sequence))
+            // We should only be returning at most a couple candidates, but
+            // we'll add a bound just in case.
+            .limit(50)
+            .all(db)
+            .await
+    }
+
     /// Get up to `limit` reaction events for the target post.
     /// Fetches in order of most-recent to least-recent so that we don't fetch
     /// outdated reactions from a user that have been superseded without also

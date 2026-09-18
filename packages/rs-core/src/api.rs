@@ -16,7 +16,6 @@ use polycentric_common::models::protos_v2::{
 use polycentric_common::models::protos_v2::{ListHeadsRequest, PutEventsResponse};
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
-use std::sync::LazyLock;
 use std::sync::{Arc, Mutex};
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native-transport")))]
@@ -31,6 +30,7 @@ async fn channel(server_url: &str) -> Result<crate::query::GrpcChannel, CoreErro
 /// Install a panic hook that logs the panic message
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn install_panic_hook() {
+    use std::sync::LazyLock;
     let lazy = LazyLock::new(|| {
         std::panic::set_hook(Box::new(|info| {
             let location = info
@@ -92,6 +92,7 @@ pub struct ContentEntry {
 pub enum Query {
     GetProfile(crate::query::profile::GetProfileArgs),
     GetEvent(crate::query::event::GetEventArgs),
+    GetPost(crate::query::event::GetPostArgs),
     GetPostThread(crate::query::feed::GetPostThreadArgs),
     GetIdentityFeed(crate::query::feed::GetIdentityFeedArgs),
     GetFollowingFeed(crate::query::feed::GetFollowingFeedArgs),
@@ -415,6 +416,9 @@ impl PolycentricCore {
             }
             Query::GetEvent(args) => {
                 crate::query::event::get_event(&self.query_client, query_key, args, opts)
+            }
+            Query::GetPost(args) => {
+                crate::query::event::get_post(&self.query_client, query_key, args, opts)
             }
             Query::GetPostThread(args) => {
                 crate::query::feed::get_post_thread(&self.query_client, query_key, args, opts)

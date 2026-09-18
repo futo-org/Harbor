@@ -50,6 +50,19 @@ message GetPostThreadResponse {
   repeated EventHint event_hints = 2;
 }
 
+// Request candidate posts matching these filters.
+message GetPostRequest {
+  string identity = 1;
+  uint64 sequence = 2;
+  repeated string omit_labels = 3;
+}
+
+// All candidate post events matching the request's filter.
+message GetPostResponse {
+  repeated EventBundle candidates = 1;
+  repeated EventHint event_hints = 2;
+}
+
 message GetPostThreadRequest {
   // Parent post to return the thread for
   EventKey event_key = 1;
@@ -82,7 +95,9 @@ service FeedsService {
   rpc GetRecommendedFeed(GetFollowingFeedRequest) returns (GetFeedResponse);
   // Get posts by any identity.
   rpc GetExploreFeed(GetExploreFeedRequest) returns (GetFeedResponse);
-  // Replies to a post
+  // Get a single post.
+  rpc GetPost(GetPostRequest) returns (GetPostResponse);
+  // Replies to a post.
   rpc GetPostThread(GetPostThreadRequest) returns (GetPostThreadResponse);
   // Posts attributed to the same target (e.g. all posts about a URL)
   rpc GetAttributionFeed(GetAttributionFeedRequest) returns (GetFeedResponse);
