@@ -45,6 +45,7 @@ const sidebars: SidebarsConfig = {
         'developer/project-structure',
         'developer/feed-paging',
         'developer/declaring-your-application',
+        'developer/submitting-events',
         'developer/e2e-testing',
       ],
     },
