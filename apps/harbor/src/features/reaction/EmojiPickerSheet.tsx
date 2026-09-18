@@ -4,7 +4,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categories, getCategory, type EmojiEntry } from './emojiData';
 import { searchEmojis } from './emojiSearch';
@@ -202,40 +202,57 @@ function EmojiCategoryRail({
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   // Measured here: the footer is not inside `Sheet.Content`.
+  const { height: windowHeight } = useWindowDimensions();
   const [railWidth, setRailWidth] = useState(0);
   const categoryColWidth = railWidth / categories.length;
 
   return (
-    <View
-      style={[
-        Atoms.flex_row,
-        {
-          paddingBottom: insets.bottom,
-          borderTopWidth: CATEGORY_RAIL_BORDER_WIDTH,
-          borderColor: theme.palette.neutral_25,
-          backgroundColor: theme.palette.neutral_0,
-        },
-        hidden && { display: 'none' },
-      ]}
-      onLayout={(e) => setRailWidth(e.nativeEvent.layout.width)}
-    >
-      {railWidth > 0 &&
-        categories.map((cat) => (
-          <Emoji
-            key={cat.key}
-            emoji={cat.icon}
-            value={cat.key}
-            size={categoryColWidth}
-            onSelect={onSelect}
-            highlightColor={theme.palette.neutral_100}
-            style={
-              cat.key === selectedCategory && {
-                borderBottomWidth: 2,
-                borderBottomColor: theme.palette.primary_500,
+    <View style={{ paddingBottom: insets.bottom }}>
+      {/* Hides grid rows behind the translucent iOS keyboard: paints the sheet
+          background from the footer's top edge (the keyboard top) downward. */}
+      <View
+        pointerEvents="none"
+        style={[
+          Atoms.absolute,
+          {
+            top: 0,
+            left: 0,
+            right: 0,
+            height: windowHeight,
+            backgroundColor: theme.palette.neutral_0,
+          },
+        ]}
+      />
+      <View
+        style={[
+          Atoms.flex_row,
+          {
+            borderTopWidth: CATEGORY_RAIL_BORDER_WIDTH,
+            borderColor: theme.palette.neutral_25,
+            backgroundColor: theme.palette.neutral_0,
+          },
+          hidden && { display: 'none' },
+        ]}
+        onLayout={(e) => setRailWidth(e.nativeEvent.layout.width)}
+      >
+        {railWidth > 0 &&
+          categories.map((cat) => (
+            <Emoji
+              key={cat.key}
+              emoji={cat.icon}
+              value={cat.key}
+              size={categoryColWidth}
+              onSelect={onSelect}
+              highlightColor={theme.palette.neutral_100}
+              style={
+                cat.key === selectedCategory && {
+                  borderBottomWidth: 2,
+                  borderBottomColor: theme.palette.primary_500,
+                }
               }
-            }
-          />
-        ))}
+            />
+          ))}
+      </View>
     </View>
   );
 }
