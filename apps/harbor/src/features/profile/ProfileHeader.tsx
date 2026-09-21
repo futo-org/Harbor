@@ -39,8 +39,6 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
 
   const username = profile.name ?? fallbackUsername;
 
-  // Same short form shown beside posts (IdentityTag). The full key is on
-  // the identity sheet this row opens.
   const displayKey = shortenIdentityId(identityKey ?? undefined);
 
   const handleEdit = useCallback(() => {
