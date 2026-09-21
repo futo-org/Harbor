@@ -146,6 +146,7 @@ export function EmojiPickerSheet({
       onClose={onClose}
       detents={[0.5]}
       maxWidth={400}
+      height={800}
       header={<Sheet.Header title="Pick a reaction" onClose={onClose} />}
       // A footer sits at the sheet's bottom and rises above the keyboard
       // natively, so hiding it while searching does not resize the grid.
