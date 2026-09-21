@@ -382,15 +382,15 @@ jobs:
       - name: Package crates
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          # Bump the crate versions and give the path dependency a version so
-          # the crates package cleanly.
+          # Bump the crate versions and give the workspace dependency a version
+          # so the crates package cleanly.
           sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" packages/rs-common/Cargo.toml packages/rs-core/Cargo.toml
-          sed -i "s#path = \"../rs-common\" }#path = \"../rs-common\", version = \"${VERSION}\" }#" packages/rs-core/Cargo.toml
+          sed -i "s#^polycentric-common = .*#polycentric-common = { path = \"packages/rs-common\", version = \"${VERSION}\" }#" Cargo.toml
           mkdir -p target/package
           cargo package -p polycentric-common --no-verify --allow-dirty || true
           cargo package -p polycentric-core --no-verify --allow-dirty || true
-          if ! ls target/package/*.crate >/dev/null 2>&1; then
-            echo "cargo package produced no .crate; falling back to a source tarball" >&2
+          if ! ls "target/package/polycentric-core-${VERSION}.crate" >/dev/null 2>&1; then
+            echo "no polycentric-core .crate; falling back to a source tarball" >&2
             tar czf "target/package/polycentric-core-${VERSION}.crate" packages/rs-core packages/rs-common
           fi
       - uses: forgejo/upload-artifact@v4
