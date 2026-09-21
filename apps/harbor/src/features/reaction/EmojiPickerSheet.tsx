@@ -18,6 +18,7 @@ import { categories, getCategory, type EmojiEntry } from './emojiData';
 import { searchEmojis } from './emojiSearch';
 import { Emoji, EMOJI_IMAGE_SCALE, EmojiLikeButton } from './Emoji';
 import { create } from 'zustand';
+import { isWeb } from '@/src/common/util/platform';
 
 type EmojiPickerSheetProps = {
   open: boolean;
@@ -205,9 +206,10 @@ export function EmojiPickerSheet({
                 // anchoring on the first visible item would fight the
                 // scroll-to-top and is anyway unnecessary here
                 maintainVisibleContentPosition={{ disabled: true }}
-                contentContainerStyle={{
-                  paddingBottom: isSearching ? 0 : railHeight,
-                }}
+                contentContainerStyle={
+                  // on native the footer overlays the list content, so it needs to be padded to match
+                  !isWeb && { paddingBottom: isSearching ? 0 : railHeight }
+                }
                 ListEmptyComponent={
                   isSearching ? <ListEmpty>No emojis found</ListEmpty> : null
                 }
