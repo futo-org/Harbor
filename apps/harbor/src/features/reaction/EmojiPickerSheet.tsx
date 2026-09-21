@@ -58,9 +58,9 @@ export function EmojiPickerSheet({
   // Derivied from the sheet width
   const [contentWidth, setContentWidth] = useState(0);
 
-  // Start over from the full grid each time the sheet is reopened.
+  // Reset when closed
   useEffect(() => {
-    if (open) {
+    if (!open) {
       setSelectedCategory(ALL);
       setSearchQuery('');
     }
