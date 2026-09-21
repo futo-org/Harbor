@@ -3,9 +3,11 @@ import { Text, TextInput } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
+import { SearchField } from '@/src/features/search/SearchField';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Pressable,
   type TextInput as RNTextInput,
   useWindowDimensions,
   View,
@@ -67,16 +69,6 @@ export function EmojiPickerSheet({
   // Derivied from the sheet width
   const [contentWidth, setContentWidth] = useState(0);
 
-  // Reset when closed
-  useEffect(() => {
-    if (!open) {
-      setSelectedCategory(ALL);
-      setRawQuery('');
-      // The input is uncontrolled, so its native text is cleared separately
-      searchInputRef.current?.clear();
-    }
-  }, [open]);
-
   // The outer glyphs sit as far from the sheet edge as the search input does
   // (its horizontal padding), so the span between the glyphs' outer edges is
   // the input width; scale the column count with it, keeping cells near
@@ -113,6 +105,20 @@ export function EmojiPickerSheet({
     setRawQuery(text);
     listRef.current?.scrollToTop({ animated: false });
   }, []);
+
+  const clearQuery = useCallback(() => {
+    // The input is uncontrolled, so its native text is cleared separately
+    searchInputRef.current?.clear();
+    handleQueryChange('');
+  }, [handleQueryChange]);
+
+  // Reset when closed
+  useEffect(() => {
+    if (!open) {
+      setSelectedCategory(ALL);
+      clearQuery();
+    }
+  }, [open, clearQuery]);
 
   const handleCategorySelect = useCallback((key: string) => {
     setSelectedCategory((prev) => (prev === key ? ALL : key));
@@ -157,15 +163,31 @@ export function EmojiPickerSheet({
         {contentWidth > 0 && (
           <>
             <View style={[Atoms.px_lg, Atoms.py_sm]}>
-              <TextInput
-                ref={searchInputRef}
-                onChangeText={handleQueryChange}
-                placeholder="Search emojis"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="search"
-                accessibilityLabel="Search emojis"
-              />
+              <SearchField onPress={() => searchInputRef.current?.focus()}>
+                <Icon name="search" size={16} color="neutral_500" />
+                <TextInput
+                  ref={searchInputRef}
+                  variant="plain"
+                  onChangeText={handleQueryChange}
+                  placeholder="Search emojis"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  accessibilityLabel="Search emojis"
+                  style={[Atoms.py_0, Atoms.px_0, Atoms.flex_1]}
+                />
+                {rawQuery.length > 0 ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear search"
+                    onPress={clearQuery}
+                    hitSlop={Spacing.sm}
+                    style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+                  >
+                    <Icon name="close" size={16} color="neutral_500" />
+                  </Pressable>
+                ) : null}
+              </SearchField>
             </View>
 
             <View style={[Atoms.flex_1, Atoms.items_center]}>
@@ -179,7 +201,7 @@ export function EmojiPickerSheet({
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 // anchoring on the first visible item would fight the
-                // scroll-to-top and is anyway unnecesaary here
+                // scroll-to-top and is anyway unnecessary here
                 maintainVisibleContentPosition={{ disabled: true }}
                 contentContainerStyle={{
                   paddingBottom: isSearching ? 0 : railHeight,
