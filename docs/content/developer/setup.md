@@ -23,6 +23,8 @@ edges and occasional breaking changes on `develop`.
 | [pnpm](https://pnpm.io)                                       | The workspace's package manager, version set in `package.json`. |
 | [Rust toolchain](https://rustup.rs)                           | Builds `rs-core`, the server, and the WASM bindings.     |
 | [`protoc`](https://github.com/protocolbuffers/protobuf)       | Compiles the protobuf definitions in `protos/`.          |
+| [JDK](https://adoptium.net) 17+                               | Only for working on `packages/kt-core`; the pre-commit hook formats its Kotlin through Gradle. |
+| [Android SDK](https://developer.android.com/studio)           | Only for working on `packages/kt-core`; AGP needs it to configure the build.                  |
 | [`docker compose`](https://github.com/docker/compose)         | Runs PostgreSQL, the object store, and the server.       |
 
 System packages on Debian/Ubuntu:
@@ -116,6 +118,18 @@ pnpm format:fix   # Biome format, writing changes
 
 Rust crates use the usual `cargo test` / `cargo fmt`. The app's TypeScript is
 checked with `pnpm -C apps/harbor typecheck`.
+
+`packages/kt-core` (Kotlin) is checked with
+[ktlint](https://github.com/JLLeitschuh/ktlint-gradle) via its Gradle
+wrapper. The pre-commit hook formats any staged `*.kt` file automatically
+(this is what requires the JDK and Android SDK above when committing
+kt-core changes); to run it manually:
+
+```sh
+cd packages/kt-core
+./gradlew :core:ktlintFormat  # fix
+./gradlew :core:ktlintCheck   # verify, same as CI
+```
 
 ## Clearing stale build caches
 

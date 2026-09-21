@@ -6,8 +6,8 @@ import org.futo.polycentric.ffi.GetIdentityFeedArgs
 import org.futo.polycentric.ffi.GetPostThreadArgs
 import org.futo.polycentric.ffi.GetProfileArgs
 import org.futo.polycentric.ffi.ListVerificationClaimsArgs
-import org.futo.polycentric.ffi.ResolveVerifiedClaimsArgs
 import org.futo.polycentric.ffi.Query
+import org.futo.polycentric.ffi.ResolveVerifiedClaimsArgs
 import polycentric.v2.AttributedTo
 import polycentric.v2.EventBundle
 import polycentric.v2.EventKey
@@ -22,7 +22,6 @@ import polycentric.v2.ResolveVerifiedClaimsResponse
  * fans out over the configured servers and resolves on the first `Success`
  * status via [awaitQuery].
  */
-
 
 suspend fun PolycentricClient.getProfile(identity: String): GetProfileResponse? =
     coreCall { core.awaitQuery(Query.GetProfile(GetProfileArgs(identity))) }
@@ -95,9 +94,7 @@ suspend fun PolycentricClient.getAttributionFeed(
         )
     }?.let { GetFeedResponse.ADAPTER.decode(it) }
 
-suspend fun PolycentricClient.listVerificationClaims(
-    claimedByIdentity: String,
-): ListVerificationClaimsResponse? =
+suspend fun PolycentricClient.listVerificationClaims(claimedByIdentity: String): ListVerificationClaimsResponse? =
     coreCall {
         core.awaitQuery(
             Query.ListVerificationClaims(ListVerificationClaimsArgs(claimedByIdentity)),
