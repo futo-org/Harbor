@@ -412,22 +412,20 @@ fn validate_string(
     min_len: Option<usize>,
     max_len: Option<usize>,
 ) -> Result<(), Status> {
-    if let Some(0) = min_len {
-        if input.is_empty() {
-            return Err(Status::invalid_argument(format!(
-                "{name} can't be empty"
-            )));
-        }
-    } else if let Some(min_len) = min_len {
-        if input.len() < min_len {
-            return Err(Status::invalid_argument(format!("{name} too short")));
-        }
+    if let Some(0) = min_len
+        && input.is_empty()
+    {
+        return Err(Status::invalid_argument(format!("{name} can't be empty")));
+    } else if let Some(min_len) = min_len
+        && input.len() < min_len
+    {
+        return Err(Status::invalid_argument(format!("{name} too short")));
     }
 
-    if let Some(max_len) = max_len {
-        if input.len() > max_len {
-            return Err(Status::invalid_argument(format!("{name} too long")));
-        }
+    if let Some(max_len) = max_len
+        && input.len() > max_len
+    {
+        return Err(Status::invalid_argument(format!("{name} too long")));
     }
 
     Ok(())
@@ -530,15 +528,12 @@ mod tests {
 
     #[test]
     fn a_delete_of_your_own_event_is_authorised() {
-        assert!(event_is_authorised("alice", Some(&delete_content("alice")),));
+        assert!(event_is_authorised("alice", &delete_content("alice")));
     }
 
     #[test]
     fn a_delete_of_another_identitys_event_is_not_authorised() {
-        assert!(!event_is_authorised(
-            "mallory",
-            Some(&delete_content("alice")),
-        ));
+        assert!(!event_is_authorised("mallory", &delete_content("alice")));
     }
 
     #[test]
@@ -546,12 +541,7 @@ mod tests {
         let content = Content {
             content_body: Some(ContentBody::Delete(Delete { event_key: None })),
         };
-        assert!(!event_is_authorised("alice", Some(&content)));
-    }
-
-    #[test]
-    fn an_event_without_content_is_not_authorised() {
-        assert!(!event_is_authorised("alice", None));
+        assert!(!event_is_authorised("alice", &content));
     }
 
     #[test]
@@ -561,6 +551,6 @@ mod tests {
                 identity: "bob".to_string(),
             })),
         };
-        assert!(event_is_authorised("alice", Some(&content)));
+        assert!(event_is_authorised("alice", &content));
     }
 }
