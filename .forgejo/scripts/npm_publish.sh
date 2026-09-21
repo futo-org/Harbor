@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 #
-# Publishes every @polycentric package to the GitLab package registry and,
+# Publishes every @polycentric package to the Forgejo package registry and,
 # when NPM_TOKEN is set, to public npm. Packages are published one at a time
 # so a version that already exists is skipped instead of aborting the whole
 # release (and blocking the packages ordered after it), keeping re-runs
 # idempotent.
 #
 # Env:
-#   CI_COMMIT_TAG    release tag, e.g. v2.0.2 (the leading "v" is stripped)
-#   CI_SERVER_HOST   GitLab host for the project package registry
-#   CI_PROJECT_ID    GitLab project id for the project package registry
-#   NPM_TOKEN        public npm auth token; public publish is skipped if unset
-# Without CI_SERVER_HOST only the public publish runs.
+#   CI_COMMIT_TAG      release tag, e.g. v2.0.2 (the leading "v" is stripped)
+#   GITHUB_SERVER_URL  Forgejo instance URL for the package registry
+#   GITHUB_REPOSITORY  owner/repo; the owner selects the Forgejo registry
+#   HARBOR_CI_TOKEN    Forgejo registry token; Forgejo publish is skipped if unset
+#   NPM_TOKEN          public npm auth token; public publish is skipped if unset
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -55,8 +55,15 @@ publish_all() {
   done
 }
 
-if [ -n "${CI_SERVER_HOST:-}" ]; then
-  publish_all "https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" "the GitLab package registry"
+if [ -n "${HARBOR_CI_TOKEN:-}" ]; then
+  : "${GITHUB_SERVER_URL:?GITHUB_SERVER_URL is required for Forgejo publishing}"
+  : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required for Forgejo publishing}"
+  forgejo_registry="${GITHUB_SERVER_URL}/api/packages/${GITHUB_REPOSITORY%%/*}/npm/"
+  forgejo_host=$(echo "${forgejo_registry}" | sed -E 's#https?://([^/]+).*#\1#')
+  echo "//${forgejo_host}/:_authToken=${HARBOR_CI_TOKEN}" >> ~/.npmrc
+  publish_all "${forgejo_registry}" "the Forgejo package registry"
+else
+  echo "HARBOR_CI_TOKEN is not set; skipping Forgejo publish" >&2
 fi
 
 if [ -n "${NPM_TOKEN:-}" ]; then

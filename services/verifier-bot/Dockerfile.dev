@@ -41,7 +41,7 @@ COPY tools tools
 # pnpm workspace + the JS pieces the bot needs. Frontend workspace members
 # (apps/*) are intentionally NOT copied: pnpm tolerates absent members, and
 # leaving them out keeps their (huge) Expo/RN deps out of node_modules.
-COPY .npmrc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY patches patches
 COPY packages/rs-core-wasm packages/rs-core-wasm
 COPY packages/js-core packages/js-core
