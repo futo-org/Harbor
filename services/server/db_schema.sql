@@ -97,6 +97,17 @@ CREATE FUNCTION public.search_query(query text) RETURNS tsquery
 
 
 --
+-- Name: alias_cache; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.alias_cache (
+    alias character varying NOT NULL,
+    identity character varying,
+    updated_at timestamp with time zone NOT NULL
+);
+
+
+--
 -- Name: application; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -663,6 +674,14 @@ CREATE TABLE public.verification_schema (
     schema_bytes bytea NOT NULL,
     schema jsonb NOT NULL
 );
+
+
+--
+-- Name: alias_cache alias_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alias_cache
+    ADD CONSTRAINT alias_cache_pkey PRIMARY KEY (alias);
 
 
 --
