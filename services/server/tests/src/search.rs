@@ -1000,6 +1000,47 @@ async fn search_posts_pagination_order_by_latest() {
     assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
+#[tokio::test]
+async fn regression_1570() {
+    let mut client = TestClient::new().await;
+
+    let post_text = "First line\n#some\n#the";
+    client.post_text(post_text, DEFAULT_CREATED_AT);
+    let post_key = client.get_last_event_key();
+    client.submit_events().await;
+
+    let mut search = search_service().await;
+    let request = SearchPostsRequest {
+        query: "some the".to_owned(),
+        sort_by: Some(SortPostsBy::Latest as _),
+        page_params: Some(PageParams {
+            limit: Some(2),
+            ..Default::default()
+        }),
+        omit_labels: Vec::new(),
+    };
+    let response = search.search_posts(request).await.unwrap();
+    let results = response.into_inner().results;
+
+    // We can match results, as long as one of them is the text we expect.
+    assert!(results.iter().any(|result| {
+        let key = Event::decode(
+            &*result
+                .event_bundle
+                .as_ref()
+                .unwrap()
+                .signed_event
+                .as_ref()
+                .unwrap()
+                .event_bytes,
+        )
+        .unwrap()
+        .key
+        .unwrap();
+        key == post_key
+    }));
+}
+
 async fn expect_searched_posts(
     request: SearchPostsRequest,
     expected: Vec<Post>,

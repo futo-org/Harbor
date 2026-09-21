@@ -36,7 +36,7 @@ CREATE AGGREGATE public.tsvector_agg(tsvector) (
 
 CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char") RETURNS tsvector
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM string_to_table(COALESCE(create_tsvector.text, ''::text), ' '::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
+    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
 
 
 --
