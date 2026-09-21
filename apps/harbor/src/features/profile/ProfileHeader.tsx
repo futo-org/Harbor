@@ -8,9 +8,12 @@ import {
   Text,
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { truncateName, useUsername } from '@/src/common/lib/polycentric-hooks';
+import {
+  shortenIdentityId,
+  truncateName,
+  useUsername,
+} from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode } from '@polycentric/react-native';
 import { router, type Href } from 'expo-router';
@@ -36,7 +39,9 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
 
   const username = profile.name ?? fallbackUsername;
 
-  const displayKey = identityKey ? identityKey.slice(0, 64) : '...';
+  // Same short form shown beside posts (IdentityTag). The full key is on
+  // the identity sheet this row opens.
+  const displayKey = shortenIdentityId(identityKey ?? undefined);
 
   const handleEdit = useCallback(() => {
     if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
@@ -129,7 +134,9 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
             ]}
           >
             <Icon name="key" size={13} color="neutral_500" />
-            <IdentityKeyText value={displayKey} />
+            <Text variant="secondary" color="neutral_500" numberOfLines={1}>
+              {displayKey}
+            </Text>
           </Pressable>
           {alias ? <AliasLabel alias={alias} /> : null}
           {profile.description ? (
@@ -170,40 +177,6 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           )}
         </View>
       </View>
-    </View>
-  );
-}
-
-const KEY_TAIL_LENGTH = 8;
-
-// Web has no middle ellipsis, so the tail is kept in its own Text.
-function IdentityKeyText({ value }: { value: string }) {
-  if (!isWeb) {
-    return (
-      <Text
-        variant="secondary"
-        color="neutral_500"
-        numberOfLines={1}
-        ellipsizeMode="middle"
-        style={{ flexShrink: 1 }}
-      >
-        {value}
-      </Text>
-    );
-  }
-  return (
-    <View style={[Atoms.flex_row, { flexShrink: 1, minWidth: 0 }]}>
-      <Text
-        variant="secondary"
-        color="neutral_500"
-        numberOfLines={1}
-        style={{ flexShrink: 1, minWidth: 0 }}
-      >
-        {value.slice(0, -KEY_TAIL_LENGTH)}
-      </Text>
-      <Text variant="secondary" color="neutral_500" style={{ flexShrink: 0 }}>
-        {value.slice(-KEY_TAIL_LENGTH)}
-      </Text>
     </View>
   );
 }
