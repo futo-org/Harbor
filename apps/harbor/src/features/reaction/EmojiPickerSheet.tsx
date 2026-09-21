@@ -3,7 +3,6 @@ import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { TextInput } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
-import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
 import { SearchField } from '@/src/features/search/SearchField';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -18,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categories, getCategory, type EmojiEntry } from './emojiData';
 import { searchEmojis } from './emojiSearch';
 import { Emoji, EMOJI_IMAGE_SCALE, EmojiLikeButton } from './Emoji';
+import { create } from 'zustand';
 
 type EmojiPickerSheetProps = {
   open: boolean;
@@ -45,6 +45,42 @@ const CATEGORY_RAIL_BORDER_WIDTH = 1;
 const CATEGORY_ICON_SCALE = 0.5;
 const CATEGORY_BUTTON_COUNT = categories.length + 0.5;
 
+const SEARCH_DEBOUNCE_MS = 300;
+
+// Shared by the search field and the grid, so neither has to mirror the
+// other's state. There is only ever one picker sheet.
+const useEmojiSearchStore = create<{
+  /** The text as typed; drives the input's clear button. */
+  rawQuery: string;
+  /** Debounced `rawQuery`; drives the grid. */
+  query: string;
+  setRawQuery: (rawQuery: string) => void;
+  clearQuery: () => void;
+}>((set) => {
+  let debounceTimeout: ReturnType<typeof setTimeout> | undefined;
+  return {
+    rawQuery: '',
+    query: '',
+    setRawQuery: (rawQuery) => {
+      clearTimeout(debounceTimeout);
+      if (rawQuery === '') {
+        // Empty query resets the search immediately
+        set({ rawQuery, query: '' });
+      } else {
+        set({ rawQuery });
+        debounceTimeout = setTimeout(
+          () => set({ query: rawQuery }),
+          SEARCH_DEBOUNCE_MS,
+        );
+      }
+    },
+    clearQuery: () => {
+      clearTimeout(debounceTimeout);
+      set({ rawQuery: '', query: '' });
+    },
+  };
+});
+
 /**
  * Emoji picker sheet with a search input, a category rail and a scrollable
  * grid, using `FlashList` over the emoji set from `emojiData`. While a search
@@ -58,14 +94,9 @@ export function EmojiPickerSheet({
 }: EmojiPickerSheetProps) {
   const { theme } = useTheme();
   const listRef = useRef<FlashListRef<EmojiEntry>>(null);
-  const searchInputRef = useRef<RNTextInput>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>(ALL);
-  const [rawQuery, setRawQuery] = useState('');
-  const query = useDebouncedValue(
-    rawQuery,
-    // Empty query resets the search immediately
-    rawQuery ? 300 : 0,
-  );
+  const query = useEmojiSearchStore((state) => state.query);
+  const clearQuery = useEmojiSearchStore((state) => state.clearQuery);
   const isSearching = query.trim() !== '';
 
   // Derivied from the sheet width
@@ -103,16 +134,10 @@ export function EmojiPickerSheet({
   const shownEmojis = isSearching ? searchResults : categoryEmojis;
 
   // Like a category switch, a new query starts the grid from the top.
-  const handleQueryChange = useCallback((text: string) => {
-    setRawQuery(text);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs on query change
+  useEffect(() => {
     listRef.current?.scrollToTop({ animated: false });
-  }, []);
-
-  const clearQuery = useCallback(() => {
-    // The input is uncontrolled, so its native text is cleared separately
-    searchInputRef.current?.clear();
-    handleQueryChange('');
-  }, [handleQueryChange]);
+  }, [query]);
 
   // Reset when closed
   useEffect(() => {
@@ -165,33 +190,7 @@ export function EmojiPickerSheet({
       >
         {contentWidth > 0 && (
           <>
-            <View style={[Atoms.px_lg, Atoms.py_sm]}>
-              <SearchField onPress={() => searchInputRef.current?.focus()}>
-                <Icon name="search" size={16} color="neutral_500" />
-                <TextInput
-                  ref={searchInputRef}
-                  variant="plain"
-                  onChangeText={handleQueryChange}
-                  placeholder="Search emojis"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="search"
-                  accessibilityLabel="Search emojis"
-                  style={[Atoms.py_0, Atoms.px_0, Atoms.flex_1]}
-                />
-                {rawQuery.length > 0 ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Clear search"
-                    onPress={clearQuery}
-                    hitSlop={Spacing.sm}
-                    style={({ pressed }) => [pressed && { opacity: 0.5 }]}
-                  >
-                    <Icon name="close" size={16} color="neutral_500" />
-                  </Pressable>
-                ) : null}
-              </SearchField>
-            </View>
+            <EmojiSearchField />
 
             <View style={[Atoms.flex_1, Atoms.items_center]}>
               <FlashList
@@ -218,6 +217,50 @@ export function EmojiPickerSheet({
         )}
       </Sheet.Content>
     </Sheet>
+  );
+}
+
+/** Search input with a clear button, writing to the emoji search store. */
+function EmojiSearchField() {
+  const inputRef = useRef<RNTextInput>(null);
+  const rawQuery = useEmojiSearchStore((state) => state.rawQuery);
+  const setRawQuery = useEmojiSearchStore((state) => state.setRawQuery);
+  const clearQuery = useEmojiSearchStore((state) => state.clearQuery);
+
+  // The input is uncontrolled, so a query cleared from elsewhere (the sheet
+  // closing) has to clear the native text too.
+  useEffect(() => {
+    if (rawQuery === '') inputRef.current?.clear();
+  }, [rawQuery]);
+
+  return (
+    <View style={[Atoms.px_lg, Atoms.py_sm]}>
+      <SearchField onPress={() => inputRef.current?.focus()}>
+        <Icon name="search" size={16} color="neutral_500" />
+        <TextInput
+          ref={inputRef}
+          variant="plain"
+          onChangeText={setRawQuery}
+          placeholder="Search emojis"
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          accessibilityLabel="Search emojis"
+          style={[Atoms.py_0, Atoms.px_0, Atoms.flex_1]}
+        />
+        {rawQuery.length > 0 ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+            onPress={clearQuery}
+            hitSlop={Spacing.sm}
+            style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+          >
+            <Icon name="close" size={16} color="neutral_500" />
+          </Pressable>
+        ) : null}
+      </SearchField>
+    </View>
   );
 }
 
