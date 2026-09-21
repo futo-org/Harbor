@@ -1,5 +1,6 @@
 import Icon from '@/src/common/components/Icon';
-import { Text, TextInput } from '@/src/common/components/primitives';
+import { ListEmpty } from '@/src/common/components/ListEmpty';
+import { TextInput } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
@@ -206,25 +207,15 @@ export function EmojiPickerSheet({
                 contentContainerStyle={{
                   paddingBottom: isSearching ? 0 : railHeight,
                 }}
-                ListEmptyComponent={isSearching ? NoEmojisFound : null}
+                ListEmptyComponent={
+                  isSearching ? <ListEmpty>No emojis found</ListEmpty> : null
+                }
               />
             </View>
           </>
         )}
       </Sheet.Content>
     </Sheet>
-  );
-}
-
-function NoEmojisFound() {
-  return (
-    <Text
-      variant="small"
-      color="neutral_500"
-      style={[Atoms.p_md, Atoms.text_center]}
-    >
-      No emojis found
-    </Text>
   );
 }
 
