@@ -19,15 +19,15 @@ export type EmojiCategory = {
 // Keyed by the slug derived from the Unicode group name; the groups are fixed
 // by the standard, so a group missing here is a bug rather than new data.
 const CATEGORY_ICON_BY_KEY: Record<string, IconName> = {
-  'smileys-emotion': 'emoticonHappyOutline',
-  'people-body': 'handWaveOutline',
+  'smileys-emotion': 'emoticonHappy',
+  'people-body': 'handWave',
   'animals-nature': 'paw',
-  'food-drink': 'foodAppleOutline',
+  'food-drink': 'foodApple',
   'travel-places': 'airplane',
   activities: 'basketball',
-  objects: 'lightbulbVariantOutline',
+  objects: 'lightbulb',
   symbols: 'pound',
-  flags: 'flagOutline',
+  flags: 'flagAlt',
 };
 
 const data = rawData as { emojis: EmojiEntry[] };
