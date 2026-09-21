@@ -9,8 +9,8 @@ use crate::service::{
     identity::repository::Query as IdentityRepository,
     identity::service::authorize_event_signer,
     proto::{
-        Content, Delete, Event, EventBundle, PublicKey, PutEventError,
-        PutEventsRequest, PutEventsResponse,
+        Application, Content, Delete, Event, EventBundle, PublicKey,
+        PutEventError, PutEventsRequest, PutEventsResponse,
     },
 };
 use chrono::{DateTime, Utc};
@@ -82,23 +82,35 @@ async fn process_event(
 ) -> Result<Vec<Blob>, Status> {
     let mut blobs = Vec::<Blob>::new();
 
+    if !event_bundle.event_proofs.is_empty() {
+        return Err(Status::invalid_argument(
+            "event proofs are not accepted when storing events",
+        ));
+    } else if event_bundle.meta.is_some() {
+        return Err(Status::invalid_argument(
+            "metadata not accepted when storing events",
+        ));
+    }
+
     // Encode the bundle up front while it's still whole — its fields are
     // moved out during validation below. Published to Kafka on success.
     let event_bundle_bytes = event_bundle.encode_to_vec();
 
-    let signed_event = event_bundle.signed_event.ok_or_else(|| {
-        Status::invalid_argument("package is missing signed event")
-    })?;
+    let signed_event = event_bundle
+        .signed_event
+        .ok_or_else(|| Status::invalid_argument("signed event missing"))?;
 
     let event =
         Event::decode(signed_event.event_bytes.as_slice()).map_err(|e| {
             tracing::debug!(error = %e, "put_events decode error");
-            Status::invalid_argument("invalid event_bytes")
+            Status::invalid_argument("signed event bytes invalid")
         })?;
+    validate_event(&event)?;
+    let collection = event.key.as_ref().map(|k| k.collection).unwrap_or(0);
 
     let key = event
         .key
-        .ok_or_else(|| Status::invalid_argument("event missing key"))?;
+        .ok_or_else(|| Status::invalid_argument("event key missing"))?;
 
     // Early banned check based on the cache.
     let is_banned = banned_cache.get(&*key.identity).copied();
@@ -127,38 +139,38 @@ async fn process_event(
     let event_key_bytes = key.encode_to_vec();
 
     let signed_by = key.signed_by.ok_or_else(|| {
-        Status::invalid_argument("event key missing signed_by")
+        Status::invalid_argument("event key signed by missing")
     })?;
 
     if !signed_by
         .sig_matches(&signed_event.signature, &signed_event.event_bytes)
     {
-        return Err(Status::unauthenticated("invalid signature"));
+        return Err(Status::unauthenticated("signed event signature invalid"));
     }
 
-    // Decode the event before we begin the transaction.
-    let decoded_content = if let (Some(serialized_content), Some(digest)) =
-        (&event_bundle.serialized_content, &event.content_digest)
-    {
-        digest
-            .verify_against(&serialized_content.content_bytes)
-            .map_err(|err| Status::invalid_argument(err.to_string()))?;
-
-        let bytes = serialized_content.content_bytes.as_slice();
-        let content = Content::decode(bytes).map_err(|e| {
-            tracing::debug!(error = %e, "put_events content decode error");
-            Status::invalid_argument("invalid content_bytes")
+    let serialized_content =
+        event_bundle.serialized_content.as_ref().ok_or_else(|| {
+            Status::invalid_argument("serialized content missing")
         })?;
+    let content_digest = event.content_digest.as_ref().ok_or_else(|| {
+        Status::invalid_argument("event content digest missing")
+    })?;
 
-        content
-            .blobs()
-            .into_iter()
-            .for_each(|blob| blobs.push(blob.clone()));
+    content_digest
+        .verify_against(&serialized_content.content_bytes)
+        .map_err(|err| Status::invalid_argument(err.to_string()))?;
 
-        Some((bytes, content, digest))
-    } else {
-        None
-    };
+    let content_bytes = serialized_content.content_bytes.as_slice();
+    let content = Content::decode(content_bytes).map_err(|e| {
+        tracing::debug!(error = %e, "put_events content decode error");
+        Status::invalid_argument("invalid content_bytes")
+    })?;
+    validate_content(&content, collection)?;
+
+    content
+        .blobs()
+        .into_iter()
+        .for_each(|blob| blobs.push(blob.clone()));
 
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
@@ -232,7 +244,9 @@ async fn process_event(
     match EventsRepository::Mutation::add_event(
         &txn,
         active_model,
-        decoded_content,
+        content_bytes,
+        content,
+        content_digest,
     )
     .await
     {
@@ -292,16 +306,143 @@ fn banned_error() -> Status {
     Status::permission_denied("identity is banned on this server")
 }
 
+fn validate_event(event: &Event) -> Result<(), Status> {
+    if let Some(Application {
+        name,
+        id,
+        version,
+        url,
+    }) = &event.application
+    {
+        validate_string(name, "event application name", Some(0), Some(200))?;
+        validate_string(id, "event application id", Some(0), Some(200))?;
+        validate_string(
+            version,
+            "event application version",
+            Some(0),
+            Some(200),
+        )?;
+        validate_string(url, "event application url", Some(0), Some(200))?;
+    }
+
+    Ok(())
+}
+
+fn validate_content(content: &Content, collection: i32) -> Result<(), Status> {
+    let Content { content_body } = content;
+    let Some(content_body) = content_body else {
+        return Err(Status::invalid_argument("missing content body"));
+    };
+
+    match content_body {
+        ContentBody::Post(_) if collection != collections::FEED => {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::Post(_) => Ok(()), // TODO: validate.
+        ContentBody::Delete(_) if collection != collections::FEED => {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::Delete(_) => Ok(()), // TODO: validate.
+        ContentBody::Follow(_) if collection != collections::SOCIAL_GRAPH => {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::Follow(_) => Ok(()), // TODO: validate.
+        ContentBody::Block(_) if collection != collections::SOCIAL_GRAPH => {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::Block(_) => Ok(()), // TODO: validate.
+        ContentBody::Reaction(_) if collection != collections::INTERACTIONS => {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::Reaction(_) => Ok(()), // TODO: validate.
+        ContentBody::AttributedToReaction(_)
+            if collection != collections::INTERACTIONS =>
+        {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::AttributedToReaction(_) => Ok(()), // TODO: validate.
+        ContentBody::ProfileUpdate(_) if collection != collections::PROFILE => {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::ProfileUpdate(_) => Ok(()), // TODO: validate.
+        ContentBody::Identity(_) if collection != collections::IDENTITY => {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::Identity(_) => Ok(()), // TODO: validate.
+        ContentBody::Repost(_) if collection != collections::FEED => {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::Repost(_) => Ok(()), // TODO: validate.
+        ContentBody::Report(_) if collection != collections::REPORTS => {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::Report(_) => Ok(()), // TODO: validate.
+        ContentBody::Labels(_) if collection != collections::LABELS => {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::Labels(_) => Ok(()), // TODO: validate.
+        ContentBody::VerificationClaim(_)
+            if collection != collections::VERIFICATIONS =>
+        {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::VerificationClaim(_) => Ok(()), // TODO: validate.
+        ContentBody::VerificationVerify(_)
+            if collection != collections::VERIFICATIONS =>
+        {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::VerificationVerify(_) => Ok(()), // TODO: validate.
+        ContentBody::VerificationTarget(_)
+            if collection != collections::VERIFICATIONS =>
+        {
+            Err(invalid_event_key_collection())
+        }
+        ContentBody::VerificationTarget(_) => Ok(()), // TODO: validate.
+    }
+}
+
+fn invalid_event_key_collection() -> Status {
+    Status::invalid_argument("event key collection invalid")
+}
+
+fn validate_string(
+    input: &str,
+    name: &'static str,
+    min_len: Option<usize>,
+    max_len: Option<usize>,
+) -> Result<(), Status> {
+    if let Some(0) = min_len {
+        if input.is_empty() {
+            return Err(Status::invalid_argument(format!(
+                "{name} can't be empty"
+            )));
+        }
+    } else if let Some(min_len) = min_len {
+        if input.len() < min_len {
+            return Err(Status::invalid_argument(format!("{name} too short")));
+        }
+    }
+
+    if let Some(max_len) = max_len {
+        if input.len() > max_len {
+            return Err(Status::invalid_argument(format!("{name} too long")));
+        }
+    }
+
+    Ok(())
+}
+
 /// Check if the `identity` is authorised to perform its mutation.
 ///
 /// This will return false if, for example, an event tries to delete a post
 /// that the identity of the deletion event didn't create.
 ///
 /// `content` must be contained in the event itself.
-pub fn event_is_authorised(identity: &str, content: Option<&Content>) -> bool {
-    let Some(Content {
+pub fn event_is_authorised(identity: &str, content: &Content) -> bool {
+    let Content {
         content_body: Some(content),
-    }) = content
+    } = content
     else {
         // Couldn't extract (valid) content, so don't consider the event as
         // authorised.

@@ -185,7 +185,9 @@ impl Mutation {
     pub async fn add_event<C: ConnectionTrait>(
         db: &C,
         event: event::ActiveModel,
-        decoded_content: Option<(&[u8], Content, &ContentDigest)>,
+        serialized_bytes: &[u8],
+        content: Content,
+        digest: &ContentDigest,
     ) -> Result<bool, Status> {
         // We're going to build one big query using Common Table Expressions
         // (CTE) store everything related to a single event in one query. We do
@@ -197,8 +199,7 @@ impl Mutation {
         with.recursive(false);
 
         let identity = event.identity.try_as_ref().map_or("", |s| &**s);
-        let content = decoded_content.as_ref().map(|(_, c, _)| c);
-        let is_authorised = event_is_authorised(identity, content);
+        let is_authorised = event_is_authorised(identity, &content);
 
         // Store the event itself into the `events` table.
         const INSERTED_EVENT: &str = "inserted_event";
@@ -208,25 +209,24 @@ impl Mutation {
         cte.table_name(INSERTED_EVENT).query(insert_event);
         with.cte(cte);
 
-        if let Some((serialized_bytes, content, digest)) = decoded_content {
-            // Store the content of the event, if not already stored (for an
-            // event with the same content).
-            const INSERTED_CONTENT: &str = "inserted_content";
-            let insert_content =
-                ContentRepository::add_content_query(serialized_bytes, digest);
-            let mut cte = CommonTableExpression::new();
-            cte.table_name(INSERTED_CONTENT).query(insert_content);
-            with.cte(cte);
+        // Store the content of the event, if not already stored (for an
+        // event with the same content).
+        const INSERTED_CONTENT: &str = "inserted_content";
+        let insert_content =
+            ContentRepository::add_content_query(serialized_bytes, digest);
+        let mut cte = CommonTableExpression::new();
+        cte.table_name(INSERTED_CONTENT).query(insert_content);
+        with.cte(cte);
 
-            if let Some(content_body) = content.content_body {
-                // Update cache tables.
-                if is_authorised {
-                    let event_id_identity = (
-                        INSERTED_EVENT.into(),
-                        event::Column::Id.into(),
-                        event::Column::Identity.into(),
-                    );
-                    let maybe_query = Mutation::update_cache_query(
+        if let Some(content_body) = content.content_body {
+            // Update cache tables.
+            if is_authorised {
+                let event_id_identity = (
+                    INSERTED_EVENT.into(),
+                    event::Column::Id.into(),
+                    event::Column::Identity.into(),
+                );
+                let maybe_query = Mutation::update_cache_query(
                         &mut with,
                         &content_body,
                         event_id_identity,
@@ -234,30 +234,29 @@ impl Mutation {
                         tracing::error!(error = %err, "failed to create query to update cache tables");
                         Status::internal("internal server error")
                     })?;
-                    if let Some(query) = maybe_query {
-                        let mut cte = CommonTableExpression::new();
-                        cte.table_name("inserted_cache").query(query);
-                        with.cte(cte);
-                    }
-                }
-
-                // Store the decoded body of the content.
-                let content_id =
-                    (INSERTED_CONTENT.into(), content::Column::Id.into());
-                let event_identity =
-                    (INSERTED_EVENT.into(), event::Column::Identity.into());
-                if let Some(query) =
-                    ContentChildRepository::save_content_body_query(
-                        &mut with,
-                        content_body,
-                        content_id,
-                        event_identity,
-                    )?
-                {
+                if let Some(query) = maybe_query {
                     let mut cte = CommonTableExpression::new();
-                    cte.table_name("inserted_content_body").query(query);
+                    cte.table_name("inserted_cache").query(query);
                     with.cte(cte);
                 }
+            }
+
+            // Store the decoded body of the content.
+            let content_id =
+                (INSERTED_CONTENT.into(), content::Column::Id.into());
+            let event_identity =
+                (INSERTED_EVENT.into(), event::Column::Identity.into());
+            if let Some(query) =
+                ContentChildRepository::save_content_body_query(
+                    &mut with,
+                    content_body,
+                    content_id,
+                    event_identity,
+                )?
+            {
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("inserted_content_body").query(query);
+                with.cte(cte);
             }
         }
 
