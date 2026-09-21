@@ -41,7 +41,7 @@ fn generated_identity_chain_validates_against_core() {
     for sequence in 1..=5u64 {
         assert!(
             client
-                .find_event_bundle_by_sequence(&identity, IDENTITY, sequence)
+                .find_event_bundle_by_sequence(&identity, IDENTITY, sequence, None)
                 .is_some(),
             "identity event at sequence {sequence} failed to validate against polycentric-core"
         );
