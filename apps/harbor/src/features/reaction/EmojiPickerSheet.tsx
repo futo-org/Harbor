@@ -12,6 +12,7 @@ import {
   type TextInput as RNTextInput,
   useWindowDimensions,
   View,
+  StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categories, getCategory, type EmojiEntry } from './emojiData';
@@ -248,26 +249,21 @@ function EmojiCategoryRail({
       <View
         pointerEvents="none"
         style={[
-          Atoms.absolute,
-          {
-            top: 0,
-            left: 0,
-            right: 0,
-            height: windowHeight,
-            backgroundColor: theme.palette.neutral_0,
-          },
+          StyleSheet.absoluteFill,
+          theme.atoms.bg,
+          { height: windowHeight },
         ]}
       />
       <View
         style={[
           Atoms.flex_row,
           Atoms.justify_center,
+          theme.atoms.bg,
           {
             borderTopWidth: CATEGORY_RAIL_BORDER_WIDTH,
             borderColor: theme.palette.neutral_25,
-            backgroundColor: theme.palette.neutral_0,
           },
-          hidden && { display: 'none' },
+          hidden && Atoms.hidden,
         ]}
         onLayout={(e) => setRailWidth(e.nativeEvent.layout.width)}
       >
