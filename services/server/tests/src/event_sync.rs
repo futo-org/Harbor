@@ -88,7 +88,7 @@ async fn invalid_signature_rejected() {
         inner
             .errors
             .iter()
-            .any(|e| e.message.contains("invalid signature")),
+            .any(|e| e.message.contains("signature invalid")),
         "tampered signature must be rejected, got errors: {:?}",
         inner.errors,
     );
