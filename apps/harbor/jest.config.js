@@ -13,7 +13,7 @@ module.exports = {
     (pattern, index) =>
       // The preset's first pattern is `/node_modules/(?!(pkg1|pkg2|...))`;
       // extend its allow-list.
-      index === 0
+      index === 0 && pattern.startsWith('/node_modules/(?!(')
         ? pattern.replace('(?!(', `(?!(${ESM_ONLY_PACKAGES.join('|')}|`)
         : pattern,
   ),
