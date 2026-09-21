@@ -124,7 +124,7 @@ export function EmojiPickerSheet({
 
   const handleCategorySelect = useCallback((key: string) => {
     setSelectedCategory((prev) => (prev === key ? ALL : key));
-    listRef.current?.scrollToTop();
+    listRef.current?.scrollToTop({ animated: false });
   }, []);
 
   const renderItem = useCallback(
