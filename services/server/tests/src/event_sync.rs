@@ -731,3 +731,904 @@ async fn events_submitted_twice_are_ignored() {
         "expected our post in the list response",
     );
 }
+
+#[tokio::test]
+async fn validation_missing_signed_event() {
+    let mut client = TestClient::new().await;
+    client.pending.last_mut().unwrap().signed_event = None;
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("signed event missing"),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_signed_event_signature() {
+    let mut client = TestClient::new().await;
+    client
+        .pending
+        .last_mut()
+        .unwrap()
+        .signed_event
+        .as_mut()
+        .unwrap()
+        .signature = b"incorrect".into();
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "signed event signature invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_signed_event_bytes() {
+    let mut client = TestClient::new().await;
+    client
+        .pending
+        .last_mut()
+        .unwrap()
+        .signed_event
+        .as_mut()
+        .unwrap()
+        .event_bytes = [255; 1].into();
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("signed event bytes invalid"),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_missing_event_key() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.key = None;
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("event key missing"),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_collection() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.key.as_mut().unwrap().collection = 9999;
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("event key collection invalid"),
+        }],
+    );
+}
+
+#[tokio::test]
+#[ignore = "TODO: validate this"]
+async fn validation_invalid_event_identity() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.key.as_mut().unwrap().identity = "invalid".to_owned();
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("event key identity invalid"),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_missing_event_signed_by() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.key.as_mut().unwrap().signed_by = None;
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("event key signed by missing"),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_signed_by_key_type() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event
+        .key
+        .as_mut()
+        .unwrap()
+        .signed_by
+        .as_mut()
+        .unwrap()
+        .key_type = 999;
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "signed event signature invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_signed_by_key() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.key.as_mut().unwrap().signed_by.as_mut().unwrap().key =
+        b"invalid".into();
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "signed event signature invalid",
+            ),
+        }],
+    );
+}
+
+// TODO: invalid (duplicate) signed_event.key.sequence.
+// TODO: invalid signed_event.identity_sequence
+// TODO: invalid signed_event.vector_clock
+// TODO: invalid signed_event.previous_signature
+// TODO: invalid signed_event.content_digest
+
+#[tokio::test]
+async fn validation_missing_event_content_digest() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.content_digest = None;
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("event content digest missing"),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_content_digest_type() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.content_digest.as_mut().unwrap().r#type = 999;
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "unsupported content digest type: 999",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_content_digest_value() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.content_digest.as_mut().unwrap().value = b"incorrect".into();
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("content digest does not match"),
+        }],
+    );
+}
+
+// NOTE: no validation for signed_event.created_at.
+
+// TODO: invalid signed_event.previous_root
+
+#[tokio::test]
+async fn validation_invalid_event_application_name_empty() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.application = Some(Application {
+        name: "".to_owned(),
+        id: "integration-tests".to_owned(),
+        version: "0.0.0".to_owned(),
+        url: "http://example.com".to_owned(),
+    });
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event application name can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_application_name_too_long() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.application = Some(Application {
+        name: "I".repeat(201),
+        id: "integration-tests".to_owned(),
+        version: "0.0.0".to_owned(),
+        url: "http://example.com".to_owned(),
+    });
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event application name too long",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_application_id_empty() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.application = Some(Application {
+        name: "Integration Tests".to_owned(),
+        id: "".to_owned(),
+        version: "0.0.0".to_owned(),
+        url: "http://example.com".to_owned(),
+    });
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event application id can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_application_id_too_long() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.application = Some(Application {
+        name: "Integration Tests".to_owned(),
+        id: "i".repeat(201),
+        version: "0.0.0".to_owned(),
+        url: "http://example.com".to_owned(),
+    });
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("event application id too long"),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_application_version_empty() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.application = Some(Application {
+        name: "Integration Tests".to_owned(),
+        id: "integration-tests".to_owned(),
+        version: "".to_owned(),
+        url: "http://example.com".to_owned(),
+    });
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event application version can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_application_version_too_long() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.application = Some(Application {
+        name: "Integration Tests".to_owned(),
+        id: "integration-tests".to_owned(),
+        version: "0".repeat(201),
+        url: "http://example.com".to_owned(),
+    });
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event application version too long",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_application_url_empty() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.application = Some(Application {
+        name: "Integration Tests".to_owned(),
+        id: "integration-tests".to_owned(),
+        version: "0.0.0".to_owned(),
+        url: "".to_owned(),
+    });
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event application url can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_application_url_too_long() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.application = Some(Application {
+        name: "Integration Tests".to_owned(),
+        id: "integration-tests".to_owned(),
+        version: "0.0.0".to_owned(),
+        url: "h".repeat(201),
+    });
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event application url too long",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_missing_serialized_content() {
+    let mut client = TestClient::new().await;
+    client.pending.last_mut().unwrap().serialized_content = None;
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("serialized content missing"),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_serialized_content_content_bytes() {
+    let mut client = TestClient::new().await;
+    client
+        .pending
+        .last_mut()
+        .unwrap()
+        .serialized_content
+        .as_mut()
+        .unwrap()
+        .content_bytes = b"".into();
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("content digest does not match"),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_missing_content_content_body() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let content = Content { content_body: None };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("missing content body"),
+        }],
+    );
+}
+
+// TODO: tests for the content.
+
+#[tokio::test]
+async fn validation_passed_event_proofs() {
+    let mut client = TestClient::new().await;
+    client.pending.last_mut().unwrap().event_proofs =
+        vec![EventProof::default()];
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event proofs are not accepted when storing events",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_passed_meta() {
+    let mut client = TestClient::new().await;
+    client.pending.last_mut().unwrap().meta = Some(EventMetadata::default());
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "metadata not accepted when storing events",
+            ),
+        }],
+    );
+}
+
+#[derive(Debug)]
+struct ExpectError {
+    bundle_index: usize,
+    kind: ExpectErrorKind,
+}
+
+#[derive(Debug)]
+enum ExpectErrorKind {
+    MsgContains(&'static str),
+}
+
+fn expect_errors(
+    result: Result<(), Vec<SubmitError>>,
+    expected: &[ExpectError],
+) {
+    let Err(errors) = result else {
+        panic!("unexpect OK result");
+    };
+
+    eprintln!("Got errors: {errors:#?}");
+    eprintln!("Expected errors: {expected:#?}");
+    assert_eq!(errors.len(), expected.len());
+    for (got, expected) in errors.iter().zip(expected) {
+        assert_eq!(got.bundle_index, expected.bundle_index);
+        match expected.kind {
+            ExpectErrorKind::MsgContains(msg) => assert!(
+                got.message.contains(msg),
+                "unexpected message: '{}', expected '{}'",
+                got.message,
+                msg
+            ),
+        }
+    }
+}
