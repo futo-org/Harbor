@@ -382,13 +382,15 @@ jobs:
       - name: Package crates
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          # Bump the crate versions and give the workspace dependency a version
-          # so the crates package cleanly.
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          INDEX_URL="${GITHUB_SERVER_URL}/api/packages/${OWNER}/cargo/"
+          mkdir -p ~/.cargo
+          printf '[registries.harbor]\nindex = "sparse+%s"\n' "$INDEX_URL" > ~/.cargo/config.toml
+          # Specify the version and registry for packaging and publishing
           sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" packages/rs-common/Cargo.toml packages/rs-core/Cargo.toml
-          sed -i "s#^polycentric-common = .*#polycentric-common = { path = \"packages/rs-common\", version = \"${VERSION}\" }#" Cargo.toml
+          sed -i "s#^polycentric-common = .*#polycentric-common = { path = \"packages/rs-common\", version = \"${VERSION}\", registry = \"harbor\" }#" Cargo.toml
           mkdir -p target/package
-          cargo package -p polycentric-common --no-verify --allow-dirty || true
-          cargo package -p polycentric-core --no-verify --allow-dirty || true
+          cargo package --registry harbor -p polycentric-common -p polycentric-core --no-verify --allow-dirty || true
           if ! ls "target/package/polycentric-core-${VERSION}.crate" >/dev/null 2>&1; then
             echo "no polycentric-core .crate; falling back to a source tarball" >&2
             tar czf "target/package/polycentric-core-${VERSION}.crate" packages/rs-core packages/rs-common
@@ -405,8 +407,6 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           OWNER="${GITHUB_REPOSITORY%%/*}"
           INDEX_URL="${GITHUB_SERVER_URL}/api/packages/${OWNER}/cargo/"
-          mkdir -p ~/.cargo
-          printf '[registries.harbor]\nindex = "sparse+%s"\n' "$INDEX_URL" > ~/.cargo/config.toml
           printf '[registries.harbor]\ntoken = "Bearer %s"\n' "$HARBOR_CI_TOKEN" > ~/.cargo/credentials.toml
           for crate in polycentric-common polycentric-core; do
             # Skip crates already published for this version. Note that the crates.io convention is
