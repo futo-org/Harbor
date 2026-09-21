@@ -125,6 +125,17 @@ describe('searchEmojis', () => {
       expect(emojisFor('poop').slice(0, 2)).toContain('💩');
       expect(emojisFor('100').slice(0, 2)).toContain('💯');
     });
+
+    // Fonts draw the U.S. Outlying Islands flag as the US flag, so it would
+    // show up as a second US flag.
+    it('returns a single US flag', () => {
+      const usOutlyingIslandsFlag = '\u{1F1FA}\u{1F1F2}';
+      for (const query of ['flag us', 'us flag']) {
+        const emojis = emojisFor(query);
+        expect(emojis[0]).toBe('🇺🇸');
+        expect(emojis).not.toContain(usOutlyingIslandsFlag);
+      }
+    });
   });
 
   describe('fuzzy matches', () => {

@@ -38,19 +38,25 @@ let searchIndex: SnapshotKeys<SearchableEmoji> | undefined;
 
 function getSearchIndex(): SnapshotKeys<SearchableEmoji> {
   if (!searchIndex) {
-    const searchableEmojis = allEntries.map(
-      (entry): SearchableEmoji => ({
-        entry,
-        name: entry.name,
-        tags: (tagsByEmoji[entry.emoji] ?? []).join(' '),
-      }),
-    );
+    const searchableEmojis = allEntries
+      .filter((entry) => entry.emoji !== US_OUTLYING_ISLANDS_FLAG)
+      .map(
+        (entry): SearchableEmoji => ({
+          entry,
+          name: entry.name,
+          tags: (tagsByEmoji[entry.emoji] ?? []).join(' '),
+        }),
+      );
     searchIndex = fuzzysort.snapshot(searchableEmojis, {
       keys: ['name', 'tags'],
     });
   }
   return searchIndex;
 }
+
+// Fonts draw the U.S. Outlying Islands flag (UM) as the US flag, so "flag us"
+// would show two of them. Escaped because the two look the same in an editor.
+const US_OUTLYING_ISLANDS_FLAG = '\u{1F1FA}\u{1F1F2}';
 
 let entryByNormalizedEmojiMap: Map<string, EmojiEntry> | undefined;
 
