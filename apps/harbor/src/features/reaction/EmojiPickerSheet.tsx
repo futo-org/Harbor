@@ -5,7 +5,11 @@ import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import {
+  type TextInput as RNTextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categories, getCategory, type EmojiEntry } from './emojiData';
 import { searchEmojis } from './emojiSearch';
@@ -50,6 +54,7 @@ export function EmojiPickerSheet({
 }: EmojiPickerSheetProps) {
   const { theme } = useTheme();
   const listRef = useRef<FlashListRef<EmojiEntry>>(null);
+  const searchInputRef = useRef<RNTextInput>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>(ALL);
   const [rawQuery, setRawQuery] = useState('');
   const query = useDebouncedValue(
@@ -67,6 +72,8 @@ export function EmojiPickerSheet({
     if (!open) {
       setSelectedCategory(ALL);
       setRawQuery('');
+      // The input is uncontrolled, so its native text is cleared separately
+      searchInputRef.current?.clear();
     }
   }, [open]);
 
@@ -151,7 +158,7 @@ export function EmojiPickerSheet({
           <>
             <View style={[Atoms.px_lg, Atoms.py_sm]}>
               <TextInput
-                value={rawQuery}
+                ref={searchInputRef}
                 onChangeText={handleQueryChange}
                 placeholder="Search emojis"
                 autoCapitalize="none"
