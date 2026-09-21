@@ -51,9 +51,13 @@ export function EmojiPickerSheet({
   const { theme } = useTheme();
   const listRef = useRef<FlashListRef<EmojiEntry>>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>(ALL);
-  const [searchQuery, setSearchQuery] = useState('');
-  const debouncedQuery = useDebouncedValue(searchQuery);
-  const isSearching = debouncedQuery.trim() !== '';
+  const [rawQuery, setRawQuery] = useState('');
+  const query = useDebouncedValue(
+    rawQuery,
+    // Empty query resets the search immediately
+    rawQuery ? 300 : 0,
+  );
+  const isSearching = query.trim() !== '';
 
   // Derivied from the sheet width
   const [contentWidth, setContentWidth] = useState(0);
@@ -62,7 +66,7 @@ export function EmojiPickerSheet({
   useEffect(() => {
     if (!open) {
       setSelectedCategory(ALL);
-      setSearchQuery('');
+      setRawQuery('');
     }
   }, [open]);
 
@@ -93,16 +97,13 @@ export function EmojiPickerSheet({
     [selectedCategory],
   );
 
-  const searchResults = useMemo(
-    () => searchEmojis(debouncedQuery),
-    [debouncedQuery],
-  );
+  const searchResults = useMemo(() => searchEmojis(query), [query]);
 
   const shownEmojis = isSearching ? searchResults : categoryEmojis;
 
   // Like a category switch, a new query starts the grid from the top.
   const handleQueryChange = useCallback((text: string) => {
-    setSearchQuery(text);
+    setRawQuery(text);
     listRef.current?.scrollToTop({ animated: false });
   }, []);
 
@@ -150,7 +151,7 @@ export function EmojiPickerSheet({
           <>
             <View style={[Atoms.px_lg, Atoms.py_sm]}>
               <TextInput
-                value={searchQuery}
+                value={rawQuery}
                 onChangeText={handleQueryChange}
                 placeholder="Search emojis"
                 autoCapitalize="none"
