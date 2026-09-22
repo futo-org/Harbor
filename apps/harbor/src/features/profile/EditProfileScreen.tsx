@@ -5,7 +5,6 @@ import { ProfileEditAvatar } from '@/src/common/components/Avatar/ProfileEditAva
 import {
   useCurrentIdentity,
   useProfileEdit,
-  useUsername,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, ZIndex } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
@@ -20,8 +19,7 @@ import { View } from 'react-native';
 
 function EditProfileSheet({ identityKey }: { identityKey: string }) {
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
-  const username = useUsername(identityKey);
-  const edit = useProfileEdit(username, profile, identityKey);
+  const edit = useProfileEdit(profile.name ?? '', profile, identityKey);
   const navigation = useNavigation();
 
   const close = useCallback(() => {
