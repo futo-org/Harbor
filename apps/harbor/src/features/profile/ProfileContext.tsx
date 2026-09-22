@@ -85,3 +85,8 @@ export function useProfileContext(): ProfileContextValue {
     throw new Error('useProfileContext must be used within ProfileProvider');
   return ctx;
 }
+
+/** Null outside a profile screen, for components that render on any route. */
+export function useOptionalProfileContext(): ProfileContextValue | null {
+  return useContext(ProfileContext);
+}

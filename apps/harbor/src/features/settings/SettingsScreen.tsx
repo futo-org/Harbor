@@ -207,7 +207,7 @@ function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
           variant="subtitle"
           fontWeight="semibold"
         />
-        <IdentityTagOrFollowing identity={identityKey} showFollowing={false} />
+        <IdentityTagOrFollowing identity={identityKey} />
       </View>
     </View>
   );

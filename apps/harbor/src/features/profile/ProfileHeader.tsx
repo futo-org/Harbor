@@ -114,7 +114,6 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           <ProfileName
             identity={identityKey}
             numberOfLines={2}
-            showFollowing={false}
             variant="title"
             fontWeight="bold"
           />

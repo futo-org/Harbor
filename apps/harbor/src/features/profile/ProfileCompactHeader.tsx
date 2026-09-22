@@ -98,7 +98,6 @@ export function ProfileCompactHeader({
         <ProfileName
           identity={identityKey}
           fetchMode={FetchMode.Default}
-          showFollowing={false}
           variant="body"
           fontWeight="bold"
           style={[Atoms.flex_1, { minWidth: 0 }]}

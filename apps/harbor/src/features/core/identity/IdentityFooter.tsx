@@ -82,10 +82,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
             fontWeight="bold"
             color="neutral_1000"
           />
-          <IdentityTagOrFollowing
-            identity={currentIdentity.identityKey}
-            showFollowing={false}
-          />
+          <IdentityTagOrFollowing identity={currentIdentity.identityKey} />
         </View>
         {hovered ? (
           <View

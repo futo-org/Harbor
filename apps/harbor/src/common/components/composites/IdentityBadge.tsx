@@ -43,12 +43,7 @@ export function IdentityBadge({
           variant={sizeConfig.textVariant}
           fontWeight="semibold"
         />
-        {showId && (
-          <IdentityTagOrFollowing
-            identity={identityKey}
-            showFollowing={false}
-          />
-        )}
+        {showId && <IdentityTagOrFollowing identity={identityKey} />}
       </View>
     </View>
   );

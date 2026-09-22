@@ -1,6 +1,8 @@
 import Icon from '@/src/common/components/Icon';
 import { Text } from '@/src/common/components/primitives';
+import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { useOptionalProfileContext } from '@/src/features/profile/ProfileContext';
 import { View } from 'react-native';
 import useFollows from './hooks/useFollows';
 
@@ -42,9 +44,7 @@ export function FollowingIcon({
   identity: string | null;
   size: number;
 }) {
-  const following = useFollows((state) =>
-    identity ? state.isFollowing(identity) : false,
-  );
+  const following = useIsFollowingIndicatorShown(identity);
 
   if (!following) return null;
 
@@ -56,5 +56,23 @@ export function FollowingIcon({
       accessibilityLabel="Following"
       style={Atoms.flex_shrink_0}
     />
+  );
+}
+
+/**
+ * Whether to mark `identity` as followed. Always false for the user's own
+ * identity and on that identity's profile screen, where the Follow button
+ * already shows the state.
+ */
+export function useIsFollowingIndicatorShown(
+  identity: string | null | undefined,
+): boolean {
+  const { isCurrentIdentity } = useCurrentIdentity();
+  const profileIdentity = useOptionalProfileContext()?.identityKey ?? null;
+  const isHiddenForIdentity =
+    !identity || isCurrentIdentity(identity) || identity === profileIdentity;
+
+  return useFollows((state) =>
+    !isHiddenForIdentity ? state.isFollowing(identity) : false,
   );
 }
