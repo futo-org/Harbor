@@ -28,7 +28,7 @@ upsert_env() {
   local key="$1" value="$2"
   touch .env
   if grep -q "^${key}=" .env; then
-    sed -i.bak "s|^${key}=.*|${key}=${value}|" .env && rm -f .env.bak
+    sed -i='' "s|^${key}=.*|${key}=${value}|" .env
   else
     printf '%s=%s\n' "$key" "$value" >>.env
   fi
