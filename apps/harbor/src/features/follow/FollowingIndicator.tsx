@@ -1,6 +1,10 @@
 import Icon from '@/src/common/components/Icon';
 import { Text } from '@/src/common/components/primitives';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import {
+  getVariantStyle,
+  textColorMap,
+} from '@/src/common/components/primitives/Button';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { useOptionalProfileContext } from '@/src/features/profile/ProfileContext';
 import { View } from 'react-native';
 import useFollows from './hooks/useFollows';
@@ -18,17 +22,13 @@ export function FollowingBadge() {
         Atoms.gap_2xs,
         Atoms.px_xs,
         Atoms.rounded_full,
-        {
-          paddingVertical: 1,
-          borderWidth: 1,
-          // Match the style to the active FollowButton.
-          backgroundColor: withHexOpacity(theme.palette.primary_400, '20'),
-          borderColor: withHexOpacity(theme.palette.primary_400, '40'),
-        },
+        { paddingVertical: 1, borderWidth: 1 },
+        // Match the active FollowButton.
+        getVariantStyle(theme, 'secondary'),
       ]}
     >
-      <Icon name="people" size={11} color="primary_400" />
-      <Text variant="small" color="primary_400" selectable={false}>
+      <Icon name="people" size={11} color={textColorMap.secondary} />
+      <Text variant="small" color={textColorMap.secondary} selectable={false}>
         Following
       </Text>
     </View>
