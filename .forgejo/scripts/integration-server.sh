@@ -20,6 +20,7 @@
 #
 
 set -euo pipefail
+set -x
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
@@ -202,7 +203,7 @@ if [ "$CI_MODE" = true ]; then
   echo "    migrations applied"
 
   # TODO: remove
-  docker logs harbor_server
+  docker logs harbor_server || true
 else
   echo "==> Applying migrations…"
   (
