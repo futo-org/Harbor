@@ -19,9 +19,9 @@ type ProfileNameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
 };
 
 const FOLLOWING_ICON_SIZE: Record<TextVariantSize, number> = {
-  lg: 16,
+  lg: 12,
   md: 12,
-  xs: 11,
+  xs: 8,
 };
 
 /**
