@@ -3,6 +3,7 @@
 use std::sync::OnceLock;
 use std::time::Duration;
 
+#[derive(Debug)]
 pub struct Config {
     /// The canonical URL of this server (`HARBOR_SERVER_NAME`). Also
     /// stamped as the source on produced Kafka events.
