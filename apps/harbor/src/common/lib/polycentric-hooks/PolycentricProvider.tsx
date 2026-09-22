@@ -3,7 +3,10 @@ import { publicEnv } from '@/src/common/util/env';
 import useBlocks from '@/src/features/block/hooks/useBlocks';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import {
+  useProfile,
+  type UseProfileOptions,
+} from '@/src/features/profile/hooks/useProfile';
 import {
   type PolycentricClient,
   createPolycentricClient,
@@ -374,9 +377,18 @@ export function useCurrentIdentity() {
   };
 }
 
-export function useUsername(identityKey: string | null | undefined): string {
-  const profile = useProfile(identityKey);
-  return profile.name ?? DEFAULT_IDENTITY_NAME;
+/**
+ * The profile name, or `…` while it is still loading, or the fallback, or the
+ * app-wide default.
+ */
+export function useUsername(
+  identityKey: string | null | undefined,
+  options?: UseProfileOptions & { fallbackName?: string | null },
+): string {
+  const profile = useProfile(identityKey, { fetchMode: options?.fetchMode });
+  if (profile.name) return profile.name;
+  if (profile.isLoading) return '…';
+  return options?.fallbackName ?? DEFAULT_IDENTITY_NAME;
 }
 
 /**

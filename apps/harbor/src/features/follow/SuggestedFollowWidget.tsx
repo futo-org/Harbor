@@ -89,6 +89,7 @@ function SuggestedFollowWidgetRow({ identity }: { identity: string }) {
     <ProfileRow
       size="sm"
       identity={identity}
+      showFollowing={false}
       onPress={() => router.push(Routes.tabs.profile(identity))}
       style={Atoms.px_0}
       activeStyle="none"

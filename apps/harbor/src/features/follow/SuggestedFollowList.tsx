@@ -81,6 +81,7 @@ function SuggestionRow({ identity }: { identity: string }) {
   return (
     <ProfileRow
       identity={identity}
+      showFollowing={false}
       onPress={() => router.push(Routes.tabs.profile(identity))}
       style={{ borderBottomWidth: 1, borderColor: theme.palette.neutral_25 }}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}

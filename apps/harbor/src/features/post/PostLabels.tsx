@@ -9,7 +9,7 @@ import {
   moderationLabelName,
 } from '@/src/common/settings/moderationLabels';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { ProfileName } from '@/src/features/profile/ProfileName';
 import { Pressable, View } from 'react-native';
 
 export const PostLabels = memo(function PostLabels({
@@ -52,12 +52,23 @@ function LabelChip({
     : theme.palette.neutral_600;
 
   const byAuthor = !!label.labeledBy && label.labeledBy === authorIdentity;
-  const labelerProfile = useProfile(byAuthor ? null : label.labeledBy || null);
-  const attribution = !label.labeledBy
-    ? null
-    : byAuthor
-      ? 'Applied by the author'
-      : `Applied by ${labelerProfile.name ?? shortenIdentityId(label.labeledBy)}`;
+  const attribution = !label.labeledBy ? null : byAuthor ? (
+    <Text variant="small" color="neutral_900">
+      Applied by the author
+    </Text>
+  ) : (
+    <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_2xs]}>
+      <Text variant="small" color="neutral_900">
+        Applied by
+      </Text>
+      <ProfileName
+        identity={label.labeledBy}
+        fallbackName={shortenIdentityId(label.labeledBy)}
+        variant="small"
+        color="neutral_900"
+      />
+    </View>
+  );
 
   const chip = (
     <View
@@ -109,9 +120,7 @@ function LabelChip({
             },
           ]}
         >
-          <Text variant="small" color="neutral_900">
-            {attribution}
-          </Text>
+          {attribution}
         </View>
       </HoverCard.Content>
     </HoverCard>

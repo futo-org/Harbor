@@ -19,9 +19,8 @@ import { useCallback } from 'react';
 import { View } from 'react-native';
 
 function EditProfileSheet({ identityKey }: { identityKey: string }) {
-  const fallbackUsername = useUsername(identityKey);
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
-  const username = profile.name ?? fallbackUsername;
+  const username = useUsername(identityKey);
   const edit = useProfileEdit(username, profile, identityKey);
   const navigation = useNavigation();
 

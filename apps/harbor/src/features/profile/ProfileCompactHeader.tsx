@@ -1,13 +1,8 @@
 import { BackButton } from '@/src/common/components/composites';
 import { TABS_HEIGHT } from '@/src/common/components/tabs';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
-import {
-  Button,
-  ProfileAvatar,
-  Text,
-} from '@/src/common/components/primitives';
+import { Button, ProfileAvatar } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { truncateName, useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
 import { FetchMode } from '@polycentric/react-native';
 import { router } from 'expo-router';
@@ -21,8 +16,8 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import FollowButton from '../follow/FollowButton';
-import { useProfile } from './hooks/useProfile';
 import { useProfileContext } from './ProfileContext';
+import { ProfileName } from './ProfileName';
 import { ProfileTabs } from './ProfileTabs';
 
 const COMPACT_HEADER_HEIGHT = TOPBAR_HEIGHT + TABS_HEIGHT;
@@ -45,10 +40,6 @@ export function ProfileCompactHeader({
 }) {
   const { theme } = useTheme();
   const { identityKey, isSelf } = useProfileContext();
-
-  const fallbackUsername = useUsername(identityKey);
-  const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
-  const username = profile.name ?? fallbackUsername;
 
   const handleEdit = useCallback(() => {
     if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
@@ -104,14 +95,14 @@ export function ProfileCompactHeader({
         {identityKey ? (
           <ProfileAvatar identityKey={identityKey} size="sm" />
         ) : null}
-        <Text
+        <ProfileName
+          identity={identityKey}
+          fetchMode={FetchMode.Default}
+          showFollowing={false}
           variant="body"
           fontWeight="bold"
-          numberOfLines={1}
           style={[Atoms.flex_1, { minWidth: 0 }]}
-        >
-          {truncateName(username, 32)}
-        </Text>
+        />
         {isSelf ? (
           <Button
             title="Edit profile"

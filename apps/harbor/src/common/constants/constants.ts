@@ -4,7 +4,7 @@ export const APP_NAME = 'Harbor';
 
 export const WEB_MAX_CONTENT_WIDTH = 600;
 
-export const DEFAULT_IDENTITY_NAME = 'Anon';
+export const DEFAULT_IDENTITY_NAME = 'Anonymous';
 
 export const FUTO_URL = 'https://futo.tech';
 export const SOURCE_CODE_URL = 'https://gitlab.futo.org/harbor/harbor';

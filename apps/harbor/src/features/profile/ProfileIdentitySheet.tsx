@@ -9,7 +9,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { ProfileName } from '@/src/features/profile/ProfileName';
 import { ServerRow } from '@/src/features/settings/servers/ServerRow';
 import { useServerSettings } from '@/src/features/settings/servers/useServerSettings';
 import { IdentityManager, type v2 } from '@polycentric/react-native';
@@ -29,7 +29,6 @@ type KeyEntry = {
 export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
   const { theme } = useTheme();
   const client = usePolycentric();
-  const profile = useProfile(identityKey);
   const { identityKey: selfKey } = useCurrentIdentity();
   const { state, isLoading } = useIdentityState(identityKey);
   const { servers: ownServers, addServer, isBusy } = useServerSettings();
@@ -72,15 +71,14 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
       <Sheet.Content style={[Atoms.gap_xl]}>
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
           <ProfileAvatar identityKey={identityKey} size="massive" />
-          <Text
+          <ProfileName
+            identity={identityKey}
             variant="title"
             fontWeight="bold"
             numberOfLines={2}
             ellipsizeMode="tail"
-            style={[Atoms.text_center, Atoms.max_w_full]}
-          >
-            {profile.name || 'Anonymous'}
-          </Text>
+            style={Atoms.text_center}
+          />
         </View>
 
         <View

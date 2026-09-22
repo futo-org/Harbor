@@ -26,6 +26,9 @@ jest.mock('@/src/common/components/primitives/Text', () => {
   return {
     Text: ({ children }: { children?: unknown }) =>
       react.createElement(Text, null, children),
+    VARIANT_CONFIG: jest.requireActual(
+      '@/src/common/components/primitives/Text',
+    ).VARIANT_CONFIG,
   };
 });
 
@@ -134,6 +137,12 @@ jest.mock('expo-router', () => ({
   useFocusEffect: () => undefined,
 }));
 
+jest.mock('@/src/features/follow/FollowingIndicator', () => ({
+  __esModule: true,
+  FollowingIcon: () => null,
+  default: () => null,
+}));
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -142,7 +151,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shortenIdentityId: (id: string) => `short-${id}`,
   truncateName: (name: string) => name,
   useCurrentIdentity: () => ({ identityKey: 'me' }),
-  useUsername: () => 'fallback',
+  useUsername: () => 'Alice',
 }));
 
 let mockProfileAlias: string | null = null;

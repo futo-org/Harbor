@@ -12,6 +12,12 @@ let mockContext: {
   alias: string | null;
 };
 
+jest.mock('@/src/features/follow/FollowingIndicator', () => ({
+  __esModule: true,
+  FollowingIcon: () => null,
+  default: () => null,
+}));
+
 jest.mock('./ProfileContext', () => ({
   useProfileContext: () => mockContext,
 }));
@@ -86,7 +92,7 @@ jest.mock('@/src/common/constants', () => ({
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   identiconUrl: () => 'u',
   truncateName: (name: string) => name,
-  useUsername: () => 'fallback',
+  useUsername: () => 'Alice',
 }));
 jest.mock('@/src/common/theme', () => ({
   ...jest.requireActual('@/src/common/theme'),

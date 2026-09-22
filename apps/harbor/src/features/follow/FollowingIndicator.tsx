@@ -4,6 +4,31 @@ import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { View } from 'react-native';
 import useFollows from './hooks/useFollows';
 
+/** Compact variant, rendered by `ProfileName` next to every display name. */
+export function FollowingIcon({
+  identity,
+  size = 12,
+}: {
+  identity: string | null;
+  size?: number;
+}) {
+  const following = useFollows((state) =>
+    identity ? state.isFollowing(identity) : false,
+  );
+
+  if (!following) return null;
+
+  return (
+    <Icon
+      name="people"
+      size={size}
+      color="primary_400"
+      accessibilityLabel="Following"
+      style={Atoms.flex_shrink_0}
+    />
+  );
+}
+
 export default function FollowingIndicator({ identity }: { identity: string }) {
   const { theme } = useTheme();
   const following = useFollows((state) => state.isFollowing(identity));

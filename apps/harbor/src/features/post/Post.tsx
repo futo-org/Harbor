@@ -9,7 +9,7 @@ import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import FollowingIndicator from '@/src/features/follow/FollowingIndicator';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { ProfileName } from '@/src/features/profile/ProfileName';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -50,9 +50,6 @@ export const Post = memo(function Post({
   const { theme } = useTheme();
 
   const authorIdentity = post.identity ?? null;
-
-  const authorProfile = useProfile(authorIdentity);
-  const authorName = authorProfile.name ?? '';
 
   const handlePress = useCallback(() => {
     if (disablePress) return;
@@ -102,10 +99,7 @@ export const Post = memo(function Post({
       <View
         style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
       >
-        <PostAuthorName
-          name={authorName || '...'}
-          onPress={handleAuthorPress}
-        />
+        <PostAuthorName identity={authorIdentity} onPress={handleAuthorPress} />
         {authorIdentity ? <IdentityTag identity={authorIdentity} /> : null}
         {authorIdentity ? (
           <FollowingIndicator identity={authorIdentity} />
@@ -181,7 +175,7 @@ export const Post = memo(function Post({
             {avatar}
             <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
               <PostAuthorName
-                name={authorName || '...'}
+                identity={authorIdentity}
                 onPress={handleAuthorPress}
               />
               {authorIdentity ? (
@@ -235,11 +229,12 @@ export const Post = memo(function Post({
   );
 });
 
+/** The full FollowingIndicator badge sits beside it, so no icon here. */
 function PostAuthorName({
-  name,
+  identity,
   onPress,
 }: {
-  name: string;
+  identity: string | null;
   onPress: () => void;
 }) {
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
@@ -251,14 +246,13 @@ function PostAuthorName({
       onHoverOut={onHoverOut}
       style={Atoms.flex_shrink_1}
     >
-      <Text
+      <ProfileName
+        identity={identity}
+        showFollowing={false}
         variant="secondary"
         fontWeight="bold"
-        numberOfLines={1}
-        style={[hovered && { textDecorationLine: 'underline' }]}
-      >
-        {name}
-      </Text>
+        style={hovered && { textDecorationLine: 'underline' }}
+      />
     </Pressable>
   );
 }
