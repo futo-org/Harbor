@@ -67,8 +67,8 @@ export function useProfile(
 
   return {
     // Reading the `name` directly is for exceptions (page titles, moderation
-    // label attribution). Otherwise, names should render through `ProfileName`,
-    // or `useUsername`.
+    // label attribution, profile edit initial input value, etc.). Otherwise,
+    // names should render through `ProfileName`, or `useUsername`.
     name: decoded.name,
     description: decoded.description,
     avatar: decoded.avatar,
