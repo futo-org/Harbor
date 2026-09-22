@@ -1,9 +1,9 @@
 package org.futo.polycentric.core
 
 import okio.ByteString.Companion.toByteString
+import org.futo.polycentric.core.ICryptoManager
 import org.futo.polycentric.core.KeyTypes
 import org.futo.polycentric.core.PolycentricException
-import org.futo.polycentric.core.ICryptoManager
 import org.futo.polycentric.core.StoredKeyPair
 
 /**
@@ -13,7 +13,6 @@ import org.futo.polycentric.core.StoredKeyPair
  * the header's `kid` as hex.
  */
 object ServerJwt {
-
     /** How long a server JWT stays valid unless overridden. */
     const val DEFAULT_EXPIRY_SECONDS = 60L * 60L
 
@@ -33,25 +32,28 @@ object ServerJwt {
             throw PolycentricException("Unsupported key type: ${keyPair.keyType}")
         }
 
-        val header = jsonObject(
-            "alg" to "EdDSA",
-            "typ" to "JWT",
-            "kid" to keyPair.publicKey.toByteString().hex(),
-        )
-        val claims = jsonObject(
-            "iss" to iss,
-            "aud" to aud,
-            "iat" to nowSeconds,
-            "exp" to nowSeconds + expirySeconds,
-        )
+        val header =
+            jsonObject(
+                "alg" to "EdDSA",
+                "typ" to "JWT",
+                "kid" to keyPair.publicKey.toByteString().hex(),
+            )
+        val claims =
+            jsonObject(
+                "iss" to iss,
+                "aud" to aud,
+                "iat" to nowSeconds,
+                "exp" to nowSeconds + expirySeconds,
+            )
 
         val signingInput =
             "${base64UrlEncode(header.encodeToByteArray())}.${base64UrlEncode(claims.encodeToByteArray())}"
-        val signature = crypto.sign(
-            keyPair.privateKey,
-            signingInput.toByteArray(Charsets.US_ASCII),
-            keyPair.keyType,
-        )
+        val signature =
+            crypto.sign(
+                keyPair.privateKey,
+                signingInput.toByteArray(Charsets.US_ASCII),
+                keyPair.keyType,
+            )
         return "$signingInput.${base64UrlEncode(signature)}"
     }
 
@@ -68,11 +70,13 @@ object ServerJwt {
 
     private fun jsonString(s: String): String {
         val sb = StringBuilder("\"")
-        for (c in s) when {
-            c == '"' -> sb.append("\\\"")
-            c == '\\' -> sb.append("\\\\")
-            c < ' ' -> sb.append("\\u%04x".format(c.code))
-            else -> sb.append(c)
+        for (c in s) {
+            when {
+                c == '"' -> sb.append("\\\"")
+                c == '\\' -> sb.append("\\\\")
+                c < ' ' -> sb.append("\\u%04x".format(c.code))
+                else -> sb.append(c)
+            }
         }
         return sb.append('"').toString()
     }
@@ -85,10 +89,12 @@ object ServerJwt {
         val sb = StringBuilder((bytes.size + 2) / 3 * 4)
         var i = 0
         while (i + 3 <= bytes.size) {
-            val n = (bytes[i].toInt() and 0xFF shl 16) or
-                (bytes[i + 1].toInt() and 0xFF shl 8) or
-                (bytes[i + 2].toInt() and 0xFF)
-            sb.append(ALPHABET[n ushr 18])
+            val n =
+                (bytes[i].toInt() and 0xFF shl 16) or
+                    (bytes[i + 1].toInt() and 0xFF shl 8) or
+                    (bytes[i + 2].toInt() and 0xFF)
+            sb
+                .append(ALPHABET[n ushr 18])
                 .append(ALPHABET[n ushr 12 and 63])
                 .append(ALPHABET[n ushr 6 and 63])
                 .append(ALPHABET[n and 63])
@@ -101,7 +107,8 @@ object ServerJwt {
             }
             2 -> {
                 val n = (bytes[i].toInt() and 0xFF shl 16) or (bytes[i + 1].toInt() and 0xFF shl 8)
-                sb.append(ALPHABET[n ushr 18])
+                sb
+                    .append(ALPHABET[n ushr 18])
                     .append(ALPHABET[n ushr 12 and 63])
                     .append(ALPHABET[n ushr 6 and 63])
             }

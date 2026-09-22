@@ -15,11 +15,13 @@ import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { usePostById } from '../hooks/usePostById';
+import { usePostModeration } from '../hooks/usePostModeration';
 import { PostImages } from '../PostImages';
+import { PostWarnOverlay } from '../PostWarnOverlay';
 
 const QUOTE_PREVIEW_LIMIT = 200;
 const PLACEHOLDER_HEADER_HEIGHT = 24;
@@ -57,28 +59,20 @@ export function PostContentQuote({
   const post = quotePost ?? fetched.post;
   const isLoading = !quotePost && fetched.isLoading;
 
-  const authorProfile = useProfile(post?.identity ?? null);
-  const authorName = authorProfile.name ?? '';
+  const { hasWarnContent, warnLabels } = usePostModeration(post?.labels);
+  const [warnDismissed, setWarnDismissed] = useState(false);
+  const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
 
   const handlePress = useCallback(() => {
     if (!post) return;
-    router.push(
-      Routes.tabs.post(
-        post.identity,
-        getKeyFingerprint(post.signedBy)!,
-        post.sequence,
-      ),
-    );
+
+    const keyFingerprint = getKeyFingerprint(post.signedBy);
+    if (!keyFingerprint) return;
+
+    router.push(Routes.tabs.post(post.identity, keyFingerprint, post.sequence));
   }, [post]);
 
   if (!post) return isLoading ? <QuoteSkeleton /> : <QuoteUnavailable />;
-
-  const content = mentionsToPlainText(post.content ?? '');
-  const preview =
-    content.length > QUOTE_PREVIEW_LIMIT
-      ? `${content.slice(0, QUOTE_PREVIEW_LIMIT)}…`
-      : content;
-  const time = timeAgo(Number(post.createdAt));
 
   return (
     <Pressable
@@ -93,46 +87,16 @@ export function PostContentQuote({
         },
       ]}
     >
-      <View style={[Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}>
-        <ProfileAvatar
-          identityKey={post.identity}
-          size="xs"
-          style={Atoms.mr_md}
+      <AuthorRow post={post} />
+      {hasWarnContent && !warnDismissed ? (
+        <PostWarnOverlay
+          labels={warnLabels}
+          authorIdentity={post.identity}
+          onDismiss={handleWarnDismiss}
         />
-        <Text
-          variant="secondary"
-          fontWeight="bold"
-          numberOfLines={1}
-          style={Atoms.flex_shrink_1}
-        >
-          {authorName || '…'}
-        </Text>
-        <IdentityTag identity={post.identity} />
-        {time ? (
-          <>
-            <Text variant="secondary" color="neutral_500" fontWeight="bold">
-              ·
-            </Text>
-            <Text variant="secondary" color="neutral_500">
-              {time}
-            </Text>
-          </>
-        ) : null}
-      </View>
-      {preview ? (
-        <Text
-          variant="secondary"
-          numberOfLines={4}
-          style={[Atoms.mt_xs, theme.atoms.text_neutral_high]}
-        >
-          {preview}
-        </Text>
-      ) : null}
-      {post.images?.length > 0 ? (
-        <View style={Atoms.mt_xs}>
-          <PostImages post={post} />
-        </View>
-      ) : null}
+      ) : (
+        <PostBody post={post} />
+      )}
     </Pressable>
   );
 }
@@ -157,6 +121,72 @@ function QuoteUnavailable() {
         </Text>
       </View>
     </View>
+  );
+}
+
+/** Author and time info at the top. */
+function AuthorRow({ post }: { post: PostData }) {
+  const authorProfile = useProfile(post.identity);
+  const authorName = authorProfile.name ?? '…';
+  const time = timeAgo(Number(post.createdAt));
+
+  return (
+    <View style={[Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}>
+      <ProfileAvatar
+        identityKey={post.identity}
+        size="xs"
+        style={Atoms.mr_md}
+      />
+      <Text
+        variant="secondary"
+        fontWeight="bold"
+        numberOfLines={1}
+        style={Atoms.flex_shrink_1}
+      >
+        {authorName}
+      </Text>
+      <IdentityTag identity={post.identity} />
+      {time ? (
+        <>
+          <Text variant="secondary" color="neutral_500" fontWeight="bold">
+            ·
+          </Text>
+          <Text variant="secondary" color="neutral_500">
+            {time}
+          </Text>
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+/** A preview of the post's content. */
+function PostBody({ post }: { post: PostData }) {
+  const { theme } = useTheme();
+
+  const content = mentionsToPlainText(post.content ?? '');
+  const preview =
+    content.length > QUOTE_PREVIEW_LIMIT
+      ? `${content.slice(0, QUOTE_PREVIEW_LIMIT)}…`
+      : content;
+
+  return (
+    <>
+      {preview ? (
+        <Text
+          variant="secondary"
+          numberOfLines={4}
+          style={[Atoms.mt_xs, theme.atoms.text_neutral_high]}
+        >
+          {preview}
+        </Text>
+      ) : null}
+      {post.images?.length > 0 ? (
+        <View style={Atoms.mt_xs}>
+          <PostImages post={post} />
+        </View>
+      ) : null}
+    </>
   );
 }
 

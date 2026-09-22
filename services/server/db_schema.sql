@@ -36,7 +36,7 @@ CREATE AGGREGATE public.tsvector_agg(tsvector) (
 
 CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char") RETURNS tsvector
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM string_to_table(COALESCE(create_tsvector.text, ''::text), ' '::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
+    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
 
 
 --
@@ -94,6 +94,17 @@ CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_
 CREATE FUNCTION public.search_query(query text) RETURNS tsquery
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     RETURN (COALESCE(to_tsquery('english'::regconfig, query), to_tsquery('simple'::regconfig, ''::text)) || COALESCE(to_tsquery('simple'::regconfig, query), to_tsquery('simple'::regconfig, ''::text)));
+
+
+--
+-- Name: alias_cache; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.alias_cache (
+    alias character varying NOT NULL,
+    identity character varying,
+    updated_at timestamp with time zone NOT NULL
+);
 
 
 --
@@ -663,6 +674,14 @@ CREATE TABLE public.verification_schema (
     schema_bytes bytea NOT NULL,
     schema jsonb NOT NULL
 );
+
+
+--
+-- Name: alias_cache alias_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alias_cache
+    ADD CONSTRAINT alias_cache_pkey PRIMARY KEY (alias);
 
 
 --

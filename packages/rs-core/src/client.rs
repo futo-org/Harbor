@@ -13,7 +13,7 @@ use polycentric_common::{
 use crate::lock::LockRecover;
 use crate::store::{
     content_store::ContentStore, event_proofs_store::EventProofsStore, event_store::EventStore,
-    identity_store::IdentityStore, keys::EventKey, meta_store::MetaStore,
+    identity_store::IdentityStore, keys::EventKey, label_store::LabelStore, meta_store::MetaStore,
     pairing_store::PairingStore,
 };
 use prost::Message;
@@ -42,6 +42,7 @@ pub struct PolycentricClient {
     event_proofs_store: EventProofsStore,
     content_store: ContentStore,
     meta_store: MetaStore,
+    label_store: LabelStore,
     identity_store: IdentityStore,
     pairing_store: PairingStore,
 }
@@ -196,6 +197,17 @@ impl PolycentricClient {
         None
     }
 
+    /// Get the event bundles for locally-known label events targeting `target`.
+    pub fn label_bundles_for(&self, target: &EventKey) -> Vec<EventBundle> {
+        self.label_store
+            .get(target)
+            .filter_map(|key| {
+                let signed_event = self.event_store.get(key)?;
+                self.bundle_for(key, signed_event, true).ok()
+            })
+            .collect()
+    }
+
     pub fn find_content_from_digest(&self, digest: &ContentDigest) -> Option<SerializedContent> {
         self.content_store
             .get(digest)
@@ -268,6 +280,10 @@ impl PolycentricClient {
             let serialized = bundle.serialized_content;
             let proofs = bundle.event_proofs;
 
+            let decoded_content = serialized
+                .as_ref()
+                .and_then(|c| Content::decode(c.content_bytes.as_slice()).ok());
+
             if let (Some(digest), Some(content)) = (digest, serialized)
                 && let Err(e) = self.copy_content(digest, content.content_bytes)
             {
@@ -277,6 +293,19 @@ impl PolycentricClient {
             if let Ok(key) = EventKey::from_event(event) {
                 if !proofs.is_empty() {
                     self.event_proofs_store.insert(key.clone(), proofs);
+                }
+                if key.collection == collections::LABELS {
+                    let target = decoded_content
+                        .and_then(|content| match content.content_body {
+                            Some(ContentBody::Labels(labels)) => Some(labels),
+                            _ => None,
+                        })
+                        .and_then(|labels| labels.event_key)
+                        .and_then(|target| EventKey::from_proto_key(target).ok());
+
+                    if let Some(target) = target {
+                        self.label_store.insert(target, &key);
+                    }
                 }
                 if let Some(meta) = bundle.meta {
                     self.copy_meta(key, meta);

@@ -14,7 +14,6 @@ class PolycentricDbHelper(
     context: Context,
     name: String = "polycentric-v2.db",
 ) : SQLiteOpenHelper(context, name, null, SqliteSchema.VERSION) {
-
     override fun onConfigure(db: SQLiteDatabase) {
         // Enforce the FK/CHECK constraints declared in the schema.
         db.setForeignKeyConstraintsEnabled(true)
@@ -39,7 +38,11 @@ class PolycentricDbHelper(
         }
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+    override fun onUpgrade(
+        db: SQLiteDatabase,
+        oldVersion: Int,
+        newVersion: Int,
+    ) {
         if (oldVersion < 2) {
             // Split "active session" out from the per-key identity binding so
             // logout can persist without forgetting the identity.

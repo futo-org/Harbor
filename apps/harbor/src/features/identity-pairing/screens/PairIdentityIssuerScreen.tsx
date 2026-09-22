@@ -76,7 +76,14 @@ export default function PairIdentityIssuerScreen() {
   } else {
     // If we still believe the session to be valid, display its pairing info.
     mainContent = (
-      <PairingInfoCard info={info} remainingSeconds={remainingSeconds} />
+      <>
+        <Text style={[Atoms.mx_lg]}>
+          On your other device, press "I already have an identity" and then
+          "Pair with existing device." From there, you can scan the QR code
+          displayed here or manually enter the pairing code after copying it.
+        </Text>
+        <PairingInfoCard info={info} remainingSeconds={remainingSeconds} />
+      </>
     );
   }
 
@@ -95,11 +102,9 @@ export default function PairIdentityIssuerScreen() {
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={[
-                Atoms.gap_lg,
-                Atoms.pb_lg,
                 Atoms.items_center,
                 Atoms.w_full,
-                { paddingTop: 100 },
+                Atoms.py_3xl,
               ]}
             >
               {mainContent}
@@ -133,6 +138,7 @@ function PairingInfoCard({
         Atoms.gap_md,
         Atoms.p_lg,
         Atoms.rounded_lg,
+        Atoms.my_3xl,
         { backgroundColor: theme.palette.neutral_50 },
       ]}
     >

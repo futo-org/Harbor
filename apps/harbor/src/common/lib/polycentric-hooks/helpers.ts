@@ -284,43 +284,49 @@ export function decodeFeedItems(
   response: v2.GetFeedResponse,
   labelMap: Map<string, PostLabel[]>,
 ): PostData[] {
+  // Gather posts from event hints
   const hintPosts = new Map<string, PostData>();
   for (const hint of response.eventHints) {
     if (!hint.eventBundle) continue;
+
     const post = decodePostBundle(hint.eventBundle);
-    if (post) hintPosts.set(post.id, post);
+    if (!post) continue;
+
+    post.labels = labelMap.get(post.id);
+    hintPosts.set(post.id, post);
   }
 
+  // Gather feed items from event bundles
   const items: PostData[] = [];
   for (const bundle of response.eventBundles) {
-    const post = decodePostBundle(bundle);
+    let post: PostData | null = decodePostBundle(bundle);
+
+    // Decode post or repost
     if (post) {
-      const labels = labelMap.get(post.id);
-      if (labels) post.labels = labels;
-      items.push(post);
-      continue;
-    }
-    const repost = decodeRepostBundle(bundle);
-    if (repost) {
+      post.labels = labelMap.get(post.id);
+    } else {
+      const repost = decodeRepostBundle(bundle);
+      if (!repost) continue;
+
       const target = hintPosts.get(repost.targetId);
-      if (target) {
-        const repostLabels = labelMap.get(repost.targetId);
-        items.push({
-          ...target,
-          labels: repostLabels ?? target.labels,
-          repostedBy: repost.repostedBy,
-          repostId: repost.repostId,
-          repostedAt: repost.repostedAt,
-        });
-      }
+      if (!target) continue;
+
+      post = {
+        ...target,
+        repostedBy: repost.repostedBy,
+        repostId: repost.repostId,
+        repostedAt: repost.repostedAt,
+      };
     }
+
+    // Add any quoted content
+    if (post.quoteId) {
+      post.quotePost = hintPosts.get(post.quoteId);
+    }
+
+    items.push(post);
   }
 
-  for (const item of items) {
-    if (item.quoteId) {
-      item.quotePost = hintPosts.get(item.quoteId);
-    }
-  }
   return items;
 }
 

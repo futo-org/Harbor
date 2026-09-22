@@ -342,71 +342,75 @@ impl Query {
             }
         }
 
-        // NOTE: SeaORM cursor only works with one of the entities used, but we
-        // need to order/filter etc. by the tally, so we can't use it.
         let order_column = sort_posts_by_column(sort_by);
+        let forward = match cursor_filter {
+            CursorFilter::Forward(cur) => {
+                match cur {
+                    Cursor::Start => { /* No filtering. */ }
+                    Cursor::Mid(marker) => {
+                        if !marker.sorted_by.matches(sort_by) {
+                            return Err(Status::internal(
+                                "wrong combination of sort_by and pagination parameters",
+                            ));
+                        }
+                        query.cond_where(
+                            Expr::tuple([
+                                order_column.clone(),
+                                Expr::col(event::Column::Id.as_column_ref()),
+                            ])
+                            .lt(Expr::tuple([
+                                marker.sorted_by.as_db_value(),
+                                Expr::from(marker.event_id),
+                            ])),
+                        );
+                    }
+                    Cursor::End => return Ok(Vec::new()),
+                }
+                true // Forwards.
+            }
+            CursorFilter::Backward(cur) => {
+                match cur {
+                    Cursor::Start => return Ok(Vec::new()),
+                    Cursor::Mid(marker) => {
+                        if !marker.sorted_by.matches(sort_by) {
+                            return Err(Status::internal(
+                                "wrong combination of sort_by and pagination parameters",
+                            ));
+                        }
+                        query.cond_where(
+                            Expr::tuple([
+                                order_column.clone(),
+                                Expr::col(event::Column::Id.as_column_ref()),
+                            ])
+                            .gt(Expr::tuple([
+                                marker.sorted_by.as_db_value(),
+                                Expr::from(marker.event_id),
+                            ])),
+                        );
+                    }
+                    Cursor::End => { /* No filtering. */ }
+                }
+                false // Backwards.
+            }
+        };
+        let order = if forward { Order::Desc } else { Order::Asc };
         query
-            .order_by_expr(order_column.clone(), Order::Desc)
-            .order_by_expr(
-                Expr::col(event::Column::Id.as_column_ref()),
-                Order::Desc,
-            );
-
-        match cursor_filter {
-            CursorFilter::Forward(cur) => match cur {
-                Cursor::Start => { /* No filtering. */ }
-                Cursor::Mid(marker) => {
-                    if !marker.sorted_by.matches(sort_by) {
-                        return Err(Status::internal(
-                            "wrong combination of sort_by and pagination parameters",
-                        ));
-                    }
-                    query.cond_where(
-                        Expr::tuple([
-                            order_column,
-                            Expr::col(event::Column::Id.as_column_ref()),
-                        ])
-                        .lt(Expr::tuple([
-                            marker.sorted_by.as_db_value(),
-                            Expr::from(marker.event_id),
-                        ])),
-                    );
-                }
-                Cursor::End => return Ok(Vec::new()),
-            },
-            CursorFilter::Backward(cur) => match cur {
-                Cursor::Start => return Ok(Vec::new()),
-                Cursor::Mid(marker) => {
-                    if !marker.sorted_by.matches(sort_by) {
-                        return Err(Status::internal(
-                            "wrong combination of sort_by and pagination parameters",
-                        ));
-                    }
-                    query.cond_where(
-                        Expr::tuple([
-                            order_column,
-                            Expr::col(event::Column::Id.as_column_ref()),
-                        ])
-                        .gt(Expr::tuple([
-                            marker.sorted_by.as_db_value(),
-                            Expr::from(marker.event_id),
-                        ])),
-                    );
-                }
-                Cursor::End => { /* No filtering. */ }
-            },
-        }
-        query.limit(limit + 1); // + 1 for pagination.
+            .order_by_expr(order_column, order.clone())
+            .order_by_expr(Expr::col(event::Column::Id.as_column_ref()), order)
+            .limit(limit);
 
         db.query_all(&query)
             .await
             .and_then(|rows| {
-                rows.into_iter()
-                    .map(|row| {
-                        ExploreEvent::try_get_many_by_index(&row)
-                            .map_err(Into::into)
-                    })
-                    .collect()
+                let rows = rows.into_iter().map(|row| {
+                    ExploreEvent::try_get_many_by_index(&row)
+                        .map_err(Into::into)
+                });
+                if forward {
+                    rows.collect()
+                } else {
+                    rows.rev().collect()
+                }
             })
             .map_err(|err| {
                 tracing::warn!(error = %err, "failed to list feed events");
@@ -836,6 +840,27 @@ impl Query {
             ],
         );
         DescendantRef::find_by_statement(stmt).all(db).await
+    }
+
+    /// List feed events at a given sequence by a given identity.
+    /// This is useful when we don't know the full signing key.
+    pub(super) async fn list_events_at_sequence(
+        db: &DbConn,
+        identity: &str,
+        sequence: u64,
+    ) -> Result<Vec<EventWithContentRow>, DbErr> {
+        event::Entity::find()
+            .select_also(content::Entity)
+            .join(JoinType::InnerJoin, content_join())
+            // Apply the requested filters.
+            .filter(event::Column::Collection.eq(FEED_COLLECTION))
+            .filter(event::Column::Identity.eq(identity))
+            .filter(event::Column::Sequence.eq(sequence))
+            // We should only be returning at most a couple candidates, but
+            // we'll add a bound just in case.
+            .limit(50)
+            .all(db)
+            .await
     }
 
     /// Get up to `limit` reaction events for the target post.
