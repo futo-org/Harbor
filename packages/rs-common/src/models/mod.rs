@@ -72,3 +72,59 @@ pub enum StringValidationError {
     TooSmall { length: usize, min: usize },
     TooLarge { length: usize, max: usize },
 }
+
+/*
+fn validate_int<Int>(
+    input: Int,
+    name: impl fmt::Display,
+    min_len: Option<Int>,
+    max_len: Option<Int>,
+) -> Result<(), Status>
+where
+    Int: Eq + Ord,
+{
+    if let Some(min_len) = min_len
+        && input < min_len
+    {
+        return Err(Status::invalid_argument(format!("{name} too small")));
+    }
+
+    if let Some(max_len) = max_len
+        && input > max_len
+    {
+        return Err(Status::invalid_argument(format!("{name} too large")));
+    }
+
+    Ok(())
+}
+
+fn validate_slice<T>(
+    input: &[T],
+    name: impl fmt::Display,
+    min_len: Option<usize>,
+    max_len: Option<usize>,
+    mut validate: impl FnMut(&T) -> Result<(), Status>,
+) -> Result<(), Status> {
+    if let Some(1) = min_len
+        && input.is_empty()
+    {
+        return Err(Status::invalid_argument(format!("{name} can't be empty")));
+    } else if let Some(min_len) = min_len
+        && input.len() < min_len
+    {
+        return Err(Status::invalid_argument(format!("{name} too short")));
+    }
+
+    if let Some(max_len) = max_len
+        && input.len() > max_len
+    {
+        return Err(Status::invalid_argument(format!("{name} too long")));
+    }
+
+    for item in input {
+        validate(item)?;
+    }
+
+    Ok(())
+}
+*/
