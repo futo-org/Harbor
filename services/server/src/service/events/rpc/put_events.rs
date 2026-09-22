@@ -1,31 +1,32 @@
 //! `put_events`: ingest signed events. Mutation — does not use the
 //! events pipeline.
 
-use crate::service::proto::content::ContentBody;
-use crate::service::{
-    content::content_repository as ContentRepository,
-    context::ServiceContext,
-    events::repository as EventsRepository,
-    identity::repository::Query as IdentityRepository,
-    identity::service::authorize_event_signer,
-    proto::{
-        Application, Content, Delete, Event, EventBundle, PublicKey,
-        PutEventError, PutEventsRequest, PutEventsResponse,
-    },
-};
+use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::time::Duration;
+
 use chrono::{DateTime, Utc};
 use common_kafka::FutureRecord;
 use entity::event;
 use polycentric_common::models::{collections, protos_v2::Blob};
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
-use sea_orm::{
-    ActiveValue::{NotSet, Set},
-    TransactionTrait,
-};
-use std::collections::HashMap;
-use std::{collections::HashSet, time::Duration};
+use sea_orm::ActiveValue::{NotSet, Set};
+use sea_orm::TransactionTrait;
 use tonic::Status;
+
+use crate::service::content::content_repository as ContentRepository;
+use crate::service::context::ServiceContext;
+use crate::service::events::repository as EventsRepository;
+use crate::service::identity::repository::Query as IdentityRepository;
+use crate::service::identity::service::authorize_event_signer;
+use crate::service::proto::attributed_to::To;
+use crate::service::proto::content::ContentBody;
+use crate::service::proto::{
+    Application, AttributedTo, Content, Delete, Event, EventBundle, Image,
+    ImageSet, Link, Post, PublicKey, PutEventError, PutEventsRequest,
+    PutEventsResponse,
+};
 
 /// Ingest a batch of signed events. Each event is processed in
 /// isolation with failures reported back in `PutEventsResponse.errors`
@@ -314,15 +315,15 @@ fn validate_event(event: &Event) -> Result<(), Status> {
         url,
     }) = &event.application
     {
-        validate_string(name, "event application name", Some(0), Some(200))?;
-        validate_string(id, "event application id", Some(0), Some(200))?;
+        validate_string(name, "event application name", Some(1), Some(200))?;
+        validate_string(id, "event application id", Some(1), Some(200))?;
         validate_string(
             version,
             "event application version",
-            Some(0),
+            Some(1),
             Some(200),
         )?;
-        validate_string(url, "event application url", Some(0), Some(200))?;
+        validate_string(url, "event application url", Some(1), Some(200))?;
     }
 
     Ok(())
@@ -335,9 +336,99 @@ fn validate_content(content: &Content, collection: i32) -> Result<(), Status> {
     };
 
     match content_body {
-        ContentBody::Post(_) => {
+        ContentBody::Post(post) => {
             check_collection(collection, collections::FEED)?;
-            // TODO: validate.
+            let Post {
+                text,
+                reply: _,
+                images,
+                quote: _,
+                links,
+                labels,
+                attributed_to,
+            } = post;
+            validate_string(text, "post text", Some(1), Some(2000))?;
+            validate_slice(
+                images,
+                "post image set",
+                None,
+                Some(10),
+                |image_set| {
+                    let ImageSet { images } = image_set;
+                    validate_slice(
+                        images,
+                        "post images",
+                        None,
+                        Some(10),
+                        |image| {
+                            let Image {
+                                blob,
+                                width: _,
+                                height: _,
+                            } = image;
+                            let Some(blob) = blob else {
+                                return Err(Status::invalid_argument(
+                                    "missing post image blob",
+                                ));
+                            };
+                            let Blob {
+                                digest,
+                                mime_type,
+                                size,
+                            } = blob;
+                            let Some(digest) = digest else {
+                                return Err(Status::invalid_argument(
+                                    "missing post image blob digest",
+                                ));
+                            };
+                            // TODO: validate digest.
+                            validate_string(
+                                mime_type,
+                                "post image blob mime type",
+                                Some(1),
+                                Some(100),
+                            )?;
+                            const MAX_SIZE: i64 = 100 * 1024 * 1024; // 100 MB
+                            validate_int(
+                                *size,
+                                "post image blob size",
+                                Some(1),
+                                Some(MAX_SIZE),
+                            )?;
+                            Ok(())
+                        },
+                    )
+                },
+            )?;
+            validate_slice(links, "post links", None, Some(10), |link| {
+                validate_link(link, "post link")
+            })?;
+            validate_slice(labels, "post labels", None, Some(10), |label| {
+                validate_string(label, "post label", Some(1), Some(200))
+            })?;
+            validate_slice(
+                attributed_to,
+                "post attributed to",
+                None,
+                Some(10),
+                |attributed_to| {
+                    let AttributedTo { to } = attributed_to;
+                    match to {
+                        Some(To::Link(link)) => {
+                            validate_link(link, "post attributed to link")
+                        }
+                        None => Err(Status::invalid_argument(
+                            "missing post attributed to",
+                        )),
+                    }
+                },
+            )?;
+
+            // TODO: needs db for validation of:
+            // * reply.root & reply.parent events exists.
+            // * reply.root & reply.parent in same thread?
+            // * quote event exists.
+
             Ok(())
         }
         ContentBody::Repost(_) => {
@@ -420,13 +511,31 @@ fn check_collection(collection: i32, expected: i32) -> Result<(), Status> {
     }
 }
 
+fn validate_link(link: &Link, prefix: &'static str) -> Result<(), Status> {
+    let Link {
+        title,
+        description,
+        image,
+        url,
+    } = link;
+    validate_string(title, format_args!("{prefix} title"), Some(1), Some(100))?;
+    validate_string(
+        description,
+        format_args!("{prefix} description"),
+        Some(1),
+        Some(200),
+    )?;
+    validate_string(image, format_args!("{prefix} image"), Some(1), Some(200))?;
+    validate_string(url, format_args!("{prefix} url"), Some(1), Some(200))
+}
+
 fn validate_string(
     input: &str,
-    name: &'static str,
+    name: impl fmt::Display,
     min_len: Option<usize>,
     max_len: Option<usize>,
 ) -> Result<(), Status> {
-    if let Some(0) = min_len
+    if let Some(1) = min_len
         && input.is_empty()
     {
         return Err(Status::invalid_argument(format!("{name} can't be empty")));
@@ -440,6 +549,60 @@ fn validate_string(
         && input.len() > max_len
     {
         return Err(Status::invalid_argument(format!("{name} too long")));
+    }
+
+    Ok(())
+}
+
+fn validate_int<Int>(
+    input: Int,
+    name: impl fmt::Display,
+    min_len: Option<Int>,
+    max_len: Option<Int>,
+) -> Result<(), Status>
+where
+    Int: Eq + Ord,
+{
+    if let Some(min_len) = min_len
+        && input < min_len
+    {
+        return Err(Status::invalid_argument(format!("{name} too small")));
+    }
+
+    if let Some(max_len) = max_len
+        && input > max_len
+    {
+        return Err(Status::invalid_argument(format!("{name} too large")));
+    }
+
+    Ok(())
+}
+
+fn validate_slice<T>(
+    input: &[T],
+    name: impl fmt::Display,
+    min_len: Option<usize>,
+    max_len: Option<usize>,
+    mut validate: impl FnMut(&T) -> Result<(), Status>,
+) -> Result<(), Status> {
+    if let Some(1) = min_len
+        && input.is_empty()
+    {
+        return Err(Status::invalid_argument(format!("{name} can't be empty")));
+    } else if let Some(min_len) = min_len
+        && input.len() < min_len
+    {
+        return Err(Status::invalid_argument(format!("{name} too short")));
+    }
+
+    if let Some(max_len) = max_len
+        && input.len() > max_len
+    {
+        return Err(Status::invalid_argument(format!("{name} too long")));
+    }
+
+    for item in input {
+        validate(item)?;
     }
 
     Ok(())
