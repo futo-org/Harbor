@@ -1,8 +1,4 @@
-import {
-  IdentityTag,
-  ProfileAvatar,
-  Text,
-} from '@/src/common/components/primitives';
+import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
@@ -12,7 +8,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
-import FollowingIndicator from '@/src/features/follow/FollowingIndicator';
+import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
 import { ProfileName } from '@/src/features/profile/ProfileName';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
@@ -136,15 +132,14 @@ function AuthorRow({ post }: { post: PostData }) {
         size="xs"
         style={Atoms.mr_md}
       />
-      {/* The full FollowingIndicator badge follows, so no icon here. */}
       <ProfileName
         identity={post.identity}
+        // The IdentityTagOrFollowing that follows shows the full badge.
         showFollowing={false}
         variant="secondary"
         fontWeight="bold"
       />
-      <IdentityTag identity={post.identity} />
-      <FollowingIndicator identity={post.identity} />
+      <IdentityTagOrFollowing identity={post.identity} />
       {time ? (
         <>
           <Text variant="secondary" color="neutral_500" fontWeight="bold">

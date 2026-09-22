@@ -1,13 +1,11 @@
 import { Text } from '@/src/common/components';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
-import {
-  type AvatarSizePreset,
-  IdentityTag,
-} from '@/src/common/components/primitives';
+import type { AvatarSizePreset } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { timeAgo } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms } from '@/src/common/theme';
+import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
 import { ProfileName } from '@/src/features/profile/ProfileName';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
@@ -40,11 +38,13 @@ export function ClaimAuthorLine({
         <ProfileAvatar identityKey={identity} size={avatarSize} />
         <ProfileName
           identity={identity}
+          // The IdentityTagOrFollowing beside it shows the full badge.
+          showFollowing={false}
           variant="secondary"
           fontWeight="bold"
           style={hovered && Atoms.text_underline}
         />
-        <IdentityTag identity={identity} />
+        <IdentityTagOrFollowing identity={identity} />
       </Pressable>
       <Text variant="secondary" color="neutral_500" fontWeight="bold">
         ·

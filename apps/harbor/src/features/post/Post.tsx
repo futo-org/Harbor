@@ -1,14 +1,10 @@
-import {
-  IdentityTag,
-  ProfileAvatar,
-  Text,
-} from '@/src/common/components/primitives';
+import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import FollowingIndicator from '@/src/features/follow/FollowingIndicator';
+import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
 import { ProfileName } from '@/src/features/profile/ProfileName';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -100,9 +96,8 @@ export const Post = memo(function Post({
         style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
       >
         <PostAuthorName identity={authorIdentity} onPress={handleAuthorPress} />
-        {authorIdentity ? <IdentityTag identity={authorIdentity} /> : null}
         {authorIdentity ? (
-          <FollowingIndicator identity={authorIdentity} />
+          <IdentityTagOrFollowing identity={authorIdentity} />
         ) : null}
 
         {time ? (
@@ -179,11 +174,8 @@ export const Post = memo(function Post({
                 onPress={handleAuthorPress}
               />
               {authorIdentity ? (
-                <View
-                  style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_xs]}
-                >
-                  <IdentityTag identity={authorIdentity} />
-                  <FollowingIndicator identity={authorIdentity} />
+                <View style={Atoms.flex_row}>
+                  <IdentityTagOrFollowing identity={authorIdentity} />
                 </View>
               ) : null}
             </View>
@@ -229,7 +221,6 @@ export const Post = memo(function Post({
   );
 });
 
-/** The full FollowingIndicator badge sits beside it, so no icon here. */
 function PostAuthorName({
   identity,
   onPress,
@@ -248,6 +239,7 @@ function PostAuthorName({
     >
       <ProfileName
         identity={identity}
+        // The IdentityTagOrFollowing beside it shows the full badge.
         showFollowing={false}
         variant="secondary"
         fontWeight="bold"

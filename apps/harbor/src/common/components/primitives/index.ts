@@ -10,6 +10,5 @@ export * from './LinkButton';
 export * from './PillButton';
 export * from './Text';
 export * from './TextInput';
-export * from './PillChip';
 export * from './SelectionIndicator';
 export * from './ListItem';

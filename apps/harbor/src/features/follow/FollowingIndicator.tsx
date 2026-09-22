@@ -4,11 +4,9 @@ import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { View } from 'react-native';
 import useFollows from './hooks/useFollows';
 
-export default function FollowingIndicator({ identity }: { identity: string }) {
+/** Full badge, rendered by `IdentityTagOrFollowing` in place of the short id. */
+export function FollowingBadge() {
   const { theme } = useTheme();
-  const following = useFollows((state) => state.isFollowing(identity));
-
-  if (!following) return null;
 
   return (
     <View
