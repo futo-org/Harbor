@@ -1,6 +1,5 @@
 import Icon from '@/src/common/components/Icon';
 import { Text } from '@/src/common/components/primitives';
-import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useOptionalProfileContext } from '@/src/features/profile/ProfileContext';
 import { View } from 'react-native';
@@ -60,19 +59,16 @@ export function FollowingIcon({
 }
 
 /**
- * Whether to mark `identity` as followed. Always false for the user's own
- * identity and on that identity's profile screen, where the Follow button
- * already shows the state.
+ * Whether to mark `identity` as followed. Always false on that identity's own
+ * profile screen, where the Follow button already shows the state.
  */
 export function useIsFollowingIndicatorShown(
   identity: string | null | undefined,
 ): boolean {
-  const { isCurrentIdentity } = useCurrentIdentity();
   const profileIdentity = useOptionalProfileContext()?.identityKey ?? null;
-  const isHiddenForIdentity =
-    !identity || isCurrentIdentity(identity) || identity === profileIdentity;
+  const isOnOwnProfile = !!identity && identity === profileIdentity;
 
   return useFollows((state) =>
-    !isHiddenForIdentity ? state.isFollowing(identity) : false,
+    identity && !isOnOwnProfile ? state.isFollowing(identity) : false,
   );
 }
