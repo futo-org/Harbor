@@ -69,6 +69,7 @@ export const IconsMap = {
   menu: defineIcon(Ionicons, 'menu'),
   more: defineIcon(Ionicons, 'ellipsis-horizontal'),
   notification: defineIcon(MaterialCommunityIcons, 'bell-outline'),
+  people: defineIcon(Ionicons, 'people'),
   personAdd: defineIcon(Ionicons, 'person-add'),
   personAddOutline: defineIcon(Ionicons, 'person-add-outline'),
   personOutline: defineIcon(Ionicons, 'person-outline'),

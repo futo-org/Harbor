@@ -12,6 +12,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
+import FollowingIndicator from '@/src/features/follow/FollowingIndicator';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
@@ -146,6 +147,7 @@ function AuthorRow({ post }: { post: PostData }) {
         {authorName}
       </Text>
       <IdentityTag identity={post.identity} />
+      <FollowingIndicator identity={post.identity} />
       {time ? (
         <>
           <Text variant="secondary" color="neutral_500" fontWeight="bold">

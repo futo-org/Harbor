@@ -8,6 +8,7 @@ import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import FollowingIndicator from '@/src/features/follow/FollowingIndicator';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -106,6 +107,9 @@ export const Post = memo(function Post({
           onPress={handleAuthorPress}
         />
         {authorIdentity ? <IdentityTag identity={authorIdentity} /> : null}
+        {authorIdentity ? (
+          <FollowingIndicator identity={authorIdentity} />
+        ) : null}
 
         {time ? (
           <>
@@ -181,8 +185,11 @@ export const Post = memo(function Post({
                 onPress={handleAuthorPress}
               />
               {authorIdentity ? (
-                <View style={Atoms.self_start}>
+                <View
+                  style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_xs]}
+                >
                   <IdentityTag identity={authorIdentity} />
+                  <FollowingIndicator identity={authorIdentity} />
                 </View>
               ) : null}
             </View>
