@@ -6,28 +6,18 @@ import {
 } from '@/src/common/components/primitives/Button';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useOptionalProfileContext } from '@/src/features/profile/ProfileContext';
-import { View } from 'react-native';
+import type { ReactNode } from 'react';
+import { View, type ViewStyle } from 'react-native';
 import useFollows from './hooks/useFollows';
+
+const BUBBLE_BORDER_WIDTH = 1;
+const ICON_BUBBLE_PADDING = 2;
 
 /** Full badge, rendered by `IdentityTagOrFollowing` in place of the short id. */
 export function FollowingBadge() {
-  const { theme } = useTheme();
-
   return (
-    <View
-      style={[
-        Atoms.flex_row,
-        Atoms.align_center,
-        Atoms.flex_shrink_0,
-        Atoms.gap_2xs,
-        Atoms.px_xs,
-        Atoms.rounded_full,
-        { paddingVertical: 1, borderWidth: 1 },
-        // Match the active FollowButton.
-        getButtonVariantStyle(theme, 'secondary'),
-      ]}
-    >
-      <Icon name="people" size={11} color={buttonTextColorMap.secondary} />
+    <FollowingBubble style={[Atoms.px_xs, { paddingVertical: 1 }]}>
+      <Icon name="people" size={12} color={buttonTextColorMap.secondary} />
       <Text
         variant="small"
         color={buttonTextColorMap.secondary}
@@ -35,7 +25,7 @@ export function FollowingBadge() {
       >
         Following
       </Text>
-    </View>
+    </FollowingBubble>
   );
 }
 
@@ -51,14 +41,48 @@ export function FollowingIcon({
 
   if (!following) return null;
 
+  // Fixed square box, since the glyph's own box isn't square.
+  const diameter = size + 2 * (ICON_BUBBLE_PADDING + BUBBLE_BORDER_WIDTH);
+
   return (
-    <Icon
-      name="people"
-      size={size}
-      color={buttonTextColorMap.secondary}
-      accessibilityLabel="Following"
-      style={Atoms.flex_shrink_0}
-    />
+    <FollowingBubble
+      style={[Atoms.justify_center, { width: diameter, height: diameter }]}
+    >
+      <Icon
+        name="people"
+        size={size}
+        color={buttonTextColorMap.secondary}
+        accessibilityLabel="Following"
+      />
+    </FollowingBubble>
+  );
+}
+
+function FollowingBubble({
+  style,
+  children,
+}: {
+  style?: ViewStyle | ViewStyle[];
+  children: ReactNode;
+}) {
+  const { theme } = useTheme();
+
+  return (
+    <View
+      style={[
+        Atoms.flex_row,
+        Atoms.align_center,
+        Atoms.flex_shrink_0,
+        Atoms.gap_2xs,
+        Atoms.rounded_full,
+        { borderWidth: BUBBLE_BORDER_WIDTH },
+        // Match the active FollowButton.
+        getButtonVariantStyle(theme, 'secondary'),
+        style,
+      ]}
+    >
+      {children}
+    </View>
   );
 }
 
