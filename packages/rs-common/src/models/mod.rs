@@ -16,6 +16,7 @@ pub mod protos_v2 {
 
 pub mod traits;
 
+pub mod application;
 pub mod collections;
 pub mod content;
 pub mod content_digest;
@@ -35,3 +36,39 @@ pub mod vector_clock;
 pub use traits::Serializable;
 
 pub use crate::models::protos::*;
+
+pub trait Validate {
+    fn validate(&self) -> core::result::Result<(), ValidationError>;
+}
+
+pub enum ValidationError {
+    /// [`Application::name`].
+    ApplicationName(StringValidationError),
+    ApplicationId(StringValidationError),
+    ApplicationVersion(StringValidationError),
+    ApplicationUrl(StringValidationError),
+}
+
+fn validate_string(
+    input: &str,
+    min_len: core::option::Option<usize>,
+    max_len: core::option::Option<usize>,
+) -> core::result::Result<(), StringValidationError> {
+    let length = input.len();
+    if let Some(min) = min_len
+        && length < min
+    {
+        Err(StringValidationError::TooSmall { length, min })
+    } else if let Some(max) = max_len
+        && length > max
+    {
+        Err(StringValidationError::TooLarge { length, max })
+    } else {
+        Ok(())
+    }
+}
+
+pub enum StringValidationError {
+    TooSmall { length: usize, min: usize },
+    TooLarge { length: usize, max: usize },
+}
