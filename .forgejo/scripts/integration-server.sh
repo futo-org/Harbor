@@ -174,7 +174,7 @@ if [ "$CI_MODE" = true ]; then
   # container is connected to a compose network via `docker network connect`
   # in a Docker-in-Docker environment).
   SERVER_HOST=server
-  SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' harbor-server-1 2>/dev/null)
+  SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' harbor_server 2>/dev/null)
   if [ -n "$SERVER_IP" ]; then
     SERVER_HOST=$SERVER_IP
     export HARBOR_TEST_SERVER="http://${SERVER_IP}:3000"
