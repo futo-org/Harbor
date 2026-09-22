@@ -66,6 +66,9 @@ export function useProfile(
   }, [query.data]);
 
   return {
+    // Reading the `name` directly is for exceptions (page titles, moderation
+    // label attribution). Otherwise, names should render through `ProfileName`,
+    // or `useUsername`.
     name: decoded.name,
     description: decoded.description,
     avatar: decoded.avatar,

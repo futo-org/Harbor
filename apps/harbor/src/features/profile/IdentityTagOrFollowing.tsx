@@ -6,17 +6,14 @@ import {
 } from '@/src/features/follow/FollowingIndicator';
 import type { ComponentProps } from 'react';
 
-type IdentityTagOrFollowingProps = {
-  /** v2 identity id (hex sha256 of the initial Identity content). */
-  identity: string | undefined;
-  style?: ComponentProps<typeof Text>['style'];
-};
-
 /** The shortened identity id, or the Following badge when the identity is followed. */
 export function IdentityTagOrFollowing({
   identity,
   style,
-}: IdentityTagOrFollowingProps) {
+}: {
+  identity: string | undefined;
+  style?: ComponentProps<typeof Text>['style'];
+}) {
   const following = useIsFollowingIndicatorShown(identity);
 
   if (following) return <FollowingBadge />;
