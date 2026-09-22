@@ -6,7 +6,7 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -36,11 +36,11 @@ export function IdentitySettingsSheet({
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
           <ProfileAvatar identityKey={identityKey} size="massive" />
           <View style={[Atoms.items_center, Atoms.gap_xs]}>
-            <ProfileName
+            <Username
               identity={identityKey}
               variant="title"
               fontWeight="bold"
-              // 0 lifts the limit (`undefined` would fall back to ProfileName's default of 1).
+              // 0 lifts the limit (`undefined` would fall back to Username's default of 1).
               numberOfLines={nameExpanded ? 0 : 2}
               ellipsizeMode="tail"
               style={[Atoms.text_center, Atoms.max_w_full]}

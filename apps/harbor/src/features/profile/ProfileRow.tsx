@@ -3,7 +3,7 @@ import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile, type ProfileHookResult } from './hooks/useProfile';
-import { ProfileName } from './ProfileName';
+import { Username } from './Username';
 import type { FetchMode } from '@polycentric/react-native';
 import type { ReactNode } from 'react';
 import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
@@ -71,7 +71,7 @@ export function ProfileRow({
       >
         <ProfileAvatar identityKey={identity} size={size} />
         <View style={Atoms.flex_1}>
-          <ProfileName
+          <Username
             identity={identity}
             fallbackName={fallbackName}
             showFollowing={showFollowing}

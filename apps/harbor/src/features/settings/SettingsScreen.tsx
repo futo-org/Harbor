@@ -22,7 +22,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
 import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
@@ -202,7 +202,7 @@ function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
           { flex: 1, alignItems: 'baseline' },
         ]}
       >
-        <ProfileName
+        <Username
           identity={identityKey}
           variant="subtitle"
           fontWeight="semibold"

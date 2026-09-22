@@ -29,7 +29,7 @@ export function FollowingBadge() {
   );
 }
 
-/** Compact variant, rendered by `ProfileName` next to every display name. */
+/** Compact variant, rendered by `Username` next to every display name. */
 export function FollowingIcon({
   identity,
   size,

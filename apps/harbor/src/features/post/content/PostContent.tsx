@@ -6,7 +6,7 @@ import {
   thirdPartyApplication,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms } from '@/src/common/theme';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import { v2 } from '@polycentric/react-native';
 import { type ExternalPathString, Link, router } from 'expo-router';
 import { memo, useCallback, useMemo } from 'react';
@@ -153,7 +153,7 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
       >
         Replying to{' '}
       </Text>
-      <ProfileName
+      <Username
         identity={parentIdentity}
         variant="secondary"
         color="primary_500"

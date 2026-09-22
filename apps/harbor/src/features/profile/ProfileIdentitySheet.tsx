@@ -9,7 +9,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import { ServerRow } from '@/src/features/settings/servers/ServerRow';
 import { useServerSettings } from '@/src/features/settings/servers/useServerSettings';
 import { IdentityManager, type v2 } from '@polycentric/react-native';
@@ -71,7 +71,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
       <Sheet.Content style={[Atoms.gap_xl]}>
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
           <ProfileAvatar identityKey={identityKey} size="massive" />
-          <ProfileName
+          <Username
             identity={identityKey}
             variant="title"
             fontWeight="bold"

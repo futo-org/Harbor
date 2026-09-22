@@ -17,7 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
-import { ProfileName } from './ProfileName';
+import { Username } from './Username';
 import { ProfileTabs } from './ProfileTabs';
 
 const COMPACT_HEADER_HEIGHT = TOPBAR_HEIGHT + TABS_HEIGHT;
@@ -95,7 +95,7 @@ export function ProfileCompactHeader({
         {identityKey ? (
           <ProfileAvatar identityKey={identityKey} size="sm" />
         ) : null}
-        <ProfileName
+        <Username
           identity={identityKey}
           fetchMode={FetchMode.Default}
           variant="body"

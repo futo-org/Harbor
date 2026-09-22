@@ -6,7 +6,7 @@ import { timeAgo } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms } from '@/src/common/theme';
 import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
@@ -36,7 +36,7 @@ export function ClaimAuthorLine({
         ]}
       >
         <ProfileAvatar identityKey={identity} size={avatarSize} />
-        <ProfileName
+        <Username
           identity={identity}
           // The IdentityTagOrFollowing beside it shows the full badge.
           showFollowing={false}

@@ -11,7 +11,7 @@ import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimBy
 import { CLAIM_TYPES } from '@/src/features/verifications/utils/forms';
 import { getPlatformFromClaim } from '@/src/features/verifications/utils/platforms';
 import { resolveClaimTitle } from '@/src/features/verifications/utils/render';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import { type Href, router } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
@@ -162,7 +162,7 @@ function InteractionNotification({
         <View
           style={[Atoms.flex_row, Atoms.items_center, { flexWrap: 'wrap' }]}
         >
-          <ProfileName
+          <Username
             identity={notification.fromIdentity}
             fontWeight="bold"
             onPress={openProfile}

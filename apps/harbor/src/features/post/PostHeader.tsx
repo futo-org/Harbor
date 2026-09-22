@@ -2,7 +2,7 @@ import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
 import { memo, useCallback } from 'react';
@@ -68,7 +68,7 @@ function RepostHeader({ identity }: { identity: string }) {
         <Icon size={16} name="repost" color="neutral_500" />
       </View>
       <View style={[Atoms.flex_row, Atoms.align_center, Atoms.flex_shrink_1]}>
-        <ProfileName
+        <Username
           identity={identity}
           variant="small"
           color="neutral_500"

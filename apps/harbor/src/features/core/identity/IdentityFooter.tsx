@@ -9,7 +9,7 @@ import {
   withHexOpacity,
 } from '@/src/common/theme';
 import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -75,7 +75,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
         ]}
       >
         <View style={[Atoms.flex_col, Atoms.flex_1]}>
-          <ProfileName
+          <Username
             identity={currentIdentity.identityKey}
             fallbackName=""
             fontSize="md"

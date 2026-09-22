@@ -3,7 +3,7 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import { View } from 'react-native';
 
 /** Names whose follow lists these are. Shared by both pages, so it sits above
@@ -17,7 +17,7 @@ export function FollowListTopbar({ identityId }: { identityId?: string }) {
         <View style={[Atoms.align_center, Atoms.flex_shrink_1, Atoms.min_w_0]}>
           {/* Centered children are content-sized; cap them so long names ellipsize. */}
           <View style={Atoms.max_w_full}>
-            <ProfileName identity={identityId} variant="title" />
+            <Username identity={identityId} variant="title" />
           </View>
           <Text
             variant="small"

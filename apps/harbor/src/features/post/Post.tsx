@@ -5,7 +5,7 @@ import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -237,7 +237,7 @@ function PostAuthorName({
       onHoverOut={onHoverOut}
       style={Atoms.flex_shrink_1}
     >
-      <ProfileName
+      <Username
         identity={identity}
         // The IdentityTagOrFollowing beside it shows the full badge.
         showFollowing={false}

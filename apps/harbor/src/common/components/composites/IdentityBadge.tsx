@@ -5,7 +5,7 @@ import {
 } from '@/src/common/components/primitives';
 import { Atoms, type SpacingToken } from '@/src/common/theme';
 import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import { View } from 'react-native';
 
 type BadgeSize = 'md' | 'lg';
@@ -38,7 +38,7 @@ export function IdentityBadge({
           { flex: 1, alignItems: 'baseline' },
         ]}
       >
-        <ProfileName
+        <Username
           identity={identityKey}
           variant={sizeConfig.textVariant}
           fontWeight="semibold"

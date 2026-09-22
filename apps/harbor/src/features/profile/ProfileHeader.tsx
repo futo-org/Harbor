@@ -11,7 +11,7 @@ import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import { FetchMode } from '@polycentric/react-native';
 import { router, type Href } from 'expo-router';
 import { memo, useCallback } from 'react';
@@ -111,7 +111,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
         <View
           style={[Atoms.mt_md, Atoms.gap_xs, Atoms.flex_1, { minWidth: 0 }]}
         >
-          <ProfileName
+          <Username
             identity={identityKey}
             numberOfLines={2}
             variant="title"

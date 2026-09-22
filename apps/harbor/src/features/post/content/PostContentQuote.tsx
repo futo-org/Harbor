@@ -9,7 +9,7 @@ import {
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
 import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
-import { ProfileName } from '@/src/features/profile/ProfileName';
+import { Username } from '@/src/features/profile/Username';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -132,7 +132,7 @@ function AuthorRow({ post }: { post: PostData }) {
         size="xs"
         style={Atoms.mr_md}
       />
-      <ProfileName
+      <Username
         identity={post.identity}
         // The IdentityTagOrFollowing that follows shows the full badge.
         showFollowing={false}

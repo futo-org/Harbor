@@ -10,7 +10,7 @@ import type { FetchMode } from '@polycentric/react-native';
 import type { ComponentProps } from 'react';
 import { View } from 'react-native';
 
-type ProfileNameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
+type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   identity: string | null | undefined;
   fallbackName?: string | null;
   fetchMode?: FetchMode;
@@ -29,7 +29,7 @@ const FOLLOWING_ICON_SIZE: Record<TextVariantSize, number> = {
  * name in the app renders through this so the indicator lives in one place.
  * Text props pass straight through to `Text`.
  */
-export function ProfileName({
+export function Username({
   identity,
   fallbackName,
   fetchMode,
@@ -38,7 +38,7 @@ export function ProfileName({
   variant = 'body',
   style,
   ...textProps
-}: ProfileNameProps) {
+}: UsernameProps) {
   const name = useUsername(identity, { fallbackName, fetchMode });
 
   return (
