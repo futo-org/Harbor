@@ -74,7 +74,6 @@ export function ProfileRow({
           <ProfileName
             identity={identity}
             fallbackName={fallbackName}
-            fetchMode={fetchMode}
             showFollowing={showFollowing}
             variant="secondary"
             fontWeight="semibold"
