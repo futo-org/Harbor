@@ -335,75 +335,89 @@ fn validate_content(content: &Content, collection: i32) -> Result<(), Status> {
     };
 
     match content_body {
-        ContentBody::Post(_) if collection != collections::FEED => {
-            Err(invalid_event_key_collection())
+        ContentBody::Post(_) => {
+            check_collection(collection, collections::FEED)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::Post(_) => Ok(()), // TODO: validate.
-        ContentBody::Delete(_) if collection != collections::FEED => {
-            Err(invalid_event_key_collection())
+        ContentBody::Repost(_) => {
+            check_collection(collection, collections::FEED)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::Delete(_) => Ok(()), // TODO: validate.
-        ContentBody::Follow(_) if collection != collections::SOCIAL_GRAPH => {
-            Err(invalid_event_key_collection())
+        ContentBody::Delete(_) => {
+            // TODO: allow any collection here? Since it can delete any event,
+            // not just ones in the feed.
+            check_collection(collection, collections::FEED)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::Follow(_) => Ok(()), // TODO: validate.
-        ContentBody::Block(_) if collection != collections::SOCIAL_GRAPH => {
-            Err(invalid_event_key_collection())
+        ContentBody::Follow(_) => {
+            check_collection(collection, collections::SOCIAL_GRAPH)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::Block(_) => Ok(()), // TODO: validate.
-        ContentBody::Reaction(_) if collection != collections::INTERACTIONS => {
-            Err(invalid_event_key_collection())
+        ContentBody::Block(_) => {
+            check_collection(collection, collections::SOCIAL_GRAPH)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::Reaction(_) => Ok(()), // TODO: validate.
-        ContentBody::AttributedToReaction(_)
-            if collection != collections::INTERACTIONS =>
-        {
-            Err(invalid_event_key_collection())
+        ContentBody::Reaction(_) => {
+            check_collection(collection, collections::INTERACTIONS)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::AttributedToReaction(_) => Ok(()), // TODO: validate.
-        ContentBody::ProfileUpdate(_) if collection != collections::PROFILE => {
-            Err(invalid_event_key_collection())
+        ContentBody::AttributedToReaction(_) => {
+            check_collection(collection, collections::INTERACTIONS)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::ProfileUpdate(_) => Ok(()), // TODO: validate.
-        ContentBody::Identity(_) if collection != collections::IDENTITY => {
-            Err(invalid_event_key_collection())
+        ContentBody::ProfileUpdate(_) => {
+            check_collection(collection, collections::PROFILE)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::Identity(_) => Ok(()), // TODO: validate.
-        ContentBody::Repost(_) if collection != collections::FEED => {
-            Err(invalid_event_key_collection())
+        ContentBody::Identity(_) => {
+            check_collection(collection, collections::IDENTITY)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::Repost(_) => Ok(()), // TODO: validate.
-        ContentBody::Report(_) if collection != collections::REPORTS => {
-            Err(invalid_event_key_collection())
+        ContentBody::Report(_) => {
+            check_collection(collection, collections::REPORTS)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::Report(_) => Ok(()), // TODO: validate.
-        ContentBody::Labels(_) if collection != collections::LABELS => {
-            Err(invalid_event_key_collection())
+        ContentBody::Labels(_) => {
+            check_collection(collection, collections::LABELS)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::Labels(_) => Ok(()), // TODO: validate.
-        ContentBody::VerificationClaim(_)
-            if collection != collections::VERIFICATIONS =>
-        {
-            Err(invalid_event_key_collection())
+        ContentBody::VerificationClaim(_) => {
+            check_collection(collection, collections::VERIFICATIONS)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::VerificationClaim(_) => Ok(()), // TODO: validate.
-        ContentBody::VerificationVerify(_)
-            if collection != collections::VERIFICATIONS =>
-        {
-            Err(invalid_event_key_collection())
+        ContentBody::VerificationVerify(_) => {
+            check_collection(collection, collections::VERIFICATIONS)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::VerificationVerify(_) => Ok(()), // TODO: validate.
-        ContentBody::VerificationTarget(_)
-            if collection != collections::VERIFICATIONS =>
-        {
-            Err(invalid_event_key_collection())
+        ContentBody::VerificationTarget(_) => {
+            check_collection(collection, collections::VERIFICATIONS)?;
+            // TODO: validate.
+            Ok(())
         }
-        ContentBody::VerificationTarget(_) => Ok(()), // TODO: validate.
     }
 }
 
-fn invalid_event_key_collection() -> Status {
-    Status::invalid_argument("event key collection invalid")
+fn check_collection(collection: i32, expected: i32) -> Result<(), Status> {
+    if collection == expected {
+        Ok(())
+    } else {
+        Err(Status::invalid_argument(format!(
+            "event key collection invalid: expected '{expected}', got '{collection}'"
+        )))
+    }
 }
 
 fn validate_string(
