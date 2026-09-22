@@ -56,14 +56,14 @@ async fn fetch(
         &ctx.service.ro_db,
         &params.identity,
         params.sort_by,
-        params.common.limit + 1,
-        params.common.cursor_filter.as_ref(),
+        params.common.limit + 1, // For pagination.
+        &params.common.cursor_filter,
     )
     .await?;
 
     let page_info = pipeline::finalize_fetch(
         &mut rows,
-        params.common.cursor_filter.as_ref(),
+        &params.common.cursor_filter,
         params.common.limit as u32,
         |row| {
             let sorted_by = match params.sort_by {

@@ -54,8 +54,8 @@ async fn fetch(
     let mut rows = Query::suggest_follow(
         &ctx.service.ro_db,
         params.identity.as_deref(),
-        params.pagination.cursor_filter.as_ref(),
-        params.pagination.limit,
+        &params.pagination.cursor_filter,
+        params.pagination.limit + 1, // For pagination.
     )
     .await
     .map_err(|err| {
@@ -65,7 +65,7 @@ async fn fetch(
 
     let page_info = pipeline::finalize_fetch(
         &mut rows,
-        params.pagination.cursor_filter.as_ref(),
+        &params.pagination.cursor_filter,
         params.pagination.limit,
         |row| Marker {
             sorted_by: row.followers.len().cast_signed() as i32,
