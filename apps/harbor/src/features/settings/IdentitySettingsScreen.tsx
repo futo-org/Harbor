@@ -40,6 +40,7 @@ export function IdentitySettingsSheet({
               identity={identityKey}
               variant="title"
               fontWeight="bold"
+              // 0 lifts the limit (`undefined` would fall back to ProfileName's default of 1).
               numberOfLines={nameExpanded ? 0 : 2}
               ellipsizeMode="tail"
               style={[Atoms.text_center, Atoms.max_w_full]}
