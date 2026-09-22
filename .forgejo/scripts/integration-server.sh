@@ -200,6 +200,9 @@ if [ "$CI_MODE" = true ]; then
   echo "==> Applying migrations via docker compose exec…"
   docker compose exec -T server /app/migration up
   echo "    migrations applied"
+
+  # TODO: remove
+  docker logs harbor_server
 else
   echo "==> Applying migrations…"
   (
