@@ -1,8 +1,8 @@
 import Icon from '@/src/common/components/Icon';
 import { Text } from '@/src/common/components/primitives';
 import {
-  getVariantStyle,
-  textColorMap,
+  getVariantStyle as getButtonVariantStyle,
+  textColorMap as buttonTextColorMap,
 } from '@/src/common/components/primitives/Button';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useOptionalProfileContext } from '@/src/features/profile/ProfileContext';
@@ -24,11 +24,15 @@ export function FollowingBadge() {
         Atoms.rounded_full,
         { paddingVertical: 1, borderWidth: 1 },
         // Match the active FollowButton.
-        getVariantStyle(theme, 'secondary'),
+        getButtonVariantStyle(theme, 'secondary'),
       ]}
     >
-      <Icon name="people" size={11} color={textColorMap.secondary} />
-      <Text variant="small" color={textColorMap.secondary} selectable={false}>
+      <Icon name="people" size={11} color={buttonTextColorMap.secondary} />
+      <Text
+        variant="small"
+        color={buttonTextColorMap.secondary}
+        selectable={false}
+      >
         Following
       </Text>
     </View>
@@ -51,7 +55,7 @@ export function FollowingIcon({
     <Icon
       name="people"
       size={size}
-      color="primary_400"
+      color={buttonTextColorMap.secondary}
       accessibilityLabel="Following"
       style={Atoms.flex_shrink_0}
     />
