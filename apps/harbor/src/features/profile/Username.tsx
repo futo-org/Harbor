@@ -5,7 +5,7 @@ import {
 } from '@/src/common/components/primitives/Text';
 import { useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
-import { FollowingBadge } from '@/src/features/follow/FollowingIndicator';
+import { FollowingBadge } from '@/src/features/follow/FollowingBadge';
 import type { FetchMode } from '@polycentric/react-native';
 import type { ComponentProps } from 'react';
 import { View } from 'react-native';
@@ -19,9 +19,9 @@ type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
 };
 
 const FOLLOWING_ICON_SIZE: Record<TextVariantSize, number> = {
-  lg: 12,
-  md: 10,
-  xs: 8,
+  lg: 14,
+  md: 12,
+  xs: 10,
 };
 
 /**

@@ -8,7 +8,6 @@ import { useOptionalProfileContext } from '@/src/features/profile/ProfileContext
 import { View } from 'react-native';
 import useFollows from './hooks/useFollows';
 
-const BUBBLE_BORDER_WIDTH = 1;
 const ICON_BUBBLE_PADDING = 2;
 
 /** Rendered by `Username` next to every display name. */
@@ -20,12 +19,12 @@ export function FollowingBadge({
   size: number;
 }) {
   const { theme } = useTheme();
-  const following = useIsFollowingIndicatorShown(identity);
+  const following = useIsFollowingBadgeShown(identity);
 
   if (!following) return null;
 
   // Fixed square box, since the glyph's own box isn't square.
-  const diameter = size + 2 * (ICON_BUBBLE_PADDING + BUBBLE_BORDER_WIDTH);
+  const diameter = size + 2 * ICON_BUBBLE_PADDING;
 
   return (
     <View
@@ -34,9 +33,13 @@ export function FollowingBadge({
         Atoms.justify_center,
         Atoms.flex_shrink_0,
         Atoms.rounded_full,
-        { width: diameter, height: diameter, borderWidth: BUBBLE_BORDER_WIDTH },
-        // Match the active FollowButton.
-        getButtonVariantStyle(theme, 'secondary'),
+        {
+          width: diameter,
+          height: diameter,
+          // Match the active FollowButton.
+          backgroundColor: getButtonVariantStyle(theme, 'secondary')
+            .backgroundColor,
+        },
       ]}
     >
       <Icon
@@ -53,7 +56,7 @@ export function FollowingBadge({
  * Whether to mark `identity` as followed. Always false on that identity's own
  * profile screen, where the Follow button already shows the state.
  */
-function useIsFollowingIndicatorShown(identity: string | null): boolean {
+function useIsFollowingBadgeShown(identity: string | null): boolean {
   const profileIdentity = useOptionalProfileContext()?.identityKey ?? null;
   const isOnOwnProfile = !!identity && identity === profileIdentity;
 

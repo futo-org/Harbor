@@ -12,7 +12,7 @@ let mockContext: {
   alias: string | null;
 };
 
-jest.mock('@/src/features/follow/FollowingIndicator', () => ({
+jest.mock('@/src/features/follow/FollowingBadge', () => ({
   __esModule: true,
   FollowingBadge: () => null,
 }));
