@@ -1,26 +1,31 @@
 import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
+import { timeAgo } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 
 const LEFT_COL_FLEX_BASIS = 40;
 
 export const PostHeader = memo(function PostHeader({
   repostedBy,
+  repostedAt,
   showThreadLineAbove,
 }: {
   repostedBy?: string;
+  repostedAt?: number;
   showThreadLineAbove: boolean;
 }) {
   return (
     <View style={!showThreadLineAbove && Atoms.pt_md}>
       {showThreadLineAbove ? <ThreadHeader /> : null}
-      {repostedBy ? <RepostHeader identity={repostedBy} /> : null}
+      {repostedBy ? (
+        <RepostHeader identity={repostedBy} repostedAt={repostedAt} />
+      ) : null}
     </View>
   );
 });
@@ -45,7 +50,13 @@ function ThreadHeader() {
   );
 }
 
-function RepostHeader({ identity }: { identity: string }) {
+function RepostHeader({
+  identity,
+  repostedAt,
+}: {
+  identity: string;
+  repostedAt?: number;
+}) {
   const profile = useProfile(identity);
   const name = profile.name ?? '';
 
@@ -54,6 +65,8 @@ function RepostHeader({ identity }: { identity: string }) {
   }, [identity]);
 
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
+
+  const time = useMemo(() => timeAgo(Number(repostedAt)), [repostedAt]);
 
   return (
     <Pressable
@@ -86,7 +99,7 @@ function RepostHeader({ identity }: { identity: string }) {
           fontWeight="bold"
           style={hovered && Atoms.text_underline}
         >
-          {' reposted'}
+          {time ? ` reposted · ${time}` : ' reposted'}
         </Text>
       </View>
     </Pressable>
