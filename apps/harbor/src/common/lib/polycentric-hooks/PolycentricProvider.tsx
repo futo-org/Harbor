@@ -377,10 +377,6 @@ export function useCurrentIdentity() {
   };
 }
 
-/**
- * The profile name, or the non-empty fallback, or `…` while it is still
- * loading, or the fallback, or the app-wide default.
- */
 export function useUsername(
   identityKey: string | null | undefined,
   options?: UseProfileOptions & { fallbackName?: string | null },
@@ -389,6 +385,7 @@ export function useUsername(
   if (profile.name) return profile.name;
   if (options?.fallbackName) return options.fallbackName;
   if (profile.isLoading) return '…';
+  // An empty fallback reaches here too, and hides the default name.
   return options?.fallbackName ?? DEFAULT_IDENTITY_NAME;
 }
 

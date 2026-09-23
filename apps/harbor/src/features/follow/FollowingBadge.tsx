@@ -21,7 +21,6 @@ const ICON_SIZE_BY_TEXT_SIZE: Record<TextVariantSize, number> = {
   xs: 10,
 };
 
-/** Rendered by `Username` next to every display name. */
 export function FollowingBadge({
   identity,
   variant,
@@ -48,7 +47,7 @@ export function FollowingBadge({
         {
           width: diameter,
           height: diameter,
-          // Match the active FollowButton.
+          // Match FollowButton's Following state.
           backgroundColor: getButtonVariantStyle(theme, 'secondary')
             .backgroundColor,
         },
@@ -64,15 +63,12 @@ export function FollowingBadge({
   );
 }
 
-/**
- * Whether to mark `identity` as followed. Always false on that identity's own
- * profile screen, where the Follow button already shows the state.
- */
 function useIsFollowingBadgeShown(identity: string | null): boolean {
   const profileIdentity = useOptionalProfileContext()?.identityKey ?? null;
-  const isOnOwnProfile = !!identity && identity === profileIdentity;
+  // The Follow button on that profile already shows the state.
+  const isOnIdentityProfile = !!identity && identity === profileIdentity;
 
   return useFollows((state) =>
-    identity && !isOnOwnProfile ? state.isFollowing(identity) : false,
+    identity && !isOnIdentityProfile ? state.isFollowing(identity) : false,
   );
 }

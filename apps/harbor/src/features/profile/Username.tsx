@@ -10,14 +10,13 @@ type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   identity: string | null | undefined;
   fallbackName?: string | null;
   fetchMode?: FetchMode;
-  /** Off where a Follow button nearby already shows the state. */
+  /** Set where a Follow button nearby already shows the state. */
   noFollowingBadge?: boolean;
 };
 
 /**
- * A user's display name with the following indicator attached. Every display
- * name in the app renders through this so the indicator lives in one place.
- * Text props pass straight through to `Text`.
+ * Every display name in the app renders through this, so the following
+ * indicator lives in one place.
  */
 export function Username({
   identity,

@@ -86,7 +86,6 @@ export function useProfileContext(): ProfileContextValue {
   return ctx;
 }
 
-/** Null outside a profile screen, for components that render on any route. */
 export function useOptionalProfileContext(): ProfileContextValue | null {
   return useContext(ProfileContext);
 }

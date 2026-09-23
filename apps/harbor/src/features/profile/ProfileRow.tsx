@@ -36,7 +36,7 @@ export function ProfileRow({
   fallbackAlias?: string | null;
   disabled?: boolean;
   activeStyle?: 'highlight' | 'none';
-  /** Off where a Follow button in `trailing` already shows the state. */
+  /** Set where a Follow button in `trailing` already shows the state. */
   noFollowingBadge?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {

@@ -4,6 +4,10 @@ import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { decodeProfile } from '../lib/decodeProfile';
 
 export interface ProfileHookResult {
+  /**
+   * Only for exceptions (page titles, moderation labels, the edit form).
+   * Display names render through `Username` or `useUsername`.
+   */
   name: string | null;
   description: string | null;
   avatar: v2.ImageSet | null;
@@ -66,9 +70,6 @@ export function useProfile(
   }, [query.data]);
 
   return {
-    // Reading the `name` directly is for exceptions (page titles, moderation
-    // label attribution, profile edit initial input value, etc.). Otherwise,
-    // names should render through `Username`, or `useUsername`.
     name: decoded.name,
     description: decoded.description,
     avatar: decoded.avatar,
