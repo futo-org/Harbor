@@ -6,7 +6,10 @@ export const ALL_CATEGORIES = 'All';
 const SEARCH_DEBOUNCE_MS = 300;
 
 export const useEmojiPickerStore = create<{
-  /** Kept after closing so the native dismiss animation has content. */
+  /**
+   * A post snapshot from opening: rely only on its fixed fields, not e.g., counts.
+   * Kept after closing so the native dismiss animation has content.
+   */
   post: PostData | null;
   open: boolean;
   /** The text as typed; drives the input's clear button. */
