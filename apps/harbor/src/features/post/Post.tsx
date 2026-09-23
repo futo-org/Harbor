@@ -65,8 +65,6 @@ export const Post = memo(function Post({
     router.push(Routes.tabs.profile(authorIdentity));
   }, [authorIdentity]);
 
-  // A repost sits in the feed at the time it was made, so that is the time
-  // the row shows.
   const shownAt = post.createdAt;
   const time = useMemo(() => timeAgo(Number(shownAt)), [shownAt]);
   const fullTimestamp = useMemo(() => {
