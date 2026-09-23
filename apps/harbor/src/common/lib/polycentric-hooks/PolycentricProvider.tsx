@@ -378,8 +378,8 @@ export function useCurrentIdentity() {
 }
 
 /**
- * The profile name, or `…` while it is still loading, or the fallback, or the
- * app-wide default.
+ * The profile name, or the non-empty fallback, or `…` while it is still
+ * loading, or the fallback, or the app-wide default.
  */
 export function useUsername(
   identityKey: string | null | undefined,
@@ -387,6 +387,7 @@ export function useUsername(
 ): string {
   const profile = useProfile(identityKey, { fetchMode: options?.fetchMode });
   if (profile.name) return profile.name;
+  if (options?.fallbackName) return options.fallbackName;
   if (profile.isLoading) return '…';
   return options?.fallbackName ?? DEFAULT_IDENTITY_NAME;
 }
