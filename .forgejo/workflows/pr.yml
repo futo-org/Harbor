@@ -799,7 +799,9 @@ jobs:
       - verifier-bot-image
       - web-image
       - services-integration
-      - scraper-integration
+      # Rumble and SoundCloud block CI at times; uncomment depending on how
+      # https://code.futo.org/harbor/harbor/issues/1550 gets solved.
+      # - scraper-integration
       - verifier-bot
       - web-e2e
       - docs
