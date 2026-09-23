@@ -146,13 +146,15 @@ export function Text({
   );
 }
 
-const VARIANT_CONFIG: Record<
-  TextVariant,
-  { size: FontSizeToken; defaultWeight: FontWeightToken }
-> = {
+export const VARIANT_CONFIG = {
   title: { size: 'lg', defaultWeight: 'bold' },
   subtitle: { size: 'lg', defaultWeight: 'semibold' },
   body: { size: 'md', defaultWeight: 'regular' },
   secondary: { size: 'md', defaultWeight: 'regular' },
   small: { size: 'xs', defaultWeight: 'semibold' },
-} as const;
+} as const satisfies Record<
+  TextVariant,
+  { size: FontSizeToken; defaultWeight: FontWeightToken }
+>;
+
+export type TextVariantSize = (typeof VARIANT_CONFIG)[TextVariant]['size'];
