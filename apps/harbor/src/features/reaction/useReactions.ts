@@ -45,6 +45,12 @@ type ReactionsState = {
     post: PostData,
     reaction: ReactionChoice,
   ) => Promise<void>;
+  // React to `post` with `emoji`; picking the active emoji again removes it.
+  toggleReaction: (
+    client: PolycentricClient,
+    post: PostData,
+    emoji: string,
+  ) => Promise<void>;
   // Rebuilds `reactions` from synced events.
   refresh: (client: PolycentricClient) => Promise<void>;
 };
@@ -217,6 +223,17 @@ const useReactions = create<ReactionsState>((set, get) => {
         await client.sync();
       } catch (err) {
         console.warn('reaction sync failed:', err);
+      }
+    },
+
+    async toggleReaction(client, post, emoji) {
+      const active = get().reactions.get(post.id);
+      if (active?.emoji === emoji) {
+        await get().removeReaction(client, post);
+      } else if (active) {
+        await get().changeReaction(client, post, { emoji, positive: true });
+      } else {
+        await get().addReaction(client, post, { emoji, positive: true });
       }
     },
 

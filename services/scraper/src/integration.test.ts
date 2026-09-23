@@ -22,14 +22,8 @@ const PROVIDERS: ProviderCase[] = [
   },
   { name: 'X', url: 'https://x.com/jack/status/20' },
   { name: 'Vimeo', url: 'https://vimeo.com/76979871', image: true },
-  { name: 'Rumble', url: 'https://rumble.com/c/Rumble' },
   { name: 'BitChute', url: 'https://www.bitchute.com/channel/bitchute/' },
   { name: 'Twitch', url: 'https://www.twitch.tv/twitch', image: true },
-  {
-    name: 'SoundCloud',
-    url: 'https://soundcloud.com/forss/flickermood',
-    image: true,
-  },
   {
     name: 'Spotify',
     url: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
@@ -41,6 +35,14 @@ const PROVIDERS: ProviderCase[] = [
   { name: 'Odysee', url: 'https://odysee.com/@Odysee:8' },
   { name: 'PeerTube (FUTO)', url: 'https://peertube.futo.org' },
   { name: 'Generic OG', url: 'https://www.bbc.com/news' },
+  // Rumble and SoundCloud block CI at times; uncomment depending on how
+  // https://code.futo.org/harbor/harbor/issues/1550 gets solved.
+  // { name: 'Rumble', url: 'https://rumble.com/c/Rumble' },
+  // {
+  //   name: 'SoundCloud',
+  //   url: 'https://soundcloud.com/forss/flickermood',
+  //   image: true,
+  // },
 ];
 
 // Gated on an env flag (set by `test:integration`) so the Chromium-spawning
