@@ -9,10 +9,11 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
 import { ServerRow } from '@/src/features/settings/servers/ServerRow';
 import { useServerSettings } from '@/src/features/settings/servers/useServerSettings';
-import { IdentityManager, type v2 } from '@polycentric/react-native';
+import { FetchMode, IdentityManager, type v2 } from '@polycentric/react-native';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
@@ -225,6 +226,8 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
 
 export default function ProfileIdentityScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
+  // Opened by URL, nothing underneath has fetched this profile.
+  useProfile(identityId ?? null, { fetchMode: FetchMode.OfflineFirst });
   if (!identityId) return null;
   return <ProfileIdentitySheet identityKey={identityId} />;
 }
