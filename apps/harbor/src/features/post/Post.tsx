@@ -67,7 +67,7 @@ export const Post = memo(function Post({
 
   // A repost sits in the feed at the time it was made, so that is the time
   // the row shows.
-  const shownAt = post.repostedAt ?? post.createdAt;
+  const shownAt = post.createdAt;
   const time = useMemo(() => timeAgo(Number(shownAt)), [shownAt]);
   const fullTimestamp = useMemo(() => {
     if (!shownAt) return '';
