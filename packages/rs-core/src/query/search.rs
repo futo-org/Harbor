@@ -25,6 +25,7 @@ use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
 pub enum SearchPostsSort {
     Default,
+    Top,
     Latest,
 }
 
@@ -32,6 +33,7 @@ impl From<SearchPostsSort> for SortPostsBy {
     fn from(sort: SearchPostsSort) -> Self {
         match sort {
             SearchPostsSort::Default => SortPostsBy::Default,
+            SearchPostsSort::Top => SortPostsBy::Top,
             SearchPostsSort::Latest => SortPostsBy::Latest,
         }
     }
@@ -174,6 +176,18 @@ fn result_profile_name(result: &SearchResult) -> Option<String> {
 
 fn sort_by_rank(results: &mut [SearchResult]) {
     results.sort_by(|a, b| b.rank.total_cmp(&a.rank));
+}
+
+fn sort_by_positive_reactions(results: &mut [SearchResult]) {
+    results.sort_by_key(|r| {
+        Reverse(
+            r.event_bundle
+                .as_ref()
+                .and_then(|e| e.meta.as_ref())
+                .and_then(|m| m.upvote_count)
+                .unwrap_or(0),
+        )
+    });
 }
 
 fn sort_by_created_at(results: &mut [SearchResult]) {
@@ -319,6 +333,7 @@ pub fn search_posts(
                          client: &Arc<Mutex<PolycentricClient>>| {
         do_search_merge::<SearchPostsResponse>(values, client, |results| match sort {
             SearchPostsSort::Default => sort_by_rank(results),
+            SearchPostsSort::Top => sort_by_positive_reactions(results),
             SearchPostsSort::Latest => sort_by_created_at(results),
         })
     };

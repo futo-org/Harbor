@@ -8,8 +8,9 @@ import polycentric.v2.PublicKey
  * lifecycle. A device may hold several keypairs (one per identity it
  * participates in); exactly one is "current".
  */
-class KeyPairManager(private val client: PolycentricClient) {
-
+class KeyPairManager(
+    private val client: PolycentricClient,
+) {
     /**
      * Creates a new key pair, stores it, and (by default) sets it as
      * current.

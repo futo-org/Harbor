@@ -10,6 +10,7 @@ jest.mock('@polycentric/react-native', () => ({
   },
   QueryStatus: { Loading: 'loading' },
   UpdateMode: { Merge: 'merge' },
+  SearchPostsSort: { Default: 'default', Top: 'top', Latest: 'latest' },
 }));
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({

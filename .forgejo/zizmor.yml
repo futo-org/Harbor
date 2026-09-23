@@ -22,3 +22,6 @@ rules:
   # Artifacts upload explicit paths, never the checkout.
   artipacked:
     disable: true
+  # Our Forgejo registry we publish to does not support OIDC tokens or trusted publishing.
+  use-trusted-publishing:
+    disable: true

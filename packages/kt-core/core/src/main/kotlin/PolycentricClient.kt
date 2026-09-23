@@ -1,7 +1,5 @@
 package org.futo.polycentric.core
 
-import java.security.MessageDigest
-import java.util.logging.Logger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -12,10 +10,10 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.ByteString.Companion.toByteString
-import org.futo.polycentric.core.ServerJwt
 import org.futo.polycentric.core.ICryptoManager
 import org.futo.polycentric.core.IFileStoreDriver
 import org.futo.polycentric.core.IStorageDriver
+import org.futo.polycentric.core.ServerJwt
 import org.futo.polycentric.core.StoredKeyPair
 import org.futo.polycentric.ffi.AuthToken
 import org.futo.polycentric.ffi.AuthTokenProvider
@@ -37,6 +35,8 @@ import polycentric.v2.PutEventsResponse
 import polycentric.v2.SignedEvent
 import polycentric.v2.UploadBlobRequest
 import polycentric.v2.VectorClock
+import java.security.MessageDigest
+import java.util.logging.Logger
 
 /**
  * Kotlin port of js-core `PolycentricClient` (polycentric-client.ts).
@@ -52,7 +52,9 @@ class PolycentricClient(
     private val storageDriver: IStorageDriver,
     val filestore: IFileStoreDriver,
     seedServers: List<String> = emptyList(),
-    val crypto: ICryptoManager = org.futo.polycentric.core.Ed25519CryptoManager(),
+    val crypto: ICryptoManager =
+        org.futo.polycentric.core
+            .Ed25519CryptoManager(),
     /** Stamped on every event this client builds. */
     val application: polycentric.v2.Application? = null,
 ) {
@@ -121,17 +123,19 @@ class PolycentricClient(
         // Authenticate every outgoing gRPC request as the active identity.
         // The core caches each server's token and only calls back when it
         // expires (js-core parity: the PolycentricClient constructor).
-        core.setAuthTokenProvider(object : AuthTokenProvider {
-            override suspend fun authToken(serverUrl: String): AuthToken? {
-                val keyPair = currentKeyPair ?: return null
-                val identity = activeIdentityKey ?: return null
-                val nowSeconds = System.currentTimeMillis() / 1000
-                return AuthToken(
-                    token = ServerJwt.create(crypto, keyPair, iss = identity, aud = serverUrl, nowSeconds = nowSeconds),
-                    expiresAt = (nowSeconds + ServerJwt.DEFAULT_EXPIRY_SECONDS).toULong(),
-                )
-            }
-        })
+        core.setAuthTokenProvider(
+            object : AuthTokenProvider {
+                override suspend fun authToken(serverUrl: String): AuthToken? {
+                    val keyPair = currentKeyPair ?: return null
+                    val identity = activeIdentityKey ?: return null
+                    val nowSeconds = System.currentTimeMillis() / 1000
+                    return AuthToken(
+                        token = ServerJwt.create(crypto, keyPair, iss = identity, aud = serverUrl, nowSeconds = nowSeconds),
+                        expiresAt = (nowSeconds + ServerJwt.DEFAULT_EXPIRY_SECONDS).toULong(),
+                    )
+                }
+            },
+        )
     }
 
     companion object {
@@ -143,7 +147,9 @@ class PolycentricClient(
             storageDriver: IStorageDriver,
             filestore: IFileStoreDriver,
             seedServers: List<String> = emptyList(),
-            crypto: ICryptoManager = org.futo.polycentric.core.Ed25519CryptoManager(),
+            crypto: ICryptoManager =
+                org.futo.polycentric.core
+                    .Ed25519CryptoManager(),
         ): PolycentricClient =
             PolycentricClient(core, storageDriver, filestore, seedServers, crypto)
                 .also { it.initialize() }
@@ -175,9 +181,10 @@ class PolycentricClient(
             // The keypair holding the signed-in identity; fall back to any
             // stored key so the client always has a keypair (js-core parity)
             // when logged out.
-            val sessionKey = session?.let { s ->
-                allKeys.firstOrNull { storageDriver.loadActiveIdentityKey(it.publicKey) == s }
-            }
+            val sessionKey =
+                session?.let { s ->
+                    allKeys.firstOrNull { storageDriver.loadActiveIdentityKey(it.publicKey) == s }
+                }
             val restored = sessionKey ?: allKeys.firstOrNull()
             if (restored != null) {
                 currentKeyPair = restored
@@ -237,7 +244,10 @@ class PolycentricClient(
      * Note: proto uint64 fields surface as Long in Wire and ULong across
      * the FFI; conversions are lossless bit-reinterpretations.
      */
-    fun buildEvent(content: Content, collection: Int = Collections.FEED): Event {
+    fun buildEvent(
+        content: Content,
+        collection: Int = Collections.FEED,
+    ): Event {
         val keyPair = requireNotNull(currentKeyPair) { "No keypair set" }
         val identity = requireNotNull(activeIdentityKey) { "No active identity" }
 
@@ -245,41 +255,51 @@ class PolycentricClient(
         val publicKeyProto = keyPair.toPublicKeyProto()
         val signedByBytes = PublicKey.ADAPTER.encode(publicKeyProto)
 
-        val identitySequence = if (collection == Collections.IDENTITY) {
-            sequence
-        } else {
-            coreCall { core.getIdentitySequence(identity, signedByBytes) }
-                ?: error("Cannot build event: current keypair has no identity event for the active identity (broken pairing?)")
-        }
+        val identitySequence =
+            if (collection == Collections.IDENTITY) {
+                sequence
+            } else {
+                coreCall { core.getIdentitySequence(identity, signedByBytes) }
+                    ?: error("Cannot build event: current keypair has no identity event for the active identity (broken pairing?)")
+            }
 
         val contentBytes = Content.ADAPTER.encode(content)
-        val digest = ContentDigest(
-            type = ContentDigestType.CONTENT_DIGEST_TYPE_SHA256,
-            value_ = sha256(contentBytes).toByteString(),
-        )
+        val digest =
+            ContentDigest(
+                type = ContentDigestType.CONTENT_DIGEST_TYPE_SHA256,
+                value_ = sha256(contentBytes).toByteString(),
+            )
 
         val identityContentForVc: ByteArray? =
-            if (collection == Collections.IDENTITY) content.identity
-                ?.let { polycentric.v2.Identity.ADAPTER.encode(it) }
-            else null
+            if (collection == Collections.IDENTITY) {
+                content.identity
+                    ?.let {
+                        polycentric.v2.Identity.ADAPTER
+                            .encode(it)
+                    }
+            } else {
+                null
+            }
 
-        val clockBytes = coreCall {
-            core.buildVectorClock(
-                identity,
-                collection,
-                identitySequence,
-                signedByBytes,
-                sequence,
-                identityContentForVc,
-            )
-        }
+        val clockBytes =
+            coreCall {
+                core.buildVectorClock(
+                    identity,
+                    collection,
+                    identitySequence,
+                    signedByBytes,
+                    sequence,
+                    identityContentForVc,
+                )
+            }
         return Event(
-            key = EventKey(
-                collection = collection,
-                identity = identity,
-                signed_by = publicKeyProto,
-                sequence = sequence.toLong(),
-            ),
+            key =
+                EventKey(
+                    collection = collection,
+                    identity = identity,
+                    signed_by = publicKeyProto,
+                    sequence = sequence.toLong(),
+                ),
             identity_sequence = identitySequence.toLong(),
             vector_clock = VectorClock.ADAPTER.decode(clockBytes),
             previous_signature = coreCall { core.previousSignature(identity, collection) }.toByteString(),
@@ -299,15 +319,15 @@ class PolycentricClient(
         val keyPair = requireNotNull(currentKeyPair) { "No keypair" }
         val eventBytes = Event.ADAPTER.encode(event)
 
-        val signedBytes = coreCall {
-            core.signEvent(
-                eventBytes,
-                object : SignBytesCallback {
-                    override suspend fun sign(bytes: ByteArray): ByteArray =
-                        crypto.sign(keyPair.privateKey, bytes, keyPair.keyType)
-                },
-            )
-        }
+        val signedBytes =
+            coreCall {
+                core.signEvent(
+                    eventBytes,
+                    object : SignBytesCallback {
+                        override suspend fun sign(bytes: ByteArray): ByteArray = crypto.sign(keyPair.privateKey, bytes, keyPair.keyType)
+                    },
+                )
+            }
         return SignedEvent.ADAPTER.decode(signedBytes)
     }
 
@@ -316,7 +336,10 @@ class PolycentricClient(
      * into the core so subsequent sequence/clock reads see them
      * (js-core `commitEvent`).
      */
-    suspend fun commitEvent(signedEvent: SignedEvent, content: Content? = null) {
+    suspend fun commitEvent(
+        signedEvent: SignedEvent,
+        content: Content? = null,
+    ) {
         // Note that `copyEvents` must be called before saving the event in local
         // storage, because `copyEvents` may throw an error to reject invalid events.
         coreCall { core.copyEvents(listOf(SignedEvent.ADAPTER.encode(signedEvent))) }
@@ -356,25 +379,29 @@ class PolycentricClient(
         heads: List<EventKey> = emptyList(),
         queryKey: List<String>? = null,
     ): List<EventBundle> {
-        val bytes = core.awaitQuery(
-            Query.ListEvents(
-                ListEventsArgs(
-                    size = limit,
-                    identity = identity,
-                    collection = collection,
-                    signedBy = signedBy?.toFfi(),
-                    sequenceGt = sequenceGt,
-                    sequenceLt = sequenceLt,
-                    heads = heads.mapNotNull { it.toFfiOrNull() }.ifEmpty { null },
+        val bytes =
+            core.awaitQuery(
+                Query.ListEvents(
+                    ListEventsArgs(
+                        size = limit,
+                        identity = identity,
+                        collection = collection,
+                        signedBy = signedBy?.toFfi(),
+                        sequenceGt = sequenceGt,
+                        sequenceLt = sequenceLt,
+                        heads = heads.mapNotNull { it.toFfiOrNull() }.ifEmpty { null },
+                    ),
                 ),
-            ),
-            queryKey = queryKey,
-        ) ?: return emptyList()
+                queryKey = queryKey,
+            ) ?: return emptyList()
         return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
     }
 
     /** Local, tombstone-filtered view of an (identity, collection) stream. */
-    fun listValidEvents(identity: String, collection: Int): List<EventBundle> {
+    fun listValidEvents(
+        identity: String,
+        collection: Int,
+    ): List<EventBundle> {
         val bytes = coreCall { core.listValidEvents(identity, collection) }
         return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
     }
@@ -387,77 +414,83 @@ class PolycentricClient(
      * delegates to the core's `pushLocalEvents`, then uploads any blobs
      * the server reports missing. Mirrors js-core `sync()`.
      */
-    suspend fun sync(strategy: SyncStrategy = SyncStrategy.PARTIAL): Int = coroutineScope {
-        val identity = activeIdentityKey ?: return@coroutineScope 0
+    suspend fun sync(strategy: SyncStrategy = SyncStrategy.PARTIAL): Int =
+        coroutineScope {
+            val identity = activeIdentityKey ?: return@coroutineScope 0
 
-        // A pull failure must not cancel in-flight pushes (js-core joins
-        // both with allSettled): capture it and rethrow after the pushes.
-        val pullTask = async {
-            try {
-                Result.success(
-                    when (strategy) {
-                        SyncStrategy.FULL, SyncStrategy.FULL_PULL -> pull(partial = false)
-                        SyncStrategy.PARTIAL, SyncStrategy.PARTIAL_PULL -> pull(partial = true)
-                        else -> 0
-                    },
-                )
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) {
-                Result.failure(e)
-            }
-        }
-
-        val doPush = strategy != SyncStrategy.FULL_PULL && strategy != SyncStrategy.PARTIAL_PULL
-        val partialPush = strategy == SyncStrategy.PARTIAL || strategy == SyncStrategy.PARTIAL_PUSH
-
-        val pushTasks = if (doPush) {
-            servers.map { server ->
+            // A pull failure must not cancel in-flight pushes (js-core joins
+            // both with allSettled): capture it and rethrow after the pushes.
+            val pullTask =
                 async {
                     try {
-                        val responseBytes = coreCall {
-                            core.pushLocalEvents(identity, server, partialPush)
-                        } ?: return@async null
-                        val response = PutEventsResponse.ADAPTER.decode(responseBytes)
-                        for (pushError in response.errors) {
-                            log.warning("Error from event push: $pushError")
-                        }
-                        for (blob in response.requested_blobs) {
-                            val digest = blob.digest ?: continue
-                            val body = filestore.get(digest) ?: continue
-                            uploadBlob(blob, body, listOf(server))
-                        }
-                        null
+                        Result.success(
+                            when (strategy) {
+                                SyncStrategy.FULL, SyncStrategy.FULL_PULL -> pull(partial = false)
+                                SyncStrategy.PARTIAL, SyncStrategy.PARTIAL_PULL -> pull(partial = true)
+                                else -> 0
+                            },
+                        )
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Throwable) {
-                        log.warning("Sync failed for $server: $e")
-                        e
+                        Result.failure(e)
                     }
                 }
-            }
-        } else {
-            emptyList()
-        }
 
-        val pushFailures = pushTasks.awaitAll()
-        val pullResult = pullTask.await()
-        val pullError = pullResult.exceptionOrNull()
-        if (pullError != null) {
-            throw pullError
+            val doPush = strategy != SyncStrategy.FULL_PULL && strategy != SyncStrategy.PARTIAL_PULL
+            val partialPush = strategy == SyncStrategy.PARTIAL || strategy == SyncStrategy.PARTIAL_PUSH
+
+            val pushTasks =
+                if (doPush) {
+                    servers.map { server ->
+                        async {
+                            try {
+                                val responseBytes =
+                                    coreCall {
+                                        core.pushLocalEvents(identity, server, partialPush)
+                                    } ?: return@async null
+                                val response = PutEventsResponse.ADAPTER.decode(responseBytes)
+                                for (pushError in response.errors) {
+                                    log.warning("Error from event push: $pushError")
+                                }
+                                for (blob in response.requested_blobs) {
+                                    val digest = blob.digest ?: continue
+                                    val body = filestore.get(digest) ?: continue
+                                    uploadBlob(blob, body, listOf(server))
+                                }
+                                null
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Throwable) {
+                                log.warning("Sync failed for $server: $e")
+                                e
+                            }
+                        }
+                    }
+                } else {
+                    emptyList()
+                }
+
+            val pushFailures = pushTasks.awaitAll()
+            val pullResult = pullTask.await()
+            val pullError = pullResult.exceptionOrNull()
+            if (pullError != null) {
+                throw pullError
+            }
+            pushFailures.firstNotNullOfOrNull { it }?.let { throw it }
+            pullResult.getOrThrow()
         }
-        pushFailures.firstNotNullOfOrNull { it }?.let { throw it }
-        pullResult.getOrThrow()
-    }
 
     private suspend fun pull(partial: Boolean): Int {
         val identity = activeIdentityKey ?: throw NoActiveIdentityException()
-        val heads = if (partial) {
-            events.getByIdentity(identity, headsOnly = true)
-                .mapNotNull { Event.ADAPTER.decode(it.event_bytes).key }
-        } else {
-            emptyList()
-        }
+        val heads =
+            if (partial) {
+                events
+                    .getByIdentity(identity, headsOnly = true)
+                    .mapNotNull { Event.ADAPTER.decode(it.event_bytes).key }
+            } else {
+                emptyList()
+            }
 
         val bundles = listEvents(identity = identity, heads = heads)
 
@@ -491,7 +524,7 @@ class PolycentricClient(
 
             // Save content (and discover its blobs) even for events the
             // `getByEventKey` check below reports as already present, in
-						// case an earlier pull stored the event without its content
+            // case an earlier pull stored the event without its content
             // or blobs.
             trySaveContent(event, bundle, blobs)
 
@@ -524,7 +557,11 @@ class PolycentricClient(
             val content = Content.ADAPTER.decode(contentBytes)
             val digest = event.content_digest ?: return false
 
-            if (digest.type != ContentDigestType.CONTENT_DIGEST_TYPE_SHA256 || sha256(contentBytes.toByteArray()).toByteString() != digest.value_) return false
+            if (digest.type != ContentDigestType.CONTENT_DIGEST_TYPE_SHA256 ||
+                sha256(contentBytes.toByteArray()).toByteString() != digest.value_
+            ) {
+                return false
+            }
 
             for (blob in ContentManager.collectBlobs(content)) {
                 val blobDigest = blob.digest ?: continue
@@ -550,32 +587,43 @@ class PolycentricClient(
     /** First server's blob URL, or null if no servers are configured. */
     fun blobUrl(digest: ContentDigest): String? = blobUrls(digest).firstOrNull()
 
-    suspend fun commitBlob(bytes: ByteArray, mimeType: String): Blob {
-        val digest = ContentDigest(
-            type = ContentDigestType.CONTENT_DIGEST_TYPE_SHA256,
-            value_ = sha256(bytes).toByteString(),
-        )
+    suspend fun commitBlob(
+        bytes: ByteArray,
+        mimeType: String,
+    ): Blob {
+        val digest =
+            ContentDigest(
+                type = ContentDigestType.CONTENT_DIGEST_TYPE_SHA256,
+                value_ = sha256(bytes).toByteString(),
+            )
         filestore.put(digest, bytes)
         return Blob(digest = digest, mime_type = mimeType, size = bytes.size.toLong())
     }
 
     /** Plain-HTTP blob fetch with per-server fallback. */
-    suspend fun fetchBlobBytes(digest: ContentDigest): ByteArray? = withContext(Dispatchers.IO) {
-        for (url in blobUrls(digest)) {
-            val bytes = runCatchingExceptCancellation {
-                http.newCall(Request.Builder().url(url).build()).execute().use { res ->
-                    if (res.isSuccessful) res.body?.bytes() else null
-                }
-            }.getOrNull()
-            if (bytes != null) return@withContext bytes
+    suspend fun fetchBlobBytes(digest: ContentDigest): ByteArray? =
+        withContext(Dispatchers.IO) {
+            for (url in blobUrls(digest)) {
+                val bytes =
+                    runCatchingExceptCancellation {
+                        http.newCall(Request.Builder().url(url).build()).execute().use { res ->
+                            if (res.isSuccessful) res.body?.bytes() else null
+                        }
+                    }.getOrNull()
+                if (bytes != null) return@withContext bytes
+            }
+            null
         }
-        null
-    }
 
-    suspend fun uploadBlob(blob: Blob, body: ByteArray, targets: List<String> = servers) {
-        val requestBytes = UploadBlobRequest.ADAPTER.encode(
-            UploadBlobRequest(blob = blob, body = body.toByteString()),
-        )
+    suspend fun uploadBlob(
+        blob: Blob,
+        body: ByteArray,
+        targets: List<String> = servers,
+    ) {
+        val requestBytes =
+            UploadBlobRequest.ADAPTER.encode(
+                UploadBlobRequest(blob = blob, body = body.toByteString()),
+            )
         for (server in targets) {
             runCatchingExceptCancellation { coreCall { core.uploadBlob(server, requestBytes) } }
                 .onFailure { e ->
@@ -600,8 +648,7 @@ class PolycentricClient(
      * Look up the v2 identity key bound to the given device keypair
      * locally; null when this device never associated one with the pair.
      */
-    suspend fun getIdentityKeyFor(keyPair: StoredKeyPair): String? =
-        storageDriver.loadActiveIdentityKey(keyPair.publicKey)
+    suspend fun getIdentityKeyFor(keyPair: StoredKeyPair): String? = storageDriver.loadActiveIdentityKey(keyPair.publicKey)
 
     suspend fun setActiveIdentityKey(identityKey: String?) {
         activeIdentityKey = identityKey
@@ -643,6 +690,5 @@ class PolycentricClient(
         core.setServers(servers)
     }
 
-    private fun sha256(bytes: ByteArray): ByteArray =
-        MessageDigest.getInstance("SHA-256").digest(bytes)
+    private fun sha256(bytes: ByteArray): ByteArray = MessageDigest.getInstance("SHA-256").digest(bytes)
 }
