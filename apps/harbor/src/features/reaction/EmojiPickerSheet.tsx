@@ -2,6 +2,7 @@ import Icon from '@/src/common/components/Icon';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { TextInput } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { SearchField } from '@/src/features/search/SearchField';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
@@ -17,18 +18,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { categories, getCategory, type EmojiEntry } from './emojiData';
 import { searchEmojis } from './emojiSearch';
 import { Emoji, EMOJI_IMAGE_SCALE, EmojiLikeButton } from './Emoji';
-import { create } from 'zustand';
+import useReactions from './useReactions';
+import { ALL_CATEGORIES, useEmojiPickerStore } from './useEmojiPickerStore';
 import { isWeb } from '@/src/common/util/platform';
-
-type EmojiPickerSheetProps = {
-  open: boolean;
-  onClose: () => void;
-  onSelect: (emoji: string) => void;
-  selectedEmoji?: string | null;
-};
-
-/** Sentinel category key for the unfiltered grid. */
-const ALL = 'All';
 
 /** Grid cells stay close to this width; wider sheets get more columns. */
 const TARGET_CELL_WIDTH = 60;
@@ -46,59 +38,29 @@ const CATEGORY_RAIL_BORDER_WIDTH = 1;
 const CATEGORY_ICON_SCALE = 0.5;
 const CATEGORY_BUTTON_COUNT = categories.length + 0.5;
 
-const SEARCH_DEBOUNCE_MS = 300;
-
-// Shared by the search field and the grid, so neither has to mirror the
-// other's state. There is only ever one picker sheet.
-const useEmojiSearchStore = create<{
-  /** The text as typed; drives the input's clear button. */
-  rawQuery: string;
-  /** Debounced `rawQuery`; drives the grid. */
-  query: string;
-  setRawQuery: (rawQuery: string) => void;
-  clearQuery: () => void;
-}>((set) => {
-  let debounceTimeout: ReturnType<typeof setTimeout> | undefined;
-  return {
-    rawQuery: '',
-    query: '',
-    setRawQuery: (rawQuery) => {
-      clearTimeout(debounceTimeout);
-      if (rawQuery === '') {
-        // Empty query resets the search immediately
-        set({ rawQuery, query: '' });
-      } else {
-        set({ rawQuery });
-        debounceTimeout = setTimeout(
-          () => set({ query: rawQuery }),
-          SEARCH_DEBOUNCE_MS,
-        );
-      }
-    },
-    clearQuery: () => {
-      clearTimeout(debounceTimeout);
-      set({ rawQuery: '', query: '' });
-    },
-  };
-});
-
 /**
  * Emoji picker sheet with a search input, a category rail and a scrollable
  * grid, using `FlashList` over the emoji set from `emojiData`. While a search
  * query is entered the rail is hidden and the grid shows the matches.
+ * Mounted once at the root; opened per post via `useEmojiPickerStore`.
  */
-export function EmojiPickerSheet({
-  open,
-  onClose,
-  onSelect,
-  selectedEmoji,
-}: EmojiPickerSheetProps) {
+export function EmojiPickerSheet() {
   const { theme } = useTheme();
-  const listRef = useRef<FlashListRef<EmojiEntry>>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>(ALL);
-  const query = useEmojiSearchStore((state) => state.query);
-  const clearQuery = useEmojiSearchStore((state) => state.clearQuery);
+  const client = usePolycentric();
+  const post = useEmojiPickerStore((state) => state.post);
+  const open = useEmojiPickerStore((state) => state.open);
+  const close = useEmojiPickerStore((state) => state.close);
+  const selectedEmoji = useReactions((state) =>
+    post ? state.reactions.get(post.id)?.emoji : undefined,
+  );
+  const toggleReaction = useReactions((state) => state.toggleReaction);
+  const selectedCategory = useEmojiPickerStore(
+    (state) => state.selectedCategory,
+  );
+  const toggleCategory = useEmojiPickerStore((state) => state.toggleCategory);
+  const query = useEmojiPickerStore((state) => state.query);
   const isSearching = query.trim() !== '';
+  const listRef = useRef<FlashListRef<EmojiEntry>>(null);
 
   // Derivied from the sheet width
   const [contentWidth, setContentWidth] = useState(0);
@@ -124,7 +86,7 @@ export function EmojiPickerSheet({
 
   const categoryEmojis = useMemo(
     () =>
-      selectedCategory === ALL
+      selectedCategory === ALL_CATEGORIES
         ? ALL_EMOJIS
         : (getCategory(selectedCategory)?.emojis ?? ALL_EMOJIS),
     [selectedCategory],
@@ -140,18 +102,21 @@ export function EmojiPickerSheet({
     listRef.current?.scrollToTop({ animated: false });
   }, [query]);
 
-  // Reset when closed
-  useEffect(() => {
-    if (!open) {
-      setSelectedCategory(ALL);
-      clearQuery();
-    }
-  }, [open, clearQuery]);
+  const handleCategorySelect = useCallback(
+    (key: string) => {
+      toggleCategory(key);
+      listRef.current?.scrollToTop({ animated: false });
+    },
+    [toggleCategory],
+  );
 
-  const handleCategorySelect = useCallback((key: string) => {
-    setSelectedCategory((prev) => (prev === key ? ALL : key));
-    listRef.current?.scrollToTop({ animated: false });
-  }, []);
+  const onSelect = useCallback(
+    (emoji: string) => {
+      close();
+      if (post) toggleReaction(client, post, emoji);
+    },
+    [close, post, toggleReaction, client],
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: EmojiEntry }) => (
@@ -169,11 +134,11 @@ export function EmojiPickerSheet({
   return (
     <Sheet
       open={open}
-      onClose={onClose}
+      onClose={close}
       detents={[0.5]}
       maxWidth={400}
       height={800}
-      header={<Sheet.Header title="Pick a reaction" onClose={onClose} />}
+      header={<Sheet.Header title="Pick a reaction" onClose={close} />}
       // A footer sits at the sheet's bottom and rises above the keyboard
       // natively, so hiding it while searching does not resize the grid.
       footer={
@@ -222,12 +187,12 @@ export function EmojiPickerSheet({
   );
 }
 
-/** Search input with a clear button, writing to the emoji search store. */
+/** Search input with a clear button, writing to the picker store. */
 function EmojiSearchField() {
   const inputRef = useRef<RNTextInput>(null);
-  const rawQuery = useEmojiSearchStore((state) => state.rawQuery);
-  const setRawQuery = useEmojiSearchStore((state) => state.setRawQuery);
-  const clearQuery = useEmojiSearchStore((state) => state.clearQuery);
+  const rawQuery = useEmojiPickerStore((state) => state.rawQuery);
+  const setRawQuery = useEmojiPickerStore((state) => state.setRawQuery);
+  const clearQuery = useEmojiPickerStore((state) => state.clearQuery);
 
   // The input is uncontrolled, so a query cleared from elsewhere (the sheet
   // closing) has to clear the native text too.
