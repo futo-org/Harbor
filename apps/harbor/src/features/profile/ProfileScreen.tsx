@@ -90,7 +90,7 @@ function IdentityProfile({
   identityKey: string | null;
   tab: ActiveFeed;
 }) {
-  const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
+  const profile = useProfile(identityKey);
 
   const [verifiedAlias, setVerifiedAlias] = useState<string | null>(() =>
     identityKey ? getVerifiedAlias(identityKey) : null,
@@ -149,8 +149,8 @@ function ProfileScreenContent() {
   const { theme } = useTheme();
   const { identityKey, activeFeed, setActiveFeed } = useProfileContext();
 
-  // Reads the profile query the header already shares.
-  const profile = useProfile(identityKey);
+  // The screen's one network fetch; the headers and tabs read the shared cache.
+  const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
   const shortId = shortenIdentityId(identityKey ?? undefined);
   usePageTitle(
     profile.name ? `${truncateText(profile.name, 30)} (${shortId})` : shortId,

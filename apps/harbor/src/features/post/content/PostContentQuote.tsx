@@ -12,7 +12,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -126,8 +126,6 @@ function QuoteUnavailable() {
 
 /** Author and time info at the top. */
 function AuthorRow({ post }: { post: PostData }) {
-  const authorProfile = useProfile(post.identity);
-  const authorName = authorProfile.name ?? '…';
   const time = timeAgo(Number(post.createdAt));
 
   return (
@@ -137,21 +135,22 @@ function AuthorRow({ post }: { post: PostData }) {
         size="xs"
         style={Atoms.mr_md}
       />
-      <Text
+      <Username
+        identity={post.identity}
         variant="secondary"
         fontWeight="bold"
-        numberOfLines={1}
-        style={Atoms.flex_shrink_1}
-      >
-        {authorName}
-      </Text>
+      />
       <IdentityTag identity={post.identity} />
       {time ? (
         <>
           <Text variant="secondary" color="neutral_500" fontWeight="bold">
             ·
           </Text>
-          <Text variant="secondary" color="neutral_500">
+          <Text
+            variant="secondary"
+            color="neutral_500"
+            style={Atoms.flex_shrink_0}
+          >
             {time}
           </Text>
         </>

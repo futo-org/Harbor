@@ -3,7 +3,7 @@ import { Routes } from '@/src/common/constants';
 import { timeAgo } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo } from 'react';
@@ -57,9 +57,6 @@ function RepostHeader({
   identity: string;
   repostedAt?: number;
 }) {
-  const profile = useProfile(identity);
-  const name = profile.name ?? '';
-
   const handlePress = useCallback(() => {
     router.push(Routes.tabs.profile(identity));
   }, [identity]);
@@ -83,21 +80,19 @@ function RepostHeader({
       <View style={[Atoms.items_end, { flexBasis: LEFT_COL_FLEX_BASIS }]}>
         <Icon size={16} name="repost" color="neutral_500" />
       </View>
-      <View style={[Atoms.flex_row, Atoms.flex_shrink_1]}>
-        <Text
-          variant="small"
-          color="neutral_500"
-          fontWeight="bold"
-          numberOfLines={1}
-          style={[Atoms.flex_shrink_1, hovered && Atoms.text_underline]}
-        >
-          {name || '…'}
-        </Text>
-        <Text
+      <View style={[Atoms.flex_row, Atoms.align_center, Atoms.flex_shrink_1]}>
+        <Username
+          identity={identity}
           variant="small"
           color="neutral_500"
           fontWeight="bold"
           style={hovered && Atoms.text_underline}
+        />
+        <Text
+          variant="small"
+          color="neutral_500"
+          fontWeight="bold"
+          style={[Atoms.flex_shrink_0, hovered && Atoms.text_underline]}
         >
           {time ? ` reposted · ${time}` : ' reposted'}
         </Text>
