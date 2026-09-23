@@ -1,8 +1,4 @@
-import {
-  Text,
-  type TextVariantSize,
-  VARIANT_CONFIG,
-} from '@/src/common/components/primitives/Text';
+import { Text } from '@/src/common/components/primitives/Text';
 import { useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { FollowingBadge } from '@/src/features/follow/FollowingBadge';
@@ -16,12 +12,6 @@ type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   fetchMode?: FetchMode;
   /** Off where a Follow button nearby already shows the state. */
   showFollowing?: boolean;
-};
-
-const FOLLOWING_ICON_SIZE: Record<TextVariantSize, number> = {
-  lg: 14,
-  md: 12,
-  xs: 10,
 };
 
 /**
@@ -61,10 +51,7 @@ export function Username({
         </Text>
       ) : null}
       {showFollowing ? (
-        <FollowingBadge
-          identity={identity ?? null}
-          size={FOLLOWING_ICON_SIZE[VARIANT_CONFIG[variant].size]}
-        />
+        <FollowingBadge identity={identity ?? null} variant={variant} />
       ) : null}
     </View>
   );

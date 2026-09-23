@@ -26,9 +26,6 @@ jest.mock('@/src/common/components/primitives/Text', () => {
   return {
     Text: ({ children }: { children?: unknown }) =>
       react.createElement(Text, null, children),
-    VARIANT_CONFIG: jest.requireActual(
-      '@/src/common/components/primitives/Text',
-    ).VARIANT_CONFIG,
   };
 });
 
