@@ -1,4 +1,5 @@
 {
   "*": "biome check --write --files-ignore-unknown=true --no-errors-on-unmatched",
+  "packages/kt-core/**/*.kt": "sh packages/kt-core/ktlint-staged.sh",
   "{packages,services}/**/*.rs": "rustfmt --edition 2024"
 }

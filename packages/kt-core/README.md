@@ -163,6 +163,15 @@ which runs, in order:
 
 To rebuild Kotlin components without rebuilding Rust: `./gradlew build -PskipRust=true`.
 
+## Formatting
+
+Commits touching `*.kt` are formatted automatically by the repo's pre-commit
+hook (setup via `pnpm prepare` at the repo root). It invokes
+`ktlint-staged.sh`, which runs `:core:ktlintFormat` restricted to the
+staged files (`-PktlintStagedFiles`), so nothing outside the commit is
+rewritten. Because ktlint runs through Gradle, committing `kt-core` changes
+requires the build toolchain (JDK 17+ and the Android SDK).
+
 ## FFI contract notes (learned from js-core — keep these invariants)
 
 - **Query observables never `complete()`**; one-shot callers resolve on the

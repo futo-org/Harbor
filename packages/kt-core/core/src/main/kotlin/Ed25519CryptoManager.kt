@@ -1,16 +1,16 @@
 package org.futo.polycentric.core
 
-import java.security.SecureRandom
 import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator
 import org.bouncycastle.crypto.params.Ed25519KeyGenerationParameters
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
 import org.bouncycastle.crypto.signers.Ed25519Signer
+import org.futo.polycentric.core.ICryptoManager
 import org.futo.polycentric.core.InvalidKeyLengthException
 import org.futo.polycentric.core.InvalidSignatureException
 import org.futo.polycentric.core.KeyTypes
-import org.futo.polycentric.core.ICryptoManager
 import org.futo.polycentric.core.StoredKeyPair
+import java.security.SecureRandom
 
 private const val ED25519_PRIVATE_KEY_LENGTH = 32
 private const val ED25519_PUBLIC_KEY_LENGTH = 32
@@ -39,7 +39,10 @@ class Ed25519CryptoManager : ICryptoManager {
         )
     }
 
-    override fun derivePublicKey(privateKey: ByteArray, keyType: Int): ByteArray {
+    override fun derivePublicKey(
+        privateKey: ByteArray,
+        keyType: Int,
+    ): ByteArray {
         require(keyType == KeyTypes.ED25519) { "Unsupported key type: $keyType" }
         if (privateKey.size != ED25519_PRIVATE_KEY_LENGTH) {
             throw InvalidKeyLengthException(
@@ -49,7 +52,11 @@ class Ed25519CryptoManager : ICryptoManager {
         return Ed25519PrivateKeyParameters(privateKey, 0).generatePublicKey().encoded
     }
 
-    override suspend fun sign(privateKey: ByteArray, message: ByteArray, keyType: Int): ByteArray {
+    override suspend fun sign(
+        privateKey: ByteArray,
+        message: ByteArray,
+        keyType: Int,
+    ): ByteArray {
         require(keyType == KeyTypes.ED25519) { "Unsupported key type: $keyType" }
         if (privateKey.size != ED25519_PRIVATE_KEY_LENGTH) {
             throw InvalidKeyLengthException(

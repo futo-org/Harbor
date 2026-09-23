@@ -17,7 +17,6 @@ transport = ["tonic/transport"]
 [dependencies]
 thiserror.workspace = true
 prost.workspace = true
-prost-types.workspace = true
 tonic.workspace = true
 tonic-prost.workspace = true
 ed25519-dalek.workspace = true
