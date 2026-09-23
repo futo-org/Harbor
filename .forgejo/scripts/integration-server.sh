@@ -20,7 +20,6 @@
 #
 
 set -euo pipefail
-set -x
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
@@ -174,7 +173,7 @@ if [ "$CI_MODE" = true ]; then
   # container is connected to a compose network via `docker network connect`
   # in a Docker-in-Docker environment).
   SERVER_HOST=server
-  SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' harbor_server 2>/dev/null)
+  SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' harbor-server-1 2>/dev/null)
   if [ -n "$SERVER_IP" ]; then
     SERVER_HOST=$SERVER_IP
     export HARBOR_TEST_SERVER="http://${SERVER_IP}:3000"
@@ -201,9 +200,6 @@ if [ "$CI_MODE" = true ]; then
   echo "==> Applying migrations via docker compose exec…"
   docker compose exec -T server /app/migration up
   echo "    migrations applied"
-
-  # TODO: remove
-  docker logs harbor_server || true
 else
   echo "==> Applying migrations…"
   (

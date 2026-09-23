@@ -54,7 +54,7 @@ fn server_config() -> ServerConfig {
 #[tokio::main]
 async fn main() {
     common_dotenv::load(".env");
-    dbg!(config::init());
+    config::init();
     common_telemetry::init();
 
     // `server`                  -> run the API (gRPC + HTTP) server (default)

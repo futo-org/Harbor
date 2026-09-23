@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:18
-    container_name: harbor_postgres
     environment:
       POSTGRES_PASSWORD: testing
     volumes:
@@ -18,7 +17,6 @@ services:
   server:
     # CI points this at the image built earlier in the pipeline.
     image: ${HARBOR_SERVER_IMAGE:-${POLYCENTRIC_SERVER_IMAGE:-harbor-server}}
-    container_name: harbor_server
     build:
       context: .
       dockerfile: services/server/Dockerfile
