@@ -14,8 +14,7 @@ let mockContext: {
 
 jest.mock('@/src/features/follow/FollowingIndicator', () => ({
   __esModule: true,
-  FollowingIcon: () => null,
-  default: () => null,
+  FollowingBadge: () => null,
 }));
 
 jest.mock('./ProfileContext', () => ({

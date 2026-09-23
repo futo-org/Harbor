@@ -1,4 +1,4 @@
-import { ProfileAvatar } from '@/src/common/components/primitives';
+import { IdentityTag, ProfileAvatar } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
@@ -8,7 +8,6 @@ import {
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
 import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
@@ -82,7 +81,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
             fontWeight="bold"
             color="neutral_1000"
           />
-          <IdentityTagOrFollowing identity={currentIdentity.identityKey} />
+          <IdentityTag identity={currentIdentity.identityKey} />
         </View>
         {hovered ? (
           <View

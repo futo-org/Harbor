@@ -1,10 +1,10 @@
 import {
   type AvatarSizePreset,
+  IdentityTag,
   ProfileAvatar,
   type TextVariant,
 } from '@/src/common/components/primitives';
 import { Atoms, type SpacingToken } from '@/src/common/theme';
-import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
 import { Username } from '@/src/features/profile/Username';
 import { View } from 'react-native';
 
@@ -43,7 +43,7 @@ export function IdentityBadge({
           variant={sizeConfig.textVariant}
           fontWeight="semibold"
         />
-        {showId && <IdentityTagOrFollowing identity={identityKey} />}
+        {showId && <IdentityTag identity={identityKey} />}
       </View>
     </View>
   );

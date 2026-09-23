@@ -139,8 +139,7 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@/src/features/follow/FollowingIndicator', () => ({
   __esModule: true,
-  FollowingIcon: () => null,
-  default: () => null,
+  FollowingBadge: () => null,
 }));
 
 jest.mock('react-native-safe-area-context', () => ({

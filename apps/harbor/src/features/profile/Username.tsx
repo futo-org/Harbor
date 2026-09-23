@@ -5,7 +5,7 @@ import {
 } from '@/src/common/components/primitives/Text';
 import { useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
-import { FollowingIcon } from '@/src/features/follow/FollowingIndicator';
+import { FollowingBadge } from '@/src/features/follow/FollowingIndicator';
 import type { FetchMode } from '@polycentric/react-native';
 import type { ComponentProps } from 'react';
 import { View } from 'react-native';
@@ -61,7 +61,7 @@ export function Username({
         </Text>
       ) : null}
       {showFollowing ? (
-        <FollowingIcon
+        <FollowingBadge
           identity={identity ?? null}
           size={FOLLOWING_ICON_SIZE[VARIANT_CONFIG[variant].size]}
         />

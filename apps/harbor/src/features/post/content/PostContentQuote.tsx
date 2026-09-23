@@ -1,4 +1,8 @@
-import { ProfileAvatar, Text } from '@/src/common/components/primitives';
+import {
+  IdentityTag,
+  ProfileAvatar,
+  Text,
+} from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
@@ -8,7 +12,6 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
-import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
 import { Username } from '@/src/features/profile/Username';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
@@ -134,12 +137,10 @@ function AuthorRow({ post }: { post: PostData }) {
       />
       <Username
         identity={post.identity}
-        // The IdentityTagOrFollowing that follows shows the full badge.
-        showFollowing={false}
         variant="secondary"
         fontWeight="bold"
       />
-      <IdentityTagOrFollowing identity={post.identity} />
+      <IdentityTag identity={post.identity} />
       {time ? (
         <>
           <Text variant="secondary" color="neutral_500" fontWeight="bold">

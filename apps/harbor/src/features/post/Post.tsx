@@ -1,10 +1,13 @@
-import { ProfileAvatar, Text } from '@/src/common/components/primitives';
+import {
+  IdentityTag,
+  ProfileAvatar,
+  Text,
+} from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
 import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -96,9 +99,7 @@ export const Post = memo(function Post({
         style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
       >
         <PostAuthorName identity={authorIdentity} onPress={handleAuthorPress} />
-        {authorIdentity ? (
-          <IdentityTagOrFollowing identity={authorIdentity} />
-        ) : null}
+        {authorIdentity ? <IdentityTag identity={authorIdentity} /> : null}
 
         {time ? (
           <>
@@ -174,8 +175,8 @@ export const Post = memo(function Post({
                 onPress={handleAuthorPress}
               />
               {authorIdentity ? (
-                <View style={Atoms.flex_row}>
-                  <IdentityTagOrFollowing identity={authorIdentity} />
+                <View style={Atoms.self_start}>
+                  <IdentityTag identity={authorIdentity} />
                 </View>
               ) : null}
             </View>
@@ -239,8 +240,6 @@ function PostAuthorName({
     >
       <Username
         identity={identity}
-        // The IdentityTagOrFollowing beside it shows the full badge.
-        showFollowing={false}
         variant="secondary"
         fontWeight="bold"
         style={hovered && { textDecorationLine: 'underline' }}

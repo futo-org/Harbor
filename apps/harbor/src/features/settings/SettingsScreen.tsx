@@ -1,4 +1,5 @@
 import {
+  IdentityTag,
   LinkButton,
   ListItem,
   ListItemGroup,
@@ -20,7 +21,6 @@ import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { IdentityTagOrFollowing } from '@/src/features/profile/IdentityTagOrFollowing';
 import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
 import { Username } from '@/src/features/profile/Username';
 import * as Application from 'expo-application';
@@ -207,7 +207,7 @@ function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
           variant="subtitle"
           fontWeight="semibold"
         />
-        <IdentityTagOrFollowing identity={identityKey} />
+        <IdentityTag identity={identityKey} />
       </View>
     </View>
   );
