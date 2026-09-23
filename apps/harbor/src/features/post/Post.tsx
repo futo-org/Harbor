@@ -168,6 +168,7 @@ export const Post = memo(function Post({
     >
       <PostHeader
         repostedBy={post.repostedBy}
+        repostedAt={post.repostedAt}
         showThreadLineAbove={showThreadLineAbove}
       />
 
