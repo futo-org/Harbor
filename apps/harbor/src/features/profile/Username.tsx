@@ -11,7 +11,7 @@ type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   fallbackName?: string | null;
   fetchMode?: FetchMode;
   /** Off where a Follow button nearby already shows the state. */
-  showFollowing?: boolean;
+  noFollowingBadge?: boolean;
 };
 
 /**
@@ -24,7 +24,7 @@ export function Username({
   fallbackName,
   fetchMode,
   numberOfLines = 1,
-  showFollowing = true,
+  noFollowingBadge,
   variant = 'body',
   style,
   ...textProps
@@ -50,9 +50,9 @@ export function Username({
           {name}
         </Text>
       ) : null}
-      {showFollowing ? (
+      {noFollowingBadge ? null : (
         <FollowingBadge identity={identity ?? null} variant={variant} />
-      ) : null}
+      )}
     </View>
   );
 }
