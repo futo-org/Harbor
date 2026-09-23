@@ -4,7 +4,6 @@ import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { Button, ProfileAvatar } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
-import { FetchMode } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
@@ -97,7 +96,6 @@ export function ProfileCompactHeader({
         ) : null}
         <Username
           identity={identityKey}
-          fetchMode={FetchMode.Default}
           variant="body"
           fontWeight="bold"
           style={[Atoms.flex_1, { minWidth: 0 }]}

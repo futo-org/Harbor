@@ -4,12 +4,15 @@ import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
+import { FetchMode } from '@polycentric/react-native';
 import { View } from 'react-native';
 
 /** Names whose follow lists these are. Shared by both pages, so it sits above
  *  the tab bar rather than inside either list. */
 export function FollowListTopbar({ identityId }: { identityId?: string }) {
-  const profile = useProfile(identityId ?? null);
+  const profile = useProfile(identityId ?? null, {
+    fetchMode: FetchMode.Default,
+  });
 
   return (
     <Topbar

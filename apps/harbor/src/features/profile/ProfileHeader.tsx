@@ -12,7 +12,6 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
-import { FetchMode } from '@polycentric/react-native';
 import { router, type Href } from 'expo-router';
 import { memo, useCallback } from 'react';
 import { Pressable, View } from 'react-native';
@@ -31,7 +30,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { theme } = useTheme();
   const { identityKey, isSelf, alias } = useProfileContext();
 
-  const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
+  const profile = useProfile(identityKey);
 
   const displayKey = identityKey ? identityKey.slice(0, 64) : '...';
 

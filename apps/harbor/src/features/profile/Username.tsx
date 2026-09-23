@@ -2,14 +2,12 @@ import { Text } from '@/src/common/components/primitives/Text';
 import { useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { FollowingBadge } from '@/src/features/follow/FollowingBadge';
-import type { FetchMode } from '@polycentric/react-native';
 import type { ComponentProps } from 'react';
 import { View } from 'react-native';
 
 type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   identity: string | null | undefined;
   fallbackName?: string | null;
-  fetchMode?: FetchMode;
   /** Set where a Follow button nearby already shows the state. */
   noFollowingBadge?: boolean;
 };
@@ -21,14 +19,13 @@ type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
 export function Username({
   identity,
   fallbackName,
-  fetchMode,
   numberOfLines = 1,
   noFollowingBadge,
   variant = 'body',
   style,
   ...textProps
 }: UsernameProps) {
-  const name = useUsername(identity, { fallbackName, fetchMode });
+  const name = useUsername(identity, { fallbackName });
 
   return (
     <View
