@@ -25,15 +25,13 @@ import {
 import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FeedPage } from '../feed/FeedPage';
-import { useSearchPosts } from './hooks/useSearchPosts';
+import { useSearchPosts, type PostSearchSort } from './hooks/useSearchPosts';
 import { type UserSearchEntry, useSearchUsers } from './hooks/useSearchUsers';
 
 export type SearchTab = 'top' | 'popular' | 'latest' | 'people';
 
 const SEARCH_TAB_VALUES: readonly SearchTab[] = [
   'top',
-  'popular',
-  'latest',
   'people',
 ];
 
@@ -54,7 +52,7 @@ function PostResultsPage({
   active,
 }: {
   query: string;
-  sort: 'top' | 'popular' | 'latest';
+  sort: PostSearchSort;
   /** True for the page being shown; only that page queries. */
   active: boolean;
 }) {
@@ -182,6 +180,8 @@ export function SearchResults({
     </View>
   );
 
+  const sortPost = (SORT_POSTS_OPTIONS.find(({value}) => value === tab)?.value || 'top') as PostSearchSort;
+
   return (
     <PagerView
       values={SEARCH_TAB_VALUES}
@@ -189,9 +189,7 @@ export function SearchResults({
       onChange={onTabChange}
       renderTabBar={renderTabBar}
     >
-      <PostResultsPage query={query} sort="top" active={tab === 'top'} />
-      <PostResultsPage query={query} sort="popular" active={tab === 'popular'} />
-      <PostResultsPage query={query} sort="latest" active={tab === 'latest'} />
+      <PostResultsPage query={query} sort={sortPost} active={tab !== 'people'} />
       <PeopleResultsPage query={query} active={tab === 'people'} />
     </PagerView>
   );
