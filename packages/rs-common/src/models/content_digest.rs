@@ -1,6 +1,7 @@
-use core::fmt;
+use std::fmt;
 
 use crate::models::protos_v2::{ContentDigest, ContentDigestType};
+use crate::models::validate::{self, SliceConfig, Validate};
 
 #[derive(Debug)]
 pub enum DigestError {
@@ -64,5 +65,37 @@ impl fmt::Debug for ContentDigest {
             .field("type", &self.r#type())
             .field("value", &hex::encode(value))
             .finish()
+    }
+}
+
+impl Validate for ContentDigest {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        let ContentDigest { r#type, value } = self;
+        const SHA256: i32 = ContentDigestType::Sha256 as i32;
+        let value_len;
+        match *r#type {
+            SHA256 => value_len = 256 / 8,
+            _ => return Err(ValidationError::TypeInvalid),
+        }
+        #[rustfmt::skip]
+        validate::slice(value, SliceConfig { min_len: Some(value_len), max_len: Some(value_len), ..Default::default() }) .map_err(ValidationError::Value)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum ValidationError {
+    TypeInvalid,
+    Value(validate::SliceError),
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValidationError::TypeInvalid => write!(f, "type is invalid"),
+            ValidationError::Value(err) => write!(f, "value {err}"),
+        }
     }
 }
