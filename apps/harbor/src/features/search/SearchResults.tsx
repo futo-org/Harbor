@@ -2,7 +2,7 @@ import Icon from '@/src/common/components/Icon';
 import { List } from '@/src/common/components/List';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { PagerView } from '@/src/common/components/PagerView';
-import { TabFilterSheet } from '@/src/common/components/tabs';
+import { TabFilterSheet, type TabFilterOption } from '@/src/common/components/tabs';
 import { Tabs } from '@/src/common/components/tabs';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { Text } from '@/src/common/components/primitives';
@@ -38,9 +38,8 @@ const SEARCH_TAB_VALUES: readonly SearchTab[] = [
 ];
 
 const SORT_POSTS_OPTIONS: readonly TabFilterOption<FeedSortOption>[] = [
-  // TODO: icons.
   { value: 'top', label: 'Top', icon: 'rocket' },
-  { value: 'popular', label: 'Popular', icon: 'star' },
+  { value: 'popular', label: 'Popular', icon: 'reactionOutline' },
   { value: 'latest', label: 'Latest', icon: 'star' },
 ];
 
