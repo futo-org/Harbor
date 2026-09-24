@@ -377,6 +377,9 @@ jobs:
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter polycentric-app...
+      # The typed routes (.expo/types) are gitignored; expo start writes them locally.
+      - name: Generate typed routes
+        run: pnpm -C apps/harbor exec expo customize tsconfig.json
       - name: Typecheck
         run: pnpm --filter polycentric-app typecheck
 
