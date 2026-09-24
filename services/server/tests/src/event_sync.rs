@@ -1507,21 +1507,6 @@ async fn validation_invalid_event_application_url_too_long() {
 }
 
 #[tokio::test]
-async fn validation_missing_serialized_content() {
-    let mut client = TestClient::new().await;
-    client.pending.last_mut().unwrap().serialized_content = None;
-
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[ExpectError {
-            bundle_index: 0,
-            kind: ExpectErrorKind::MsgContains("serialized content missing"),
-        }],
-    );
-}
-
-#[tokio::test]
 async fn validation_invalid_serialized_content_content_bytes() {
     let mut client = TestClient::new().await;
     client

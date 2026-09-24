@@ -151,29 +151,30 @@ async fn process_event(
         return Err(Status::unauthenticated("signed event signature invalid"));
     }
 
-    let serialized_content =
-        event_bundle.serialized_content.as_ref().ok_or_else(|| {
-            Status::invalid_argument("serialized content missing")
+    let decoded_content = if let (Some(serialized_content), Some(digest)) = (
+        event_bundle.serialized_content.as_ref(),
+        event.content_digest.as_ref(),
+    ) {
+        digest
+            .verify_against(&serialized_content.content_bytes)
+            .map_err(|err| Status::invalid_argument(err.to_string()))?;
+
+        let content_bytes = serialized_content.content_bytes.as_slice();
+        let content = Content::decode(content_bytes).map_err(|e| {
+            tracing::debug!(error = %e, "put_events content decode error");
+            Status::invalid_argument("invalid content_bytes")
         })?;
-    let content_digest = event.content_digest.as_ref().ok_or_else(|| {
-        Status::invalid_argument("event content digest missing")
-    })?;
+        validate_content(&content, collection)?;
 
-    content_digest
-        .verify_against(&serialized_content.content_bytes)
-        .map_err(|err| Status::invalid_argument(err.to_string()))?;
+        content
+            .blobs()
+            .into_iter()
+            .for_each(|blob| blobs.push(blob.clone()));
 
-    let content_bytes = serialized_content.content_bytes.as_slice();
-    let content = Content::decode(content_bytes).map_err(|e| {
-        tracing::debug!(error = %e, "put_events content decode error");
-        Status::invalid_argument("invalid content_bytes")
-    })?;
-    validate_content(&content, collection)?;
-
-    content
-        .blobs()
-        .into_iter()
-        .for_each(|blob| blobs.push(blob.clone()));
+        Some((content_bytes, content, digest))
+    } else {
+        None
+    };
 
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
@@ -247,9 +248,7 @@ async fn process_event(
     match EventsRepository::Mutation::add_event(
         &txn,
         active_model,
-        content_bytes,
-        content,
-        content_digest,
+        decoded_content,
     )
     .await
     {
@@ -594,10 +593,10 @@ fn validate_slice<T>(
 /// that the identity of the deletion event didn't create.
 ///
 /// `content` must be contained in the event itself.
-pub fn event_is_authorised(identity: &str, content: &Content) -> bool {
-    let Content {
+pub fn event_is_authorised(identity: &str, content: Option<&Content>) -> bool {
+    let Some(Content {
         content_body: Some(content),
-    } = content
+    }) = content
     else {
         // Couldn't extract (valid) content, so don't consider the event as
         // authorised.
@@ -685,12 +684,15 @@ mod tests {
 
     #[test]
     fn a_delete_of_your_own_event_is_authorised() {
-        assert!(event_is_authorised("alice", &delete_content("alice")));
+        assert!(event_is_authorised("alice", Some(&delete_content("alice"))));
     }
 
     #[test]
     fn a_delete_of_another_identitys_event_is_not_authorised() {
-        assert!(!event_is_authorised("mallory", &delete_content("alice")));
+        assert!(!event_is_authorised(
+            "mallory",
+            Some(&delete_content("alice"))
+        ));
     }
 
     #[test]
@@ -698,7 +700,12 @@ mod tests {
         let content = Content {
             content_body: Some(ContentBody::Delete(Delete { event_key: None })),
         };
-        assert!(!event_is_authorised("alice", &content));
+        assert!(!event_is_authorised("alice", Some(&content)));
+    }
+
+    #[test]
+    fn an_event_without_content_is_not_authorised() {
+        assert!(!event_is_authorised("alice", None));
     }
 
     #[test]
@@ -708,6 +715,6 @@ mod tests {
                 identity: "bob".to_string(),
             })),
         };
-        assert!(event_is_authorised("alice", &content));
+        assert!(event_is_authorised("alice", Some(&content)));
     }
 }
