@@ -2,7 +2,10 @@ import Icon from '@/src/common/components/Icon';
 import { List } from '@/src/common/components/List';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { PagerView } from '@/src/common/components/PagerView';
-import { TabFilterSheet, type TabFilterOption } from '@/src/common/components/tabs';
+import {
+  TabFilterSheet,
+  type TabFilterOption,
+} from '@/src/common/components/tabs';
 import { Tabs } from '@/src/common/components/tabs';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { Text } from '@/src/common/components/primitives';
@@ -30,10 +33,7 @@ import { type UserSearchEntry, useSearchUsers } from './hooks/useSearchUsers';
 
 export type SearchTab = 'top' | 'popular' | 'latest' | 'people';
 
-const SEARCH_TAB_VALUES: readonly SearchTab[] = [
-  'top',
-  'people',
-];
+const SEARCH_TAB_VALUES: readonly SearchTab[] = ['top', 'people'];
 
 const SORT_POSTS_OPTIONS: readonly TabFilterOption<SearchTab>[] = [
   { value: 'top', label: 'Top', icon: 'rocket' },
@@ -41,7 +41,11 @@ const SORT_POSTS_OPTIONS: readonly TabFilterOption<SearchTab>[] = [
   { value: 'latest', label: 'Latest', icon: 'star' },
 ];
 
-const SEARCH_TABS: readonly { value: SearchTab, label: string, menu_options?: readonly TabFilterOption<SearchTab>[] }[] = [
+const SEARCH_TABS: readonly {
+  value: SearchTab;
+  label: string;
+  menu_options?: readonly TabFilterOption<SearchTab>[];
+}[] = [
   { value: 'top', label: 'Posts', menu_options: SORT_POSTS_OPTIONS },
   { value: 'people', label: 'People' },
 ];
@@ -154,24 +158,30 @@ export function SearchResults({
     <View style={{ backgroundColor: theme.palette.neutral_0 }}>
       {topbar}
       <Tabs progress={dragProgress}>
-        {SEARCH_TABS.map(({value, label, menu_options}) => (
+        {SEARCH_TABS.map(({ value, label, menu_options }) => (
           <Tabs.Tab
             key={value}
-            active={value === tab || menu_options?.some(({value}) => value === tab)}
+            active={
+              value === tab || menu_options?.some(({ value }) => value === tab)
+            }
             onPress={() => onTabChange(value)}
-            menu={menu_options ? ({ open, onClose }) => (
-              <TabFilterSheet
-                open={open}
-                onClose={onClose}
-                title="Sort by"
-                options={menu_options}
-                selected={tab}
-                onChange={(value) => {
-                  onTabChange(value);
-                  onClose();
-                }}
-              />
-            ) : undefined}
+            menu={
+              menu_options
+                ? ({ open, onClose }) => (
+                    <TabFilterSheet
+                      open={open}
+                      onClose={onClose}
+                      title="Sort by"
+                      options={menu_options}
+                      selected={tab}
+                      onChange={(value) => {
+                        onTabChange(value);
+                        onClose();
+                      }}
+                    />
+                  )
+                : undefined
+            }
           >
             {label}
           </Tabs.Tab>
@@ -180,7 +190,8 @@ export function SearchResults({
     </View>
   );
 
-  const sortPost = (SORT_POSTS_OPTIONS.find(({value}) => value === tab)?.value || 'top') as PostSearchSort;
+  const sortPost = (SORT_POSTS_OPTIONS.find(({ value }) => value === tab)
+    ?.value || 'top') as PostSearchSort;
 
   return (
     <PagerView
@@ -189,7 +200,11 @@ export function SearchResults({
       onChange={onTabChange}
       renderTabBar={renderTabBar}
     >
-      <PostResultsPage query={query} sort={sortPost} active={tab !== 'people'} />
+      <PostResultsPage
+        query={query}
+        sort={sortPost}
+        active={tab !== 'people'}
+      />
       <PeopleResultsPage query={query} active={tab === 'people'} />
     </PagerView>
   );
