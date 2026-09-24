@@ -16,7 +16,7 @@ import {
   truncateSegments,
   type TextSegment,
 } from '@/src/common/util/parseTextLinks';
-import { isWeb } from '@/src/common/util/platform';
+import { isWeb, isAndroid } from '@/src/common/util/platform';
 import { type Href, Link } from 'expo-router';
 import { memo, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -30,7 +30,10 @@ type MentionTextSegment = Extract<TextSegment, { type: 'alias' | 'identity' }>;
 
 // Distance from a line's top to its text baseline (NotoSans, per text size):
 // native inline views sit on the baseline, so the box is lifted by this much.
-const MENTION_BASELINE_OFFSET = { regular: 17, large: 20 };
+const MENTION_BASELINE_OFFSET = {
+  regular: isAndroid ? 16 : 17,
+  large: isAndroid ? 19 : 20,
+};
 
 // How far the box's background is inset from the line's top and bottom, so
 // boxes on adjacent lines don't touch.
