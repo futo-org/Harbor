@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use regex::Regex;
 
 use crate::models::application;
@@ -55,4 +57,10 @@ pub enum StringError<'r> {
     TooSmall { length: usize, min: usize },
     TooLarge { length: usize, max: usize },
     FailsRegex { regex: &'r Regex },
+}
+
+/// Regex that checks if the input starts with `http://` or `https://`.
+pub(crate) fn url_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| Regex::new("https?:\\/\\/").unwrap())
 }
