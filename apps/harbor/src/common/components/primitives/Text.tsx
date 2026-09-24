@@ -56,7 +56,7 @@ function withEmojiImages(text: string, fontSize: number): ReactNode {
         style={[
           // iOS ignores margins on text attachments.
           isWeb ? { marginHorizontal: gap } : { width: size + 2 * gap },
-          { transform: [{ translateY: shift }] },
+          !isWeb && { transform: [{ translateY: shift }] },
         ]}
         copyable
       />

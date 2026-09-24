@@ -33,9 +33,11 @@ type MentionTextSegment = Extract<TextSegment, { type: 'alias' | 'identity' }>;
 const MENTION_BASELINE_OFFSET = { regular: 17, large: 20 };
 
 // How far the box's background is inset from the line's top and bottom, so
-// boxes on adjacent lines don't touch. Only the background shrinks: the box
-// keeps its size, so the text neither moves nor clips.
-const MENTION_BACKGROUND_INSET = { top: isWeb ? 2 : 3, bottom: isWeb ? 2 : 1 };
+// boxes on adjacent lines don't touch.
+const MENTION_BACKGROUND_INSET = {
+  regular: { top: 2, bottom: isWeb ? 2 : 1 },
+  large: { top: 3, bottom: isWeb ? 4 : 1 },
+};
 
 // The person glyph sits off the text's visual center (below it on web, above
 // it on native), so it's nudged by this much; positive moves it down.
@@ -180,8 +182,8 @@ function MentionSegment({
   const href = buildSegmentHref(segment);
   const icon = (
     <Icon
-      name="person"
-      size={10}
+      name="personCircle"
+      size={large ? 14 : 12}
       color="primary_500"
       style={[Atoms.mr_2xs, styles.mentionIcon]}
     />
@@ -200,14 +202,12 @@ function MentionSegment({
         ]}
         onPress={stopPostCardPress}
       >
-        <MentionBackground />
+        <MentionBackground large={large} />
         {icon}
         {segment.value}
       </Link>
     );
   }
-
-  const baselineOffset = MENTION_BASELINE_OFFSET[large ? 'large' : 'regular'];
 
   return (
     <>
@@ -221,7 +221,12 @@ function MentionSegment({
               {
                 // Explicit, since the zero-height parent would squash the text.
                 height: typography.lineHeight[large ? 'lg' : 'md'],
-                transform: [{ translateY: -baselineOffset }],
+                transform: [
+                  {
+                    translateY:
+                      -MENTION_BASELINE_OFFSET[large ? 'large' : 'regular'],
+                  },
+                ],
               },
             ])}
             // Without this, releasing a long press still fires onPress and
@@ -230,7 +235,7 @@ function MentionSegment({
           >
             {({ pressed }) => (
               <>
-                <MentionBackground pressed={pressed} />
+                <MentionBackground large={large} pressed={pressed} />
                 {icon}
                 <Text
                   variant="secondary"
@@ -250,8 +255,16 @@ function MentionSegment({
   );
 }
 
-function MentionBackground({ pressed = false }: { pressed?: boolean }) {
+function MentionBackground({
+  large,
+  pressed = false,
+}: {
+  large: boolean;
+  pressed?: boolean;
+}) {
   const { theme } = useTheme();
+
+  const inset = MENTION_BACKGROUND_INSET[large ? 'large' : 'regular'];
 
   return (
     <View
@@ -260,11 +273,13 @@ function MentionBackground({ pressed = false }: { pressed?: boolean }) {
         Atoms.rounded_sm,
         styles.mentionBackground,
         {
+          top: inset.top,
+          bottom: inset.bottom,
           // Translucent so the Android selection highlight, drawn under inline
           // views, shows through.
           backgroundColor: withHexOpacity(
             theme.palette.primary_500,
-            theme.scheme === 'dark' ? '25' : '14',
+            theme.scheme === 'dark' ? '25' : '10',
           ),
         },
       ]}
@@ -310,9 +325,7 @@ function buildSegmentHref(segment: LinkSegment): Href {
 }
 
 const styles = StyleSheet.create({
-  // `top` rather than a transform: web renders the icon as an inline span,
-  // which ignores transforms.
-  mentionIcon: { top: MENTION_ICON_SHIFT },
+  mentionIcon: { top: MENTION_ICON_SHIFT, left: 1 },
   webMentionLink: {
     display: 'inline-block',
     // Contains the background's negative z-index, so it paints under this
@@ -321,10 +334,6 @@ const styles = StyleSheet.create({
   },
   // Zero height so the box can't stretch the line it sits on.
   nativeMentionAnchor: { height: 0 },
-  mentionBackground: {
-    top: MENTION_BACKGROUND_INSET.top,
-    bottom: MENTION_BACKGROUND_INSET.bottom,
-    // On web, positioned elements paint over in-flow text unless sent back.
-    ...(isWeb ? { zIndex: ZIndex.behind } : {}),
-  },
+  // On web, positioned elements paint over in-flow text unless sent back.
+  mentionBackground: isWeb ? { zIndex: ZIndex.behind } : {},
 });

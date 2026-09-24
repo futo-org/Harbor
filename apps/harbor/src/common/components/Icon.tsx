@@ -78,7 +78,7 @@ export const IconsMap = {
   notification: defineIcon(MaterialCommunityIcons, 'bell-outline'),
   people: defineIcon(Ionicons, 'people'),
   paw: defineIcon(MaterialCommunityIcons, 'paw'),
-  person: defineIcon(Ionicons, 'person'),
+  personCircle: defineIcon(Ionicons, 'person-circle'),
   personAdd: defineIcon(Ionicons, 'person-add'),
   personAddOutline: defineIcon(Ionicons, 'person-add-outline'),
   personOutline: defineIcon(Ionicons, 'person-outline'),
