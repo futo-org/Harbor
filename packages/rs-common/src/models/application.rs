@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::models::protos_v2::Application;
 use crate::models::validate::{self, StringConfig, Validate, url_regex};
 
@@ -15,9 +17,21 @@ impl Validate for Application {
     }
 }
 
+#[derive(Debug)]
 pub enum ValidationError {
     Name(validate::StringError<'static>),
     Id(validate::StringError<'static>),
     Version(validate::StringError<'static>),
     Url(validate::StringError<'static>),
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValidationError::Name(err) => write!(f, "name {err}"),
+            ValidationError::Id(err) => write!(f, "id {err}"),
+            ValidationError::Version(err) => write!(f, "version {err}"),
+            ValidationError::Url(err) => write!(f, "url {err}"),
+        }
+    }
 }
