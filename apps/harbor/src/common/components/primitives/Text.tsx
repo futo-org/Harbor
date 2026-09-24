@@ -1,7 +1,12 @@
 import { UITextView } from '@bsky.app/react-native-uitextview';
-import { Children, type ReactNode } from 'react';
-import { type TextProps as RNTextProps, StyleSheet } from 'react-native';
+import { Children, Fragment, type ReactNode } from 'react';
+import {
+  Text as RNText,
+  type TextProps as RNTextProps,
+  StyleSheet,
+} from 'react-native';
 import { EmojiImage } from '@/src/common/components/EmojiImage';
+import { CopyOnlyText } from '@/src/common/components/primitives/CopyOnlyText';
 import {
   useTheme,
   typography,
@@ -44,17 +49,26 @@ function withEmojiImages(text: string, fontSize: number): ReactNode {
   const gap = Math.round(fontSize * EMOJI_GAP);
   return parts.map((part, i) =>
     i % 2 ? (
-      <EmojiImage
-        // biome-ignore lint/suspicious/noArrayIndexKey: runs are positional, derived from the string
-        key={i}
-        sequence={part}
-        size={size}
-        style={[
-          // iOS ignores margins on text attachments.
-          isWeb ? { marginHorizontal: gap } : { width: size + 2 * gap },
-          { transform: [{ translateY: shift }] },
-        ]}
-      />
+      // biome-ignore lint/suspicious/noArrayIndexKey: runs are positional, derived from the string
+      <Fragment key={i}>
+        <EmojiImage
+          sequence={part}
+          size={size}
+          style={[
+            // iOS ignores margins on text attachments.
+            isWeb
+              ? {
+                  marginHorizontal: gap,
+                  // Keeps the image's inner divs out of copied text, where
+                  // they add a line break; CopyOnlyText carries the emoji.
+                  userSelect: 'none',
+                }
+              : { width: size + 2 * gap },
+            { transform: [{ translateY: shift }] },
+          ]}
+        />
+        <CopyOnlyText>{part}</CopyOnlyText>
+      </Fragment>
     ) : (
       part
     ),
@@ -78,6 +92,10 @@ interface TextProps extends RNTextProps {
   fontSize?: FontSizeToken | number;
   lineHeight?: LineHeightToken | number;
   italic?: boolean;
+  // Bypasses UITextView, e.g. inside an inline view nested in selectable text,
+  // where UITextView would render it as a span of the outer text and it
+  // wouldn't show.
+  forceRNText?: boolean;
 }
 
 export function Text({
@@ -87,6 +105,7 @@ export function Text({
   fontSize,
   lineHeight,
   italic,
+  forceRNText,
   style,
   children,
   ...props
@@ -116,33 +135,38 @@ export function Text({
     ? WEB_FONT_STACK
     : NATIVE_FONTS[resolvedFontWeight][wantsItalic ? 'italic' : 'normal'];
 
+  const textProps: RNTextProps = {
+    style: [
+      {
+        fontFamily,
+        color: color ? theme.palette[color] : theme.palette.neutral_900,
+        fontSize: resolvedFontSize,
+        lineHeight: resolvedLineHeight,
+        ...(isWeb
+          ? {
+              fontWeight: resolvedFontWeight,
+              ...(wantsItalic ? { fontStyle: 'italic' as const } : {}),
+            }
+          : {}),
+      },
+      style,
+    ],
+    ...props,
+    children: renderChildren(
+      children,
+      StyleSheet.flatten(style)?.fontSize ?? resolvedFontSize,
+    ),
+  };
+
+  if (forceRNText) return <RNText {...textProps} />;
+
   return (
     <UITextView
       // iOS `selectable` Text only offers the copy callout; UITextView gives
       // real range selection. Everywhere else this renders the base Text.
       uiTextView={!!props.selectable}
-      style={[
-        {
-          fontFamily,
-          color: color ? theme.palette[color] : theme.palette.neutral_900,
-          fontSize: resolvedFontSize,
-          lineHeight: resolvedLineHeight,
-          ...(isWeb
-            ? {
-                fontWeight: resolvedFontWeight,
-                ...(wantsItalic ? { fontStyle: 'italic' as const } : {}),
-              }
-            : {}),
-        },
-        style,
-      ]}
-      {...props}
-    >
-      {renderChildren(
-        children,
-        StyleSheet.flatten(style)?.fontSize ?? resolvedFontSize,
-      )}
-    </UITextView>
+      {...textProps}
+    />
   );
 }
 
