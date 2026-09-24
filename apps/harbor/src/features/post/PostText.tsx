@@ -5,8 +5,6 @@ import { Routes } from '@/src/common/constants/routes';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   Atoms,
-  BorderRadius,
-  Spacing,
   typography,
   useTheme,
   withHexOpacity,
@@ -19,13 +17,7 @@ import {
 import { isWeb } from '@/src/common/util/platform';
 import { type Href, Link } from 'expo-router';
 import { memo, useMemo, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  View,
-  type TextStyle,
-  type ViewStyle,
-} from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
@@ -37,6 +29,11 @@ type MentionTextSegment = Extract<TextSegment, { type: 'alias' | 'identity' }>;
 // Distance from a line's top to its text baseline (NotoSans, per text size):
 // native inline views sit on the baseline, so the box is lifted by this much.
 const MENTION_BASELINE_OFFSET = { regular: 17, large: 20 };
+
+// How far the box's background is inset from the line's top and bottom, so
+// boxes on adjacent lines don't touch. Only the background shrinks: the box
+// keeps its size, so the text neither moves nor clips.
+const MENTION_BACKGROUND_INSET = { top: isWeb ? 2 : 3, bottom: isWeb ? 2 : 1 };
 
 // The person glyph sits off the text's visual center (below it on web, above
 // it on native), so it's nudged by this much; positive moves it down.
@@ -192,16 +189,9 @@ function MentionSegment({
       color="primary_500"
       // `top` rather than a transform: web renders the icon as an inline span,
       // which ignores transforms.
-      style={{ marginRight: Spacing['2xs'], top: MENTION_ICON_SHIFT }}
+      style={[Atoms.mr_2xs, { top: MENTION_ICON_SHIFT }]}
     />
   );
-  const boxStyle: TextStyle & ViewStyle = {
-    // Translucent so the Android selection highlight, drawn under inline views,
-    // shows through. Matches primary_25 on white.
-    backgroundColor: withHexOpacity(theme.palette.primary_500, '14'),
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing['2xs'],
-  };
 
   if (isWeb) {
     return (
@@ -209,14 +199,19 @@ function MentionSegment({
         className="underlineOnHover"
         href={href}
         style={[
-          boxStyle,
+          Atoms.px_2xs,
+          Atoms.relative,
           {
             color: theme.palette.primary_500,
             display: 'inline-block',
+            // Contains the background's negative z-index, so it paints under
+            // this box's text but above the post card.
+            zIndex: 0,
           },
         ]}
         onPress={stopPostCardPress}
       >
+        <MentionBackground />
         {icon}
         {segment.value}
       </Link>
@@ -233,7 +228,7 @@ function MentionSegment({
           <Pressable
             // Link's Slot rejects style arrays on its child.
             style={StyleSheet.flatten([
-              boxStyle,
+              Atoms.px_2xs,
               Atoms.flex_row,
               Atoms.align_center,
               {
@@ -243,6 +238,7 @@ function MentionSegment({
               },
             ])}
           >
+            <MentionBackground />
             {icon}
             <Text variant="secondary" color="primary_500" forceRNText {...size}>
               {segment.value}
@@ -252,6 +248,30 @@ function MentionSegment({
       </View>
       <CopyOnlyText>{segment.value}</CopyOnlyText>
     </>
+  );
+}
+
+function MentionBackground() {
+  const { theme } = useTheme();
+
+  return (
+    <View
+      style={[
+        Atoms.absolute,
+        Atoms.inset_0,
+        Atoms.rounded_sm,
+        {
+          top: MENTION_BACKGROUND_INSET.top,
+          bottom: MENTION_BACKGROUND_INSET.bottom,
+          // Translucent so the Android selection highlight, drawn under inline
+          // views, shows through. Matches primary_25 on white.
+          backgroundColor: withHexOpacity(theme.palette.primary_500, '14'),
+          // On web, positioned elements paint over in-flow text unless sent
+          // back, and a div in a selection adds a line break to copied text.
+          ...(isWeb ? { zIndex: -1 } : {}),
+        },
+      ]}
+    />
   );
 }
 

@@ -348,6 +348,9 @@ const atomStyles = {
   px_0: {
     paddingHorizontal: Spacing['0'],
   },
+  px_2xs: {
+    paddingHorizontal: Spacing['2xs'],
+  },
   px_xs: {
     paddingHorizontal: Spacing.xs,
   },
@@ -656,6 +659,9 @@ const atomStyles = {
 
   mr_0: {
     marginRight: Spacing['0'],
+  },
+  mr_2xs: {
+    marginRight: Spacing['2xs'],
   },
   mr_xs: {
     marginRight: Spacing.xs,
