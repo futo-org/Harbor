@@ -25,10 +25,9 @@ interface IEventRepository {
     suspend fun getByEventKey(key: EventKey): SignedEvent?
 
     /**
-     * Events for an identity, sorted by sequence ascending. Optional
+     * Events for an identity; order is unspecified. Optional
      * [signer] and [collection] narrow the scan. With [headsOnly] return
-     * only the highest-sequence event per (signer, collection) stream —
-     * the anchors for a partial pull.
+     * only the highest-sequence event per (signer, collection) stream.
      */
     suspend fun getByIdentity(
         identity: String,

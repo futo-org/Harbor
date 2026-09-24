@@ -19,7 +19,7 @@ import org.futo.polycentric.ffi.AuthToken
 import org.futo.polycentric.ffi.AuthTokenProvider
 import org.futo.polycentric.ffi.ContentEntry
 import org.futo.polycentric.ffi.ListEventsArgs
-import org.futo.polycentric.ffi.PolycentricCore
+import org.futo.polycentric.ffi.PolycentricCoreInterface
 import org.futo.polycentric.ffi.Query
 import org.futo.polycentric.ffi.SignBytesCallback
 import polycentric.v2.Blob
@@ -44,11 +44,12 @@ import java.util.logging.Logger
  * Thin orchestration shell over the shared Rust protocol engine
  * (rs-core via UniFFI): the core owns sequences, Merkle anchoring,
  * vector clocks, validation, the networked query engine, and gRPC
- * transport (native tonic + TLS — no Kotlin transport code needed).
+ * transport.
+ *
  * This class owns key custody, persistent storage, and control flow.
  */
 class PolycentricClient(
-    val core: PolycentricCore,
+    val core: PolycentricCoreInterface,
     private val storageDriver: IStorageDriver,
     val filestore: IFileStoreDriver,
     seedServers: List<String> = emptyList(),
@@ -60,12 +61,12 @@ class PolycentricClient(
 ) {
     @Volatile
     var currentKeyPair: StoredKeyPair? = null
-        private set
+        internal set
 
     /** Identity key (hex sha256 of genesis Identity doc) the keypair acts as. */
     @Volatile
     var activeIdentityKey: String? = null
-        private set
+        internal set
 
     @Volatile
     var servers: List<String> = seedServers
@@ -143,7 +144,7 @@ class PolycentricClient(
 
         /** Construct and initialize in one step (js-core `PolycentricClient.create`). */
         suspend fun create(
-            core: PolycentricCore,
+            core: PolycentricCoreInterface,
             storageDriver: IStorageDriver,
             filestore: IFileStoreDriver,
             seedServers: List<String> = emptyList(),
@@ -380,20 +381,23 @@ class PolycentricClient(
         queryKey: List<String>? = null,
     ): List<EventBundle> {
         val bytes =
-            core.awaitQuery(
-                Query.ListEvents(
-                    ListEventsArgs(
-                        size = limit,
-                        identity = identity,
-                        collection = collection,
-                        signedBy = signedBy?.toFfi(),
-                        sequenceGt = sequenceGt,
-                        sequenceLt = sequenceLt,
-                        heads = heads.mapNotNull { it.toFfiOrNull() }.ifEmpty { null },
+            coreCall {
+                core.awaitQuery(
+                    Query.ListEvents(
+                        ListEventsArgs(
+                            size = limit,
+                            identity = identity,
+                            collection = collection,
+                            signedBy = signedBy?.toFfi(),
+                            sequenceGt = sequenceGt,
+                            sequenceLt = sequenceLt,
+                            heads = heads.mapNotNull { it.toFfiOrNull() }.ifEmpty { null },
+                        ),
                     ),
-                ),
-                queryKey = queryKey,
-            ) ?: return emptyList()
+                    queryKey = queryKey,
+                    opts = null,
+                )
+            } ?: return emptyList()
         return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
     }
 
@@ -481,7 +485,7 @@ class PolycentricClient(
             pullResult.getOrThrow()
         }
 
-    private suspend fun pull(partial: Boolean): Int {
+    internal suspend fun pull(partial: Boolean): Int {
         val identity = activeIdentityKey ?: throw NoActiveIdentityException()
         val heads =
             if (partial) {
@@ -512,7 +516,7 @@ class PolycentricClient(
      * Absorb errors and return true only when the event is new and added.
      * Discovered blobs are added to [blobs]. (js-core `trySaveBundle`.)
      */
-    private suspend fun trySaveBundle(
+    internal suspend fun trySaveBundle(
         bundle: EventBundle,
         blobs: MutableMap<String, polycentric.v2.Blob>,
     ): Boolean {
@@ -547,7 +551,7 @@ class PolycentricClient(
      * have. (js-core `trySaveContent`.) Content whose bytes do not hash
      * to [Event.content_digest] is rejected.
      */
-    private suspend fun trySaveContent(
+    internal suspend fun trySaveContent(
         event: Event,
         bundle: EventBundle,
         blobs: MutableMap<String, polycentric.v2.Blob>,
