@@ -120,6 +120,9 @@ pub enum StringError<'r> {
 impl<'r> fmt::Display for StringError<'r> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            StringError::TooShort { length: _, min: 1 } => {
+                write!(f, "can't be empty")
+            }
             StringError::TooShort { length, min } => {
                 write!(f, "is too short ({length}), minimum is {min}")
             }
@@ -169,6 +172,9 @@ pub enum SliceError {
 impl fmt::Display for SliceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            SliceError::TooShort { length: _, min: 1 } => {
+                write!(f, "can't be empty")
+            }
             SliceError::TooShort { length, min } => {
                 write!(f, "is too short ({length}), minimum is {min}")
             }
