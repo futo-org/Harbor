@@ -29,6 +29,9 @@ export const EmojiImage = memo(function EmojiImage({
         style={[{ width: size, height: size }, style]}
         accessibilityLabel={sequence}
         testID="emoji"
+        // Inline in text, touches go to the text (a link around the emoji, text
+        // selection) rather than stopping at the image.
+        {...(copyable ? { pointerEvents: 'none' } : {})}
       />
       {copyable ? <CopyOnlyText>{sequence}</CopyOnlyText> : null}
     </>

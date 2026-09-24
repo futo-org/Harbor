@@ -237,12 +237,24 @@ function MentionSegment({
                 transform: [{ translateY: -baselineOffset }],
               },
             ])}
+            // Without it, releasing a long press still fires onPress and opens
+            // the profile.
+            onLongPress={() => {}}
           >
-            <MentionBackground />
-            {icon}
-            <Text variant="secondary" color="primary_500" forceRNText {...size}>
-              {segment.value}
-            </Text>
+            {({ pressed }) => (
+              <>
+                <MentionBackground pressed={pressed} />
+                {icon}
+                <Text
+                  variant="secondary"
+                  color="primary_500"
+                  forceRNText
+                  {...size}
+                >
+                  {segment.value}
+                </Text>
+              </>
+            )}
           </Pressable>
         </Link>
       </View>
@@ -251,7 +263,7 @@ function MentionSegment({
   );
 }
 
-function MentionBackground() {
+function MentionBackground({ pressed = false }: { pressed?: boolean }) {
   const { theme } = useTheme();
 
   return (
@@ -271,7 +283,18 @@ function MentionBackground() {
           ...(isWeb ? { zIndex: -1 } : {}),
         },
       ]}
-    />
+    >
+      {pressed ? (
+        <View
+          style={[
+            Atoms.absolute,
+            Atoms.inset_0,
+            Atoms.rounded_sm,
+            { backgroundColor: 'rgba(0, 0, 0, 0.25)' },
+          ]}
+        />
+      ) : null}
+    </View>
   );
 }
 

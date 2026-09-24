@@ -1,0 +1,32 @@
+diff --git a/ios/RNUITextView.mm b/ios/RNUITextView.mm
+index 7dabee7a6713aa56d19b6cde4357e748a2ec2b64..64dfb4ee5651a1d0bd1331a746cc52c68634dbdf 100644
+--- a/ios/RNUITextView.mm
++++ b/ios/RNUITextView.mm
+@@ -350,6 +350,27 @@ - (void)updateState:(const facebook::react::State::Shared &)state oldState:(cons
+   [self setNeedsDisplay];
+ }
+ 
++// Inline views (React children other than text spans) are mounted under
++// _textView, which covers them and would take every touch. Let them hit-test
++// first, so a Pressable inside one receives its touches.
++- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
++{
++  UIView *hitView = [super hitTest:point withEvent:event];
++  if (![hitView isDescendantOfView:_textView]) {
++    return hitView;
++  }
++  for (UIView *subview in [self.subviews reverseObjectEnumerator]) {
++    if (subview == _textView || subview == _view || [subview isKindOfClass:[RNUITextViewChild class]]) {
++      continue;
++    }
++    UIView *inlineHitView = [subview hitTest:[subview convertPoint:point fromView:self] withEvent:event];
++    if (inlineHitView) {
++      return inlineHitView;
++    }
++  }
++  return hitView;
++}
++
+ // MARK: - UIGestureRecognizerDelegate
+ 
+ - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
