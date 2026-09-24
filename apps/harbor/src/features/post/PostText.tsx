@@ -2,6 +2,7 @@ import Icon from '@/src/common/components/Icon';
 import { Text } from '@/src/common/components/primitives';
 import { CopyOnlyText } from '@/src/common/components/primitives/CopyOnlyText';
 import { Routes } from '@/src/common/constants/routes';
+import { NOOP_SYNC } from '@/src/features/feed/hooks/types';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   Atoms,
@@ -164,12 +165,6 @@ function Segment({
   );
 }
 
-/**
- * A mention as a bordered box whose text sits exactly where the same text
- * would sit inline. On web it's an inline-block anchor sharing the parent's
- * line height, so its baseline matches. On native it's an inline view lifted
- * off the baseline it's pinned to.
- */
 function MentionSegment({
   segment,
   size,
@@ -187,9 +182,7 @@ function MentionSegment({
       name="person"
       size={10}
       color="primary_500"
-      // `top` rather than a transform: web renders the icon as an inline span,
-      // which ignores transforms.
-      style={[Atoms.mr_2xs, { top: MENTION_ICON_SHIFT }]}
+      style={[Atoms.mr_2xs, styles.mentionIcon]}
     />
   );
 
@@ -201,13 +194,8 @@ function MentionSegment({
         style={[
           Atoms.px_2xs,
           Atoms.relative,
-          {
-            color: theme.palette.primary_500,
-            display: 'inline-block',
-            // Contains the background's negative z-index, so it paints under
-            // this box's text but above the post card.
-            zIndex: 0,
-          },
+          styles.webMentionLink,
+          { color: theme.palette.primary_500 },
         ]}
         onPress={stopPostCardPress}
       >
@@ -222,11 +210,9 @@ function MentionSegment({
 
   return (
     <>
-      {/* Zero height so the box can't stretch the line it sits on. */}
-      <View style={{ height: 0 }}>
+      <View style={styles.nativeMentionAnchor}>
         <Link href={href} asChild onPress={stopPostCardPress}>
           <Pressable
-            // Link's Slot rejects style arrays on its child.
             style={StyleSheet.flatten([
               Atoms.px_2xs,
               Atoms.flex_row,
@@ -237,9 +223,9 @@ function MentionSegment({
                 transform: [{ translateY: -baselineOffset }],
               },
             ])}
-            // Without it, releasing a long press still fires onPress and opens
-            // the profile.
-            onLongPress={() => {}}
+            // Without this, releasing a long press still fires onPress and
+            // opens the profile.
+            onLongPress={NOOP_SYNC}
           >
             {({ pressed }) => (
               <>
@@ -272,15 +258,11 @@ function MentionBackground({ pressed = false }: { pressed?: boolean }) {
         Atoms.absolute,
         Atoms.inset_0,
         Atoms.rounded_sm,
+        styles.mentionBackground,
         {
-          top: MENTION_BACKGROUND_INSET.top,
-          bottom: MENTION_BACKGROUND_INSET.bottom,
           // Translucent so the Android selection highlight, drawn under inline
           // views, shows through. Matches primary_25 on white.
           backgroundColor: withHexOpacity(theme.palette.primary_500, '14'),
-          // On web, positioned elements paint over in-flow text unless sent
-          // back, and a div in a selection adds a line break to copied text.
-          ...(isWeb ? { zIndex: -1 } : {}),
         },
       ]}
     >
@@ -290,7 +272,7 @@ function MentionBackground({ pressed = false }: { pressed?: boolean }) {
             Atoms.absolute,
             Atoms.inset_0,
             Atoms.rounded_sm,
-            { backgroundColor: 'rgba(0, 0, 0, 0.25)' },
+            styles.mentionPressedHighlight,
           ]}
         />
       ) : null}
@@ -323,3 +305,25 @@ function buildSegmentHref(segment: LinkSegment): Href {
       return Routes.tabs.profile(segment.identity);
   }
 }
+
+const styles = StyleSheet.create({
+  // `top` rather than a transform: web renders the icon as an inline span,
+  // which ignores transforms.
+  mentionIcon: { top: MENTION_ICON_SHIFT },
+  webMentionLink: {
+    display: 'inline-block',
+    // Contains the background's negative z-index, so it paints under this
+    // box's text but above the post card.
+    zIndex: 0,
+  },
+  // Zero height so the box can't stretch the line it sits on.
+  nativeMentionAnchor: { height: 0 },
+  mentionBackground: {
+    top: MENTION_BACKGROUND_INSET.top,
+    bottom: MENTION_BACKGROUND_INSET.bottom,
+    // On web, positioned elements paint over in-flow text unless sent back.
+    ...(isWeb ? { zIndex: -1 } : {}),
+  },
+  // uitextview's press highlight on links.
+  mentionPressedHighlight: { backgroundColor: 'rgba(0, 0, 0, 0.25)' },
+});

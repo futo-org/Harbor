@@ -1,4 +1,5 @@
 import { UITextView } from '@bsky.app/react-native-uitextview';
+import { StyleSheet } from 'react-native';
 
 /**
  * Invisible, near-zero-width real text placed next to an inline view (a
@@ -10,8 +11,10 @@ export function CopyOnlyText({ children }: { children: string }) {
   return (
     // UITextView rather than our Text, so it inherits the parent's line height
     // instead of setting its own.
-    <UITextView style={{ color: 'transparent', fontSize: 0.01 }}>
-      {children}
-    </UITextView>
+    <UITextView style={styles.copyOnlyText}>{children}</UITextView>
   );
 }
+
+const styles = StyleSheet.create({
+  copyOnlyText: { color: 'transparent', fontSize: 0.01 },
+});
