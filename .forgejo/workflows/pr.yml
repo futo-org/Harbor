@@ -233,7 +233,6 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.app_lint
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.forgejo/actions/setup-pnpm
@@ -365,6 +364,24 @@ jobs:
           name: junit-app
           path: apps/harbor/junit.xml
           retention-days: 7
+
+  app-typecheck:
+    name: Typecheck app code
+    needs: [changes, sdks]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.app_typecheck && needs.sdks.result == 'success' }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.forgejo/actions/sdk-artifacts
+      - uses: ./.forgejo/actions/setup-pnpm
+        with:
+          install-args: --filter polycentric-app...
+      # The typed routes (.expo/types) are gitignored; expo start writes them locally.
+      - name: Generate typed routes
+        run: pnpm -C apps/harbor exec expo customize tsconfig.json
+      - name: Typecheck
+        run: pnpm --filter polycentric-app typecheck
 
   # Packages -----------------------------------------------------------------
   # The rs-core libraries, unless the registry has them for these sources.
@@ -788,6 +805,7 @@ jobs:
       - js-packages
       - scraper
       - app
+      - app-typecheck
       - wasm
       - android
       - ios
