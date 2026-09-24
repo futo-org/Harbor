@@ -8,7 +8,9 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use common_kafka::FutureRecord;
 use entity::event;
-use polycentric_common::models::{collections, protos_v2::Blob};
+use polycentric_common::models::collections;
+use polycentric_common::models::protos_v2::Blob;
+use polycentric_common::models::validate::Validate;
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
@@ -23,9 +25,8 @@ use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::attributed_to::To;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
-    Application, AttributedTo, Content, Delete, Event, EventBundle, Image,
-    ImageSet, Link, Post, PublicKey, PutEventError, PutEventsRequest,
-    PutEventsResponse,
+    AttributedTo, Content, Delete, Event, EventBundle, Image, ImageSet, Link,
+    Post, PublicKey, PutEventError, PutEventsRequest, PutEventsResponse,
 };
 
 /// Ingest a batch of signed events. Each event is processed in
@@ -106,7 +107,8 @@ async fn process_event(
             tracing::debug!(error = %e, "put_events decode error");
             Status::invalid_argument("signed event bytes invalid")
         })?;
-    validate_event(&event)?;
+    Validate::validate(&event)
+        .map_err(|err| Status::invalid_argument(format!("event {err}")))?;
     let collection = event.key.as_ref().map(|k| k.collection).unwrap_or(0);
 
     let key = event
@@ -305,28 +307,6 @@ async fn process_event(
 
 fn banned_error() -> Status {
     Status::permission_denied("identity is banned on this server")
-}
-
-fn validate_event(event: &Event) -> Result<(), Status> {
-    if let Some(Application {
-        name,
-        id,
-        version,
-        url,
-    }) = &event.application
-    {
-        validate_string(name, "event application name", Some(1), Some(200))?;
-        validate_string(id, "event application id", Some(1), Some(200))?;
-        validate_string(
-            version,
-            "event application version",
-            Some(1),
-            Some(200),
-        )?;
-        validate_string(url, "event application url", Some(1), Some(200))?;
-    }
-
-    Ok(())
 }
 
 fn validate_content(content: &Content, collection: i32) -> Result<(), Status> {

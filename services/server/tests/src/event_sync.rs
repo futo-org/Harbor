@@ -822,7 +822,7 @@ async fn validation_missing_event_key() {
         result,
         &[ExpectError {
             bundle_index: 0,
-            kind: ExpectErrorKind::MsgContains("event key missing"),
+            kind: ExpectErrorKind::MsgContains("event key is missing"),
         }],
     );
 }
@@ -934,7 +934,9 @@ async fn validation_missing_event_signed_by() {
         result,
         &[ExpectError {
             bundle_index: 0,
-            kind: ExpectErrorKind::MsgContains("event key signed by missing"),
+            kind: ExpectErrorKind::MsgContains(
+                "event key signed by is missing",
+            ),
         }],
     );
 }
@@ -979,7 +981,7 @@ async fn validation_invalid_event_signed_by_key_type() {
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
-                "signed event signature invalid",
+                "event key signed by key type is invalid",
             ),
         }],
     );
@@ -1010,7 +1012,7 @@ async fn validation_invalid_event_signed_by_key() {
         0,
     );
     event.key.as_mut().unwrap().signed_by.as_mut().unwrap().key =
-        b"invalid".into();
+        b"incorrect01234567890123456789012".into();
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -1063,7 +1065,9 @@ async fn validation_missing_event_content_digest() {
         result,
         &[ExpectError {
             bundle_index: 0,
-            kind: ExpectErrorKind::MsgContains("event content digest missing"),
+            kind: ExpectErrorKind::MsgContains(
+                "event content digest is missing",
+            ),
         }],
     );
 }
@@ -1101,7 +1105,7 @@ async fn validation_invalid_event_content_digest_type() {
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
-                "unsupported content digest type: 999",
+                "event content digest type is invalid",
             ),
         }],
     );
@@ -1131,7 +1135,9 @@ async fn validation_invalid_event_content_digest_value() {
         digest,
         0,
     );
-    event.content_digest.as_mut().unwrap().value = b"incorrect".into();
+
+    event.content_digest.as_mut().unwrap().value =
+        b"incorrect01234567890123456789012".into();
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -1217,7 +1223,7 @@ async fn validation_invalid_event_application_name_too_long() {
         0,
     );
     event.application = Some(Application {
-        name: "I".repeat(201),
+        name: "I".repeat(51),
         id: "integration-tests".to_owned(),
         version: "0.0.0".to_owned(),
         url: "http://example.com".to_owned(),
@@ -1230,7 +1236,7 @@ async fn validation_invalid_event_application_name_too_long() {
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
-                "event application name too long",
+                "event application name is too long (51), maximum is 50",
             ),
         }],
     );
@@ -1317,7 +1323,9 @@ async fn validation_invalid_event_application_id_too_long() {
         result,
         &[ExpectError {
             bundle_index: 0,
-            kind: ExpectErrorKind::MsgContains("event application id too long"),
+            kind: ExpectErrorKind::MsgContains(
+                "event application id is too long",
+            ),
         }],
     );
 }
@@ -1404,7 +1412,7 @@ async fn validation_invalid_event_application_version_too_long() {
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
-                "event application version too long",
+                "event application version is too long",
             ),
         }],
     );
@@ -1482,7 +1490,7 @@ async fn validation_invalid_event_application_url_too_long() {
         name: "Integration Tests".to_owned(),
         id: "integration-tests".to_owned(),
         version: "0.0.0".to_owned(),
-        url: "h".repeat(201),
+        url: "h".repeat(101),
     });
     client.push_event_bundle2(event, content_bytes);
 
@@ -1492,7 +1500,7 @@ async fn validation_invalid_event_application_url_too_long() {
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
-                "event application url too long",
+                "event application url is too long (101), maximum is 100",
             ),
         }],
     );
