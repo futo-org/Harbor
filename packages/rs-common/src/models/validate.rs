@@ -20,22 +20,22 @@ pub(crate) fn validate_string(
     input: &str,
     min_len: Option<usize>,
     max_len: Option<usize>,
-) -> Result<(), StringValidationError> {
+) -> Result<(), StringError> {
     let length = input.len();
     if let Some(min) = min_len
         && length < min
     {
-        Err(StringValidationError::TooSmall { length, min })
+        Err(StringError::TooSmall { length, min })
     } else if let Some(max) = max_len
         && length > max
     {
-        Err(StringValidationError::TooLarge { length, max })
+        Err(StringError::TooLarge { length, max })
     } else {
         Ok(())
     }
 }
 
-pub enum StringValidationError {
+pub enum StringError {
     TooSmall { length: usize, min: usize },
     TooLarge { length: usize, max: usize },
 }

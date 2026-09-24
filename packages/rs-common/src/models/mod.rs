@@ -31,7 +31,7 @@ pub mod query_engine_stats;
 pub mod signed_event;
 pub mod signed_issuer_state;
 pub mod signed_message;
-pub mod validation;
+pub mod validate;
 pub mod vector_clock;
 
 pub use traits::Serializable;
