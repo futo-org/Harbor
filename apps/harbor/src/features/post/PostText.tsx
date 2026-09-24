@@ -261,8 +261,11 @@ function MentionBackground({ pressed = false }: { pressed?: boolean }) {
         styles.mentionBackground,
         {
           // Translucent so the Android selection highlight, drawn under inline
-          // views, shows through. Matches primary_25 on white.
-          backgroundColor: withHexOpacity(theme.palette.primary_500, '14'),
+          // views, shows through.
+          backgroundColor: withHexOpacity(
+            theme.palette.primary_500,
+            theme.scheme === 'dark' ? '25' : '14',
+          ),
         },
       ]}
     >
