@@ -4,6 +4,7 @@ import {
   SHEET_FILE,
   SHEET_INDEX,
 } from '@/src/common/emoji/twemoji/sheet';
+import { CopyOnlyText } from '@/src/common/components/primitives/CopyOnlyText';
 import { TWEMOJI_URL, twemojiCode } from '@/src/common/util/emoji';
 import {
   type CSSProperties,
@@ -17,6 +18,8 @@ type Props = {
   sequence: string;
   size: number;
   style?: StyleProp<ImageStyle>;
+  // Inline in selectable text: copying a selection includes the emoji.
+  copyable?: boolean;
 };
 
 // The callers' React Native styles (margins, translateY) as CSS.
@@ -93,6 +96,7 @@ export const EmojiImage = memo(function EmojiImage({
   sequence,
   size,
   style,
+  copyable,
 }: Props) {
   const code = twemojiCode(sequence);
   const cell = SHEET_INDEX[code];
@@ -104,53 +108,59 @@ export const EmojiImage = memo(function EmojiImage({
   const showImage = cell === undefined ? loaded === src : ready;
   const scale = size / SHEET_CELL;
   return (
-    <span
-      role="img"
-      aria-label={sequence}
-      style={{
-        position: 'relative',
-        display: 'inline-block',
-        width: size,
-        height: size,
-        verticalAlign: 'middle',
-        ...toCss(style),
-      }}
-    >
-      {!showImage && <Glyph sequence={sequence} size={size} />}
-      {cell !== undefined
-        ? showImage && (
-            <span
-              data-testid="emoji"
-              style={{
-                display: 'block',
-                width: size,
-                height: size,
-                backgroundImage: `url(${SHEET_URL})`,
-                backgroundSize: `${SHEET_COLUMNS * SHEET_CELL * scale}px auto`,
-                backgroundPosition: `${-(cell % SHEET_COLUMNS) * size}px ${-Math.floor(cell / SHEET_COLUMNS) * size}px`,
-              }}
-            />
-          )
-        : missing !== src && (
-            <img
-              src={src}
-              width={size}
-              height={size}
-              decoding="async"
-              draggable={false}
-              alt=""
-              data-testid="emoji"
-              style={{
-                display: 'block',
-                width: size,
-                height: size,
-                objectFit: 'contain',
-                opacity: showImage ? 1 : 0,
-              }}
-              onLoad={() => setLoaded(src)}
-              onError={() => setMissing(src)}
-            />
-          )}
-    </span>
+    <>
+      <span
+        role="img"
+        aria-label={sequence}
+        style={{
+          position: 'relative',
+          display: 'inline-block',
+          width: size,
+          height: size,
+          verticalAlign: 'middle',
+          // Keeps the image's inner elements out of copied text, where they
+          // add a line break; CopyOnlyText carries the emoji.
+          ...(copyable ? { userSelect: 'none' } : {}),
+          ...toCss(style),
+        }}
+      >
+        {!showImage && <Glyph sequence={sequence} size={size} />}
+        {cell !== undefined
+          ? showImage && (
+              <span
+                data-testid="emoji"
+                style={{
+                  display: 'block',
+                  width: size,
+                  height: size,
+                  backgroundImage: `url(${SHEET_URL})`,
+                  backgroundSize: `${SHEET_COLUMNS * SHEET_CELL * scale}px auto`,
+                  backgroundPosition: `${-(cell % SHEET_COLUMNS) * size}px ${-Math.floor(cell / SHEET_COLUMNS) * size}px`,
+                }}
+              />
+            )
+          : missing !== src && (
+              <img
+                src={src}
+                width={size}
+                height={size}
+                decoding="async"
+                draggable={false}
+                alt=""
+                data-testid="emoji"
+                style={{
+                  display: 'block',
+                  width: size,
+                  height: size,
+                  objectFit: 'contain',
+                  opacity: showImage ? 1 : 0,
+                }}
+                onLoad={() => setLoaded(src)}
+                onError={() => setMissing(src)}
+              />
+            )}
+      </span>
+      {copyable ? <CopyOnlyText>{sequence}</CopyOnlyText> : null}
+    </>
   );
 });
