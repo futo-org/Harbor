@@ -9,6 +9,7 @@ import {
   typography,
   useTheme,
   withHexOpacity,
+  ZIndex,
 } from '@/src/common/theme';
 import {
   parseTextLinks,
@@ -255,8 +256,7 @@ function MentionBackground({ pressed = false }: { pressed?: boolean }) {
   return (
     <View
       style={[
-        Atoms.absolute,
-        Atoms.inset_0,
+        StyleSheet.absoluteFill,
         Atoms.rounded_sm,
         styles.mentionBackground,
         {
@@ -269,10 +269,10 @@ function MentionBackground({ pressed = false }: { pressed?: boolean }) {
       {pressed ? (
         <View
           style={[
-            Atoms.absolute,
-            Atoms.inset_0,
+            StyleSheet.absoluteFill,
             Atoms.rounded_sm,
-            styles.mentionPressedHighlight,
+            // uitextview's press highlight on links: black at 25%.
+            { backgroundColor: withHexOpacity(theme.palette.black, '40') },
           ]}
         />
       ) : null}
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     display: 'inline-block',
     // Contains the background's negative z-index, so it paints under this
     // box's text but above the post card.
-    zIndex: 0,
+    zIndex: ZIndex.base,
   },
   // Zero height so the box can't stretch the line it sits on.
   nativeMentionAnchor: { height: 0 },
@@ -322,8 +322,6 @@ const styles = StyleSheet.create({
     top: MENTION_BACKGROUND_INSET.top,
     bottom: MENTION_BACKGROUND_INSET.bottom,
     // On web, positioned elements paint over in-flow text unless sent back.
-    ...(isWeb ? { zIndex: -1 } : {}),
+    ...(isWeb ? { zIndex: ZIndex.behind } : {}),
   },
-  // uitextview's press highlight on links.
-  mentionPressedHighlight: { backgroundColor: 'rgba(0, 0, 0, 0.25)' },
 });

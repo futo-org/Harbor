@@ -71,6 +71,12 @@ export const Breakpoints = {
  * the gaps leave room for new layers.
  */
 export const ZIndex = {
+  // Behind in-flow siblings, within the nearest stacking context (a web
+  // background layer under its box's text).
+  behind: -1,
+  // Opens a stacking context without raising the element, so a `behind`
+  // child stays above what's under the element.
+  base: 0,
   // Above static siblings within a screen (sticky headers, etc).
   raised: 1,
   // Inline (native) tooltip bubble.
