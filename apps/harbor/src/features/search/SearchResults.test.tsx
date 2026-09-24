@@ -269,9 +269,7 @@ describe('SearchResults typeahead', () => {
 describe('SearchResults full search', () => {
   it('shows the tabs', async () => {
     const { screen } = await renderResults({ submitted: true });
-    expect(screen.getByText('Top')).toBeTruthy();
-    expect(screen.getByText('Popular')).toBeTruthy();
-    expect(screen.getByText('Latest')).toBeTruthy();
+    expect(screen.getByText('Posts')).toBeTruthy();
     expect(screen.getByText('People')).toBeTruthy();
   });
 
@@ -279,11 +277,7 @@ describe('SearchResults full search', () => {
     // The pager pairs each page with the tab at the same index, so a page in
     // the wrong place would swipe to the wrong results.
     await renderResults({ submitted: true });
-    expect(mockCapturedFeeds.map((feed) => feed.__sort)).toEqual([
-      'top',
-      'popular',
-      'latest',
-    ]);
+    expect(mockCapturedFeeds.map((feed) => feed.__sort)).toEqual(['top']);
   });
 
   it('reports tab changes', async () => {
