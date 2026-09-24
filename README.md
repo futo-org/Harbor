@@ -15,11 +15,11 @@ Harbor implements the [Polycentric Protocol](https://join.harbor.social/docs/pro
 
 ## Docs
 
-- [Development setup](https://join.harbor.social/docs/development/setup)
-- [Project structure](https://join.harbor.social/docs/development/project-structure)
-- [Running a server](https://join.harbor.social/docs/running-a-server)
+- [Development setup](https://join.harbor.social/docs/developer/setup)
+- [Project structure](https://join.harbor.social/docs/developer/project-structure)
+- [Running a server](https://join.harbor.social/docs/guides/running-a-server)
 - [Polycentric Protocol](https://join.harbor.social/docs/protocol/overview)
-- [Contributing](https://join.harbor.social/docs/contributing)
+- [Contributing](https://join.harbor.social/docs/support#contributing)
 
 The docs site itself is in [`docs/`](docs).
 
