@@ -361,6 +361,7 @@ fn validate_content(content: &Content, collection: i32) -> Result<(), Status> {
                                 ));
                             };
                             // TODO: validate digest.
+                            _ = digest;
                             validate_string(
                                 mime_type,
                                 "post image blob mime type",

@@ -227,13 +227,13 @@ impl Mutation {
                         event::Column::Identity.into(),
                     );
                     let maybe_query = Mutation::update_cache_query(
-                            &mut with,
-                            &content_body,
-                            event_id_identity,
-                        ).map_err(|err| {
-                            tracing::error!(error = %err, "failed to create query to update cache tables");
-                            Status::internal("internal server error")
-                        })?;
+                        &mut with,
+                        &content_body,
+                        event_id_identity,
+                    ).map_err(|err| {
+                        tracing::error!(error = %err, "failed to create query to update cache tables");
+                        Status::internal("internal server error")
+                    })?;
                     if let Some(query) = maybe_query {
                         let mut cte = CommonTableExpression::new();
                         cte.table_name("inserted_cache").query(query);
