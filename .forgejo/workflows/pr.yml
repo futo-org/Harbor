@@ -571,8 +571,8 @@ jobs:
           export-cache: 'true'
           build-args: |
             APP_VERSION=${{ steps.version.outputs.app_version }}
-            EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS }}
-            EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS }}
+            EXPO_PUBLIC_HARBOR_SEED_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS }}
+            EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS }}
             SKIP_WORKSPACE_BUILD=1
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
@@ -593,8 +593,8 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust-dind:${{ needs.changes.outputs.images_tag }}
     timeout-minutes: 60
     env:
-      POLYCENTRIC_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
-      POLYCENTRIC_SERVER_FALLBACK_IMAGE: ${{ needs.changes.outputs.registry }}/server:staging
+      HARBOR_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
+      HARBOR_SERVER_FALLBACK_IMAGE: ${{ needs.changes.outputs.registry }}/server:staging
     steps:
       - uses: actions/checkout@v4
       - uses: ./.forgejo/actions/rust-env
@@ -661,7 +661,7 @@ jobs:
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     env:
       PUPPETEER_SKIP_DOWNLOAD: '1'
-      POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+      HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
     steps:
       - name: Install Chromium
         run: apt-get update && apt-get install -y --no-install-recommends chromium && rm -rf /var/lib/apt/lists/*
@@ -695,7 +695,7 @@ jobs:
         image: ${{ needs.changes.outputs.registry }}/web:${{ github.sha }}
         env:
           EXPO_PUBLIC_APP_VARIANT: staging
-          EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS: https://srv.staging.harbor.social,https://srv.staging.polycentric.io
+          EXPO_PUBLIC_HARBOR_SEED_SERVERS: https://srv.staging.harbor.social,https://srv.staging.polycentric.io
     env:
       MAESTRO_WEB_URL: http://web:8080
       MAESTRO_BROWSER: /usr/local/bin/e2e-chromium

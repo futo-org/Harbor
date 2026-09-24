@@ -7,7 +7,7 @@
 # runs `cargo test -p integration-tests`, then cleans up.
 #
 # Usage:
-#   .forgejo/scripts/integration-server.sh              # full run
+#   .forgejo/scripts/integration-server.sh               # full run
 #   .forgejo/scripts/integration-server.sh --no-deps     # skip docker services (already up)
 #   .forgejo/scripts/integration-server.sh --no-cleanup  # keep server + docker running
 #   .forgejo/scripts/integration-server.sh --ci          # CI mode
@@ -148,21 +148,21 @@ if [ "$CI_MODE" = true ]; then
   docker network connect "$NETWORK" "$(self_container)"
 
   echo "==> Starting server and workers…"
-  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   # The mention integration test serves the alias document from a mock server
   # in this job container; the workers reach it over the stack network (see
   # ALIAS_MOCK_PORT in services/server/tests/src/notifications.rs).
   JOB_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' "$(self_container)")
-  export POLYCENTRIC_ALIAS_TEST_ORIGIN="http://${JOB_IP}:3999"
-  echo "    alias test origin: ${POLYCENTRIC_ALIAS_TEST_ORIGIN}"
+  export HARBOR_ALIAS_TEST_ORIGIN="http://${JOB_IP}:3999"
+  echo "    alias test origin: ${HARBOR_ALIAS_TEST_ORIGIN}"
   # server-workers materializes notifications (the mention/reply integration
   # tests poll for them); it is behind the `push` profile in compose.yml.
   export COMPOSE_PROFILES=push
   # --no-deps avoids pulling in the `scraper` dependency, which requires
   # NET_ADMIN for its nftables egress firewall and cannot start in CI's
   # Docker-in-Docker environment.
-  if [ -n "${POLYCENTRIC_SERVER_IMAGE:-}" ]; then
-    docker pull -q "$POLYCENTRIC_SERVER_IMAGE"
+  if [ -n "${HARBOR_SERVER_IMAGE:-}" ]; then
+    docker pull -q "$HARBOR_SERVER_IMAGE"
     docker compose up -d --no-deps --no-build --wait server server-workers
   else
     docker compose up -d --no-deps --build --wait server server-workers
@@ -176,11 +176,11 @@ if [ "$CI_MODE" = true ]; then
   SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' harbor-server-1 2>/dev/null)
   if [ -n "$SERVER_IP" ]; then
     SERVER_HOST=$SERVER_IP
-    export POLYCENTRIC_TEST_SERVER="http://${SERVER_IP}:3000"
+    export HARBOR_TEST_SERVER="http://${SERVER_IP}:3000"
     echo "    server IP: ${SERVER_IP}"
   else
-    export POLYCENTRIC_TEST_SERVER="${POLYCENTRIC_TEST_SERVER:-http://localhost:3000}"
-    echo "    (no server IP found; using ${POLYCENTRIC_TEST_SERVER})"
+    export HARBOR_TEST_SERVER="${HARBOR_TEST_SERVER:-http://localhost:3000}"
+    echo "    (no server IP found; using ${HARBOR_TEST_SERVER})"
   fi
 
   echo "    waiting for server (port ${SERVER_HOST}:3000)…"
@@ -210,18 +210,18 @@ else
   echo "    migrations applied"
 
   echo "==> Starting server…"
-  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   export RUST_LOG="${RUST_LOG:-info}"
-  export DATABASE_URL="${DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
-  export CONTENT_BLOB_OS_BUCKET="${CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}"
-  export CONTENT_BLOB_OS_ENDPOINT="${CONTENT_BLOB_OS_ENDPOINT:-http://localhost:9000}"
-  export CONTENT_BLOB_OS_FORCE_PATH_STYLE="${CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}"
-  export CONTENT_BLOB_OS_ACCESS_KEY="${CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}"
-  export CONTENT_BLOB_OS_SECRET_KEY="${CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}"
+  export HARBOR_DATABASE_URL="${HARBOR_DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
+  export HARBOR_CONTENT_BLOB_OS_BUCKET="${HARBOR_CONTENT_BLOB_OS_BUCKET:-harbor-blobs}"
+  export HARBOR_CONTENT_BLOB_OS_ENDPOINT="${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-http://localhost:9000}"
+  export HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE="${HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}"
+  export HARBOR_CONTENT_BLOB_OS_ACCESS_KEY="${HARBOR_CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}"
+  export HARBOR_CONTENT_BLOB_OS_SECRET_KEY="${HARBOR_CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}"
   # Kafka is reached on the EXTERNAL listener for local connections.
-  export POLYCENTRIC_KAFKA_BROKERS="${POLYCENTRIC_KAFKA_BROKERS:-localhost:9092}"
+  export HARBOR_KAFKA_BROKERS="${HARBOR_KAFKA_BROKERS:-localhost:9092}"
   # The test crate reads this to know where to reach the server.
-  export POLYCENTRIC_TEST_SERVER="${POLYCENTRIC_TEST_SERVER:-http://localhost:3000}"
+  export HARBOR_TEST_SERVER="${HARBOR_TEST_SERVER:-http://localhost:3000}"
 
   cargo run -p server &
   SERVER_PID=$!
