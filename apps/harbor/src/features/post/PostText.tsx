@@ -35,13 +35,13 @@ const MENTION_BASELINE_OFFSET = { regular: 17, large: 20 };
 // How far the box's background is inset from the line's top and bottom, so
 // boxes on adjacent lines don't touch.
 const MENTION_BACKGROUND_INSET = {
-  regular: { top: 2, bottom: isWeb ? 2 : 1 },
-  large: { top: 3, bottom: isWeb ? 4 : 1 },
+  regular: { top: 2, bottom: 1 },
+  large: { top: 3, bottom: isWeb ? 3 : 1 },
 };
 
 // The person glyph sits off the text's visual center (below it on web, above
 // it on native), so it's nudged by this much; positive moves it down.
-const MENTION_ICON_SHIFT = isWeb ? -1 : 1;
+const MENTION_ICON_SHIFT = isWeb ? 0 : 1;
 
 /**
  * Renders post body text with tappable links and mentions.
