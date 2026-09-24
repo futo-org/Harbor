@@ -426,6 +426,10 @@ export function useComposer({
   };
 }
 
+/**
+ * Adjust some local feed/thread caches and counters to account for this new
+ * post.
+ */
 function injectLocally(
   identity: string,
   bundle: v2.EventBundle,
@@ -444,6 +448,10 @@ function injectLocally(
   injectPostIntoFeedCache(feedQueryKeys.explore(identity), bundle);
 }
 
+/**
+ * After the new post has been synced to servers, refresh queries
+ * that could contain this post by fetching new server responses.
+ */
 async function refreshAfterPosting(
   client: PolycentricClient,
   identity: string,
