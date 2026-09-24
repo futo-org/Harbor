@@ -5,7 +5,7 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::models::application;
+use crate::models::{application, public_key};
 
 /// Validate a value.
 pub trait Validate {
@@ -23,7 +23,14 @@ pub trait Validate {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ValidationError {
+    PublicKey(public_key::ValidationError),
     Application(application::ValidationError),
+}
+
+impl From<public_key::ValidationError> for ValidationError {
+    fn from(err: public_key::ValidationError) -> ValidationError {
+        ValidationError::PublicKey(err)
+    }
 }
 
 impl From<application::ValidationError> for ValidationError {
@@ -35,6 +42,7 @@ impl From<application::ValidationError> for ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            ValidationError::PublicKey(err) => write!(f, "public key {err}"),
             ValidationError::Application(err) => write!(f, "application {err}"),
         }
     }
@@ -95,6 +103,54 @@ impl<'r> fmt::Display for StringError<'r> {
                 write!(f, "is too long ({length}), maximum is {max}")
             }
             StringError::FailsRegex { regex } => write!(f, "doesn't match the regex '{regex}'"),
+        }
+    }
+}
+
+/// Validate a slice.
+pub(crate) fn slice<T>(input: &[T], config: SliceConfig) -> Result<(), SliceError> {
+    let length = input.len();
+    if let Some(min) = config.min_len
+        && length < min
+    {
+        Err(SliceError::TooShort { length, min })
+    } else if let Some(max) = config.max_len
+        && length > max
+    {
+        Err(SliceError::TooLong { length, max })
+    } else {
+        Ok(())
+    }
+}
+
+/// Argument to [`validate::slice`].
+///
+/// [`validate::slice`]: slice()
+#[derive(Debug, Default)]
+#[non_exhaustive]
+pub(crate) struct SliceConfig {
+    pub(crate) min_len: Option<usize>,
+    pub(crate) max_len: Option<usize>,
+}
+
+/// Error returned by [`validate::slice`].
+///
+/// [`validate::slice`]: slice()
+#[derive(Debug)]
+pub enum SliceError {
+    TooShort { length: usize, min: usize },
+    TooLong { length: usize, max: usize },
+}
+
+impl fmt::Display for SliceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SliceError::TooShort { length, min } => {
+                write!(f, "is too short ({length}), minimum is {min}")
+            }
+            SliceError::TooLong { length, max } => {
+                write!(f, "is too long ({length}), maximum is {max}")
+            }
         }
     }
 }

@@ -1,12 +1,15 @@
-use crate::error::{Error, Result};
-use crate::models::protos_v2::{KeyType, PublicKey};
-use crate::models::traits::Serializable;
-use crate::platform::error::PlatformError;
-use crate::signing;
+use std::fmt;
+
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use prost::Message;
-use std::fmt;
+
+use crate::error::Error;
+use crate::models::Serializable;
+use crate::models::protos_v2::{KeyType, PublicKey};
+use crate::models::validate::{self, SliceConfig, Validate, url_regex};
+use crate::platform::error::PlatformError;
+use crate::signing;
 
 impl PublicKey {
     /// Gets the raw key bytes
@@ -25,7 +28,7 @@ impl PublicKey {
     }
 
     /// Validates that the key has the expected length
-    pub fn validate_length(&self, expected: usize) -> Result<()> {
+    pub fn validate_length(&self, expected: usize) -> Result<(), Error> {
         if self.key.len() != expected {
             return Err(Error::Platform(PlatformError::KeyIncorrectLength {
                 expected,
@@ -36,7 +39,7 @@ impl PublicKey {
     }
 
     /// Validates that the key type is correct
-    pub fn validate_type(&self, _expected: u64) -> Result<()> {
+    pub fn validate_type(&self, _expected: u64) -> Result<(), Error> {
         // TODO: re-enable once `key_type` width settles between v1 (u64) and v2 (i32).
         // if self.key_type != expected {
         //     return Err(Error::Platform(PlatformError::KeyInvalidType {
@@ -74,14 +77,14 @@ impl PublicKey {
 }
 
 impl Serializable for PublicKey {
-    fn to_bytes(&self) -> Result<Vec<u8>> {
+    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .map_err(|e| Error::Platform(PlatformError::SerializationError(e.to_string())))?;
         Ok(buf)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         PublicKey::decode(bytes)
             .map_err(|e| Error::Platform(PlatformError::DeserializationError(e.to_string())))
     }
@@ -94,5 +97,37 @@ impl fmt::Debug for PublicKey {
             .field("key_type", key_type)
             .field("key", &URL_SAFE_NO_PAD.encode(key))
             .finish()
+    }
+}
+
+impl Validate for PublicKey {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        let PublicKey { key_type, key } = self;
+        const ED25519: i32 = KeyType::Ed25519 as i32;
+        let key_len;
+        match *key_type {
+            ED25519 => key_len = 32,
+            _ => return Err(ValidationError::KeyTypeInvalid),
+        }
+        #[rustfmt::skip]
+        validate::slice(key, SliceConfig { min_len: Some(key_len), max_len: Some(key_len), ..Default::default() }) .map_err(ValidationError::Key)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum ValidationError {
+    KeyTypeInvalid,
+    Key(validate::SliceError),
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValidationError::KeyTypeInvalid => write!(f, "key type is invalid"),
+            ValidationError::Key(err) => write!(f, "key {err}"),
+        }
     }
 }
