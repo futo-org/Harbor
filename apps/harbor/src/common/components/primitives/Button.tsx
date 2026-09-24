@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
+export const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
   primary: 'white',
   secondary: 'primary_600',
   tertiary: 'neutral_1000',
@@ -196,7 +196,7 @@ const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
 
-function getVariantStyle(theme: Theme, variant: ButtonVariant) {
+export function getVariantStyle(theme: Theme, variant: ButtonVariant) {
   switch (variant) {
     case 'primary':
       return {

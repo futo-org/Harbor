@@ -23,16 +23,21 @@ import {
 import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FeedPage } from '../feed/FeedPage';
-import { PostSkeletonList } from '../post/PostSkeleton';
 import { useSearchPosts } from './hooks/useSearchPosts';
 import { type UserSearchEntry, useSearchUsers } from './hooks/useSearchUsers';
 
-export type SearchTab = 'top' | 'latest' | 'people';
+export type SearchTab = 'top' | 'popular' | 'latest' | 'people';
 
 /** Page order behind the tab bar. */
-const SEARCH_TABS: readonly SearchTab[] = ['top', 'latest', 'people'];
+const SEARCH_TABS: readonly SearchTab[] = [
+  'top',
+  'popular',
+  'latest',
+  'people',
+];
 const SEARCH_TAB_LABELS: Record<SearchTab, string> = {
   top: 'Top',
+  popular: 'Popular',
   latest: 'Latest',
   people: 'People',
 };
@@ -43,7 +48,7 @@ function PostResultsPage({
   active,
 }: {
   query: string;
-  sort: 'top' | 'latest';
+  sort: 'top' | 'popular' | 'latest';
   /** True for the page being shown; only that page queries. */
   active: boolean;
 }) {
@@ -166,6 +171,11 @@ export function SearchResults({
       renderTabBar={renderTabBar}
     >
       <PostResultsPage query={query} sort="top" active={tab === 'top'} />
+      <PostResultsPage
+        query={query}
+        sort="popular"
+        active={tab === 'popular'}
+      />
       <PostResultsPage query={query} sort="latest" active={tab === 'latest'} />
       <PeopleResultsPage query={query} active={tab === 'people'} />
     </PagerView>
@@ -272,6 +282,7 @@ function UserRow({ identity }: { identity: string }) {
   return (
     <ProfileRow
       identity={identity}
+      noFollowingBadge
       onPress={() => router.push(Routes.tabs.profile(identity))}
       style={{ borderBottomWidth: 1, borderColor: theme.palette.neutral_25 }}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}

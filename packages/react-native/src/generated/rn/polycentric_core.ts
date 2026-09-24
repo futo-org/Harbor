@@ -1954,6 +1954,7 @@ const FfiConverterTypeResolveVerifiedClaimsArgs = (() => {
 
 export enum SearchPostsSort {
     Default,
+    Top,
     Latest
 }
 
@@ -1963,14 +1964,16 @@ const FfiConverterTypeSearchPostsSort = (() => {
         readFromCursor(c: Cursor): TypeName {
             switch (c.readI32()) {
                 case 1: return SearchPostsSort.Default;
-                case 2: return SearchPostsSort.Latest;
+                case 2: return SearchPostsSort.Top;
+                case 3: return SearchPostsSort.Latest;
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
         writeIntoCursor(value: TypeName, c: Cursor): void {
             switch (value) {
                 case SearchPostsSort.Default: return c.writeI32(1);
-                case SearchPostsSort.Latest: return c.writeI32(2);
+                case SearchPostsSort.Top: return c.writeI32(2);
+                case SearchPostsSort.Latest: return c.writeI32(3);
             }
         }
         allocationSize(value: TypeName): number {

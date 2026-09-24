@@ -8,11 +8,10 @@ import {
   Text,
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { truncateName, useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { FetchMode } from '@polycentric/react-native';
+import { Username } from '@/src/features/profile/Username';
 import { router, type Href } from 'expo-router';
 import { memo, useCallback } from 'react';
 import { Pressable, View } from 'react-native';
@@ -31,10 +30,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { theme } = useTheme();
   const { identityKey, isSelf, alias } = useProfileContext();
 
-  const fallbackUsername = useUsername(identityKey);
-  const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
-
-  const username = profile.name ?? fallbackUsername;
+  const profile = useProfile(identityKey);
 
   const displayKey = identityKey ? identityKey.slice(0, 64) : '...';
 
@@ -114,9 +110,12 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
         <View
           style={[Atoms.mt_md, Atoms.gap_xs, Atoms.flex_1, { minWidth: 0 }]}
         >
-          <Text variant="title" fontWeight="bold">
-            {truncateName(username, 32)}
-          </Text>
+          <Username
+            identity={identityKey}
+            numberOfLines={2}
+            variant="title"
+            fontWeight="bold"
+          />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="View identity details"
