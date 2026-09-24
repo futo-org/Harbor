@@ -6,8 +6,8 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { Link, router } from 'expo-router';
+import { Username } from '@/src/features/profile/Username';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -18,14 +18,12 @@ export function IdentitySettingsSheet({
 }) {
   const { theme } = useTheme();
   const client = usePolycentric();
-  const profile = useProfile(identityKey);
 
   const [nameExpanded, setNameExpanded] = useState(false);
 
   const signingKey = client.currentKeyPair?.publicKey
     ? publicKeyToString(client.currentKeyPair.publicKey)
     : '';
-  const displayName = profile.name;
 
   return (
     <Sheet detents={[1]} dismissible>
@@ -38,16 +36,16 @@ export function IdentitySettingsSheet({
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
           <ProfileAvatar identityKey={identityKey} size="massive" />
           <View style={[Atoms.items_center, Atoms.gap_xs]}>
-            <Text
+            <Username
+              identity={identityKey}
               variant="title"
               fontWeight="bold"
-              numberOfLines={nameExpanded ? undefined : 2}
+              // 0 lifts the limit (`undefined` would fall back to Username's default of 1).
+              numberOfLines={nameExpanded ? 0 : 2}
               ellipsizeMode="tail"
               style={[Atoms.text_center, Atoms.max_w_full]}
               onPress={() => setNameExpanded((v) => !v)}
-            >
-              {displayName || 'Anonymous'}
-            </Text>
+            />
           </View>
         </View>
 

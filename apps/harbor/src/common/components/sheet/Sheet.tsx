@@ -54,6 +54,9 @@ type CommonProps = {
   scrollable?: boolean;
   /** Web only: overrides the modal card's default 600px max width. */
   maxWidth?: number;
+  /** Web only: fixed card height instead of content sizing; the viewport
+   * still caps it. */
+  height?: number;
   header?: ReactElement;
   /** Pinned footer element — bottom of the sheet (native) / card (web). */
   footer?: ReactElement;
@@ -219,6 +222,7 @@ function NativeSheet({
   ...props
 }: NativeInternalProps) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const sheetRef = useRef<TrueSheet>(null);
   /** Once the sheet's dismiss animation has run (or is running) we
    * shouldn't loop it again on the follow-up navigation dispatch. */
@@ -310,6 +314,8 @@ function NativeSheet({
       }}
       header={props.header}
       footer={props.footer}
+      // Prevents the inset from applying when the keyboard is up (footer rises with it)
+      footerOptions={{ keyboardOffset: -insets.bottom }}
     >
       <View style={[Atoms.w_full, Atoms.flex_1, { backgroundColor: surface }]}>
         {children}
@@ -353,6 +359,7 @@ function WebModal({
   children,
   dismissible = true,
   maxWidth,
+  height,
   navigation,
   header,
   footer,
@@ -422,6 +429,7 @@ function WebModal({
           // Content-sized up to the viewport; taller content scrolls inside
           // the card body so the modal itself never exceeds the screen.
           Atoms.max_h_full,
+          height !== undefined && { height },
           Atoms.overflow_hidden,
           Atoms.flex_col,
           { maxWidth: 600, marginVertical: 'auto', marginHorizontal: 'auto' },
@@ -441,10 +449,8 @@ function WebModal({
         {/* The scroll container between the pinned header and footer. A
             scroll container's automatic minimum size is 0, so it shrinks to
             the space the card has left instead of forcing the card past its
-            max height. */}
-        <View style={[Atoms.flex_shrink_1, Atoms.overflow_auto]}>
-          {children}
-        </View>
+            max height, and grows to fill a fixed-height card. */}
+        <View style={[Atoms.flex_1, Atoms.overflow_auto]}>{children}</View>
         {footer}
       </View>
     </Reanimated.View>

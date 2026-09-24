@@ -126,7 +126,7 @@ export function useSearchPosts(
   },
 ): FeedHookResult {
   const enabled = (options?.enabled ?? true) && searchQuery.length > 0;
-  const sort = SORT_TYPE_MAP[options?.sort] ?? SearchPostsSort.Default;
+  const sort = options?.sort ?? 'top';
   const omitLabels = useOmitLabels();
   const queryKey = searchQueryKeys.posts(sort, searchQuery);
 
@@ -135,7 +135,7 @@ export function useSearchPosts(
     (_status, data) =>
       new Query.SearchPosts({
         query: searchQuery,
-        sortBy: sort,
+        sortBy: SORT_TYPE_MAP[sort],
         limit: options?.perServerLimit,
         forwardToken: extractToken(data),
         omitLabels,
