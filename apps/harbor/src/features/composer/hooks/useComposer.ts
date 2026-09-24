@@ -524,6 +524,5 @@ async function getParentPost(
     v2.EventBundle.fromBinary(new Uint8Array(data)),
   );
 
-  if (!post) return undefined;
-  return post.reply?.parentId;
+  return post?.reply?.parentId;
 }
