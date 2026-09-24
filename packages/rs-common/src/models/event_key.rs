@@ -1,12 +1,15 @@
-use super::protos_v2::{EventKey, PublicKey};
-use crate::error::{Error, Result};
+use std::fmt;
+
+use prost::Message;
+
+use crate::error::Error;
 use crate::models::collections::{
     FEED, IDENTITY, INTERACTIONS, LABELS, PROFILE, REPORTS, SOCIAL_GRAPH, VERIFICATIONS,
 };
-use crate::models::traits::Serializable;
+use crate::models::protos_v2::{EventKey, PublicKey};
+use crate::models::validate::{self, StringConfig, Validate, url_regex};
+use crate::models::{Serializable, public_key};
 use crate::platform::error::PlatformError;
-use prost::Message;
-use std::fmt;
 
 impl EventKey {
     pub fn new(collection: i32, identity: String, signed_by: PublicKey, sequence: u64) -> Self {
@@ -18,7 +21,7 @@ impl EventKey {
         }
     }
 
-    pub fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> Result<(), Error> {
         if self.identity.is_empty() {
             return Err(Error::Platform(PlatformError::SerializationError(
                 "EventKey.identity is empty".to_string(),
@@ -34,14 +37,14 @@ impl EventKey {
 }
 
 impl Serializable for EventKey {
-    fn to_bytes(&self) -> Result<Vec<u8>> {
+    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .map_err(|e| Error::Platform(PlatformError::SerializationError(e.to_string())))?;
         Ok(buf)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         EventKey::decode(bytes)
             .map_err(|e| Error::Platform(PlatformError::DeserializationError(e.to_string())))
     }
@@ -74,5 +77,49 @@ impl fmt::Debug for EventKey {
             .field("signed_by", signed_by)
             .field("sequence", sequence)
             .finish()
+    }
+}
+
+impl Validate for EventKey {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        let EventKey {
+            collection: _, // No validation.
+            identity,
+            signed_by,
+            sequence: _, // No validation.
+        } = self;
+        #[rustfmt::skip]
+        validate::string(identity, StringConfig { min_len: Some(1), ..Default::default() }) .map_err(ValidationError::Identity)?;
+        if let Some(signed_by) = signed_by.as_ref() {
+            signed_by.validate()?;
+        } else {
+            return Err(ValidationError::SignedByMissing);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum ValidationError {
+    Identity(validate::StringError<'static>),
+    SignedBy(public_key::ValidationError),
+    SignedByMissing,
+}
+
+impl From<public_key::ValidationError> for ValidationError {
+    fn from(err: public_key::ValidationError) -> ValidationError {
+        ValidationError::SignedBy(err)
+    }
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValidationError::Identity(err) => write!(f, "identity {err}"),
+            ValidationError::SignedBy(err) => write!(f, "signed by {err}"),
+            ValidationError::SignedByMissing => write!(f, "signed by is missing"),
+        }
     }
 }
