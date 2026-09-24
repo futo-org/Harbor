@@ -5,7 +5,7 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::models::{application, content_digest, event_key, public_key};
+use crate::models::{application, content_digest, event, event_key, public_key};
 
 /// Validate a value.
 pub trait Validate {
@@ -23,10 +23,17 @@ pub trait Validate {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ValidationError {
+    Event(event::ValidationError),
     EventKey(event_key::ValidationError),
     PublicKey(public_key::ValidationError),
     ContentDigest(content_digest::ValidationError),
     Application(application::ValidationError),
+}
+
+impl From<event::ValidationError> for ValidationError {
+    fn from(err: event::ValidationError) -> ValidationError {
+        ValidationError::Event(err)
+    }
 }
 
 impl From<event_key::ValidationError> for ValidationError {
@@ -56,6 +63,7 @@ impl From<application::ValidationError> for ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            ValidationError::Event(err) => write!(f, "event {err}"),
             ValidationError::EventKey(err) => write!(f, "event key {err}"),
             ValidationError::PublicKey(err) => write!(f, "public key {err}"),
             ValidationError::ContentDigest(err) => write!(f, "content digest {err}"),
