@@ -7,7 +7,7 @@ use prost::Message;
 use crate::error::Error;
 use crate::models::Serializable;
 use crate::models::protos_v2::{KeyType, PublicKey};
-use crate::models::validate::{self, SliceConfig, Validate, url_regex};
+use crate::models::validate::{self, SliceConfig, Validate};
 use crate::platform::error::PlatformError;
 use crate::signing;
 
@@ -106,11 +106,10 @@ impl Validate for PublicKey {
     fn validate(&self) -> Result<(), Self::Error> {
         let PublicKey { key_type, key } = self;
         const ED25519: i32 = KeyType::Ed25519 as i32;
-        let key_len;
-        match *key_type {
-            ED25519 => key_len = 32,
+        let key_len = match *key_type {
+            ED25519 => 32,
             _ => return Err(ValidationError::KeyTypeInvalid),
-        }
+        };
         #[rustfmt::skip]
         validate::slice(key, SliceConfig { min_len: Some(key_len), max_len: Some(key_len), ..Default::default() }) .map_err(ValidationError::Key)?;
         Ok(())

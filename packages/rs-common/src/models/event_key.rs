@@ -7,7 +7,7 @@ use crate::models::collections::{
     FEED, IDENTITY, INTERACTIONS, LABELS, PROFILE, REPORTS, SOCIAL_GRAPH, VERIFICATIONS,
 };
 use crate::models::protos_v2::{EventKey, PublicKey};
-use crate::models::validate::{self, StringConfig, Validate, url_regex};
+use crate::models::validate::{self, StringConfig, Validate};
 use crate::models::{Serializable, public_key};
 use crate::platform::error::PlatformError;
 

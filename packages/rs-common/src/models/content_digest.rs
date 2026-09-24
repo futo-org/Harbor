@@ -74,11 +74,10 @@ impl Validate for ContentDigest {
     fn validate(&self) -> Result<(), Self::Error> {
         let ContentDigest { r#type, value } = self;
         const SHA256: i32 = ContentDigestType::Sha256 as i32;
-        let value_len;
-        match *r#type {
-            SHA256 => value_len = 256 / 8,
+        let value_len = match *r#type {
+            SHA256 => 256 / 8,
             _ => return Err(ValidationError::TypeInvalid),
-        }
+        };
         #[rustfmt::skip]
         validate::slice(value, SliceConfig { min_len: Some(value_len), max_len: Some(value_len), ..Default::default() }) .map_err(ValidationError::Value)?;
         Ok(())
