@@ -467,13 +467,17 @@ async function refreshAfterPosting(
   const parent = post.reply?.parent;
   if (!parent) return;
 
-  for (
-    let current: string | undefined = eventKeyId(parent);
-    current;
-    current = await getParentPost(client, current)
-  ) {
-    if (ancestors.has(current)) break;
-    ancestors.add(current);
+  try {
+    for (
+      let current: string | undefined = eventKeyId(parent);
+      current;
+      current = await getParentPost(client, current)
+    ) {
+      if (ancestors.has(current)) break;
+      ancestors.add(current);
+    }
+  } catch (e) {
+    console.warn(`error while walking new post ancestors: ${e}`);
   }
 
   for (const postId of ancestors) {
