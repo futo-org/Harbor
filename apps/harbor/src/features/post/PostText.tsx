@@ -38,6 +38,10 @@ type MentionTextSegment = Extract<TextSegment, { type: 'alias' | 'identity' }>;
 // native inline views sit on the baseline, so the box is lifted by this much.
 const MENTION_BASELINE_OFFSET = { regular: 17, large: 20 };
 
+// The person glyph sits off the text's visual center (below it on web, above
+// it on native), so it's nudged by this much; positive moves it down.
+const MENTION_ICON_SHIFT = isWeb ? -1 : 1;
+
 /**
  * Renders post body text with tappable links and mentions.
  */
@@ -186,7 +190,9 @@ function MentionSegment({
       name="person"
       size={10}
       color="primary_500"
-      style={{ marginRight: Spacing['2xs'] }}
+      // `top` rather than a transform: web renders the icon as an inline span,
+      // which ignores transforms.
+      style={{ marginRight: Spacing['2xs'], top: MENTION_ICON_SHIFT }}
     />
   );
   const boxStyle: TextStyle & ViewStyle = {
