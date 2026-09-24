@@ -33,11 +33,17 @@ pnpm -r --filter "@polycentric/*" exec npm version "${VERSION}" --no-git-tag-ver
 # Topological order; pnpm rewrites workspace:* -> ${VERSION} on publish.
 PACKAGES="@polycentric/rs-core-wasm @polycentric/js-storage-sqlite @polycentric/js-core @polycentric/js-browser @polycentric/js-node @polycentric/react-native"
 
+add_npmrc() {
+  # Append to ~/.npmrc unless the exact line is already there
+  grep -qxF "$1" ~/.npmrc 2>/dev/null || echo "$1" >> ~/.npmrc
+}
+
 publish_all() {
   registry_url="$1"
   registry_label="$2"
   echo "Publishing to ${registry_label} (${registry_url})"
-  pnpm config set @polycentric:registry "${registry_url}"
+  # Use `.npmrc` directly (instead of `pnpm config set` which writes to a pnpm-only `auth.ini`)
+  add_npmrc "@polycentric:registry=${registry_url}"
   for pkg in $PACKAGES; do
     set +e
     output=$(pnpm -r --filter "$pkg" publish --no-git-checks --access public --tag "$DIST_TAG" 2>&1)
@@ -60,7 +66,7 @@ if [ -n "${HARBOR_CI_TOKEN:-}" ]; then
   : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required for Forgejo publishing}"
   forgejo_registry="${GITHUB_SERVER_URL}/api/packages/${GITHUB_REPOSITORY%%/*}/npm/"
   forgejo_host=$(echo "${forgejo_registry}" | sed -E 's#https?://([^/]+).*#\1#')
-  echo "//${forgejo_host}/:_authToken=${HARBOR_CI_TOKEN}" >> ~/.npmrc
+  add_npmrc "//${forgejo_host}/api/packages/${GITHUB_REPOSITORY%%/*}/npm/:_authToken=${HARBOR_CI_TOKEN}"
   publish_all "${forgejo_registry}" "the Forgejo package registry"
 else
   echo "HARBOR_CI_TOKEN is not set; skipping Forgejo publish" >&2
