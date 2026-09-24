@@ -43,8 +43,8 @@ const SORT_POSTS_OPTIONS: readonly TabFilterOption<SearchTab>[] = [
   { value: 'latest', label: 'Latest', icon: 'star' },
 ];
 
-const SEARCH_TABS = [
-  { value: 'posts', label: 'Posts', menu_options: SORT_POSTS_OPTIONS },
+const SEARCH_TABS: readonly { value: SearchTab, label: string, menu_options?: readonly TabFilterOption<SearchTab>[] }[] = [
+  { value: 'top', label: 'Posts', menu_options: SORT_POSTS_OPTIONS },
   { value: 'people', label: 'People' },
 ];
 
@@ -160,9 +160,7 @@ export function SearchResults({
           <Tabs.Tab
             key={value}
             active={value === tab || menu_options?.some(({value}) => value === tab)}
-            // NOTE: this is only relevant for the People tab, the Posts tab
-            // uses a menu.
-            onPress={() => onTabChange(value as SearchTab)}
+            onPress={() => onTabChange(value)}
             menu={menu_options ? ({ open, onClose }) => (
               <TabFilterSheet
                 open={open}
