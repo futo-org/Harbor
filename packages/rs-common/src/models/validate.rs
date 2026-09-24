@@ -1,4 +1,6 @@
-use crate::models::application::ApplicationValidationError;
+use regex::Regex;
+
+use crate::models::application;
 
 pub trait Validate {
     type Error: Into<ValidationError>;
@@ -7,20 +9,19 @@ pub trait Validate {
 }
 
 pub enum ValidationError {
-    Application(ApplicationValidationError),
+    Application(application::ValidationError),
 }
 
-impl From<ApplicationValidationError> for ValidationError {
-    fn from(err: ApplicationValidationError) -> ValidationError {
+impl From<application::ValidationError> for ValidationError {
+    fn from(err: application::ValidationError) -> ValidationError {
         ValidationError::Application(err)
     }
 }
 
-pub(crate) fn validate_string(
-    input: &str,
-    min_len: Option<usize>,
-    max_len: Option<usize>,
-) -> Result<(), StringError> {
+/// Validate a string.
+pub(crate) fn string<'r>(input: &str, config: StringConfig<'r>) -> Result<(), StringError<'r>> {
+    #[rustfmt::skip]
+    let StringConfig { min_len, max_len, regex } = config;
     let length = input.len();
     if let Some(min) = min_len
         && length < min
@@ -30,12 +31,28 @@ pub(crate) fn validate_string(
         && length > max
     {
         Err(StringError::TooLarge { length, max })
+    } else if let Some(regex) = regex
+        && !regex.is_match(input)
+    {
+        Err(StringError::FailsRegex { regex })
     } else {
         Ok(())
     }
 }
 
-pub enum StringError {
+#[derive(Debug, Default)]
+#[non_exhaustive]
+pub(crate) struct StringConfig<'r> {
+    pub(crate) min_len: Option<usize>,
+    pub(crate) max_len: Option<usize>,
+    pub(crate) regex: Option<&'r Regex>,
+}
+
+/// Error returned by [`validate::string`].
+///
+/// [`validate::string`]: string()
+pub enum StringError<'r> {
     TooSmall { length: usize, min: usize },
     TooLarge { length: usize, max: usize },
+    FailsRegex { regex: &'r Regex },
 }
