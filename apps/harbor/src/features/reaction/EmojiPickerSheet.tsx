@@ -135,7 +135,7 @@ export function EmojiPickerSheet() {
     <Sheet
       open={open}
       onClose={close}
-      detents={[0.5]}
+      detents={[0.5, 1]}
       maxWidth={400}
       height={800}
       header={<Sheet.Header title="Pick a reaction" onClose={close} />}
