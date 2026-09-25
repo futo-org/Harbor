@@ -161,7 +161,7 @@ jobs:
           path: ${{ env.RUST_CACHE_PATHS }}
 
   services-db-schema:
-    name: DB schema
+    name: DB Schema Check
     needs: [changes, setup-images]
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.services_db_schema && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
