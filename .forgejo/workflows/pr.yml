@@ -166,7 +166,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.services_db_schema && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
-      image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
+      image: ${{ needs.changes.outputs.registry }}/ci/rust-dind:${{ needs.changes.outputs.images_tag }}
     env:
       # For running the migrations.
       HARBOR_DATABASE_URL: postgres://postgres:testing@localhost:5432
