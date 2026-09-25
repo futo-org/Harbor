@@ -77,9 +77,24 @@ export const PostText = memo(function PostText({
 
   const size: PostTextSize = large ? { fontSize: 'lg', lineHeight: 'lg' } : {};
 
+  // The text as read by screen readers, once, without the inline views
+  // (emoji images, mention boxes) that also carry it. The selectable
+  // UITextView has no label of its own, so it would otherwise be skipped.
+  const accessibilityLabel = useMemo(
+    () =>
+      segments.map((segment) => segment.value).join('') +
+      (truncated ? '…' : ''),
+    [segments, truncated],
+  );
+
   return (
     <>
-      <Text variant="secondary" selectable={selectable} {...size}>
+      <Text
+        variant="secondary"
+        selectable={selectable}
+        accessibilityLabel={accessibilityLabel}
+        {...size}
+      >
         {segments.map((segment) =>
           // Plain text stays a direct string child: the selectable
           // UITextView only turns direct strings into native text.
