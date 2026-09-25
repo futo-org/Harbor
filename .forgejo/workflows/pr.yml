@@ -184,7 +184,7 @@ jobs:
           cache: services-db-schema
       - name: Start Postgres
         run: docker compose up -d --build --wait postgres
-      - name: [REMOVE] Docker info
+      - name: '[REMOVE] Docker info'
         run: docker ps
       - name: Connect Docket network
         run: docker network connect "$harbor_default" "${$(grep -oE 'containers/[0-9a-f]{64}' /proc/self/mountinfo | head -1 | cut -d/ -f2):-$(cat /etc/hostname)}"
