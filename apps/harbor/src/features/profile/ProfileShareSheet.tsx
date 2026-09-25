@@ -6,6 +6,7 @@ import { nativeShareUrl } from '@/src/common/util/nativeShareUrl';
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import { HARBOR_APP_URL, Routes } from '@/src/common/constants';
 
 const QR_CODE_SIZE = 300;
 const COPIED_INDICATOR_DURATION_MS = 2000;
@@ -22,8 +23,7 @@ export default function ProfileShareSheet({
   open,
   onClose,
 }: ProfileShareSheetProps) {
-  // TODO: derive the profile's web link per environment.
-  const profileLink = 'TBD';
+  const profileLink = `${HARBOR_APP_URL}/${Routes.tabs.profile(identityKey)}`;
 
   return (
     <Sheet
