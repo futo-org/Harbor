@@ -11,7 +11,9 @@ import { TrueSheet, type SheetDetent } from '@lodev09/react-native-true-sheet';
 import { Portal } from '@rn-primitives/portal';
 import { router, useNavigation } from 'expo-router';
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -42,8 +44,14 @@ const FADE_OUT_MS = 120;
 /** Exported for viewport-aware content sizing. */
 export const SHEET_OVERLAY_PADDING = 16;
 
+// True when a native sheet sizes itself to its content (`'auto'` detent).
+// `flex: 1` content has no height of its own, so it'd measure as zero there.
+const SheetSizesToContentContext = createContext(false);
+
 type CommonProps = {
   children: ReactNode;
+  /** With `'auto'`, the content is measured at its natural height, so it
+   * won't stretch to fill a taller detent in the same list. */
   detents?: SheetDetent[];
   dismissible?: boolean;
   /** Dim the background; tapping the dim area dismisses the sheet (native).
@@ -96,12 +104,18 @@ function SheetContent({
   scrollable = true,
   ...props
 }: SheetContentProps) {
+  const sizesToContent = useContext(SheetSizesToContentContext);
   // Web scrolls in the modal card body already; native needs a ScrollView
   // here for TrueSheet to pin and inset when the keyboard shows.
   if (isWeb || !scrollable) {
     return (
       <View
-        style={[Atoms.p_lg, Atoms.flex_1, { minHeight: 50 }, style]}
+        style={[
+          Atoms.p_lg,
+          !sizesToContent && Atoms.flex_1,
+          { minHeight: 50 },
+          style,
+        ]}
         {...props}
       >
         {children}
@@ -110,7 +124,7 @@ function SheetContent({
   }
   return (
     <ScrollView
-      style={Atoms.flex_1}
+      style={!sizesToContent && Atoms.flex_1}
       contentContainerStyle={[Atoms.p_lg, { minHeight: 50 }, style]}
       keyboardShouldPersistTaps="handled"
       alwaysBounceVertical={false}
@@ -284,6 +298,7 @@ function NativeSheet({
   }, [isInline, open, mounted]);
 
   const surface = theme.palette.neutral_0;
+  const sizesToContent = detents.includes('auto');
 
   if (isInline && !mounted) return null;
 
@@ -317,8 +332,16 @@ function NativeSheet({
       // Prevents the inset from applying when the keyboard is up (footer rises with it)
       footerOptions={{ keyboardOffset: -insets.bottom }}
     >
-      <View style={[Atoms.w_full, Atoms.flex_1, { backgroundColor: surface }]}>
-        {children}
+      <View
+        style={[
+          Atoms.w_full,
+          !sizesToContent && Atoms.flex_1,
+          { backgroundColor: surface },
+        ]}
+      >
+        <SheetSizesToContentContext.Provider value={sizesToContent}>
+          {children}
+        </SheetSizesToContentContext.Provider>
       </View>
     </TrueSheet>
   );
