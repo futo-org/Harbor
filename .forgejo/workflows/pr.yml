@@ -207,7 +207,6 @@ jobs:
           make db_schema
           git diff --exit-code
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
         continue-on-error: true
         with:
           mode: save
