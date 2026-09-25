@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict pDfhDFSWlMVwKJJCtVjCu9jpArxFvkN6yDVEZFQGYIycOWdbwu1Quua6JieaPNw
+\restrict harborServerDB
 
 -- Dumped from database version 18.6 (Debian 18.6-1.pgdg13+2)
 -- Dumped by pg_dump version 18.4 (Homebrew)
@@ -1306,5 +1306,5 @@ ALTER TABLE ONLY public.events
 -- PostgreSQL database dump complete
 --
 
-\unrestrict pDfhDFSWlMVwKJJCtVjCu9jpArxFvkN6yDVEZFQGYIycOWdbwu1Quua6JieaPNw
+\unrestrict harborServerDB
 

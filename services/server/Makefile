@@ -57,7 +57,7 @@ db_schema:
 	source $(ENV_FILE) && \
 	PGPASSWORD="$$DB_PASSWORD" pg_dump \
 		--dbname "$$DB_NAME" --host "$$DB_HOST" --port "$$DB_PORT" --username "$$DB_USER" \
-		--exclude-schema=seaql_migrations --schema-only --no-owner \
+		--exclude-schema=seaql_migrations --schema-only --no-owner --restrict-key=harborServerDB \
 		> db_schema.sql
 
 # Write a backup of the database to `db_dump.sql`.
