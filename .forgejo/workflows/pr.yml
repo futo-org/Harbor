@@ -192,22 +192,26 @@ jobs:
         run: |
           echo "$HARBOR_DATABASE_URL"
           cd services/server
+          touch .env
           echo 'SELECT 1' | make psql
       - name: Check server's DB schema up-to-date
         run: |
           cd services/server/migration
+          touch .env
           cargo run
           make db_schema
           git diff --exit-code
       - name: Check moderation's DB schema up-to-date
         run: |
           cd services/moderation/migration
+          touch .env
           cargo run
           make db_schema
           git diff --exit-code
       - name: Check notification's DB schema up-to-date
         run: |
           cd services/push-notifications/migration
+          touch .env
           cargo run
           make db_schema
           git diff --exit-code
