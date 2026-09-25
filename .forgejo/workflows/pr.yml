@@ -160,6 +160,20 @@ jobs:
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
 
+  services-db-schema:
+    name: DB schema
+    needs: [changes]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.services_db_schema }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check DB schema up-to-date
+        run: |
+          cd services/server
+          make db_schema
+          git diff --exit-code
+      # TODO: moderation and push-notification.
+
   js-packages-lint:
     name: Lint JS packages
     needs: changes
