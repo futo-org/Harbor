@@ -187,7 +187,9 @@ jobs:
       - name: '[REMOVE] Docker info'
         run: docker ps
       - name: Connect Docket network
-        run: docker network connect "$harbor_default" "${$(grep -oE 'containers/[0-9a-f]{64}' /proc/self/mountinfo | head -1 | cut -d/ -f2):-$(cat /etc/hostname)}"
+        run: |
+          export id="$(grep -oE 'containers/[0-9a-f]{64}' /proc/self/mountinfo | head -1 | cut -d/ -f2)"
+          docker network connect "$harbor_default" "${id:-$(cat /etc/hostname)}"
       - name: Check server's DB schema up-to-date
         run: |
           cd services/server/migration
