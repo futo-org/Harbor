@@ -1,4 +1,4 @@
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, useTheme, Spacing } from '@/src/common/theme';
 import { View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -6,10 +6,10 @@ type QrCodeProps = {
   // Encoded payload; renders a blank placeholder of the same size while null.
   value: string | null;
   size: number;
+  variant?: 'black' | 'harbor-gradient';
 };
 
-/** Black-on-white QR code in a rounded card, legible in both themes. */
-export function QrCode({ value, size }: QrCodeProps) {
+export function QrCode({ value, size, variant = 'black' }: QrCodeProps) {
   const { theme } = useTheme();
 
   return (
@@ -27,8 +27,16 @@ export function QrCode({ value, size }: QrCodeProps) {
           value={value}
           size={size}
           color={theme.palette.black}
-          backgroundColor={theme.palette.white}
-          quietZone={32}
+          backgroundColor="transparent"
+          quietZone={Spacing.lg}
+          {...(variant === 'harbor-gradient' && {
+            enableLinearGradient: true,
+            gradientDirection: ['0%', '0%', '0%', '100%'],
+            linearGradient: [
+              theme.palette.primary_100,
+              theme.palette.primary_500,
+            ],
+          })}
         />
       ) : (
         <View style={{ width: size, height: size }} />

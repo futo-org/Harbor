@@ -9,7 +9,7 @@ import useBlocks from '../block/hooks/useBlocks';
 import BanSheet from '../moderation/BanSheet';
 import useModerationStatus from '../moderation/hooks/useModerationStatus';
 import { useProfileContext } from './ProfileContext';
-import ShareSheet from './ShareSheet';
+import ProfileShareSheet from './ProfileShareSheet';
 
 type MenuItem = {
   key: string;
@@ -112,7 +112,7 @@ export default function ProfileMenu() {
       </DropdownMenu>
 
       {/* Modals */}
-      <ShareSheet
+      <ProfileShareSheet
         identityKey={identityKey}
         open={showShareSheet}
         onClose={() => setShowShareSheet(false)}
