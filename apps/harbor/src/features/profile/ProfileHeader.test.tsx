@@ -72,6 +72,7 @@ jest.mock('@/src/common/components/primitives', () => {
   const react = require('react');
   const { Text: Native } = require('react-native');
   return {
+    AVATAR_SIZE_MAP: { xl: 0 },
     Text: ({ children }: { children: unknown }) =>
       react.createElement(Native, null, children),
     Button: () => null,
