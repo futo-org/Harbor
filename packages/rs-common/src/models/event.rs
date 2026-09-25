@@ -90,17 +90,21 @@ impl Validate for Event {
             // NOTE: currently has a validate method that is used over the
             // Validate trait implementation. Once that is removed this can be
             // change to `key.validate()?`.
-            Validate::validate(key)?;
+            Validate::validate(key).map_err(ValidationError::Key)?;
         } else {
             return Err(ValidationError::KeyMissing);
         }
         if let Some(content_digest) = content_digest.as_ref() {
-            content_digest.validate()?;
+            content_digest
+                .validate()
+                .map_err(ValidationError::ContentDigest)?;
         } else {
             return Err(ValidationError::ContentDigestMissing);
         }
         if let Some(application) = application.as_ref() {
-            application.validate()?;
+            application
+                .validate()
+                .map_err(ValidationError::Application)?;
         }
         Ok(())
     }
@@ -113,24 +117,6 @@ pub enum ValidationError {
     ContentDigest(content_digest::ValidationError),
     ContentDigestMissing,
     Application(application::ValidationError),
-}
-
-impl From<event_key::ValidationError> for ValidationError {
-    fn from(err: event_key::ValidationError) -> ValidationError {
-        ValidationError::Key(err)
-    }
-}
-
-impl From<content_digest::ValidationError> for ValidationError {
-    fn from(err: content_digest::ValidationError) -> ValidationError {
-        ValidationError::ContentDigest(err)
-    }
-}
-
-impl From<application::ValidationError> for ValidationError {
-    fn from(err: application::ValidationError) -> ValidationError {
-        ValidationError::Application(err)
-    }
 }
 
 impl fmt::Display for ValidationError {

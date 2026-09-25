@@ -76,7 +76,9 @@ impl Validate for Content {
     fn validate(&self) -> Result<(), Self::Error> {
         let Content { content_body } = self;
         if let Some(content_body) = content_body.as_ref() {
-            content_body.validate()?;
+            content_body
+                .validate()
+                .map_err(ValidationError::ContentBody)?;
         } else {
             return Err(ValidationError::ContentBodyMissing);
         }
@@ -88,12 +90,6 @@ impl Validate for Content {
 pub enum ValidationError {
     ContentBody(content_body::ValidationError),
     ContentBodyMissing,
-}
-
-impl From<content_body::ValidationError> for ValidationError {
-    fn from(err: content_body::ValidationError) -> ValidationError {
-        ValidationError::ContentBody(err)
-    }
 }
 
 impl fmt::Display for ValidationError {

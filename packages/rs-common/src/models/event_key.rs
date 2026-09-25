@@ -101,7 +101,7 @@ impl Validate for EventKey {
         )
         .map_err(ValidationError::Identity)?;
         if let Some(signed_by) = signed_by.as_ref() {
-            signed_by.validate()?;
+            signed_by.validate().map_err(ValidationError::SignedBy)?;
         } else {
             return Err(ValidationError::SignedByMissing);
         }
@@ -114,12 +114,6 @@ pub enum ValidationError {
     Identity(validate::StringError),
     SignedBy(public_key::ValidationError),
     SignedByMissing,
-}
-
-impl From<public_key::ValidationError> for ValidationError {
-    fn from(err: public_key::ValidationError) -> ValidationError {
-        ValidationError::SignedBy(err)
-    }
 }
 
 impl fmt::Display for ValidationError {

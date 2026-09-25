@@ -9,7 +9,7 @@ impl Validate for ContentBody {
 
     fn validate(&self) -> Result<(), Self::Error> {
         match self {
-            ContentBody::Post(post) => post.validate().map_err(Into::into),
+            ContentBody::Post(post) => post.validate().map_err(ValidationError::Post),
             _ => Ok(()), // TODO.
         }
     }
@@ -18,12 +18,6 @@ impl Validate for ContentBody {
 #[derive(Debug)]
 pub enum ValidationError {
     Post(post::ValidationError),
-}
-
-impl From<post::ValidationError> for ValidationError {
-    fn from(err: post::ValidationError) -> ValidationError {
-        ValidationError::Post(err)
-    }
 }
 
 impl fmt::Display for ValidationError {
