@@ -153,6 +153,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         initialOrientation: 'DEFAULT',
       },
     ],
+    './plugins/withDisableForceDark',
   ],
   experiments: {
     typedRoutes: true,
