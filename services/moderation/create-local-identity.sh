@@ -28,7 +28,7 @@ upsert_env() {
   local key="$1" value="$2"
   touch .env
   if grep -q "^${key}=" .env; then
-    sed -i.bak "s|^${key}=.*|${key}=${value}|" .env && rm -f .env.bak
+    sed -i='' "s|^${key}=.*|${key}=${value}|" .env
   else
     printf '%s=%s\n' "$key" "$value" >>.env
   fi
@@ -53,10 +53,10 @@ fi
 
 SIGNING_SEED=$(identity_tool private-key "$SIGNING_PUBLIC")
 
-upsert_env POLYCENTRIC_MODERATION_IDENTITY "$IDENTITY"
-upsert_env POLYCENTRIC_MODERATION_SIGNING_KEY "$SIGNING_SEED"
+upsert_env HARBOR_MODERATION_IDENTITY "$IDENTITY"
+upsert_env HARBOR_MODERATION_SIGNING_KEY "$SIGNING_SEED"
 
-echo "==> Wrote POLYCENTRIC_MODERATION_IDENTITY and POLYCENTRIC_MODERATION_SIGNING_KEY to .env"
+echo "==> Wrote HARBOR_MODERATION_IDENTITY and HARBOR_MODERATION_SIGNING_KEY to .env"
 echo "    identity: $IDENTITY"
 echo
 echo "Restart the server so it picks up the identity it should trust labels from,"

@@ -2,6 +2,7 @@ import { toast } from '@/src/common/components/toast/useToast';
 import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/loadBoundedImage';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
+  eventKeyId,
   hexToBytes,
   truncateName,
   useCurrentIdentity,
@@ -17,7 +18,14 @@ import {
   injectReplyIntoThreadCache,
   threadQueryKey,
 } from '@/src/features/feed/hooks/feedCache';
-import { COLLECTION, type types, v2 } from '@polycentric/react-native';
+import {
+  COLLECTION,
+  type types,
+  v2,
+  type PolycentricClient,
+  FetchMode,
+  Query,
+} from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef } from 'react';
 import { Keyboard } from 'react-native';
@@ -28,6 +36,10 @@ import {
   ImageUploadError,
   formatImageUploadErrorOrFallback,
 } from '@/src/common/lib/images/ImageUploadError';
+import {
+  decodePostBundle,
+  getKeyFingerprint,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 
 export const MAX_ATTACHMENTS = 4;
 export const MAX_POST_LENGTH = 2000;
@@ -295,7 +307,7 @@ export function useComposer({
       // null yields no card).
       const link = await resolveLinkForPost();
 
-      const post: types.v2.Post = {
+      const post: v2.Post = {
         text: rewriteIdentityMentions(
           text.trim(),
           useComposerStore.getState().mentions,
@@ -336,18 +348,8 @@ export function useComposer({
       });
       const identity = currentIdentityKey ?? '';
 
-      // Optimistically add the new event to the below query
-      if (isReply && replyTo) {
-        injectReplyIntoThreadCache(newBundle);
-        alterPostReplyCount(threadQueryKey(replyTo.id), replyTo.id, 1);
-        alterPostReplyCount(feedQueryKeys.following(identity), replyTo.id, 1);
-        alterPostReplyCount(feedQueryKeys.identity(identity), replyTo.id, 1);
-        alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
-      }
-
-      injectPostIntoFeedCache(feedQueryKeys.following(identity), newBundle);
-      injectPostIntoFeedCache(feedQueryKeys.identity(identity), newBundle);
-      injectPostIntoFeedCache(feedQueryKeys.explore(identity), newBundle);
+      // Optimistically add the new event to feeds and threads
+      injectLocally(identity, newBundle, replyTo ?? undefined);
 
       // `commitEvent` persists the event locally
       await client.commitEvent(signedEvent, content);
@@ -359,12 +361,7 @@ export function useComposer({
 
       void client
         .sync()
-        .then(() => {
-          // Invalidate all the caches now the post has been successfully submitted
-          invalidateQuery(client, feedQueryKeys.following(identity));
-          invalidateQuery(client, feedQueryKeys.identity(identity));
-          invalidateQuery(client, feedQueryKeys.explore(identity));
-        })
+        .then(() => refreshAfterPosting(client, identity, post))
         .catch((err) => {
           console.warn('compose sync failed:', err);
         });
@@ -427,4 +424,105 @@ export function useComposer({
     handleRemoveAttachment,
     handleRemoveLinkPreview,
   };
+}
+
+/**
+ * Adjust some local feed/thread caches and counters to account for this new
+ * post.
+ */
+function injectLocally(
+  identity: string,
+  bundle: v2.EventBundle,
+  replyTo: PostData | undefined,
+): void {
+  if (replyTo) {
+    injectReplyIntoThreadCache(bundle);
+    alterPostReplyCount(threadQueryKey(replyTo.id), replyTo.id, 1);
+    alterPostReplyCount(feedQueryKeys.following(identity), replyTo.id, 1);
+    alterPostReplyCount(feedQueryKeys.identity(identity), replyTo.id, 1);
+    alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
+  }
+
+  injectPostIntoFeedCache(feedQueryKeys.following(identity), bundle);
+  injectPostIntoFeedCache(feedQueryKeys.identity(identity), bundle);
+  injectPostIntoFeedCache(feedQueryKeys.explore(identity), bundle);
+}
+
+/**
+ * After the new post has been synced to servers, refresh queries
+ * that could contain this post by fetching new server responses.
+ */
+async function refreshAfterPosting(
+  client: PolycentricClient,
+  identity: string,
+  post: v2.Post,
+): Promise<void> {
+  // Feeds
+  invalidateQuery(client, feedQueryKeys.following(identity));
+  invalidateQuery(client, feedQueryKeys.identity(identity));
+  invalidateQuery(client, feedQueryKeys.explore(identity));
+
+  // Threads
+  const ancestors: Set<string> = new Set();
+  const parent = post.reply?.parent;
+  if (!parent) return;
+
+  try {
+    for (
+      let current: string | undefined = eventKeyId(parent);
+      current;
+      current = await getParentPost(client, current)
+    ) {
+      if (ancestors.has(current)) break;
+      ancestors.add(current);
+    }
+  } catch (e) {
+    console.warn(`error while walking new post ancestors: ${e}`);
+  }
+
+  for (const postId of ancestors) {
+    invalidateQuery(client, threadQueryKey(postId));
+  }
+}
+
+/**
+ * Fetches the parent of the post identified by `postId` from rs-core's store,
+ * or returns undefined if the post has no parent that we have locally.
+ * Returns the post id of the parent if we find it.
+ */
+async function getParentPost(
+  client: PolycentricClient,
+  postId: string,
+): Promise<string | undefined> {
+  const key = v2.EventKey.fromBinary(hexToBytes(postId));
+
+  const data = await new Promise<ArrayBuffer | undefined>((resolve) => {
+    let latest: ArrayBuffer | undefined;
+    client.core
+      .fetchQuery(
+        undefined,
+        new Query.GetEvent({
+          identity: key.identity,
+          collection: COLLECTION.FEED,
+          sequence: key.sequence,
+          signerKeyPrefix: getKeyFingerprint(key.signedBy),
+        }),
+        { fetchMode: FetchMode.OfflineOnly },
+      )
+      .subscribe({
+        next: (result) => {
+          latest = result.data;
+        },
+        error: () => resolve(undefined),
+        complete: () => resolve(latest),
+      });
+  });
+
+  if (!data?.byteLength) return undefined;
+
+  const post = decodePostBundle(
+    v2.EventBundle.fromBinary(new Uint8Array(data)),
+  );
+
+  return post?.reply?.parentId;
 }

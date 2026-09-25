@@ -6,7 +6,13 @@
     "types": ["node", "react-native-web"],
     "paths": { "@/*": ["./*"] }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "include": [
+    "**/*.ts",
+    "**/*.mts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
   // Overriding `exclude` drops the base config's list, so restate it.
   "exclude": ["node_modules", "android", "ios", "**/*.test.ts", "**/*.test.tsx"]
 }

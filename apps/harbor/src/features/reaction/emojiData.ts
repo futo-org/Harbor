@@ -1,3 +1,4 @@
+import type { IconName } from '@/src/common/components/Icon';
 import rawData from './emojis.json';
 
 export type EmojiEntry = {
@@ -11,8 +12,22 @@ export type EmojiEntry = {
 export type EmojiCategory = {
   key: string;
   name: string;
-  icon: string;
+  icon: IconName;
   emojis: EmojiEntry[];
+};
+
+// Keyed by the slug derived from the Unicode group name; the groups are fixed
+// by the standard, so a group missing here is a bug rather than new data.
+const CATEGORY_ICON_BY_KEY: Record<string, IconName> = {
+  'smileys-emotion': 'emoticonHappy',
+  'people-body': 'handWave',
+  'animals-nature': 'paw',
+  'food-drink': 'foodApple',
+  'travel-places': 'airplane',
+  activities: 'basketball',
+  objects: 'lightbulb',
+  symbols: 'pound',
+  flags: 'flagAlt',
 };
 
 const data = rawData as { emojis: EmojiEntry[] };
@@ -31,12 +46,12 @@ function groupByCategory(): EmojiCategory[] {
     list.push(entry);
   }
 
-  return Array.from(map.entries()).map(([name, emojis]) => ({
-    key: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-    name,
-    icon: emojis[0]?.emoji ?? '',
-    emojis,
-  }));
+  return Array.from(map.entries()).map(([name, emojis]) => {
+    const key = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const icon = CATEGORY_ICON_BY_KEY[key];
+    if (!icon) throw new Error(`No rail icon for emoji category "${name}"`);
+    return { key, name, icon, emojis };
+  });
 }
 
 export const categories: EmojiCategory[] = groupByCategory();

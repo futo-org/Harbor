@@ -10,9 +10,10 @@ import {
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import { ServerRow } from '@/src/features/settings/servers/ServerRow';
 import { useServerSettings } from '@/src/features/settings/servers/useServerSettings';
-import { IdentityManager, type v2 } from '@polycentric/react-native';
+import { FetchMode, IdentityManager, type v2 } from '@polycentric/react-native';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
@@ -29,7 +30,6 @@ type KeyEntry = {
 export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
   const { theme } = useTheme();
   const client = usePolycentric();
-  const profile = useProfile(identityKey);
   const { identityKey: selfKey } = useCurrentIdentity();
   const { state, isLoading } = useIdentityState(identityKey);
   const { servers: ownServers, addServer, isBusy } = useServerSettings();
@@ -72,15 +72,14 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
       <Sheet.Content style={[Atoms.gap_xl]}>
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
           <ProfileAvatar identityKey={identityKey} size="massive" />
-          <Text
+          <Username
+            identity={identityKey}
             variant="title"
             fontWeight="bold"
             numberOfLines={2}
             ellipsizeMode="tail"
-            style={[Atoms.text_center, Atoms.max_w_full]}
-          >
-            {profile.name || 'Anonymous'}
-          </Text>
+            style={Atoms.text_center}
+          />
         </View>
 
         <View
@@ -227,6 +226,8 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
 
 export default function ProfileIdentityScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
+  // Opened by URL, nothing underneath has fetched this profile.
+  useProfile(identityId ?? null, { fetchMode: FetchMode.OfflineFirst });
   if (!identityId) return null;
   return <ProfileIdentitySheet identityKey={identityId} />;
 }

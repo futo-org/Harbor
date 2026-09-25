@@ -6,7 +6,7 @@ import {
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
@@ -19,11 +19,9 @@ export default function LoginSuccessScreen({
 }) {
   const { theme } = useTheme();
   const { identityKey } = useCurrentIdentity();
-  const profile = useProfile(identityKey);
   const links = useOnboardingLinks();
 
   if (!identityKey) return null;
-  const displayName = profile.name ?? 'Anon';
 
   return (
     <View
@@ -47,13 +45,11 @@ export default function LoginSuccessScreen({
         <ProfileAvatar identityKey={identityKey} size="xl" />
 
         <View style={[Atoms.items_center, Atoms.gap_xs]}>
-          <Text
+          <Username
+            identity={identityKey}
             variant="title"
-            numberOfLines={1}
             style={[Atoms.text_center, Atoms.max_w_full]}
-          >
-            {displayName}
-          </Text>
+          />
         </View>
       </View>
 
