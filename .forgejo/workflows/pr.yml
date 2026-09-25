@@ -194,7 +194,18 @@ jobs:
           cargo run
           make db_schema
           git diff --exit-code
-      # TODO: moderation and push-notification.
+      - name: Check moderation's DB schema up-to-date
+        run: |
+          cd services/moderation/migration
+          cargo run
+          make db_schema
+          git diff --exit-code
+      - name: Check notification's DB schema up-to-date
+        run: |
+          cd services/push-notifications/migration
+          cargo run
+          make db_schema
+          git diff --exit-code
       - uses: ./.forgejo/actions/r2-cache
         if: always()
         continue-on-error: true
