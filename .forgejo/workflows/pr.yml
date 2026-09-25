@@ -191,7 +191,7 @@ jobs:
       - name: '[DEBUG] Postgres check'
         run: |
           echo "$HARBOR_DATABASE_URL"
-          cd services/server/migration
+          cd services/server
           echo 'SELECT 1' | make psql
       - name: Check server's DB schema up-to-date
         run: |
