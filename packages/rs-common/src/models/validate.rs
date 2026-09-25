@@ -345,8 +345,14 @@ impl<E: fmt::Display> fmt::Display for SliceError<E> {
     }
 }
 
-/// Regex that checks if the input starts with `http://` or `https://`.
+/// Regex that checks if the string starts with `http://` or `https://`.
 pub(crate) fn url_regex() -> &'static Regex {
     static REGEX: OnceLock<Regex> = OnceLock::new();
     REGEX.get_or_init(|| Regex::new("https?:\\/\\/").unwrap())
+}
+
+/// Regex that checks if the string is hex encoded
+pub(crate) fn hex_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| Regex::new("[0-9a-fA-F]+").unwrap())
 }

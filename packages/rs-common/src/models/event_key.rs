@@ -7,7 +7,7 @@ use crate::models::collections::{
     FEED, IDENTITY, INTERACTIONS, LABELS, PROFILE, REPORTS, SOCIAL_GRAPH, VERIFICATIONS,
 };
 use crate::models::protos_v2::{EventKey, PublicKey};
-use crate::models::validate::{self, StringConfig, Validate};
+use crate::models::validate::{self, StringConfig, Validate, hex_regex};
 use crate::models::{Serializable, public_key};
 use crate::platform::error::PlatformError;
 
@@ -90,8 +90,16 @@ impl Validate for EventKey {
             signed_by,
             sequence: _, // No validation.
         } = self;
-        #[rustfmt::skip]
-        validate::string(identity, StringConfig { min_len: Some(1), ..Default::default() }) .map_err(ValidationError::Identity)?;
+        validate::string(
+            identity,
+            StringConfig {
+                min_len: Some(64),
+                max_len: Some(64),
+                regex: Some(hex_regex()),
+                ..Default::default()
+            },
+        )
+        .map_err(ValidationError::Identity)?;
         if let Some(signed_by) = signed_by.as_ref() {
             signed_by.validate()?;
         } else {
