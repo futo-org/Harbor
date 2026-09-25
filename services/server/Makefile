@@ -47,14 +47,14 @@ db_migrations:
 
 # Run psql connected to the database.
 psql:
-	. $(ENV_FILE) || true && \
+	. $(ENV_FILE) && \
 	PGPASSWORD="$$DB_PASSWORD" psql \
 		--dbname "$$DB_NAME" --host "$$DB_HOST" --port "$$DB_PORT" --username "$$DB_USER"
 
 # Write the database schema to `db_schema.sql`.
 db_schema.sql: db_schema
 db_schema:
-	. $(ENV_FILE) || true && \
+	. $(ENV_FILE) && \
 	PGPASSWORD="$$DB_PASSWORD" pg_dump \
 		--dbname "$$DB_NAME" --host "$$DB_HOST" --port "$$DB_PORT" --username "$$DB_USER" \
 		--exclude-schema=seaql_migrations --schema-only --no-owner --restrict-key=harborServerDB \
@@ -63,7 +63,7 @@ db_schema:
 # Write a backup of the database to `db_dump.sql`.
 db_dump.sql: db_dump
 db_dump:
-	. $(ENV_FILE) || true && \
+	. $(ENV_FILE) && \
 	PGPASSWORD="$$DB_PASSWORD" pg_dump \
 		--dbname "$$DB_NAME" --host "$$DB_HOST" --port "$$DB_PORT" --username "$$DB_USER" \
 		> db_dump.sql
