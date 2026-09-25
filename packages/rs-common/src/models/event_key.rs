@@ -103,7 +103,7 @@ impl Validate for EventKey {
 
 #[derive(Debug)]
 pub enum ValidationError {
-    Identity(validate::StringError<'static>),
+    Identity(validate::StringError),
     SignedBy(public_key::ValidationError),
     SignedByMissing,
 }

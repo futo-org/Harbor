@@ -55,10 +55,10 @@ impl Validate for Link {
 
 #[derive(Debug)]
 pub enum ValidationError {
-    Title(StringError<'static>),
-    Description(StringError<'static>),
-    Image(StringError<'static>),
-    Url(StringError<'static>),
+    Title(StringError),
+    Description(StringError),
+    Image(StringError),
+    Url(StringError),
 }
 
 impl fmt::Display for ValidationError {

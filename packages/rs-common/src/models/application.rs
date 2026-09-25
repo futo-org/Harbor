@@ -19,10 +19,10 @@ impl Validate for Application {
 
 #[derive(Debug)]
 pub enum ValidationError {
-    Name(validate::StringError<'static>),
-    Id(validate::StringError<'static>),
-    Version(validate::StringError<'static>),
-    Url(validate::StringError<'static>),
+    Name(validate::StringError),
+    Id(validate::StringError),
+    Version(validate::StringError),
+    Url(validate::StringError),
 }
 
 impl fmt::Display for ValidationError {

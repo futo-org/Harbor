@@ -44,7 +44,7 @@ impl Validate for Blob {
 pub enum ValidationError {
     Digest(content_digest::ValidationError),
     DigestMissing,
-    MimeType(StringError<'static>),
+    MimeType(StringError),
     Size(IntError<i64>),
 }
 

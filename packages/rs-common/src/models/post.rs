@@ -83,12 +83,12 @@ impl Validate for Post {
 
 #[derive(Debug)]
 pub enum ValidationError {
-    Text(validate::StringError<'static>),
+    Text(validate::StringError),
     Reply(post_reply::ValidationError),
     ImageSet(SliceError<image_set::ValidationError>),
     Quote(event_key::ValidationError),
     Links(SliceError<link::ValidationError>),
-    Labels(SliceError<StringError<'static>>),
+    Labels(SliceError<StringError>),
     AttributedTo(SliceError<attributed_to::ValidationError>),
 }
 

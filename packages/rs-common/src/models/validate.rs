@@ -156,7 +156,7 @@ impl fmt::Display for ValidationError {
 }
 
 /// Validate a string.
-pub(crate) fn string<'r>(input: &str, config: StringConfig<'r>) -> Result<(), StringError<'r>> {
+pub(crate) fn string(input: &str, config: StringConfig) -> Result<(), StringError> {
     #[rustfmt::skip]
     let StringConfig { min_len, max_len, regex } = config;
     let length = input.len();
@@ -182,25 +182,25 @@ pub(crate) fn string<'r>(input: &str, config: StringConfig<'r>) -> Result<(), St
 /// [`validate::string`]: string()
 #[derive(Debug, Default)]
 #[non_exhaustive]
-pub(crate) struct StringConfig<'r> {
+pub(crate) struct StringConfig {
     pub(crate) min_len: Option<usize>,
     pub(crate) max_len: Option<usize>,
-    pub(crate) regex: Option<&'r Regex>,
+    pub(crate) regex: Option<&'static Regex>,
 }
 
 /// Error returned by [`validate::string`].
 ///
 /// [`validate::string`]: string()
 #[derive(Debug)]
-pub enum StringError<'r> {
+pub enum StringError {
     TooShort { length: usize, min: usize },
     TooLong { length: usize, max: usize },
-    FailsRegex { regex: &'r Regex },
+    FailsRegex { regex: &'static Regex },
 }
 
 /// Error message that completes the sentence "${field name} ", e.g. "name is
 /// too short".
-impl<'r> fmt::Display for StringError<'r> {
+impl fmt::Display for StringError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             StringError::TooShort { length: _, min: 1 } => {
