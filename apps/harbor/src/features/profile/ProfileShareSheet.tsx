@@ -1,14 +1,16 @@
-import { Button } from '@/src/common/components';
-import { QrCode } from '@/src/common/components/QrCode';
+import { Button, ProfileAvatar } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
-import { Atoms } from '@/src/common/theme';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { nativeShareUrl } from '@/src/common/util/nativeShareUrl';
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { HARBOR_APP_URL, Routes } from '@/src/common/constants';
+import { Username } from '@/src/features/profile/Username';
 
-const QR_CODE_SIZE = 300;
+const QR_CARD_WIDTH = 300;
+const QR_CODE_PADDING = 25;
 const COPIED_INDICATOR_DURATION_MS = 2000;
 
 type ProfileShareSheetProps = {
@@ -23,6 +25,7 @@ export default function ProfileShareSheet({
   open,
   onClose,
 }: ProfileShareSheetProps) {
+  const { theme } = useTheme();
   const profileLink = `${HARBOR_APP_URL}${Routes.tabs.profile(identityKey)}`;
 
   return (
@@ -35,13 +38,65 @@ export default function ProfileShareSheet({
     >
       <Sheet.Content
         scrollable={false}
-        style={[Atoms.items_center, Atoms.gap_lg]}
+        style={[Atoms.items_center, Atoms.gap_2xl]}
       >
-        <QrCode
-          value={profileLink}
-          size={QR_CODE_SIZE}
-          variant="harbor-gradient"
-        />
+        <View
+          style={[
+            Atoms.rounded_lg,
+            {
+              backgroundColor: theme.palette.white,
+              boxShadow: `0 12px 40px ${withHexOpacity(theme.palette.black, '1F')}`,
+              width: QR_CARD_WIDTH,
+              padding: QR_CODE_PADDING,
+              gap: QR_CODE_PADDING,
+            },
+          ]}
+        >
+          <View>
+            <View style={[Atoms.rounded_sm, Atoms.overflow_hidden]}>
+              <QRCode
+                value={profileLink}
+                size={QR_CARD_WIDTH - QR_CODE_PADDING * 2}
+                backgroundColor="transparent"
+                enableLinearGradient
+                gradientDirection={['0%', '0%', '0%', '100%']}
+                linearGradient={[
+                  theme.palette.primary_100,
+                  theme.palette.primary_500,
+                ]}
+              />
+            </View>
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                Atoms.items_center,
+                Atoms.justify_center,
+              ]}
+            >
+              <View
+                style={[
+                  Atoms.p_xs,
+                  Atoms.rounded_full,
+                  { backgroundColor: theme.palette.white },
+                ]}
+              >
+                <ProfileAvatar identityKey={identityKey} size="lg" />
+              </View>
+            </View>
+          </View>
+
+          <View style={[Atoms.items_center]}>
+            <Username
+              identity={identityKey}
+              variant="title"
+              fontWeight="bold"
+              numberOfLines={2}
+              color="primary_500"
+              style={Atoms.text_center}
+              noFollowingBadge
+            />
+          </View>
+        </View>
 
         <View style={[Atoms.flex_row, Atoms.w_full, Atoms.gap_sm]}>
           <View style={Atoms.flex_1}>

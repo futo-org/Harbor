@@ -1,6 +1,5 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
-import { QrCode } from '@/src/common/components/QrCode';
 import type { IconProps } from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
 import { Routes } from '@/src/common/constants/routes';
@@ -11,6 +10,7 @@ import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { type ReactNode, useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { encodePairingCode, EncodingMode } from '../pairingCode';
 import { useCountdown } from '../hooks/useCountdown';
 import type { v2 } from '@polycentric/react-native';
@@ -142,14 +142,46 @@ function PairingInfoCard({
         { backgroundColor: theme.palette.neutral_50 },
       ]}
     >
-      <QrCode
-        value={info ? encodePairingCode(info, EncodingMode.BASE64) : null}
-        size={PAIRING_BLOCK_WIDTH}
-      />
+      <PairingQRCode info={info} />
       <CopyButton info={info} />
       <View style={Atoms.items_center}>
         <CountdownTimer remainingSeconds={remainingSeconds} />
       </View>
+    </View>
+  );
+}
+
+function PairingQRCode({ info }: { info: v2.PairingInfo | null }) {
+  const { theme } = useTheme();
+
+  return (
+    <View
+      style={[
+        Atoms.items_center,
+        Atoms.justify_center,
+        Atoms.rounded_lg,
+        Atoms.overflow_hidden,
+        {
+          backgroundColor: theme.palette.white,
+        },
+      ]}
+    >
+      {info ? (
+        <QRCode
+          value={encodePairingCode(info, EncodingMode.BASE64)}
+          size={PAIRING_BLOCK_WIDTH}
+          color={theme.palette.black}
+          backgroundColor={theme.palette.white}
+          quietZone={32}
+        />
+      ) : (
+        <View
+          style={{
+            width: PAIRING_BLOCK_WIDTH,
+            height: PAIRING_BLOCK_WIDTH,
+          }}
+        />
+      )}
     </View>
   );
 }
