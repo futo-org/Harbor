@@ -23,7 +23,7 @@ export default function ProfileShareSheet({
   open,
   onClose,
 }: ProfileShareSheetProps) {
-  const profileLink = `${HARBOR_APP_URL}/${Routes.tabs.profile(identityKey)}`;
+  const profileLink = `${HARBOR_APP_URL}${Routes.tabs.profile(identityKey)}`;
 
   return (
     <Sheet
