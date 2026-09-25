@@ -2,6 +2,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 import fs from 'fs';
 
 const { version: PKG_VERSION } = require('./package.json');
+const { appLinks } = require('./appLinks');
 
 // 'dev' | 'staging' | 'production'. Staging comes from the eas.json
 // profile env; dev from the local scripts.
@@ -22,6 +23,10 @@ const ID = IS_DEV
     : 'org.futo.polycentric';
 
 const SCHEME = IS_DEV ? 'harbor.dev' : IS_STAGING ? 'harbor.staging' : 'harbor';
+
+// Web host whose links open this app (none for dev: verification needs a
+// public HTTPS domain). Claims the whole host; appLinks.js excludes paths.
+const APP_LINK_HOST: string | undefined = appLinks[VARIANT]?.host;
 
 // Play builds get their own package so the store channel can never
 // entangle with sideloaded installs (versionCodes and signatures stay
@@ -67,6 +72,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     requireFullScreen: true,
     supportsTablet: true,
     bundleIdentifier: ID,
+    // TODO: needs Associated Domains capability enabled for iOS builds first
+    // ...(APP_LINK_HOST && { associatedDomains: [`applinks:${APP_LINK_HOST}`] }),
     infoPlist: {
       NSCameraUsageDescription: '$(PRODUCT_NAME) needs access to your Camera.',
       ITSAppUsesNonExemptEncryption: false,
@@ -89,6 +96,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'android.permission.REQUEST_INSTALL_PACKAGES',
     ],
     ...(HAS_GOOGLE_SERVICES && { googleServicesFile: GOOGLE_SERVICES_FILE }),
+    ...(APP_LINK_HOST && {
+      intentFilters: [
+        {
+          action: 'VIEW',
+          autoVerify: true,
+          data: [{ scheme: 'https', host: APP_LINK_HOST }],
+          category: ['BROWSABLE', 'DEFAULT'],
+        },
+      ],
+    }),
   },
   plugins: [
     [
