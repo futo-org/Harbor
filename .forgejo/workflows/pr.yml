@@ -187,7 +187,7 @@ jobs:
         run: docker ps
       - name: Set Postgres IP in env vars
         run: |
-          PG_IP="$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' harbor_postgres_1)"
+          PG_IP="$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' harbor-postgres-1)"
           echo "HARBOR_DATABASE_URL=postgres://postgres:testing@${PG_IP}:5432" >> "${FORGEJO_ENV}"
           echo "DB_HOST=${PG_IP}" >> "${FORGEJO_ENV}"
       - name: '[REMOVE] Env info'
