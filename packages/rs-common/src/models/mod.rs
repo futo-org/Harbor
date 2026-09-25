@@ -17,20 +17,29 @@ pub mod protos_v2 {
 pub mod traits;
 
 pub mod application;
+pub mod attributed_to;
+pub mod blob;
 pub mod collections;
 pub mod content;
+pub mod content_body;
 pub mod content_digest;
 pub mod event;
 pub mod event_key;
 pub mod identity;
+pub mod image;
+pub mod image_set;
+pub mod link;
 pub mod moderation_label;
 pub mod moderation_tag;
 pub mod pointer;
+pub mod post;
+pub mod post_reply;
 pub mod public_key;
 pub mod query_engine_stats;
 pub mod signed_event;
 pub mod signed_issuer_state;
 pub mod signed_message;
+pub mod to;
 pub mod validate;
 pub mod vector_clock;
 

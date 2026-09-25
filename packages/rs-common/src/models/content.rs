@@ -1,9 +1,13 @@
+use std::fmt;
+
+use prost::Message;
+
 use crate::error::CoreError;
+use crate::models::content_body;
 use crate::models::protos_v2::Blob;
 use crate::models::protos_v2::content::ContentBody::{Post, ProfileUpdate};
 use crate::models::protos_v2::{Content, Identity, SerializedContent, content::ContentBody};
-use prost::Message;
-use std::fmt;
+use crate::models::validate::Validate;
 
 impl Content {
     pub fn as_identity(&self) -> Result<&Identity, CoreError> {
@@ -63,5 +67,40 @@ impl fmt::Debug for SerializedContent {
         f.debug_struct("SerializedContent")
             .field("content", content)
             .finish()
+    }
+}
+
+impl Validate for Content {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        let Content { content_body } = self;
+        if let Some(content_body) = content_body.as_ref() {
+            content_body.validate()?;
+        } else {
+            return Err(ValidationError::ContentBodyMissing);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum ValidationError {
+    ContentBody(content_body::ValidationError),
+    ContentBodyMissing,
+}
+
+impl From<content_body::ValidationError> for ValidationError {
+    fn from(err: content_body::ValidationError) -> ValidationError {
+        ValidationError::ContentBody(err)
+    }
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValidationError::ContentBody(err) => write!(f, "content body {err}"),
+            ValidationError::ContentBodyMissing => write!(f, "content body is missing"),
+        }
     }
 }
