@@ -8,8 +8,8 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
-import { isIOS } from '@/src/common/util/platform';
-import { Share, View } from 'react-native';
+import { nativeShareUrl } from '@/src/common/util/nativeShareUrl';
+import { View } from 'react-native';
 import useCanShare from '../hooks/useCanShare';
 import useReposts from '../hooks/useReposts';
 import PostActionButton from './PostActionButton';
@@ -43,9 +43,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
       post.sequence,
     );
     const url = `${HARBOR_APP_URL}${path}`;
-    // expo-sharing only shares local files on Android; RN Share handles URLs.
-    // iOS shares `url`; Android only reads `message`.
-    void Share.share(isIOS ? { url } : { message: url }).catch(() => {});
+    nativeShareUrl(url);
   };
 
   const button = (
