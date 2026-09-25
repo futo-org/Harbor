@@ -169,9 +169,8 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust-dind:${{ needs.changes.outputs.images_tag }}
     continue-on-error: true
     env:
-      # For running the migrations.
-      HARBOR_DATABASE_URL: postgres://postgres:testing@localhost:5432
-      # For creating the schema.
+      # NOTE: HARBOR_DATABASE_URL and DB_HOST are set once we have an IP address
+      # for the Postgres container.
       DB_USER: postgres
       DB_PASSWORD: testing
       DB_NAME: postgres
@@ -186,10 +185,13 @@ jobs:
         run: docker compose up -d --build --wait postgres
       - name: '[REMOVE] Docker info'
         run: docker ps
-      - name: Connect Docket network
+      - name: Set Postgres IP in env vars
         run: |
-          export id="$(grep -oE 'containers/[0-9a-f]{64}' /proc/self/mountinfo | head -1 | cut -d/ -f2)"
-          docker network connect "$harbor_default" "${id:-$(cat /etc/hostname)}"
+          PG_IP="$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' harbor_postgres_1)"
+          echo "HARBOR_DATABASE_URL=postgres://postgres:testing@${PG_IP}:5432" >> "${FORGEJO_ENV}"
+          echo "DB_HOST=${PG_IP}" >> "${FORGEJO_ENV}"
+      - name: '[REMOVE] Env info'
+        run: env
       - name: Check server's DB schema up-to-date
         run: |
           cd services/server/migration
