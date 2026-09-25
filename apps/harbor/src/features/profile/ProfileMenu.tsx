@@ -9,6 +9,7 @@ import useBlocks from '../block/hooks/useBlocks';
 import BanSheet from '../moderation/BanSheet';
 import useModerationStatus from '../moderation/hooks/useModerationStatus';
 import { useProfileContext } from './ProfileContext';
+import ShareSheet from './ShareSheet';
 
 type MenuItem = {
   key: string;
@@ -19,8 +20,8 @@ type MenuItem = {
 };
 
 /**
- * The "..." context menu on a profile page. Renders nothing when no
- * menu items apply to the viewed profile.
+ * The "..." context menu on a profile page. Renders nothing until the
+ * profile's identity is known.
  */
 export default function ProfileMenu() {
   const { theme } = useTheme();
@@ -32,8 +33,17 @@ export default function ProfileMenu() {
   const removeBlock = useBlocks((s) => s.removeBlock);
 
   const [showBanSheet, setShowBanSheet] = useState<boolean>(false);
+  const [showShareSheet, setShowShareSheet] = useState<boolean>(false);
 
   const items: MenuItem[] = [];
+  if (identityKey) {
+    items.push({
+      key: 'share',
+      icon: 'share',
+      label: 'Share',
+      onPress: () => setShowShareSheet(true),
+    });
+  }
   if (isModerator && !isSelf) {
     items.push({
       key: 'ban',
@@ -102,6 +112,11 @@ export default function ProfileMenu() {
       </DropdownMenu>
 
       {/* Modals */}
+      <ShareSheet
+        identityKey={identityKey}
+        open={showShareSheet}
+        onClose={() => setShowShareSheet(false)}
+      />
       <BanSheet
         identityKey={identityKey}
         open={showBanSheet}
