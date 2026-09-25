@@ -162,14 +162,31 @@ jobs:
 
   services-db-schema:
     name: DB schema
-    needs: [changes]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.services_db_schema }}
+    needs: [changes, setup-images]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.services_db_schema && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
+    env:
+      # For running the migrations.
+      HARBOR_DATABASE_URL: postgres://postgres:testing@localhost:5432
+      # For creating the schema.
+      DB_USER: postgres
+      DB_PASSWORD: testing
+      DB_NAME: postgres
+      DB_HOST: localhost
+      DB_PORT: 5432
     steps:
       - uses: actions/checkout@v4
-      - name: Check DB schema up-to-date
+      - uses: ./.forgejo/actions/rust-env
+        with:
+          cache: services-db-schema
+      - name: Start Postgres
+        run: docker compose up -d --build --wait postgres
+      - name: Check server's DB schema up-to-date
         run: |
-          cd services/server
+          cd services/server/migration
+          cargo run
           make db_schema
           git diff --exit-code
       # TODO: moderation and push-notification.
