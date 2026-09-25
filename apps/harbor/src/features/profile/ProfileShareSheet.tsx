@@ -14,7 +14,6 @@ const QR_CODE_PADDING = 25;
 const COPIED_INDICATOR_DURATION_MS = 2000;
 
 type ProfileShareSheetProps = {
-  // Identity being shared.
   identityKey: string;
   open: boolean;
   onClose: () => void;
