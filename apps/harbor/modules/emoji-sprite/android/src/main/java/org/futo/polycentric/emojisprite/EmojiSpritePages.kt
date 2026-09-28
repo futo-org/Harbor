@@ -1,7 +1,9 @@
 package org.futo.polycentric.emojisprite
 
 import android.app.ActivityManager
+import android.content.ComponentCallbacks2
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Handler
@@ -25,13 +27,18 @@ internal object EmojiSpritePages {
     override fun sizeOf(key: Int, value: Bitmap) = value.byteCount
   }
   // Listeners by page for decodes in flight; touched only on the main thread.
-  private val pendingListenersByPage = HashMap<Int, MutableList<(Bitmap) -> Unit>>()
+  private val pendingListenersByPage = HashMap<Int, MutableList<(Bitmap?) -> Unit>>()
   private val decoder = Executors.newSingleThreadExecutor()
   private val mainHandler = Handler(Looper.getMainLooper())
+  private var isTrimCallbackRegistered = false
 
-  /** Calls [onLoaded] on the main thread, right away if the page is cached. */
-  fun load(context: Context, page: Int, onLoaded: (Bitmap) -> Unit) {
+  /**
+   * Calls [onLoaded] on the main thread, right away if the page is cached,
+   * with null if the page fails to decode.
+   */
+  fun load(context: Context, page: Int, onLoaded: (Bitmap?) -> Unit) {
     if (page < 0) return
+    registerTrimCallback(context)
     cache.get(page)?.let {
       onLoaded(it)
       return
@@ -47,11 +54,27 @@ internal object EmojiSpritePages {
       val bitmap = decodePage(appContext, page)
       mainHandler.post {
         val listeners = pendingListenersByPage.remove(page).orEmpty()
-        if (bitmap == null) return@post
-        cache.put(page, bitmap)
+        if (bitmap != null) cache.put(page, bitmap)
         listeners.forEach { it(bitmap) }
       }
     }
+  }
+
+  // Views still hold the pages they draw; this drops the rest once the app
+  // is backgrounded or the system runs low.
+  private fun registerTrimCallback(context: Context) {
+    if (isTrimCallbackRegistered) return
+    isTrimCallbackRegistered = true
+    context.applicationContext.registerComponentCallbacks(object : ComponentCallbacks2 {
+      override fun onTrimMemory(level: Int) {
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) cache.evictAll()
+      }
+
+      override fun onConfigurationChanged(newConfig: Configuration) = Unit
+
+      @Deprecated("Deprecated in Java")
+      override fun onLowMemory() = cache.evictAll()
+    })
   }
 
   private fun decodePage(context: Context, page: Int): Bitmap? {
