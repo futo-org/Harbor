@@ -1,5 +1,6 @@
 //! Validation
 
+use std::convert::Infallible;
 use std::fmt;
 use std::sync::OnceLock;
 
@@ -323,7 +324,7 @@ pub(crate) struct SliceConfig {
 ///
 /// [`validate::slice`]: slice()
 #[derive(Debug)]
-pub enum SliceError<E = !> {
+pub enum SliceError<E = Infallible> {
     TooShort { length: usize, min: usize },
     TooLong { length: usize, max: usize },
     Validate { index: usize, error: E },
