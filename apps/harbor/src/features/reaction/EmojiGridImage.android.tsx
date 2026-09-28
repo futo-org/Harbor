@@ -12,11 +12,11 @@ type Props = {
 };
 
 /**
- * The picker's emoji glyph, drawn from a shared sprite page so opening the
- * picker decodes a few pages rather than an image per cell. Emoji missing
- * from the pages (skin tones, newer additions) use their own image.
+ * An emoji in the picker sheet's grid, drawn from a shared sprite page so
+ * opening the sheet decodes a few pages rather than an image per cell. Emoji
+ * missing from the pages (skin tones, newer additions) use their own image.
  */
-export function EmojiPickerImage({ sequence, size }: Props) {
+export function EmojiGridImage({ sequence, size }: Props) {
   const sheetIndex = SHEET_INDEX[twemojiCode(sequence)];
   if (sheetIndex === undefined)
     return <EmojiImage sequence={sequence} size={size} />;

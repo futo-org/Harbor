@@ -1,9 +1,10 @@
 import { Atoms } from '@/src/common/theme';
+import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { isWeb } from '@/src/common/util/platform';
 import { memo, useCallback, type ReactNode } from 'react';
 import type { Insets, ViewStyle } from 'react-native';
 import { Pressable, View } from 'react-native';
-import { EmojiPickerImage } from './EmojiPickerImage';
+import { EmojiGridImage } from './EmojiGridImage';
 
 // Scale/timing/opacity for the hover (on web) and press (on native) animations.
 export const EMOJI_POP_SCALE = 1.12;
@@ -111,6 +112,9 @@ type EmojiProps = {
   size?: string | number;
   // Passed as a prop to avoid frequent theme subscriptions
   highlightColor: string;
+  // Draws from shared sprite pages, which pays off only for a grid of many
+  // emoji; a few loose ones would decode whole pages.
+  isGridCell?: boolean;
 };
 
 export const Emoji = memo(function Emoji({
@@ -120,12 +124,14 @@ export const Emoji = memo(function Emoji({
   selected = false,
   size,
   highlightColor,
+  isGridCell = false,
 }: EmojiProps) {
   const handlePress = useCallback(
     () => onSelect(value ?? emoji),
     [onSelect, value, emoji],
   );
   const isNumericSize = typeof size === 'number';
+  const imageSize = isNumericSize ? Math.round(size * EMOJI_IMAGE_SCALE) : 28;
 
   return (
     <EmojiLikePressable
@@ -134,10 +140,11 @@ export const Emoji = memo(function Emoji({
       highlightColor={highlightColor}
       selected={selected}
     >
-      <EmojiPickerImage
-        sequence={emoji}
-        size={isNumericSize ? Math.round(size * EMOJI_IMAGE_SCALE) : 28}
-      />
+      {isGridCell ? (
+        <EmojiGridImage sequence={emoji} size={imageSize} />
+      ) : (
+        <EmojiImage sequence={emoji} size={imageSize} />
+      )}
     </EmojiLikePressable>
   );
 });

@@ -5,7 +5,7 @@ type Props = {
   size: number;
 };
 
-/** The picker's emoji glyph; Android draws it from sprite pages instead. */
-export function EmojiPickerImage({ sequence, size }: Props) {
+/** An emoji in the picker sheet's grid; Android draws it from sprite pages. */
+export function EmojiGridImage({ sequence, size }: Props) {
   return <EmojiImage sequence={sequence} size={size} />;
 }
