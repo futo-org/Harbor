@@ -209,7 +209,9 @@ where
     if let Some(regex) = regex
         && !regex.is_match(input)
     {
-        let err = StringError::FailsRegex { regex };
+        let err = StringError::FailsRegex {
+            regex: regex.as_str(),
+        };
         errors.push(map_err(err));
     }
 }
@@ -232,7 +234,7 @@ pub(crate) struct StringConfig {
 pub enum StringError {
     TooShort { length: usize, min: usize },
     TooLong { length: usize, max: usize },
-    FailsRegex { regex: &'static Regex },
+    FailsRegex { regex: &'static str },
 }
 
 /// Error message that completes the sentence "${field name} ", e.g. "name is
