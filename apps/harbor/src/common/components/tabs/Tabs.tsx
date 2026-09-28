@@ -218,13 +218,22 @@ export function Tabs({
 
 type TabProps = {
   children: string;
+  /** Shown before the label, e.g. an emoji. */
+  leading?: ReactNode;
   active?: boolean;
   /** Renders the tab's menu, marked by a down chevron; pressing the tab
    *  while active opens it instead of firing `onPress`. */
   menu?: (props: { open: boolean; onClose: () => void }) => ReactNode;
 } & Omit<ComponentProps<typeof Pressable>, 'children' | 'style'>;
 
-function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
+function Tab({
+  children,
+  leading,
+  active = false,
+  menu,
+  onPress,
+  ...props
+}: TabProps) {
   const { theme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const expand = useContext(ExpandContext);
@@ -290,6 +299,7 @@ function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
             { minWidth: 56 },
           ]}
         >
+          {leading}
           <Text
             variant="secondary"
             // Content-sized tabs keep a constant weight so they don't change

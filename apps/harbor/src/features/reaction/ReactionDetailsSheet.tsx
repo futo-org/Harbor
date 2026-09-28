@@ -1,9 +1,10 @@
+import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { Text } from '@/src/common/components/primitives/Text';
 import { Sheet } from '@/src/common/components/sheet';
 import { Tabs } from '@/src/common/components/tabs';
 import { Routes } from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, Spacing } from '@/src/common/theme';
+import { Atoms, Spacing, typography } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { FetchMode } from '@polycentric/react-native';
@@ -101,12 +102,12 @@ function deriveTabs(
   return tabs;
 }
 
-/** Render the emoji and count for a tab as a string to display on the tab. */
+/** The tab's text; an emoji tab shows its emoji before it. */
 function tabLabel(tab: TabData): string {
   if (tab.emoji === null) {
     return tab.countEstimate > 0 ? `All • ${tab.countEstimate}` : 'All';
   } else {
-    return `${tab.emoji}  ${tab.countEstimate}`;
+    return String(tab.countEstimate);
   }
 }
 
@@ -145,9 +146,7 @@ export default function ReactionDetailsSheet({
           router.push(Routes.tabs.profile(item.identity));
         }}
         trailing={
-          <Text fontSize="lg" lineHeight="lg">
-            {item.emoji}
-          </Text>
+          <EmojiImage sequence={item.emoji} size={typography.fontSize.lg} />
         }
       />
     ),
@@ -200,6 +199,14 @@ export default function ReactionDetailsSheet({
                 tab.emoji === null ? 'All reactions' : `${tab.emoji} reactions`
               }
               onPress={() => setSelectedEmoji(tab.emoji)}
+              leading={
+                tab.emoji === null ? undefined : (
+                  <EmojiImage
+                    sequence={tab.emoji}
+                    size={typography.fontSize.md}
+                  />
+                )
+              }
             >
               {tabLabel(tab)}
             </Tabs.Tab>

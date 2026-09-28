@@ -5,9 +5,9 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { EmojiFingerprint } from '@/src/features/identity-pairing/components/EmojiFingerprint';
 import { PairIdentityCamera } from '@/src/features/identity-pairing/components/PairIdentityCamera';
 import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
-import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -32,9 +32,6 @@ export default function PairIdentityClaimerScreen() {
 
   const pubKeyStr = client.currentKeyPair
     ? publicKeyToString(client.currentKeyPair.publicKey)
-    : '';
-  const pubKeyEmoji = pubKeyStr
-    ? publicKeyEmojiFingerprint(pubKeyStr).join(' ')
     : '';
 
   useEffect(() => {
@@ -108,16 +105,9 @@ export default function PairIdentityClaimerScreen() {
           </>
         ) : (
           <>
-            <Text
-              variant="title"
-              style={{
-                fontSize: 84,
-                lineHeight: 92,
-                textAlign: 'center',
-              }}
-            >
-              {pubKeyEmoji}
-            </Text>
+            {pubKeyStr ? (
+              <EmojiFingerprint publicKey={pubKeyStr} size={84} />
+            ) : null}
 
             <View style={[Atoms.items_center, Atoms.gap_sm]}>
               <Text

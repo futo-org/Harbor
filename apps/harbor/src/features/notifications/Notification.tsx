@@ -1,10 +1,17 @@
 import { Text } from '@/src/common/components';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
+import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { Routes } from '@/src/common/constants';
 import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import {
+  Atoms,
+  Spacing,
+  typography,
+  useTheme,
+  withHexOpacity,
+} from '@/src/common/theme';
 import { Post } from '@/src/features/post/Post';
 import { ClaimTypeChip } from '@/src/features/verifications/claims/toolbar/ClaimTypeChip';
 import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimById';
@@ -46,9 +53,7 @@ function summary(
     case 'repost':
       return 'reposted your post';
     case 'reaction':
-      return notification.emoji
-        ? `reacted ${notification.emoji} to your post`
-        : 'reacted to your post';
+      return 'reacted to your post';
     case 'verificationRequest':
       return 'requested a verification from you';
     case 'verificationComplete':
@@ -167,16 +172,23 @@ function InteractionNotification({
             fontWeight="bold"
             onPress={openProfile}
           />
-          <Text>
-            {' '}
-            {summary(notification)}
-            {notification.createdAt > 0 ? (
-              <Text color="neutral_500">
-                {' '}
-                · {timeAgo(notification.createdAt)}
-              </Text>
-            ) : null}
-          </Text>
+          <Text> {summary(notification)}</Text>
+          {/* Its own element, not inside the text: Android clips emoji
+              missing from the system font when they're inside text. */}
+          {notification.kind === 'reaction' && notification.emoji ? (
+            <View style={{ paddingLeft: Spacing.xs }}>
+              <EmojiImage
+                sequence={notification.emoji}
+                size={typography.fontSize.md}
+              />
+            </View>
+          ) : null}
+          {notification.createdAt > 0 ? (
+            <Text color="neutral_500">
+              {' '}
+              · {timeAgo(notification.createdAt)}
+            </Text>
+          ) : null}
         </View>
 
         {/* The post the action was taken against, quoted. */}
