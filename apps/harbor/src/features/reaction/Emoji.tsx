@@ -1,9 +1,9 @@
 import { Atoms } from '@/src/common/theme';
-import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { isWeb } from '@/src/common/util/platform';
 import { memo, useCallback, type ReactNode } from 'react';
 import type { Insets, ViewStyle } from 'react-native';
 import { Pressable, View } from 'react-native';
+import { EmojiPickerImage } from './EmojiPickerImage';
 
 // Scale/timing/opacity for the hover (on web) and press (on native) animations.
 export const EMOJI_POP_SCALE = 1.12;
@@ -134,7 +134,7 @@ export const Emoji = memo(function Emoji({
       highlightColor={highlightColor}
       selected={selected}
     >
-      <EmojiImage
+      <EmojiPickerImage
         sequence={emoji}
         size={isNumericSize ? Math.round(size * EMOJI_IMAGE_SCALE) : 28}
       />
