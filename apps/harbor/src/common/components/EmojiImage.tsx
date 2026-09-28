@@ -1,5 +1,5 @@
 import { TWEMOJI } from '@/src/common/emoji/twemoji';
-import { twemojiCode } from '@/src/common/util/emoji';
+import { TWEMOJI_ENABLED, twemojiCode } from '@/src/common/util/emoji';
 import { isAndroid } from '@/src/common/util/platform';
 import {
   Image as ExpoImage,
@@ -21,7 +21,8 @@ export const EmojiImage = memo(function EmojiImage({
   style,
 }: Props) {
   const source = TWEMOJI[twemojiCode(sequence)];
-  if (!source) return <Text style={{ fontSize: size * 0.85 }}>{sequence}</Text>;
+  if (!TWEMOJI_ENABLED || !source)
+    return <Text style={{ fontSize: size }}>{sequence}</Text>;
 
   // Android's RN Image fades in and re-decodes recycled cells, so the
   // picker grid flickers; expo-image keeps decoded emojis in memory.

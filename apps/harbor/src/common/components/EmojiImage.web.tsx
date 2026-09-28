@@ -4,7 +4,11 @@ import {
   SHEET_FILE,
   SHEET_INDEX,
 } from '@/src/common/emoji/twemoji/sheet';
-import { TWEMOJI_URL, twemojiCode } from '@/src/common/util/emoji';
+import {
+  TWEMOJI_ENABLED,
+  TWEMOJI_URL,
+  twemojiCode,
+} from '@/src/common/util/emoji';
 import {
   type CSSProperties,
   memo,
@@ -83,26 +87,12 @@ function Glyph({ sequence, size }: { sequence: string; size: number }) {
   );
 }
 
-/**
- * A Twemoji image for one emoji: a region of the sprite sheet, or for
- * emoji outside it (skin tones, newer additions) its own PNG from
- * `public/twemoji/`. The platform glyph shows until the image is there,
- * and stays if there is none, so a scrolling grid is never blank.
- */
+/** One emoji in a fixed box: a Twemoji image, or the platform glyph. */
 export const EmojiImage = memo(function EmojiImage({
   sequence,
   size,
   style,
 }: Props) {
-  const code = twemojiCode(sequence);
-  const cell = SHEET_INDEX[code];
-  const ready = useSheetReady();
-  const src = `${TWEMOJI_URL}${code}.png`;
-  // Keyed by src: a recycled list cell gets a new sequence on the same instance.
-  const [loaded, setLoaded] = useState<string | null>(null);
-  const [missing, setMissing] = useState<string | null>(null);
-  const showImage = cell === undefined ? loaded === src : ready;
-  const scale = size / SHEET_CELL;
   return (
     <span
       role="img"
@@ -116,6 +106,33 @@ export const EmojiImage = memo(function EmojiImage({
         ...toCss(style),
       }}
     >
+      {TWEMOJI_ENABLED ? (
+        <Twemoji sequence={sequence} size={size} />
+      ) : (
+        <Glyph sequence={sequence} size={size} />
+      )}
+    </span>
+  );
+});
+
+/**
+ * A Twemoji image for one emoji: a region of the sprite sheet, or for
+ * emoji outside it (skin tones, newer additions) its own PNG from
+ * `public/twemoji/`. The platform glyph shows until the image is there,
+ * and stays if there is none, so a scrolling grid is never blank.
+ */
+function Twemoji({ sequence, size }: { sequence: string; size: number }) {
+  const code = twemojiCode(sequence);
+  const cell = SHEET_INDEX[code];
+  const ready = useSheetReady();
+  const src = `${TWEMOJI_URL}${code}.png`;
+  // Keyed by src: a recycled list cell gets a new sequence on the same instance.
+  const [loaded, setLoaded] = useState<string | null>(null);
+  const [missing, setMissing] = useState<string | null>(null);
+  const showImage = cell === undefined ? loaded === src : ready;
+  const scale = size / SHEET_CELL;
+  return (
+    <>
       {!showImage && <Glyph sequence={sequence} size={size} />}
       {cell !== undefined
         ? showImage && (
@@ -151,6 +168,6 @@ export const EmojiImage = memo(function EmojiImage({
               onError={() => setMissing(src)}
             />
           )}
-    </span>
+    </>
   );
-});
+}

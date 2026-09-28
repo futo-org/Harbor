@@ -10,7 +10,7 @@ import {
   type FontSizeToken,
   type LineHeightToken,
 } from '@/src/common/theme';
-import { splitEmoji } from '@/src/common/util/emoji';
+import { splitEmoji, TWEMOJI_ENABLED } from '@/src/common/util/emoji';
 import { isWeb } from '@/src/common/util/platform';
 
 const WEB_FONT_STACK =
@@ -62,6 +62,7 @@ function withEmojiImages(text: string, fontSize: number): ReactNode {
 }
 
 function renderChildren(children: ReactNode, fontSize: number): ReactNode {
+  if (!TWEMOJI_ENABLED) return children;
   if (typeof children === 'string') return withEmojiImages(children, fontSize);
   if (!Array.isArray(children)) return children;
   return Children.map(children, (child) =>

@@ -26,6 +26,11 @@ const emojiImages = (json: unknown): string[] => {
   return found;
 };
 
+jest.mock('@/src/common/util/emoji', () => ({
+  ...jest.requireActual('@/src/common/util/emoji'),
+  TWEMOJI_ENABLED: true,
+}));
+
 describe('Text', () => {
   it('replaces emoji with Twemoji images', async () => {
     const { toJSON } = await render(<Text>hi 👋 there 🐈</Text>);
