@@ -7,7 +7,7 @@ export const SHEET_COLUMNS = 64;
 
 /** Sheet index of the first emoji on each Android sprite page
  * (emoji-sprite module); a page holds the emoji up to the next start. */
-export const SPRITE_PAGE_STARTS = [0, 168, 424, 554, 713, 844, 1062, 1147, 1403, 1411, 1635, 1891];
+export const SPRITE_PAGE_STARTS = [0, 168, 440, 554, 713, 844, 1062, 1147, 1411, 1635];
 
 /** Sheet cell of each emoji code (see `twemojiCode`), row-major. */
 export const SHEET_INDEX: Record<string, number> = {

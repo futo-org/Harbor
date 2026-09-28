@@ -69,10 +69,11 @@ console.log(
 // the 72px source cells, unscaled.
 const CELL = 72;
 const COLUMNS = 64;
-// Android sprite pages: up to 16x16 cells of 72px, about 5 MB per decoded
-// page. PAGE_COLUMNS must match EmojiSpriteView.kt.
+// Android sprite pages: up to 16x17 cells of 72px, about 5.6 MB per decoded
+// page; 17 rows fit the 264- and 270-emoji categories without a near-empty
+// overflow page. PAGE_COLUMNS must match EmojiSpriteView.kt.
 const PAGE_COLUMNS = 16;
-const PAGE_CELLS = PAGE_COLUMNS * PAGE_COLUMNS;
+const PAGE_CELLS = PAGE_COLUMNS * 17;
 const pagesDir = join(
   app,
   'modules',
