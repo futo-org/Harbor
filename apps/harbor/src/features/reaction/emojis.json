@@ -1,9 +1,4 @@
 {
-  "@version": "16.0.0",
-  "@author": "Chalda Pnuzig <chalda_emoji＠chalda.it>",
-  "@copyright": "Chalda Pnuzig 2021-2024",
-  "@see": "{@link https://github.com/chalda-pnuzig/emojis.json|GitHub}",
-  "@license": "ISC",
   "emojis": [
     {
       "code": ["1F600"],
@@ -139,8 +134,8 @@
       "subcategory": "face-affection"
     },
     {
-      "code": ["263A"],
-      "emoji": "☺",
+      "code": ["263A", "FE0F"],
+      "emoji": "☺️",
       "name": "smiling face",
       "category": "Smileys & Emotion",
       "subcategory": "face-affection"
@@ -566,8 +561,8 @@
       "subcategory": "face-concerned"
     },
     {
-      "code": ["2639"],
-      "emoji": "☹",
+      "code": ["2639", "FE0F"],
+      "emoji": "☹️",
       "name": "frowning face",
       "category": "Smileys & Emotion",
       "subcategory": "face-concerned"
@@ -769,8 +764,8 @@
       "subcategory": "face-negative"
     },
     {
-      "code": ["2620"],
-      "emoji": "☠",
+      "code": ["2620", "FE0F"],
+      "emoji": "☠️",
       "name": "skull and crossbones",
       "category": "Smileys & Emotion",
       "subcategory": "face-negative"
@@ -979,8 +974,8 @@
       "subcategory": "heart"
     },
     {
-      "code": ["2763"],
-      "emoji": "❣",
+      "code": ["2763", "FE0F"],
+      "emoji": "❣️",
       "name": "heart exclamation",
       "category": "Smileys & Emotion",
       "subcategory": "heart"
@@ -1007,8 +1002,8 @@
       "subcategory": "heart"
     },
     {
-      "code": ["2764"],
-      "emoji": "❤",
+      "code": ["2764", "FE0F"],
+      "emoji": "❤️",
       "name": "red heart",
       "category": "Smileys & Emotion",
       "subcategory": "heart"
@@ -1140,8 +1135,8 @@
       "subcategory": "emotion"
     },
     {
-      "code": ["1F573"],
-      "emoji": "🕳",
+      "code": ["1F573", "FE0F"],
+      "emoji": "🕳️",
       "name": "hole",
       "category": "Smileys & Emotion",
       "subcategory": "emotion"
@@ -1161,15 +1156,15 @@
       "subcategory": "emotion"
     },
     {
-      "code": ["1F5E8"],
-      "emoji": "🗨",
+      "code": ["1F5E8", "FE0F"],
+      "emoji": "🗨️",
       "name": "left speech bubble",
       "category": "Smileys & Emotion",
       "subcategory": "emotion"
     },
     {
-      "code": ["1F5EF"],
-      "emoji": "🗯",
+      "code": ["1F5EF", "FE0F"],
+      "emoji": "🗯️",
       "name": "right anger bubble",
       "category": "Smileys & Emotion",
       "subcategory": "emotion"
@@ -1203,8 +1198,8 @@
       "subcategory": "hand-fingers-open"
     },
     {
-      "code": ["1F590"],
-      "emoji": "🖐",
+      "code": ["1F590", "FE0F"],
+      "emoji": "🖐️",
       "name": "hand with fingers splayed",
       "category": "People & Body",
       "subcategory": "hand-fingers-open"
@@ -1287,8 +1282,8 @@
       "subcategory": "hand-fingers-partial"
     },
     {
-      "code": ["270C"],
-      "emoji": "✌",
+      "code": ["270C", "FE0F"],
+      "emoji": "✌️",
       "name": "victory hand",
       "category": "People & Body",
       "subcategory": "hand-fingers-partial"
@@ -1364,8 +1359,8 @@
       "subcategory": "hand-single-finger"
     },
     {
-      "code": ["261D"],
-      "emoji": "☝",
+      "code": ["261D", "FE0F"],
+      "emoji": "☝️",
       "name": "index pointing up",
       "category": "People & Body",
       "subcategory": "hand-single-finger"
@@ -1469,8 +1464,8 @@
       "subcategory": "hands"
     },
     {
-      "code": ["270D"],
-      "emoji": "✍",
+      "code": ["270D", "FE0F"],
+      "emoji": "✍️",
       "name": "writing hand",
       "category": "People & Body",
       "subcategory": "hand-prop"
@@ -1588,8 +1583,8 @@
       "subcategory": "body-parts"
     },
     {
-      "code": ["1F441"],
-      "emoji": "👁",
+      "code": ["1F441", "FE0F"],
+      "emoji": "👁️",
       "name": "eye",
       "category": "People & Body",
       "subcategory": "body-parts"
@@ -2379,8 +2374,8 @@
       "subcategory": "person-role"
     },
     {
-      "code": ["1F575"],
-      "emoji": "🕵",
+      "code": ["1F575", "FE0F"],
+      "emoji": "🕵️",
       "name": "detective",
       "category": "People & Body",
       "subcategory": "person-role"
@@ -3149,8 +3144,8 @@
       "subcategory": "person-activity"
     },
     {
-      "code": ["1F574"],
-      "emoji": "🕴",
+      "code": ["1F574", "FE0F"],
+      "emoji": "🕴️",
       "name": "person in suit levitating",
       "category": "People & Body",
       "subcategory": "person-activity"
@@ -3233,8 +3228,8 @@
       "subcategory": "person-sport"
     },
     {
-      "code": ["26F7"],
-      "emoji": "⛷",
+      "code": ["26F7", "FE0F"],
+      "emoji": "⛷️",
       "name": "skier",
       "category": "People & Body",
       "subcategory": "person-sport"
@@ -3247,8 +3242,8 @@
       "subcategory": "person-sport"
     },
     {
-      "code": ["1F3CC"],
-      "emoji": "🏌",
+      "code": ["1F3CC", "FE0F"],
+      "emoji": "🏌️",
       "name": "person golfing",
       "category": "People & Body",
       "subcategory": "person-sport"
@@ -3331,8 +3326,8 @@
       "subcategory": "person-sport"
     },
     {
-      "code": ["26F9"],
-      "emoji": "⛹",
+      "code": ["26F9", "FE0F"],
+      "emoji": "⛹️",
       "name": "person bouncing ball",
       "category": "People & Body",
       "subcategory": "person-sport"
@@ -3352,8 +3347,8 @@
       "subcategory": "person-sport"
     },
     {
-      "code": ["1F3CB"],
-      "emoji": "🏋",
+      "code": ["1F3CB", "FE0F"],
+      "emoji": "🏋️",
       "name": "person lifting weights",
       "category": "People & Body",
       "subcategory": "person-sport"
@@ -3841,8 +3836,8 @@
       "subcategory": "family"
     },
     {
-      "code": ["1F5E3"],
-      "emoji": "🗣",
+      "code": ["1F5E3", "FE0F"],
+      "emoji": "🗣️",
       "name": "speaking head",
       "category": "People & Body",
       "subcategory": "person-symbol"
@@ -4310,8 +4305,8 @@
       "subcategory": "animal-mammal"
     },
     {
-      "code": ["1F43F"],
-      "emoji": "🐿",
+      "code": ["1F43F", "FE0F"],
+      "emoji": "🐿️",
       "name": "chipmunk",
       "category": "Animals & Nature",
       "subcategory": "animal-mammal"
@@ -4464,8 +4459,8 @@
       "subcategory": "animal-bird"
     },
     {
-      "code": ["1F54A"],
-      "emoji": "🕊",
+      "code": ["1F54A", "FE0F"],
+      "emoji": "🕊️",
       "name": "dove",
       "category": "Animals & Nature",
       "subcategory": "animal-bird"
@@ -4807,15 +4802,15 @@
       "subcategory": "animal-bug"
     },
     {
-      "code": ["1F577"],
-      "emoji": "🕷",
+      "code": ["1F577", "FE0F"],
+      "emoji": "🕷️",
       "name": "spider",
       "category": "Animals & Nature",
       "subcategory": "animal-bug"
     },
     {
-      "code": ["1F578"],
-      "emoji": "🕸",
+      "code": ["1F578", "FE0F"],
+      "emoji": "🕸️",
       "name": "spider web",
       "category": "Animals & Nature",
       "subcategory": "animal-bug"
@@ -4884,8 +4879,8 @@
       "subcategory": "plant-flower"
     },
     {
-      "code": ["1F3F5"],
-      "emoji": "🏵",
+      "code": ["1F3F5", "FE0F"],
+      "emoji": "🏵️",
       "name": "rosette",
       "category": "Animals & Nature",
       "subcategory": "plant-flower"
@@ -4996,8 +4991,8 @@
       "subcategory": "plant-other"
     },
     {
-      "code": ["2618"],
-      "emoji": "☘",
+      "code": ["2618", "FE0F"],
+      "emoji": "☘️",
       "name": "shamrock",
       "category": "Animals & Nature",
       "subcategory": "plant-other"
@@ -5234,8 +5229,8 @@
       "subcategory": "food-vegetable"
     },
     {
-      "code": ["1F336"],
-      "emoji": "🌶",
+      "code": ["1F336", "FE0F"],
+      "emoji": "🌶️",
       "name": "hot pepper",
       "category": "Food & Drink",
       "subcategory": "food-vegetable"
@@ -5934,8 +5929,8 @@
       "subcategory": "dishware"
     },
     {
-      "code": ["1F37D"],
-      "emoji": "🍽",
+      "code": ["1F37D", "FE0F"],
+      "emoji": "🍽️",
       "name": "fork and knife with plate",
       "category": "Food & Drink",
       "subcategory": "dishware"
@@ -6004,8 +5999,8 @@
       "subcategory": "place-map"
     },
     {
-      "code": ["1F5FA"],
-      "emoji": "🗺",
+      "code": ["1F5FA", "FE0F"],
+      "emoji": "🗺️",
       "name": "world map",
       "category": "Travel & Places",
       "subcategory": "place-map"
@@ -6025,15 +6020,15 @@
       "subcategory": "place-map"
     },
     {
-      "code": ["1F3D4"],
-      "emoji": "🏔",
+      "code": ["1F3D4", "FE0F"],
+      "emoji": "🏔️",
       "name": "snow-capped mountain",
       "category": "Travel & Places",
       "subcategory": "place-geographic"
     },
     {
-      "code": ["26F0"],
-      "emoji": "⛰",
+      "code": ["26F0", "FE0F"],
+      "emoji": "⛰️",
       "name": "mountain",
       "category": "Travel & Places",
       "subcategory": "place-geographic"
@@ -6053,57 +6048,57 @@
       "subcategory": "place-geographic"
     },
     {
-      "code": ["1F3D5"],
-      "emoji": "🏕",
+      "code": ["1F3D5", "FE0F"],
+      "emoji": "🏕️",
       "name": "camping",
       "category": "Travel & Places",
       "subcategory": "place-geographic"
     },
     {
-      "code": ["1F3D6"],
-      "emoji": "🏖",
+      "code": ["1F3D6", "FE0F"],
+      "emoji": "🏖️",
       "name": "beach with umbrella",
       "category": "Travel & Places",
       "subcategory": "place-geographic"
     },
     {
-      "code": ["1F3DC"],
-      "emoji": "🏜",
+      "code": ["1F3DC", "FE0F"],
+      "emoji": "🏜️",
       "name": "desert",
       "category": "Travel & Places",
       "subcategory": "place-geographic"
     },
     {
-      "code": ["1F3DD"],
-      "emoji": "🏝",
+      "code": ["1F3DD", "FE0F"],
+      "emoji": "🏝️",
       "name": "desert island",
       "category": "Travel & Places",
       "subcategory": "place-geographic"
     },
     {
-      "code": ["1F3DE"],
-      "emoji": "🏞",
+      "code": ["1F3DE", "FE0F"],
+      "emoji": "🏞️",
       "name": "national park",
       "category": "Travel & Places",
       "subcategory": "place-geographic"
     },
     {
-      "code": ["1F3DF"],
-      "emoji": "🏟",
+      "code": ["1F3DF", "FE0F"],
+      "emoji": "🏟️",
       "name": "stadium",
       "category": "Travel & Places",
       "subcategory": "place-building"
     },
     {
-      "code": ["1F3DB"],
-      "emoji": "🏛",
+      "code": ["1F3DB", "FE0F"],
+      "emoji": "🏛️",
       "name": "classical building",
       "category": "Travel & Places",
       "subcategory": "place-building"
     },
     {
-      "code": ["1F3D7"],
-      "emoji": "🏗",
+      "code": ["1F3D7", "FE0F"],
+      "emoji": "🏗️",
       "name": "building construction",
       "category": "Travel & Places",
       "subcategory": "place-building"
@@ -6137,15 +6132,15 @@
       "subcategory": "place-building"
     },
     {
-      "code": ["1F3D8"],
-      "emoji": "🏘",
+      "code": ["1F3D8", "FE0F"],
+      "emoji": "🏘️",
       "name": "houses",
       "category": "Travel & Places",
       "subcategory": "place-building"
     },
     {
-      "code": ["1F3DA"],
-      "emoji": "🏚",
+      "code": ["1F3DA", "FE0F"],
+      "emoji": "🏚️",
       "name": "derelict house",
       "category": "Travel & Places",
       "subcategory": "place-building"
@@ -6305,8 +6300,8 @@
       "subcategory": "place-religious"
     },
     {
-      "code": ["26E9"],
-      "emoji": "⛩",
+      "code": ["26E9", "FE0F"],
+      "emoji": "⛩️",
       "name": "shinto shrine",
       "category": "Travel & Places",
       "subcategory": "place-religious"
@@ -6347,8 +6342,8 @@
       "subcategory": "place-other"
     },
     {
-      "code": ["1F3D9"],
-      "emoji": "🏙",
+      "code": ["1F3D9", "FE0F"],
+      "emoji": "🏙️",
       "name": "cityscape",
       "category": "Travel & Places",
       "subcategory": "place-other"
@@ -6389,8 +6384,8 @@
       "subcategory": "place-other"
     },
     {
-      "code": ["2668"],
-      "emoji": "♨",
+      "code": ["2668", "FE0F"],
+      "emoji": "♨️",
       "name": "hot springs",
       "category": "Travel & Places",
       "subcategory": "place-other"
@@ -6641,15 +6636,15 @@
       "subcategory": "transport-ground"
     },
     {
-      "code": ["1F3CE"],
-      "emoji": "🏎",
+      "code": ["1F3CE", "FE0F"],
+      "emoji": "🏎️",
       "name": "racing car",
       "category": "Travel & Places",
       "subcategory": "transport-ground"
     },
     {
-      "code": ["1F3CD"],
-      "emoji": "🏍",
+      "code": ["1F3CD", "FE0F"],
+      "emoji": "🏍️",
       "name": "motorcycle",
       "category": "Travel & Places",
       "subcategory": "transport-ground"
@@ -6718,22 +6713,22 @@
       "subcategory": "transport-ground"
     },
     {
-      "code": ["1F6E3"],
-      "emoji": "🛣",
+      "code": ["1F6E3", "FE0F"],
+      "emoji": "🛣️",
       "name": "motorway",
       "category": "Travel & Places",
       "subcategory": "transport-ground"
     },
     {
-      "code": ["1F6E4"],
-      "emoji": "🛤",
+      "code": ["1F6E4", "FE0F"],
+      "emoji": "🛤️",
       "name": "railway track",
       "category": "Travel & Places",
       "subcategory": "transport-ground"
     },
     {
-      "code": ["1F6E2"],
-      "emoji": "🛢",
+      "code": ["1F6E2", "FE0F"],
+      "emoji": "🛢️",
       "name": "oil drum",
       "category": "Travel & Places",
       "subcategory": "transport-ground"
@@ -6823,22 +6818,22 @@
       "subcategory": "transport-water"
     },
     {
-      "code": ["1F6F3"],
-      "emoji": "🛳",
+      "code": ["1F6F3", "FE0F"],
+      "emoji": "🛳️",
       "name": "passenger ship",
       "category": "Travel & Places",
       "subcategory": "transport-water"
     },
     {
-      "code": ["26F4"],
-      "emoji": "⛴",
+      "code": ["26F4", "FE0F"],
+      "emoji": "⛴️",
       "name": "ferry",
       "category": "Travel & Places",
       "subcategory": "transport-water"
     },
     {
-      "code": ["1F6E5"],
-      "emoji": "🛥",
+      "code": ["1F6E5", "FE0F"],
+      "emoji": "🛥️",
       "name": "motor boat",
       "category": "Travel & Places",
       "subcategory": "transport-water"
@@ -6851,15 +6846,15 @@
       "subcategory": "transport-water"
     },
     {
-      "code": ["2708"],
-      "emoji": "✈",
+      "code": ["2708", "FE0F"],
+      "emoji": "✈️",
       "name": "airplane",
       "category": "Travel & Places",
       "subcategory": "transport-air"
     },
     {
-      "code": ["1F6E9"],
-      "emoji": "🛩",
+      "code": ["1F6E9", "FE0F"],
+      "emoji": "🛩️",
       "name": "small airplane",
       "category": "Travel & Places",
       "subcategory": "transport-air"
@@ -6921,8 +6916,8 @@
       "subcategory": "transport-air"
     },
     {
-      "code": ["1F6F0"],
-      "emoji": "🛰",
+      "code": ["1F6F0", "FE0F"],
+      "emoji": "🛰️",
       "name": "satellite",
       "category": "Travel & Places",
       "subcategory": "transport-air"
@@ -6942,8 +6937,8 @@
       "subcategory": "transport-air"
     },
     {
-      "code": ["1F6CE"],
-      "emoji": "🛎",
+      "code": ["1F6CE", "FE0F"],
+      "emoji": "🛎️",
       "name": "bellhop bell",
       "category": "Travel & Places",
       "subcategory": "hotel"
@@ -6984,22 +6979,22 @@
       "subcategory": "time"
     },
     {
-      "code": ["23F1"],
-      "emoji": "⏱",
+      "code": ["23F1", "FE0F"],
+      "emoji": "⏱️",
       "name": "stopwatch",
       "category": "Travel & Places",
       "subcategory": "time"
     },
     {
-      "code": ["23F2"],
-      "emoji": "⏲",
+      "code": ["23F2", "FE0F"],
+      "emoji": "⏲️",
       "name": "timer clock",
       "category": "Travel & Places",
       "subcategory": "time"
     },
     {
-      "code": ["1F570"],
-      "emoji": "🕰",
+      "code": ["1F570", "FE0F"],
+      "emoji": "🕰️",
       "name": "mantelpiece clock",
       "category": "Travel & Places",
       "subcategory": "time"
@@ -7257,15 +7252,15 @@
       "subcategory": "sky & weather"
     },
     {
-      "code": ["1F321"],
-      "emoji": "🌡",
+      "code": ["1F321", "FE0F"],
+      "emoji": "🌡️",
       "name": "thermometer",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["2600"],
-      "emoji": "☀",
+      "code": ["2600", "FE0F"],
+      "emoji": "☀️",
       "name": "sun",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
@@ -7320,8 +7315,8 @@
       "subcategory": "sky & weather"
     },
     {
-      "code": ["2601"],
-      "emoji": "☁",
+      "code": ["2601", "FE0F"],
+      "emoji": "☁️",
       "name": "cloud",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
@@ -7334,71 +7329,71 @@
       "subcategory": "sky & weather"
     },
     {
-      "code": ["26C8"],
-      "emoji": "⛈",
+      "code": ["26C8", "FE0F"],
+      "emoji": "⛈️",
       "name": "cloud with lightning and rain",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["1F324"],
-      "emoji": "🌤",
+      "code": ["1F324", "FE0F"],
+      "emoji": "🌤️",
       "name": "sun behind small cloud",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["1F325"],
-      "emoji": "🌥",
+      "code": ["1F325", "FE0F"],
+      "emoji": "🌥️",
       "name": "sun behind large cloud",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["1F326"],
-      "emoji": "🌦",
+      "code": ["1F326", "FE0F"],
+      "emoji": "🌦️",
       "name": "sun behind rain cloud",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["1F327"],
-      "emoji": "🌧",
+      "code": ["1F327", "FE0F"],
+      "emoji": "🌧️",
       "name": "cloud with rain",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["1F328"],
-      "emoji": "🌨",
+      "code": ["1F328", "FE0F"],
+      "emoji": "🌨️",
       "name": "cloud with snow",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["1F329"],
-      "emoji": "🌩",
+      "code": ["1F329", "FE0F"],
+      "emoji": "🌩️",
       "name": "cloud with lightning",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["1F32A"],
-      "emoji": "🌪",
+      "code": ["1F32A", "FE0F"],
+      "emoji": "🌪️",
       "name": "tornado",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["1F32B"],
-      "emoji": "🌫",
+      "code": ["1F32B", "FE0F"],
+      "emoji": "🌫️",
       "name": "fog",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["1F32C"],
-      "emoji": "🌬",
+      "code": ["1F32C", "FE0F"],
+      "emoji": "🌬️",
       "name": "wind face",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
@@ -7425,8 +7420,8 @@
       "subcategory": "sky & weather"
     },
     {
-      "code": ["2602"],
-      "emoji": "☂",
+      "code": ["2602", "FE0F"],
+      "emoji": "☂️",
       "name": "umbrella",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
@@ -7439,8 +7434,8 @@
       "subcategory": "sky & weather"
     },
     {
-      "code": ["26F1"],
-      "emoji": "⛱",
+      "code": ["26F1", "FE0F"],
+      "emoji": "⛱️",
       "name": "umbrella on ground",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
@@ -7453,15 +7448,15 @@
       "subcategory": "sky & weather"
     },
     {
-      "code": ["2744"],
-      "emoji": "❄",
+      "code": ["2744", "FE0F"],
+      "emoji": "❄️",
       "name": "snowflake",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
     },
     {
-      "code": ["2603"],
-      "emoji": "☃",
+      "code": ["2603", "FE0F"],
+      "emoji": "☃️",
       "name": "snowman",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
@@ -7474,8 +7469,8 @@
       "subcategory": "sky & weather"
     },
     {
-      "code": ["2604"],
-      "emoji": "☄",
+      "code": ["2604", "FE0F"],
+      "emoji": "☄️",
       "name": "comet",
       "category": "Travel & Places",
       "subcategory": "sky & weather"
@@ -7628,15 +7623,15 @@
       "subcategory": "event"
     },
     {
-      "code": ["1F397"],
-      "emoji": "🎗",
+      "code": ["1F397", "FE0F"],
+      "emoji": "🎗️",
       "name": "reminder ribbon",
       "category": "Activities",
       "subcategory": "event"
     },
     {
-      "code": ["1F39F"],
-      "emoji": "🎟",
+      "code": ["1F39F", "FE0F"],
+      "emoji": "🎟️",
       "name": "admission tickets",
       "category": "Activities",
       "subcategory": "event"
@@ -7649,8 +7644,8 @@
       "subcategory": "event"
     },
     {
-      "code": ["1F396"],
-      "emoji": "🎖",
+      "code": ["1F396", "FE0F"],
+      "emoji": "🎖️",
       "name": "military medal",
       "category": "Activities",
       "subcategory": "award-medal"
@@ -7831,8 +7826,8 @@
       "subcategory": "sport"
     },
     {
-      "code": ["26F8"],
-      "emoji": "⛸",
+      "code": ["26F8", "FE0F"],
+      "emoji": "⛸️",
       "name": "ice skate",
       "category": "Activities",
       "subcategory": "sport"
@@ -7936,8 +7931,8 @@
       "subcategory": "game"
     },
     {
-      "code": ["1F579"],
-      "emoji": "🕹",
+      "code": ["1F579", "FE0F"],
+      "emoji": "🕹️",
       "name": "joystick",
       "category": "Activities",
       "subcategory": "game"
@@ -7992,36 +7987,36 @@
       "subcategory": "game"
     },
     {
-      "code": ["2660"],
-      "emoji": "♠",
+      "code": ["2660", "FE0F"],
+      "emoji": "♠️",
       "name": "spade suit",
       "category": "Activities",
       "subcategory": "game"
     },
     {
-      "code": ["2665"],
-      "emoji": "♥",
+      "code": ["2665", "FE0F"],
+      "emoji": "♥️",
       "name": "heart suit",
       "category": "Activities",
       "subcategory": "game"
     },
     {
-      "code": ["2666"],
-      "emoji": "♦",
+      "code": ["2666", "FE0F"],
+      "emoji": "♦️",
       "name": "diamond suit",
       "category": "Activities",
       "subcategory": "game"
     },
     {
-      "code": ["2663"],
-      "emoji": "♣",
+      "code": ["2663", "FE0F"],
+      "emoji": "♣️",
       "name": "club suit",
       "category": "Activities",
       "subcategory": "game"
     },
     {
-      "code": ["265F"],
-      "emoji": "♟",
+      "code": ["265F", "FE0F"],
+      "emoji": "♟️",
       "name": "chess pawn",
       "category": "Activities",
       "subcategory": "game"
@@ -8055,8 +8050,8 @@
       "subcategory": "arts & crafts"
     },
     {
-      "code": ["1F5BC"],
-      "emoji": "🖼",
+      "code": ["1F5BC", "FE0F"],
+      "emoji": "🖼️",
       "name": "framed picture",
       "category": "Activities",
       "subcategory": "arts & crafts"
@@ -8104,8 +8099,8 @@
       "subcategory": "clothing"
     },
     {
-      "code": ["1F576"],
-      "emoji": "🕶",
+      "code": ["1F576", "FE0F"],
+      "emoji": "🕶️",
       "name": "sunglasses",
       "category": "Objects",
       "subcategory": "clothing"
@@ -8265,8 +8260,8 @@
       "subcategory": "clothing"
     },
     {
-      "code": ["1F6CD"],
-      "emoji": "🛍",
+      "code": ["1F6CD", "FE0F"],
+      "emoji": "🛍️",
       "name": "shopping bags",
       "category": "Objects",
       "subcategory": "clothing"
@@ -8391,8 +8386,8 @@
       "subcategory": "clothing"
     },
     {
-      "code": ["26D1"],
-      "emoji": "⛑",
+      "code": ["26D1", "FE0F"],
+      "emoji": "⛑️",
       "name": "rescue worker’s helmet",
       "category": "Objects",
       "subcategory": "clothing"
@@ -8510,22 +8505,22 @@
       "subcategory": "music"
     },
     {
-      "code": ["1F399"],
-      "emoji": "🎙",
+      "code": ["1F399", "FE0F"],
+      "emoji": "🎙️",
       "name": "studio microphone",
       "category": "Objects",
       "subcategory": "music"
     },
     {
-      "code": ["1F39A"],
-      "emoji": "🎚",
+      "code": ["1F39A", "FE0F"],
+      "emoji": "🎚️",
       "name": "level slider",
       "category": "Objects",
       "subcategory": "music"
     },
     {
-      "code": ["1F39B"],
-      "emoji": "🎛",
+      "code": ["1F39B", "FE0F"],
+      "emoji": "🎛️",
       "name": "control knobs",
       "category": "Objects",
       "subcategory": "music"
@@ -8650,8 +8645,8 @@
       "subcategory": "phone"
     },
     {
-      "code": ["260E"],
-      "emoji": "☎",
+      "code": ["260E", "FE0F"],
+      "emoji": "☎️",
       "name": "telephone",
       "category": "Objects",
       "subcategory": "phone"
@@ -8706,36 +8701,36 @@
       "subcategory": "computer"
     },
     {
-      "code": ["1F5A5"],
-      "emoji": "🖥",
+      "code": ["1F5A5", "FE0F"],
+      "emoji": "🖥️",
       "name": "desktop computer",
       "category": "Objects",
       "subcategory": "computer"
     },
     {
-      "code": ["1F5A8"],
-      "emoji": "🖨",
+      "code": ["1F5A8", "FE0F"],
+      "emoji": "🖨️",
       "name": "printer",
       "category": "Objects",
       "subcategory": "computer"
     },
     {
-      "code": ["2328"],
-      "emoji": "⌨",
+      "code": ["2328", "FE0F"],
+      "emoji": "⌨️",
       "name": "keyboard",
       "category": "Objects",
       "subcategory": "computer"
     },
     {
-      "code": ["1F5B1"],
-      "emoji": "🖱",
+      "code": ["1F5B1", "FE0F"],
+      "emoji": "🖱️",
       "name": "computer mouse",
       "category": "Objects",
       "subcategory": "computer"
     },
     {
-      "code": ["1F5B2"],
-      "emoji": "🖲",
+      "code": ["1F5B2", "FE0F"],
+      "emoji": "🖲️",
       "name": "trackball",
       "category": "Objects",
       "subcategory": "computer"
@@ -8783,15 +8778,15 @@
       "subcategory": "light & video"
     },
     {
-      "code": ["1F39E"],
-      "emoji": "🎞",
+      "code": ["1F39E", "FE0F"],
+      "emoji": "🎞️",
       "name": "film frames",
       "category": "Objects",
       "subcategory": "light & video"
     },
     {
-      "code": ["1F4FD"],
-      "emoji": "📽",
+      "code": ["1F4FD", "FE0F"],
+      "emoji": "📽️",
       "name": "film projector",
       "category": "Objects",
       "subcategory": "light & video"
@@ -8853,8 +8848,8 @@
       "subcategory": "light & video"
     },
     {
-      "code": ["1F56F"],
-      "emoji": "🕯",
+      "code": ["1F56F", "FE0F"],
+      "emoji": "🕯️",
       "name": "candle",
       "category": "Objects",
       "subcategory": "light & video"
@@ -8979,8 +8974,8 @@
       "subcategory": "book-paper"
     },
     {
-      "code": ["1F5DE"],
-      "emoji": "🗞",
+      "code": ["1F5DE", "FE0F"],
+      "emoji": "🗞️",
       "name": "rolled-up newspaper",
       "category": "Objects",
       "subcategory": "book-paper"
@@ -9000,8 +8995,8 @@
       "subcategory": "book-paper"
     },
     {
-      "code": ["1F3F7"],
-      "emoji": "🏷",
+      "code": ["1F3F7", "FE0F"],
+      "emoji": "🏷️",
       "name": "label",
       "category": "Objects",
       "subcategory": "book-paper"
@@ -9077,8 +9072,8 @@
       "subcategory": "money"
     },
     {
-      "code": ["2709"],
-      "emoji": "✉",
+      "code": ["2709", "FE0F"],
+      "emoji": "✉️",
       "name": "envelope",
       "category": "Objects",
       "subcategory": "mail"
@@ -9161,50 +9156,50 @@
       "subcategory": "mail"
     },
     {
-      "code": ["1F5F3"],
-      "emoji": "🗳",
+      "code": ["1F5F3", "FE0F"],
+      "emoji": "🗳️",
       "name": "ballot box with ballot",
       "category": "Objects",
       "subcategory": "mail"
     },
     {
-      "code": ["270F"],
-      "emoji": "✏",
+      "code": ["270F", "FE0F"],
+      "emoji": "✏️",
       "name": "pencil",
       "category": "Objects",
       "subcategory": "writing"
     },
     {
-      "code": ["2712"],
-      "emoji": "✒",
+      "code": ["2712", "FE0F"],
+      "emoji": "✒️",
       "name": "black nib",
       "category": "Objects",
       "subcategory": "writing"
     },
     {
-      "code": ["1F58B"],
-      "emoji": "🖋",
+      "code": ["1F58B", "FE0F"],
+      "emoji": "🖋️",
       "name": "fountain pen",
       "category": "Objects",
       "subcategory": "writing"
     },
     {
-      "code": ["1F58A"],
-      "emoji": "🖊",
+      "code": ["1F58A", "FE0F"],
+      "emoji": "🖊️",
       "name": "pen",
       "category": "Objects",
       "subcategory": "writing"
     },
     {
-      "code": ["1F58C"],
-      "emoji": "🖌",
+      "code": ["1F58C", "FE0F"],
+      "emoji": "🖌️",
       "name": "paintbrush",
       "category": "Objects",
       "subcategory": "writing"
     },
     {
-      "code": ["1F58D"],
-      "emoji": "🖍",
+      "code": ["1F58D", "FE0F"],
+      "emoji": "🖍️",
       "name": "crayon",
       "category": "Objects",
       "subcategory": "writing"
@@ -9238,8 +9233,8 @@
       "subcategory": "office"
     },
     {
-      "code": ["1F5C2"],
-      "emoji": "🗂",
+      "code": ["1F5C2", "FE0F"],
+      "emoji": "🗂️",
       "name": "card index dividers",
       "category": "Objects",
       "subcategory": "office"
@@ -9259,15 +9254,15 @@
       "subcategory": "office"
     },
     {
-      "code": ["1F5D2"],
-      "emoji": "🗒",
+      "code": ["1F5D2", "FE0F"],
+      "emoji": "🗒️",
       "name": "spiral notepad",
       "category": "Objects",
       "subcategory": "office"
     },
     {
-      "code": ["1F5D3"],
-      "emoji": "🗓",
+      "code": ["1F5D3", "FE0F"],
+      "emoji": "🗓️",
       "name": "spiral calendar",
       "category": "Objects",
       "subcategory": "office"
@@ -9329,8 +9324,8 @@
       "subcategory": "office"
     },
     {
-      "code": ["1F587"],
-      "emoji": "🖇",
+      "code": ["1F587", "FE0F"],
+      "emoji": "🖇️",
       "name": "linked paperclips",
       "category": "Objects",
       "subcategory": "office"
@@ -9350,29 +9345,29 @@
       "subcategory": "office"
     },
     {
-      "code": ["2702"],
-      "emoji": "✂",
+      "code": ["2702", "FE0F"],
+      "emoji": "✂️",
       "name": "scissors",
       "category": "Objects",
       "subcategory": "office"
     },
     {
-      "code": ["1F5C3"],
-      "emoji": "🗃",
+      "code": ["1F5C3", "FE0F"],
+      "emoji": "🗃️",
       "name": "card file box",
       "category": "Objects",
       "subcategory": "office"
     },
     {
-      "code": ["1F5C4"],
-      "emoji": "🗄",
+      "code": ["1F5C4", "FE0F"],
+      "emoji": "🗄️",
       "name": "file cabinet",
       "category": "Objects",
       "subcategory": "office"
     },
     {
-      "code": ["1F5D1"],
-      "emoji": "🗑",
+      "code": ["1F5D1", "FE0F"],
+      "emoji": "🗑️",
       "name": "wastebasket",
       "category": "Objects",
       "subcategory": "office"
@@ -9413,8 +9408,8 @@
       "subcategory": "lock"
     },
     {
-      "code": ["1F5DD"],
-      "emoji": "🗝",
+      "code": ["1F5DD", "FE0F"],
+      "emoji": "🗝️",
       "name": "old key",
       "category": "Objects",
       "subcategory": "lock"
@@ -9434,36 +9429,36 @@
       "subcategory": "tool"
     },
     {
-      "code": ["26CF"],
-      "emoji": "⛏",
+      "code": ["26CF", "FE0F"],
+      "emoji": "⛏️",
       "name": "pick",
       "category": "Objects",
       "subcategory": "tool"
     },
     {
-      "code": ["2692"],
-      "emoji": "⚒",
+      "code": ["2692", "FE0F"],
+      "emoji": "⚒️",
       "name": "hammer and pick",
       "category": "Objects",
       "subcategory": "tool"
     },
     {
-      "code": ["1F6E0"],
-      "emoji": "🛠",
+      "code": ["1F6E0", "FE0F"],
+      "emoji": "🛠️",
       "name": "hammer and wrench",
       "category": "Objects",
       "subcategory": "tool"
     },
     {
-      "code": ["1F5E1"],
-      "emoji": "🗡",
+      "code": ["1F5E1", "FE0F"],
+      "emoji": "🗡️",
       "name": "dagger",
       "category": "Objects",
       "subcategory": "tool"
     },
     {
-      "code": ["2694"],
-      "emoji": "⚔",
+      "code": ["2694", "FE0F"],
+      "emoji": "⚔️",
       "name": "crossed swords",
       "category": "Objects",
       "subcategory": "tool"
@@ -9490,8 +9485,8 @@
       "subcategory": "tool"
     },
     {
-      "code": ["1F6E1"],
-      "emoji": "🛡",
+      "code": ["1F6E1", "FE0F"],
+      "emoji": "🛡️",
       "name": "shield",
       "category": "Objects",
       "subcategory": "tool"
@@ -9525,22 +9520,22 @@
       "subcategory": "tool"
     },
     {
-      "code": ["2699"],
-      "emoji": "⚙",
+      "code": ["2699", "FE0F"],
+      "emoji": "⚙️",
       "name": "gear",
       "category": "Objects",
       "subcategory": "tool"
     },
     {
-      "code": ["1F5DC"],
-      "emoji": "🗜",
+      "code": ["1F5DC", "FE0F"],
+      "emoji": "🗜️",
       "name": "clamp",
       "category": "Objects",
       "subcategory": "tool"
     },
     {
-      "code": ["2696"],
-      "emoji": "⚖",
+      "code": ["2696", "FE0F"],
+      "emoji": "⚖️",
       "name": "balance scale",
       "category": "Objects",
       "subcategory": "tool"
@@ -9567,8 +9562,8 @@
       "subcategory": "tool"
     },
     {
-      "code": ["26D3"],
-      "emoji": "⛓",
+      "code": ["26D3", "FE0F"],
+      "emoji": "⛓️",
       "name": "chains",
       "category": "Objects",
       "subcategory": "tool"
@@ -9609,8 +9604,8 @@
       "subcategory": "tool"
     },
     {
-      "code": ["2697"],
-      "emoji": "⚗",
+      "code": ["2697", "FE0F"],
+      "emoji": "⚗️",
       "name": "alembic",
       "category": "Objects",
       "subcategory": "science"
@@ -9735,15 +9730,15 @@
       "subcategory": "household"
     },
     {
-      "code": ["1F6CF"],
-      "emoji": "🛏",
+      "code": ["1F6CF", "FE0F"],
+      "emoji": "🛏️",
       "name": "bed",
       "category": "Objects",
       "subcategory": "household"
     },
     {
-      "code": ["1F6CB"],
-      "emoji": "🛋",
+      "code": ["1F6CB", "FE0F"],
+      "emoji": "🛋️",
       "name": "couch and lamp",
       "category": "Objects",
       "subcategory": "household"
@@ -9889,8 +9884,8 @@
       "subcategory": "other-object"
     },
     {
-      "code": ["26B0"],
-      "emoji": "⚰",
+      "code": ["26B0", "FE0F"],
+      "emoji": "⚰️",
       "name": "coffin",
       "category": "Objects",
       "subcategory": "other-object"
@@ -9903,8 +9898,8 @@
       "subcategory": "other-object"
     },
     {
-      "code": ["26B1"],
-      "emoji": "⚱",
+      "code": ["26B1", "FE0F"],
+      "emoji": "⚱️",
       "name": "funeral urn",
       "category": "Objects",
       "subcategory": "other-object"
@@ -10036,8 +10031,8 @@
       "subcategory": "transport-sign"
     },
     {
-      "code": ["26A0"],
-      "emoji": "⚠",
+      "code": ["26A0", "FE0F"],
+      "emoji": "⚠️",
       "name": "warning",
       "category": "Symbols",
       "subcategory": "warning"
@@ -10113,113 +10108,113 @@
       "subcategory": "warning"
     },
     {
-      "code": ["2622"],
-      "emoji": "☢",
+      "code": ["2622", "FE0F"],
+      "emoji": "☢️",
       "name": "radioactive",
       "category": "Symbols",
       "subcategory": "warning"
     },
     {
-      "code": ["2623"],
-      "emoji": "☣",
+      "code": ["2623", "FE0F"],
+      "emoji": "☣️",
       "name": "biohazard",
       "category": "Symbols",
       "subcategory": "warning"
     },
     {
-      "code": ["2B06"],
-      "emoji": "⬆",
+      "code": ["2B06", "FE0F"],
+      "emoji": "⬆️",
       "name": "up arrow",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["2197"],
-      "emoji": "↗",
+      "code": ["2197", "FE0F"],
+      "emoji": "↗️",
       "name": "up-right arrow",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["27A1"],
-      "emoji": "➡",
+      "code": ["27A1", "FE0F"],
+      "emoji": "➡️",
       "name": "right arrow",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["2198"],
-      "emoji": "↘",
+      "code": ["2198", "FE0F"],
+      "emoji": "↘️",
       "name": "down-right arrow",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["2B07"],
-      "emoji": "⬇",
+      "code": ["2B07", "FE0F"],
+      "emoji": "⬇️",
       "name": "down arrow",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["2199"],
-      "emoji": "↙",
+      "code": ["2199", "FE0F"],
+      "emoji": "↙️",
       "name": "down-left arrow",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["2B05"],
-      "emoji": "⬅",
+      "code": ["2B05", "FE0F"],
+      "emoji": "⬅️",
       "name": "left arrow",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["2196"],
-      "emoji": "↖",
+      "code": ["2196", "FE0F"],
+      "emoji": "↖️",
       "name": "up-left arrow",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["2195"],
-      "emoji": "↕",
+      "code": ["2195", "FE0F"],
+      "emoji": "↕️",
       "name": "up-down arrow",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["2194"],
-      "emoji": "↔",
+      "code": ["2194", "FE0F"],
+      "emoji": "↔️",
       "name": "left-right arrow",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["21A9"],
-      "emoji": "↩",
+      "code": ["21A9", "FE0F"],
+      "emoji": "↩️",
       "name": "right arrow curving left",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["21AA"],
-      "emoji": "↪",
+      "code": ["21AA", "FE0F"],
+      "emoji": "↪️",
       "name": "left arrow curving right",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["2934"],
-      "emoji": "⤴",
+      "code": ["2934", "FE0F"],
+      "emoji": "⤴️",
       "name": "right arrow curving up",
       "category": "Symbols",
       "subcategory": "arrow"
     },
     {
-      "code": ["2935"],
-      "emoji": "⤵",
+      "code": ["2935", "FE0F"],
+      "emoji": "⤵️",
       "name": "right arrow curving down",
       "category": "Symbols",
       "subcategory": "arrow"
@@ -10281,64 +10276,64 @@
       "subcategory": "religion"
     },
     {
-      "code": ["269B"],
-      "emoji": "⚛",
+      "code": ["269B", "FE0F"],
+      "emoji": "⚛️",
       "name": "atom symbol",
       "category": "Symbols",
       "subcategory": "religion"
     },
     {
-      "code": ["1F549"],
-      "emoji": "🕉",
+      "code": ["1F549", "FE0F"],
+      "emoji": "🕉️",
       "name": "om",
       "category": "Symbols",
       "subcategory": "religion"
     },
     {
-      "code": ["2721"],
-      "emoji": "✡",
+      "code": ["2721", "FE0F"],
+      "emoji": "✡️",
       "name": "star of David",
       "category": "Symbols",
       "subcategory": "religion"
     },
     {
-      "code": ["2638"],
-      "emoji": "☸",
+      "code": ["2638", "FE0F"],
+      "emoji": "☸️",
       "name": "wheel of dharma",
       "category": "Symbols",
       "subcategory": "religion"
     },
     {
-      "code": ["262F"],
-      "emoji": "☯",
+      "code": ["262F", "FE0F"],
+      "emoji": "☯️",
       "name": "yin yang",
       "category": "Symbols",
       "subcategory": "religion"
     },
     {
-      "code": ["271D"],
-      "emoji": "✝",
+      "code": ["271D", "FE0F"],
+      "emoji": "✝️",
       "name": "latin cross",
       "category": "Symbols",
       "subcategory": "religion"
     },
     {
-      "code": ["2626"],
-      "emoji": "☦",
+      "code": ["2626", "FE0F"],
+      "emoji": "☦️",
       "name": "orthodox cross",
       "category": "Symbols",
       "subcategory": "religion"
     },
     {
-      "code": ["262A"],
-      "emoji": "☪",
+      "code": ["262A", "FE0F"],
+      "emoji": "☪️",
       "name": "star and crescent",
       "category": "Symbols",
       "subcategory": "religion"
     },
     {
-      "code": ["262E"],
-      "emoji": "☮",
+      "code": ["262E", "FE0F"],
+      "emoji": "☮️",
       "name": "peace symbol",
       "category": "Symbols",
       "subcategory": "religion"
@@ -10477,8 +10472,8 @@
       "subcategory": "av-symbol"
     },
     {
-      "code": ["25B6"],
-      "emoji": "▶",
+      "code": ["25B6", "FE0F"],
+      "emoji": "▶️",
       "name": "play button",
       "category": "Symbols",
       "subcategory": "av-symbol"
@@ -10491,22 +10486,22 @@
       "subcategory": "av-symbol"
     },
     {
-      "code": ["23ED"],
-      "emoji": "⏭",
+      "code": ["23ED", "FE0F"],
+      "emoji": "⏭️",
       "name": "next track button",
       "category": "Symbols",
       "subcategory": "av-symbol"
     },
     {
-      "code": ["23EF"],
-      "emoji": "⏯",
+      "code": ["23EF", "FE0F"],
+      "emoji": "⏯️",
       "name": "play or pause button",
       "category": "Symbols",
       "subcategory": "av-symbol"
     },
     {
-      "code": ["25C0"],
-      "emoji": "◀",
+      "code": ["25C0", "FE0F"],
+      "emoji": "◀️",
       "name": "reverse button",
       "category": "Symbols",
       "subcategory": "av-symbol"
@@ -10519,8 +10514,8 @@
       "subcategory": "av-symbol"
     },
     {
-      "code": ["23EE"],
-      "emoji": "⏮",
+      "code": ["23EE", "FE0F"],
+      "emoji": "⏮️",
       "name": "last track button",
       "category": "Symbols",
       "subcategory": "av-symbol"
@@ -10554,29 +10549,29 @@
       "subcategory": "av-symbol"
     },
     {
-      "code": ["23F8"],
-      "emoji": "⏸",
+      "code": ["23F8", "FE0F"],
+      "emoji": "⏸️",
       "name": "pause button",
       "category": "Symbols",
       "subcategory": "av-symbol"
     },
     {
-      "code": ["23F9"],
-      "emoji": "⏹",
+      "code": ["23F9", "FE0F"],
+      "emoji": "⏹️",
       "name": "stop button",
       "category": "Symbols",
       "subcategory": "av-symbol"
     },
     {
-      "code": ["23FA"],
-      "emoji": "⏺",
+      "code": ["23FA", "FE0F"],
+      "emoji": "⏺️",
       "name": "record button",
       "category": "Symbols",
       "subcategory": "av-symbol"
     },
     {
-      "code": ["23CF"],
-      "emoji": "⏏",
+      "code": ["23CF", "FE0F"],
+      "emoji": "⏏️",
       "name": "eject button",
       "category": "Symbols",
       "subcategory": "av-symbol"
@@ -10631,29 +10626,29 @@
       "subcategory": "av-symbol"
     },
     {
-      "code": ["2640"],
-      "emoji": "♀",
+      "code": ["2640", "FE0F"],
+      "emoji": "♀️",
       "name": "female sign",
       "category": "Symbols",
       "subcategory": "gender"
     },
     {
-      "code": ["2642"],
-      "emoji": "♂",
+      "code": ["2642", "FE0F"],
+      "emoji": "♂️",
       "name": "male sign",
       "category": "Symbols",
       "subcategory": "gender"
     },
     {
-      "code": ["26A7"],
-      "emoji": "⚧",
+      "code": ["26A7", "FE0F"],
+      "emoji": "⚧️",
       "name": "transgender symbol",
       "category": "Symbols",
       "subcategory": "gender"
     },
     {
-      "code": ["2716"],
-      "emoji": "✖",
+      "code": ["2716", "FE0F"],
+      "emoji": "✖️",
       "name": "multiply",
       "category": "Symbols",
       "subcategory": "math"
@@ -10687,22 +10682,22 @@
       "subcategory": "math"
     },
     {
-      "code": ["267E"],
-      "emoji": "♾",
+      "code": ["267E", "FE0F"],
+      "emoji": "♾️",
       "name": "infinity",
       "category": "Symbols",
       "subcategory": "math"
     },
     {
-      "code": ["203C"],
-      "emoji": "‼",
+      "code": ["203C", "FE0F"],
+      "emoji": "‼️",
       "name": "double exclamation mark",
       "category": "Symbols",
       "subcategory": "punctuation"
     },
     {
-      "code": ["2049"],
-      "emoji": "⁉",
+      "code": ["2049", "FE0F"],
+      "emoji": "⁉️",
       "name": "exclamation question mark",
       "category": "Symbols",
       "subcategory": "punctuation"
@@ -10736,8 +10731,8 @@
       "subcategory": "punctuation"
     },
     {
-      "code": ["3030"],
-      "emoji": "〰",
+      "code": ["3030", "FE0F"],
+      "emoji": "〰️",
       "name": "wavy dash",
       "category": "Symbols",
       "subcategory": "punctuation"
@@ -10757,22 +10752,22 @@
       "subcategory": "currency"
     },
     {
-      "code": ["2695"],
-      "emoji": "⚕",
+      "code": ["2695", "FE0F"],
+      "emoji": "⚕️",
       "name": "medical symbol",
       "category": "Symbols",
       "subcategory": "other-symbol"
     },
     {
-      "code": ["267B"],
-      "emoji": "♻",
+      "code": ["267B", "FE0F"],
+      "emoji": "♻️",
       "name": "recycling symbol",
       "category": "Symbols",
       "subcategory": "other-symbol"
     },
     {
-      "code": ["269C"],
-      "emoji": "⚜",
+      "code": ["269C", "FE0F"],
+      "emoji": "⚜️",
       "name": "fleur-de-lis",
       "category": "Symbols",
       "subcategory": "other-symbol"
@@ -10813,15 +10808,15 @@
       "subcategory": "other-symbol"
     },
     {
-      "code": ["2611"],
-      "emoji": "☑",
+      "code": ["2611", "FE0F"],
+      "emoji": "☑️",
       "name": "check box with check",
       "category": "Symbols",
       "subcategory": "other-symbol"
     },
     {
-      "code": ["2714"],
-      "emoji": "✔",
+      "code": ["2714", "FE0F"],
+      "emoji": "✔️",
       "name": "check mark",
       "category": "Symbols",
       "subcategory": "other-symbol"
@@ -10855,50 +10850,50 @@
       "subcategory": "other-symbol"
     },
     {
-      "code": ["303D"],
-      "emoji": "〽",
+      "code": ["303D", "FE0F"],
+      "emoji": "〽️",
       "name": "part alternation mark",
       "category": "Symbols",
       "subcategory": "other-symbol"
     },
     {
-      "code": ["2733"],
-      "emoji": "✳",
+      "code": ["2733", "FE0F"],
+      "emoji": "✳️",
       "name": "eight-spoked asterisk",
       "category": "Symbols",
       "subcategory": "other-symbol"
     },
     {
-      "code": ["2734"],
-      "emoji": "✴",
+      "code": ["2734", "FE0F"],
+      "emoji": "✴️",
       "name": "eight-pointed star",
       "category": "Symbols",
       "subcategory": "other-symbol"
     },
     {
-      "code": ["2747"],
-      "emoji": "❇",
+      "code": ["2747", "FE0F"],
+      "emoji": "❇️",
       "name": "sparkle",
       "category": "Symbols",
       "subcategory": "other-symbol"
     },
     {
-      "code": ["00A9"],
-      "emoji": "©",
+      "code": ["00A9", "FE0F"],
+      "emoji": "©️",
       "name": "copyright",
       "category": "Symbols",
       "subcategory": "other-symbol"
     },
     {
-      "code": ["00AE"],
-      "emoji": "®",
+      "code": ["00AE", "FE0F"],
+      "emoji": "®️",
       "name": "registered",
       "category": "Symbols",
       "subcategory": "other-symbol"
     },
     {
-      "code": ["2122"],
-      "emoji": "™",
+      "code": ["2122", "FE0F"],
+      "emoji": "™️",
       "name": "trade mark",
       "category": "Symbols",
       "subcategory": "other-symbol"
@@ -11037,8 +11032,8 @@
       "subcategory": "alphanum"
     },
     {
-      "code": ["1F170"],
-      "emoji": "🅰",
+      "code": ["1F170", "FE0F"],
+      "emoji": "🅰️",
       "name": "A button (blood type)",
       "category": "Symbols",
       "subcategory": "alphanum"
@@ -11051,8 +11046,8 @@
       "subcategory": "alphanum"
     },
     {
-      "code": ["1F171"],
-      "emoji": "🅱",
+      "code": ["1F171", "FE0F"],
+      "emoji": "🅱️",
       "name": "B button (blood type)",
       "category": "Symbols",
       "subcategory": "alphanum"
@@ -11079,8 +11074,8 @@
       "subcategory": "alphanum"
     },
     {
-      "code": ["2139"],
-      "emoji": "ℹ",
+      "code": ["2139", "FE0F"],
+      "emoji": "ℹ️",
       "name": "information",
       "category": "Symbols",
       "subcategory": "alphanum"
@@ -11093,8 +11088,8 @@
       "subcategory": "alphanum"
     },
     {
-      "code": ["24C2"],
-      "emoji": "Ⓜ",
+      "code": ["24C2", "FE0F"],
+      "emoji": "Ⓜ️",
       "name": "circled M",
       "category": "Symbols",
       "subcategory": "alphanum"
@@ -11114,8 +11109,8 @@
       "subcategory": "alphanum"
     },
     {
-      "code": ["1F17E"],
-      "emoji": "🅾",
+      "code": ["1F17E", "FE0F"],
+      "emoji": "🅾️",
       "name": "O button (blood type)",
       "category": "Symbols",
       "subcategory": "alphanum"
@@ -11128,8 +11123,8 @@
       "subcategory": "alphanum"
     },
     {
-      "code": ["1F17F"],
-      "emoji": "🅿",
+      "code": ["1F17F", "FE0F"],
+      "emoji": "🅿️",
       "name": "P button",
       "category": "Symbols",
       "subcategory": "alphanum"
@@ -11163,15 +11158,15 @@
       "subcategory": "alphanum"
     },
     {
-      "code": ["1F202"],
-      "emoji": "🈂",
+      "code": ["1F202", "FE0F"],
+      "emoji": "🈂️",
       "name": "Japanese “service charge” button",
       "category": "Symbols",
       "subcategory": "alphanum"
     },
     {
-      "code": ["1F237"],
-      "emoji": "🈷",
+      "code": ["1F237", "FE0F"],
+      "emoji": "🈷️",
       "name": "Japanese “monthly amount” button",
       "category": "Symbols",
       "subcategory": "alphanum"
@@ -11247,15 +11242,15 @@
       "subcategory": "alphanum"
     },
     {
-      "code": ["3297"],
-      "emoji": "㊗",
+      "code": ["3297", "FE0F"],
+      "emoji": "㊗️",
       "name": "Japanese “congratulations” button",
       "category": "Symbols",
       "subcategory": "alphanum"
     },
     {
-      "code": ["3299"],
-      "emoji": "㊙",
+      "code": ["3299", "FE0F"],
+      "emoji": "㊙️",
       "name": "Japanese “secret” button",
       "category": "Symbols",
       "subcategory": "alphanum"
@@ -11401,15 +11396,15 @@
       "subcategory": "geometric"
     },
     {
-      "code": ["25FC"],
-      "emoji": "◼",
+      "code": ["25FC", "FE0F"],
+      "emoji": "◼️",
       "name": "black medium square",
       "category": "Symbols",
       "subcategory": "geometric"
     },
     {
-      "code": ["25FB"],
-      "emoji": "◻",
+      "code": ["25FB", "FE0F"],
+      "emoji": "◻️",
       "name": "white medium square",
       "category": "Symbols",
       "subcategory": "geometric"
@@ -11429,15 +11424,15 @@
       "subcategory": "geometric"
     },
     {
-      "code": ["25AA"],
-      "emoji": "▪",
+      "code": ["25AA", "FE0F"],
+      "emoji": "▪️",
       "name": "black small square",
       "category": "Symbols",
       "subcategory": "geometric"
     },
     {
-      "code": ["25AB"],
-      "emoji": "▫",
+      "code": ["25AB", "FE0F"],
+      "emoji": "▫️",
       "name": "white small square",
       "category": "Symbols",
       "subcategory": "geometric"
@@ -11541,8 +11536,8 @@
       "subcategory": "flag"
     },
     {
-      "code": ["1F3F3"],
-      "emoji": "🏳",
+      "code": ["1F3F3", "FE0F"],
+      "emoji": "🏳️",
       "name": "white flag",
       "category": "Flags",
       "subcategory": "flag"

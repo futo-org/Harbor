@@ -2,10 +2,9 @@
 // English search tags and writes `src/features/reaction/emojiTags.json`,
 // a flat object of emoji -> tags. Run with `pnpm generate:emoji-tags`.
 //
-// `emojis.json` is only read, never rewritten: it stays the single source of
-// the emoji list and its order, which `publicKeyEmojiFingerprint.ts` depends
-// on. Keys are copied from it verbatim so the app can look tags up with no
-// normalization. Only the tags are copied; the name stays in `emojis.json`.
+// `emojis.json` is only read, never rewritten: it comes from
+// `generate-emojis-json.mts`, so run this after regenerating it. Keys are
+// copied from it verbatim so the app can look tags up with no normalization. Only the tags are copied; the name stays in `emojis.json`.
 import { writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

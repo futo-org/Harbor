@@ -21,6 +21,7 @@
     "lint:fix": "biome lint --write .",
     "prebuild": "APP_VARIANT=dev expo prebuild --clean",
     "typecheck": "tsc && tsc -p tsconfig.test.json",
+    "generate:emojis-json": "node scripts/generate-emojis-json.mts && biome format --write src/features/reaction/emojis.json",
     "generate:emoji-tags": "node scripts/generate-emoji-tags.mts && biome format --write src/features/reaction/emojiTags.json"
   },
   "dependencies": {

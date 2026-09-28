@@ -49,9 +49,9 @@ describe('searchEmojis', () => {
     });
 
     it('ignores the variation selector', () => {
-      // emojis.json spells red heart without U+FE0F.
-      expect(emojisFor('❤️')).toEqual(['❤']);
-      expect(emojisFor('❤')).toEqual(['❤']);
+      // emojis.json spells red heart with U+FE0F; a bare query still finds it.
+      expect(emojisFor('❤️')).toEqual(['❤️']);
+      expect(emojisFor('❤')).toEqual(['❤️']);
     });
 
     it('maps a skin tone to the base emoji', () => {
@@ -78,7 +78,7 @@ describe('searchEmojis', () => {
       expect(emojisFor('fire')).toContain('🔥');
       expect(emojisFor('rocket')).toContain('🚀');
       expect(emojisFor('pizza')).toContain('🍕');
-      expect(emojisFor('red heart')).toContain('❤');
+      expect(emojisFor('red heart')).toContain('❤️');
     });
 
     // Ranking is fuzzysort's own scoring, nothing here enforces it. These are
@@ -87,11 +87,11 @@ describe('searchEmojis', () => {
       expect(emojisFor('fire')[0]).toBe('🔥');
       expect(emojisFor('rocket')[0]).toBe('🚀');
       expect(emojisFor('pizza')[0]).toBe('🍕');
-      expect(emojisFor('red heart')[0]).toBe('❤');
+      expect(emojisFor('red heart')[0]).toBe('❤️');
     });
 
     it('keeps the obvious answer near the top for weaker queries', () => {
-      expect(emojisFor('heart').slice(0, 3)).toContain('❤');
+      expect(emojisFor('heart').slice(0, 3)).toContain('❤️');
       expect(emojisFor('joy').slice(0, 3)).toContain('😂');
       expect(emojisFor('laughing')[0]).toBe('🤣');
       expect(emojisFor('sad').slice(0, 8)).toContain('😢');
@@ -155,7 +155,7 @@ describe('searchEmojis', () => {
     it('matches words run together', () => {
       expect(emojisFor('thumbsup')).toEqual(['👍']);
       expect(emojisFor('thumbsdown')).toEqual(['👎']);
-      expect(emojisFor('redheart')).toEqual(['❤']);
+      expect(emojisFor('redheart')).toEqual(['❤️']);
     });
 
     // fuzzysort's default threshold (0.5) drops loose subsequence matches, and
@@ -165,7 +165,7 @@ describe('searchEmojis', () => {
       expect(emojisFor('piza')).toEqual([]);
       expect(emojisFor('smilng')).toEqual([]);
       expect(emojisFor('fier')).not.toContain('🔥');
-      expect(emojisFor('haert')).not.toContain('❤');
+      expect(emojisFor('haert')).not.toContain('❤️');
     });
   });
 });
