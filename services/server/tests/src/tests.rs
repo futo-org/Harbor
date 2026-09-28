@@ -341,7 +341,7 @@ impl TestClient {
         let post = Post {
             text: text.to_owned(),
             reply: Some(PostReply {
-                root: None,
+                root: Some(post.clone()),
                 parent: Some(post),
             }),
             images: Vec::new(),
@@ -982,6 +982,9 @@ pub fn make_post_bundle(
         .iter()
         .map(|url| AttributedTo {
             to: Some(attributed_to::To::Link(Link {
+                title: "Title".to_owned(),
+                description: "Description".to_owned(),
+                image: "Image".to_owned(),
                 url: url.to_string(),
                 ..Default::default()
             })),
