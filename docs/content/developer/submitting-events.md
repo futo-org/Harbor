@@ -64,7 +64,7 @@ Polycentric currently reserver a number of these:
 * `7`: labels
 * `8`: verifications
 
-The `identity` is the identity key (a sha256 hash of the initial
+The `identity` is the identity key (a SHA256 hash of the initial
 [`Identity`](/docs/protocol/data-model#identity) content). `signed_by` contains
 the [public key](/docs/protocol/data-model#publickey). Finally the `sequence`
 contains the number of event in the collection, it must be unique within
@@ -135,10 +135,12 @@ Let's walk through the validation on a per-field basis (keep the type definition
 of `Event` handy!). Starting with the `EventKey`.
 
 The `EventKey.collection` must match `ContentBody` type, see the [Content
-section](#content) below for more information. TODO: `EventKey.identity`,
-`EventKey.signed_by`. The tuple (`EventKey.collection`, `EventKey.sequence`)
-must be unique, in other words the sequence number must be increased for each
-event in the same collection.
+section](#content) below for more information. `EventKey.identity` must be a
+hex-encoded SHA256 hash of the identity, if it's not a valid hash or it doesn't
+match the identity the submitter of the event it's rejected. In
+`EventKey.signed_by` currently only ED25519 keys are supported. The tuple
+(`EventKey.collection`, `EventKey.sequence`) must be unique, in other words the
+sequence number must be increased for each event in the same collection.
 
 Getting back to `Event` type, TODO: `identity_sequence`, `vector_clock`,
 `previous_signature`. The `content_digest` must match the content. `created_at`

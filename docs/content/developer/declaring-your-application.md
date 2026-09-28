@@ -26,20 +26,24 @@ message Application {
 ```
 
 **`name`** is the product name people recognise, such as `Harbor`. Keep it the same
-across platforms and build variants. Clients display it verbatim, so keep it short.
+across platforms and build variants. Clients display it verbatim so it's limited
+to 50 characters.
 
-**`id`** is a reverse-DNS identifier for the build, such as `org.futo.polycentric`. On
-Android and iOS use the installed package or bundle identifier. Give each distribution
-its own id where they differ in practice, for example a dev build, a store build, or a
-web build, so operators can tell them apart. Keep it stable across versions. Never
-reuse another app's id.
+**`id`** is a reverse-DNS identifier for the build, such as
+`org.futo.polycentric`. Limited to 100 characters. On Android and iOS use the
+installed package or bundle identifier. Give each distribution its own id where
+they differ in practice, for example a dev build, a store build, or a web build,
+so operators can tell them apart. Keep it stable across versions. Never reuse
+another app's id.
 
-**`version`** is the version people see in your app or its store listing, such as
-`1.2.0`. Read it from the installed binary rather than hardcoding it.
+**`version`** is the version people see in your app or its store listing, such
+as `1.2.0`. Limited to 50 characters. Read it from the installed binary rather
+than hardcoding it.
 
-**`url`** is the website for your app, such as `https://harbor.social`. It must start
-with `http://` or `https://`. Clients turn the app name into a link to this address, and
-ignore anything that is not a web URL. Leave it empty if you have no site.
+**`url`** is the website for your app, such as `https://harbor.social`. It must
+start with `http://` or `https://` and is limited to 100 characters. Clients
+turn the app name into a link to this address, and ignore anything that is not a
+web URL. Leave it empty if you have no site.
 
 Leave the whole message unset only when your software genuinely cannot say what it
 is. Do not set it to placeholder values.
