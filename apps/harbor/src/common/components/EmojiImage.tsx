@@ -40,6 +40,7 @@ export const EmojiImage = memo(function EmojiImage({
 
   return (
     <>
+      {copyable ? <CopyOnlyText>{sequence}</CopyOnlyText> : null}
       {isAndroid ? (
         // Android's RN Image fades in and re-decodes recycled cells, so the
         // picker grid flickers; expo-image keeps decoded emojis in memory.
@@ -52,7 +53,6 @@ export const EmojiImage = memo(function EmojiImage({
       ) : (
         <Image source={source} resizeMode="contain" {...imageProps} />
       )}
-      {copyable ? <CopyOnlyText>{sequence}</CopyOnlyText> : null}
     </>
   );
 });
