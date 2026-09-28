@@ -26,7 +26,7 @@ pub trait Validate {
         }
     }
 
-    /// Same as [`validate`], but onky returns the first error.
+    /// Same as [`validate`], but only returns the first error.
     fn validate_first(&self) -> Result<(), Self::Error> {
         let mut errors = Vec::new();
         self.validate_check(&mut errors, identity);
