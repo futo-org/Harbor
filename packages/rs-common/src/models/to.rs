@@ -7,9 +7,14 @@ use crate::models::validate::Validate;
 impl Validate for To {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         match self {
-            To::Link(link) => link.validate().map_err(ValidationError::Link),
+            To::Link(link) => {
+                link.validate_check(errors, |err| map_err(ValidationError::Link(err)))
+            }
         }
     }
 }

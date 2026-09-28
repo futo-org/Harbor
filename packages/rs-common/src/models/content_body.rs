@@ -7,10 +7,15 @@ use crate::models::validate::Validate;
 impl Validate for ContentBody {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         match self {
-            ContentBody::Post(post) => post.validate().map_err(ValidationError::Post),
-            _ => Ok(()), // TODO.
+            ContentBody::Post(post) => {
+                post.validate_check(errors, |err| map_err(ValidationError::Post(err)))
+            }
+            _ => { /* TODO. */ }
         }
     }
 }

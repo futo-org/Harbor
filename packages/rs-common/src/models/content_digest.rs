@@ -71,23 +71,29 @@ impl fmt::Debug for ContentDigest {
 impl Validate for ContentDigest {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let ContentDigest { r#type, value } = self;
         const SHA256: i32 = ContentDigestType::Sha256 as i32;
         let value_len = match *r#type {
             SHA256 => 256 / 8,
-            _ => return Err(ValidationError::TypeInvalid),
+            _ => {
+                errors.push(map_err(ValidationError::TypeInvalid));
+                return; // Can't validate the value without knowing the type.
+            }
         };
         validate::slice(
             value,
+            errors,
+            |err| map_err(ValidationError::Value(err)),
             SliceConfig {
                 min_len: Some(value_len),
                 max_len: Some(value_len),
                 ..Default::default()
             },
-        )
-        .map_err(ValidationError::Value)?;
-        Ok(())
+        );
     }
 }
 

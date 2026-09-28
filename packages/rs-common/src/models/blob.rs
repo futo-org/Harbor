@@ -7,36 +7,40 @@ use crate::models::validate::{self, IntConfig, IntError, StringConfig, StringErr
 impl Validate for Blob {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let Blob {
             digest,
             mime_type,
             size,
         } = self;
         if let Some(digest) = digest {
-            digest.validate().map_err(ValidationError::Digest)?;
+            digest.validate_check(errors, |err| map_err(ValidationError::Digest(err)));
         } else {
-            return Err(ValidationError::DigestMissing);
+            errors.push(map_err(ValidationError::DigestMissing));
         }
         validate::string(
             mime_type,
+            errors,
+            |err| map_err(ValidationError::MimeType(err)),
             StringConfig {
                 min_len: Some(1),
                 max_len: Some(50),
                 ..Default::default()
             },
-        )
-        .map_err(ValidationError::MimeType)?;
+        );
         validate::int(
             *size,
+            errors,
+            |err| map_err(ValidationError::Size(err)),
             IntConfig {
                 min: Some(1),
                 max: Some(100 * 1024 * 1024), // 100 MB.
                 ..Default::default()
             },
         )
-        .map_err(ValidationError::Size)?;
-        Ok(())
     }
 }
 

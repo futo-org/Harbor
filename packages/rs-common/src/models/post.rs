@@ -7,7 +7,10 @@ use crate::models::{attributed_to, event_key, image_set, link, post_reply};
 impl Validate for Post {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let Post {
             text,
             reply,
@@ -19,46 +22,53 @@ impl Validate for Post {
         } = self;
         validate::string(
             text,
+            errors,
+            |err| map_err(ValidationError::Text(err)),
             StringConfig {
                 min_len: Some(1),
                 max_len: Some(2000),
                 ..Default::default()
             },
-        )
-        .map_err(ValidationError::Text)?;
+        );
         if let Some(reply) = reply {
-            reply.validate().map_err(ValidationError::Reply)?;
+            reply.validate_check(errors, |err| map_err(ValidationError::Reply(err)));
         }
         validate::slice2(
             images,
+            errors,
+            |err| map_err(ValidationError::ImageSet(err)),
             SliceConfig {
                 max_len: Some(4),
                 ..Default::default()
             },
-            |image_set| image_set.validate(),
-        )
-        .map_err(ValidationError::ImageSet)?;
+            |image_set, errors, map_err| image_set.validate_check(errors, map_err),
+        );
         if let Some(quote) = quote {
-            Validate::validate(quote).map_err(ValidationError::Quote)?;
+            quote.validate_check(errors, |err| map_err(ValidationError::Quote(err)));
         }
         validate::slice2(
             links,
+            errors,
+            |err| map_err(ValidationError::Links(err)),
             SliceConfig {
                 max_len: Some(10),
                 ..Default::default()
             },
-            |link| link.validate(),
-        )
-        .map_err(ValidationError::Links)?;
+            |link, errors, map_err| link.validate_check(errors, map_err),
+        );
         validate::slice2(
             labels,
+            errors,
+            |err| map_err(ValidationError::Labels(err)),
             SliceConfig {
                 max_len: Some(10),
                 ..Default::default()
             },
-            |label| {
+            |label, errors, map_err| {
                 validate::string(
                     label,
+                    errors,
+                    map_err,
                     StringConfig {
                         min_len: Some(1),
                         max_len: Some(200),
@@ -66,18 +76,17 @@ impl Validate for Post {
                     },
                 )
             },
-        )
-        .map_err(ValidationError::Labels)?;
+        );
         validate::slice2(
             attributed_to,
+            errors,
+            |err| map_err(ValidationError::AttributedTo(err)),
             SliceConfig {
                 max_len: Some(10),
                 ..Default::default()
             },
-            |attributed_to| attributed_to.validate(),
-        )
-        .map_err(ValidationError::AttributedTo)?;
-        Ok(())
+            |attributed_to, errors, map_err| attributed_to.validate_check(errors, map_err),
+        );
     }
 }
 

@@ -73,16 +73,16 @@ impl fmt::Debug for SerializedContent {
 impl Validate for Content {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let Content { content_body } = self;
         if let Some(content_body) = content_body.as_ref() {
-            content_body
-                .validate()
-                .map_err(ValidationError::ContentBody)?;
+            content_body.validate_check(errors, |err| map_err(ValidationError::ContentBody(err)));
         } else {
-            return Err(ValidationError::ContentBodyMissing);
+            errors.push(map_err(ValidationError::ContentBodyMissing));
         }
-        Ok(())
     }
 }
 

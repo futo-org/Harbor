@@ -1,6 +1,6 @@
 //! Validation
 
-use std::convert::Infallible;
+use std::convert::{Infallible, identity};
 use std::fmt;
 use std::sync::OnceLock;
 
@@ -15,7 +15,22 @@ use crate::models::{
 pub trait Validate {
     type Error: Into<ValidationError>;
 
-    fn validate(&self) -> Result<(), Self::Error>;
+    /// Validate a value, returning all errors.
+    fn validate(&self) -> Result<(), Vec<Self::Error>> {
+        let mut errors = Vec::new();
+        self.validate_check(&mut errors, identity);
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    /// Validate a value, collecting the errors in `errors` using `map_err` to
+    /// convert them to a single type.
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E;
 }
 
 /// Collection error for [`Validate`].
@@ -157,7 +172,10 @@ impl fmt::Display for ValidationError {
 }
 
 /// Validate a string.
-pub(crate) fn string(input: &str, config: StringConfig) -> Result<(), StringError> {
+pub(crate) fn string<E, F>(input: &str, errors: &mut Vec<E>, map_err: F, config: StringConfig)
+where
+    F: Fn(StringError) -> E,
+{
     let StringConfig {
         min_len,
         max_len,
@@ -165,19 +183,23 @@ pub(crate) fn string(input: &str, config: StringConfig) -> Result<(), StringErro
     } = config;
     let length = input.len();
     if let Some(min) = min_len
+        && Some(min) != max_len // Don't return double error for exact size check.
         && length < min
     {
-        Err(StringError::TooShort { length, min })
-    } else if let Some(max) = max_len
+        let err = StringError::TooShort { length, min };
+        errors.push(map_err(err));
+    }
+    if let Some(max) = max_len
         && length > max
     {
-        Err(StringError::TooLong { length, max })
-    } else if let Some(regex) = regex
+        let err = StringError::TooLong { length, max };
+        errors.push(map_err(err));
+    }
+    if let Some(regex) = regex
         && !regex.is_match(input)
     {
-        Err(StringError::FailsRegex { regex })
-    } else {
-        Ok(())
+        let err = StringError::FailsRegex { regex };
+        errors.push(map_err(err));
     }
 }
 
@@ -222,20 +244,22 @@ impl fmt::Display for StringError {
 }
 
 /// Validate an integer.
-pub(crate) fn int<Int>(value: Int, config: IntConfig<Int>) -> Result<(), IntError<Int>>
+pub(crate) fn int<Int, E, F>(value: Int, errors: &mut Vec<E>, map_err: F, config: IntConfig<Int>)
 where
-    Int: Eq + Ord,
+    Int: Copy + Eq + Ord,
+    F: Fn(IntError<Int>) -> E,
 {
     if let Some(min) = config.min
         && value < min
     {
-        Err(IntError::TooSmall { value, min })
-    } else if let Some(max) = config.max
+        let err = IntError::TooSmall { value, min };
+        errors.push(map_err(err));
+    }
+    if let Some(max) = config.max
         && value > max
     {
-        Err(IntError::TooLarge { value, max })
-    } else {
-        Ok(())
+        let err = IntError::TooLarge { value, max };
+        errors.push(map_err(err));
     }
 }
 
@@ -272,18 +296,22 @@ impl<Int: fmt::Display> fmt::Display for IntError<Int> {
 }
 
 /// Validate a slice.
-pub(crate) fn slice<T>(input: &[T], config: SliceConfig) -> Result<(), SliceError> {
+pub(crate) fn slice<T, E, F>(input: &[T], errors: &mut Vec<E>, map_err: F, config: SliceConfig)
+where
+    F: Fn(SliceError) -> E,
+{
     let length = input.len();
     if let Some(min) = config.min_len
         && length < min
     {
-        Err(SliceError::TooShort { length, min })
-    } else if let Some(max) = config.max_len
+        let err = SliceError::TooShort { length, min };
+        errors.push(map_err(err));
+    }
+    if let Some(max) = config.max_len
         && length > max
     {
-        Err(SliceError::TooLong { length, max })
-    } else {
-        Ok(())
+        let err = SliceError::TooLong { length, max };
+        errors.push(map_err(err));
     }
 }
 
@@ -292,22 +320,31 @@ pub(crate) fn slice<T>(input: &[T], config: SliceConfig) -> Result<(), SliceErro
 /// If `validate` is not needed use [`validate::slice`].
 ///
 /// [`validate::slice`]: slice()
-pub(crate) fn slice2<T, F, E>(
+pub(crate) fn slice2<T, E, F, VE, V>(
     input: &[T],
+    errors: &mut Vec<E>,
+    map_err: F,
     config: SliceConfig,
-    validate: F,
-) -> Result<(), SliceError<E>>
-where
-    F: Fn(&T) -> Result<(), E>,
+    validate: V,
+) where
+    F: Fn(SliceError<VE>) -> E,
+    // Can't use `impl Fn` here (yet), so using `&dyn Fn` for now.
+    V: Fn(&T, &mut Vec<E>, &dyn Fn(VE) -> E),
 {
-    slice(input, config).map_err(|err| match err {
-        SliceError::TooShort { length, min } => SliceError::TooShort { length, min },
-        SliceError::TooLong { length, max } => SliceError::TooLong { length, max },
-    })?;
+    slice(
+        input,
+        errors,
+        |err| match err {
+            SliceError::TooShort { length, min } => map_err(SliceError::TooShort { length, min }),
+            SliceError::TooLong { length, max } => map_err(SliceError::TooLong { length, max }),
+        },
+        config,
+    );
     for (index, item) in input.iter().enumerate() {
-        validate(item).map_err(|error| SliceError::Validate { index, error })?;
+        validate(item, errors, &|err| {
+            map_err(SliceError::Validate { index, error: err })
+        });
     }
-    Ok(())
 }
 
 /// Argument to [`validate::slice`].

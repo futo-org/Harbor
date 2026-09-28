@@ -83,7 +83,10 @@ impl fmt::Debug for EventKey {
 impl Validate for EventKey {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let EventKey {
             collection: _, // No validation.
             identity,
@@ -92,20 +95,20 @@ impl Validate for EventKey {
         } = self;
         validate::string(
             identity,
+            errors,
+            |err| map_err(ValidationError::Identity(err)),
             StringConfig {
                 min_len: Some(64),
                 max_len: Some(64),
                 regex: Some(hex_regex()),
                 ..Default::default()
             },
-        )
-        .map_err(ValidationError::Identity)?;
+        );
         if let Some(signed_by) = signed_by.as_ref() {
-            signed_by.validate().map_err(ValidationError::SignedBy)?;
+            signed_by.validate_check(errors, |err| map_err(ValidationError::SignedBy(err)));
         } else {
-            return Err(ValidationError::SignedByMissing);
+            errors.push(map_err(ValidationError::SignedByMissing));
         }
-        Ok(())
     }
 }
 

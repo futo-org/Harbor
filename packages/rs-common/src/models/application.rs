@@ -6,7 +6,10 @@ use crate::models::validate::{self, StringConfig, Validate, url_regex};
 impl Validate for Application {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let Application {
             name,
             id,
@@ -15,42 +18,45 @@ impl Validate for Application {
         } = self;
         validate::string(
             name,
+            errors,
+            |err| map_err(ValidationError::Name(err)),
             StringConfig {
                 min_len: Some(1),
                 max_len: Some(50),
                 ..Default::default()
             },
-        )
-        .map_err(ValidationError::Name)?;
+        );
         validate::string(
             id,
+            errors,
+            |err| map_err(ValidationError::Id(err)),
             StringConfig {
                 min_len: Some(1),
                 max_len: Some(100),
                 ..Default::default()
             },
-        )
-        .map_err(ValidationError::Id)?;
+        );
         validate::string(
             version,
+            errors,
+            |err| map_err(ValidationError::Version(err)),
             StringConfig {
                 min_len: Some(1),
                 max_len: Some(50),
                 ..Default::default()
             },
-        )
-        .map_err(ValidationError::Version)?;
+        );
         validate::string(
             url,
+            errors,
+            |err| map_err(ValidationError::Url(err)),
             StringConfig {
                 min_len: Some(1),
                 max_len: Some(100),
                 regex: Some(url_regex()),
                 ..Default::default()
             },
-        )
-        .map_err(ValidationError::Url)?;
-        Ok(())
+        );
     }
 }
 

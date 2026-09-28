@@ -103,23 +103,29 @@ impl fmt::Debug for PublicKey {
 impl Validate for PublicKey {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let PublicKey { key_type, key } = self;
         const ED25519: i32 = KeyType::Ed25519 as i32;
         let key_len = match *key_type {
             ED25519 => 32,
-            _ => return Err(ValidationError::KeyTypeInvalid),
+            _ => {
+                errors.push(map_err(ValidationError::KeyTypeInvalid));
+                return; // Can't validate the key without knowing the type.
+            }
         };
         validate::slice(
             key,
+            errors,
+            |err| map_err(ValidationError::Key(err)),
             SliceConfig {
                 min_len: Some(key_len),
                 max_len: Some(key_len),
                 ..Default::default()
             },
-        )
-        .map_err(ValidationError::Key)?;
-        Ok(())
+        );
     }
 }
 

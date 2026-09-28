@@ -7,14 +7,16 @@ use crate::models::validate::Validate;
 impl Validate for AttributedTo {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let AttributedTo { to } = self;
         if let Some(to) = to {
-            to.validate().map_err(ValidationError::To)?;
+            to.validate_check(errors, |err| map_err(ValidationError::To(err)));
         } else {
-            return Err(ValidationError::ToMissing);
+            errors.push(map_err(ValidationError::ToMissing));
         }
-        Ok(())
     }
 }
 

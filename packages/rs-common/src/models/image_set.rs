@@ -7,18 +7,21 @@ use crate::models::validate::{self, SliceConfig, SliceError, Validate};
 impl Validate for ImageSet {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let ImageSet { images } = self;
         validate::slice2(
             images,
+            errors,
+            |err| map_err(ValidationError::Images(err)),
             SliceConfig {
                 max_len: Some(10),
                 ..Default::default()
             },
-            |image| image.validate(),
-        )
-        .map_err(ValidationError::Images)?;
-        Ok(())
+            |image, errors, map_err| image.validate_check(errors, map_err),
+        );
     }
 }
 

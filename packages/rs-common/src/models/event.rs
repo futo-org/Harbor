@@ -75,7 +75,10 @@ impl Serializable for Event {
 impl Validate for Event {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let Event {
             key,
             identity_sequence: _,  // No validation.
@@ -87,26 +90,19 @@ impl Validate for Event {
             application,
         } = self;
         if let Some(key) = key.as_ref() {
-            // NOTE: currently has a validate method that is used over the
-            // Validate trait implementation. Once that is removed this can be
-            // change to `key.validate()?`.
-            Validate::validate(key).map_err(ValidationError::Key)?;
+            key.validate_check(errors, |err| map_err(ValidationError::Key(err)));
         } else {
-            return Err(ValidationError::KeyMissing);
+            errors.push(map_err(ValidationError::KeyMissing));
         }
         if let Some(content_digest) = content_digest.as_ref() {
             content_digest
-                .validate()
-                .map_err(ValidationError::ContentDigest)?;
+                .validate_check(errors, |err| map_err(ValidationError::ContentDigest(err)));
         } else {
-            return Err(ValidationError::ContentDigestMissing);
+            errors.push(map_err(ValidationError::ContentDigestMissing));
         }
         if let Some(application) = application.as_ref() {
-            application
-                .validate()
-                .map_err(ValidationError::Application)?;
+            application.validate_check(errors, |err| map_err(ValidationError::Application(err)));
         }
-        Ok(())
     }
 }
 

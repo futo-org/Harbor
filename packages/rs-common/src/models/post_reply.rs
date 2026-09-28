@@ -7,19 +7,21 @@ use crate::models::validate::Validate;
 impl Validate for PostReply {
     type Error = ValidationError;
 
-    fn validate(&self) -> Result<(), Self::Error> {
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
         let PostReply { root, parent } = self;
         if let Some(root) = root {
-            Validate::validate(root).map_err(ValidationError::Root)?;
+            root.validate_check(errors, |err| map_err(ValidationError::Root(err)));
         } else {
-            return Err(ValidationError::RootMissing);
+            errors.push(map_err(ValidationError::RootMissing));
         }
         if let Some(parent) = parent {
-            Validate::validate(parent).map_err(ValidationError::Parent)?;
+            parent.validate_check(errors, |err| map_err(ValidationError::Parent(err)));
         } else {
-            return Err(ValidationError::ParentMissing);
+            errors.push(map_err(ValidationError::ParentMissing));
         }
-        Ok(())
     }
 }
 
