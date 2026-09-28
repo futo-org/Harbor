@@ -20,8 +20,12 @@ class EmojiSpriteView(context: Context, appContext: AppContext) : ExpoView(conte
   var page = -1
   var cell = -1
 
-  private var bitmap: Bitmap? = null
-  private var bitmapPage = -1
+  // What is drawn. Kept while another page decodes, so a recycled view
+  // shows its previous emoji instead of flashing blank, like expo-image.
+  private var drawnBitmap: Bitmap? = null
+  private var drawnPage = -1
+  private var drawnCell = -1
+
   private val sourceRect = Rect()
   private val destinationRect = Rect()
   private val paint = Paint(Paint.FILTER_BITMAP_FLAG)
@@ -32,33 +36,30 @@ class EmojiSpriteView(context: Context, appContext: AppContext) : ExpoView(conte
 
   fun loadPage() {
     val requestedPage = page
-    if (bitmapPage == requestedPage) {
+    if (drawnPage == requestedPage) {
+      drawnCell = cell
       invalidate()
       return
     }
-    // Clear right away: a recycled view must not show its previous emoji
-    // while another page decodes.
-    bitmap = null
-    bitmapPage = -1
-    invalidate()
     EmojiSpritePages.load(context, requestedPage) { pageBitmap ->
       // Props may have moved on to another page while this one decoded.
       if (page != requestedPage) return@load
-      bitmap = pageBitmap
-      bitmapPage = requestedPage
+      drawnBitmap = pageBitmap
+      drawnPage = requestedPage
+      drawnCell = cell
       invalidate()
     }
   }
 
   override fun onDraw(canvas: Canvas) {
     super.onDraw(canvas)
-    val pageBitmap = bitmap ?: return
-    if (cell < 0) return
+    val pageBitmap = drawnBitmap ?: return
+    if (drawnCell < 0) return
     // Derived from the bitmap, so a page decoded at a reduced sample size
     // still maps correctly.
     val cellSize = pageBitmap.width / PAGE_COLUMNS
-    val left = (cell % PAGE_COLUMNS) * cellSize
-    val top = (cell / PAGE_COLUMNS) * cellSize
+    val left = (drawnCell % PAGE_COLUMNS) * cellSize
+    val top = (drawnCell / PAGE_COLUMNS) * cellSize
     sourceRect.set(left, top, left + cellSize, top + cellSize)
     val size = minOf(width, height)
     val x = (width - size) / 2
