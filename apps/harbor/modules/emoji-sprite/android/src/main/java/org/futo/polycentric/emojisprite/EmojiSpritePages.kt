@@ -10,7 +10,6 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.util.LruCache
-import java.io.IOException
 import java.util.concurrent.Executors
 
 // Share of the app's heap the decoded pages may hold (Android's usual
@@ -87,7 +86,9 @@ internal object EmojiSpritePages {
       context.assets.open("emoji-sprite/page-$page.png").use {
         BitmapFactory.decodeStream(it, null, options)
       }
-    } catch (e: IOException) {
+    } catch (e: Throwable) {
+      // Includes OutOfMemoryError on low-heap devices: an escaped throwable
+      // would crash the app and leave the page's listeners pending forever.
       Log.w(TAG, "Failed to decode emoji sprite page $page", e)
       null
     }
