@@ -157,8 +157,11 @@ impl fmt::Display for ValidationError {
 
 /// Validate a string.
 pub(crate) fn string(input: &str, config: StringConfig) -> Result<(), StringError> {
-    #[rustfmt::skip]
-    let StringConfig { min_len, max_len, regex } = config;
+    let StringConfig {
+        min_len,
+        max_len,
+        regex,
+    } = config;
     let length = input.len();
     if let Some(min) = min_len
         && length < min

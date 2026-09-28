@@ -110,8 +110,15 @@ impl Validate for PublicKey {
             ED25519 => 32,
             _ => return Err(ValidationError::KeyTypeInvalid),
         };
-        #[rustfmt::skip]
-        validate::slice(key, SliceConfig { min_len: Some(key_len), max_len: Some(key_len), ..Default::default() }).map_err(ValidationError::Key)?;
+        validate::slice(
+            key,
+            SliceConfig {
+                min_len: Some(key_len),
+                max_len: Some(key_len),
+                ..Default::default()
+            },
+        )
+        .map_err(ValidationError::Key)?;
         Ok(())
     }
 }

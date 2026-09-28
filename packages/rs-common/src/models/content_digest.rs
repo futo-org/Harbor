@@ -78,8 +78,15 @@ impl Validate for ContentDigest {
             SHA256 => 256 / 8,
             _ => return Err(ValidationError::TypeInvalid),
         };
-        #[rustfmt::skip]
-        validate::slice(value, SliceConfig { min_len: Some(value_len), max_len: Some(value_len), ..Default::default() }).map_err(ValidationError::Value)?;
+        validate::slice(
+            value,
+            SliceConfig {
+                min_len: Some(value_len),
+                max_len: Some(value_len),
+                ..Default::default()
+            },
+        )
+        .map_err(ValidationError::Value)?;
         Ok(())
     }
 }
