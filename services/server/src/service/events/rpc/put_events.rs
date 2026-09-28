@@ -113,7 +113,7 @@ async fn process_event(
     // * event.vector_clock
     // * event.previous_signature
     // * event.previous_root
-    Validate::validate(&event)
+    Validate::validate_first(&event)
         .map_err(|err| Status::invalid_argument(format!("event {err}")))?;
     let collection = event.key.as_ref().map(|k| k.collection).unwrap_or(0);
 
@@ -323,7 +323,7 @@ fn validate_content(content: &Content, collection: i32) -> Result<(), Status> {
     match content_body {
         ContentBody::Post(post) => {
             check_collection(collection, collections::FEED)?;
-            post.validate().map_err(|err| {
+            post.validate_first().map_err(|err| {
                 Status::invalid_argument(format!("event {err}"))
             })?;
 
