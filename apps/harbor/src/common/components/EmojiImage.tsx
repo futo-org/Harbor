@@ -13,6 +13,9 @@ type Props = {
   sequence: string;
   size: number;
   style?: ExpoImageProps['style'];
+  // Inline in text: touches go to the text (a link around the emoji, text
+  // selection) rather than stopping at the image.
+  inText?: boolean;
   // Inline in selectable text: copying a selection includes the emoji.
   copyable?: boolean;
 };
@@ -22,6 +25,7 @@ export const EmojiImage = memo(function EmojiImage({
   sequence,
   size,
   style,
+  inText,
   copyable,
 }: Props) {
   const source = TWEMOJI[twemojiCode(sequence)];
@@ -31,9 +35,7 @@ export const EmojiImage = memo(function EmojiImage({
     style: [{ width: size, height: size }, style],
     accessibilityLabel: sequence,
     testID: 'emoji',
-    // Inline in text, touches go to the text (a link around the emoji, text
-    // selection) rather than stopping at the image.
-    ...(copyable ? { pointerEvents: 'none' as const } : {}),
+    ...(inText ? { pointerEvents: 'none' as const } : {}),
   };
 
   return (
