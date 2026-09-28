@@ -156,7 +156,7 @@ for (let page = 0; page < pageCount; page++) {
     page * PAGE_CELLS,
     (page + 1) * PAGE_CELLS,
   );
-  const pageWebp = await sharp({
+  const pagePng = await sharp({
     create: {
       width: CELL * PAGE_COLUMNS,
       height: CELL * Math.ceil(pageCodes.length / PAGE_COLUMNS),
@@ -171,9 +171,9 @@ for (let page = 0; page < pageCount; page++) {
         top: Math.floor(i / PAGE_COLUMNS) * CELL,
       })),
     )
-    .webp({ lossless: true, effort: 6 })
+    .png({ compressionLevel: 9, palette: false })
     .toBuffer();
-  writeFileSync(join(pagesDir, `page-${page}.webp`), pageWebp);
+  writeFileSync(join(pagesDir, `page-${page}.png`), pagePng);
 }
 console.log(
   `${sheetCodes.length} emoji -> ${pageCount} Android sprite pages in modules/emoji-sprite`,

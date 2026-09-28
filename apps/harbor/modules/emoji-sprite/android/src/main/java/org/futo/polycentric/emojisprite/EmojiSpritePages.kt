@@ -61,7 +61,7 @@ internal object EmojiSpritePages {
       inSampleSize = if (activityManager.isLowRamDevice) 2 else 1
     }
     return try {
-      context.assets.open("emoji-sprite/page-$page.webp").use {
+      context.assets.open("emoji-sprite/page-$page.png").use {
         BitmapFactory.decodeStream(it, null, options)
       }
     } catch (e: IOException) {
