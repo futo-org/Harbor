@@ -44,8 +44,10 @@ class EmojiSpriteView(context: Context, appContext: AppContext) : ExpoView(conte
     EmojiSpritePages.load(context, requestedPage) { pageBitmap ->
       // Props may have moved on to another page while this one decoded.
       if (page != requestedPage) return@load
+      // On a failed decode, blank rather than keep another emoji; the next
+      // props update retries.
       drawnBitmap = pageBitmap
-      drawnPage = requestedPage
+      drawnPage = if (pageBitmap == null) -1 else requestedPage
       drawnCell = cell
       invalidate()
     }
