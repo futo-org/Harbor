@@ -1144,12 +1144,14 @@ async fn publish_genesis(
     let bundle =
         make_identity_bundle(identity, key, 1, 1, vec![1], initial, created_at);
     let sig = bundle_signature(&bundle);
-    client
+    let response = client
         .put_events(PutEventsRequest {
             event_bundles: vec![bundle],
         })
         .await
-        .expect("genesis put failed");
+        .expect("genesis put failed")
+        .into_inner();
+    assert!(response.errors.is_empty(), "response: {response:?}");
     sig
 }
 
@@ -1173,12 +1175,14 @@ async fn publish_post(
         created_at,
     );
     let sig = bundle_signature(&bundle);
-    client
+    let response = client
         .put_events(PutEventsRequest {
             event_bundles: vec![bundle],
         })
         .await
-        .expect("post put failed");
+        .expect("post put failed")
+        .into_inner();
+    assert!(response.errors.is_empty(), "response: {response:?}");
     sig
 }
 
