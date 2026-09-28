@@ -57,12 +57,6 @@ export default function ProfileShareSheet({
                 value={profileLink}
                 size={QR_CARD_WIDTH - QR_CODE_PADDING * 2}
                 backgroundColor="transparent"
-                enableLinearGradient
-                gradientDirection={['0%', '0%', '0%', '100%']}
-                linearGradient={[
-                  theme.palette.primary_100,
-                  theme.palette.primary_500,
-                ]}
               />
             </View>
             <View
@@ -90,7 +84,7 @@ export default function ProfileShareSheet({
               variant="title"
               fontWeight="bold"
               numberOfLines={2}
-              color="primary_500"
+              color="black"
               style={Atoms.text_center}
               noFollowingBadge
             />
