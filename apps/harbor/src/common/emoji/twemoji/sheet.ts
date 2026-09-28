@@ -5,8 +5,9 @@ export const SHEET_FILE = 'sheet-835ae646.png';
 export const SHEET_CELL = 72;
 export const SHEET_COLUMNS = 64;
 
-/** Emoji per Android sprite page (emoji-sprite module). */
-export const SPRITE_PAGE_CELLS = 256;
+/** Sheet index of the first emoji on each Android sprite page
+ * (emoji-sprite module); a page holds the emoji up to the next start. */
+export const SPRITE_PAGE_STARTS = [0, 168, 424, 554, 713, 844, 1062, 1147, 1403, 1411, 1635, 1891];
 
 /** Sheet cell of each emoji code (see `twemojiCode`), row-major. */
 export const SHEET_INDEX: Record<string, number> = {

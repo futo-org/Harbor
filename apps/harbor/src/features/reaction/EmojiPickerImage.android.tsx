@@ -2,7 +2,7 @@ import { EmojiSprite } from '@/modules/emoji-sprite';
 import { EmojiImage } from '@/src/common/components/EmojiImage';
 import {
   SHEET_INDEX,
-  SPRITE_PAGE_CELLS,
+  SPRITE_PAGE_STARTS,
 } from '@/src/common/emoji/twemoji/sheet';
 import { twemojiCode } from '@/src/common/util/emoji';
 
@@ -21,10 +21,14 @@ export function EmojiPickerImage({ sequence, size }: Props) {
   if (sheetIndex === undefined)
     return <EmojiImage sequence={sequence} size={size} />;
 
+  const page = SPRITE_PAGE_STARTS.findLastIndex(
+    (pageStart) => pageStart <= sheetIndex,
+  );
+
   return (
     <EmojiSprite
-      page={Math.floor(sheetIndex / SPRITE_PAGE_CELLS)}
-      cell={sheetIndex % SPRITE_PAGE_CELLS}
+      page={page}
+      cell={sheetIndex - SPRITE_PAGE_STARTS[page]}
       style={{ width: size, height: size }}
       accessibilityLabel={sequence}
       testID="emoji"
