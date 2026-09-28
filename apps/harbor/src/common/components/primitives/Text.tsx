@@ -54,6 +54,7 @@ function withEmojiImages(text: string, fontSize: number): ReactNode {
           isWeb ? { marginHorizontal: gap } : { width: size + 2 * gap },
           { transform: [{ translateY: shift }] },
         ]}
+        copyable
       />
     ) : (
       part

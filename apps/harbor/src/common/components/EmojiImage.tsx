@@ -1,3 +1,4 @@
+import { CopyOnlyText } from '@/src/common/components/primitives/CopyOnlyText';
 import { TWEMOJI } from '@/src/common/emoji/twemoji';
 import { twemojiCode } from '@/src/common/util/emoji';
 import { isAndroid } from '@/src/common/util/platform';
@@ -12,6 +13,8 @@ type Props = {
   sequence: string;
   size: number;
   style?: ExpoImageProps['style'];
+  // Inline in selectable text: copying a selection includes the emoji.
+  copyable?: boolean;
 };
 
 /** A Twemoji image for one emoji; falls back to the platform glyph. */
@@ -19,31 +22,35 @@ export const EmojiImage = memo(function EmojiImage({
   sequence,
   size,
   style,
+  copyable,
 }: Props) {
   const source = TWEMOJI[twemojiCode(sequence)];
   if (!source) return <Text style={{ fontSize: size * 0.85 }}>{sequence}</Text>;
 
-  // Android's RN Image fades in and re-decodes recycled cells, so the
-  // picker grid flickers; expo-image keeps decoded emojis in memory.
-  if (isAndroid)
-    return (
-      <ExpoImage
-        source={source}
-        contentFit="contain"
-        cachePolicy="memory"
-        style={[{ width: size, height: size }, style]}
-        accessibilityLabel={sequence}
-        testID="emoji"
-      />
-    );
+  const imageProps = {
+    style: [{ width: size, height: size }, style],
+    accessibilityLabel: sequence,
+    testID: 'emoji',
+    // Inline in text, touches go to the text (a link around the emoji, text
+    // selection) rather than stopping at the image.
+    ...(copyable ? { pointerEvents: 'none' as const } : {}),
+  };
 
   return (
-    <Image
-      source={source}
-      resizeMode="contain"
-      style={[{ width: size, height: size }, style]}
-      accessibilityLabel={sequence}
-      testID="emoji"
-    />
+    <>
+      {isAndroid ? (
+        // Android's RN Image fades in and re-decodes recycled cells, so the
+        // picker grid flickers; expo-image keeps decoded emojis in memory.
+        <ExpoImage
+          source={source}
+          contentFit="contain"
+          cachePolicy="memory"
+          {...imageProps}
+        />
+      ) : (
+        <Image source={source} resizeMode="contain" {...imageProps} />
+      )}
+      {copyable ? <CopyOnlyText>{sequence}</CopyOnlyText> : null}
+    </>
   );
 });
