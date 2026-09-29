@@ -50,7 +50,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
   }, [link.url]);
 
   const image =
-    imageUris ? (
+    imageUris.length > 0 ? (
       <Image
         testID="linkPreviewImage"
         uris={imageUris}
