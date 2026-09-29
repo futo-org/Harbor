@@ -42,7 +42,7 @@ publish_all() {
   registry_url="$1"
   registry_label="$2"
   echo "Publishing to ${registry_label} (${registry_url})"
-  # Use `.npmrc` directly (instead of `pnpm config set` which writes to a pnpm-only `auth.ini`)
+  # Ensure `.npmrc` is used (In `pnpm>=11`, `pnpm config set` writes to `auth.ini`)
   add_npmrc "@polycentric:registry=${registry_url}"
   for pkg in $PACKAGES; do
     set +e
