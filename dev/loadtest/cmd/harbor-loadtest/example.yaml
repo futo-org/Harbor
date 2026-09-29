@@ -1,0 +1,189 @@
+# harbor-loadtest configuration. Every key is optional: anything left out
+# keeps the default shown here. Scenarios you do not list keep their defaults
+# too, and listed scenarios only override the params you set.
+
+target:
+  # Web app origin: sent as Origin/Referer like a browser, and its HTML is
+  # fetched by logged-out visitors (browse.loadWebApp).
+  webURL: https://staging.harbor.social
+  # Seed servers, in the app's order (EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS).
+  # srv.staging.harbor.social is the harbor-server namespace,
+  # srv.staging.polycentric.io is harbor-server-alt. The first one serves blob
+  # and image-proxy GETs.
+  servers:
+    - https://srv.staging.harbor.social
+    - https://srv.staging.polycentric.io
+  # "all": every RPC goes to every server in parallel, like the app.
+  # "first": only the first server (isolate one backend).
+  fanout: all
+  userAgent: harbor-loadtest/0.1 (+https://code.futo.org/harbor/harbor)
+  # Per-request timeout. The app itself abandons a server after 5s.
+  timeout: 30s
+  # Independent HTTP/2 connection pools per server (requests round-robin).
+  connectionPools: 4
+  # Hosts must contain "staging" (or be localhost) unless this is true.
+  allowNonStaging: false
+
+metrics:
+  enabled: true
+  # Staging VictoriaMetrics (tenant 3:1), reachable over netbird.
+  url: https://vmetrics.staging.o11y.futo.network/select/3:1/prometheus
+  interval: 15s      # how often the dashboard re-queries
+  step: 30s          # query resolution (scrape interval is 30s)
+  lookback: 15m      # history shown before the run starts
+  scope:
+    cluster: harbor-infra-staging
+    namespaces: [harbor-server, harbor-server-alt, harbor-pg, kafka, harbor-web, harbor-moderation,
+                 harbor-moderation-alt, harbor-push-notifications, harbor-scraper, harbor-verifier-bot, envoy-system]
+    serverNamespaces: [harbor-server, harbor-server-alt]
+    pgNamespace: harbor-pg
+
+run:
+  # Stop automatically after this long; 0 = until stopped (or until the
+  # longest enabled scenario's stages are done).
+  duration: 10m
+  # How long in-flight sessions may finish after stopping.
+  gracefulStop: 30s
+  # Each run writes config.yaml, ticks.jsonl (per-second stats),
+  # summary.json and metrics.json to <resultsDir>/<run id>/.
+  resultsDir: results
+  # Identities the tool created, with their private keys. Reused by later
+  # runs (so logged-in scenarios have users) and read by `accounts`/`cleanup`.
+  accountsFile: state/accounts.jsonl
+
+safety:
+  # Pause everything if the edge starts refusing us. The harbor.social
+  # Cloudflare zone is shared with production, so a WAF ban on this IP would
+  # also block production.
+  pauseOnBlock: true
+  blockThreshold: 0.2   # share of 403/429 responses over 10s
+  # Pause when the overall error ratio over 30s exceeds this (0 = off).
+  maxErrorRate: 0
+
+content:
+  # Moderation sends every new content digest (posts and profile updates) to
+  # Azure Content Safety, a paid call. With uniquePosts false, top-level posts
+  # come from a fixed corpus of corpusSize texts, so Azure sees at most that
+  # many. Replies, quotes and mentions are always unique.
+  uniquePosts: false
+  corpusSize: 500
+  # Let replies/reactions/reposts/quotes target real users' posts (they
+  # would get notifications). Off: only load-test content is touched.
+  interactWithReal: false
+  # Adds the "loadtest" self-label next to the app's "harbor" label.
+  loadtestLabel: true
+  # Display names are "<prefix> <Adjective> <Animal>" (1,600 combinations).
+  namePrefix: Loadtest
+  # Generated JPEG sizes (longest edge) per uploaded image, like the app's
+  # 512/1280 post variants, and how many distinct images to cycle through.
+  imageVariants: [512, 1280]
+  imageCorpus: 16
+
+# Each scenario has: enabled, rate (arrivals per second), optional stages
+# (linear ramps: each stage moves the rate to `target` over `duration`),
+# maxInFlight (arrivals beyond this concurrency are dropped and counted), and
+# params. Rates, enabled and maxInFlight can be changed live from the
+# dashboard; params apply from the next run.
+scenarios:
+  # Logged-out visitor: web app HTML, Explore (Top by default) from every
+  # server, images for mounted rows, scroll steps (each fetches the next page
+  # from every server), sometimes a thread or a profile.
+  browse:
+    enabled: true
+    rate: 2
+    maxInFlight: 2000
+    params:
+      scrollSteps: {min: 1, max: 6}
+      thinkTime: {min: 2s, max: 8s}
+      sortTopShare: 0.8       # rest use Latest
+      threadProb: 0.3         # per session
+      profileProb: 0.2
+      loadWebApp: true
+      loadStaticAssets: false
+      images: true            # GET /blob for avatars and post images
+      imageProxy: false       # /image_proxy makes the scraper fetch third-party URLs
+      cacheBust: false        # true bypasses Cloudflare's cache for blobs
+      preflightProb: 0.3      # share of fresh browsers sending CORS preflights
+      rowsFirstRender: 12
+      rowsPerScroll: 15
+
+  # Returning logged-in user (needs published accounts: enable register or
+  # reuse the accounts file): boot sync (ListEvents + ListHeads),
+  # IsModerator, land on Following/For you/Explore, SuggestFollow, scroll,
+  # sometimes threads, profiles and notifications. Sends the JWT like the app.
+  browse_user:
+    enabled: true
+    rate: 1
+    maxInFlight: 1000
+    params:
+      scrollSteps: {min: 1, max: 6}
+      thinkTime: {min: 2s, max: 8s}
+      landingFollowing: 0.7
+      landingForYou: 0.15     # the rest land on Explore
+      suggestFollow: 0.7
+      threadProb: 0.3
+      profileProb: 0.2
+      notificationProb: 0.3
+      images: true
+      imageProxy: false
+      cacheBust: false
+      authReads: true
+      rowsFirstRender: 12
+      rowsPerScroll: 15
+
+  # Signup: genesis identity event (ListHeads + PutEvents on every server),
+  # profile update with a display name, optional follows, then the feed.
+  register:
+    enabled: true
+    rate: 0.5
+    maxInFlight: 500
+    params:
+      followOnSignup: 5
+      browseAfterSignup: true
+
+  # Top-level post by a random load-test account, synced like the app
+  # (ListEvents pull alongside ListHeads + PutEvents, per server).
+  post:
+    enabled: true
+    rate: 0.5
+    maxInFlight: 500
+    params:
+      imageProb: 0.1          # uploads every variant to every server first
+      quoteProb: 0.05
+      mentionProb: 0.05
+      textWords: {min: 3, max: 40}
+
+  reply:
+    enabled: true
+    rate: 0.2
+    maxInFlight: 500
+    params:
+      targetSkew: 1.0         # 0 = uniform over known posts, higher = recent posts get more
+      textWords: {min: 2, max: 25}
+
+  react:
+    enabled: true
+    rate: 1
+    maxInFlight: 500
+    params:
+      targetSkew: 1.0         # reactions on one post serialize on its reaction_tally row
+      negativeProb: 0.05
+
+  repost:
+    enabled: false
+    rate: 0.1
+    maxInFlight: 200
+    params:
+      targetSkew: 1.0
+
+  follow:
+    enabled: true
+    rate: 0.2
+    maxInFlight: 200
+
+  search:
+    enabled: false
+    rate: 0.2
+    maxInFlight: 200
+    params:
+      usersShare: 0.3
