@@ -340,9 +340,9 @@ fn validate_content(content: &Content, collection: i32) -> Result<(), Status> {
             Ok(())
         }
         ContentBody::Delete(_) => {
-            // TODO: allow any collection here? Since it can delete any event,
-            // not just ones in the feed.
-            check_collection(collection, collections::FEED)?;
+            // NOTE: we allow deletion of any event, so the collection can't be
+            // checked here.
+
             // TODO: validate.
             Ok(())
         }
