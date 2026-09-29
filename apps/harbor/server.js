@@ -2,6 +2,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { createServer } = require('node:http');
 const { createRequestHandler } = require('expo-server/vendor/http');
+const { buildAppleAppSiteAssociation, buildAssetLinks } = require('./appLinks');
 
 const CLIENT_DIR = path.join(__dirname, 'dist', 'client');
 const handler = createRequestHandler({
@@ -64,6 +65,29 @@ const MIME_TYPES = {
   '.wasm': 'application/wasm',
 };
 
+// Verification files for iOS Universal Links and Android App Links, built
+// for the requested host. Other hosts (alt domains, self-hosters) get a 404.
+const APP_LINK_FILE_BUILDERS = {
+  '/.well-known/apple-app-site-association': buildAppleAppSiteAssociation,
+  '/.well-known/assetlinks.json': buildAssetLinks,
+};
+
+function serveAppLinkFile(req, res, next) {
+  const buildAppLinkFile = APP_LINK_FILE_BUILDERS[req.url.split('?')[0]];
+  if (!buildAppLinkFile) return next();
+
+  const appLinkFile = buildAppLinkFile(req.headers.host);
+  if (!appLinkFile) {
+    res.statusCode = 404;
+    res.end('Not Found');
+    return;
+  }
+
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.end(JSON.stringify(appLinkFile));
+}
+
 function serveStatic(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 
@@ -85,13 +109,15 @@ function serveStatic(req, res, next) {
 }
 
 createServer((req, res) => {
-  serveStatic(req, res, () => {
-    handler(req, res, (err) => {
-      if (err) {
-        console.error(err);
-        res.statusCode = 500;
-        res.end('Internal Server Error');
-      }
+  serveAppLinkFile(req, res, () => {
+    serveStatic(req, res, () => {
+      handler(req, res, (err) => {
+        if (err) {
+          console.error(err);
+          res.statusCode = 500;
+          res.end('Internal Server Error');
+        }
+      });
     });
   });
 }).listen(port, () => {
