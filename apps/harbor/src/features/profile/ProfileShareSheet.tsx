@@ -1,9 +1,7 @@
-import { Button, ProfileAvatar } from '@/src/common/components';
+import { Button, CopyButton, ProfileAvatar } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { canShareUrl, nativeShareUrl } from '@/src/common/util/nativeShareUrl';
-import * as Clipboard from 'expo-clipboard';
-import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { HARBOR_APP_URL, Routes } from '@/src/common/constants';
@@ -11,7 +9,6 @@ import { Username } from '@/src/features/profile/Username';
 
 const QR_CARD_WIDTH = 300;
 const QR_CODE_PADDING = 25;
-const COPIED_INDICATOR_DURATION_MS = 2000;
 
 type ProfileShareSheetProps = {
   identityKey: string;
@@ -100,7 +97,7 @@ export default function ProfileShareSheet({
           ]}
         >
           <View style={Atoms.flex_1}>
-            <CopyLinkButton link={profileLink} />
+            <CopyButton title="Copy Link" value={profileLink} />
           </View>
           {canShareUrl ? (
             <View style={Atoms.flex_1}>
@@ -110,40 +107,6 @@ export default function ProfileShareSheet({
         </View>
       </Sheet.Content>
     </Sheet>
-  );
-}
-
-function CopyLinkButton({ link }: { link: string }) {
-  // Briefly flips the button to a "Copied" state after a copy.
-  const [justCopied, setJustCopied] = useState<boolean>(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    },
-    [],
-  );
-
-  const copyLink = () => {
-    void Clipboard.setStringAsync(link);
-    setJustCopied(true);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      setJustCopied(false);
-      timeoutRef.current = null;
-    }, COPIED_INDICATOR_DURATION_MS);
-  };
-
-  return (
-    <Button
-      title={justCopied ? 'Copied' : 'Copy Link'}
-      icon={justCopied ? 'checkmark' : 'copy'}
-      variant="primary"
-      size="md"
-      fullWidth
-      onPress={copyLink}
-    />
   );
 }
 

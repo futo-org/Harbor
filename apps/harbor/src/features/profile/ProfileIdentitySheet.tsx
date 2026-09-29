@@ -1,12 +1,12 @@
 import { IconButton, ProfileAvatar, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
-import { useToast } from '@/src/common/components/toast';
 import {
   publicKeyToString,
   useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
+import { useCopyToClipboard } from '@/src/common/lib/useCopyToClipboard';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
@@ -14,7 +14,6 @@ import { Username } from '@/src/features/profile/Username';
 import { ServerRow } from '@/src/features/settings/servers/ServerRow';
 import { useServerSettings } from '@/src/features/settings/servers/useServerSettings';
 import { FetchMode, IdentityManager, type v2 } from '@polycentric/react-native';
-import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { ActivityIndicator, type TextStyle, View } from 'react-native';
@@ -193,12 +192,9 @@ function SigningKeyRow({
 }
 
 function CopyableValue({ value, label }: { value: string; label: string }) {
-  const toast = useToast();
-
-  const onCopy = () => {
-    void Clipboard.setStringAsync(value);
-    toast.success('Copied to clipboard');
-  };
+  const { copyToClipboard, justCopied } = useCopyToClipboard({
+    showToast: true,
+  });
 
   return (
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
@@ -217,8 +213,14 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
         variant="ghost"
         compact
         accessibilityLabel={`Copy ${label}`}
-        icon={() => <Icon name="copy" size={16} color="neutral_500" />}
-        onPress={onCopy}
+        icon={() => (
+          <Icon
+            name={justCopied ? 'checkmark' : 'copy'}
+            size={16}
+            color={justCopied ? 'positive_500' : 'neutral_500'}
+          />
+        )}
+        onPress={() => copyToClipboard(value)}
       />
     </View>
   );
