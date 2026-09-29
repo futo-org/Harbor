@@ -5,6 +5,7 @@ import { openProfilePhoto } from '@/src/features/profile/ProfilePhotoScreen';
 import {
   AVATAR_SIZE_MAP,
   Button,
+  IconButton,
   ProfileAvatar,
   Text,
 } from '@/src/common/components/primitives';
@@ -14,11 +15,12 @@ import { isWeb } from '@/src/common/util/platform';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
 import { router, type Href } from 'expo-router';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
+import ProfileShareSheet from './ProfileShareSheet';
 
 const BANNER_HEIGHT = 150;
 
@@ -32,6 +34,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { identityKey, isSelf, alias } = useProfileContext();
 
   const profile = useProfile(identityKey);
+  const [showShareSheet, setShowShareSheet] = useState<boolean>(false);
 
   const displayKey = identityKey ? identityKey.slice(0, 64) : '...';
 
@@ -42,6 +45,8 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const handleIdentityPress = useCallback(() => {
     if (identityKey) router.push(Routes.tabs.profileIdentity(identityKey));
   }, [identityKey]);
+
+  const openShareSheet = useCallback(() => setShowShareSheet(true), []);
 
   const handleAvatarPress = useCallback(() => {
     if (!identityKey) return;
@@ -123,7 +128,16 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           ) : (
             <FollowButton identity={identityKey!} />
           )}
-          <ProfileMenu />
+          {identityKey ? (
+            <IconButton
+              size="sm"
+              accessibilityLabel="Share profile"
+              variant="ghost"
+              icon={(props) => <Icon name="share" {...props} />}
+              onPress={openShareSheet}
+            />
+          ) : null}
+          <ProfileMenu onSharePress={openShareSheet} />
         </View>
       </View>
 
@@ -164,6 +178,14 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           />
         ) : null}
       </View>
+
+      {identityKey ? (
+        <ProfileShareSheet
+          identityKey={identityKey}
+          open={showShareSheet}
+          onClose={() => setShowShareSheet(false)}
+        />
+      ) : null}
     </View>
   );
 }

@@ -62,6 +62,10 @@ jest.mock('./ProfileMenu', () => ({
   __esModule: true,
   default: () => null,
 }));
+jest.mock('./ProfileShareSheet', () => ({
+  __esModule: true,
+  default: () => null,
+}));
 jest.mock('@/src/common/components/composites', () => ({
   BackButton: () => null,
 }));
@@ -76,6 +80,7 @@ jest.mock('@/src/common/components/primitives', () => {
     Text: ({ children }: { children: unknown }) =>
       react.createElement(Native, null, children),
     Button: () => null,
+    IconButton: () => null,
     ProfileAvatar: () => null,
   };
 });
