@@ -190,7 +190,7 @@ function PairingEmojiCard(): ReactNode {
 
       <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
         <ActivityIndicator size="small" />
-        <Text variant="small" color="neutral_500">
+        <Text variant="small" color="neutral_500" style={Atoms.flex_shrink_1}>
           Waiting for approval from other device
         </Text>
       </View>
