@@ -456,11 +456,7 @@ function WebModal({
           Atoms.overflow_hidden,
           Atoms.flex_col,
           { maxWidth: 600, marginVertical: 'auto', marginHorizontal: 'auto' },
-          compact &&
-            ([
-              Atoms.max_w_full,
-              { marginVertical: 0, minHeight: '100%' },
-            ] as const),
+          compact && Atoms.max_w_full,
           maxWidth !== undefined && { maxWidth },
           {
             backgroundColor: theme.palette.neutral_0,
