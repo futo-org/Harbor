@@ -12,8 +12,8 @@ import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/us
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { router } from 'expo-router';
-import { type ReactNode, useEffect, useState } from 'react';
-import { ActivityIndicator, type TextStyle, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import type { v2 } from '@polycentric/react-native';
 
 export default function PairIdentityClaimerScreen() {
@@ -127,7 +127,7 @@ export default function PairIdentityClaimerScreen() {
   );
 }
 
-function PairingEmojiCard(): ReactNode {
+function PairingEmojiCard() {
   const { theme } = useTheme();
   const client = usePolycentric();
 
@@ -182,7 +182,7 @@ function PairingEmojiCard(): ReactNode {
         style={[
           { fontFamily: 'monospace', textAlign: 'center' },
           // The pubkey string is a long string with no whitespace
-          isWeb && ({ wordBreak: 'break-all' } as unknown as TextStyle),
+          isWeb && { wordBreak: 'break-all' },
         ]}
       >
         {pubKeyStr}
