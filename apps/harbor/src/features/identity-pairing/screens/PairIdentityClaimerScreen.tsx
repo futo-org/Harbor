@@ -163,7 +163,7 @@ function PairingEmojiCard(): ReactNode {
           Atoms.justify_center,
           Atoms.gap_lg,
           Atoms.rounded_lg,
-          Atoms.overflow_hidden,
+          Atoms.flex_wrap,
           Atoms.py_lg,
           Atoms.px_lg,
           { backgroundColor: theme.palette.white },
