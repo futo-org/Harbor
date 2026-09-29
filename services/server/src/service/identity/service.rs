@@ -33,7 +33,7 @@ const ALL_COLLECTIONS: [i32; 8] = [
 
 /// Events erased per transaction. Keeps each transaction short so a deadlock
 /// with the tally cron or a worker only costs one batch.
-const ERASE_BATCH: u64 = 50_000;
+const ERASE_BATCH: u64 = 100;
 
 /// Erases an identity's events, deletes blobs nothing references any more,
 /// and drops its cached chain state. Used by bans and the operator command.
