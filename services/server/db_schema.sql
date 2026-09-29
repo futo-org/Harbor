@@ -1227,6 +1227,13 @@ CREATE INDEX reaction_tally_decayed_count ON public.reaction_tally USING btree (
 
 
 --
+-- Name: reaction_tally_decayed_count_update; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX reaction_tally_decayed_count_update ON public.reaction_tally USING btree (event_id DESC) WHERE (decayed_count > (0)::numeric);
+
+
+--
 -- Name: reply_identity_post; Type: INDEX; Schema: public; Owner: -
 --
 
