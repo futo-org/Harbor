@@ -18,30 +18,12 @@ catalogs:
     '@types/node':
       specifier: ^24.0.0
       version: 24.13.1
-    '@ubjs/core':
-      specifier: 0.31.0-5
-      version: 0.31.0-5
-    '@ubjs/wasm':
-      specifier: 0.31.0-5
-      version: 0.31.0-5
     jest:
       specifier: ^29.7.0
       version: 29.7.0
     jest-junit:
       specifier: ^17.0.0
       version: 17.0.0
-    prom-client:
-      specifier: ^15.1.3
-      version: 15.1.3
-    puppeteer:
-      specifier: ^25.1.0
-      version: 25.3.0
-    typescript:
-      specifier: ^5.9.3
-      version: 5.9.3
-    uniffi-bindgen-react-native:
-      specifier: 0.31.0-5
-      version: 0.31.0-5
 
 overrides:
   serialize-javascript@<7.0.5: '>=7.0.5'
@@ -213,9 +195,6 @@ importers:
       expo-server:
         specifier: ~57.0.3
         version: 57.0.3
-      expo-sharing:
-        specifier: ~57.0.13
-        version: 57.0.14(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
       expo-splash-screen:
         specifier: ~57.0.7
         version: 57.0.7(expo@57.0.15)(typescript@6.0.3)
@@ -7375,13 +7354,6 @@ packages:
   expo-server@57.0.3:
     resolution: {integrity: sha512-aK+LdKzauHSGmsOStZtyxdzv0zWssCkxTw3m4QuOhfDSJsZaMRTd9O41d8ixU/QfELTbaJ0oRNcF7JFV/7O9YQ==}
     engines: {node: '>=20.16.0'}
-
-  expo-sharing@57.0.14:
-    resolution: {integrity: sha512-X/GG2Z/aGHzC90gnX4rX88BJjoWEt5Piqgeybb0taOvSCu8N/sHROvbIrYp07NSLagOqGTYAgfDmmyQXtrchJQ==}
-    peerDependencies:
-      expo: '*'
-      react: '*'
-      react-native: '*'
 
   expo-splash-screen@57.0.7:
     resolution: {integrity: sha512-QxqfjOCTnTGnqK2BxfEtxUJOcnsJbUXO873Q342r3VkgHAG877eozsNzgYWQXcCFj/asMwx2uy9OXxBShxc5rQ==}
@@ -19799,7 +19771,7 @@ snapshots:
       react-refresh: 0.14.2
     optionalDependencies:
       '@babel/runtime': 7.29.7
-      expo: 57.0.15(e04a7af596377c06ab0f85410e00cc77)
+      expo: 57.0.15(2b32c1adfa6d459b4caf38d20ae59d39)
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color
@@ -21648,18 +21620,6 @@ snapshots:
       react-native: 0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
 
   expo-server@57.0.3: {}
-
-  expo-sharing@57.0.14(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3):
-    dependencies:
-      '@expo/config-plugins': 57.0.8(typescript@6.0.3)
-      '@expo/config-types': 57.0.2
-      '@expo/plist': 0.8.1
-      expo: 57.0.15(2b32c1adfa6d459b4caf38d20ae59d39)
-      react: 19.2.3
-      react-native: 0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
-    transitivePeerDependencies:
-      - supports-color
-      - typescript
 
   expo-splash-screen@57.0.7(expo@57.0.15)(typescript@6.0.3):
     dependencies:

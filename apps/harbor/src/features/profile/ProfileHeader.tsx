@@ -3,7 +3,9 @@ import HoverCard from '@/src/common/components/HoverCard';
 import Icon from '@/src/common/components/Icon';
 import { openProfilePhoto } from '@/src/features/profile/ProfilePhotoScreen';
 import {
+  AVATAR_SIZE_MAP,
   Button,
+  IconButton,
   ProfileAvatar,
   Text,
 } from '@/src/common/components/primitives';
@@ -13,11 +15,12 @@ import { isWeb } from '@/src/common/util/platform';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
 import { router, type Href } from 'expo-router';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
+import ProfileShareSheet from './ProfileShareSheet';
 
 const BANNER_HEIGHT = 150;
 
@@ -31,6 +34,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { identityKey, isSelf, alias } = useProfileContext();
 
   const profile = useProfile(identityKey);
+  const [showShareSheet, setShowShareSheet] = useState<boolean>(false);
 
   const displayKey = identityKey ? identityKey.slice(0, 64) : '...';
 
@@ -41,6 +45,8 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const handleIdentityPress = useCallback(() => {
     if (identityKey) router.push(Routes.tabs.profileIdentity(identityKey));
   }, [identityKey]);
+
+  const openShareSheet = useCallback(() => setShowShareSheet(true), []);
 
   const handleAvatarPress = useCallback(() => {
     if (!identityKey) return;
@@ -85,78 +91,33 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
         </View>
       </View>
 
-      <View style={[Atoms.mx_lg, { marginTop: -56 }]}>
+      <View
+        style={[
+          Atoms.mx_lg,
+          Atoms.flex_row,
+          Atoms.justify_between,
+          Atoms.items_end,
+          Atoms.gap_md,
+          { marginTop: -AVATAR_SIZE_MAP.xl / 2 },
+        ]}
+      >
         {identityKey ? (
           <ProfileAvatar
             identityKey={identityKey}
             size="xl"
             onPress={handleAvatarPress}
           />
-        ) : null}
-      </View>
-
-      <View
-        style={[
-          Atoms.mx_lg,
-          Atoms.pb_lg,
-          Atoms.flex_row,
-          Atoms.justify_between,
-          Atoms.gap_md,
-        ]}
-      >
-        {/* Flexible, shrinkable column: `minWidth: 0` lets a long unbreakable
-            alias truncate instead of forcing the row wider and pushing the
-            action button off-screen. */}
-        <View
-          style={[Atoms.mt_md, Atoms.gap_xs, Atoms.flex_1, { minWidth: 0 }]}
-        >
-          <Username
-            identity={identityKey}
-            numberOfLines={2}
-            variant="title"
-            fontWeight="bold"
-          />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="View identity details"
-            onPress={handleIdentityPress}
-            style={({ pressed }) => [
-              Atoms.flex_row,
-              Atoms.items_center,
-              Atoms.gap_xs,
-              pressed && { opacity: 0.5 },
-            ]}
-          >
-            <Icon name="key" size={13} color="neutral_500" />
-            <IdentityKeyText value={displayKey} />
-          </Pressable>
-          {alias ? <AliasLabel alias={alias} /> : null}
-          {profile.description ? (
-            <View style={Atoms.mt_sm}>
-              <Text variant="body" fontSize="sm" color="neutral_1000">
-                {profile.description}
-              </Text>
-            </View>
-          ) : null}
-          {identityKey ? (
-            <FollowCounts
-              identityKey={identityKey}
-              following={profile.followingCount}
-              followers={profile.followersCount}
-            />
-          ) : null}
-        </View>
-
+        ) : (
+          <View />
+        )}
         <View
           style={[
-            Atoms.mt_md,
             Atoms.flex_row,
             Atoms.items_center,
             Atoms.gap_sm,
             { flexShrink: 0 },
           ]}
         >
-          <ProfileMenu />
           {isSelf ? (
             <Button
               title="Edit profile"
@@ -167,8 +128,64 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           ) : (
             <FollowButton identity={identityKey!} />
           )}
+          {identityKey ? (
+            <IconButton
+              size="sm"
+              accessibilityLabel="Share profile"
+              variant="ghost"
+              icon={(props) => <Icon name="share" {...props} />}
+              onPress={openShareSheet}
+            />
+          ) : null}
+          <ProfileMenu onSharePress={openShareSheet} />
         </View>
       </View>
+
+      <View style={[Atoms.mx_lg, Atoms.mt_md, Atoms.pb_lg, Atoms.gap_xs]}>
+        <Username
+          identity={identityKey}
+          numberOfLines={2}
+          variant="title"
+          fontWeight="bold"
+        />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="View identity details"
+          onPress={handleIdentityPress}
+          style={({ pressed }) => [
+            Atoms.flex_row,
+            Atoms.items_center,
+            Atoms.gap_xs,
+            pressed && { opacity: 0.5 },
+          ]}
+        >
+          <Icon name="key" size={13} color="neutral_500" />
+          <IdentityKeyText value={displayKey} />
+        </Pressable>
+        {alias ? <AliasLabel alias={alias} /> : null}
+        {profile.description ? (
+          <View style={Atoms.mt_sm}>
+            <Text variant="body" fontSize="sm" color="neutral_1000">
+              {profile.description}
+            </Text>
+          </View>
+        ) : null}
+        {identityKey ? (
+          <FollowCounts
+            identityKey={identityKey}
+            following={profile.followingCount}
+            followers={profile.followersCount}
+          />
+        ) : null}
+      </View>
+
+      {identityKey ? (
+        <ProfileShareSheet
+          identityKey={identityKey}
+          open={showShareSheet}
+          onClose={() => setShowShareSheet(false)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -256,8 +273,7 @@ function FollowCounts({
 }
 
 /**
- * The verified alias, truncated to one line so it can't push the
- * action button off-screen. Built on the shared HoverCard (hover on web, tap on
+ * The verified alias, truncated to one line. Built on the shared HoverCard (hover on web, tap on
  * native), which portals + positions the reveal bubble correctly here.
  */
 function AliasLabel({ alias }: { alias: string }) {
