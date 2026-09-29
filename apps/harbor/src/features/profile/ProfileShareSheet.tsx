@@ -33,7 +33,7 @@ export default function ProfileShareSheet({
       onClose={onClose}
       detents={['auto']}
       scrollable={false}
-      header={<View style={{ height: QR_CODE_PADDING }} />}
+      header={<Sheet.Header title="Share Profile" onClose={onClose} />}
     >
       <Sheet.Content
         scrollable={false}
