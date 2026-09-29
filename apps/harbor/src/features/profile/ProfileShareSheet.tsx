@@ -1,7 +1,7 @@
 import { Button, ProfileAvatar } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { nativeShareUrl } from '@/src/common/util/nativeShareUrl';
+import { canShareUrl, nativeShareUrl } from '@/src/common/util/nativeShareUrl';
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -91,13 +91,22 @@ export default function ProfileShareSheet({
           </View>
         </View>
 
-        <View style={[Atoms.flex_row, Atoms.w_full, Atoms.gap_sm]}>
+        <View
+          style={[
+            Atoms.flex_row,
+            Atoms.gap_sm,
+            // A lone Copy button would be too wide at full width.
+            canShareUrl ? Atoms.w_full : { width: QR_CARD_WIDTH },
+          ]}
+        >
           <View style={Atoms.flex_1}>
             <CopyLinkButton link={profileLink} />
           </View>
-          <View style={Atoms.flex_1}>
-            <ShareLinkButton link={profileLink} />
-          </View>
+          {canShareUrl ? (
+            <View style={Atoms.flex_1}>
+              <ShareLinkButton link={profileLink} />
+            </View>
+          ) : null}
         </View>
       </Sheet.Content>
     </Sheet>
