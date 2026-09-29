@@ -104,13 +104,30 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 .value(
                     gravity::Column::CalculatedAt,
                     Expr::current_timestamp(),
+                )
+                // Don't update the value if it has not been updated `every`
+                // time (e.g. in the last 5 minutes).
+                .cond_where(
+                    Expr::col(gravity::Column::CalculatedAt.as_column_ref())
+                        .lt(Expr::current_timestamp().sub(Expr::cust(format!(
+                            "INTERVAL '{} seconds'", every.as_secs()
+                        ))))
                 );
 
-            if let Err(err) = tx.execute(&update_gravity).await {
-                tracing::warn!(error = %err, "failed to update gravity value & timestamp");
+            match tx.execute(&update_gravity).await {
+                Ok(result) if result.rows_affected() == 0 => {
+                    tracing::debug!(elapsed = ?start.elapsed(), "gravity value not updated, skipping calculation of decayed reaction counts");
+                    return ControlFlow::Continue(());
+                }
+                Ok(_) => { /* Update decayed reaction counts below. */ }
+                Err(err) => {
+                    tracing::warn!(error = %err, "failed to update gravity value & timestamp");
+                    return ControlFlow::Continue(());
+                },
             }
             if let Err(err) = tx.commit().await {
                 tracing::warn!(error = %err, "failed to commit gravity value & timestamp changes");
+                return ControlFlow::Continue(());
             }
             tracing::debug!(elapsed = ?start.elapsed(), "updated gravity value");
 
