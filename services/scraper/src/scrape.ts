@@ -16,10 +16,10 @@ import {
 import { fetchMode } from './mode.js';
 
 export type LinkMetadata = {
-  title: string | null;
-  description: string | null;
-  image: string | null;
-  url: string | null;
+  title: string;
+  description?: string;
+  image?: string;
+  url: string;
 };
 
 // The target returned a non-2xx status. Carries it so the caller reports the
@@ -63,7 +63,7 @@ export const scrape = async (
   targetUrl: string,
   fetchHtml: HtmlFetcher,
   { retries = 3, backoffMs = defaultBackoff }: ScrapeOptions = {},
-): Promise<LinkMetadata> => {
+): Promise<LinkMetadata | undefined> => {
   const started = performance.now();
   const host = hostOf(targetUrl);
   const mode = fetchMode(targetUrl);
@@ -97,14 +97,14 @@ export const scrape = async (
       fetchAttempts.inc({ mode, status_class: statusClass(statusCode) });
       if (statusCode >= 200 && statusCode < 300) {
         const meta = await extract({ html, url });
-        const result: LinkMetadata = {
-          title: meta.title ?? null,
-          description: meta.description ?? null,
-          image: meta.image ?? null,
-          url: meta.url ?? null,
-        };
-        const present = (Object.keys(result) as (keyof LinkMetadata)[]).filter(
-          (field) => result[field] !== null,
+        const result = meta.title ? {
+          title: meta.title,
+          description: meta.description,
+          image: meta.image,
+          url: meta.url ?? targetUrl,
+        } : undefined;
+        const present = (Object.keys(result ?? {}) as (keyof LinkMetadata)[]).filter(
+          (field) => (result ?? {})[field] !== undefined,
         );
         for (const field of present) metadataFields.inc({ field });
         finish('ok', { fields: present, html_bytes: html.length });

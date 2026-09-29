@@ -136,12 +136,7 @@ describe('server /image proxy', () => {
     });
     ({ base: upstream, close: closeUpstream } = await listen(up));
 
-    const scraper = buildServer(async () => ({
-      title: null,
-      description: null,
-      image: null,
-      url: null,
-    }));
+    const scraper = buildServer(async () => (undefined));
     ({ base, close: closeScraper } = await listen(scraper));
   });
   after(async () => {
