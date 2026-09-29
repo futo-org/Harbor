@@ -63,8 +63,8 @@ message PostReply {
 
 message Link {
   string title = 1;
-  string description = 2;
-  string image = 3;
+  optional string description = 2;
+  optional string image = 3;
   string url = 4;
 }
 
