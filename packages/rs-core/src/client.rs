@@ -1020,6 +1020,7 @@ mod tests {
                 banner: None,
                 description: None,
                 alias: None,
+                known_as: None,
             })),
         };
         let profile_bytes = profile_content.encode_to_vec();

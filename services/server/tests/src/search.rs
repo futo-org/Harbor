@@ -27,6 +27,7 @@ async fn search_users_match_profile_name() {
         banner: None,
         description: None,
         alias: None,
+        known_as: None,
     };
     client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
     client.submit_events().await;
@@ -53,6 +54,7 @@ async fn search_users_does_not_match_description() {
         banner: None,
         description: Some(description.clone()),
         alias: None,
+        known_as: None,
     };
     client.profile_update(profile_update, DEFAULT_CREATED_AT);
     client.submit_events().await;
@@ -79,6 +81,7 @@ async fn search_users_match_alias() {
         banner: None,
         description: None,
         alias: Some(alias.clone()),
+        known_as: None,
     };
     client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
     client.submit_events().await;
@@ -105,6 +108,7 @@ async fn search_users_match_identity() {
         banner: None,
         description: None,
         alias: Some(alias.clone()),
+        known_as: None,
     };
     client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
     client.submit_events().await;
@@ -132,6 +136,7 @@ async fn search_users_only_consider_latest_update() {
         banner: None,
         description: None,
         alias: Some(old_alias.clone()),
+        known_as: None,
     };
     client.profile_update(profile_update, DEFAULT_CREATED_AT);
     // Remove the alias, so we shouldn't match any more.
@@ -141,6 +146,7 @@ async fn search_users_only_consider_latest_update() {
         banner: None,
         description: None,
         alias: None,
+        known_as: None,
     };
     client.profile_update(profile_update, DEFAULT_CREATED_AT + 1);
     client.submit_events().await;
@@ -167,6 +173,7 @@ async fn search_users_do_not_consider_deleted_updates() {
         banner: None,
         description: None,
         alias: Some(alias.clone()),
+        known_as: None,
     };
     client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
     let event_key = client.get_last_event_key();
@@ -208,6 +215,7 @@ async fn search_users_match_on_hashtags() {
         banner: None,
         description: None,
         alias: None,
+        known_as: None,
     };
     client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
     client.submit_events().await;
@@ -242,6 +250,7 @@ async fn search_users_order_by_rank() {
             banner: None,
             description: None,
             alias: Some(alias),
+            known_as: None,
         };
         client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
         client.submit_events().await;
@@ -275,6 +284,7 @@ async fn search_users_order_by_alpha() {
             banner: None,
             description: None,
             alias: Some(alias),
+            known_as: None,
         };
         client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
         client.submit_events().await;
@@ -307,6 +317,7 @@ async fn search_users_pagination_order_by_rank() {
             banner: None,
             description: None,
             alias: Some(alias),
+            known_as: None,
         };
         client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
         client.submit_events().await;
@@ -399,6 +410,7 @@ async fn search_users_pagination_order_by_alpha() {
             banner: None,
             description: None,
             alias: Some(alias),
+            known_as: None,
         };
         client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
         client.submit_events().await;

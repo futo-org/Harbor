@@ -52,6 +52,7 @@ impl EventSyncService for MockEventSync {
                             banner: None,
                             description: None,
                             alias: None,
+                            known_as: None,
                         })),
                     })]
                 })

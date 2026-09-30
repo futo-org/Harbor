@@ -476,6 +476,7 @@ async fn gen_profile_update(mut client: Client, amount: usize) {
                 banner: None, // Option<ImageSet>,
                 description: optional_random_string(10, 500),
                 alias: optional_random_string(3, 20),
+                known_as: None,
             },
             current_timestamp(),
         );

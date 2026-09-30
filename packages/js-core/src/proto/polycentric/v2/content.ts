@@ -353,6 +353,12 @@ export interface ProfileUpdate {
      * @generated from protobuf field: optional string alias = 5
      */
     alias?: string;
+    /**
+     * One of the author's own platform VerificationClaims to show instead of the identity.
+     *
+     * @generated from protobuf field: optional polycentric.v2.EventKey known_as = 6
+     */
+    knownAs?: EventKey;
 }
 /**
  * If an uploaded Blob is uploaded to the servers Object Storage and not
@@ -1375,7 +1381,8 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
             { no: 2, name: "avatar", kind: "message", T: () => ImageSet },
             { no: 3, name: "banner", kind: "message", T: () => ImageSet },
             { no: 4, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "alias", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
+            { no: 5, name: "alias", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "known_as", kind: "message", T: () => EventKey }
         ]);
     }
     create(value?: PartialMessage<ProfileUpdate>): ProfileUpdate {
@@ -1404,6 +1411,9 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
                 case /* optional string alias */ 5:
                     message.alias = reader.string();
                     break;
+                case /* optional polycentric.v2.EventKey known_as */ 6:
+                    message.knownAs = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.knownAs);
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -1431,6 +1441,9 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
         /* optional string alias = 5; */
         if (message.alias !== undefined)
             writer.tag(5, WireType.LengthDelimited).string(message.alias);
+        /* optional polycentric.v2.EventKey known_as = 6; */
+        if (message.knownAs)
+            EventKey.internalBinaryWrite(message.knownAs, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

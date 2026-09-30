@@ -177,6 +177,7 @@ async fn suggest_follow_with_profile_updates() {
             banner: None,
             description: None,
             alias: None,
+            known_as: None,
         },
         DEFAULT_CREATED_AT,
     );
@@ -193,6 +194,7 @@ async fn suggest_follow_with_profile_updates() {
                 banner: None,
                 description: None,
                 alias: None,
+                known_as: None,
             },
             DEFAULT_CREATED_AT,
         );
@@ -245,6 +247,7 @@ async fn suggest_follow_no_duplicate_identities() {
             banner: None,
             description: None,
             alias: None,
+            known_as: None,
         },
         DEFAULT_CREATED_AT,
     );
@@ -255,6 +258,7 @@ async fn suggest_follow_no_duplicate_identities() {
             banner: None,
             description: Some(random_string()),
             alias: None,
+            known_as: None,
         },
         DEFAULT_CREATED_AT,
     );
@@ -269,6 +273,7 @@ async fn suggest_follow_no_duplicate_identities() {
             banner: None,
             description: None,
             alias: None,
+            known_as: None,
         },
         DEFAULT_CREATED_AT,
     );
@@ -376,6 +381,7 @@ async fn suggest_follow_pagination() {
                 banner: None,
                 description: None,
                 alias: None,
+                known_as: None,
             },
             DEFAULT_CREATED_AT,
         );
@@ -393,6 +399,7 @@ async fn suggest_follow_pagination() {
                 banner: None,
                 description: None,
                 alias: None,
+                known_as: None,
             },
             DEFAULT_CREATED_AT,
         );
