@@ -257,8 +257,8 @@ if [ "$CI_MODE" = true ]; then
   if [ "$?" != 0 ]; then
     cd "$REPO_ROOT"
     docker compose logs server
+    exit 1
   fi
-  set -e
 else
   cargo test -p integration-tests 2>&1
 fi
