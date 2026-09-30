@@ -17,7 +17,6 @@ import {
   Platform,
   Pressable,
   type PressableProps,
-  StyleProp,
   StyleSheet,
   View,
   type ViewStyle,
@@ -139,7 +138,7 @@ export function Button({
       ]}
       {...props}
     >
-      <View style={[styles.content]}>
+      <View style={[styles.content, iconOnly && styles.iconOnlyContent]}>
         {icon &&
           (typeof icon === 'function' ? (
             icon({ size: sizeConfig.iconSize, color: iconColor })
@@ -184,6 +183,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  iconOnlyContent: {
+    aspectRatio: 1,
   },
 });
 

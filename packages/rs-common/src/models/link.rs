@@ -1,7 +1,9 @@
 use std::fmt;
 
 use crate::models::protos_v2::Link;
-use crate::models::validate::{self, StringConfig, StringError, Validate};
+// TODO: add back.
+//use crate::models::validate::{self, StringConfig, StringError};
+use crate::models::validate::{StringError, Validate};
 
 impl Validate for Link {
     type Error = ValidationError;
@@ -10,6 +12,9 @@ impl Validate for Link {
     where
         F: Fn(Self::Error) -> E,
     {
+        _ = errors;
+        _ = map_err;
+        /* TODO: reenable.
         let Link {
             title,
             description,
@@ -60,6 +65,7 @@ impl Validate for Link {
                 ..Default::default()
             },
         );
+        */
     }
 }
 
