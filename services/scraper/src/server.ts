@@ -45,7 +45,7 @@ const handleScrape = async (
   target: string,
   res: ServerResponse,
   ctx: RequestContext,
-  scrapeUrl: (url: string) => Promise<LinkMetadata | undefined>,
+  scrapeUrl: (url: string) => Promise<LinkMetadata>,
 ): Promise<void> => {
   if (!isValidHttpUrl(target)) {
     ctx.outcome = 'invalid_url';
@@ -153,7 +153,7 @@ const handleImage = async (
 // so it can be driven without a real browser. Must not be exposed publicly (it
 // fetches arbitrary URLs; SSRF is bounded at the network egress layer).
 export const buildServer = (
-  scrapeUrl: (url: string) => Promise<LinkMetadata | undefined>,
+  scrapeUrl: (url: string) => Promise<LinkMetadata>,
 ): Server =>
   createServer((req: IncomingMessage, res: ServerResponse) => {
     const started = performance.now();

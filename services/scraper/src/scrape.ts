@@ -16,10 +16,10 @@ import {
 import { fetchMode } from './mode.js';
 
 export type LinkMetadata = {
-  title: string;
+  title?: string;
   description?: string;
   image?: string;
-  url: string;
+  url?: string;
 };
 
 // The target returned a non-2xx status. Carries it so the caller reports the
@@ -63,7 +63,7 @@ export const scrape = async (
   targetUrl: string,
   fetchHtml: HtmlFetcher,
   { retries = 3, backoffMs = defaultBackoff }: ScrapeOptions = {},
-): Promise<LinkMetadata | undefined> => {
+): Promise<LinkMetadata> => {
   const started = performance.now();
   const host = hostOf(targetUrl);
   const mode = fetchMode(targetUrl);
@@ -97,14 +97,14 @@ export const scrape = async (
       fetchAttempts.inc({ mode, status_class: statusClass(statusCode) });
       if (statusCode >= 200 && statusCode < 300) {
         const meta = await extract({ html, url });
-        const result = meta.title ? {
+        const result = {
           title: meta.title,
           description: meta.description,
           image: meta.image,
           url: meta.url ?? targetUrl,
-        } : undefined;
-        const present = (Object.keys(result ?? {}) as (keyof LinkMetadata)[]).filter(
-          (field) => (result ?? {})[field] !== undefined,
+        };
+        const present = (Object.keys(result) as (keyof LinkMetadata)[]).filter(
+          (field) => (result)[field] !== undefined,
         );
         for (const field of present) metadataFields.inc({ field });
         finish('ok', { fields: present, html_bytes: html.length });
