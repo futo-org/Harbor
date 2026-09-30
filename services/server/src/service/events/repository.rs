@@ -236,7 +236,7 @@ impl Mutation {
         match db.query_one(&query).await? {
             Some(row) => row.try_get_by(0),
             None => Err(DbErr::Custom(
-                "failed to get or insert appliaction".to_owned(),
+                "failed to get or insert application".to_owned(),
             )),
         }
     }
