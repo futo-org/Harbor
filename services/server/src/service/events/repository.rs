@@ -235,9 +235,21 @@ impl Mutation {
 
         match db.query_one(&query).await? {
             Some(row) => row.try_get_by(0),
-            None => Err(DbErr::Custom(
-                "failed to get or insert application".to_owned(),
-            )),
+            None => {
+                // Due to the use of Read Committed transaction isolation level
+                // (the default) it is possible to not SELECT the application id
+                // and also conflict when inserting it, resulting in hitting
+                // this branch where we don't have an id.
+                // We simply try the query again, which fixes this unlikely race
+                // condition.
+                if let Some(row) = db.query_one(&query).await? {
+                    return Ok(row.try_get_by(0)?);
+                }
+
+                Err(DbErr::Custom(
+                    "failed to get or insert application".to_owned(),
+                ))
+            }
         }
     }
 
