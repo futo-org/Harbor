@@ -16,6 +16,7 @@ pub(super) fn add_query(
         banner,
         description,
         alias,
+        known_as: _,
     } = update;
 
     let mut query = InsertStatement::new();
