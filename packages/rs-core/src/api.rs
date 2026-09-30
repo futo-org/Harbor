@@ -118,12 +118,13 @@ pub enum Query {
     GetReactions(crate::query::reactions::GetReactionsArgs),
 }
 
+/// Oneshot sender for [`FirstSuccessObserver`].
+type FirstSuccessSender = futures::channel::oneshot::Sender<Result<Option<Vec<u8>>, CoreError>>;
+
 /// A [`QueryObserver`] implementation that returns the first success recieved from a server, rather
 /// than a subscription. Any errors from servers ignored. If all servers error, a `CoreError` is
 /// returned.
-struct FirstSuccessObserver(
-    Mutex<Option<futures::channel::oneshot::Sender<Result<Option<Vec<u8>>, CoreError>>>>,
-);
+struct FirstSuccessObserver(Mutex<Option<FirstSuccessSender>>);
 
 impl FirstSuccessObserver {
     /// Deliver the first success from any server; later server responses are ignored.
