@@ -209,9 +209,9 @@ message UrlInfoRequest {
  * Response for UrlInfo: the fetched link-preview metadata.
  */
 message UrlInfoResponse {
-  string title = 1;
-  string description = 2;
-  string image = 3;
+  optional string title = 1;
+  optional string description = 2;
+  optional string image = 3;
 }
 
 service ContentService {

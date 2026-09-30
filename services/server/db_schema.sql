@@ -653,9 +653,9 @@ CREATE TABLE public.seaql_migrations (
 
 CREATE TABLE public.url_info_cache (
     url character varying NOT NULL,
-    title character varying NOT NULL,
-    description character varying NOT NULL,
-    image character varying NOT NULL,
+    title text,
+    description text,
+    image text,
     raw_response character varying,
     error_code integer,
     error_message character varying,
