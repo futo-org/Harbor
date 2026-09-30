@@ -203,22 +203,23 @@ jobs:
           cd ../
           make db_schema
           git diff --exit-code
-      - name: Check moderation's DB schema up-to-date
-        run: |
-          cd services/moderation/migration
-          touch .env
-          cargo run
-          cd ../
-          make db_schema
-          git diff --exit-code
-      - name: Check notification's DB schema up-to-date
-        run: |
-          cd services/push-notifications/migration
-          touch .env
-          cargo run
-          cd ../
-          make db_schema
-          git diff --exit-code
+      # TODO: enable once the schema & Makefile (or similar) are setup.
+      #- name: Check moderation's DB schema up-to-date
+      #  run: |
+      #    cd services/moderation/migration
+      #    touch .env
+      #    cargo run
+      #    cd ../
+      #    make db_schema
+      #    git diff --exit-code
+      #- name: Check notification's DB schema up-to-date
+      #  run: |
+      #    cd services/push-notifications/migration
+      #    touch .env
+      #    cargo run
+      #    cd ../
+      #    make db_schema
+      #    git diff --exit-code
       - uses: ./.forgejo/actions/r2-cache
         continue-on-error: true
         with:
