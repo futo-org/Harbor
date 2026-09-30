@@ -182,6 +182,8 @@ jobs:
           cache: services-db-schema
       - name: Start Postgres
         run: docker compose up -d --build --wait postgres
+      - name: Install pg_dump
+        run: apt-get install postgresql-client-17
       - name: Connect Docker network
         run: |
           self_container() {
