@@ -22,7 +22,7 @@ export default function PairIdentityClaimerScreen() {
   const { to } = useOnboardingLinks();
 
   // Error state is managed by `usePairIdentityClaimer()`, so we use `null`
-  // to mean that the pairing code was invalid and couldn't be parsed and
+  // to mean that the pairing link was invalid and couldn't be parsed and
   // `undefined` to mean that we just don't have one.
   const [pairingInfo, setPairingInfo] = useState<
     v2.PairingInfo | null | undefined

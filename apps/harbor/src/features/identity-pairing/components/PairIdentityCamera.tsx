@@ -10,7 +10,7 @@ import {
 import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
 import { useQrCodeOutput } from './useQrCodeOutput';
-import { decodePairingCode, EncodingMode } from '../pairingCode';
+import { extractPairingInfo } from '../pairingCode';
 
 export const PairIdentityCamera: PairIdentityCameraComponent = ({
   onCodeScanned,
@@ -27,7 +27,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
       if (scannedRef.current) return;
 
       scannedRef.current = true;
-      const info = decodePairingCode(value, EncodingMode.BASE64) ?? null;
+      const info = extractPairingInfo(value) ?? null;
       onCodeScanned(info);
     },
     () => setCameraEnabled(false),
@@ -40,10 +40,8 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
   }, [hasPermission, requestPermission, cameraEnabled]);
 
   const handleContinue = () => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-    const info = decodePairingCode(trimmed, EncodingMode.HEX) ?? null;
-    onCodeScanned(info);
+    if (!input.trim()) return;
+    onCodeScanned(extractPairingInfo(input) ?? null);
   };
 
   const canUseCamera = hasPermission && cameraEnabled && device !== undefined;
@@ -73,7 +71,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
             />
           </View>
           <LinkButton
-            title="Can't scan? Enter code manually"
+            title="Can't scan? Paste link manually"
             onPress={() => setCameraEnabled(false)}
             variant="small"
             underlineOnHover

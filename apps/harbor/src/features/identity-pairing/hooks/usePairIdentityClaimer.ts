@@ -51,7 +51,7 @@ export function usePairIdentityClaimer(
       if (info) {
         setState({ stage: 'joining', info });
       } else if (info === null) {
-        error('Invalid pairing code.');
+        error('Invalid pairing link.');
       }
 
       return undefined;

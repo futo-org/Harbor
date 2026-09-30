@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
-import { decodePairingCode, EncodingMode } from '../pairingCode';
+import { extractPairingInfo } from '../pairingCode';
 
 function supportsGetUserMedia() {
   return (
@@ -66,7 +66,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
             const raw = barcodes[0]?.rawValue;
             if (raw) {
               scannedRef.current = true;
-              const info = decodePairingCode(raw, EncodingMode.BASE64) ?? null;
+              const info = extractPairingInfo(raw) ?? null;
               onCodeScanned(info);
               return;
             }
@@ -99,10 +99,8 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
   }, [canUseCamera, onCodeScanned]);
 
   const handleContinue = () => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-    const info = decodePairingCode(trimmed, EncodingMode.HEX) ?? null;
-    onCodeScanned(info);
+    if (!input.trim()) return;
+    onCodeScanned(extractPairingInfo(input) ?? null);
   };
 
   return (
@@ -134,7 +132,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
           </View>
 
           <LinkButton
-            title="Can't scan? Enter code manually"
+            title="Can't scan? Paste link manually"
             onPress={() => setUseCamera(false)}
             variant="small"
             underlineOnHover
