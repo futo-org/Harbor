@@ -83,6 +83,7 @@ export function extractPairingInfo(input: string): v2.PairingInfo | undefined {
   const trimmed = input.trim();
   let code = trimmed;
 
+  // Try extracting the pairing code if the input is a pairing link.
   // Depending on the platform, a non-url input may throw or just resolve to
   // a `/` pathname.
   try {
@@ -97,6 +98,7 @@ export function extractPairingInfo(input: string): v2.PairingInfo | undefined {
     }
   } catch {}
 
+  // Accept either a hex-encoded or base64-encoded pairing code.
   return (
     decodePairingCode(code, EncodingMode.HEX) ??
     decodePairingCode(code, EncodingMode.BASE64)
