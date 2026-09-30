@@ -105,8 +105,8 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     gravity::Column::CalculatedAt,
                     Expr::current_timestamp(),
                 )
-                // Don't update the value if it has not been updated `every`
-                // time (e.g. in the last 5 minutes).
+                // Don't update the value if it has been updated in the last
+                // `every` time (e.g. in the last 5 minutes).
                 .cond_where(
                     Expr::col(gravity::Column::CalculatedAt.as_column_ref())
                         .lt(Expr::current_timestamp().sub(Expr::cust(format!(
