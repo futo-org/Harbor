@@ -243,7 +243,7 @@ impl Mutation {
                 // We simply try the query again, which fixes this unlikely race
                 // condition.
                 if let Some(row) = db.query_one(&query).await? {
-                    return Ok(row.try_get_by(0)?);
+                    return row.try_get_by(0);
                 }
 
                 Err(DbErr::Custom(
