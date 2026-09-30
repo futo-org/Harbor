@@ -11,22 +11,30 @@ import { PairIdentityCamera } from '@/src/features/identity-pairing/components/P
 import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { PAIRING_CODE_PARAM, Routes } from '@/src/common/constants';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import type { v2 } from '@polycentric/react-native';
+import { extractPairingInfo } from '@/src/features/identity-pairing/pairingCode';
 
 export default function PairIdentityClaimerScreen() {
   const { theme } = useTheme();
   const { refreshCurrentIdentity } = usePolycentricContext();
   const { to } = useOnboardingLinks();
+  const code = useLocalSearchParams()[PAIRING_CODE_PARAM];
 
   // Error state is managed by `usePairIdentityClaimer()`, so we use `null`
   // to mean that the pairing link was invalid and couldn't be parsed and
   // `undefined` to mean that we just don't have one.
-  const [pairingInfo, setPairingInfo] = useState<
-    v2.PairingInfo | null | undefined
-  >(undefined);
+  const pairingInfo = useMemo(() => {
+    if (code === undefined) return undefined;
+    if (typeof code !== 'string') return null; // repeated `code` param
+    return extractPairingInfo(code) ?? null;
+  }, [code]);
+
+  const onCodeScanned = useCallback((scanned: string) => {
+    router.setParams({ [PAIRING_CODE_PARAM]: scanned });
+  }, []);
 
   const { error, approved, claimInProgress } =
     usePairIdentityClaimer(pairingInfo);
@@ -47,11 +55,7 @@ export default function PairIdentityClaimerScreen() {
           <View style={Atoms.gap_xs}>
             <Text variant="subtitle">Pair Identity</Text>
           </View>
-          <PairIdentityCamera
-            onCodeScanned={(info) => {
-              setPairingInfo(info);
-            }}
-          />
+          <PairIdentityCamera onCodeScanned={onCodeScanned} />
         </>
       );
     }
@@ -68,7 +72,7 @@ export default function PairIdentityClaimerScreen() {
             variant="secondary"
             fullWidth
             onPress={() => {
-              setPairingInfo(undefined);
+              router.replace(to(Routes.onboarding.pair));
             }}
           />
         </>

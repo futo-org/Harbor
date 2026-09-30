@@ -10,7 +10,6 @@ import {
 import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
 import { useQrCodeOutput } from './useQrCodeOutput';
-import { extractPairingInfo } from '../pairingCode';
 
 export const PairIdentityCamera: PairIdentityCameraComponent = ({
   onCodeScanned,
@@ -27,8 +26,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
       if (scannedRef.current) return;
 
       scannedRef.current = true;
-      const info = extractPairingInfo(value) ?? null;
-      onCodeScanned(info);
+      onCodeScanned(value);
     },
     () => setCameraEnabled(false),
   );
@@ -41,7 +39,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
 
   const handleContinue = () => {
     if (!input.trim()) return;
-    onCodeScanned(extractPairingInfo(input) ?? null);
+    onCodeScanned(input);
   };
 
   const canUseCamera = hasPermission && cameraEnabled && device !== undefined;

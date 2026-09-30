@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
-import { extractPairingInfo } from '../pairingCode';
 
 function supportsGetUserMedia() {
   return (
@@ -66,8 +65,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
             const raw = barcodes[0]?.rawValue;
             if (raw) {
               scannedRef.current = true;
-              const info = extractPairingInfo(raw) ?? null;
-              onCodeScanned(info);
+              onCodeScanned(raw);
               return;
             }
           } catch {}
@@ -100,7 +98,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
 
   const handleContinue = () => {
     if (!input.trim()) return;
-    onCodeScanned(extractPairingInfo(input) ?? null);
+    onCodeScanned(input);
   };
 
   return (
