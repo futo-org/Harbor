@@ -888,7 +888,12 @@ fn make_event(
         previous_root,
         content_digest: Some(digest),
         created_at,
-        application: None,
+        application: Some(Application {
+            name: "Server Integration Tests".to_owned(),
+            id: "tests.social.harbor".to_owned(),
+            version: "0.0.1".to_owned(),
+            url: "https://code.futo.org/harbor/harbor".to_owned(),
+        }),
     }
 }
 
