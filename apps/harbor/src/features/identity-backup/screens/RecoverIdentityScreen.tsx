@@ -52,7 +52,7 @@ export default function RecoverIdentityScreen() {
     }
 
     // Bail if the user was logged in elsewhere in the meantime
-    if (redirectIfLoggedIn(client)) return;
+    if (await redirectIfLoggedIn(client)) return;
 
     try {
       await client.identityManager.recoverIdentity(backup);

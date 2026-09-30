@@ -91,7 +91,7 @@ export function useSignup() {
     }
 
     // Bail if the user was logged in between starting the onboarding flow and now
-    if (redirectIfLoggedIn(client)) {
+    if (await redirectIfLoggedIn(client)) {
       reset();
       return;
     }

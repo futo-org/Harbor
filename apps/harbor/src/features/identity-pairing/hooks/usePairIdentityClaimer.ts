@@ -126,7 +126,7 @@ export function usePairIdentityClaimer(
       void (async () => {
         try {
           // Bail if the user was logged in elsewhere during the pairing process
-          if (redirectIfLoggedIn(client)) return;
+          if (await redirectIfLoggedIn(client)) return;
 
           const identityKey = session.digest.issuerIdentity;
           const claimServers = serversForClaim(session, info, client.servers);

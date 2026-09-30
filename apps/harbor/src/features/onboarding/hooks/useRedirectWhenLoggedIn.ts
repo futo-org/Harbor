@@ -13,6 +13,6 @@ export function useRedirectWhenLoggedIn(enabled: boolean) {
   useEffect(() => {
     if (!enabled || alreadyCheckedRef.current || !isReady) return;
     alreadyCheckedRef.current = true;
-    redirectIfLoggedIn(client);
+    void redirectIfLoggedIn(client);
   }, [enabled, isReady, client]);
 }
