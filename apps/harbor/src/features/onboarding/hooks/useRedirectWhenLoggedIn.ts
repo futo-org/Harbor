@@ -1,6 +1,5 @@
-import { Routes } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
-import { type Href, router } from 'expo-router';
+import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
 import { useEffect, useRef } from 'react';
 
 /**
@@ -8,12 +7,12 @@ import { useEffect, useRef } from 'react';
  * Useful in onboarding screens.
  */
 export function useRedirectWhenLoggedIn(enabled: boolean) {
-  const { currentIdentity, isLoading, isReady } = usePolycentricContext();
+  const { client, isReady } = usePolycentricContext();
   const alreadyCheckedRef = useRef(false);
 
   useEffect(() => {
-    if (!enabled || alreadyCheckedRef.current || isLoading || !isReady) return;
+    if (!enabled || alreadyCheckedRef.current || !isReady) return;
     alreadyCheckedRef.current = true;
-    if (currentIdentity) router.dismissTo(Routes.tabs.feed.index as Href);
-  }, [enabled, isLoading, isReady, currentIdentity]);
+    redirectIfLoggedIn(client);
+  }, [enabled, isReady, client]);
 }

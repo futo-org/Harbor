@@ -2,6 +2,7 @@ import { router, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { create } from 'zustand';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
+import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
 import { createIdentity } from '@polycentric/react-native';
 import { getNextStep, isLastStep, type SignupRoute } from './flow';
 import {
@@ -86,6 +87,12 @@ export function useSignup() {
   const finish = async () => {
     if (!client) {
       console.error('Client not available');
+      return;
+    }
+
+    // Bail if the user was logged in between starting the onboarding flow and now
+    if (redirectIfLoggedIn(client)) {
+      reset();
       return;
     }
 
