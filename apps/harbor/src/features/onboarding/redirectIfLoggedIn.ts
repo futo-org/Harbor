@@ -27,8 +27,12 @@ export async function redirectIfLoggedIn(
   // On web, another tab could have updated the local storage beyond what we
   // have loaded in-memory.
   // In this case, we need to trigger a full page load.
-  if (isWeb) window.location.assign(Routes.tabs.feed.index);
-  else router.dismissTo(Routes.tabs.feed.index as Href);
+  if (isWeb) {
+    window.location.assign(Routes.tabs.feed.index);
+  } else {
+    console.warn('In-memory state does not match storage on non-web platform');
+    router.dismissTo(Routes.tabs.feed.index as Href);
+  }
 
   return true;
 }
