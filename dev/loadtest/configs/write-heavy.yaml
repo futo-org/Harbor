@@ -1,0 +1,14 @@
+# Stress the write path (PutEvents, Kafka, workers, moderation) with light
+# reads. Posts come from the corpus, so Azure sees at most corpusSize new
+# texts; replies are unique, so keep their rate modest.
+run:
+  duration: 10m
+scenarios:
+  browse: {rate: 1}
+  browse_user: {rate: 1}
+  register: {rate: 2, params: {followOnSignup: 10}}
+  post: {rate: 10, params: {imageProb: 0.05}}
+  reply: {rate: 1}
+  react: {rate: 20}
+  repost: {enabled: true, rate: 2}
+  follow: {rate: 5}
