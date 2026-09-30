@@ -51,10 +51,10 @@ export default function RecoverIdentityScreen() {
       return;
     }
 
-    // Bail if the user was logged in elsewhere in the meantime
-    if (await redirectIfLoggedIn(client)) return;
-
     try {
+      // Bail if the user was logged in elsewhere in the meantime
+      if (await redirectIfLoggedIn(client)) return;
+
       await client.identityManager.recoverIdentity(backup);
     } catch (err: unknown) {
       console.warn('Recovery failed:', err);

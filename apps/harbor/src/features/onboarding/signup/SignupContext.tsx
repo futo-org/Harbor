@@ -90,14 +90,14 @@ export function useSignup() {
       return;
     }
 
-    // Bail if the user was logged in between starting the onboarding flow and now
-    if (await redirectIfLoggedIn(client)) {
-      reset();
-      return;
-    }
-
-    setSubmitting(true);
     try {
+      // Bail if the user was logged in between starting the onboarding flow and now
+      if (await redirectIfLoggedIn(client)) {
+        reset();
+        return;
+      }
+
+      setSubmitting(true);
       await createIdentity(client, DEFAULT_SERVER);
       await publishProfileUpdate(client, {
         name: data.displayName,
