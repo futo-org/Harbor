@@ -182,9 +182,17 @@ jobs:
           cache: services-db-schema
       - name: Start Postgres
         run: docker compose up -d --build --wait postgres
+      - name: Connect Docker network
+        run: |
+          self_container() {
+            local id
+            id=$(grep -oE 'containers/[0-9a-f]{64}' /proc/self/mountinfo | head -1 | cut -d/ -f2)
+            echo "${id:-$(cat /etc/hostname)}"
+          }
+          docker network connect harbor_default "$(self_container)"
       - name: Set Postgres IP in env vars
         run: |
-          PG_IP="$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' harbor-postgres-1)"
+          PG_IP="$(docker inspect -f '{{(index .NetworkSettings.Networks "'harbor_default'").IPAddress}}' harbor-postgres-1 2>/dev/null)"
           echo "DB_HOST=${PG_IP}" >> "${FORGEJO_ENV}"
           echo "HARBOR_DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${PG_IP}:${DB_PORT}" >> "${FORGEJO_ENV}"
       - name: '[DEBUG] Postgres check'
