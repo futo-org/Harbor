@@ -1,4 +1,10 @@
-import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
+import {
+  Button,
+  CopyButton,
+  Screen,
+  ScreenHeader,
+  Text,
+} from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import type { IconProps } from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
@@ -6,9 +12,8 @@ import { Routes } from '@/src/common/constants/routes';
 import { Atoms, type Palette, useTheme } from '@/src/common/theme';
 import { usePairIdentityIssuer } from '@/src/features/identity-pairing/hooks/usePairIdentityIssuer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
-import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
-import { type ReactNode, useCallback, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { encodePairingCode, EncodingMode } from '../pairingCode';
@@ -143,7 +148,10 @@ function PairingInfoCard({
       ]}
     >
       <PairingQRCode info={info} />
-      <CopyButton info={info} />
+      <CopyButton
+        title="Copy pairing code"
+        value={info ? encodePairingCode(info, EncodingMode.HEX) : null}
+      />
       <View style={Atoms.items_center}>
         <CountdownTimer remainingSeconds={remainingSeconds} />
       </View>
@@ -217,46 +225,6 @@ function CountdownTimer({
         </Text>
       </Text>
     </View>
-  );
-}
-
-function CopyButton({ info }: { info: v2.PairingInfo | null }) {
-  /** When true, indicate to the user that the text was copied. */
-  const [justCopied, setJustCopied] = useState<boolean>(false);
-
-  /** We'll reset the text-copied indicator after a timeout. */
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const doCopy = useCallback(() => {
-    if (!info) {
-      return;
-    }
-
-    const code = encodePairingCode(info, EncodingMode.HEX);
-    void Clipboard.setStringAsync(code);
-
-    setJustCopied(true);
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = setTimeout(() => {
-      setJustCopied(false);
-      timeoutRef.current = null;
-    }, 2000);
-  }, [info]);
-
-  return (
-    <Button
-      title={justCopied ? 'Copied' : 'Copy pairing code'}
-      icon={justCopied ? 'checkmark' : 'copy'}
-      variant="primary"
-      size="md"
-      fullWidth
-      disabled={!info}
-      onPress={doCopy}
-    />
   );
 }
 

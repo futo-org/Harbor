@@ -1,8 +1,12 @@
-use super::protos_v2::{ContentDigest, Event, EventKey, VectorClock};
-use crate::error::{Error, Result};
-use crate::models::traits::Serializable;
-use crate::platform::error::PlatformError;
+use std::fmt;
+
 use prost::Message;
+
+use crate::error::Error;
+use crate::models::protos_v2::{ContentDigest, Event, EventKey, VectorClock};
+use crate::models::validate::Validate;
+use crate::models::{Serializable, application, content_digest, event_key};
+use crate::platform::error::PlatformError;
 
 impl Event {
     /// Creates a new event with the given parameters.
@@ -29,7 +33,7 @@ impl Event {
     }
 
     /// Validates that the event has all required fields
-    pub fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> Result<(), Error> {
         // if self.system.is_none() {
         //     return Err(Error::Platform(PlatformError::DeserializationError(
         //         "Event missing system".to_string(),
@@ -55,15 +59,70 @@ impl Event {
 }
 
 impl Serializable for Event {
-    fn to_bytes(&self) -> Result<Vec<u8>> {
+    fn to_bytes(&self) -> Result<Vec<u8>, Error> {
         let mut buf = Vec::new();
         self.encode(&mut buf)
             .map_err(|e| Error::Platform(PlatformError::SerializationError(e.to_string())))?;
         Ok(buf)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         Event::decode(bytes)
             .map_err(|e| Error::Platform(PlatformError::DeserializationError(e.to_string())))
+    }
+}
+
+impl Validate for Event {
+    type Error = ValidationError;
+
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
+        let Event {
+            key,
+            identity_sequence: _,  // No validation.
+            vector_clock: _,       // TODO.
+            previous_signature: _, // Can't validate.
+            content_digest,
+            created_at: _,    // No validation.
+            previous_root: _, // Can't validate.
+            application,
+        } = self;
+        if let Some(key) = key.as_ref() {
+            key.validate_check(errors, |err| map_err(ValidationError::Key(err)));
+        } else {
+            errors.push(map_err(ValidationError::KeyMissing));
+        }
+        if let Some(content_digest) = content_digest.as_ref() {
+            content_digest
+                .validate_check(errors, |err| map_err(ValidationError::ContentDigest(err)));
+        } else {
+            errors.push(map_err(ValidationError::ContentDigestMissing));
+        }
+        if let Some(application) = application.as_ref() {
+            application.validate_check(errors, |err| map_err(ValidationError::Application(err)));
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ValidationError {
+    Key(event_key::ValidationError),
+    KeyMissing,
+    ContentDigest(content_digest::ValidationError),
+    ContentDigestMissing,
+    Application(application::ValidationError),
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValidationError::Key(err) => write!(f, "key {err}"),
+            ValidationError::KeyMissing => write!(f, "key is missing"),
+            ValidationError::ContentDigest(err) => write!(f, "content digest {err}"),
+            ValidationError::ContentDigestMissing => write!(f, "content digest is missing"),
+            ValidationError::Application(err) => write!(f, "application {err}"),
+        }
     }
 }

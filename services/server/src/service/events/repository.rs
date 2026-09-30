@@ -17,7 +17,7 @@ use polycentric_common::models::protos_v2::{
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, Func, InsertStatement,
     IntoCondition, IntoTableRef, OnConflict, SelectExpr, SelectStatement,
-    SubQueryStatement, UpdateStatement, WithClause,
+    SubQueryStatement, UnionType, UpdateStatement, WithClause,
 };
 use sea_orm::*;
 use tonic::Status;
@@ -145,37 +145,100 @@ pub struct HeadInfoRow {
 pub struct Mutation;
 
 impl Mutation {
-    /// Find or create the `application` row for `app`, returning its id.
+    /// Find or create the `application` for `app`, returning its id.
     pub async fn application_id<C: ConnectionTrait>(
         db: &C,
         app: &Application,
     ) -> Result<i32, DbErr> {
-        // Keep client-supplied strings within the unique index's limits.
-        const MAX_LEN: usize = 256;
-        let bounded = |s: &str| s.chars().take(MAX_LEN).collect::<String>();
+        // NOTE: this query is carefully optimised for the common case where the
+        // application is known and we just need the id.
 
-        let row = application::ActiveModel {
-            id: NotSet,
-            name: Set(bounded(&app.name)),
-            identifier: Set(bounded(&app.id)),
-            version: Set(bounded(&app.version)),
-            url: Set(bounded(&app.url)),
-        };
-        // A no-op update makes the existing row's id come back on conflict.
-        let inserted = application::Entity::insert(row)
-            .on_conflict(
-                OnConflict::columns([
-                    application::Column::Name,
-                    application::Column::Identifier,
-                    application::Column::Version,
-                    application::Column::Url,
-                ])
-                .update_column(application::Column::Name)
-                .to_owned(),
+        let mut with = WithClause::new();
+
+        // Common case where the application already exists and we simply
+        // retrieve the id.
+        let mut select_existing_app = SelectStatement::new();
+        select_existing_app
+            .column(application::Column::Id)
+            .from(application::Entity)
+            .and_where(
+                Expr::col(application::Column::Name.as_column_ref())
+                    .eq(&*app.name),
             )
-            .exec(db)
-            .await?;
-        Ok(inserted.last_insert_id)
+            .and_where(
+                Expr::col(application::Column::Identifier.as_column_ref())
+                    .eq(&*app.id),
+            )
+            .and_where(
+                Expr::col(application::Column::Version.as_column_ref())
+                    .eq(&*app.version),
+            )
+            .and_where(
+                Expr::col(application::Column::Url.as_column_ref())
+                    .eq(&*app.url),
+            );
+        let mut cte = CommonTableExpression::new();
+        const EXISTING_APP: &str = "existing_app";
+        cte.table_name(EXISTING_APP).query(select_existing_app);
+        with.cte(cte);
+
+        // Uncommon case where we need to insert the application data.
+        let mut insert_new_app = InsertStatement::new();
+        insert_new_app
+            .into_table(application::Entity)
+            .columns([
+                application::Column::Name,
+                application::Column::Identifier,
+                application::Column::Version,
+                application::Column::Url,
+            ])
+            // Don't (try to) insert when we found an existing app.
+            .select_from({
+                let mut q = SelectStatement::new();
+                q
+                    // Reuse the variables from above.
+                    .expr(Expr::cust("$1"))
+                    .expr(Expr::cust("$2"))
+                    .expr(Expr::cust("$3"))
+                    .expr(Expr::cust("$4"))
+                    .cond_where(Expr::not_exists({
+                        let mut q = SelectStatement::new();
+                        q.expr(Expr::Constant(true.into())).from(EXISTING_APP);
+                        q
+                    }));
+                q
+            })
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?
+            .on_conflict({
+                let mut c = OnConflict::new();
+                c.do_nothing();
+                c
+            })
+            .returning_col(application::Column::Id);
+        let mut cte = CommonTableExpression::new();
+        const NEW_APP: &str = "new_app";
+        cte.table_name(NEW_APP).query(insert_new_app);
+        with.cte(cte);
+
+        let mut query = SelectStatement::new();
+        query
+            .column(application::Column::Id)
+            .from(EXISTING_APP)
+            .union(UnionType::Distinct, {
+                let mut q = SelectStatement::new();
+                q.column(application::Column::Id).from(NEW_APP);
+                q
+            });
+        let query = query.with(with);
+
+        match db.query_one(&query).await? {
+            Some(row) => row.try_get_by(0),
+            None => Err(DbErr::Custom(
+                "failed to get or insert application".to_owned(),
+            )),
+        }
     }
 
     /// Store an event and it's content.
