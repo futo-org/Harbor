@@ -5,6 +5,7 @@ jest.mock('@polycentric/react-native', () => ({
   v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
 }));
 
+import { eventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
 import { v2 } from '@polycentric/react-native';
 import { decodeProfile } from './decodeProfile';
 
@@ -15,6 +16,7 @@ function profileContent(
     name: string;
     description: string;
     alias: string;
+    knownAs: v2.EventKey;
   }>,
 ): v2.Content {
   return v2.Content.create({
@@ -73,6 +75,25 @@ describe('decodeProfile', () => {
       bundle(profileContent({ name: 'Bob' }), 1),
     ]);
     expect(decodeProfile(bytes).alias).toBeNull();
+  });
+
+  it('extracts the known-as claim id', () => {
+    const claimKey = v2.EventKey.create({
+      collection: 8,
+      identity: IDENTITY,
+      sequence: 4n,
+    });
+    const bytes = serializedResponse([
+      bundle(profileContent({ knownAs: claimKey }), 1),
+    ]);
+    expect(decodeProfile(bytes).knownAs).toBe(eventKeyId(claimKey));
+  });
+
+  it('returns a null known-as when the field is absent', () => {
+    const bytes = serializedResponse([
+      bundle(profileContent({ name: 'Bob' }), 1),
+    ]);
+    expect(decodeProfile(bytes).knownAs).toBeNull();
   });
 
   it('uses the highest-sequence update (latest wins)', () => {

@@ -1,12 +1,15 @@
-// Avoid the native barrel; publishProfileUpdate only needs COLLECTION at
-// runtime. The image helper is mocked so no upload path runs.
+// Avoid the native barrel; publishProfileUpdate only needs COLLECTION and the
+// protos at runtime. The image helper is mocked so no upload path runs.
 jest.mock('@polycentric/react-native', () => ({
   COLLECTION: { PROFILE: 3 },
+  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
 }));
 jest.mock('@/src/common/lib/images/processAndUploadImage', () => ({
   processAndUploadImage: jest.fn(),
 }));
 
+import { eventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
+import { v2 } from '@polycentric/react-native';
 import { publishProfileUpdate } from './publishProfileUpdate';
 
 type BuildArg = {
@@ -15,6 +18,7 @@ type BuildArg = {
     name: string;
     description: string;
     alias?: string;
+    knownAs?: v2.EventKey;
     avatar?: unknown;
     banner?: unknown;
   };
@@ -69,6 +73,28 @@ describe('publishProfileUpdate', () => {
     const { client, builtProfile } = makeClient();
     await publishProfileUpdate(client as never, { name: 'A', description: '' });
     expect(builtProfile().alias).toBeUndefined();
+  });
+
+  it('writes the known-as claim id as its event key', async () => {
+    const claimKey = v2.EventKey.create({
+      collection: 8,
+      identity: 'me',
+      signedBy: v2.PublicKey.create({ key: new Uint8Array([1, 2, 3]) }),
+      sequence: 7n,
+    });
+    const { client, builtProfile } = makeClient();
+    await publishProfileUpdate(client as never, {
+      name: 'A',
+      description: '',
+      knownAs: eventKeyId(claimKey),
+    });
+    expect(builtProfile().knownAs).toEqual(claimKey);
+  });
+
+  it('omits the known-as claim when none is provided', async () => {
+    const { client, builtProfile } = makeClient();
+    await publishProfileUpdate(client as never, { name: 'A', description: '' });
+    expect(builtProfile().knownAs).toBeUndefined();
   });
 
   it('carries the existing avatar and banner forward when no new image is picked', async () => {

@@ -1,8 +1,9 @@
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
+import { hexToBytes } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
   COLLECTION,
   type PolycentricClient,
-  type v2,
+  v2,
 } from '@polycentric/react-native';
 
 type PublishProfileUpdateInput = {
@@ -15,6 +16,7 @@ type PublishProfileUpdateInput = {
   avatar?: v2.ImageSet | null;
   banner?: v2.ImageSet | null;
   alias?: string | null;
+  knownAs?: string | null;
 };
 
 // When the user picked a new avatar, resize + upload every
@@ -29,6 +31,7 @@ export async function publishProfileUpdate(
     avatar,
     banner,
     alias,
+    knownAs,
   }: PublishProfileUpdateInput,
 ): Promise<void> {
   const nextAvatar = avatarUri
@@ -43,6 +46,9 @@ export async function publishProfileUpdate(
       avatar: nextAvatar,
       banner: banner ?? undefined,
       alias: trimmedAlias ? trimmedAlias : undefined,
+      knownAs: knownAs
+        ? v2.EventKey.fromBinary(hexToBytes(knownAs))
+        : undefined,
     },
   });
 

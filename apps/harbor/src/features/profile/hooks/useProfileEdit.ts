@@ -10,6 +10,7 @@ import { formatImageUploadErrorOrFallback } from '@/src/common/lib/images/ImageU
 interface ProfileRef {
   description: string | null;
   alias: string | null;
+  knownAs: string | null;
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
 }
@@ -23,6 +24,8 @@ export type ProfileEditState = {
   setDescriptionDraft: (value: string) => void;
   aliasDraft: string;
   setAliasDraft: (value: string) => void;
+  knownAsDraft: string | null;
+  setKnownAsDraft: (value: string | null) => void;
   avatarUri: string | null;
   setAvatarUri: (value: string | null) => void;
   saving: boolean;
@@ -44,6 +47,7 @@ export function useProfileEdit(
   const [nameDraft, setNameDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [aliasDraft, setAliasDraft] = useState('');
+  const [knownAsDraft, setKnownAsDraft] = useState<string | null>(null);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [aliasError, setAliasError] = useState<string | null>(null);
@@ -59,6 +63,10 @@ export function useProfileEdit(
   useEffect(() => {
     setAliasDraft(profile.alias ?? '');
   }, [profile.alias]);
+
+  useEffect(() => {
+    setKnownAsDraft(profile.knownAs);
+  }, [profile.knownAs]);
 
   // Editing the alias clears any stale verification error.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `aliasDraft` is the reset trigger, not a capture
@@ -90,6 +98,7 @@ export function useProfileEdit(
         avatar: profile.avatar,
         banner: profile.banner,
         alias: aliasDraft,
+        knownAs: knownAsDraft,
       });
       invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       setEditing(false);
@@ -109,6 +118,7 @@ export function useProfileEdit(
     nameDraft,
     descriptionDraft,
     aliasDraft,
+    knownAsDraft,
     avatarUri,
     profile,
   ]);
@@ -117,9 +127,10 @@ export function useProfileEdit(
     setNameDraft(username);
     setDescriptionDraft(profile.description ?? '');
     setAliasDraft(profile.alias ?? '');
+    setKnownAsDraft(profile.knownAs);
     setAvatarUri(null);
     setEditing(false);
-  }, [username, profile.description, profile.alias]);
+  }, [username, profile.description, profile.alias, profile.knownAs]);
 
   return {
     editing,
@@ -130,6 +141,8 @@ export function useProfileEdit(
     setDescriptionDraft,
     aliasDraft,
     setAliasDraft,
+    knownAsDraft,
+    setKnownAsDraft,
     avatarUri,
     setAvatarUri,
     saving,

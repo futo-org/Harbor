@@ -1,4 +1,5 @@
 import { v2 } from '@polycentric/react-native';
+import { eventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
 import { truncateText } from '@/src/common/util/truncateText';
 
 export const MAX_NAME_LENGTH = 50;
@@ -10,6 +11,7 @@ export type DecodedProfile = {
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
   alias: string | null;
+  knownAs: string | null;
   followingCount: number;
   followersCount: number;
 };
@@ -59,6 +61,7 @@ export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
     avatar: latest?.update.avatar ?? null,
     banner: latest?.update.banner ?? null,
     alias: latest?.update.alias ?? null,
+    knownAs: latest?.update.knownAs ? eventKeyId(latest.update.knownAs) : null,
     followingCount: Number(response.followingCount),
     followersCount: Number(response.followersCount),
   };

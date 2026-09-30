@@ -13,6 +13,7 @@ export interface ProfileHookResult {
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
   alias: string | null;
+  knownAs: string | null;
   followingCount: number;
   followersCount: number;
   isLoading: boolean;
@@ -41,6 +42,7 @@ const EMPTY_PROFILE: Omit<
   avatar: null,
   banner: null,
   alias: null,
+  knownAs: null,
   followingCount: 0,
   followersCount: 0,
 };
@@ -80,6 +82,7 @@ export function useProfile(
     avatar: decoded.avatar,
     banner: decoded.banner,
     alias: decoded.alias,
+    knownAs: decoded.knownAs,
     followingCount: decoded.followingCount,
     followersCount: decoded.followersCount,
     isLoading: query.isLoading,

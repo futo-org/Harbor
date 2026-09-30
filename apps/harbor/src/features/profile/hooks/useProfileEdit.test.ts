@@ -27,6 +27,7 @@ const OTHER =
 const makeProfile = (alias: string | null = 'me@domain.com') => ({
   description: 'bio',
   alias,
+  knownAs: null,
   avatar: null,
   banner: null,
   refresh: jest.fn(),
@@ -133,5 +134,41 @@ describe('useProfileEdit alias', () => {
     expect(ok).toBe(true);
     expect(mockResolve).not.toHaveBeenCalled();
     expect(mockPublish).toHaveBeenCalled();
+  });
+});
+
+describe('useProfileEdit known as', () => {
+  it('republishes the profile’s known-as claim when saving other edits', async () => {
+    const { result } = await renderHook(() =>
+      useProfileEdit(
+        'Alice',
+        { ...makeProfile(), knownAs: 'claim-id' },
+        IDENTITY,
+      ),
+    );
+    await act(async () => result.current.setDescriptionDraft('new bio'));
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(mockPublish).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ description: 'new bio', knownAs: 'claim-id' }),
+    );
+  });
+
+  it('publishes an edited known-as draft', async () => {
+    const { result } = await renderHook(() =>
+      useProfileEdit('Alice', makeProfile(), IDENTITY),
+    );
+    await act(async () => result.current.setKnownAsDraft('claim-id'));
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(mockPublish).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ knownAs: 'claim-id' }),
+    );
   });
 });
