@@ -90,6 +90,8 @@ export function useSignup() {
       return;
     }
 
+    setSubmitting(true);
+
     try {
       // Bail if the user was logged in between starting the onboarding flow and now
       if (await redirectIfLoggedIn(client)) {
@@ -97,7 +99,6 @@ export function useSignup() {
         return;
       }
 
-      setSubmitting(true);
       await createIdentity(client, DEFAULT_SERVER);
       await publishProfileUpdate(client, {
         name: data.displayName,
