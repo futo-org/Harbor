@@ -104,7 +104,7 @@ export const scrape = async (
           url: meta.url ?? targetUrl,
         };
         const present = (Object.keys(result) as (keyof LinkMetadata)[]).filter(
-          (field) => (result)[field] !== undefined,
+          (field) => result[field] !== undefined,
         );
         for (const field of present) metadataFields.inc({ field });
         finish('ok', { fields: present, html_bytes: html.length });
