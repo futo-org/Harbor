@@ -200,6 +200,7 @@ jobs:
           cd services/server/migration
           touch .env
           cargo run
+          cd ../
           make db_schema
           git diff --exit-code
       - name: Check moderation's DB schema up-to-date
@@ -207,6 +208,7 @@ jobs:
           cd services/moderation/migration
           touch .env
           cargo run
+          cd ../
           make db_schema
           git diff --exit-code
       - name: Check notification's DB schema up-to-date
@@ -214,6 +216,7 @@ jobs:
           cd services/push-notifications/migration
           touch .env
           cargo run
+          cd ../
           make db_schema
           git diff --exit-code
       - uses: ./.forgejo/actions/r2-cache
