@@ -147,6 +147,10 @@ if [ "$CI_MODE" = true ]; then
   echo "==> Joining job container to the stack network ($NETWORK)…"
   docker network connect "$NETWORK" "$(self_container)"
 
+  echo "==> Applying migrations via docker compose exec…"
+  docker compose run --no-deps -T server /app/migration up
+  echo "    migrations applied"
+
   echo "==> Starting server and workers…"
   export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   # The mention integration test serves the alias document from a mock server
@@ -197,9 +201,6 @@ if [ "$CI_MODE" = true ]; then
     sleep 1
   done
 
-  echo "==> Applying migrations via docker compose exec…"
-  docker compose exec -T server /app/migration up
-  echo "    migrations applied"
 else
   echo "==> Applying migrations…"
   (
