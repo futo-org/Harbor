@@ -24,13 +24,8 @@ jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => {
   };
 });
 
-let mockKnownAs: string | null = null;
-jest.mock('./useProfile', () => ({
-  useProfile: () => ({ knownAs: mockKnownAs }),
-}));
-
 let mockVerifierBots: Set<string> | undefined;
-jest.mock('../../verifications/hooks/useVerifierIdentities', () => ({
+jest.mock('./useVerifierIdentities', () => ({
   useVerifierIdentities: () => mockVerifierBots,
 }));
 
@@ -48,28 +43,22 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
 }));
 
 import { eventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
-import { useQuery } from '@/src/common/query/hooks/useQuery';
 import { v2 } from '@polycentric/react-native';
 import { renderHook } from '@testing-library/react-native';
-import { useKnownAs } from './useKnownAs';
+import { useVerifiedPlatformAccounts } from './useVerifiedPlatformAccounts';
 
 const AUTHOR = 'author';
 const BOT = 'bot';
 const STRANGER = 'stranger';
 
-const mockUseQuery = useQuery as jest.Mock;
-
 beforeEach(() => {
-  jest.clearAllMocks();
-  mockKnownAs = null;
   mockVerifierBots = new Set([BOT]);
   mockClaimsData = undefined;
 });
 
-describe('useKnownAs', () => {
+describe('useVerifiedPlatformAccounts', () => {
   it('returns the platform and account of a claim verified by a trusted bot', async () => {
     const claim = platformClaim(1, 'github', 'alice');
-    mockKnownAs = claim.id;
     respond([
       {
         claim: claim.bundle,
@@ -78,39 +67,18 @@ describe('useKnownAs', () => {
       },
     ]);
 
-    const { result } = await renderHook(() => useKnownAs(AUTHOR));
-
-    expect(result.current?.platform.slug).toBe('github');
-    expect(result.current?.account).toBe('alice');
-  });
-
-  it('returns null without querying when known-as is unset', async () => {
-    const { result } = await renderHook(() => useKnownAs(AUTHOR));
-
-    expect(result.current).toBeNull();
-    expect(mockUseQuery).toHaveBeenCalledWith(
-      ['claims-list', AUTHOR],
-      expect.anything(),
-      expect.anything(),
-      false,
+    const { result } = await renderHook(() =>
+      useVerifiedPlatformAccounts(AUTHOR),
     );
+
+    expect(result.current).toHaveLength(1);
+    expect(result.current[0].claimId).toBe(claim.id);
+    expect(result.current[0].platform.slug).toBe('github');
+    expect(result.current[0].account).toBe('alice');
   });
 
-  it('returns null when the claim is missing from the list', async () => {
-    const other = platformClaim(1, 'github', 'alice');
-    mockKnownAs = platformClaim(2, 'github', 'alice').id;
-    respond([
-      { claim: other.bundle, targets: [], verifies: [verifyBundle(BOT)] },
-    ]);
-
-    const { result } = await renderHook(() => useKnownAs(AUTHOR));
-
-    expect(result.current).toBeNull();
-  });
-
-  it('returns null for a non-platform claim', async () => {
+  it('skips a non-platform claim', async () => {
     const claim = claimBundle(1, 'Freeform', { name: 'alice' });
-    mockKnownAs = claim.id;
     respond([
       {
         claim: claim.bundle,
@@ -119,14 +87,32 @@ describe('useKnownAs', () => {
       },
     ]);
 
-    const { result } = await renderHook(() => useKnownAs(AUTHOR));
+    const { result } = await renderHook(() =>
+      useVerifiedPlatformAccounts(AUTHOR),
+    );
 
-    expect(result.current).toBeNull();
+    expect(result.current).toEqual([]);
   });
 
-  it('returns null for a claim verified only by an untrusted identity', async () => {
+  it('skips a platform claim without an account', async () => {
+    const claim = claimBundle(1, 'Platform', { platform: 'github' });
+    respond([
+      {
+        claim: claim.bundle,
+        targets: [targetBundle([BOT])],
+        verifies: [verifyBundle(BOT)],
+      },
+    ]);
+
+    const { result } = await renderHook(() =>
+      useVerifiedPlatformAccounts(AUTHOR),
+    );
+
+    expect(result.current).toEqual([]);
+  });
+
+  it('skips a claim verified only by an untrusted identity', async () => {
     const claim = platformClaim(1, 'github', 'alice');
-    mockKnownAs = claim.id;
     respond([
       {
         claim: claim.bundle,
@@ -135,15 +121,16 @@ describe('useKnownAs', () => {
       },
     ]);
 
-    const { result } = await renderHook(() => useKnownAs(AUTHOR));
+    const { result } = await renderHook(() =>
+      useVerifiedPlatformAccounts(AUTHOR),
+    );
 
-    expect(result.current).toBeNull();
+    expect(result.current).toEqual([]);
   });
 
-  it('returns null while the verifier bots are loading or failed to load', async () => {
+  it('returns nothing while the verifier bots are loading or failed to load', async () => {
     mockVerifierBots = undefined;
     const claim = platformClaim(1, 'github', 'alice');
-    mockKnownAs = claim.id;
     respond([
       {
         claim: claim.bundle,
@@ -152,9 +139,11 @@ describe('useKnownAs', () => {
       },
     ]);
 
-    const { result } = await renderHook(() => useKnownAs(AUTHOR));
+    const { result } = await renderHook(() =>
+      useVerifiedPlatformAccounts(AUTHOR),
+    );
 
-    expect(result.current).toBeNull();
+    expect(result.current).toEqual([]);
   });
 });
 
