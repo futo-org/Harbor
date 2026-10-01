@@ -1,5 +1,6 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
+import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
 import type { PairingSession, v2 } from '@polycentric/react-native';
 import { useEffect, useState } from 'react';
 
@@ -124,6 +125,10 @@ export function usePairIdentityClaimer(
 
       void (async () => {
         try {
+          // Bail if the user was logged in elsewhere during the pairing process
+          if (await redirectIfLoggedIn(client)) return;
+          if (canceled) return;
+
           const identityKey = session.digest.issuerIdentity;
           const claimServers = serversForClaim(session, info, client.servers);
           await client.identityManager.claim(identityKey, claimServers);
