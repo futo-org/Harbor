@@ -152,6 +152,25 @@ async fn process_event(
         }
     }
 
+    let application_id = match &event.application {
+        Some(app) if let Some(app_id) = app_cache.get(app) => Some(*app_id),
+        Some(app) => {
+            let app_id = EventsRepository::Mutation::application_id(
+                &ctx.db, app,
+            )
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, "put_events application db error");
+                Status::internal("internal server error")
+            })?;
+
+            app_cache.insert(app.clone(), app_id);
+
+            Some(app_id)
+        }
+        None => None,
+    };
+
     // Kafka partition/message key: the serialized protobuf event key.
     // Encoded here while `key` is whole — its fields are moved out below.
     let event_key_bytes = key.encode_to_vec();
@@ -218,21 +237,6 @@ async fn process_event(
         )
         .await?;
     }
-
-    let application_id = match &event.application {
-        Some(app) if let Some(app_id) = app_cache.get(app) => Some(*app_id),
-        Some(app) => {
-            let app_id = EventsRepository::Mutation::application_id(&txn, app).await.map_err(|e| {
-                tracing::error!(error = %e, "put_events application db error");
-                Status::internal("internal server error")
-            })?;
-
-            app_cache.insert(app.clone(), app_id);
-
-            Some(app_id)
-        }
-        None => None,
-    };
 
     let event_identity = key.identity.clone();
     let event_collection = key.collection;
