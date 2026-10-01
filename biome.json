@@ -36,7 +36,8 @@
       "!packages/js-core/src/proto/polycentric.ts",
       "!packages/js-core/src/proto/polycentric/v2",
       "!**/rust_modules",
-      "!docs/src/tailwind.css"
+      "!docs/src/tailwind.css",
+      "!dev/loadtest/internal/web/static/vendor"
     ]
   },
   "formatter": {
