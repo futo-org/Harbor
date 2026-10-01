@@ -1,5 +1,5 @@
 import { IdentityTag } from '@/src/common/components/primitives/PillChip';
-import { Text } from '@/src/common/components/primitives/Text';
+import { Text, VARIANT_CONFIG } from '@/src/common/components/primitives/Text';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, typography, useTheme } from '@/src/common/theme';
 import { View } from 'react-native';
@@ -7,24 +7,36 @@ import Animated from 'react-native-reanimated';
 import type { VerifiedPlatformAccount } from '../verifications/hooks/useVerifiedPlatformAccounts';
 import { useKnownAs } from './hooks/useKnownAs';
 
-export function AuthorTag({ identity }: { identity: string }) {
+type AuthorTagVariant = 'secondary' | 'small';
+
+export function AuthorTag({
+  identity,
+  variant = 'secondary',
+}: {
+  identity: string;
+  variant?: AuthorTagVariant;
+}) {
   const { knownAs, isLoading } = useKnownAs(identity);
 
-  if (isLoading) return <AuthorTagSkeleton />;
+  if (isLoading) return <AuthorTagSkeleton variant={variant} />;
 
-  return <AuthorTagView identity={identity} knownAs={knownAs} />;
+  return (
+    <AuthorTagView identity={identity} knownAs={knownAs} variant={variant} />
+  );
 }
 
 export function AuthorTagView({
   identity,
   knownAs,
+  variant = 'secondary',
 }: {
   identity: string;
   knownAs: VerifiedPlatformAccount | null;
+  variant?: AuthorTagVariant;
 }) {
   const { theme } = useTheme();
 
-  if (!knownAs) return <IdentityTag identity={identity} />;
+  if (!knownAs) return <IdentityTag identity={identity} variant={variant} />;
 
   return (
     <View
@@ -40,7 +52,7 @@ export function AuthorTagView({
         color: theme.palette[knownAs.platform.color],
       })}
       <Text
-        variant="secondary"
+        variant={variant}
         color="neutral_500"
         numberOfLines={1}
         style={[Atoms.flex_shrink_1]}
@@ -51,11 +63,18 @@ export function AuthorTagView({
   );
 }
 
-function AuthorTagSkeleton() {
+function AuthorTagSkeleton({ variant }: { variant: AuthorTagVariant }) {
   const animatedStyle = useShimmerOpacity();
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View
+      style={[
+        animatedStyle,
+        Atoms.justify_center,
+        // Take the text's line height, so the row doesn't resize once it resolves.
+        { height: typography.lineHeight[VARIANT_CONFIG[variant].size] },
+      ]}
+    >
       <Block width={80} />
     </Animated.View>
   );
