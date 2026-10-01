@@ -1,9 +1,7 @@
 use std::fmt;
 
 use crate::models::protos_v2::Link;
-// TODO: add back.
-//use crate::models::validate::{self, StringConfig, StringError};
-use crate::models::validate::{StringError, Validate};
+use crate::models::validate::{self, StringConfig, StringError, Validate};
 
 impl Validate for Link {
     type Error = ValidationError;
@@ -12,9 +10,6 @@ impl Validate for Link {
     where
         F: Fn(Self::Error) -> E,
     {
-        _ = errors;
-        _ = map_err;
-        /* TODO: reenable.
         let Link {
             title,
             description,
@@ -31,26 +26,30 @@ impl Validate for Link {
                 ..Default::default()
             },
         );
-        validate::string(
-            description,
-            errors,
-            |err| map_err(ValidationError::Description(err)),
-            StringConfig {
-                min_len: Some(1),
-                max_len: Some(200),
-                ..Default::default()
-            },
-        );
-        validate::string(
-            image,
-            errors,
-            |err| map_err(ValidationError::Image(err)),
-            StringConfig {
-                min_len: Some(1),
-                max_len: Some(200),
-                ..Default::default()
-            },
-        );
+        if let Some(description) = description.as_deref() {
+            validate::string(
+                description,
+                errors,
+                |err| map_err(ValidationError::Description(err)),
+                StringConfig {
+                    min_len: Some(1),
+                    max_len: Some(200),
+                    ..Default::default()
+                },
+            );
+        }
+        if let Some(image) = image.as_deref() {
+            validate::string(
+                image,
+                errors,
+                |err| map_err(ValidationError::Image(err)),
+                StringConfig {
+                    min_len: Some(1),
+                    max_len: Some(200),
+                    ..Default::default()
+                },
+            );
+        }
         validate::string(
             url,
             errors,
@@ -61,7 +60,6 @@ impl Validate for Link {
                 ..Default::default()
             },
         );
-        */
     }
 }
 

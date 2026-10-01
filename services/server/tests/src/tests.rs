@@ -988,8 +988,8 @@ pub fn make_post_bundle(
         .map(|url| AttributedTo {
             to: Some(attributed_to::To::Link(Link {
                 title: "Title".to_owned(),
-                description: "Description".to_owned(),
-                image: "Image".to_owned(),
+                description: Some("Description".to_owned()),
+                image: Some("Image".to_owned()),
                 url: url.to_string(),
                 ..Default::default()
             })),
