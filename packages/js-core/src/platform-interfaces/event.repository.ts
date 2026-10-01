@@ -31,7 +31,7 @@ export interface IEventRepository {
    * Optional `signer` and `collection` filters narrow the scan. When
    * `headsOnly` is true, returns one event per (signer, collection) — the
    * highest-sequence entry for each stream. Otherwise returns all matching
-   * events sorted by sequence ascending.
+   * events in unspecified order.
    *
    * @param identity - The identity key (hex hash)
    * @param options - Optional filters and head-only flag
