@@ -149,6 +149,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
             </View>
             <KnownAsPicker
               identityKey={identityKey}
+              nameDraft={edit.nameDraft}
               selected={edit.knownAsDraft}
               onSelect={edit.setKnownAsDraft}
             />

@@ -1,6 +1,7 @@
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import type { ReactNode } from 'react';
+import { Text } from '@/src/common/components/primitives/Text';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import {
   useVerifiedPlatformAccounts,
@@ -8,14 +9,15 @@ import {
 } from '../verifications/hooks/useVerifiedPlatformAccounts';
 import { AuthorTagView } from './AuthorTag';
 import type { KnownAs } from './lib/decodeProfile';
-import { Username } from './Username';
 
 export function KnownAsPicker({
   identityKey,
+  nameDraft,
   selected,
   onSelect,
 }: {
   identityKey: string;
+  nameDraft: string;
   selected: KnownAs | null;
   onSelect: (knownAs: KnownAs | null) => void;
 }) {
@@ -46,7 +48,7 @@ export function KnownAsPicker({
         selected={!verifiedAccounts.some((a) => a.claimId === selectedClaimId)}
         onPress={() => onSelect(null)}
       >
-        <AuthorLine identityKey={identityKey} knownAs={null} />
+        <AuthorLine identityKey={identityKey} name={nameDraft} knownAs={null} />
       </KnownAsOption>
       {verifiedAccounts.map((account) => (
         <KnownAsOption
@@ -56,7 +58,11 @@ export function KnownAsPicker({
             onSelect({ kind: 'platformAccount', claimId: account.claimId })
           }
         >
-          <AuthorLine identityKey={identityKey} knownAs={account} />
+          <AuthorLine
+            identityKey={identityKey}
+            name={nameDraft}
+            knownAs={account}
+          />
         </KnownAsOption>
       ))}
     </View>
@@ -107,19 +113,23 @@ function KnownAsOption({
 
 function AuthorLine({
   identityKey,
+  name,
   knownAs,
 }: {
   identityKey: string;
+  name: string;
   knownAs: VerifiedPlatformAccount | null;
 }) {
   return (
     <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_xs]}>
-      <Username
-        identity={identityKey}
+      <Text
         variant="secondary"
         fontWeight="bold"
-        noFollowingBadge
-      />
+        numberOfLines={1}
+        style={Atoms.flex_shrink_1}
+      >
+        {name}
+      </Text>
       <AuthorTagView identity={identityKey} knownAs={knownAs} />
     </View>
   );
