@@ -16,7 +16,7 @@ import { router } from 'expo-router';
 import { type ReactNode, useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { encodePairingCode, EncodingMode } from '../pairingCode';
+import { pairingLinkFrom } from '../pairingCode';
 import { useCountdown } from '../hooks/useCountdown';
 import type { v2 } from '@polycentric/react-native';
 
@@ -76,7 +76,7 @@ export default function PairIdentityIssuerScreen() {
     );
   } else if (expired) {
     mainContent = (
-      <StatusDisplay icon="error" summary="The pairing code expired." />
+      <StatusDisplay icon="error" summary="The pairing link expired." />
     );
   } else {
     // If we still believe the session to be valid, display its pairing info.
@@ -85,7 +85,7 @@ export default function PairIdentityIssuerScreen() {
         <Text style={[Atoms.mx_lg]}>
           On your other device, press "I already have an identity" and then
           "Pair with existing device." From there, you can scan the QR code
-          displayed here or manually enter the pairing code after copying it.
+          displayed here or paste the pairing link after copying it.
         </Text>
         <PairingInfoCard info={info} remainingSeconds={remainingSeconds} />
       </>
@@ -136,6 +136,7 @@ function PairingInfoCard({
   remainingSeconds: number | null;
 }) {
   const { theme } = useTheme();
+  const link = info ? pairingLinkFrom(info) : null;
 
   return (
     <View
@@ -147,11 +148,8 @@ function PairingInfoCard({
         { backgroundColor: theme.palette.neutral_50 },
       ]}
     >
-      <PairingQRCode info={info} />
-      <CopyButton
-        title="Copy pairing code"
-        value={info ? encodePairingCode(info, EncodingMode.HEX) : null}
-      />
+      <PairingQRCode link={link} />
+      <CopyButton title="Copy pairing link" value={link} />
       <View style={Atoms.items_center}>
         <CountdownTimer remainingSeconds={remainingSeconds} />
       </View>
@@ -159,7 +157,7 @@ function PairingInfoCard({
   );
 }
 
-function PairingQRCode({ info }: { info: v2.PairingInfo | null }) {
+function PairingQRCode({ link }: { link: string | null }) {
   const { theme } = useTheme();
 
   return (
@@ -174,9 +172,9 @@ function PairingQRCode({ info }: { info: v2.PairingInfo | null }) {
         },
       ]}
     >
-      {info ? (
+      {link ? (
         <QRCode
-          value={encodePairingCode(info, EncodingMode.BASE64)}
+          value={link}
           size={PAIRING_BLOCK_WIDTH}
           color={theme.palette.black}
           backgroundColor={theme.palette.white}
