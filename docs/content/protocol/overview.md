@@ -9,7 +9,7 @@ sidebar_position: 1
 Harbor is the flagship implementation of the **Polycentric Protocol**. This
 documentation is preliminary and tracks the v2 protocol, defined in the
 `protos/polycentric/v2` directory of the
-[Harbor code repository](https://gitlab.futo.org/polycentric/polycentric).
+[Harbor code repository](https://code.futo.org/harbor/harbor).
 
 The Polycentric Protocol is built on three ideas:
 

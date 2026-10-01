@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # Project Structure
 
-The [repository](https://gitlab.futo.org/polycentric/polycentric) is a pnpm +
+The [repository](https://code.futo.org/harbor/harbor) is a pnpm +
 Cargo monorepo. Builds are orchestrated by [Turbo](https://turborepo.com), so
 each package declares its own `build`, `test`, and `lint` tasks and the root
 scripts fan out across them.
@@ -20,6 +20,7 @@ scripts fan out across them.
 | `services/` | Server-side processes.                                                                    |
 | `protos/`   | Protobuf definitions for the [Polycentric Protocol](../protocol/overview.md). The Rust and TypeScript types are generated from these. |
 | `docs/`     | This documentation site (Docusaurus).                                                     |
+| `dev/`      | Developer tooling for testing |
 
 ## Apps
 

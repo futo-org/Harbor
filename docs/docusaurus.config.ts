@@ -95,7 +95,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://gitlab.futo.org/harbor/harbor',
+          href: 'https://code.futo.org/harbor/harbor',
           label: 'Code',
           position: 'right',
         },
@@ -135,8 +135,8 @@ const config: Config = {
           items: [
             { label: 'App', href: 'https://harbor.social' },
             {
-              label: 'GitLab',
-              href: 'https://gitlab.futo.org/polycentric/polycentric',
+              label: 'Forgejo',
+              href: 'https://code.futo.org/harbor/harbor',
             },
           ],
         },
