@@ -18,7 +18,7 @@ export function AuthorTag({
 }) {
   const { knownAs, isLoading } = useKnownAs(identity);
 
-  if (isLoading) return <AuthorTagSkeleton variant={variant} />;
+  if (isLoading && !knownAs) return <AuthorTagSkeleton variant={variant} />;
 
   return (
     <AuthorTagView identity={identity} knownAs={knownAs} variant={variant} />

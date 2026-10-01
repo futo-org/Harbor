@@ -26,7 +26,7 @@ export function KnownAsPicker({
   const selectedClaimId =
     selected?.kind === 'platformAccount' ? selected.claimId : null;
 
-  if (isLoading) {
+  if (isLoading && verifiedAccounts.length === 0) {
     return (
       <View style={Atoms.p_md}>
         <ActivityIndicator

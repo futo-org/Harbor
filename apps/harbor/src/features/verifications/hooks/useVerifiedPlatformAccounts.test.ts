@@ -141,6 +141,25 @@ describe('useVerifiedPlatformAccounts', () => {
     expect(result.current.isLoading).toBe(true);
   });
 
+  it('keeps the accounts from the previous response while the claims refetch', async () => {
+    mockIsLoading = true;
+    const claim = platformClaim(1, 'github', 'alice');
+    respond([
+      {
+        claim: claim.bundle,
+        targets: [targetBundle([BOT])],
+        verifies: [verifyBundle(BOT)],
+      },
+    ]);
+
+    const { result } = await renderHook(() =>
+      useVerifiedPlatformAccounts({ identity: AUTHOR }),
+    );
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.verifiedAccounts).toHaveLength(1);
+  });
+
   it('reports loading while the verifier bots are loading or failed to load', async () => {
     mockVerifierBots = undefined;
     const claim = platformClaim(1, 'github', 'alice');
@@ -157,6 +176,7 @@ describe('useVerifiedPlatformAccounts', () => {
     );
 
     expect(result.current.isLoading).toBe(true);
+    expect(result.current.verifiedAccounts).toEqual([]);
   });
 });
 
