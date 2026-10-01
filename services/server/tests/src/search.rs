@@ -488,7 +488,7 @@ async fn regression_1658() {
     let mut client = TestClient::new_with_identity(key).await;
 
     let profile_update = ProfileUpdate {
-        name: None,
+        name: Some("Regression #1658".to_owned()),
         avatar: None,
         banner: None,
         description: None,
