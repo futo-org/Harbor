@@ -5,18 +5,22 @@ import {
 } from '../../verifications/hooks/useVerifiedPlatformAccounts';
 import { useProfile } from './useProfile';
 
-/**
- * The platform account `identity` chose to be known as, or null when none is
- * set or no trusted verifier bot has verified it.
- */
-export function useKnownAs(
-  identity: string | null | undefined,
-): VerifiedPlatformAccount | null {
+export function useKnownAs(identity: string): {
+  knownAs: VerifiedPlatformAccount | null;
+  isLoading: boolean;
+} {
   const { knownAs } = useProfile(identity);
-  const verifiedAccounts = useVerifiedPlatformAccounts(
-    identity ?? undefined,
-    !!knownAs,
-    FetchMode.OfflineFirst,
-  );
-  return verifiedAccounts.find((a) => a.claimId === knownAs) ?? null;
+  const { verifiedAccounts, isLoading } = useVerifiedPlatformAccounts({
+    identity,
+    // Fetch only for users with knownAs set, at most once per users per session
+    enabled: !!knownAs,
+    fetchMode: FetchMode.OfflineFirst,
+  });
+
+  if (!knownAs) return { knownAs: null, isLoading: false };
+
+  return {
+    knownAs: verifiedAccounts.find((a) => a.claimId === knownAs) ?? null,
+    isLoading,
+  };
 }

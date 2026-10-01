@@ -13,6 +13,7 @@ import {
   MAX_NAME_LENGTH,
 } from '@/src/features/profile/lib/decodeProfile';
 import { FetchMode } from '@polycentric/react-native';
+import { KnownAsPicker } from './KnownAsPicker';
 import { Link, router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
@@ -71,7 +72,6 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               onChangeText={edit.setNameDraft}
               placeholder="Display name"
               maxLength={MAX_NAME_LENGTH}
-              autoFocus
               disabled={edit.saving}
             />
             <CharCount count={edit.nameDraft.length} max={MAX_NAME_LENGTH} />
@@ -131,6 +131,27 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
                 How to set up an alias ↗
               </Text>
             </Link>
+          </View>
+
+          <View style={Atoms.gap_xs}>
+            <View
+              style={[
+                Atoms.flex_row,
+                Atoms.items_center,
+                Atoms.gap_xs,
+                { zIndex: ZIndex.raised },
+              ]}
+            >
+              <Text variant="small" color="neutral_500">
+                KNOWN AS
+              </Text>
+              <InfoTooltip text="hown next to your name instead of your ID. Verify more accounts to add choices here." />
+            </View>
+            <KnownAsPicker
+              identityKey={identityKey}
+              selectedClaimId={edit.knownAsDraft}
+              onSelect={edit.setKnownAsDraft}
+            />
           </View>
         </View>
       </Sheet.Content>

@@ -1,8 +1,4 @@
-import {
-  IdentityTag,
-  ProfileAvatar,
-  Text,
-} from '@/src/common/components/primitives';
+import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
@@ -12,6 +8,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
+import { AuthorTag } from '@/src/features/profile/AuthorTag';
 import { Username } from '@/src/features/profile/Username';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
@@ -140,7 +137,7 @@ function AuthorRow({ post }: { post: PostData }) {
         variant="secondary"
         fontWeight="bold"
       />
-      <IdentityTag identity={post.identity} />
+      <AuthorTag identity={post.identity} />
       {time ? (
         <>
           <Text variant="secondary" color="neutral_500" fontWeight="bold">

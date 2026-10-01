@@ -30,11 +30,12 @@ jest.mock('./useVerifierIdentities', () => ({
 }));
 
 let mockClaimsData: Uint8Array | undefined;
+let mockIsLoading = false;
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: jest.fn(
     (_key: unknown, _query: unknown, _opts: unknown, enabled: boolean) => ({
       data: enabled ? mockClaimsData : undefined,
-      isLoading: false,
+      isLoading: enabled && mockIsLoading,
       hasPendingRefresh: false,
       refresh: jest.fn(),
     }),
@@ -54,6 +55,7 @@ const STRANGER = 'stranger';
 beforeEach(() => {
   mockVerifierBots = new Set([BOT]);
   mockClaimsData = undefined;
+  mockIsLoading = false;
 });
 
 describe('useVerifiedPlatformAccounts', () => {
@@ -68,13 +70,14 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts(AUTHOR),
+      useVerifiedPlatformAccounts({ identity: AUTHOR }),
     );
 
-    expect(result.current).toHaveLength(1);
-    expect(result.current[0].claimId).toBe(claim.id);
-    expect(result.current[0].platform.slug).toBe('github');
-    expect(result.current[0].account).toBe('alice');
+    const { verifiedAccounts } = result.current;
+    expect(verifiedAccounts).toHaveLength(1);
+    expect(verifiedAccounts[0].claimId).toBe(claim.id);
+    expect(verifiedAccounts[0].platform.slug).toBe('github');
+    expect(verifiedAccounts[0].account).toBe('alice');
   });
 
   it('skips a non-platform claim', async () => {
@@ -88,10 +91,10 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts(AUTHOR),
+      useVerifiedPlatformAccounts({ identity: AUTHOR }),
     );
 
-    expect(result.current).toEqual([]);
+    expect(result.current.verifiedAccounts).toEqual([]);
   });
 
   it('skips a platform claim without an account', async () => {
@@ -105,10 +108,10 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts(AUTHOR),
+      useVerifiedPlatformAccounts({ identity: AUTHOR }),
     );
 
-    expect(result.current).toEqual([]);
+    expect(result.current.verifiedAccounts).toEqual([]);
   });
 
   it('skips a claim verified only by an untrusted identity', async () => {
@@ -122,13 +125,23 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts(AUTHOR),
+      useVerifiedPlatformAccounts({ identity: AUTHOR }),
     );
 
-    expect(result.current).toEqual([]);
+    expect(result.current.verifiedAccounts).toEqual([]);
   });
 
-  it('returns nothing while the verifier bots are loading or failed to load', async () => {
+  it('reports loading while the claims are loading', async () => {
+    mockIsLoading = true;
+
+    const { result } = await renderHook(() =>
+      useVerifiedPlatformAccounts({ identity: AUTHOR }),
+    );
+
+    expect(result.current.isLoading).toBe(true);
+  });
+
+  it('reports loading while the verifier bots are loading or failed to load', async () => {
     mockVerifierBots = undefined;
     const claim = platformClaim(1, 'github', 'alice');
     respond([
@@ -140,10 +153,10 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts(AUTHOR),
+      useVerifiedPlatformAccounts({ identity: AUTHOR }),
     );
 
-    expect(result.current).toEqual([]);
+    expect(result.current.isLoading).toBe(true);
   });
 });
 

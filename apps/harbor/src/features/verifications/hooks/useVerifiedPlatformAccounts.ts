@@ -9,16 +9,26 @@ export interface VerifiedPlatformAccount {
   account: string;
 }
 
-export function useVerifiedPlatformAccounts(
-  identity: string | undefined,
+export function useVerifiedPlatformAccounts({
+  identity,
   enabled = true,
-  fetchMode?: FetchMode,
-): VerifiedPlatformAccount[] {
-  const { claims, verifierBots } = useClaimsList(identity, enabled, fetchMode);
+  fetchMode,
+}: {
+  identity: string | undefined;
+  enabled?: boolean;
+  fetchMode?: FetchMode;
+}): { verifiedAccounts: VerifiedPlatformAccount[]; isLoading: boolean } {
+  const {
+    claims,
+    verifierBots,
+    isLoading: isClaimsLoading,
+  } = useClaimsList(identity, enabled, fetchMode);
+  // Until the trusted bot list loads, claim status counts vouches from anyone,
+  // so a claim can look verified when no trusted bot verified it.
+  const isLoading = isClaimsLoading || !verifierBots;
 
-  return useMemo(() => {
-    // Until the bot set loads, every verifier counts toward the status.
-    if (!verifierBots) return [];
+  const verifiedAccounts = useMemo(() => {
+    if (isLoading) return [];
     return claims.flatMap((claim) => {
       if (claim.status.verifiedCount === 0) return [];
       const platform = getPlatformFromClaim(claim.schemaName, claim.fields);
@@ -26,5 +36,7 @@ export function useVerifiedPlatformAccounts(
       if (!platform || !account) return [];
       return [{ claimId: claim.id, platform, account }];
     });
-  }, [claims, verifierBots]);
+  }, [claims, isLoading]);
+
+  return { verifiedAccounts, isLoading };
 }

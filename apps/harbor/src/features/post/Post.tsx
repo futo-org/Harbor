@@ -1,13 +1,10 @@
-import {
-  IdentityTag,
-  ProfileAvatar,
-  Text,
-} from '@/src/common/components/primitives';
+import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { AuthorTag } from '@/src/features/profile/AuthorTag';
 import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -97,7 +94,7 @@ export const Post = memo(function Post({
         style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
       >
         <PostAuthorName identity={authorIdentity} onPress={handleAuthorPress} />
-        {authorIdentity ? <IdentityTag identity={authorIdentity} /> : null}
+        {authorIdentity ? <AuthorTag identity={authorIdentity} /> : null}
 
         {time ? (
           <>
@@ -175,7 +172,7 @@ export const Post = memo(function Post({
               />
               {authorIdentity ? (
                 <View style={Atoms.self_start}>
-                  <IdentityTag identity={authorIdentity} />
+                  <AuthorTag identity={authorIdentity} />
                 </View>
               ) : null}
             </View>
