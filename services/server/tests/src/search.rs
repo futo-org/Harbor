@@ -474,6 +474,40 @@ async fn search_users_pagination_order_by_alpha() {
     assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
+#[tokio::test]
+async fn regression_1658() {
+    // Identity that is parsed as "Scientific notation" when parsing ts vectors.
+    // For example:
+    // ```
+    // SELECT description, token FROM ts_debug('simple', '36052e2fefa35676d356782f00f3745886519595be110aa38b18ff1f287fb22c');
+    // ```
+    let seed = Sha256::digest(b"regression_1658_oHiUY7S8HD7kDANc")
+        .try_into()
+        .unwrap();
+    let key = SigningKey::from_bytes(&seed);
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let profile_update = ProfileUpdate {
+        name: None,
+        avatar: None,
+        banner: None,
+        description: None,
+        alias: None,
+    };
+    client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+    client.submit_events().await;
+
+    expect_searched_users(
+        SearchUsersRequest {
+            query: client.identity().to_owned(),
+            sort_by: None,
+            page_params: None,
+        },
+        vec![profile_update],
+    )
+    .await;
+}
+
 async fn expect_searched_users(
     request: SearchUsersRequest,
     expected: Vec<ProfileUpdate>,

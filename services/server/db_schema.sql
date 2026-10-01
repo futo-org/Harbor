@@ -88,12 +88,23 @@ CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_
 
 
 --
+-- Name: tsquery_agg(tsquery); Type: AGGREGATE; Schema: public; Owner: -
+--
+
+CREATE AGGREGATE public.tsquery_agg(tsquery) (
+    SFUNC = tsquery_or,
+    STYPE = tsquery,
+    INITCOND = ''
+);
+
+
+--
 -- Name: search_query(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.search_query(query text) RETURNS tsquery
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (COALESCE(to_tsquery('english'::regconfig, query), to_tsquery('simple'::regconfig, ''::text)) || COALESCE(to_tsquery('simple'::regconfig, query), to_tsquery('simple'::regconfig, ''::text)));
+    RETURN ((COALESCE(to_tsquery('english'::regconfig, query), ''::tsquery) || COALESCE(to_tsquery('simple'::regconfig, query), ''::tsquery)) || (SELECT public.tsquery_agg(("left"(data.word, 64))::tsquery) AS tsquery_agg FROM regexp_split_to_table(COALESCE(search_query.query, ''::text), '[[:space:]]'::text) data(word) WHERE ((length(data.word) = 66) AND ("right"(data.word, 2) = ':*'::text))));
 
 
 --
