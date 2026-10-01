@@ -14,7 +14,7 @@ use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::TransactionTrait;
-use tonic::Status;
+use tonic::{Code, Status};
 
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::context::ServiceContext;
@@ -42,7 +42,14 @@ pub async fn handle(
             Ok(blobs) => {
                 all_blobs.extend(blobs);
             }
-
+            // We should see internal errors if something is wrong on our end,
+            // e.g. when the database is down. In that case in stead of trying
+            // to store the remaining events return the error immediately and
+            // not as an event specific errors as it's unlikely to be related to
+            // the event.
+            Err(status) if status.code() == Code::Internal => {
+                return Err(status);
+            }
             Err(status) => {
                 tracing::debug!(
                     "put_events[{idx}] skipped: {} {}",
