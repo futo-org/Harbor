@@ -10,17 +10,18 @@ export function useKnownAs(identity: string): {
   isLoading: boolean;
 } {
   const { knownAs } = useProfile(identity);
+  const claimId = knownAs?.kind === 'platformAccount' ? knownAs.claimId : null;
   const { verifiedAccounts, isLoading } = useVerifiedPlatformAccounts({
     identity,
     // Fetch only for users with knownAs set, at most once per users per session
-    enabled: !!knownAs,
+    enabled: !!claimId,
     fetchMode: FetchMode.OfflineFirst,
   });
 
-  if (!knownAs) return { knownAs: null, isLoading: false };
+  if (!claimId) return { knownAs: null, isLoading: false };
 
   return {
-    knownAs: verifiedAccounts.find((a) => a.claimId === knownAs) ?? null,
+    knownAs: verifiedAccounts.find((a) => a.claimId === claimId) ?? null,
     isLoading,
   };
 }

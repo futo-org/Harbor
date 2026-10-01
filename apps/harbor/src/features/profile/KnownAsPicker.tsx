@@ -7,21 +7,24 @@ import {
   type VerifiedPlatformAccount,
 } from '../verifications/hooks/useVerifiedPlatformAccounts';
 import { AuthorTagView } from './AuthorTag';
+import type { KnownAs } from './lib/decodeProfile';
 import { Username } from './Username';
 
 export function KnownAsPicker({
   identityKey,
-  selectedClaimId,
+  selected,
   onSelect,
 }: {
   identityKey: string;
-  selectedClaimId: string | null;
-  onSelect: (claimId: string | null) => void;
+  selected: KnownAs | null;
+  onSelect: (knownAs: KnownAs | null) => void;
 }) {
   const { theme } = useTheme();
   const { verifiedAccounts, isLoading } = useVerifiedPlatformAccounts({
     identity: identityKey,
   });
+  const selectedClaimId =
+    selected?.kind === 'platformAccount' ? selected.claimId : null;
 
   if (isLoading) {
     return (
@@ -49,7 +52,9 @@ export function KnownAsPicker({
         <KnownAsOption
           key={account.claimId}
           selected={account.claimId === selectedClaimId}
-          onPress={() => onSelect(account.claimId)}
+          onPress={() =>
+            onSelect({ kind: 'platformAccount', claimId: account.claimId })
+          }
         >
           <AuthorLine identityKey={identityKey} knownAs={account} />
         </KnownAsOption>

@@ -18,7 +18,7 @@ type BuildArg = {
     name: string;
     description: string;
     alias?: string;
-    knownAs?: v2.EventKey;
+    knownAs?: v2.KnownAs;
     avatar?: unknown;
     banner?: unknown;
   };
@@ -86,9 +86,14 @@ describe('publishProfileUpdate', () => {
     await publishProfileUpdate(client as never, {
       name: 'A',
       description: '',
-      knownAs: eventKeyId(claimKey),
+      knownAs: { kind: 'platformAccount', claimId: eventKeyId(claimKey) },
     });
-    expect(builtProfile().knownAs).toEqual(claimKey);
+    expect(builtProfile().knownAs).toEqual({
+      kind: {
+        oneofKind: 'platformAccount',
+        platformAccount: { claim: claimKey },
+      },
+    });
   });
 
   it('omits the known-as claim when none is provided', async () => {

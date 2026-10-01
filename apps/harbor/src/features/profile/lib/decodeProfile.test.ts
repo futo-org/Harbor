@@ -16,7 +16,7 @@ function profileContent(
     name: string;
     description: string;
     alias: string;
-    knownAs: v2.EventKey;
+    knownAs: v2.KnownAs;
   }>,
 ): v2.Content {
   return v2.Content.create({
@@ -77,16 +77,29 @@ describe('decodeProfile', () => {
     expect(decodeProfile(bytes).alias).toBeNull();
   });
 
-  it('extracts the known-as claim id', () => {
+  it('extracts the known-as platform claim id', () => {
     const claimKey = v2.EventKey.create({
       collection: 8,
       identity: IDENTITY,
       sequence: 4n,
     });
     const bytes = serializedResponse([
-      bundle(profileContent({ knownAs: claimKey }), 1),
+      bundle(
+        profileContent({
+          knownAs: {
+            kind: {
+              oneofKind: 'platformAccount',
+              platformAccount: { claim: claimKey },
+            },
+          },
+        }),
+        1,
+      ),
     ]);
-    expect(decodeProfile(bytes).knownAs).toBe(eventKeyId(claimKey));
+    expect(decodeProfile(bytes).knownAs).toEqual({
+      kind: 'platformAccount',
+      claimId: eventKeyId(claimKey),
+    });
   });
 
   it('returns a null known-as when the field is absent', () => {
