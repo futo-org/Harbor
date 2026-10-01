@@ -1,10 +1,16 @@
-import type { PaletteColorToken } from '@/src/common/theme';
+import { Atoms, type PaletteColorToken } from '@/src/common/theme';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { createElement, type ReactNode } from 'react';
+import { View } from 'react-native';
 
 // Every platform claim shares one verification schema; which platform a claim
 // is for is carried by the verifier route it's sent to, not the schema.
 export const PLATFORM_SCHEMA_NAME = 'Platform';
+
+// FontAwesome 6 metrics in em (512 font units): the widest glyph advance in
+// its fonts, and the text line height (ascender + descender).
+const LOGO_WIDTH_EM = 641 / 512;
+const LOGO_HEIGHT_EM = 535 / 512;
 
 // A platform a claim can be verified against. `slug` is the platform's route
 // on the verifier bot; `logo` matches SelectChip's icon render-prop; `color`
@@ -28,12 +34,31 @@ export interface Platform {
 const brandLogo =
   (name: string) =>
   ({ size, color }: { size: number; color: string }): ReactNode =>
-    createElement(FontAwesome6, { name, brand: true, size, color });
+    buildSizedLogo(
+      size,
+      createElement(FontAwesome6, { name, brand: true, size, color }),
+    );
 
 const solidLogo =
   (name: string) =>
   ({ size, color }: { size: number; color: string }): ReactNode =>
-    createElement(FontAwesome6, { name, size, color });
+    buildSizedLogo(size, createElement(FontAwesome6, { name, size, color }));
+
+// A fixed box that fits any FontAwesome 6 glyph, so the logo takes its space
+// before the icon font loads.
+function buildSizedLogo(size: number, logo: ReactNode): ReactNode {
+  return createElement(
+    View,
+    {
+      style: [
+        Atoms.align_center,
+        Atoms.justify_center,
+        { width: size * LOGO_WIDTH_EM, height: size * LOGO_HEIGHT_EM },
+      ],
+    },
+    logo,
+  );
+}
 
 export const PLATFORMS: Platform[] = [
   {
