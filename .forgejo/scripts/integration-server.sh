@@ -147,6 +147,16 @@ if [ "$CI_MODE" = true ]; then
   echo "==> Joining job container to the stack network ($NETWORK)…"
   docker network connect "$NETWORK" "$(self_container)"
 
+  if [ -n "${HARBOR_SERVER_IMAGE:-}" ]; then
+    echo "==> Pulling server and server-worker images…"
+    docker pull -q "$HARBOR_SERVER_IMAGE"
+    echo "    images built"
+  else
+    echo "==> Building server and server-worker images…"
+    docker compose build --no-deps --build server server-workers
+    echo "    images pulled"
+  fi
+
   echo "==> Applying migrations via docker compose exec…"
   docker compose run --no-deps -T server /app/migration up
   echo "    migrations applied"
@@ -165,12 +175,7 @@ if [ "$CI_MODE" = true ]; then
   # --no-deps avoids pulling in the `scraper` dependency, which requires
   # NET_ADMIN for its nftables egress firewall and cannot start in CI's
   # Docker-in-Docker environment.
-  if [ -n "${HARBOR_SERVER_IMAGE:-}" ]; then
-    docker pull -q "$HARBOR_SERVER_IMAGE"
-    docker compose up -d --no-deps --no-build --wait server server-workers
-  else
-    docker compose up -d --no-deps --build --wait server server-workers
-  fi
+  docker compose up -d --no-deps --no-build --wait server server-workers
 
   # Resolve the server container's IP on the compose network and use it
   # directly, bypassing Docker embedded DNS (which can be flaky when the job
