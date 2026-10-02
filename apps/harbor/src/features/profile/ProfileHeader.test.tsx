@@ -85,9 +85,6 @@ jest.mock('@/src/common/constants', () => ({
 }));
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   identiconUrl: () => 'u',
-  shortenIdentityId: jest.requireActual(
-    '@/src/common/lib/polycentric-hooks/helpers',
-  ).shortenIdentityId,
   truncateName: (name: string) => name,
   useUsername: () => 'fallback',
 }));
@@ -97,12 +94,8 @@ jest.mock('@/src/common/theme', () => ({
   Atoms: new Proxy({}, { get: () => ({}) }),
 }));
 
-import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import { router } from 'expo-router';
 import { ProfileHeader } from './ProfileHeader';
-
-// What the header renders beside the key icon.
-const SHORT_IDENTITY = shortenIdentityId(IDENTITY);
 
 const baseContext = {
   identityKey: IDENTITY,
@@ -119,7 +112,7 @@ describe('ProfileHeader alias', () => {
       <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
     );
     expect(queryByText('test@domain.com')).not.toBeNull();
-    expect(queryByText(SHORT_IDENTITY)).not.toBeNull();
+    expect(queryByText(IDENTITY)).not.toBeNull();
   });
 
   it('shows only the id when there is no alias', async () => {
@@ -127,7 +120,7 @@ describe('ProfileHeader alias', () => {
     const { queryByText } = await render(
       <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
     );
-    expect(queryByText(SHORT_IDENTITY)).not.toBeNull();
+    expect(queryByText(IDENTITY)).not.toBeNull();
     // No alias-style text rendered.
     expect(queryByText(/@/)).toBeNull();
   });
@@ -144,7 +137,7 @@ describe('ProfileHeader identity key', () => {
       <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
     );
 
-    await fireEvent.press(getByText(SHORT_IDENTITY));
+    await fireEvent.press(getByText(IDENTITY));
     expect(router.push).toHaveBeenCalledWith('/x/identity');
   });
 });
