@@ -5,16 +5,13 @@ import { truncateText } from '@/src/common/util/truncateText';
 export const MAX_NAME_LENGTH = 50;
 export const MAX_BIO_LENGTH = 160;
 
-// What the profile shows next to its name instead of the identity.
-export type KnownAs = { kind: 'platformAccount'; claimId: string };
-
 export type DecodedProfile = {
   name: string | null;
   description: string | null;
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
   alias: string | null;
-  knownAs: KnownAs | null;
+  knownAs: string | null;
   followingCount: number;
   followersCount: number;
 };
@@ -64,25 +61,10 @@ export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
     avatar: latest?.update.avatar ?? null,
     banner: latest?.update.banner ?? null,
     alias: latest?.update.alias ?? null,
-    knownAs: latest?.update.knownAs
-      ? decodeKnownAs(latest.update.knownAs)
-      : null,
+    knownAs: latest?.update.knownAs ? eventKeyId(latest.update.knownAs) : null,
     followingCount: Number(response.followingCount),
     followersCount: Number(response.followersCount),
   };
   decodeCache.set(bytes, decoded);
   return decoded;
-}
-
-function decodeKnownAs(knownAs: v2.KnownAs): KnownAs | null {
-  switch (knownAs.kind.oneofKind) {
-    case 'platformAccount': {
-      const claim = knownAs.kind.platformAccount.claim;
-      return claim
-        ? { kind: 'platformAccount', claimId: eventKeyId(claim) }
-        : null;
-    }
-    default:
-      return null;
-  }
 }

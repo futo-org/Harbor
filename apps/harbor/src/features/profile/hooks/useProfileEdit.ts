@@ -3,7 +3,6 @@ import { toast } from '@/src/common/components/toast/useToast';
 import { resolveAlias, type v2 } from '@polycentric/react-native';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import type { KnownAs } from '../lib/decodeProfile';
 import { publishProfileUpdate } from '../lib/publishProfileUpdate';
 import { profileQueryKey } from './useProfile';
 import { formatImageUploadErrorOrFallback } from '@/src/common/lib/images/ImageUploadError';
@@ -11,7 +10,7 @@ import { formatImageUploadErrorOrFallback } from '@/src/common/lib/images/ImageU
 interface ProfileRef {
   description: string | null;
   alias: string | null;
-  knownAs: KnownAs | null;
+  knownAs: string | null;
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
 }
@@ -25,8 +24,8 @@ export type ProfileEditState = {
   setDescriptionDraft: (value: string) => void;
   aliasDraft: string;
   setAliasDraft: (value: string) => void;
-  knownAsDraft: KnownAs | null;
-  setKnownAsDraft: (value: KnownAs | null) => void;
+  knownAsDraft: string | null;
+  setKnownAsDraft: (value: string | null) => void;
   avatarUri: string | null;
   setAvatarUri: (value: string | null) => void;
   saving: boolean;
@@ -48,7 +47,7 @@ export function useProfileEdit(
   const [nameDraft, setNameDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [aliasDraft, setAliasDraft] = useState('');
-  const [knownAsDraft, setKnownAsDraft] = useState<KnownAs | null>(null);
+  const [knownAsDraft, setKnownAsDraft] = useState<string | null>(null);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [aliasError, setAliasError] = useState<string | null>(null);

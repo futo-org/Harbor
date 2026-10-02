@@ -24,11 +24,6 @@ const IDENTITY =
 const OTHER =
   'f00df0262908a197391c4cbc619eb11cb6867c90915b6e23a3db7a061def8fc3';
 
-const KNOWN_AS_CLAIM = {
-  kind: 'platformAccount',
-  claimId: 'claim-id',
-} as const;
-
 const makeProfile = (alias: string | null = 'me@domain.com') => ({
   description: 'bio',
   alias,
@@ -147,7 +142,7 @@ describe('useProfileEdit known as', () => {
     const { result } = await renderHook(() =>
       useProfileEdit(
         'Alice',
-        { ...makeProfile(), knownAs: KNOWN_AS_CLAIM },
+        { ...makeProfile(), knownAs: 'claim-id' },
         IDENTITY,
       ),
     );
@@ -158,10 +153,7 @@ describe('useProfileEdit known as', () => {
 
     expect(mockPublish).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({
-        description: 'new bio',
-        knownAs: KNOWN_AS_CLAIM,
-      }),
+      expect.objectContaining({ description: 'new bio', knownAs: 'claim-id' }),
     );
   });
 
@@ -169,14 +161,14 @@ describe('useProfileEdit known as', () => {
     const { result } = await renderHook(() =>
       useProfileEdit('Alice', makeProfile(), IDENTITY),
     );
-    await act(async () => result.current.setKnownAsDraft(KNOWN_AS_CLAIM));
+    await act(async () => result.current.setKnownAsDraft('claim-id'));
     await act(async () => {
       await result.current.handleSave();
     });
 
     expect(mockPublish).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ knownAs: KNOWN_AS_CLAIM }),
+      expect.objectContaining({ knownAs: 'claim-id' }),
     );
   });
 });

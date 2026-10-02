@@ -5,7 +5,6 @@ import {
   type PolycentricClient,
   v2,
 } from '@polycentric/react-native';
-import type { KnownAs } from './decodeProfile';
 
 type PublishProfileUpdateInput = {
   name: string;
@@ -17,7 +16,7 @@ type PublishProfileUpdateInput = {
   avatar?: v2.ImageSet | null;
   banner?: v2.ImageSet | null;
   alias?: string | null;
-  knownAs?: KnownAs | null;
+  knownAs?: string | null;
 };
 
 // When the user picked a new avatar, resize + upload every
@@ -47,7 +46,9 @@ export async function publishProfileUpdate(
       avatar: nextAvatar,
       banner: banner ?? undefined,
       alias: trimmedAlias ? trimmedAlias : undefined,
-      knownAs: knownAs ? buildKnownAs(knownAs) : undefined,
+      knownAs: knownAs
+        ? v2.EventKey.fromBinary(hexToBytes(knownAs))
+        : undefined,
     },
   });
 
@@ -56,18 +57,4 @@ export async function publishProfileUpdate(
   const signedEvent = await client.signEvent(event);
   await client.commitEvent(signedEvent, content);
   await client.sync();
-}
-
-function buildKnownAs(knownAs: KnownAs): v2.KnownAs {
-  switch (knownAs.kind) {
-    case 'platformAccount':
-      return {
-        kind: {
-          oneofKind: 'platformAccount',
-          platformAccount: {
-            claim: v2.EventKey.fromBinary(hexToBytes(knownAs.claimId)),
-          },
-        },
-      };
-  }
 }

@@ -354,39 +354,11 @@ export interface ProfileUpdate {
      */
     alias?: string;
     /**
-     * What to show next to the name instead of the identity.
+     * One of the author's own platform VerificationClaims to show instead of the identity.
      *
-     * @generated from protobuf field: optional polycentric.v2.KnownAs known_as = 6
+     * @generated from protobuf field: optional polycentric.v2.EventKey known_as = 6
      */
-    knownAs?: KnownAs;
-}
-/**
- * @generated from protobuf message polycentric.v2.KnownAs
- */
-export interface KnownAs {
-    /**
-     * @generated from protobuf oneof: kind
-     */
-    kind: {
-        oneofKind: "platformAccount";
-        /**
-         * @generated from protobuf field: polycentric.v2.KnownAsPlatformAccount platform_account = 1
-         */
-        platformAccount: KnownAsPlatformAccount;
-    } | {
-        oneofKind: undefined;
-    };
-}
-/**
- * @generated from protobuf message polycentric.v2.KnownAsPlatformAccount
- */
-export interface KnownAsPlatformAccount {
-    /**
-     * One of the author's own platform VerificationClaims.
-     *
-     * @generated from protobuf field: polycentric.v2.EventKey claim = 1
-     */
-    claim?: EventKey;
+    knownAs?: EventKey;
 }
 /**
  * If an uploaded Blob is uploaded to the servers Object Storage and not
@@ -1410,7 +1382,7 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
             { no: 3, name: "banner", kind: "message", T: () => ImageSet },
             { no: 4, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 5, name: "alias", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "known_as", kind: "message", T: () => KnownAs }
+            { no: 6, name: "known_as", kind: "message", T: () => EventKey }
         ]);
     }
     create(value?: PartialMessage<ProfileUpdate>): ProfileUpdate {
@@ -1439,8 +1411,8 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
                 case /* optional string alias */ 5:
                     message.alias = reader.string();
                     break;
-                case /* optional polycentric.v2.KnownAs known_as */ 6:
-                    message.knownAs = KnownAs.internalBinaryRead(reader, reader.uint32(), options, message.knownAs);
+                case /* optional polycentric.v2.EventKey known_as */ 6:
+                    message.knownAs = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.knownAs);
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1469,9 +1441,9 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
         /* optional string alias = 5; */
         if (message.alias !== undefined)
             writer.tag(5, WireType.LengthDelimited).string(message.alias);
-        /* optional polycentric.v2.KnownAs known_as = 6; */
+        /* optional polycentric.v2.EventKey known_as = 6; */
         if (message.knownAs)
-            KnownAs.internalBinaryWrite(message.knownAs, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
+            EventKey.internalBinaryWrite(message.knownAs, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1482,102 +1454,6 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
  * @generated MessageType for protobuf message polycentric.v2.ProfileUpdate
  */
 export const ProfileUpdate = new ProfileUpdate$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class KnownAs$Type extends MessageType<KnownAs> {
-    constructor() {
-        super("polycentric.v2.KnownAs", [
-            { no: 1, name: "platform_account", kind: "message", oneof: "kind", T: () => KnownAsPlatformAccount }
-        ]);
-    }
-    create(value?: PartialMessage<KnownAs>): KnownAs {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.kind = { oneofKind: undefined };
-        if (value !== undefined)
-            reflectionMergePartial<KnownAs>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: KnownAs): KnownAs {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* polycentric.v2.KnownAsPlatformAccount platform_account */ 1:
-                    message.kind = {
-                        oneofKind: "platformAccount",
-                        platformAccount: KnownAsPlatformAccount.internalBinaryRead(reader, reader.uint32(), options, (message.kind as any).platformAccount)
-                    };
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: KnownAs, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* polycentric.v2.KnownAsPlatformAccount platform_account = 1; */
-        if (message.kind.oneofKind === "platformAccount")
-            KnownAsPlatformAccount.internalBinaryWrite(message.kind.platformAccount, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message polycentric.v2.KnownAs
- */
-export const KnownAs = new KnownAs$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class KnownAsPlatformAccount$Type extends MessageType<KnownAsPlatformAccount> {
-    constructor() {
-        super("polycentric.v2.KnownAsPlatformAccount", [
-            { no: 1, name: "claim", kind: "message", T: () => EventKey }
-        ]);
-    }
-    create(value?: PartialMessage<KnownAsPlatformAccount>): KnownAsPlatformAccount {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        if (value !== undefined)
-            reflectionMergePartial<KnownAsPlatformAccount>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: KnownAsPlatformAccount): KnownAsPlatformAccount {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* polycentric.v2.EventKey claim */ 1:
-                    message.claim = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.claim);
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: KnownAsPlatformAccount, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* polycentric.v2.EventKey claim = 1; */
-        if (message.claim)
-            EventKey.internalBinaryWrite(message.claim, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message polycentric.v2.KnownAsPlatformAccount
- */
-export const KnownAsPlatformAccount = new KnownAsPlatformAccount$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Blob$Type extends MessageType<Blob> {
     constructor() {

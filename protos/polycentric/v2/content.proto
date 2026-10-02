@@ -120,19 +120,8 @@ message ProfileUpdate {
   optional string description = 4;
   // A domain-based alias (e.g. user@domain.com) the profile claims for itself.
   optional string alias = 5;
-  // What to show next to the name instead of the identity.
-  optional KnownAs known_as = 6;
-}
-
-message KnownAs {
-  oneof kind {
-    KnownAsPlatformAccount platform_account = 1;
-  }
-}
-
-message KnownAsPlatformAccount {
-  // One of the author's own platform VerificationClaims.
-  EventKey claim = 1;
+  // One of the author's own platform VerificationClaims to show instead of the identity.
+  optional EventKey known_as = 6;
 }
 
 // If an uploaded Blob is uploaded to the servers Object Storage and not

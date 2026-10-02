@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { FetchMode, Query, type v2 } from '@polycentric/react-native';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { decodeProfile, type KnownAs } from '../lib/decodeProfile';
+import { decodeProfile } from '../lib/decodeProfile';
 
 export interface ProfileHookResult {
   /**
@@ -13,7 +13,7 @@ export interface ProfileHookResult {
   avatar: v2.ImageSet | null;
   banner: v2.ImageSet | null;
   alias: string | null;
-  knownAs: KnownAs | null;
+  knownAs: string | null;
   followingCount: number;
   followersCount: number;
   isLoading: boolean;

@@ -123,7 +123,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Other',
     slug: 'website',
-    logo: solidLogo('globe'),
+    logo: solidLogo('ellipsis'),
     color: 'neutral_500',
     location: 'profile',
     placeholder: 'example.com',
