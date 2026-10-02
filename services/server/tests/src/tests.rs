@@ -7,6 +7,7 @@ use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncS
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::identity_service_client::IdentityServiceClient;
+use polycentric_common::models::protos_v2::profile_service_client::ProfileServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
@@ -122,6 +123,13 @@ pub async fn graph_service() -> GraphServiceClient<tonic::transport::Channel> {
 pub async fn identity_service()
 -> IdentityServiceClient<tonic::transport::Channel> {
     IdentityServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn profile_service() -> ProfileServiceClient<tonic::transport::Channel>
+{
+    ProfileServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -475,6 +483,19 @@ impl TestClient {
             fields,
         };
         self.verification_claim(claim, created_at)
+    }
+
+    pub fn verification_verify(
+        &mut self,
+        claim_event_key: EventKey,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(
+            ContentBody::VerificationVerify(VerificationVerify {
+                claim_event_key: Some(claim_event_key),
+            }),
+            created_at,
+        )
     }
 
     #[track_caller]

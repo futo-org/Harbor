@@ -14,6 +14,7 @@ export interface ProfileHookResult {
   banner: v2.ImageSet | null;
   alias: string | null;
   knownAs: string | null;
+  knownAsClaimBundle: v2.VerificationClaimBundle | null;
   followingCount: number;
   followersCount: number;
   isLoading: boolean;
@@ -43,6 +44,7 @@ const EMPTY_PROFILE: Omit<
   banner: null,
   alias: null,
   knownAs: null,
+  knownAsClaimBundle: null,
   followingCount: 0,
   followersCount: 0,
 };
@@ -83,6 +85,7 @@ export function useProfile(
     banner: decoded.banner,
     alias: decoded.alias,
     knownAs: decoded.knownAs,
+    knownAsClaimBundle: decoded.knownAsClaimBundle,
     followingCount: decoded.followingCount,
     followersCount: decoded.followersCount,
     isLoading: query.isLoading,

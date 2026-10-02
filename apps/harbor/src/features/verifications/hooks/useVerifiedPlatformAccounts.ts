@@ -1,5 +1,6 @@
 import type { FetchMode } from '@polycentric/react-native';
 import { useMemo } from 'react';
+import type { ClaimWithStatus } from '../utils/claim-status';
 import { getPlatformFromClaim, type Platform } from '../utils/platforms';
 import { useClaimsList } from './useClaimsList';
 
@@ -29,14 +30,19 @@ export function useVerifiedPlatformAccounts({
     // Until the trusted bot list loads, claim status counts vouches from anyone,
     // so a claim can look verified when no trusted bot verified it.
     if (!verifierBots) return [];
-    return claims.flatMap((claim) => {
-      if (claim.status.verifiedCount === 0) return [];
-      const platform = getPlatformFromClaim(claim.schemaName, claim.fields);
-      const account = claim.fields.find((f) => f.key === 'account')?.value;
-      if (!platform || !account) return [];
-      return [{ claimId: claim.id, platform, account }];
-    });
+    return claims.flatMap((claim) => findVerifiedPlatformAccount(claim) ?? []);
   }, [claims, verifierBots]);
 
   return { verifiedAccounts, isLoading };
+}
+
+/** The platform account `claim` proves, or null when it isn't verified. */
+export function findVerifiedPlatformAccount(
+  claim: ClaimWithStatus,
+): VerifiedPlatformAccount | null {
+  if (claim.status.verifiedCount === 0) return null;
+  const platform = getPlatformFromClaim(claim.schemaName, claim.fields);
+  const account = claim.fields.find((f) => f.key === 'account')?.value;
+  if (!platform || !account) return null;
+  return { claimId: claim.id, platform, account };
 }

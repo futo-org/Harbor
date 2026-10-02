@@ -27,15 +27,37 @@ function profileContent(
   });
 }
 
+function claimContent(): v2.Content {
+  return v2.Content.create({
+    contentBody: {
+      oneofKind: 'verificationClaim',
+      verificationClaim: v2.VerificationClaim.create(),
+    },
+  });
+}
+
+function verifyContent(claimEventKey: v2.EventKey): v2.Content {
+  return v2.Content.create({
+    contentBody: {
+      oneofKind: 'verificationVerify',
+      verificationVerify: v2.VerificationVerify.create({ claimEventKey }),
+    },
+  });
+}
+
 function bundle(content: v2.Content, sequence: number): v2.EventBundle {
-  const event = v2.Event.create({
-    key: v2.EventKey.create({
+  return keyedBundle(
+    content,
+    v2.EventKey.create({
       collection: 3,
       identity: IDENTITY,
       sequence: BigInt(sequence),
     }),
-    createdAt: 1000n,
-  });
+  );
+}
+
+function keyedBundle(content: v2.Content, key: v2.EventKey): v2.EventBundle {
+  const event = v2.Event.create({ key, createdAt: 1000n });
   return v2.EventBundle.create({
     signedEvent: v2.SignedEvent.create({
       eventBytes: v2.Event.toBinary(event),
@@ -50,10 +72,12 @@ function bundle(content: v2.Content, sequence: number): v2.EventBundle {
 function serializedResponse(
   bundles: v2.EventBundle[],
   counts?: { following: number; followers: number },
+  hints: v2.EventBundle[] = [],
 ): Uint8Array {
   return v2.GetProfileResponse.toBinary(
     v2.GetProfileResponse.create({
       eventBundles: bundles,
+      eventHints: hints.map((eventBundle) => ({ eventBundle })),
       followingCount: BigInt(counts?.following ?? 0),
       followersCount: BigInt(counts?.followers ?? 0),
     }),
@@ -94,6 +118,46 @@ describe('decodeProfile', () => {
       bundle(profileContent({ name: 'Bob' }), 1),
     ]);
     expect(decodeProfile(bytes).knownAs).toBeNull();
+  });
+
+  it('collects the known-as claim and its verifies from the hints', () => {
+    const claimKey = v2.EventKey.create({
+      collection: 8,
+      identity: IDENTITY,
+      sequence: 4n,
+    });
+    const otherClaimKey = v2.EventKey.create({ ...claimKey, sequence: 5n });
+    const claim = keyedBundle(claimContent(), claimKey);
+    const verify = keyedBundle(
+      verifyContent(claimKey),
+      v2.EventKey.create({ collection: 8, identity: 'verifier', sequence: 1n }),
+    );
+    const otherVerify = keyedBundle(
+      verifyContent(otherClaimKey),
+      v2.EventKey.create({ collection: 8, identity: 'verifier', sequence: 2n }),
+    );
+    const bytes = serializedResponse(
+      [bundle(profileContent({ knownAs: claimKey }), 1)],
+      undefined,
+      [claim, verify, otherVerify],
+    );
+    expect(decodeProfile(bytes).knownAsClaimBundle).toEqual(
+      v2.VerificationClaimBundle.create({ claim, verifies: [verify] }),
+    );
+  });
+
+  it('ignores a known-as claim of another identity', () => {
+    const claimKey = v2.EventKey.create({
+      collection: 8,
+      identity: 'someone-else',
+      sequence: 4n,
+    });
+    const bytes = serializedResponse(
+      [bundle(profileContent({ knownAs: claimKey }), 1)],
+      undefined,
+      [keyedBundle(claimContent(), claimKey)],
+    );
+    expect(decodeProfile(bytes).knownAsClaimBundle).toBeNull();
   });
 
   it('uses the highest-sequence update (latest wins)', () => {

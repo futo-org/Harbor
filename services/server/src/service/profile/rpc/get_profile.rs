@@ -9,6 +9,7 @@ use crate::service::identity::service::{
 };
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{GetProfileRequest, GetProfileResponse};
+use polycentric_common::models::collections;
 use tonic::Status;
 
 pub async fn handle(
@@ -25,12 +26,19 @@ pub async fn handle(
         GraphRepository::count_following(ctx, &req.identity),
         GraphRepository::count_followers(ctx, &req.identity),
     )?;
+    // Split off the known-as claim events that come with the profile events.
+    let (profile_rows, known_as_rows): (Vec<_>, Vec<_>) =
+        profile_rows.into_iter().partition(|(event, _)| {
+            event.collection == collections::PROFILE as i16
+        });
 
     let mut event_bundles = rows_into_bundles(profile_rows);
     attach_proofs(ctx, &mut event_bundles).await?;
 
-    // The identity's key chain, so clients can validate the bundles.
-    let event_hints = rows_into_hints(identity_rows);
+    // The identity's key chain, so clients can validate the bundles, and the
+    // known-as claim events.
+    let event_hints =
+        rows_into_hints(identity_rows.into_iter().chain(known_as_rows));
 
     Ok(GetProfileResponse {
         event_bundles,

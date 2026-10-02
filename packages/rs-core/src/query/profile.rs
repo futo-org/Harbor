@@ -2,17 +2,19 @@ use std::sync::Arc;
 
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
-    GetProfileRequest, GetProfileResponse, profile_service_client::ProfileServiceClient,
+    Content, EventBundle, EventHint, GetProfileRequest, GetProfileResponse, content::ContentBody,
+    profile_service_client::ProfileServiceClient,
 };
 use prost::Message;
 
 use crate::lock::LockRecover;
-use crate::query::event::merge::{merge_event_bundles, merge_event_hints};
+use crate::query::event::merge::{decode_event, merge_event_bundles, merge_event_hints};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{
     FetchMode, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
 };
 use crate::rx::observable::Observable;
+use crate::store::keys::EventKey;
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetProfileArgs {
@@ -50,26 +52,52 @@ fn merge_profile_responses(
 
 /// Encode `identity`'s `PROFILE` collection events out of the local
 /// event store, returning `None` when the store has nothing for this
-/// identity. The follow counters are server aggregates, so local
+/// identity. The known-as claim and its verifies go in the hints, as the
+/// server sends them. The follow counters are server aggregates, so local
 /// snapshots report zero until a server responds.
 fn local_profile_bytes(query_client: &QueryClient<Vec<u8>>, identity: &str) -> Option<Vec<u8>> {
-    let bundles = query_client
-        .client()
-        .lock_recover()
+    let client = query_client.client().lock_recover();
+    let bundles = client
         .list_valid_events(identity, collections::PROFILE)
         .unwrap_or_default();
     if bundles.is_empty() {
         return None;
     }
+    let mut event_hints: Vec<EventHint> = decode_known_as_key(&bundles)
+        .map(|claim| client.claim_and_verify_bundles(&claim))
+        .unwrap_or_default()
+        .into_iter()
+        .map(|bundle| EventHint {
+            event_bundle: Some(bundle),
+        })
+        .collect();
+    retain_validated_hints(&client, &mut event_hints);
     Some(
         GetProfileResponse {
             event_bundles: bundles,
-            event_hints: Vec::new(),
+            event_hints,
             following_count: 0,
             followers_count: 0,
         }
         .encode_to_vec(),
     )
+}
+
+/// The claim key the highest-sequence profile update names as its known-as.
+fn decode_known_as_key(bundles: &[EventBundle]) -> Option<EventKey> {
+    let (_, latest_update) = bundles
+        .iter()
+        .filter_map(|bundle| {
+            let sequence = decode_event(bundle)?.key?.sequence;
+            let serialized = bundle.serialized_content.as_ref()?;
+            let content = Content::decode(serialized.content_bytes.as_slice()).ok()?;
+            match content.content_body {
+                Some(ContentBody::ProfileUpdate(update)) => Some((sequence, update)),
+                _ => None,
+            }
+        })
+        .max_by_key(|(sequence, _)| *sequence)?;
+    EventKey::from_proto_key(latest_update.known_as?).ok()
 }
 
 /// Fetch `identity`'s profile (its `PROFILE` collection events plus the

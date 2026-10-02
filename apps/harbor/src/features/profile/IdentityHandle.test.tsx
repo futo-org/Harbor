@@ -11,21 +11,23 @@ const GITHUB_ACCOUNT = {
   account: 'alice-gh',
 } as unknown as VerifiedPlatformAccount;
 
-// Profile fields and verified accounts the tag reads; set per test.
-let mockProfile: { knownAs: string | null; alias: string | null };
-let mockVerifiedAccounts: VerifiedPlatformAccount[];
+const CLAIM_BUNDLE = {};
+
+// Profile fields and the account the known-as claim proves; set per test.
+let mockProfile: { knownAsClaimBundle: object | null; alias: string | null };
+let mockVerifiedAccount: VerifiedPlatformAccount | null;
 
 jest.mock('./hooks/useProfile', () => ({
   useProfile: () => mockProfile,
 }));
-jest.mock('../verifications/hooks/useVerifiedPlatformAccounts', () => ({
-  useVerifiedPlatformAccounts: () => ({
-    verifiedAccounts: mockVerifiedAccounts,
-    isLoading: false,
-  }),
+jest.mock('../verifications/hooks/useVerifierIdentities', () => ({
+  useVerifierIdentities: () => new Set(['verifier-bot']),
 }));
-jest.mock('@polycentric/react-native', () => ({
-  FetchMode: { OfflineFirst: 'offline-first' },
+jest.mock('../verifications/utils/claim-status', () => ({
+  decodeVerificationClaimBundle: () => ({}),
+}));
+jest.mock('../verifications/hooks/useVerifiedPlatformAccounts', () => ({
+  findVerifiedPlatformAccount: () => mockVerifiedAccount,
 }));
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shortenIdentityId: (id: string) => `short-${id}`,
@@ -41,45 +43,52 @@ const renderTag = () =>
   );
 
 beforeEach(() => {
-  mockVerifiedAccounts = [GITHUB_ACCOUNT];
+  mockVerifiedAccount = GITHUB_ACCOUNT;
 });
 
 describe('IdentityHandle', () => {
   it('shows the known-as account over the alias', async () => {
-    mockProfile = { knownAs: 'claim-1', alias: 'alice@example.com' };
+    mockProfile = {
+      knownAsClaimBundle: CLAIM_BUNDLE,
+      alias: 'alice@example.com',
+    };
     const { getByText, queryByText } = await renderTag();
     expect(getByText('alice-gh')).toBeTruthy();
     expect(queryByText('alice@example.com')).toBeNull();
   });
 
   it('shows the alias when known-as is not set', async () => {
-    mockProfile = { knownAs: null, alias: 'alice@example.com' };
+    mockProfile = { knownAsClaimBundle: null, alias: 'alice@example.com' };
     const { getByText } = await renderTag();
     expect(getByText('alice@example.com')).toBeTruthy();
   });
 
   it('shows the alias when the known-as claim is no longer verified', async () => {
-    mockProfile = { knownAs: 'claim-1', alias: 'alice@example.com' };
-    mockVerifiedAccounts = [];
+    mockProfile = {
+      knownAsClaimBundle: CLAIM_BUNDLE,
+      alias: 'alice@example.com',
+    };
+    mockVerifiedAccount = null;
     const { getByText } = await renderTag();
     expect(getByText('alice@example.com')).toBeTruthy();
   });
 
   it('shows the alias when the known-as claim is for the Other platform', async () => {
-    mockProfile = { knownAs: 'claim-1', alias: 'alice@example.com' };
-    mockVerifiedAccounts = [
-      {
-        ...GITHUB_ACCOUNT,
-        platform: { ...GITHUB_ACCOUNT.platform, generic: true },
-      },
-    ];
+    mockProfile = {
+      knownAsClaimBundle: CLAIM_BUNDLE,
+      alias: 'alice@example.com',
+    };
+    mockVerifiedAccount = {
+      ...GITHUB_ACCOUNT,
+      platform: { ...GITHUB_ACCOUNT.platform, generic: true },
+    };
     const { getByText, queryByText } = await renderTag();
     expect(getByText('alice@example.com')).toBeTruthy();
     expect(queryByText('alice-gh')).toBeNull();
   });
 
   it('shows the short id without known-as or alias', async () => {
-    mockProfile = { knownAs: null, alias: null };
+    mockProfile = { knownAsClaimBundle: null, alias: null };
     const { getByText } = await renderTag();
     expect(getByText(`short-${IDENTITY}`)).toBeTruthy();
   });

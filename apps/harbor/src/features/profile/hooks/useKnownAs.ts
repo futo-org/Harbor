@@ -1,8 +1,10 @@
-import { FetchMode } from '@polycentric/react-native';
+import { useMemo } from 'react';
+import { useVerifierIdentities } from '../../verifications/hooks/useVerifierIdentities';
 import {
-  useVerifiedPlatformAccounts,
+  findVerifiedPlatformAccount,
   type VerifiedPlatformAccount,
 } from '../../verifications/hooks/useVerifiedPlatformAccounts';
+import { decodeVerificationClaimBundle } from '../../verifications/utils/claim-status';
 import { useProfile } from './useProfile';
 
 export function useKnownAs(identity: string | null): {
@@ -10,25 +12,24 @@ export function useKnownAs(identity: string | null): {
   alias: string | null;
   isLoading: boolean;
 } {
-  const { knownAs, alias } = useProfile(identity);
-  const { verifiedAccounts, isLoading } = useVerifiedPlatformAccounts({
-    identity: identity ?? undefined,
-    // Fetch only for users with knownAs set, at most once per users per session
-    enabled: !!knownAs,
-    fetchMode: FetchMode.OfflineFirst,
-  });
+  const { knownAsClaimBundle, alias } = useProfile(identity);
+  const verifierBots = useVerifierIdentities();
 
-  if (!knownAs) return { knownAs: null, alias, isLoading: false };
+  const knownAs = useMemo(() => {
+    // Until the trusted bot list loads, verifies from anyone would count.
+    if (!knownAsClaimBundle || !verifierBots) return null;
+    const claim = decodeVerificationClaimBundle(
+      knownAsClaimBundle,
+      verifierBots,
+    );
+    const account = claim && findVerifiedPlatformAccount(claim);
+    // "Other" accounts are arbitrary websites, so they can't be a known-as.
+    return account && !account.platform.generic ? account : null;
+  }, [knownAsClaimBundle, verifierBots]);
 
   return {
-    knownAs:
-      verifiedAccounts.find(
-        (a) =>
-          a.claimId === knownAs &&
-          // "Other" accounts are arbitrary websites, so they can't be a known-as.
-          !a.platform.generic,
-      ) ?? null,
+    knownAs,
     alias,
-    isLoading,
+    isLoading: !!knownAsClaimBundle && !verifierBots,
   };
 }

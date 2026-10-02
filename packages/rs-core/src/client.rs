@@ -43,6 +43,7 @@ pub struct PolycentricClient {
     content_store: ContentStore,
     meta_store: MetaStore,
     label_store: LabelStore,
+    verifies_by_claim: LabelStore,
     identity_store: IdentityStore,
     pairing_store: PairingStore,
 }
@@ -208,6 +209,17 @@ impl PolycentricClient {
             .collect()
     }
 
+    /// Get the event bundles for `claim` and the locally-known verify events of it.
+    pub fn claim_and_verify_bundles(&self, claim: &EventKey) -> Vec<EventBundle> {
+        std::iter::once(claim)
+            .chain(self.verifies_by_claim.get(claim))
+            .filter_map(|key| {
+                let signed_event = self.event_store.get(key)?;
+                self.bundle_for(key, signed_event, true).ok()
+            })
+            .collect()
+    }
+
     pub fn find_content_from_digest(&self, digest: &ContentDigest) -> Option<SerializedContent> {
         self.content_store
             .get(digest)
@@ -305,6 +317,17 @@ impl PolycentricClient {
 
                     if let Some(target) = target {
                         self.label_store.insert(target, &key);
+                    }
+                } else if key.collection == collections::VERIFICATIONS {
+                    let claim = decoded_content
+                        .and_then(|content| match content.content_body {
+                            Some(ContentBody::VerificationVerify(verify)) => verify.claim_event_key,
+                            _ => None,
+                        })
+                        .and_then(|claim| EventKey::from_proto_key(claim).ok());
+
+                    if let Some(claim) = claim {
+                        self.verifies_by_claim.insert(claim, &key);
                     }
                 }
                 if let Some(meta) = bundle.meta {

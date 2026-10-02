@@ -3,8 +3,11 @@
 //! so the pipeline's hydrate stage can fan them out in parallel.
 
 use crate::data::EventWithContentRow;
+use crate::data::hydration::to_target_event_key;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::ServiceContext;
+use crate::service::events::TargetEventKey;
+use crate::service::events::tombstone::{self, HasEventKey};
 use crate::service::feeds::repository::{self as FeedsRepository};
 use crate::service::identity::chain;
 use crate::service::identity::repository::{
@@ -12,11 +15,17 @@ use crate::service::identity::repository::{
 };
 use crate::service::proofs::cache::ProofCache;
 use crate::service::proto::{ContentDigest, PublicKey};
+use crate::service::verifications::repository::{
+    Query as VerificationsRepository, VerificationEventDto,
+};
 use polycentric_common::models::collections;
+use polycentric_common::models::protos_v2::Content;
+use polycentric_common::models::protos_v2::content::ContentBody;
+use prost::Message;
 use sea_orm::{
     ConnectionTrait, DatabaseConnection, DbErr, RuntimeErr, TransactionTrait,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 use tonic::Status;
 
@@ -196,16 +205,98 @@ pub async fn list_identity_events(
 }
 
 /// Fetch the latest profile event (display name, avatar, banner)
-/// for each identity in `identities`.
+/// for each identity in `identities`, followed by the events clients need to
+/// render each profile's known-as claim (see [`list_known_as_events`]).
 pub async fn list_profile_events(
     ctx: &ServiceContext,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
-    FeedsRepository::Query::list_latest_profiles_for_identities(
-        &ctx.ro_db, identities,
-    )
-    .await
-    .map_err(map_db_err)
+    let mut profile_events =
+        FeedsRepository::Query::list_latest_profiles_for_identities(
+            &ctx.ro_db, identities,
+        )
+        .await
+        .map_err(map_db_err)?;
+    let known_as_events = list_known_as_events(ctx, &profile_events).await?;
+    profile_events.extend(known_as_events);
+    Ok(profile_events)
+}
+
+/// The known-as claims referenced by `profile_events`, their verifies, and
+/// the verifiers' identity chains, without deleted claims and verifies.
+async fn list_known_as_events(
+    ctx: &ServiceContext,
+    profile_events: &[EventWithContentRow],
+) -> Result<Vec<EventWithContentRow>, Status> {
+    let claim_keys: Vec<TargetEventKey> = profile_events
+        .iter()
+        .filter_map(decode_known_as_key)
+        .collect();
+    if claim_keys.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let claims_fut = async {
+        VerificationsRepository::list_claim_events_by_keys(
+            &ctx.ro_db,
+            &claim_keys,
+        )
+        .await
+        .map_err(map_db_err)
+    };
+    let verifies_fut = async {
+        VerificationsRepository::list_verify_events_for_claims(
+            &ctx.ro_db,
+            &claim_keys,
+        )
+        .await
+        .map_err(map_db_err)
+    };
+    let (claims, verifies) = tokio::try_join!(claims_fut, verifies_fut)?;
+
+    let fetched_keys: Vec<TargetEventKey> = claims
+        .iter()
+        .map(HasEventKey::event_key)
+        .chain(verifies.iter().map(HasEventKey::event_key))
+        .collect();
+    let verifier_identities: HashSet<String> = verifies
+        .iter()
+        .map(|verify| verify.event.identity.clone())
+        .collect();
+    let (deletes_by_target, verifier_identity_events) = tokio::try_join!(
+        tombstone::validated_tombstones(ctx, &fetched_keys),
+        list_identity_events(ctx, verifier_identities.into_iter().collect()),
+    )?;
+
+    let live_claims: Vec<EventWithContentRow> = claims
+        .into_iter()
+        .filter(|claim| !deletes_by_target.contains_key(&claim.event_key()))
+        .collect();
+    let live_claim_keys: HashSet<TargetEventKey> =
+        live_claims.iter().map(HasEventKey::event_key).collect();
+    let live_verifies = verifies
+        .into_iter()
+        .filter(|verify| {
+            live_claim_keys.contains(&verify.claim_key)
+                && !deletes_by_target.contains_key(&verify.event_key())
+        })
+        .map(VerificationEventDto::into_row);
+
+    Ok(live_claims
+        .into_iter()
+        .chain(live_verifies)
+        .chain(verifier_identity_events)
+        .collect())
+}
+
+/// The claim key a profile update row names as its known-as, if any.
+fn decode_known_as_key(row: &EventWithContentRow) -> Option<TargetEventKey> {
+    let content = row.1.as_ref()?;
+    let decoded = Content::decode(content.serialized_bytes.as_slice()).ok()?;
+    let Some(ContentBody::ProfileUpdate(update)) = decoded.content_body else {
+        return None;
+    };
+    to_target_event_key(update.known_as.as_ref()?)
 }
 
 /// Pass our the identity events through to the proof cache
