@@ -1,9 +1,7 @@
 import { IdentityTag } from '@/src/common/components/primitives/PillChip';
 import { Text, VARIANT_CONFIG } from '@/src/common/components/primitives/Text';
-import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, typography, useTheme } from '@/src/common/theme';
 import { View } from 'react-native';
-import Animated from 'react-native-reanimated';
 import type { VerifiedPlatformAccount } from '../verifications/hooks/useVerifiedPlatformAccounts';
 import { useKnownAs } from './hooks/useKnownAs';
 
@@ -19,7 +17,12 @@ export function IdentityHandle({
   const { knownAs, alias, isLoading } = useKnownAs(identity);
 
   if (isLoading && !knownAs)
-    return <IdentityHandleSkeleton variant={variant} />;
+    return (
+      <View
+        // Take the text's line height, so the row doesn't resize once it resolves.
+        style={{ height: typography.lineHeight[VARIANT_CONFIG[variant].size] }}
+      />
+    );
 
   return (
     <IdentityHandleLabel
@@ -91,26 +94,5 @@ export function KnownAsLabel({
         {knownAs.account}
       </Text>
     </View>
-  );
-}
-
-function IdentityHandleSkeleton({
-  variant,
-}: {
-  variant: IdentityHandleVariant;
-}) {
-  const animatedStyle = useShimmerOpacity();
-
-  return (
-    <Animated.View
-      style={[
-        animatedStyle,
-        Atoms.justify_center,
-        // Take the text's line height, so the row doesn't resize once it resolves.
-        { height: typography.lineHeight[VARIANT_CONFIG[variant].size] },
-      ]}
-    >
-      <Block width={80} />
-    </Animated.View>
   );
 }

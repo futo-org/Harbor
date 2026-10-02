@@ -14,7 +14,11 @@ const GITHUB_ACCOUNT = {
 const CLAIM_BUNDLE = { claim: {} };
 
 // Profile fields and the account the known-as claim proves; set per test.
-let mockProfile: { knownAsClaimBundle: object | null; alias: string | null };
+let mockProfile: {
+  knownAsClaimBundle: object | null;
+  alias: string | null;
+  isLoading?: boolean;
+};
 let mockVerifiedAccount: VerifiedPlatformAccount | null;
 let mockVerifierBots: Set<string> | undefined;
 let mockCurrentIdentity: string | null;
@@ -78,6 +82,12 @@ describe('IdentityHandle', () => {
     mockVerifierBots = undefined;
     const { getByText } = await renderTag();
     expect(getByText('alice-gh')).toBeTruthy();
+  });
+
+  it('hides the short id while the profile loads', async () => {
+    mockProfile = { knownAsClaimBundle: null, alias: null, isLoading: true };
+    const { queryByText } = await renderTag();
+    expect(queryByText(`short-${IDENTITY}`)).toBeNull();
   });
 
   it('shows the alias when known-as is not set', async () => {
