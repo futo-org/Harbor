@@ -1,7 +1,6 @@
-import { Text } from '@/src/common/components';
 import Topbar from '@/src/common/components/layout/Topbar';
-import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
+import { AuthorTag } from '@/src/features/profile/AuthorTag';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
 import { FetchMode } from '@polycentric/react-native';
@@ -10,9 +9,8 @@ import { View } from 'react-native';
 /** Names whose follow lists these are. Shared by both pages, so it sits above
  *  the tab bar rather than inside either list. */
 export function FollowListTopbar({ identityId }: { identityId?: string }) {
-  const profile = useProfile(identityId ?? null, {
-    fetchMode: FetchMode.Default,
-  });
+  // Refetch the profile; the name and subtitle read it from the shared cache entry.
+  useProfile(identityId ?? null, { fetchMode: FetchMode.Default });
 
   return (
     <Topbar
@@ -22,15 +20,11 @@ export function FollowListTopbar({ identityId }: { identityId?: string }) {
           <View style={Atoms.max_w_full}>
             <Username identity={identityId} variant="title" />
           </View>
-          <Text
-            variant="small"
-            color="neutral_500"
-            numberOfLines={1}
-            style={Atoms.max_w_full}
-          >
-            {identityId ? shortenIdentityId(identityId) : ''}
-            {profile.alias ? ` · ${profile.alias}` : ''}
-          </Text>
+          {identityId ? (
+            <View style={Atoms.max_w_full}>
+              <AuthorTag identity={identityId} variant="small" />
+            </View>
+          ) : null}
         </View>
       }
     />

@@ -1,13 +1,11 @@
 import { Text } from '@/src/common/components';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
-import {
-  type AvatarSizePreset,
-  IdentityTag,
-} from '@/src/common/components/primitives';
+import type { AvatarSizePreset } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { timeAgo } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms } from '@/src/common/theme';
+import { AuthorTag } from '@/src/features/profile/AuthorTag';
 import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
@@ -44,7 +42,7 @@ export function ClaimAuthorLine({
           fontWeight="bold"
           style={hovered && Atoms.text_underline}
         />
-        <IdentityTag identity={identity} />
+        <AuthorTag identity={identity} />
       </Pressable>
       <Text variant="secondary" color="neutral_500" fontWeight="bold">
         ·

@@ -157,6 +157,16 @@ jest.mock('@/src/features/profile/hooks/useProfile', () => ({
   useProfile: () => ({ name: 'Alice', alias: mockProfileAlias }),
 }));
 
+jest.mock(
+  '@/src/features/verifications/hooks/useVerifiedPlatformAccounts',
+  () => ({
+    useVerifiedPlatformAccounts: () => ({
+      verifiedAccounts: [],
+      isLoading: false,
+    }),
+  }),
+);
+
 jest.mock('./FollowButton', () => {
   const react = require('react');
   const { Text } = require('react-native');
