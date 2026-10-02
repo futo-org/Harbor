@@ -10,12 +10,12 @@ use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::{
-    Block, Content, ContentDigest, ContentDigestType, Delete, Event,
-    EventBundle, EventKey, FieldDef, FieldKind, Follow, Identity, KeyType,
-    Labels, Post, PostReply, ProfileUpdate, PublicKey, PutEventsRequest,
-    Reaction, Report, ReportCategory, Repost, SerializedContent,
-    SerializedVerificationSchema, SignedEvent, VectorClock, VerificationClaim,
-    VerificationSchema,
+    Application, Block, Content, ContentDigest, ContentDigestType, Delete,
+    Event, EventBundle, EventKey, FieldDef, FieldKind, Follow, Identity,
+    KeyType, Labels, Post, PostReply, ProfileUpdate, PublicKey,
+    PutEventsRequest, Reaction, Report, ReportCategory, Repost,
+    SerializedContent, SerializedVerificationSchema, SignedEvent, VectorClock,
+    VerificationClaim, VerificationSchema,
 };
 use prost::Message;
 
@@ -380,7 +380,12 @@ impl Client {
             previous_root,
             content_digest: Some(digest),
             created_at,
-            application: None,
+            application: Some(Application {
+                name: "Server Performance Tests".to_owned(),
+                id: "perf.tests.social.harbor".to_owned(),
+                version: "0.0.1".to_owned(),
+                url: "https://code.futo.org/harbor/harbor".to_owned(),
+            }),
         }
     }
 
