@@ -382,7 +382,7 @@ impl Client {
             created_at,
             application: Some(Application {
                 name: "Server Performance Tests".to_owned(),
-                id: "perf.tests.social.harbor".to_owned(),
+                id: "social.harbor.perftests".to_owned(),
                 version: "0.0.1".to_owned(),
                 url: "https://code.futo.org/harbor/harbor".to_owned(),
             }),
