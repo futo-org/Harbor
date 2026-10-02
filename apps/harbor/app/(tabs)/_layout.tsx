@@ -1,12 +1,14 @@
+import { Routes } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 export default function TabsLayout() {
   const { theme } = useTheme();
   const { currentIdentity, isLoading, isReady } = usePolycentricContext();
+  const pathname = usePathname();
 
   // Stay permissive until the identity store has settled — pruning routes
   // during startup would break deep links that resolve after login state.
@@ -41,6 +43,8 @@ export default function TabsLayout() {
   return (
     <NativeTabs
       backBehavior="history"
+      // iOS: The compose tab is a full-screen composer; keep the tab bar off it.
+      hidden={pathname === Routes.tabs.compose}
       minimizeBehavior="never"
       backgroundColor={theme.palette.neutral_0}
       iconColor={theme.palette.neutral_900}
