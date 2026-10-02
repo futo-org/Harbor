@@ -15,7 +15,11 @@ export function useKnownAs(identity: string | null): {
   alias: string | null;
   isLoading: boolean;
 } {
-  const { knownAsClaimBundle, alias } = useProfile(identity);
+  const {
+    knownAsClaimBundle,
+    alias,
+    isLoading: isProfileLoading,
+  } = useProfile(identity);
   const verifierBots = useVerifierIdentities();
   const { isCurrentIdentity } = useCurrentIdentity();
   const isOwnIdentity = isCurrentIdentity(identity);
@@ -45,6 +49,8 @@ export function useKnownAs(identity: string | null): {
   return {
     knownAs,
     alias,
-    isLoading: !!knownAsClaimBundle && !isOwnIdentity && !verifierBots,
+    isLoading:
+      isProfileLoading ||
+      (!!knownAsClaimBundle && !isOwnIdentity && !verifierBots),
   };
 }
