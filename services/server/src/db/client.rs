@@ -36,7 +36,7 @@ async fn create_pool(
 ) -> Result<DatabaseConnection, sea_orm::DbErr> {
     let mut opt =
         ConnectOptions::new(with_connection_options(url, durable_commits));
-    opt.set_application_name("Harbor-server")
+    opt.set_application_name("harbor-server")
         .set_schema_search_path("public")
         .max_connections(max)
         .min_connections(5)
