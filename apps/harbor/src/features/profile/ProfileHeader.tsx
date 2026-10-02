@@ -12,12 +12,14 @@ import {
 import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
+import { useKnownAs } from '@/src/features/profile/hooks/useKnownAs';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
 import { router, type Href } from 'expo-router';
 import { memo, useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import FollowButton from '../follow/FollowButton';
+import { KnownAsLabel } from './AuthorTag';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
 import ProfileShareSheet from './ProfileShareSheet';
@@ -34,6 +36,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { identityKey, isSelf, alias } = useProfileContext();
 
   const profile = useProfile(identityKey);
+  const { knownAs } = useKnownAs(identityKey);
   const [showShareSheet, setShowShareSheet] = useState<boolean>(false);
 
   const displayKey = identityKey ? identityKey.slice(0, 64) : '...';
@@ -163,6 +166,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
           <IdentityKeyText value={displayKey} />
         </Pressable>
         {alias ? <AliasLabel alias={alias} /> : null}
+        {knownAs ? <KnownAsLabel knownAs={knownAs} /> : null}
         {profile.description ? (
           <View style={Atoms.mt_sm}>
             <Text variant="body" fontSize="sm" color="neutral_1000">

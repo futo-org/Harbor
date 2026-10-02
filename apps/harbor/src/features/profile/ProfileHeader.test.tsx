@@ -36,6 +36,9 @@ jest.mock('./hooks/useProfile', () => ({
   }),
 }));
 
+jest.mock('./hooks/useKnownAs', () => ({
+  useKnownAs: () => ({ knownAs: null, alias: null, isLoading: false }),
+}));
 jest.mock('@polycentric/react-native', () => ({ FetchMode: { Default: 'd' } }));
 jest.mock('@rn-primitives/portal', () => ({
   Portal: ({ children }: { children: unknown }) => children,

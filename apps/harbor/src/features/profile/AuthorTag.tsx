@@ -41,8 +41,6 @@ export function AuthorTagView({
   alias: string | null;
   variant?: AuthorTagVariant;
 }) {
-  const { theme } = useTheme();
-
   if (!knownAs && alias) {
     return (
       <Text
@@ -57,6 +55,18 @@ export function AuthorTagView({
   }
 
   if (!knownAs) return <IdentityTag identity={identity} variant={variant} />;
+
+  return <KnownAsLabel knownAs={knownAs} variant={variant} />;
+}
+
+export function KnownAsLabel({
+  knownAs,
+  variant = 'secondary',
+}: {
+  knownAs: VerifiedPlatformAccount;
+  variant?: AuthorTagVariant;
+}) {
+  const { theme } = useTheme();
 
   return (
     <View
