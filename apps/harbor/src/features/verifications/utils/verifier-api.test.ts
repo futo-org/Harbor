@@ -79,6 +79,17 @@ describe('platformVerifiers', () => {
   });
 });
 
+describe('verifierIdentities', () => {
+  it('keeps the resolved identities for synchronous reads', async () => {
+    fetchMock.mockResolvedValue(response({ identity: 'bot' }));
+
+    const api = new VerifierApi([A]);
+    expect(api.loadedVerifierIdentities).toBeUndefined();
+    await api.verifierIdentities();
+    expect(api.loadedVerifierIdentities).toEqual(new Set(['bot']));
+  });
+});
+
 describe('getClaimFieldsByUrl', () => {
   it('returns fields from the first server that answers', async () => {
     fetchMock.mockResolvedValue(response([{ key: 0, value: 'futo' }]));

@@ -36,6 +36,8 @@ export class VerifierApi {
   // Cached for the session.
   private verifiersPromise?: Promise<Map<string, Set<string>>>;
   private identitiesPromise?: Promise<Set<string>>;
+  // The resolved `verifierIdentities()`, so later readers don't wait a tick.
+  loadedVerifierIdentities?: Set<string>;
 
   constructor(servers: string[]) {
     this.servers = servers;
@@ -86,7 +88,11 @@ export class VerifierApi {
    * throws only when none answers, and retries on the next call.
    */
   verifierIdentities(): Promise<Set<string>> {
-    this.identitiesPromise ??= this.fetchVerifierIdentities().catch(
+    this.identitiesPromise ??= this.fetchVerifierIdentities().then(
+      (identities) => {
+        this.loadedVerifierIdentities = identities;
+        return identities;
+      },
       (e: unknown) => {
         this.identitiesPromise = undefined; // Retry on the next call.
         throw e;

@@ -6,7 +6,9 @@ import { verifierApi } from '../utils/verifier-api';
  * while they load (or when no server is reachable).
  */
 export function useVerifierIdentities(): Set<string> | undefined {
-  const [identities, setIdentities] = useState<Set<string>>();
+  const [identities, setIdentities] = useState(
+    () => verifierApi.loadedVerifierIdentities,
+  );
 
   useEffect(() => {
     let cancelled = false;
