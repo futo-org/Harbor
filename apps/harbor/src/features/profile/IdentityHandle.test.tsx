@@ -31,12 +31,12 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shortenIdentityId: (id: string) => `short-${id}`,
 }));
 
-import { AuthorTag } from './AuthorTag';
+import { IdentityHandle } from './IdentityHandle';
 
 const renderTag = () =>
   render(
     <ThemeProvider>
-      <AuthorTag identity={IDENTITY} />
+      <IdentityHandle identity={IDENTITY} />
     </ThemeProvider>,
   );
 
@@ -44,7 +44,7 @@ beforeEach(() => {
   mockVerifiedAccounts = [GITHUB_ACCOUNT];
 });
 
-describe('AuthorTag', () => {
+describe('IdentityHandle', () => {
   it('shows the known-as account over the alias', async () => {
     mockProfile = { knownAs: 'claim-1', alias: 'alice@example.com' };
     const { getByText, queryByText } = await renderTag();

@@ -1,6 +1,6 @@
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { AuthorTag } from './AuthorTag';
+import { IdentityHandle } from './IdentityHandle';
 import { useProfile, type ProfileHookResult } from './hooks/useProfile';
 import { Username } from './Username';
 import type { FetchMode } from '@polycentric/react-native';
@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
 
 /**
- * A pressable identity row: avatar, name, and `AuthorTag` subtitle,
+ * A pressable identity row: avatar, name, and `IdentityHandle` subtitle,
  * with an optional trailing element. Runs edge to edge (the hover
  * background spans the full width) with the standard horizontal inset.
  */
@@ -71,7 +71,7 @@ export function ProfileRow({
             fontWeight="semibold"
             selectable={false}
           />
-          <AuthorTag identity={identity} variant="small" />
+          <IdentityHandle identity={identity} variant="small" />
         </View>
         {trailing}
       </View>

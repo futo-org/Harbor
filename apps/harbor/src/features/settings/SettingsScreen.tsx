@@ -21,7 +21,7 @@ import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
-import { AuthorTag } from '@/src/features/profile/AuthorTag';
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { Username } from '@/src/features/profile/Username';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
@@ -207,7 +207,7 @@ function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
           variant="subtitle"
           fontWeight="semibold"
         />
-        <AuthorTag identity={identityKey} />
+        <IdentityHandle identity={identityKey} />
       </View>
     </View>
   );

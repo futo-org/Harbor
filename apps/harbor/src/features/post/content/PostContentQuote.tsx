@@ -8,7 +8,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
-import { AuthorTag } from '@/src/features/profile/AuthorTag';
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { Username } from '@/src/features/profile/Username';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
@@ -137,7 +137,7 @@ function AuthorRow({ post }: { post: PostData }) {
         variant="secondary"
         fontWeight="bold"
       />
-      <AuthorTag identity={post.identity} />
+      <IdentityHandle identity={post.identity} />
       {time ? (
         <>
           <Text variant="secondary" color="neutral_500" fontWeight="bold">

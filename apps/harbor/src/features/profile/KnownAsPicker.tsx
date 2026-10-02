@@ -7,7 +7,7 @@ import {
   useVerifiedPlatformAccounts,
   type VerifiedPlatformAccount,
 } from '../verifications/hooks/useVerifiedPlatformAccounts';
-import { AuthorTagView } from './AuthorTag';
+import { IdentityHandleLabel } from './IdentityHandle';
 
 export function KnownAsPicker({
   identityKey,
@@ -137,7 +137,11 @@ function AuthorLine({
       >
         {name}
       </Text>
-      <AuthorTagView identity={identityKey} knownAs={knownAs} alias={alias} />
+      <IdentityHandleLabel
+        identity={identityKey}
+        knownAs={knownAs}
+        alias={alias}
+      />
     </View>
   );
 }

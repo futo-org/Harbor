@@ -19,7 +19,7 @@ import { router, type Href } from 'expo-router';
 import { memo, useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import FollowButton from '../follow/FollowButton';
-import { KnownAsLabel } from './AuthorTag';
+import { KnownAsLabel } from './IdentityHandle';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
 import ProfileShareSheet from './ProfileShareSheet';

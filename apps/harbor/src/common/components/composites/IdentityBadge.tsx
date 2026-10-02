@@ -4,7 +4,7 @@ import {
   type TextVariant,
 } from '@/src/common/components/primitives';
 import { Atoms, type SpacingToken } from '@/src/common/theme';
-import { AuthorTag } from '@/src/features/profile/AuthorTag';
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { Username } from '@/src/features/profile/Username';
 import { View } from 'react-native';
 
@@ -43,7 +43,7 @@ export function IdentityBadge({
           variant={sizeConfig.textVariant}
           fontWeight="semibold"
         />
-        {showId && <AuthorTag identity={identityKey} />}
+        {showId && <IdentityHandle identity={identityKey} />}
       </View>
     </View>
   );

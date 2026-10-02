@@ -1,6 +1,6 @@
 import Topbar from '@/src/common/components/layout/Topbar';
 import { Atoms } from '@/src/common/theme';
-import { AuthorTag } from '@/src/features/profile/AuthorTag';
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
 import { FetchMode } from '@polycentric/react-native';
@@ -22,7 +22,7 @@ export function FollowListTopbar({ identityId }: { identityId?: string }) {
           </View>
           {identityId ? (
             <View style={Atoms.max_w_full}>
-              <AuthorTag identity={identityId} variant="small" />
+              <IdentityHandle identity={identityId} variant="small" />
             </View>
           ) : null}
         </View>

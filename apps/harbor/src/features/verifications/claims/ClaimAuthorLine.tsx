@@ -5,7 +5,7 @@ import { Routes } from '@/src/common/constants';
 import { timeAgo } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms } from '@/src/common/theme';
-import { AuthorTag } from '@/src/features/profile/AuthorTag';
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
@@ -42,7 +42,7 @@ export function ClaimAuthorLine({
           fontWeight="bold"
           style={hovered && Atoms.text_underline}
         />
-        <AuthorTag identity={identity} />
+        <IdentityHandle identity={identity} />
       </Pressable>
       <Text variant="secondary" color="neutral_500" fontWeight="bold">
         ·

@@ -8,7 +8,7 @@ import {
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { AuthorTag } from '@/src/features/profile/AuthorTag';
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
@@ -81,7 +81,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
             fontWeight="bold"
             color="neutral_1000"
           />
-          <AuthorTag identity={currentIdentity.identityKey} />
+          <IdentityHandle identity={currentIdentity.identityKey} />
         </View>
         {hovered ? (
           <View

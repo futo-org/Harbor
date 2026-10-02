@@ -7,21 +7,22 @@ import Animated from 'react-native-reanimated';
 import type { VerifiedPlatformAccount } from '../verifications/hooks/useVerifiedPlatformAccounts';
 import { useKnownAs } from './hooks/useKnownAs';
 
-type AuthorTagVariant = 'secondary' | 'small';
+type IdentityHandleVariant = 'secondary' | 'small';
 
-export function AuthorTag({
+export function IdentityHandle({
   identity,
   variant = 'secondary',
 }: {
   identity: string;
-  variant?: AuthorTagVariant;
+  variant?: IdentityHandleVariant;
 }) {
   const { knownAs, alias, isLoading } = useKnownAs(identity);
 
-  if (isLoading && !knownAs) return <AuthorTagSkeleton variant={variant} />;
+  if (isLoading && !knownAs)
+    return <IdentityHandleSkeleton variant={variant} />;
 
   return (
-    <AuthorTagView
+    <IdentityHandleLabel
       identity={identity}
       knownAs={knownAs}
       alias={alias}
@@ -30,7 +31,7 @@ export function AuthorTag({
   );
 }
 
-export function AuthorTagView({
+export function IdentityHandleLabel({
   identity,
   knownAs,
   alias,
@@ -39,7 +40,7 @@ export function AuthorTagView({
   identity: string;
   knownAs: VerifiedPlatformAccount | null;
   alias: string | null;
-  variant?: AuthorTagVariant;
+  variant?: IdentityHandleVariant;
 }) {
   if (!knownAs && alias) {
     return (
@@ -64,7 +65,7 @@ export function KnownAsLabel({
   variant = 'secondary',
 }: {
   knownAs: VerifiedPlatformAccount;
-  variant?: AuthorTagVariant;
+  variant?: IdentityHandleVariant;
 }) {
   const { theme } = useTheme();
 
@@ -93,7 +94,11 @@ export function KnownAsLabel({
   );
 }
 
-function AuthorTagSkeleton({ variant }: { variant: AuthorTagVariant }) {
+function IdentityHandleSkeleton({
+  variant,
+}: {
+  variant: IdentityHandleVariant;
+}) {
   const animatedStyle = useShimmerOpacity();
 
   return (
