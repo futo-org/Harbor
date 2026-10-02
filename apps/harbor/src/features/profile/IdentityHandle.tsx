@@ -95,7 +95,7 @@ export function KnownAsLabel({
 const styles = StyleSheet.create({
   handle: {
     // Prioritizes username when both are side-by-side, too long and have to be ellipsized
-    flexShrink: 100,
+    flexShrink: 1000,
     // Keep something legible when ellipsized
     minWidth: 60,
   },
