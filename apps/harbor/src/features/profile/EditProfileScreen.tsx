@@ -150,6 +150,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
             <KnownAsPicker
               identityKey={identityKey}
               nameDraft={edit.nameDraft}
+              aliasDraft={edit.aliasDraft}
               selectedClaimId={edit.knownAsDraft}
               onSelect={edit.setKnownAsDraft}
             />

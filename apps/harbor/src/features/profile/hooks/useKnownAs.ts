@@ -7,9 +7,10 @@ import { useProfile } from './useProfile';
 
 export function useKnownAs(identity: string): {
   knownAs: VerifiedPlatformAccount | null;
+  alias: string | null;
   isLoading: boolean;
 } {
-  const { knownAs } = useProfile(identity);
+  const { knownAs, alias } = useProfile(identity);
   const { verifiedAccounts, isLoading } = useVerifiedPlatformAccounts({
     identity,
     // Fetch only for users with knownAs set, at most once per users per session
@@ -17,10 +18,11 @@ export function useKnownAs(identity: string): {
     fetchMode: FetchMode.OfflineFirst,
   });
 
-  if (!knownAs) return { knownAs: null, isLoading: false };
+  if (!knownAs) return { knownAs: null, alias, isLoading: false };
 
   return {
     knownAs: verifiedAccounts.find((a) => a.claimId === knownAs) ?? null,
+    alias,
     isLoading,
   };
 }

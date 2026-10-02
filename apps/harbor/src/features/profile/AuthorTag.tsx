@@ -16,25 +16,45 @@ export function AuthorTag({
   identity: string;
   variant?: AuthorTagVariant;
 }) {
-  const { knownAs, isLoading } = useKnownAs(identity);
+  const { knownAs, alias, isLoading } = useKnownAs(identity);
 
   if (isLoading && !knownAs) return <AuthorTagSkeleton variant={variant} />;
 
   return (
-    <AuthorTagView identity={identity} knownAs={knownAs} variant={variant} />
+    <AuthorTagView
+      identity={identity}
+      knownAs={knownAs}
+      alias={alias}
+      variant={variant}
+    />
   );
 }
 
 export function AuthorTagView({
   identity,
   knownAs,
+  alias,
   variant = 'secondary',
 }: {
   identity: string;
   knownAs: VerifiedPlatformAccount | null;
+  alias: string | null;
   variant?: AuthorTagVariant;
 }) {
   const { theme } = useTheme();
+
+  if (!knownAs && alias) {
+    return (
+      <Text
+        variant={variant}
+        color="neutral_500"
+        numberOfLines={1}
+        style={[Atoms.flex_shrink_1]}
+      >
+        {alias}
+      </Text>
+    );
+  }
 
   if (!knownAs) return <IdentityTag identity={identity} variant={variant} />;
 

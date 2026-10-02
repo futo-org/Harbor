@@ -12,11 +12,13 @@ import { AuthorTagView } from './AuthorTag';
 export function KnownAsPicker({
   identityKey,
   nameDraft,
+  aliasDraft,
   selectedClaimId,
   onSelect,
 }: {
   identityKey: string;
   nameDraft: string;
+  aliasDraft: string;
   selectedClaimId: string | null;
   onSelect: (claimId: string | null) => void;
 }) {
@@ -45,7 +47,12 @@ export function KnownAsPicker({
         selected={!verifiedAccounts.some((a) => a.claimId === selectedClaimId)}
         onPress={() => onSelect(null)}
       >
-        <AuthorLine identityKey={identityKey} name={nameDraft} knownAs={null} />
+        <AuthorLine
+          identityKey={identityKey}
+          name={nameDraft}
+          knownAs={null}
+          alias={aliasDraft.trim() || null}
+        />
       </KnownAsOption>
       {verifiedAccounts.map((account) => (
         <KnownAsOption
@@ -57,6 +64,7 @@ export function KnownAsPicker({
             identityKey={identityKey}
             name={nameDraft}
             knownAs={account}
+            alias={null}
           />
         </KnownAsOption>
       ))}
@@ -110,10 +118,12 @@ function AuthorLine({
   identityKey,
   name,
   knownAs,
+  alias,
 }: {
   identityKey: string;
   name: string;
   knownAs: VerifiedPlatformAccount | null;
+  alias: string | null;
 }) {
   return (
     <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_xs]}>
@@ -125,7 +135,7 @@ function AuthorLine({
       >
         {name}
       </Text>
-      <AuthorTagView identity={identityKey} knownAs={knownAs} />
+      <AuthorTagView identity={identityKey} knownAs={knownAs} alias={alias} />
     </View>
   );
 }
