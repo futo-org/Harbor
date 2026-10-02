@@ -21,7 +21,13 @@ export function useKnownAs(identity: string | null): {
   if (!knownAs) return { knownAs: null, alias, isLoading: false };
 
   return {
-    knownAs: verifiedAccounts.find((a) => a.claimId === knownAs) ?? null,
+    knownAs:
+      verifiedAccounts.find(
+        (a) =>
+          a.claimId === knownAs &&
+          // "Other" accounts are arbitrary websites, so they can't be a known-as.
+          !a.platform.generic,
+      ) ?? null,
     alias,
     isLoading,
   };

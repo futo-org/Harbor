@@ -26,8 +26,10 @@ export function KnownAsPicker({
   const { verifiedAccounts, isLoading } = useVerifiedPlatformAccounts({
     identity: identityKey,
   });
+  // "Other" accounts are arbitrary websites, so they can't be a known-as.
+  const knownAsCandidates = verifiedAccounts.filter((a) => !a.platform.generic);
 
-  if (isLoading && verifiedAccounts.length === 0) {
+  if (isLoading && knownAsCandidates.length === 0) {
     return (
       <View style={Atoms.p_md}>
         <ActivityIndicator
@@ -44,7 +46,7 @@ export function KnownAsPicker({
     <View style={[Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_xs]}>
       <KnownAsOption
         // A saved claim that was deleted or lost its verification shows as none.
-        selected={!verifiedAccounts.some((a) => a.claimId === selectedClaimId)}
+        selected={!knownAsCandidates.some((a) => a.claimId === selectedClaimId)}
         onPress={() => onSelect(null)}
       >
         <AuthorLine
@@ -54,7 +56,7 @@ export function KnownAsPicker({
           alias={aliasDraft.trim() || null}
         />
       </KnownAsOption>
-      {verifiedAccounts.map((account) => (
+      {knownAsCandidates.map((account) => (
         <KnownAsOption
           key={account.claimId}
           selected={account.claimId === selectedClaimId}

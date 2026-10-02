@@ -65,6 +65,19 @@ describe('AuthorTag', () => {
     expect(getByText('alice@example.com')).toBeTruthy();
   });
 
+  it('shows the alias when the known-as claim is for the Other platform', async () => {
+    mockProfile = { knownAs: 'claim-1', alias: 'alice@example.com' };
+    mockVerifiedAccounts = [
+      {
+        ...GITHUB_ACCOUNT,
+        platform: { ...GITHUB_ACCOUNT.platform, generic: true },
+      },
+    ];
+    const { getByText, queryByText } = await renderTag();
+    expect(getByText('alice@example.com')).toBeTruthy();
+    expect(queryByText('alice-gh')).toBeNull();
+  });
+
   it('shows the short id without known-as or alias', async () => {
     mockProfile = { knownAs: null, alias: null };
     const { getByText } = await renderTag();
