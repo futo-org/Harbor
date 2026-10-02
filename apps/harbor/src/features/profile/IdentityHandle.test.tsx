@@ -11,26 +11,35 @@ const GITHUB_ACCOUNT = {
   account: 'alice-gh',
 } as unknown as VerifiedPlatformAccount;
 
-const CLAIM_BUNDLE = {};
+const CLAIM_BUNDLE = { claim: {} };
 
 // Profile fields and the account the known-as claim proves; set per test.
 let mockProfile: { knownAsClaimBundle: object | null; alias: string | null };
 let mockVerifiedAccount: VerifiedPlatformAccount | null;
+let mockVerifierBots: Set<string> | undefined;
+let mockCurrentIdentity: string | null;
 
 jest.mock('./hooks/useProfile', () => ({
   useProfile: () => mockProfile,
 }));
 jest.mock('../verifications/hooks/useVerifierIdentities', () => ({
-  useVerifierIdentities: () => new Set(['verifier-bot']),
+  useVerifierIdentities: () => mockVerifierBots,
 }));
 jest.mock('../verifications/utils/claim-status', () => ({
   decodeVerificationClaimBundle: () => ({}),
 }));
 jest.mock('../verifications/hooks/useVerifiedPlatformAccounts', () => ({
   findVerifiedPlatformAccount: () => mockVerifiedAccount,
+  findPlatformAccount: () => GITHUB_ACCOUNT,
+}));
+jest.mock('../verifications/hooks/useClaimById', () => ({
+  decodeClaimBundle: () => ({}),
 }));
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shortenIdentityId: (id: string) => `short-${id}`,
+  useCurrentIdentity: () => ({
+    isCurrentIdentity: (identity: string) => identity === mockCurrentIdentity,
+  }),
 }));
 
 import { IdentityHandle } from './IdentityHandle';
@@ -44,6 +53,8 @@ const renderTag = () =>
 
 beforeEach(() => {
   mockVerifiedAccount = GITHUB_ACCOUNT;
+  mockVerifierBots = new Set(['verifier-bot']);
+  mockCurrentIdentity = null;
 });
 
 describe('IdentityHandle', () => {
@@ -55,6 +66,18 @@ describe('IdentityHandle', () => {
     const { getByText, queryByText } = await renderTag();
     expect(getByText('alice-gh')).toBeTruthy();
     expect(queryByText('alice@example.com')).toBeNull();
+  });
+
+  it('shows your own known-as without a verify, before the bot list loads', async () => {
+    mockProfile = {
+      knownAsClaimBundle: CLAIM_BUNDLE,
+      alias: 'alice@example.com',
+    };
+    mockCurrentIdentity = IDENTITY;
+    mockVerifiedAccount = null;
+    mockVerifierBots = undefined;
+    const { getByText } = await renderTag();
+    expect(getByText('alice-gh')).toBeTruthy();
   });
 
   it('shows the alias when known-as is not set', async () => {

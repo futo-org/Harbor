@@ -1,6 +1,7 @@
 import type { FetchMode } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import type { ClaimWithStatus } from '../utils/claim-status';
+import type { DecodedClaim } from './useClaimById';
 import { getPlatformFromClaim, type Platform } from '../utils/platforms';
 import { useClaimsList } from './useClaimsList';
 
@@ -41,6 +42,13 @@ export function findVerifiedPlatformAccount(
   claim: ClaimWithStatus,
 ): VerifiedPlatformAccount | null {
   if (claim.status.verifiedCount === 0) return null;
+  return findPlatformAccount(claim);
+}
+
+/** The platform account `claim` claims, verified or not. */
+export function findPlatformAccount(
+  claim: DecodedClaim,
+): VerifiedPlatformAccount | null {
   const platform = getPlatformFromClaim(claim.schemaName, claim.fields);
   const account = claim.fields.find((f) => f.key === 'account')?.value;
   if (!platform || !account) return null;

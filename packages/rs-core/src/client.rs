@@ -211,6 +211,16 @@ impl PolycentricClient {
 
     /// Get the event bundles for `claim` and the locally-known verify events of it.
     pub fn claim_and_verify_bundles(&self, claim: &EventKey) -> Vec<EventBundle> {
+        // A claim its owner deleted has no bundles.
+        let is_claim_live = self
+            .list_valid_events(&claim.identity, collections::VERIFICATIONS)
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|bundle| EventKey::from_signed_event(bundle.signed_event.as_ref()?).ok())
+            .any(|key| &key == claim);
+        if !is_claim_live {
+            return Vec::new();
+        }
         std::iter::once(claim)
             .chain(self.verifies_by_claim.get(claim))
             .filter_map(|key| {
@@ -1704,6 +1714,69 @@ mod tests {
             .copy_content(&digest, content_bytes)
             .expect("content should insert");
         assert!(client.is_blocked("spammer"));
+    }
+
+    #[test]
+    fn claim_and_verify_bundles_skip_a_deleted_claim() {
+        use polycentric_common::models::protos_v2::{Delete, SerializedContent, VerificationClaim};
+
+        fn verifications_bundle(
+            signer: &Keypair,
+            identity: &str,
+            sequence: u64,
+            body: Body,
+        ) -> EventBundle {
+            let content_bytes = Content {
+                content_body: Some(body),
+            }
+            .encode_to_vec();
+            let signed_event = sign_event(
+                signer,
+                identity,
+                collections::VERIFICATIONS,
+                sequence,
+                1,
+                vec![sequence],
+                sha256_digest(&content_bytes),
+            );
+            EventBundle {
+                signed_event: Some(signed_event),
+                serialized_content: Some(SerializedContent { content_bytes }),
+                event_proofs: Vec::new(),
+                meta: None,
+            }
+        }
+
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let identity = add_identity_event(&mut client, &a, None, 1, vec![a.public.clone()], vec![]);
+
+        let claim_bundle = verifications_bundle(
+            &a,
+            &identity,
+            1,
+            Body::VerificationClaim(VerificationClaim::default()),
+        );
+        let claim_key =
+            EventKey::from_signed_event(claim_bundle.signed_event.as_ref().unwrap()).unwrap();
+        client.copy_bundles(vec![claim_bundle]);
+        assert_eq!(client.claim_and_verify_bundles(&claim_key).len(), 1);
+
+        let delete = Delete {
+            event_key: Some(ProtoEventKey {
+                collection: collections::VERIFICATIONS,
+                identity: identity.clone(),
+                signed_by: Some(a.public.clone()),
+                sequence: 1,
+            }),
+        };
+        client.copy_bundles(vec![verifications_bundle(
+            &a,
+            &identity,
+            2,
+            Body::Delete(delete),
+        )]);
+        assert!(client.claim_and_verify_bundles(&claim_key).is_empty());
     }
 
     #[test]
