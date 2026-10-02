@@ -36,15 +36,16 @@ async fn create_pool(
 ) -> Result<DatabaseConnection, sea_orm::DbErr> {
     let mut opt =
         ConnectOptions::new(with_connection_options(url, durable_commits));
-    opt.max_connections(max)
+    opt.set_application_name("Harbor-server")
+        .set_schema_search_path("public")
+        .max_connections(max)
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))
         .acquire_timeout(Duration::from_secs(8))
         .statement_timeout(Duration::from_secs(5))
         .idle_timeout(Duration::from_secs(600))
         .max_lifetime(Duration::from_secs(1800))
-        .sqlx_logging(false)
-        .set_schema_search_path("public");
+        .sqlx_logging(false);
 
     let db = Database::connect(opt).await?;
 
