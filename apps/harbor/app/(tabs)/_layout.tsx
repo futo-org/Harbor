@@ -1,14 +1,13 @@
-import { Routes } from '@/src/common/constants';
+import { openCompose } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
-import { Stack, usePathname } from 'expo-router';
+import { Stack } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 export default function TabsLayout() {
   const { theme } = useTheme();
   const { currentIdentity, isLoading, isReady } = usePolycentricContext();
-  const pathname = usePathname();
 
   // Stay permissive until the identity store has settled — pruning routes
   // during startup would break deep links that resolve after login state.
@@ -43,8 +42,6 @@ export default function TabsLayout() {
   return (
     <NativeTabs
       backBehavior="history"
-      // iOS: The compose tab is a full-screen composer; keep the tab bar off it.
-      hidden={pathname === Routes.tabs.compose}
       minimizeBehavior="never"
       backgroundColor={theme.palette.neutral_0}
       iconColor={theme.palette.neutral_900}
@@ -74,12 +71,17 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       {isIOS ? (
-        <NativeTabs.Trigger name="compose" role="search">
+        <NativeTabs.Trigger
+          name="compose"
+          role="search"
+          // This tab screen cannot be selected: the tap opens the same
+          // root-stack composer that New Post on Android and replies (both iOS
+          // and Android) use
+          disabled
+          listeners={{ tabPress: () => openCompose() }}
+        >
           <NativeTabs.Trigger.Label hidden>Compose</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon
-            sf={{ default: 'square.and.pencil', selected: 'square.and.pencil' }}
-            md="edit"
-          />
+          <NativeTabs.Trigger.Icon sf="square.and.pencil" md="edit" />
         </NativeTabs.Trigger>
       ) : null}
     </NativeTabs>

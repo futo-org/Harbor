@@ -45,7 +45,6 @@ export const Routes = {
       index: '/feed',
       compose: '/feed/compose',
     },
-    compose: '/compose',
     search: '/search',
     explore: {
       index: '/explore',
