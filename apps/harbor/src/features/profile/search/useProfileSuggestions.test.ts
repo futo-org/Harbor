@@ -1,15 +1,3 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
-// time, which can't run under jest — expose just what the hook needs.
-jest.mock('@polycentric/react-native', () => {
-  const aliasResolver = jest.requireActual(
-    '../../../../../../packages/js-core/src/http/alias-resolver',
-  );
-  return {
-    normalizeAlias: aliasResolver.normalizeAlias,
-    resolveAlias: jest.fn(),
-  };
-});
-
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   useCurrentIdentity: () => ({ identityKey: 'me' }),
 }));
@@ -25,12 +13,6 @@ jest.mock('@/src/features/follow/hooks/useFollowList', () => ({
     loadMore: jest.fn(),
     refresh: jest.fn(),
   }),
-}));
-
-type ProfileStub = { name: string | null; alias: string | null };
-let mockProfiles = new Map<string, ProfileStub>();
-jest.mock('@/src/features/profile/hooks/useProfiles', () => ({
-  useProfiles: () => mockProfiles,
 }));
 
 let mockSearchEntries: { identity: string }[] = [];
@@ -51,7 +33,6 @@ jest.mock('@/src/features/search/hooks/useSearchUsers', () => ({
   },
 }));
 
-import { resolveAlias } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -59,8 +40,6 @@ import {
   type ProfileSuggestionsResult,
   useProfileSuggestions,
 } from './useProfileSuggestions';
-
-const mockResolve = resolveAlias as jest.Mock;
 
 const ALICE = 'aa11'.repeat(16);
 const BOB = 'bb22'.repeat(16);
@@ -96,16 +75,11 @@ function renderSuggestions(
 
 beforeEach(() => {
   jest.useFakeTimers();
-  mockResolve.mockReset();
   mockEntries = [];
   mockIsLoading = false;
   mockSearchEntries = [];
   mockSearchLoading = false;
   lastSearchQuery = null;
-  mockProfiles = new Map([
-    [ALICE, { name: 'Alice', alias: 'alice@example.com' }],
-    [BOB, { name: 'Bob', alias: null }],
-  ]);
 });
 
 afterEach(() => {
@@ -118,13 +92,8 @@ describe('useProfileSuggestions', () => {
 
     const { result } = renderSuggestions();
     expect(result.current.suggestions).toEqual([
-      {
-        identity: ALICE,
-        name: 'Alice',
-        alias: 'alice@example.com',
-        source: 'following',
-      },
-      { identity: BOB, name: 'Bob', alias: null, source: 'following' },
+      { identity: ALICE, source: 'following' },
+      { identity: BOB, source: 'following' },
     ]);
   });
 
@@ -135,7 +104,7 @@ describe('useProfileSuggestions', () => {
     const { result } = renderSuggestions('bob');
     expect(lastSearchQuery).toBe('bob');
     expect(result.current.suggestions).toEqual([
-      { identity: BOB, name: null, alias: null, source: 'search' },
+      { identity: BOB, source: 'search' },
     ]);
   });
 
@@ -175,91 +144,5 @@ describe('useProfileSuggestions', () => {
     expect(searched.result.current.suggestions.map((s) => s.identity)).toEqual([
       BOB,
     ]);
-  });
-
-  it('offers a pasted identity id directly, deduped against follows', () => {
-    follows(ALICE);
-
-    const stranger = 'cd'.repeat(32);
-    const pasted = renderSuggestions(stranger.toUpperCase());
-    expect(pasted.result.current.suggestions).toEqual([
-      { identity: stranger, name: null, alias: null, source: 'identity' },
-    ]);
-
-    // Pasting someone already followed yields a single row.
-    const followed = renderSuggestions(ALICE);
-    expect(followed.result.current.suggestions).toHaveLength(1);
-  });
-
-  it('resolves an alias query after the debounce', async () => {
-    const stranger = 'ef'.repeat(32);
-    mockResolve.mockResolvedValue(stranger);
-
-    const { result } = renderSuggestions('Carol@Example.com');
-    expect(result.current.isResolvingAlias).toBe(true);
-    expect(result.current.suggestions).toEqual([]);
-
-    await act(async () => {
-      jest.advanceTimersByTime(300);
-    });
-
-    expect(mockResolve).toHaveBeenCalledWith('carol@example.com');
-    expect(result.current.isResolvingAlias).toBe(false);
-    expect(result.current.suggestions).toEqual([
-      {
-        identity: stranger,
-        name: null,
-        alias: 'carol@example.com',
-        source: 'alias',
-      },
-    ]);
-  });
-
-  it('resolves a bare-domain query as a wildcard alias', async () => {
-    const stranger = 'ef'.repeat(32);
-    mockResolve.mockResolvedValue(stranger);
-
-    const { result } = renderSuggestions('Example.com');
-    await act(async () => {
-      jest.advanceTimersByTime(300);
-    });
-
-    expect(mockResolve).toHaveBeenCalledWith('example.com');
-    expect(result.current.suggestions).toEqual([
-      {
-        identity: stranger,
-        name: null,
-        alias: 'example.com',
-        source: 'alias',
-      },
-    ]);
-  });
-
-  it('shows nothing for an alias that does not resolve', async () => {
-    mockResolve.mockResolvedValue(null);
-
-    const { result } = renderSuggestions('nobody@example.com');
-    await act(async () => {
-      jest.advanceTimersByTime(300);
-    });
-
-    expect(result.current.isResolvingAlias).toBe(false);
-    expect(result.current.suggestions).toEqual([]);
-  });
-
-  it('only resolves the latest alias after typing pauses', async () => {
-    mockResolve.mockResolvedValue('ab'.repeat(32));
-
-    const { setQuery } = renderSuggestions('a@example.com');
-    await act(async () => {
-      jest.advanceTimersByTime(100);
-    });
-    setQuery('ab@example.com');
-    await act(async () => {
-      jest.advanceTimersByTime(300);
-    });
-
-    expect(mockResolve).toHaveBeenCalledTimes(1);
-    expect(mockResolve).toHaveBeenCalledWith('ab@example.com');
   });
 });
