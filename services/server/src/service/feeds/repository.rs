@@ -1,3 +1,4 @@
+use crate::config;
 use crate::data::EventWithContentRow;
 use crate::data::{Cursor, CursorFilter};
 use crate::service::events::TargetEventKey;
@@ -557,9 +558,8 @@ impl Query {
     pub async fn list_labels_for_event_keys(
         db: &DbConn,
         keys: &[TargetEventKey],
-        trusted_moderator: Option<&str>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        let Some(moderator) = trusted_moderator else {
+        let Some(moderator) = config::get().trusted_moderator.as_deref() else {
             return Ok(Vec::new());
         };
 

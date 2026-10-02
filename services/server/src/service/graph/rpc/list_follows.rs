@@ -123,10 +123,7 @@ async fn hydrate(
         .map_err(map_db_err)?;
     let deletes_by_target = tombstone::validate_tombstones(ctx, raw).await?;
 
-    let identities = collect_identities(
-        ctx.trusted_moderator.as_deref(),
-        fetched.rows.iter(),
-    );
+    let identities = collect_identities(fetched.rows.iter());
     let (identity_events, profile_events) =
         list_identity_and_profile_events(ctx, identities).await?;
 
