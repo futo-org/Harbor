@@ -145,7 +145,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               <Text variant="small" color="neutral_500">
                 KNOWN AS
               </Text>
-              <InfoTooltip text="hown next to your name instead of your ID. Verify more accounts to add choices here." />
+              <InfoTooltip text="What gets shown next to your name. Verify more accounts to add choices here." />
             </View>
             <KnownAsPicker
               identityKey={identityKey}
