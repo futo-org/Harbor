@@ -45,7 +45,19 @@ async fn create_pool(
         .statement_timeout(Duration::from_secs(5))
         .idle_timeout(Duration::from_secs(600))
         .max_lifetime(Duration::from_secs(1800))
-        .sqlx_logging(false);
+        .record_stmt_in_spans(false)
+        // Only log slow execution of queries.
+        .sqlx_logging(true)
+        .sqlx_logging_level(log::LevelFilter::Off)
+        .sqlx_slow_statements_logging_settings(
+            log::LevelFilter::Warn,
+            Duration::from_secs(1),
+        )
+        .map_sqlx_postgres_pool_opts(|options| {
+            options
+                .acquire_slow_level(log::LevelFilter::Warn)
+                .acquire_slow_threshold(Duration::from_secs(1))
+        });
 
     let db = Database::connect(opt).await?;
 
