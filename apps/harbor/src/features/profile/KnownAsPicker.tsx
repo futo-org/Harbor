@@ -1,23 +1,17 @@
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import type { ReactNode } from 'react';
-import { Text } from '@/src/common/components/primitives/Text';
 import { ActivityIndicator, Pressable, View } from 'react-native';
-import {
-  useVerifiedPlatformAccounts,
-  type VerifiedPlatformAccount,
-} from '../verifications/hooks/useVerifiedPlatformAccounts';
+import { useVerifiedPlatformAccounts } from '../verifications/hooks/useVerifiedPlatformAccounts';
 import { IdentityHandleLabel } from './IdentityHandle';
 
 export function KnownAsPicker({
   identityKey,
-  nameDraft,
   aliasDraft,
   selectedClaimId,
   onSelect,
 }: {
   identityKey: string;
-  nameDraft: string;
   aliasDraft: string;
   selectedClaimId: string | null;
   onSelect: (claimId: string | null) => void;
@@ -49,9 +43,8 @@ export function KnownAsPicker({
         selected={!knownAsCandidates.some((a) => a.claimId === selectedClaimId)}
         onPress={() => onSelect(null)}
       >
-        <AuthorLine
-          identityKey={identityKey}
-          name={nameDraft}
+        <IdentityHandleLabel
+          identity={identityKey}
           knownAs={null}
           alias={aliasDraft.trim() || null}
         />
@@ -62,9 +55,8 @@ export function KnownAsPicker({
           selected={account.claimId === selectedClaimId}
           onPress={() => onSelect(account.claimId)}
         >
-          <AuthorLine
-            identityKey={identityKey}
-            name={nameDraft}
+          <IdentityHandleLabel
+            identity={identityKey}
             knownAs={account}
             alias={null}
           />
@@ -113,35 +105,5 @@ function KnownAsOption({
     >
       {children}
     </Pressable>
-  );
-}
-
-function AuthorLine({
-  identityKey,
-  name,
-  knownAs,
-  alias,
-}: {
-  identityKey: string;
-  name: string;
-  knownAs: VerifiedPlatformAccount | null;
-  alias: string | null;
-}) {
-  return (
-    <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_xs]}>
-      <Text
-        variant="secondary"
-        fontWeight="bold"
-        numberOfLines={1}
-        style={Atoms.flex_shrink_1}
-      >
-        {name}
-      </Text>
-      <IdentityHandleLabel
-        identity={identityKey}
-        knownAs={knownAs}
-        alias={alias}
-      />
-    </View>
   );
 }
