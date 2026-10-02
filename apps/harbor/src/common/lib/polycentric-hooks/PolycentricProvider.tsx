@@ -374,16 +374,11 @@ export function useCurrentIdentity() {
   };
 }
 
-export function useUsername(
-  identityKey: string | null | undefined,
-  options?: { fallbackName?: string | null },
-): string {
+export function useUsername(identityKey: string | null | undefined): string {
   const profile = useProfile(identityKey);
   if (profile.name) return profile.name;
-  if (options?.fallbackName) return options.fallbackName;
   if (profile.isLoading || !profile.isResolved) return '…';
-  // An empty fallback reaches here too, and hides the default name.
-  return options?.fallbackName ?? DEFAULT_IDENTITY_NAME;
+  return DEFAULT_IDENTITY_NAME;
 }
 
 /**

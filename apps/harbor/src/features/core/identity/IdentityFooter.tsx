@@ -77,7 +77,6 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
         <View style={[Atoms.flex_col, Atoms.flex_1]}>
           <Username
             identity={currentIdentity.identityKey}
-            fallbackName=""
             fontSize="md"
             fontWeight="bold"
             color="neutral_1000"

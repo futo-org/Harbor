@@ -32,14 +32,14 @@ export function ProfileSearchInput({
 }) {
   const { theme } = useTheme();
   const [query, setQuery] = useState('');
-  const { suggestions, isLoading, isResolvingAlias, isSearching } =
-    useProfileSuggestions(query, { exclude });
+  const { suggestions, isLoading, isSearching } = useProfileSuggestions(query, {
+    exclude,
+  });
 
   const trimmed = query.trim();
   const showFollowingLabel =
     !trimmed && suggestions.some((s) => s.source === 'following');
-  const showEmpty =
-    suggestions.length === 0 && !isLoading && !isResolvingAlias && !isSearching;
+  const showEmpty = suggestions.length === 0 && !isLoading && !isSearching;
 
   return (
     <View style={Atoms.gap_sm}>
@@ -58,27 +58,7 @@ export function ProfileSearchInput({
         />
       </View>
 
-      {isResolvingAlias && (
-        <View
-          style={[
-            Atoms.flex_row,
-            Atoms.align_center,
-            Atoms.gap_sm,
-            Atoms.px_lg,
-          ]}
-        >
-          <ActivityIndicator
-            size="small"
-            color={theme.palette.neutral_500}
-            accessibilityLabel="Resolving alias"
-          />
-          <Text variant="small" color="neutral_500">
-            Looking up {trimmed}…
-          </Text>
-        </View>
-      )}
-
-      {isSearching && suggestions.length === 0 && !isResolvingAlias && (
+      {isSearching && suggestions.length === 0 && (
         <View style={[Atoms.align_center, Atoms.p_md]}>
           <ActivityIndicator
             size="small"
@@ -148,15 +128,13 @@ function SuggestionRow({
       identity={suggestion.identity}
       onPress={onPress}
       disabled={disabled}
-      // Followed profiles read from cache like every other list; alias/id
+      // Followed profiles read from cache like every other list; search
       // matches are usually strangers, so fetch their profile to show a name.
       fetchMode={
         suggestion.source === 'following'
           ? FetchMode.OfflineOnly
           : FetchMode.Default
       }
-      fallbackName={suggestion.name}
-      fallbackAlias={suggestion.alias}
       trailing={
         pending ? (
           <ActivityIndicator

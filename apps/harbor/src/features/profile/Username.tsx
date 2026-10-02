@@ -7,7 +7,6 @@ import { View } from 'react-native';
 
 type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   identity: string | null | undefined;
-  fallbackName?: string | null;
   /** Set where a Follow button nearby already shows the state. */
   noFollowingBadge?: boolean;
 };
@@ -18,14 +17,13 @@ type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
  */
 export function Username({
   identity,
-  fallbackName,
   numberOfLines = 1,
   noFollowingBadge,
   variant = 'body',
   style,
   ...textProps
 }: UsernameProps) {
-  const name = useUsername(identity, { fallbackName });
+  const name = useUsername(identity);
 
   return (
     <View
