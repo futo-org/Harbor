@@ -21,7 +21,7 @@ export function PairIdentityManualEntry({
 
       <View style={Atoms.gap_xs}>
         <Text variant="small" color="neutral_500">
-          PAIRING CODE
+          PAIRING LINK
         </Text>
         <TextInput
           value={input}
@@ -29,7 +29,7 @@ export function PairIdentityManualEntry({
           autoCapitalize="none"
           style={{ fontFamily: 'monospace' }}
           multiline
-          placeholder="Paste pairing code"
+          placeholder="Paste pairing link"
         />
       </View>
 

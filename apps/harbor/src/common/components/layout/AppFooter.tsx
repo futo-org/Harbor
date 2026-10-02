@@ -3,7 +3,7 @@ import { Atoms, typography, useTheme } from '@/src/common/theme';
 import { type ExternalPathString, Link } from 'expo-router';
 import { type ComponentProps, useCallback } from 'react';
 import { Pressable, View } from 'react-native';
-import { FUTO_URL } from '../../constants';
+import { FUTO_URL, SOURCE_CODE_URL } from '../../constants';
 
 const LINKS: { text: string; href: ExternalPathString }[] = [
   {
@@ -12,7 +12,7 @@ const LINKS: { text: string; href: ExternalPathString }[] = [
   },
   {
     text: 'Source Code',
-    href: 'https://gitlab.futo.org/polycentric/polycentric',
+    href: SOURCE_CODE_URL,
   },
   { text: 'FUTO © 2026.', href: FUTO_URL },
 ];
