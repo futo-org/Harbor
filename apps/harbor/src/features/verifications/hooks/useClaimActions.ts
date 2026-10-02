@@ -2,6 +2,7 @@ import { hexToBytes, usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
+import { profileQueryKey } from '../../profile/hooks/useProfile';
 import type { DecodedClaim } from './useClaimById';
 
 type Client = ReturnType<typeof usePolycentric>;
@@ -40,6 +41,8 @@ export default function useClaimActions(claim: DecodedClaim) {
     await deleteClaim(client, claim.id);
 
     invalidateQuery(client, ['claims-list', claim.identity]);
+    // The claim may be the profile's known-as.
+    invalidateQuery(client, profileQueryKey(claim.identity));
 
     if (router.canGoBack()) router.back();
   };
