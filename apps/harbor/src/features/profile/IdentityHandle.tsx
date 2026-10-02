@@ -1,7 +1,7 @@
 import { IdentityTag } from '@/src/common/components/primitives/PillChip';
 import { Text, VARIANT_CONFIG } from '@/src/common/components/primitives/Text';
 import { Atoms, typography, useTheme } from '@/src/common/theme';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { VerifiedPlatformAccount } from '../verifications/hooks/useVerifiedPlatformAccounts';
 import { useKnownAs } from './hooks/useKnownAs';
 
@@ -51,7 +51,7 @@ export function IdentityHandleLabel({
         variant={variant}
         color="neutral_500"
         numberOfLines={1}
-        style={[Atoms.flex_shrink_1]}
+        style={styles.handle}
       >
         {alias}
       </Text>
@@ -74,12 +74,7 @@ export function KnownAsLabel({
 
   return (
     <View
-      style={[
-        Atoms.flex_row,
-        Atoms.align_center,
-        Atoms.gap_2xs,
-        Atoms.flex_shrink_1,
-      ]}
+      style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_2xs, styles.handle]}
     >
       {knownAs.platform.logo({
         size: typography.fontSize.xs,
@@ -96,3 +91,12 @@ export function KnownAsLabel({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  handle: {
+    // Prioritizes username when both are side-by-side, too long and have to be ellipsized
+    flexShrink: 100,
+    // Keep something legible when ellipsized
+    minWidth: 60,
+  },
+});
