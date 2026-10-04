@@ -6,7 +6,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { memo, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { EmojiPickerSheet } from '../../reaction/EmojiPickerSheet';
+import { useEmojiPickerStore } from '../../reaction/useEmojiPickerStore';
 import EmojiPickerInline from '../../reaction/EmojiPickerInline';
 import useReactions from '../../reaction/useReactions';
 import PostActionButton from './PostActionButton';
@@ -23,29 +23,20 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
 
   const reaction = useReactions((s) => s.reactions.get(post.id));
   const count = post.upvoteCount;
-  const addReaction = useReactions((s) => s.addReaction);
-  const removeReaction = useReactions((s) => s.removeReaction);
-  const changeReaction = useReactions((s) => s.changeReaction);
+  const toggleReaction = useReactions((s) => s.toggleReaction);
+  const openEmojiPicker = useEmojiPickerStore((s) => s.openFor);
 
   const [open, setOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const hasReaction = !!reaction;
 
   const onEmojiSelect = (emoji: string) => {
     triggerRef.current?.close();
-    if (hasReaction && reaction.emoji === emoji) {
-      // Reselecting the same emoji clears it.
-      removeReaction(client, post);
-    } else if (hasReaction) {
-      changeReaction(client, post, { emoji, positive: true });
-    } else {
-      addReaction(client, post, { emoji, positive: true });
-    }
+    toggleReaction(client, post, emoji);
   };
 
   const onShowMore = () => {
     triggerRef.current?.close();
-    setPickerOpen(true);
+    openEmojiPicker(post);
   };
 
   const button = (
@@ -75,15 +66,6 @@ function PostReactionButton({ post }: PostReactionButtonProps) {
           />
         </HoverCard.Content>
       </HoverCard>
-      <EmojiPickerSheet
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        onSelect={(emoji) => {
-          setPickerOpen(false);
-          onEmojiSelect(emoji);
-        }}
-        selectedEmoji={reaction?.emoji}
-      />
     </View>
   );
 }

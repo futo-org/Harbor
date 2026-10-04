@@ -17,7 +17,6 @@ import {
   Platform,
   Pressable,
   type PressableProps,
-  StyleProp,
   StyleSheet,
   View,
   type ViewStyle,
@@ -139,7 +138,7 @@ export function Button({
       ]}
       {...props}
     >
-      <View style={[styles.content]}>
+      <View style={[styles.content, iconOnly && styles.iconOnlyContent]}>
         {icon &&
           (typeof icon === 'function' ? (
             icon({ size: sizeConfig.iconSize, color: iconColor })
@@ -185,9 +184,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  iconOnlyContent: {
+    aspectRatio: 1,
+  },
 });
 
-const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
+export const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
   primary: 'white',
   secondary: 'primary_600',
   tertiary: 'neutral_1000',
@@ -196,7 +198,7 @@ const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
 
-function getVariantStyle(theme: Theme, variant: ButtonVariant) {
+export function getVariantStyle(theme: Theme, variant: ButtonVariant) {
   switch (variant) {
     case 'primary':
       return {

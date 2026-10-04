@@ -1,11 +1,13 @@
 import { Toaster } from '@/src/common/components/toast';
 import { AppUpdater } from '@/src/features/core/apk-update';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
+import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import {
   PolycentricProvider,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
+import { useStripCopiedInlineViewPlaceholders } from '@/src/common/lib/useStripCopiedInlineViewPlaceholders';
 import { APP_NAME } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
@@ -149,6 +151,7 @@ function RootStack() {
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
   const onInitialized = useCallback(() => setReady(true), []);
+  useStripCopiedInlineViewPlaceholders();
 
   useEffect(() => {
     if (!ready) {
@@ -173,6 +176,7 @@ export default function RootLayout() {
                   <PortalHost />
                   <Toaster />
                   <AuthGateSheet />
+                  <EmojiPickerSheet />
                   <AppUpdater />
                 </TrueSheetProvider>
               </PolycentricProvider>

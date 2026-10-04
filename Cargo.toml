@@ -17,7 +17,7 @@ resolver = "2"
 
 [workspace.dependencies]
 # Internal crates
-polycentric-common = { path = "packages/rs-common" }
+polycentric-common = { path = "packages/rs-common", version = "0.0.0" }
 
 # Async runtime / service frameworks
 tokio = { version = "1.50.0", default-features = false }

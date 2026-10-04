@@ -341,7 +341,7 @@ impl TestClient {
         let post = Post {
             text: text.to_owned(),
             reply: Some(PostReply {
-                root: None,
+                root: Some(post.clone()),
                 parent: Some(post),
             }),
             images: Vec::new(),
@@ -518,6 +518,14 @@ impl TestClient {
             digest,
             created_at,
         );
+        self.push_event_bundle2(event, content_bytes)
+    }
+
+    fn push_event_bundle2(
+        &mut self,
+        event: Event,
+        content_bytes: Vec<u8>,
+    ) -> Vec<u8> {
         let event_bundle = bundle(sign(&self.key, event), content_bytes);
         let signature = bundle_signature(&event_bundle);
         self.pending.push(event_bundle);
@@ -549,9 +557,21 @@ impl TestClient {
 
     /// Submit all pending events.
     pub async fn submit_events(&mut self) {
+        if let Err(errors) = self.try_submit_events().await {
+            let n = errors.len();
+            for (n, err) in errors.iter().enumerate() {
+                eprintln!("Error {}:", n + 1);
+                eprintln!("Error in {:?}", err.bundle);
+                eprintln!("Error: {}", err.message);
+            }
+            panic!("{n} unexpected error(s)");
+        }
+    }
+
+    pub async fn try_submit_events(&mut self) -> Result<(), Vec<SubmitError>> {
         let event_bundles = take(&mut self.pending);
         if event_bundles.is_empty() {
-            return;
+            return Ok(());
         }
 
         let response = self
@@ -563,17 +583,20 @@ impl TestClient {
             .expect("put_events failed")
             .into_inner();
 
-        if !response.errors.is_empty() {
-            let n = response.errors.len();
-            for (n, err) in response.errors.iter().enumerate() {
-                eprintln!("Error {}:", n + 1);
-                eprintln!(
-                    "Error in {:?}",
-                    event_bundles[err.event_bundle_index as usize]
-                );
-                eprintln!("Error: {}", err.message);
+        if response.errors.is_empty() {
+            Ok(())
+        } else {
+            let mut errors = Vec::with_capacity(response.errors.len());
+            for err in response.errors.into_iter() {
+                let idx = err.event_bundle_index as usize;
+                let bundle = event_bundles[idx].clone();
+                errors.push(SubmitError {
+                    message: err.message,
+                    bundle_index: idx,
+                    bundle,
+                });
             }
-            panic!("{n} unexpected error(s)");
+            Err(errors)
         }
     }
 
@@ -637,6 +660,13 @@ impl Drop for TestClient {
 
 pub fn current_timestamp() -> u64 {
     SystemTime::UNIX_EPOCH.elapsed().unwrap().as_millis() as u64
+}
+
+#[derive(Debug)]
+pub struct SubmitError {
+    message: String,
+    bundle_index: usize,
+    bundle: EventBundle,
 }
 
 #[derive(Debug)]
@@ -858,7 +888,12 @@ fn make_event(
         previous_root,
         content_digest: Some(digest),
         created_at,
-        application: None,
+        application: Some(Application {
+            name: "Server Integration Tests".to_owned(),
+            id: "tests.social.harbor".to_owned(),
+            version: "0.0.1".to_owned(),
+            url: "https://code.futo.org/harbor/harbor".to_owned(),
+        }),
     }
 }
 
@@ -952,6 +987,9 @@ pub fn make_post_bundle(
         .iter()
         .map(|url| AttributedTo {
             to: Some(attributed_to::To::Link(Link {
+                title: "Title".to_owned(),
+                description: Some("Description".to_owned()),
+                image: Some("Image".to_owned()),
                 url: url.to_string(),
                 ..Default::default()
             })),
@@ -1114,12 +1152,14 @@ async fn publish_genesis(
     let bundle =
         make_identity_bundle(identity, key, 1, 1, vec![1], initial, created_at);
     let sig = bundle_signature(&bundle);
-    client
+    let response = client
         .put_events(PutEventsRequest {
             event_bundles: vec![bundle],
         })
         .await
-        .expect("genesis put failed");
+        .expect("genesis put failed")
+        .into_inner();
+    assert!(response.errors.is_empty(), "response: {response:?}");
     sig
 }
 
@@ -1143,12 +1183,14 @@ async fn publish_post(
         created_at,
     );
     let sig = bundle_signature(&bundle);
-    client
+    let response = client
         .put_events(PutEventsRequest {
             event_bundles: vec![bundle],
         })
         .await
-        .expect("post put failed");
+        .expect("post put failed")
+        .into_inner();
+    assert!(response.errors.is_empty(), "response: {response:?}");
     sig
 }
 

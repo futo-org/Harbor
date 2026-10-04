@@ -119,7 +119,6 @@ jest.mock('./ClaimAuthorLine', () => ({
 }));
 
 jest.mock('./ClaimMenu', () => ({ ClaimMenu: () => null }));
-jest.mock('./toolbar', () => ({ Toolbar: () => null }));
 
 jest.mock('./toolbar/StatusChip', () => {
   const react = require('react');

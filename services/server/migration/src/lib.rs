@@ -63,6 +63,8 @@ mod m20260910_000002_profile_search_include_identity;
 mod m20260911_000001_add_alias_cache_table;
 mod m20260914_000001_list_events_index;
 mod m20260921_000001_split_on_any_whitespace_in_create_tsvector;
+mod m20260929_000001_decayed_reaction_count_update_index;
+mod m20260930_000001_url_info_cache_nullable;
 
 mod old_entity;
 
@@ -135,6 +137,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20260911_000001_add_alias_cache_table::Migration),
             Box::new(m20260914_000001_list_events_index::Migration),
             Box::new(m20260921_000001_split_on_any_whitespace_in_create_tsvector::Migration),
+            Box::new(m20260929_000001_decayed_reaction_count_update_index::Migration),
+            Box::new(m20260930_000001_url_info_cache_nullable::Migration),
         ]
     }
 }

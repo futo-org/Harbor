@@ -215,6 +215,13 @@ dependencies {
     // android.jar's org.json is a throwing stub on the host JVM; unit tests
     // that exercise Moderation (and decode JWT segments) need the real one.
     testImplementation(libs.orgjson)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockwebserver)
+    // Robolectric provides the android.database.sqlite storage layer with a
+    // real instance of SQLite.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
 }
 

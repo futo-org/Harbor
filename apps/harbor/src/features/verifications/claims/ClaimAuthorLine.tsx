@@ -5,10 +5,10 @@ import {
   IdentityTag,
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { timeAgo, truncateName } from '@/src/common/lib/polycentric-hooks';
+import { timeAgo } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms } from '@/src/common/theme';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
@@ -22,8 +22,6 @@ export function ClaimAuthorLine({
   createdAt: bigint;
   avatarSize?: AvatarSizePreset;
 }) {
-  const profile = useProfile(identity);
-  const name = profile.name ? truncateName(profile.name, 24) : '...';
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   return (
@@ -40,20 +38,18 @@ export function ClaimAuthorLine({
         ]}
       >
         <ProfileAvatar identityKey={identity} size={avatarSize} />
-        <Text
+        <Username
+          identity={identity}
           variant="secondary"
           fontWeight="bold"
-          numberOfLines={1}
-          style={[Atoms.flex_shrink_1, hovered && Atoms.text_underline]}
-        >
-          {name}
-        </Text>
+          style={hovered && Atoms.text_underline}
+        />
         <IdentityTag identity={identity} />
       </Pressable>
       <Text variant="secondary" color="neutral_500" fontWeight="bold">
         ·
       </Text>
-      <Text variant="secondary" color="neutral_500">
+      <Text variant="secondary" color="neutral_500" style={Atoms.flex_shrink_0}>
         {timeAgo(Number(createdAt))}
       </Text>
     </View>

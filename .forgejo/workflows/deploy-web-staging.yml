@@ -129,8 +129,8 @@ jobs:
           export-cache: 'true'
           build-args: |
             APP_VERSION=${{ steps.version.outputs.app_version }}
-            EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS }}
-            EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS }}
+            EXPO_PUBLIC_HARBOR_SEED_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS }}
+            EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS }}
             SKIP_WORKSPACE_BUILD=1
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}

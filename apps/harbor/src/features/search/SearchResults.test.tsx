@@ -270,6 +270,7 @@ describe('SearchResults full search', () => {
   it('shows the tabs', async () => {
     const { screen } = await renderResults({ submitted: true });
     expect(screen.getByText('Top')).toBeTruthy();
+    expect(screen.getByText('Popular')).toBeTruthy();
     expect(screen.getByText('Latest')).toBeTruthy();
     expect(screen.getByText('People')).toBeTruthy();
   });
@@ -280,6 +281,7 @@ describe('SearchResults full search', () => {
     await renderResults({ submitted: true });
     expect(mockCapturedFeeds.map((feed) => feed.__sort)).toEqual([
       'top',
+      'popular',
       'latest',
     ]);
   });

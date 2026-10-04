@@ -1,8 +1,4 @@
-import {
-  IdentityTag,
-  ProfileAvatar,
-  Text,
-} from '@/src/common/components/primitives';
+import { IdentityTag, ProfileAvatar } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
@@ -12,7 +8,7 @@ import {
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -26,9 +22,6 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
-
-  const profile = useProfile(currentIdentity?.identityKey);
-  const username = profile.name ?? '';
 
   // This component shouldn't mount if a current identity is not set.
   if (!currentIdentity?.identityKey) {
@@ -81,14 +74,13 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
         ]}
       >
         <View style={[Atoms.flex_col, Atoms.flex_1]}>
-          <Text
+          <Username
+            identity={currentIdentity.identityKey}
+            fallbackName=""
             fontSize="md"
             fontWeight="bold"
             color="neutral_1000"
-            numberOfLines={1}
-          >
-            {username}
-          </Text>
+          />
           <IdentityTag identity={currentIdentity.identityKey} />
         </View>
         {hovered ? (

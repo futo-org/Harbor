@@ -11,7 +11,7 @@ import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimBy
 import { CLAIM_TYPES } from '@/src/features/verifications/utils/forms';
 import { getPlatformFromClaim } from '@/src/features/verifications/utils/platforms';
 import { resolveClaimTitle } from '@/src/features/verifications/utils/render';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import { type Href, router } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
@@ -125,8 +125,6 @@ function InteractionNotification({
   notification: Exclude<NotificationData, PostNotification>;
 }) {
   const { theme } = useTheme();
-  const profile = useProfile(notification.fromIdentity);
-  const name = profile.name ?? 'Anonymous';
 
   const quoted = quotedPost(notification);
 
@@ -164,14 +162,11 @@ function InteractionNotification({
         <View
           style={[Atoms.flex_row, Atoms.items_center, { flexWrap: 'wrap' }]}
         >
-          <Text
+          <Username
+            identity={notification.fromIdentity}
             fontWeight="bold"
-            numberOfLines={1}
-            style={Atoms.flex_shrink_1}
             onPress={openProfile}
-          >
-            {name}
-          </Text>
+          />
           <Text>
             {' '}
             {summary(notification)}

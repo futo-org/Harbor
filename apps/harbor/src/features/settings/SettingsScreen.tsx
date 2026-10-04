@@ -22,7 +22,7 @@ import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
@@ -190,8 +190,6 @@ export default function SettingsTabScreen() {
 }
 
 function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
-  const profile = useProfile(identityKey);
-
   return (
     <View
       style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_md, { flex: 1 }]}
@@ -204,14 +202,11 @@ function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
           { flex: 1, alignItems: 'baseline' },
         ]}
       >
-        <Text
+        <Username
+          identity={identityKey}
           variant="subtitle"
           fontWeight="semibold"
-          numberOfLines={1}
-          style={{ flexShrink: 1 }}
-        >
-          {profile.name || 'Anonymous'}
-        </Text>
+        />
         <IdentityTag identity={identityKey} />
       </View>
     </View>
@@ -307,11 +302,7 @@ function SourceCodeItem() {
     <View
       style={[Atoms.pt_3xl, Atoms.px_md, Atoms.flex_row, Atoms.items_center]}
     >
-      <LinkButton
-        title="Source code"
-        onPress={() => Linking.openURL(SOURCE_CODE_URL)}
-        underlineOnHover
-      />
+      <LinkButton title="Source code" href={SOURCE_CODE_URL} underlineOnHover />
     </View>
   );
 }

@@ -12,6 +12,11 @@ let mockContext: {
   alias: string | null;
 };
 
+jest.mock('@/src/features/follow/FollowingBadge', () => ({
+  __esModule: true,
+  FollowingBadge: () => null,
+}));
+
 jest.mock('./ProfileContext', () => ({
   useProfileContext: () => mockContext,
 }));
@@ -57,6 +62,10 @@ jest.mock('./ProfileMenu', () => ({
   __esModule: true,
   default: () => null,
 }));
+jest.mock('./ProfileShareSheet', () => ({
+  __esModule: true,
+  default: () => null,
+}));
 jest.mock('@/src/common/components/composites', () => ({
   BackButton: () => null,
 }));
@@ -67,9 +76,11 @@ jest.mock('@/src/common/components/primitives', () => {
   const react = require('react');
   const { Text: Native } = require('react-native');
   return {
+    AVATAR_SIZE_MAP: { xl: 0 },
     Text: ({ children }: { children: unknown }) =>
       react.createElement(Native, null, children),
     Button: () => null,
+    IconButton: () => null,
     ProfileAvatar: () => null,
   };
 });
@@ -86,7 +97,7 @@ jest.mock('@/src/common/constants', () => ({
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   identiconUrl: () => 'u',
   truncateName: (name: string) => name,
-  useUsername: () => 'fallback',
+  useUsername: () => 'Alice',
 }));
 jest.mock('@/src/common/theme', () => ({
   ...jest.requireActual('@/src/common/theme'),

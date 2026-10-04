@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 #
-# Publishes every @polycentric package to the GitLab package registry and,
+# Publishes every @polycentric package to the Forgejo package registry and,
 # when NPM_TOKEN is set, to public npm. Packages are published one at a time
 # so a version that already exists is skipped instead of aborting the whole
 # release (and blocking the packages ordered after it), keeping re-runs
 # idempotent.
 #
 # Env:
-#   CI_COMMIT_TAG    release tag, e.g. v2.0.2 (the leading "v" is stripped)
-#   CI_SERVER_HOST   GitLab host for the project package registry
-#   CI_PROJECT_ID    GitLab project id for the project package registry
-#   NPM_TOKEN        public npm auth token; public publish is skipped if unset
-# Without CI_SERVER_HOST only the public publish runs.
+#   CI_COMMIT_TAG      release tag, e.g. v2.0.2 (the leading "v" is stripped)
+#   GITHUB_SERVER_URL  Forgejo instance URL for the package registry
+#   GITHUB_REPOSITORY  owner/repo; the owner selects the Forgejo registry
+#   HARBOR_CI_TOKEN    Forgejo registry token; Forgejo publish is skipped if unset
+#   NPM_TOKEN          public npm auth token; public publish is skipped if unset
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -33,11 +33,17 @@ pnpm -r --filter "@polycentric/*" exec npm version "${VERSION}" --no-git-tag-ver
 # Topological order; pnpm rewrites workspace:* -> ${VERSION} on publish.
 PACKAGES="@polycentric/rs-core-wasm @polycentric/js-storage-sqlite @polycentric/js-core @polycentric/js-browser @polycentric/js-node @polycentric/react-native"
 
+add_npmrc() {
+  # Append to ~/.npmrc unless the exact line is already there
+  grep -qxF "$1" ~/.npmrc 2>/dev/null || echo "$1" >> ~/.npmrc
+}
+
 publish_all() {
   registry_url="$1"
   registry_label="$2"
   echo "Publishing to ${registry_label} (${registry_url})"
-  pnpm config set @polycentric:registry "${registry_url}"
+  # Ensure `.npmrc` is used (In `pnpm>=11`, `pnpm config set` writes to `auth.ini`)
+  add_npmrc "@polycentric:registry=${registry_url}"
   for pkg in $PACKAGES; do
     set +e
     output=$(pnpm -r --filter "$pkg" publish --no-git-checks --access public --tag "$DIST_TAG" 2>&1)
@@ -55,8 +61,15 @@ publish_all() {
   done
 }
 
-if [ -n "${CI_SERVER_HOST:-}" ]; then
-  publish_all "https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/" "the GitLab package registry"
+if [ -n "${HARBOR_CI_TOKEN:-}" ]; then
+  : "${GITHUB_SERVER_URL:?GITHUB_SERVER_URL is required for Forgejo publishing}"
+  : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required for Forgejo publishing}"
+  forgejo_registry="${GITHUB_SERVER_URL}/api/packages/${GITHUB_REPOSITORY%%/*}/npm/"
+  forgejo_host=$(echo "${forgejo_registry}" | sed -E 's#https?://([^/]+).*#\1#')
+  add_npmrc "//${forgejo_host}/api/packages/${GITHUB_REPOSITORY%%/*}/npm/:_authToken=${HARBOR_CI_TOKEN}"
+  publish_all "${forgejo_registry}" "the Forgejo package registry"
+else
+  echo "HARBOR_CI_TOKEN is not set; skipping Forgejo publish" >&2
 fi
 
 if [ -n "${NPM_TOKEN:-}" ]; then

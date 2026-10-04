@@ -11,7 +11,9 @@ import { TrueSheet, type SheetDetent } from '@lodev09/react-native-true-sheet';
 import { Portal } from '@rn-primitives/portal';
 import { router, useNavigation } from 'expo-router';
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -42,8 +44,14 @@ const FADE_OUT_MS = 120;
 /** Exported for viewport-aware content sizing. */
 export const SHEET_OVERLAY_PADDING = 16;
 
+// True when a native sheet sizes itself to its content (`'auto'` detent).
+// `flex: 1` content has no height of its own, so it'd measure as zero there.
+const SheetSizesToContentContext = createContext(false);
+
 type CommonProps = {
   children: ReactNode;
+  /** With `'auto'`, the content is measured at its natural height, so it
+   * won't stretch to fill a taller detent in the same list. */
   detents?: SheetDetent[];
   dismissible?: boolean;
   /** Dim the background; tapping the dim area dismisses the sheet (native).
@@ -54,6 +62,9 @@ type CommonProps = {
   scrollable?: boolean;
   /** Web only: overrides the modal card's default 600px max width. */
   maxWidth?: number;
+  /** Web only: fixed card height instead of content sizing; the viewport
+   * still caps it. */
+  height?: number;
   header?: ReactElement;
   /** Pinned footer element — bottom of the sheet (native) / card (web). */
   footer?: ReactElement;
@@ -93,12 +104,18 @@ function SheetContent({
   scrollable = true,
   ...props
 }: SheetContentProps) {
+  const sizesToContent = useContext(SheetSizesToContentContext);
   // Web scrolls in the modal card body already; native needs a ScrollView
   // here for TrueSheet to pin and inset when the keyboard shows.
   if (isWeb || !scrollable) {
     return (
       <View
-        style={[Atoms.p_lg, Atoms.flex_1, { minHeight: 50 }, style]}
+        style={[
+          Atoms.p_lg,
+          !sizesToContent && Atoms.flex_1,
+          { minHeight: 50 },
+          style,
+        ]}
         {...props}
       >
         {children}
@@ -107,7 +124,7 @@ function SheetContent({
   }
   return (
     <ScrollView
-      style={Atoms.flex_1}
+      style={!sizesToContent && Atoms.flex_1}
       contentContainerStyle={[Atoms.p_lg, { minHeight: 50 }, style]}
       keyboardShouldPersistTaps="handled"
       alwaysBounceVertical={false}
@@ -219,6 +236,7 @@ function NativeSheet({
   ...props
 }: NativeInternalProps) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const sheetRef = useRef<TrueSheet>(null);
   /** Once the sheet's dismiss animation has run (or is running) we
    * shouldn't loop it again on the follow-up navigation dispatch. */
@@ -280,6 +298,7 @@ function NativeSheet({
   }, [isInline, open, mounted]);
 
   const surface = theme.palette.neutral_0;
+  const sizesToContent = detents.includes('auto');
 
   if (isInline && !mounted) return null;
 
@@ -310,9 +329,19 @@ function NativeSheet({
       }}
       header={props.header}
       footer={props.footer}
+      // Prevents the inset from applying when the keyboard is up (footer rises with it)
+      footerOptions={{ keyboardOffset: -insets.bottom }}
     >
-      <View style={[Atoms.w_full, Atoms.flex_1, { backgroundColor: surface }]}>
-        {children}
+      <View
+        style={[
+          Atoms.w_full,
+          !sizesToContent && Atoms.flex_1,
+          { backgroundColor: surface },
+        ]}
+      >
+        <SheetSizesToContentContext.Provider value={sizesToContent}>
+          {children}
+        </SheetSizesToContentContext.Provider>
       </View>
     </TrueSheet>
   );
@@ -353,6 +382,7 @@ function WebModal({
   children,
   dismissible = true,
   maxWidth,
+  height,
   navigation,
   header,
   footer,
@@ -422,14 +452,11 @@ function WebModal({
           // Content-sized up to the viewport; taller content scrolls inside
           // the card body so the modal itself never exceeds the screen.
           Atoms.max_h_full,
+          height !== undefined && { height },
           Atoms.overflow_hidden,
           Atoms.flex_col,
           { maxWidth: 600, marginVertical: 'auto', marginHorizontal: 'auto' },
-          compact &&
-            ([
-              Atoms.max_w_full,
-              { marginVertical: 0, minHeight: '100%' },
-            ] as const),
+          compact && Atoms.max_w_full,
           maxWidth !== undefined && { maxWidth },
           {
             backgroundColor: theme.palette.neutral_0,
@@ -441,10 +468,8 @@ function WebModal({
         {/* The scroll container between the pinned header and footer. A
             scroll container's automatic minimum size is 0, so it shrinks to
             the space the card has left instead of forcing the card past its
-            max height. */}
-        <View style={[Atoms.flex_shrink_1, Atoms.overflow_auto]}>
-          {children}
-        </View>
+            max height, and grows to fill a fixed-height card. */}
+        <View style={[Atoms.flex_1, Atoms.overflow_auto]}>{children}</View>
         {footer}
       </View>
     </Reanimated.View>

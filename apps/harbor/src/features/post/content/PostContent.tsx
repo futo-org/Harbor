@@ -6,7 +6,7 @@ import {
   thirdPartyApplication,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms } from '@/src/common/theme';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import { v2 } from '@polycentric/react-native';
 import { type ExternalPathString, Link, router } from 'expo-router';
 import { memo, useCallback, useMemo } from 'react';
@@ -127,9 +127,6 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
     }
   }, [parentId]);
 
-  const parentProfile = useProfile(parentIdentity);
-  const parentName = parentProfile.name ?? '';
-
   const handlePress = useCallback(() => {
     if (!parentIdentity) return;
     router.push(Routes.tabs.profile(parentIdentity));
@@ -156,14 +153,11 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
       >
         Replying to{' '}
       </Text>
-      <Text
+      <Username
+        identity={parentIdentity}
         variant="secondary"
         color="primary_500"
-        numberOfLines={1}
-        style={Atoms.flex_shrink_1}
-      >
-        {parentName || '…'}
-      </Text>
+      />
     </Pressable>
   );
 }

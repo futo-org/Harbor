@@ -16,6 +16,7 @@ const PREVIEW_LIMIT = 240;
 const MAX_DISPLAY_LIMIT = 2000;
 
 type PostTextSize = { fontSize?: 'lg'; lineHeight?: 'lg' };
+type LinkSegment = Exclude<TextSegment, { type: 'text' }>;
 
 /**
  * Renders post body text with tappable links and mentions.
@@ -48,12 +49,33 @@ export const PostText = memo(function PostText({
 
   const size: PostTextSize = large ? { fontSize: 'lg', lineHeight: 'lg' } : {};
 
+  // The text as read by screen readers, once, without the inline views
+  // (emoji images, their copy-only text) that also carry it. The selectable
+  // UITextView has no label of its own, so it would otherwise be skipped.
+  const accessibilityLabel = useMemo(
+    () =>
+      segments.map((segment) => segment.value).join('') +
+      (truncated ? '…' : ''),
+    [segments, truncated],
+  );
+
   return (
     <>
-      <Text variant="secondary" selectable={selectable} {...size}>
-        {segments.map((segment) => (
-          <Segment key={segment.start} segment={segment} size={size} />
-        ))}
+      <Text
+        variant="secondary"
+        selectable={selectable}
+        accessibilityLabel={accessibilityLabel}
+        {...size}
+      >
+        {segments.map((segment) =>
+          // Plain text stays a direct string child: the selectable
+          // UITextView only turns direct strings into native text.
+          segment.type === 'text' ? (
+            segment.value
+          ) : (
+            <Segment key={segment.start} segment={segment} size={size} />
+          ),
+        )}
         {truncated ? '…' : ''}
       </Text>
       {truncateToPreview && truncated ? (
@@ -85,20 +107,18 @@ function ShowMoreToggle({ onPress }: { onPress: () => void }) {
 }
 
 /**
- * One parsed segment: plain text as-is, or a link/mention as a tappable
- * primary-colored piece. On web it's a real anchor (hover underline, new tab
- * for external links); on native it's a Text with an onPress.
+ * A link/hashtag/mention segment as a tappable primary-colored piece. On web
+ * it's a real anchor (hover underline, new tab for external links); on native
+ * it's a Text with an onPress.
  */
 function Segment({
   segment,
   size,
 }: {
-  segment: TextSegment;
+  segment: LinkSegment;
   size: PostTextSize;
 }) {
   const { theme } = useTheme();
-
-  if (segment.type === 'text') return segment.value;
 
   const href = buildSegmentHref(segment);
 
@@ -136,9 +156,7 @@ function Segment({
   );
 }
 
-function buildSegmentHref(
-  segment: Exclude<TextSegment, { type: 'text' }>,
-): Href {
+function buildSegmentHref(segment: LinkSegment): Href {
   switch (segment.type) {
     case 'link':
       return segment.url as Href;

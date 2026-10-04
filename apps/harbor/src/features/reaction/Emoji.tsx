@@ -2,17 +2,23 @@ import { Atoms } from '@/src/common/theme';
 import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { isWeb } from '@/src/common/util/platform';
 import { memo, useCallback, type ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
 import type { Insets, StyleProp, ViewStyle } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 // Scale/timing/opacity for the hover (on web) and press (on native) animations.
 export const EMOJI_POP_SCALE = 1.12;
 export const EMOJI_POP_MS = 120;
 export const EMOJI_PRESS_OPACITY = 0.6;
+/** Glyph size as a fraction of a numerically sized emoji cell. */
+export const EMOJI_IMAGE_SCALE = 0.62;
 
-// Web-only: transition descriptor for the Pressable style render function.
-const WEB_TRANSITION: ViewStyle = {
-  transitionProperty: 'transform, background-color',
+// Web-only: transition descriptors for the Pressable style render functions.
+const WEB_BACKGROUND_TRANSITION: ViewStyle = {
+  transitionProperty: 'background-color',
+  transitionDuration: `${EMOJI_POP_MS}ms`,
+};
+const WEB_TRANSFORM_TRANSITION: ViewStyle = {
+  transitionProperty: 'transform',
   transitionDuration: `${EMOJI_POP_MS}ms`,
 };
 
@@ -27,7 +33,11 @@ type EmojiLikePressableProps = {
   children: ReactNode;
 };
 
-/** A rounded, centered Pressable with hover/press animation. */
+/**
+ * A rounded, centered Pressable with hover/press animation. The button itself
+ * only changes color/opacity; the pop scale is applied to its content so the
+ * highlight keeps its size.
+ */
 function EmojiLikePressable({
   onPress,
   children,
@@ -45,25 +55,29 @@ function EmojiLikePressable({
         Atoms.align_center,
         Atoms.justify_center,
         size ? { width: size, aspectRatio: 1 } : undefined,
-        isWeb ? WEB_TRANSITION : undefined,
+        isWeb ? WEB_BACKGROUND_TRANSITION : undefined,
         selected ? { backgroundColor: highlightColor } : undefined,
-        // Hover/press animation
         isWeb
           ? state.hovered || state.pressed
-            ? {
-                backgroundColor: highlightColor,
-                transform: [{ scale: EMOJI_POP_SCALE }],
-              }
+            ? { backgroundColor: highlightColor }
             : undefined
           : state.pressed
-            ? {
-                opacity: EMOJI_PRESS_OPACITY,
-                transform: [{ scale: EMOJI_POP_SCALE }],
-              }
+            ? { opacity: EMOJI_PRESS_OPACITY }
             : undefined,
       ]}
     >
-      {children}
+      {(state) => (
+        <View
+          style={[
+            isWeb ? WEB_TRANSFORM_TRANSITION : undefined,
+            (isWeb ? state.hovered || state.pressed : state.pressed)
+              ? { transform: [{ scale: EMOJI_POP_SCALE }] }
+              : undefined,
+          ]}
+        >
+          {children}
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -106,7 +120,7 @@ export const Emoji = memo(function Emoji({
       <View style={style}>
         <EmojiImage
           sequence={emoji}
-          size={isNumericSize ? Math.round(size * 0.62) : 28}
+          size={isNumericSize ? Math.round(size * EMOJI_IMAGE_SCALE) : 28}
         />
       </View>
     </EmojiLikePressable>

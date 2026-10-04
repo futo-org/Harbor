@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harbor load test</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232a78d6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='5' r='3'/%3E%3Cpath d='M12 22V8M5 12H2a10 10 0 0 0 20 0h-3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="vendor/uPlot.min.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="3"/><path d="M12 22V8M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
+    Harbor load test
+  </div>
+  <div class="target" id="target"></div>
+  <div class="runstate">
+    <span id="state-badge" class="badge"><span class="dot"></span><span id="state-text">Idle</span></span>
+    <span id="elapsed" class="num ink2"></span>
+    <div class="progress" id="progress" hidden><div id="progress-bar"></div></div>
+  </div>
+  <div class="actions">
+    <button type="button" id="btn-start" class="primary">Start run</button>
+    <button type="button" id="btn-pause" disabled>Pause</button>
+    <button type="button" id="btn-stop" class="danger" disabled>Stop</button>
+  </div>
+</header>
+<div id="banners"></div>
+<main>
+  <section class="kpis" id="kpis" aria-label="Headline numbers"></section>
+
+  <section class="cols">
+    <div class="card">
+      <div class="card-head">
+        <h2>Scenarios</h2>
+        <span class="hint">Rates are arrivals per second (open model). Changes apply live during a run.</span>
+      </div>
+      <div class="table-wrap">
+        <table id="scenarios">
+          <thead><tr>
+            <th></th><th>Scenario</th><th>Target rate</th><th class="r">Achieved</th>
+            <th class="r">In flight</th><th class="r">Done</th><th class="r">Failed</th><th class="r">Dropped</th><th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Run settings</h2><span class="hint" id="settings-hint">Editable while idle</span></div>
+      <form id="settings" class="settings" autocomplete="off"></form>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Client-side results</h2>
+      <span class="hint">Measured by this tool, 1-second resolution</span>
+      <span class="spacer" style="flex:1"></span>
+      <div class="filters">
+        <span class="muted" style="font-size:12px">Smoothing</span>
+        <div class="seg" id="smooth-seg" title="Moving average for rates (latency stays raw)">
+          <button type="button" data-s="1">1s</button><button type="button" data-s="5" class="on">5s</button><button type="button" data-s="15">15s</button>
+        </div>
+        <span class="muted" style="font-size:12px;margin-left:8px">Window</span>
+        <div class="seg" id="window-seg">
+          <button type="button" data-w="120">2m</button><button type="button" data-w="300">5m</button><button type="button" data-w="900">15m</button><button type="button" data-w="0" class="on">Run</button>
+        </div>
+      </div>
+    </div>
+    <div class="charts" id="client-charts"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Operations</h2>
+      <span class="hint" id="ops-hint">Last 10 seconds. Click a row to chart its latency.</span>
+      <span class="spacer"></span>
+      <div class="seg" id="ops-seg"><button type="button" data-m="recent" class="on">Last 10s</button><button type="button" data-m="total">Whole run</button></div>
+    </div>
+    <div class="table-wrap"><table id="ops"></table></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Platform</h2>
+      <span class="hint" id="platform-hint">From VictoriaMetrics</span>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-head"><h3 style="font-size:13.5px">Components</h3><span class="hint">Latest sample, and peak since the run started</span></div>
+      <div class="table-wrap"><table id="components" class="components"></table></div>
+    </div>
+    <div id="platform"></div>
+  </section>
+
+  <section class="cols">
+    <div class="card">
+      <div class="card-head"><h2>Errors</h2><span class="hint">Most recent message per operation and class</span></div>
+      <div class="table-wrap"><table id="errors" class="samples"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Log</h2></div>
+      <div class="log" id="log"></div>
+    </div>
+  </section>
+</main>
+<script src="vendor/uPlot.iife.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

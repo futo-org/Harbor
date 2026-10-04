@@ -93,13 +93,9 @@ async fn insert_cached(
             None,
             None,
         ),
-        Err((code, message)) => (
-            String::new(),
-            String::new(),
-            String::new(),
-            Some(*code as i32),
-            Some(message.clone()),
-        ),
+        Err((code, message)) => {
+            (None, None, None, Some(*code as i32), Some(message.clone()))
+        }
     };
 
     let row = url_info_cache::ActiveModel {
@@ -250,9 +246,9 @@ async fn fetch_metadata(
     })?;
 
     let response = UrlInfoResponse {
-        title: meta.title.unwrap_or_default(),
-        description: meta.description.unwrap_or_default(),
-        image: meta.image.unwrap_or_default(),
+        title: meta.title,
+        description: meta.description,
+        image: meta.image,
     };
     Ok((response, raw))
 }
@@ -290,9 +286,9 @@ mod tests {
             .await
             .expect("should map metadata");
 
-        assert_eq!(resp.title, "Example");
-        assert_eq!(resp.description, "Desc");
-        assert_eq!(resp.image, "https://img/x.png");
+        assert_eq!(resp.title.as_deref(), Some("Example"));
+        assert_eq!(resp.description.as_deref(), Some("Desc"));
+        assert_eq!(resp.image.as_deref(), Some("https://img/x.png"));
         assert_eq!(
             raw,
             r#"{"title":"Example","description":"Desc","image":"https://img/x.png"}"#,
@@ -318,9 +314,9 @@ mod tests {
             .await
             .expect("should map metadata");
 
-        assert_eq!(resp.title, "Only title");
-        assert_eq!(resp.description, "");
-        assert_eq!(resp.image, "");
+        assert_eq!(resp.title.as_deref(), Some("Only title"));
+        assert_eq!(resp.description, None);
+        assert_eq!(resp.image, None);
     }
 
     #[tokio::test]
@@ -376,9 +372,9 @@ mod tests {
     ) -> url_info_cache::Model {
         url_info_cache::Model {
             url: url.to_string(),
-            title: title.to_string(),
-            description: String::new(),
-            image: String::new(),
+            title: Some(title.to_string()),
+            description: None,
+            image: None,
             raw_response: None,
             error_code: None,
             error_message: None,
@@ -446,8 +442,8 @@ mod tests {
             .await
             .expect("second lookup should succeed");
 
-        assert_eq!(first.title, "Cached");
-        assert_eq!(second.title, "Cached");
+        assert_eq!(first.title.as_deref(), Some("Cached"));
+        assert_eq!(second.title.as_deref(), Some("Cached"));
         mock.assert_async().await;
     }
 
@@ -477,7 +473,7 @@ mod tests {
             .await
             .expect("expired row should be refetched");
 
-        assert_eq!(resp.title, "Fresh");
+        assert_eq!(resp.title.as_deref(), Some("Fresh"));
         mock.assert_async().await;
     }
 
@@ -504,7 +500,7 @@ mod tests {
         let resp = lookup(&ctx, &scrape_url, "https://example.com")
             .await
             .expect("lookup should succeed");
-        assert_eq!(resp.title, "Evicting");
+        assert_eq!(resp.title.as_deref(), Some("Evicting"));
         mock.assert_async().await;
 
         let statements = ctx.db.clone().into_transaction_log();
@@ -579,7 +575,7 @@ mod tests {
             .await
             .expect("padded URL should be trimmed and scraped");
 
-        assert_eq!(resp.title, "Normalized");
+        assert_eq!(resp.title.as_deref(), Some("Normalized"));
         mock.assert_async().await;
     }
 
@@ -642,7 +638,7 @@ mod tests {
             .await
             .expect("retry after recovery should succeed");
 
-        assert_eq!(recovered.title, "Recovered");
+        assert_eq!(recovered.title.as_deref(), Some("Recovered"));
         mock.assert_async().await;
     }
 

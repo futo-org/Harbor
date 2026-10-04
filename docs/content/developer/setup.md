@@ -51,8 +51,8 @@ Xcode on macOS for iOS.
 ## Build the workspace
 
 ```sh
-git clone https://gitlab.futo.org/polycentric/polycentric.git
-cd polycentric
+git clone https://code.futo.org/harbor/harbor.git
+cd harbor
 
 # Install the pinned Node.js version.
 nvm install
@@ -84,7 +84,7 @@ The server listens on `localhost:3000` by default, which is what the app's
 default seed server list points at. See
 [Running a Server](../guides/running-a-server.md) for configuration, migration
 commands, and how to run the server from source instead of in Docker; the
-[server README](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/server/README.md)
+[server README](https://code.futo.org/harbor/harbor/src/branch/develop/services/server/README.md)
 covers its environment variables and integration tests.
 
 If you use Podman, make sure `docker compose` resolves to Compose v2.

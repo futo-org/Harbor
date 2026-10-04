@@ -653,9 +653,9 @@ CREATE TABLE public.seaql_migrations (
 
 CREATE TABLE public.url_info_cache (
     url character varying NOT NULL,
-    title character varying NOT NULL,
-    description character varying NOT NULL,
-    image character varying NOT NULL,
+    title text,
+    description text,
+    image text,
     raw_response character varying,
     error_code integer,
     error_message character varying,
@@ -1224,6 +1224,13 @@ CREATE INDEX reaction_on_post_idx ON public.reaction USING btree (on_post);
 --
 
 CREATE INDEX reaction_tally_decayed_count ON public.reaction_tally USING btree (decayed_count DESC, event_id DESC) WHERE (decayed_count > (0)::numeric);
+
+
+--
+-- Name: reaction_tally_decayed_count_update; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX reaction_tally_decayed_count_update ON public.reaction_tally USING btree (event_id DESC) WHERE (decayed_count > (0)::numeric);
 
 
 --

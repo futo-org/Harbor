@@ -134,6 +134,13 @@ jest.mock('expo-router', () => ({
   useFocusEffect: () => undefined,
 }));
 
+jest.mock('@/src/features/follow/FollowingBadge', () => ({
+  __esModule: true,
+  FollowingBadge: () => null,
+}));
+
+jest.mock('@polycentric/react-native', () => ({ FetchMode: { Default: 'd' } }));
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -142,7 +149,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shortenIdentityId: (id: string) => `short-${id}`,
   truncateName: (name: string) => name,
   useCurrentIdentity: () => ({ identityKey: 'me' }),
-  useUsername: () => 'fallback',
+  useUsername: () => 'Alice',
 }));
 
 let mockProfileAlias: string | null = null;
