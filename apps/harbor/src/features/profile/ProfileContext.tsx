@@ -85,7 +85,3 @@ export function useProfileContext(): ProfileContextValue {
     throw new Error('useProfileContext must be used within ProfileProvider');
   return ctx;
 }
-
-export function useOptionalProfileContext(): ProfileContextValue | null {
-  return useContext(ProfileContext);
-}
