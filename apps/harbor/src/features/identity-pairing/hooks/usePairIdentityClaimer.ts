@@ -1,21 +1,13 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
 import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
-import {
-  type ProfileHookResult,
-  useProfile,
-} from '@/src/features/profile/hooks/useProfile';
-import {
-  FetchMode,
-  type PairingSession,
-  type v2,
-} from '@polycentric/react-native';
+import type { PairingSession, v2 } from '@polycentric/react-native';
 import { useCallback, useEffect, useState } from 'react';
 
 export type PairIdentityClaimerHookResult = {
   stage: ClaimerStage;
   error: string | null;
-  profile: ProfileHookResult;
+  issuerIdentity: string | undefined;
   approved: boolean;
   join: () => void;
 };
@@ -234,15 +226,13 @@ export function usePairIdentityClaimer(
     issuerIdentity = state.session?.digest.issuerIdentity;
   }
 
-  const profile = useProfile(issuerIdentity, { fetchMode: FetchMode.Default });
-
   // Derive return value
   return {
     error: state.stage === 'error' ? state.message : null,
     approved: state.stage === 'done',
     stage: state.stage,
+    issuerIdentity,
     join,
-    profile,
   };
 }
 

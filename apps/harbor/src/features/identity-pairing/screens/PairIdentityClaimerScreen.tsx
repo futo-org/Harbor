@@ -1,4 +1,8 @@
 import { EmojiImage } from '@/src/common/components/EmojiImage';
+import {
+  IdentityBadge,
+  IdentityBadgeSkeleton,
+} from '@/src/common/components/composites/IdentityBadge';
 import { Button, Text } from '@/src/common/components/primitives';
 import {
   publicKeyToString,
@@ -13,9 +17,17 @@ import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publi
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { PAIRING_CODE_PARAM, Routes } from '@/src/common/constants';
 import { router, useLocalSearchParams } from 'expo-router';
-import { type ReactNode, useCallback, useEffect, useMemo } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { extractPairingInfo } from '@/src/features/identity-pairing/pairingCode';
+import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { FetchMode } from '@polycentric/react-native';
 
 export default function PairIdentityClaimerScreen() {
   const { theme } = useTheme();
@@ -36,12 +48,8 @@ export default function PairIdentityClaimerScreen() {
     router.setParams({ [PAIRING_CODE_PARAM]: scanned });
   }, []);
 
-  const { error, approved, stage, join } = usePairIdentityClaimer(pairingInfo);
-
-  // TODO: replace with a confirmation UI showing the issuer's profile
-  useEffect(() => {
-    if (stage === 'confirming') join();
-  }, [stage, join]);
+  const { error, approved, stage, issuerIdentity, join } =
+    usePairIdentityClaimer(pairingInfo);
 
   useEffect(() => {
     if (!approved) return;
@@ -85,7 +93,7 @@ export default function PairIdentityClaimerScreen() {
       </>
     );
   } else if (stage === 'confirming') {
-    body = <Text>TODO</Text>;
+    body = <ConfirmationBody issuer={issuerIdentity} onConfirm={join} />;
   } else {
     body = (
       <View
@@ -191,6 +199,73 @@ function PairingEmojiCard() {
         <Text variant="small" color="neutral_500" style={Atoms.flex_shrink_1}>
           Waiting for approval from other device
         </Text>
+      </View>
+    </View>
+  );
+}
+
+function ConfirmationBody({
+  issuer,
+  onConfirm,
+}: {
+  issuer: string | undefined;
+  onConfirm: () => void;
+}) {
+  const { landing } = useOnboardingLinks();
+  // Ensure that the issuer profile is available in `IdentityBadge`.
+  useProfile(issuer, { fetchMode: FetchMode.Default });
+
+  // Disable the pair button at first
+  const [allowPair, setAllowPair] = useState(false);
+  useEffect(() => {
+    const timeout = setTimeout(() => setAllowPair(true), 1000);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  const onCancel = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(landing);
+    }
+  };
+
+  return (
+    <View
+      style={[
+        Atoms.flex_1,
+        Atoms.items_center,
+        Atoms.justify_center,
+        Atoms.gap_xl,
+        { maxWidth: 350 },
+      ]}
+    >
+      <Text variant="title">Is this you?</Text>
+      <View style={[Atoms.w_full, Atoms.flex_row]}>
+        {issuer ? (
+          <IdentityBadge identityKey={issuer} size="lg" />
+        ) : (
+          <IdentityBadgeSkeleton size="lg" />
+        )}
+      </View>
+      <View style={[Atoms.w_full, Atoms.flex_row, Atoms.gap_md]}>
+        <View style={Atoms.flex_1}>
+          <Button
+            title="Cancel"
+            variant="secondary"
+            fullWidth
+            onPress={onCancel}
+          />
+        </View>
+        <View style={Atoms.flex_1}>
+          <Button
+            title="Pair"
+            variant="primary"
+            fullWidth
+            disabled={!allowPair}
+            onPress={onConfirm}
+          />
+        </View>
       </View>
     </View>
   );
