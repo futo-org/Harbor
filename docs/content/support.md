@@ -20,8 +20,8 @@ server, file issues, and discuss — but please open an issue before investing t
 change, as we may decline contributions that do not fit the current direction.
 :::
 
-The source is hosted on GitLab:
-[gitlab.futo.org/polycentric/polycentric](https://gitlab.futo.org/polycentric/polycentric).
+The source is hosted on Forgejo:
+[code.futo.org/harbor/harbor](https://code.futo.org/harbor/harbor).
 
 ### Working on the code
 
@@ -34,13 +34,13 @@ The source is hosted on GitLab:
 
 Details that belong next to the code stay in the repository:
 
-- [Server README](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/server/README.md)
+- [Server README](https://code.futo.org/harbor/harbor/src/branch/develop/services/server/README.md)
   — the server's environment variables and integration tests.
-- [Migrations README](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/server/migration/README.md)
+- [Migrations README](https://code.futo.org/harbor/harbor/src/branch/develop/services/server/migration/README.md)
   — writing and managing database migrations.
 
 ### Project management
 
-- [Work items](https://gitlab.futo.org/polycentric/polycentric/-/work_items)
-- [Merge requests](https://gitlab.futo.org/polycentric/polycentric/-/merge_requests)
-- [Milestones](https://gitlab.futo.org/polycentric/polycentric/-/milestones)
+- [Issues](https://code.futo.org/harbor/harbor/issues)
+- [Pull requests](https://code.futo.org/harbor/harbor/pulls)
+- [Milestones](https://code.futo.org/harbor/harbor/milestones)

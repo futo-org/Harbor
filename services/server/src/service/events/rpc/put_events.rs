@@ -14,7 +14,7 @@ use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::TransactionTrait;
-use tonic::Status;
+use tonic::{Code, Status};
 
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::context::ServiceContext;
@@ -23,7 +23,7 @@ use crate::service::identity::repository::Query as IdentityRepository;
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
-    Content, Delete, Event, EventBundle, PublicKey, PutEventError,
+    Application, Content, Delete, Event, EventBundle, PublicKey, PutEventError,
     PutEventsRequest, PutEventsResponse,
 };
 
@@ -37,12 +37,27 @@ pub async fn handle(
     let mut all_blobs = HashSet::<Blob>::new();
 
     let mut banned_cache = HashMap::new();
+    let mut app_cache = HashMap::new();
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
-        match process_event(ctx, event_bundle, &mut banned_cache).await {
+        match process_event(
+            ctx,
+            event_bundle,
+            &mut banned_cache,
+            &mut app_cache,
+        )
+        .await
+        {
             Ok(blobs) => {
                 all_blobs.extend(blobs);
             }
-
+            // We should see internal errors if something is wrong on our end,
+            // e.g. when the database is down. In that case in stead of trying
+            // to store the remaining events return the error immediately and
+            // not as an event specific errors as it's unlikely to be related to
+            // the event.
+            Err(status) if status.code() == Code::Internal => {
+                return Err(status);
+            }
             Err(status) => {
                 tracing::debug!(
                     "put_events[{idx}] skipped: {} {}",
@@ -79,6 +94,7 @@ async fn process_event(
     ctx: &ServiceContext,
     event_bundle: EventBundle,
     banned_cache: &mut HashMap<Box<str>, bool>,
+    app_cache: &mut HashMap<Application, i32>,
 ) -> Result<Vec<Blob>, Status> {
     let mut blobs = Vec::<Blob>::new();
 
@@ -142,6 +158,25 @@ async fn process_event(
             }
         }
     }
+
+    let application_id = match &event.application {
+        Some(app) if let Some(app_id) = app_cache.get(app) => Some(*app_id),
+        Some(app) => {
+            let app_id = EventsRepository::Mutation::application_id(
+                &ctx.db, app,
+            )
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, "put_events application db error");
+                Status::internal("internal server error")
+            })?;
+
+            app_cache.insert(app.clone(), app_id);
+
+            Some(app_id)
+        }
+        None => None,
+    };
 
     // Kafka partition/message key: the serialized protobuf event key.
     // Encoded here while `key` is whole — its fields are moved out below.
@@ -209,16 +244,6 @@ async fn process_event(
         )
         .await?;
     }
-
-    let application_id = match &event.application {
-        Some(app) => {
-            Some(EventsRepository::Mutation::application_id(&txn, app).await.map_err(|e| {
-                tracing::error!(error = %e, "put_events application db error");
-                Status::internal("internal server error")
-            })?)
-        }
-        None => None,
-    };
 
     let event_identity = key.identity.clone();
     let event_collection = key.collection;

@@ -1,0 +1,14 @@
+# Steady, realistic mix for 15 minutes: mostly readers, a few writers.
+# Roughly 100 concurrent readers once sessions overlap.
+run:
+  duration: 15m
+scenarios:
+  browse: {rate: 5}
+  browse_user: {rate: 3}
+  register: {rate: 0.5}
+  post: {rate: 1}
+  reply: {rate: 0.5}
+  react: {rate: 3}
+  repost: {enabled: true, rate: 0.2}
+  follow: {rate: 0.5}
+  search: {enabled: true, rate: 0.5}

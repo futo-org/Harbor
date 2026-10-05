@@ -1,3 +1,4 @@
+use crate::config;
 use crate::data::{
     EventWithContentRow, assemble_hint, bundle_into_hint, pipeline,
     rows_into_bundles,
@@ -144,7 +145,6 @@ async fn hydrate(
         FeedsRepository::list_labels_for_event_keys(
             &ctx.service.ro_db,
             &trigger_keys,
-            ctx.service.trusted_moderator.as_deref(),
         )
         .await
         .map_err(map_db_err)
@@ -153,10 +153,10 @@ async fn hydrate(
     // Add moderation service identity to every request, such that clients can verify label events.
     // This ships the identity events more times than the client needs, and even when labels aren't
     // present in the feed page--can be optimized later.
-    if let Some(moderator) = &ctx.service.trusted_moderator
+    if let Some(moderator) = config::get().trusted_moderator.as_deref()
         && !identities.is_empty()
     {
-        identities.insert(moderator.clone());
+        identities.insert(moderator.to_owned());
     }
 
     let identities: Vec<String> = identities.into_iter().collect();

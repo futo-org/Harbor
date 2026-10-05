@@ -80,7 +80,6 @@ pub(crate) mod claim_bundles {
 
         let identities =
             collect_identities::<(&event::Model, Option<&content::Model>)>(
-                ctx.trusted_moderator.as_deref(),
                 fetched
                     .claims
                     .iter()
@@ -224,8 +223,7 @@ pub(crate) mod event_list {
         let deletes_by_target =
             tombstone::validated_tombstones(ctx, &keys).await?;
 
-        let identities =
-            collect_identities(ctx.trusted_moderator.as_deref(), rows.iter());
+        let identities = collect_identities(rows.iter());
         let (identity_events, profile_events) =
             list_identity_and_profile_events(ctx, identities).await?;
 

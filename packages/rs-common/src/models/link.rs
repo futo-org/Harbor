@@ -26,26 +26,30 @@ impl Validate for Link {
                 ..Default::default()
             },
         );
-        validate::string(
-            description,
-            errors,
-            |err| map_err(ValidationError::Description(err)),
-            StringConfig {
-                min_len: Some(1),
-                max_len: Some(200),
-                ..Default::default()
-            },
-        );
-        validate::string(
-            image,
-            errors,
-            |err| map_err(ValidationError::Image(err)),
-            StringConfig {
-                min_len: Some(1),
-                max_len: Some(200),
-                ..Default::default()
-            },
-        );
+        if let Some(description) = description.as_deref() {
+            validate::string(
+                description,
+                errors,
+                |err| map_err(ValidationError::Description(err)),
+                StringConfig {
+                    min_len: Some(1),
+                    max_len: Some(200),
+                    ..Default::default()
+                },
+            );
+        }
+        if let Some(image) = image.as_deref() {
+            validate::string(
+                image,
+                errors,
+                |err| map_err(ValidationError::Image(err)),
+                StringConfig {
+                    min_len: Some(1),
+                    max_len: Some(200),
+                    ..Default::default()
+                },
+            );
+        }
         validate::string(
             url,
             errors,

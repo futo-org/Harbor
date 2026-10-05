@@ -149,9 +149,15 @@ fn content_text(content: &Content) -> Option<String> {
             }
             // Link previews carry user-/site-supplied text worth moderating.
             for link in &post.links {
-                for field in [&link.title, &link.description, &link.url] {
-                    if !field.is_empty() {
-                        parts.push(field.as_str());
+                for field in [
+                    Some(&*link.title),
+                    link.description.as_deref(),
+                    Some(&*link.url),
+                ] {
+                    if let Some(field) = field
+                        && !field.is_empty()
+                    {
+                        parts.push(field);
                     }
                 }
             }

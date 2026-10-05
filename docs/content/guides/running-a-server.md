@@ -24,8 +24,8 @@ It depends on two backing services:
 Requires `git`, `docker`, and Docker Compose v2.
 
 ```bash
-git clone https://gitlab.futo.org/polycentric/polycentric.git
-cd polycentric
+git clone https://code.futo.org/harbor/harbor.git
+cd harbor
 
 # Build and start postgres, the object store, and the server.
 docker compose up -d --build
@@ -64,7 +64,7 @@ DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 cargo run -p server
 ```
 
-See [`services/server/README.md`](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/server/README.md)
+See [`services/server/README.md`](https://code.futo.org/harbor/harbor/src/branch/develop/services/server/README.md)
 for details.
 
 ## Configuration
@@ -133,7 +133,7 @@ The server produces events to Kafka, and its background workers consume them.
 
 The companion services (moderation, push notifications, scraper) are configured the
 same way; their variables are listed in each service's README under
-[`services/`](https://gitlab.futo.org/polycentric/polycentric/-/tree/develop/services).
+[`services/`](https://code.futo.org/harbor/harbor/src/branch/develop/services).
 
 `HARBOR_SERVER_PORT` is read by `compose.yml` to choose the published host port;
 the server process itself always binds `3000` inside the container.
@@ -181,7 +181,7 @@ remain in the object store.
 
 Removing blob bodies can be done by a separate moderation service. FUTO runs
 one, and you can
-[run your own](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/moderation/README.md).
+[run your own](https://code.futo.org/harbor/harbor/src/branch/develop/services/moderation/README.md).
 It scans images (for example, matching against PhotoDNA to detect known CSAM),
 deletes matching blobs directly from the object store, and publishes a
 [`Report`](../protocol/data-model.md#report) event recording the violation. Because it
