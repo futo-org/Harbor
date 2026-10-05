@@ -1,9 +1,12 @@
 import { EmojiImage } from '@/src/common/components/EmojiImage';
+import { AVATAR_SIZE_MAP } from '@/src/common/components/Avatar/Avatar';
 import {
-  IdentityBadge,
-  IdentityBadgeSkeleton,
-} from '@/src/common/components/composites/IdentityBadge';
-import { Button, Text } from '@/src/common/components/primitives';
+  Button,
+  IdentityTag,
+  ProfileAvatar,
+  Text,
+} from '@/src/common/components/primitives';
+import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import {
   publicKeyToString,
   usePolycentric,
@@ -27,7 +30,9 @@ import {
 import { ActivityIndicator, View } from 'react-native';
 import { extractPairingInfo } from '@/src/features/identity-pairing/pairingCode';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import { FetchMode } from '@polycentric/react-native';
+import Animated from 'react-native-reanimated';
 
 export default function PairIdentityClaimerScreen() {
   const { theme } = useTheme();
@@ -212,8 +217,9 @@ function ConfirmationBody({
   onConfirm: () => void;
 }) {
   const { landing } = useOnboardingLinks();
-  // Ensure that the issuer profile is available in `IdentityBadge`.
-  useProfile(issuer, { fetchMode: FetchMode.Default });
+  // Child components also use the profile information we fetch.
+  const profile = useProfile(issuer, { fetchMode: FetchMode.Default });
+  const showSkeleton = !issuer || profile.isLoading;
 
   // Disable the pair button at first
   const [allowPair, setAllowPair] = useState(false);
@@ -231,43 +237,70 @@ function ConfirmationBody({
   };
 
   return (
-    <View
-      style={[
-        Atoms.flex_1,
-        Atoms.items_center,
-        Atoms.justify_center,
-        Atoms.gap_xl,
-        { maxWidth: 350 },
-      ]}
-    >
-      <Text variant="title">Is this you?</Text>
-      <View style={[Atoms.w_full, Atoms.flex_row]}>
-        {issuer ? (
-          <IdentityBadge identityKey={issuer} size="lg" />
+    <View style={[Atoms.flex_1, Atoms.items_center, Atoms.justify_center]}>
+      <View
+        style={[
+          Atoms.w_full,
+          Atoms.items_center,
+          Atoms.gap_xl,
+          { maxWidth: 350 },
+        ]}
+      >
+        <Text variant="title">Is this you?</Text>
+        {showSkeleton ? (
+          <IssuerProfileSkeleton />
         ) : (
-          <IdentityBadgeSkeleton size="lg" />
+          <IssuerProfile identityKey={issuer} />
         )}
-      </View>
-      <View style={[Atoms.w_full, Atoms.flex_row, Atoms.gap_md]}>
-        <View style={Atoms.flex_1}>
-          <Button
-            title="Cancel"
-            variant="secondary"
-            fullWidth
-            onPress={onCancel}
-          />
-        </View>
-        <View style={Atoms.flex_1}>
-          <Button
-            title="Pair"
-            variant="primary"
-            fullWidth
-            disabled={!allowPair}
-            onPress={onConfirm}
-          />
+        <View style={[Atoms.w_full, Atoms.flex_row, Atoms.gap_md]}>
+          <View style={Atoms.flex_1}>
+            <Button
+              title="Cancel"
+              variant="secondary"
+              fullWidth
+              onPress={onCancel}
+            />
+          </View>
+          <View style={Atoms.flex_1}>
+            <Button
+              title="Pair"
+              variant="primary"
+              fullWidth
+              disabled={!allowPair}
+              onPress={onConfirm}
+            />
+          </View>
         </View>
       </View>
     </View>
+  );
+}
+
+function IssuerProfile({ identityKey }: { identityKey: string }) {
+  return (
+    <View style={[Atoms.items_center, Atoms.gap_sm]}>
+      <ProfileAvatar identityKey={identityKey} size="xl" />
+      <Username
+        identity={identityKey}
+        variant="subtitle"
+        fontWeight="semibold"
+        noFollowingBadge
+        style={{ textAlign: 'center' }}
+      />
+      <IdentityTag identity={identityKey} />
+    </View>
+  );
+}
+
+/** Keep in sync with `IssuerProfile`. */
+function IssuerProfileSkeleton() {
+  const shimmer = useShimmerOpacity();
+  return (
+    <Animated.View style={[Atoms.items_center, Atoms.gap_sm, shimmer]}>
+      <Block width={AVATAR_SIZE_MAP.xl} height={AVATAR_SIZE_MAP.xl} />
+      <Block width={140} />
+      <Block width={90} height={10} />
+    </Animated.View>
   );
 }
 

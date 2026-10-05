@@ -1,15 +1,12 @@
-import { resolveAvatarSize } from '@/src/common/components/Avatar/Avatar';
 import {
   type AvatarSizePreset,
   IdentityTag,
   ProfileAvatar,
   type TextVariant,
 } from '@/src/common/components/primitives';
-import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, type SpacingToken } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
 import { View } from 'react-native';
-import Animated from 'react-native-reanimated';
 
 type BadgeSize = 'md' | 'lg';
 
@@ -49,31 +46,6 @@ export function IdentityBadge({
         {showId && <IdentityTag identity={identityKey} />}
       </View>
     </View>
-  );
-}
-
-/** Placeholder skeleton shaped like an `IdentityBadge`. */
-export function IdentityBadgeSkeleton({ size = 'md' }: { size?: BadgeSize }) {
-  const animatedStyle = useShimmerOpacity();
-  const avatarPx = resolveAvatarSize(CONFIG[size].avatarSize);
-  const rowGap = size === 'lg' ? Atoms.gap_md : Atoms.gap_sm;
-
-  return (
-    <Animated.View
-      style={[
-        Atoms.flex_row,
-        Atoms.items_center,
-        rowGap,
-        { flex: 1 },
-        animatedStyle,
-      ]}
-    >
-      <Block width={avatarPx} height={avatarPx} />
-      <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
-        <Block width={120} />
-        <Block width={80} height={10} />
-      </View>
-    </Animated.View>
   );
 }
 
