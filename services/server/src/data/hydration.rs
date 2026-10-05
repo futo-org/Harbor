@@ -1,3 +1,4 @@
+use crate::config;
 use crate::data::{
     EventRow, EventWithContentRow, assemble_hint, row_into_hint,
 };
@@ -120,7 +121,6 @@ where
         feeds_repository::Query::list_labels_for_event_keys(
             &ctx.service.ro_db,
             &display_keys,
-            ctx.service.trusted_moderator.as_deref(),
         )
         .await
         .map_err(|err| {
@@ -167,7 +167,7 @@ where
     // verify label events. This ships the identity events more times than the
     // client needs, and even when labels aren't present in the feed page -- can
     // be optimized later.
-    if let Some(moderator) = ctx.service.trusted_moderator.as_deref()
+    if let Some(moderator) = config::get().trusted_moderator.as_deref()
         && !identities.is_empty()
     {
         identities.insert(moderator.to_owned());
@@ -361,10 +361,7 @@ pub fn to_target_event_key(key: &EventKey) -> Option<TargetEventKey> {
     })
 }
 
-pub fn collect_identities<Row>(
-    trusted_moderator: Option<&str>,
-    rows: impl Iterator<Item = Row>,
-) -> Vec<String>
+pub fn collect_identities<Row>(rows: impl Iterator<Item = Row>) -> Vec<String>
 where
     Row: EventRow,
 {
@@ -377,7 +374,7 @@ where
     // verify label events. This ships the identity events more times than the
     // client needs, and even when labels aren't present in the feed page -- can
     // be optimized later.
-    if let Some(moderator) = trusted_moderator
+    if let Some(moderator) = config::get().trusted_moderator.as_deref()
         && !identities.is_empty()
     {
         identities.insert(moderator.to_owned());

@@ -93,8 +93,7 @@ async fn hydrate(
     _params: &Params,
     rows: &Vec<EventWithContentRow>,
 ) -> Result<HydrationState, Status> {
-    let identities =
-        collect_identities(ctx.trusted_moderator.as_deref(), rows.iter());
+    let identities = collect_identities(rows.iter());
 
     let keys = rows
         .iter()
