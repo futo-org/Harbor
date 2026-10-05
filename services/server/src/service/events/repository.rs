@@ -720,9 +720,11 @@ impl Mutation {
                     .expr(Expr::col((event_table.clone(), event_id)))
                     .expr(Expr::col((event_table.clone(), identity.clone())))
                     .expr(Expr::from(update.name.clone()))
+                    // NOTE: we don't use `create_tsvector` for the identity as
+                    // that sometimes parses it as two words, see #1658.
                     .expr(Expr::cust_with_exprs(
                         "  create_tsvector('simple', COALESCE($1, ''), 'A')
-                        || create_tsvector('simple', $2, 'A')
+                        || setweight(array_to_tsvector(ARRAY[$2]), 'A')
                         || create_tsvector('simple', COALESCE($3, ''), 'B')",
                         [
                             Expr::from(update.alias.clone()),
