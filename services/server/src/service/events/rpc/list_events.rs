@@ -36,7 +36,7 @@ pub struct View {
 pub struct Params {
     pub size: u64,
     pub collection: Option<i32>,
-    pub identity: Option<String>,
+    pub identity: String,
     pub signed_by: Option<PublicKey>,
     pub sequence_gt: Option<i64>,
     pub sequence_lt: Option<i64>,
@@ -58,6 +58,10 @@ pub async fn handle(
         sequence_lt: filters.sequence_lt,
         heads: filters.heads,
     };
+
+    if params.identity.is_empty() {
+        return Err(Status::invalid_argument("Identity is required"));
+    }
 
     let result =
         pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
