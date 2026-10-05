@@ -515,7 +515,18 @@ async fn regression_1658() {
             sort_by: None,
             page_params: None,
         },
-        vec![profile_update],
+        vec![profile_update.clone()],
+    )
+    .await;
+
+    // Not valid hex, but part of it.
+    expect_searched_users(
+        SearchUsersRequest {
+            query: client.identity()[..11].to_owned(),
+            sort_by: None,
+            page_params: None,
+        },
+        vec![profile_update.clone()],
     )
     .await;
 }

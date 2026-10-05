@@ -28,7 +28,7 @@ impl MigrationTrait for Migration {
               || (
                 SELECT tsquery_agg(word::tsquery)
                 FROM regexp_split_to_table(COALESCE(search_query.query, ''), '[[:space:]]') as data(word)
-                WHERE left(word, -2) ~ '^([a-fA-F0-9]{2})*$' -- Valid hexidecimal.
+                WHERE left(word, -2) ~ '^([a-fA-F0-9])*$' -- Valid hexidecimal.
               )
             )"
         ).await?;
