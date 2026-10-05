@@ -6,6 +6,8 @@ type EmojiSpriteProps = ViewProps & {
   page: number;
   /** Row-major cell within the page. */
   cell: number;
+  /** Cells per page row. */
+  pageColumns: number;
 };
 
 /** Android only: one emoji drawn from a shared Twemoji sprite page. */

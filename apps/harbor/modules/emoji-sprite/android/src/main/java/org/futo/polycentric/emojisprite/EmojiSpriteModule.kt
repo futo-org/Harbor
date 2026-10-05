@@ -16,6 +16,10 @@ class EmojiSpriteModule : Module() {
         view.cell = cell
       }
 
+      Prop("pageColumns") { view: EmojiSpriteView, pageColumns: Int ->
+        view.pageColumns = pageColumns
+      }
+
       OnViewDidUpdateProps { view: EmojiSpriteView ->
         view.loadPage()
       }

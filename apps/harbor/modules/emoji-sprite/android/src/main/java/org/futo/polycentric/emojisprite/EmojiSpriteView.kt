@@ -8,9 +8,6 @@ import android.graphics.Rect
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.views.ExpoView
 
-// Cells per page row, as written by tools/twemoji/generate.mjs.
-private const val PAGE_COLUMNS = 16
-
 /**
  * Draws one emoji: a cell of a sprite page shared by every view showing an
  * emoji from that page, so the picker grid decodes a handful of pages
@@ -19,6 +16,7 @@ private const val PAGE_COLUMNS = 16
 class EmojiSpriteView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
   var page = -1
   var cell = -1
+  var pageColumns = 0
 
   // What is drawn. Kept while another page decodes, so a recycled view
   // shows its previous emoji instead of flashing blank, like expo-image.
@@ -59,9 +57,9 @@ class EmojiSpriteView(context: Context, appContext: AppContext) : ExpoView(conte
     if (drawnCell < 0) return
     // Derived from the bitmap, so a page decoded at a reduced sample size
     // still maps correctly.
-    val cellSize = pageBitmap.width / PAGE_COLUMNS
-    val left = (drawnCell % PAGE_COLUMNS) * cellSize
-    val top = (drawnCell / PAGE_COLUMNS) * cellSize
+    val cellSize = pageBitmap.width / pageColumns
+    val left = (drawnCell % pageColumns) * cellSize
+    val top = (drawnCell / pageColumns) * cellSize
     sourceRect.set(left, top, left + cellSize, top + cellSize)
     val size = minOf(width, height)
     val x = (width - size) / 2

@@ -72,7 +72,7 @@ const CELL = 72;
 const COLUMNS = 64;
 // Android sprite pages: up to 16x17 cells of 72px, about 5.6 MB per decoded
 // page; 17 rows fit the 264- and 270-emoji categories without a near-empty
-// overflow page. PAGE_COLUMNS must match EmojiSpriteView.kt.
+// overflow page.
 const PAGE_COLUMNS = 16;
 const PAGE_CELLS = PAGE_COLUMNS * 17;
 const pagesDir = join(
@@ -146,6 +146,9 @@ export const SHEET_COLUMNS = ${COLUMNS};
 /** Sheet index of the first emoji on each Android sprite page
  * (emoji-sprite module); a page holds the emoji up to the next start. */
 export const SPRITE_PAGE_STARTS = [${pageStarts.join(', ')}];
+
+/** Cells per row of an Android sprite page. */
+export const SPRITE_PAGE_COLUMNS = ${PAGE_COLUMNS};
 
 /** Sheet cell of each emoji code (see \`twemojiCode\`), row-major. */
 export const SHEET_INDEX: Record<string, number> = {

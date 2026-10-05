@@ -2,6 +2,7 @@ import { EmojiSprite } from '@/modules/emoji-sprite';
 import { EmojiImage } from '@/src/common/components/EmojiImage';
 import {
   SHEET_INDEX,
+  SPRITE_PAGE_COLUMNS,
   SPRITE_PAGE_STARTS,
 } from '@/src/common/emoji/twemoji/sheet';
 import { twemojiCode } from '@/src/common/util/emoji';
@@ -29,6 +30,7 @@ export function EmojiGridImage({ sequence, size }: Props) {
     <EmojiSprite
       page={page}
       cell={sheetIndex - SPRITE_PAGE_STARTS[page]}
+      pageColumns={SPRITE_PAGE_COLUMNS}
       style={{ width: size, height: size }}
       accessibilityLabel={sequence}
       testID="emoji"
