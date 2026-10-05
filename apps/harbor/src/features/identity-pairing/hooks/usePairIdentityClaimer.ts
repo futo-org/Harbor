@@ -1,26 +1,49 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
 import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
-import type { PairingSession, v2 } from '@polycentric/react-native';
-import { useEffect, useState } from 'react';
+import {
+  type ProfileHookResult,
+  useProfile,
+} from '@/src/features/profile/hooks/useProfile';
+import {
+  FetchMode,
+  type PairingSession,
+  type v2,
+} from '@polycentric/react-native';
+import { useCallback, useEffect, useState } from 'react';
 
 export type PairIdentityClaimerHookResult = {
+  stage: ClaimerStage;
   error: string | null;
+  profile: ProfileHookResult;
   approved: boolean;
-  claimInProgress: boolean;
+  join: () => void;
 };
+
+export type ClaimerStage = ClaimerState['stage'];
 
 /** `useEffect()` return type */
 type StageResult = (() => void) | undefined;
 
 type ErrorState = { message: string };
-type JoiningState = { info: v2.PairingInfo };
-type PollingState = JoiningState & { session: PairingSession };
+
+type ConfirmingState = {
+  info: v2.PairingInfo;
+  session: PairingSession | undefined;
+};
+
+type JoiningState = {
+  info: v2.PairingInfo;
+  session: PairingSession | undefined;
+};
+
+type PollingState = { info: v2.PairingInfo; session: PairingSession };
 type ClaimingState = PollingState;
 
 type ClaimerState =
   | { stage: 'unstarted' }
   | ({ stage: 'error' } & ErrorState)
+  | ({ stage: 'confirming' } & ConfirmingState)
   | ({ stage: 'joining' } & JoiningState)
   | ({ stage: 'polling' } & PollingState)
   | ({ stage: 'claiming' } & ClaimingState)
@@ -50,7 +73,7 @@ export function usePairIdentityClaimer(
     // ---  Define handlers for each stage ---
     const whenUnstarted = (): StageResult => {
       if (info) {
-        setState({ stage: 'joining', info });
+        setState({ stage: 'confirming', info, session: undefined });
       } else if (info === null) {
         error('Invalid pairing link.');
       }
@@ -66,19 +89,49 @@ export function usePairIdentityClaimer(
       return undefined;
     };
 
-    const whenJoining = ({ info }: JoiningState): StageResult => {
+    const whenConfirming = ({
+      info,
+      session,
+    }: ConfirmingState): StageResult => {
+      if (session) return undefined;
+
       let canceled = false;
 
-      const join = async () => {
+      const fetchSession = async () => {
         try {
           const session =
             await client.pairingSessionManager.getPairingSession(info);
           if (canceled) return;
 
+          setState((prev) =>
+            prev.stage === 'confirming' ? { ...prev, session } : prev,
+          );
+        } catch (err) {
+          if (canceled) return;
+          onError(err, 'Failed to fetch pairing session.');
+        }
+      };
+
+      fetchSession();
+      return () => {
+        canceled = true;
+      };
+    };
+
+    const whenJoining = ({ info, session }: JoiningState): StageResult => {
+      let canceled = false;
+
+      const join = async () => {
+        try {
+          const resolved =
+            session ??
+            (await client.pairingSessionManager.getPairingSession(info));
+          if (canceled) return;
+
           await client.pairingSessionManager.joinPairingSession(info);
           if (canceled) return;
 
-          setState({ stage: 'polling', info, session });
+          setState({ stage: 'polling', info, session: resolved });
         } catch (err) {
           if (canceled) return;
           onError(err, 'Failed to join pairing session.');
@@ -153,6 +206,8 @@ export function usePairIdentityClaimer(
         return whenUnstarted();
       case 'error':
         return whenError();
+      case 'confirming':
+        return whenConfirming(state);
       case 'joining':
         return whenJoining(state);
       case 'polling':
@@ -164,11 +219,30 @@ export function usePairIdentityClaimer(
     }
   }, [info, state, client]);
 
+  const join = useCallback(() => {
+    setState((prev) => {
+      if (prev.stage === 'confirming') {
+        return { stage: 'joining', info: prev.info, session: prev.session };
+      } else {
+        return prev;
+      }
+    });
+  }, []);
+
+  let issuerIdentity: string | undefined;
+  if ('session' in state) {
+    issuerIdentity = state.session?.digest.issuerIdentity;
+  }
+
+  const profile = useProfile(issuerIdentity, { fetchMode: FetchMode.Default });
+
   // Derive return value
   return {
     error: state.stage === 'error' ? state.message : null,
     approved: state.stage === 'done',
-    claimInProgress: state.stage === 'joining',
+    stage: state.stage,
+    join,
+    profile,
   };
 }
 

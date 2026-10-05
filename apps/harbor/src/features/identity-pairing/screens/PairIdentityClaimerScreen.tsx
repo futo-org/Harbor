@@ -36,8 +36,13 @@ export default function PairIdentityClaimerScreen() {
     router.setParams({ [PAIRING_CODE_PARAM]: scanned });
   }, []);
 
-  const { error, approved, claimInProgress } =
-    usePairIdentityClaimer(pairingInfo);
+  const { error, approved, stage, join } = usePairIdentityClaimer(pairingInfo);
+  const claimInProgress = stage === 'joining';
+
+  // TODO: replace with a confirmation UI showing the issuer's profile
+  useEffect(() => {
+    if (stage === 'confirming') join();
+  }, [stage, join]);
 
   useEffect(() => {
     if (!approved) return;
