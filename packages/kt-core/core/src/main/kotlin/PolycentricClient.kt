@@ -369,7 +369,7 @@ class PolycentricClient(
 
     /** One-shot ListEvents across all configured servers. */
     suspend fun listEvents(
-        identity: String? = null,
+        identity: String,
         collection: Int? = null,
         limit: Int? = null,
         signedBy: PublicKey? = null,
