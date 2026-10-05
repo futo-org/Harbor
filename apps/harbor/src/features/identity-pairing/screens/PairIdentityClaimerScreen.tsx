@@ -256,7 +256,7 @@ function ConfirmationBody({
           <View style={Atoms.flex_1}>
             <Button
               title="Cancel"
-              variant="secondary"
+              variant="tertiary"
               fullWidth
               onPress={onCancel}
             />
