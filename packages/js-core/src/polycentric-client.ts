@@ -469,9 +469,9 @@ export class PolycentricClient {
    * per-server emission, and resolves once the observable completes.
    * Does not persist — callers decide what to do with the response.
    */
-  async listEvents(options?: {
+  async listEvents(options: {
     limit?: number | null;
-    identity?: string | null;
+    identity: string;
     collection?: number | null;
     signedBy?: Proto.PublicKey | null;
     /** Exclusive lower bound on EventKey.sequence. */
@@ -504,7 +504,7 @@ export class PolycentricClient {
         options?.queryKey ?? undefined,
         new Query.ListEvents({
           size: options?.limit ?? undefined,
-          identity: options?.identity ?? undefined,
+          identity: options.identity,
           collection: options?.collection ?? undefined,
           signedBy,
           sequenceGt,
