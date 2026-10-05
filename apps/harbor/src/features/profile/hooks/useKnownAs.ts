@@ -19,6 +19,7 @@ export function useKnownAs(identity: string | null): {
     knownAsClaimBundle,
     alias,
     isLoading: isProfileLoading,
+    isResolved: isProfileResolved,
   } = useProfile(identity);
   const verifierBots = useVerifierIdentities();
   const { isCurrentIdentity } = useCurrentIdentity();
@@ -50,7 +51,8 @@ export function useKnownAs(identity: string | null): {
     knownAs,
     alias,
     isLoading:
-      isProfileLoading ||
+      // A refetch keeps showing the cached profile.
+      (isProfileLoading && !isProfileResolved) ||
       (!!knownAsClaimBundle && !isOwnIdentity && !verifierBots),
   };
 }

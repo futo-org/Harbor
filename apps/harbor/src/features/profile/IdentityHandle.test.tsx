@@ -18,6 +18,7 @@ let mockProfile: {
   knownAsClaimBundle: object | null;
   alias: string | null;
   isLoading?: boolean;
+  isResolved?: boolean;
 };
 let mockVerifiedAccount: VerifiedPlatformAccount | null;
 let mockVerifierBots: Set<string> | undefined;
@@ -88,6 +89,17 @@ describe('IdentityHandle', () => {
     mockProfile = { knownAsClaimBundle: null, alias: null, isLoading: true };
     const { queryByText } = await renderIdentityHandle();
     expect(queryByText(`short-${IDENTITY}`)).toBeNull();
+  });
+
+  it('keeps showing the cached alias while the profile refetches', async () => {
+    mockProfile = {
+      knownAsClaimBundle: null,
+      alias: 'alice@example.com',
+      isLoading: true,
+      isResolved: true,
+    };
+    const { getByText } = await renderIdentityHandle();
+    expect(getByText('alice@example.com')).toBeTruthy();
   });
 
   it('shows the alias when known-as is not set', async () => {
