@@ -56,6 +56,12 @@ pub async fn auth_middleware(
                 authenticated = Some(identity.clone());
                 request.extensions_mut().insert(identity);
             }
+            Err(status) if status.code() == tonic::Code::FailedPrecondition => {
+                tracing::warn!(
+                    reason = status.message(),
+                    "auth token unverifiable"
+                );
+            }
             Err(status) => return grpc_error_response(status, &request),
         }
     }
