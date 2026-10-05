@@ -1,4 +1,3 @@
-import type { FetchMode } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import type { ClaimWithStatus } from '../utils/claim-status';
 import type { DecodedClaim } from './useClaimById';
@@ -11,20 +10,15 @@ export interface VerifiedPlatformAccount {
   account: string;
 }
 
-export function useVerifiedPlatformAccounts({
-  identity,
-  enabled = true,
-  fetchMode,
-}: {
-  identity: string | undefined;
-  enabled?: boolean;
-  fetchMode?: FetchMode;
-}): { verifiedAccounts: VerifiedPlatformAccount[]; isLoading: boolean } {
+export function useVerifiedPlatformAccounts(identity: string | undefined): {
+  verifiedAccounts: VerifiedPlatformAccount[];
+  isLoading: boolean;
+} {
   const {
     claims,
     verifierBots,
     isLoading: isClaimsLoading,
-  } = useClaimsList(identity, enabled, fetchMode);
+  } = useClaimsList(identity);
   const isLoading = isClaimsLoading || !verifierBots;
 
   const verifiedAccounts = useMemo(() => {

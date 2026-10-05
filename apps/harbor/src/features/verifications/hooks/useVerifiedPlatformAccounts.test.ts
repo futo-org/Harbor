@@ -2,7 +2,6 @@
 // time, which can't run under jest — expose just what the hook needs.
 jest.mock('@polycentric/react-native', () => ({
   v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-  FetchMode: { Default: 'Default', OfflineFirst: 'OfflineFirst' },
   Query: {
     ListVerificationClaims: function ListVerificationClaims() {},
   },
@@ -70,7 +69,7 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts({ identity: AUTHOR }),
+      useVerifiedPlatformAccounts(AUTHOR),
     );
 
     const { verifiedAccounts } = result.current;
@@ -91,7 +90,7 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts({ identity: AUTHOR }),
+      useVerifiedPlatformAccounts(AUTHOR),
     );
 
     expect(result.current.verifiedAccounts).toEqual([]);
@@ -108,7 +107,7 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts({ identity: AUTHOR }),
+      useVerifiedPlatformAccounts(AUTHOR),
     );
 
     expect(result.current.verifiedAccounts).toEqual([]);
@@ -125,7 +124,7 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts({ identity: AUTHOR }),
+      useVerifiedPlatformAccounts(AUTHOR),
     );
 
     expect(result.current.verifiedAccounts).toEqual([]);
@@ -135,7 +134,7 @@ describe('useVerifiedPlatformAccounts', () => {
     mockIsLoading = true;
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts({ identity: AUTHOR }),
+      useVerifiedPlatformAccounts(AUTHOR),
     );
 
     expect(result.current.isLoading).toBe(true);
@@ -153,7 +152,7 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts({ identity: AUTHOR }),
+      useVerifiedPlatformAccounts(AUTHOR),
     );
 
     expect(result.current.isLoading).toBe(true);
@@ -172,7 +171,7 @@ describe('useVerifiedPlatformAccounts', () => {
     ]);
 
     const { result } = await renderHook(() =>
-      useVerifiedPlatformAccounts({ identity: AUTHOR }),
+      useVerifiedPlatformAccounts(AUTHOR),
     );
 
     expect(result.current.isLoading).toBe(true);

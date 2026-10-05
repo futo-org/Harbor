@@ -3,7 +3,7 @@ import {
   RefreshStrategy,
   useQuery,
 } from '@/src/common/query/hooks/useQuery';
-import { FetchMode, type v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import {
   type ClaimWithStatus,
@@ -21,7 +21,6 @@ export function useClaimBundleList(
   querySource: QuerySource,
   parse: (bytes: Uint8Array) => v2.VerificationClaimBundle[],
   enabled: boolean,
-  fetchMode = FetchMode.Default,
 ): {
   claims: ClaimWithStatus[];
   verifierBots: Set<string> | undefined;
@@ -29,7 +28,7 @@ export function useClaimBundleList(
   isRefreshing: boolean;
   refresh: () => void;
 } {
-  const query = useQuery(queryKey, querySource, { fetchMode }, enabled);
+  const query = useQuery(queryKey, querySource, undefined, enabled);
   const verifierBots = useVerifierIdentities();
 
   const claims = useMemo<ClaimWithStatus[]>(() => {

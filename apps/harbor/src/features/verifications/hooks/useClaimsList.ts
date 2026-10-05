@@ -1,4 +1,4 @@
-import { type FetchMode, Query, v2 } from '@polycentric/react-native';
+import { Query, v2 } from '@polycentric/react-native';
 import { useClaimBundleList } from './useClaimBundleList';
 
 const parse = (bytes: Uint8Array) =>
@@ -9,16 +9,11 @@ const parse = (bytes: Uint8Array) =>
  * carrying its verification status. Backed by the dedicated
  * `VerificationsService.ListVerificationClaims` RPC.
  */
-export function useClaimsList(
-  identity: string | undefined,
-  enabled = true,
-  fetchMode?: FetchMode,
-) {
+export function useClaimsList(identity: string | undefined, enabled = true) {
   return useClaimBundleList(
     ['claims-list', identity ?? ''],
     new Query.ListVerificationClaims({ claimedByIdentity: identity ?? '' }),
     parse,
     enabled && !!identity,
-    fetchMode,
   );
 }

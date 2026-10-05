@@ -17,9 +17,8 @@ export function KnownAsPicker({
   onSelect: (claimId: string | null) => void;
 }) {
   const { theme } = useTheme();
-  const { verifiedAccounts, isLoading } = useVerifiedPlatformAccounts({
-    identity: identityKey,
-  });
+  const { verifiedAccounts, isLoading } =
+    useVerifiedPlatformAccounts(identityKey);
   // "Other" accounts are arbitrary websites, so they can't be a known-as.
   const knownAsCandidates = verifiedAccounts.filter((a) => !a.platform.generic);
 
