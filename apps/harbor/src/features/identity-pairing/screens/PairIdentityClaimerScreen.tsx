@@ -2,7 +2,6 @@ import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { AVATAR_SIZE_MAP } from '@/src/common/components/Avatar/Avatar';
 import {
   Button,
-  IdentityTag,
   ProfileAvatar,
   Text,
 } from '@/src/common/components/primitives';
@@ -278,7 +277,7 @@ function ConfirmationBody({
 
 function IssuerProfile({ identityKey }: { identityKey: string }) {
   return (
-    <View style={[Atoms.items_center, Atoms.gap_sm]}>
+    <View style={[Atoms.w_full, Atoms.items_center, Atoms.gap_sm]}>
       <ProfileAvatar identityKey={identityKey} size="xl" />
       <Username
         identity={identityKey}
@@ -287,7 +286,18 @@ function IssuerProfile({ identityKey }: { identityKey: string }) {
         noFollowingBadge
         style={{ textAlign: 'center' }}
       />
-      <IdentityTag identity={identityKey} />
+      <Text
+        variant="secondary"
+        color="neutral_500"
+        selectable
+        style={[
+          { fontFamily: 'monospace', textAlign: 'center' },
+          // The identity key is a long string with no whitespace
+          isWeb && { wordBreak: 'break-all' },
+        ]}
+      >
+        {identityKey}
+      </Text>
     </View>
   );
 }
@@ -296,10 +306,13 @@ function IssuerProfile({ identityKey }: { identityKey: string }) {
 function IssuerProfileSkeleton() {
   const shimmer = useShimmerOpacity();
   return (
-    <Animated.View style={[Atoms.items_center, Atoms.gap_sm, shimmer]}>
+    <Animated.View
+      style={[Atoms.w_full, Atoms.items_center, Atoms.gap_sm, shimmer]}
+    >
       <Block width={AVATAR_SIZE_MAP.xl} height={AVATAR_SIZE_MAP.xl} />
       <Block width={140} />
-      <Block width={90} height={10} />
+      <Block width="100%" height={10} />
+      <Block width="40%" height={10} />
     </Animated.View>
   );
 }
