@@ -497,9 +497,21 @@ async fn regression_1658() {
     client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
     client.submit_events().await;
 
+    // Search using full identity.
     expect_searched_users(
         SearchUsersRequest {
             query: client.identity().to_owned(),
+            sort_by: None,
+            page_params: None,
+        },
+        vec![profile_update.clone()],
+    )
+    .await;
+
+    // Search using partial identity.
+    expect_searched_users(
+        SearchUsersRequest {
+            query: client.identity()[..10].to_owned(),
             sort_by: None,
             page_params: None,
         },
