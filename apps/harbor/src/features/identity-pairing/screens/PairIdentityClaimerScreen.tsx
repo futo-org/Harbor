@@ -13,7 +13,7 @@ import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publi
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { PAIRING_CODE_PARAM, Routes } from '@/src/common/constants';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { extractPairingInfo } from '@/src/features/identity-pairing/pairingCode';
 
@@ -37,7 +37,6 @@ export default function PairIdentityClaimerScreen() {
   }, []);
 
   const { error, approved, stage, join } = usePairIdentityClaimer(pairingInfo);
-  const claimInProgress = stage === 'joining';
 
   // TODO: replace with a confirmation UI showing the issuer's profile
   useEffect(() => {
@@ -53,38 +52,42 @@ export default function PairIdentityClaimerScreen() {
     })();
   }, [approved, refreshCurrentIdentity, to]);
 
-  const renderBody = () => {
-    if (pairingInfo === undefined) {
-      return (
-        <>
-          <View style={Atoms.gap_xs}>
-            <Text variant="subtitle">Pair Identity</Text>
-          </View>
-          <PairIdentityCamera onCodeScanned={onCodeScanned} />
-        </>
-      );
-    }
-
-    if (pairingInfo !== undefined && error && !claimInProgress) {
-      return (
-        <>
-          <Text variant="title">Error</Text>
-          <Text variant="body" color="negative_500">
-            {error}
-          </Text>
-          <Button
-            title="Go Back"
-            variant="secondary"
-            fullWidth
-            onPress={() => {
-              router.replace(to(Routes.onboarding.pair));
-            }}
-          />
-        </>
-      );
-    }
-
-    return (
+  let body: ReactNode;
+  if (stage === 'unstarted' && pairingInfo !== undefined) {
+    // This case only happens when we've parsed the pairing link but the hook
+    // is behind.
+    // We'll just render a blank page and it'll heal next render.
+    body = null;
+  } else if (stage === 'unstarted') {
+    body = (
+      <>
+        <View style={Atoms.gap_xs}>
+          <Text variant="subtitle">Pair Identity</Text>
+        </View>
+        <PairIdentityCamera onCodeScanned={onCodeScanned} />
+      </>
+    );
+  } else if (stage === 'error') {
+    body = (
+      <>
+        <Text variant="title">Error</Text>
+        <Text variant="body" color="negative_500">
+          {error}
+        </Text>
+        <Button
+          title="Go Back"
+          variant="secondary"
+          fullWidth
+          onPress={() => {
+            router.replace(to(Routes.onboarding.pair));
+          }}
+        />
+      </>
+    );
+  } else if (stage === 'confirming') {
+    body = <Text>TODO</Text>;
+  } else {
+    body = (
       <View
         style={[
           Atoms.flex_1,
@@ -94,21 +97,7 @@ export default function PairIdentityClaimerScreen() {
         ]}
       >
         {approved ? (
-          <>
-            <Text variant="title" style={{ fontSize: 64, lineHeight: 72 }}>
-              ✓
-            </Text>
-            <View style={[Atoms.items_center, Atoms.gap_xs]}>
-              <Text variant="title">Approved!</Text>
-              <Text
-                variant="body"
-                color="neutral_500"
-                style={{ textAlign: 'center' }}
-              >
-                Completing setup...
-              </Text>
-            </View>
-          </>
+          <ApprovalLoadingBody />
         ) : (
           <>
             <PairingEmojiCard />
@@ -119,19 +108,19 @@ export default function PairIdentityClaimerScreen() {
         )}
       </View>
     );
-  };
+  }
 
   return (
     <View
       style={[
         Atoms.flex_1,
         { backgroundColor: theme.atoms.bg.backgroundColor },
-        ...(!pairingInfo || (pairingInfo && error && !claimInProgress)
+        ...(stage === 'unstarted' || stage === 'error'
           ? [Atoms.flex_col, Atoms.gap_lg]
           : []),
       ]}
     >
-      {renderBody()}
+      {body}
     </View>
   );
 }
@@ -204,5 +193,25 @@ function PairingEmojiCard() {
         </Text>
       </View>
     </View>
+  );
+}
+
+function ApprovalLoadingBody() {
+  return (
+    <>
+      <Text variant="title" style={{ fontSize: 64, lineHeight: 72 }}>
+        ✓
+      </Text>
+      <View style={[Atoms.items_center, Atoms.gap_xs]}>
+        <Text variant="title">Approved!</Text>
+        <Text
+          variant="body"
+          color="neutral_500"
+          style={{ textAlign: 'center' }}
+        >
+          Completing setup...
+        </Text>
+      </View>
+    </>
   );
 }
