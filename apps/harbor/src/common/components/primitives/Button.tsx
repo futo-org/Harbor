@@ -110,7 +110,7 @@ export function Button({
     onPress?.();
     if (!href) return;
     event?.preventDefault?.();
-    router.push(href);
+    router.navigate(href);
   };
 
   const pressable = (

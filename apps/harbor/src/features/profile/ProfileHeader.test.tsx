@@ -51,7 +51,7 @@ jest.mock('@/src/common/components/Icon', () => ({
   __esModule: true,
   default: () => null,
 }));
-jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+jest.mock('expo-router', () => ({ router: { navigate: jest.fn() } }));
 jest.mock('../follow/FollowButton', () => ({
   __esModule: true,
   default: () => null,
@@ -140,7 +140,7 @@ describe('ProfileHeader alias', () => {
 describe('ProfileHeader identity key', () => {
   beforeEach(() => {
     mockContext = { ...baseContext };
-    (router.push as jest.Mock).mockClear();
+    (router.navigate as jest.Mock).mockClear();
   });
 
   it('opens the identity sheet when the key is pressed', async () => {
@@ -149,7 +149,7 @@ describe('ProfileHeader identity key', () => {
     );
 
     await fireEvent.press(getByText(IDENTITY));
-    expect(router.push).toHaveBeenCalledWith('/x/identity');
+    expect(router.navigate).toHaveBeenCalledWith('/x/identity');
   });
 });
 
@@ -157,7 +157,7 @@ describe('ProfileHeader follow counters', () => {
   beforeEach(() => {
     mockContext = { ...baseContext };
     mockCounts = { followingCount: 0, followersCount: 0 };
-    (router.push as jest.Mock).mockClear();
+    (router.navigate as jest.Mock).mockClear();
   });
 
   it('renders the counts from the profile', async () => {
@@ -178,9 +178,9 @@ describe('ProfileHeader follow counters', () => {
     );
 
     await fireEvent.press(getByText(/Following/));
-    expect(router.push).toHaveBeenCalledWith('/x/following');
+    expect(router.navigate).toHaveBeenCalledWith('/x/following');
 
     await fireEvent.press(getByText(/Followers/));
-    expect(router.push).toHaveBeenCalledWith('/x/followers');
+    expect(router.navigate).toHaveBeenCalledWith('/x/followers');
   });
 });

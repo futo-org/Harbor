@@ -95,7 +95,7 @@ export default function SettingsTabScreen() {
             <View style={[Atoms.p_lg, Atoms.gap_xl]}>
               <ListItemGroup>
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.identity)}
+                  onPress={() => router.navigate(Routes.tabs.settings.identity)}
                 >
                   {identityKey && (
                     <CurrentIdentityBadge identityKey={identityKey} />
@@ -115,7 +115,7 @@ export default function SettingsTabScreen() {
                 <ListItemWrapper
                   onPress={
                     canRotate
-                      ? () => router.push(Routes.tabs.settings.pairIdentity)
+                      ? () => router.navigate(Routes.tabs.settings.pairIdentity)
                       : undefined
                   }
                 >
@@ -124,14 +124,16 @@ export default function SettingsTabScreen() {
                 <ListItemWrapper
                   onPress={
                     canRotate
-                      ? () => router.push(Routes.tabs.settings.createBackup)
+                      ? () => router.navigate(Routes.tabs.settings.createBackup)
                       : undefined
                   }
                 >
                   <Text variant="body">Back Up Identity</Text>
                 </ListItemWrapper>
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.checkBackup)}
+                  onPress={() =>
+                    router.navigate(Routes.tabs.settings.checkBackup)
+                  }
                 >
                   <Text variant="body">Test Backup</Text>
                 </ListItemWrapper>
@@ -139,7 +141,7 @@ export default function SettingsTabScreen() {
 
               <ListItemGroup label="Servers">
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.servers)}
+                  onPress={() => router.navigate(Routes.tabs.settings.servers)}
                 >
                   <Text variant="body">
                     {canRotate ? 'Configure servers' : 'View servers'}
@@ -150,13 +152,15 @@ export default function SettingsTabScreen() {
               <ListItemGroup label="Content Moderation">
                 <ListItemWrapper
                   onPress={() =>
-                    router.push(Routes.tabs.settings.moderationSettings)
+                    router.navigate(Routes.tabs.settings.moderationSettings)
                   }
                 >
                   <Text variant="body">Moderation preferences</Text>
                 </ListItemWrapper>
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.blockedUsers)}
+                  onPress={() =>
+                    router.navigate(Routes.tabs.settings.blockedUsers)
+                  }
                 >
                   <Text variant="body">Blocked users</Text>
                 </ListItemWrapper>
@@ -174,7 +178,9 @@ export default function SettingsTabScreen() {
                 <VersionRow />
                 {canSelfUpdate() ? <CheckForUpdatesRow /> : null}
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.legalNotices)}
+                  onPress={() =>
+                    router.navigate(Routes.tabs.settings.legalNotices)
+                  }
                 >
                   <Text variant="body">Legal notices</Text>
                 </ListItemWrapper>
