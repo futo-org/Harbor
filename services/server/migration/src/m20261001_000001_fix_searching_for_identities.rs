@@ -26,10 +26,9 @@ impl MigrationTrait for Migration {
               || COALESCE(to_tsquery('simple', search_query.query), ''::tsquery)
               -- Explicitly search for any identities, work around for #1658.
               || (
-                SELECT tsquery_agg(left(word, 64)::tsquery)
+                SELECT tsquery_agg(word::tsquery)
                 FROM regexp_split_to_table(COALESCE(search_query.query, ''), '[[:space:]]') as data(word)
-                WHERE length(word) = 66 -- 64 + `:*`
-                  AND right(word, 2) = ':*'
+                WHERE left(word, -2) ~ '^([a-fA-F0-9]{2})*$' -- Valid hexidecimal.
               )
             )"
         ).await?;
