@@ -23,6 +23,7 @@ import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { twemojiCode } from '../../apps/harbor/src/common/util/emoji.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const app = join(root, 'apps', 'harbor');
@@ -84,16 +85,6 @@ const pagesDir = join(
   'assets',
   'emoji-sprite',
 );
-
-// Same as `twemojiCode` in src/common/util/emoji.ts.
-function twemojiCode(sequence) {
-  const cps = [...sequence].map((ch) => ch.codePointAt(0));
-  const keepVs16 = cps.includes(0x200d);
-  return cps
-    .filter((cp) => keepVs16 || cp !== 0xfe0f)
-    .map((cp) => cp.toString(16))
-    .join('-');
-}
 
 const picker = JSON.parse(
   readFileSync(join(app, 'src', 'features', 'reaction', 'emojis.json'), 'utf8'),
