@@ -126,6 +126,7 @@ export function EmojiPickerSheet() {
         onSelect={onSelect}
         highlightColor={theme.palette.neutral_100}
         size={colWidth}
+        isGridCell
       />
     ),
     [onSelect, colWidth, theme, selectedEmoji],
