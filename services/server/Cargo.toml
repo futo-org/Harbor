@@ -25,6 +25,7 @@ axum = { version = "0.8.8", default-features = false, features = ["http2"] }
 base64.workspace = true
 chrono.workspace = true
 hex.workspace = true
+log = { version = "0.4.34", default-features = false }
 polycentric-common.workspace = true
 prost.workspace = true
 prost-types.workspace = true
