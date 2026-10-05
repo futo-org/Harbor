@@ -196,11 +196,7 @@ function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
     >
       <ProfileAvatar identityKey={identityKey} size="md" />
       <View
-        style={[
-          Atoms.flex_row,
-          Atoms.gap_sm,
-          { flex: 1, alignItems: 'baseline' },
-        ]}
+        style={[Atoms.flex_row, Atoms.gap_sm, Atoms.flex_1, Atoms.align_center]}
       >
         <Username
           identity={identityKey}
