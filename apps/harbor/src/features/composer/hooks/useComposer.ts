@@ -77,9 +77,8 @@ export type UseComposerArgs = {
 };
 
 /**
- * All composer state + behavior, shared between the sheet/modal composer
- * (`ComposeSheet`) and the full-screen compose tab (`ComposeTabScreen`). The
- * presentation chrome (Sheet vs Screen) and dismiss target live in the callers.
+ * All composer state + behavior for `ComposeSheet`, which owns the
+ * presentation chrome and dismiss target.
  */
 export function useComposer({
   onPostCreated,
