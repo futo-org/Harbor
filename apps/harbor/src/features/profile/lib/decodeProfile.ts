@@ -51,7 +51,8 @@ export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
       );
       if (content.contentBody.oneofKind !== 'profileUpdate') continue;
       const sequence = event.key.sequence;
-      if (!latest || sequence > latest.sequence) {
+      // On a sequence tie (two devices) the last one wins, as in rs-core.
+      if (!latest || sequence >= latest.sequence) {
         latest = {
           sequence,
           identity: event.key.identity,

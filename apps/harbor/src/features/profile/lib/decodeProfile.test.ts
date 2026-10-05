@@ -171,6 +171,14 @@ describe('decodeProfile', () => {
     expect(decoded.alias).toBeNull();
   });
 
+  it('uses the last of two updates with the same sequence', () => {
+    const bytes = serializedResponse([
+      bundle(profileContent({ name: 'First' }), 1),
+      bundle(profileContent({ name: 'Last' }), 1),
+    ]);
+    expect(decodeProfile(bytes).name).toBe('Last');
+  });
+
   it('returns nulls for an empty response', () => {
     expect(decodeProfile(serializedResponse([])).alias).toBeNull();
   });

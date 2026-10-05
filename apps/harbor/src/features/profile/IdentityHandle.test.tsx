@@ -48,7 +48,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
 
 import { IdentityHandle } from './IdentityHandle';
 
-const renderTag = () =>
+const renderIdentityHandle = () =>
   render(
     <ThemeProvider>
       <IdentityHandle identity={IDENTITY} />
@@ -67,7 +67,7 @@ describe('IdentityHandle', () => {
       knownAsClaimBundle: CLAIM_BUNDLE,
       alias: 'alice@example.com',
     };
-    const { getByText, queryByText } = await renderTag();
+    const { getByText, queryByText } = await renderIdentityHandle();
     expect(getByText('alice-gh')).toBeTruthy();
     expect(queryByText('alice@example.com')).toBeNull();
   });
@@ -80,19 +80,19 @@ describe('IdentityHandle', () => {
     mockCurrentIdentity = IDENTITY;
     mockVerifiedAccount = null;
     mockVerifierBots = undefined;
-    const { getByText } = await renderTag();
+    const { getByText } = await renderIdentityHandle();
     expect(getByText('alice-gh')).toBeTruthy();
   });
 
   it('hides the short id while the profile loads', async () => {
     mockProfile = { knownAsClaimBundle: null, alias: null, isLoading: true };
-    const { queryByText } = await renderTag();
+    const { queryByText } = await renderIdentityHandle();
     expect(queryByText(`short-${IDENTITY}`)).toBeNull();
   });
 
   it('shows the alias when known-as is not set', async () => {
     mockProfile = { knownAsClaimBundle: null, alias: 'alice@example.com' };
-    const { getByText } = await renderTag();
+    const { getByText } = await renderIdentityHandle();
     expect(getByText('alice@example.com')).toBeTruthy();
   });
 
@@ -102,7 +102,7 @@ describe('IdentityHandle', () => {
       alias: 'alice@example.com',
     };
     mockVerifiedAccount = null;
-    const { getByText } = await renderTag();
+    const { getByText } = await renderIdentityHandle();
     expect(getByText('alice@example.com')).toBeTruthy();
   });
 
@@ -115,14 +115,14 @@ describe('IdentityHandle', () => {
       ...GITHUB_ACCOUNT,
       platform: { ...GITHUB_ACCOUNT.platform, generic: true },
     };
-    const { getByText, queryByText } = await renderTag();
+    const { getByText, queryByText } = await renderIdentityHandle();
     expect(getByText('alice@example.com')).toBeTruthy();
     expect(queryByText('alice-gh')).toBeNull();
   });
 
   it('shows the short id without known-as or alias', async () => {
     mockProfile = { knownAsClaimBundle: null, alias: null };
-    const { getByText } = await renderTag();
+    const { getByText } = await renderIdentityHandle();
     expect(getByText(`short-${IDENTITY}`)).toBeTruthy();
   });
 });
