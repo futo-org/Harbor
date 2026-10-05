@@ -130,7 +130,7 @@ impl PolycentricClient {
             .list_events(ListEventsRequest {
                 filters: Some(ListEventsFilters {
                     collection: Some(collection),
-                    identity: Some(identity.to_string()),
+                    identity: identity.to_string(),
                     ..Default::default()
                 }),
                 size: None,
