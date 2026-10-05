@@ -48,14 +48,12 @@ export function UpdateSheet() {
 
   if (!available) return null;
 
-  const busy = phase === 'downloading' || phase === 'installing';
-
   return (
     <Sheet
       open={sheetOpen}
       onClose={closeSheet}
-      detents={[0.5]}
-      dismissible={!busy}
+      detents={[0.5, 1]}
+      dismissible={false}
     >
       <Sheet.Header title="Update available" onClose={closeSheet} />
       <Sheet.Content>
