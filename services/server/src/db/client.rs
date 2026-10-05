@@ -53,6 +53,10 @@ async fn create_pool(
             log::LevelFilter::Warn,
             Duration::from_secs(1),
         )
+        .map_sqlx_postgres_opts(|options| {
+            // SQLx's statement cache seems broken, so disable it.
+            options.statement_cache_capacity(0)
+        })
         .map_sqlx_postgres_pool_opts(|options| {
             options
                 .acquire_slow_level(log::LevelFilter::Warn)
