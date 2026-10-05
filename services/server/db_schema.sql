@@ -44,8 +44,23 @@ CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char
 --
 
 CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone, gravity numeric, gravity_time timestamp with time zone) RETURNS numeric
-    LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN ((((reaction_count + 1))::numeric / power((GREATEST((EXTRACT(epoch FROM (gravity_time - post_created_at)) / (3600)::numeric), (0)::numeric) + (2)::numeric), gravity)))::numeric(20,11);
+    LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
+    AS $$
+BEGIN
+  RETURN (
+    (reaction_count + 1)::NUMERIC / power(
+      GREATEST(
+        EXTRACT(epoch FROM (gravity_time - post_created_at))::NUMERIC / 3600::NUMERIC,
+        0::NUMERIC
+      ) + 2::NUMERIC,
+      gravity
+    )
+  )::NUMERIC(20, 11);
+EXCEPTION
+    WHEN numeric_value_out_of_range THEN
+      RETURN (0)::numeric;
+END;
+$$;
 
 
 SET default_tablespace = '';

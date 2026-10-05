@@ -13,9 +13,6 @@ pub struct ServiceContext {
     pub ro_db: DatabaseConnection,
     pub proof_cache: Arc<ProofCache>,
     pub kafka_producer: FutureProducer,
-    /// Only labels from this moderator identity are considered.
-    /// `None` means no labels.
-    pub trusted_moderator: Option<String>,
 }
 
 impl ServiceContext {
@@ -29,7 +26,6 @@ impl ServiceContext {
             ro_db,
             proof_cache: ProofCache::new(),
             kafka_producer,
-            trusted_moderator: crate::config::get().trusted_moderator.clone(),
         })
     }
 }
