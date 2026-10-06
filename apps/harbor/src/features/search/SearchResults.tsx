@@ -31,13 +31,18 @@ import { FeedPage } from '../feed/FeedPage';
 import { useSearchPosts, type PostSearchSort } from './hooks/useSearchPosts';
 import { type UserSearchEntry, useSearchUsers } from './hooks/useSearchUsers';
 
-export type SearchTab = 'top' | 'popular' | 'latest' | 'people';
+export type SearchTab = 'top' | 'latest' | 'people';
 
-const SEARCH_TAB_VALUES: readonly SearchTab[] = ['top', 'people'];
+const SEARCH_TAB_VALUES: readonly SearchTab[] = ['top', 'latest', 'people'];
+
+const SEARCH_TAB_LABELS: Record<SearchTab, string> = {
+  top: 'Top',
+  latest: 'Latest',
+  people: 'People',
+};
 
 const SORT_POSTS_OPTIONS: readonly TabFilterOption<SearchTab>[] = [
   { value: 'top', label: 'Top', icon: 'rocket' },
-  { value: 'popular', label: 'Popular', icon: 'reactionOutline' },
   { value: 'latest', label: 'Latest', icon: 'star' },
 ];
 
@@ -158,40 +163,18 @@ export function SearchResults({
     <View style={{ backgroundColor: theme.palette.neutral_0 }}>
       {topbar}
       <Tabs progress={dragProgress}>
-        {SEARCH_TABS.map(({ value, label, menu_options }) => (
+        {SEARCH_TAB_VALUES.map((value) => (
           <Tabs.Tab
             key={value}
-            active={
-              value === tab || menu_options?.some(({ value }) => value === tab)
-            }
+            active={tab === value}
             onPress={() => onTabChange(value)}
-            menu={
-              menu_options
-                ? ({ open, onClose }) => (
-                    <TabFilterSheet
-                      open={open}
-                      onClose={onClose}
-                      title="Sort by"
-                      options={menu_options}
-                      selected={tab}
-                      onChange={(value) => {
-                        onTabChange(value);
-                        onClose();
-                      }}
-                    />
-                  )
-                : undefined
-            }
           >
-            {label}
+            {SEARCH_TAB_LABELS[value]}
           </Tabs.Tab>
         ))}
       </Tabs>
     </View>
   );
-
-  const sortPost = (SORT_POSTS_OPTIONS.find(({ value }) => value === tab)
-    ?.value || 'top') as PostSearchSort;
 
   return (
     <PagerView
@@ -200,11 +183,8 @@ export function SearchResults({
       onChange={onTabChange}
       renderTabBar={renderTabBar}
     >
-      <PostResultsPage
-        query={query}
-        sort={sortPost}
-        active={tab !== 'people'}
-      />
+      <PostResultsPage query={query} sort='top' active={tab === 'top'} />
+      <PostResultsPage query={query} sort='latest' active={tab === 'latest'} />
       <PeopleResultsPage query={query} active={tab === 'people'} />
     </PagerView>
   );
