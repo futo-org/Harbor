@@ -18,3 +18,4 @@ appId: ${MAESTRO_APP_ID}
       for (let i = 0; i < 50 && !onScreen(); i++) await sleep();
       if (!onScreen()) throw new Error('no post on screen after scrolling');
       return window.scrollY;
+- waitForAnimationToEnd
