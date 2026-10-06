@@ -656,14 +656,16 @@ async fn search_posts_match_on_hashtags() {
 }
 
 #[tokio::test]
-async fn search_posts_order_by_rank() {
+async fn search_posts_order_by_default() {
     let mut client = TestClient::new().await;
 
     let query = random_string();
     let post_text1 = format!("{query} first.");
-    let post_text2 = format!("{query} second. {query}");
+    let post_text2 = format!("{query} second.");
     client.post_text(&post_text1, DEFAULT_CREATED_AT);
     client.post_text(&post_text2, DEFAULT_CREATED_AT + 1);
+    let post2_key = client.get_last_event_key();
+    client.thumbs_up(post2_key, DEFAULT_CREATED_AT + 2);
     client.submit_events().await;
 
     expect_searched_posts(
