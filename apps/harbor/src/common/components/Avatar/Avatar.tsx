@@ -24,16 +24,34 @@ export function resolveAvatarSize(size: AvatarSizePreset | number): number {
   return typeof size === 'number' ? size : AVATAR_SIZE_MAP[size];
 }
 
+type AvatarSizeRequest = {
+  /** The size in device pixels that the Avatar will be displayed. */
+  displayPixels: number;
+
+  /**
+   * Minimum size in device pixels that should be accepted here in variant
+   * selection.
+   */
+  minPixels: number;
+};
+
 /**
- * Find the minimum size in device pixels that we want an avatar of size `size`
- * to display with.
+ * Derive device pixel sizes from the logical pixel size requested.
  */
 export function useAvatarSizeRequest(
+  /** Logical pixel size. */
   size: AvatarSizePreset | number,
+
+  /** Value from 0 to 1 that reduces the minimum size. */
   slack: number = 0,
-): number {
+): AvatarSizeRequest {
   const { scale } = useWindowDimensions();
-  return Math.ceil(resolveAvatarSize(size) * scale * (1 - slack));
+  const scaled = resolveAvatarSize(size) * scale;
+
+  const displayPixels = Math.ceil(scaled);
+  const minPixels = Math.ceil(scaled * (1 - slack));
+
+  return { displayPixels, minPixels };
 }
 
 interface AvatarProps extends Omit<ImageProps, 'source'> {

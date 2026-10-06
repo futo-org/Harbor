@@ -25,16 +25,16 @@ export function ProfileEditAvatar({
 }: ProfileEditAvatarProps) {
   const profile = useProfile(identityKey);
   const client = usePolycentric();
-  const pixelSize = useAvatarSizeRequest(size);
+  const { displayPixels, minPixels } = useAvatarSizeRequest(size);
 
   const uri = useMemo(() => {
-    const variant = pickImageVariant(profile.avatar, pixelSize);
+    const variant = pickImageVariant(profile.avatar, minPixels);
     if (variant?.blob?.digest) {
       const url = client.blobUrl(variant.blob.digest);
       if (url) return url;
     }
-    return identiconUrl(identityKey, pixelSize);
-  }, [profile.avatar, client, identityKey, pixelSize]);
+    return identiconUrl(identityKey, displayPixels);
+  }, [profile.avatar, client, identityKey, displayPixels, minPixels]);
 
   return <AvatarEdit {...rest} size={size} defaultUri={uri} />;
 }
