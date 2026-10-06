@@ -72,7 +72,8 @@ export default function SearchScreen() {
   const params = useLocalSearchParams<{ q?: string; f?: string }>();
   const paramQuery = typeof params.q === 'string' ? params.q.trim() : '';
   usePageTitle(paramQuery ? `${paramQuery} - Search` : 'Search');
-  const tab: SearchTab = params.f === 'latest' || params.f === 'people' ? params.f : 'top';
+  const tab: SearchTab =
+    params.f === 'latest' || params.f === 'people' ? params.f : 'top';
 
   const [query, setQuery] = useState(paramQuery);
   const [submitted, setSubmitted] = useState(!!paramQuery);

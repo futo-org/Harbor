@@ -278,7 +278,10 @@ describe('SearchResults full search', () => {
     // The pager pairs each page with the tab at the same index, so a page in
     // the wrong place would swipe to the wrong results.
     await renderResults({ submitted: true });
-    expect(mockCapturedFeeds.map((feed) => feed.__sort)).toEqual(['top', 'latest']);
+    expect(mockCapturedFeeds.map((feed) => feed.__sort)).toEqual([
+      'top',
+      'latest',
+    ]);
   });
 
   it('reports tab changes', async () => {

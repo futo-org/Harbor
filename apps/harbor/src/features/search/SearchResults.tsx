@@ -183,8 +183,8 @@ export function SearchResults({
       onChange={onTabChange}
       renderTabBar={renderTabBar}
     >
-      <PostResultsPage query={query} sort='top' active={tab === 'top'} />
-      <PostResultsPage query={query} sort='latest' active={tab === 'latest'} />
+      <PostResultsPage query={query} sort="top" active={tab === 'top'} />
+      <PostResultsPage query={query} sort="latest" active={tab === 'latest'} />
       <PeopleResultsPage query={query} active={tab === 'people'} />
     </PagerView>
   );
