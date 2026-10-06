@@ -27,7 +27,7 @@ export function SuggestedFollowWidget() {
   const showMore = () => {
     // This wouldn't work on the native side as explore.people is not mounted as
     // a native route, but it works on web and this widget is web-only
-    router.push(Routes.tabs.explore.people);
+    router.navigate(Routes.tabs.explore.people);
   };
 
   if (!active || !entries.length) return null;
@@ -90,7 +90,7 @@ function SuggestedFollowWidgetRow({ identity }: { identity: string }) {
       size="sm"
       identity={identity}
       noFollowingBadge
-      onPress={() => router.push(Routes.tabs.profile(identity))}
+      onPress={() => router.navigate(Routes.tabs.profile(identity))}
       style={Atoms.px_0}
       activeStyle="none"
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
