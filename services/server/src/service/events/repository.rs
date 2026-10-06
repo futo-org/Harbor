@@ -35,7 +35,7 @@ impl Query {
         db: &DbConn,
         mut limit: Option<u64>,
         collection: Option<i32>,
-        identity: Option<String>,
+        identity: String,
         signed_by: Option<crate::service::proto::PublicKey>,
         sequence_gt: Option<i64>,
         sequence_lt: Option<i64>,
@@ -45,8 +45,9 @@ impl Query {
             limit = Some(200);
         }
 
-        let mut query =
-            event::Entity::find().select_also(content::Entity).join(
+        let mut query = event::Entity::find()
+            .select_also(content::Entity)
+            .join(
                 JoinType::LeftJoin,
                 event::Entity::belongs_to(content::Entity)
                     .from(event::Column::ContentDigestType)
@@ -60,14 +61,11 @@ impl Query {
                         .into_condition()
                     })
                     .into(),
-            );
+            )
+            .filter(event::Column::Identity.eq(identity));
 
         if let Some(c) = collection {
             query = query.filter(event::Column::Collection.eq(c as i16));
-        }
-
-        if let Some(id) = identity {
-            query = query.filter(event::Column::Identity.eq(id));
         }
 
         if let Some(pk) = signed_by {
@@ -722,9 +720,11 @@ impl Mutation {
                     .expr(Expr::col((event_table.clone(), event_id)))
                     .expr(Expr::col((event_table.clone(), identity.clone())))
                     .expr(Expr::from(update.name.clone()))
+                    // NOTE: we don't use `create_tsvector` for the identity as
+                    // that sometimes parses it as two words, see #1658.
                     .expr(Expr::cust_with_exprs(
                         "  create_tsvector('simple', COALESCE($1, ''), 'A')
-                        || create_tsvector('simple', $2, 'A')
+                        || setweight(array_to_tsvector(ARRAY[$2]), 'A')
                         || create_tsvector('simple', COALESCE($3, ''), 'B')",
                         [
                             Expr::from(update.alias.clone()),

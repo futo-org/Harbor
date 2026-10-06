@@ -1192,7 +1192,7 @@ const FfiConverterTypeListBansArgs = (() => {
 
 export type ListEventsArgs = {
     size?: number,
-    identity?: string,
+    identity: string,
     collection?: number,
     signedBy?: PublicKey,
     sequenceGt?: bigint,
@@ -1222,7 +1222,7 @@ const FfiConverterTypeListEventsArgs = (() => {
         readFromCursor(c: Cursor): TypeName {
             return {
                 size: FfiConverterOptionalInt32.readFromCursor(c), 
-                identity: FfiConverterOptionalString.readFromCursor(c), 
+                identity: FfiConverterString.readFromCursor(c), 
                 collection: FfiConverterOptionalInt32.readFromCursor(c), 
                 signedBy: FfiConverterOptionalTypePublicKey.readFromCursor(c), 
                 sequenceGt: FfiConverterOptionalInt64.readFromCursor(c), 
@@ -1232,7 +1232,7 @@ const FfiConverterTypeListEventsArgs = (() => {
         }
         writeIntoCursor(value: TypeName, c: Cursor): void {
             FfiConverterOptionalInt32.writeIntoCursor(value.size, c);
-            FfiConverterOptionalString.writeIntoCursor(value.identity, c);
+            FfiConverterString.writeIntoCursor(value.identity, c);
             FfiConverterOptionalInt32.writeIntoCursor(value.collection, c);
             FfiConverterOptionalTypePublicKey.writeIntoCursor(value.signedBy, c);
             FfiConverterOptionalInt64.writeIntoCursor(value.sequenceGt, c);
@@ -1241,7 +1241,7 @@ const FfiConverterTypeListEventsArgs = (() => {
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalInt32.allocationSize(value.size) +
-             FfiConverterOptionalString.allocationSize(value.identity) +
+             FfiConverterString.allocationSize(value.identity) +
              FfiConverterOptionalInt32.allocationSize(value.collection) +
              FfiConverterOptionalTypePublicKey.allocationSize(value.signedBy) +
              FfiConverterOptionalInt64.allocationSize(value.sequenceGt) +
