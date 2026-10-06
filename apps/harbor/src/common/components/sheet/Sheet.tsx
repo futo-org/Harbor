@@ -98,6 +98,7 @@ type SheetContentProps = Omit<ViewProps, 'onScroll'> & {
    * (list or ScrollView) so TrueSheet pins that one instead. */
   scrollable?: boolean;
 };
+
 function SheetContent({
   children,
   style,
@@ -186,14 +187,17 @@ function SheetHeader({
 type SheetFooterProps = {
   left?: ReactElement;
   right?: ReactElement;
+  onLayout?: ViewProps['onLayout'];
 };
-export function SheetFooter({ left, right }: SheetFooterProps) {
+
+export function SheetFooter({ left, right, onLayout }: SheetFooterProps) {
   const { theme } = useTheme();
 
   const insets = useSafeAreaInsets();
 
   return (
     <View
+      onLayout={onLayout}
       style={[
         Atoms.flex_row,
         Atoms.p_lg,
