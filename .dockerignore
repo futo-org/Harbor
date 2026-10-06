@@ -1,5 +1,6 @@
 **/target
 **/node_modules
+**/.env
 apps/harbor/dist
 **/.git
 .turbo

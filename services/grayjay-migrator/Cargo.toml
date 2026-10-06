@@ -1,0 +1,45 @@
+[package]
+edition      = "2024"
+name         = "grayjay-migrator"
+publish      = false
+rust-version = "1.85.0"
+version      = "0.1.0"
+
+# The long-running lookup service.
+[[bin]]
+name = "grayjay-migrator"
+path = "src/main.rs"
+
+# The one-shot migration tool.
+[[bin]]
+name = "grayjay-migrate"
+path = "src/bin/migrate.rs"
+
+[dependencies]
+# Workspace
+polycentric-core = { path = "../../packages/rs-core" }
+polycentric-common.workspace = true
+common-dotenv = { path = "../common/dotenv" }
+common-telemetry = { path = "../common/telemetry" }
+grayjay-migrator-entity = { path = "./entity" }
+grayjay-migrator-migration = { path = "./migration" }
+# Reused by the `seed-moderation` step to write `processed_content`.
+moderation-entity = { path = "../moderation/entity" }
+
+# 3rd Party
+ed25519-dalek.workspace = true
+hex.workspace = true
+prost.workspace = true
+sha2.workspace = true
+time.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["fmt", "ansi"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "query"] }
+futures = "0.3"
+indicatif = "0.17"
+sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio", "macros"] }
+tokio = { workspace = true, features = ["full"] }
+tonic = { workspace = true, features = ["transport"] }
+axum = { version = "0.8.8", default-features = false, features = ["http1", "json", "tokio"] }

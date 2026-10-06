@@ -101,6 +101,13 @@ const pushNotifications = touches(
   'services/common/',
   CHARTS,
 );
+const grayjayMigrator = touches(
+  CARGO,
+  'services/grayjay-migrator/',
+  'services/moderation/entity/',
+  'services/common/',
+  CHARTS,
+);
 const scraper = touches(NODE_ROOT, 'services/scraper/', CHARTS);
 const verifierBot = touches(
   NODE_ROOT,
@@ -157,7 +164,8 @@ const flags = {
     workflows: touches('.forgejo/'),
     scan: pr,
     rs_core_lint: rsCore,
-    rust_services_lint: server || moderation || pushNotifications,
+    rust_services_lint:
+      server || moderation || pushNotifications || grayjayMigrator,
     js_sdk_lint: jsSdk,
     js_services_lint: scraper || verifierBot,
     charts_lint: charts,
@@ -165,7 +173,7 @@ const flags = {
     app_lint: app,
     rs_core: rsCore,
     js_sdk: jsSdk,
-    rust_services: server || moderation || pushNotifications,
+    rust_services: server || moderation || pushNotifications || grayjayMigrator,
     scraper,
     app,
     build_sdks: rsCore || jsSdk || rnSdk || app || verifierBot,
@@ -205,6 +213,12 @@ const rustServices = [
     label: 'push notifications',
     dockerfile: 'services/push-notifications',
     changed: pushNotifications,
+  },
+  {
+    image: 'grayjay-migrator',
+    label: 'grayjay migrator',
+    dockerfile: 'services/grayjay-migrator',
+    changed: grayjayMigrator,
   },
 ];
 
