@@ -41,20 +41,6 @@ const SEARCH_TAB_LABELS: Record<SearchTab, string> = {
   people: 'People',
 };
 
-const SORT_POSTS_OPTIONS: readonly TabFilterOption<SearchTab>[] = [
-  { value: 'top', label: 'Top', icon: 'rocket' },
-  { value: 'latest', label: 'Latest', icon: 'star' },
-];
-
-const SEARCH_TABS: readonly {
-  value: SearchTab;
-  label: string;
-  menu_options?: readonly TabFilterOption<SearchTab>[];
-}[] = [
-  { value: 'top', label: 'Posts', menu_options: SORT_POSTS_OPTIONS },
-  { value: 'people', label: 'People' },
-];
-
 function PostResultsPage({
   query,
   sort,
