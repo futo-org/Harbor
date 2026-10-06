@@ -126,12 +126,10 @@ export function ProfileCompactHeader({
           {identityKey ? (
             <ProfileAvatar identityKey={identityKey} size="sm" />
           ) : null}
-          <Username
-            identity={identityKey}
-            variant="body"
-            fontWeight="bold"
-            style={[Atoms.flex_1, { minWidth: 0 }]}
-          />
+          {/* Takes the free space, so the name and its badge stay left. */}
+          <View style={[Atoms.flex_1, { minWidth: 0 }]}>
+            <Username identity={identityKey} variant="body" fontWeight="bold" />
+          </View>
           {isSelf ? (
             <Button
               title="Edit profile"
