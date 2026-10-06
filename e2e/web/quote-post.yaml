@@ -1,5 +1,7 @@
 url: ${MAESTRO_WEB_URL}
 name: I can quote a post
+tags:
+  - flaky
 ---
 - runFlow: ../elements/load.yaml
 - runFlow: ../steps/fresh-start.yaml
