@@ -88,7 +88,7 @@ impl Validate for EventKey {
         F: Fn(Self::Error) -> E,
     {
         let EventKey {
-            collection: _, // No validation.
+            collection: _, // No validation possible, needs content.
             identity,
             signed_by,
             sequence: _, // No validation.
@@ -114,6 +114,7 @@ impl Validate for EventKey {
 
 #[derive(Debug)]
 pub enum ValidationError {
+    CollectionInvalid { expected: i32 },
     Identity(validate::StringError),
     SignedBy(public_key::ValidationError),
     SignedByMissing,
@@ -122,6 +123,9 @@ pub enum ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            ValidationError::CollectionInvalid { expected } => {
+                write!(f, "collection invalid, expected '{expected}'")
+            }
             ValidationError::Identity(err) => write!(f, "identity {err}"),
             ValidationError::SignedBy(err) => write!(f, "signed by {err}"),
             ValidationError::SignedByMissing => write!(f, "signed by is missing"),
