@@ -1,5 +1,5 @@
 import { type ComponentProps, useMemo } from 'react';
-import { resolveAvatarSize } from './Avatar';
+import { useAvatarSizeRequest } from './Avatar';
 import AvatarEdit from './AvatarEdit';
 import {
   identiconUrl,
@@ -25,7 +25,7 @@ export function ProfileEditAvatar({
 }: ProfileEditAvatarProps) {
   const profile = useProfile(identityKey);
   const client = usePolycentric();
-  const pixelSize = resolveAvatarSize(size);
+  const pixelSize = useAvatarSizeRequest(size);
 
   const uri = useMemo(() => {
     const variant = pickImageVariant(profile.avatar, pixelSize);

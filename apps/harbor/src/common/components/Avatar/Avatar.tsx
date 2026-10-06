@@ -1,7 +1,13 @@
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { useTheme, withHexOpacity } from '@/src/common/theme';
 import { Image, type ImageProps } from 'expo-image';
-import { Pressable, StyleSheet, View, type ViewProps } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type ViewProps,
+} from 'react-native';
 
 export type AvatarSizePreset = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'massive';
 
@@ -16,6 +22,18 @@ export const AVATAR_SIZE_MAP: Record<AvatarSizePreset, number> = {
 
 export function resolveAvatarSize(size: AvatarSizePreset | number): number {
   return typeof size === 'number' ? size : AVATAR_SIZE_MAP[size];
+}
+
+/**
+ * Find the minimum size in device pixels that we want an avatar of size `size`
+ * to display with.
+ */
+export function useAvatarSizeRequest(
+  size: AvatarSizePreset | number,
+  slack: number = 0,
+): number {
+  const { scale } = useWindowDimensions();
+  return Math.ceil(resolveAvatarSize(size) * scale * (1 - slack));
 }
 
 interface AvatarProps extends Omit<ImageProps, 'source'> {
