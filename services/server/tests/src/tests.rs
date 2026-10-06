@@ -558,17 +558,26 @@ impl TestClient {
     /// Submit all pending events.
     pub async fn submit_events(&mut self) {
         if let Err(errors) = self.try_submit_events().await {
+            let SubmitErrors { errors, warnings } = errors;
             let n = errors.len();
             for (n, err) in errors.iter().enumerate() {
                 eprintln!("Error {}:", n + 1);
                 eprintln!("Error in {:?}", err.bundle);
                 eprintln!("Error: {}", err.message);
             }
-            panic!("{n} unexpected error(s)");
+
+            let m = warnings.len();
+            for (n, err) in warnings.iter().enumerate() {
+                eprintln!("Warning {}:", n + 1);
+                eprintln!("Warning in {:?}", err.bundle);
+                eprintln!("Warning: {}", err.message);
+            }
+
+            panic!("{n} unexpected error(s) and {m} unexpected warning(s)");
         }
     }
 
-    pub async fn try_submit_events(&mut self) -> Result<(), Vec<SubmitError>> {
+    pub async fn try_submit_events(&mut self) -> Result<(), SubmitErrors> {
         let event_bundles = take(&mut self.pending);
         if event_bundles.is_empty() {
             return Ok(());
@@ -583,20 +592,22 @@ impl TestClient {
             .expect("put_events failed")
             .into_inner();
 
-        if response.errors.is_empty() {
+        if response.errors.is_empty() && response.warnings.is_empty() {
             Ok(())
         } else {
-            let mut errors = Vec::with_capacity(response.errors.len());
-            for err in response.errors.into_iter() {
+            let map_err = |err: PutEventError| {
                 let idx = err.event_bundle_index as usize;
                 let bundle = event_bundles[idx].clone();
-                errors.push(SubmitError {
+                SubmitError {
                     message: err.message,
                     bundle_index: idx,
                     bundle,
-                });
-            }
-            Err(errors)
+                }
+            };
+            Err(SubmitErrors {
+                errors: response.errors.into_iter().map(map_err).collect(),
+                warnings: response.warnings.into_iter().map(map_err).collect(),
+            })
         }
     }
 
@@ -660,6 +671,12 @@ impl Drop for TestClient {
 
 pub fn current_timestamp() -> u64 {
     SystemTime::UNIX_EPOCH.elapsed().unwrap().as_millis() as u64
+}
+
+#[derive(Debug)]
+pub struct SubmitErrors {
+    errors: Vec<SubmitError>,
+    warnings: Vec<SubmitError>,
 }
 
 #[derive(Debug)]

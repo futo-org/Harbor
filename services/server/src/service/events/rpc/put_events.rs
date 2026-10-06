@@ -7,9 +7,9 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use common_kafka::FutureRecord;
 use entity::event;
-use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::Blob;
-use polycentric_common::models::validate::Validate;
+use polycentric_common::models::validate::{Validate, ValidationError};
+use polycentric_common::models::{collections, event_key};
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
@@ -35,6 +35,7 @@ pub async fn handle(
 ) -> Result<PutEventsResponse, Status> {
     let mut errors: Vec<PutEventError> = Vec::new();
     let mut all_blobs = HashSet::<Blob>::new();
+    let mut warnings: Vec<PutEventError> = Vec::new();
 
     let mut banned_cache = HashMap::new();
     let mut app_cache = HashMap::new();
@@ -44,12 +45,16 @@ pub async fn handle(
             event_bundle,
             &mut banned_cache,
             &mut app_cache,
+            &mut all_blobs,
+            &mut warnings,
+            |err| PutEventError {
+                event_bundle_index: idx as u32,
+                message: err.to_string(),
+            },
         )
         .await
         {
-            Ok(blobs) => {
-                all_blobs.extend(blobs);
-            }
+            Ok(()) => {}
             // We should see internal errors if something is wrong on our end,
             // e.g. when the database is down. In that case in stead of trying
             // to store the remaining events return the error immediately and
@@ -85,6 +90,7 @@ pub async fn handle(
     Ok(PutEventsResponse {
         errors,
         requested_blobs: missing_blobs,
+        warnings,
     })
 }
 
@@ -95,9 +101,11 @@ async fn process_event(
     event_bundle: EventBundle,
     banned_cache: &mut HashMap<Box<str>, bool>,
     app_cache: &mut HashMap<Application, i32>,
-) -> Result<Vec<Blob>, Status> {
-    let mut blobs = Vec::<Blob>::new();
-
+    all_blobs: &mut HashSet<Blob>,
+    warnings: &mut Vec<PutEventError>,
+    map_warning: impl Fn(ValidationError) -> PutEventError,
+) -> Result<(), Status> {
+    let start_warning_len = warnings.len();
     if !event_bundle.event_proofs.is_empty() {
         return Err(Status::invalid_argument(
             "event proofs are not accepted when storing events",
@@ -129,13 +137,15 @@ async fn process_event(
     // * event.vector_clock
     // * event.previous_signature
     // * event.previous_root
-    Validate::validate_first(&event)
-        .map_err(|err| Status::invalid_argument(format!("event {err}")))?;
+    event.validate_check(warnings, |err| map_warning(err.into()));
     let collection = event.key.as_ref().map(|k| k.collection).unwrap_or(0);
 
-    let key = event
-        .key
-        .ok_or_else(|| Status::invalid_argument("event key missing"))?;
+    let key = event.key.ok_or_else(|| {
+        // Event validation also checks this, don't return an error and warning
+        // about the same thing.
+        warnings.truncate(start_warning_len);
+        Status::invalid_argument("event key is missing")
+    })?;
 
     // Early banned check based on the cache.
     let is_banned = banned_cache.get(&*key.identity).copied();
@@ -162,18 +172,27 @@ async fn process_event(
     let application_id = match &event.application {
         Some(app) if let Some(app_id) = app_cache.get(app) => Some(*app_id),
         Some(app) => {
-            let app_id = EventsRepository::Mutation::application_id(
-                &ctx.db, app,
-            )
-            .await
-            .map_err(|e| {
-                tracing::error!(error = %e, "put_events application db error");
-                Status::internal("internal server error")
-            })?;
+            // Only store the application if its valid.
+            // NOTE: we already validate the application above, but those
+            // warnings have been converted into the PutEventError type, so we
+            // can't easily use to determine if we have a warning for the
+            // application.
+            let mut app_errors = Vec::<()>::new();
+            app.validate_check(&mut app_errors, |_| ());
+            if app_errors.is_empty() {
+                let app_id = EventsRepository::Mutation::application_id(&ctx.db, app)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!(error = %e, "put_events application db error");
+                        Status::internal("internal server error")
+                    })?;
 
-            app_cache.insert(app.clone(), app_id);
+                app_cache.insert(app.clone(), app_id);
 
-            Some(app_id)
+                Some(app_id)
+            } else {
+                None
+            }
         }
         None => None,
     };
@@ -183,7 +202,10 @@ async fn process_event(
     let event_key_bytes = key.encode_to_vec();
 
     let signed_by = key.signed_by.ok_or_else(|| {
-        Status::invalid_argument("event key signed by missing")
+        // Event validation also checks this, don't return an error and warning
+        // about the same thing.
+        warnings.truncate(start_warning_len);
+        Status::invalid_argument("event key signed by is missing")
     })?;
 
     if !signed_by
@@ -205,14 +227,16 @@ async fn process_event(
             tracing::debug!(error = %e, "put_events content decode error");
             Status::invalid_argument("invalid content_bytes")
         })?;
-        validate_content(&content, collection)?;
+        validate_content(&content, collection, warnings, map_warning);
 
-        content
-            .blobs()
-            .into_iter()
-            .for_each(|blob| blobs.push(blob.clone()));
+        all_blobs.extend(content.blobs().into_iter().cloned());
 
-        Some((content_bytes, content, digest))
+        if warnings.len() > start_warning_len {
+            // We got validation warnings, so we won't store the content.
+            None
+        } else {
+            Some((content_bytes, content, digest))
+        }
     } else {
         None
     };
@@ -332,110 +356,99 @@ async fn process_event(
         }
     }
 
-    Ok(blobs)
+    Ok(())
 }
 
 fn banned_error() -> Status {
     Status::permission_denied("identity is banned on this server")
 }
 
-fn validate_content(content: &Content, collection: i32) -> Result<(), Status> {
+fn validate_content(
+    content: &Content,
+    collection: i32,
+    warnings: &mut Vec<PutEventError>,
+    map_warning: impl Fn(ValidationError) -> PutEventError,
+) {
     let Content { content_body } = content;
+    content.validate_check(warnings, |err| map_warning(err.into()));
     let Some(content_body) = content_body else {
-        return Err(Status::invalid_argument("missing content body"));
+        // NOTE: we already added a ContentBodyMissing warnings previously.
+        return;
+    };
+
+    let mut check_collection = |collection: i32, expected: i32| {
+        if collection != expected {
+            warnings.push(map_warning(
+                event_key::ValidationError::CollectionInvalid { expected }
+                    .into(),
+            ));
+        }
     };
 
     match content_body {
         ContentBody::Post(post) => {
-            check_collection(collection, collections::FEED)?;
-            post.validate_first().map_err(|err| {
-                Status::invalid_argument(format!("event {err}"))
-            })?;
+            check_collection(collection, collections::FEED);
+            post.validate_check(warnings, |err| map_warning(err.into()));
 
             // TODO: needs db for validation of:
             // * reply.root & reply.parent events exists.
             // * reply.root & reply.parent in same thread?
             // * quote event exists.
-
-            Ok(())
         }
         ContentBody::Repost(_) => {
-            check_collection(collection, collections::FEED)?;
+            check_collection(collection, collections::FEED);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::Delete(_) => {
             // NOTE: we allow deletion of any event, so the collection can't be
             // checked here.
 
             // TODO: validate.
-            Ok(())
         }
         ContentBody::Follow(_) => {
-            check_collection(collection, collections::SOCIAL_GRAPH)?;
+            check_collection(collection, collections::SOCIAL_GRAPH);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::Block(_) => {
-            check_collection(collection, collections::SOCIAL_GRAPH)?;
+            check_collection(collection, collections::SOCIAL_GRAPH);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::Reaction(_) => {
-            check_collection(collection, collections::INTERACTIONS)?;
+            check_collection(collection, collections::INTERACTIONS);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::AttributedToReaction(_) => {
-            check_collection(collection, collections::INTERACTIONS)?;
+            check_collection(collection, collections::INTERACTIONS);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::ProfileUpdate(_) => {
-            check_collection(collection, collections::PROFILE)?;
+            check_collection(collection, collections::PROFILE);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::Identity(_) => {
-            check_collection(collection, collections::IDENTITY)?;
+            check_collection(collection, collections::IDENTITY);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::Report(_) => {
-            check_collection(collection, collections::REPORTS)?;
+            check_collection(collection, collections::REPORTS);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::Labels(_) => {
-            check_collection(collection, collections::LABELS)?;
+            check_collection(collection, collections::LABELS);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::VerificationClaim(_) => {
-            check_collection(collection, collections::VERIFICATIONS)?;
+            check_collection(collection, collections::VERIFICATIONS);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::VerificationVerify(_) => {
-            check_collection(collection, collections::VERIFICATIONS)?;
+            check_collection(collection, collections::VERIFICATIONS);
             // TODO: validate.
-            Ok(())
         }
         ContentBody::VerificationTarget(_) => {
-            check_collection(collection, collections::VERIFICATIONS)?;
+            check_collection(collection, collections::VERIFICATIONS);
             // TODO: validate.
-            Ok(())
         }
-    }
-}
-
-fn check_collection(collection: i32, expected: i32) -> Result<(), Status> {
-    if collection == expected {
-        Ok(())
-    } else {
-        Err(Status::invalid_argument(format!(
-            "event key collection invalid: expected '{expected}', got '{collection}'"
-        )))
     }
 }
 
