@@ -17,6 +17,10 @@ import { Username } from '@/src/features/profile/Username';
 import { router, type Href } from 'expo-router';
 import { memo, useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import Animated, {
+  type SharedValue,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
@@ -28,9 +32,15 @@ const BANNER_HEIGHT = 150;
 export interface ProfileHeaderProps {
   bannerColors: [string, string];
   onBack: () => void;
+  /** The showing page's scroll offset, which stretches the banner on overscroll. */
+  scrollY: SharedValue<number>;
 }
 
-function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
+function ProfileHeaderInner({
+  bannerColors,
+  onBack,
+  scrollY,
+}: ProfileHeaderProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { identityKey, isSelf, alias } = useProfileContext();
@@ -55,18 +65,29 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
     openProfilePhoto(identityKey);
   }, [identityKey]);
 
+  const bannerHeight = BANNER_HEIGHT + insets.top;
+  // iOS overscroll at the top pulls the header down; the banner grows up into the gap.
+  const bannerStretchStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: Math.max(1, 1 - scrollY.value / bannerHeight) }],
+  }));
+
   if (profile.isLoading && !profile.name) return undefined;
 
   return (
     <View style={{ backgroundColor: theme.palette.neutral_0 }}>
       <View style={{ position: 'relative' }}>
-        <View
-          style={{
-            // Extends under the status bar; the screen draws under it.
-            height: BANNER_HEIGHT + insets.top,
-            backgroundColor: bannerColors[1],
-            overflow: 'hidden',
-          }}
+        <Animated.View
+          style={[
+            {
+              // Extends under the status bar; the screen draws under it.
+              height: bannerHeight,
+              backgroundColor: bannerColors[1],
+              overflow: 'hidden',
+              // Stretches from its bottom edge, keeping the top at the screen's.
+              transformOrigin: 'bottom',
+            },
+            bannerStretchStyle,
+          ]}
         >
           <View
             style={[
@@ -81,7 +102,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
               },
             ]}
           />
-        </View>
+        </Animated.View>
         <View
           style={[
             Atoms.absolute,

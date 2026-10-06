@@ -193,8 +193,14 @@ function ProfileScreenContent() {
   const [headerHeight, setHeaderHeight] = useState(0);
 
   const renderHeader = useCallback(
-    () => <ProfileHeader bannerColors={bannerColors} onBack={handleBack} />,
-    [bannerColors, handleBack],
+    () => (
+      <ProfileHeader
+        bannerColors={bannerColors}
+        onBack={handleBack}
+        scrollY={scrollY}
+      />
+    ),
+    [bannerColors, handleBack, scrollY],
   );
 
   const renderTabBar = useCallback(
