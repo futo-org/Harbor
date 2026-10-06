@@ -69,7 +69,9 @@ export function PostContentQuote({
     const keyFingerprint = getKeyFingerprint(post.signedBy);
     if (!keyFingerprint) return;
 
-    router.push(Routes.tabs.post(post.identity, keyFingerprint, post.sequence));
+    router.navigate(
+      Routes.tabs.post(post.identity, keyFingerprint, post.sequence),
+    );
   }, [post]);
 
   if (!post) return isLoading ? <QuoteSkeleton /> : <QuoteUnavailable />;

@@ -35,7 +35,7 @@ export function ClaimListItem({
       onPress={
         onPress ??
         (() =>
-          router.push(
+          router.navigate(
             Routes.tabs.verification(
               claim.identity,
               claim.keyFingerprint,

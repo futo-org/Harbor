@@ -4,6 +4,7 @@ name: I can quote a post
 - runFlow: ../elements/load.yaml
 - runFlow: ../steps/fresh-start.yaml
 - runFlow: ../steps/create-identity.yaml
+- runFlow: ../steps/sort-explore-latest.yaml
 - runFlow: ../steps/scroll-down.yaml
 - runFlow: ../steps/open-post-menu.yaml
 - tapOn:

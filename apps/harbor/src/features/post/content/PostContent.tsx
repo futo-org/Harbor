@@ -129,7 +129,7 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
 
   const handlePress = useCallback(() => {
     if (!parentIdentity) return;
-    router.push(Routes.tabs.profile(parentIdentity));
+    router.navigate(Routes.tabs.profile(parentIdentity));
   }, [parentIdentity]);
 
   if (!parentIdentity) return null;

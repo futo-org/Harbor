@@ -22,7 +22,7 @@ const DASHBOARD_ITEMS: DashboardItem[] = [
     icon: 'ban',
     label: 'Ban list',
     navigate: (server) =>
-      router.push(
+      router.navigate(
         `${Routes.tabs.moderation.banList}?server=${encodeURIComponent(
           server,
         )}`,

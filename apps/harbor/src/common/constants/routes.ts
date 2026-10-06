@@ -34,7 +34,7 @@ export function openCompose(options: OpenComposeOptions = {}) {
   if (attachImage) params.set('attach', '1');
   const queryString = params.toString();
   withIdentity(() =>
-    router.push(
+    router.navigate(
       queryString
         ? `${Routes.tabs.feed.compose}?${queryString}`
         : Routes.tabs.feed.compose,
