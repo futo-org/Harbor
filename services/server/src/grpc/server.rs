@@ -1,8 +1,13 @@
-use crate::service::content::content_filestore::ContentFilestore;
-use crate::service::context::ServiceContext;
-use crate::service::server::rpc::ServerConfig;
-use crate::service::{self, notifications::rpc::build_notifications_service};
+use std::future;
+use std::pin::pin;
+use std::task::Poll;
+use std::time::Duration;
+
 use axum::Router;
+use axum::body::Body;
+use axum::extract::Request;
+use axum::middleware::Next;
+use axum::response::Response;
 use common_kafka::FutureProducer;
 use http::header::HeaderName;
 use sea_orm::DatabaseConnection;
@@ -10,6 +15,13 @@ use tonic::service::Routes;
 use tonic_web::GrpcWebLayer;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_layer::Layer;
+
+use crate::service::content::content_filestore::ContentFilestore;
+use crate::service::context::ServiceContext;
+use crate::service::server::rpc::ServerConfig;
+use crate::service::{self, notifications::rpc::build_notifications_service};
+
+const HANDLER_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Builds reflection for gRPC docs. The file descriptors are created in ./build.rs.
 fn build_reflection_service() -> Result<
@@ -70,7 +82,8 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(search_service))
         .add_service(grpc_web.layer(verifications_service))
         .add_service(grpc_web.layer(graph_service))
-        .add_service(grpc_web.layer(profile_service));
+        .add_service(grpc_web.layer(profile_service))
+        .prepare();
 
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::any())
@@ -97,5 +110,36 @@ pub fn build_grpc_router(
         service::auth::auth_middleware,
     );
 
-    Ok(routes.into_axum_router().layer(auth).layer(cors))
+    Ok(routes
+        .into_axum_router()
+        .layer(axum::middleware::from_fn(timeout))
+        .layer(auth)
+        .layer(cors))
+}
+
+/// Timeout middle for the gRPC handlers.
+async fn timeout(request: Request, next: Next) -> Response {
+    let mut next = pin!(next.run(request));
+    let mut timeout = pin!(tokio::time::sleep(HANDLER_TIMEOUT));
+
+    future::poll_fn(move |ctx| {
+        if let Poll::Ready(response) = next.as_mut().poll(ctx) {
+            Poll::Ready(response)
+        } else if let Poll::Ready(()) = timeout.as_mut().poll(ctx) {
+            let mut response = http::Response::new(Body::empty());
+            let headers = response.headers_mut();
+            headers.insert(
+                tonic::Status::GRPC_STATUS,
+                (tonic::Code::DeadlineExceeded as i32).into(),
+            );
+            headers.insert(
+                http::header::CONTENT_TYPE,
+                tonic::metadata::GRPC_CONTENT_TYPE,
+            );
+            Poll::Ready(response)
+        } else {
+            Poll::Pending
+        }
+    })
+    .await
 }

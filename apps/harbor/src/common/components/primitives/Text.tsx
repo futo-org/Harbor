@@ -36,7 +36,11 @@ const EMOJI_SIZE = 1.05;
 const EMOJI_BASELINE_SHIFT = 0.12;
 const EMOJI_GAP = 0.1;
 
-function withEmojiImages(text: string, fontSize: number): ReactNode {
+function withEmojiImages(
+  text: string,
+  fontSize: number,
+  selectable: boolean,
+): ReactNode {
   const parts = splitEmoji(text);
   if (parts.length === 1) return text;
   const size = Math.round(fontSize * EMOJI_SIZE);
@@ -54,6 +58,8 @@ function withEmojiImages(text: string, fontSize: number): ReactNode {
           isWeb ? { marginHorizontal: gap } : { width: size + 2 * gap },
           { transform: [{ translateY: shift }] },
         ]}
+        inText
+        copyable={selectable}
       />
     ) : (
       part
@@ -61,11 +67,18 @@ function withEmojiImages(text: string, fontSize: number): ReactNode {
   );
 }
 
-function renderChildren(children: ReactNode, fontSize: number): ReactNode {
-  if (typeof children === 'string') return withEmojiImages(children, fontSize);
+function renderChildren(
+  children: ReactNode,
+  fontSize: number,
+  selectable: boolean,
+): ReactNode {
+  if (typeof children === 'string')
+    return withEmojiImages(children, fontSize, selectable);
   if (!Array.isArray(children)) return children;
   return Children.map(children, (child) =>
-    typeof child === 'string' ? withEmojiImages(child, fontSize) : child,
+    typeof child === 'string'
+      ? withEmojiImages(child, fontSize, selectable)
+      : child,
   );
 }
 
@@ -141,6 +154,7 @@ export function Text({
       {renderChildren(
         children,
         StyleSheet.flatten(style)?.fontSize ?? resolvedFontSize,
+        !!props.selectable,
       )}
     </UITextView>
   );

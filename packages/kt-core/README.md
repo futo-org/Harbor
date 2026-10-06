@@ -71,7 +71,7 @@ decodes with its own generated types — same contract js-core uses.
 | `crypto/server-jwt.ts` | `ServerJwt.kt` | **ported** — the `AuthTokenProvider` registered in the client constructor mints an EdDSA JWT per server; tokens cleared on identity switch |
 | `utils/moderation.ts` | `Moderation.kt` | **ported** (`decodeStatusByServer`/`encodeStatusByServer`; `setBanStatus` on the client, `isModerator`/`isBanned`/`listBans` in `Queries.kt`) |
 | `client-internal/event-service.ts` | `EventService.kt` | **ported** (StateFlow for state/progress/hydration, SharedFlow for content-created/keypair/errors; named `client.eventService` since `client.events` is the event repository here) |
-| `errors.ts` | `Errors.kt` | **ported** (WrapperError family → PolycentricException hierarchy; WasmError has no analogue — rs-core's UniFFI `CoreException` is folded into `CoreFailureException` (a `PolycentricException`) at every FFI call site via `coreCall`, and `CoreQueryException` extends `PolycentricException`; consumers only catch `PolycentricException`) |
+| `errors.ts` | `Errors.kt` | **ported** (WrapperError family → PolycentricException hierarchy; WasmError has no analogue — rs-core's UniFFI `CoreException` is folded into `CoreFailureException` (a `PolycentricException`) at every FFI call site via `coreCall`; consumers only catch `PolycentricException`) |
 | — (apps call core.fetchQuery) | `Queries.kt` | typed one-shot wrappers for all 16 non-ListEvents Query variants (incl. the moderation trio) with response decoding |
 | `platform-interfaces/*` | `PlatformInterfaces.kt` | done |
 | `js-storage-sqlite` (DrizzleStorageDriver) | `SqliteStorageDriver.kt` + repos | **ported** — same schema (events/content/keys/active_identity_for_key), no-op ack repo, raw `SQLiteOpenHelper` (no extra deps); heads query uses a correlated MAX() subquery instead of a window function (SQLite on minSdk 24 predates window fns) |
@@ -79,7 +79,6 @@ decodes with its own generated types — same contract js-core uses.
 | `datastore/*` (drivers) | `InMemoryStorageDriver.kt` | in-memory driver for tests |
 | `http/alias-resolver.ts` | `http/AliasResolver.kt` | **ported** (parse/normalize/resolve, wildcard `*`, 10s timeout; org.json — on the Android bootclasspath) |
 | `datastore/event-ack-store.ts` | interface only | js-core's store is a vestigial v1-shaped pass-through with no call sites; the Kotlin `IEventAckRepository` is v2-shaped (server, EventKey) by design |
-| observable bridge | `QueryFlows.kt` | done (verify generated names) |
 
 **Salvage:** `origin/kotlin-wrapper` has `packages/kotlin` with SQLite
 repositories (`drivers/storage/sqlite/`) and ~2,100 lines of instrumented
@@ -174,8 +173,9 @@ requires the build toolchain (JDK 17+ and the Android SDK).
 
 ## FFI contract notes (learned from js-core — keep these invariants)
 
-- **Query observables never `complete()`**; one-shot callers resolve on the
-  first `Success` status (`awaitQuery`). Don't wait for completion.
+- **Query observables never `complete()`**; one-shot callers use the FFI
+  `awaitQuery` (rs-core `await_query`), which resolves on the first
+  `Success` status. Don't wait for completion.
 - **Signing is a foreign callback** (`SignBytesCallback` in the generated
   Kotlin): the core builds the canonical envelope and calls back with exact
   bytes; private keys stay in Kotlin.

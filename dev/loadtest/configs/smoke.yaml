@@ -1,0 +1,14 @@
+# A minute of very light traffic across every scenario: checks the tool,
+# the accounts file and the metrics connection before a real test.
+run:
+  duration: 1m
+scenarios:
+  browse: {rate: 0.5}
+  browse_user: {rate: 0.3}
+  register: {rate: 0.2}
+  post: {rate: 0.2}
+  reply: {rate: 0.1}
+  react: {rate: 0.3}
+  repost: {enabled: true, rate: 0.05}
+  follow: {rate: 0.1}
+  search: {enabled: true, rate: 0.1}

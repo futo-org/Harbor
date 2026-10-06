@@ -1,8 +1,7 @@
-import type { v2 } from '@polycentric/react-native';
 import type { ReactNode } from 'react';
 
 export type PairIdentityCameraProps = {
-  onCodeScanned: (pairingInfo: v2.PairingInfo | null) => void;
+  onCodeScanned: (scanned: string) => void;
 };
 
 /**

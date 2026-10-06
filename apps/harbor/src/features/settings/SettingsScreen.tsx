@@ -302,11 +302,7 @@ function SourceCodeItem() {
     <View
       style={[Atoms.pt_3xl, Atoms.px_md, Atoms.flex_row, Atoms.items_center]}
     >
-      <LinkButton
-        title="Source code"
-        onPress={() => Linking.openURL(SOURCE_CODE_URL)}
-        underlineOnHover
-      />
+      <LinkButton title="Source code" href={SOURCE_CODE_URL} underlineOnHover />
     </View>
   );
 }

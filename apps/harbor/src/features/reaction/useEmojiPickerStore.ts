@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 export const ALL_CATEGORIES = 'All';
 
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 150;
 
 export const useEmojiPickerStore = create<{
   /**
@@ -35,11 +35,11 @@ export const useEmojiPickerStore = create<{
     rawQuery: '',
     query: '',
     selectedCategory: ALL_CATEGORIES,
-    openFor: (post) => set({ post, open: true }),
-    close: () => {
+    openFor: (post) => {
       clearQuery();
-      set({ open: false, selectedCategory: ALL_CATEGORIES });
+      set({ post, open: true, selectedCategory: ALL_CATEGORIES });
     },
+    close: () => set({ open: false }),
     setRawQuery: (rawQuery) => {
       clearTimeout(debounceTimeout);
       if (rawQuery === '') {

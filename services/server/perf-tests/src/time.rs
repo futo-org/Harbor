@@ -8,8 +8,9 @@ use polycentric_common::models::protos_v2::graph_service_client::GraphServiceCli
 use polycentric_common::models::protos_v2::{
     EventKey, GetExploreFeedRequest, GetFollowingFeedRequest,
     GetIdentityFeedRequest, GetPostThreadRequest, GetReactionsRequest,
-    ListEventsRequest, ListFollowersRequest, ListFollowingRequest,
-    ListHeadsRequest, PublicKey, SortPostsBy, SuggestFollowRequest,
+    ListEventsFilters, ListEventsRequest, ListFollowersRequest,
+    ListFollowingRequest, ListHeadsRequest, PublicKey, SortPostsBy,
+    SuggestFollowRequest,
 };
 use tokio::task::JoinSet;
 
@@ -82,7 +83,11 @@ async fn main() {
                     args.next().expect("missing identity for SuggestFollow");
                 RpcMethod::SuggestFollow(identity)
             }
-            "ListEvents" => RpcMethod::ListEvents,
+            "ListEvents" => {
+                let identity =
+                    args.next().expect("missing identity for ListEvents");
+                RpcMethod::ListEvents(identity)
+            }
             "ListHeads" => {
                 let identity =
                     args.next().expect("missing identity for ListHeads");
@@ -188,7 +193,7 @@ enum RpcMethod {
     ListFollowing(String),
     ListFollowers(String),
     SuggestFollow(String),
-    ListEvents,
+    ListEvents(String),
     ListHeads(String),
     GetReactions(EventKey),
 }
@@ -217,7 +222,9 @@ async fn time(address: String, method: RpcMethod, amount: usize) {
         RpcMethod::SuggestFollow(identity) => {
             time_suggest_follow(address, amount, identity).await
         }
-        RpcMethod::ListEvents => time_list_events(address, amount).await,
+        RpcMethod::ListEvents(identity) => {
+            time_list_events(address, amount, identity).await
+        }
         RpcMethod::ListHeads(identity) => {
             time_list_heads(address, amount, identity).await
         }
@@ -374,12 +381,15 @@ async fn time_suggest_follow(address: String, amount: usize, identity: String) {
     println!("{amount} requests took {total:?}, {avg:?} on average");
 }
 
-async fn time_list_events(address: String, amount: usize) {
+async fn time_list_events(address: String, amount: usize, identity: String) {
     let mut client = event_sync_client(address).await;
     let mut total = Duration::ZERO;
     for _ in 0..amount {
         let request = ListEventsRequest {
-            filters: None,
+            filters: Some(ListEventsFilters {
+                identity: identity.clone(),
+                ..Default::default()
+            }),
             size: None,
         };
         let start = Instant::now();

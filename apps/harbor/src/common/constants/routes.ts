@@ -5,6 +5,9 @@ import type { PostData } from '../lib/polycentric-hooks';
 /** Query param carrying where onboarding should land the user afterwards. */
 export const RETURN_TO_PARAM = 'returnTo';
 
+/** Query param carrying the pairing code in a pairing link. */
+export const PAIRING_CODE_PARAM = 'code';
+
 /** In-app absolute paths only, so `?returnTo=` cannot redirect off-site.
  *  `/` is excluded: the onboarding welcome screen also serves it. */
 export function safeReturnTo(value: unknown): string | null {

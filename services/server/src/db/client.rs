@@ -36,14 +36,28 @@ async fn create_pool(
 ) -> Result<DatabaseConnection, sea_orm::DbErr> {
     let mut opt =
         ConnectOptions::new(with_connection_options(url, durable_commits));
-    opt.max_connections(max)
+    opt.set_application_name("harbor-server")
+        .set_schema_search_path("public")
+        .max_connections(max)
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))
         .acquire_timeout(Duration::from_secs(8))
+        .statement_timeout(Duration::from_secs(5))
         .idle_timeout(Duration::from_secs(600))
         .max_lifetime(Duration::from_secs(1800))
-        .sqlx_logging(false)
-        .set_schema_search_path("public");
+        .record_stmt_in_spans(false)
+        // Only log slow execution of queries.
+        .sqlx_logging(true)
+        .sqlx_logging_level(log::LevelFilter::Off)
+        .sqlx_slow_statements_logging_settings(
+            log::LevelFilter::Warn,
+            Duration::from_secs(1),
+        )
+        .map_sqlx_postgres_pool_opts(|options| {
+            options
+                .acquire_slow_level(log::LevelFilter::Warn)
+                .acquire_slow_threshold(Duration::from_secs(1))
+        });
 
     let db = Database::connect(opt).await?;
 

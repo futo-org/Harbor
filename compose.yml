@@ -23,7 +23,7 @@ services:
     ports:
       - ${HARBOR_SERVER_PORT:-${POLYCENTRIC_SERVER_PORT:-3000}}:3000
     environment: &server-env
-      - RUST_LOG=debug
+      - RUST_LOG=${RUST_LOG:-debug}
       - HARBOR_DATABASE_URL=${HARBOR_DATABASE_URL:-${DATABASE_URL:-postgres://postgres:testing@postgres:5432}}
       - HARBOR_CONTENT_BLOB_OS_BUCKET=${HARBOR_CONTENT_BLOB_OS_BUCKET:-${CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}}
       - HARBOR_CONTENT_BLOB_OS_ENDPOINT=${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-${CONTENT_BLOB_OS_ENDPOINT:-http://rustfs:9000}}
