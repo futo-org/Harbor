@@ -17,6 +17,7 @@ import { Username } from '@/src/features/profile/Username';
 import { router, type Href } from 'expo-router';
 import { memo, useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
@@ -31,6 +32,7 @@ export interface ProfileHeaderProps {
 
 function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { identityKey, isSelf, alias } = useProfileContext();
 
   const profile = useProfile(identityKey);
@@ -60,7 +62,8 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
       <View style={{ position: 'relative' }}>
         <View
           style={{
-            height: BANNER_HEIGHT,
+            // Extends under the status bar; the screen draws under it.
+            height: BANNER_HEIGHT + insets.top,
             backgroundColor: bannerColors[1],
             overflow: 'hidden',
           }}
@@ -82,7 +85,7 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
         <View
           style={[
             Atoms.absolute,
-            { top: 0, left: 0 },
+            { top: insets.top, left: 0 },
             Atoms.mx_lg,
             Atoms.mt_md,
           ]}

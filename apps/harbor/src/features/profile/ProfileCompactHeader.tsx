@@ -7,6 +7,7 @@ import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
@@ -38,14 +39,17 @@ export function ProfileCompactHeader({
   onBack: () => void;
 }) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const { identityKey, isSelf } = useProfileContext();
+  // Covers the status bar too, as the screen draws under it.
+  const compactHeaderHeight = COMPACT_HEADER_HEIGHT + insets.top;
 
   const handleEdit = useCallback(() => {
     if (identityKey) router.navigate(Routes.tabs.editProfile(identityKey));
   }, [identityKey]);
 
   // Hands over as the full header's own tabs leave the screen.
-  const revealAt = Math.max(0, headerHeight - COMPACT_HEADER_HEIGHT);
+  const revealAt = Math.max(0, headerHeight - compactHeaderHeight);
   const measured = headerHeight > 0;
 
   // Timed rather than scroll-linked, so it reads the same at any scroll speed.
@@ -64,7 +68,7 @@ export function ProfileCompactHeader({
 
   const style = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ translateY: -COMPACT_HEADER_HEIGHT * (1 - progress.value) }],
+    transform: [{ translateY: -compactHeaderHeight * (1 - progress.value) }],
   }));
 
   return (
@@ -75,6 +79,7 @@ export function ProfileCompactHeader({
           top: 0,
           left: 0,
           right: 0,
+          paddingTop: insets.top,
           zIndex: ZIndex.raised,
           backgroundColor: theme.palette.neutral_0,
         },

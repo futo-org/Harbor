@@ -205,7 +205,7 @@ function ProfileScreenContent() {
   );
 
   return (
-    <Screen>
+    <Screen drawUnderStatusBar>
       <Screen.PrimaryColumn>
         <PagerViewWithHeader
           values={PROFILE_TABS}

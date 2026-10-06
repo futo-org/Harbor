@@ -52,6 +52,9 @@ jest.mock('@/src/common/components/Icon', () => ({
   default: () => null,
 }));
 jest.mock('expo-router', () => ({ router: { navigate: jest.fn() } }));
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 jest.mock('../follow/FollowButton', () => ({
   __esModule: true,
   default: () => null,
