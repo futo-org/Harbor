@@ -9,7 +9,6 @@ import {
   VARIANT_CONFIG,
 } from '@/src/common/components/primitives/Text';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { useOptionalProfileContext } from '@/src/features/profile/ProfileContext';
 import { View } from 'react-native';
 import useFollows from './hooks/useFollows';
 
@@ -29,7 +28,9 @@ export function FollowingBadge({
   variant: TextVariant;
 }) {
   const { theme } = useTheme();
-  const following = useIsFollowingBadgeShown(identity);
+  const following = useFollows((state) =>
+    identity ? state.isFollowing(identity) : false,
+  );
 
   if (!following) return null;
 
@@ -60,15 +61,5 @@ export function FollowingBadge({
         accessibilityLabel="Following"
       />
     </View>
-  );
-}
-
-function useIsFollowingBadgeShown(identity: string | null): boolean {
-  const profileIdentity = useOptionalProfileContext()?.identityKey ?? null;
-  // The Follow button on that profile already shows the state.
-  const isOnIdentityProfile = !!identity && identity === profileIdentity;
-
-  return useFollows((state) =>
-    identity && !isOnIdentityProfile ? state.isFollowing(identity) : false,
   );
 }

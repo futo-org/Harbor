@@ -29,7 +29,7 @@ use crate::store::keys::EventKey as StoreEventKey;
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListEventsArgs {
     pub size: Option<i32>,
-    pub identity: Option<String>,
+    pub identity: String,
     pub collection: Option<i32>,
     pub signed_by: Option<PublicKey>,
     pub sequence_gt: Option<i64>,
@@ -196,7 +196,7 @@ pub fn get_event(
     let request = ListEventsRequest {
         filters: Some(ListEventsFilters {
             collection: Some(collection),
-            identity: Some(identity.clone()),
+            identity: identity.clone(),
             signed_by: None,
             sequence_gt: Some(sequence_i64.saturating_sub(1)),
             sequence_lt: Some(sequence_i64.saturating_add(1)),

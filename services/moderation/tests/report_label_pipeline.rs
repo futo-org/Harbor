@@ -238,7 +238,7 @@ async fn label_exists(identity: &str, target: &EventKey, label: &str) -> Result<
         .list_events(ListEventsRequest {
             filters: Some(ListEventsFilters {
                 collection: Some(collections::LABELS),
-                identity: Some(identity.to_string()),
+                identity: identity.to_string(),
                 ..Default::default()
             }),
             size: Some(100),

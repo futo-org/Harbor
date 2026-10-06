@@ -3,20 +3,6 @@
 use crate::*;
 
 #[tokio::test]
-async fn list_events_empty_works() {
-    let mut client = connect_event_sync().await;
-    client
-        .list_events(ListEventsRequest {
-            size: Some(10),
-            ..Default::default()
-        })
-        .await
-        .expect("list_events failed");
-    // No assertion on count — server may have prior state — just that the
-    // call succeeds and decodes.
-}
-
-#[tokio::test]
 async fn put_then_list_round_trip() {
     let mut client = TestClient::new().await;
 
@@ -30,7 +16,7 @@ async fn put_then_list_round_trip() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity),
+                identity,
                 ..Default::default()
             }),
         })
@@ -212,7 +198,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity),
+                identity,
                 ..Default::default()
             }),
         })
@@ -423,7 +409,7 @@ async fn post_revocation_event_returns_without_proof() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity),
+                identity,
                 ..Default::default()
             }),
         })
@@ -577,7 +563,7 @@ async fn rewritten_event_invalidates_proofs() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity.clone()),
+                identity: identity.clone(),
                 ..Default::default()
             }),
         })
@@ -677,7 +663,7 @@ async fn put_verification_claim_is_ingested_and_listable() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity),
+                identity,
                 collection: Some(COLLECTION_VERIFICATIONS),
                 ..Default::default()
             }),
@@ -713,7 +699,7 @@ async fn events_submitted_twice_are_ignored() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity),
+                identity,
                 ..Default::default()
             }),
         })

@@ -119,7 +119,7 @@ message ListEventsFilters {
   // Collection to filter events by
   optional int32 collection = 1;
   // Identity key to filter events by
-  optional string identity = 2;
+  string identity = 2;
   // Filter events to those signed by this public key
   optional PublicKey signed_by = 3;
   // Return sequences greater than
@@ -133,7 +133,7 @@ message ListEventsFilters {
 
 message ListEventsRequest {
   // Filters
-  optional ListEventsFilters filters = 1;
+  ListEventsFilters filters = 1;
   // Max number of events to return
   optional int32 size = 2;
 }
