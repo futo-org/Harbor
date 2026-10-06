@@ -442,9 +442,9 @@ function injectLocally(
     alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
   }
 
-  injectPostIntoFeedCache(feedQueryKeys.following(identity), bundle);
+  injectPostIntoFeedCache(feedQueryKeys.following(identity, 'latest'), bundle);
   injectPostIntoFeedCache(feedQueryKeys.identity(identity), bundle);
-  injectPostIntoFeedCache(feedQueryKeys.explore(identity), bundle);
+  injectPostIntoFeedCache(feedQueryKeys.explore(identity, 'latest'), bundle);
 }
 
 /**
@@ -457,9 +457,9 @@ async function refreshAfterPosting(
   post: v2.Post,
 ): Promise<void> {
   // Feeds
-  invalidateQuery(client, feedQueryKeys.following(identity));
+  invalidateQuery(client, feedQueryKeys.following(identity, 'latest'));
   invalidateQuery(client, feedQueryKeys.identity(identity));
-  invalidateQuery(client, feedQueryKeys.explore(identity));
+  invalidateQuery(client, feedQueryKeys.explore(identity, 'latest'));
 
   // Threads
   const ancestors: Set<string> = new Set();
