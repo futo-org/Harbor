@@ -38,7 +38,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
     <Pressable
       onPress={() => {
         if (!currentIdentity.identityKey) return;
-        router.push(Routes.tabs.profile(currentIdentity.identityKey));
+        router.navigate(Routes.tabs.profile(currentIdentity.identityKey));
       }}
     >
       <ProfileAvatar identityKey={currentIdentity.identityKey} />
@@ -61,7 +61,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
       {avatar}
       <Pressable
         // TODO  Route to identitySwitch when that is implemented
-        onPress={() => router.push(Routes.tabs.settings.identity)}
+        onPress={() => router.navigate(Routes.tabs.settings.identity)}
         onHoverIn={onHoverIn}
         onHoverOut={onHoverOut}
         hitSlop={10}

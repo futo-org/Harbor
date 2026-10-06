@@ -39,11 +39,11 @@ function ProfileHeaderInner({ bannerColors, onBack }: ProfileHeaderProps) {
   const displayKey = identityKey ? identityKey.slice(0, 64) : '...';
 
   const handleEdit = useCallback(() => {
-    if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
+    if (identityKey) router.navigate(Routes.tabs.editProfile(identityKey));
   }, [identityKey]);
 
   const handleIdentityPress = useCallback(() => {
-    if (identityKey) router.push(Routes.tabs.profileIdentity(identityKey));
+    if (identityKey) router.navigate(Routes.tabs.profileIdentity(identityKey));
   }, [identityKey]);
 
   const openShareSheet = useCallback(() => setShowShareSheet(true), []);
@@ -257,7 +257,7 @@ function FollowCounts({
         <Pressable
           key={label}
           accessibilityRole="link"
-          onPress={() => router.push(route)}
+          onPress={() => router.navigate(route)}
           style={({ pressed }) => [pressed && { opacity: 0.5 }]}
         >
           <Text variant="secondary" color="neutral_500" selectable={false}>

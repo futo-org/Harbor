@@ -139,7 +139,7 @@ export function ClaimCreateSheet({
     );
     close();
     if (!requestFrom) {
-      router.push(
+      router.navigate(
         `${Routes.tabs.verification(
           ref.identity,
           ref.keyFingerprint,
@@ -155,7 +155,7 @@ export function ClaimCreateSheet({
     toast.success('Account verified');
     close();
     if (!requestFrom) {
-      router.push(
+      router.navigate(
         Routes.tabs.verification(
           ref.identity,
           ref.keyFingerprint,
