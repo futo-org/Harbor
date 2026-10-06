@@ -9,18 +9,14 @@ appId: ${MAESTRO_APP_ID}
       if (document.getElementById('menuPost')) return window.scrollY;
       const middle = window.innerHeight / 2;
       const distance = (rect) => Math.abs(rect.top + rect.height / 2 - middle);
-      // output.post.menu; browser scripts don't interpolate variables.
-      const buttons = [
-        ...document.querySelectorAll('[role="article"] [aria-label="Repost or quote"]'),
-      ]
+      const posts = [...document.querySelectorAll('[role="article"]')]
         .map((el) => ({ el, rect: el.getBoundingClientRect() }))
-        // Skip buttons off screen or under the sticky header, which the tap would scroll to.
-        .filter(({ el, rect }) =>
-          el.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)),
-        );
-      buttons
-        .sort((a, b) => distance(a.rect) - distance(b.rect))[0]
-        .el.closest('[role="article"]').id = 'menuPost';
+        .filter(({ rect }) => rect.height > 0);
+      const onScreen = posts.filter(
+        ({ rect }) => rect.top >= 0 && rect.bottom <= window.innerHeight,
+      );
+      (onScreen.length ? onScreen : posts)
+        .sort((a, b) => distance(a.rect) - distance(b.rect))[0].el.id = 'menuPost';
       return window.scrollY;
     output: scrollBefore
 # The page must be scrolled for the last check to mean anything.
