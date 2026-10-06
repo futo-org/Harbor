@@ -148,7 +148,7 @@ function Segment({
         e.stopPropagation?.();
         // expo-router hands URLs (anything with a scheme) to Linking.openURL
         // and navigates in-app otherwise.
-        router.push(href);
+        router.navigate(href);
       }}
     >
       {segment.value}

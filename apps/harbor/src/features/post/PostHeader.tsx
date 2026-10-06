@@ -58,7 +58,7 @@ function RepostHeader({
   repostedAt?: number;
 }) {
   const handlePress = useCallback(() => {
-    router.push(Routes.tabs.profile(identity));
+    router.navigate(Routes.tabs.profile(identity));
   }, [identity]);
 
   const { hovered, onHoverIn, onHoverOut } = useWebHover();

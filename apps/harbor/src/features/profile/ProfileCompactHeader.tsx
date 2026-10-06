@@ -41,7 +41,7 @@ export function ProfileCompactHeader({
   const { identityKey, isSelf } = useProfileContext();
 
   const handleEdit = useCallback(() => {
-    if (identityKey) router.push(Routes.tabs.editProfile(identityKey));
+    if (identityKey) router.navigate(Routes.tabs.editProfile(identityKey));
   }, [identityKey]);
 
   // Hands over as the full header's own tabs leave the screen.

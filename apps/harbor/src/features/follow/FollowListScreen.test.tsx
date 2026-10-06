@@ -123,11 +123,11 @@ jest.mock('@/src/common/components/Avatar/ProfileAvatar', () => ({
   ProfileAvatar: () => null,
 }));
 
-const mockPush = jest.fn();
+const mockNavigate = jest.fn();
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   router: {
-    push: (...args: unknown[]) => mockPush(...args),
+    navigate: (...args: unknown[]) => mockNavigate(...args),
     replace: (...args: unknown[]) => mockReplace(...args),
   },
   useLocalSearchParams: () => ({ identityId: 'profile-id' }),
@@ -239,7 +239,7 @@ describe('FollowListScreen rows', () => {
     const screen = await render(<FollowListScreen mode="followers" />);
 
     await fireEvent.press(screen.getByText('short-alice-id'));
-    expect(mockPush).toHaveBeenCalledWith('/alice-id');
+    expect(mockNavigate).toHaveBeenCalledWith('/alice-id');
     expect(screen.getByTestId('follow-bob-id')).toBeTruthy();
   });
 
