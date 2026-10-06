@@ -95,10 +95,10 @@ jest.mock('@/src/common/components/tabs', () => {
   return { Tabs };
 });
 
-const mockPush = jest.fn();
+const mockNavigate = jest.fn();
 jest.mock('expo-router', () => ({
   router: {
-    push: (...args: unknown[]) => mockPush(...args),
+    navigate: (...args: unknown[]) => mockNavigate(...args),
   },
   useFocusEffect: () => undefined,
   useNavigation: () => ({ addListener: () => () => {} }),

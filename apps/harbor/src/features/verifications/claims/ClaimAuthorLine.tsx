@@ -27,7 +27,7 @@ export function ClaimAuthorLine({
   return (
     <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}>
       <Pressable
-        onPress={() => router.push(Routes.tabs.profile(identity))}
+        onPress={() => router.navigate(Routes.tabs.profile(identity))}
         onHoverIn={onHoverIn}
         onHoverOut={onHoverOut}
         style={[

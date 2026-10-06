@@ -54,12 +54,14 @@ export const Post = memo(function Post({
     if (disablePress) return;
     const keyFingerprint = getKeyFingerprint(post.signedBy);
     if (!keyFingerprint) return;
-    router.push(Routes.tabs.post(post.identity, keyFingerprint, post.sequence));
+    router.navigate(
+      Routes.tabs.post(post.identity, keyFingerprint, post.sequence),
+    );
   }, [disablePress, post]);
 
   const handleAuthorPress = useCallback(() => {
     if (!authorIdentity) return;
-    router.push(Routes.tabs.profile(authorIdentity));
+    router.navigate(Routes.tabs.profile(authorIdentity));
   }, [authorIdentity]);
 
   const shownAt = post.createdAt;

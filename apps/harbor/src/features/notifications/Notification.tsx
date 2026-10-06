@@ -129,14 +129,14 @@ function InteractionNotification({
   const quoted = quotedPost(notification);
 
   const handlePress = useCallback(() => {
-    router.push(
+    router.navigate(
       notificationRoute(notification) ??
         Routes.tabs.profile(notification.fromIdentity),
     );
   }, [notification]);
 
   const openProfile = useCallback(
-    () => router.push(Routes.tabs.profile(notification.fromIdentity)),
+    () => router.navigate(Routes.tabs.profile(notification.fromIdentity)),
     [notification.fromIdentity],
   );
 

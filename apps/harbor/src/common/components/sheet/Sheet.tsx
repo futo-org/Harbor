@@ -24,10 +24,12 @@ import {
 import {
   Pressable,
   ScrollView,
+  StyleSheet,
   useWindowDimensions,
   View,
   type ViewProps,
 } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
@@ -98,6 +100,7 @@ type SheetContentProps = Omit<ViewProps, 'onScroll'> & {
    * (list or ScrollView) so TrueSheet pins that one instead. */
   scrollable?: boolean;
 };
+
 function SheetContent({
   children,
   style,
@@ -112,7 +115,9 @@ function SheetContent({
       <View
         style={[
           Atoms.p_lg,
-          !sizesToContent && Atoms.flex_1,
+          // Web's card body is the scroller here: grow past it rather than
+          // shrink to it, or overflowing children spill past the bottom padding.
+          !sizesToContent && (scrollable ? Atoms.flex_grow_1 : Atoms.flex_1),
           { minHeight: 50 },
           style,
         ]}
@@ -186,25 +191,72 @@ function SheetHeader({
 type SheetFooterProps = {
   left?: ReactElement;
   right?: ReactElement;
+  fadeTop?: boolean;
+  onLayout?: ViewProps['onLayout'];
 };
-export function SheetFooter({ left, right }: SheetFooterProps) {
+
+export function SheetFooter({
+  left,
+  right,
+  fadeTop,
+  onLayout,
+}: SheetFooterProps) {
   const { theme } = useTheme();
 
   const insets = useSafeAreaInsets();
+  const backgroundColor = theme.palette.neutral_0;
+  const padding = Spacing.lg;
 
   return (
     <View
+      onLayout={onLayout}
       style={[
         Atoms.flex_row,
-        Atoms.p_lg,
-        { paddingBottom: insets.bottom + Spacing['lg'] },
-        {
-          backgroundColor: theme.palette.neutral_0,
-        },
+        { padding, paddingBottom: insets.bottom + padding },
+        !fadeTop && { backgroundColor },
+        // The web footer sits below the scrolling body instead of over it, so
+        // pull it up over the body's bottom padding for the fade to overlap.
+        fadeTop && isWeb && { marginTop: -padding },
       ]}
     >
+      {fadeTop && (
+        <FooterFadeBackground color={backgroundColor} height={padding} />
+      )}
       <View style={Atoms.flex_1}>{left}</View>
       <View style={Atoms.self_end}>{right}</View>
+    </View>
+  );
+}
+
+function FooterFadeBackground({
+  color,
+  height,
+}: {
+  color: string;
+  height: number;
+}) {
+  // SVG ids need to be document-global on web, so keep them unique per instance.
+  const gradientId = `footer-fade-${useId()}`;
+
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Svg width="100%" height="100%">
+        <Defs>
+          <LinearGradient
+            id={gradientId}
+            // Spans just the given height; below it the last stop stays solid.
+            gradientUnits="userSpaceOnUse"
+            x1="0"
+            y1="0"
+            x2="0"
+            y2={height}
+          >
+            <Stop offset="0" stopColor={color} stopOpacity={0} />
+            <Stop offset="1" stopColor={color} stopOpacity={1} />
+          </LinearGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill={`url(#${gradientId})`} />
+      </Svg>
     </View>
   );
 }

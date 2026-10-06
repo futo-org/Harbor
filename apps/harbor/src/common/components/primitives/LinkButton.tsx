@@ -58,7 +58,7 @@ export function LinkButton({
     onPress?.();
     if (!href) return;
     event?.preventDefault?.();
-    router.push(href);
+    router.navigate(href);
   };
 
   return (
