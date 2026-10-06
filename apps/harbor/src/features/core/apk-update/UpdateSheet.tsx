@@ -60,6 +60,7 @@ export function UpdateSheet() {
       header={<Sheet.Header title="Update available" onClose={closeSheet} />}
       footer={
         <Sheet.Footer
+          fadeTop
           onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
           left={
             phase === 'downloading' ? (
