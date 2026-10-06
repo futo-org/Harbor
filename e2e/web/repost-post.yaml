@@ -1,16 +1,20 @@
 url: ${MAESTRO_WEB_URL}
 name: I can repost a post
-tags:
-  - flaky
 ---
 - runFlow: ../elements/load.yaml
 - runFlow: ../steps/fresh-start.yaml
 - runFlow: ../steps/create-identity.yaml
+- runFlow: ../steps/sort-explore-latest.yaml
 - runFlow: ../steps/scroll-down.yaml
 - runFlow: ../steps/open-post-menu.yaml
 - tapOn:
     role: menuitem
     text: ${output.post.repost}
+# On Latest the repost joins the top of the feed and pushes the posts down.
+# Wait for it, so the menu step doesn't see the page move.
+- extendedWaitUntil:
+    visible: ${output.identityName} ${output.post.reposted} · now
+    timeout: 30000
 - runFlow: ../steps/open-post-menu.yaml
 - assertVisible:
     role: menuitem

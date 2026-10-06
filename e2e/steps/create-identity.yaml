@@ -2,7 +2,10 @@ appId: ${MAESTRO_APP_ID}
 ---
 - tapOn: ${output.onboarding.createIdentity}
 - tapOn: ${output.onboarding.displayName}
-- inputText: Maestro
+# Unique per run, so flows can tell this identity's content from earlier
+# runs' on a shared server.
+- evalScript: ${output.identityName = 'Maestro ' + Date.now().toString(36)}
+- inputText: ${output.identityName}
 - tapOn: ${output.onboarding.continue}
 # Creating the identity publishes to the server, so give it room.
 - extendedWaitUntil:
