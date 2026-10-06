@@ -1,3 +1,6 @@
+// The server mirrors the mention rules below in
+// `packages/rs-common/src/mentions.rs` (to notify mentioned users). Keep the
+// two in sync.
 type SegmentBody =
   | { type: 'text'; value: string }
   | { type: 'link'; value: string; url: string }
@@ -63,7 +66,7 @@ const HAS_SCHEME = /^https?:\/\//i;
  * A standalone `@` (not preceded by a word character, so an email's `@` never
  * starts one) begins a mention:
  * - `@{identity,displayName}` / `@{identity}` — identity mention rendered as
- *   the bare display name; identity must be 64 hex chars. The default form.
+ *   `@displayName`; identity must be 64 hex chars. The default form.
  * - `@<64-hex>` — identity mention.
  * - anything else containing a dot (`@user@domain.com`, `@domain.com`) — alias
  *   mention.
@@ -145,10 +148,9 @@ function parseSegment(raw: string, isCurly: boolean): SegmentBody | null {
 
     if (!HEX64.test(identity)) return null;
 
-    // With a display name, render it bare; `@` is only shown for the
-    // identity/alias forms (and when the name is empty: `@{id,}`).
+    // Falls back to the identity when the name is empty: `@{id,}`.
     const name = ~separatorIndex ? content.slice(separatorIndex + 1) : '';
-    return { type: 'identity', value: name || `@${identity}`, identity };
+    return { type: 'identity', value: `@${name || identity}`, identity };
   }
 
   if (raw[0] === '@') {
@@ -207,7 +209,7 @@ export function truncateSegments(
 }
 
 /**
- * `text` as it reads once rendered: curly mentions become their display name,
+ * `text` as it reads once rendered: curly mentions become `@displayName`,
  * everything else stays as typed. For plain-text surfaces that don't render
  * segments (previews, page titles) — slice this, not the raw text.
  */

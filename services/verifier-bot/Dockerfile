@@ -27,7 +27,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
-COPY .npmrc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY patches patches
 COPY tools tools
 # Prebuilt by CI (js-sdks-build, rs-core-wasm-wasm-build); dist/ arrives via
@@ -56,7 +56,7 @@ FROM node:24-slim AS runner
 WORKDIR /app/services/verifier-bot
 ENV NODE_ENV=production
 # System Chromium for the Puppeteer-based verifiers (e.g. Kick).
-ENV POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 RUN apt-get update \
   && apt-get install -y --no-install-recommends chromium \
   && rm -rf /var/lib/apt/lists/*

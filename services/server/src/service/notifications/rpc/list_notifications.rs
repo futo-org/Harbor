@@ -1,3 +1,4 @@
+use crate::config;
 use crate::data::{
     EventWithContentRow, assemble_hint, bundle_into_hint, pipeline,
     rows_into_bundles,
@@ -21,7 +22,6 @@ use crate::service::{
 };
 use entity::notification;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use tonic::Status;
 
 const DEFAULT_LIMIT: u32 = 50;
@@ -45,7 +45,7 @@ struct Hydrated {
     event_hints: Vec<EventHint>,
     /// Label events targeting the page's trigger events, for `filter`.
     trigger_labels: Vec<EventWithContentRow>,
-    blocked_identities: Arc<HashSet<String>>,
+    blocked_identities: HashSet<String>,
 }
 
 pub async fn handle(
@@ -145,7 +145,6 @@ async fn hydrate(
         FeedsRepository::list_labels_for_event_keys(
             &ctx.service.ro_db,
             &trigger_keys,
-            ctx.service.trusted_moderator.as_deref(),
         )
         .await
         .map_err(map_db_err)
@@ -154,10 +153,10 @@ async fn hydrate(
     // Add moderation service identity to every request, such that clients can verify label events.
     // This ships the identity events more times than the client needs, and even when labels aren't
     // present in the feed page--can be optimized later.
-    if let Some(moderator) = &ctx.service.trusted_moderator
+    if let Some(moderator) = config::get().trusted_moderator.as_deref()
         && !identities.is_empty()
     {
-        identities.insert(moderator.clone());
+        identities.insert(moderator.to_owned());
     }
 
     let identities: Vec<String> = identities.into_iter().collect();
@@ -333,6 +332,7 @@ mod tests {
     use entity::{content, event};
     use prost::Message;
     use sea_orm::{DbBackend, MockDatabase};
+    use std::sync::Arc;
 
     fn notification_row(id: i64, from_identity: &str) -> notification::Model {
         let ts = chrono::DateTime::from_timestamp(0, 0).unwrap();
@@ -414,9 +414,7 @@ mod tests {
 
     fn hydrated_blocking(blocked: &[&str]) -> Hydrated {
         Hydrated {
-            blocked_identities: Arc::new(
-                blocked.iter().map(|s| s.to_string()).collect(),
-            ),
+            blocked_identities: blocked.iter().map(|s| s.to_string()).collect(),
             ..hydrated_with_labels(Vec::new())
         }
     }
@@ -428,7 +426,7 @@ mod tests {
             bundles: HashMap::new(),
             event_hints: Vec::new(),
             trigger_labels,
-            blocked_identities: Arc::default(),
+            blocked_identities: HashSet::new(),
         }
     }
 

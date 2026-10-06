@@ -1,5 +1,6 @@
 //! Shared structured-logging and metrics setup for the Rust services.
 
+use std::env;
 use std::io::IsTerminal;
 
 use opentelemetry::KeyValue;
@@ -13,7 +14,10 @@ use tracing_subscriber::EnvFilter;
 /// overrides the format. `log` macros are bridged into `tracing`.
 pub fn init() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    let json = match std::env::var("LOG_FORMAT").as_deref() {
+    let json = match env::var("HARBOR_LOG_FORMAT")
+        .or_else(|_| env::var("LOG_FORMAT"))
+        .as_deref()
+    {
         Ok("json") => true,
         Ok("text") => false,
         _ => !std::io::stdout().is_terminal(),
@@ -28,7 +32,7 @@ pub fn init() {
 }
 
 /// Install a Prometheus-backed OpenTelemetry meter provider and serve
-/// GET /metrics on 0.0.0.0:$METRICS_PORT (default 9464). Must be called
+/// GET /metrics on 0.0.0.0:$HARBOR_METRICS_PORT (default 9464). Must be called
 /// from within a tokio runtime.
 pub fn init_metrics(service_name: &str) {
     let registry = prometheus::Registry::new();
@@ -46,7 +50,8 @@ pub fn init_metrics(service_name: &str) {
         .build();
     opentelemetry::global::set_meter_provider(provider);
 
-    let port: u16 = std::env::var("METRICS_PORT")
+    let port: u16 = env::var("HARBOR_METRICS_PORT")
+        .or_else(|_| env::var("METRICS_PORT"))
         .ok()
         .and_then(|p| p.parse().ok())
         .unwrap_or(9464);

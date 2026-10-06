@@ -4,6 +4,7 @@
 use crate::query::event::key::EventKey;
 use crate::query::event::merge::EventDedupKey;
 use polycentric_common::models::moderation_label::ModerationLabel;
+use polycentric_common::models::protos_v2::GetPostResponse;
 use polycentric_common::models::protos_v2::{
     Content, Event, EventBundle, EventHint, GetFeedResponse, GetPostThreadResponse,
     ListNotificationsResponse, SearchPostsResponse, content::ContentBody,
@@ -159,6 +160,14 @@ pub fn labels_from_notifications_response(response: Vec<u8>) -> Vec<LabelSet> {
 #[uniffi::export]
 pub fn labels_from_search_response(response: Vec<u8>) -> Vec<LabelSet> {
     SearchPostsResponse::decode(response.as_slice())
+        .map(|r| build_label_sets(&r.event_hints))
+        .unwrap_or_default()
+}
+
+/// Return the labels from the `event_hints` field of a get post response.
+#[uniffi::export]
+pub fn labels_from_get_post_response(response: Vec<u8>) -> Vec<LabelSet> {
+    GetPostResponse::decode(response.as_slice())
         .map(|r| build_label_sets(&r.event_hints))
         .unwrap_or_default()
 }

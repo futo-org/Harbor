@@ -6,6 +6,7 @@ import type { Browser } from 'puppeteer-extra-plugin/dist/puppeteer';
 // Kick's bot protection blocks vanilla headless Chrome outright.
 puppeteer.use(StealthPlugin());
 import type { ClaimField, Platform } from '../models.js';
+import { PUPPETEER_EXECUTABLE_PATH } from '../utility.js';
 import { Result } from '../result.js';
 import {
   TextVerifier,
@@ -37,8 +38,7 @@ class KickTextVerifier extends TextVerifier {
     super.init();
     this.puppeteerBrowser = await puppeteer.launch({
       headless: true,
-      executablePath:
-        process.env.POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH,
+      executablePath: PUPPETEER_EXECUTABLE_PATH,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
   }

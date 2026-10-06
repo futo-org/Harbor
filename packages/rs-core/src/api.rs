@@ -2,6 +2,7 @@ use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
 use crate::media::process_image;
 use crate::pairing;
+use crate::query::{QueryObserver, QueryResultFfi, QueryStatus};
 use crate::sync;
 use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
@@ -16,7 +17,6 @@ use polycentric_common::models::protos_v2::{
 use polycentric_common::models::protos_v2::{ListHeadsRequest, PutEventsResponse};
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
-use std::sync::LazyLock;
 use std::sync::{Arc, Mutex};
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native-transport")))]
@@ -31,6 +31,7 @@ async fn channel(server_url: &str) -> Result<crate::query::GrpcChannel, CoreErro
 /// Install a panic hook that logs the panic message
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn install_panic_hook() {
+    use std::sync::LazyLock;
     let lazy = LazyLock::new(|| {
         std::panic::set_hook(Box::new(|info| {
             let location = info
@@ -92,6 +93,7 @@ pub struct ContentEntry {
 pub enum Query {
     GetProfile(crate::query::profile::GetProfileArgs),
     GetEvent(crate::query::event::GetEventArgs),
+    GetPost(crate::query::event::GetPostArgs),
     GetPostThread(crate::query::feed::GetPostThreadArgs),
     GetIdentityFeed(crate::query::feed::GetIdentityFeedArgs),
     GetFollowingFeed(crate::query::feed::GetFollowingFeedArgs),
@@ -114,6 +116,44 @@ pub enum Query {
     IsBanned(crate::query::moderation::IsBannedArgs),
     ListBans(crate::query::moderation::ListBansArgs),
     GetReactions(crate::query::reactions::GetReactionsArgs),
+}
+
+/// Oneshot sender for [`FirstSuccessObserver`].
+type FirstSuccessSender = futures::channel::oneshot::Sender<Result<Option<Vec<u8>>, CoreError>>;
+
+/// A [`QueryObserver`] implementation that returns the first success recieved from a server, rather
+/// than a subscription. Any errors from servers ignored. If all servers error, a `CoreError` is
+/// returned.
+struct FirstSuccessObserver(Mutex<Option<FirstSuccessSender>>);
+
+impl FirstSuccessObserver {
+    /// Deliver the first success from any server; later server responses are ignored.
+    fn send(&self, outcome: Result<Option<Vec<u8>>, CoreError>) {
+        if let Some(tx) = self.0.lock_recover().take() {
+            let _ = tx.send(outcome);
+        }
+    }
+}
+
+impl QueryObserver for FirstSuccessObserver {
+    fn next(&self, result: QueryResultFfi) {
+        match result.status {
+            QueryStatus::Loading => {}
+            QueryStatus::Success => self.send(Ok(result.data)),
+            QueryStatus::Error => {
+                self.send(Err(CoreError::Network(
+                    "Query failed on all servers".into(),
+                )));
+            }
+        }
+    }
+
+    // Server errors are ignored.
+    fn error(&self, _message: String) {}
+
+    fn complete(&self) {
+        self.send(Ok(None));
+    }
 }
 
 // See AuthTokenProvider: single-threaded wasm32 wants non-Send futures.
@@ -416,6 +456,9 @@ impl PolycentricCore {
             Query::GetEvent(args) => {
                 crate::query::event::get_event(&self.query_client, query_key, args, opts)
             }
+            Query::GetPost(args) => {
+                crate::query::event::get_post(&self.query_client, query_key, args, opts)
+            }
             Query::GetPostThread(args) => {
                 crate::query::feed::get_post_thread(&self.query_client, query_key, args, opts)
             }
@@ -511,6 +554,30 @@ impl PolycentricCore {
                 crate::query::reactions::get_reactions(&self.query_client, query_key, args, opts)
             }
         }
+    }
+
+    /// A [`Self::fetch_query`] alternative that returns the first successful server response for a
+    /// query, and ignores all following responses, useful for testing scenarios. Error responses
+    /// from servers are ignored. If all servers error, `CoreError::Network` is returned.
+    pub async fn await_query(
+        &self,
+        query: Query,
+        query_key: Option<crate::query::QueryKey>,
+        opts: Option<crate::query::QueryOpts>,
+    ) -> Result<Option<Vec<u8>>, CoreError> {
+        let observable = self.fetch_query(query_key, query, opts);
+        let (tx, rx) = futures::channel::oneshot::channel::<Result<Option<Vec<u8>>, CoreError>>();
+        let subscription =
+            observable.subscribe(Arc::new(FirstSuccessObserver(Mutex::new(Some(tx)))));
+        // The subscription's terminal status (or `complete`) resolves the
+        // channel; a dropped sender would mean the query machinery was torn
+        // down underneath us.
+        let outcome = match rx.await {
+            Ok(outcome) => outcome,
+            Err(_) => Err(CoreError::Network("query cancelled".into())),
+        };
+        subscription.unsubscribe();
+        outcome
     }
 
     /// Clear the cache for a query key and discard the responses for any

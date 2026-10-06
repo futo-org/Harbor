@@ -215,13 +215,13 @@ export interface Link {
      */
     title: string;
     /**
-     * @generated from protobuf field: string description = 2
+     * @generated from protobuf field: optional string description = 2
      */
-    description: string;
+    description?: string;
     /**
-     * @generated from protobuf field: string image = 3
+     * @generated from protobuf field: optional string image = 3
      */
-    image: string;
+    image?: string;
     /**
      * @generated from protobuf field: string url = 4
      */
@@ -512,17 +512,17 @@ export interface UrlInfoRequest {
  */
 export interface UrlInfoResponse {
     /**
-     * @generated from protobuf field: string title = 1
+     * @generated from protobuf field: optional string title = 1
      */
-    title: string;
+    title?: string;
     /**
-     * @generated from protobuf field: string description = 2
+     * @generated from protobuf field: optional string description = 2
      */
-    description: string;
+    description?: string;
     /**
-     * @generated from protobuf field: string image = 3
+     * @generated from protobuf field: optional string image = 3
      */
-    image: string;
+    image?: string;
 }
 /**
  * @generated from protobuf enum polycentric.v2.ReportCategory
@@ -993,16 +993,14 @@ class Link$Type extends MessageType<Link> {
     constructor() {
         super("polycentric.v2.Link", [
             { no: 1, name: "title", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "description", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "image", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "image", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "url", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<Link>): Link {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.title = "";
-        message.description = "";
-        message.image = "";
         message.url = "";
         if (value !== undefined)
             reflectionMergePartial<Link>(this, message, value);
@@ -1016,10 +1014,10 @@ class Link$Type extends MessageType<Link> {
                 case /* string title */ 1:
                     message.title = reader.string();
                     break;
-                case /* string description */ 2:
+                case /* optional string description */ 2:
                     message.description = reader.string();
                     break;
-                case /* string image */ 3:
+                case /* optional string image */ 3:
                     message.image = reader.string();
                     break;
                 case /* string url */ 4:
@@ -1040,11 +1038,11 @@ class Link$Type extends MessageType<Link> {
         /* string title = 1; */
         if (message.title !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.title);
-        /* string description = 2; */
-        if (message.description !== "")
+        /* optional string description = 2; */
+        if (message.description !== undefined)
             writer.tag(2, WireType.LengthDelimited).string(message.description);
-        /* string image = 3; */
-        if (message.image !== "")
+        /* optional string image = 3; */
+        if (message.image !== undefined)
             writer.tag(3, WireType.LengthDelimited).string(message.image);
         /* string url = 4; */
         if (message.url !== "")
@@ -1963,16 +1961,13 @@ export const UrlInfoRequest = new UrlInfoRequest$Type();
 class UrlInfoResponse$Type extends MessageType<UrlInfoResponse> {
     constructor() {
         super("polycentric.v2.UrlInfoResponse", [
-            { no: 1, name: "title", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "description", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "image", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+            { no: 1, name: "title", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "description", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "image", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<UrlInfoResponse>): UrlInfoResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.title = "";
-        message.description = "";
-        message.image = "";
         if (value !== undefined)
             reflectionMergePartial<UrlInfoResponse>(this, message, value);
         return message;
@@ -1982,13 +1977,13 @@ class UrlInfoResponse$Type extends MessageType<UrlInfoResponse> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string title */ 1:
+                case /* optional string title */ 1:
                     message.title = reader.string();
                     break;
-                case /* string description */ 2:
+                case /* optional string description */ 2:
                     message.description = reader.string();
                     break;
-                case /* string image */ 3:
+                case /* optional string image */ 3:
                     message.image = reader.string();
                     break;
                 default:
@@ -2003,14 +1998,14 @@ class UrlInfoResponse$Type extends MessageType<UrlInfoResponse> {
         return message;
     }
     internalBinaryWrite(message: UrlInfoResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string title = 1; */
-        if (message.title !== "")
+        /* optional string title = 1; */
+        if (message.title !== undefined)
             writer.tag(1, WireType.LengthDelimited).string(message.title);
-        /* string description = 2; */
-        if (message.description !== "")
+        /* optional string description = 2; */
+        if (message.description !== undefined)
             writer.tag(2, WireType.LengthDelimited).string(message.description);
-        /* string image = 3; */
-        if (message.image !== "")
+        /* optional string image = 3; */
+        if (message.image !== undefined)
             writer.tag(3, WireType.LengthDelimited).string(message.image);
         let u = options.writeUnknownFields;
         if (u !== false)

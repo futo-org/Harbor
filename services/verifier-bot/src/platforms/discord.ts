@@ -6,6 +6,7 @@ import {
   encodeObject,
   getCallbackForPlatform,
   httpResponseToError,
+  OAUTH_CALLBACK_DOMAIN,
 } from '../utility.js';
 import { OAuthVerifier } from '../verifier.js';
 
@@ -18,6 +19,13 @@ type DiscordTokenRequest = {
   harborSecret?: string;
 };
 
+const DISCORD_CLIENT_ID =
+  process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_ID ??
+  process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID;
+const DISCORD_CLIENT_SECRET =
+  process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_SECRET ??
+  process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_SECRET;
+
 class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
   constructor() {
     super('Discord');
@@ -27,8 +35,8 @@ class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
 
   public async getOAuthURL(): Promise<Result<string>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      DISCORD_CLIENT_ID === undefined ||
+      OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     } else {
@@ -38,7 +46,7 @@ class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
 
       return Result.ok(
         `https://discord.com/api/oauth2/authorize?client_id=${
-          process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID
+          DISCORD_CLIENT_ID
         }&redirect_uri=${redirectUri}&response_type=code&scope=identify&state=${encodeURIComponent(
           JSON.stringify({ harborSecret }),
         )}`,
@@ -50,10 +58,9 @@ class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
     data: DiscordTokenRequest,
   ): Promise<Result<TokenResponse>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_SECRET ===
-        undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN === undefined
+      DISCORD_CLIENT_ID === undefined ||
+      DISCORD_CLIENT_SECRET === undefined ||
+      OAUTH_CALLBACK_DOMAIN === undefined
     ) {
       return Result.errMsg('Verifier not configured');
     }
@@ -76,9 +83,8 @@ class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
         const resp = await client.post(
           'https://discord.com/api/oauth2/token',
           new URLSearchParams({
-            client_id: process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID,
-            client_secret:
-              process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_SECRET,
+            client_id: DISCORD_CLIENT_ID,
+            client_secret: DISCORD_CLIENT_SECRET,
             grant_type: 'authorization_code',
             redirect_uri: redirectUri,
             code: data.code,
@@ -271,8 +277,8 @@ class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
 
   public async healthCheck(): Promise<Result<void>> {
     if (
-      process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID === undefined ||
-      process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_SECRET === undefined
+      DISCORD_CLIENT_ID === undefined ||
+      DISCORD_CLIENT_SECRET === undefined
     ) {
       return Result.errMsg(
         'Verifier not configured: Missing Discord credentials',

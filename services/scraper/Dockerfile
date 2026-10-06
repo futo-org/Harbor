@@ -35,7 +35,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD=1
 # `tools` (for @polycentric/tsconfig), and the service itself. The other
 # workspace packages (apps/*, packages/*) are absent here - pnpm tolerates
 # missing workspace members and installs only what's present.
-COPY .npmrc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY patches patches
 COPY tools tools
 COPY services/scraper services/scraper

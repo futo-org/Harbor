@@ -8,7 +8,7 @@ import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -50,9 +50,6 @@ export const Post = memo(function Post({
 
   const authorIdentity = post.identity ?? null;
 
-  const authorProfile = useProfile(authorIdentity);
-  const authorName = authorProfile.name ?? '';
-
   const handlePress = useCallback(() => {
     if (disablePress) return;
     const keyFingerprint = getKeyFingerprint(post.signedBy);
@@ -65,9 +62,7 @@ export const Post = memo(function Post({
     router.push(Routes.tabs.profile(authorIdentity));
   }, [authorIdentity]);
 
-  // A repost sits in the feed at the time it was made, so that is the time
-  // the row shows.
-  const shownAt = post.repostedAt ?? post.createdAt;
+  const shownAt = post.createdAt;
   const time = useMemo(() => timeAgo(Number(shownAt)), [shownAt]);
   const fullTimestamp = useMemo(() => {
     if (!shownAt) return '';
@@ -101,10 +96,7 @@ export const Post = memo(function Post({
       <View
         style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
       >
-        <PostAuthorName
-          name={authorName || '...'}
-          onPress={handleAuthorPress}
-        />
+        <PostAuthorName identity={authorIdentity} onPress={handleAuthorPress} />
         {authorIdentity ? <IdentityTag identity={authorIdentity} /> : null}
 
         {time ? (
@@ -168,6 +160,7 @@ export const Post = memo(function Post({
     >
       <PostHeader
         repostedBy={post.repostedBy}
+        repostedAt={post.repostedAt}
         showThreadLineAbove={showThreadLineAbove}
       />
 
@@ -177,7 +170,7 @@ export const Post = memo(function Post({
             {avatar}
             <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
               <PostAuthorName
-                name={authorName || '...'}
+                identity={authorIdentity}
                 onPress={handleAuthorPress}
               />
               {authorIdentity ? (
@@ -229,10 +222,10 @@ export const Post = memo(function Post({
 });
 
 function PostAuthorName({
-  name,
+  identity,
   onPress,
 }: {
-  name: string;
+  identity: string | null;
   onPress: () => void;
 }) {
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
@@ -244,14 +237,12 @@ function PostAuthorName({
       onHoverOut={onHoverOut}
       style={Atoms.flex_shrink_1}
     >
-      <Text
+      <Username
+        identity={identity}
         variant="secondary"
         fontWeight="bold"
-        numberOfLines={1}
-        style={[hovered && { textDecorationLine: 'underline' }]}
-      >
-        {name}
-      </Text>
+        style={hovered && { textDecorationLine: 'underline' }}
+      />
     </Pressable>
   );
 }

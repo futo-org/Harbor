@@ -1,6 +1,7 @@
 import { type ComponentProps, useState } from 'react';
 import { Avatar } from './Avatar';
 import * as ImagePicker from 'expo-image-picker';
+import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/loadBoundedImage';
 
 type AvatarEditProps = {
   /** Avatar shown until the user picks a new image. */
@@ -16,7 +17,9 @@ export default function AvatarEdit({
   const [selectedUri, setSelectedUri] = useState<string>();
 
   const onPress = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync();
+    const result = await ImagePicker.launchImageLibraryAsync(
+      IMAGE_PICKER_DEFAULT_OPTIONS,
+    );
 
     if (result.canceled || !result.assets?.length) {
       return;

@@ -33,7 +33,7 @@ const ALL_COLLECTIONS: [i32; 8] = [
 
 /// Events erased per transaction. Keeps each transaction short so a deadlock
 /// with the tally cron or a worker only costs one batch.
-const ERASE_BATCH: u64 = 50_000;
+const ERASE_BATCH: u64 = 100;
 
 /// Erases an identity's events, deletes blobs nothing references any more,
 /// and drops its cached chain state. Used by bans and the operator command.
@@ -44,7 +44,6 @@ pub async fn erase_identity(
     identity: &str,
 ) -> Result<Erased, DbErr> {
     let mut total = Erased::default();
-    let mut after = 0;
     loop {
         let started = Instant::now();
         let batch = retry_deadlocks(|| async {
@@ -52,7 +51,6 @@ pub async fn erase_identity(
             let batch = IdentityMutation::erase_events_batch(
                 &txn,
                 identity,
-                after,
                 ERASE_BATCH,
             )
             .await?;
@@ -60,13 +58,11 @@ pub async fn erase_identity(
             Ok(batch)
         })
         .await?;
-        let Some(batch) = batch else { break };
 
         delete_blobs(filestore, &batch.blobs).await;
         total.events += batch.erased.events;
         total.content += batch.erased.content;
         total.blobs += batch.erased.blobs;
-        after = batch.last_id;
         tracing::info!(
             identity,
             events = total.events,
@@ -75,6 +71,10 @@ pub async fn erase_identity(
             batch_ms = started.elapsed().as_millis(),
             "erased batch"
         );
+
+        if batch.erased.events < ERASE_BATCH {
+            break;
+        }
     }
     retry_deadlocks(|| async {
         let txn = db.begin().await?;

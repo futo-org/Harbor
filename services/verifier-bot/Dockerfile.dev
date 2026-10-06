@@ -41,7 +41,7 @@ COPY tools tools
 # pnpm workspace + the JS pieces the bot needs. Frontend workspace members
 # (apps/*) are intentionally NOT copied: pnpm tolerates absent members, and
 # leaving them out keeps their (huge) Expo/RN deps out of node_modules.
-COPY .npmrc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY patches patches
 COPY packages/rs-core-wasm packages/rs-core-wasm
 COPY packages/js-core packages/js-core
@@ -77,7 +77,7 @@ FROM node:24-slim AS runner
 WORKDIR /app/services/verifier-bot
 ENV NODE_ENV=production
 # System Chromium for the Puppeteer-based verifiers (e.g. Kick).
-ENV POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 RUN apt-get update \
   && apt-get install -y --no-install-recommends chromium \
   && rm -rf /var/lib/apt/lists/*

@@ -73,7 +73,7 @@ Extend `OAuthVerifier<T>` when the user proves ownership by signing in.
 Implement `getOAuthURL` (where to send the user), `getToken` (exchange the OAuth
 code, returning the authenticated username), and `isTokenValid` (confirm the
 token's account matches the claim). Read credentials from
-`process.env.POLYCENTRIC_VERIFIER_BOT_*`.
+`process.env.HARBOR_VERIFIER_BOT_*`.
 
 ```typescript
 import type { ClaimField, Platform, TokenResponse } from '../models.js';
@@ -89,7 +89,7 @@ class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
   }
 
   public async getOAuthURL(): Promise<Result<string>> {
-    const clientId = process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID;
+    const clientId = process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_ID;
     if (!clientId) return Result.errMsg('Verifier not configured');
     const redirectUri = getCallbackForPlatform(this.platform, true);
     return Result.ok(

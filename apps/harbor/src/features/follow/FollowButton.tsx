@@ -18,6 +18,7 @@ export default function FollowButton({ identity }: FollowButtonProps) {
       title={following ? 'Following' : 'Follow'}
       variant={following ? 'secondary' : 'primary'}
       size="sm"
+      icon="people"
       onPress={() =>
         withIdentity(() => {
           if (following) {

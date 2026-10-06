@@ -36,7 +36,7 @@ CREATE AGGREGATE public.tsvector_agg(tsvector) (
 
 CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char") RETURNS tsvector
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM string_to_table(COALESCE(create_tsvector.text, ''::text), ' '::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
+    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
 
 
 --
@@ -44,8 +44,23 @@ CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char
 --
 
 CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone, gravity numeric, gravity_time timestamp with time zone) RETURNS numeric
-    LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN ((((reaction_count + 1))::numeric / power((GREATEST((EXTRACT(epoch FROM (gravity_time - post_created_at)) / (3600)::numeric), (0)::numeric) + (2)::numeric), gravity)))::numeric(20,11);
+    LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
+    AS $$
+BEGIN
+  RETURN (
+    (reaction_count + 1)::NUMERIC / power(
+      GREATEST(
+        EXTRACT(epoch FROM (gravity_time - post_created_at))::NUMERIC / 3600::NUMERIC,
+        0::NUMERIC
+      ) + 2::NUMERIC,
+      gravity
+    )
+  )::NUMERIC(20, 11);
+EXCEPTION
+    WHEN numeric_value_out_of_range THEN
+      RETURN (0)::numeric;
+END;
+$$;
 
 
 SET default_tablespace = '';
@@ -88,12 +103,34 @@ CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_
 
 
 --
+-- Name: tsquery_agg(tsquery); Type: AGGREGATE; Schema: public; Owner: -
+--
+
+CREATE AGGREGATE public.tsquery_agg(tsquery) (
+    SFUNC = tsquery_or,
+    STYPE = tsquery,
+    INITCOND = ''
+);
+
+
+--
 -- Name: search_query(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.search_query(query text) RETURNS tsquery
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (COALESCE(to_tsquery('english'::regconfig, query), to_tsquery('simple'::regconfig, ''::text)) || COALESCE(to_tsquery('simple'::regconfig, query), to_tsquery('simple'::regconfig, ''::text)));
+    RETURN ((COALESCE(to_tsquery('english'::regconfig, query), ''::tsquery) || COALESCE(to_tsquery('simple'::regconfig, query), ''::tsquery)) || (SELECT public.tsquery_agg((data.word)::tsquery) AS tsquery_agg FROM regexp_split_to_table(COALESCE(search_query.query, ''::text), '[[:space:]]'::text) data(word) WHERE ("left"(data.word, '-2'::integer) ~ '^([a-fA-F0-9]{2})*$'::text)));
+
+
+--
+-- Name: alias_cache; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.alias_cache (
+    alias character varying NOT NULL,
+    identity character varying,
+    updated_at timestamp with time zone NOT NULL
+);
 
 
 --
@@ -642,9 +679,9 @@ CREATE TABLE public.seaql_migrations (
 
 CREATE TABLE public.url_info_cache (
     url character varying NOT NULL,
-    title character varying NOT NULL,
-    description character varying NOT NULL,
-    image character varying NOT NULL,
+    title text,
+    description text,
+    image text,
     raw_response character varying,
     error_code integer,
     error_message character varying,
@@ -663,6 +700,14 @@ CREATE TABLE public.verification_schema (
     schema_bytes bytea NOT NULL,
     schema jsonb NOT NULL
 );
+
+
+--
+-- Name: alias_cache alias_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alias_cache
+    ADD CONSTRAINT alias_cache_pkey PRIMARY KEY (alias);
 
 
 --
@@ -1054,6 +1099,13 @@ CREATE INDEX content_verification_verify_claim_event_key_idx ON public.content_v
 
 
 --
+-- Name: event_identity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX event_identity ON public.events USING btree (identity);
+
+
+--
 -- Name: events_collection_created_at_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1198,6 +1250,13 @@ CREATE INDEX reaction_on_post_idx ON public.reaction USING btree (on_post);
 --
 
 CREATE INDEX reaction_tally_decayed_count ON public.reaction_tally USING btree (decayed_count DESC, event_id DESC) WHERE (decayed_count > (0)::numeric);
+
+
+--
+-- Name: reaction_tally_decayed_count_update; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX reaction_tally_decayed_count_update ON public.reaction_tally USING btree (event_id DESC) WHERE (decayed_count > (0)::numeric);
 
 
 --

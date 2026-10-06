@@ -121,15 +121,18 @@ export const EmojiImage = memo(function EmojiImage({
         ? showImage && (
             <span
               data-testid="emoji"
+              className="transparentText"
               style={{
-                display: 'block',
+                display: 'inline-block',
                 width: size,
                 height: size,
                 backgroundImage: `url(${SHEET_URL})`,
                 backgroundSize: `${SHEET_COLUMNS * SHEET_CELL * scale}px auto`,
                 backgroundPosition: `${-(cell % SHEET_COLUMNS) * size}px ${-Math.floor(cell / SHEET_COLUMNS) * size}px`,
               }}
-            />
+            >
+              {sequence}
+            </span>
           )
         : missing !== src && (
             <img
@@ -138,7 +141,8 @@ export const EmojiImage = memo(function EmojiImage({
               height={size}
               decoding="async"
               draggable={false}
-              alt=""
+              // Copying selected text includes the alt text.
+              alt={sequence}
               data-testid="emoji"
               style={{
                 display: 'block',

@@ -1,0 +1,20 @@
+import { UITextView } from '@bsky.app/react-native-uitextview';
+import { StyleSheet } from 'react-native';
+
+/**
+ * Invisible, near-zero-width real text placed next to an inline view (a
+ * Twemoji image), so copying a text selection includes the characters the
+ * view shows. Inline views themselves copy as nothing (iOS) or as U+FFFC
+ * (Android, see `useStripCopiedInlineViewPlaceholders`).
+ */
+export function CopyOnlyText({ children }: { children: string }) {
+  return (
+    // UITextView rather than our Text, so it inherits the parent's line height
+    // instead of setting its own.
+    <UITextView style={styles.copyOnlyText}>{children}</UITextView>
+  );
+}
+
+const styles = StyleSheet.create({
+  copyOnlyText: { color: 'transparent', fontSize: 0.01 },
+});

@@ -1,0 +1,24 @@
+appId: ${MAESTRO_APP_ID}
+---
+# Removes the first verifier row, the newest one (the flow asserts by name
+# which one went): cancels the request, or drops the verifier once verified.
+# CONFIRM_TITLE says which alert to expect. The confirm is window.confirm,
+# which the runner would dismiss, answering "no", so it is stubbed to say yes
+# and record the prompt.
+- evalBrowserScript:
+    script: |
+      window.confirmMessage = '';
+      window.confirm = (message) => {
+        window.confirmMessage = message;
+        return true;
+      };
+      return true;
+- tapOn:
+    css: '[aria-label="${output.verifications.verifierOptions}"]'
+# The menu has one item; the recorded prompt below checks it was the right one.
+- tapOn:
+    css: '[role="menuitem"]'
+- evalBrowserScript:
+    script: return window.confirmMessage
+    output: confirmMessage
+- assertTrue: ${confirmMessage.startsWith(CONFIRM_TITLE)}

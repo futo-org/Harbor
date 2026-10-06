@@ -1,6 +1,6 @@
 import Icon from '@/src/common/components/Icon';
 import { Image } from 'expo-image';
-import { Link, router, useIsFocused, useSegments } from 'expo-router';
+import { router, useIsFocused, useSegments } from 'expo-router';
 import { memo, useRef, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
@@ -105,13 +105,11 @@ function Topbar({ title, left, center, right }: TopbarProps) {
               {title}
             </Text>
           ) : (
-            // <Link href={{ pathname: '/' }}>
             <Image
               source={HARBOR_LOGO}
               contentFit="contain"
               style={[{ width: 36, height: 36 }, Atoms.self_center]}
             />
-            // </Link>
           ))}
       </View>
       <View

@@ -7,17 +7,9 @@ import {
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import {
-  type TargetBarcodeFormat,
-  useBarcodeScannerOutput,
-} from 'react-native-vision-camera-barcode-scanner';
 import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
-import { decodePairingCode, EncodingMode } from '../pairingCode';
-
-// Stable reference for the barcode formats array to prevent
-// the scanner from being destroyed and recreated extra times.
-const BARCODE_FORMATS: TargetBarcodeFormat[] = ['qr-code'];
+import { useQrCodeOutput } from './useQrCodeOutput';
 
 export const PairIdentityCamera: PairIdentityCameraComponent = ({
   onCodeScanned,
@@ -29,20 +21,15 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
   const { theme } = useTheme();
   const scannedRef = useRef(false);
 
-  const barcodeOutput = useBarcodeScannerOutput({
-    barcodeFormats: BARCODE_FORMATS,
-    onBarcodeScanned: (barcodes) => {
+  const qrCodeOutput = useQrCodeOutput(
+    (value) => {
       if (scannedRef.current) return;
 
-      const value = barcodes.find((barcode) => barcode.rawValue)?.rawValue;
-      if (!value) return;
-
       scannedRef.current = true;
-      const info = decodePairingCode(value, EncodingMode.BASE64) ?? null;
-      onCodeScanned(info);
+      onCodeScanned(value);
     },
-    onError: () => setCameraEnabled(false),
-  });
+    () => setCameraEnabled(false),
+  );
 
   useEffect(() => {
     if (!hasPermission && cameraEnabled) {
@@ -51,10 +38,8 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
   }, [hasPermission, requestPermission, cameraEnabled]);
 
   const handleContinue = () => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-    const info = decodePairingCode(trimmed, EncodingMode.HEX) ?? null;
-    onCodeScanned(info);
+    if (!input.trim()) return;
+    onCodeScanned(input);
   };
 
   const canUseCamera = hasPermission && cameraEnabled && device !== undefined;
@@ -79,12 +64,12 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
             <Camera
               device={device}
               isActive={true}
-              outputs={[barcodeOutput]}
+              outputs={[qrCodeOutput]}
               style={{ flex: 1 }}
             />
           </View>
           <LinkButton
-            title="Can't scan? Enter code manually"
+            title="Can't scan? Paste link manually"
             onPress={() => setCameraEnabled(false)}
             variant="small"
             underlineOnHover

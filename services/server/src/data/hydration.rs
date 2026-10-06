@@ -1,3 +1,4 @@
+use crate::config;
 use crate::data::{
     EventRow, EventWithContentRow, assemble_hint, row_into_hint,
 };
@@ -12,11 +13,10 @@ use crate::service::stats::service::{EventStats, gather_stats_for};
 use entity::{content, event};
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
-    Content, EventBundle, EventHint, EventKey,
+    Content, EventBundle, EventHint, EventKey, PostReply,
 };
 use prost::Message;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use tonic::Status;
 
 #[derive(Default)]
@@ -31,7 +31,7 @@ pub struct HydrationState {
     pub follow_events: Vec<EventWithContentRow>,
     /// Blocked identities for the authenticated caller. Empty for anonymous
     /// requests or pipelines where blocking is not applicable.
-    pub blocked_identities: Arc<HashSet<String>>,
+    pub blocked_identities: HashSet<String>,
 }
 
 impl HydrationState {
@@ -97,11 +97,6 @@ where
         collect_referenced_keys(rows, config);
     let mut target_event_keys = to_target_event_keys(&ref_keys);
 
-    let identities = collect_identities(
-        ctx.service.trusted_moderator.as_deref(),
-        rows.iter(),
-    );
-
     // Event keys for all referenced post events that may be displayed by the client.
     // Fetch labels and additional metadata for these.
     let display_keys: Vec<TargetEventKey> = {
@@ -111,9 +106,6 @@ where
 
     let tombstones_fut =
         tombstone::validated_tombstones(ctx.service, &display_keys);
-    let identity_events_fut =
-        list_identity_events(ctx.service, identities.clone());
-    let profile_events_fut = list_profile_events(ctx.service, identities);
     let referenced_fut = async {
         feeds_repository::Query::list_events_by_keys(
             &ctx.service.ro_db,
@@ -129,7 +121,6 @@ where
         feeds_repository::Query::list_labels_for_event_keys(
             &ctx.service.ro_db,
             &display_keys,
-            ctx.service.trusted_moderator.as_deref(),
         )
         .await
         .map_err(|err| {
@@ -151,21 +142,43 @@ where
     let blocked_fut = GraphRepository::blocked_set_for_caller(ctx);
     let (
         deletes_by_target,
-        identity_events,
-        profile_events,
         referenced,
         label_events,
         stats,
         blocked_identities,
     ) = tokio::try_join!(
         tombstones_fut,
-        identity_events_fut,
-        profile_events_fut,
         referenced_fut,
         labels_fut,
         stats_fut,
         blocked_fut,
     )?;
+
+    // For all rows we return and for all hints, return the latest identity and
+    // profile update events.
+    let mut identities = HashSet::new();
+    for row in rows.iter() {
+        row.collect_identities(&mut identities);
+    }
+    for row in referenced.iter() {
+        row.collect_identities(&mut identities);
+    }
+    // Add moderation service identity to every request, such that clients can
+    // verify label events. This ships the identity events more times than the
+    // client needs, and even when labels aren't present in the feed page -- can
+    // be optimized later.
+    if let Some(moderator) = config::get().trusted_moderator.as_deref()
+        && !identities.is_empty()
+    {
+        identities.insert(moderator.to_owned());
+    }
+    let identities: Vec<_> = identities.into_iter().collect();
+
+    let identity_events_fut =
+        list_identity_events(ctx.service, identities.clone());
+    let profile_events_fut = list_profile_events(ctx.service, identities);
+    let (identity_events, profile_events) =
+        tokio::try_join!(identity_events_fut, profile_events_fut)?;
 
     let mut quote_post_events = Vec::new();
     let mut repost_events = Vec::new();
@@ -348,10 +361,7 @@ pub fn to_target_event_key(key: &EventKey) -> Option<TargetEventKey> {
     })
 }
 
-pub fn collect_identities<Row>(
-    trusted_moderator: Option<&str>,
-    rows: impl Iterator<Item = Row>,
-) -> Vec<String>
+pub fn collect_identities<Row>(rows: impl Iterator<Item = Row>) -> Vec<String>
 where
     Row: EventRow,
 {
@@ -364,7 +374,7 @@ where
     // verify label events. This ships the identity events more times than the
     // client needs, and even when labels aren't present in the feed page -- can
     // be optimized later.
-    if let Some(moderator) = trusted_moderator
+    if let Some(moderator) = config::get().trusted_moderator.as_deref()
         && !identities.is_empty()
     {
         identities.insert(moderator.to_owned());
@@ -386,11 +396,23 @@ pub fn event_identities(
         };
         match decoded.content_body {
             Some(ContentBody::Post(post)) => {
-                if let Some(identity) =
-                    post.reply.and_then(|r| r.parent).map(|p| p.identity)
-                    && !identity.is_empty()
+                if let Some(reply) = post.reply {
+                    let PostReply { root, parent, .. } = reply;
+                    if let Some(identity) = root.map(|p| p.identity)
+                        && !identity.is_empty()
+                    {
+                        identities.insert(identity);
+                    }
+                    if let Some(identity) = parent.map(|p| p.identity)
+                        && !identity.is_empty()
+                    {
+                        identities.insert(identity);
+                    }
+                }
+                if let Some(quote) = post.quote
+                    && !quote.identity.is_empty()
                 {
-                    identities.insert(identity);
+                    identities.insert(quote.identity);
                 }
             }
             Some(ContentBody::Follow(follow)) => {
@@ -416,6 +438,9 @@ pub fn event_identities(
                         .filter(|identity| !identity.is_empty()),
                 );
             }
+            // TODO: Delete, Block, Reaction, Report, Labels,
+            // VerificationVerify, VerificationTarget.claim_event_key. Currently
+            // not needed.
             _ => {}
         }
     }

@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import { useComposer } from './useComposer';
 import { useComposerStore } from './useComposerStore';
+import { ImageUploadError } from '@/src/common/lib/images/ImageUploadError';
 
 // --- Mocks ----------------------------------------------------------------
 
@@ -18,6 +19,7 @@ jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(),
   launchCameraAsync: jest.fn(),
   requestCameraPermissionsAsync: jest.fn(),
+  UIImagePickerPreferredAssetRepresentationMode: { Compatible: 'compatible' },
 }));
 
 const mockClient = {
@@ -193,7 +195,42 @@ describe('useComposer attachments', () => {
     expect(result.current.attachments[0].status).toBe('ready');
   });
 
-  it('marks the attachment as error when processing fails', async () => {
+  it('removes the attachment and describes the stage when processing fails', async () => {
+    libraryReturns([{ uri: 'file://a.jpg', width: 100, height: 80 }]);
+    mockProcess.mockRejectedValueOnce(
+      new ImageUploadError('decode', new Error('cannot decode')),
+    );
+
+    const { result } = await renderComposer();
+    await act(async () => {
+      await result.current.handleAttachImage();
+    });
+
+    await flush();
+    expect(result.current.attachments).toHaveLength(0);
+    expect(result.current.error).toBe(
+      "Couldn't open this image. Try a different format.",
+    );
+  });
+
+  it('keeps the attachment flagged for retry when only the upload fails', async () => {
+    libraryReturns([{ uri: 'file://a.jpg', width: 100, height: 80 }]);
+    mockProcess.mockRejectedValueOnce(
+      new ImageUploadError('upload', new Error('network')),
+    );
+
+    const { result } = await renderComposer();
+    await act(async () => {
+      await result.current.handleAttachImage();
+    });
+
+    await flush();
+    expect(result.current.attachments).toHaveLength(1);
+    expect(result.current.attachments[0].status).toBe('error');
+    expect(result.current.error).toBeNull();
+  });
+
+  it('never shows a raw library message for an untagged failure', async () => {
     libraryReturns([{ uri: 'file://a.jpg', width: 100, height: 80 }]);
     mockProcess.mockRejectedValueOnce(new Error('resize failed'));
 
@@ -203,7 +240,8 @@ describe('useComposer attachments', () => {
     });
 
     await flush();
-    expect(result.current.attachments[0].status).toBe('error');
+    expect(result.current.attachments).toHaveLength(0);
+    expect(result.current.error).toBe("Couldn't attach this image.");
   });
 
   it('dismisses the keyboard before opening the picker', async () => {
@@ -407,7 +445,7 @@ describe('useComposer handlePost', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('surfaces an error when posting fails', async () => {
+  it('shows a fixed message, not the raw error, when posting fails', async () => {
     mockClient.commitEvent.mockRejectedValueOnce(new Error('commit boom'));
     const { result } = await renderComposer();
     act(() => result.current.setText('hello'));
@@ -416,7 +454,7 @@ describe('useComposer handlePost', () => {
       await result.current.handlePost();
     });
 
-    expect(result.current.error).toBe('commit boom');
+    expect(result.current.error).toBe("Couldn't publish the post. Try again.");
     expect(result.current.submitting).toBe(false);
     expect(onClose).not.toHaveBeenCalled();
   });

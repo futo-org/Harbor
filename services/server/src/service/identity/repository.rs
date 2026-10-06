@@ -1,10 +1,11 @@
+use ::entity::{ban, content, event, moderator};
+use polycentric_common::models::collections;
+use sea_orm::*;
+
 use crate::data::EventWithContentRow;
 use crate::service::feeds::repository::content_join;
 use crate::service::identity::chain;
 use crate::service::proto::{ContentDigest, Identity, PublicKey};
-use ::entity::{ban, content, event, moderator, notification};
-use polycentric_common::models::collections;
-use sea_orm::*;
 
 const IDENTITY_COLLECTION: i16 = collections::IDENTITY as i16;
 
@@ -245,78 +246,116 @@ impl Mutation {
     pub async fn erase_events_batch(
         db: &DatabaseTransaction,
         identity: &str,
-        after: i64,
         limit: u64,
-    ) -> Result<Option<ErasedBatch>, DbErr> {
-        db.execute_raw(Statement::from_sql_and_values(
-            DbBackend::Postgres,
-            "CREATE TEMP TABLE erase_events ON COMMIT DROP AS \
-             SELECT e.id FROM events e WHERE e.identity = $1 AND e.id > $2 \
-             ORDER BY e.id LIMIT $3",
-            [identity.into(), after.into(), (limit as i64).into()],
-        ))
-        .await?;
-        let last_id: Option<i64> = db
-            .query_one_raw(Statement::from_string(
+    ) -> Result<ErasedBatch, DbErr> {
+        // Collect the events and content we're going to delete this batch.
+        let res = db
+            .execute_raw(Statement::from_sql_and_values(
                 DbBackend::Postgres,
-                "SELECT max(id) AS last_id FROM erase_events",
+                "CREATE TEMP TABLE erase_events ON COMMIT DROP AS
+                 SELECT id
+                 FROM events
+                 WHERE events.identity = $1
+                 LIMIT $2",
+                [identity.into(), limit.into()],
             ))
-            .await?
-            .and_then(|row| row.try_get("", "last_id").ok());
-        let Some(last_id) = last_id else {
-            return Ok(None);
-        };
+            .await?;
+        if res.rows_affected() == 0 {
+            return Ok(ErasedBatch {
+                erased: Erased {
+                    events: 0,
+                    content: 0,
+                    blobs: 0,
+                },
+                blobs: Vec::new(),
+            });
+        }
+
         db.execute_unprepared(
-            "CREATE TEMP TABLE erase_content ON COMMIT DROP AS \
-             SELECT DISTINCT c.id FROM content c \
-             JOIN events e ON e.content_digest_type = c.digest_type \
-               AND e.content_digest_bytes = c.digest_bytes \
-             JOIN erase_events x ON x.id = e.id",
+            "CREATE TEMP TABLE erase_content ON COMMIT DROP AS
+             SELECT DISTINCT content.id
+             FROM erase_events
+             INNER JOIN events ON events.id = erase_events.id
+             INNER JOIN content ON events.content_digest_type = content.digest_type
+               AND events.content_digest_bytes = content.digest_bytes"
         )
         .await?;
         db.execute_unprepared("ANALYZE erase_events; ANALYZE erase_content")
             .await?;
 
-        for (table, column) in CACHE_EVENT_COLUMNS {
+        // Delete from tables based on event id.
+        for (table, column) in CACHE_EVENT_ID_COLUMNS {
             db.execute_unprepared(&format!(
                 "DELETE FROM {table} WHERE {column} IN (SELECT id FROM erase_events)"
             ))
             .await?;
         }
-        // The gravity cron rewrites every tally in one long update. Skip the
-        // rows it holds rather than wait; `erase_derived` sweeps them up.
+
+        // NOTE: this can conflict the gravity cron job, which rewrites every
+        // tally in one long update. Previously this skipped locked rows, but
+        // need to update the tallies based on deleted reactions below, which
+        // would be lost if we skipped deletion here.
         db.execute_unprepared(
-            "DELETE FROM reaction_tally t USING (\
-               SELECT event_id FROM reaction_tally \
-               WHERE event_id IN (SELECT id FROM erase_events) \
-               FOR UPDATE SKIP LOCKED) l \
-             WHERE t.event_id = l.event_id",
+            "DELETE FROM reaction_tally
+             USING erase_events
+             WHERE reaction_tally.event_id = erase_events.id",
         )
         .await?;
+
+        // Delete reactions and update the tallies.
+        db.execute_unprepared(
+            "WITH
+             deleted_reaction AS (
+               DELETE FROM reaction
+               USING erase_events
+               WHERE reaction.event_id = erase_events.id
+                 OR reaction.on_post = erase_events.id
+               RETURNING on_post, positive
+             ),
+             grouped_deleted_reaction AS (
+               SELECT
+                 deleted_reaction.on_post,
+                 SUM(CASE WHEN deleted_reaction.positive THEN 1 ELSE 0 END) AS positive_count_diff,
+                 SUM(CASE WHEN deleted_reaction.positive THEN 0 ELSE 1 END) AS negative_count_diff
+               FROM deleted_reaction
+               GROUP BY deleted_reaction.on_post
+             )
+             UPDATE reaction_tally SET
+               positive_count = positive_count - grouped_deleted_reaction.positive_count_diff,
+               negative_count = negative_count - grouped_deleted_reaction.negative_count_diff,
+               decayed_count = reaction_count_decay(positive_count + grouped_deleted_reaction.positive_count_diff, events.created_at)
+             FROM grouped_deleted_reaction
+             INNER JOIN events ON grouped_deleted_reaction.on_post = events.id
+             WHERE reaction_tally.event_id = grouped_deleted_reaction.on_post",
+        )
+        .await?;
+
+        // Actually delete the events.
         let events = db
-            .execute_unprepared(
-                "DELETE FROM events e USING erase_events x WHERE e.id = x.id",
-            )
+            .execute_unprepared("DELETE FROM events USING erase_events WHERE events.id = erase_events.id")
             .await?
             .rows_affected();
+
+        // Delete the content rows which are unique to the events we've deleted
+        // above.
         db.execute_unprepared(
-            "DELETE FROM erase_content x USING content c, events e \
-             WHERE c.id = x.id \
-               AND e.content_digest_type = c.digest_type \
-               AND e.content_digest_bytes = c.digest_bytes",
+            "DELETE FROM erase_content
+             USING content, events
+             WHERE content.id = erase_content.id
+               AND events.content_digest_type = content.digest_type
+               AND events.content_digest_bytes = content.digest_bytes",
         )
         .await?;
         let (content, blobs) = delete_content_rows(db).await?;
 
-        Ok(Some(ErasedBatch {
+        Ok(ErasedBatch {
             erased: Erased {
                 events,
                 content,
                 blobs: blobs.len() as u64,
             },
             blobs,
-            last_id,
-        }))
+        })
     }
 
     /// Deletes what is keyed by the identity rather than by event: the
@@ -326,19 +365,12 @@ impl Mutation {
         db: &DatabaseTransaction,
         identity: &str,
     ) -> Result<(), DbErr> {
-        db.execute_unprepared(
-            "DELETE FROM reaction_tally t \
-             WHERE NOT EXISTS (SELECT 1 FROM events e WHERE e.id = t.event_id)",
-        )
-        .await?;
-        notification::Entity::delete_many()
-            .filter(
-                Condition::any()
-                    .add(notification::Column::FromIdentity.eq(identity))
-                    .add(notification::Column::ToIdentity.eq(identity)),
-            )
-            .exec(db)
+        for (table, column) in CACHE_EVENT_IDENTITY_COLUMNS {
+            db.execute_unprepared(&format!(
+                "DELETE FROM {table} WHERE {column} = '{identity}'"
+            ))
             .await?;
+        }
         Ok(())
     }
 
@@ -362,17 +394,25 @@ const ORPHAN_CONTENT: &str = "NOT EXISTS (\
       AND e.content_digest_bytes = c.digest_bytes)";
 
 /// Cache tables and the columns in them that hold event ids.
-const CACHE_EVENT_COLUMNS: [(&str, &str); 10] = [
+const CACHE_EVENT_ID_COLUMNS: &[(&str, &str)] = &[
     ("follow", "event_id"),
     ("block", "event_id"),
-    ("reaction", "event_id"),
-    ("reaction", "on_post"),
     ("repost", "event_id"),
     ("repost", "post"),
     ("quote", "event_id"),
     ("quote", "post"),
     ("reply", "event_id"),
     ("reply", "post"),
+    ("profile", "event_id"),
+];
+
+/// Cache tables and the columns in them that hold identities.
+const CACHE_EVENT_IDENTITY_COLUMNS: &[(&str, &str)] = &[
+    ("notification", "from_identity"),
+    ("notification", "to_identity"),
+    ("moderator", "identity"),
+    ("pairing_session", "issuer_identity"),
+    ("pairing_session_claimer", "issuer_identity"),
 ];
 
 const CONTENT_CHILD_TABLES: [&str; 17] = [
@@ -406,8 +446,6 @@ pub struct ErasedBatch {
     pub erased: Erased,
     /// Blobs no content references any more, for the caller to remove.
     pub blobs: Vec<ContentDigest>,
-    /// Highest event id in the batch; pass as `after` for the next one.
-    pub last_id: i64,
 }
 
 /// Deletes the content rows listed in the `erase_content` temp table and

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/loadBoundedImage';
 
 export interface UseImagePickerOptions {
   allowsEditing?: boolean;
@@ -51,6 +52,7 @@ export function useImagePicker(
         allowsEditing,
         aspect,
         quality,
+        ...IMAGE_PICKER_DEFAULT_OPTIONS,
       });
 
       if (result.canceled) {

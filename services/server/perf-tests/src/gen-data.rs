@@ -84,6 +84,9 @@ async fn main() {
                 needs_posts = true;
                 EventKind::Labels
             }
+            "verification_claim" | "verification-claim" => {
+                EventKind::VerificationClaim
+            }
             arg => panic!("unexpect data to generate '{arg}'"),
         };
         to_generate.push(method);
@@ -223,8 +226,8 @@ enum EventKind {
     Repost,
     Report,
     Labels,
-    /*
     VerificationClaim,
+    /*
     VerificationVerify,
     VerificationTarget,
     */
@@ -249,6 +252,9 @@ async fn gen_data(
         EventKind::Repost => gen_repost(client, amount, posts).await,
         EventKind::Report => gen_report(client, amount, posts).await,
         EventKind::Labels => gen_labels(client, amount, posts).await,
+        EventKind::VerificationClaim => {
+            gen_verification_claims(client, amount).await
+        }
     }
 }
 
@@ -437,6 +443,20 @@ async fn gen_labels(mut client: Client, amount: usize, posts: Box<[EventKey]>) {
         client.add_labels(
             post,
             random_strings(1, 5, 5, 20),
+            current_timestamp(),
+        );
+
+        if client.pending().len() > MAX_EVENTS_PER_REQUEST {
+            client.submit_events().await
+        }
+    }
+    client.submit_events().await
+}
+
+async fn gen_verification_claims(mut client: Client, amount: usize) {
+    for _ in 0..amount {
+        client.github_verification_claim(
+            &random_string(5, 20),
             current_timestamp(),
         );
 

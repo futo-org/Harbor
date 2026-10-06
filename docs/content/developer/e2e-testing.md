@@ -164,7 +164,7 @@ Maestro drives its own Chromium. The flows create an identity and act on
 real posts, so the app they drive should talk to the staging servers:
 
 ```bash
-EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=https://srv.staging.harbor.social,https://srv.staging.polycentric.io \
+EXPO_PUBLIC_HARBOR_SEED_SERVERS=https://srv.staging.harbor.social,https://srv.staging.polycentric.io \
   pnpm -C apps/harbor web        # serves on localhost:8081
 pnpm test:e2e:web
 ```

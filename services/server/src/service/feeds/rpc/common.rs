@@ -21,7 +21,7 @@ use tonic::Status;
 /// Common feed parameters needed for shared pagination logic in `finalize_fetch()`.
 pub struct Params<SortedBy = EventCreatedAt> {
     pub limit: u64,
-    pub cursor_filter: Option<CursorFilter<SortedBy>>,
+    pub cursor_filter: CursorFilter<SortedBy>,
     pub omit_labels: Vec<String>,
 }
 
@@ -70,7 +70,7 @@ pub fn finalize_fetch(
 ) -> Fetched {
     let page_info = pipeline::finalize_fetch(
         &mut rows,
-        params.cursor_filter.as_ref(),
+        &params.cursor_filter,
         params.limit as u32,
         create_event_created_at_marker,
     );
@@ -351,7 +351,6 @@ mod tests {
     use entity::{content, event};
     use sea_orm::prelude::DateTimeWithTimeZone;
     use std::collections::HashSet;
-    use std::sync::Arc;
 
     fn ts(seconds: i64) -> DateTimeWithTimeZone {
         DateTime::from_timestamp_secs(seconds)
@@ -479,9 +478,10 @@ mod tests {
 
     fn blocking(identities: &[&str]) -> HydrationState {
         HydrationState {
-            blocked_identities: Arc::new(
-                identities.iter().map(|s| s.to_string()).collect(),
-            ),
+            blocked_identities: identities
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
             ..Default::default()
         }
     }

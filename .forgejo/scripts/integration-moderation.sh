@@ -61,20 +61,20 @@ if [[ "${CI:-}" == "true" ]]; then
   # Reach the services by their in-network names instead of localhost. Kafka
   # is reached on its INTERNAL listener, which advertises kafka:19092 on this
   # network (the EXTERNAL listener advertises localhost:9092, for local use).
-  export POLYCENTRIC_TEST_DATABASE_URL="postgres://postgres:testing@postgres:5432"
-  export POLYCENTRIC_TEST_OS_ENDPOINT="http://rustfs:9000"
-  export POLYCENTRIC_TEST_KAFKA_BROKERS="kafka:19092"
+  export HARBOR_TEST_DATABASE_URL="postgres://postgres:testing@postgres:5432"
+  export HARBOR_TEST_OS_ENDPOINT="http://rustfs:9000"
+  export HARBOR_TEST_KAFKA_BROKERS="kafka:19092"
 fi
 
 echo "==> Building and starting the server…"
 # Build and start the server without its depends_on chain (--no-deps), so
 # the scraper container is not pulled in.  The infrastructure is already
 # running, so this is safe.
-if [ -n "${POLYCENTRIC_SERVER_IMAGE:-}" ]; then
-  if ! docker pull -q "$POLYCENTRIC_SERVER_IMAGE"; then
-    echo "    ${POLYCENTRIC_SERVER_IMAGE} not found, using ${POLYCENTRIC_SERVER_FALLBACK_IMAGE}"
-    export POLYCENTRIC_SERVER_IMAGE="$POLYCENTRIC_SERVER_FALLBACK_IMAGE"
-    docker pull -q "$POLYCENTRIC_SERVER_IMAGE"
+if [ -n "${HARBOR_SERVER_IMAGE:-}" ]; then
+  if ! docker pull -q "$HARBOR_SERVER_IMAGE"; then
+    echo "    ${HARBOR_SERVER_IMAGE} not found, using ${HARBOR_SERVER_FALLBACK_IMAGE}"
+    export HARBOR_SERVER_IMAGE="$HARBOR_SERVER_FALLBACK_IMAGE"
+    docker pull -q "$HARBOR_SERVER_IMAGE"
   fi
   docker compose up -d --no-deps --no-build --wait server
 else
@@ -92,7 +92,7 @@ if [[ "${CI:-}" == "true" ]]; then
     SERVER_HOST=$SERVER_IP
   fi
 fi
-export POLYCENTRIC_TEST_SERVER="http://${SERVER_HOST}:${SERVER_PORT}"
+export HARBOR_TEST_SERVER="http://${SERVER_HOST}:${SERVER_PORT}"
 
 echo "==> Waiting for the server gRPC port ($SERVER_HOST:$SERVER_PORT)…"
 for i in $(seq 1 60); do

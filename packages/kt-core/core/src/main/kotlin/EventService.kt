@@ -12,7 +12,9 @@ import polycentric.v2.SignedEvent
 enum class ClientState { UNINITIALIZED, INITIALIZING, READY, ERROR }
 
 /** Port of js-core `InitializationStep` (display strings preserved). */
-enum class InitializationStep(val label: String) {
+enum class InitializationStep(
+    val label: String,
+) {
     STARTING("Starting initialization..."),
     INITIALIZING_CORE("Initializing core..."),
     SETTING_UP_STORAGE("Setting up storage..."),
@@ -25,6 +27,18 @@ enum class InitializationStep(val label: String) {
 
 /** Port of js-core `HydrationStatus`. */
 enum class HydrationStatus { NOT_STARTED, IN_PROGRESS, FAILED, COMPLETED }
+
+/**
+ * Emission on key pair changing events that carries only non-secret
+ * material.
+ */
+class KeyPairChangedPayload(
+    val keyType: Int,
+    /** Public key bytes. */
+    val publicKey: ByteArray,
+    /** Hex sha256 of the genesis Identity doc the keypair acts as, if signed in. */
+    val identityKey: String?,
+)
 
 class ContentCreatedPayload(
     val signedEvent: SignedEvent,
@@ -53,8 +67,8 @@ class EventService {
     private val _hydrationStatus = MutableStateFlow(HydrationStatus.NOT_STARTED)
     val hydrationStatus: StateFlow<HydrationStatus> = _hydrationStatus
 
-    private val _keyPairChanged = MutableSharedFlow<StoredKeyPair?>(extraBufferCapacity = 16)
-    val keyPairChanged: SharedFlow<StoredKeyPair?> = _keyPairChanged
+    private val _keyPairChanged = MutableSharedFlow<KeyPairChangedPayload?>(extraBufferCapacity = 16)
+    val keyPairChanged: SharedFlow<KeyPairChangedPayload?> = _keyPairChanged
 
     private val _contentCreated = MutableSharedFlow<ContentCreatedPayload>(extraBufferCapacity = 64)
     val contentCreated: SharedFlow<ContentCreatedPayload> = _contentCreated
@@ -74,8 +88,19 @@ class EventService {
         _hydrationStatus.value = status
     }
 
-    internal suspend fun emitKeyPairChanged(keyPair: StoredKeyPair?) {
-        _keyPairChanged.emit(keyPair)
+    internal suspend fun emitKeyPairChanged(
+        keyPair: StoredKeyPair?,
+        identityKey: String? = null,
+    ) {
+        _keyPairChanged.emit(
+            keyPair?.let {
+                KeyPairChangedPayload(
+                    keyType = it.keyType,
+                    publicKey = it.publicKey,
+                    identityKey = identityKey,
+                )
+            },
+        )
     }
 
     internal suspend fun emitContentCreated(payload: ContentCreatedPayload) {

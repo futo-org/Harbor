@@ -9,7 +9,7 @@ sidebar_position: 2
 The Polycentric Protocol is a binary protocol using
 [Protocol Buffers v3](https://protobuf.dev/). The messages below are the v2
 definitions from the `protos/polycentric/v2` directory of the
-[Harbor code repository](https://gitlab.futo.org/polycentric/polycentric). RPC
+[Harbor code repository](https://code.futo.org/harbor/harbor). RPC
 request/response messages are covered in [gRPC](./grpc.md).
 
 ## Keys and identity
@@ -373,9 +373,9 @@ A `Labels` event records that a moderation service has classified content
 against a set of label values. Labels are signed events in collection 7
 (`Labels`). Like `Report`, labeling is per-server — a server indexes and
 serves only labels from its configured trusted moderation service (set via
-`POLYCENTRIC_MODERATION_IDENTITY` on the server side). Labels from any other
-identity are stored and synced as normal events but are not indexed or served
-when querying feeds.
+`HARBOR_MODERATION_IDENTITY` on the server side). Labels from any other identity
+are stored and synced as normal events but are not indexed or served when
+querying feeds.
 
 The server returns matching `Labels` events as `EventHint` entries alongside
 feed results; the client correlates each hint's event bundle to its target

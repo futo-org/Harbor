@@ -89,9 +89,17 @@ export type VerificationCompleteNotification = NotificationBase & {
   claim?: DecodedClaim;
 };
 
+/** Someone mentioned you in a post. */
+export type MentionNotification = NotificationBase & {
+  kind: 'mention';
+  /** The post that mentions you (its text plus key, for navigation). */
+  mentioningPost: PostData;
+};
+
 export type NotificationData =
   | FollowNotification
   | ReplyNotification
+  | MentionNotification
   | RepostNotification
   | ReactionNotification
   | QuoteNotification
@@ -152,6 +160,15 @@ function decodeNotification(
         : null;
       if (!reply) return null;
       return { ...base, kind: 'reply', reply, targetPost };
+    }
+
+    case v2.NotificationKind.MENTION: {
+      // The mentioning post is the trigger event; drop it if it won't decode.
+      const mentioningPost = notification.triggerEvent
+        ? withLabels(decodeV2PostBundle(notification.triggerEvent), labels)
+        : null;
+      if (!mentioningPost) return null;
+      return { ...base, kind: 'mention', mentioningPost };
     }
 
     case v2.NotificationKind.REPOST:

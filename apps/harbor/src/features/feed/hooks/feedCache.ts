@@ -685,9 +685,6 @@ export function useFeedPageInfo(
   return pageInfo;
 }
 
-/**
- * Optimistically prepend a post into a feed
- */
 /** Cached feed keys under `queryKey`, which is a partition of them. */
 function cachedKeysUnder(queryKey: string[]): string[] {
   const prefix = queryKey.join('\0');
@@ -696,6 +693,9 @@ function cachedKeysUnder(queryKey: string[]): string[] {
   );
 }
 
+/**
+ * Optimistically prepend a post into a feed
+ */
 export function injectPostIntoFeedCache(
   queryKey: string[],
   newBundle: v2.EventBundle,

@@ -15,7 +15,7 @@ WORKDIR /app
 # and fall through to a full workspace build.
 ARG SKIP_WORKSPACE_BUILD=
 
-COPY .npmrc turbo.jsonc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY turbo.jsonc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY patches patches
 COPY apps apps
 COPY packages packages
@@ -29,11 +29,13 @@ RUN if [ -z "$SKIP_WORKSPACE_BUILD" ]; then pnpm run build; fi
 RUN pnpm --filter polycentric-app --prod --legacy deploy /deploy
 # Inlined by `expo export` (app.config.ts reads APP_VERSION). Declared after
 # install and deploy so a new value keeps their layers cached.
+ARG EXPO_PUBLIC_HARBOR_SEED_SERVERS
 ARG EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS
+ARG EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS
 ARG EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS
 ARG APP_VERSION
-ENV EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS \
-    EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS=$EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS \
+ENV EXPO_PUBLIC_HARBOR_SEED_SERVERS=${EXPO_PUBLIC_HARBOR_SEED_SERVERS:-${EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS}} \
+    EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS=${EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS:-${EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS}} \
     APP_VERSION=$APP_VERSION
 RUN cd /deploy && npx expo export --platform web
 

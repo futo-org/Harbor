@@ -8,6 +8,13 @@ import { Result } from './result.js';
 const binaryParser = bodyParser.raw({ type: 'application/octet-stream' });
 const jsonParser = bodyParser.json();
 
+export const OAUTH_CALLBACK_DOMAIN =
+  process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN ??
+  process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN;
+export const PUPPETEER_EXECUTABLE_PATH =
+  process.env.HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH ??
+  process.env.POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH;
+
 export function createCookieEnabledAxios(): AxiosInstance {
   const cookieJar = new CookieJar(new MemoryCookieStore());
 
@@ -123,8 +130,6 @@ export function slug(schemaName: string): string {
 }
 
 export function getCallbackForPlatform(schemaName: string, uriEncode = false) {
-  const url = `${process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN}/platforms/${slug(
-    schemaName,
-  )}/oauth/callback`;
+  const url = `${OAUTH_CALLBACK_DOMAIN}/platforms/${slug(schemaName)}/oauth/callback`;
   return uriEncode ? encodeURIComponent(url) : url;
 }

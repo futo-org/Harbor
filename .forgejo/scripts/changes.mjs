@@ -176,8 +176,10 @@ const flags = {
     rust_services: server || moderation || pushNotifications || grayjayMigrator,
     scraper,
     app,
+    app_typecheck: app || jsSdk || rnSdk || rsCore,
     build_sdks: rsCore || jsSdk || rnSdk || app || verifierBot,
     build_rn_sdk: rnSdk || rsCore || app,
+    kt_core_lint: ktCore,
     kt_core_build: ktCore,
     image_scraper: scraper,
     image_verifier_bot: verifierBot,
@@ -242,7 +244,10 @@ if (!flags.service_images) {
 }
 // Jobs that download the SDK artifacts (sdk-artifacts action) need them built.
 flags.build_sdks ||=
-  flags.image_verifier_bot || flags.verifier_bot_tests || flags.web_image;
+  flags.image_verifier_bot ||
+  flags.verifier_bot_tests ||
+  flags.web_image ||
+  flags.app_typecheck;
 flags.build_rn_sdk ||= flags.web_image;
 
 // Outputs -------------------------------------------------------------------

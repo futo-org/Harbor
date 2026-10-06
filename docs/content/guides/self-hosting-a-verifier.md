@@ -21,7 +21,7 @@ cp services/verifier-bot/.env.example services/verifier-bot/.env   # then edit
 docker compose up -d verifier-bot
 ```
 
-The bot listens on port `3002` by default (`POLYCENTRIC_VERIFIER_BOT_PORT`).
+The bot listens on port `3002` by default (`HARBOR_VERIFIER_BOT_PORT`).
 
 ## Production image
 
@@ -34,33 +34,33 @@ runtime).
 ## Environment variables
 
 All configuration is via environment variables prefixed with
-`POLYCENTRIC_VERIFIER_BOT_`. Copy `services/verifier-bot/.env.example` to `.env`
-and fill it in.
+`HARBOR_VERIFIER_BOT_`. Copy `services/verifier-bot/.env.example` to `.env` and
+fill it in.
 
 ### Core
 
 | Variable | Description |
 |---|---|
-| `POLYCENTRIC_VERIFIER_BOT_SERVERS` | Harbor server(s) to sync with. Comma-delimited for multiple. |
-| `POLYCENTRIC_VERIFIER_BOT_DATABASE_URL` | Postgres connection string (`?schema=<name>` scopes the tables). Unset uses a local sqlite file under `./state`. |
-| `POLYCENTRIC_VERIFIER_BOT_ALLOWED_ORIGINS` | Comma-delimited CORS allow-list. |
-| `POLYCENTRIC_VERIFIER_BOT_ALLOWED_CALLBACKS` | Comma-delimited callback URL prefixes the OAuth callback may redirect to (native app deep links). |
-| `POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN` | Public base domain of this bot, used to build OAuth callback URLs. |
-| `POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH` | Path to a Chrome/Chromium binary for the headless-browser verifiers (e.g. Kick). |
-| `POLYCENTRIC_VERIFIER_BOT_PROFILE_NAME` | Display name published for the bot's identity on first run. |
-| `POLYCENTRIC_VERIFIER_BOT_PROFILE_DESCRIPTION` | Profile description published alongside the name. |
-| `POLYCENTRIC_VERIFIER_BOT_HEALTH_CHECK_INTERVAL_SECONDS` | How often every platform's health check runs (default `900`). `0` disables the loop. |
+| `HARBOR_VERIFIER_BOT_SERVERS` | Harbor server(s) to sync with. Comma-delimited for multiple. |
+| `HARBOR_VERIFIER_BOT_DATABASE_URL` | Postgres connection string (`?schema=<name>` scopes the tables). Unset uses a local sqlite file under `./state`. |
+| `HARBOR_VERIFIER_BOT_ALLOWED_ORIGINS` | Comma-delimited CORS allow-list. |
+| `HARBOR_VERIFIER_BOT_ALLOWED_CALLBACKS` | Comma-delimited callback URL prefixes the OAuth callback may redirect to (native app deep links). |
+| `HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN` | Public base domain of this bot, used to build OAuth callback URLs. |
+| `HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH` | Path to a Chrome/Chromium binary for the headless-browser verifiers (e.g. Kick). |
+| `HARBOR_VERIFIER_BOT_PROFILE_NAME` | Display name published for the bot's identity on first run. |
+| `HARBOR_VERIFIER_BOT_PROFILE_DESCRIPTION` | Profile description published alongside the name. |
+| `HARBOR_VERIFIER_BOT_HEALTH_CHECK_INTERVAL_SECONDS` | How often every platform's health check runs (default `900`). `0` disables the loop. |
 
 ### OAuth credentials
 
 Only needed for the OAuth platforms you enable. Each is a
 `_CLIENT_ID` / `_CLIENT_SECRET` pair (X uses `_API_KEY` / `_API_SECRET`):
 
-- `POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID` / `_CLIENT_SECRET`
-- `POLYCENTRIC_VERIFIER_BOT_X_API_KEY` / `_API_SECRET`
-- `POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID` / `_CLIENT_SECRET`
-- `POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_ID` / `_CLIENT_SECRET`
-- `POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_ID` / `_CLIENT_SECRET`
+- `HARBOR_VERIFIER_BOT_DISCORD_CLIENT_ID` / `_CLIENT_SECRET`
+- `HARBOR_VERIFIER_BOT_X_API_KEY` / `_API_SECRET`
+- `HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_ID` / `_CLIENT_SECRET`
+- `HARBOR_VERIFIER_BOT_INSTAGRAM_CLIENT_ID` / `_CLIENT_SECRET`
+- `HARBOR_VERIFIER_BOT_PATREON_CLIENT_ID` / `_CLIENT_SECRET`
 
 `.env.example` is the authoritative, up-to-date list.
 
@@ -78,7 +78,7 @@ Only needed for the OAuth platforms you enable. Each is a
 | `verifier_bot_oauth_sessions_pending` | | OAuth sign-ins started but not yet called back. |
 
 Every verifier's `healthCheck` runs on boot and then every
-`POLYCENTRIC_VERIFIER_BOT_HEALTH_CHECK_INTERVAL_SECONDS`. Text verifiers fetch
+`HARBOR_VERIFIER_BOT_HEALTH_CHECK_INTERVAL_SECONDS`. Text verifiers fetch
 a known profile and parse a known URL; OAuth verifiers confirm their
 credentials are set. `GET /platforms/<slug>/<type>/health-check` runs one on
 demand and records it the same way. The Harbor Grafana dashboard for these

@@ -317,9 +317,7 @@ mod tests {
     /// Hydration whose caller blocks `blocked`.
     fn hydration_blocking(blocked: &[&str]) -> HydrationState {
         HydrationState {
-            blocked_identities: Arc::new(
-                blocked.iter().map(|s| s.to_string()).collect(),
-            ),
+            blocked_identities: blocked.iter().map(|s| s.to_string()).collect(),
             ..Default::default()
         }
     }

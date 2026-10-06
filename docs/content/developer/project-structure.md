@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # Project Structure
 
-The [repository](https://gitlab.futo.org/polycentric/polycentric) is a pnpm +
+The [repository](https://code.futo.org/harbor/harbor) is a pnpm +
 Cargo monorepo. Builds are orchestrated by [Turbo](https://turborepo.com), so
 each package declares its own `build`, `test`, and `lint` tasks and the root
 scripts fan out across them.
@@ -20,6 +20,7 @@ scripts fan out across them.
 | `services/` | Server-side processes.                                                                    |
 | `protos/`   | Protobuf definitions for the [Polycentric Protocol](../protocol/overview.md). The Rust and TypeScript types are generated from these. |
 | `docs/`     | This documentation site (Docusaurus).                                                     |
+| `dev/`      | Developer tooling for testing |
 
 ## Apps
 
@@ -40,6 +41,7 @@ scripts fan out across them.
 | `packages/js-node`            | Node.js SDK, storing data in sqlite3.                                                         |
 | `packages/js-storage-sqlite`  | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                  |
 | `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                             |
+| `packages/kt-core`            | Core library holding the protocol logic and generated protobuf types, for Android development. This is a Kotlin port of `js-core`. |
 
 ## Services
 

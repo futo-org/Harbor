@@ -1,4 +1,10 @@
-import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
+import {
+  Button,
+  CopyButton,
+  Screen,
+  ScreenHeader,
+  Text,
+} from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import type { IconProps } from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
@@ -6,12 +12,11 @@ import { Routes } from '@/src/common/constants/routes';
 import { Atoms, type Palette, useTheme } from '@/src/common/theme';
 import { usePairIdentityIssuer } from '@/src/features/identity-pairing/hooks/usePairIdentityIssuer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
-import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
-import { type ReactNode, useCallback, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { encodePairingCode, EncodingMode } from '../pairingCode';
+import { pairingLinkFrom } from '../pairingCode';
 import { useCountdown } from '../hooks/useCountdown';
 import type { v2 } from '@polycentric/react-native';
 
@@ -71,12 +76,19 @@ export default function PairIdentityIssuerScreen() {
     );
   } else if (expired) {
     mainContent = (
-      <StatusDisplay icon="error" summary="The pairing code expired." />
+      <StatusDisplay icon="error" summary="The pairing link expired." />
     );
   } else {
     // If we still believe the session to be valid, display its pairing info.
     mainContent = (
-      <PairingInfoCard info={info} remainingSeconds={remainingSeconds} />
+      <>
+        <Text style={[Atoms.mx_lg]}>
+          On your other device, press "I already have an identity" and then
+          "Pair with existing device." From there, you can scan the QR code
+          displayed here or paste the pairing link after copying it.
+        </Text>
+        <PairingInfoCard info={info} remainingSeconds={remainingSeconds} />
+      </>
     );
   }
 
@@ -95,11 +107,9 @@ export default function PairIdentityIssuerScreen() {
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={[
-                Atoms.gap_lg,
-                Atoms.pb_lg,
                 Atoms.items_center,
                 Atoms.w_full,
-                { paddingTop: 100 },
+                Atoms.py_3xl,
               ]}
             >
               {mainContent}
@@ -126,6 +136,7 @@ function PairingInfoCard({
   remainingSeconds: number | null;
 }) {
   const { theme } = useTheme();
+  const link = info ? pairingLinkFrom(info) : null;
 
   return (
     <View
@@ -133,11 +144,12 @@ function PairingInfoCard({
         Atoms.gap_md,
         Atoms.p_lg,
         Atoms.rounded_lg,
+        Atoms.my_3xl,
         { backgroundColor: theme.palette.neutral_50 },
       ]}
     >
-      <PairingQRCode info={info} />
-      <CopyButton info={info} />
+      <PairingQRCode link={link} />
+      <CopyButton title="Copy pairing link" value={link} />
       <View style={Atoms.items_center}>
         <CountdownTimer remainingSeconds={remainingSeconds} />
       </View>
@@ -145,7 +157,7 @@ function PairingInfoCard({
   );
 }
 
-function PairingQRCode({ info }: { info: v2.PairingInfo | null }) {
+function PairingQRCode({ link }: { link: string | null }) {
   const { theme } = useTheme();
 
   return (
@@ -160,9 +172,9 @@ function PairingQRCode({ info }: { info: v2.PairingInfo | null }) {
         },
       ]}
     >
-      {info ? (
+      {link ? (
         <QRCode
-          value={encodePairingCode(info, EncodingMode.BASE64)}
+          value={link}
           size={PAIRING_BLOCK_WIDTH}
           color={theme.palette.black}
           backgroundColor={theme.palette.white}
@@ -211,46 +223,6 @@ function CountdownTimer({
         </Text>
       </Text>
     </View>
-  );
-}
-
-function CopyButton({ info }: { info: v2.PairingInfo | null }) {
-  /** When true, indicate to the user that the text was copied. */
-  const [justCopied, setJustCopied] = useState<boolean>(false);
-
-  /** We'll reset the text-copied indicator after a timeout. */
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const doCopy = useCallback(() => {
-    if (!info) {
-      return;
-    }
-
-    const code = encodePairingCode(info, EncodingMode.HEX);
-    void Clipboard.setStringAsync(code);
-
-    setJustCopied(true);
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = setTimeout(() => {
-      setJustCopied(false);
-      timeoutRef.current = null;
-    }, 2000);
-  }, [info]);
-
-  return (
-    <Button
-      title={justCopied ? 'Copied' : 'Copy pairing code'}
-      icon={justCopied ? 'checkmark' : 'copy'}
-      variant="primary"
-      size="md"
-      fullWidth
-      disabled={!info}
-      onPress={doCopy}
-    />
   );
 }
 
