@@ -35,7 +35,7 @@ export function ProfileEditAvatar({
     }
 
     // Leave size as default for identicons, so that we don't
-    // spam reqests as the user zooms in/out.
+    // spam requests as the user zooms in/out.
     return identiconUrl(identityKey);
   }, [profile.avatar, client, identityKey, minPixels]);
 

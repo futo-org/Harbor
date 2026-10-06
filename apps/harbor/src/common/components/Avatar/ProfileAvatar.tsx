@@ -36,7 +36,7 @@ export function ProfileAvatar({
     if (blobUris.length === 0 && profile.isLoading) return [];
 
     // Leave size as default for identicons, so that we don't
-    // spam reqests as the user zooms in/out.
+    // spam requests as the user zooms in/out.
     return [...blobUris, identiconUrl(identityKey)];
   }, [profile.avatar, profile.isLoading, client, identityKey, minPixels]);
 
