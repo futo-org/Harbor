@@ -2,8 +2,9 @@ import { Atoms } from '@/src/common/theme';
 import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { isWeb } from '@/src/common/util/platform';
 import { memo, useCallback, type ReactNode } from 'react';
-import type { Insets, StyleProp, ViewStyle } from 'react-native';
+import type { Insets, ViewStyle } from 'react-native';
 import { Pressable, View } from 'react-native';
+import { EmojiGridImage } from './EmojiGridImage';
 
 // Scale/timing/opacity for the hover (on web) and press (on native) animations.
 export const EMOJI_POP_SCALE = 1.12;
@@ -34,8 +35,8 @@ type EmojiLikePressableProps = {
 };
 
 /**
- * A rounded, centered Pressable with hover/press animation. The button itself
- * only changes color/opacity; the pop scale is applied to its content so the
+ * A rounded, centered Pressable with hover/press animation. On web the button
+ * only changes color and the pop scale is applied to its content so the hover
  * highlight keeps its size.
  */
 function EmojiLikePressable({
@@ -46,33 +47,52 @@ function EmojiLikePressable({
   size,
   hitSlop,
 }: EmojiLikePressableProps) {
+  const baseStyle = [
+    Atoms.rounded_full,
+    Atoms.align_center,
+    Atoms.justify_center,
+    size ? { width: size, aspectRatio: 1 } : undefined,
+    selected ? { backgroundColor: highlightColor } : undefined,
+  ];
+
+  // Native has no hover highlight, so the pop scale goes on the button itself,
+  // sparing the picker grid an extra view per cell.
+  if (!isWeb)
+    return (
+      <Pressable
+        onPress={onPress}
+        hitSlop={hitSlop}
+        style={({ pressed }) => [
+          baseStyle,
+          pressed && {
+            opacity: EMOJI_PRESS_OPACITY,
+            transform: [{ scale: EMOJI_POP_SCALE }],
+          },
+        ]}
+      >
+        {children}
+      </Pressable>
+    );
+
   return (
     <Pressable
       onPress={onPress}
       hitSlop={hitSlop}
       style={(state) => [
-        Atoms.rounded_full,
-        Atoms.align_center,
-        Atoms.justify_center,
-        size ? { width: size, aspectRatio: 1 } : undefined,
-        isWeb ? WEB_BACKGROUND_TRANSITION : undefined,
-        selected ? { backgroundColor: highlightColor } : undefined,
-        isWeb
-          ? state.hovered || state.pressed
-            ? { backgroundColor: highlightColor }
-            : undefined
-          : state.pressed
-            ? { opacity: EMOJI_PRESS_OPACITY }
-            : undefined,
+        baseStyle,
+        WEB_BACKGROUND_TRANSITION,
+        (state.hovered || state.pressed) && {
+          backgroundColor: highlightColor,
+        },
       ]}
     >
       {(state) => (
         <View
           style={[
-            isWeb ? WEB_TRANSFORM_TRANSITION : undefined,
-            (isWeb ? state.hovered || state.pressed : state.pressed)
-              ? { transform: [{ scale: EMOJI_POP_SCALE }] }
-              : undefined,
+            WEB_TRANSFORM_TRANSITION,
+            (state.hovered || state.pressed) && {
+              transform: [{ scale: EMOJI_POP_SCALE }],
+            },
           ]}
         >
           {children}
@@ -92,23 +112,26 @@ type EmojiProps = {
   size?: string | number;
   // Passed as a prop to avoid frequent theme subscriptions
   highlightColor: string;
-  style?: StyleProp<ViewStyle>;
+  // Draws from shared sprite pages, which pays off only for a grid of many
+  // emoji; a few loose ones would decode whole pages.
+  isGridCell?: boolean;
 };
 
 export const Emoji = memo(function Emoji({
-  style,
   emoji,
   onSelect,
   value,
   selected = false,
   size,
   highlightColor,
+  isGridCell = false,
 }: EmojiProps) {
   const handlePress = useCallback(
     () => onSelect(value ?? emoji),
     [onSelect, value, emoji],
   );
   const isNumericSize = typeof size === 'number';
+  const imageSize = isNumericSize ? Math.round(size * EMOJI_IMAGE_SCALE) : 28;
 
   return (
     <EmojiLikePressable
@@ -117,12 +140,11 @@ export const Emoji = memo(function Emoji({
       highlightColor={highlightColor}
       selected={selected}
     >
-      <View style={style}>
-        <EmojiImage
-          sequence={emoji}
-          size={isNumericSize ? Math.round(size * EMOJI_IMAGE_SCALE) : 28}
-        />
-      </View>
+      {isGridCell ? (
+        <EmojiGridImage sequence={emoji} size={imageSize} />
+      ) : (
+        <EmojiImage sequence={emoji} size={imageSize} />
+      )}
     </EmojiLikePressable>
   );
 });

@@ -1192,7 +1192,7 @@ const FfiConverterTypeListBansArgs = (() => {
 
 export type ListEventsArgs = {
     size?: number,
-    identity?: string,
+    identity: string,
     collection?: number,
     signedBy?: PublicKey,
     sequenceGt?: bigint,
@@ -1222,7 +1222,7 @@ const FfiConverterTypeListEventsArgs = (() => {
         readFromCursor(c: Cursor): TypeName {
             return {
                 size: FfiConverterOptionalInt32.readFromCursor(c), 
-                identity: FfiConverterOptionalString.readFromCursor(c), 
+                identity: FfiConverterString.readFromCursor(c), 
                 collection: FfiConverterOptionalInt32.readFromCursor(c), 
                 signedBy: FfiConverterOptionalTypePublicKey.readFromCursor(c), 
                 sequenceGt: FfiConverterOptionalInt64.readFromCursor(c), 
@@ -1232,7 +1232,7 @@ const FfiConverterTypeListEventsArgs = (() => {
         }
         writeIntoCursor(value: TypeName, c: Cursor): void {
             FfiConverterOptionalInt32.writeIntoCursor(value.size, c);
-            FfiConverterOptionalString.writeIntoCursor(value.identity, c);
+            FfiConverterString.writeIntoCursor(value.identity, c);
             FfiConverterOptionalInt32.writeIntoCursor(value.collection, c);
             FfiConverterOptionalTypePublicKey.writeIntoCursor(value.signedBy, c);
             FfiConverterOptionalInt64.writeIntoCursor(value.sequenceGt, c);
@@ -1241,7 +1241,7 @@ const FfiConverterTypeListEventsArgs = (() => {
         }
         allocationSize(value: TypeName): number {
             return FfiConverterOptionalInt32.allocationSize(value.size) +
-             FfiConverterOptionalString.allocationSize(value.identity) +
+             FfiConverterString.allocationSize(value.identity) +
              FfiConverterOptionalInt32.allocationSize(value.collection) +
              FfiConverterOptionalTypePublicKey.allocationSize(value.signedBy) +
              FfiConverterOptionalInt64.allocationSize(value.sequenceGt) +
@@ -4980,6 +4980,12 @@ export interface PolycentricCoreLike {
  */
     assembleRecoveryPayload(identity: string, publicKey: ArrayBuffer) /*throws*/: ArrayBuffer;
 /**
+ * A [`Self::fetch_query`] alternative that returns the first successful server response for a
+ * query, and ignores all following responses, useful for testing scenarios. Error responses
+ * from servers are ignored. If all servers error, `CoreError::Network` is returned.
+ */
+    awaitQuery(query: Query, queryKey: Array<string> | undefined, opts: QueryOpts | undefined, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer | undefined>;
+/**
  * Identities the active identity blocks, derived from its non-tombstoned
  * social graph events.
  */
@@ -5221,6 +5227,52 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
         return FfiConverterArrayBuffer.lift(__rb);
     } finally {
         nativeModule().rustbuffer_free(__rb);
+    }
+    }
+    
+/**
+ * A [`Self::fetch_query`] alternative that returns the first successful server response for a
+ * query, and ignores all following responses, useful for testing scenarios. Error responses
+ * from servers are ignored. If all servers error, `CoreError::Network` is returned.
+ */
+    async awaitQuery(query: Query, queryKey: Array<string> | undefined, opts: QueryOpts | undefined, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer | undefined> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+        return await uniffiRustCallAsync(
+            /*rustCaller:*/ uniffiCaller,
+            /*rustFutureFunc:*/ () => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_await_query(
+                    uniffiTypePolycentricCoreObjectFactory.clonePointer(this),FfiConverterTypeQuery.lower(query, nativeModule().rustbuffer_alloc),FfiConverterOptionalSequenceString.lower(queryKey, nativeModule().rustbuffer_alloc),FfiConverterOptionalTypeQueryOpts.lower(opts, nativeModule().rustbuffer_alloc)
+                );
+            },
+            /*pollFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+            /*cancelFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+            /*completeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+            /*freeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+            // Async returns always go through the JS-side converter: the
+            // FFI symbol returns the future handle (u64), and the user-level
+            // RustBuffer comes back via the shared `rust_future_complete_*`
+            // export. The bytes the runtime hands back must be deserialized
+            // here using the per-callable return-type converter.
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterOptionalBytes.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+            /*asyncOpts:*/ asyncOpts_,
+            /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
+        );
+    } catch (__error: any) {
+        if (uniffiIsDebug && __error instanceof Error) {
+            __error.stack = __stack;
+        }
+        throw __error;
     }
     }
     
@@ -6392,14 +6444,14 @@ const FfiConverterOptionalTypeSearchUsersSort = new FfiConverterOptional(FfiConv
 // FfiConverter for AuthToken | undefined
 const FfiConverterOptionalTypeAuthToken = new FfiConverterOptional(FfiConverterTypeAuthToken);
 
+// FfiConverter for QueryOpts | undefined
+const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(FfiConverterTypeQueryOpts);
+
 // FfiConverter for Array<ContentEntry>
 const FfiConverterSequenceTypeContentEntry = new FfiConverterArray(FfiConverterTypeContentEntry);
 
 // FfiConverter for Array<ArrayBuffer>
 const FfiConverterSequenceBytes = new FfiConverterArray(FfiConverterArrayBuffer);
-
-// FfiConverter for QueryOpts | undefined
-const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(FfiConverterTypeQueryOpts);
 
 // FfiConverter for bigint | undefined
 const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
@@ -6482,6 +6534,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload() !== 35652) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_await_query() !== 11654) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_await_query");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities() !== 52117) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities");

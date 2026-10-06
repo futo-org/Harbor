@@ -611,6 +611,7 @@ jobs:
     timeout-minutes: 60
     env:
       HARBOR_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
+      RUST_LOG: warn
       HARBOR_SERVER_FALLBACK_IMAGE: ${{ needs.changes.outputs.registry }}/server:staging
     steps:
       - uses: actions/checkout@v4

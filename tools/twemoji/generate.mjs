@@ -2,7 +2,9 @@
 // Vendors the Twemoji 72px PNGs: to apps/harbor/public/twemoji/ for the web
 // and to src/common/emoji/twemoji/ for native, with a require map. The web
 // also gets one sprite sheet of the picker's emoji, so the grid draws from a
-// single preloaded image instead of one request per cell.
+// single preloaded image instead of one request per cell. Android gets the
+// same emoji split into smaller sprite pages for the emoji-sprite module,
+// which decodes a page only once one of its emoji is shown.
 //
 //   curl -L -o twemoji.tar.gz https://github.com/jdecked/twemoji/archive/refs/tags/v17.0.3.tar.gz
 //   mkdir twemoji && tar -xzf twemoji.tar.gz -C twemoji --strip-components=1 '*/assets/72x72/*' '*/LICENSE*'
@@ -21,6 +23,7 @@ import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { twemojiCode } from '../../apps/harbor/src/common/util/emoji.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const app = join(root, 'apps', 'harbor');
@@ -67,25 +70,47 @@ console.log(
 // the 72px source cells, unscaled.
 const CELL = 72;
 const COLUMNS = 64;
-
-// Same as `twemojiCode` in src/common/util/emoji.ts.
-function twemojiCode(sequence) {
-  const cps = [...sequence].map((ch) => ch.codePointAt(0));
-  const keepVs16 = cps.includes(0x200d);
-  return cps
-    .filter((cp) => keepVs16 || cp !== 0xfe0f)
-    .map((cp) => cp.toString(16))
-    .join('-');
-}
+// Android sprite pages: up to 16x17 cells of 72px, about 5.6 MB per decoded
+// page; 17 rows fit the 264- and 270-emoji categories without a near-empty
+// overflow page.
+const PAGE_COLUMNS = 16;
+const PAGE_CELLS = PAGE_COLUMNS * 17;
+const pagesDir = join(
+  app,
+  'modules',
+  'emoji-sprite',
+  'android',
+  'src',
+  'main',
+  'assets',
+  'emoji-sprite',
+);
 
 const picker = JSON.parse(
   readFileSync(join(app, 'src', 'features', 'reaction', 'emojis.json'), 'utf8'),
 ).emojis.filter((e) => e.category !== 'Component');
 const sheetCodes = [];
+const sheetCategories = [];
 for (const entry of picker) {
   const code = twemojiCode(entry.emoji);
-  if (existsSync(join(pngs, `${code}.png`))) sheetCodes.push(code);
-  else console.warn(`no twemoji for ${entry.emoji} (${code})`);
+  if (existsSync(join(pngs, `${code}.png`))) {
+    sheetCodes.push(code);
+    sheetCategories.push(entry.category);
+  } else console.warn(`no twemoji for ${entry.emoji} (${code})`);
+}
+
+// Sheet index of the first emoji on each Android page. Every category starts
+// a new page, so the top of a category (what the picker shows first after a
+// category switch) is always on a single page.
+const pageStarts = [];
+for (let i = 0; i < sheetCodes.length; i++) {
+  const pageStart = pageStarts.at(-1);
+  if (
+    pageStart === undefined ||
+    sheetCategories[i] !== sheetCategories[i - 1] ||
+    i - pageStart === PAGE_CELLS
+  )
+    pageStarts.push(i);
 }
 const rows = Math.ceil(sheetCodes.length / COLUMNS);
 const sheetPng = await sharp({
@@ -118,6 +143,13 @@ export const SHEET_FILE = '${sheetFile}';
 export const SHEET_CELL = ${CELL};
 export const SHEET_COLUMNS = ${COLUMNS};
 
+/** Sheet index of the first emoji on each Android sprite page
+ * (emoji-sprite module); a page holds the emoji up to the next start. */
+export const SPRITE_PAGE_STARTS = [${pageStarts.join(', ')}];
+
+/** Cells per row of an Android sprite page. */
+export const SPRITE_PAGE_COLUMNS = ${PAGE_COLUMNS};
+
 /** Sheet cell of each emoji code (see \`twemojiCode\`), row-major. */
 export const SHEET_INDEX: Record<string, number> = {
 ${sheetCodes.map((c, i) => `  '${c}': ${i},`).join('\n')}
@@ -126,4 +158,31 @@ ${sheetCodes.map((c, i) => `  '${c}': ${i},`).join('\n')}
 );
 console.log(
   `${sheetCodes.length} emoji -> public/twemoji/${sheetFile} (${CELL * COLUMNS}x${CELL * rows}, ${(sheetPng.length / 1e6).toFixed(1)} MB)`,
+);
+
+rmSync(pagesDir, { recursive: true, force: true });
+mkdirSync(pagesDir, { recursive: true });
+for (let page = 0; page < pageStarts.length; page++) {
+  const pageCodes = sheetCodes.slice(pageStarts[page], pageStarts[page + 1]);
+  const pagePng = await sharp({
+    create: {
+      width: CELL * PAGE_COLUMNS,
+      height: CELL * Math.ceil(pageCodes.length / PAGE_COLUMNS),
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite(
+      pageCodes.map((code, i) => ({
+        input: join(pngs, `${code}.png`),
+        left: (i % PAGE_COLUMNS) * CELL,
+        top: Math.floor(i / PAGE_COLUMNS) * CELL,
+      })),
+    )
+    .png({ compressionLevel: 9, palette: false })
+    .toBuffer();
+  writeFileSync(join(pagesDir, `page-${page}.png`), pagePng);
+}
+console.log(
+  `${sheetCodes.length} emoji -> ${pageStarts.length} Android sprite pages in modules/emoji-sprite`,
 );

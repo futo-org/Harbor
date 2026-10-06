@@ -1,3 +1,4 @@
+import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { Button, Text } from '@/src/common/components/primitives';
 import {
   publicKeyToString,
@@ -5,37 +6,38 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { isWeb } from '@/src/common/util/platform';
 import { PairIdentityCamera } from '@/src/features/identity-pairing/components/PairIdentityCamera';
 import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { PAIRING_CODE_PARAM, Routes } from '@/src/common/constants';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import type { v2 } from '@polycentric/react-native';
+import { extractPairingInfo } from '@/src/features/identity-pairing/pairingCode';
 
 export default function PairIdentityClaimerScreen() {
   const { theme } = useTheme();
-  const client = usePolycentric();
   const { refreshCurrentIdentity } = usePolycentricContext();
   const { to } = useOnboardingLinks();
+  const code = useLocalSearchParams()[PAIRING_CODE_PARAM];
 
   // Error state is managed by `usePairIdentityClaimer()`, so we use `null`
-  // to mean that the pairing code was invalid and couldn't be parsed and
+  // to mean that the pairing link was invalid and couldn't be parsed and
   // `undefined` to mean that we just don't have one.
-  const [pairingInfo, setPairingInfo] = useState<
-    v2.PairingInfo | null | undefined
-  >(undefined);
+  const pairingInfo = useMemo(() => {
+    if (code === undefined) return undefined;
+    if (typeof code !== 'string') return null; // repeated `code` param
+    return extractPairingInfo(code) ?? null;
+  }, [code]);
+
+  const onCodeScanned = useCallback((scanned: string) => {
+    router.setParams({ [PAIRING_CODE_PARAM]: scanned });
+  }, []);
 
   const { error, approved, claimInProgress } =
     usePairIdentityClaimer(pairingInfo);
-
-  const pubKeyStr = client.currentKeyPair
-    ? publicKeyToString(client.currentKeyPair.publicKey)
-    : '';
-  const pubKeyEmoji = pubKeyStr
-    ? publicKeyEmojiFingerprint(pubKeyStr).join(' ')
-    : '';
 
   useEffect(() => {
     if (!approved) return;
@@ -53,11 +55,7 @@ export default function PairIdentityClaimerScreen() {
           <View style={Atoms.gap_xs}>
             <Text variant="subtitle">Pair Identity</Text>
           </View>
-          <PairIdentityCamera
-            onCodeScanned={(info) => {
-              setPairingInfo(info);
-            }}
-          />
+          <PairIdentityCamera onCodeScanned={onCodeScanned} />
         </>
       );
     }
@@ -74,7 +72,7 @@ export default function PairIdentityClaimerScreen() {
             variant="secondary"
             fullWidth
             onPress={() => {
-              setPairingInfo(undefined);
+              router.replace(to(Routes.onboarding.pair));
             }}
           />
         </>
@@ -108,50 +106,9 @@ export default function PairIdentityClaimerScreen() {
           </>
         ) : (
           <>
-            <Text
-              variant="title"
-              style={{
-                fontSize: 84,
-                lineHeight: 92,
-                textAlign: 'center',
-              }}
-            >
-              {pubKeyEmoji}
-            </Text>
-
-            <View style={[Atoms.items_center, Atoms.gap_sm]}>
-              <Text
-                variant="small"
-                color="neutral_500"
-                selectable
-                style={{ fontFamily: 'monospace', textAlign: 'center' }}
-              >
-                {pubKeyStr}
-              </Text>
-            </View>
-
-            <View
-              style={[
-                Atoms.flex_row,
-                Atoms.items_center,
-                Atoms.gap_sm,
-                Atoms.px_md,
-                Atoms.py_sm,
-                Atoms.rounded_full,
-                {
-                  backgroundColor: theme.palette.neutral_50,
-                },
-              ]}
-            >
-              <ActivityIndicator size="small" />
-              <Text variant="small" color="neutral_500">
-                Waiting for approval
-              </Text>
-            </View>
-
-            <Text variant="secondary" italic color="neutral_600">
-              On your other device, press "Approve" when the emojis match the
-              ones above.
+            <PairingEmojiCard />
+            <Text variant="secondary" style={{ textAlign: 'center' }}>
+              Check your other device
             </Text>
           </>
         )}
@@ -170,6 +127,77 @@ export default function PairIdentityClaimerScreen() {
       ]}
     >
       {renderBody()}
+    </View>
+  );
+}
+
+function PairingEmojiCard() {
+  const { theme } = useTheme();
+  const client = usePolycentric();
+
+  const pubKeyStr = client.currentKeyPair
+    ? publicKeyToString(client.currentKeyPair.publicKey)
+    : '';
+
+  const pubKeyEmojis = pubKeyStr ? publicKeyEmojiFingerprint(pubKeyStr) : [];
+
+  return (
+    <View
+      style={[
+        Atoms.w_full,
+        Atoms.items_center,
+        Atoms.gap_md,
+        Atoms.p_lg,
+        Atoms.rounded_lg,
+        {
+          maxWidth: 350,
+          backgroundColor: theme.palette.neutral_50,
+        },
+      ]}
+    >
+      <Text variant="subtitle" style={{ textAlign: 'center' }}>
+        Your matching code
+      </Text>
+
+      <View
+        style={[
+          Atoms.w_full,
+          Atoms.flex_row,
+          Atoms.items_center,
+          Atoms.justify_center,
+          Atoms.gap_lg,
+          Atoms.rounded_lg,
+          Atoms.flex_wrap,
+          Atoms.py_lg,
+          Atoms.px_lg,
+          { backgroundColor: theme.palette.white },
+        ]}
+      >
+        {pubKeyEmojis.map((emoji, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: short emoji sequence that doesn't reorder
+          <EmojiImage key={i} sequence={emoji} size={60} />
+        ))}
+      </View>
+
+      <Text
+        variant="small"
+        color="neutral_500"
+        selectable
+        style={[
+          { fontFamily: 'monospace', textAlign: 'center' },
+          // The pubkey string is a long string with no whitespace
+          isWeb && { wordBreak: 'break-all' },
+        ]}
+      >
+        {pubKeyStr}
+      </Text>
+
+      <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
+        <ActivityIndicator size="small" />
+        <Text variant="small" color="neutral_500" style={Atoms.flex_shrink_1}>
+          Waiting for approval from other device
+        </Text>
+      </View>
     </View>
   );
 }

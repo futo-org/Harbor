@@ -384,17 +384,14 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           OWNER="${GITHUB_REPOSITORY%%/*}"
           INDEX_URL="${GITHUB_SERVER_URL}/api/packages/${OWNER}/cargo/"
-          mkdir -p ~/.cargo
-          printf '[registries.harbor]\nindex = "sparse+%s"\n' "$INDEX_URL" > ~/.cargo/config.toml
+          CARGO_CONFIG_DIR="${CARGO_HOME:-$HOME/.cargo}"
+          mkdir -p "$CARGO_CONFIG_DIR"
+          printf '[registries.harbor]\nindex = "sparse+%s"\n' "$INDEX_URL" > "$CARGO_CONFIG_DIR/config.toml"
           # Specify the version and registry for packaging and publishing
           sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" packages/rs-common/Cargo.toml packages/rs-core/Cargo.toml
           sed -i "s#^polycentric-common = .*#polycentric-common = { path = \"packages/rs-common\", version = \"${VERSION}\", registry = \"harbor\" }#" Cargo.toml
           mkdir -p target/package
-          cargo package --registry harbor -p polycentric-common -p polycentric-core --no-verify --allow-dirty || true
-          if ! ls "target/package/polycentric-core-${VERSION}.crate" >/dev/null 2>&1; then
-            echo "no polycentric-core .crate; falling back to a source tarball" >&2
-            tar czf "target/package/polycentric-core-${VERSION}.crate" packages/rs-core packages/rs-common
-          fi
+          cargo package --registry harbor -p polycentric-common -p polycentric-core --no-verify --allow-dirty
       - uses: forgejo/upload-artifact@v4
         with:
           name: rs-core-crates
@@ -407,7 +404,9 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           OWNER="${GITHUB_REPOSITORY%%/*}"
           INDEX_URL="${GITHUB_SERVER_URL}/api/packages/${OWNER}/cargo/"
-          printf '[registries.harbor]\ntoken = "Bearer %s"\n' "$HARBOR_CI_TOKEN" > ~/.cargo/credentials.toml
+          CARGO_CONFIG_DIR="${CARGO_HOME:-$HOME/.cargo}"
+          mkdir -p "$CARGO_CONFIG_DIR"
+          printf '[registries.harbor]\ntoken = "Bearer %s"\n' "$HARBOR_CI_TOKEN" > "$CARGO_CONFIG_DIR/credentials.toml"
           for crate in polycentric-common polycentric-core; do
             # Skip crates already published for this version. Note that the crates.io convention is
             # to index the first few characters before the crate name.

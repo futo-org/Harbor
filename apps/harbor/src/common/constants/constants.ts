@@ -7,7 +7,7 @@ export const WEB_MAX_CONTENT_WIDTH = 600;
 export const DEFAULT_IDENTITY_NAME = 'Anonymous';
 
 export const FUTO_URL = 'https://futo.tech';
-export const SOURCE_CODE_URL = 'https://gitlab.futo.org/harbor/harbor';
+export const SOURCE_CODE_URL = 'https://code.futo.org/harbor/harbor';
 export const REPORT_BUG_URL = 'https://chat.futo.org/login/';
 
 /**

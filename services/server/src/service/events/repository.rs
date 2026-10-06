@@ -17,7 +17,7 @@ use polycentric_common::models::protos_v2::{
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, Func, InsertStatement,
     IntoCondition, IntoTableRef, OnConflict, SelectExpr, SelectStatement,
-    SubQueryStatement, UpdateStatement, WithClause,
+    SubQueryStatement, UnionType, UpdateStatement, WithClause,
 };
 use sea_orm::*;
 use tonic::Status;
@@ -35,7 +35,7 @@ impl Query {
         db: &DbConn,
         mut limit: Option<u64>,
         collection: Option<i32>,
-        identity: Option<String>,
+        identity: String,
         signed_by: Option<crate::service::proto::PublicKey>,
         sequence_gt: Option<i64>,
         sequence_lt: Option<i64>,
@@ -45,8 +45,9 @@ impl Query {
             limit = Some(200);
         }
 
-        let mut query =
-            event::Entity::find().select_also(content::Entity).join(
+        let mut query = event::Entity::find()
+            .select_also(content::Entity)
+            .join(
                 JoinType::LeftJoin,
                 event::Entity::belongs_to(content::Entity)
                     .from(event::Column::ContentDigestType)
@@ -60,14 +61,11 @@ impl Query {
                         .into_condition()
                     })
                     .into(),
-            );
+            )
+            .filter(event::Column::Identity.eq(identity));
 
         if let Some(c) = collection {
             query = query.filter(event::Column::Collection.eq(c as i16));
-        }
-
-        if let Some(id) = identity {
-            query = query.filter(event::Column::Identity.eq(id));
         }
 
         if let Some(pk) = signed_by {
@@ -145,37 +143,112 @@ pub struct HeadInfoRow {
 pub struct Mutation;
 
 impl Mutation {
-    /// Find or create the `application` row for `app`, returning its id.
+    /// Find or create the `application` for `app`, returning its id.
     pub async fn application_id<C: ConnectionTrait>(
         db: &C,
         app: &Application,
     ) -> Result<i32, DbErr> {
-        // Keep client-supplied strings within the unique index's limits.
-        const MAX_LEN: usize = 256;
-        let bounded = |s: &str| s.chars().take(MAX_LEN).collect::<String>();
+        // NOTE: this query is carefully optimised for the common case where the
+        // application is known and we just need the id.
 
-        let row = application::ActiveModel {
-            id: NotSet,
-            name: Set(bounded(&app.name)),
-            identifier: Set(bounded(&app.id)),
-            version: Set(bounded(&app.version)),
-            url: Set(bounded(&app.url)),
-        };
-        // A no-op update makes the existing row's id come back on conflict.
-        let inserted = application::Entity::insert(row)
-            .on_conflict(
-                OnConflict::columns([
-                    application::Column::Name,
-                    application::Column::Identifier,
-                    application::Column::Version,
-                    application::Column::Url,
-                ])
-                .update_column(application::Column::Name)
-                .to_owned(),
+        let mut with = WithClause::new();
+
+        // Common case where the application already exists and we simply
+        // retrieve the id.
+        let mut select_existing_app = SelectStatement::new();
+        select_existing_app
+            .column(application::Column::Id)
+            .from(application::Entity)
+            .and_where(
+                Expr::col(application::Column::Name.as_column_ref())
+                    .eq(&*app.name),
             )
-            .exec(db)
-            .await?;
-        Ok(inserted.last_insert_id)
+            .and_where(
+                Expr::col(application::Column::Identifier.as_column_ref())
+                    .eq(&*app.id),
+            )
+            .and_where(
+                Expr::col(application::Column::Version.as_column_ref())
+                    .eq(&*app.version),
+            )
+            .and_where(
+                Expr::col(application::Column::Url.as_column_ref())
+                    .eq(&*app.url),
+            );
+        let mut cte = CommonTableExpression::new();
+        const EXISTING_APP: &str = "existing_app";
+        cte.table_name(EXISTING_APP).query(select_existing_app);
+        with.cte(cte);
+
+        // Uncommon case where we need to insert the application data.
+        let mut insert_new_app = InsertStatement::new();
+        insert_new_app
+            .into_table(application::Entity)
+            .columns([
+                application::Column::Name,
+                application::Column::Identifier,
+                application::Column::Version,
+                application::Column::Url,
+            ])
+            // Don't (try to) insert when we found an existing app.
+            .select_from({
+                let mut q = SelectStatement::new();
+                q
+                    // Reuse the variables from above.
+                    .expr(Expr::cust("$1"))
+                    .expr(Expr::cust("$2"))
+                    .expr(Expr::cust("$3"))
+                    .expr(Expr::cust("$4"))
+                    .cond_where(Expr::not_exists({
+                        let mut q = SelectStatement::new();
+                        q.expr(Expr::Constant(true.into())).from(EXISTING_APP);
+                        q
+                    }));
+                q
+            })
+            .map_err(|err| {
+                DbErr::Custom(format!("incorrect amount of values: {err}"))
+            })?
+            .on_conflict({
+                let mut c = OnConflict::new();
+                c.do_nothing();
+                c
+            })
+            .returning_col(application::Column::Id);
+        let mut cte = CommonTableExpression::new();
+        const NEW_APP: &str = "new_app";
+        cte.table_name(NEW_APP).query(insert_new_app);
+        with.cte(cte);
+
+        let mut query = SelectStatement::new();
+        query
+            .column(application::Column::Id)
+            .from(EXISTING_APP)
+            .union(UnionType::Distinct, {
+                let mut q = SelectStatement::new();
+                q.column(application::Column::Id).from(NEW_APP);
+                q
+            });
+        let query = query.with(with);
+
+        match db.query_one(&query).await? {
+            Some(row) => row.try_get_by(0),
+            None => {
+                // Due to the use of Read Committed transaction isolation level
+                // (the default) it is possible to not SELECT the application id
+                // and also conflict when inserting it, resulting in hitting
+                // this branch where we don't have an id.
+                // We simply try the query again, which fixes this unlikely race
+                // condition.
+                if let Some(row) = db.query_one(&query).await? {
+                    return row.try_get_by(0);
+                }
+
+                Err(DbErr::Custom(
+                    "failed to get or insert application".to_owned(),
+                ))
+            }
+        }
     }
 
     /// Store an event and it's content.
@@ -647,9 +720,11 @@ impl Mutation {
                     .expr(Expr::col((event_table.clone(), event_id)))
                     .expr(Expr::col((event_table.clone(), identity.clone())))
                     .expr(Expr::from(update.name.clone()))
+                    // NOTE: we don't use `create_tsvector` for the identity as
+                    // that sometimes parses it as two words, see #1658.
                     .expr(Expr::cust_with_exprs(
                         "  create_tsvector('simple', COALESCE($1, ''), 'A')
-                        || create_tsvector('simple', $2, 'A')
+                        || setweight(array_to_tsvector(ARRAY[$2]), 'A')
                         || create_tsvector('simple', COALESCE($3, ''), 'B')",
                         [
                             Expr::from(update.alias.clone()),

@@ -61,9 +61,9 @@ describe('LOCAL: provider unfurl smoke', {
   for (const c of PROVIDERS) {
     test(`LOCAL: unfurls ${c.name}`, async () => {
       const meta = await scrape(c.url, fetchHtml);
-      assert.ok(meta.title, `${c.name}: expected a title (${c.url})`);
+      assert.ok(meta!.title, `${c.name}: expected a title (${c.url})`);
       if (c.image) {
-        assert.ok(meta.image, `${c.name}: expected an image (${c.url})`);
+        assert.ok(meta!.image, `${c.name}: expected an image (${c.url})`);
       }
     });
   }
