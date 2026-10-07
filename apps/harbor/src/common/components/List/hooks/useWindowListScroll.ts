@@ -195,12 +195,13 @@ function useAnchoredRow({
   });
 
   if (anchorIndex === undefined || isEmpty) return 0;
-  // Room for the anchored row to reach the top. Reserve a viewport until
-  // the row is measured, or the scroll above clamps to a short page.
+  // Room for the anchored row to reach the top, or the scroll above clamps
+  // to a short page. `getTotalSize` also refreshes `measurementsCache`.
+  const totalSize = virtualizer.getTotalSize();
   const anchorStart = virtualizer.measurementsCache[anchorIndex]?.start;
   const room = window.innerHeight - headerHeight;
   if (anchorStart === undefined) return room;
-  const below = scrollMargin + virtualizer.getTotalSize() - anchorStart;
+  const below = scrollMargin + totalSize - anchorStart;
   return Math.max(0, room - below);
 }
 
