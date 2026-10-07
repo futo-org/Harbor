@@ -183,10 +183,6 @@ jobs:
       - name: Start Postgres
         run: docker compose up -d --build --wait postgres
       - name: Install pg_dump
-        # I have no idea what distribution we're running.
-        # The docker image is based on Alpine, `uname` reports Ubuntu and
-        # `/etc/os-release` has Debian 12 Bookworm info. ¯\_(ツ)_/¯
-        # Looking at the logs we're getting packages from Debian 12 Bookworm.
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
