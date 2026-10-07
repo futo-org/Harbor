@@ -4,7 +4,7 @@ use crate::db::client::build_db_clients;
 use crate::service::content::content_filestore::{
     ContentFilestore, ContentFilestoreConfig,
 };
-use crate::service::identity::repository::{Erased, Query};
+use crate::service::identity::repository::Query;
 use crate::service::identity::service as identity_service;
 use sea_orm::DatabaseConnection;
 
@@ -25,24 +25,25 @@ pub async fn delete_events(args: Vec<String>) {
         }
     }
     let db = connect().await;
-    let identities = match (identity, public_key) {
-        (Some(identity), None) => vec![identity],
+    let (identities, count, public_key) = match (identity, public_key) {
+        (Some(identity), None) => {
+            let count = Query::count_events(&db, &identity)
+                .await
+                .expect("failed to count events");
+            (vec![identity], count, None)
+        }
         (None, Some(key)) => {
             let key = hex::decode(key)
                 .unwrap_or_else(|_| usage_error("--public-key must be hex"));
-            Query::identities_signed_by(&db, &key)
+            let counts = Query::identities_signed_by(&db, &key)
                 .await
-                .expect("failed to find identities")
+                .expect("failed to find identities");
+            let count = counts.iter().map(|(_, n)| *n as u64).sum();
+            let identities = counts.into_iter().map(|(i, _)| i).collect();
+            (identities, count, Some(key))
         }
         _ => usage_error("pass exactly one of --identity or --public-key"),
     };
-
-    let mut count = 0;
-    for identity in &identities {
-        count += Query::count_events(&db, identity)
-            .await
-            .expect("failed to count events");
-    }
     if !yes {
         println!(
             "{count} events across {} identities would be deleted; add --yes to delete them",
@@ -52,20 +53,24 @@ pub async fn delete_events(args: Vec<String>) {
     }
 
     let filestore = filestore().await;
-    let mut total = Erased::default();
-    for identity in &identities {
-        let erased = identity_service::erase_identity(
+    let total = match public_key {
+        Some(key) => identity_service::erase_signed_by(
+            &db,
+            filestore.as_ref(),
+            &key,
+            &identities,
+        )
+        .await
+        .expect("failed to delete events"),
+        None => identity_service::erase_identity(
             &db,
             filestore.as_ref(),
             None,
-            identity,
+            &identities[0],
         )
         .await
-        .expect("failed to delete events");
-        total.events += erased.events;
-        total.content += erased.content;
-        total.blobs += erased.blobs;
-    }
+        .expect("failed to delete events"),
+    };
     println!(
         "deleted {} events, {} orphaned content rows and {} blobs across {} identities",
         total.events,
@@ -103,8 +108,9 @@ pub async fn prune_content(args: Vec<String>) {
     );
 }
 
+/// No statement timeout: finding a key's identities scans every event.
 async fn connect() -> DatabaseConnection {
-    build_db_clients(true)
+    build_db_clients(true, None)
         .await
         .expect("failed to connect to database")
         .0

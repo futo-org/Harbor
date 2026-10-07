@@ -8,18 +8,26 @@ use crate::config;
 ///
 /// With `durable_commits` off connections run `synchronous_commit=off`;
 /// only for the workers, whose writes are caches rebuilt by Kafka replay.
+/// `statement_timeout` is unset for the operator commands.
 pub async fn build_db_clients(
     durable_commits: bool,
+    statement_timeout: Option<Duration>,
 ) -> Result<(DatabaseConnection, DatabaseConnection), sea_orm::DbErr> {
     let config = config::get();
     let max = config.database_max_connections;
 
-    let db =
-        create_pool("server-rw", &config.database_url, max, durable_commits)
-            .await?;
+    let db = create_pool(
+        "server-rw",
+        &config.database_url,
+        max,
+        durable_commits,
+        statement_timeout,
+    )
+    .await?;
 
     let ro_db = if let Some(url) = config.ro_database_url.as_deref() {
-        create_pool("server-ro", url, max, durable_commits).await?
+        create_pool("server-ro", url, max, durable_commits, statement_timeout)
+            .await?
     } else {
         // If no read-only instance is available reuse the read-write pool.
         db.clone()
@@ -33,6 +41,7 @@ async fn create_pool(
     url: &str,
     max: u32,
     durable_commits: bool,
+    statement_timeout: Option<Duration>,
 ) -> Result<DatabaseConnection, sea_orm::DbErr> {
     let mut opt =
         ConnectOptions::new(with_connection_options(url, durable_commits));
@@ -42,7 +51,6 @@ async fn create_pool(
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))
         .acquire_timeout(Duration::from_secs(8))
-        .statement_timeout(Duration::from_secs(5))
         .idle_timeout(Duration::from_secs(600))
         .max_lifetime(Duration::from_secs(1800))
         .record_stmt_in_spans(false)
@@ -58,6 +66,9 @@ async fn create_pool(
                 .acquire_slow_level(log::LevelFilter::Warn)
                 .acquire_slow_threshold(Duration::from_secs(1))
         });
+    if let Some(timeout) = statement_timeout {
+        opt.statement_timeout(timeout);
+    }
 
     let db = Database::connect(opt).await?;
 

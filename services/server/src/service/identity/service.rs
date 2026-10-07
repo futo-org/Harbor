@@ -78,7 +78,7 @@ pub async fn erase_identity(
     }
     retry_deadlocks(|| async {
         let txn = db.begin().await?;
-        IdentityMutation::erase_derived(&txn, identity).await?;
+        IdentityMutation::erase_derived(&txn, &[identity.to_string()]).await?;
         txn.commit().await
     })
     .await?;
@@ -90,6 +90,28 @@ pub async fn erase_identity(
         }
     }
     Ok(total)
+}
+
+/// Erases every event `public_key` signed and the rows derived from
+/// `identities` (the ones it signed for), in one transaction. For the
+/// operator command; a running server's caches are not invalidated.
+pub async fn erase_signed_by(
+    db: &DatabaseConnection,
+    filestore: Option<&ContentFilestore>,
+    public_key: &[u8],
+    identities: &[String],
+) -> Result<Erased, DbErr> {
+    let batch = retry_deadlocks(|| async {
+        let txn = db.begin().await?;
+        let batch =
+            IdentityMutation::erase_events_signed_by(&txn, public_key).await?;
+        IdentityMutation::erase_derived(&txn, identities).await?;
+        txn.commit().await?;
+        Ok(batch)
+    })
+    .await?;
+    delete_blobs(filestore, &batch.blobs).await;
+    Ok(batch.erased)
 }
 
 /// Deletes content rows no event references, and their blob bodies.
