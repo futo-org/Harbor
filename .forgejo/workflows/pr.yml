@@ -193,9 +193,13 @@ jobs:
         # The docker image is based on Alpine, `uname` reports Ubuntu and
         # `/etc/os-release` has Debian 12 Bookworm info. ¯\_(ツ)_/¯
         # Looking at the logs we're getting packages from Debian 12 Bookworm.
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install postgresql-client --yes
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+          sudo apt-get install --yes postgresql-client-18
       - name: Connect Docker network
         run: |
           self_container() {
