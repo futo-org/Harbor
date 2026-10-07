@@ -183,7 +183,7 @@ jobs:
       - name: Start Postgres
         run: docker compose up -d --build --wait postgres
       - name: Install pg_dump
-        run: apt-get install postgresql-client
+        run: apk add --no-cache postgresql18-client
       - name: Connect Docker network
         run: |
           self_container() {
