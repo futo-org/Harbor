@@ -160,6 +160,82 @@ jobs:
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
 
+  services-db-schema:
+    name: DB Schema Check
+    needs: [changes, setup-images]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.services_db_schema && needs.setup-images.result != 'failure' }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust-dind:${{ needs.changes.outputs.images_tag }}
+    continue-on-error: true
+    env:
+      # NOTE: HARBOR_DATABASE_URL and DB_HOST are set once we have an IP address
+      # for the Postgres container.
+      DB_USER: postgres
+      DB_PASSWORD: testing
+      DB_NAME: postgres
+      DB_PORT: 5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.forgejo/actions/rust-env
+        with:
+          cache: services-db-schema
+      - name: Start Postgres
+        run: docker compose up -d --build --wait postgres
+      - name: Install pg_dump
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install --yes postgresql-common
+          YES=yes /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+          apt-get install --yes postgresql-client-18
+          pg_dump --version
+      - name: Connect Docker network
+        run: |
+          self_container() {
+            local id
+            id=$(grep -oE 'containers/[0-9a-f]{64}' /proc/self/mountinfo | head -1 | cut -d/ -f2)
+            echo "${id:-$(cat /etc/hostname)}"
+          }
+          docker network connect harbor_default "$(self_container)"
+      - name: Set Postgres IP in env vars
+        run: |
+          PG_IP="$(docker inspect -f '{{(index .NetworkSettings.Networks "'harbor_default'").IPAddress}}' harbor-postgres-1 2>/dev/null)"
+          echo "DB_HOST=${PG_IP}" >> "${FORGEJO_ENV}"
+          echo "HARBOR_DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${PG_IP}:${DB_PORT}" >> "${FORGEJO_ENV}"
+      - name: Check server's DB schema up-to-date
+        run: |
+          cd services/server/migration
+          cargo run
+          cd ../
+          touch .env
+          make db_schema
+          git diff --exit-code
+      # TODO: enable once the schema & Makefile (or similar) are setup.
+      #- name: Check moderation's DB schema up-to-date
+      #  run: |
+      #    cd services/moderation/migration
+      #    cargo run
+      #    cd ../
+      #    touch .env
+      #    make db_schema
+      #    git diff --exit-code
+      #- name: Check notification's DB schema up-to-date
+      #  run: |
+      #    cd services/push-notifications/migration
+      #    cargo run
+      #    cd ../
+      #    touch .env
+      #    make db_schema
+      #    git diff --exit-code
+      - uses: ./.forgejo/actions/r2-cache
+        continue-on-error: true
+        with:
+          mode: save
+          key: ${{ env.RUST_CACHE_KEY }}
+          path: ${{ env.RUST_CACHE_PATHS }}
+
   js-packages-lint:
     name: Lint JS packages
     needs: changes
@@ -796,6 +872,7 @@ jobs:
       - scan
       - rust-packages-lint
       - rust-services-lint
+      - services-db-schema
       - js-packages-lint
       - js-services-lint
       - charts-lint

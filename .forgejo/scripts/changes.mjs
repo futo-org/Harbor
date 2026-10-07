@@ -167,6 +167,7 @@ const flags = {
     rs_core_lint: rsCore,
     rust_services_lint:
       server || moderation || pushNotifications || grayjayMigrator,
+    services_db_schema: server || moderation || pushNotifications,
     js_sdk_lint: jsSdk,
     js_services_lint: scraper || verifierBot,
     charts_lint: charts,
