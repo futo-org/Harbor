@@ -16,6 +16,7 @@ use polycentric_common::models::protos_v2::{
     KeyType, PublicKey, SerializedContent, ServerList, SignedEvent, VectorClock,
     content::ContentBody,
 };
+use polycentric_common::models::validate::Validate;
 use polycentric_core::sync as core_sync;
 use prost::Message;
 use sha2::{Digest, Sha256};
@@ -26,11 +27,13 @@ use std::time::Duration;
 const PUSH_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Stamped on every migrated event's `Event.application`, marking its origin.
+/// Legacy events carry no app version; "v1" names the Polycentric version
+/// they were authored under. Changing it changes every event's bytes.
 fn grayjay_application() -> Application {
     Application {
         name: "Grayjay".to_string(),
         id: "com.futo.platformplayer".to_string(),
-        version: String::new(),
+        version: "v1".to_string(),
         url: "https://grayjay.app".to_string(),
     }
 }
@@ -298,7 +301,7 @@ impl Authoring {
                 &[],
                 &[],
                 genesis_created_at,
-            );
+            )?;
             // Record IDENTITY chain state so resume detects genesis is done.
             let mut identity_merkle = IncrementalMerkle::default();
             identity_merkle.append(&genesis.signature);
@@ -333,7 +336,7 @@ impl Authoring {
                 &previous_signature,
                 &previous_root,
                 item.created_at,
-            );
+            )?;
             authored.push(AuthoredEvent {
                 source: item.source.clone(),
                 content_type: item.content_type,
@@ -364,7 +367,7 @@ impl Authoring {
         previous_signature: &[u8],
         previous_root: &[u8],
         created_at: u64,
-    ) -> SignedEvent {
+    ) -> Result<SignedEvent, String> {
         let event = Event {
             key: Some(EventKey {
                 collection,
@@ -382,12 +385,16 @@ impl Authoring {
             created_at,
             application: Some(grayjay_application()),
         };
+        // The same checks the server runs in put_events.
+        event
+            .validate_first()
+            .map_err(|e| format!("event {collection}/{sequence} invalid: {e}"))?;
         let event_bytes = event.encode_to_vec();
         let signature = self.signing_key.sign(&event_bytes).to_bytes().to_vec();
-        SignedEvent {
+        Ok(SignedEvent {
             signature,
             event_bytes,
-        }
+        })
     }
 }
 

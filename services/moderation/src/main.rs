@@ -477,13 +477,10 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
     }
 
     // Obtain the Azure result: reuse a prior one if this content was already
-    // processed, otherwise run Azure now and persist the outcome.
-    let azure_response = match repository::get_content(
-        &ctx.ro_db,
-        digest_type,
-        digest_bytes.clone(),
-    )
-    .await
+    // processed, otherwise run Azure now and persist the outcome. Read the
+    // primary: the row may have been written moments ago for the same digest.
+    let azure_response = match repository::get_content(&ctx.db, digest_type, digest_bytes.clone())
+        .await
     {
         // Already processed by Azure — skip the Azure step and reuse the
         // stored result (we still confirm the labels event below).

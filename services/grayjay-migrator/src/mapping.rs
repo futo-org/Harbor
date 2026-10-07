@@ -450,17 +450,23 @@ pub async fn upsert_chains(
     Ok(())
 }
 
-/// Every legacy pointer already migrated, so `re-sign` authors only new events.
-pub async fn all_migrated_pointers(db: &DatabaseConnection) -> Result<HashSet<String>, DbErr> {
+/// Every legacy pointer already migrated, grouped by system, so `re-sign`
+/// authors only new events. Pointers repeat across systems (`profile`, `op:…`),
+/// so the system is part of the key.
+pub async fn migrated_pointers_by_system(
+    db: &DatabaseConnection,
+) -> Result<HashMap<String, HashSet<String>>, DbErr> {
     let rows = db
         .query_all_raw(Statement::from_string(
             DatabaseBackend::Postgres,
-            "SELECT legacy_pointer FROM migrated_event".to_string(),
+            "SELECT legacy_system_key, legacy_pointer FROM migrated_event".to_string(),
         ))
         .await?;
-    let mut out = HashSet::with_capacity(rows.len());
+    let mut out: HashMap<String, HashSet<String>> = HashMap::new();
     for row in rows {
-        out.insert(row.try_get::<String>("", "legacy_pointer")?);
+        out.entry(row.try_get("", "legacy_system_key")?)
+            .or_default()
+            .insert(row.try_get("", "legacy_pointer")?);
     }
     Ok(out)
 }

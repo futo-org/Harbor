@@ -184,6 +184,16 @@ fetches from the migration host directly, and authoring reads whatever
 `scrape-links`/`enrich-youtube` already cached, with links that have no cached
 preview falling back to just the URL.
 
+Every event is stamped `application = Grayjay / com.futo.platformplayer / v1`
+and checked with the same `rs-common` validators the server runs in
+`put_events` before it is persisted, so a rule the server would reject fails
+`re-sign` rather than `push`. To fit those rules (limits are in bytes): posts
+with empty text are skipped, text is cut at 2000, topics with a URL over 200
+are dropped and at most 10 are kept; a cached preview becomes a card only if
+it has a title (cut at 100), its description is cut at 200 and an image URL
+over 200 is dropped; every `attributed_to` link is titled by its preview or,
+failing that, its host.
+
 Deferred, with documented extension points in `src/convert.rs`:
 - images/avatars (need the v2 blob-upload flow),
 - claims (map v1 `Claim` -> v2 `VerificationClaim`).

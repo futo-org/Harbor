@@ -12,11 +12,13 @@
 //! `enrich-youtube`) into `url_info_cache`; authoring only reads that cache.
 
 use futures::stream::{self, StreamExt};
+use grayjay_migrator::convert::host_of;
 use grayjay_migrator::polycentric::MigratedContent;
 use grayjay_migrator::{config, convert, db, legacy, mapping, og, polycentric, rumble, youtube};
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use polycentric_common::models::collections;
-use polycentric_common::models::protos_v2::{EventBundle, EventKey, Link, PublicKey};
+use polycentric_common::models::protos_v2::{Content, EventBundle, EventKey, Link, PublicKey};
+use polycentric_common::models::validate::Validate;
 use prost::Message;
 use std::collections::{HashMap, HashSet};
 use std::io::IsTerminal;
@@ -114,17 +116,6 @@ async fn resolve_og(http: &reqwest::Client, url: &str) -> Option<(String, String
         }
     }
     None
-}
-
-/// Host portion of a URL (no scheme, path, or query), for grouping/pacing.
-fn host_of(url: &str) -> String {
-    url.split_once("://")
-        .map(|(_, r)| r)
-        .unwrap_or(url)
-        .split(['/', '?', '#'])
-        .next()
-        .unwrap_or("")
-        .to_string()
 }
 
 /// Exponential 429 backoff for Rumble: 2, 4, 8, 16, 32, capped at 60s.
@@ -362,11 +353,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Migrated pointers filter out already-authored events; chain state resumes signing.
     info!("loading already-migrated state");
-    let migrated_pointers = mapping::all_migrated_pointers(&db).await?;
+    let migrated_pointers = mapping::migrated_pointers_by_system(&db).await?;
     let mut chains_by_system = mapping::all_chains(&db).await?;
     info!(
         "{} events already migrated across {} systems with chain state",
-        fmt_count(migrated_pointers.len() as u64),
+        fmt_count(migrated_pointers.values().map(|s| s.len() as u64).sum()),
         fmt_count(chains_by_system.len() as u64),
     );
 
@@ -464,13 +455,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // The IDENTITY row is written when genesis is authored, so its presence
         // means this system already exists on the network.
         let genesis_done = chains.last_sequence(collections::IDENTITY) > 0;
+        let done = migrated_pointers.get(&key_hex);
         let items: Vec<convert::PlanItem> = plan
             .items
             .into_iter()
             .filter(|it| {
                 it.source
                     .as_deref()
-                    .is_none_or(|p| !migrated_pointers.contains(p))
+                    .is_none_or(|p| !done.is_some_and(|d| d.contains(p)))
             })
             .collect();
 
@@ -561,15 +553,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let cached = mapping::load_url_cache(&db).await?;
         let mut lc = link_cache.lock().unwrap();
         for (url, title, description, image) in cached {
-            lc.insert(
-                url.clone(),
-                Link {
-                    title,
-                    description,
-                    image,
-                    url,
-                },
-            );
+            let link = Link {
+                title,
+                description: Some(description),
+                image: Some(image),
+                url: url.clone(),
+            };
+            if let Some(link) = convert::sanitize_link(link) {
+                lc.insert(url, link);
+            }
         }
         if !lc.is_empty() {
             info!("preloaded {} cached link previews", lc.len());
@@ -718,6 +710,8 @@ async fn report_stats(
 
     let systems = legacy::cached_list_systems(db).await?;
     let (mut posts, mut posts_with_link, mut posts_with_yt) = (0u64, 0u64, 0u64);
+    let (mut text_empty, mut text_long, mut topics_many, mut topic_url_long) =
+        (0u64, 0u64, 0u64, 0u64);
     let (mut react_url, mut react_yt, mut react_other_http, mut react_nonurl, mut react_in_net) =
         (0u64, 0u64, 0u64, 0u64, 0u64);
     let mut follows = 0u64;
@@ -734,9 +728,13 @@ async fn report_stats(
             match &item.body {
                 convert::PlanBody::Post(post) => {
                     posts += 1;
+                    text_empty += post.text.is_empty() as u64;
+                    text_long += (post.text.len() > 2000) as u64;
+                    topics_many += (post.topics.len() > 10) as u64;
                     let mut has_link = false;
                     let mut has_yt = false;
                     for t in &post.topics {
+                        topic_url_long += (t.url.len() > 200) as u64;
                         if t.previewable {
                             has_link = true;
                             post_link_urls.insert(t.url.clone());
@@ -783,6 +781,21 @@ async fn report_stats(
     );
     println!("  distinct post link URLs  {}", post_link_urls.len());
     println!("  distinct post YouTube ids {}", post_yt_ids.len());
+    println!("  empty text               {text_empty}");
+    println!("  text over 2000 bytes     {text_long}");
+    println!("  over 10 topics           {topics_many}");
+    println!("  topic URL over 200 bytes {topic_url_long}");
+    let (mut title_long, mut description_long, mut image_long) = (0u64, 0u64, 0u64);
+    let cached = mapping::load_url_cache(db).await?;
+    for (_, title, description, image) in &cached {
+        title_long += (title.len() > 100) as u64;
+        description_long += (description.len() > 200) as u64;
+        image_long += (image.len() > 200) as u64;
+    }
+    println!("LINK CACHE  {} rows", cached.len());
+    println!("  title over 100 bytes       {title_long}");
+    println!("  description over 200 bytes {description_long}");
+    println!("  image URL over 200 bytes   {image_long}");
     println!("REACTIONS");
     println!("  external-URL votes       {react_url}");
     println!("    YouTube                {react_yt}");
@@ -1189,15 +1202,18 @@ async fn author_system(
         let content_bytes = match &item.body {
             convert::PlanBody::Ready(bytes) => bytes.clone(),
             convert::PlanBody::Post(post) => {
-                // Only http(s) topics unfurl into a rich link preview; other
-                // schemes and legacy-id refs are attribution-only.
-                let mut links = Vec::new();
-                for topic in &post.topics {
-                    if topic.previewable {
-                        links.push(resolve_link(&topic.url, link_cache));
-                    }
-                }
-                convert::finalize_post(post, reply_map, &links)
+                // Only http(s) topics carry a preview card; other schemes and
+                // legacy-id refs are attribution-only.
+                let previews: Vec<Option<Link>> = post
+                    .topics
+                    .iter()
+                    .map(|t| {
+                        t.previewable
+                            .then(|| resolve_link(&t.url, link_cache))
+                            .flatten()
+                    })
+                    .collect();
+                convert::finalize_post(post, reply_map, &previews)
             }
             convert::PlanBody::Reaction(reaction) => {
                 match convert::finalize_reaction(reaction, reply_map) {
@@ -1223,6 +1239,11 @@ async fn author_system(
                 convert::finalize_follow(&authoring.identity_string_for_key(followed_key))
             }
         };
+        // The same content checks the server runs in put_events.
+        Content::decode(content_bytes.as_slice())
+            .map_err(|e| format!("decode content {:?}: {e}", item.source))?
+            .validate_first()
+            .map_err(|e| format!("content {:?} invalid: {e}", item.source))?;
         contents.push(MigratedContent {
             collection: item.collection,
             content_bytes,
@@ -1319,17 +1340,9 @@ async fn author_system(
     Ok(())
 }
 
-/// Look up a preview from the preloaded cache; a miss yields a bare `Link { url }`.
-fn resolve_link(url: &str, cache: &LinkCache) -> Link {
-    cache
-        .lock()
-        .unwrap()
-        .get(url)
-        .cloned()
-        .unwrap_or_else(|| Link {
-            url: url.to_string(),
-            ..Default::default()
-        })
+/// Look up a preview from the preloaded cache; a miss means no card.
+fn resolve_link(url: &str, cache: &LinkCache) -> Option<Link> {
+    cache.lock().unwrap().get(url).cloned()
 }
 
 /// Push each `signed` system's unpushed bundles concurrently, then mark complete.

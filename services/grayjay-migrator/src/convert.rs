@@ -51,6 +51,15 @@ const OPINION_LIKE: &[u8] = &[1];
 const OPINION_DISLIKE: &[u8] = &[2];
 const OPINION_NEUTRAL: &[u8] = &[3];
 
+// Limits (bytes) from rs-common's Post and Link validators, which the server
+// enforces in put_events.
+const POST_TEXT_MAX: usize = 2000;
+const POST_TOPICS_MAX: usize = 10;
+const LINK_TITLE_MAX: usize = 100;
+const LINK_DESCRIPTION_MAX: usize = 200;
+const LINK_IMAGE_MAX: usize = 200;
+const LINK_URL_MAX: usize = 200;
+
 /// A planned v2 content event, before final serialization.
 pub struct PlanItem {
     pub collection: i32,
@@ -153,21 +162,29 @@ pub fn plan(events: &[LegacyEvent], opinions: &[LegacyOpinion]) -> SystemPlan {
     for event in events {
         match event.content_type {
             CT_POST => {
-                if let Ok(legacy) = LegacyPost::decode(event.content.as_slice()) {
-                    items.push(PlanItem {
-                        collection: collections::FEED,
-                        created_at: event.unix_milliseconds,
-                        source: Some(event.pointer()),
-                        content_type: CT_POST,
-                        moderation_status: event.moderation_status.clone(),
-                        moderation_tags: event.moderation_tags.clone(),
-                        body: PlanBody::Post(PostPlan {
-                            text: legacy.content,
-                            topics: topics(&event.references),
-                            reply_target: event.pointer_target(),
-                        }),
-                    });
+                let Ok(legacy) = LegacyPost::decode(event.content.as_slice()) else {
+                    continue;
+                };
+                // An empty post can't be stored; images aren't migrated yet.
+                if legacy.content.is_empty() {
+                    continue;
                 }
+                let mut topics = topics(&event.references);
+                topics.retain(|t| t.url.len() <= LINK_URL_MAX);
+                topics.truncate(POST_TOPICS_MAX);
+                items.push(PlanItem {
+                    collection: collections::FEED,
+                    created_at: event.unix_milliseconds,
+                    source: Some(event.pointer()),
+                    content_type: CT_POST,
+                    moderation_status: event.moderation_status.clone(),
+                    moderation_tags: event.moderation_tags.clone(),
+                    body: PlanBody::Post(PostPlan {
+                        text: truncate_bytes(&legacy.content, POST_TEXT_MAX).to_string(),
+                        topics,
+                        reply_target: event.pointer_target(),
+                    }),
+                });
             }
             CT_FOLLOW => {
                 if let Some(f) = &event.follow {
@@ -295,12 +312,13 @@ pub fn plan(events: &[LegacyEvent], opinions: &[LegacyOpinion]) -> SystemPlan {
 }
 
 /// Phase 2: serialize a deferred post, resolving its reply target against the
-/// global legacy->v2 map and attaching a resolved rich link (`links`) plus the
-/// topic attribution (`attributed_to`).
+/// global legacy->v2 map. `previews` holds the cached (sanitized) preview per
+/// topic: each becomes a `links` card, and every topic is attributed, titled
+/// by its preview or its host.
 pub fn finalize_post(
     plan: &PostPlan,
     reply_map: &HashMap<(String, String), EventKey>,
-    resolved_links: &[Link],
+    previews: &[Option<Link>],
 ) -> Vec<u8> {
     let reply = plan.reply_target.as_ref().and_then(|t| {
         reply_map
@@ -319,12 +337,64 @@ pub fn finalize_post(
             reply,
             images: vec![],
             quote: None,
-            links: resolved_links.to_vec(),
+            links: previews.iter().flatten().cloned().collect(),
             labels: vec![],
-            attributed_to: plan.topics.iter().map(|t| url_link(&t.url)).collect(),
+            attributed_to: plan
+                .topics
+                .iter()
+                .zip(previews)
+                .map(|(t, p)| attribution(&t.url, p.as_ref()))
+                .collect(),
         })),
     }
     .encode_to_vec()
+}
+
+/// Fit a cached preview to the server's limits. `None` when it can't carry a
+/// card (no title, or a URL too long to store).
+pub fn sanitize_link(link: Link) -> Option<Link> {
+    if link.url.len() > LINK_URL_MAX {
+        return None;
+    }
+    let title = truncate_bytes(link.title.trim(), LINK_TITLE_MAX).to_string();
+    if title.is_empty() {
+        return None;
+    }
+    Some(Link {
+        title,
+        description: link
+            .description
+            .as_deref()
+            .map(|d| truncate_bytes(d, LINK_DESCRIPTION_MAX).to_string())
+            .filter(|d| !d.is_empty()),
+        image: link
+            .image
+            .filter(|i| !i.is_empty() && i.len() <= LINK_IMAGE_MAX),
+        url: link.url,
+    })
+}
+
+/// Longest prefix of `s` within `max` bytes, on a char boundary.
+fn truncate_bytes(s: &str, max: usize) -> &str {
+    if s.len() <= max {
+        return s;
+    }
+    let mut end = max;
+    while !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
+
+/// Host portion of a URL (no scheme, path, or query).
+pub fn host_of(url: &str) -> String {
+    url.split_once("://")
+        .map(|(_, r)| r)
+        .unwrap_or(url)
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or("")
+        .to_string()
 }
 
 /// Fold one deduplicated v1 opinion into the latest-state map for its target.
@@ -491,13 +561,24 @@ fn classify_topic(raw: &str) -> Topic {
     }
 }
 
-fn url_link(url: &str) -> AttributedTo {
+/// The topic attribution: titled by its preview when there is one, else its host.
+fn attribution(url: &str, preview: Option<&Link>) -> AttributedTo {
+    let title = match preview {
+        Some(link) => link.title.clone(),
+        None => {
+            let host = host_of(url);
+            if host.is_empty() {
+                "Grayjay".to_string()
+            } else {
+                truncate_bytes(&host, LINK_TITLE_MAX).to_string()
+            }
+        }
+    };
     AttributedTo {
         to: Some(attributed_to::To::Link(Link {
-            title: String::new(),
-            description: String::new(),
-            image: String::new(),
+            title,
             url: url.to_string(),
+            ..Default::default()
         })),
     }
 }
@@ -548,6 +629,70 @@ mod tests {
             assert_eq!(t.url, format!("grayjay://polycentric-legacy-ref/{raw}"));
             assert!(!t.previewable);
         }
+    }
+
+    #[test]
+    fn finalized_post_passes_server_validation() {
+        use polycentric_common::models::validate::Validate;
+        let plan = PostPlan {
+            text: "a".repeat(3000),
+            topics: vec![
+                Topic {
+                    url: "https://www.youtube.com/watch?v=papQ8xQxizA".to_string(),
+                    previewable: true,
+                },
+                Topic {
+                    url: "grayjay://polycentric-legacy-ref/v3pvi2v".to_string(),
+                    previewable: false,
+                },
+            ],
+            reply_target: None,
+        };
+        let preview = sanitize_link(Link {
+            title: format!(" {} ", "t".repeat(150)),
+            description: Some("d".repeat(300)),
+            image: Some("https://i/".to_string() + &"x".repeat(300)),
+            url: plan.topics[0].url.clone(),
+        })
+        .expect("a titled preview survives");
+        assert_eq!(preview.title.len(), 100);
+        assert_eq!(preview.description.as_ref().unwrap().len(), 200);
+        assert!(preview.image.is_none(), "oversize image URL is dropped");
+        assert!(
+            sanitize_link(Link::default()).is_none(),
+            "no title, no card"
+        );
+
+        // Text is capped in plan(); mirror that here.
+        let plan = PostPlan {
+            text: truncate_bytes(&plan.text, POST_TEXT_MAX).to_string(),
+            ..plan
+        };
+        let bytes = finalize_post(&plan, &HashMap::new(), &[Some(preview), None]);
+        let content = Content::decode(bytes.as_slice()).unwrap();
+        content.validate_first().expect("valid post");
+        let Some(ContentBody::Post(post)) = content.content_body else {
+            panic!("expected a post");
+        };
+        assert_eq!(post.links.len(), 1);
+        assert_eq!(post.attributed_to.len(), 2);
+        let titles: Vec<_> = post
+            .attributed_to
+            .iter()
+            .map(|a| match &a.to {
+                Some(attributed_to::To::Link(l)) => l.title.clone(),
+                None => String::new(),
+            })
+            .collect();
+        assert_eq!(titles[0], "t".repeat(100));
+        assert_eq!(titles[1], "polycentric-legacy-ref");
+    }
+
+    #[test]
+    fn truncates_on_char_boundaries() {
+        assert_eq!(truncate_bytes("héllo", 2), "h");
+        assert_eq!(truncate_bytes("héllo", 3), "hé");
+        assert_eq!(truncate_bytes("héllo", 99), "héllo");
     }
 
     fn opinion(value: &[u8], target: OpinionTarget) -> LegacyOpinion {
