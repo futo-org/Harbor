@@ -200,6 +200,8 @@ function useAnchoredRow({
   const totalSize = virtualizer.getTotalSize();
   const anchorStart = virtualizer.measurementsCache[anchorIndex]?.start;
   const room = window.innerHeight - headerHeight;
+  // Purely defensive: the cache covers every row, so this only catches an
+  // out-of-range index, which isn't expected to happen.
   if (anchorStart === undefined) return room;
   const below = scrollMargin + totalSize - anchorStart;
   return Math.max(0, room - below);
