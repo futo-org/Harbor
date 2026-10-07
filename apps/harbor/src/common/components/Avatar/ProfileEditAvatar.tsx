@@ -25,7 +25,7 @@ export function ProfileEditAvatar({
 }: ProfileEditAvatarProps) {
   const profile = useProfile(identityKey);
   const client = usePolycentric();
-  const { displayPixels, minPixels } = useAvatarSizeRequest(size);
+  const { minPixels } = useAvatarSizeRequest(size);
 
   const uri = useMemo(() => {
     const variant = pickImageVariant(profile.avatar, minPixels);
@@ -33,8 +33,11 @@ export function ProfileEditAvatar({
       const url = client.blobUrl(variant.blob.digest);
       if (url) return url;
     }
-    return identiconUrl(identityKey, displayPixels);
-  }, [profile.avatar, client, identityKey, displayPixels, minPixels]);
+
+    // Leave size as default for identicons, so that we don't
+    // spam requests as the user zooms in/out.
+    return identiconUrl(identityKey);
+  }, [profile.avatar, client, identityKey, minPixels]);
 
   return <AvatarEdit {...rest} size={size} defaultUri={uri} />;
 }

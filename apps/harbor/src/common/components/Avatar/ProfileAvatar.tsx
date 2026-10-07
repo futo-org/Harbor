@@ -24,7 +24,7 @@ export function ProfileAvatar({
 }: ProfileAvatarProps) {
   const profile = useProfile(identityKey);
   const client = usePolycentric();
-  const { displayPixels, minPixels } = useAvatarSizeRequest(size, 0.1);
+  const { minPixels } = useAvatarSizeRequest(size, 0.1);
 
   const candidates = useMemo(() => {
     const variant = pickImageVariant(profile.avatar, minPixels);
@@ -34,15 +34,11 @@ export function ProfileAvatar({
     // Until the profile has resolved we don't know whether an avatar
     // exists, so render the empty circle
     if (blobUris.length === 0 && profile.isLoading) return [];
-    return [...blobUris, identiconUrl(identityKey, displayPixels)];
-  }, [
-    profile.avatar,
-    profile.isLoading,
-    client,
-    identityKey,
-    displayPixels,
-    minPixels,
-  ]);
+
+    // Leave size as default for identicons, so that we don't
+    // spam requests as the user zooms in/out.
+    return [...blobUris, identiconUrl(identityKey)];
+  }, [profile.avatar, profile.isLoading, client, identityKey, minPixels]);
 
   const { uri, onError } = useFallbackUri(candidates);
 
