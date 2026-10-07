@@ -52,6 +52,9 @@ jest.mock('@/src/common/components/Icon', () => ({
   default: () => null,
 }));
 jest.mock('expo-router', () => ({ router: { navigate: jest.fn() } }));
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 jest.mock('../follow/FollowButton', () => ({
   __esModule: true,
   default: () => null,
@@ -106,7 +109,10 @@ jest.mock('@/src/common/theme', () => ({
 }));
 
 import { router } from 'expo-router';
+import type { SharedValue } from 'react-native-reanimated';
 import { ProfileHeader } from './ProfileHeader';
+
+const scrollY = { value: 0 } as SharedValue<number>;
 
 const baseContext = {
   identityKey: IDENTITY,
@@ -120,7 +126,11 @@ describe('ProfileHeader alias', () => {
   it('shows the alias under the id when present in context', async () => {
     mockContext = { ...baseContext, alias: 'test@domain.com' };
     const { queryByText } = await render(
-      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+      <ProfileHeader
+        bannerColors={['#a', '#b']}
+        onBack={() => undefined}
+        scrollY={scrollY}
+      />,
     );
     expect(queryByText('test@domain.com')).not.toBeNull();
     expect(queryByText(IDENTITY)).not.toBeNull();
@@ -129,7 +139,11 @@ describe('ProfileHeader alias', () => {
   it('shows only the id when there is no alias', async () => {
     mockContext = { ...baseContext, alias: null };
     const { queryByText } = await render(
-      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+      <ProfileHeader
+        bannerColors={['#a', '#b']}
+        onBack={() => undefined}
+        scrollY={scrollY}
+      />,
     );
     expect(queryByText(IDENTITY)).not.toBeNull();
     // No alias-style text rendered.
@@ -145,7 +159,11 @@ describe('ProfileHeader identity key', () => {
 
   it('opens the identity sheet when the key is pressed', async () => {
     const { getByText } = await render(
-      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+      <ProfileHeader
+        bannerColors={['#a', '#b']}
+        onBack={() => undefined}
+        scrollY={scrollY}
+      />,
     );
 
     await fireEvent.press(getByText(IDENTITY));
@@ -163,7 +181,11 @@ describe('ProfileHeader follow counters', () => {
   it('renders the counts from the profile', async () => {
     mockCounts = { followingCount: 3, followersCount: 7 };
     const { getByText } = await render(
-      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+      <ProfileHeader
+        bannerColors={['#a', '#b']}
+        onBack={() => undefined}
+        scrollY={scrollY}
+      />,
     );
 
     expect(getByText('3')).toBeTruthy();
@@ -174,7 +196,11 @@ describe('ProfileHeader follow counters', () => {
 
   it('links to the following and followers lists', async () => {
     const { getByText } = await render(
-      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+      <ProfileHeader
+        bannerColors={['#a', '#b']}
+        onBack={() => undefined}
+        scrollY={scrollY}
+      />,
     );
 
     await fireEvent.press(getByText(/Following/));
