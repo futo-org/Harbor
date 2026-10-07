@@ -198,7 +198,7 @@ jobs:
         run: |
           apt-get update
           apt-get install --yes postgresql-common
-          /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh || true
+          YES=yes /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
           apt-get install --yes postgresql-client-18
           pg_dump --version
       - name: Connect Docker network
