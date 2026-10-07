@@ -131,12 +131,15 @@ type ScreenProps = {
   children: ReactElement;
   showLeftSidebar?: boolean;
   keyboardAvoiding?: boolean;
+  // The screen pads its own content by the top inset, e.g. to run a banner under the status bar.
+  drawUnderStatusBar?: boolean;
 };
 
 function Screen({
   children,
   showLeftSidebar = true,
   keyboardAvoiding = false,
+  drawUnderStatusBar = false,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -181,7 +184,7 @@ function Screen({
         // keeps a fixed viewport-height screen.
         isWeb ? { minHeight: '100%' } : Atoms.flex_1,
         { backgroundColor: theme.palette.neutral_0 },
-        { paddingTop: insets.top },
+        !drawUnderStatusBar && { paddingTop: insets.top },
         !isWeb && {
           borderBottomWidth: 1,
           borderBottomColor: theme.palette.neutral_25,
@@ -211,7 +214,7 @@ function Screen({
       {drawerMode && drawerOpen && (
         <SidebarDrawer onClose={() => setDrawerOpen(false)} />
       )}
-      {!isWeb && insets.top > 0 ? (
+      {!isWeb && !drawUnderStatusBar && insets.top > 0 ? (
         // Opaque cap that sits on top of all descendants and visually
         // masks any content that overflows into the status-bar zone
         // (FlashList items scrolling past `paddingTop`, sliding sticky
