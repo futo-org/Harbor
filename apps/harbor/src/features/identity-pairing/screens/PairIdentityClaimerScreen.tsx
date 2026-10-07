@@ -283,7 +283,6 @@ function IssuerProfile({ identityKey }: { identityKey: string }) {
         identity={identityKey}
         variant="subtitle"
         fontWeight="semibold"
-        noFollowingBadge
         style={{ textAlign: 'center' }}
       />
       <Text

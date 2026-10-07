@@ -23,7 +23,6 @@ export function ProfileRow({
   fallbackAlias,
   disabled,
   activeStyle = 'highlight',
-  noFollowingBadge,
   style,
 }: {
   identity: string;
@@ -36,8 +35,6 @@ export function ProfileRow({
   fallbackAlias?: string | null;
   disabled?: boolean;
   activeStyle?: 'highlight' | 'none';
-  /** Set where a Follow button in `trailing` already shows the state. */
-  noFollowingBadge?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const { theme } = useTheme();
@@ -74,7 +71,6 @@ export function ProfileRow({
           <Username
             identity={identity}
             fallbackName={fallbackName}
-            noFollowingBadge={noFollowingBadge}
             variant="secondary"
             fontWeight="semibold"
             selectable={false}

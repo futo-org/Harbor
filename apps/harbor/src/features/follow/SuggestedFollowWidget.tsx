@@ -89,7 +89,6 @@ function SuggestedFollowWidgetRow({ identity }: { identity: string }) {
     <ProfileRow
       size="sm"
       identity={identity}
-      noFollowingBadge
       onPress={() => router.navigate(Routes.tabs.profile(identity))}
       style={Atoms.px_0}
       activeStyle="none"

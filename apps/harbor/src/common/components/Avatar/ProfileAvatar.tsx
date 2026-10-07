@@ -1,5 +1,5 @@
 import { type ComponentProps, useMemo } from 'react';
-import { Avatar, useAvatarSizeRequest } from './Avatar';
+import { Avatar, resolveAvatarSize, useAvatarSizeRequest } from './Avatar';
 import {
   identiconUrl,
   pickImageVariant,
@@ -7,15 +7,26 @@ import {
 } from '../../lib/polycentric-hooks';
 import { useFallbackUri } from '@/src/common/components/Image';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { FollowingBadge } from '@/src/features/follow/FollowingBadge';
+import { View } from 'react-native';
 
 type ProfileAvatarProps = {
   identityKey: string;
 } & Omit<ComponentProps<typeof Avatar>, 'source'>;
 
 /**
+ * Following badge diameter for an avatar of `size` logical pixels. Capped so
+ * the glyph matches a small button's 16px icon on large avatars.
+ */
+function badgeSize(size: number) {
+  return Math.min(24, Math.max(12, Math.round(size * 0.4)));
+}
+
+/**
  * Avatar bound to a Polycentric identity. Picks the best-fitting variant
  * from the profile's `avatar` ImageSet, trying each server in turn and
- * falling back to a Dicebear identicon if none serve it.
+ * falling back to a Dicebear identicon if none serve it. Shows the
+ * following badge on the bottom-right corner.
  */
 export function ProfileAvatar({
   identityKey,
@@ -42,14 +53,27 @@ export function ProfileAvatar({
 
   const { uri, onError } = useFallbackUri(candidates);
 
+  const pixels = resolveAvatarSize(size);
+  const badge = badgeSize(pixels);
+  // Centre the badge on the circle's rim at 45 degrees, where the rim sits
+  // inside the square's corner by r * (1 - 1/sqrt 2).
+  const overhang = Math.round(badge / 2 - (pixels / 2) * (1 - Math.SQRT1_2));
+
   return (
-    <Avatar
-      {...rest}
-      size={size}
-      source={uri ? { uri } : undefined}
-      // The identity, not the URL
-      recyclingKey={identityKey}
-      onError={uri ? () => onError(uri) : undefined}
-    />
+    <View style={{ width: pixels, height: pixels }}>
+      <Avatar
+        {...rest}
+        size={size}
+        source={uri ? { uri } : undefined}
+        // The identity, not the URL
+        recyclingKey={identityKey}
+        onError={uri ? () => onError(uri) : undefined}
+      />
+      <FollowingBadge
+        identity={identityKey}
+        size={badge}
+        style={{ position: 'absolute', right: -overhang, bottom: -overhang }}
+      />
+    </View>
   );
 }

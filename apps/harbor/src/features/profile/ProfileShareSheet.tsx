@@ -83,7 +83,6 @@ export default function ProfileShareSheet({
               numberOfLines={2}
               color="black"
               style={Atoms.text_center}
-              noFollowingBadge
             />
           </View>
         </View>
