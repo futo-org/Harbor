@@ -99,6 +99,7 @@ function Segment({
         Atoms.flex_row,
         Atoms.align_center,
         Atoms.justify_center,
+        Atoms.gap_xs,
         Atoms.p_sm,
         {
           borderWidth: StyleSheet.hairlineWidth,

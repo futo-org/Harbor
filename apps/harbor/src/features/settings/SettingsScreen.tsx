@@ -10,6 +10,7 @@ import {
 import Icon from '@/src/common/components/Icon';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
+import { SegmentedButton } from '@/src/common/components/SegmentedButton';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import {
   REPORT_BUG_URL,
@@ -19,7 +20,7 @@ import {
 } from '@/src/common/constants';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, THEME_PREFERENCE_OPTIONS, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
 import { Username } from '@/src/features/profile/Username';
@@ -31,24 +32,36 @@ import { ActivityIndicator, Linking, Switch, View } from 'react-native';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 
 function AppearanceSettingRow() {
-  const { theme, setActiveThemeName } = useTheme();
-
-  const toggleTheme = () => {
-    const next = theme.name === 'dark' ? 'light' : 'dark';
-    setActiveThemeName(next);
-  };
+  const { theme, themePreference, setThemePreference } = useTheme();
 
   return (
-    <ListItem onPress={toggleTheme}>
+    <ListItem pressable={false}>
       <View
-        style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md, Atoms.pl_xs]}
+        style={[
+          Atoms.flex_row,
+          Atoms.align_center,
+          Atoms.justify_between,
+          Atoms.pl_xs,
+        ]}
       >
-        <Icon
-          name={theme.name === 'dark' ? 'themeLight' : 'themeDark'}
-          size={22}
-          color={theme.scheme === 'dark' ? 'neutral_600' : 'primary_600'}
+        <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
+          <Icon
+            name={theme.name === 'dark' ? 'themeDark' : 'themeLight'}
+            size={22}
+            color={theme.scheme === 'dark' ? 'neutral_600' : 'primary_600'}
+          />
+          <Text variant="body">Theme</Text>
+        </View>
+        <SegmentedButton
+          segments={THEME_PREFERENCE_OPTIONS.map(
+            ({ preference, label, icon }) => ({
+              label,
+              icon,
+              active: themePreference === preference,
+              onPress: () => setThemePreference(preference),
+            }),
+          )}
         />
-        <Text variant="body">Toggle Theme</Text>
       </View>
     </ListItem>
   );
