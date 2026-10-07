@@ -79,29 +79,22 @@ async fn fetch(
     .ok_or_else(|| Status::not_found("event not found"))?;
     let subject_id = subject_row.0.id;
 
-    let ancestor_refs_fut = async {
-        FeedsRepository::list_ancestor_refs(
-            &ctx.service.ro_db,
-            subject_id,
-            PARENT_HEIGHT_LIMIT,
-        )
-        .await
-        .map_err(map_db_err)
-    };
+    let ancestor_refs = FeedsRepository::list_ancestor_refs(
+        &ctx.service.ro_db,
+        subject_id,
+        PARENT_HEIGHT_LIMIT,
+    )
+    .await
+    .map_err(map_db_err)?;
 
-    let descendant_refs_fut = async {
-        FeedsRepository::list_descendant_refs(
-            &ctx.service.ro_db,
-            subject_id,
-            DESCENDANT_DEPTH_LIMIT,
-            params.descendants_limit,
-        )
-        .await
-        .map_err(map_db_err)
-    };
-
-    let (ancestor_refs, descendant_refs) =
-        tokio::try_join!(ancestor_refs_fut, descendant_refs_fut)?;
+    let descendant_refs = FeedsRepository::list_descendant_refs(
+        &ctx.service.ro_db,
+        subject_id,
+        DESCENDANT_DEPTH_LIMIT,
+        params.descendants_limit,
+    )
+    .await
+    .map_err(map_db_err)?;
 
     // parent → [children, newest-first]. Order is (depth ASC,
     // created_at DESC), so per-parent order is newest first.
