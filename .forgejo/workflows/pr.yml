@@ -182,6 +182,12 @@ jobs:
           cache: services-db-schema
       - name: Start Postgres
         run: docker compose up -d --build --wait postgres
+      - name: [DEBUG]
+        run: |
+          uname -a || true
+          lsb_release -a || true
+          cat /etc/*release || true
+          cat /etc/os-release || true
       - name: Install pg_dump
         run: apk add --no-cache postgresql18-client
       - name: Connect Docker network
