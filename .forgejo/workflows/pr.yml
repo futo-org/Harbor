@@ -182,12 +182,6 @@ jobs:
           cache: services-db-schema
       - name: Start Postgres
         run: docker compose up -d --build --wait postgres
-      - name: "[DEBUG] info"
-        run: |
-          uname -a || true
-          lsb_release -a || true
-          cat /etc/*release || true
-          cat /etc/os-release || true
       - name: Install pg_dump
         # I have no idea what distribution we're running.
         # The docker image is based on Alpine, `uname` reports Ubuntu and
