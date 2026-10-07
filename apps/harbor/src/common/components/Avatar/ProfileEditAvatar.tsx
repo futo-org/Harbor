@@ -1,5 +1,5 @@
 import { type ComponentProps, useMemo } from 'react';
-import { resolveAvatarSize } from './Avatar';
+import { useAvatarSizeRequest } from './Avatar';
 import AvatarEdit from './AvatarEdit';
 import {
   identiconUrl,
@@ -25,16 +25,19 @@ export function ProfileEditAvatar({
 }: ProfileEditAvatarProps) {
   const profile = useProfile(identityKey);
   const client = usePolycentric();
-  const pixelSize = resolveAvatarSize(size);
+  const { minPixels } = useAvatarSizeRequest(size);
 
   const uri = useMemo(() => {
-    const variant = pickImageVariant(profile.avatar, pixelSize);
+    const variant = pickImageVariant(profile.avatar, minPixels);
     if (variant?.blob?.digest) {
       const url = client.blobUrl(variant.blob.digest);
       if (url) return url;
     }
-    return identiconUrl(identityKey, pixelSize);
-  }, [profile.avatar, client, identityKey, pixelSize]);
+
+    // Leave size as default for identicons, so that we don't
+    // spam requests as the user zooms in/out.
+    return identiconUrl(identityKey);
+  }, [profile.avatar, client, identityKey, minPixels]);
 
   return <AvatarEdit {...rest} size={size} defaultUri={uri} />;
 }

@@ -26,17 +26,6 @@ pub trait Validate {
         }
     }
 
-    /// Same as [`validate`], but only returns the first error.
-    fn validate_first(&self) -> Result<(), Self::Error> {
-        let mut errors = Vec::new();
-        self.validate_check(&mut errors, identity);
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors.swap_remove(0))
-        }
-    }
-
     /// Validate a value, collecting the errors in `errors` using `map_err` to
     /// convert them to a single type.
     fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)

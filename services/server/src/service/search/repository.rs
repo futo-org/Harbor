@@ -1,15 +1,15 @@
 use crate::data::{Cursor, CursorFilter, Marker};
-use crate::service::feeds::repository::content_join;
+use crate::service::feeds::repository::{DecayedReactionCount, content_join};
 use crate::service::proto::{SortPostsBy, SortUsersBy};
 use crate::service::search::rpc::search_posts::SortedPostsBy;
 use crate::service::search::rpc::search_users::SortedUsersBy;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use entity::{content, event, profile, reaction_tally};
-use sea_orm::sea_query::{Expr, Order, Value};
+use sea_orm::sea_query::{Expr, Func, Order, Value};
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, IdenStatic,
-    Iterable, JoinType, QueryFilter, QueryOrder, QueryResult, QuerySelect,
-    RelationTrait, TryGetError, TryGetableMany,
+    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iterable,
+    JoinType, QueryFilter, QueryOrder, QueryResult, QuerySelect, RelationTrait,
+    TryGetError, TryGetableMany,
 };
 use tonic::Status;
 
@@ -49,7 +49,8 @@ pub struct SearchPostsEvent {
     pub event: event::Model,
     pub content: content::Model,
     pub search_rank: f32,
-    pub positive_reactions: i64,
+    /// Will default to zero if not returned.
+    pub reactions: DecayedReactionCount,
 }
 
 impl TryGetableMany for SearchPostsEvent {
@@ -66,14 +67,16 @@ impl TryGetableMany for SearchPostsEvent {
             event: FromQueryResult::from_query_result(res, EVENT_PREFIX)?,
             content: FromQueryResult::from_query_result(res, CONTENT_PREFIX)?,
             search_rank: res.try_get_by(SEARCH_RANK_COLUMN)?,
-            positive_reactions: res
-                .try_get_by(reaction_tally::Column::PositiveCount.as_str())
-                .unwrap_or(0),
+            // This column is only present if we order by top posts.
+            reactions: res
+                .try_get_by(REACTION_COUNT_COLUMN)
+                .unwrap_or_else(|_| "0.0".to_owned()),
         })
     }
 }
 
 const SEARCH_RANK_COLUMN: &str = "search_rank";
+const REACTION_COUNT_COLUMN: &str = "reaction_count";
 
 pub struct Query;
 
@@ -216,13 +219,22 @@ impl Query {
                 [search_query],
             ));
 
-        if let SortPostsBy::Top = sort_by {
+        if let SortPostsBy::Default | SortPostsBy::Top = sort_by {
             query = query
                 .join(
                     JoinType::InnerJoin,
                     reaction_tally::Relation::Event.def().rev(),
                 )
-                .column(reaction_tally::Column::PositiveCount);
+                .expr_as(
+                    Func::cast_as(
+                        Expr::col(
+                            reaction_tally::Column::DecayedCount
+                                .as_column_ref(),
+                        ),
+                        "TEXT",
+                    ),
+                    REACTION_COUNT_COLUMN,
+                );
         }
 
         let column = sort_posts_by_column(sort_by);
@@ -241,17 +253,10 @@ impl Query {
                     }
                     query = match marker {
                         Marker {
-                            sorted_by: SortedPostsBy::Rank(rank),
+                            sorted_by: SortedPostsBy::DecayedReactionCount(count),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, search_query($$1)), events.id) < ($1, $2)",
-                            [Value::from(rank), Value::from(event_id)],
-                        )),
-                        Marker {
-                            sorted_by: SortedPostsBy::PositiveReactions(count),
-                            event_id,
-                        } => query.filter(Expr::cust_with_values(
-                            "(reaction_tally.positive_count, events.id) < ($1, $2)",
+                            "(reaction_tally.decayed_count, events.id) < (($1)::NUMERIC, $2)",
                             [Value::from(count), Value::from(event_id)],
                         )),
                         Marker {
@@ -273,20 +278,12 @@ impl Query {
                             "wrong combination of sort_by and pagination parameters",
                         ));
                     }
-
                     query = match marker {
                         Marker {
-                            sorted_by: SortedPostsBy::Rank(rank),
+                            sorted_by: SortedPostsBy::DecayedReactionCount(count),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, search_query($$1)), events.id) > ($1, $2)",
-                            [Value::from(rank), Value::from(event_id)],
-                        )),
-                        Marker {
-                            sorted_by: SortedPostsBy::PositiveReactions(count),
-                            event_id,
-                        } => query.filter(Expr::cust_with_values(
-                            "(reaction_tally.positive_count, events.id) > ($1, $2)",
+                            "(reaction_tally.decayed_count, events.id) > (($1)::NUMERIC, $2)",
                             [Value::from(count), Value::from(event_id)],
                         )),
                         Marker {
@@ -321,9 +318,8 @@ fn sort_users_by_column(sort_by: SortUsersBy) -> (Expr, Order) {
 
 fn sort_posts_by_column(sort_by: SortPostsBy) -> Expr {
     match sort_by {
-        SortPostsBy::Default => Expr::col(SEARCH_RANK_COLUMN),
-        SortPostsBy::Top => {
-            Expr::col(reaction_tally::Column::PositiveCount.as_column_ref())
+        SortPostsBy::Default | SortPostsBy::Top => {
+            Expr::col(reaction_tally::Column::DecayedCount.as_column_ref())
         }
         SortPostsBy::Latest => {
             Expr::col(event::Column::CreatedAt.as_column_ref())

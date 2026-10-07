@@ -74,6 +74,9 @@ impl fmt::Display for ValidationError {
             ValidationError::Name(err) => write!(f, "name {err}"),
             ValidationError::Id(err) => write!(f, "id {err}"),
             ValidationError::Version(err) => write!(f, "version {err}"),
+            ValidationError::Url(validate::StringError::FailsRegex { .. }) => {
+                write!(f, "url is not a valid URL")
+            }
             ValidationError::Url(err) => write!(f, "url {err}"),
         }
     }

@@ -74,7 +74,7 @@ export function useSignup() {
   const goToNextStep = () => {
     const nextStep = getNextStep(currentStep);
     if (nextStep) {
-      router.push(links.to(nextStep));
+      router.navigate(links.to(nextStep));
     }
   };
 

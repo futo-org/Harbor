@@ -1,5 +1,5 @@
 import { type ComponentProps, useMemo } from 'react';
-import { Avatar, resolveAvatarSize } from './Avatar';
+import { Avatar, useAvatarSizeRequest } from './Avatar';
 import {
   identiconUrl,
   pickImageVariant,
@@ -24,18 +24,21 @@ export function ProfileAvatar({
 }: ProfileAvatarProps) {
   const profile = useProfile(identityKey);
   const client = usePolycentric();
-  const pixelSize = resolveAvatarSize(size);
+  const { minPixels } = useAvatarSizeRequest(size, 0.1);
 
   const candidates = useMemo(() => {
-    const variant = pickImageVariant(profile.avatar, pixelSize);
+    const variant = pickImageVariant(profile.avatar, minPixels);
     const blobUris = variant?.blob?.digest
       ? client.blobUrls(variant.blob.digest)
       : [];
     // Until the profile has resolved we don't know whether an avatar
     // exists, so render the empty circle
     if (blobUris.length === 0 && profile.isLoading) return [];
-    return [...blobUris, identiconUrl(identityKey, pixelSize)];
-  }, [profile.avatar, profile.isLoading, client, identityKey, pixelSize]);
+
+    // Leave size as default for identicons, so that we don't
+    // spam requests as the user zooms in/out.
+    return [...blobUris, identiconUrl(identityKey)];
+  }, [profile.avatar, profile.isLoading, client, identityKey, minPixels]);
 
   const { uri, onError } = useFallbackUri(candidates);
 

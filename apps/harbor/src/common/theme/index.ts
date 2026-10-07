@@ -2,11 +2,13 @@ export { darkPalette, lightPalette, withHexOpacity } from './palette';
 export type { Palette, PaletteColorToken } from './palette';
 export { Context, ThemeProvider, useTheme } from './provider';
 export { createTheme, themes } from './themes';
+export { THEME_PREFERENCE_OPTIONS } from './themePreferenceOptions';
 export type {
   Theme,
   ThemeAtoms,
   ThemeKey,
   ThemeName,
+  ThemePreference,
   ThemeScheme,
   Themes,
 } from './themes';

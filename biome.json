@@ -54,6 +54,7 @@
     "useEditorconfig": true
   },
   "linter": { "enabled": true, "rules": { "recommended": true } },
+  "plugins": ["./apps/harbor/biome-plugins/no-router-push.grit"],
   "javascript": {
     "formatter": {
       "jsxQuoteStyle": "double",

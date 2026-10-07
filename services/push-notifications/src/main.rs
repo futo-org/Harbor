@@ -21,7 +21,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use common_kafka::{BorrowedMessage, CommitMode, Consumer, Headers, Message, Offset};
+use common_kafka::{BorrowedMessage, Consumer, Headers, Message, Offset};
 use polycentric_common::models::protos_v2::Notification;
 use prost::Message as _;
 use tonic::transport::Server;
@@ -29,13 +29,12 @@ use tonic::transport::Server;
 /// Duration before retrying a Retry event.
 const RETRY_BACKOFF: Duration = Duration::from_secs(2);
 
-/// Number of times a message is retried before it is skipped (committed
-/// past without being processed).
+/// Number of times a message is retried before it is skipped.
 const MAX_RETRIES: u32 = 5;
 
-/// Whether the consumed message's offset should be committed.
+/// What to do with the consumed message's offset.
 enum Outcome {
-    /// Done with this message — commit so it is not redelivered.
+    /// Done. Store the offset so it is committed and not redelivered.
     Commit,
     /// Transient failure — seek back so the message is re-delivered and
     /// retried (see the consume loop). After [`MAX_RETRIES`] it is skipped.
@@ -131,8 +130,8 @@ async fn run_consumer(ctx: Arc<Context>) {
             Outcome::Commit => {
                 attempts.remove(&coord);
                 count_message("committed");
-                if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
-                    warn!("failed to commit offset: {}", e);
+                if let Err(e) = consumer.store_offset_from_message(&message) {
+                    warn!("failed to store offset: {}", e);
                 }
             }
             Outcome::Retry => {
@@ -144,15 +143,14 @@ async fn run_consumer(ctx: Arc<Context>) {
 
                 if failures > MAX_RETRIES {
                     count_message("skipped");
-                    // Retries exhausted — give up and commit past this message
-                    // so the partition can make progress.
+                    // Retries exhausted. Skip so the partition can make progress.
                     warn!(
                         "message at partition {} offset {} failed {} times; skipping",
                         coord.0, coord.1, failures
                     );
                     attempts.remove(&coord);
-                    if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
-                        warn!("failed to commit offset after skip: {}", e);
+                    if let Err(e) = consumer.store_offset_from_message(&message) {
+                        warn!("failed to store offset after skip: {}", e);
                     }
                 } else {
                     count_message("retried");
@@ -176,7 +174,7 @@ async fn run_consumer(ctx: Arc<Context>) {
 /// Handle a single consumed message.
 async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
     // Only notifications published by the main server should fire pushes.
-    // Skip (commit past) anything from another source.
+    // Skip anything from another source.
     let source_server = message
         .headers()
         .and_then(|headers| headers.iter().find(|h| h.key == "SOURCE_SERVER"))

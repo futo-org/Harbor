@@ -104,55 +104,37 @@ where
         target_event_keys.into_iter().collect()
     };
 
-    let tombstones_fut =
-        tombstone::validated_tombstones(ctx.service, &display_keys);
-    let referenced_fut = async {
-        feeds_repository::Query::list_events_by_keys(
-            &ctx.service.ro_db,
-            &ref_keys,
-        )
-        .await
-        .map_err(|err| {
-            tracing::error!(error = %err, "failed to list events");
-            Status::internal("internal server error")
-        })
-    };
-    let labels_fut = async {
-        feeds_repository::Query::list_labels_for_event_keys(
-            &ctx.service.ro_db,
-            &display_keys,
-        )
-        .await
-        .map_err(|err| {
-            tracing::error!(error = %err, "failed to list labels");
-            Status::internal("internal server error")
-        })
-    };
-    let stats_fut = async {
-        gather_stats_for(
-            &ctx.service.ro_db,
-            rows.iter().map(|row| row.event_id()),
-        )
-        .await
-        .map_err(|err| {
-            tracing::error!(error = %err, "failed to gather stats");
-            Status::internal("internal server error")
-        })
-    };
-    let blocked_fut = GraphRepository::blocked_set_for_caller(ctx);
-    let (
-        deletes_by_target,
-        referenced,
-        label_events,
-        stats,
-        blocked_identities,
-    ) = tokio::try_join!(
-        tombstones_fut,
-        referenced_fut,
-        labels_fut,
-        stats_fut,
-        blocked_fut,
-    )?;
+    let deletes_by_target =
+        tombstone::validated_tombstones(ctx.service, &display_keys).await?;
+    let referenced = feeds_repository::Query::list_events_by_keys(
+        &ctx.service.ro_db,
+        &ref_keys,
+    )
+    .await
+    .map_err(|err| {
+        tracing::error!(error = %err, "failed to list events");
+        Status::internal("internal server error")
+    })?;
+    let label_events = feeds_repository::Query::list_labels_for_event_keys(
+        &ctx.service.ro_db,
+        &display_keys,
+    )
+    .await
+    .map_err(|err| {
+        tracing::error!(error = %err, "failed to list labels");
+        Status::internal("internal server error")
+    })?;
+    let stats = gather_stats_for(
+        &ctx.service.ro_db,
+        rows.iter().map(|row| row.event_id()),
+    )
+    .await
+    .map_err(|err| {
+        tracing::error!(error = %err, "failed to gather stats");
+        Status::internal("internal server error")
+    })?;
+    let blocked_identities =
+        GraphRepository::blocked_set_for_caller(ctx).await?;
 
     // For all rows we return and for all hints, return the latest identity and
     // profile update events.
@@ -174,11 +156,9 @@ where
     }
     let identities: Vec<_> = identities.into_iter().collect();
 
-    let identity_events_fut =
-        list_identity_events(ctx.service, identities.clone());
-    let profile_events_fut = list_profile_events(ctx.service, identities);
-    let (identity_events, profile_events) =
-        tokio::try_join!(identity_events_fut, profile_events_fut)?;
+    let identity_events =
+        list_identity_events(ctx.service, identities.clone()).await?;
+    let profile_events = list_profile_events(ctx.service, identities).await?;
 
     let mut quote_post_events = Vec::new();
     let mut repost_events = Vec::new();

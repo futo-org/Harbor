@@ -54,27 +54,31 @@ pub fn clear_auth_tokens() {
     TOKENS.write_recover().clear();
 }
 
-/// Adds `authorization: Bearer <token>` to each outgoing request.
+/// Adds `authorization: Bearer <token>` to each outgoing request. The bearer
+/// is looked up in the token cache at call time, so a token refreshed after
+/// the interceptor was built still works for later requests.
 #[derive(Clone)]
 pub struct AuthInterceptor {
-    bearer: Option<AsciiMetadataValue>,
+    server_url: String,
 }
 
 impl tonic::service::Interceptor for AuthInterceptor {
     fn call(&mut self, mut request: Request<()>) -> Result<Request<()>, Status> {
-        if let Some(bearer) = &self.bearer {
+        if let Some(cached) = TOKENS.read_recover().get(&self.server_url) {
             request
                 .metadata_mut()
-                .insert("authorization", bearer.clone());
+                .insert("authorization", cached.bearer.clone());
         }
         Ok(request)
     }
 }
 
-/// The interceptor for a channel to `server_url`.
+/// The interceptor for a channel to `server_url`. Ensures a bearer for
+/// `server_url` is minted/cached first (see [`bearer_for`]).
 pub async fn interceptor_for(server_url: &str) -> AuthInterceptor {
+    bearer_for(server_url).await;
     AuthInterceptor {
-        bearer: bearer_for(server_url).await,
+        server_url: server_url.to_string(),
     }
 }
 
@@ -107,6 +111,10 @@ mod tests {
     use tonic::service::Interceptor;
 
     /// Counts mints; hands out tokens that expire `ttl` seconds from now.
+    /// It only mints for `https://a.example` and `https://b.example` as
+    /// server URLs; all other URLs do not receive any tokens. This is done
+    /// so that other tests can request other URLs, and not be counted
+    /// towards mints (tokens are global).
     struct CountingProvider {
         mints: AtomicUsize,
         ttl: AtomicU64,
@@ -115,6 +123,12 @@ mod tests {
     #[async_trait::async_trait]
     impl AuthTokenProvider for CountingProvider {
         async fn auth_token(&self, server_url: String) -> Option<AuthToken> {
+            if !matches!(
+                server_url.as_str(),
+                "https://a.example" | "https://b.example"
+            ) {
+                return None;
+            }
             let mint = self.mints.fetch_add(1, Ordering::SeqCst) + 1;
             Some(AuthToken {
                 token: format!("{server_url}-{mint}"),
@@ -159,6 +173,26 @@ mod tests {
         );
         assert_eq!(provider.mints.load(Ordering::SeqCst), 1);
 
+        // Make sure an interceptor keeps working after forcing a new mint
+        // by clearing the cache
+        let mut interceptor = interceptor_for("https://a.example").await;
+        clear_auth_tokens();
+        assert_eq!(
+            bearer_for("https://a.example")
+                .await
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            "Bearer https://a.example-2"
+        );
+        let request = interceptor.call(Request::new(())).unwrap();
+        assert_eq!(
+            request.metadata().get("authorization").unwrap(),
+            &"Bearer https://a.example-2"
+                .parse::<AsciiMetadataValue>()
+                .unwrap()
+        );
+
         // Already-expired tokens are re-minted on every request.
         let provider = register(0);
         bearer_for("https://b.example").await;
@@ -172,7 +206,9 @@ mod tests {
 
     #[test]
     fn sends_nothing_without_a_token() {
-        let mut interceptor = AuthInterceptor { bearer: None };
+        let mut interceptor = AuthInterceptor {
+            server_url: "https://none.example".to_string(),
+        };
         let request = interceptor.call(Request::new(())).unwrap();
         assert!(request.metadata().get("authorization").is_none());
     }

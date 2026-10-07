@@ -95,10 +95,10 @@ jest.mock('@/src/common/components/tabs', () => {
   return { Tabs };
 });
 
-const mockPush = jest.fn();
+const mockNavigate = jest.fn();
 jest.mock('expo-router', () => ({
   router: {
-    push: (...args: unknown[]) => mockPush(...args),
+    navigate: (...args: unknown[]) => mockNavigate(...args),
   },
   useFocusEffect: () => undefined,
   useNavigation: () => ({ addListener: () => () => {} }),
@@ -270,7 +270,6 @@ describe('SearchResults full search', () => {
   it('shows the tabs', async () => {
     const { screen } = await renderResults({ submitted: true });
     expect(screen.getByText('Top')).toBeTruthy();
-    expect(screen.getByText('Popular')).toBeTruthy();
     expect(screen.getByText('Latest')).toBeTruthy();
     expect(screen.getByText('People')).toBeTruthy();
   });
@@ -281,7 +280,6 @@ describe('SearchResults full search', () => {
     await renderResults({ submitted: true });
     expect(mockCapturedFeeds.map((feed) => feed.__sort)).toEqual([
       'top',
-      'popular',
       'latest',
     ]);
   });

@@ -5,6 +5,8 @@ appId: ${MAESTRO_APP_ID}
 # feed is virtualised, so only a post already on screen is safe to target.
 - evalBrowserScript:
     script: |
+      // Later runs reuse the mark, so they reopen the same post after the feed shifts.
+      if (document.getElementById('menuPost')) return window.scrollY;
       const middle = window.innerHeight / 2;
       const distance = (rect) => Math.abs(rect.top + rect.height / 2 - middle);
       const posts = [...document.querySelectorAll('[role="article"]')]
