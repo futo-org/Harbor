@@ -5,7 +5,13 @@ import {
   type Virtualizer,
 } from '@tanstack/react-virtual';
 import { useIsFocused } from 'expo-router';
-import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type RefObject,
+} from 'react';
 
 const ESTIMATED_ITEM_HEIGHT = 150;
 
@@ -61,6 +67,18 @@ export function useWindowListScroll<T>({
     restorationKey ? savedStates.get(restorationKey) : undefined,
   ).current;
 
+  // Stable unless the rows change: a new `getItemKey` makes the virtualizer
+  // recompute every row's position.
+  const keyExtractorRef = useRef(keyExtractor);
+  keyExtractorRef.current = keyExtractor;
+  const getItemKey = useCallback(
+    (index: number) =>
+      typeof keyExtractorRef.current === 'function'
+        ? keyExtractorRef.current(items[index], index)
+        : index,
+    [items],
+  );
+
   // Row heights vary, so each rendered row is measured via `measureElement`.
   const virtualizer = useWindowVirtualizer({
     count: items.length,
@@ -73,10 +91,7 @@ export function useWindowListScroll<T>({
     useFlushSync: false,
     useAnimationFrameWithResizeObserver: true,
     measureElement: measureVisibleRow,
-    getItemKey: (index) =>
-      typeof keyExtractor === 'function'
-        ? keyExtractor(items[index], index)
-        : index,
+    getItemKey,
   });
 
   const liveHeaderHeight = () =>
