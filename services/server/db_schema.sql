@@ -5,7 +5,7 @@
 \restrict harborServerDB
 
 -- Dumped from database version 18.6 (Debian 18.6-1.pgdg13+2)
--- Dumped by pg_dump version 18.4 (Homebrew)
+-- Dumped by pg_dump version 18.6 (Debian 18.6-1.pgdg12+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -119,7 +119,7 @@ CREATE AGGREGATE public.tsquery_agg(tsquery) (
 
 CREATE FUNCTION public.search_query(query text) RETURNS tsquery
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN ((COALESCE(to_tsquery('english'::regconfig, query), ''::tsquery) || COALESCE(to_tsquery('simple'::regconfig, query), ''::tsquery)) || (SELECT public.tsquery_agg((data.word)::tsquery) AS tsquery_agg FROM regexp_split_to_table(COALESCE(search_query.query, ''::text), '[[:space:]]'::text) data(word) WHERE ("left"(data.word, '-2'::integer) ~ '^([a-fA-F0-9]{2})*$'::text)));
+    RETURN ((COALESCE(to_tsquery('english'::regconfig, query), ''::tsquery) || COALESCE(to_tsquery('simple'::regconfig, query), ''::tsquery)) || (SELECT public.tsquery_agg((data.word)::tsquery) AS tsquery_agg FROM regexp_split_to_table(COALESCE(search_query.query, ''::text), '[[:space:]]'::text) data(word) WHERE ("left"(data.word, '-2'::integer) ~ '^([a-fA-F0-9])*$'::text)));
 
 
 --
