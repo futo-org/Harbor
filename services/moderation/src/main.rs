@@ -9,7 +9,7 @@ mod repository;
 use std::collections::HashMap;
 use std::time::Duration;
 
-use common_kafka::{BorrowedMessage, CommitMode, Consumer, Message, Offset};
+use common_kafka::{BorrowedMessage, Consumer, Message, Offset};
 use common_object_store::{ObjectStore, ObjectStoreConfig};
 use context::Context;
 use polycentric::{PolycentricClient, PublishError};
@@ -32,13 +32,12 @@ use sea_orm::sea_query::value::prelude::serde_json;
 /// Duration before retrying a Retry event
 const RETRY_BACKOFF: Duration = Duration::from_secs(2);
 
-/// Number of times a message is retried before it is skipped (committed
-/// past without being processed).
+/// Number of times a message is retried before it is skipped.
 const MAX_RETRIES: u32 = 5;
 
-/// Whether the consumed message's offset should be committed.
+/// What to do with the consumed message's offset.
 enum Outcome {
-    /// Done with this message — commit so it is not redelivered.
+    /// Done. Store the offset so it is committed and not redelivered.
     Commit,
     /// Transient failure — seek back so the message is re-delivered and
     /// retried (see the consume loop). After [`MAX_RETRIES`] it is skipped.
@@ -389,8 +388,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Outcome::Commit => {
                 attempts.remove(&coord);
                 count_message("committed");
-                if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
-                    tracing::warn!(error = %e, "failed to commit offset");
+                if let Err(e) = consumer.store_offset_from_message(&message) {
+                    tracing::warn!(error = %e, "failed to store offset");
                 }
             }
             Outcome::Retry => {
@@ -402,8 +401,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if failures > MAX_RETRIES {
                     count_message("skipped");
-                    // Retries exhausted — give up and commit past this message
-                    // so the partition can make progress.
+                    // Retries exhausted. Skip so the partition can make progress.
                     tracing::error!(
                         partition = coord.0,
                         offset = coord.1,
@@ -411,8 +409,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         "message failed repeatedly; skipping"
                     );
                     attempts.remove(&coord);
-                    if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
-                        tracing::warn!(error = %e, "failed to commit offset after skip");
+                    if let Err(e) = consumer.store_offset_from_message(&message) {
+                        tracing::warn!(error = %e, "failed to store offset after skip");
                     }
                 } else {
                     count_message("retried");
