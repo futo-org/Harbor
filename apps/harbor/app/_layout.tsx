@@ -30,6 +30,8 @@ import Head from 'expo-router/head';
 // Otherwise expo-router hides the splash as soon as navigation mounts, before
 // the providers below have anything to show; RootLayout hides it once ready.
 void SplashScreen.preventAutoHideAsync();
+// iOS removes the splash without a fade by default; Android always fades.
+SplashScreen.setOptions({ fade: true });
 
 const imageViewerScreenOptions = {
   presentation: 'transparentModal' as const,
