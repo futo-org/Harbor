@@ -189,7 +189,10 @@ jobs:
           cat /etc/*release || true
           cat /etc/os-release || true
       - name: Install pg_dump
-        run: apk add --no-cache postgresql18-client
+        # I have no idea what distribution we're running.
+        # The docker image is based on Alpine, `uname` reports Ubuntu and
+        # `/etc/os-release` has Debian 12 Bookworm info. ¯\_(ツ)_/¯
+        run: apt-get install postgresql
       - name: Connect Docker network
         run: |
           self_container() {
