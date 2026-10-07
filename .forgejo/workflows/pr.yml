@@ -182,7 +182,7 @@ jobs:
           cache: services-db-schema
       - name: Start Postgres
         run: docker compose up -d --build --wait postgres
-      - name: [DEBUG]
+      - name: "[DEBUG] info"
         run: |
           uname -a || true
           lsb_release -a || true
