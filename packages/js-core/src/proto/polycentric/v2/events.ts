@@ -368,8 +368,10 @@ export interface PutEventError {
  */
 export interface PutEventsResponse {
     /**
-     * One entry per event the server could not store. Empty when every
-     * event in the request was accepted.
+     * One entry per event the server could not store. Any error in here means the
+     * event was not stored.
+     *
+     * Empty when every event in the request was accepted.
      *
      * @generated from protobuf field: repeated polycentric.v2.PutEventError errors = 1
      */
@@ -381,6 +383,17 @@ export interface PutEventsResponse {
      * @generated from protobuf field: repeated polycentric.v2.Blob requested_blobs = 2
      */
     requestedBlobs: Blob[];
+    /**
+     * Zero or more entries per event that caused the content of the event not be
+     * stored, the event data is still stored. For example if this contains a
+     * warning that the event's application name is too long the event will be
+     * stored, but the application will not.
+     *
+     * Empty when every event and its content in the request was accepted.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.PutEventError warnings = 3
+     */
+    warnings: PutEventError[];
 }
 /**
  * @generated from protobuf message polycentric.v2.ListHeadsRequest
@@ -1362,13 +1375,15 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
     constructor() {
         super("polycentric.v2.PutEventsResponse", [
             { no: 1, name: "errors", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PutEventError },
-            { no: 2, name: "requested_blobs", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Blob }
+            { no: 2, name: "requested_blobs", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Blob },
+            { no: 3, name: "warnings", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PutEventError }
         ]);
     }
     create(value?: PartialMessage<PutEventsResponse>): PutEventsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.errors = [];
         message.requestedBlobs = [];
+        message.warnings = [];
         if (value !== undefined)
             reflectionMergePartial<PutEventsResponse>(this, message, value);
         return message;
@@ -1383,6 +1398,9 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
                     break;
                 case /* repeated polycentric.v2.Blob requested_blobs */ 2:
                     message.requestedBlobs.push(Blob.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* repeated polycentric.v2.PutEventError warnings */ 3:
+                    message.warnings.push(PutEventError.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1402,6 +1420,9 @@ class PutEventsResponse$Type extends MessageType<PutEventsResponse> {
         /* repeated polycentric.v2.Blob requested_blobs = 2; */
         for (let i = 0; i < message.requestedBlobs.length; i++)
             Blob.internalBinaryWrite(message.requestedBlobs[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.PutEventError warnings = 3; */
+        for (let i = 0; i < message.warnings.length; i++)
+            PutEventError.internalBinaryWrite(message.warnings[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
