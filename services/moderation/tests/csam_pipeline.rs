@@ -307,7 +307,7 @@ async fn report_exists(identity: &str, target: &EventKey) -> Result<bool, String
         .list_events(ListEventsRequest {
             filters: Some(ListEventsFilters {
                 collection: Some(collections::REPORTS),
-                identity: Some(identity.to_string()),
+                identity: identity.to_string(),
                 ..Default::default()
             }),
             size: Some(100),

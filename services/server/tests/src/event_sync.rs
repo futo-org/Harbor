@@ -3,20 +3,6 @@
 use crate::*;
 
 #[tokio::test]
-async fn list_events_empty_works() {
-    let mut client = connect_event_sync().await;
-    client
-        .list_events(ListEventsRequest {
-            size: Some(10),
-            ..Default::default()
-        })
-        .await
-        .expect("list_events failed");
-    // No assertion on count — server may have prior state — just that the
-    // call succeeds and decodes.
-}
-
-#[tokio::test]
 async fn put_then_list_round_trip() {
     let mut client = TestClient::new().await;
 
@@ -30,7 +16,7 @@ async fn put_then_list_round_trip() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity),
+                identity,
                 ..Default::default()
             }),
         })
@@ -212,7 +198,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity),
+                identity,
                 ..Default::default()
             }),
         })
@@ -423,7 +409,7 @@ async fn post_revocation_event_returns_without_proof() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity),
+                identity,
                 ..Default::default()
             }),
         })
@@ -577,7 +563,7 @@ async fn rewritten_event_invalidates_proofs() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity.clone()),
+                identity: identity.clone(),
                 ..Default::default()
             }),
         })
@@ -677,7 +663,7 @@ async fn put_verification_claim_is_ingested_and_listable() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity),
+                identity,
                 collection: Some(COLLECTION_VERIFICATIONS),
                 ..Default::default()
             }),
@@ -713,7 +699,7 @@ async fn events_submitted_twice_are_ignored() {
         .list_events(ListEventsRequest {
             size: Some(100),
             filters: Some(ListEventsFilters {
-                identity: Some(identity),
+                identity,
                 ..Default::default()
             }),
         })
@@ -743,6 +729,7 @@ async fn validation_missing_signed_event() {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains("signed event missing"),
         }],
+        &[],
     );
 }
 
@@ -766,6 +753,7 @@ async fn validation_invalid_signed_event_signature() {
                 "signed event signature invalid",
             ),
         }],
+        &[],
     );
 }
 
@@ -787,6 +775,7 @@ async fn validation_invalid_signed_event_bytes() {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains("signed event bytes invalid"),
         }],
+        &[],
     );
 }
 
@@ -824,42 +813,41 @@ async fn validation_missing_event_key() {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains("event key is missing"),
         }],
+        &[],
     );
 }
 
 #[tokio::test]
 async fn validation_invalid_event_collection() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
 
-    let identity = Identity {
-        rotation_keys: vec![public_key_of(&client.key)],
-        signing_keys: vec![],
-        revocation_bounds: vec![],
-        servers: None,
-        recovery_key: None,
-        recovery_signature: None,
+    let post = Post {
+        text: "Hello!".to_owned(),
+        reply: None,
+        images: Vec::new(),
+        quote: None,
+        links: Vec::new(),
+        labels: Vec::new(),
+        attributed_to: Vec::new(),
     };
     let content = Content {
-        content_body: Some(ContentBody::Identity(identity)),
+        content_body: Some(ContentBody::Post(post)),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let mut event = client.make_event(
-        COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
-        digest,
-        0,
-    );
+    let mut event =
+        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
     event.key.as_mut().unwrap().collection = 9999;
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[],
         &[ExpectError {
-            bundle_index: 0,
-            kind: ExpectErrorKind::MsgContains("event key collection invalid"),
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '2'",
+            ),
         }],
     );
 }
@@ -899,6 +887,7 @@ async fn validation_invalid_event_identity() {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains("event key identity invalid"),
         }],
+        &[],
     );
 }
 
@@ -938,6 +927,7 @@ async fn validation_missing_event_signed_by() {
                 "event key signed by is missing",
             ),
         }],
+        &[],
     );
 }
 
@@ -978,6 +968,12 @@ async fn validation_invalid_event_signed_by_key_type() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "signed event signature invalid",
+            ),
+        }],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
@@ -1024,6 +1020,7 @@ async fn validation_invalid_event_signed_by_key() {
                 "signed event signature invalid",
             ),
         }],
+        &[],
     );
 }
 
@@ -1063,6 +1060,7 @@ async fn validation_missing_event_content_digest() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
@@ -1102,6 +1100,12 @@ async fn validation_invalid_event_content_digest_type() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "unsupported content digest type: 999",
+            ),
+        }],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
@@ -1147,6 +1151,7 @@ async fn validation_invalid_event_content_digest_value() {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains("content digest does not match"),
         }],
+        &[],
     );
 }
 
@@ -1189,6 +1194,7 @@ async fn validation_invalid_event_application_name_empty() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
@@ -1233,6 +1239,7 @@ async fn validation_invalid_event_application_name_too_long() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
@@ -1277,6 +1284,7 @@ async fn validation_invalid_event_application_id_empty() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
@@ -1321,6 +1329,7 @@ async fn validation_invalid_event_application_id_too_long() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
@@ -1365,6 +1374,7 @@ async fn validation_invalid_event_application_version_empty() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
@@ -1409,6 +1419,7 @@ async fn validation_invalid_event_application_version_too_long() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
@@ -1453,12 +1464,21 @@ async fn validation_invalid_event_application_url_empty() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
-        &[ExpectError {
-            bundle_index: 0,
-            kind: ExpectErrorKind::MsgContains(
-                "event application url can't be empty",
-            ),
-        }],
+        &[],
+        &[
+            ExpectError {
+                bundle_index: 0,
+                kind: ExpectErrorKind::MsgContains(
+                    "event application url can't be empty",
+                ),
+            },
+            ExpectError {
+                bundle_index: 0,
+                kind: ExpectErrorKind::MsgContains(
+                    "event application url is not a valid URL",
+                ),
+            },
+        ],
     );
 }
 
@@ -1497,10 +1517,64 @@ async fn validation_invalid_event_application_url_too_long() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[],
+        &[
+            ExpectError {
+                bundle_index: 0,
+                kind: ExpectErrorKind::MsgContains(
+                    "event application url is too long (101), maximum is 100",
+                ),
+            },
+            ExpectError {
+                bundle_index: 0,
+                kind: ExpectErrorKind::MsgContains(
+                    "event application url is not a valid URL",
+                ),
+            },
+        ],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_event_application_url_not_an_url() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    event.application = Some(Application {
+        name: "Integration Tests".to_owned(),
+        id: "integration-tests".to_owned(),
+        version: "0.0.0".to_owned(),
+        url: "INVALID_URL".to_owned(),
+    });
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
         &[ExpectError {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains(
-                "event application url is too long (101), maximum is 100",
+                "event application url is not a valid URL",
             ),
         }],
     );
@@ -1525,6 +1599,7 @@ async fn validation_invalid_serialized_content_content_bytes() {
             bundle_index: 0,
             kind: ExpectErrorKind::MsgContains("content digest does not match"),
         }],
+        &[],
     );
 }
 
@@ -1547,9 +1622,12 @@ async fn validation_missing_content_content_body() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
+        &[],
         &[ExpectError {
             bundle_index: 0,
-            kind: ExpectErrorKind::MsgContains("missing content body"),
+            kind: ExpectErrorKind::MsgContains(
+                "content content body is missing",
+            ),
         }],
     );
 }
@@ -1571,6 +1649,7 @@ async fn validation_passed_event_proofs() {
                 "event proofs are not accepted when storing events",
             ),
         }],
+        &[],
     );
 }
 
@@ -1588,6 +1667,7 @@ async fn validation_passed_meta() {
                 "metadata not accepted when storing events",
             ),
         }],
+        &[],
     );
 }
 
@@ -1603,17 +1683,34 @@ enum ExpectErrorKind {
 }
 
 fn expect_errors(
-    result: Result<(), Vec<SubmitError>>,
-    expected: &[ExpectError],
+    result: Result<(), SubmitErrors>,
+    expected_errors: &[ExpectError],
+    expected_warnings: &[ExpectError],
 ) {
     let Err(errors) = result else {
         panic!("unexpect OK result");
     };
+    let SubmitErrors { errors, warnings } = errors;
 
     eprintln!("Got errors: {errors:#?}");
-    eprintln!("Expected errors: {expected:#?}");
-    assert_eq!(errors.len(), expected.len());
-    for (got, expected) in errors.iter().zip(expected) {
+    eprintln!("Expected errors: {expected_errors:#?}");
+    assert_eq!(errors.len(), expected_errors.len());
+    for (got, expected) in errors.iter().zip(expected_errors) {
+        assert_eq!(got.bundle_index, expected.bundle_index);
+        match expected.kind {
+            ExpectErrorKind::MsgContains(msg) => assert!(
+                got.message.contains(msg),
+                "unexpected message: '{}', expected '{}'",
+                got.message,
+                msg
+            ),
+        }
+    }
+
+    eprintln!("Got warnings: {warnings:#?}");
+    eprintln!("Expected warnings: {expected_warnings:#?}");
+    assert_eq!(warnings.len(), expected_warnings.len());
+    for (got, expected) in warnings.iter().zip(expected_warnings) {
         assert_eq!(got.bundle_index, expected.bundle_index);
         match expected.kind {
             ExpectErrorKind::MsgContains(msg) => assert!(

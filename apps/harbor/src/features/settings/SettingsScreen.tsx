@@ -10,6 +10,7 @@ import {
 import Icon from '@/src/common/components/Icon';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
+import { SegmentedButton } from '@/src/common/components/SegmentedButton';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import {
   REPORT_BUG_URL,
@@ -19,7 +20,7 @@ import {
 } from '@/src/common/constants';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, THEME_PREFERENCE_OPTIONS, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
 import { Username } from '@/src/features/profile/Username';
@@ -31,24 +32,36 @@ import { ActivityIndicator, Linking, Switch, View } from 'react-native';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 
 function AppearanceSettingRow() {
-  const { theme, setActiveThemeName } = useTheme();
-
-  const toggleTheme = () => {
-    const next = theme.name === 'dark' ? 'light' : 'dark';
-    setActiveThemeName(next);
-  };
+  const { theme, themePreference, setThemePreference } = useTheme();
 
   return (
-    <ListItem onPress={toggleTheme}>
+    <ListItem pressable={false}>
       <View
-        style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md, Atoms.pl_xs]}
+        style={[
+          Atoms.flex_row,
+          Atoms.align_center,
+          Atoms.justify_between,
+          Atoms.pl_xs,
+        ]}
       >
-        <Icon
-          name={theme.name === 'dark' ? 'themeLight' : 'themeDark'}
-          size={22}
-          color={theme.scheme === 'dark' ? 'neutral_600' : 'primary_600'}
+        <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
+          <Icon
+            name={theme.name === 'dark' ? 'themeDark' : 'themeLight'}
+            size={22}
+            color={theme.scheme === 'dark' ? 'neutral_600' : 'primary_600'}
+          />
+          <Text variant="body">Theme</Text>
+        </View>
+        <SegmentedButton
+          segments={THEME_PREFERENCE_OPTIONS.map(
+            ({ preference, label, icon }) => ({
+              label,
+              icon,
+              active: themePreference === preference,
+              onPress: () => setThemePreference(preference),
+            }),
+          )}
         />
-        <Text variant="body">Toggle Theme</Text>
       </View>
     </ListItem>
   );
@@ -95,7 +108,7 @@ export default function SettingsTabScreen() {
             <View style={[Atoms.p_lg, Atoms.gap_xl]}>
               <ListItemGroup>
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.identity)}
+                  onPress={() => router.navigate(Routes.tabs.settings.identity)}
                 >
                   {identityKey && (
                     <CurrentIdentityBadge identityKey={identityKey} />
@@ -115,7 +128,7 @@ export default function SettingsTabScreen() {
                 <ListItemWrapper
                   onPress={
                     canRotate
-                      ? () => router.push(Routes.tabs.settings.pairIdentity)
+                      ? () => router.navigate(Routes.tabs.settings.pairIdentity)
                       : undefined
                   }
                 >
@@ -124,14 +137,16 @@ export default function SettingsTabScreen() {
                 <ListItemWrapper
                   onPress={
                     canRotate
-                      ? () => router.push(Routes.tabs.settings.createBackup)
+                      ? () => router.navigate(Routes.tabs.settings.createBackup)
                       : undefined
                   }
                 >
                   <Text variant="body">Back Up Identity</Text>
                 </ListItemWrapper>
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.checkBackup)}
+                  onPress={() =>
+                    router.navigate(Routes.tabs.settings.checkBackup)
+                  }
                 >
                   <Text variant="body">Test Backup</Text>
                 </ListItemWrapper>
@@ -139,7 +154,7 @@ export default function SettingsTabScreen() {
 
               <ListItemGroup label="Servers">
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.servers)}
+                  onPress={() => router.navigate(Routes.tabs.settings.servers)}
                 >
                   <Text variant="body">
                     {canRotate ? 'Configure servers' : 'View servers'}
@@ -150,13 +165,15 @@ export default function SettingsTabScreen() {
               <ListItemGroup label="Content Moderation">
                 <ListItemWrapper
                   onPress={() =>
-                    router.push(Routes.tabs.settings.moderationSettings)
+                    router.navigate(Routes.tabs.settings.moderationSettings)
                   }
                 >
                   <Text variant="body">Moderation preferences</Text>
                 </ListItemWrapper>
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.blockedUsers)}
+                  onPress={() =>
+                    router.navigate(Routes.tabs.settings.blockedUsers)
+                  }
                 >
                   <Text variant="body">Blocked users</Text>
                 </ListItemWrapper>
@@ -174,7 +191,9 @@ export default function SettingsTabScreen() {
                 <VersionRow />
                 {canSelfUpdate() ? <CheckForUpdatesRow /> : null}
                 <ListItemWrapper
-                  onPress={() => router.push(Routes.tabs.settings.legalNotices)}
+                  onPress={() =>
+                    router.navigate(Routes.tabs.settings.legalNotices)
+                  }
                 >
                   <Text variant="body">Legal notices</Text>
                 </ListItemWrapper>
@@ -302,11 +321,7 @@ function SourceCodeItem() {
     <View
       style={[Atoms.pt_3xl, Atoms.px_md, Atoms.flex_row, Atoms.items_center]}
     >
-      <LinkButton
-        title="Source code"
-        onPress={() => Linking.openURL(SOURCE_CODE_URL)}
-        underlineOnHover
-      />
+      <LinkButton title="Source code" href={SOURCE_CODE_URL} underlineOnHover />
     </View>
   );
 }

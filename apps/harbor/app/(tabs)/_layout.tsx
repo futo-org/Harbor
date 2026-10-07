@@ -1,3 +1,4 @@
+import { openCompose } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
@@ -70,12 +71,17 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       {isIOS ? (
-        <NativeTabs.Trigger name="compose" role="search">
+        <NativeTabs.Trigger
+          name="compose"
+          role="search"
+          // This tab screen cannot be selected: the tap opens the same
+          // root-stack composer that New Post on Android and replies (both iOS
+          // and Android) use
+          disabled
+          listeners={{ tabPress: () => openCompose() }}
+        >
           <NativeTabs.Trigger.Label hidden>Compose</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon
-            sf={{ default: 'square.and.pencil', selected: 'square.and.pencil' }}
-            md="edit"
-          />
+          <NativeTabs.Trigger.Icon sf="square.and.pencil" md="edit" />
         </NativeTabs.Trigger>
       ) : null}
     </NativeTabs>

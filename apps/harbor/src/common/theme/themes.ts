@@ -154,3 +154,4 @@ export const themes = {
 
 export type Themes = typeof themes;
 export type ThemeKey = keyof Themes;
+export type ThemePreference = ThemeKey | 'system';

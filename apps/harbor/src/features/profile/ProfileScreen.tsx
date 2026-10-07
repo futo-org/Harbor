@@ -193,8 +193,14 @@ function ProfileScreenContent() {
   const [headerHeight, setHeaderHeight] = useState(0);
 
   const renderHeader = useCallback(
-    () => <ProfileHeader bannerColors={bannerColors} onBack={handleBack} />,
-    [bannerColors, handleBack],
+    () => (
+      <ProfileHeader
+        bannerColors={bannerColors}
+        onBack={handleBack}
+        scrollY={scrollY}
+      />
+    ),
+    [bannerColors, handleBack, scrollY],
   );
 
   const renderTabBar = useCallback(
@@ -205,7 +211,7 @@ function ProfileScreenContent() {
   );
 
   return (
-    <Screen>
+    <Screen drawUnderStatusBar>
       <Screen.PrimaryColumn>
         <PagerViewWithHeader
           values={PROFILE_TABS}

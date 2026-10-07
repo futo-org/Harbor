@@ -663,8 +663,8 @@ jobs:
           export-cache: 'true'
           build-args: |
             APP_VERSION=${{ steps.version.outputs.app_version }}
-            EXPO_PUBLIC_HARBOR_SEED_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS }}
-            EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS }}
+            EXPO_PUBLIC_HARBOR_SEED_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
+            EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS }}
             SKIP_WORKSPACE_BUILD=1
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
@@ -686,6 +686,7 @@ jobs:
     timeout-minutes: 60
     env:
       HARBOR_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
+      RUST_LOG: warn
       HARBOR_SERVER_FALLBACK_IMAGE: ${{ needs.changes.outputs.registry }}/server:staging
     steps:
       - uses: actions/checkout@v4

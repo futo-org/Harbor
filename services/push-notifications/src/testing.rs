@@ -88,6 +88,7 @@ impl EventSyncService for MockEventSync {
         Ok(Response::new(PutEventsResponse {
             errors: vec![],
             requested_blobs: vec![],
+            warnings: vec![],
         }))
     }
 

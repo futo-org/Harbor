@@ -119,7 +119,7 @@ message ListEventsFilters {
   // Collection to filter events by
   optional int32 collection = 1;
   // Identity key to filter events by
-  optional string identity = 2;
+  string identity = 2;
   // Filter events to those signed by this public key
   optional PublicKey signed_by = 3;
   // Return sequences greater than
@@ -133,7 +133,7 @@ message ListEventsFilters {
 
 message ListEventsRequest {
   // Filters
-  optional ListEventsFilters filters = 1;
+  ListEventsFilters filters = 1;
   // Max number of events to return
   optional int32 size = 2;
 }
@@ -159,12 +159,21 @@ message PutEventError {
 }
 
 message PutEventsResponse {
-  // One entry per event the server could not store. Empty when every
-  // event in the request was accepted.
+  // One entry per event the server could not store. Any error in here means the
+  // event was not stored.
+  //
+  // Empty when every event in the request was accepted.
   repeated PutEventError errors = 1;
   // Blobs referenced by the events that the server does not have.
   // Client should upload these.
   repeated Blob requested_blobs = 2;
+  // Zero or more entries per event that caused the content of the event not be
+  // stored, the event data is still stored. For example if this contains a
+  // warning that the event's application name is too long the event will be
+  // stored, but the application will not.
+  //
+  // Empty when every event and its content in the request was accepted.
+  repeated PutEventError warnings = 3;
 }
 
 message ListHeadsRequest {

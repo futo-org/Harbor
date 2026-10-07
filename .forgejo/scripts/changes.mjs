@@ -110,6 +110,7 @@ const verifierBot = touches(
   CHARTS,
 );
 const app = touches(LOCK, 'apps/', CHARTS);
+const e2e = touches('e2e/');
 const docs = touches('docs/');
 const charts = touches(
   CHARTS,
@@ -176,12 +177,12 @@ const flags = {
     kt_core_build: ktCore,
     image_scraper: scraper,
     image_verifier_bot: verifierBot,
-    web_image: app,
+    web_image: app || e2e,
     server_integration: serverIntegration,
     moderation_integration: moderationIntegration,
     scraper_integration: scraper,
     verifier_bot_tests: verifierBot,
-    web_e2e: app,
+    web_e2e: app || e2e,
     docs,
     docs_preview: docs && pr,
   }),

@@ -87,6 +87,14 @@ pub(crate) fn max_poll_interval_ms() -> String {
         .unwrap_or_else(|_| "1800000".to_string())
 }
 
+/// Consumer `auto.commit.interval.ms`, overridable via
+/// `HARBOR_KAFKA_AUTO_COMMIT_INTERVAL_MS`.
+pub(crate) fn auto_commit_interval_ms() -> String {
+    env::var("HARBOR_KAFKA_AUTO_COMMIT_INTERVAL_MS")
+        .or_else(|_| env::var("POLYCENTRIC_KAFKA_AUTO_COMMIT_INTERVAL_MS"))
+        .unwrap_or_else(|_| "5000".to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

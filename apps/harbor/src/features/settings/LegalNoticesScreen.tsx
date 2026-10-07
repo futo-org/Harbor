@@ -9,7 +9,7 @@ import {
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
-import { Linking, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LEGAL_NOTICES, type LegalNotice } from './legalNotices';
 
@@ -22,12 +22,12 @@ function NoticeGroup({ notice }: { notice: LegalNotice }) {
           <View style={[Atoms.flex_row, Atoms.gap_lg]}>
             <LinkButton
               title={notice.name}
-              onPress={() => Linking.openURL(notice.url)}
+              href={notice.url}
               underlineOnHover
             />
             <LinkButton
               title={notice.license}
-              onPress={() => Linking.openURL(notice.licenseUrl)}
+              href={notice.licenseUrl}
               underlineOnHover
             />
           </View>

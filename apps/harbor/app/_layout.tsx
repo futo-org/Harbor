@@ -7,6 +7,7 @@ import {
   PolycentricProvider,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
+import { useStripCopiedInlineViewPlaceholders } from '@/src/common/lib/useStripCopiedInlineViewPlaceholders';
 import { APP_NAME } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
@@ -15,6 +16,7 @@ import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
+import { NavigationBar } from 'expo-navigation-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
@@ -53,6 +55,7 @@ function RootStack() {
   const stack = (
     <>
       <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
+      <NavigationBar style={theme.name === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -150,6 +153,7 @@ function RootStack() {
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
   const onInitialized = useCallback(() => setReady(true), []);
+  useStripCopiedInlineViewPlaceholders();
 
   useEffect(() => {
     if (!ready) {

@@ -273,9 +273,9 @@ export interface ListEventsFilters {
     /**
      * Identity key to filter events by
      *
-     * @generated from protobuf field: optional string identity = 2
+     * @generated from protobuf field: string identity = 2
      */
-    identity?: string;
+    identity: string;
     /**
      * Filter events to those signed by this public key
      *
@@ -309,7 +309,7 @@ export interface ListEventsRequest {
     /**
      * Filters
      *
-     * @generated from protobuf field: optional polycentric.v2.ListEventsFilters filters = 1
+     * @generated from protobuf field: polycentric.v2.ListEventsFilters filters = 1
      */
     filters?: ListEventsFilters;
     /**
@@ -1069,7 +1069,7 @@ class ListEventsFilters$Type extends MessageType<ListEventsFilters> {
     constructor() {
         super("polycentric.v2.ListEventsFilters", [
             { no: 1, name: "collection", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
-            { no: 2, name: "identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 3, name: "signed_by", kind: "message", T: () => PublicKey },
             { no: 4, name: "sequence_gt", kind: "scalar", opt: true, T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
             { no: 5, name: "sequence_lt", kind: "scalar", opt: true, T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
@@ -1078,6 +1078,7 @@ class ListEventsFilters$Type extends MessageType<ListEventsFilters> {
     }
     create(value?: PartialMessage<ListEventsFilters>): ListEventsFilters {
         const message = globalThis.Object.create((this.messagePrototype!));
+        message.identity = "";
         message.heads = [];
         if (value !== undefined)
             reflectionMergePartial<ListEventsFilters>(this, message, value);
@@ -1091,7 +1092,7 @@ class ListEventsFilters$Type extends MessageType<ListEventsFilters> {
                 case /* optional int32 collection */ 1:
                     message.collection = reader.int32();
                     break;
-                case /* optional string identity */ 2:
+                case /* string identity */ 2:
                     message.identity = reader.string();
                     break;
                 case /* optional polycentric.v2.PublicKey signed_by */ 3:
@@ -1121,8 +1122,8 @@ class ListEventsFilters$Type extends MessageType<ListEventsFilters> {
         /* optional int32 collection = 1; */
         if (message.collection !== undefined)
             writer.tag(1, WireType.Varint).int32(message.collection);
-        /* optional string identity = 2; */
-        if (message.identity !== undefined)
+        /* string identity = 2; */
+        if (message.identity !== "")
             writer.tag(2, WireType.LengthDelimited).string(message.identity);
         /* optional polycentric.v2.PublicKey signed_by = 3; */
         if (message.signedBy)
@@ -1165,7 +1166,7 @@ class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* optional polycentric.v2.ListEventsFilters filters */ 1:
+                case /* polycentric.v2.ListEventsFilters filters */ 1:
                     message.filters = ListEventsFilters.internalBinaryRead(reader, reader.uint32(), options, message.filters);
                     break;
                 case /* optional int32 size */ 2:
@@ -1183,7 +1184,7 @@ class ListEventsRequest$Type extends MessageType<ListEventsRequest> {
         return message;
     }
     internalBinaryWrite(message: ListEventsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* optional polycentric.v2.ListEventsFilters filters = 1; */
+        /* polycentric.v2.ListEventsFilters filters = 1; */
         if (message.filters)
             ListEventsFilters.internalBinaryWrite(message.filters, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         /* optional int32 size = 2; */

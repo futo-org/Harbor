@@ -78,7 +78,7 @@ function VerifierRow({
       key={verifier.identity}
       identity={verifier.identity}
       size="sm"
-      onPress={() => router.push(Routes.tabs.profile(verifier.identity))}
+      onPress={() => router.navigate(Routes.tabs.profile(verifier.identity))}
       trailing={
         canRemove ? (
           <ClaimVerifierMenu

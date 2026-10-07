@@ -2,6 +2,7 @@ import { router, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { create } from 'zustand';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
+import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
 import { createIdentity } from '@polycentric/react-native';
 import { getNextStep, isLastStep, type SignupRoute } from './flow';
 import {
@@ -73,7 +74,7 @@ export function useSignup() {
   const goToNextStep = () => {
     const nextStep = getNextStep(currentStep);
     if (nextStep) {
-      router.push(links.to(nextStep));
+      router.navigate(links.to(nextStep));
     }
   };
 
@@ -90,7 +91,14 @@ export function useSignup() {
     }
 
     setSubmitting(true);
+
     try {
+      // Bail if the user was logged in between starting the onboarding flow and now
+      if (await redirectIfLoggedIn(client)) {
+        reset();
+        return;
+      }
+
       await createIdentity(client, DEFAULT_SERVER);
       await publishProfileUpdate(client, {
         name: data.displayName,

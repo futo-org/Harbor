@@ -1,0 +1,16 @@
+# Readers only (after a short burst of signups so logged-in users exist).
+run:
+  duration: 10m
+scenarios:
+  browse: {rate: 30}
+  browse_user: {rate: 10}
+  register:
+    rate: 0
+    stages:
+      - {duration: 1m, target: 2}
+      - {duration: 0s, target: 0}
+  post: {enabled: false}
+  reply: {enabled: false}
+  react: {enabled: false}
+  follow: {enabled: false}
+  search: {enabled: true, rate: 2}

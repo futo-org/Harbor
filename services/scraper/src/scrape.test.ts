@@ -21,13 +21,13 @@ const respond = (page: { html?: string; statusCode?: number }): HtmlFetcher => {
 describe('scrape', () => {
   test('extracts Open Graph metadata', async () => {
     const meta = await scrape('https://youtu.be/x', respond({ html: OG_HTML }));
-    assert.equal(meta.title, 'Never Gonna Give You Up');
-    assert.equal(meta.description, 'The official video');
+    assert.equal(meta!.title, 'Never Gonna Give You Up');
+    assert.equal(meta!.description, 'The official video');
     assert.equal(
-      meta.image,
+      meta!.image,
       'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
     );
-    assert.ok(meta.url);
+    assert.ok(meta!.url);
   });
 
   test('nulls missing fields rather than throwing', async () => {
@@ -35,9 +35,9 @@ describe('scrape', () => {
       'https://example.com',
       respond({ html: '<html><head><title>Bare</title></head></html>' }),
     );
-    assert.equal(meta.title, 'Bare');
-    assert.equal(meta.description, null);
-    assert.equal(meta.image, null);
+    assert.equal(meta!.title, 'Bare');
+    assert.equal(meta!.description, null);
+    assert.equal(meta!.image, null);
   });
 
   test('throws UpstreamStatusError on a non-2xx status', async () => {
@@ -59,7 +59,7 @@ describe('scrape', () => {
       backoffMs: () => 0,
     });
     assert.equal(calls, 3);
-    assert.equal(meta.title, 'Never Gonna Give You Up');
+    assert.equal(meta!.title, 'Never Gonna Give You Up');
   });
 
   test('gives up after exhausting retries on a persistent 429', async () => {

@@ -1,3 +1,4 @@
+use crate::config;
 use crate::data::EventWithContentRow;
 use crate::data::{Cursor, CursorFilter};
 use crate::service::events::TargetEventKey;
@@ -26,20 +27,22 @@ const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
 /// Type used when ordering events by the create at column.
 pub type EventCreatedAt = DateTimeWithTimeZone;
 
+/// Number of positive reactions decayed over time (see the
+/// `reaction_count_decay` SQL function).
+///
+/// NOTE: This is actually a `NUMERIC(20,11)`, but we don't have a big number
+/// type and since we're not doing any arithmetic on it it doesn't really
+/// matter.
+pub type DecayedReactionCount = String;
+
 // This type only exists to work around trying to get additional columns (e.g.
 // the search rank) from SeaORM.
 #[derive(Debug)]
 pub struct ExploreEvent {
     pub event: event::Model,
     pub content: content::Model,
-    /// Number of positive reactions decayed over time (see the
-    /// `reaction_count_decay` SQL function).
     /// Will default to zero if not returned.
-    ///
-    /// NOTE: This is actually a `f64`, but floating point numbers lose
-    /// precision, so we let Postgres encode and decode the numeric number to a
-    /// string to avoid a loss of precision.
-    pub reactions: String,
+    pub reactions: DecayedReactionCount,
 }
 
 impl TryGetableMany for ExploreEvent {
@@ -71,7 +74,7 @@ pub enum SortedBy {
     /// By created time.
     CreatedAt(DateTimeWithTimeZone),
     /// By the amount of reactions on it.
-    ReactionCount(String),
+    ReactionCount(DecayedReactionCount),
 }
 
 impl SortedBy {
@@ -557,9 +560,8 @@ impl Query {
     pub async fn list_labels_for_event_keys(
         db: &DbConn,
         keys: &[TargetEventKey],
-        trusted_moderator: Option<&str>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        let Some(moderator) = trusted_moderator else {
+        let Some(moderator) = config::get().trusted_moderator.as_deref() else {
             return Ok(Vec::new());
         };
 

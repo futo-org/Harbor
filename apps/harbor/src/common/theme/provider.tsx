@@ -17,12 +17,12 @@ import {
 import { Appearance, useColorScheme } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 import { useSettings } from '@/src/common/settings';
-import { themes, type Theme, type ThemeKey } from './themes';
+import { themes, type Theme, type ThemePreference } from './themes';
 
 export type ThemeContextValue = {
   theme: Theme;
-  activeThemeName: ThemeKey;
-  setActiveThemeName: (name: ThemeKey) => void;
+  themePreference: ThemePreference;
+  setThemePreference: (preference: ThemePreference) => void;
 };
 
 export const Context = createContext<ThemeContextValue | undefined>(undefined);
@@ -33,7 +33,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   const [fontsLoaded, fontError] = useFonts(isWeb ? {} : Fonts);
 
   const colorScheme = useColorScheme();
-  const storedTheme = useSettings((s) => s.theme);
+  const themePreference = useSettings((s) => s.theme);
 
   // Server snapshot is `false` so the first client render matches the
   // SSR shell; React re-renders with the real value right after hydration.
@@ -43,31 +43,40 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     () => false,
   );
 
-  const activeThemeName = hydrated
-    ? storedTheme
-    : colorScheme === 'dark'
-      ? 'dark'
-      : 'light';
+  const activeThemeName =
+    hydrated && themePreference !== 'system'
+      ? themePreference
+      : colorScheme === 'dark'
+        ? 'dark'
+        : 'light';
 
-  const setActiveThemeName = useCallback((name: ThemeKey) => {
-    useSettings.getState().setTheme(name);
+  const setThemePreference = useCallback((preference: ThemePreference) => {
+    useSettings.getState().setTheme(preference);
   }, []);
 
   const theme = useMemo(() => themes[activeThemeName], [activeThemeName]);
 
+  // The interface style drives system chrome (liquid glass tab bars, sheets,
+  // keyboard). Overriding it also overrides what `useColorScheme` reports, so
+  // 'unspecified' hands both back to the OS. Waits for hydration so the
+  // default preference doesn't briefly override a stored 'system'.
+  useEffect(() => {
+    if (isWeb || !hydrated) return;
+    Appearance.setColorScheme(
+      themePreference === 'system' ? 'unspecified' : themePreference,
+    );
+  }, [hydrated, themePreference]);
+
   // Keep the native window background in sync with the theme so the
   // moments where no surface has painted (splash dismissal, stack
-  // transitions) don't flash the default white window. The interface style
-  // drives system chrome (liquid glass tab bars, sheets, keyboard), which
-  // follows the OS scheme unless overridden.
+  // transitions) don't flash the default white window.
   useEffect(() => {
-    if (!isWeb) Appearance.setColorScheme(theme.scheme);
     void SystemUI.setBackgroundColorAsync(theme.palette.neutral_0);
   }, [theme]);
 
   const value = useMemo(
-    () => ({ theme, activeThemeName, setActiveThemeName }),
-    [theme, activeThemeName, setActiveThemeName],
+    () => ({ theme, themePreference, setThemePreference }),
+    [theme, themePreference, setThemePreference],
   );
 
   if (fontError) {

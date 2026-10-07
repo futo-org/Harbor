@@ -13,12 +13,12 @@ fetch it from another server that holds a copy.
 
 Harbor is the flagship implementation of the
 [**Polycentric Protocol**](./protocol/overview.md), defined in the
-[`protos`](https://gitlab.futo.org/polycentric/polycentric/-/tree/develop/protos)
+[`protos`](https://code.futo.org/harbor/harbor/src/branch/develop/protos)
 directory of the repository. Anyone can build their own client or server against
 the same protocol and interoperate with Harbor.
 
 The [web client and app](https://harbor.social) and the
-[source code](https://gitlab.futo.org/polycentric/polycentric) are public.
+[source code](https://code.futo.org/harbor/harbor) are public.
 
 ## Download
 

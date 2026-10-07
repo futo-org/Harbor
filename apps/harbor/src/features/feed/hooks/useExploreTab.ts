@@ -25,7 +25,7 @@ export function useExploreTab(routeTab: ExploreTab) {
     if (!isExploreTab(next)) return;
 
     if (isWeb) {
-      router.push(
+      router.navigate(
         next === 'people'
           ? Routes.tabs.explore.people
           : Routes.tabs.explore.index,
