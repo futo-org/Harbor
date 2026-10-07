@@ -9,7 +9,7 @@
 //!
 //! Reads from the migrator's own `migrated_event` table (populated by a prior
 //! migrate/dry-run) and writes to the moderation database configured via
-//! `POLYCENTRIC_GRAYJAY_MIGRATOR_MODERATION_DATABASE_URL`. Run it before the
+//! `HARBOR_GRAYJAY_MIGRATOR_MODERATION_DATABASE_URL`. Run it before the
 //! real (pushing) migrate so the rows exist before the worker sees the events.
 
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
@@ -66,9 +66,10 @@ async fn connect_moderation(url: &str, schema: &str) -> Result<DatabaseConnectio
 /// Run the seed step.
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = crate::config::get();
-    let url = cfg.moderation_database_url.as_deref().ok_or(
-        "POLYCENTRIC_GRAYJAY_MIGRATOR_MODERATION_DATABASE_URL is required for seed-moderation",
-    )?;
+    let url = cfg
+        .moderation_database_url
+        .as_deref()
+        .ok_or("HARBOR_GRAYJAY_MIGRATOR_MODERATION_DATABASE_URL is required for seed-moderation")?;
 
     info!("connecting to migrator database");
     let db = crate::db::connect().await?;

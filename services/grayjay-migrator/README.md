@@ -30,7 +30,7 @@ yet, and `probe-url <url>…` resolves the given URLs the way `scrape-links`
 does and prints what it found. An unknown command is an error; no command
 means `re-sign`.
 
-`sync-legacy` needs `POLYCENTRIC_GRAYJAY_MIGRATOR_LEGACY_DATABASE_URL`; the
+`sync-legacy` needs `HARBOR_GRAYJAY_MIGRATOR_LEGACY_DATABASE_URL`; the
 migrate step does not (it only reads the local cache). Opinions are copied
 pre-deduplicated (latest per target) from the server's
 `lww_element_latest_reference_*` tables, and only the mapped event types
@@ -67,16 +67,16 @@ start).
 | Variable | Used by | Description |
 | --- | --- | --- |
 | `DATABASE_URL` | both | Migrator's own Postgres (holds the `migrated_identity` table). |
-| `POLYCENTRIC_GRAYJAY_MIGRATOR_DATABASE_SCHEMA` | both | Schema for this service's tables (default `grayjay_migrator`). |
-| `POLYCENTRIC_GRAYJAY_MIGRATOR_LEGACY_DATABASE_URL` | tool | Read-only URL for the legacy (v1) server's Postgres. |
-| `POLYCENTRIC_GRAYJAY_MIGRATOR_SIGNING_KEY` | tool | Hex 32-byte ed25519 master seed. **High-value secret.** |
-| `POLYCENTRIC_GRAYJAY_MIGRATOR_SERVERS` | tool | Comma-separated Harbor gRPC URLs to push to. Required only by `push`; `re-sign`, `scrape-links`, and `enrich-youtube` don't need it. |
-| `POLYCENTRIC_GRAYJAY_MIGRATOR_IDENTITY_SERVERS` | tool | Comma-separated server URLs baked into each migrated identity document (`Identity.servers`) so clients know where to pull the account. Distinct from `SERVERS` (where the tool pushes). Empty leaves `servers` unset. **Changing it changes every identity string** (it's part of the hashed document), so set it before the run. |
-| `POLYCENTRIC_GRAYJAY_MIGRATOR_YOUTUBE_API_KEY` | tool | YouTube Data API v3 key. When set, YouTube link previews (title/description/thumbnail) are resolved via the API in batches of 50 - quota-based, so it avoids the per-IP rate-limiting (HTTP 429) that page-scraping ~200k videos hits. ~4k quota units for the whole run (default quota 10k/day). Strongly recommended, since YouTube is the bulk of the links. |
-| `POLYCENTRIC_GRAYJAY_MIGRATOR_HTTP_ADDR` | service | Lookup bind address (default `0.0.0.0:3003`). |
-| `POLYCENTRIC_GRAYJAY_MIGRATOR_CONCURRENCY` | tool | How many systems to process in parallel, for both `re-sign` and `push` (default 32). |
-| `POLYCENTRIC_GRAYJAY_MIGRATOR_MODERATION_DATABASE_URL` | seed | Harbor moderation Postgres, for `seed-moderation`. |
-| `POLYCENTRIC_GRAYJAY_MIGRATOR_MODERATION_DATABASE_SCHEMA` | seed | Moderation schema (default `moderation`). |
+| `HARBOR_GRAYJAY_MIGRATOR_DATABASE_SCHEMA` | both | Schema for this service's tables (default `grayjay_migrator`). |
+| `HARBOR_GRAYJAY_MIGRATOR_LEGACY_DATABASE_URL` | tool | Read-only URL for the legacy (v1) server's Postgres. |
+| `HARBOR_GRAYJAY_MIGRATOR_SIGNING_KEY` | tool | Hex 32-byte ed25519 master seed. **High-value secret.** |
+| `HARBOR_GRAYJAY_MIGRATOR_SERVERS` | tool | Comma-separated Harbor gRPC URLs to push to. Required only by `push`; `re-sign`, `scrape-links`, and `enrich-youtube` don't need it. |
+| `HARBOR_GRAYJAY_MIGRATOR_IDENTITY_SERVERS` | tool | Comma-separated server URLs baked into each migrated identity document (`Identity.servers`) so clients know where to pull the account. Distinct from `SERVERS` (where the tool pushes). Empty leaves `servers` unset. **Changing it changes every identity string** (it's part of the hashed document), so set it before the run. |
+| `HARBOR_GRAYJAY_MIGRATOR_YOUTUBE_API_KEY` | tool | YouTube Data API v3 key. When set, YouTube link previews (title/description/thumbnail) are resolved via the API in batches of 50 - quota-based, so it avoids the per-IP rate-limiting (HTTP 429) that page-scraping ~200k videos hits. ~4k quota units for the whole run (default quota 10k/day). Strongly recommended, since YouTube is the bulk of the links. |
+| `HARBOR_GRAYJAY_MIGRATOR_HTTP_ADDR` | service | Lookup bind address (default `0.0.0.0:3003`). |
+| `HARBOR_GRAYJAY_MIGRATOR_CONCURRENCY` | tool | How many systems to process in parallel, for both `re-sign` and `push` (default 32). |
+| `HARBOR_GRAYJAY_MIGRATOR_MODERATION_DATABASE_URL` | seed | Harbor moderation Postgres, for `seed-moderation`. |
+| `HARBOR_GRAYJAY_MIGRATOR_MODERATION_DATABASE_SCHEMA` | seed | Moderation schema (default `moderation`). |
 
 ## re-sign and push (append-only, continuously runnable)
 
@@ -117,7 +117,7 @@ if retracted).
 ## Performance
 
 Systems are migrated concurrently (each is independent - its own identity,
-chain, and rows). Tune with `POLYCENTRIC_GRAYJAY_MIGRATOR_CONCURRENCY` (default
+chain, and rows). Tune with `HARBOR_GRAYJAY_MIGRATOR_CONCURRENCY` (default
 32). The DB connection pools are sized to `concurrency + 4`, so if you raise it
 substantially make sure Postgres `max_connections` has room.
 
@@ -150,7 +150,7 @@ v2's out-of-network attribution:
     (host-only card) with the topic still in `attributed_to`. Two steps fill the
     cache, both resumable and idempotent (already-cached URLs are skipped):
     - **`enrich-youtube`** - YouTube post links via the **YouTube Data API**
-      (`POLYCENTRIC_GRAYJAY_MIGRATOR_YOUTUBE_API_KEY`, batched 50/call, 1 quota
+      (`HARBOR_GRAYJAY_MIGRATOR_YOUTUBE_API_KEY`, batched 50/call, 1 quota
       unit each) into real title/description/thumbnail - quota-based, so no
       per-IP rate-limiting (the scraper rate-limits YouTube to empty results,
       which is why YouTube never goes through it). Also runs automatically before
@@ -218,7 +218,7 @@ step pre-seeds those rows from the recorded verdicts, so migrated posts are
 never re-scored:
 
 ```sh
-POLYCENTRIC_GRAYJAY_MIGRATOR_MODERATION_DATABASE_URL=postgres://…/harbor \
+HARBOR_GRAYJAY_MIGRATOR_MODERATION_DATABASE_URL=postgres://…/harbor \
   cargo run -p grayjay-migrator --bin grayjay-migrate -- seed-moderation
 ```
 
@@ -264,7 +264,7 @@ srv1-gj's actual schema before running the tool.
 behind a Service, with the schema migrations as a pre-install/pre-upgrade hook
 Job). `deploy-grayjay-migrator-staging.yml` builds the image and publishes the
 chart on a push to `develop`; `deploy-grayjay-migrator-production.yml` promotes
-the staging tags. `DATABASE_URL` and the `POLYCENTRIC_GRAYJAY_MIGRATOR_*`
+the staging tags. `DATABASE_URL` and the `HARBOR_GRAYJAY_MIGRATOR_*`
 variables come from a Secret referenced through `envFrom`.
 
 The image also ships `grayjay-migrate`, so the tool steps can run in-cluster

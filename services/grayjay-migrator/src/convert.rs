@@ -670,7 +670,7 @@ mod tests {
         };
         let bytes = finalize_post(&plan, &HashMap::new(), &[Some(preview), None]);
         let content = Content::decode(bytes.as_slice()).unwrap();
-        content.validate_first().expect("valid post");
+        content.validate().expect("valid post");
         let Some(ContentBody::Post(post)) = content.content_body else {
             panic!("expected a post");
         };

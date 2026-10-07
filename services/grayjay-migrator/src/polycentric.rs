@@ -386,9 +386,9 @@ impl Authoring {
             application: Some(grayjay_application()),
         };
         // The same checks the server runs in put_events.
-        event
-            .validate_first()
-            .map_err(|e| format!("event {collection}/{sequence} invalid: {e}"))?;
+        Validate::validate(&event).map_err(|errors| {
+            format!("event {collection}/{sequence} invalid: {}", join(&errors))
+        })?;
         let event_bytes = event.encode_to_vec();
         let signature = self.signing_key.sign(&event_bytes).to_bytes().to_vec();
         Ok(SignedEvent {
@@ -409,6 +409,15 @@ pub async fn push(server: &str, bundles: Vec<EventBundle>) -> Result<Vec<String>
         .map_err(|_| format!("push to {server} timed out"))?
         .map_err(|e| e.to_string())?;
     Ok(response.errors.into_iter().map(|e| e.message).collect())
+}
+
+/// Validation errors as one comma separated string.
+pub fn join<E: std::fmt::Display>(errors: &[E]) -> String {
+    errors
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Wrap a `ContentBody` into a serialized `Content` and its digest.

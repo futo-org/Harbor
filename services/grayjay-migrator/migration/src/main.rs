@@ -3,7 +3,7 @@ use sea_orm_migration::prelude::*;
 
 #[tokio::main]
 async fn main() {
-    let schema = std::env::var("POLYCENTRIC_GRAYJAY_MIGRATOR_DATABASE_SCHEMA")
+    let schema = std::env::var("HARBOR_GRAYJAY_MIGRATOR_DATABASE_SCHEMA")
         .unwrap_or_else(|_| "grayjay_migrator".to_string());
 
     cli::run_cli_with_connection(grayjay_migrator_migration::Migrator, move |mut options| {

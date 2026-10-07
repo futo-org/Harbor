@@ -195,9 +195,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // `sync-legacy`: copy the rows we need from the remote legacy DB into local
     // cache tables. Afterwards the migrate step reads only local.
     if command == "sync-legacy" {
-        let legacy_url = cfg.legacy_database_url.as_deref().ok_or(
-            "POLYCENTRIC_GRAYJAY_MIGRATOR_LEGACY_DATABASE_URL is required for sync-legacy",
-        )?;
+        let legacy_url = cfg
+            .legacy_database_url
+            .as_deref()
+            .ok_or("HARBOR_GRAYJAY_MIGRATOR_LEGACY_DATABASE_URL is required for sync-legacy")?;
         info!("connecting to migrator (local) and legacy (remote) databases");
         let db = db::connect().await?;
         db::run_migrations(&db).await?;
@@ -243,7 +244,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let api_key = cfg
             .youtube_api_key
             .as_deref()
-            .ok_or("POLYCENTRIC_GRAYJAY_MIGRATOR_YOUTUBE_API_KEY is required for enrich-youtube")?;
+            .ok_or("HARBOR_GRAYJAY_MIGRATOR_YOUTUBE_API_KEY is required for enrich-youtube")?;
         info!("connecting to migrator database");
         let db = db::connect().await?;
         db::run_migrations(&db).await?;
@@ -325,7 +326,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // `push`: send each `signed` system's unpushed bundles, then mark complete.
     if command == "push" {
         if cfg.servers.is_empty() {
-            return Err("POLYCENTRIC_GRAYJAY_MIGRATOR_SERVERS is required for push".into());
+            return Err("HARBOR_GRAYJAY_MIGRATOR_SERVERS is required for push".into());
         }
         info!("connecting to migrator database");
         let db = db::connect().await?;
@@ -342,7 +343,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signing_key = cfg
         .signing_key
         .as_deref()
-        .ok_or("POLYCENTRIC_GRAYJAY_MIGRATOR_SIGNING_KEY is required")?;
+        .ok_or("HARBOR_GRAYJAY_MIGRATOR_SIGNING_KEY is required")?;
 
     let authoring = polycentric::Authoring::new(signing_key, cfg.identity_servers.clone())?;
     let master_public = authoring.master_public();
@@ -1242,8 +1243,14 @@ async fn author_system(
         // The same content checks the server runs in put_events.
         Content::decode(content_bytes.as_slice())
             .map_err(|e| format!("decode content {:?}: {e}", item.source))?
-            .validate_first()
-            .map_err(|e| format!("content {:?} invalid: {e}", item.source))?;
+            .validate()
+            .map_err(|errors| {
+                format!(
+                    "content {:?} invalid: {}",
+                    item.source,
+                    polycentric::join(&errors)
+                )
+            })?;
         contents.push(MigratedContent {
             collection: item.collection,
             content_bytes,

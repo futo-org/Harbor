@@ -23,12 +23,12 @@ podSecurityContext: {}
 
 securityContext: {}
 
-# DATABASE_URL, POLYCENTRIC_GRAYJAY_MIGRATOR_*: put secrets in a Secret
+# DATABASE_URL, HARBOR_GRAYJAY_MIGRATOR_*: put secrets in a Secret
 # referenced via envFrom.
 env: []
 envFrom: []
 
-# Must match POLYCENTRIC_GRAYJAY_MIGRATOR_HTTP_ADDR (default 0.0.0.0:3003).
+# Must match HARBOR_GRAYJAY_MIGRATOR_HTTP_ADDR (default 0.0.0.0:3003).
 containerPort: 3003
 
 # Run the migration binary shipped in the image as a pre-install/pre-upgrade
