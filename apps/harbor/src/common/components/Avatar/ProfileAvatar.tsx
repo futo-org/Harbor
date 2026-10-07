@@ -14,9 +14,12 @@ type ProfileAvatarProps = {
   identityKey: string;
 } & Omit<ComponentProps<typeof Avatar>, 'source'>;
 
-/** Following badge diameter for an avatar of `size` logical pixels. */
+/**
+ * Following badge diameter for an avatar of `size` logical pixels. Capped so
+ * the glyph matches a small button's 16px icon on large avatars.
+ */
 function badgeSize(size: number) {
-  return Math.min(36, Math.max(12, Math.round(size * 0.4)));
+  return Math.min(24, Math.max(12, Math.round(size * 0.4)));
 }
 
 /**
@@ -52,7 +55,9 @@ export function ProfileAvatar({
 
   const pixels = resolveAvatarSize(size);
   const badge = badgeSize(pixels);
-  const overhang = Math.round(badge * 0.15);
+  // Centre the badge on the circle's rim at 45 degrees, where the rim sits
+  // inside the square's corner by r * (1 - 1/sqrt 2).
+  const overhang = Math.round(badge / 2 - (pixels / 2) * (1 - Math.SQRT1_2));
 
   return (
     <View style={{ width: pixels, height: pixels }}>
