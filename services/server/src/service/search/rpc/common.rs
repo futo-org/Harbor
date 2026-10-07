@@ -263,20 +263,18 @@ pub async fn view<SortedBy>(
         ..
     } = hydration;
 
+    attach_proofs(ctx, &mut tombstone_bundles).await?;
+
     let mut results = assemble_results(live_rows, &stats);
     // SAFETY: we've just assembled the result above where the event_bundle is
     // always Some, hence it's safe to unwrap.
     let results_iter = results
         .iter_mut()
         .map(|result| result.event_bundle.as_mut().unwrap());
+    attach_proofs(ctx, results_iter).await?;
 
     let mut label_bundles = assemble_bundles(label_events, &stats);
-
-    tokio::try_join!(
-        attach_proofs(ctx, results_iter),
-        attach_proofs(ctx, &mut tombstone_bundles),
-        attach_proofs(ctx, &mut label_bundles),
-    )?;
+    attach_proofs(ctx, &mut label_bundles).await?;
 
     // Identity, profile, referenced (quote / repost) posts, tombstones,
     // and moderation labels all ship as hints.

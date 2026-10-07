@@ -104,20 +104,17 @@ async fn hydrate(
         .map(|(event, _)| TargetEventKey::of(event))
         .collect::<Vec<_>>();
 
-    let stats_fut = async {
-        gather_stats_for(&ctx.ro_db, rows.iter().map(|(e, _)| e.id))
-            .await
-            .map_err(map_db_err)
-    };
+    let identity_events = list_identity_events(ctx, identities.clone()).await?;
 
-    let (identity_events, profile_events, deletes_by_target, stats) = tokio::try_join!(
-        list_identity_events(ctx, identities.clone()),
-        list_profile_events(ctx, identities),
-        // We won't filter out tombstoned events, but we still collect deletions
-        // so that we can send them as hints.
-        tombstone::validated_tombstones(ctx, &keys),
-        stats_fut,
-    )?;
+    let profile_events = list_profile_events(ctx, identities).await?;
+
+    // We won't filter out tombstoned events, but we still collect deletions
+    // so that we can send them as hints.
+    let deletes_by_target = tombstone::validated_tombstones(ctx, &keys).await?;
+
+    let stats = gather_stats_for(&ctx.ro_db, rows.iter().map(|(e, _)| e.id))
+        .await
+        .map_err(map_db_err)?;
 
     Ok(HydrationState {
         identity_events,
