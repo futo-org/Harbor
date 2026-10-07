@@ -25,7 +25,7 @@ export function FollowingBadge({
 
   if (!following) return null;
 
-  const tickSize = Math.round(size * 0.6);
+  const glyphSize = Math.round(size * 0.7);
   // Match FollowButton's Following state.
   const backgroundColor = getButtonVariantStyle(
     theme,
@@ -44,8 +44,8 @@ export function FollowingBadge({
         ]}
       >
         <Icon
-          name="checkBold"
-          size={tickSize}
+          name="personCheck"
+          size={glyphSize}
           color={buttonTextColorMap.primary}
         />
       </View>

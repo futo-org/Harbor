@@ -10,7 +10,7 @@ export function InfoTooltip({
   size?: number;
 }) {
   return (
-    <Tooltip text={text} accessibilityLabel="More information">
+    <Tooltip text={text} accessibilityLabel="More information" inline>
       <Icon name="infoOutline" size={size} color="neutral_500" />
     </Tooltip>
   );
