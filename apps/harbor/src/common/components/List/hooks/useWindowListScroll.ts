@@ -5,7 +5,13 @@ import {
   type Virtualizer,
 } from '@tanstack/react-virtual';
 import { useIsFocused } from 'expo-router';
-import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type RefObject,
+} from 'react';
 
 const ESTIMATED_ITEM_HEIGHT = 150;
 
@@ -61,6 +67,18 @@ export function useWindowListScroll<T>({
     restorationKey ? savedStates.get(restorationKey) : undefined,
   ).current;
 
+  // Stable unless the rows change: a new `getItemKey` makes the virtualizer
+  // recompute every row's position.
+  const keyExtractorRef = useRef(keyExtractor);
+  keyExtractorRef.current = keyExtractor;
+  const getItemKey = useCallback(
+    (index: number) =>
+      typeof keyExtractorRef.current === 'function'
+        ? keyExtractorRef.current(items[index], index)
+        : index,
+    [items],
+  );
+
   // Row heights vary, so each rendered row is measured via `measureElement`.
   const virtualizer = useWindowVirtualizer({
     count: items.length,
@@ -73,10 +91,7 @@ export function useWindowListScroll<T>({
     useFlushSync: false,
     useAnimationFrameWithResizeObserver: true,
     measureElement: measureVisibleRow,
-    getItemKey: (index) =>
-      typeof keyExtractor === 'function'
-        ? keyExtractor(items[index], index)
-        : index,
+    getItemKey,
   });
 
   const liveHeaderHeight = () =>
@@ -195,12 +210,15 @@ function useAnchoredRow({
   });
 
   if (anchorIndex === undefined || isEmpty) return 0;
-  // Room for the anchored row to reach the top. Reserve a viewport until
-  // the row is measured, or the scroll above clamps to a short page.
+  // Room for the anchored row to reach the top, or the scroll above clamps
+  // to a short page. `getTotalSize` also refreshes `measurementsCache`.
+  const totalSize = virtualizer.getTotalSize();
   const anchorStart = virtualizer.measurementsCache[anchorIndex]?.start;
   const room = window.innerHeight - headerHeight;
+  // Purely defensive: the cache covers every row, so this only catches an
+  // out-of-range index, which isn't expected to happen.
   if (anchorStart === undefined) return room;
-  const below = scrollMargin + virtualizer.getTotalSize() - anchorStart;
+  const below = scrollMargin + totalSize - anchorStart;
   return Math.max(0, room - below);
 }
 
