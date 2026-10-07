@@ -2,6 +2,10 @@ import Icon from '@/src/common/components/Icon';
 import { List } from '@/src/common/components/List';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { PagerView } from '@/src/common/components/PagerView';
+import {
+  TabFilterSheet,
+  type TabFilterOption,
+} from '@/src/common/components/tabs';
 import { Tabs } from '@/src/common/components/tabs';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { Text } from '@/src/common/components/primitives';
@@ -13,6 +17,7 @@ import FollowButton from '@/src/features/follow/FollowButton';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { router } from 'expo-router';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -23,21 +28,15 @@ import {
 import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FeedPage } from '../feed/FeedPage';
-import { useSearchPosts } from './hooks/useSearchPosts';
+import { useSearchPosts, type PostSearchSort } from './hooks/useSearchPosts';
 import { type UserSearchEntry, useSearchUsers } from './hooks/useSearchUsers';
 
-export type SearchTab = 'top' | 'popular' | 'latest' | 'people';
+export type SearchTab = 'top' | 'latest' | 'people';
 
-/** Page order behind the tab bar. */
-const SEARCH_TABS: readonly SearchTab[] = [
-  'top',
-  'popular',
-  'latest',
-  'people',
-];
+const SEARCH_TAB_VALUES: readonly SearchTab[] = ['top', 'latest', 'people'];
+
 const SEARCH_TAB_LABELS: Record<SearchTab, string> = {
   top: 'Top',
-  popular: 'Popular',
   latest: 'Latest',
   people: 'People',
 };
@@ -48,7 +47,7 @@ function PostResultsPage({
   active,
 }: {
   query: string;
-  sort: 'top' | 'popular' | 'latest';
+  sort: PostSearchSort;
   /** True for the page being shown; only that page queries. */
   active: boolean;
 }) {
@@ -150,7 +149,7 @@ export function SearchResults({
     <View style={{ backgroundColor: theme.palette.neutral_0 }}>
       {topbar}
       <Tabs progress={dragProgress}>
-        {SEARCH_TABS.map((value) => (
+        {SEARCH_TAB_VALUES.map((value) => (
           <Tabs.Tab
             key={value}
             active={tab === value}
@@ -165,17 +164,12 @@ export function SearchResults({
 
   return (
     <PagerView
-      values={SEARCH_TABS}
+      values={SEARCH_TAB_VALUES}
       active={tab}
       onChange={onTabChange}
       renderTabBar={renderTabBar}
     >
       <PostResultsPage query={query} sort="top" active={tab === 'top'} />
-      <PostResultsPage
-        query={query}
-        sort="popular"
-        active={tab === 'popular'}
-      />
       <PostResultsPage query={query} sort="latest" active={tab === 'latest'} />
       <PeopleResultsPage query={query} active={tab === 'people'} />
     </PagerView>

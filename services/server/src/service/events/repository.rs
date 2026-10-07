@@ -7,7 +7,6 @@ use ::entity::{
     application, block, content, content_delete, event, follow, profile, quote,
     reaction, reaction_tally, reply, repost,
 };
-use chrono::Utc;
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
@@ -410,9 +409,10 @@ impl Mutation {
                     .expr(Expr::Constant(0.into()))
                     .expr(reaction_count_decay(
                         Expr::Constant(0.into()), // Reaction count.
-                        // NOTE: this timestamp isn't 100% accurate, but for a
-                        // post without reactions that shouldn't really matter.
-                        Expr::from(Utc::now()),
+                        Expr::col((
+                            event_table.clone(),
+                            event::Column::CreatedAt,
+                        )),
                     ));
                 q
             })

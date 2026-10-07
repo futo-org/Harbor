@@ -4,6 +4,7 @@ use crate::data::Marker;
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::pipeline::{Fetched, create_pipeline, finalize_fetch};
 use crate::service::context::RequestContext;
+use crate::service::feeds::repository::DecayedReactionCount;
 use crate::service::proto::{
     SearchPostsRequest, SearchPostsResponse, SortPostsBy,
 };
@@ -60,9 +61,8 @@ async fn fetch(
         params.common.limit as u32,
         |row| Marker {
             sorted_by: match params.sort_by {
-                SortPostsBy::Default => SortedPostsBy::Rank(row.search_rank),
-                SortPostsBy::Top => {
-                    SortedPostsBy::PositiveReactions(row.positive_reactions)
+                SortPostsBy::Default | SortPostsBy::Top => {
+                    SortedPostsBy::DecayedReactionCount(row.reactions.clone())
                 }
                 SortPostsBy::Latest => {
                     SortedPostsBy::Latest(row.event.created_at)
@@ -80,10 +80,8 @@ async fn fetch(
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum SortedPostsBy {
-    /// ts_rank rank returned by Postgres.
-    Rank(f32),
-    /// Amount of positive reactions on the post.
-    PositiveReactions(i64),
+    /// Decayed reaction count on the post.
+    DecayedReactionCount(DecayedReactionCount),
     /// Event creation timestamp.
     Latest(DateTimeWithTimeZone),
 }
@@ -91,8 +89,9 @@ pub enum SortedPostsBy {
 impl SortedPostsBy {
     pub fn matches(&self, sort_by: SortPostsBy) -> bool {
         match self {
-            SortedPostsBy::Rank(_) => sort_by == SortPostsBy::Default,
-            SortedPostsBy::PositiveReactions(_) => sort_by == SortPostsBy::Top,
+            SortedPostsBy::DecayedReactionCount(_) => {
+                matches!(sort_by, SortPostsBy::Default | SortPostsBy::Top)
+            }
             SortedPostsBy::Latest(_) => sort_by == SortPostsBy::Latest,
         }
     }
