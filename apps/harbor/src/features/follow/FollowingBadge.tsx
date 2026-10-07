@@ -1,31 +1,22 @@
 import Icon from '@/src/common/components/Icon';
+import { Tooltip } from '@/src/common/components/Tooltip';
 import {
   getVariantStyle as getButtonVariantStyle,
   textColorMap as buttonTextColorMap,
 } from '@/src/common/components/primitives/Button';
-import {
-  type TextVariant,
-  type TextVariantSize,
-  VARIANT_CONFIG,
-} from '@/src/common/components/primitives/Text';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { View } from 'react-native';
+import { type StyleProp, View, type ViewStyle } from 'react-native';
 import useFollows from './hooks/useFollows';
-
-const ICON_BUBBLE_PADDING = 2;
-
-const ICON_SIZE_BY_TEXT_SIZE: Record<TextVariantSize, number> = {
-  lg: 14,
-  md: 12,
-  xs: 10,
-};
 
 export function FollowingBadge({
   identity,
-  variant,
+  size,
+  style,
 }: {
   identity: string | null;
-  variant: TextVariant;
+  /** Badge diameter in logical pixels. */
+  size: number;
+  style?: StyleProp<ViewStyle>;
 }) {
   const { theme } = useTheme();
   const following = useFollows((state) =>
@@ -34,32 +25,30 @@ export function FollowingBadge({
 
   if (!following) return null;
 
-  const size = ICON_SIZE_BY_TEXT_SIZE[VARIANT_CONFIG[variant].size];
-  // Fixed square box, since the glyph's own box isn't square.
-  const diameter = size + 2 * ICON_BUBBLE_PADDING;
+  const tickSize = Math.round(size * 0.6);
+  // Match FollowButton's Following state.
+  const backgroundColor = getButtonVariantStyle(
+    theme,
+    'primary',
+  ).backgroundColor;
 
   return (
-    <View
-      style={[
-        Atoms.align_center,
-        Atoms.justify_center,
-        Atoms.flex_shrink_0,
-        Atoms.rounded_full,
-        {
-          width: diameter,
-          height: diameter,
-          // Match FollowButton's Following state.
-          backgroundColor: getButtonVariantStyle(theme, 'secondary')
-            .backgroundColor,
-        },
-      ]}
-    >
-      <Icon
-        name="people"
-        size={size}
-        color={buttonTextColorMap.secondary}
-        accessibilityLabel="Following"
-      />
-    </View>
+    <Tooltip text="Following" style={style}>
+      <View
+        style={[
+          Atoms.align_center,
+          Atoms.justify_center,
+          Atoms.flex_shrink_0,
+          Atoms.rounded_full,
+          { width: size, height: size, backgroundColor },
+        ]}
+      >
+        <Icon
+          name="checkBold"
+          size={tickSize}
+          color={buttonTextColorMap.primary}
+        />
+      </View>
+    </Tooltip>
   );
 }

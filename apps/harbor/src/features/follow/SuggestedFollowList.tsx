@@ -81,7 +81,6 @@ function SuggestionRow({ identity }: { identity: string }) {
   return (
     <ProfileRow
       identity={identity}
-      noFollowingBadge
       onPress={() => router.navigate(Routes.tabs.profile(identity))}
       style={{ borderBottomWidth: 1, borderColor: theme.palette.neutral_25 }}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}

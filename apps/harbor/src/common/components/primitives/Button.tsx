@@ -167,7 +167,7 @@ export function Button({
   return <Animated.View style={animatedStyle}>{pressable}</Animated.View>;
 }
 
-const BORDER_WIDTH = 1.5;
+const BORDER_WIDTH = 1;
 
 const styles = StyleSheet.create({
   base: {

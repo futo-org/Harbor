@@ -46,6 +46,7 @@ export const IconsMap = {
     'card-account-details-outline',
   ),
   certificateOutline: defineIcon(MaterialCommunityIcons, 'certificate-outline'),
+  checkBold: defineIcon(MaterialCommunityIcons, 'check-bold'),
   checkmark: defineIcon(Ionicons, 'checkmark'),
   checkmarkCircle: defineIcon(Ionicons, 'checkmark-circle'),
   checkmarkSharp: defineIcon(Ionicons, 'checkmark-sharp'),

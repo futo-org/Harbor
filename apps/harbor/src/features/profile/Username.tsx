@@ -1,26 +1,19 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import { useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
-import { FollowingBadge } from '@/src/features/follow/FollowingBadge';
 import type { ComponentProps } from 'react';
 import { View } from 'react-native';
 
 type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   identity: string | null | undefined;
   fallbackName?: string | null;
-  /** Set where a Follow button nearby already shows the state. */
-  noFollowingBadge?: boolean;
 };
 
-/**
- * Every display name in the app renders through this, so the following
- * indicator lives in one place.
- */
+/** Every display name in the app renders through this. */
 export function Username({
   identity,
   fallbackName,
   numberOfLines = 1,
-  noFollowingBadge,
   variant = 'body',
   style,
   ...textProps
@@ -46,9 +39,6 @@ export function Username({
           {name}
         </Text>
       ) : null}
-      {noFollowingBadge ? null : (
-        <FollowingBadge identity={identity ?? null} variant={variant} />
-      )}
     </View>
   );
 }
