@@ -55,6 +55,7 @@ export const IconsMap = {
   close: defineIcon(Ionicons, 'close'),
   closeCircle: defineIcon(Ionicons, 'close-circle'),
   closeSharp: defineIcon(Ionicons, 'close-sharp'),
+  contrast: defineIcon(Ionicons, 'contrast'),
   copy: defineIcon(Ionicons, 'copy-outline'),
   document: defineIcon(Ionicons, 'document-outline'),
   dotsVertical: defineIcon(MaterialCommunityIcons, 'dots-vertical'),
