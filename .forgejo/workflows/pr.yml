@@ -195,7 +195,7 @@ jobs:
         # Looking at the logs we're getting packages from Debian 12 Bookworm.
         run: |
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install postgresql-client
+          DEBIAN_FRONTEND=noninteractive apt-get install postgresql-client --yes
       - name: Connect Docker network
         run: |
           self_container() {
