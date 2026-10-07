@@ -8,6 +8,7 @@ members = [
     "services/server/tests",
     "services/server/perf-tests",
     "services/moderation",
+    "services/grayjay-migrator",
     "services/push-notifications",
     "services/common/*",
     "tools/identity",

@@ -26,7 +26,12 @@ async fn connect_db_with_retry(
 ) -> (DatabaseConnection, DatabaseConnection) {
     let mut delay = std::time::Duration::from_secs(1);
     loop {
-        match build_db_clients(durable_commits).await {
+        match build_db_clients(
+            durable_commits,
+            Some(std::time::Duration::from_secs(5)),
+        )
+        .await
+        {
             Ok((db, ro_db)) => return (db, ro_db),
             Err(e) => {
                 tracing::warn!(

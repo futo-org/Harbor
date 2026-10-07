@@ -30,8 +30,7 @@ check:
 # Linting.
 lint: clippy
 clippy:
-	cargo clippy --all-targets --all-features -- -D warnings \
-		--allow clippy::double_must_use
+	cargo clippy --all-targets --all-features -- -D warnings
 
 # Format.
 fmt:

@@ -1,0 +1,69 @@
+replicaCount: 2
+
+image:
+  # Built by the grayjay-migrator image CI job.
+  repository: registry.futo.org/harbor/grayjay-migrator
+  # Defaults to the chart's appVersion (the commit SHA set by charts-publish).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Scraped by VictoriaMetrics.
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9464"
+  prometheus.io/path: /metrics
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+# DATABASE_URL, HARBOR_GRAYJAY_MIGRATOR_*: put secrets in a Secret
+# referenced via envFrom.
+env: []
+envFrom: []
+
+# Must match HARBOR_GRAYJAY_MIGRATOR_HTTP_ADDR (default 0.0.0.0:3003).
+containerPort: 3003
+
+# Run the migration binary shipped in the image as a pre-install/pre-upgrade
+# hook Job.
+migrations:
+  enabled: true
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: grayjay-migrator.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

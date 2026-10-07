@@ -37,8 +37,8 @@ Rules:
 
 ## Deploys
 
-Components: `server`, `moderation`, `push-notifications`, `scraper`,
-`verifier-bot`, `web`, `app`, `docs`.
+Components: `server`, `moderation`, `push-notifications`, `grayjay-migrator`,
+`scraper`, `verifier-bot`, `web`, `app`, `docs`.
 
 `deploy-<component>-staging.yml` runs on a push to `develop` that touches the
 component's paths (or the workflow and the actions it uses), and manually. A

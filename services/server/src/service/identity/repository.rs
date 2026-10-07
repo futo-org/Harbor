@@ -99,16 +99,18 @@ impl Query {
             .await
     }
 
-    /// Identities with at least one event signed by `public_key`.
+    /// Identities with at least one event signed by `public_key`, with how
+    /// many each has. One scan of `events`.
     pub async fn identities_signed_by<C: ConnectionTrait>(
         db: &C,
         public_key: &[u8],
-    ) -> Result<Vec<String>, DbErr> {
+    ) -> Result<Vec<(String, i64)>, DbErr> {
         event::Entity::find()
             .select_only()
             .column(event::Column::Identity)
-            .distinct()
+            .column_as(event::Column::Id.count(), "n")
             .filter(event::Column::PublicKey.eq(public_key.to_vec()))
+            .group_by(event::Column::Identity)
             .into_tuple()
             .all(db)
             .await
@@ -261,17 +263,58 @@ impl Mutation {
             ))
             .await?;
         if res.rows_affected() == 0 {
-            return Ok(ErasedBatch {
-                erased: Erased {
-                    events: 0,
-                    content: 0,
-                    blobs: 0,
-                },
-                blobs: Vec::new(),
-            });
+            return Ok(ErasedBatch::default());
         }
+        erase_collected(db).await
+    }
 
-        db.execute_unprepared(
+    /// Erases every event `public_key` signed, in one pass. The operator
+    /// command's path for a key with many identities.
+    pub async fn erase_events_signed_by(
+        db: &DatabaseTransaction,
+        public_key: &[u8],
+    ) -> Result<ErasedBatch, DbErr> {
+        let res = db
+            .execute_raw(Statement::from_sql_and_values(
+                DbBackend::Postgres,
+                "CREATE TEMP TABLE erase_events ON COMMIT DROP AS
+                 SELECT id
+                 FROM events
+                 WHERE events.public_key = $1",
+                [public_key.to_vec().into()],
+            ))
+            .await?;
+        if res.rows_affected() == 0 {
+            return Ok(ErasedBatch::default());
+        }
+        erase_collected(db).await
+    }
+
+    /// Deletes what is keyed by the identity rather than by event: the
+    /// notifications and per-event counts. Run once after the batches.
+    /// Counts on other events that include their interactions are left as-is.
+    pub async fn erase_derived(
+        db: &DatabaseTransaction,
+        identities: &[String],
+    ) -> Result<(), DbErr> {
+        for (table, column) in CACHE_EVENT_IDENTITY_COLUMNS {
+            db.execute_raw(Statement::from_sql_and_values(
+                DbBackend::Postgres,
+                format!("DELETE FROM {table} WHERE {column} = ANY($1)"),
+                [identities.to_vec().into()],
+            ))
+            .await?;
+        }
+        Ok(())
+    }
+}
+
+/// Deletes the events listed in the `erase_events` temp table, the cache
+/// rows and tallies derived from them, and the content only they used.
+async fn erase_collected(
+    db: &DatabaseTransaction,
+) -> Result<ErasedBatch, DbErr> {
+    db.execute_unprepared(
             "CREATE TEMP TABLE erase_content ON COMMIT DROP AS
              SELECT DISTINCT content.id
              FROM erase_events
@@ -280,30 +323,30 @@ impl Mutation {
                AND events.content_digest_bytes = content.digest_bytes"
         )
         .await?;
-        db.execute_unprepared("ANALYZE erase_events; ANALYZE erase_content")
-            .await?;
+    db.execute_unprepared("ANALYZE erase_events; ANALYZE erase_content")
+        .await?;
 
-        // Delete from tables based on event id.
-        for (table, column) in CACHE_EVENT_ID_COLUMNS {
-            db.execute_unprepared(&format!(
+    // Delete from tables based on event id.
+    for (table, column) in CACHE_EVENT_ID_COLUMNS {
+        db.execute_unprepared(&format!(
                 "DELETE FROM {table} WHERE {column} IN (SELECT id FROM erase_events)"
             ))
             .await?;
-        }
+    }
 
-        // NOTE: this can conflict the gravity cron job, which rewrites every
-        // tally in one long update. Previously this skipped locked rows, but
-        // need to update the tallies based on deleted reactions below, which
-        // would be lost if we skipped deletion here.
-        db.execute_unprepared(
-            "DELETE FROM reaction_tally
+    // NOTE: this can conflict the gravity cron job, which rewrites every
+    // tally in one long update. Previously this skipped locked rows, but
+    // need to update the tallies based on deleted reactions below, which
+    // would be lost if we skipped deletion here.
+    db.execute_unprepared(
+        "DELETE FROM reaction_tally
              USING erase_events
              WHERE reaction_tally.event_id = erase_events.id",
-        )
-        .await?;
+    )
+    .await?;
 
-        // Delete reactions and update the tallies.
-        db.execute_unprepared(
+    // Delete reactions and update the tallies.
+    db.execute_unprepared(
             "WITH
              deleted_reaction AS (
                DELETE FROM reaction
@@ -330,50 +373,35 @@ impl Mutation {
         )
         .await?;
 
-        // Actually delete the events.
-        let events = db
+    // Actually delete the events.
+    let events = db
             .execute_unprepared("DELETE FROM events USING erase_events WHERE events.id = erase_events.id")
             .await?
             .rows_affected();
 
-        // Delete the content rows which are unique to the events we've deleted
-        // above.
-        db.execute_unprepared(
-            "DELETE FROM erase_content
+    // Delete the content rows which are unique to the events we've deleted
+    // above.
+    db.execute_unprepared(
+        "DELETE FROM erase_content
              USING content, events
              WHERE content.id = erase_content.id
                AND events.content_digest_type = content.digest_type
                AND events.content_digest_bytes = content.digest_bytes",
-        )
-        .await?;
-        let (content, blobs) = delete_content_rows(db).await?;
+    )
+    .await?;
+    let (content, blobs) = delete_content_rows(db).await?;
 
-        Ok(ErasedBatch {
-            erased: Erased {
-                events,
-                content,
-                blobs: blobs.len() as u64,
-            },
-            blobs,
-        })
-    }
+    Ok(ErasedBatch {
+        erased: Erased {
+            events,
+            content,
+            blobs: blobs.len() as u64,
+        },
+        blobs,
+    })
+}
 
-    /// Deletes what is keyed by the identity rather than by event: the
-    /// notifications and per-event counts. Run once after the batches.
-    /// Counts on other events that include their interactions are left as-is.
-    pub async fn erase_derived(
-        db: &DatabaseTransaction,
-        identity: &str,
-    ) -> Result<(), DbErr> {
-        for (table, column) in CACHE_EVENT_IDENTITY_COLUMNS {
-            db.execute_unprepared(&format!(
-                "DELETE FROM {table} WHERE {column} = '{identity}'"
-            ))
-            .await?;
-        }
-        Ok(())
-    }
-
+impl Mutation {
     /// Deletes content no event references. Returns the count and the blobs
     /// left for the caller to remove.
     pub async fn prune_orphan_content(
@@ -442,6 +470,7 @@ pub struct Erased {
     pub blobs: u64,
 }
 
+#[derive(Default)]
 pub struct ErasedBatch {
     pub erased: Erased,
     /// Blobs no content references any more, for the caller to remove.

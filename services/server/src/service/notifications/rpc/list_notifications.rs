@@ -125,31 +125,6 @@ async fn hydrate(
         identities.insert(row.to_identity.clone());
     }
 
-    // Bulk-fetch the referenced events, build bundles with proofs, and index
-    // them by their comparable key for the view stage.
-    let proto_keys: Vec<EventKey> = cmp_keys.iter().map(to_proto_key).collect();
-    let fetched =
-        FeedsRepository::list_events_by_keys(&ctx.service.ro_db, &proto_keys)
-            .await
-            .map_err(map_db_err)?;
-
-    let stats_fut = async {
-        gather_stats_for(&ctx.service.ro_db, fetched.iter().map(|(e, _)| e.id))
-            .await
-            .map_err(map_db_err)
-    };
-
-    // Fetch label events for trigger events only: we assume recipient is the target's
-    // author and does not object to their own posts.
-    let label_fut = async {
-        FeedsRepository::list_labels_for_event_keys(
-            &ctx.service.ro_db,
-            &trigger_keys,
-        )
-        .await
-        .map_err(map_db_err)
-    };
-
     // Add moderation service identity to every request, such that clients can verify label events.
     // This ships the identity events more times than the client needs, and even when labels aren't
     // present in the feed page--can be optimized later.
@@ -161,16 +136,33 @@ async fn hydrate(
 
     let identities: Vec<String> = identities.into_iter().collect();
 
-    let blocked_fut = GraphRepository::blocked_set_for_caller(ctx);
+    // Bulk-fetch the referenced events, build bundles with proofs, and index
+    // them by their comparable key for the view stage.
+    let proto_keys: Vec<EventKey> = cmp_keys.iter().map(to_proto_key).collect();
+    let fetched =
+        FeedsRepository::list_events_by_keys(&ctx.service.ro_db, &proto_keys)
+            .await
+            .map_err(map_db_err)?;
 
-    // Author identity, profile, and moderation label events all ship as hints.
-    let (identity_events, profile_events, label_rows, stats, blocked) = tokio::try_join!(
-        list_identity_events(ctx.service, identities.clone()),
-        list_profile_events(ctx.service, identities),
-        label_fut,
-        stats_fut,
-        blocked_fut,
-    )?;
+    let identity_events =
+        list_identity_events(ctx.service, identities.clone()).await?;
+    let profile_events = list_profile_events(ctx.service, identities).await?;
+
+    let stats =
+        gather_stats_for(&ctx.service.ro_db, fetched.iter().map(|(e, _)| e.id))
+            .await
+            .map_err(map_db_err)?;
+
+    // Fetch label events for trigger events only: we assume recipient is the target's
+    // author and does not object to their own posts.
+    let label_rows = FeedsRepository::list_labels_for_event_keys(
+        &ctx.service.ro_db,
+        &trigger_keys,
+    )
+    .await
+    .map_err(map_db_err)?;
+
+    let blocked = GraphRepository::blocked_set_for_caller(ctx).await?;
 
     let fetched_keys: Vec<_> =
         fetched.iter().map(|(e, _)| TargetEventKey::of(e)).collect();
