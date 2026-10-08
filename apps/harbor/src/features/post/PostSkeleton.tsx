@@ -8,6 +8,8 @@ import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+export const POST_SKELETON_LIST_COUNT = 6;
+
 export function PostSkeleton() {
   const { theme } = useTheme();
   const animatedStyle = useShimmerOpacity();
@@ -47,9 +49,9 @@ export function PostSkeleton() {
   );
 }
 
-export function PostSkeletonList({ count = 6 }: { count?: number }) {
+export function PostSkeletonList() {
   return (
-    <SkeletonList count={count}>
+    <SkeletonList count={POST_SKELETON_LIST_COUNT}>
       <PostSkeleton />
     </SkeletonList>
   );

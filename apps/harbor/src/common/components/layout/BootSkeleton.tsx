@@ -10,6 +10,7 @@ import {
 } from '@/src/common/components/metrics';
 import HARBOR_LOGO from '@/src/common/assets/images/harbor-logo-256.png';
 import type { ImageURISource } from 'react-native';
+import { POST_SKELETON_LIST_COUNT } from '@/src/features/post/PostSkeleton';
 import {
   BorderRadius,
   Breakpoints,
@@ -27,7 +28,6 @@ const FADE_OUT_MS = 300;
 // Asset imports resolve to `{ uri }` on web.
 const HARBOR_LOGO_URI = (HARBOR_LOGO as ImageURISource).uri;
 
-const POST_COUNT = 5;
 // Label widths of the signed-in nav; signed-out shows only the first item.
 const NAV_LABEL_WIDTHS = [50, 64, 104, 100, 54, 66];
 // Real nav items are 48–51px tall, depending on the icon glyph.
@@ -167,7 +167,7 @@ export function BootSkeleton() {
                 <Bone width={AVATAR_SIZE} height={AVATAR_SIZE} />
                 <Bone width={140} />
               </div>
-              {Array.from({ length: POST_COUNT }, (_, i) => (
+              {Array.from({ length: POST_SKELETON_LIST_COUNT }, (_, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder rows never reorder
                 <PostBones key={i} />
               ))}
