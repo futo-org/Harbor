@@ -1,5 +1,7 @@
+import { hideBootSkeleton } from '@/src/common/components/layout/BootSkeleton';
 import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
 import { publicEnv } from '@/src/common/util/env';
+import { isWeb } from '@/src/common/util/platform';
 import useBlocks from '@/src/features/block/hooks/useBlocks';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
@@ -18,6 +20,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
 import { Platform, Text, View } from 'react-native';
 import { Atoms, useTheme } from '../../theme';
 import { registerForPushNotifications } from '../notifications/registerPushToken';
@@ -113,7 +116,6 @@ export const DEFAULT_VERIFIER_SERVERS: string[] = (() => {
 interface PolycentricProviderProps {
   children: ReactNode;
   loadingComponent?: ReactNode;
-  onInitialized?: () => void;
 }
 
 function DefaultLoadingComponent() {
@@ -133,6 +135,11 @@ function DefaultLoadingComponent() {
 }
 
 function DefaultErrorComponent({ error }: { error: Error }) {
+  // The root stack, which hides the splash, never mounts on this path.
+  useEffect(() => {
+    void SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   return (
     <View
       style={{
@@ -202,7 +209,6 @@ function bootstrapClient(): Promise<Bootstrap> {
 export function PolycentricProvider({
   children,
   loadingComponent,
-  onInitialized,
 }: PolycentricProviderProps) {
   const [client, setClient] = useState<PolycentricClient | null>(null);
   const [store, setStore] = useState<PolycentricStoreApi | null>(null);
@@ -217,10 +223,8 @@ export function PolycentricProvider({
   useNotificationNavigation(!isLoading && !error);
 
   useEffect(() => {
-    if (!isLoading) {
-      onInitialized?.();
-    }
-  }, [isLoading, onInitialized]);
+    if (!isLoading && isWeb) hideBootSkeleton();
+  }, [isLoading]);
 
   const currentIdentityKey = currentIdentity?.identityKey;
   useEffect(() => {
