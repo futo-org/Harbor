@@ -6,7 +6,6 @@ use sea_orm_migration::prelude::*;
 #[tokio::main]
 async fn main() {
     let schema = env::var("HARBOR_NOTIFICATIONS_DATABASE_SCHEMA")
-        .or_else(|_| env::var("POLYCENTRIC_NOTIFICATIONS_DATABASE_SCHEMA"))
         .unwrap_or_else(|_| "notifications".to_string());
 
     if let Ok(db_url) = env::var("HARBOR_DATABASE_URL") {

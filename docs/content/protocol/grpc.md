@@ -230,7 +230,7 @@ message JoinPairingSessionResponse {
 
 Registers a device for push notifications. The request is a signed
 `RegisterPushNotificationRequest`. The server currently supports Expo as the push
-service (configured with the push-notifications service's `EXPO_ACCESS_TOKEN`).
+service (configured with the push-notifications service's `HARBOR_EXPO_ACCESS_TOKEN`).
 
 ```protobuf
 service NotificationService {
@@ -264,7 +264,7 @@ message ServerInfo {
 }
 ```
 
-`cdn_url` reflects the server's `CDN_URL` configuration.
+`cdn_url` reflects the server's `HARBOR_CDN_URL` configuration.
 
 ## SignedMessage
 

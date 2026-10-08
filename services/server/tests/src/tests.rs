@@ -29,15 +29,12 @@ mod verifications;
 /// gRPC server address. Override with `HARBOR_TEST_SERVER` env var.
 pub fn grpc_addr() -> String {
     std::env::var("HARBOR_TEST_SERVER")
-        .or_else(|_| std::env::var("POLYCENTRIC_TEST_SERVER"))
         .unwrap_or_else(|_| "http://localhost:3000".to_string())
 }
 
 /// JWT auth token audience.
 fn audience() -> String {
-    match std::env::var("HARBOR_ALLOW_HOSTS")
-        .or_else(|_| std::env::var("POLYCENTRIC_ALLOW_HOSTS"))
-    {
+    match std::env::var("HARBOR_ALLOW_HOSTS") {
         Ok(hosts) => hosts
             .split(',')
             .map(str::trim)
@@ -46,7 +43,6 @@ fn audience() -> String {
             .expect("invalid HARBOR_ALLOW_HOSTS")
             .to_owned(),
         Err(_) => std::env::var("HARBOR_SERVER_NAME")
-            .or_else(|_| std::env::var("POLYCENTRIC_SERVER_NAME"))
             .unwrap_or_else(|_| "http://localhost:3000".to_string()),
     }
 }

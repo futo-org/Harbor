@@ -63,9 +63,8 @@ function retrieveOAuthSecret(token: string): string | undefined {
 // prefixes). Native apps pass their deep-link URL — an https redirect can't
 // close a mobile auth session.
 const allowedCallbacks = (
-  process.env.HARBOR_VERIFIER_BOT_ALLOWED_CALLBACKS ??
-  (process.env.POLYCENTRIC_VERIFIER_BOT_ALLOWED_CALLBACKS ||
-    'harbor://,harbor.staging://,harbor.dev://,exp://,exps://,http://localhost:8081,https://harbor.social,https://staging.harbor.social')
+  process.env.HARBOR_VERIFIER_BOT_ALLOWED_CALLBACKS ||
+  'harbor://,harbor.staging://,harbor.dev://,exp://,exps://,http://localhost:8081,https://harbor.social,https://staging.harbor.social'
 )
   .split(',')
   .map((s) => s.trim())
@@ -107,9 +106,7 @@ function retrieveOAuthRedirect(key: string | undefined): string | undefined {
 async function loadClient(): Promise<PolycentricClient> {
   // Comma-delimited list of servers.
   const servers = (
-    process.env.HARBOR_VERIFIER_BOT_SERVERS ??
-    (process.env.POLYCENTRIC_VERIFIER_BOT_SERVERS ||
-      'https://east.polycentric.dev')
+    process.env.HARBOR_VERIFIER_BOT_SERVERS || 'https://east.polycentric.dev'
   )
     .split(',')
     .map((s) => s.trim())
@@ -123,9 +120,7 @@ async function loadClient(): Promise<PolycentricClient> {
   // DATABASE_URL (postgres://, optionally ?schema=<name>) to use postgres
   // instead of the local sqlite file.
   const client = await createPolycentricNodeClient({
-    databaseUrl:
-      process.env.HARBOR_VERIFIER_BOT_DATABASE_URL ??
-      process.env.POLYCENTRIC_VERIFIER_BOT_DATABASE_URL,
+    databaseUrl: process.env.HARBOR_VERIFIER_BOT_DATABASE_URL,
     databasePath: './state/polycentric.db',
     blobDirectory: './state/blobs',
     seedServers: servers,
@@ -166,13 +161,10 @@ async function ensureProfile(client: PolycentricClient): Promise<void> {
       contentBody: {
         oneofKind: 'profileUpdate',
         profileUpdate: {
-          name:
-            process.env.HARBOR_VERIFIER_BOT_PROFILE_NAME ??
-            (process.env.POLYCENTRIC_VERIFIER_BOT_PROFILE_NAME || 'Verifier'),
+          name: process.env.HARBOR_VERIFIER_BOT_PROFILE_NAME || 'Verifier',
           description:
-            process.env.HARBOR_VERIFIER_BOT_PROFILE_DESCRIPTION ??
-            (process.env.POLYCENTRIC_VERIFIER_BOT_PROFILE_DESCRIPTION ||
-              'Automated verifier of platform claims.'),
+            process.env.HARBOR_VERIFIER_BOT_PROFILE_DESCRIPTION ||
+            'Automated verifier of platform claims.',
         },
       },
     });
@@ -227,9 +219,8 @@ async function ensureProfile(client: PolycentricClient): Promise<void> {
   app.use(
     cors({
       origin: (
-        process.env.HARBOR_VERIFIER_BOT_ALLOWED_ORIGINS ??
-        (process.env.POLYCENTRIC_VERIFIER_BOT_ALLOWED_ORIGINS ||
-          'http://localhost:3002,http://localhost:8081,https://harbor.social,https://staging.harbor.social')
+        process.env.HARBOR_VERIFIER_BOT_ALLOWED_ORIGINS ||
+        'http://localhost:3002,http://localhost:8081,https://harbor.social,https://staging.harbor.social'
       ).split(','),
       credentials: true,
       methods: ['GET', 'POST', 'OPTIONS'],

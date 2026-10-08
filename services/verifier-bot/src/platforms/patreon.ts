@@ -29,12 +29,9 @@ export type PatreonOAuthURLResult = {
   secret: string;
 };
 
-const PATREON_CLIENT_ID =
-  process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_ID ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_ID;
+const PATREON_CLIENT_ID = process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_ID;
 const PATREON_CLIENT_SECRET =
-  process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_SECRET ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_PATREON_CLIENT_SECRET;
+  process.env.HARBOR_VERIFIER_BOT_PATREON_CLIENT_SECRET;
 
 class PatreonOAuthVerifier extends OAuthVerifier<PatreonOAuthCallbackData> {
   constructor() {

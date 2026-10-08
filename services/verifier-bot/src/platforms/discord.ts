@@ -19,12 +19,9 @@ type DiscordTokenRequest = {
   harborSecret?: string;
 };
 
-const DISCORD_CLIENT_ID =
-  process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_ID ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_ID;
+const DISCORD_CLIENT_ID = process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET =
-  process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_SECRET ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_DISCORD_CLIENT_SECRET;
+  process.env.HARBOR_VERIFIER_BOT_DISCORD_CLIENT_SECRET;
 
 class DiscordOAuthVerifier extends OAuthVerifier<DiscordTokenRequest> {
   constructor() {

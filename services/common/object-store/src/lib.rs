@@ -49,24 +49,15 @@ pub struct ObjectStoreConfig {
 impl ObjectStoreConfig {
     pub fn from_env() -> Result<Self, String> {
         let bucket = env::var("HARBOR_CONTENT_BLOB_OS_BUCKET")
-            .or_else(|_| env::var("CONTENT_BLOB_OS_BUCKET"))
             .map_err(|_| "CONTENT_BLOB_OS_BUCKET is required".to_string())?;
-        let region = env::var("HARBOR_CONTENT_BLOB_OS_REGION")
-            .or_else(|_| env::var("CONTENT_BLOB_OS_REGION"))
-            .unwrap_or_else(|_| "us-east-1".to_string());
-        let endpoint = env::var("HARBOR_CONTENT_BLOB_OS_ENDPOINT")
-            .or_else(|_| env::var("CONTENT_BLOB_OS_ENDPOINT"))
-            .ok();
+        let region =
+            env::var("HARBOR_CONTENT_BLOB_OS_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+        let endpoint = env::var("HARBOR_CONTENT_BLOB_OS_ENDPOINT").ok();
         let force_path_style = env::var("HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE")
-            .or_else(|_| env::var("CONTENT_BLOB_OS_FORCE_PATH_STYLE"))
             .map(|v| matches!(v.as_str(), "true" | "1"))
             .unwrap_or(false);
-        let access_key = env::var("HARBOR_CONTENT_BLOB_OS_ACCESS_KEY")
-            .or_else(|_| env::var("CONTENT_BLOB_OS_ACCESS_KEY"))
-            .ok();
-        let secret_key = env::var("HARBOR_CONTENT_BLOB_OS_SECRET_KEY")
-            .or_else(|_| env::var("CONTENT_BLOB_OS_SECRET_KEY"))
-            .ok();
+        let access_key = env::var("HARBOR_CONTENT_BLOB_OS_ACCESS_KEY").ok();
+        let secret_key = env::var("HARBOR_CONTENT_BLOB_OS_SECRET_KEY").ok();
         Ok(Self {
             bucket,
             region,
