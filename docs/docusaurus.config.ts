@@ -2,6 +2,7 @@ import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import tailwindPostcss from '@tailwindcss/postcss';
+import grpcApiPlugin from './plugins/grpc-api/index';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -34,6 +35,8 @@ const config: Config = {
   },
 
   plugins: [
+    // The gRPC API reference, generated from the proto files.
+    grpcApiPlugin,
     // Tailwind (v4) for the landing pages; docs pages stay on Infima.
     async function tailwindPlugin() {
       return {

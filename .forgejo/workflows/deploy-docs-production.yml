@@ -8,6 +8,8 @@ on:
     branches: [develop]
     paths:
       - docs/**
+      - protos/polycentric/v2/**
+      - buf.yaml
       - .forgejo/workflows/deploy-docs-production.yml
       - .forgejo/actions/setup-pnpm/**
 

@@ -1,0 +1,50 @@
+---
+title: gRPC API
+sidebar_label: gRPC API
+sidebar_position: 3
+description: Reference for the Polycentric gRPC services, generated from the protocol's proto files.
+---
+
+import Reference from './_grpc-reference.mdx';
+
+# gRPC API
+
+A Polycentric server exposes its API as gRPC services in the `polycentric.v2`
+package, served as gRPC (HTTP/2 cleartext) and gRPC-Web on one port (`3000` by
+default, see [Host a Server](../guides/running-a-server.md)).
+
+The reference below is generated when this site is built from the `.proto`
+files in
+[`protos/polycentric/v2`](https://code.futo.org/harbor/harbor/src/branch/develop/protos/polycentric/v2),
+so it matches the checked-in definitions. Every server also serves the
+reference for its own build at `/docs`, generated from gRPC reflection.
+
+## Calling a method
+
+- **Path.** A method is `POST /{package}.{Service}/{Method}`, for example
+  `https://srv.harbor.social/polycentric.v2.FeedsService/GetExploreFeed`.
+- **Encoding.** Requests and responses are binary protobuf messages. The *Try
+  it out* panels below take
+  [proto3 JSON](https://protobuf.dev/programming-guides/json/) (`bytes` fields
+  are base64, 64-bit integers may be strings), encode it, and send a real
+  gRPC-Web request from your browser to the selected server.
+- **Authentication.** Methods that act for an identity expect a JWT in the
+  `authorization` header, see
+  [Server Authentication](./server-auth.md). Push notification registration
+  instead takes a `SignedMessage` envelope signed by the device's key pair.
+- **Reflection.** Servers enable gRPC reflection, so tools like
+  [grpcurl](https://github.com/fullstorydev/grpcurl) can list and call methods
+  without the proto files:
+
+```bash
+grpcurl -plaintext localhost:3000 list
+grpcurl -plaintext -d '{"identity": "<identity>"}' localhost:3000 \
+  polycentric.v2.ProfileService/GetProfile
+```
+
+The messages carried by events (posts, follows, identity documents and so on)
+are explained in [Data Model](./data-model.md). Blob bodies are downloaded over
+plain HTTP, see the
+[HTTP endpoints](../guides/running-a-server.md#http-endpoints).
+
+<Reference />

@@ -14,7 +14,9 @@ import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
  * *
- * Push notifications provided by polycentric servers
+ * Notifications for an identity. ListNotifications is served by the server.
+ * The push registration methods are served by a push-notifications service;
+ * a server without one answers them with NOT_FOUND.
  *
  * @generated from protobuf service polycentric.v2.NotificationService
  */
@@ -40,7 +42,9 @@ export interface INotificationServiceClient {
 }
 /**
  * *
- * Push notifications provided by polycentric servers
+ * Notifications for an identity. ListNotifications is served by the server.
+ * The push registration methods are served by a push-notifications service;
+ * a server without one answers them with NOT_FOUND.
  *
  * @generated from protobuf service polycentric.v2.NotificationService
  */

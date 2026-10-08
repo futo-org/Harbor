@@ -118,7 +118,7 @@ const verifierBot = touches(
 );
 const app = touches(LOCK, 'apps/', CHARTS);
 const e2e = touches('e2e/');
-const docs = touches('docs/');
+const docs = touches('docs/', 'protos/polycentric/v2/', /^buf\.yaml$/);
 const charts = touches(
   CHARTS,
   NODE_ROOT,

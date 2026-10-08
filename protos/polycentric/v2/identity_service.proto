@@ -4,11 +4,6 @@ package polycentric.v2;
 import "polycentric/v2/common.proto";
 
 /**
- * The moderation RPCs are authenticated by the caller's bearer JWT
- * (see `auth_middleware`): the ban endpoints require a moderator.
- */
-
-/**
  * IsModerator: no extra fields.
  */
 message IsModeratorRequest {}
@@ -61,8 +56,8 @@ message ListBansResponse {
 }
 
 /**
- * Identity moderation APIs, authenticated by the caller's bearer JWT
- * (see the note above).
+ * Identity moderation APIs. The caller is authenticated by its bearer JWT
+ * (see `auth_middleware`); the ban endpoints require a moderator.
  */
 service IdentityService {
   // Returns whether the calling identity is a moderator on this server.
