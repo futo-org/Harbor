@@ -15,6 +15,14 @@ jest.mock('@/src/common/lib/images/processAndUploadImage', () => ({
   processAndUploadImage: jest.fn(),
 }));
 
+jest.mock('expo-router', () => ({
+  useNavigation: () => ({ dispatch: jest.fn() }),
+}));
+
+jest.mock('expo-router/react-navigation', () => ({
+  usePreventRemove: jest.fn(),
+}));
+
 jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(),
   launchCameraAsync: jest.fn(),
@@ -387,9 +395,10 @@ describe('useComposer handlePost', () => {
     );
     expect(mockClient.commitEvent).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
-    // Composer was reset.
-    expect(result.current.text).toBe('');
     expect(result.current.submitting).toBe(false);
+    // Closing unmounts the composer, which resets it.
+    act(() => renderers.at(-1)?.unmount());
+    expect(useComposerStore.getState().text).toBe('');
   });
 
   it('rewrites remembered identity mentions to the curly form', async () => {
@@ -410,6 +419,7 @@ describe('useComposer handlePost', () => {
       }),
     );
     // Memory is cleared with the rest of the composer.
+    act(() => renderers.at(-1)?.unmount());
     expect(useComposerStore.getState().mentions).toEqual({});
   });
 

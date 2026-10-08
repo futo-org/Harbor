@@ -1,4 +1,5 @@
 import { toast } from '@/src/common/components/toast/useToast';
+import { confirm } from '@/src/common/lib/dialogs';
 import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/loadBoundedImage';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
@@ -27,8 +28,11 @@ import {
   Query,
 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useEffect, useRef } from 'react';
+import { useNavigation } from 'expo-router';
+import { usePreventRemove } from 'expo-router/react-navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
+import { isWeb } from '@/src/common/util/platform';
 import { useComposerStore } from './useComposerStore';
 import { rewriteIdentityMentions } from '../utils/rewriteIdentityMentions';
 import { useLinkPreview } from './useLinkPreview';
@@ -132,14 +136,15 @@ export function useComposer({
 
   const isReply = !!replyTo;
   const title = isReply ? 'Reply' : 'New Post';
+  const hasDraft = text.trim().length > 0 || attachments.length > 0;
   // While the link preview is fetching, hold the Post button so the user
   // either waits for the card (it gets embedded in the signed post) or
   // removes it with the X, which clears the loading state.
-  const canPost =
-    (text.trim().length > 0 || attachments.length > 0) &&
-    !submitting &&
-    !linkPreviewLoading;
+  const canPost = hasDraft && !submitting && !linkPreviewLoading;
   const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
+
+  const [posted, setPosted] = useState(false);
+  useDiscardDraftConfirmation(hasDraft && !posted, isReply);
 
   // Reset composer state and drop any in-flight/cached uploads so nothing
   // carries over to the next open.
@@ -188,10 +193,7 @@ export function useComposer({
   const handleClose = useCallback(() => {
     if (submitting) return;
     onClose();
-    // Reset here too: the native compose tab stays mounted after closing,
-    // so the unmount reset below wouldn't fire for it.
-    resetAll();
-  }, [submitting, onClose, resetAll]);
+  }, [submitting, onClose]);
 
   // Turn picked/captured assets into attachments: show the thumbnails
   const ingestAssets = useCallback(
@@ -355,8 +357,11 @@ export function useComposer({
 
       setSubmitting(false);
       toast.success(isReply ? 'Reply posted' : 'Post published');
-      onClose();
-      resetAll();
+
+      // Don't close the composer here: the "Discard post?" guard is still on and
+      // would show. Setting `posted` turns the guard off, and the effect below then
+      // closes the composer. Its draft is cleared when the composer unmounts.
+      setPosted(true);
 
       void client
         .sync()
@@ -387,11 +392,13 @@ export function useComposer({
     replyToEventKey,
     replyRootEventKey,
     resolveLinkForPost,
-    resetAll,
     setSubmitting,
     setError,
-    onClose,
   ]);
+
+  useEffect(() => {
+    if (posted) onClose();
+  }, [posted, onClose]);
 
   const placeholder = isReply
     ? `Reply to ${truncateName(replyAuthorName, 16)}...`
@@ -423,6 +430,33 @@ export function useComposer({
     handleRemoveAttachment,
     handleRemoveLinkPreview,
   };
+}
+
+function useDiscardDraftConfirmation(
+  hasUnpostedDraft: boolean,
+  isReply: boolean,
+) {
+  const navigation = useNavigation();
+
+  // Every way of closing removes this route (Cancel/X, Escape, backdrop,
+  // swipe back, hardware back), so guard the removal itself.
+  usePreventRemove(hasUnpostedDraft, ({ data }) => {
+    void confirm({
+      title: isReply ? 'Discard reply?' : 'Discard post?',
+      message: "Your changes won't be saved.",
+      confirmText: 'Discard',
+      destructive: true,
+      onConfirm: () => navigation.dispatch(data.action),
+    });
+  });
+
+  // Reloading or closing the browser tab bypasses navigation entirely.
+  useEffect(() => {
+    if (!isWeb || !hasUnpostedDraft) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasUnpostedDraft]);
 }
 
 /**
