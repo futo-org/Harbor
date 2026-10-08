@@ -21,7 +21,8 @@ import {
   ZIndex,
 } from '@/src/common/theme';
 
-export const BOOT_SKELETON_ID = 'boot-skeleton';
+const BOOT_SKELETON_ID = 'boot-skeleton';
+const FADE_OUT_MS = 300;
 
 // Asset imports resolve to `{ uri }` on web.
 const HARBOR_LOGO_URI = (HARBOR_LOGO as ImageURISource).uri;
@@ -63,7 +64,7 @@ export const BOOT_SKELETON_STYLE = `
 :root{${buildColorVariables(lightPalette)}}
 :root[data-theme=dark]{${buildColorVariables(darkPalette)}}
 :root:not([data-signed-in]) .sk-signed-in,:root[data-signed-in] .sk-signed-out{display:none!important}
-#${BOOT_SKELETON_ID}{position:fixed;inset:0;z-index:${ZIndex.bootSkeleton};overflow:hidden;background:var(--sk-bg);container-type:inline-size}
+#${BOOT_SKELETON_ID}{position:fixed;inset:0;z-index:${ZIndex.bootSkeleton};overflow:hidden;background:var(--sk-bg);container-type:inline-size;transition:opacity ${FADE_OUT_MS}ms}
 @keyframes sk-pulse{from{opacity:.5}to{opacity:1}}
 .sk-screen{display:flex;height:100%}
 .sk-bone{flex-shrink:0;height:${BAR_HEIGHT}px;border-radius:${BorderRadius.full}px;background:var(--sk-bone)}
@@ -199,6 +200,18 @@ export function BootSkeleton() {
       </div>
     </div>
   );
+}
+
+/** Fades the skeleton out over the app, which is rendered underneath by now. */
+export function hideBootSkeleton() {
+  const skeleton = document.getElementById(BOOT_SKELETON_ID);
+  if (!skeleton) return;
+  skeleton.addEventListener('transitionend', () => skeleton.remove(), {
+    once: true,
+  });
+  // Lets clicks reach the app during the fade.
+  skeleton.style.pointerEvents = 'none';
+  skeleton.style.opacity = '0';
 }
 
 /** Mirrors `PostSkeleton`. */

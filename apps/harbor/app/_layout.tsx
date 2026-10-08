@@ -1,5 +1,5 @@
 import { Toaster } from '@/src/common/components/toast';
-import { BOOT_SKELETON_ID } from '@/src/common/components/layout/BootSkeleton';
+import { hideBootSkeleton } from '@/src/common/components/layout/BootSkeleton';
 import { AppUpdater } from '@/src/features/core/apk-update';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
 import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
@@ -172,7 +172,7 @@ export default function RootLayout() {
       void SplashScreen.hideAsync().catch(() => {});
     });
 
-    if (isWeb) document.getElementById(BOOT_SKELETON_ID)?.remove();
+    if (isWeb) hideBootSkeleton();
   }, [ready]);
 
   return (
