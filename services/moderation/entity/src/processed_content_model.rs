@@ -1,3 +1,5 @@
+#![allow(clippy::try_from_instead_of_from_str)] // For DeriveActiveEnum on Status.
+
 use sea_orm::{entity::prelude::*, sea_query::value::prelude::serde_json};
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]

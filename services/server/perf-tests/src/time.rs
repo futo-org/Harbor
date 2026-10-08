@@ -367,6 +367,7 @@ async fn time_list_followers(address: String, amount: usize, identity: String) {
     println!("{amount} requests took {total:?}, {avg:?} on average");
 }
 
+#[allow(warnings)]
 async fn time_suggest_follow(address: String, amount: usize, identity: String) {
     let mut client = graph_client(address).await;
     todo!("add auth token for identity");

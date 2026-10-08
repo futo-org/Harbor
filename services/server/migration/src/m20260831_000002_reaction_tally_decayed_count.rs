@@ -77,18 +77,18 @@ impl MigrationTrait for Migration {
                 gravity
               )
             )::NUMERIC(20, 11);";
-        tx.execute_unprepared(&create_function).await.unwrap();
+        tx.execute_unprepared(create_function).await.unwrap();
         // Version without gravity_time argument.
         let create_function =
             "CREATE OR REPLACE FUNCTION reaction_count_decay(reaction_count BIGINT, post_created_at TIMESTAMPTZ, gravity NUMERIC) RETURNS NUMERIC
               LANGUAGE sql STABLE PARALLEL SAFE
             RETURN reaction_count_decay(reaction_count, post_created_at, gravity, (SELECT calculated_at FROM gravity));";
-        tx.execute_unprepared(&create_function).await.unwrap();
+        tx.execute_unprepared(create_function).await.unwrap();
         // Version with only the reaction count and post creation time.
         let create_function = "CREATE OR REPLACE FUNCTION reaction_count_decay(reaction_count BIGINT, post_created_at TIMESTAMPTZ) RETURNS NUMERIC
               LANGUAGE sql STABLE PARALLEL SAFE
             RETURN reaction_count_decay(reaction_count, post_created_at, (SELECT value FROM gravity), (SELECT calculated_at FROM gravity));";
-        tx.execute_unprepared(&create_function).await.unwrap();
+        tx.execute_unprepared(create_function).await.unwrap();
 
         // Update all decayed counts.
         let mut query = UpdateStatement::new();
@@ -157,12 +157,12 @@ impl MigrationTrait for Migration {
                 gravity
               )
             )::NUMERIC(20, 11);";
-        tx.execute_unprepared(&create_function).await.unwrap();
+        tx.execute_unprepared(create_function).await.unwrap();
 
         let create_function = "CREATE OR REPLACE FUNCTION reaction_count_decay(count BIGINT, created_at TIMESTAMPTZ) RETURNS NUMERIC
               LANGUAGE sql STABLE PARALLEL SAFE
             RETURN reaction_count_decay(count, created_at, (SELECT value FROM gravity));";
-        tx.execute_unprepared(&create_function).await.unwrap();
+        tx.execute_unprepared(create_function).await.unwrap();
 
         //  Drop the added decayed count column.
         let mut stmt = Table::alter();
