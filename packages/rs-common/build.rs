@@ -73,6 +73,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "#[derive(serde::Serialize)] #[serde(rename_all = \"snake_case\")]",
         );
     }
+    for ty in ["Application"] {
+        conf = conf.type_attribute(
+            ty,
+            "#[cfg_attr(feature = \"uniffi\", derive(uniffi::Object))]",
+        );
+    }
     conf.compile_protos(&v2_protos, &["../../protos"])?;
 
     // ── rerun-if-changed ─────────────────────────────────────────

@@ -181,7 +181,7 @@ where
         max_len,
         regex,
     } = config;
-    let length = input.len();
+    let length = input.len().try_into().unwrap_or(u32::MAX);
     if let Some(min) = min_len
         && Some(min) != max_len // Don't return double error for exact size check.
         && length < min
@@ -199,7 +199,7 @@ where
         && !regex.is_match(input)
     {
         let err = StringError::FailsRegex {
-            regex: regex.as_str(),
+            regex: regex.as_str().to_owned(),
         };
         errors.push(map_err(err));
     }
@@ -211,8 +211,8 @@ where
 #[derive(Debug, Default)]
 #[non_exhaustive]
 pub(crate) struct StringConfig {
-    pub(crate) min_len: Option<usize>,
-    pub(crate) max_len: Option<usize>,
+    pub(crate) min_len: Option<u32>,
+    pub(crate) max_len: Option<u32>,
     pub(crate) regex: Option<&'static Regex>,
 }
 
@@ -220,10 +220,12 @@ pub(crate) struct StringConfig {
 ///
 /// [`validate::string`]: string()
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum StringError {
-    TooShort { length: usize, min: usize },
-    TooLong { length: usize, max: usize },
-    FailsRegex { regex: &'static str },
+    TooShort { length: u32, min: u32 },
+    TooLong { length: u32, max: u32 },
+    // NOTE: this should be `'static str`, but uniffi doesn't support that.
+    FailsRegex { regex: String },
 }
 
 /// Error message that completes the sentence "${field name} ", e.g. "name is
