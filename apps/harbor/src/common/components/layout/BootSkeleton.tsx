@@ -206,12 +206,10 @@ export function BootSkeleton() {
 export function hideBootSkeleton() {
   const skeleton = document.getElementById(BOOT_SKELETON_ID);
   if (!skeleton) return;
-  skeleton.addEventListener('transitionend', () => skeleton.remove(), {
-    once: true,
-  });
   // Lets clicks reach the app during the fade.
   skeleton.style.pointerEvents = 'none';
   skeleton.style.opacity = '0';
+  setTimeout(() => skeleton.remove(), FADE_OUT_MS);
 }
 
 /** Mirrors `PostSkeleton`. */
