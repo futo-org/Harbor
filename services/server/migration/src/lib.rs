@@ -67,6 +67,7 @@ mod m20260929_000001_decayed_reaction_count_update_index;
 mod m20260930_000001_url_info_cache_nullable;
 mod m20261001_000001_fix_searching_for_identities;
 mod m20261002_000002_fix_reaction_count_decay_overflow;
+mod m20261008_000001_analyze_all_tables;
 
 mod old_entity;
 
@@ -143,6 +144,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260930_000001_url_info_cache_nullable::Migration),
             Box::new(m20261001_000001_fix_searching_for_identities::Migration),
             Box::new(m20261002_000002_fix_reaction_count_decay_overflow::Migration),
+            Box::new(m20261008_000001_analyze_all_tables::Migration),
         ]
     }
 }
