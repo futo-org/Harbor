@@ -929,6 +929,43 @@ export class PolycentricClient {
     }
   }
 
+  /**
+   * Persist each event bundle in order.
+   * Throws on the first malformed bundle or failed write.
+   */
+  async saveBundles(bundles: Proto.EventBundle[]): Promise<void> {
+    for (const bundle of bundles) {
+      const signedEvent = bundle.signedEvent;
+      if (!signedEvent) throw new Error('Bundle is missing signedEvent');
+
+      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
+      if (!event.key?.signedBy) throw new Error('Event is missing key');
+
+      const contentBytes = bundle.serializedContent?.contentBytes;
+      if (!contentBytes) throw new Error('Bundle is missing content');
+
+      const digest = event.contentDigest;
+      if (
+        !digest ||
+        digest.type !== Proto.ContentDigestType.SHA256 ||
+        !bytesEqual(sha256(contentBytes), digest.value)
+      ) {
+        throw new Error('Content does not match event digest');
+      }
+
+      const content = Proto.Content.fromBinary(contentBytes);
+
+      // Both writes can throw.
+      // We will skip saving the event if the content fails to write.
+      if (!(await this.storage.content.get(digest))) {
+        await this.storage.content.save(digest, content);
+      }
+
+      if (await this.storage.events.getByEventKey(event.key)) continue;
+      await this.storage.events.save(signedEvent);
+    }
+  }
+
   /** Used for syncing */
   private getPullFn(strategy: SyncStrategy): () => Promise<number> {
     switch (strategy) {
