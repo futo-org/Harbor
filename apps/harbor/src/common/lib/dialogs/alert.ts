@@ -69,6 +69,7 @@ export function confirm(options: {
   message: string;
   confirmText?: string;
   cancelText?: string;
+  destructive?: boolean;
   onConfirm?: () => void | Promise<void>;
   onCancel?: () => void;
 }): Promise<boolean> {
@@ -106,7 +107,7 @@ export function confirm(options: {
         },
         {
           text: options.confirmText || 'Confirm',
-          style: 'default',
+          style: options.destructive ? 'destructive' : 'default',
           onPress: async () => {
             await options.onConfirm?.();
             resolve(true);
