@@ -80,8 +80,10 @@ export const ZIndex = {
   modal: 9999,
   // Web tooltip portal — tooltips can open from inside modals.
   tooltipOverlay: 10000,
-  // Toasts sit above everything.
+  // Toasts sit above everything in the app.
   toast: 10100,
+  // Web startup skeleton, covering the app until it's ready.
+  bootSkeleton: 10200,
 } as const;
 
 export type ZIndexToken = keyof typeof ZIndex;
