@@ -40,7 +40,7 @@ import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
 import { AppFooter } from './AppFooter';
 import { VerticalNav } from './nav/VerticalNav';
-import Topbar, { TOPBAR_HEIGHT } from './Topbar';
+import Topbar from './Topbar';
 import { SuggestedFollowWidget } from '@/src/features/follow/SuggestedFollowWidget';
 import { LAYOUT_SIZES } from '../metrics';
 
@@ -98,10 +98,6 @@ type PrimaryColumnProps = {
 };
 function PrimaryColumn({ children }: PrimaryColumnProps) {
   const { theme } = useTheme();
-  const { width: deviceWidth, height: windowHeight } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  // Matches Screen's drawer mode, where the menu topbar sits above the column.
-  const drawerMode = deviceWidth <= Breakpoints.sm;
 
   return (
     <View
@@ -115,15 +111,6 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
           borderLeftWidth: 1,
           borderRightColor: theme.palette.neutral_25,
           borderRightWidth: 1,
-        },
-        // Web page-scroll: let the column grow with content so the
-        // borders span the full scrollable height. `self_start` opts
-        // out of the row's cross-axis stretch; `minHeight` keeps
-        // borders painting to the viewport bottom on short-content
-        // pages.
-        isWeb && Atoms.self_start,
-        isWeb && {
-          minHeight: drawerMode ? windowHeight - TOPBAR_HEIGHT : windowHeight,
         },
       ]}
     >
