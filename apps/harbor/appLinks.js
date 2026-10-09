@@ -31,11 +31,12 @@ const appLinks = {
           '39:AC:18:C7:95:6F:89:AC:C7:86:74:E9:0D:6C:B8:AA:8E:4D:61:B5:E8:B3:E2:0B:65:92:70:45:B6:5D:66:EA',
         ],
       },
-      // TODO: we don't have a staging app set up in store yet
-      // {
-      //   packageName: 'org.futo.polycentric.staging.store',
-      //   sha256CertFingerprints: ['TODO_PLAY_APP_SIGNING_SHA256'],
-      // },
+      {
+        packageName: 'org.futo.polycentric.staging.store',
+        sha256CertFingerprints: [
+          '32:71:BA:CF:B4:2F:E2:78:46:39:31:95:03:E9:8B:69:76:94:F4:91:29:78:4F:44:87:84:46:AC:2D:8A:06:6F',
+        ],
+      },
     ],
   },
 };
