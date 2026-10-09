@@ -23,6 +23,7 @@ pub mod collections;
 pub mod content;
 pub mod content_body;
 pub mod content_digest;
+pub mod delete;
 pub mod event;
 pub mod event_key;
 pub mod identity;

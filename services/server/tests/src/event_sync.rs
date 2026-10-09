@@ -1606,8 +1606,6 @@ async fn validation_invalid_serialized_content_content_bytes() {
 #[tokio::test]
 async fn validation_missing_content_content_body() {
     let mut client = TestClient::new().await;
-    client.pending.clear(); // Remove valid identity event.
-
     let content = Content { content_body: None };
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
@@ -1624,7 +1622,7 @@ async fn validation_missing_content_content_body() {
         result,
         &[],
         &[ExpectError {
-            bundle_index: 0,
+            bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
                 "content content body is missing",
             ),
@@ -1632,7 +1630,97 @@ async fn validation_missing_content_content_body() {
     );
 }
 
-// TODO: tests for the content.
+// TODO: tests for post content.
+
+#[tokio::test]
+async fn validation_missing_content_content_body_delete_event_key() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Delete(Delete { event_key: None })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body delete event key is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_delete_event_key_collection() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Delete(Delete {
+            event_key: Some(EventKey {
+                collection: COLLECTION_FEED + 1,
+                identity: client.identity().to_owned(),
+                signed_by: Some(client.public_key()),
+                sequence: 1,
+            }),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '3'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_delete_event_key_identity() {
+    let mut other_client = TestClient::new().await;
+    other_client.pending.clear(); // Unused.
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Delete(Delete {
+            event_key: Some(EventKey {
+                collection: COLLECTION_FEED,
+                identity: other_client.identity().to_owned(),
+                signed_by: Some(client.public_key()),
+                sequence: 1,
+            }),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "delete event key identity mismatch",
+            ),
+        }],
+    );
+}
+
+// TODO: tests for the content body variants.
 
 #[tokio::test]
 async fn validation_passed_event_proofs() {

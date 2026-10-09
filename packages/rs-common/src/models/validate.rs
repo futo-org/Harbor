@@ -7,8 +7,8 @@ use std::sync::OnceLock;
 use regex::Regex;
 
 use crate::models::{
-    application, attributed_to, blob, content, content_body, content_digest, event, event_key,
-    image, image_set, link, post, post_reply, public_key, to,
+    application, attributed_to, blob, content, content_body, content_digest, delete, event,
+    event_key, image, image_set, link, post, post_reply, public_key, to,
 };
 
 /// Validate a value.
@@ -57,6 +57,7 @@ pub enum ValidationError {
     Link(link::ValidationError),
     AttributedTo(attributed_to::ValidationError),
     To(to::ValidationError),
+    Delete(delete::ValidationError),
 }
 
 impl From<event::ValidationError> for ValidationError {
@@ -149,6 +150,12 @@ impl From<to::ValidationError> for ValidationError {
     }
 }
 
+impl From<delete::ValidationError> for ValidationError {
+    fn from(err: delete::ValidationError) -> ValidationError {
+        ValidationError::Delete(err)
+    }
+}
+
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -167,6 +174,7 @@ impl fmt::Display for ValidationError {
             ValidationError::Link(err) => write!(f, "link {err}"),
             ValidationError::AttributedTo(err) => write!(f, "attributed to {err}"),
             ValidationError::To(err) => write!(f, "to {err}"),
+            ValidationError::Delete(err) => write!(f, "delete {err}"),
         }
     }
 }
