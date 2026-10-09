@@ -1778,6 +1778,37 @@ async fn validation_invalid_content_content_body_follow_identity() {
 }
 
 #[tokio::test]
+async fn validation_invalid_content_content_body_follow_identity_self() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Follow(Follow {
+            identity: client.identity.to_owned(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_SOCIAL_GRAPH,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "follow identity is invalid, can't follow yourself",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
 async fn validation_invalid_content_content_body_block_collection() {
     let mut client = TestClient::new().await;
     let content = Content {
@@ -1829,6 +1860,37 @@ async fn validation_invalid_content_content_body_block_identity() {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
                 "content content body block identity is not a valid identity",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_block_identity_self() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Block(Block {
+            identity: client.identity.to_owned(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_SOCIAL_GRAPH,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "block identity is invalid, can't block yourself",
             ),
         }],
     );

@@ -20,6 +20,7 @@ impl Validate for Follow {
 #[derive(Debug)]
 pub enum ValidationError {
     Identity(validate::StringError),
+    IdentitySelf,
 }
 
 impl fmt::Display for ValidationError {
@@ -29,6 +30,9 @@ impl fmt::Display for ValidationError {
                 write!(f, "identity is not a valid identity")
             }
             ValidationError::Identity(err) => write!(f, "identity {err}"),
+            ValidationError::IdentitySelf => {
+                write!(f, "identity is invalid, can't follow yourself")
+            }
         }
     }
 }

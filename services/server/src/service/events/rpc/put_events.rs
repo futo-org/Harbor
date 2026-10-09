@@ -9,7 +9,9 @@ use common_kafka::FutureRecord;
 use entity::event;
 use polycentric_common::models::protos_v2::Blob;
 use polycentric_common::models::validate::{Validate, ValidationError};
-use polycentric_common::models::{collections, delete, event_key};
+use polycentric_common::models::{
+    block, collections, delete, event_key, follow,
+};
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
@@ -409,11 +411,23 @@ fn validate_content(
                 }
             } // NOTE: if we don't have a key, the validation above would have flagged it already.
         }
-        ContentBody::Follow(_) => {
+        ContentBody::Follow(follow) => {
             check_collection(collection, collections::SOCIAL_GRAPH);
+            // Can't follow yourself.
+            if follow.identity == key.identity {
+                warnings.push(map_warning(
+                    follow::ValidationError::IdentitySelf.into(),
+                ));
+            }
         }
-        ContentBody::Block(_) => {
+        ContentBody::Block(block) => {
             check_collection(collection, collections::SOCIAL_GRAPH);
+            // Can't block yourself.
+            if block.identity == key.identity {
+                warnings.push(map_warning(
+                    block::ValidationError::IdentitySelf.into(),
+                ));
+            }
         }
         ContentBody::Reaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
