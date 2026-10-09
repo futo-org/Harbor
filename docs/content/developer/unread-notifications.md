@@ -19,7 +19,8 @@ streams of several servers.
   The notification worker inserts them.
 - **Read marker.** The `notification_read_marker` table holds one row per
   identity: `last_read_id`. Every notification with a higher id is unread.
-  `AcknowledgeNotifications` moves the marker to the newest id.
+  `AcknowledgeNotifications` moves the marker up to the notification the
+  client names, never backwards.
 - **Unread count.** Rows above the marker, counted up to 100. The client
   shows anything at the cap as `99+`.
 - **Change feed.** A Postgres `NOTIFY` on the `notification_changed` channel
@@ -76,8 +77,9 @@ serve` process holds exactly one `LISTEN` connection, opened by
 process. Everything received on it is copied onto a `tokio::sync::broadcast`
 channel. A subscription is a tokio task holding a receiver on that channel: no
 connection, no polling. If the `LISTEN` connection drops, the listener
-reconnects after five seconds and every subscription keeps working without
-noticing.
+reconnects after five seconds. Postgres does not queue notifications sent
+while nobody listens, so after every connect the listener broadcasts a
+"changed for everyone" message and each open stream re-counts.
 
 A subscription touches the pool only briefly:
 
@@ -136,9 +138,11 @@ cannot know which identities it missed.
 
 ## Acknowledging
 
-Opening the Notifications tab acknowledges everything the servers hold at that
-moment. The same path tells every other open stream for the identity,
-including other devices, that the count dropped.
+Opening the Notifications tab acknowledges up to the newest notification it
+has shown, named by that notification's trigger event key in `last_seen`.
+Anything that arrives after the list was fetched stays unread. The same path
+tells every other open stream for the identity, including other devices, that
+the count dropped.
 
 ```mermaid
 sequenceDiagram
@@ -150,9 +154,9 @@ sequenceDiagram
     participant B as device B
 
     Note over A: badge zeroed locally first
-    A->>Server: AcknowledgeNotifications
-    Server->>PG: SELECT newest notification id
-    Server->>PG: UPSERT read marker
+    A->>Server: AcknowledgeNotifications(last_seen)
+    Server->>PG: SELECT id of the notification last_seen triggered
+    Server->>PG: UPSERT read marker to GREATEST(current, id)
     Server->>PG: SELECT pg_notify('notification_changed', identity)
     Server-->>A: ok
     PG-->>Task: NOTIFY via listener and broadcast
@@ -162,8 +166,12 @@ sequenceDiagram
     Note over B: badge clears
 ```
 
-The marker is set to the newest notification id read just before the upsert,
-so a notification that lands between the two statements stays unread.
+The server resolves `last_seen` to its own row id, since ids differ between
+servers while the trigger event key is the same everywhere. The upsert keeps
+the higher of the stored and the new id, so a stale acknowledgement from a
+slower device cannot move the marker backwards. A server that never produced
+that notification has nothing newer the client could have seen, so it marks
+everything it holds.
 
 Device A does not wait for its own stream: the client zeroes its cached count
 before the RPC and drops the rust-side cache after it, so the badge clears at

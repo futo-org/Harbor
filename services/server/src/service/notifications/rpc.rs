@@ -90,6 +90,8 @@ pub fn build_notifications_service(
 mod tests {
     use super::*;
     use crate::service::auth::AuthenticatedIdentity;
+    use crate::service::notifications::changes::Change;
+    use crate::service::proto::{EventKey, PublicKey};
     use entity::notification_read_marker;
     use sea_orm::{DbBackend, MockDatabase, MockExecResult, Value};
     use std::collections::BTreeMap;
@@ -124,7 +126,7 @@ mod tests {
             ctx(MockDatabase::new(DbBackend::Postgres).into_connection()).await;
         let err = acknowledge_notifications::handle(
             &ctx,
-            Request::new(AcknowledgeNotificationsRequest {}),
+            Request::new(AcknowledgeNotificationsRequest { last_seen: None }),
         )
         .await
         .unwrap_err();
@@ -134,17 +136,61 @@ mod tests {
     #[tokio::test]
     async fn acknowledge_moves_the_marker() {
         let db = MockDatabase::new(DbBackend::Postgres)
+            // The trigger lookup, then the marker upsert and the notify.
             .append_query_results([vec![id_row(9)]])
-            // The marker upsert, then the change notify.
             .append_exec_results([exec_ok(), exec_ok()])
             .into_connection();
         let ctx = ctx(db).await;
         acknowledge_notifications::handle(
             &ctx,
-            authed(AcknowledgeNotificationsRequest {}, "bob"),
+            authed(acknowledge_request(), "bob"),
         )
         .await
         .unwrap();
+    }
+
+    #[tokio::test]
+    async fn acknowledge_falls_back_to_the_newest_when_the_trigger_is_unknown()
+    {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_query_results([Vec::<BTreeMap<&str, Value>>::new()])
+            .append_query_results([vec![id_row(5)]])
+            .append_exec_results([exec_ok(), exec_ok()])
+            .into_connection();
+        let ctx = ctx(db).await;
+        acknowledge_notifications::handle(
+            &ctx,
+            authed(acknowledge_request(), "bob"),
+        )
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn acknowledge_requires_last_seen() {
+        let ctx =
+            ctx(MockDatabase::new(DbBackend::Postgres).into_connection()).await;
+        let err = acknowledge_notifications::handle(
+            &ctx,
+            authed(AcknowledgeNotificationsRequest { last_seen: None }, "bob"),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err.code(), Code::InvalidArgument);
+    }
+
+    fn acknowledge_request() -> AcknowledgeNotificationsRequest {
+        AcknowledgeNotificationsRequest {
+            last_seen: Some(EventKey {
+                collection: 2,
+                identity: "alice".to_string(),
+                signed_by: Some(PublicKey {
+                    key_type: 1,
+                    key: vec![0xAB],
+                }),
+                sequence: 7,
+            }),
+        }
     }
 
     fn exec_ok() -> MockExecResult {
@@ -156,6 +202,8 @@ mod tests {
 
     /// A mock that answers one unread count per entry of `counts`: the
     /// marker lookup (none) followed by that many ids.
+    /// A mock that answers one unread count per entry of `counts`: the
+    /// marker lookup (none) followed by the count row.
     fn db_counting(counts: &[i64]) -> MockDatabase {
         let mut db = MockDatabase::new(DbBackend::Postgres);
         for &count in counts {
@@ -163,17 +211,22 @@ mod tests {
                 .append_query_results([
                     Vec::<notification_read_marker::Model>::new(),
                 ])
-                .append_query_results([(1..=count)
-                    .map(id_row)
-                    .collect::<Vec<_>>()]);
+                .append_query_results([vec![BTreeMap::from([(
+                    "num_items",
+                    Value::BigInt(Some(count)),
+                )])]]);
         }
         db
+    }
+
+    fn changed(identity: &str) -> Change {
+        Change::Identity(identity.into())
     }
 
     async fn subscribe(
         db: MockDatabase,
         identity: &str,
-        changes: Option<broadcast::Receiver<String>>,
+        changes: broadcast::Receiver<Change>,
     ) -> subscribe_unread_notification_count::CountStream {
         subscribe_unread_notification_count::handle(
             ctx(db.into_connection()).await,
@@ -213,7 +266,7 @@ mod tests {
         let result = subscribe_unread_notification_count::handle(
             ctx,
             Request::new(SubscribeUnreadNotificationCountRequest {}),
-            None,
+            broadcast::channel(8).1,
         )
         .await;
         match result {
@@ -224,24 +277,28 @@ mod tests {
 
     #[tokio::test]
     async fn subscribe_unread_count_sends_the_current_count_first() {
-        let mut stream = subscribe(db_counting(&[3]), "bob", None).await;
+        let (_tx, rx) = broadcast::channel(8);
+        let mut stream = subscribe(db_counting(&[3]), "bob", rx).await;
         assert_eq!(next_count(&mut stream).await, 3);
-    }
-
-    #[tokio::test]
-    async fn without_a_change_feed_the_stream_ends_after_the_first_count() {
-        let mut stream = subscribe(db_counting(&[3]), "bob", None).await;
-        next_count(&mut stream).await;
-        assert!(stream.next().await.is_none());
     }
 
     #[tokio::test]
     async fn a_change_for_the_identity_sends_the_new_count() {
         let (tx, rx) = broadcast::channel(8);
-        let mut stream = subscribe(db_counting(&[1, 2]), "bob", Some(rx)).await;
+        let mut stream = subscribe(db_counting(&[1, 2]), "bob", rx).await;
         assert_eq!(next_count(&mut stream).await, 1);
 
-        tx.send("bob".to_string()).unwrap();
+        tx.send(changed("bob")).unwrap();
+        assert_eq!(next_count(&mut stream).await, 2);
+    }
+
+    #[tokio::test]
+    async fn a_change_for_everyone_sends_the_new_count() {
+        let (tx, rx) = broadcast::channel(8);
+        let mut stream = subscribe(db_counting(&[1, 2]), "bob", rx).await;
+        assert_eq!(next_count(&mut stream).await, 1);
+
+        tx.send(Change::All).unwrap();
         assert_eq!(next_count(&mut stream).await, 2);
     }
 
@@ -249,24 +306,23 @@ mod tests {
     async fn a_change_for_another_identity_is_ignored() {
         let (tx, rx) = broadcast::channel(8);
         // Only one count is mocked: a re-count would fail loudly.
-        let mut stream = subscribe(db_counting(&[1]), "bob", Some(rx)).await;
+        let mut stream = subscribe(db_counting(&[1]), "bob", rx).await;
         next_count(&mut stream).await;
 
-        tx.send("alice".to_string()).unwrap();
+        tx.send(changed("alice")).unwrap();
         assert_silent(&mut stream).await;
     }
 
     #[tokio::test]
     async fn an_unchanged_count_is_not_resent() {
         let (tx, rx) = broadcast::channel(8);
-        let mut stream =
-            subscribe(db_counting(&[1, 1, 4]), "bob", Some(rx)).await;
+        let mut stream = subscribe(db_counting(&[1, 1, 4]), "bob", rx).await;
         next_count(&mut stream).await;
 
-        tx.send("bob".to_string()).unwrap();
+        tx.send(changed("bob")).unwrap();
         assert_silent(&mut stream).await;
 
-        tx.send("bob".to_string()).unwrap();
+        tx.send(changed("bob")).unwrap();
         assert_eq!(next_count(&mut stream).await, 4);
     }
 
@@ -275,9 +331,9 @@ mod tests {
         // Capacity one and two sends before the task reads: the first
         // recv reports the lag, which must trigger a re-count.
         let (tx, rx) = broadcast::channel(1);
-        tx.send("alice".to_string()).unwrap();
-        tx.send("alice".to_string()).unwrap();
-        let mut stream = subscribe(db_counting(&[1, 5]), "bob", Some(rx)).await;
+        tx.send(changed("alice")).unwrap();
+        tx.send(changed("alice")).unwrap();
+        let mut stream = subscribe(db_counting(&[1, 5]), "bob", rx).await;
         assert_eq!(next_count(&mut stream).await, 1);
         assert_eq!(next_count(&mut stream).await, 5);
     }
@@ -285,7 +341,7 @@ mod tests {
     #[tokio::test]
     async fn dropping_the_stream_ends_the_task() {
         let (tx, rx) = broadcast::channel(8);
-        let mut stream = subscribe(db_counting(&[1]), "bob", Some(rx)).await;
+        let mut stream = subscribe(db_counting(&[1]), "bob", rx).await;
         next_count(&mut stream).await;
         assert_eq!(tx.receiver_count(), 1);
 
@@ -300,7 +356,7 @@ mod tests {
     #[tokio::test]
     async fn closing_the_change_feed_ends_the_stream() {
         let (tx, rx) = broadcast::channel(8);
-        let mut stream = subscribe(db_counting(&[1]), "bob", Some(rx)).await;
+        let mut stream = subscribe(db_counting(&[1]), "bob", rx).await;
         next_count(&mut stream).await;
 
         drop(tx);

@@ -1,7 +1,7 @@
-//! Feed of "notifications changed for identity" events, shared across
-//! server and worker processes through Postgres LISTEN/NOTIFY.
+//! Feed of "notifications changed" events, shared across server and worker
+//! processes through Postgres LISTEN/NOTIFY.
 
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use sea_orm::sqlx::postgres::{PgListener, PgPool};
@@ -12,28 +12,49 @@ use tokio::sync::broadcast;
 
 const CHANNEL: &str = "notification_changed";
 
-static CHANGES: OnceLock<broadcast::Sender<String>> = OnceLock::new();
+/// Postgres drops notifications sent while nobody listens, so `All`
+/// follows every (re)connect of the listener.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Change {
+    Identity(Arc<str>),
+    All,
+}
+
+static CHANGES: OnceLock<broadcast::Sender<Change>> = OnceLock::new();
+
+fn sender() -> &'static broadcast::Sender<Change> {
+    CHANGES.get_or_init(|| broadcast::channel(1024).0)
+}
 
 /// Starts listening on `db`. Called once at server startup.
 pub fn init(db: &DatabaseConnection) {
-    let (tx, _) = broadcast::channel(1024);
     let pool = db.get_postgres_connection_pool().clone();
-    let sender = tx.clone();
-    tokio::spawn(listen(pool, sender));
-    let _ = CHANGES.set(tx);
+    tokio::spawn(listen(pool, sender().clone()));
 }
 
-async fn listen(pool: PgPool, tx: broadcast::Sender<String>) {
+async fn listen(pool: PgPool, tx: broadcast::Sender<Change>) {
     loop {
-        match PgListener::connect_with(&pool).await {
+        match connect(&pool).await {
             Ok(mut listener) => {
-                if let Err(e) = listener.listen(CHANNEL).await {
-                    tracing::warn!(error = %e, "notification listen failed");
+                let _ = tx.send(Change::All);
+                loop {
+                    match listener.try_recv().await {
+                        Ok(Some(notification)) => {
+                            let _ = tx.send(Change::Identity(
+                                notification.payload().into(),
+                            ));
+                        }
+                        // Reconnected underneath us: anything sent
+                        // meanwhile is gone.
+                        Ok(None) => {
+                            let _ = tx.send(Change::All);
+                        }
+                        Err(e) => {
+                            tracing::warn!(error = %e, "notification listener lost");
+                            break;
+                        }
+                    }
                 }
-                while let Ok(notification) = listener.recv().await {
-                    let _ = tx.send(notification.payload().to_owned());
-                }
-                tracing::warn!("notification listener disconnected");
             }
             Err(e) => {
                 tracing::warn!(error = %e, "notification listener connect failed")
@@ -43,10 +64,15 @@ async fn listen(pool: PgPool, tx: broadcast::Sender<String>) {
     }
 }
 
-/// Identities whose notifications changed, from every process. `None`
-/// before `init`.
-pub fn subscribe() -> Option<broadcast::Receiver<String>> {
-    CHANGES.get().map(|tx| tx.subscribe())
+async fn connect(pool: &PgPool) -> Result<PgListener, sea_orm::sqlx::Error> {
+    let mut listener = PgListener::connect_with(pool).await?;
+    listener.listen(CHANNEL).await?;
+    Ok(listener)
+}
+
+/// Changes from every process. Nothing arrives before `init`.
+pub fn subscribe() -> broadcast::Receiver<Change> {
+    sender().subscribe()
 }
 
 /// Announces that `identity`'s notifications changed.
@@ -67,6 +93,7 @@ pub async fn notify(
 mod tests {
     use super::*;
     use sea_orm::{DbBackend, MockDatabase, MockExecResult};
+    use tokio::sync::broadcast::error::TryRecvError;
 
     #[tokio::test]
     async fn notify_sends_the_identity_on_the_channel() {
@@ -86,7 +113,8 @@ mod tests {
     }
 
     #[test]
-    fn subscribe_is_none_before_init() {
-        assert!(subscribe().is_none());
+    fn subscribe_before_init_receives_nothing() {
+        let mut rx = subscribe();
+        assert_eq!(rx.try_recv(), Err(TryRecvError::Empty));
     }
 }
