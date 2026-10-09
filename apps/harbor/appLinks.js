@@ -13,10 +13,12 @@ const appLinks = {
           'A9:E6:AD:3F:79:DA:10:FD:E0:AC:CE:95:A5:47:C2:6F:26:78:E2:A0:6A:51:1E:05:5B:8C:3B:B4:59:CC:D9:2E',
         ],
       },
-      // {
-      //   packageName: 'org.futo.polycentric.store',
-      //   sha256CertFingerprints: ['TODO_PLAY_APP_SIGNING_SHA256'],
-      // },
+      {
+        packageName: 'org.futo.polycentric.store',
+        sha256CertFingerprints: [
+          'C7:20:B7:50:A1:F9:A2:4B:C9:44:8F:A0:1A:18:11:BE:0B:8B:75:6E:D2:9E:CF:0D:11:82:81:7F:6D:BC:00:B5',
+        ],
+      },
     ],
   },
   staging: {
@@ -29,6 +31,7 @@ const appLinks = {
           '39:AC:18:C7:95:6F:89:AC:C7:86:74:E9:0D:6C:B8:AA:8E:4D:61:B5:E8:B3:E2:0B:65:92:70:45:B6:5D:66:EA',
         ],
       },
+      // TODO: we don't have a staging app set up in store yet
       // {
       //   packageName: 'org.futo.polycentric.staging.store',
       //   sha256CertFingerprints: ['TODO_PLAY_APP_SIGNING_SHA256'],

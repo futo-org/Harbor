@@ -72,8 +72,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     requireFullScreen: true,
     supportsTablet: true,
     bundleIdentifier: ID,
-    // TODO: needs Associated Domains capability enabled for iOS builds first
-    // ...(APP_LINK_HOST && { associatedDomains: [`applinks:${APP_LINK_HOST}`] }),
+    ...(APP_LINK_HOST && { associatedDomains: [`applinks:${APP_LINK_HOST}`] }),
     infoPlist: {
       NSCameraUsageDescription: '$(PRODUCT_NAME) needs access to your Camera.',
       ITSAppUsesNonExemptEncryption: false,
