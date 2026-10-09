@@ -155,3 +155,90 @@ async fn wait_for_notifications(
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
 }
+
+/// The unread count stream starts at the current count, rises when the
+/// workers insert a notification, and drops to zero on acknowledge from
+/// another connection. Needs the `workers` process running.
+#[tokio::test]
+async fn unread_count_stream_follows_new_notifications_and_acknowledge() {
+    let mut recipient = TestClient::new().await;
+    recipient.submit_events().await;
+    let auth_token = recipient.create_auth_token();
+
+    let mut subscriber = NotificationServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server");
+    let mut request =
+        tonic::Request::new(SubscribeUnreadNotificationCountRequest {});
+    request
+        .metadata_mut()
+        .insert("authorization", auth_token.clone().try_into().unwrap());
+    let mut stream = subscriber
+        .subscribe_unread_notification_count(request)
+        .await
+        .expect("subscribe failed")
+        .into_inner();
+
+    assert_eq!(
+        next_count(&mut stream).await,
+        0,
+        "a new identity has nothing unread"
+    );
+
+    let mut follower = TestClient::new().await;
+    follower
+        .follow_identity(recipient.identity().to_owned(), DEFAULT_CREATED_AT);
+    follower.submit_events().await;
+
+    assert_eq!(
+        next_count(&mut stream).await,
+        1,
+        "the follow is pushed to the open stream"
+    );
+
+    let mut acknowledger = NotificationServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server");
+    let mut request = tonic::Request::new(AcknowledgeNotificationsRequest {});
+    request
+        .metadata_mut()
+        .insert("authorization", auth_token.try_into().unwrap());
+    acknowledger
+        .acknowledge_notifications(request)
+        .await
+        .expect("acknowledge failed");
+
+    assert_eq!(
+        next_count(&mut stream).await,
+        0,
+        "acknowledging clears the count"
+    );
+}
+
+#[tokio::test]
+async fn unread_count_stream_rejects_unauthenticated() {
+    let mut client = NotificationServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server");
+    let result = client
+        .subscribe_unread_notification_count(
+            SubscribeUnreadNotificationCountRequest {},
+        )
+        .await;
+    match result {
+        Err(status) => assert_eq!(status.code(), tonic::Code::Unauthenticated),
+        Ok(_) => panic!("unauthenticated subscribe must fail"),
+    }
+}
+
+/// Next count from the stream, or a panic after `NOTIFICATION_TIMEOUT`.
+async fn next_count(
+    stream: &mut tonic::Streaming<SubscribeUnreadNotificationCountResponse>,
+) -> u32 {
+    tokio::time::timeout(NOTIFICATION_TIMEOUT, stream.message())
+        .await
+        .expect("no count within the timeout")
+        .expect("stream failed")
+        .expect("stream ended")
+        .count
+}

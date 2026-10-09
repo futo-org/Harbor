@@ -43,6 +43,23 @@ message ListNotificationsResponse {
   PageInfo page_info = 3;
 }
 
+// Empty: the identity comes from the auth token and every notification
+// existing at the time of the call is marked read
+message AcknowledgeNotificationsRequest {}
+
+// Empty: success is signalled by the call not failing
+message AcknowledgeNotificationsResponse {}
+
+// Empty: the identity comes from the auth token
+message SubscribeUnreadNotificationCountRequest {}
+
+// Unread count for the authenticated identity on this server, sent on
+// subscribe and again whenever it changes
+message SubscribeUnreadNotificationCountResponse {
+  // Notifications newer than the last acknowledgement, capped by the server
+  uint32 count = 1;
+}
+
 message RegisterPushNotificationRequest {
   // Push provider the token belongs to. `expo` is the only provider
   // currently supported.
@@ -62,13 +79,19 @@ message UnregisterPushNotificationRequest {
 message UnregisterPushNotificationResponse {}
 
 /**
- * Notifications for an identity. ListNotifications is served by the server.
- * The push registration methods are served by a push-notifications service;
+ * Notifications for an identity. ListNotifications, AcknowledgeNotifications
+ * and SubscribeUnreadNotificationCount are served by the server. The push
+ * registration methods are served by a push-notifications service;
  * a server without one answers them with NOT_FOUND.
  */
 service NotificationService {
   // Returns notifications for a user
   rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse);
+  // Marks every notification of the authenticated identity as read
+  rpc AcknowledgeNotifications(AcknowledgeNotificationsRequest) returns (AcknowledgeNotificationsResponse);
+  // Streams the unread notification count of the authenticated identity,
+  // now and whenever it changes
+  rpc SubscribeUnreadNotificationCount(SubscribeUnreadNotificationCountRequest) returns (stream SubscribeUnreadNotificationCountResponse);
   // This endpoint expects a signed RegisterPushNotificationRequest message
   rpc RegisterPushNotifications(SignedMessage) returns (RegisterPushNotificationResponse);
 

@@ -70,6 +70,11 @@ const config: Config = {
     ],
   ],
 
+  markdown: {
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
+
   themeConfig: {
     colorMode: {
       // Default to dark, but still honor the user's stored/OS preference and

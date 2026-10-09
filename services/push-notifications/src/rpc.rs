@@ -9,10 +9,13 @@ use polycentric_common::models::protos_v2::notification_service_server::{
     NotificationService, NotificationServiceServer,
 };
 use polycentric_common::models::protos_v2::{
-    ListNotificationsRequest, ListNotificationsResponse, RegisterPushNotificationResponse,
-    SignedMessage, UnregisterPushNotificationResponse,
+    AcknowledgeNotificationsRequest, AcknowledgeNotificationsResponse, ListNotificationsRequest,
+    ListNotificationsResponse, RegisterPushNotificationResponse, SignedMessage,
+    SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse,
+    UnregisterPushNotificationResponse,
 };
 use std::sync::Arc;
+use tonic::codegen::BoxStream;
 use tonic::{Request, Response, Status};
 
 #[derive(Clone)]
@@ -28,6 +31,26 @@ impl NotificationService for NotificationServiceImpl {
     ) -> Result<Response<ListNotificationsResponse>, Status> {
         // The notification feed is served by the main server, not the push
         // service.
+        Err(Status::not_found(
+            "Not implemented here. Use the main server.",
+        ))
+    }
+
+    async fn acknowledge_notifications(
+        &self,
+        _request: Request<AcknowledgeNotificationsRequest>,
+    ) -> Result<Response<AcknowledgeNotificationsResponse>, Status> {
+        Err(Status::not_found(
+            "Not implemented here. Use the main server.",
+        ))
+    }
+
+    type SubscribeUnreadNotificationCountStream =
+        BoxStream<SubscribeUnreadNotificationCountResponse>;
+    async fn subscribe_unread_notification_count(
+        &self,
+        _request: Request<SubscribeUnreadNotificationCountRequest>,
+    ) -> Result<Response<Self::SubscribeUnreadNotificationCountStream>, Status> {
         Err(Status::not_found(
             "Not implemented here. Use the main server.",
         ))
