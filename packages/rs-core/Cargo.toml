@@ -9,6 +9,14 @@ repository = ""
 [lib]
 crate-type = ["cdylib", "rlib", "staticlib"]
 
+[[bin]]
+name = "generate"
+path = "src/bin/generate.rs"
+required-features = ["uniffi/cli"]
+
+# cargo build
+# cargo run --bin generate --features uniffi/cli -- generate ../../target/debug/libpolycentric_core.dylib --language kotlin --out-dir tmp_kotlin/ --config ../kt-core/core/uniffi.toml
+
 [features]
 default = ["native-transport"]
 native-transport = [

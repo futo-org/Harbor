@@ -3411,6 +3411,7 @@ dependencies = [
  "tonic",
  "tonic-prost",
  "tonic-prost-build",
+ "uniffi",
 ]
 
 [[package]]
