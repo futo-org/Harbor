@@ -1,4 +1,5 @@
 import { Toaster } from '@/src/common/components/toast';
+import { hideBootSkeleton } from '@/src/common/components/layout/BootSkeleton';
 import { AppUpdater } from '@/src/features/core/apk-update';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
 import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
@@ -170,7 +171,9 @@ export default function RootLayout() {
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <ThemeProvider>
             <LinkPreviewsProvider>
-              <PolycentricProvider>
+              <PolycentricProvider
+                onInitialized={isWeb ? hideBootSkeleton : undefined}
+              >
                 <ModerationStatusPrefetch />
                 <TrueSheetProvider>
                   <RootStack />

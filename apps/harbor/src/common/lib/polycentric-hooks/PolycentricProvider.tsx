@@ -1,7 +1,5 @@
-import { hideBootSkeleton } from '@/src/common/components/layout/BootSkeleton';
 import { DEFAULT_IDENTITY_NAME } from '@/src/common/constants';
 import { publicEnv } from '@/src/common/util/env';
-import { isWeb } from '@/src/common/util/platform';
 import useBlocks from '@/src/features/block/hooks/useBlocks';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
@@ -116,6 +114,7 @@ export const DEFAULT_VERIFIER_SERVERS: string[] = (() => {
 interface PolycentricProviderProps {
   children: ReactNode;
   loadingComponent?: ReactNode;
+  onInitialized?: () => void;
 }
 
 function DefaultLoadingComponent() {
@@ -209,6 +208,7 @@ function bootstrapClient(): Promise<Bootstrap> {
 export function PolycentricProvider({
   children,
   loadingComponent,
+  onInitialized,
 }: PolycentricProviderProps) {
   const [client, setClient] = useState<PolycentricClient | null>(null);
   const [store, setStore] = useState<PolycentricStoreApi | null>(null);
@@ -223,8 +223,10 @@ export function PolycentricProvider({
   useNotificationNavigation(!isLoading && !error);
 
   useEffect(() => {
-    if (!isLoading && isWeb) hideBootSkeleton();
-  }, [isLoading]);
+    if (!isLoading) {
+      onInitialized?.();
+    }
+  }, [isLoading, onInitialized]);
 
   const currentIdentityKey = currentIdentity?.identityKey;
   useEffect(() => {
