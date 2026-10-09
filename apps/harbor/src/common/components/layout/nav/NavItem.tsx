@@ -20,6 +20,8 @@ type NavItemProps = Omit<LinkProps, 'href' | 'children'> & {
   label: string;
   /** Overrides the width-based default (labels only above xl). */
   showLabel?: boolean;
+  /** Counter drawn over the icon. */
+  badge?: string | null;
 };
 
 export function NavItem({
@@ -27,6 +29,7 @@ export function NavItem({
   icon,
   label,
   showLabel,
+  badge,
   ...props
 }: NavItemProps) {
   const { theme } = useTheme();
@@ -61,6 +64,33 @@ export function NavItem({
     return (
       <View style={[{ width: 30 }, Atoms.items_center, Atoms.justify_center]}>
         {colored}
+        {badge && (
+          <View
+            style={[
+              Atoms.absolute,
+              Atoms.rounded_full,
+              Atoms.px_xs,
+              Atoms.items_center,
+              Atoms.justify_center,
+              {
+                top: -6,
+                right: -8,
+                minWidth: 18,
+                height: 18,
+                backgroundColor: theme.palette.primary_500,
+              },
+            ]}
+          >
+            <Text
+              fontSize="xs"
+              lineHeight={18}
+              fontWeight="bold"
+              color="neutral_0"
+            >
+              {badge}
+            </Text>
+          </View>
+        )}
       </View>
     );
   };

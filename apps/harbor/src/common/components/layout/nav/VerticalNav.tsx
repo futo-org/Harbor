@@ -3,6 +3,9 @@ import type { ComponentProps } from 'react';
 
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import Icon from '@/src/common/components/Icon';
+import useUnreadNotificationCount, {
+  unreadNotificationsBadgeLabel,
+} from '@/src/features/notifications/hooks/useUnreadNotificationCount';
 import { View } from 'react-native';
 import { NavItem } from './NavItem';
 
@@ -14,6 +17,9 @@ type VerticalNavProps = {
 
 export function VerticalNav({ style, showLabels }: VerticalNavProps) {
   const { identity } = useCurrentIdentity();
+  const unreadNotificationsLabel = unreadNotificationsBadgeLabel(
+    useUnreadNotificationCount(),
+  );
 
   return (
     <View
@@ -39,6 +45,7 @@ export function VerticalNav({ style, showLabels }: VerticalNavProps) {
           <NavItem
             label="Notifications"
             icon={<Icon name="notification" size={24} />}
+            badge={unreadNotificationsLabel}
             href="/notifications"
             showLabel={showLabels}
           />
