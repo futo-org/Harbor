@@ -1965,41 +1965,6 @@ async fn validation_invalid_content_content_body_reaction_no_event_key() {
 }
 
 #[tokio::test]
-async fn validation_missing_content_content_body_reaction_emoji() {
-    let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
-    let event_key = client.get_last_event_key();
-    let content = Content {
-        content_body: Some(ContentBody::Reaction(Reaction {
-            event_key: Some(event_key),
-            emoji: None,
-            positive: true,
-        })),
-    };
-    let (content_bytes, digest) = content_with_digest(content);
-    let event = client.make_event(
-        COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
-        digest,
-        0,
-    );
-    client.push_event_bundle2(event, content_bytes);
-
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[],
-        &[ExpectError {
-            bundle_index: 2,
-            kind: ExpectErrorKind::MsgContains(
-                "content content body reaction emoji is missing",
-            ),
-        }],
-    );
-}
-
-#[tokio::test]
 async fn validation_invalid_content_content_body_reaction_empty_emoji() {
     let mut client = TestClient::new().await;
     client.post_text("Test", 0);

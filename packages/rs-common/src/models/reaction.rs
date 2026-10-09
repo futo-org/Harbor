@@ -28,8 +28,6 @@ impl Validate for Reaction {
             } else if emoji.chars().count() != 1 {
                 errors.push(map_err(ValidationError::EmojiTooLong));
             }
-        } else {
-            errors.push(map_err(ValidationError::EmojiMissing));
         }
     }
 }
@@ -40,7 +38,6 @@ pub enum ValidationError {
     EventKeyMissing,
     EmojiEmpty,
     EmojiTooLong,
-    EmojiMissing,
 }
 
 impl fmt::Display for ValidationError {
@@ -50,7 +47,6 @@ impl fmt::Display for ValidationError {
             ValidationError::EventKeyMissing => write!(f, "event key is missing"),
             ValidationError::EmojiEmpty => write!(f, "emoji can't be empty"),
             ValidationError::EmojiTooLong => write!(f, "emoji can't be longer than 1 character"),
-            ValidationError::EmojiMissing => write!(f, "emoji is missing"),
         }
     }
 }
