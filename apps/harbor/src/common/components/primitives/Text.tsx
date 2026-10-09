@@ -14,7 +14,7 @@ import { splitEmoji } from '@/src/common/util/emoji';
 import { isWeb } from '@/src/common/util/platform';
 
 // Twemoji draws the emoji (see `app/+html.tsx`).
-const WEB_FONT_STACK =
+export const WEB_FONT_STACK =
   'NotoSans, Twemoji, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 // Native font APIs can't select a variable font's weights, so each face is

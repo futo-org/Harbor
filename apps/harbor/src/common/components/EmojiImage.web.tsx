@@ -1,126 +1,33 @@
-import {
-  SHEET_CELL,
-  SHEET_COLUMNS,
-  SHEET_FILE,
-  SHEET_INDEX,
-} from '@/src/common/emoji/twemoji/sheet';
-import { TWEMOJI_URL, twemojiCode } from '@/src/common/util/emoji';
-import { memo, useState, useSyncExternalStore } from 'react';
+import { memo } from 'react';
 
 type Props = {
   sequence: string;
   size: number;
 };
 
-// The picker's emoji come from one sprite sheet, fetched once on the first
-// emoji rendered; every cell then just points at its own region of it.
-const SHEET_URL = `${TWEMOJI_URL}${SHEET_FILE}`;
-let sheetReady = false;
-let sheetImage: HTMLImageElement | undefined;
-const sheetListeners = new Set<() => void>();
-function subscribeSheet(listener: () => void) {
-  sheetListeners.add(listener);
-  if (!sheetImage) {
-    sheetImage = new Image();
-    sheetImage.onload = () => {
-      sheetReady = true;
-      for (const l of sheetListeners) l();
-    };
-    sheetImage.src = SHEET_URL;
-  }
-  return () => {
-    sheetListeners.delete(listener);
-  };
-}
-const useSheetReady = () =>
-  useSyncExternalStore(subscribeSheet, () => sheetReady);
-
-function Glyph({ sequence, size }: { sequence: string; size: number }) {
-  return (
-    <span
-      data-testid="emoji"
-      style={{
-        position: 'absolute',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: size * 0.85,
-        lineHeight: 1,
-      }}
-    >
-      {sequence}
-    </span>
-  );
-}
-
-/**
- * A Twemoji image for one emoji: a region of the sprite sheet, or for
- * emoji outside it (skin tones, newer additions) its own PNG from
- * `public/twemoji/`. The platform glyph shows until the image is there,
- * and stays if there is none, so a scrolling grid is never blank.
- */
+/** One emoji in a `size` square, drawn with the Twemoji font (see `app/+html.tsx`). */
 export const EmojiImage = memo(function EmojiImage({ sequence, size }: Props) {
-  const code = twemojiCode(sequence);
-  const cell = SHEET_INDEX[code];
-  const ready = useSheetReady();
-  const src = `${TWEMOJI_URL}${code}.png`;
-  // Keyed by src: a recycled list cell gets a new sequence on the same instance.
-  const [loaded, setLoaded] = useState<string | null>(null);
-  const [missing, setMissing] = useState<string | null>(null);
-  const showImage = cell === undefined ? loaded === src : ready;
-  const scale = size / SHEET_CELL;
   return (
     <span
       role="img"
       aria-label={sequence}
+      data-testid="emoji"
       style={{
-        position: 'relative',
         display: 'inline-block',
         width: size,
         height: size,
         verticalAlign: 'middle',
+        whiteSpace: 'nowrap',
+        fontFamily: 'TwemojiImage',
+        fontSize: size,
+        // The font's ascent and descent are its 1em glyph, so the glyph
+        // fills the line.
+        lineHeight: 1,
+        // The glyph starts 0.1em into its advance.
+        textIndent: '-0.1em',
       }}
     >
-      {!showImage && <Glyph sequence={sequence} size={size} />}
-      {cell !== undefined
-        ? showImage && (
-            <span
-              data-testid="emoji"
-              className="transparentText"
-              style={{
-                display: 'inline-block',
-                width: size,
-                height: size,
-                backgroundImage: `url(${SHEET_URL})`,
-                backgroundSize: `${SHEET_COLUMNS * SHEET_CELL * scale}px auto`,
-                backgroundPosition: `${-(cell % SHEET_COLUMNS) * size}px ${-Math.floor(cell / SHEET_COLUMNS) * size}px`,
-              }}
-            >
-              {sequence}
-            </span>
-          )
-        : missing !== src && (
-            <img
-              src={src}
-              width={size}
-              height={size}
-              decoding="async"
-              draggable={false}
-              // Copying selected text includes the alt text.
-              alt={sequence}
-              data-testid="emoji"
-              style={{
-                display: 'block',
-                width: size,
-                height: size,
-                objectFit: 'contain',
-                opacity: showImage ? 1 : 0,
-              }}
-              onLoad={() => setLoaded(src)}
-              onError={() => setMissing(src)}
-            />
-          )}
+      {sequence}
     </span>
   );
 });

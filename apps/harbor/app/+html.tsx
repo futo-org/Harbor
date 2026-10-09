@@ -21,11 +21,15 @@ const TWEMOJI_UNICODE_RANGE =
 // synthesise bold, which Safari renders badly. Twemoji's faces cover every
 // weight and italic too, so emoji are never synthesised bold or slanted; it
 // blocks rather than swaps, so the platform's emoji never show first.
+// TwemojiImage is the same font for `EmojiImage`, with no unicode-range: as
+// the first font covering a space, its metrics place the line's baseline.
 const FONT_STYLE = `
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans.ttf);font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans-Italic.ttf);font-weight:100 900;font-style:italic;font-display:swap}
 @font-face{font-family:Twemoji;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:normal;font-display:block;unicode-range:${TWEMOJI_UNICODE_RANGE}}
 @font-face{font-family:Twemoji;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:italic;font-display:block;unicode-range:${TWEMOJI_UNICODE_RANGE}}
+@font-face{font-family:TwemojiImage;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:normal;font-display:block}
+@font-face{font-family:TwemojiImage;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:italic;font-display:block}
 `;
 
 export default function Root({ children }: PropsWithChildren) {
