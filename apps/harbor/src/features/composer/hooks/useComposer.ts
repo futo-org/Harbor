@@ -439,7 +439,8 @@ function useDiscardDraftConfirmation(
   const navigation = useNavigation();
 
   // Every way of closing removes this route (Cancel/X, Escape, backdrop,
-  // swipe back, hardware back), so guard the removal itself.
+  // swipe back, hardware back), so guard the removal itself. Browser back
+  // isn't caught until expo-router 58.
   usePreventRemove(hasUnpostedDraft, ({ data }) => {
     void confirm({
       title: isReply ? 'Discard reply?' : 'Discard post?',
@@ -451,6 +452,7 @@ function useDiscardDraftConfirmation(
   });
 
   // Reloading or closing the browser tab bypasses navigation entirely.
+  // Remove on expo-router 58, whose usePreventRemove handles this itself.
   useEffect(() => {
     if (!isWeb || !hasUnpostedDraft) return;
     const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
