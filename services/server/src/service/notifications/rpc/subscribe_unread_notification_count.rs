@@ -8,6 +8,7 @@ use tonic::{Request, Status};
 
 use crate::service::auth::authenticated_identity;
 use crate::service::context::ServiceContext;
+use crate::service::notifications::changes::Change;
 use crate::service::notifications::repository::Query;
 use crate::service::proto::{
     SubscribeUnreadNotificationCountRequest,
@@ -20,12 +21,11 @@ const MAX_COUNT: u64 = 100;
 pub type CountStream = BoxStream<SubscribeUnreadNotificationCountResponse>;
 
 /// Sends the current count, then a new one each time `changes` names the
-/// identity and the count differs. Without `changes` only the current count
-/// is sent.
+/// identity (or everyone) and the count differs.
 pub async fn handle(
     ctx: Arc<ServiceContext>,
     request: Request<SubscribeUnreadNotificationCountRequest>,
-    changes: Option<broadcast::Receiver<String>>,
+    mut changes: broadcast::Receiver<Change>,
 ) -> Result<CountStream, Status> {
     let identity = authenticated_identity(&request)
         .ok_or_else(|| Status::unauthenticated("authentication required"))?;
@@ -34,34 +34,34 @@ pub async fn handle(
     let (tx, rx) = mpsc::channel(4);
     let _ = tx.try_send(Ok(response(initial)));
 
-    if let Some(mut changes) = changes {
-        tokio::spawn(async move {
-            let mut last = initial;
-            loop {
-                let changed = tokio::select! {
-                    _ = tx.closed() => return,
-                    changed = changes.recv() => changed,
-                };
-                match changed {
-                    Ok(changed) if changed != identity => continue,
-                    Ok(_) | Err(RecvError::Lagged(_)) => {}
-                    Err(RecvError::Closed) => return,
+    tokio::spawn(async move {
+        let mut last = initial;
+        loop {
+            let changed = tokio::select! {
+                _ = tx.closed() => return,
+                changed = changes.recv() => changed,
+            };
+            match changed {
+                Ok(Change::Identity(changed)) if *changed != *identity => {
+                    continue;
                 }
-                match count(&ctx, &identity).await {
-                    Ok(current) if current != last => {
-                        last = current;
-                        if tx.send(Ok(response(current))).await.is_err() {
-                            return;
-                        }
+                Ok(_) | Err(RecvError::Lagged(_)) => {}
+                Err(RecvError::Closed) => return,
+            }
+            match count(&ctx, &identity).await {
+                Ok(current) if current != last => {
+                    last = current;
+                    if tx.send(Ok(response(current))).await.is_err() {
+                        return;
                     }
-                    Ok(_) => {}
-                    Err(status) => {
-                        tracing::warn!(error = %status, "unread count refresh failed")
-                    }
+                }
+                Ok(_) => {}
+                Err(status) => {
+                    tracing::warn!(error = %status, "unread count refresh failed")
                 }
             }
-        });
-    }
+        }
+    });
 
     Ok(Box::pin(ReceiverStream::new(rx)))
 }

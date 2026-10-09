@@ -188,6 +188,7 @@ async fn unread_count_stream_follows_new_notifications_and_acknowledge() {
     let mut follower = TestClient::new().await;
     follower
         .follow_identity(recipient.identity().to_owned(), DEFAULT_CREATED_AT);
+    let follow_key = follower.get_last_event_key();
     follower.submit_events().await;
 
     assert_eq!(
@@ -199,7 +200,9 @@ async fn unread_count_stream_follows_new_notifications_and_acknowledge() {
     let mut acknowledger = NotificationServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server");
-    let mut request = tonic::Request::new(AcknowledgeNotificationsRequest {});
+    let mut request = tonic::Request::new(AcknowledgeNotificationsRequest {
+        last_seen: Some(follow_key),
+    });
     request
         .metadata_mut()
         .insert("authorization", auth_token.try_into().unwrap());

@@ -1,6 +1,8 @@
 use ::entity::{notification, notification_read_marker};
-use sea_orm::sea_query::OnConflict;
+use sea_orm::sea_query::{Alias, Expr, Func, OnConflict};
 use sea_orm::*;
+
+use crate::service::events::TargetEventKey;
 
 pub struct Query;
 pub struct Mutation;
@@ -20,17 +22,74 @@ impl Query {
                 .map(|marker| marker.last_read_id)
                 .unwrap_or(0);
 
-        let ids: Vec<i64> = notification::Entity::find()
+        let unread = sea_query::Query::select()
+            .column(notification::Column::Id)
+            .from(notification::Entity)
+            .and_where(Expr::col(notification::Column::ToIdentity).eq(identity))
+            .and_where(Expr::col(notification::Column::Id).gt(last_read_id))
+            .limit(cap)
+            .to_owned();
+        let count = sea_query::Query::select()
+            .expr(Expr::cust("COUNT(*) AS num_items"))
+            .from_subquery(unread, Alias::new("unread"))
+            .to_owned();
+
+        match db.query_one(&count).await? {
+            Some(row) => Ok(row.try_get::<i64>("", "num_items")? as u64),
+            None => Ok(0),
+        }
+    }
+
+    /// Id of the notification to `identity` that `trigger` produced, if this
+    /// server has it. The newest one, since redelivery can duplicate rows.
+    pub async fn id_of_trigger(
+        db: &DbConn,
+        identity: &str,
+        trigger: &TargetEventKey,
+    ) -> Result<Option<i64>, DbErr> {
+        notification::Entity::find()
             .select_only()
             .column(notification::Column::Id)
             .filter(notification::Column::ToIdentity.eq(identity))
-            .filter(notification::Column::Id.gt(last_read_id))
-            .limit(cap)
+            .filter(
+                notification::Column::TriggerEventKeyCollection
+                    .eq(trigger.collection),
+            )
+            .filter(
+                notification::Column::TriggerEventKeyIdentity
+                    .eq(&trigger.identity),
+            )
+            .filter(
+                notification::Column::TriggerEventKeyPublicKeyType
+                    .eq(trigger.public_key_type),
+            )
+            .filter(
+                notification::Column::TriggerEventKeyPublicKey
+                    .eq(trigger.public_key.clone()),
+            )
+            .filter(
+                notification::Column::TriggerEventKeySequence
+                    .eq(trigger.sequence),
+            )
+            .order_by_desc(notification::Column::Id)
             .into_tuple()
-            .all(db)
-            .await?;
+            .one(db)
+            .await
+    }
 
-        Ok(ids.len() as u64)
+    /// Id of the newest notification addressed to `identity`.
+    pub async fn newest_id(
+        db: &DbConn,
+        identity: &str,
+    ) -> Result<Option<i64>, DbErr> {
+        notification::Entity::find()
+            .select_only()
+            .column(notification::Column::Id)
+            .filter(notification::Column::ToIdentity.eq(identity))
+            .order_by_desc(notification::Column::Id)
+            .into_tuple()
+            .one(db)
+            .await
     }
 
     /// Notifications addressed to `to_identity`, newest first.
@@ -54,31 +113,35 @@ impl Query {
 }
 
 impl Mutation {
-    /// Moves `identity`'s read marker to its newest notification.
-    pub async fn mark_read(db: &DbConn, identity: &str) -> Result<(), DbErr> {
-        let newest_id: Option<i64> = notification::Entity::find()
-            .select_only()
-            .column(notification::Column::Id)
-            .filter(notification::Column::ToIdentity.eq(identity))
-            .order_by_desc(notification::Column::Id)
-            .into_tuple()
-            .one(db)
-            .await?;
+    /// Moves `identity`'s read marker up to `up_to_id`, never backwards.
+    pub async fn mark_read(
+        db: &DbConn,
+        identity: &str,
+        up_to_id: i64,
+    ) -> Result<(), DbErr> {
+        use notification_read_marker::Column;
 
         let now = chrono::Utc::now();
         notification_read_marker::Entity::insert(
             notification_read_marker::ActiveModel {
                 identity: Set(identity.to_string()),
-                last_read_id: Set(newest_id.unwrap_or(0)),
+                last_read_id: Set(up_to_id),
                 updated_at: Set(now),
             },
         )
         .on_conflict(
-            OnConflict::column(notification_read_marker::Column::Identity)
-                .update_columns([
-                    notification_read_marker::Column::LastReadId,
-                    notification_read_marker::Column::UpdatedAt,
-                ])
+            OnConflict::column(Column::Identity)
+                .value(
+                    Column::LastReadId,
+                    Func::greatest([
+                        Expr::col((
+                            notification_read_marker::Entity,
+                            Column::LastReadId,
+                        )),
+                        Expr::col((Alias::new("excluded"), Column::LastReadId)),
+                    ]),
+                )
+                .update_column(Column::UpdatedAt)
                 .to_owned(),
         )
         .exec_without_returning(db)
@@ -185,18 +248,24 @@ mod tests {
         }
     }
 
+    fn count_row(count: i64) -> BTreeMap<&'static str, Value> {
+        BTreeMap::from([("num_items", Value::BigInt(Some(count)))])
+    }
+
     #[tokio::test]
-    async fn unread_count_counts_ids_above_the_marker() {
+    async fn unread_count_counts_ids_above_the_marker_in_sql() {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([vec![marker("bob", 5)]])
-            .append_query_results([vec![id_row(7), id_row(6)]])
+            .append_query_results([vec![count_row(2)]])
             .into_connection();
 
         let count = Query::unread_count(&db, "bob", 100).await.unwrap();
 
         assert_eq!(count, 2);
         let sql = format!("{:?}", db.into_transaction_log());
+        assert!(sql.contains("COUNT(*)"), "counts in the database: {sql}");
         assert!(sql.contains("to_identity"), "filters by recipient: {sql}");
+        assert!(sql.contains("BigInt(Some(5))"), "above the marker: {sql}");
         assert!(sql.contains('>'), "only ids above the marker: {sql}");
         assert!(sql.to_uppercase().contains("LIMIT"), "capped: {sql}");
     }
@@ -207,47 +276,97 @@ mod tests {
             .append_query_results([
                 Vec::<notification_read_marker::Model>::new(),
             ])
-            .append_query_results([vec![id_row(1)]])
+            .append_query_results([vec![count_row(1)]])
             .into_connection();
 
         let count = Query::unread_count(&db, "bob", 100).await.unwrap();
 
         assert_eq!(count, 1);
+        let sql = format!("{:?}", db.into_transaction_log());
+        assert!(
+            sql.contains("BigInt(Some(0))"),
+            "marker defaults to 0: {sql}"
+        );
+    }
+
+    fn trigger() -> TargetEventKey {
+        TargetEventKey {
+            collection: 2,
+            identity: "alice".to_string(),
+            public_key_type: 1,
+            public_key: vec![0xAB],
+            sequence: 7,
+        }
     }
 
     #[tokio::test]
-    async fn mark_read_upserts_the_newest_id() {
+    async fn id_of_trigger_matches_every_key_column_for_the_recipient() {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([vec![id_row(42)]])
-            .append_exec_results([MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 1,
-            }])
+            .append_query_results([vec![id_row(9)]])
             .into_connection();
 
-        Mutation::mark_read(&db, "bob").await.unwrap();
+        let id = Query::id_of_trigger(&db, "bob", &trigger()).await.unwrap();
 
+        assert_eq!(id, Some(9));
         let sql = format!("{:?}", db.into_transaction_log());
-        assert!(sql.contains("ON CONFLICT"), "upserts the marker: {sql}");
+        for column in [
+            "to_identity",
+            "trigger_event_key_collection",
+            "trigger_event_key_identity",
+            "trigger_event_key_public_key_type",
+            "trigger_event_key_public_key",
+            "trigger_event_key_sequence",
+        ] {
+            assert!(sql.contains(column), "filters by {column}: {sql}");
+        }
         assert!(
-            sql.contains("BigInt(Some(42))"),
-            "stores the newest id: {sql}"
+            sql.contains("ORDER BY") && sql.contains("DESC"),
+            "newest duplicate wins: {sql}"
         );
     }
 
     #[tokio::test]
-    async fn mark_read_without_notifications_stores_zero() {
+    async fn id_of_trigger_is_none_when_absent() {
         let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([Vec::<BTreeMap<&str, Value>>::new()])
+            .into_connection();
+
+        let id = Query::id_of_trigger(&db, "bob", &trigger()).await.unwrap();
+
+        assert_eq!(id, None);
+    }
+
+    #[tokio::test]
+    async fn newest_id_takes_the_highest_id_for_the_recipient() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([vec![id_row(42)]])
+            .into_connection();
+
+        let id = Query::newest_id(&db, "bob").await.unwrap();
+
+        assert_eq!(id, Some(42));
+        let sql = format!("{:?}", db.into_transaction_log());
+        assert!(sql.contains("to_identity"), "filters by recipient: {sql}");
+        assert!(
+            sql.contains("ORDER BY") && sql.contains("DESC"),
+            "newest first: {sql}"
+        );
+    }
+
+    #[tokio::test]
+    async fn mark_read_upserts_without_moving_backwards() {
+        let db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_exec_results([MockExecResult {
                 last_insert_id: 0,
                 rows_affected: 1,
             }])
             .into_connection();
 
-        Mutation::mark_read(&db, "bob").await.unwrap();
+        Mutation::mark_read(&db, "bob", 42).await.unwrap();
 
         let sql = format!("{:?}", db.into_transaction_log());
-        assert!(sql.contains("BigInt(Some(0))"), "stores zero: {sql}");
+        assert!(sql.contains("ON CONFLICT"), "upserts the marker: {sql}");
+        assert!(sql.contains("GREATEST"), "keeps the higher id: {sql}");
+        assert!(sql.contains("BigInt(Some(42))"), "stores the id: {sql}");
     }
 }
