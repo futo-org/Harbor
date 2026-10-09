@@ -105,7 +105,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_method_observer_error(uniffiSelf: bigint, message: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_method_observer_complete(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_constructor_polycentriccore_new(uniffi_out_err: UniffiRustCallStatus): bigint;
-    ubrn_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(uniffiSelf: bigint, serverUrl: Uint8Array): bigint;
+    ubrn_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_assemble_recovery_payload(uniffiSelf: bigint, identity: Uint8Array, publicKey: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_await_query(uniffiSelf: bigint, query: Uint8Array, queryKey: Uint8Array, opts: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_blocked_identities(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): Uint8Array;

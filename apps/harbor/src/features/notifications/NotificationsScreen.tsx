@@ -29,12 +29,16 @@ export default function NotificationsScreen() {
     refresh();
   });
 
-  // Every notification on a loaded, focused list counts as seen.
+  // Every notification on a loaded, focused list counts as seen, up to the
+  // newest one shown.
   const acknowledge = useAcknowledgeNotifications();
   const focused = useIsFocused();
+  const newest = items[0];
   useEffect(() => {
-    if (focused && !isLoading && !isRefreshing) void acknowledge();
-  }, [focused, isLoading, isRefreshing, acknowledge]);
+    if (focused && !isLoading && !isRefreshing && newest) {
+      void acknowledge(newest.triggerKey);
+    }
+  }, [focused, isLoading, isRefreshing, newest, acknowledge]);
 
   return (
     <Screen>

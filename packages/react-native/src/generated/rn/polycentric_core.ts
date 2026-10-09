@@ -5057,10 +5057,10 @@ const uniffiCallbackInterfaceSignBytesCallback: { vtable: any; register: () => v
 export interface PolycentricCoreLike {
     
 /**
- * Mark every notification of the authenticated identity on a server as
- * read.
+ * Mark the authenticated identity's notifications on a server as read.
+ * `request_bytes` is a serialized `AcknowledgeNotificationsRequest`.
  */
-    acknowledgeNotifications(serverUrl: string, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<void>;
+    acknowledgeNotifications(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<void>;
 /**
  * Derive the bytes that should be signed by the recovery key in order to
  * authorize `public_key` as a new rotation key for the identity.
@@ -5295,17 +5295,17 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
 
     
 /**
- * Mark every notification of the authenticated identity on a server as
- * read.
+ * Mark the authenticated identity's notifications on a server as read.
+ * `request_bytes` is a serialized `AcknowledgeNotificationsRequest`.
  */
-    async acknowledgeNotifications(serverUrl: string, asyncOpts_?: { signal: AbortSignal }): Promise<void> /*throws*/ {
+    async acknowledgeNotifications(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }): Promise<void> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
     try {
         return await uniffiRustCallAsync(
             /*rustCaller:*/ uniffiCaller,
             /*rustFutureFunc:*/ () => {
                 return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(
-                    uniffiTypePolycentricCoreObjectFactory.clonePointer(this),FfiConverterString.lower(serverUrl, nativeModule().rustbuffer_alloc)
+                    uniffiTypePolycentricCoreObjectFactory.clonePointer(this),FfiConverterString.lower(serverUrl, nativeModule().rustbuffer_alloc),FfiConverterArrayBuffer.lower(requestBytes, nativeModule().rustbuffer_alloc)
                 );
             },
             /*pollFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_poll_void,
@@ -6651,7 +6651,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_constructor_polycentriccore_new() !== 49425) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_constructor_polycentriccore_new");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_acknowledge_notifications() !== 10302) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_acknowledge_notifications() !== 44266) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_acknowledge_notifications");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload() !== 35652) {

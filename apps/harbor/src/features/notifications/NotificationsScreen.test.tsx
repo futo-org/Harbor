@@ -2,13 +2,14 @@ import { render } from '@testing-library/react-native';
 
 // What the mocked hooks report; tests reassign these between renders.
 let mockFocused = true;
+const newest = { id: 'n1', triggerKey: { identity: 'alice' } };
 let mockList = {
-  items: [] as unknown[],
+  items: [newest] as unknown[],
   isLoading: false,
   isRefreshing: false,
   refresh: jest.fn(),
 };
-const mockAcknowledge = jest.fn(async () => {});
+const mockAcknowledge = jest.fn(async (_lastSeen: unknown) => {});
 
 jest.mock('expo-router', () => ({ useIsFocused: () => mockFocused }));
 
@@ -67,7 +68,7 @@ import NotificationsScreen from './NotificationsScreen';
 beforeEach(() => {
   mockFocused = true;
   mockList = {
-    items: [],
+    items: [newest],
     isLoading: false,
     isRefreshing: false,
     refresh: jest.fn(),
@@ -76,10 +77,31 @@ beforeEach(() => {
 });
 
 describe('NotificationsScreen acknowledging', () => {
-  it('acknowledges once the focused list has loaded', async () => {
+  it('acknowledges up to the newest shown once the focused list has loaded', async () => {
     await render(<NotificationsScreen />);
 
     expect(mockAcknowledge).toHaveBeenCalledTimes(1);
+    expect(mockAcknowledge).toHaveBeenCalledWith(newest.triggerKey);
+  });
+
+  it('has nothing to acknowledge on an empty list', async () => {
+    mockList = { ...mockList, items: [] };
+
+    await render(<NotificationsScreen />);
+
+    expect(mockAcknowledge).not.toHaveBeenCalled();
+  });
+
+  it('acknowledges again when a newer notification is shown', async () => {
+    const { rerender } = await render(<NotificationsScreen />);
+    expect(mockAcknowledge).toHaveBeenCalledTimes(1);
+
+    const newer = { id: 'n2', triggerKey: { identity: 'carol' } };
+    mockList = { ...mockList, items: [newer, newest] };
+    await rerender(<NotificationsScreen />);
+
+    expect(mockAcknowledge).toHaveBeenCalledTimes(2);
+    expect(mockAcknowledge).toHaveBeenLastCalledWith(newer.triggerKey);
   });
 
   it('waits for the list to load', async () => {

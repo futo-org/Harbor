@@ -12,6 +12,7 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { EventKey } from "./event_key";
 import { PageInfo } from "./common";
 import { EventHint } from "./events";
 import { EventBundle } from "./events";
@@ -85,12 +86,19 @@ export interface ListNotificationsResponse {
     pageInfo?: PageInfo;
 }
 /**
- * Empty: the identity comes from the auth token and every notification
- * existing at the time of the call is marked read
+ * The identity comes from the auth token
  *
  * @generated from protobuf message polycentric.v2.AcknowledgeNotificationsRequest
  */
 export interface AcknowledgeNotificationsRequest {
+    /**
+     * Trigger event of the newest notification the client has shown. Every
+     * notification up to it is marked read, later ones stay unread. A server
+     * that does not hold that notification marks everything it has
+     *
+     * @generated from protobuf field: polycentric.v2.EventKey last_seen = 1
+     */
+    lastSeen?: EventKey;
 }
 /**
  * Empty: success is signalled by the call not failing
@@ -399,7 +407,9 @@ export const ListNotificationsResponse = new ListNotificationsResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class AcknowledgeNotificationsRequest$Type extends MessageType<AcknowledgeNotificationsRequest> {
     constructor() {
-        super("polycentric.v2.AcknowledgeNotificationsRequest", []);
+        super("polycentric.v2.AcknowledgeNotificationsRequest", [
+            { no: 1, name: "last_seen", kind: "message", T: () => EventKey }
+        ]);
     }
     create(value?: PartialMessage<AcknowledgeNotificationsRequest>): AcknowledgeNotificationsRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
@@ -412,6 +422,9 @@ class AcknowledgeNotificationsRequest$Type extends MessageType<AcknowledgeNotifi
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
+                case /* polycentric.v2.EventKey last_seen */ 1:
+                    message.lastSeen = EventKey.internalBinaryRead(reader, reader.uint32(), options, message.lastSeen);
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -424,6 +437,9 @@ class AcknowledgeNotificationsRequest$Type extends MessageType<AcknowledgeNotifi
         return message;
     }
     internalBinaryWrite(message: AcknowledgeNotificationsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.EventKey last_seen = 1; */
+        if (message.lastSeen)
+            EventKey.internalBinaryWrite(message.lastSeen, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

@@ -25,6 +25,8 @@ function withLabels<T extends PostData | null | undefined>(
 type NotificationBase = {
   /** Stable list key — hex of the trigger event's key. */
   id: string;
+  /** The trigger event's key, named when acknowledging. */
+  triggerKey: v2.EventKey;
   /** Identity that triggered the notification (the actor). */
   fromIdentity: string;
   /** When the triggering event was created (ms since epoch). */
@@ -108,9 +110,12 @@ export type NotificationData =
 
 /** The author identity, a stable hex id, and creation time from a bundle's
  *  event key. `null` when the bundle is missing or unparseable. */
-function triggerInfo(
-  bundle: v2.EventBundle | undefined,
-): { id: string; identity: string; createdAt: number } | null {
+function triggerInfo(bundle: v2.EventBundle | undefined): {
+  id: string;
+  key: v2.EventKey;
+  identity: string;
+  createdAt: number;
+} | null {
   if (!bundle?.signedEvent) return null;
   try {
     const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
@@ -118,6 +123,7 @@ function triggerInfo(
     if (!key) return null;
     return {
       id: eventKeyId(key),
+      key,
       identity: key.identity,
       createdAt: Number(event.createdAt ?? 0),
     };
@@ -137,6 +143,7 @@ function decodeNotification(
 
   const base: NotificationBase = {
     id: trigger.id,
+    triggerKey: trigger.key,
     fromIdentity: trigger.identity,
     createdAt: trigger.createdAt,
   };

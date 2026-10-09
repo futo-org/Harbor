@@ -231,7 +231,8 @@ extern "C" {
     );
     /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(
         /*handle*/ uint64_t ptr, 
-        RustBuffer server_url
+        RustBuffer server_url, 
+        RustBuffer request_bytes
     );
     RustBuffer uniffi_polycentric_core_fn_method_polycentriccore_assemble_recovery_payload(
         /*handle*/ uint64_t ptr, 
@@ -5470,7 +5471,7 @@ NativePolycentricCore::NativePolycentricCore(
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications"),
-        2,
+        3,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(rt, thisVal, args, count);
         }
@@ -7365,7 +7366,7 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_constructor_pol
         return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        auto value = uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1])
+        auto value = uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2])
         );
 
         

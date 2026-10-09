@@ -838,12 +838,22 @@ impl PolycentricCore {
         Ok(())
     }
 
-    /// Mark every notification of the authenticated identity on a server as
-    /// read.
-    pub async fn acknowledge_notifications(&self, server_url: String) -> Result<(), CoreError> {
+    /// Mark the authenticated identity's notifications on a server as read.
+    /// `request_bytes` is a serialized `AcknowledgeNotificationsRequest`.
+    pub async fn acknowledge_notifications(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<(), CoreError> {
+        let request =
+            AcknowledgeNotificationsRequest::decode(request_bytes.as_slice()).map_err(|e| {
+                CoreError::Decode(format!(
+                    "Failed to decode AcknowledgeNotificationsRequest: {e}"
+                ))
+            })?;
         let mut client = NotificationServiceClient::new(channel(&server_url).await?);
         client
-            .acknowledge_notifications(AcknowledgeNotificationsRequest {})
+            .acknowledge_notifications(request)
             .await
             .map_err(|e| CoreError::Network(format!("acknowledge_notifications: {e}")))?;
         Ok(())

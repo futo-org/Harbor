@@ -268,12 +268,18 @@ export class PolycentricClient {
 
   /**
    * Mark every notification of the active identity as read on each
-   * configured server (`NotificationService.AcknowledgeNotifications`).
-   * Per-server failures are logged but do not throw.
+   * configured server (`NotificationService.AcknowledgeNotifications`), up to
+   * the notification `lastSeen` triggered. Per-server failures are logged
+   * but do not throw.
    */
-  async acknowledgeNotifications(): Promise<void> {
+  async acknowledgeNotifications(lastSeen: Proto.EventKey): Promise<void> {
+    const body = Proto.AcknowledgeNotificationsRequest.toBinary(
+      Proto.AcknowledgeNotificationsRequest.create({ lastSeen }),
+    );
     const results = await Promise.allSettled(
-      this.servers.map((server) => this.core.acknowledgeNotifications(server)),
+      this.servers.map((server) =>
+        this.core.acknowledgeNotifications(server, body.buffer as ArrayBuffer),
+      ),
     );
     for (const result of results) {
       if (result.status === 'rejected') {

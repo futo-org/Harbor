@@ -47,7 +47,7 @@ function countResponse(count: number): ArrayBuffer {
 // `renderHook` renders an empty result under this jest-expo setup, so run
 // the hooks through a probe component like the other component tests do.
 let count: number;
-let acknowledge: () => Promise<void>;
+let acknowledge: (lastSeen: never) => Promise<void>;
 function Probe({ enabled = true }: { enabled?: boolean }) {
   count = useUnreadNotificationCount(enabled);
   acknowledge = useAcknowledgeNotifications();
@@ -105,17 +105,19 @@ describe('useUnreadNotificationCount', () => {
 });
 
 describe('useAcknowledgeNotifications', () => {
-  it('zeroes the badge, acknowledges on every server and drops the cache', async () => {
+  const lastSeen = { identity: 'alice', sequence: 7n } as never;
+
+  it('zeroes the badge, acknowledges up to the key on every server and drops the cache', async () => {
     mockQueryResult = { data: countResponse(3) };
     await render(<Probe />);
 
-    await act(() => acknowledge());
+    await act(() => acknowledge(lastSeen));
 
     const key = ['unread_notification_count', 'me'];
     expect(mockSetQueryCache).toHaveBeenCalledWith(key, {
       data: countResponse(0),
     });
-    expect(mockAcknowledgeNotifications).toHaveBeenCalledTimes(1);
+    expect(mockAcknowledgeNotifications).toHaveBeenCalledWith(lastSeen);
     expect(mockInvalidateQuery).toHaveBeenCalledWith(key);
   });
 
@@ -123,7 +125,7 @@ describe('useAcknowledgeNotifications', () => {
     mockActiveIdentityKey = null;
     await render(<Probe />);
 
-    await act(() => acknowledge());
+    await act(() => acknowledge(lastSeen));
 
     expect(mockAcknowledgeNotifications).not.toHaveBeenCalled();
   });

@@ -34,7 +34,7 @@ export interface INotificationServiceClient {
      */
     listNotifications(input: ListNotificationsRequest, options?: RpcOptions): UnaryCall<ListNotificationsRequest, ListNotificationsResponse>;
     /**
-     * Marks every notification of the authenticated identity as read
+     * Marks the authenticated identity's notifications up to `last_seen` as read
      *
      * @generated from protobuf rpc: AcknowledgeNotifications
      */
@@ -84,7 +84,7 @@ export class NotificationServiceClient implements INotificationServiceClient, Se
         return stackIntercept<ListNotificationsRequest, ListNotificationsResponse>("unary", this._transport, method, opt, input);
     }
     /**
-     * Marks every notification of the authenticated identity as read
+     * Marks the authenticated identity's notifications up to `last_seen` as read
      *
      * @generated from protobuf rpc: AcknowledgeNotifications
      */

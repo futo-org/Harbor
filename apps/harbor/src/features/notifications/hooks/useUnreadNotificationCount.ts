@@ -46,18 +46,24 @@ export default function useUnreadNotificationCount(enabled = true): number {
 }
 
 /**
- * Marks every notification of the active identity as read on every server
- * (`NotificationService.AcknowledgeNotifications`), zeroing the badge first.
+ * Marks the active identity's notifications up to `lastSeen` as read on
+ * every server (`NotificationService.AcknowledgeNotifications`), zeroing
+ * the badge first.
  */
-export function useAcknowledgeNotifications(): () => Promise<void> {
+export function useAcknowledgeNotifications(): (
+  lastSeen: v2.EventKey,
+) => Promise<void> {
   const client = usePolycentric();
   const identity = client.activeIdentityKey ?? '';
 
-  return useCallback(async () => {
-    if (!identity) return;
-    const key = queryKey(identity);
-    setQueryCache(key, { data: encodeCount(0) });
-    await client.acknowledgeNotifications();
-    client.core.invalidateQuery(key);
-  }, [client, identity]);
+  return useCallback(
+    async (lastSeen: v2.EventKey) => {
+      if (!identity) return;
+      const key = queryKey(identity);
+      setQueryCache(key, { data: encodeCount(0) });
+      await client.acknowledgeNotifications(lastSeen);
+      client.core.invalidateQuery(key);
+    },
+    [client, identity],
+  );
 }
