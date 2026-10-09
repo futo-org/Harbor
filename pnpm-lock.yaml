@@ -346,6 +346,9 @@ importers:
 
   docs:
     dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.11.0
+        version: 2.11.0
       '@docusaurus/core':
         specifier: 3.10.2
         version: 3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.16)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(postcss@8.5.16))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.16)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
@@ -380,6 +383,9 @@ importers:
         specifier: ^4.3.3
         version: 4.3.3
     devDependencies:
+      '@bufbuild/buf':
+        specifier: ^1.71.0
+        version: 1.72.0
       '@docusaurus/module-type-aliases':
         specifier: 3.10.2
         version: 3.10.2(@swc/core@1.15.40)(postcss@8.5.16)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -389,6 +395,9 @@ importers:
       '@docusaurus/types':
         specifier: 3.10.2
         version: 3.10.2(@swc/core@1.15.40)(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.16))(html-minifier-terser@7.2.0)(postcss@8.5.16)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.1
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.17

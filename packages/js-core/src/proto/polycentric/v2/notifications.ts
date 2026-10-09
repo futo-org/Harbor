@@ -89,10 +89,15 @@ export interface ListNotificationsResponse {
  */
 export interface RegisterPushNotificationRequest {
     /**
+     * Push provider the token belongs to. `expo` is the only provider
+     * currently supported.
+     *
      * @generated from protobuf field: string service = 1
      */
     service: string;
     /**
+     * Device token issued by the push provider.
+     *
      * @generated from protobuf field: string token = 2
      */
     token: string;
@@ -107,6 +112,8 @@ export interface RegisterPushNotificationResponse {
  */
 export interface UnregisterPushNotificationRequest {
     /**
+     * Push provider the token belongs to, see RegisterPushNotificationRequest.
+     *
      * @generated from protobuf field: string service = 1
      */
     service: string;

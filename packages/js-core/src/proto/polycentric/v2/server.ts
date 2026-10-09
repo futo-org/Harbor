@@ -36,7 +36,8 @@ export interface ServerInfo {
      */
     version?: ServerVersion;
     /**
-     * URL used to resolve HTTP assets (blobs, images, etc)
+     * URL used to resolve HTTP assets (blobs, images, etc), the server's
+     * `CDN_URL` setting.
      *
      * @generated from protobuf field: string cdn_url = 2
      */
@@ -57,14 +58,21 @@ export interface GetServerInfoResponse {
     serverInfo?: ServerInfo;
 }
 /**
+ * Envelope for requests authenticated with a key pair instead of a bearer
+ * token.
+ *
  * @generated from protobuf message polycentric.v2.SignedMessage
  */
 export interface SignedMessage {
     /**
+     * Signature by `public_key` over `message_bytes`.
+     *
      * @generated from protobuf field: bytes signature = 1
      */
     signature: Uint8Array;
     /**
+     * The serialized request message, e.g. a RegisterPushNotificationRequest.
+     *
      * @generated from protobuf field: bytes message_bytes = 2
      */
     messageBytes: Uint8Array;

@@ -32,7 +32,11 @@ import type { PolycentricCoreLike, EventKey } from '@polycentric/rs-core-wasm';
 // class and QueryStatus enum without dragging in the wasm asset. The
 // uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
 // externalised in webpack.config.js so consumers resolve it at runtime.
-import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
+import {
+  Query,
+  QueryStatus,
+  type QueryOpts,
+} from '@polycentric/rs-core-wasm/generated';
 
 type CoreType = PolycentricCoreLike;
 
@@ -480,6 +484,7 @@ export class PolycentricClient {
     sequenceLt?: number | bigint | null;
     heads?: Proto.EventKey[] | null;
     queryKey?: string[] | null;
+    queryOpts?: QueryOpts | null;
   }): Promise<Proto.EventBundle[]> {
     const sequenceGt =
       options?.sequenceGt != null ? BigInt(options.sequenceGt) : undefined;
@@ -511,31 +516,68 @@ export class PolycentricClient {
           sequenceLt,
           heads,
         }),
-        undefined,
+        options?.queryOpts ?? undefined,
       );
 
-      let latest: Proto.EventBundle[] = [];
-      // Observable never `complete()`s — resolve on the Loading→Success
-      // transition once every server slot has reported.
-      const subscription = observable.subscribe({
-        next: (result) => {
-          if (result.data) {
+      // Most up-to-date emission from the query.
+      let latest: ArrayBuffer | undefined;
+
+      // Error to return if we get no success responses but at least one error.
+      let firstError: string | undefined;
+
+      // It's possible for the query to complete before or after `subscribe()`
+      // returns.
+      // We need some extra tracking to manage the subscription's lifetime.
+      let settled = false;
+      let subscription: ReturnType<typeof observable.subscribe> | undefined;
+      const settle = () => {
+        // Manage subscription lifetime
+        settled = true;
+        subscription?.unsubscribe();
+
+        // Finalize the promise
+        if (latest) {
+          try {
             const response = Proto.ListEventsResponse.fromBinary(
-              new Uint8Array(result.data),
+              new Uint8Array(latest),
             );
-            latest = response.eventBundles;
+            resolve(response.eventBundles);
+          } catch (e) {
+            reject(e);
           }
-          if (result.status === QueryStatus.Success) {
-            subscription.unsubscribe();
-            resolve(latest);
+        } else if (firstError) {
+          reject(new Error(firstError));
+        } else {
+          resolve([]);
+        }
+      };
+
+      subscription = observable.subscribe({
+        next: (result) => {
+          if (settled) return;
+
+          if (result.data) {
+            latest = result.data;
+
+            // Resolve if the query is no longer loading
+            if (result.status === QueryStatus.Success) {
+              settle();
+            }
           }
         },
+
         error: (message: string) => {
-          subscription.unsubscribe();
-          reject(new Error(message));
+          if (settled) return;
+          if (!firstError) firstError = message;
         },
-        complete: () => {},
+
+        complete: () => {
+          if (settled) return;
+          settle();
+        },
       });
+
+      if (settled) subscription.unsubscribe();
     });
   }
 

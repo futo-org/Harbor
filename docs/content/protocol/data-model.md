@@ -10,7 +10,7 @@ The Polycentric Protocol is a binary protocol using
 [Protocol Buffers v3](https://protobuf.dev/). The messages below are the v2
 definitions from the `protos/polycentric/v2` directory of the
 [Harbor code repository](https://code.futo.org/harbor/harbor). RPC
-request/response messages are covered in [gRPC](./grpc.md).
+request/response messages are covered in [gRPC](./grpc.mdx).
 
 ## Keys and identity
 

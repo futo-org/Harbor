@@ -17,8 +17,8 @@ import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
  * *
- * Identity moderation APIs, authenticated by the caller's bearer JWT
- * (see the note above).
+ * Identity moderation APIs. The caller is authenticated by its bearer JWT
+ * (see `auth_middleware`); the ban endpoints require a moderator.
  *
  * @generated from protobuf service polycentric.v2.IdentityService
  */
@@ -50,8 +50,8 @@ export interface IIdentityServiceClient {
 }
 /**
  * *
- * Identity moderation APIs, authenticated by the caller's bearer JWT
- * (see the note above).
+ * Identity moderation APIs. The caller is authenticated by its bearer JWT
+ * (see `auth_middleware`); the ban endpoints require a moderator.
  *
  * @generated from protobuf service polycentric.v2.IdentityService
  */
