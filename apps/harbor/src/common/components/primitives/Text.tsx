@@ -13,8 +13,9 @@ import {
 import { splitEmoji } from '@/src/common/util/emoji';
 import { isWeb } from '@/src/common/util/platform';
 
+// Twemoji draws the emoji (see `app/+html.tsx`).
 const WEB_FONT_STACK =
-  'NotoSans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  'NotoSans, Twemoji, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
 // Native font APIs can't select a variable font's weights, so each face is
 // its own family (see `src/common/assets`). Keyed by every weight the theme
@@ -55,7 +56,7 @@ function withEmojiImages(
         size={size}
         style={[
           // iOS ignores margins on text attachments.
-          isWeb ? { marginHorizontal: gap } : { width: size + 2 * gap },
+          { width: size + 2 * gap },
           { transform: [{ translateY: shift }] },
         ]}
         inText
@@ -151,11 +152,13 @@ export function Text({
       ]}
       {...props}
     >
-      {renderChildren(
-        children,
-        StyleSheet.flatten(style)?.fontSize ?? resolvedFontSize,
-        !!props.selectable,
-      )}
+      {isWeb
+        ? children
+        : renderChildren(
+            children,
+            StyleSheet.flatten(style)?.fontSize ?? resolvedFontSize,
+            !!props.selectable,
+          )}
     </UITextView>
   );
 }
