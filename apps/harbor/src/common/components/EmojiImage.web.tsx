@@ -121,7 +121,7 @@ export const EmojiImage = memo(function EmojiImage({
         ? showImage && (
             <span
               data-testid="emoji"
-              className="transparentText"
+              className="twemojiSpriteText"
               style={{
                 display: 'inline-block',
                 width: size,

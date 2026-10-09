@@ -10,7 +10,11 @@ const ROOT_STYLE =
   'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100vh}' +
   'html>body[data-scroll-locked]{overflow:visible!important;margin-right:0!important}' +
   '@media(hover:hover){.underlineOnHover:hover{text-decoration:underline}}' +
-  '.transparentText{color:transparent}';
+  '.twemojiSpriteText{color:transparent}' +
+  // Firefox on Linux recolors selected text, revealing the glyph over the sprite.
+  // round(down, alpha) is 1 only for an opaque highlight, which then gets 50%
+  // alpha; macOS's is already translucent and halving it would leave ~25%.
+  '.twemojiSpriteText::selection{color:transparent;background-color:rgb(from Highlight r g b/calc(alpha - 0.5*round(down,alpha)))}';
 
 // Declared here rather than through expo-font, whose injected @font-face has
 // no font-weight range: browsers then clamp the variable font to 400 and
