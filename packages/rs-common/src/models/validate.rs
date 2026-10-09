@@ -7,7 +7,7 @@ use std::sync::OnceLock;
 use regex::Regex;
 
 use crate::models::{
-    application, attributed_to, blob, content, content_body, content_digest, delete, event,
+    application, attributed_to, blob, block, content, content_body, content_digest, delete, event,
     event_key, follow, image, image_set, link, post, post_reply, public_key, to,
 };
 
@@ -59,6 +59,7 @@ pub enum ValidationError {
     To(to::ValidationError),
     Delete(delete::ValidationError),
     Follow(follow::ValidationError),
+    Block(block::ValidationError),
 }
 
 impl From<event::ValidationError> for ValidationError {
@@ -163,6 +164,12 @@ impl From<follow::ValidationError> for ValidationError {
     }
 }
 
+impl From<block::ValidationError> for ValidationError {
+    fn from(err: block::ValidationError) -> ValidationError {
+        ValidationError::Block(err)
+    }
+}
+
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -183,6 +190,7 @@ impl fmt::Display for ValidationError {
             ValidationError::To(err) => write!(f, "to {err}"),
             ValidationError::Delete(err) => write!(f, "delete {err}"),
             ValidationError::Follow(err) => write!(f, "follow {err}"),
+            ValidationError::Block(err) => write!(f, "block {err}"),
         }
     }
 }

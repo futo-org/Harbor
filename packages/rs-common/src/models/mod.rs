@@ -19,6 +19,7 @@ pub mod traits;
 pub mod application;
 pub mod attributed_to;
 pub mod blob;
+pub mod block;
 pub mod collections;
 pub mod content;
 pub mod content_body;

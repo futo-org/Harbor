@@ -415,8 +415,7 @@ fn validate_content(
             check_collection(collection, collections::SOCIAL_GRAPH);
         }
         ContentBody::Block(_) => {
-            check_collection(collection, collections::SOCIAL_GRAPH);
-            // TODO: validate.
+            check_collection(collection, collections::SOCIAL_GRAPH)
         }
         ContentBody::Reaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
