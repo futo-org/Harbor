@@ -7,10 +7,12 @@ import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms } from '@/src/common/theme';
-import { useRef } from 'react';
+import { useIsFocused } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import Notification from './Notification';
 import useListNotifications from './hooks/useListNotifications';
+import { useAcknowledgeNotifications } from './hooks/useUnreadNotificationCount';
 import type { NotificationData } from './utils';
 import { isWeb } from '@/src/common/util/platform';
 
@@ -26,6 +28,13 @@ export default function NotificationsScreen() {
     listRef.current?.scrollToTop();
     refresh();
   });
+
+  // Every notification on a loaded, focused list counts as seen.
+  const acknowledge = useAcknowledgeNotifications();
+  const focused = useIsFocused();
+  useEffect(() => {
+    if (focused && !isLoading && !isRefreshing) void acknowledge();
+  }, [focused, isLoading, isRefreshing, acknowledge]);
 
   return (
     <Screen>

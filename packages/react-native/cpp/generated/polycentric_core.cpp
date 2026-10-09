@@ -229,6 +229,10 @@ extern "C" {
     );
     /*handle*/ uint64_t uniffi_polycentric_core_fn_constructor_polycentriccore_new(RustCallStatus *uniffi_out_err
     );
+    /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(
+        /*handle*/ uint64_t ptr, 
+        RustBuffer server_url
+    );
     RustBuffer uniffi_polycentric_core_fn_method_polycentriccore_assemble_recovery_payload(
         /*handle*/ uint64_t ptr, 
         RustBuffer identity, 
@@ -826,6 +830,8 @@ extern "C" {
     uint16_t uniffi_polycentric_core_checksum_func_merge_labels(
     );
     uint16_t uniffi_polycentric_core_checksum_func_moderation_labels(
+    );
+    uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_acknowledge_notifications(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload(
     );
@@ -5461,6 +5467,14 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_fn_constructor_polycentriccore_new(rt, thisVal, args, count);
         }
     );
+    props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications"),
+        2,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(rt, thisVal, args, count);
+        }
+    );
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_assemble_recovery_payload"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_assemble_recovery_payload"),
@@ -6581,6 +6595,14 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_checksum_func_moderation_labels(rt, thisVal, args, count);
         }
     );
+    props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_acknowledge_notifications"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_acknowledge_notifications"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_acknowledge_notifications(rt, thisVal, args, count);
+        }
+    );
     props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_assemble_recovery_payload"),
@@ -7338,6 +7360,13 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_constructor_pol
         auto value = uniffi_polycentric_core_fn_constructor_polycentriccore_new(&status
         );
         uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_fn_method_polycentriccore_acknowledge_notifications(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1])
+        );
 
         
         return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
@@ -8576,6 +8605,13 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_merg
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_moderation_labels(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_checksum_func_moderation_labels(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_acknowledge_notifications(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_method_polycentriccore_acknowledge_notifications(
         );
 
         

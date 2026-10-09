@@ -85,6 +85,42 @@ export interface ListNotificationsResponse {
     pageInfo?: PageInfo;
 }
 /**
+ * Empty: the identity comes from the auth token and every notification
+ * existing at the time of the call is marked read
+ *
+ * @generated from protobuf message polycentric.v2.AcknowledgeNotificationsRequest
+ */
+export interface AcknowledgeNotificationsRequest {
+}
+/**
+ * Empty: success is signalled by the call not failing
+ *
+ * @generated from protobuf message polycentric.v2.AcknowledgeNotificationsResponse
+ */
+export interface AcknowledgeNotificationsResponse {
+}
+/**
+ * Empty: the identity comes from the auth token
+ *
+ * @generated from protobuf message polycentric.v2.SubscribeUnreadNotificationCountRequest
+ */
+export interface SubscribeUnreadNotificationCountRequest {
+}
+/**
+ * Unread count for the authenticated identity on this server, sent on
+ * subscribe and again whenever it changes
+ *
+ * @generated from protobuf message polycentric.v2.SubscribeUnreadNotificationCountResponse
+ */
+export interface SubscribeUnreadNotificationCountResponse {
+    /**
+     * Notifications newer than the last acknowledgement, capped by the server
+     *
+     * @generated from protobuf field: uint32 count = 1
+     */
+    count: number;
+}
+/**
  * @generated from protobuf message polycentric.v2.RegisterPushNotificationRequest
  */
 export interface RegisterPushNotificationRequest {
@@ -361,6 +397,167 @@ class ListNotificationsResponse$Type extends MessageType<ListNotificationsRespon
  */
 export const ListNotificationsResponse = new ListNotificationsResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class AcknowledgeNotificationsRequest$Type extends MessageType<AcknowledgeNotificationsRequest> {
+    constructor() {
+        super("polycentric.v2.AcknowledgeNotificationsRequest", []);
+    }
+    create(value?: PartialMessage<AcknowledgeNotificationsRequest>): AcknowledgeNotificationsRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<AcknowledgeNotificationsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AcknowledgeNotificationsRequest): AcknowledgeNotificationsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: AcknowledgeNotificationsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.AcknowledgeNotificationsRequest
+ */
+export const AcknowledgeNotificationsRequest = new AcknowledgeNotificationsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class AcknowledgeNotificationsResponse$Type extends MessageType<AcknowledgeNotificationsResponse> {
+    constructor() {
+        super("polycentric.v2.AcknowledgeNotificationsResponse", []);
+    }
+    create(value?: PartialMessage<AcknowledgeNotificationsResponse>): AcknowledgeNotificationsResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<AcknowledgeNotificationsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AcknowledgeNotificationsResponse): AcknowledgeNotificationsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: AcknowledgeNotificationsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.AcknowledgeNotificationsResponse
+ */
+export const AcknowledgeNotificationsResponse = new AcknowledgeNotificationsResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class SubscribeUnreadNotificationCountRequest$Type extends MessageType<SubscribeUnreadNotificationCountRequest> {
+    constructor() {
+        super("polycentric.v2.SubscribeUnreadNotificationCountRequest", []);
+    }
+    create(value?: PartialMessage<SubscribeUnreadNotificationCountRequest>): SubscribeUnreadNotificationCountRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<SubscribeUnreadNotificationCountRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SubscribeUnreadNotificationCountRequest): SubscribeUnreadNotificationCountRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: SubscribeUnreadNotificationCountRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.SubscribeUnreadNotificationCountRequest
+ */
+export const SubscribeUnreadNotificationCountRequest = new SubscribeUnreadNotificationCountRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class SubscribeUnreadNotificationCountResponse$Type extends MessageType<SubscribeUnreadNotificationCountResponse> {
+    constructor() {
+        super("polycentric.v2.SubscribeUnreadNotificationCountResponse", [
+            { no: 1, name: "count", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<SubscribeUnreadNotificationCountResponse>): SubscribeUnreadNotificationCountResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.count = 0;
+        if (value !== undefined)
+            reflectionMergePartial<SubscribeUnreadNotificationCountResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SubscribeUnreadNotificationCountResponse): SubscribeUnreadNotificationCountResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* uint32 count */ 1:
+                    message.count = reader.uint32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: SubscribeUnreadNotificationCountResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* uint32 count = 1; */
+        if (message.count !== 0)
+            writer.tag(1, WireType.Varint).uint32(message.count);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.SubscribeUnreadNotificationCountResponse
+ */
+export const SubscribeUnreadNotificationCountResponse = new SubscribeUnreadNotificationCountResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class RegisterPushNotificationRequest$Type extends MessageType<RegisterPushNotificationRequest> {
     constructor() {
         super("polycentric.v2.RegisterPushNotificationRequest", [
@@ -551,6 +748,8 @@ export const UnregisterPushNotificationResponse = new UnregisterPushNotification
  */
 export const NotificationService = new ServiceType("polycentric.v2.NotificationService", [
     { name: "ListNotifications", options: {}, I: ListNotificationsRequest, O: ListNotificationsResponse },
+    { name: "AcknowledgeNotifications", options: {}, I: AcknowledgeNotificationsRequest, O: AcknowledgeNotificationsResponse },
+    { name: "SubscribeUnreadNotificationCount", serverStreaming: true, options: {}, I: SubscribeUnreadNotificationCountRequest, O: SubscribeUnreadNotificationCountResponse },
     { name: "RegisterPushNotifications", options: {}, I: SignedMessage, O: RegisterPushNotificationResponse },
     { name: "UnregisterPushNotifications", options: {}, I: SignedMessage, O: UnregisterPushNotificationResponse }
 ]);

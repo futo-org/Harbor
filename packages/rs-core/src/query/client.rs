@@ -1,4 +1,4 @@
-use futures::FutureExt;
+use futures::{FutureExt, Stream, StreamExt};
 use std::cmp::max;
 use std::collections::HashMap;
 use std::future::Future;
@@ -152,6 +152,27 @@ pub type QueryFutureBox<T> = Pin<Box<dyn Future<Output = Result<T, String>> + 's
 
 /// Type-erased per-server `query_fn`.
 pub type QueryFnBox<T> = Arc<dyn Fn(String) -> QueryFutureBox<T> + Send + Sync + 'static>;
+
+/// Type-erased per-server stream of values, opened by a `StreamFnBox`.
+#[cfg(not(target_arch = "wasm32"))]
+pub type QueryStreamBox<T> = Pin<Box<dyn Stream<Item = Result<T, String>> + Send + 'static>>;
+#[cfg(target_arch = "wasm32")]
+pub type QueryStreamBox<T> = Pin<Box<dyn Stream<Item = Result<T, String>> + 'static>>;
+
+/// Type-erased per-server `stream_fn`.
+pub type StreamFnBox<T> =
+    Arc<dyn Fn(String) -> QueryFutureBox<QueryStreamBox<T>> + Send + Sync + 'static>;
+
+/// Delay before re-opening a server stream that ended or failed.
+#[cfg(not(test))]
+const RECONNECT_DELAY: Duration = Duration::from_secs(10);
+#[cfg(test)]
+const RECONNECT_DELAY: Duration = Duration::from_millis(200);
+/// How often an idle stream task checks whether its subscriber left.
+#[cfg(not(test))]
+const CLOSE_POLL: Duration = Duration::from_secs(1);
+#[cfg(test)]
+const CLOSE_POLL: Duration = Duration::from_millis(50);
 
 /// Type-erased `merge_fn`. Reduces every page held for this key, plus the
 /// value last emitted, to the value to emit next. The client handle lets a
@@ -438,6 +459,86 @@ where
         })
     }
 
+    /// Like `fetch`, but `stream_fn` opens a server stream and every value
+    /// it yields is merged and emitted, so the observable never completes.
+    pub fn subscribe<F, Fut, S, M>(
+        &self,
+        query_key: Option<QueryKey>,
+        stream_fn: F,
+        merge_fn: M,
+        opts: Option<QueryOpts>,
+    ) -> Observable<QueryResult<T>>
+    where
+        F: Fn(String) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<S, String>> + MaybeSend + 'static,
+        S: Stream<Item = Result<T, String>> + MaybeSend + 'static,
+        M: Fn(&[T], Option<&T>, &Arc<Mutex<PolycentricClient>>) -> T + Send + Sync + 'static,
+    {
+        let queries = self.queries.clone();
+        let client = self.client.clone();
+        let stream_fn: StreamFnBox<T> = Arc::new(move |server_url| {
+            let opening = stream_fn(server_url);
+            Box::pin(async move { opening.await.map(|s| Box::pin(s) as QueryStreamBox<T>) })
+        });
+        let merge_fn: MergeFn<T> = Arc::new(merge_fn);
+        let server_timeout = Duration::from_millis(
+            opts.as_ref()
+                .and_then(|o| o.server_timeout_ms)
+                .unwrap_or(DEFAULT_SERVER_TIMEOUT_MS) as u64,
+        );
+        let servers = opts.and_then(|o| o.servers);
+
+        Observable::new(move |subscriber| {
+            if subscriber.is_closed() {
+                return;
+            }
+            let subscriber = Arc::new(subscriber);
+            let state = get_or_create_state(&queries, &query_key);
+            let target_servers = resolve_servers(servers.as_deref(), &client);
+
+            let cached = {
+                let mut s = state.lock_recover();
+                compute_emission(&mut s, &merge_fn, &client)
+            };
+            if cached.is_some() {
+                subscriber.next(QueryResult {
+                    data: cached,
+                    status: QueryStatus::Loading,
+                    successful_servers: 0,
+                    pending_servers: target_servers.len(),
+                });
+            }
+            if target_servers.is_empty() {
+                subscriber.complete();
+                return;
+            }
+
+            let context = StreamContext {
+                state,
+                server_timeout,
+                stream_fn: stream_fn.clone(),
+                merge_fn: merge_fn.clone(),
+                client: client.clone(),
+                subscriber,
+                pending: Arc::new(AtomicUsize::new(target_servers.len())),
+                successful: Arc::new(AtomicUsize::new(0)),
+            };
+            for server_url in target_servers {
+                let task_context = context.clone();
+                let task_server_url = server_url.clone();
+                if !spawn(async move { run_stream(task_context, task_server_url).await }) {
+                    let msg = format!("error [{server_url}]: runtime unavailable");
+                    log_error(|| msg.clone());
+                    if !context.subscriber.is_closed() {
+                        context.subscriber.error(msg);
+                        context.subscriber.complete();
+                    }
+                    return;
+                }
+            }
+        })
+    }
+
     /// Clear the data cache of every key under `prefix`, which is a key
     /// partition: `["feed"]` clears `["feed", "explore", …]` too.
     pub fn invalidate(&self, prefix: &QueryKey) {
@@ -500,6 +601,110 @@ where
     } else {
         make_new_state()
     }
+}
+
+/// Shared state of one `subscribe` call's server streams.
+#[derive(Clone)]
+struct StreamContext<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
+    state: QueryStateHandle<T>,
+    server_timeout: Duration,
+    stream_fn: StreamFnBox<T>,
+    merge_fn: MergeFn<T>,
+    client: Arc<Mutex<PolycentricClient>>,
+    subscriber: Arc<Subscriber<QueryResult<T>>>,
+    /// Servers that have not sent their first value yet.
+    pending: Arc<AtomicUsize>,
+    successful: Arc<AtomicUsize>,
+}
+
+/// Keeps one server's stream open for as long as the subscriber is,
+/// re-opening it after `RECONNECT_DELAY` whenever it ends.
+async fn run_stream<T>(context: StreamContext<T>, server_url: String)
+where
+    T: Clone + Send + Sync + 'static,
+{
+    let mut delivered = false;
+    loop {
+        if context.subscriber.is_closed() {
+            return;
+        }
+        let opened = match panic_to_err(select(
+            (context.stream_fn)(server_url.clone()),
+            Delay::new(context.server_timeout),
+        ))
+        .await
+        {
+            Ok(Either::Left((result, _))) => result,
+            Ok(Either::Right(_)) => Err(format!(
+                "timeout [{server_url}]: no response within {}ms",
+                context.server_timeout.as_millis()
+            )),
+            Err(panic_msg) => Err(format!("error [{server_url}]: internal panic: {panic_msg}")),
+        };
+
+        match opened {
+            Ok(mut stream) => loop {
+                match select(stream.next(), Delay::new(CLOSE_POLL)).await {
+                    Either::Left((Some(Ok(value)), _)) => {
+                        deliver(&context, &server_url, value, &mut delivered);
+                    }
+                    Either::Left((Some(Err(msg)), _)) => {
+                        log_warn(|| msg.clone());
+                        context.subscriber.error(msg);
+                        break;
+                    }
+                    Either::Left((None, _)) => break,
+                    Either::Right(_) => {
+                        if context.subscriber.is_closed() {
+                            return;
+                        }
+                    }
+                }
+            },
+            Err(msg) => {
+                log_warn(|| msg.clone());
+                context.subscriber.error(msg);
+            }
+        }
+
+        let mut waited = Duration::ZERO;
+        while waited < RECONNECT_DELAY {
+            if context.subscriber.is_closed() {
+                return;
+            }
+            Delay::new(CLOSE_POLL).await;
+            waited += CLOSE_POLL;
+        }
+    }
+}
+
+/// Records one streamed value and emits the merged result.
+fn deliver<T>(context: &StreamContext<T>, server_url: &str, value: T, delivered: &mut bool)
+where
+    T: Clone + Send + Sync + 'static,
+{
+    let snapshot = {
+        let mut s = context.state.lock_recover();
+        if !*delivered {
+            *delivered = true;
+            context.pending.fetch_sub(1, Ordering::SeqCst);
+            context.successful.fetch_add(1, Ordering::SeqCst);
+        }
+        // Each value starts a new epoch so it replaces the server's last one.
+        let epoch = s.next_fanout(UpdateMode::Replace);
+        s.update(server_url, value, epoch, UpdateMode::Replace);
+        let pending_servers = context.pending.load(Ordering::SeqCst);
+        QueryResult {
+            data: compute_emission(&mut s, &context.merge_fn, &context.client),
+            status: s.status(pending_servers),
+            successful_servers: context.successful.load(Ordering::SeqCst),
+            pending_servers,
+        }
+    };
+    context.subscriber.next(snapshot);
 }
 
 /// Required arguments to pass to [`spawn_fanout`].
@@ -967,5 +1172,474 @@ mod tests {
         // The core survives: a follow-up query still works.
         let again = run_fanout(&qc, &key, "1,2").await;
         assert_eq!(again.last().map(String::as_str), Some("1,2"));
+    }
+
+    // `subscribe` tests. Streams are built from `futures::stream`; a stream
+    // that must stay open chains `pending()` so the task never reconnects.
+
+    use crate::rx::subscription::Subscription;
+    use futures::stream;
+    use std::sync::atomic::AtomicBool;
+    use std::time::Instant;
+
+    type TestStream = Pin<Box<dyn Stream<Item = Result<Vec<u8>, String>> + Send>>;
+
+    /// A stream of the given values that then stays open.
+    fn open_stream(values: &[Result<&str, &str>]) -> TestStream {
+        let items: Vec<Result<Vec<u8>, String>> = values
+            .iter()
+            .map(|v| v.map(|s| s.as_bytes().to_vec()).map_err(str::to_string))
+            .collect();
+        Box::pin(stream::iter(items).chain(stream::pending()))
+    }
+
+    /// Largest number across every server's latest value.
+    fn merge_max(
+        values: &[Vec<u8>],
+        _previous: Option<&Vec<u8>>,
+        _client: &Arc<Mutex<PolycentricClient>>,
+    ) -> Vec<u8> {
+        values
+            .iter()
+            .filter_map(|v| String::from_utf8_lossy(v).parse::<u32>().ok())
+            .max()
+            .unwrap_or(0)
+            .to_string()
+            .into_bytes()
+    }
+
+    enum SubEv {
+        Next(String, QueryStatus),
+        Error(String),
+        Complete,
+    }
+
+    struct Collected {
+        data: Vec<(String, QueryStatus)>,
+        errors: Vec<String>,
+        completed: bool,
+    }
+
+    async fn recv_timeout(
+        rx: &mut tokio::sync::mpsc::UnboundedReceiver<SubEv>,
+        ms: u64,
+    ) -> Option<SubEv> {
+        match select(Box::pin(rx.recv()), Delay::new(Duration::from_millis(ms))).await {
+            Either::Left((ev, _)) => ev,
+            Either::Right(_) => None,
+        }
+    }
+
+    /// Subscribe to `obs` and gather `take` emissions, then whatever else
+    /// arrives within `settle_ms`. The subscription is returned open.
+    async fn collect(
+        obs: &Observable<QueryResult<Vec<u8>>>,
+        take: usize,
+        settle_ms: u64,
+    ) -> (Collected, Arc<Subscription>) {
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let tx_err = tx.clone();
+        let tx_complete = tx.clone();
+        let sub = obs.subscribe(
+            move |r: QueryResult<Vec<u8>>| {
+                let data = String::from_utf8_lossy(&r.data.unwrap_or_default()).into_owned();
+                let _ = tx.send(SubEv::Next(data, r.status));
+            },
+            move |e| {
+                let _ = tx_err.send(SubEv::Error(e));
+            },
+            move || {
+                let _ = tx_complete.send(SubEv::Complete);
+            },
+        );
+
+        let mut out = Collected {
+            data: Vec::new(),
+            errors: Vec::new(),
+            completed: false,
+        };
+        while out.data.len() < take {
+            match recv_timeout(&mut rx, 5_000).await {
+                Some(ev) => out.record(ev),
+                None => panic!("expected {take} emissions, got {}", out.data.len()),
+            }
+        }
+        let settle_until = Instant::now() + Duration::from_millis(settle_ms);
+        loop {
+            let left = settle_until.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                break;
+            }
+            match recv_timeout(&mut rx, left.as_millis() as u64).await {
+                Some(ev) => out.record(ev),
+                None => break,
+            }
+        }
+        (out, sub)
+    }
+
+    impl Collected {
+        fn record(&mut self, ev: SubEv) {
+            match ev {
+                SubEv::Next(d, s) => self.data.push((d, s)),
+                SubEv::Error(e) => self.errors.push(e),
+                SubEv::Complete => self.completed = true,
+            }
+        }
+    }
+
+    fn subscribe_client(servers: &[&str]) -> QueryClient<Vec<u8>> {
+        let client = Arc::new(Mutex::new(PolycentricClient::new()));
+        client
+            .lock_recover()
+            .set_servers(servers.iter().map(|s| s.to_string()).collect());
+        QueryClient::new(client)
+    }
+
+    #[tokio::test]
+    async fn subscribe_merges_the_latest_value_of_every_server() {
+        let qc = subscribe_client(&["s1", "s2"]);
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            |server: String| async move {
+                Ok(match server.as_str() {
+                    "s1" => open_stream(&[Ok("1"), Ok("3")]),
+                    _ => open_stream(&[Ok("2")]),
+                })
+            },
+            merge_max,
+            None,
+        );
+
+        let (got, _sub) = collect(&obs, 3, 100).await;
+
+        assert_eq!(got.data.len(), 3, "one emission per streamed value");
+        assert_eq!(
+            got.data[0].1,
+            QueryStatus::Loading,
+            "one server still pending"
+        );
+        let last = got.data.last().unwrap();
+        assert_eq!(last.0, "3");
+        assert_eq!(last.1, QueryStatus::Success);
+        assert!(!got.completed, "a subscription never completes");
+    }
+
+    #[tokio::test]
+    async fn subscribe_replaces_a_servers_earlier_value() {
+        let qc = subscribe_client(&["s1"]);
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            |_server: String| async move { Ok(open_stream(&[Ok("5"), Ok("2")])) },
+            merge_max,
+            None,
+        );
+
+        let (got, _sub) = collect(&obs, 2, 100).await;
+
+        let data: Vec<&str> = got.data.iter().map(|(d, _)| d.as_str()).collect();
+        assert_eq!(
+            data,
+            ["5", "2"],
+            "the latest value wins, not the largest seen"
+        );
+    }
+
+    #[tokio::test]
+    async fn subscribe_emits_the_cached_value_before_the_stream() {
+        let qc = subscribe_client(&["s1"]);
+        let key = vec!["unread".to_string()];
+        let first = qc.subscribe(
+            Some(key.clone()),
+            |_server: String| async move { Ok(open_stream(&[Ok("7")])) },
+            merge_max,
+            None,
+        );
+        let (_, sub) = collect(&first, 1, 0).await;
+        sub.unsubscribe();
+
+        let second = qc.subscribe(
+            Some(key),
+            |_server: String| async move { Ok(open_stream(&[])) },
+            merge_max,
+            None,
+        );
+        let (got, _sub) = collect(&second, 1, 100).await;
+
+        assert_eq!(got.data, vec![("7".to_string(), QueryStatus::Loading)]);
+    }
+
+    #[tokio::test]
+    async fn subscribe_reports_a_stream_error_without_completing() {
+        let qc = subscribe_client(&["s1"]);
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            |_server: String| async move { Ok(open_stream(&[Ok("1"), Err("boom")])) },
+            merge_max,
+            None,
+        );
+
+        let (got, _sub) = collect(&obs, 1, 300).await;
+
+        // Every re-open replays the same stream, so the error may repeat.
+        assert!(!got.errors.is_empty());
+        assert!(got.errors.iter().all(|e| e == "boom"), "{:?}", got.errors);
+        assert!(!got.completed);
+    }
+
+    #[tokio::test]
+    async fn subscribe_reports_a_failed_open_without_completing() {
+        let qc = subscribe_client(&["s1"]);
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            |_server: String| async move { Err::<TestStream, _>("refused".to_string()) },
+            merge_max,
+            None,
+        );
+
+        let (got, _sub) = collect(&obs, 0, 300).await;
+
+        assert!(!got.errors.is_empty());
+        assert!(
+            got.errors.iter().all(|e| e == "refused"),
+            "{:?}",
+            got.errors
+        );
+        assert!(got.data.is_empty());
+        assert!(!got.completed);
+    }
+
+    #[tokio::test]
+    async fn subscribe_without_servers_completes() {
+        let qc = subscribe_client(&[]);
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            |_server: String| async move { Ok(open_stream(&[Ok("1")])) },
+            merge_max,
+            None,
+        );
+
+        let (got, _sub) = collect(&obs, 0, 100).await;
+
+        assert!(got.data.is_empty());
+        assert!(got.completed);
+    }
+
+    /// A stream that flags when it is dropped.
+    struct DropFlag {
+        inner: TestStream,
+        dropped: Arc<AtomicBool>,
+    }
+
+    impl Stream for DropFlag {
+        type Item = Result<Vec<u8>, String>;
+        fn poll_next(
+            mut self: Pin<&mut Self>,
+            cx: &mut std::task::Context<'_>,
+        ) -> std::task::Poll<Option<Self::Item>> {
+            self.inner.as_mut().poll_next(cx)
+        }
+    }
+
+    impl Drop for DropFlag {
+        fn drop(&mut self) {
+            self.dropped.store(true, Ordering::SeqCst);
+        }
+    }
+
+    #[tokio::test]
+    async fn unsubscribing_drops_the_server_stream() {
+        let dropped = Arc::new(AtomicBool::new(false));
+        let flag = dropped.clone();
+        let qc = subscribe_client(&["s1"]);
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            move |_server: String| {
+                let dropped = flag.clone();
+                async move {
+                    Ok(DropFlag {
+                        inner: open_stream(&[Ok("1")]),
+                        dropped,
+                    })
+                }
+            },
+            merge_max,
+            None,
+        );
+
+        let (_, sub) = collect(&obs, 1, 0).await;
+        sub.unsubscribe();
+
+        // The idle task notices within one `CLOSE_POLL`.
+        let deadline = Instant::now() + CLOSE_POLL * 3;
+        while !dropped.load(Ordering::SeqCst) && Instant::now() < deadline {
+            Delay::new(Duration::from_millis(50)).await;
+        }
+        assert!(
+            dropped.load(Ordering::SeqCst),
+            "stream still open after unsubscribe"
+        );
+    }
+
+    fn data_of(got: &Collected) -> Vec<&str> {
+        got.data.iter().map(|(d, _)| d.as_str()).collect()
+    }
+
+    #[tokio::test]
+    async fn subscribe_reopens_a_stream_that_ended() {
+        let opens = Arc::new(AtomicUsize::new(0));
+        let counter = opens.clone();
+        let qc = subscribe_client(&["s1"]);
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            move |_server: String| {
+                let n = counter.fetch_add(1, Ordering::SeqCst);
+                async move {
+                    Ok(if n == 0 {
+                        // Ends right after its only value.
+                        Box::pin(stream::iter([Ok(b"1".to_vec())])) as TestStream
+                    } else {
+                        open_stream(&[Ok("2")])
+                    })
+                }
+            },
+            merge_max,
+            None,
+        );
+
+        let (got, _sub) = collect(&obs, 2, 0).await;
+
+        assert_eq!(data_of(&got), ["1", "2"]);
+        assert_eq!(
+            opens.load(Ordering::SeqCst),
+            2,
+            "opened once more after the end"
+        );
+        assert!(got.errors.is_empty(), "a clean end is not an error");
+    }
+
+    #[tokio::test]
+    async fn subscribe_reopens_after_a_failed_open() {
+        let opens = Arc::new(AtomicUsize::new(0));
+        let counter = opens.clone();
+        let qc = subscribe_client(&["s1"]);
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            move |_server: String| {
+                let n = counter.fetch_add(1, Ordering::SeqCst);
+                async move {
+                    if n == 0 {
+                        Err("refused".to_string())
+                    } else {
+                        Ok(open_stream(&[Ok("4")]))
+                    }
+                }
+            },
+            merge_max,
+            None,
+        );
+
+        let (got, _sub) = collect(&obs, 1, 0).await;
+
+        assert_eq!(got.errors, vec!["refused".to_string()]);
+        assert_eq!(data_of(&got), ["4"]);
+    }
+
+    #[tokio::test]
+    async fn subscribe_times_out_an_open_that_hangs() {
+        let qc = subscribe_client(&["s1"]);
+        let opts = QueryOpts {
+            server_timeout_ms: Some(100),
+            ..Default::default()
+        };
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            |_server: String| futures::future::pending::<Result<TestStream, String>>(),
+            merge_max,
+            Some(opts),
+        );
+
+        let (got, _sub) = collect(&obs, 0, 400).await;
+
+        assert!(got.data.is_empty());
+        assert!(
+            got.errors
+                .first()
+                .is_some_and(|e| e.starts_with("timeout [s1]")),
+            "unexpected errors: {:?}",
+            got.errors
+        );
+        assert!(!got.completed);
+    }
+
+    #[tokio::test]
+    async fn subscribe_honours_the_servers_override() {
+        let opened = Arc::new(Mutex::new(Vec::<String>::new()));
+        let record = opened.clone();
+        let qc = subscribe_client(&["s1", "s2"]);
+        let opts = QueryOpts {
+            servers: Some(vec!["only".to_string()]),
+            ..Default::default()
+        };
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            move |server: String| {
+                record.lock().unwrap().push(server);
+                async move { Ok(open_stream(&[Ok("1")])) }
+            },
+            merge_max,
+            Some(opts),
+        );
+
+        let (got, _sub) = collect(&obs, 1, 100).await;
+
+        assert_eq!(*opened.lock().unwrap(), vec!["only".to_string()]);
+        assert_eq!(got.data, vec![("1".to_string(), QueryStatus::Success)]);
+    }
+
+    #[tokio::test]
+    async fn subscribe_stays_loading_until_every_server_has_answered() {
+        let qc = subscribe_client(&["s1", "s2"]);
+        let obs = qc.subscribe(
+            Some(vec!["unread".to_string()]),
+            |server: String| async move {
+                Ok(match server.as_str() {
+                    "s1" => open_stream(&[Ok("1")]),
+                    _ => open_stream(&[]),
+                })
+            },
+            merge_max,
+            None,
+        );
+
+        let (got, _sub) = collect(&obs, 1, 200).await;
+
+        assert_eq!(got.data, vec![("1".to_string(), QueryStatus::Loading)]);
+    }
+
+    #[tokio::test]
+    async fn invalidate_drops_the_streamed_cache() {
+        let qc = subscribe_client(&["s1"]);
+        let key = vec!["unread".to_string()];
+        let first = qc.subscribe(
+            Some(key.clone()),
+            |_server: String| async move { Ok(open_stream(&[Ok("7")])) },
+            merge_max,
+            None,
+        );
+        let (_, sub) = collect(&first, 1, 0).await;
+        sub.unsubscribe();
+
+        qc.invalidate(&key);
+
+        let second = qc.subscribe(
+            Some(key),
+            |_server: String| async move { Ok(open_stream(&[Ok("9")])) },
+            merge_max,
+            None,
+        );
+        let (got, _sub) = collect(&second, 1, 100).await;
+
+        assert_eq!(got.data, vec![("9".to_string(), QueryStatus::Success)]);
     }
 }

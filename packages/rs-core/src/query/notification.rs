@@ -3,8 +3,10 @@
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
+use futures::StreamExt;
 use polycentric_common::models::protos_v2::{
     EventBundle, ListNotificationsRequest, ListNotificationsResponse, Notification,
+    SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse,
     notification_service_client::NotificationServiceClient,
 };
 use prost::Message;
@@ -24,6 +26,48 @@ pub struct ListNotificationsArgs {
     pub after: Option<String>,
     /// Label values for which the requester does not want to see content.
     pub omit_labels: Vec<String>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct SubscribeUnreadNotificationCountArgs {}
+
+/// Servers usually hold the same notifications, so the merged count is the
+/// largest per-server count rather than their sum.
+fn merge_unread_counts(
+    values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
+    _client: &Arc<Mutex<PolycentricClient>>,
+) -> Vec<u8> {
+    let count = values
+        .iter()
+        .filter_map(|v| SubscribeUnreadNotificationCountResponse::decode(v.as_slice()).ok())
+        .map(|r| r.count)
+        .max()
+        .unwrap_or(0);
+    SubscribeUnreadNotificationCountResponse { count }.encode_to_vec()
+}
+
+/// Unread notification count for the authenticated identity. Keeps a
+/// stream open to every configured server and emits the merged
+/// `SubscribeUnreadNotificationCountResponse` whenever one sends a value.
+pub fn subscribe_unread_notification_count(
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: Option<QueryKey>,
+    _args: SubscribeUnreadNotificationCountArgs,
+    opts: Option<QueryOpts>,
+) -> Arc<dyn QueryObservable> {
+    let stream_fn = move |server_url: String| async move {
+        let stream = NotificationServiceClient::new(channel(&server_url).await?)
+            .subscribe_unread_notification_count(SubscribeUnreadNotificationCountRequest {})
+            .await
+            .map_err(|e| format!("subscribe_unread_notification_count [{server_url}]: {e}"))?
+            .into_inner();
+        Ok(stream.map(move |item| {
+            item.map(|response| response.encode_to_vec())
+                .map_err(|e| format!("subscribe_unread_notification_count [{server_url}]: {e}"))
+        }))
+    };
+    Arc::new(query_client.subscribe(query_key, stream_fn, merge_unread_counts, opts))
 }
 
 /// Identity of a notification for dedup: the `(trigger, target)` event
@@ -147,4 +191,39 @@ pub fn list_notifications(
     };
 
     Arc::new(query_client.fetch(query_key, query_fn, merge_notification_responses, opts))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn count_bytes(count: u32) -> Vec<u8> {
+        SubscribeUnreadNotificationCountResponse { count }.encode_to_vec()
+    }
+
+    fn decode_count(bytes: &[u8]) -> u32 {
+        SubscribeUnreadNotificationCountResponse::decode(bytes)
+            .unwrap()
+            .count
+    }
+
+    fn client() -> Arc<Mutex<PolycentricClient>> {
+        Arc::new(Mutex::new(PolycentricClient::new()))
+    }
+
+    #[test]
+    fn merge_unread_counts_keeps_the_largest() {
+        let merged = merge_unread_counts(
+            &[count_bytes(2), count_bytes(5), count_bytes(3)],
+            None,
+            &client(),
+        );
+        assert_eq!(decode_count(&merged), 5);
+    }
+
+    #[test]
+    fn merge_unread_counts_is_zero_without_responses() {
+        let merged = merge_unread_counts(&[vec![0xff]], None, &client());
+        assert_eq!(decode_count(&merged), 0);
+    }
 }

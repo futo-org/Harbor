@@ -7,6 +7,11 @@ import { NotificationService } from "./notifications";
 import type { UnregisterPushNotificationResponse } from "./notifications";
 import type { RegisterPushNotificationResponse } from "./notifications";
 import type { SignedMessage } from "./server";
+import type { SubscribeUnreadNotificationCountResponse } from "./notifications";
+import type { SubscribeUnreadNotificationCountRequest } from "./notifications";
+import type { ServerStreamingCall } from "@protobuf-ts/runtime-rpc";
+import type { AcknowledgeNotificationsResponse } from "./notifications";
+import type { AcknowledgeNotificationsRequest } from "./notifications";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import type { ListNotificationsResponse } from "./notifications";
 import type { ListNotificationsRequest } from "./notifications";
@@ -14,8 +19,9 @@ import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
  * *
- * Notifications for an identity. ListNotifications is served by the server.
- * The push registration methods are served by a push-notifications service;
+ * Notifications for an identity. ListNotifications, AcknowledgeNotifications
+ * and SubscribeUnreadNotificationCount are served by the server. The push
+ * registration methods are served by a push-notifications service;
  * a server without one answers them with NOT_FOUND.
  *
  * @generated from protobuf service polycentric.v2.NotificationService
@@ -27,6 +33,19 @@ export interface INotificationServiceClient {
      * @generated from protobuf rpc: ListNotifications
      */
     listNotifications(input: ListNotificationsRequest, options?: RpcOptions): UnaryCall<ListNotificationsRequest, ListNotificationsResponse>;
+    /**
+     * Marks every notification of the authenticated identity as read
+     *
+     * @generated from protobuf rpc: AcknowledgeNotifications
+     */
+    acknowledgeNotifications(input: AcknowledgeNotificationsRequest, options?: RpcOptions): UnaryCall<AcknowledgeNotificationsRequest, AcknowledgeNotificationsResponse>;
+    /**
+     * Streams the unread notification count of the authenticated identity,
+     * now and whenever it changes
+     *
+     * @generated from protobuf rpc: SubscribeUnreadNotificationCount
+     */
+    subscribeUnreadNotificationCount(input: SubscribeUnreadNotificationCountRequest, options?: RpcOptions): ServerStreamingCall<SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse>;
     /**
      * This endpoint expects a signed RegisterPushNotificationRequest message
      *
@@ -42,8 +61,9 @@ export interface INotificationServiceClient {
 }
 /**
  * *
- * Notifications for an identity. ListNotifications is served by the server.
- * The push registration methods are served by a push-notifications service;
+ * Notifications for an identity. ListNotifications, AcknowledgeNotifications
+ * and SubscribeUnreadNotificationCount are served by the server. The push
+ * registration methods are served by a push-notifications service;
  * a server without one answers them with NOT_FOUND.
  *
  * @generated from protobuf service polycentric.v2.NotificationService
@@ -64,12 +84,31 @@ export class NotificationServiceClient implements INotificationServiceClient, Se
         return stackIntercept<ListNotificationsRequest, ListNotificationsResponse>("unary", this._transport, method, opt, input);
     }
     /**
+     * Marks every notification of the authenticated identity as read
+     *
+     * @generated from protobuf rpc: AcknowledgeNotifications
+     */
+    acknowledgeNotifications(input: AcknowledgeNotificationsRequest, options?: RpcOptions): UnaryCall<AcknowledgeNotificationsRequest, AcknowledgeNotificationsResponse> {
+        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        return stackIntercept<AcknowledgeNotificationsRequest, AcknowledgeNotificationsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Streams the unread notification count of the authenticated identity,
+     * now and whenever it changes
+     *
+     * @generated from protobuf rpc: SubscribeUnreadNotificationCount
+     */
+    subscribeUnreadNotificationCount(input: SubscribeUnreadNotificationCountRequest, options?: RpcOptions): ServerStreamingCall<SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse> {
+        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        return stackIntercept<SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse>("serverStreaming", this._transport, method, opt, input);
+    }
+    /**
      * This endpoint expects a signed RegisterPushNotificationRequest message
      *
      * @generated from protobuf rpc: RegisterPushNotifications
      */
     registerPushNotifications(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, RegisterPushNotificationResponse> {
-        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        const method = this.methods[3], opt = this._transport.mergeOptions(options);
         return stackIntercept<SignedMessage, RegisterPushNotificationResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -78,7 +117,7 @@ export class NotificationServiceClient implements INotificationServiceClient, Se
      * @generated from protobuf rpc: UnregisterPushNotifications
      */
     unregisterPushNotifications(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, UnregisterPushNotificationResponse> {
-        const method = this.methods[2], opt = this._transport.mergeOptions(options);
+        const method = this.methods[4], opt = this._transport.mergeOptions(options);
         return stackIntercept<SignedMessage, UnregisterPushNotificationResponse>("unary", this._transport, method, opt, input);
     }
 }
