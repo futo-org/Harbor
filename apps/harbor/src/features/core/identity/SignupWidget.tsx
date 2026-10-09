@@ -1,6 +1,6 @@
 import { Button, Text } from '@/src/common/components/primitives';
 import { useIsStoragePersistent } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme, ZIndex } from '@/src/common/theme';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { Image } from 'expo-image';
 import { usePathname } from 'expo-router';
@@ -86,8 +86,11 @@ export function SignupBar() {
         Atoms.justify_between,
         Atoms.gap_md,
         Atoms.px_lg,
-        Atoms.py_md,
+        Atoms.pt_md,
         {
+          // Clears the rounded screen corners once the browser toolbar hides
+          // and the page reaches the bottom edge (needs viewport-fit=cover).
+          paddingBottom: `calc(${Spacing.md}px + env(safe-area-inset-bottom))`,
           position: 'fixed' as 'absolute',
           bottom: 0,
           left: 0,
