@@ -9,7 +9,9 @@ use common_kafka::FutureRecord;
 use entity::event;
 use polycentric_common::models::protos_v2::Blob;
 use polycentric_common::models::validate::{Validate, ValidationError};
-use polycentric_common::models::{collections, event_key};
+use polycentric_common::models::{
+    block, collections, delete, event_key, follow,
+};
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
@@ -23,8 +25,8 @@ use crate::service::identity::repository::Query as IdentityRepository;
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
-    Application, Content, Delete, Event, EventBundle, PublicKey, PutEventError,
-    PutEventsRequest, PutEventsResponse,
+    Application, Content, Delete, Event, EventBundle, EventKey, PublicKey,
+    PutEventError, PutEventsRequest, PutEventsResponse,
 };
 
 /// Ingest a batch of signed events. Each event is processed in
@@ -138,7 +140,6 @@ async fn process_event(
     // * event.previous_signature
     // * event.previous_root
     event.validate_check(warnings, |err| map_warning(err.into()));
-    let collection = event.key.as_ref().map(|k| k.collection).unwrap_or(0);
 
     let key = event.key.ok_or_else(|| {
         // Event validation also checks this, don't return an error and warning
@@ -201,19 +202,6 @@ async fn process_event(
     // Encoded here while `key` is whole — its fields are moved out below.
     let event_key_bytes = key.encode_to_vec();
 
-    let signed_by = key.signed_by.ok_or_else(|| {
-        // Event validation also checks this, don't return an error and warning
-        // about the same thing.
-        warnings.truncate(start_warning_len);
-        Status::invalid_argument("event key signed by is missing")
-    })?;
-
-    if !signed_by
-        .sig_matches(&signed_event.signature, &signed_event.event_bytes)
-    {
-        return Err(Status::unauthenticated("signed event signature invalid"));
-    }
-
     let decoded_content = if let (Some(serialized_content), Some(digest)) = (
         event_bundle.serialized_content.as_ref(),
         event.content_digest.as_ref(),
@@ -227,7 +215,7 @@ async fn process_event(
             tracing::debug!(error = %e, "put_events content decode error");
             Status::invalid_argument("invalid content_bytes")
         })?;
-        validate_content(&content, collection, warnings, map_warning);
+        validate_content(&content, &key, warnings, map_warning);
 
         all_blobs.extend(content.blobs().into_iter().cloned());
 
@@ -240,6 +228,19 @@ async fn process_event(
     } else {
         None
     };
+
+    let signed_by = key.signed_by.ok_or_else(|| {
+        // Event validation also checks this, don't return an error and warning
+        // about the same thing.
+        warnings.truncate(start_warning_len);
+        Status::invalid_argument("event key signed by is missing")
+    })?;
+
+    if !signed_by
+        .sig_matches(&signed_event.signature, &signed_event.event_bytes)
+    {
+        return Err(Status::unauthenticated("signed event signature invalid"));
+    }
 
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
@@ -365,7 +366,7 @@ fn banned_error() -> Status {
 
 fn validate_content(
     content: &Content,
-    collection: i32,
+    key: &EventKey,
     warnings: &mut Vec<PutEventError>,
     map_warning: impl Fn(ValidationError) -> PutEventError,
 ) {
@@ -385,6 +386,7 @@ fn validate_content(
         }
     };
 
+    let collection = key.collection;
     match content_body {
         ContentBody::Post(post) => {
             check_collection(collection, collections::FEED);
@@ -399,23 +401,41 @@ fn validate_content(
             check_collection(collection, collections::FEED);
             // TODO: validate.
         }
-        ContentBody::Delete(_) => {
-            // NOTE: we allow deletion of any event, so the collection can't be
-            // checked here.
-
-            // TODO: validate.
+        ContentBody::Delete(delete) => {
+            if let Some(delete_key) = delete.event_key.as_ref() {
+                check_collection(collection, delete_key.collection);
+                if delete_key.identity != key.identity {
+                    warnings.push(map_warning(
+                        delete::ValidationError::IdentityMismatch.into(),
+                    ));
+                }
+            } // NOTE: if we don't have a key, the validation above would have flagged it already.
         }
-        ContentBody::Follow(_) => {
+        ContentBody::Follow(follow) => {
             check_collection(collection, collections::SOCIAL_GRAPH);
-            // TODO: validate.
+            // Can't follow yourself.
+            if follow.identity == key.identity {
+                warnings.push(map_warning(
+                    follow::ValidationError::IdentitySelf.into(),
+                ));
+            }
         }
-        ContentBody::Block(_) => {
+        ContentBody::Block(block) => {
             check_collection(collection, collections::SOCIAL_GRAPH);
-            // TODO: validate.
+            // Can't block yourself.
+            if block.identity == key.identity {
+                warnings.push(map_warning(
+                    block::ValidationError::IdentitySelf.into(),
+                ));
+            }
         }
         ContentBody::Reaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * at most 1 reaction per post per user.
+            // * in db only allow reactions to posts -- don't think we need to
+            //   return a warning for this.
         }
         ContentBody::AttributedToReaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
