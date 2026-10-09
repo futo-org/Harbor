@@ -408,14 +408,12 @@ fn validate_content(
                     ));
                 }
             } // NOTE: if we don't have a key, the validation above would have flagged it already.
-            // NOTE: we've already validated the delete key when validating the
-            // post.
         }
         ContentBody::Follow(_) => {
             check_collection(collection, collections::SOCIAL_GRAPH);
         }
         ContentBody::Block(_) => {
-            check_collection(collection, collections::SOCIAL_GRAPH)
+            check_collection(collection, collections::SOCIAL_GRAPH);
         }
         ContentBody::Reaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
