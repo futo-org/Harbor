@@ -9,12 +9,7 @@ import type { PropsWithChildren } from 'react';
 const ROOT_STYLE =
   'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100dvh}' +
   'html>body[data-scroll-locked]{overflow:visible!important;margin-right:0!important}' +
-  '@media(hover:hover){.underlineOnHover:hover{text-decoration:underline}}' +
-  '.twemojiSpriteText{color:transparent}' +
-  // Firefox on Linux recolors selected text, revealing the glyph over the sprite.
-  // round(down, alpha) is 1 only for an opaque highlight, which then gets 50%
-  // alpha; macOS's is already translucent and halving it would leave ~25%.
-  '.twemojiSpriteText::selection{color:transparent;background-color:rgb(from Highlight r g b/calc(alpha - 0.5*round(down,alpha)))}';
+  '@media(hover:hover){.underlineOnHover:hover{text-decoration:underline}}';
 
 // Every code point in the Twemoji font, so pages without emoji never fetch it.
 const TWEMOJI_UNICODE_RANGE =
@@ -25,11 +20,15 @@ const TWEMOJI_UNICODE_RANGE =
 // synthesise bold, which Safari renders badly. Twemoji's faces cover every
 // weight and italic too, so emoji are never synthesised bold or slanted; it
 // blocks rather than swaps, so the platform's emoji never show first.
+// TwemojiImage is the same font for `EmojiImage`, with no unicode-range: as
+// the first font covering a space, its metrics place the line's baseline.
 const FONT_STYLE = `
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans.ttf);font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans-Italic.ttf);font-weight:100 900;font-style:italic;font-display:swap}
 @font-face{font-family:Twemoji;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:normal;font-display:block;unicode-range:${TWEMOJI_UNICODE_RANGE}}
 @font-face{font-family:Twemoji;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:italic;font-display:block;unicode-range:${TWEMOJI_UNICODE_RANGE}}
+@font-face{font-family:TwemojiImage;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:normal;font-display:block}
+@font-face{font-family:TwemojiImage;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:italic;font-display:block}
 `;
 
 export default function Root({ children }: PropsWithChildren) {
