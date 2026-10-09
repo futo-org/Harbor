@@ -257,7 +257,7 @@ export function PolycentricProvider({
       useBlocks.getState().refresh(c);
     };
 
-    // Onboarding publishes the identity event; adopt it.
+    // Keep identity state up to date.
     const handleContentCreated = ({
       content,
     }: {
@@ -265,6 +265,7 @@ export function PolycentricProvider({
     }) => {
       if (cancelled || !ready) return;
       if (content?.contentBody.oneofKind !== 'identity') return;
+      if (!ready.client.activeIdentityKey) return;
       setCurrentIdentity(ready.client.identityManager.resolveIdentity());
     };
 

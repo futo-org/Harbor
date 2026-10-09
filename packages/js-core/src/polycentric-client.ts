@@ -347,16 +347,18 @@ export class PolycentricClient {
   async buildEvent(
     content: Proto.Content,
     collection: Collection | number = COLLECTION.FEED,
+    identityKey?: string,
   ): Promise<Proto.Event> {
     if (!this.currentKeyPair) {
       throw new Error('No keypair set');
     }
 
-    if (!this.activeIdentityKey) {
+    const identity = identityKey ?? this.activeIdentityKey;
+    if (!identity) {
       throw new Error('No active identity');
     }
 
-    const sequence = this.core.nextSequence(this.activeIdentityKey, collection);
+    const sequence = this.core.nextSequence(identity, collection);
 
     // identity_sequence must reference an identity event signed by the
     // current keypair.
@@ -364,7 +366,7 @@ export class PolycentricClient {
       collection === COLLECTION.IDENTITY
         ? sequence
         : this.core.getIdentitySequence(
-            this.activeIdentityKey,
+            identity,
             Proto.PublicKey.toBinary(this.currentKeyPair.publicKey)
               .buffer as ArrayBuffer,
           );
@@ -376,16 +378,16 @@ export class PolycentricClient {
     }
 
     const previousSignature = new Uint8Array(
-      this.core.previousSignature(this.activeIdentityKey, collection),
+      this.core.previousSignature(identity, collection),
     );
     const previousRoot = new Uint8Array(
-      this.core.previousRoot(this.activeIdentityKey, collection),
+      this.core.previousRoot(identity, collection),
     );
 
     const event = Proto.Event.create({
       key: Proto.EventKey.create({
         collection,
-        identity: this.activeIdentityKey,
+        identity,
         signedBy: this.currentKeyPair.publicKey,
         sequence,
       }),
@@ -1091,15 +1093,21 @@ export class PolycentricClient {
    * Explicitly set the active identity key and persist it.
    */
   public async setActiveIdentityKey(identityKey: string | null): Promise<void> {
+    if (this.currentKeyPair) {
+      await this.storageDriver.saveActiveIdentityKey(
+        this.currentKeyPair.publicKey.key,
+        identityKey,
+      );
+    }
+
     this.activeIdentityKey = identityKey;
     this.core.setActiveIdentity(identityKey ?? undefined);
+
     // Tokens minted for the previous identity must not be reused.
     this.core.clearAuthTokens();
-    if (!this.currentKeyPair) return;
-    await this.storageDriver.saveActiveIdentityKey(
-      this.currentKeyPair.publicKey.key,
-      identityKey,
-    );
+
+    // Really an 'identityChanged' event underneath
+    this.events.emitKeyPairChanged(this.currentKeyPair);
   }
 
   /**
