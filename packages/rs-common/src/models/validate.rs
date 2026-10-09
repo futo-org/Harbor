@@ -8,7 +8,7 @@ use regex::Regex;
 
 use crate::models::{
     application, attributed_to, blob, block, content, content_body, content_digest, delete, event,
-    event_key, follow, image, image_set, link, post, post_reply, public_key, to,
+    event_key, follow, image, image_set, link, post, post_reply, public_key, reaction, to,
 };
 
 /// Validate a value.
@@ -60,6 +60,7 @@ pub enum ValidationError {
     Delete(delete::ValidationError),
     Follow(follow::ValidationError),
     Block(block::ValidationError),
+    Reaction(reaction::ValidationError),
 }
 
 impl From<event::ValidationError> for ValidationError {
@@ -170,6 +171,12 @@ impl From<block::ValidationError> for ValidationError {
     }
 }
 
+impl From<reaction::ValidationError> for ValidationError {
+    fn from(err: reaction::ValidationError) -> ValidationError {
+        ValidationError::Reaction(err)
+    }
+}
+
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -191,6 +198,7 @@ impl fmt::Display for ValidationError {
             ValidationError::Delete(err) => write!(f, "delete {err}"),
             ValidationError::Follow(err) => write!(f, "follow {err}"),
             ValidationError::Block(err) => write!(f, "block {err}"),
+            ValidationError::Reaction(err) => write!(f, "reaction {err}"),
         }
     }
 }

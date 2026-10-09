@@ -39,6 +39,7 @@ pub mod post;
 pub mod post_reply;
 pub mod public_key;
 pub mod query_engine_stats;
+pub mod reaction;
 pub mod signed_event;
 pub mod signed_issuer_state;
 pub mod signed_message;

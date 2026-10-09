@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::models::protos_v2::content::ContentBody;
 use crate::models::validate::Validate;
-use crate::models::{block, delete, follow, post};
+use crate::models::{block, delete, follow, post, reaction};
 
 impl Validate for ContentBody {
     type Error = ValidationError;
@@ -24,6 +24,9 @@ impl Validate for ContentBody {
             ContentBody::Block(block) => {
                 block.validate_check(errors, |err| map_err(ValidationError::Block(err)))
             }
+            ContentBody::Reaction(reaction) => {
+                reaction.validate_check(errors, |err| map_err(ValidationError::Reaction(err)))
+            }
             _ => { /* TODO. */ }
         }
     }
@@ -35,6 +38,7 @@ pub enum ValidationError {
     Delete(delete::ValidationError),
     Follow(follow::ValidationError),
     Block(block::ValidationError),
+    Reaction(reaction::ValidationError),
 }
 
 impl fmt::Display for ValidationError {
@@ -44,6 +48,7 @@ impl fmt::Display for ValidationError {
             ValidationError::Delete(err) => write!(f, "delete {err}"),
             ValidationError::Follow(err) => write!(f, "follow {err}"),
             ValidationError::Block(err) => write!(f, "block {err}"),
+            ValidationError::Reaction(err) => write!(f, "reaction {err}"),
         }
     }
 }

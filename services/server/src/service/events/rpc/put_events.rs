@@ -431,7 +431,6 @@ fn validate_content(
         }
         ContentBody::Reaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-            // TODO: validate.
         }
         ContentBody::AttributedToReaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
