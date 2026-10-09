@@ -7,7 +7,7 @@ import { APP_NAME } from '@/src/common/constants';
 import type { PropsWithChildren } from 'react';
 
 const ROOT_STYLE =
-  'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100vh}' +
+  'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100dvh}' +
   'html>body[data-scroll-locked]{overflow:visible!important;margin-right:0!important}' +
   '@media(hover:hover){.underlineOnHover:hover{text-decoration:underline}}' +
   '.transparentText{color:transparent}';

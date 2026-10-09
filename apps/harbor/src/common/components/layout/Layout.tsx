@@ -40,7 +40,7 @@ import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
 import { AppFooter } from './AppFooter';
 import { VerticalNav } from './nav/VerticalNav';
-import Topbar from './Topbar';
+import Topbar, { TOPBAR_HEIGHT } from './Topbar';
 import { SuggestedFollowWidget } from '@/src/features/follow/SuggestedFollowWidget';
 import { LAYOUT_SIZES } from '../metrics';
 
@@ -98,8 +98,10 @@ type PrimaryColumnProps = {
 };
 function PrimaryColumn({ children }: PrimaryColumnProps) {
   const { theme } = useTheme();
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: deviceWidth, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  // Matches Screen's drawer mode, where the menu topbar sits above the column.
+  const drawerMode = deviceWidth <= Breakpoints.sm;
 
   return (
     <View
@@ -120,7 +122,9 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
         // borders painting to the viewport bottom on short-content
         // pages.
         isWeb && Atoms.self_start,
-        isWeb && { minHeight: windowHeight },
+        isWeb && {
+          minHeight: drawerMode ? windowHeight - TOPBAR_HEIGHT : windowHeight,
+        },
       ]}
     >
       {children}
@@ -392,7 +396,7 @@ export const LeftSidebar = memo(function LeftSidebar({
             {
               position: 'sticky',
               top: 0,
-              height: '100vh',
+              height: '100dvh',
             },
           ]}
         >
@@ -433,7 +437,7 @@ export const RightSidebar = memo(function RightSidebar() {
       <View
         style={
           isWeb
-            ? { position: 'sticky', top: 0, height: '100vh', width }
+            ? { position: 'sticky', top: 0, height: '100dvh', width }
             : undefined
         }
       >
