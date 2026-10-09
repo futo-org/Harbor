@@ -6,7 +6,6 @@ import type { PolycentricClient, PrivateKey } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { bytesEqual } from '../utils/bytes';
 import { bytesToHex } from '../utils/hex';
-import { QueryOpts } from '@polycentric/rs-core-wasm';
 
 /**
  * Resolved identity state from the latest Identity document.
@@ -301,11 +300,14 @@ export class IdentityManager {
 
   /**
    * Query all relevant servers for identity events and copy them to rs-core.
+   * Throws if all queries sent to servers fail.
    */
   private async discoverRemoteIdentityEvents(
     identityKey: string,
   ): Promise<void> {
     const queriedServers = new Set<string>();
+    let hadSuccess = false;
+    let hadError = false;
 
     // Each round, query any servers that we have discovered from this identity
     // but haven't queried yet.
@@ -322,18 +324,29 @@ export class IdentityManager {
       );
       if (serversToQuery.length === 0) break;
 
-      // The events discovered by this query will be stored in rs-core
-      await this.client.listEvents({
-        identity: identityKey,
-        collection: COLLECTION.IDENTITY,
-        queryOpts: {
-          servers: [...new Set(serversToQuery)],
-        },
-      });
+      try {
+        // The events discovered by this query will be stored in rs-core
+        await this.client.listEvents({
+          identity: identityKey,
+          collection: COLLECTION.IDENTITY,
+          queryOpts: {
+            servers: [...new Set(serversToQuery)],
+          },
+        });
+
+        hadSuccess = true;
+      } catch (e) {
+        console.error(`Listing identity events failed: ${e}`);
+        hadError = true;
+      }
 
       for (const queried of serversToQuery) {
         queriedServers.add(queried);
       }
+    }
+
+    if (hadError && !hadSuccess) {
+      throw new Error('Failed to query for remote identity events');
     }
   }
 

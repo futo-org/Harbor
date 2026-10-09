@@ -9,6 +9,7 @@ import {
   createPolycentricClient,
   type types,
   type IdentityState,
+  v2,
 } from '@polycentric/react-native';
 import { HARBOR_APPLICATION } from '@/src/common/util/application';
 import {
@@ -259,13 +260,18 @@ export function PolycentricProvider({
 
     // Keep identity state up to date.
     const handleContentCreated = ({
+      signedEvent,
       content,
     }: {
+      signedEvent: { eventBytes: Uint8Array };
       content?: { contentBody: { oneofKind?: string } };
     }) => {
       if (cancelled || !ready) return;
       if (content?.contentBody.oneofKind !== 'identity') return;
-      if (!ready.client.activeIdentityKey) return;
+
+      const event = v2.Event.fromBinary(signedEvent.eventBytes);
+      if (event.key?.identity !== ready.client.activeIdentityKey) return;
+
       setCurrentIdentity(ready.client.identityManager.resolveIdentity());
     };
 

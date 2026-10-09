@@ -1100,6 +1100,8 @@ export class PolycentricClient {
       );
     }
 
+    if (identityKey === this.activeIdentityKey) return;
+
     this.activeIdentityKey = identityKey;
     this.core.setActiveIdentity(identityKey ?? undefined);
 
