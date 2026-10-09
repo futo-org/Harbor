@@ -40,6 +40,7 @@ export type {
   IdentityState,
   PublishArgs,
   IdentityUpdate,
+  KeyUpdateOptions,
 } from './polycentric-client';
 
 export * from './errors';

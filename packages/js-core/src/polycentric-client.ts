@@ -44,6 +44,7 @@ export type {
   IdentityState,
   PublishArgs,
   IdentityUpdate,
+  KeyUpdateOptions,
 } from './client-internal/identity-manager';
 
 /** Private key — same shape as PublicKey, holds the secret key bytes. */
@@ -829,6 +830,76 @@ export class PolycentricClient {
 
     // Catch any of our own referenced blobs so they persist locally.
     await this.contentManager.pullBlobs(blobs);
+    return newCount;
+  }
+
+  /**
+   * Pull every event of the active identity from every server and persist
+   * new ones locally. Throws if any server fails.
+   *
+   * TODO: This works around the missing pagination for `listEvents` query
+   * by counting sequence numbers and filtering for the sequence numbers
+   * not seen yet. We should implement proper pagination on `listEvents`
+   * at some point.
+   *
+   * @returns The number of new events persisted
+   */
+  async pullComplete(): Promise<number> {
+    if (!this.activeIdentityKey) throw new Error('No active identity');
+    const identity = this.activeIdentityKey;
+
+    const blobs: Proto.Blob[] = [];
+    let newCount = 0;
+
+    for (const server of this.servers) {
+      const request = Proto.ListHeadsRequest.toBinary({ identity });
+      const { heads } = Proto.ListHeadsResponse.fromBinary(
+        new Uint8Array(
+          await this.core.listHeads(server, request.slice().buffer),
+        ),
+      );
+
+      for (const head of heads) {
+        if (!head.signedBy) continue;
+        let sequenceLt = head.sequence + 1n;
+
+        // We filter by sequence numbers before the lowest one we've seen to
+        // "paginate" the `listEvents` query. Eventually we should implement
+        // real pagination and replace the code below.
+        while (true) {
+          const page = await this.listEvents({
+            identity,
+            collection: head.collection,
+            signedBy: head.signedBy,
+            sequenceLt,
+            queryOpts: { servers: [server] },
+          });
+
+          // A stream's sequence numbers are unique for each signer, so the lowest one
+          // seen acts as a cursor.
+          let lowest: bigint | undefined;
+          for (const bundle of page) {
+            if (await this.trySaveBundle(bundle, blobs)) newCount++;
+            if (!bundle.signedEvent) continue;
+            const sequence = Proto.Event.fromBinary(
+              bundle.signedEvent.eventBytes,
+            ).key?.sequence;
+            if (sequence !== undefined && sequence < (lowest ?? sequenceLt)) {
+              lowest = sequence;
+            }
+          }
+          if (lowest === undefined) break;
+          sequenceLt = lowest;
+        }
+      }
+    }
+
+    const blobMap: Map<string, Proto.Blob> = new Map();
+    for (const blob of blobs) {
+      if (!blob.digest) continue;
+      blobMap.set(toDigestKey(blob.digest), blob);
+    }
+    await this.contentManager.pullBlobs([...blobMap.values()]);
     return newCount;
   }
 

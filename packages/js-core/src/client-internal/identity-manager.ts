@@ -54,6 +54,26 @@ export interface PublishArgs {
   isLogin?: boolean;
 }
 
+/** Arguments for `IdentityManager.publishIdentityUpdate()`. */
+interface IdentityUpdateArgs {
+  identityKey: string;
+  rotationKeys: Proto.PublicKey[];
+  signingKeys: Proto.PublicKey[];
+  servers?: string[];
+  recoveryKey?: Proto.PublicKey;
+  recoverySignature?: Uint8Array;
+  isLogin?: boolean;
+}
+
+/** Options for removing or replacing identity keys. */
+export interface KeyUpdateOptions {
+  /**
+   * Allow the change to drop the current key as a rotation key, which locks
+   * this device out of further identity changes.
+   */
+  allowSelfRemoval?: boolean;
+}
+
 /** Information about a published identity event. */
 export interface IdentityUpdate {
   identityKey: string;
@@ -382,11 +402,14 @@ export class IdentityManager {
         ? state.rotationKeys
         : [...state.rotationKeys, publicKey];
 
-      await this.publish({
-        ...state,
-        isLogin: true,
+      // Our key isn't authorized by the head yet: the recovery signature
+      // vouches for it instead.
+      await this.publishIdentityUpdate({
+        identityKey,
         rotationKeys,
+        signingKeys: state.signingKeys,
         recoverySignature,
+        isLogin: true,
       });
     } catch (err: unknown) {
       // Roll back changes as best we can
@@ -442,25 +465,34 @@ export class IdentityManager {
     const state = this.resolveIdentity();
     if (!state) throw new Error('No active identity');
 
-    const signingKeys = [...state.signingKeys, publicKey];
-    const { signedEvent } = await this.publish({ ...state, signingKeys });
-    return signedEvent;
+    return this.publishIdentityUpdate({
+      identityKey: state.identityKey,
+      rotationKeys: state.rotationKeys,
+      signingKeys: [...state.signingKeys, publicKey],
+    });
   }
 
   /**
-   * Removes a signing key from the current identity and publishes the updated document.
+   * Removes a signing key, writing revocation bounds for it so its earlier
+   * events stay valid. See `rotateKeys()`.
    */
   async removeSigningKey(
     publicKey: Proto.PublicKey,
+    options: KeyUpdateOptions = {},
   ): Promise<Proto.SignedEvent> {
-    const state = this.resolveIdentity();
-    if (!state) throw new Error('No active identity');
-
-    const signingKeys = state.signingKeys.filter(
-      (k) => !bytesEqual(k.key, publicKey.key),
-    );
-    const { signedEvent } = await this.publish({ ...state, signingKeys });
-    return signedEvent;
+    return this.updateKeys(options, (state) => {
+      if (
+        !state.signingKeys.some((k) => IdentityManager.keysEqual(k, publicKey))
+      ) {
+        throw new Error('Signing key not found');
+      }
+      return {
+        rotationKeys: state.rotationKeys,
+        signingKeys: state.signingKeys.filter(
+          (k) => !IdentityManager.keysEqual(k, publicKey),
+        ),
+      };
+    });
   }
 
   /**
@@ -477,24 +509,125 @@ export class IdentityManager {
       throw new Error('Rotation key already exists');
     }
 
-    const rotationKeys = [...state.rotationKeys, publicKey];
-    const { signedEvent } = await this.publish({ ...state, rotationKeys });
-    return signedEvent;
+    return this.publishIdentityUpdate({
+      identityKey: state.identityKey,
+      rotationKeys: [...state.rotationKeys, publicKey],
+      signingKeys: state.signingKeys,
+    });
   }
 
   /**
-   * Removes a rotation key from the current identity and publishes the updated document.
+   * Removes a rotation key, writing revocation bounds for it so its earlier
+   * events stay valid. See `rotateKeys()`.
    */
   async removeRotationKey(
     publicKey: Proto.PublicKey,
+    options: KeyUpdateOptions = {},
   ): Promise<Proto.SignedEvent> {
-    const state = this.resolveIdentity();
-    if (!state) throw new Error('No active identity');
+    return this.updateKeys(options, (state) => {
+      if (
+        !state.rotationKeys.some((k) => IdentityManager.keysEqual(k, publicKey))
+      ) {
+        throw new Error('Rotation key not found');
+      }
+      return {
+        rotationKeys: state.rotationKeys.filter(
+          (k) => !IdentityManager.keysEqual(k, publicKey),
+        ),
+        signingKeys: state.signingKeys,
+      };
+    });
+  }
 
-    const rotationKeys = state.rotationKeys.filter(
-      (k) => !IdentityManager.keysEqual(k, publicKey),
+  /**
+   * Replaces both key sets with a new identity event. Every dropped key gets
+   * a revocation bound covering the events it signed, so they stay valid
+   * while any new ones will not.
+   * - Pulls the identity's complete history from every server first, such
+   *   that we can ensure all bounds completely cover all previous events.
+   * - The current key must be a rotation key, and the new key sets
+   *   must keep a rotation key.
+   * - Dropping the current key as a rotation key locks this device out of
+   *   further changes, so it needs `allowSelfRemoval`.
+   */
+  async rotateKeys(
+    rotationKeys: Proto.PublicKey[],
+    signingKeys: Proto.PublicKey[],
+    options: KeyUpdateOptions = {},
+  ): Promise<Proto.SignedEvent> {
+    return this.updateKeys(options, () => ({ rotationKeys, signingKeys }));
+  }
+
+  private async updateKeys(
+    { allowSelfRemoval = false }: KeyUpdateOptions,
+    newKeys: (state: IdentityState) => {
+      rotationKeys: Proto.PublicKey[];
+      signingKeys: Proto.PublicKey[];
+    },
+  ): Promise<Proto.SignedEvent> {
+    const myKey = this.client.currentKeyPair?.publicKey;
+    if (!myKey) throw new Error('No active key pair');
+    const identityKey = this.client.activeIdentityKey;
+    if (!identityKey) throw new Error('No active identity');
+
+    await this.client.pullComplete();
+
+    const state = this.resolveIdentity(identityKey);
+    if (!state) throw new Error('No active identity');
+    if (!state.rotationKeys.some((k) => IdentityManager.keysEqual(k, myKey))) {
+      throw new Error("Only a rotation key can change an identity's keys");
+    }
+
+    const { rotationKeys, signingKeys } = newKeys(state);
+    if (rotationKeys.length === 0) {
+      throw new Error('An identity needs at least one rotation key');
+    }
+    if (
+      !allowSelfRemoval &&
+      !rotationKeys.some((k) => IdentityManager.keysEqual(k, myKey))
+    ) {
+      throw new Error(
+        'Removing the current key as a rotation key requires allowSelfRemoval',
+      );
+    }
+
+    return this.publishIdentityUpdate({
+      identityKey,
+      rotationKeys,
+      signingKeys,
+    });
+  }
+
+  /**
+   * Publishes the next identity update, using local identity state.
+   */
+  private async publishIdentityUpdate(
+    args: IdentityUpdateArgs,
+  ): Promise<Proto.SignedEvent> {
+    const encode = (key: Proto.PublicKey) =>
+      Proto.PublicKey.toBinary(key).slice().buffer as ArrayBuffer;
+    const identity = Proto.Identity.fromBinary(
+      new Uint8Array(
+        this.client.core.buildIdentityUpdate(
+          args.identityKey,
+          args.rotationKeys.map(encode),
+          args.signingKeys.map(encode),
+          args.servers,
+          args.recoveryKey ? encode(args.recoveryKey) : undefined,
+        ),
+      ),
     );
-    const { signedEvent } = await this.publish({ ...state, rotationKeys });
+
+    const { signedEvent } = await this.publish({
+      identityKey: args.identityKey,
+      rotationKeys: identity.rotationKeys,
+      signingKeys: identity.signingKeys,
+      revocationBounds: identity.revocationBounds,
+      servers: identity.servers?.urls ?? null,
+      recoveryKey: identity.recoveryKey ?? null,
+      recoverySignature: args.recoverySignature,
+      isLogin: args.isLogin,
+    });
     return signedEvent;
   }
 
@@ -515,11 +648,12 @@ export class IdentityManager {
 
     await this.client.core.getServerInfo(url);
 
-    const { signedEvent } = await this.publish({
-      ...state,
+    return this.publishIdentityUpdate({
+      identityKey: state.identityKey,
+      rotationKeys: state.rotationKeys,
+      signingKeys: state.signingKeys,
       servers: [...servers, url],
     });
-    return signedEvent;
   }
 
   /**
@@ -536,8 +670,12 @@ export class IdentityManager {
       throw new Error('Server not found');
     }
 
-    const { signedEvent } = await this.publish({ ...state, servers });
-    return signedEvent;
+    return this.publishIdentityUpdate({
+      identityKey: state.identityKey,
+      rotationKeys: state.rotationKeys,
+      signingKeys: state.signingKeys,
+      servers,
+    });
   }
 
   /**
@@ -555,9 +693,10 @@ export class IdentityManager {
     const { privateKey, publicKey } =
       await this.client.crypto.generateKeyPair(keyType);
 
-    // Try persisting a identity new event locally and publishing it to servers
-    await this.publish({
-      ...state,
+    await this.publishIdentityUpdate({
+      identityKey: state.identityKey,
+      rotationKeys: state.rotationKeys,
+      signingKeys: state.signingKeys,
       recoveryKey: { keyType, key: publicKey },
     });
 

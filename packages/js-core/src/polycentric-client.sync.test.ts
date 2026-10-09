@@ -1720,3 +1720,75 @@ describe('PolycentricClient sync', () => {
     });
   });
 });
+
+describe('PolycentricClient pullComplete', () => {
+  const posts = [1, 2, 3, 4, 5].map((sequence) =>
+    makeSignedEvent({
+      signer: signerB,
+      identity: identityA,
+      collection: COLLECTION.FEED,
+      sequence,
+      content: makeContent(`post-${sequence}`),
+    }),
+  );
+  const sequenceOf = (signedEvent: Proto.SignedEvent) =>
+    Proto.Event.fromBinary(signedEvent.eventBytes).key!.sequence;
+
+  /** A core whose servers each hold `posts`, served in pages of two. */
+  function pagedCore() {
+    const core = makeCoreMock({
+      pullBundles: (args: any) =>
+        posts
+          .filter((p) => sequenceOf(p) < args.sequenceLt)
+          .sort((a, b) => Number(sequenceOf(b) - sequenceOf(a)))
+          .slice(0, 2)
+          .map((p) => makeBundle(p)),
+    });
+    core.listHeads = vi.fn(
+      async () =>
+        Proto.ListHeadsResponse.toBinary({
+          heads: [
+            Proto.EventKey.create({
+              collection: COLLECTION.FEED,
+              identity: identityA.key,
+              signedBy: signerB.publicKey,
+              sequence: 5n,
+            }),
+          ],
+        }).slice().buffer,
+    );
+    return core;
+  }
+
+  it('pages back through every stream on every server', async () => {
+    const core = pagedCore();
+    const { client, eventRepository } = makeClient({
+      core,
+      identity: identityA,
+      signer: signerA,
+      servers: ['http://a', 'http://b'],
+    });
+
+    const count = await client.pullComplete();
+
+    expect(count).toBe(5);
+    for (const post of posts) {
+      const key = Proto.Event.fromBinary(post.eventBytes).key!;
+      expect(await eventRepository.getByEventKey(key)).toEqual(post);
+    }
+
+    const calls = core.fetchQuery.mock.calls.map((call: any[]) => ({
+      sequenceLt: call[1].inner[0].sequenceLt,
+      servers: call[2]?.servers,
+    }));
+    expect(calls).toEqual(
+      ['http://a', 'http://b'].flatMap((server) =>
+        [6n, 4n, 2n, 1n].map((sequenceLt) => ({
+          sequenceLt,
+          servers: [server],
+        })),
+      ),
+    );
+    expect(pullQueryArgs(core).collection).toBe(COLLECTION.FEED);
+  });
+});

@@ -549,6 +549,116 @@ impl PolycentricClient {
             .collect()
     }
 
+    /// Builds the next `Identity` event to publish after the current head of
+    /// the identity chain.
+    /// - The `rotation_keys` and `signing_keys` replace the two respective key
+    ///   sets. For every previous key not found in the new set, the key is revoked
+    ///   with a revocation bound.
+    /// - Passing `servers` replaces the server list, or keeps the old list with
+    ///   `None`; `recovery_key` likewise.
+    /// - Existing revocation bounds carry forward, unless the new key sets
+    ///   authorize a revoked key again.
+    pub fn build_identity_update(
+        &self,
+        identity: &str,
+        rotation_keys: Vec<PublicKey>,
+        signing_keys: Vec<PublicKey>,
+        servers: Option<Vec<String>>,
+        recovery_key: Option<PublicKey>,
+    ) -> Result<Identity, CoreError> {
+        let chain = self.identity_chain(identity)?;
+        let head = chain.latest_state().ok_or_else(|| {
+            CoreError::InvalidEvent(format!("No identity chain is known for {identity}"))
+        })?;
+
+        let revocation_bounds =
+            self.revocation_bounds(identity, head, &rotation_keys, &signing_keys);
+        Ok(Identity {
+            rotation_keys,
+            signing_keys,
+            revocation_bounds,
+            servers: match servers {
+                Some(urls) => Some(protos_v2::ServerList { urls }),
+                None => head.servers.clone(),
+            },
+            recovery_key: recovery_key.or_else(|| head.recovery_key.clone()),
+            recovery_signature: None,
+        })
+    }
+
+    /// Creates revocation bounds for all keys that get removed by an
+    /// identity update (from `prior` identity to the new sets of
+    /// keys `rotation_keys` and `signing_keys`), based on the on the
+    /// highest sequence numbers of the events signed by the removed keys.
+    pub fn revocation_bounds(
+        &self,
+        identity: &str,
+        prior: &Identity,
+        rotation_keys: &[PublicKey],
+        signing_keys: &[PublicKey],
+    ) -> Vec<protos_v2::RevocationBound> {
+        let same_key = |a: &PublicKey, b: &PublicKey| a.key_type == b.key_type && a.key == b.key;
+        let is_authorized = |pk: &PublicKey| {
+            rotation_keys
+                .iter()
+                .chain(signing_keys)
+                .any(|k| same_key(k, pk))
+        };
+
+        let removed: Vec<&PublicKey> = prior
+            .deduplicated_keys()
+            .into_iter()
+            .filter(|pk| !is_authorized(pk))
+            .collect();
+        let is_removed = |pk: &PublicKey| removed.iter().any(|r| same_key(r, pk));
+
+        // A removed key gets a fresh bound below, so drop any stale one.
+        let carried = prior.revocation_bounds.iter().filter(|rb| {
+            rb.revoked_key
+                .as_ref()
+                .is_none_or(|pk| !is_authorized(pk) && !is_removed(pk))
+        });
+
+        let new_bounds = removed.iter().map(|pk| {
+            // The removed key's highest-sequence event per collection.
+            let mut heads: std::collections::BTreeMap<i32, (u64, &SignedEvent)> =
+                std::collections::BTreeMap::new();
+            for (k, signed) in self.event_store.by_identity(identity) {
+                if k.signed_by_key_type != pk.key_type || k.signed_by_key != pk.key {
+                    continue;
+                }
+                let head = heads.entry(k.collection).or_insert((k.sequence, signed));
+                if k.sequence >= head.0 {
+                    *head = (k.sequence, signed);
+                }
+            }
+
+            let targets = heads
+                .into_iter()
+                .filter_map(|(collection, (_, signed))| {
+                    let event = Event::decode(signed.event_bytes.as_slice()).ok()?;
+                    let leaf_count = self
+                        .canonical_signatures(identity, collection)
+                        .iter()
+                        .position(|s| *s == signed.signature)?;
+                    Some(protos_v2::EventProofTarget {
+                        collection,
+                        signature: signed.signature.clone(),
+                        root: event.previous_root,
+                        leaf_count: leaf_count as u64,
+                    })
+                })
+                .collect();
+
+            protos_v2::RevocationBound {
+                revoked_key: Some((*pk).clone()),
+                targets,
+            }
+        });
+
+        carried.cloned().chain(new_bounds).collect()
+    }
+
     /// Ensure that the pairing store considers `sequence` to be an observed sequence
     /// for the specified pairing session.
     pub fn accept_pairing_sequence(&mut self, digest_sha256: &[u8], sequence: i64) {
@@ -685,11 +795,10 @@ mod tests {
     use super::*;
     use ed25519_dalek::{Signer, SigningKey};
     use polycentric_common::models::protos_v2::{
-        ContentDigestType, EventKey as ProtoEventKey, EventProofTarget, Identity, KeyType, Post,
-        RevocationBound, content::ContentBody as Body,
+        ContentDigestType, EventKey as ProtoEventKey, Identity, KeyType, Post, RevocationBound,
+        content::ContentBody as Body,
     };
     use sha2::{Digest as ShaDigest, Sha256};
-    use std::collections::HashMap;
 
     struct Keypair {
         signing: SigningKey,
@@ -818,17 +927,8 @@ mod tests {
             .map(|s| s.to_string())
             .unwrap_or_else(|| provisional_identity.derive_hex_key());
 
-        // identity_sequence: 1 for genesis (self-reference); N-1 for rotations.
-        let identity_sequence = if sequence == 1 { 1 } else { sequence - 1 };
-
-        // For rotations: compute revocation_bounds — keys present in the
-        // prior content but absent from the new content, with their max observed
-        // sequence per collection at this point in time.
-        //
-        // Bounds are treated as cumulative here: the head document must carry
-        // every active bound, because `revocation_target_for` only consults the
-        // head. So carry the prior document's bounds forward, dropping any whose
-        // key the new content re-authorizes, and append the newly-removed keys.
+        // For rotations: carry the prior document's bounds forward and bound
+        // every key the new content drops, exactly as production updates do.
         let revocation_bounds: Vec<RevocationBound> = if sequence == 1 {
             Vec::new()
         } else {
@@ -838,94 +938,43 @@ mod tests {
             let prior = prior_chain
                 .event_at_sequence(sequence - 1)
                 .expect("prior identity event must exist for a rotation");
-            let new_keys: Vec<&PublicKey> = rotation.iter().chain(signing.iter()).collect();
-            let is_reauthorized = |pk: &PublicKey| {
-                new_keys
-                    .iter()
-                    .any(|nk| nk.key_type == pk.key_type && nk.key == pk.key)
-            };
-            let removed: Vec<&PublicKey> = prior
-                .document
-                .deduplicated_keys()
-                .into_iter()
-                .filter(|pk| !is_reauthorized(pk))
-                .collect();
-            let carried: Vec<RevocationBound> = prior
-                .document
-                .revocation_bounds
-                .iter()
-                .filter(|rb| {
-                    rb.revoked_key
-                        .as_ref()
-                        .is_none_or(|pk| !is_reauthorized(pk))
-                })
-                .cloned()
-                .collect();
-            carried
-                .into_iter()
-                .chain(removed.into_iter().map(|pk| {
-                    // Per collection: build a target naming the revoked key's
-                    // head event (max-sequence) with its root + sequence.
-                    let mut heads: HashMap<i32, (u64, &SignedEvent)> = HashMap::new();
-                    for (k, signed) in client.event_store.by_identity(&id_string) {
-                        if k.signed_by_key_type == pk.key_type && k.signed_by_key == pk.key {
-                            heads
-                                .entry(k.collection)
-                                .and_modify(|(seq, head)| {
-                                    if k.sequence >= *seq {
-                                        *seq = k.sequence;
-                                        *head = signed;
-                                    }
-                                })
-                                .or_insert((k.sequence, signed));
-                        }
-                    }
-                    let targets: Vec<EventProofTarget> = heads
-                        .into_iter()
-                        .map(|(collection, (_, signed))| {
-                            let inner = Event::decode(signed.event_bytes.as_slice())
-                                .expect("head event decodes");
-                            let leaf_count = client
-                                .canonical_signatures(&id_string, collection)
-                                .into_iter()
-                                .position(|s| s == signed.signature)
-                                .map(|p| p as u64)
-                                .unwrap_or(0);
-                            EventProofTarget {
-                                collection,
-                                signature: signed.signature.clone(),
-                                root: inner.previous_root,
-                                leaf_count,
-                            }
-                        })
-                        .collect();
-                    RevocationBound {
-                        revoked_key: Some(pk.clone()),
-                        targets,
-                    }
-                }))
-                .collect()
+            client.revocation_bounds(&id_string, &prior.document, &rotation, &signing)
         };
 
-        // Build the actual content (with computed bounds) and its digest.
-        let (content_bytes, digest) =
-            identity_content(rotation.clone(), signing.clone(), revocation_bounds.clone());
+        insert_identity_document(
+            client,
+            signer,
+            &id_string,
+            sequence,
+            Identity {
+                rotation_keys: rotation,
+                signing_keys: signing,
+                revocation_bounds,
+                servers: None,
+                recovery_key: None,
+                recovery_signature: None,
+            },
+        );
+        id_string
+    }
 
-        // content the VC is indexed against.
-        let signer_identity_content = Identity {
-            rotation_keys: rotation,
-            signing_keys: signing,
-            revocation_bounds,
-            servers: None,
-            recovery_key: None,
-            recovery_signature: None,
-        };
+    /// Insert `document` as the identity event at `sequence` signed by
+    /// `signer`, with the VC described on [`add_identity_event`].
+    fn insert_identity_document(
+        client: &mut PolycentricClient,
+        signer: &Keypair,
+        identity: &str,
+        sequence: u64,
+        document: Identity,
+    ) {
+        // identity_sequence: 1 for genesis (self-reference); N-1 for rotations.
+        let identity_sequence = if sequence == 1 { 1 } else { sequence - 1 };
 
-        let dedup = signer_identity_content.deduplicated_keys();
+        let dedup = document.deduplicated_keys();
         let self_pos = dedup
             .iter()
             .position(|pk| pk.key_type == signer.public.key_type && pk.key == signer.public.key)
-            .expect("signer must be present in signer_identity_content");
+            .expect("signer must be present in the document");
         let mut vc = vec![0u64; dedup.len()];
         vc[self_pos] = sequence;
         if sequence > 1 {
@@ -933,16 +982,21 @@ mod tests {
                 if pos == self_pos {
                     continue;
                 }
-                vc[pos] = client.get_identity_sequence(&id_string, key).unwrap_or(0);
+                vc[pos] = client.get_identity_sequence(identity, key).unwrap_or(0);
             }
         }
 
+        let content_bytes = Content {
+            content_body: Some(Body::Identity(document)),
+        }
+        .encode_to_vec();
+        let digest = sha256_digest(&content_bytes);
         client
             .copy_content(&digest, content_bytes)
             .expect("content matches its computed digest");
         let signed = sign_event(
             signer,
-            &id_string,
+            identity,
             collections::IDENTITY,
             sequence,
             identity_sequence,
@@ -950,7 +1004,6 @@ mod tests {
             digest,
         );
         client.copy_event(signed).unwrap();
-        id_string
     }
 
     fn dummy_post_digest() -> ContentDigest {
@@ -1412,6 +1465,162 @@ mod tests {
             }
             _ => panic!("expected InvalidEvent, got {:?}", err),
         }
+    }
+
+    fn bound_for<'a>(document: &'a Identity, key: &PublicKey) -> Option<&'a RevocationBound> {
+        document
+            .revocation_bounds
+            .iter()
+            .find(|rb| rb.revoked_key.as_ref() == Some(key))
+    }
+
+    #[test]
+    fn build_identity_update_carries_head_fields_forward() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+        let c = keypair(3);
+        let recovery = keypair(4);
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone(), c.public.clone()],
+        );
+        client
+            .copy_event(sign_event(
+                &b,
+                &identity,
+                2,
+                1,
+                1,
+                vec![0, 1, 0],
+                dummy_post_digest(),
+            ))
+            .unwrap();
+
+        // Head: B revoked, with servers and a recovery key.
+        let head = client
+            .build_identity_update(
+                &identity,
+                vec![a.public.clone()],
+                vec![c.public.clone()],
+                Some(vec!["https://s1".into()]),
+                Some(recovery.public.clone()),
+            )
+            .unwrap();
+        assert_eq!(head.recovery_key, Some(recovery.public.clone()));
+        insert_identity_document(&mut client, &a, &identity, 2, head.clone());
+
+        // No change to the keys: the document is the head again.
+        let same = client
+            .build_identity_update(
+                &identity,
+                vec![a.public.clone()],
+                vec![c.public.clone()],
+                None,
+                None,
+            )
+            .unwrap();
+        assert_eq!(same, head);
+        assert!(bound_for(&same, &b.public).is_some());
+        assert_eq!(same.recovery_key, Some(recovery.public.clone()));
+        assert_eq!(same.servers.unwrap().urls, vec!["https://s1".to_string()]);
+        assert_eq!(same.recovery_signature, None);
+
+        // Authorizing B again drops its bound; `servers` overrides the head's.
+        let readded = client
+            .build_identity_update(
+                &identity,
+                vec![a.public.clone()],
+                vec![b.public.clone(), c.public.clone()],
+                Some(vec!["https://s2".into()]),
+                None,
+            )
+            .unwrap();
+        assert!(readded.revocation_bounds.is_empty());
+        assert_eq!(
+            readded.servers.unwrap().urls,
+            vec!["https://s2".to_string()]
+        );
+        assert_eq!(readded.recovery_key, Some(recovery.public.clone()));
+
+        // `recovery_key` replaces the head's.
+        let rotated = client
+            .build_identity_update(
+                &identity,
+                vec![a.public.clone()],
+                vec![c.public.clone()],
+                None,
+                Some(b.public.clone()),
+            )
+            .unwrap();
+        assert_eq!(rotated.recovery_key, Some(b.public.clone()));
+        assert_eq!(rotated.revocation_bounds, head.revocation_bounds);
+
+        // Removing C keeps B's bound and adds one for C, which signed nothing.
+        let removed = client
+            .build_identity_update(&identity, vec![a.public.clone()], vec![], None, None)
+            .unwrap();
+        assert_eq!(bound_for(&removed, &b.public), bound_for(&head, &b.public));
+        assert!(bound_for(&removed, &c.public).unwrap().targets.is_empty());
+    }
+
+    #[test]
+    fn revocation_bound_ordering_with_multiple_revoked_keys() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let b = keypair(2);
+        let c = keypair(3);
+        let identity = add_identity_event(
+            &mut client,
+            &a,
+            None,
+            1,
+            vec![a.public.clone()],
+            vec![b.public.clone(), c.public.clone()],
+        );
+
+        // B and C each write sequence 1 concurrently, so one of them sits at
+        // canonical index 1 despite its `sequence - 1` being 0.
+        let b_post = sign_event(&b, &identity, 2, 1, 1, vec![0, 1, 0], dummy_post_digest());
+        let c_post = sign_event(&c, &identity, 2, 1, 1, vec![0, 0, 1], dummy_post_digest());
+        client.copy_event(b_post.clone()).unwrap();
+        client.copy_event(c_post.clone()).unwrap();
+        let canonical = client.canonical_signatures(&identity, 2);
+
+        add_identity_event(
+            &mut client,
+            &a,
+            Some(&identity),
+            2,
+            vec![a.public.clone()],
+            vec![],
+        );
+        let chain = client.identity_chain(&identity).unwrap();
+        let head = chain.latest_state().unwrap();
+
+        let mut leaf_counts = Vec::new();
+        for (key, post) in [(&b, &b_post), (&c, &c_post)] {
+            let targets = &bound_for(head, &key.public).unwrap().targets;
+            assert_eq!(targets.len(), 1);
+            let target = &targets[0];
+            assert_eq!(target.collection, 2);
+            assert_eq!(target.signature, post.signature);
+            assert_eq!(
+                Some(target.leaf_count as usize),
+                canonical.iter().position(|s| *s == post.signature)
+            );
+            leaf_counts.push(target.leaf_count);
+
+            client
+                .validate_event(post, &[])
+                .expect("the revoked key's bounded event stays valid");
+        }
+        leaf_counts.sort();
+        assert_eq!(leaf_counts, vec![0, 1]);
     }
 
     #[test]

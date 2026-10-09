@@ -3,10 +3,15 @@ package org.futo.polycentric.core
 import kotlinx.coroutines.CancellationException
 import org.futo.polycentric.ffi.CoreException
 
+/** rs-core's `InvalidInput` message for an expired pairing session (`pairing.rs`). */
+private const val PAIRING_SESSION_EXPIRED = "pairing session has expired"
+
 /**
  * Run an rs-core (UniFFI) operation, folding its generated [CoreException]
  * into [CoreFailureException] so consumers of this package only catch
- * [PolycentricException]. All other throwables remain untouched.
+ * [PolycentricException]. Specific errors with more detailed information
+ * get a subclass, like [PairingSessionExpiredException]. All other throwables
+ * remain untouched.
  *
  * Only wrap calls that can actually fail (the `@Throws(CoreException::class)`
  * methods of the generated bindings): pure in-memory setters like
@@ -16,7 +21,12 @@ internal inline fun <R> coreCall(block: () -> R): R =
     try {
         block()
     } catch (e: CoreException) {
-        throw CoreFailureException(e.message ?: "Rust core operation failed", e)
+        val message = e.message ?: "Rust core operation failed"
+        throw if (e is CoreException.InvalidInput && message.endsWith(PAIRING_SESSION_EXPIRED)) {
+            PairingSessionExpiredException(e)
+        } else {
+            CoreFailureException(message, e)
+        }
     }
 
 /**

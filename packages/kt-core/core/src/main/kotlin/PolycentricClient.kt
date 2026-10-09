@@ -21,6 +21,7 @@ import org.futo.polycentric.ffi.ContentEntry
 import org.futo.polycentric.ffi.ListEventsArgs
 import org.futo.polycentric.ffi.PolycentricCoreInterface
 import org.futo.polycentric.ffi.Query
+import org.futo.polycentric.ffi.QueryOpts
 import org.futo.polycentric.ffi.SignBytesCallback
 import polycentric.v2.Blob
 import polycentric.v2.Content
@@ -30,6 +31,8 @@ import polycentric.v2.Event
 import polycentric.v2.EventBundle
 import polycentric.v2.EventKey
 import polycentric.v2.ListEventsResponse
+import polycentric.v2.ListHeadsRequest
+import polycentric.v2.ListHeadsResponse
 import polycentric.v2.PublicKey
 import polycentric.v2.PutEventsResponse
 import polycentric.v2.SignedEvent
@@ -367,7 +370,7 @@ class PolycentricClient(
 
     // ── Queries (js-core: listEvents / listValidEvents) ────────────────
 
-    /** One-shot ListEvents across all configured servers. */
+    /** One-shot ListEvents across [servers] (default: all configured servers). */
     suspend fun listEvents(
         identity: String,
         collection: Int? = null,
@@ -379,6 +382,7 @@ class PolycentricClient(
         sequenceLt: Long? = null,
         heads: List<EventKey> = emptyList(),
         queryKey: List<String>? = null,
+        servers: List<String>? = null,
     ): List<EventBundle> {
         val bytes =
             coreCall {
@@ -395,7 +399,16 @@ class PolycentricClient(
                         ),
                     ),
                     queryKey = queryKey,
-                    opts = null,
+                    opts =
+                        servers?.let {
+                            QueryOpts(
+                                fetchMode = null,
+                                updateMode = null,
+                                servers = it,
+                                emitMode = null,
+                                serverTimeoutMs = null,
+                            )
+                        },
                 )
             } ?: return emptyList()
         return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
@@ -508,6 +521,61 @@ class PolycentricClient(
         }
 
         // Fetch any of our own referenced blobs so they persist locally.
+        contentManager.pullBlobs(blobs.values.toList())
+        return newCount
+    }
+
+    /**
+     * Pull every event of the active identity from every server and persist
+     * new ones locally. Throws if any server fails.
+     *
+     * TODO: This works around the missing pagination for `listEvents` query
+     * by counting sequence numbers and filtering for the sequence numbers
+     * not seen yet. We should implement proper pagination on `listEvents`
+     * at some point.
+     *
+     * @return The number of new events persisted
+     */
+    internal suspend fun pullComplete(): Int {
+        val identity = activeIdentityKey ?: throw NoActiveIdentityException()
+        val blobs = mutableMapOf<String, Blob>()
+        var newCount = 0
+
+        for (server in servers) {
+            val headsBytes =
+                coreCall {
+                    core.listHeads(server, ListHeadsRequest.ADAPTER.encode(ListHeadsRequest(identity = identity)))
+                }
+            for (head in ListHeadsResponse.ADAPTER.decode(headsBytes).heads) {
+                val signer = head.signed_by ?: continue
+                var sequenceLt = head.sequence + 1
+
+                // We filter by sequence numbers before the lowest one we've seen to
+                // "paginate" the `listEvents` query. Eventually we should implement
+                // real pagination and replace the code below.
+                while (true) {
+                    val page =
+                        listEvents(
+                            identity = identity,
+                            collection = head.collection,
+                            signedBy = signer,
+                            sequenceLt = sequenceLt,
+                            servers = listOf(server),
+                        )
+                    // A stream's sequence numbers are unique for each signer, so the lowest one
+                    // seen acts as a cursor.
+                    var lowest: Long? = null
+                    for (bundle in page) {
+                        if (trySaveBundle(bundle, blobs)) newCount++
+                        val event = bundle.signed_event?.let { Event.ADAPTER.decode(it.event_bytes) }
+                        val sequence = event?.key?.sequence
+                        if (sequence != null && sequence < (lowest ?: sequenceLt)) lowest = sequence
+                    }
+                    sequenceLt = lowest ?: break
+                }
+            }
+        }
+
         contentManager.pullBlobs(blobs.values.toList())
         return newCount
     }

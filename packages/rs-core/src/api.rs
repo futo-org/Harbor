@@ -264,6 +264,45 @@ impl PolycentricCore {
             .map(|document| document.encode_to_vec())
     }
 
+    /// Builds the next `Identity` event to publish after the current head of
+    /// the identity chain.
+    /// - The `rotation_keys` and `signing_keys` replace the two respective key
+    /// sets. For every previous key not found in the new set, the key is revoked
+    /// with a revocation bound.
+    /// - Passing `servers` replaces the server list, or keeps the old list with
+    /// `None`; `recovery_key` likewise.
+    /// - Existing revocation bounds carry forward, unless the new key sets
+    /// authorize a revoked key again.
+    pub fn build_identity_update(
+        &self,
+        identity: String,
+        rotation_keys: Vec<Vec<u8>>,
+        signing_keys: Vec<Vec<u8>>,
+        servers: Option<Vec<String>>,
+        recovery_key: Option<Vec<u8>>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let decode = |key: &Vec<u8>| {
+            PublicKey::decode(key.as_slice())
+                .map_err(|e| CoreError::Decode(format!("build_identity_update: {e}")))
+        };
+        let rotation_keys = rotation_keys.iter().map(decode).collect::<Result<_, _>>()?;
+        let signing_keys = signing_keys.iter().map(decode).collect::<Result<_, _>>()?;
+        let recovery_key = recovery_key.as_ref().map(decode).transpose()?;
+
+        let identity = self
+            .client
+            .lock_recover()
+            .build_identity_update(
+                &identity,
+                rotation_keys,
+                signing_keys,
+                servers,
+                recovery_key,
+            )
+            .map_err(|e| CoreError::InvalidInput(format!("build_identity_update: {e}")))?;
+        Ok(identity.encode_to_vec())
+    }
+
     /// Returns the canonical identity chain for `identity` as a serialized
     /// `ListEventsResponse`.
     pub fn resolve_identity_chain(&self, identity: String) -> Result<Vec<u8>, CoreError> {

@@ -221,3 +221,21 @@ fun eventKeyString(key: EventKey): String =
     "${key.collection}|${key.identity}|${
         key.signed_by?.let { "${it.key_type.value}:${it.key.hex()}" } ?: "?"
     }|${key.sequence}"
+
+/**
+ * An identity head with [signer] as its rotation key, `makeSigner(2)` as a
+ * signing key, servers, and `makeSigner(4)` as its recovery key.
+ */
+fun identityHead(signer: TestSigner = makeSigner(1)): Identity =
+    Identity(
+        rotation_keys = listOf(signer.publicKey),
+        signing_keys = listOf(makeSigner(2).publicKey),
+        servers = polycentric.v2.ServerList(urls = listOf("https://home")),
+        recovery_key = makeSigner(4).publicKey,
+    )
+
+/** The identity document of the most recently published identity event. */
+fun ClientFixture.lastPublishedIdentity(): Identity? =
+    contentRepository.saved
+        .lastOrNull()
+        ?.let { Content.ADAPTER.decode(it.second).identity }

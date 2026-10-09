@@ -1245,4 +1245,57 @@ class PolycentricClientSyncTest {
             assertTrue(blobs.isEmpty())
             assertTrue(f.contentRepository.saved.isEmpty())
         }
+
+    @Test
+    fun `pullComplete pages back through every stream on every server`() =
+        runTest {
+            val signer = makeSigner(2)
+            val identity = makeIdentity(listOf(makeSigner(1)), listOf(signer))
+            val posts = makeStream(signer, identity, Collections.FEED, count = 5, label = "post")
+
+            fun sequenceOf(event: SignedEvent) = requireNotNull(Event.ADAPTER.decode(event.event_bytes).key).sequence
+
+            val core =
+                FakeCore {
+                    listHeads = {
+                        polycentric.v2.ListHeadsResponse(
+                            heads =
+                                listOf(
+                                    EventKey(
+                                        collection = Collections.FEED,
+                                        identity = identity.key,
+                                        signed_by = signer.publicKey,
+                                        sequence = 5,
+                                    ),
+                                ),
+                        )
+                    }
+                    // Pages of at most two events, newest first.
+                    pullBundles = { args ->
+                        posts
+                            .filter { sequenceOf(it) < requireNotNull(args.sequenceLt) }
+                            .sortedByDescending { sequenceOf(it) }
+                            .take(2)
+                            .map { makeBundle(it) }
+                    }
+                }
+            val f =
+                makeClient {
+                    this.core = core
+                    this.identity = identity
+                    servers = listOf("http://a", "http://b")
+                }
+
+            val count = f.client.pullComplete()
+
+            assertEquals(5, count)
+            for (post in posts) {
+                assertEquals(post, f.eventRepository.getByEventKey(requireNotNull(Event.ADAPTER.decode(post.event_bytes).key)))
+            }
+            assertEquals(List(2) { listOf(6L, 4L, 2L, 1L) }.flatten(), core.pullQueryArgs.map { it.sequenceLt })
+            assertEquals(
+                listOf("http://a", "http://b").flatMap { server -> List(4) { listOf(server) } },
+                core.pullQueryServers,
+            )
+        }
 }

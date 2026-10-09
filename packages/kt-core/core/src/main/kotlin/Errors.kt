@@ -28,10 +28,15 @@ class UnauthorizedKeyException : PolycentricException("Current key is not author
  * Wraps UniFFI-generated `org.futo.polycentric.ffi.CoreException`.
  * This lets consumers only catch [PolycentricException].
  */
-class CoreFailureException(
+open class CoreFailureException(
     message: String,
     cause: Throwable? = null,
 ) : PolycentricException(message, cause)
+
+/** A pairing session call was made after the session's TTL ran out. */
+class PairingSessionExpiredException(
+    cause: Throwable? = null,
+) : CoreFailureException("Pairing session has expired", cause)
 
 class InvalidKeyLengthException(
     message: String,

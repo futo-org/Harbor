@@ -14,6 +14,7 @@ import polycentric.v2.Content
 import polycentric.v2.ContentDigest
 import polycentric.v2.EventBundle
 import polycentric.v2.ListEventsResponse
+import polycentric.v2.ListHeadsResponse
 import polycentric.v2.SignedEvent
 import polycentric.v2.UploadBlobRequest
 
@@ -242,6 +243,12 @@ class FakeCoreOptions {
     /** Serialized identity doc returned by `resolveIdentity`. */
     var resolveIdentityResponse: ByteArray? = null
 
+    /** Overrides [resolveIdentityResponse], e.g. to answer differently per call. */
+    var resolveIdentity: ((identity: String) -> ByteArray?)? = null
+
+    /** Per-server `ListHeadsResponse` returned by `listHeads`. */
+    var listHeads: ((server: String) -> ListHeadsResponse)? = null
+
     /** Non-null makes `copyEvents` throw (hydration failure). */
     var copyEventsError: Throwable? = null
 
@@ -264,6 +271,9 @@ class FakeCore(
 
     /** The `ListEventsArgs` of every pull query, in call order. */
     val pullQueryArgs = mutableListOf<ListEventsArgs>()
+
+    /** The `QueryOpts.servers` of every pull query (null = all servers), in call order. */
+    val pullQueryServers = mutableListOf<List<String>?>()
 
     /** Recorded `(identity, server, partial)` push calls. */
     val pushCalls = mutableListOf<Triple<String, String, Boolean>>()
@@ -373,12 +383,22 @@ class FakeCore(
     ): ByteArray? {
         val args = (query as? Query.ListEvents)?.v1 ?: error("FakeCore only handles ListEvents queries")
         pullQueryArgs.add(args)
+        pullQueryServers.add(opts?.servers)
         options.pullError?.let { throw CoreException.Network("Query failed on all servers: $it") }
         val bundles = options.pullBundles?.invoke(args) ?: emptyList()
         return ListEventsResponse.ADAPTER.encode(ListEventsResponse(event_bundles = bundles))
     }
 
-    override fun resolveIdentity(identity: String): ByteArray? = options.resolveIdentityResponse
+    override fun resolveIdentity(identity: String): ByteArray? =
+        options.resolveIdentity?.invoke(identity) ?: options.resolveIdentityResponse
+
+    override fun buildIdentityUpdate(
+        identity: String,
+        rotationKeys: List<ByteArray>,
+        signingKeys: List<ByteArray>,
+        servers: List<String>?,
+        recoveryKey: ByteArray?,
+    ): ByteArray = error("not used by sync tests")
 
     override suspend fun getServerInfo(serverUrl: String): ByteArray = error("not used by sync tests")
 
@@ -438,7 +458,10 @@ class FakeCore(
     override suspend fun listHeads(
         serverUrl: String,
         requestBytes: ByteArray,
-    ): ByteArray = error("not used by sync tests")
+    ): ByteArray =
+        ListHeadsResponse.ADAPTER.encode(
+            requireNotNull(options.listHeads) { "listHeads not configured" }(serverUrl),
+        )
 
     override fun processImageToJpeg(
         image: ByteArray,
