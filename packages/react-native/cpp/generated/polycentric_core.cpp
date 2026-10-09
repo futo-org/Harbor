@@ -245,6 +245,15 @@ extern "C" {
         /*handle*/ uint64_t ptr, 
         RustCallStatus *uniffi_out_err
     );
+    RustBuffer uniffi_polycentric_core_fn_method_polycentriccore_build_identity_update(
+        /*handle*/ uint64_t ptr, 
+        RustBuffer identity, 
+        RustBuffer rotation_keys, 
+        RustBuffer signing_keys, 
+        RustBuffer servers, 
+        RustBuffer recovery_key, 
+        RustCallStatus *uniffi_out_err
+    );
     RustBuffer uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock(
         /*handle*/ uint64_t ptr, 
         RustBuffer identity, 
@@ -832,6 +841,8 @@ extern "C" {
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_await_query(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities(
+    );
+    uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_build_identity_update(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock(
     );
@@ -5485,6 +5496,14 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_blocked_identities(rt, thisVal, args, count);
         }
     );
+    props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_identity_update"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_identity_update"),
+        6,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_build_identity_update(rt, thisVal, args, count);
+        }
+    );
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_vector_clock"),
@@ -6605,6 +6624,14 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities(rt, thisVal, args, count);
         }
     );
+    props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_identity_update"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_identity_update"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_build_identity_update(rt, thisVal, args, count);
+        }
+    );
     props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock"),
@@ -7362,6 +7389,16 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycent
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_blocked_identities(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
         auto value = uniffi_polycentric_core_fn_method_polycentriccore_blocked_identities(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_build_identity_update(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_method_polycentriccore_build_identity_update(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[5]), 
             &status
         );
         uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
@@ -8597,6 +8634,13 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_po
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_build_identity_update(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_method_polycentriccore_build_identity_update(
         );
 
         

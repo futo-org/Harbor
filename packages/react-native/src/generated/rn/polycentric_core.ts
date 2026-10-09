@@ -4991,6 +4991,18 @@ export interface PolycentricCoreLike {
  */
     blockedIdentities(): Array<string>;
 /**
+ * Builds the next `Identity` event to publish after the current head of
+ * the identity chain.
+ * - The `rotation_keys` and `signing_keys` replace the two respective key
+ * sets. For every previous key not found in the new set, the key is revoked
+ * with a revocation bound.
+ * - Passing `servers` replaces the server list, or keeps the old list with
+ * `None`; `recovery_key` likewise.
+ * - Existing revocation bounds carry forward, unless the new key sets
+ * authorize a revoked key again.
+ */
+    buildIdentityUpdate(identity: string, rotationKeys: Array<ArrayBuffer>, signingKeys: Array<ArrayBuffer>, servers: Array<string> | undefined, recoveryKey: ArrayBuffer | undefined) /*throws*/: ArrayBuffer;
+/**
  * Build a vector clock (returns serialized `VectorClock` proto bytes).
  * For identity events, callers should pass the new event's identity
  * content as `identity_content` (serialized `Identity` proto bytes).
@@ -5291,6 +5303,39 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     );
     try {
         return FfiConverterSequenceString.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
+    }
+    
+/**
+ * Builds the next `Identity` event to publish after the current head of
+ * the identity chain.
+ * - The `rotation_keys` and `signing_keys` replace the two respective key
+ * sets. For every previous key not found in the new set, the key is revoked
+ * with a revocation bound.
+ * - Passing `servers` replaces the server list, or keeps the old list with
+ * `None`; `recovery_key` likewise.
+ * - Existing revocation bounds carry forward, unless the new key sets
+ * authorize a revoked key again.
+ */
+    buildIdentityUpdate(identity: string, rotationKeys: Array<ArrayBuffer>, signingKeys: Array<ArrayBuffer>, servers: Array<string> | undefined, recoveryKey: ArrayBuffer | undefined): ArrayBuffer /*throws*/ {
+    const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_build_identity_update(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterString.lower(identity, nativeModule().rustbuffer_alloc),
+        FfiConverterSequenceBytes.lower(rotationKeys, nativeModule().rustbuffer_alloc),
+        FfiConverterSequenceBytes.lower(signingKeys, nativeModule().rustbuffer_alloc),
+        FfiConverterOptionalSequenceString.lower(servers, nativeModule().rustbuffer_alloc),
+        FfiConverterOptionalBytes.lower(recoveryKey, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+    try {
+        return FfiConverterArrayBuffer.lift(__rb);
     } finally {
         nativeModule().rustbuffer_free(__rb);
     }
@@ -6447,11 +6492,11 @@ const FfiConverterOptionalTypeAuthToken = new FfiConverterOptional(FfiConverterT
 // FfiConverter for QueryOpts | undefined
 const FfiConverterOptionalTypeQueryOpts = new FfiConverterOptional(FfiConverterTypeQueryOpts);
 
-// FfiConverter for Array<ContentEntry>
-const FfiConverterSequenceTypeContentEntry = new FfiConverterArray(FfiConverterTypeContentEntry);
-
 // FfiConverter for Array<ArrayBuffer>
 const FfiConverterSequenceBytes = new FfiConverterArray(FfiConverterArrayBuffer);
+
+// FfiConverter for Array<ContentEntry>
+const FfiConverterSequenceTypeContentEntry = new FfiConverterArray(FfiConverterTypeContentEntry);
 
 // FfiConverter for bigint | undefined
 const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
@@ -6540,6 +6585,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities() !== 52117) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_blocked_identities");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_identity_update() !== 15546) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_build_identity_update");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock() !== 16886) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_build_vector_clock");
