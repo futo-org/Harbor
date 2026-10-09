@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": ["local>harbor/renovate"],
   "minimumReleaseAge": "3 days",
   "packageRules": [
     {
