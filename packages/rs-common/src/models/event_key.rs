@@ -7,7 +7,7 @@ use crate::models::collections::{
     FEED, IDENTITY, INTERACTIONS, LABELS, PROFILE, REPORTS, SOCIAL_GRAPH, VERIFICATIONS,
 };
 use crate::models::protos_v2::{EventKey, PublicKey};
-use crate::models::validate::{self, StringConfig, Validate, hex_regex};
+use crate::models::validate::{self, Validate};
 use crate::models::{Serializable, public_key};
 use crate::platform::error::PlatformError;
 
@@ -93,17 +93,9 @@ impl Validate for EventKey {
             signed_by,
             sequence: _, // No validation.
         } = self;
-        validate::string(
-            identity,
-            errors,
-            |err| map_err(ValidationError::Identity(err)),
-            StringConfig {
-                min_len: Some(64),
-                max_len: Some(64),
-                regex: Some(hex_regex()),
-                ..Default::default()
-            },
-        );
+        validate::identity(identity, errors, |err| {
+            map_err(ValidationError::Identity(err))
+        });
         if let Some(signed_by) = signed_by.as_ref() {
             signed_by.validate_check(errors, |err| map_err(ValidationError::SignedBy(err)));
         } else {
@@ -125,6 +117,9 @@ impl fmt::Display for ValidationError {
         match self {
             ValidationError::CollectionInvalid { expected } => {
                 write!(f, "collection invalid, expected '{expected}'")
+            }
+            ValidationError::Identity(validate::StringError::FailsRegex { .. }) => {
+                write!(f, "identity is not a valid identity")
             }
             ValidationError::Identity(err) => write!(f, "identity {err}"),
             ValidationError::SignedBy(err) => write!(f, "signed by {err}"),

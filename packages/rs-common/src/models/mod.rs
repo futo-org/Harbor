@@ -26,6 +26,7 @@ pub mod content_digest;
 pub mod delete;
 pub mod event;
 pub mod event_key;
+pub mod follow;
 pub mod identity;
 pub mod image;
 pub mod image_set;

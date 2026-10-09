@@ -413,7 +413,6 @@ fn validate_content(
         }
         ContentBody::Follow(_) => {
             check_collection(collection, collections::SOCIAL_GRAPH);
-            // TODO: validate.
         }
         ContentBody::Block(_) => {
             check_collection(collection, collections::SOCIAL_GRAPH);
