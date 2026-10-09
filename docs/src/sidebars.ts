@@ -44,6 +44,7 @@ const sidebars: SidebarsConfig = {
         'developer/setup',
         'developer/project-structure',
         'developer/feed-paging',
+        'developer/unread-notifications',
         'developer/declaring-your-application',
         'developer/e2e-testing',
       ],

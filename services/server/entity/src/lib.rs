@@ -84,6 +84,7 @@ pub mod follow;
 pub mod gravity;
 pub mod moderator;
 pub mod notification;
+pub mod notification_read_marker;
 pub mod pairing_session;
 pub mod pairing_session_claimer;
 pub mod profile;
