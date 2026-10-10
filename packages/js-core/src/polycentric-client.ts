@@ -804,6 +804,7 @@ export class PolycentricClient {
   /**
    * Pull signed events for the active identity from all configured servers
    * and persist new ones locally. Existing events/content are not overwritten.
+   * Emits `pulled` if any new events were persisted.
    *
    * @returns The number of new events persisted
    */
@@ -856,6 +857,8 @@ export class PolycentricClient {
 
     // Catch any of our own referenced blobs so they persist locally.
     await this.contentManager.pullBlobs(blobs);
+
+    if (newCount > 0) this.events.emitPulled(identity);
     return newCount;
   }
 
