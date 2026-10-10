@@ -5,6 +5,10 @@ const APP_LINK_PATH_RULES = [{ '/': '/oauth/*', exclude: true }, { '/': '*' }];
 const appLinks = {
   production: {
     host: 'harbor.social',
+    // The identity the bare domain resolves to as an alias (the `*` entry of
+    // /.well-known/polycentric.json; see js-core's alias-resolver).
+    polycentricIdentity:
+      '743817767bdaf220694c7a4316916a7487d70cc9bb10e171108fcc8f20b19a86',
     iosBundleId: 'org.futo.polycentric',
     androidApps: [
       {
@@ -76,8 +80,22 @@ function buildAssetLinks(host) {
   }));
 }
 
+// The domain's alias document: local parts to identities, `*` being what the
+// bare domain resolves to. Hosts with no configured identity get a 404.
+function buildPolycentricAliases(host) {
+  const appLink = findAppLinkByHost(host);
+  if (!appLink?.polycentricIdentity) return null;
+
+  return { names: { '*': appLink.polycentricIdentity } };
+}
+
 function findAppLinkByHost(host) {
   return Object.values(appLinks).find((appLink) => appLink.host === host);
 }
 
-module.exports = { appLinks, buildAppleAppSiteAssociation, buildAssetLinks };
+module.exports = {
+  appLinks,
+  buildAppleAppSiteAssociation,
+  buildAssetLinks,
+  buildPolycentricAliases,
+};
