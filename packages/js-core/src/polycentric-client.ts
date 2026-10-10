@@ -195,7 +195,7 @@ export class PolycentricClient {
       // Push the JS-side server list into the rust core so that
       // observables that fan out to every configured server (e.g.
       // `getIdentityFeed`) actually have somewhere to call.
-      await this.refreshServers();
+      this.refreshServers();
 
       this.setStep(InitializationStep.COMPLETE);
       this.setState(ClientState.READY);
@@ -1070,7 +1070,7 @@ export class PolycentricClient {
     );
     this.core.setActiveIdentity(this.activeIdentityKey ?? undefined);
     if (this.storageHandle) {
-      await this.refreshServers();
+      this.refreshServers();
     }
   }
 
@@ -1079,7 +1079,7 @@ export class PolycentricClient {
    * Identities that have never configured a server list keep the current
    * (seed) list.
    */
-  public async refreshServers(): Promise<void> {
+  public refreshServers(): void {
     if (this.activeIdentityKey) {
       const state = this.identityManager.resolveIdentity();
       if (state?.servers) {
@@ -1090,26 +1090,33 @@ export class PolycentricClient {
   }
 
   /**
-   * Explicitly set the active identity key and persist it.
+   * Update our state to match this identity.
    */
-  public async setActiveIdentityKey(identityKey: string | null): Promise<void> {
-    if (this.currentKeyPair) {
+  public async adoptIdentity(identityKey: string | null): Promise<void> {
+    const changedIdentity = identityKey !== this.activeIdentityKey;
+
+    if (changedIdentity && this.currentKeyPair) {
       await this.storageDriver.saveActiveIdentityKey(
         this.currentKeyPair.publicKey.key,
         identityKey,
       );
     }
 
-    if (identityKey === this.activeIdentityKey) return;
+    if (changedIdentity) {
+      this.activeIdentityKey = identityKey;
+      this.core.setActiveIdentity(identityKey ?? undefined);
 
-    this.activeIdentityKey = identityKey;
-    this.core.setActiveIdentity(identityKey ?? undefined);
+      // Tokens minted for the previous identity must not be reused.
+      this.core.clearAuthTokens();
+    }
 
-    // Tokens minted for the previous identity must not be reused.
-    this.core.clearAuthTokens();
+    // Use the latest server list from the latest identity state
+    this.refreshServers();
 
-    // Really an 'identityChanged' event underneath
-    this.events.emitKeyPairChanged(this.currentKeyPair);
+    if (changedIdentity) {
+      // This is really an 'identityChanged' event underneath
+      this.events.emitKeyPairChanged(this.currentKeyPair);
+    }
   }
 
   /**

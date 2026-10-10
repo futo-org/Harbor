@@ -194,14 +194,7 @@ export class IdentityManager {
 
     // At this point, we have saved the identity event authorizing us locally
     // and are fully committed to the switch.
-    await this.client.setActiveIdentityKey(resolvedIdentityKey);
-
-    // The identity document is the source of truth for the server list, so
-    // adopt it before syncing — a newly added server receives the push.
-    if (identity.servers) {
-      this.client.servers = [...identity.servers.urls];
-      this.client.core.setServers(this.client.servers);
-    }
+    await this.client.adoptIdentity(resolvedIdentityKey);
 
     // Push errors are currently swallowed
     await this.client.sync(SyncStrategy.PARTIAL_PUSH);
