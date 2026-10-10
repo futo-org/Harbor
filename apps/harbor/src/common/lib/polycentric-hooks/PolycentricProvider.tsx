@@ -269,13 +269,18 @@ export function PolycentricProvider({
       const { client: c, store: s } = ready;
       if (identityKey !== c.activeIdentityKey) return;
 
-      setCurrentIdentity(c.identityManager.resolveIdentity());
-      await s.getState().refreshIdentities();
-
-      useFollows.getState().refresh(c);
-      useReposts.getState().refresh(c);
-      useReactions.getState().refresh(c);
-      useBlocks.getState().refresh(c);
+      try {
+        setCurrentIdentity(c.identityManager.resolveIdentity());
+        await Promise.all([
+          s.getState().refreshIdentities(),
+          useFollows.getState().refresh(c),
+          useReposts.getState().refresh(c),
+          useReactions.getState().refresh(c),
+          useBlocks.getState().refresh(c),
+        ]);
+      } catch (err) {
+        console.warn('Failed to refresh stores after pull:', err);
+      }
     };
 
     (async () => {
