@@ -293,14 +293,13 @@ export class IdentityManager {
 
   /**
    * Query all relevant servers for identity events and copy them to rs-core.
-   * Throws if all queries sent to servers fail.
    */
   private async discoverRemoteIdentityEvents(
     identityKey: string,
   ): Promise<void> {
     const queriedServers = new Set<string>();
-    let hadSuccess = false;
-    let hadError = false;
+
+    // TODO: online-only fetch mode so that we can skip the local cache here.
 
     // Each round, query any servers that we have discovered from this identity
     // but haven't queried yet.
@@ -326,20 +325,13 @@ export class IdentityManager {
             servers: [...new Set(serversToQuery)],
           },
         });
-
-        hadSuccess = true;
       } catch (e) {
         console.error(`Listing identity events failed: ${e}`);
-        hadError = true;
       }
 
       for (const queried of serversToQuery) {
         queriedServers.add(queried);
       }
-    }
-
-    if (hadError && !hadSuccess) {
-      throw new Error('Failed to query for remote identity events');
     }
   }
 
