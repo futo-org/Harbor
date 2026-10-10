@@ -352,7 +352,6 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     env:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       HARBOR_CI_TOKEN: ${{ secrets.HARBOR_CI_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -362,8 +361,6 @@ jobs:
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install: 'false'
-      - name: npm auth
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Publish
