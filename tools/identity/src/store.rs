@@ -9,6 +9,8 @@
 //! <dir>/keys/<pubhex>.private     # raw 32-byte Ed25519 private key
 //! <dir>/events/000001.event       # SignedEvent protobuf bytes
 //! <dir>/events/000001.content     # Content protobuf bytes (the identity doc)
+//! <dir>/events/profile-000001.event    # profile SignedEvent protobuf bytes
+//! <dir>/events/profile-000001.content  # Content bytes (a ProfileUpdate)
 //! ```
 //!
 //! All events are signed by the genesis (primary) rotation key, so the chain
@@ -21,9 +23,10 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, Context, Result};
-use polycentric_common::models::collections::IDENTITY;
+use polycentric_common::models::collections::{IDENTITY, PROFILE};
 use polycentric_common::models::protos_v2::{
-    content::ContentBody, Content, Event, Identity, PublicKey, RevocationBound, SignedEvent,
+    content::ContentBody, Content, Event, Identity, ProfileUpdate, PublicKey, RevocationBound,
+    SignedEvent,
 };
 use prost::Message;
 
@@ -34,6 +37,9 @@ use crate::key::{KeyKind, KeyPair, PRIVATE_KEY_LEN};
 const IDENTITY_FILE: &str = "identity";
 const KEYS_DIR: &str = "keys";
 const EVENTS_DIR: &str = "events";
+/// Filename prefix distinguishing PROFILE-collection events from identity
+/// events, which share the events directory but have their own sequence space.
+const PROFILE_PREFIX: &str = "profile-";
 
 /// A summary of a key that was just added.
 pub struct AddedKey {
@@ -168,6 +174,80 @@ impl IdentityStore {
         Ok(kind)
     }
 
+    /// Set the profile display name: append a PROFILE-collection event whose
+    /// content is a [`ProfileUpdate`] carrying `name`. Returns the sequence of
+    /// the new profile event.
+    pub fn set_profile_name(&mut self, name: &str) -> Result<u64> {
+        let name = name.trim();
+        if name.is_empty() {
+            bail!("profile name must not be empty");
+        }
+        let chain = self.require_chain()?;
+        let identity = self.identity()?;
+        let signer = self.genesis_keypair(&chain)?;
+
+        let content_bytes = Content {
+            content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+                name: Some(name.to_string()),
+                ..Default::default()
+            })),
+        }
+        .encode_to_vec();
+        let content_digest = identity::content_digest(&content_bytes);
+
+        // Profile events have their own sequence space and anchor only over
+        // prior events in the PROFILE collection.
+        let prior = self.load_profile_events_seq()?;
+        let sequence = prior.last().map_or(1, |(seq, _)| seq + 1);
+        let prior_events: Vec<SignedEvent> = prior.into_iter().map(|(_, se)| se).collect();
+        let prior_max = max_sequence_by_signer(&prior_events);
+        let vector_clock = event::vector_clock(
+            &head(&chain).doc,
+            &signer.to_public_key(),
+            sequence,
+            &prior_max,
+        );
+        let (previous_signature, previous_root) = event::merkle_anchor(&prior_events);
+
+        let signed = event::sign(EventParams {
+            signer: &signer,
+            identity: &identity,
+            collection: PROFILE,
+            sequence,
+            // Governed by the current identity document (the chain head).
+            identity_sequence: head(&chain).sequence,
+            vector_clock,
+            content_digest,
+            previous_signature,
+            previous_root,
+            created_at: now_ms(),
+        });
+
+        self.write_event_files(
+            &self.profile_event_path(sequence),
+            &self.profile_content_path(sequence),
+            &signed,
+            &content_bytes,
+        )?;
+        Ok(sequence)
+    }
+
+    /// The current profile (the latest profile event's content), if any.
+    pub fn profile(&self) -> Result<Option<ProfileUpdate>> {
+        let Some((sequence, _)) = self.load_profile_events_seq()?.into_iter().next_back() else {
+            return Ok(None);
+        };
+        let path = self.profile_content_path(sequence);
+        let bytes = fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
+        match Content::decode(bytes.as_slice())
+            .context("decoding stored profile content")?
+            .content_body
+        {
+            Some(ContentBody::ProfileUpdate(update)) => Ok(Some(update)),
+            _ => bail!("profile content at sequence {sequence} is not a profile update"),
+        }
+    }
+
     /// The current identity document (the head event's content).
     pub fn current_doc(&self) -> Result<Identity> {
         Ok(head(&self.require_chain()?).doc.clone())
@@ -191,19 +271,28 @@ impl IdentityStore {
         self.load_private_key(&public)
     }
 
-    /// Publish the full identity event chain to `server` via gRPC PutEvents.
-    /// Returns the number of events sent.
+    /// Publish the identity event chain and any profile events to `server`
+    /// via gRPC PutEvents. Returns the number of events sent.
     pub fn publish(&self, server: &str) -> Result<usize> {
         crate::polycentric::publish(server, self.export()?)
     }
 
-    /// Every signed event paired with its content, genesis first — ready to
-    /// publish to a server or feed to a validator.
+    /// Every signed event paired with its content — the identity chain
+    /// (genesis first) followed by any profile events — ready to publish to a
+    /// server or feed to a validator.
     pub fn export(&self) -> Result<Vec<ExportedEvent>> {
         let mut exported = Vec::new();
         for (sequence, signed_event) in self.load_signed_events_seq()? {
             let content = fs::read(self.content_path(sequence))
                 .with_context(|| format!("reading content for sequence {sequence}"))?;
+            exported.push(ExportedEvent {
+                signed_event,
+                content,
+            });
+        }
+        for (sequence, signed_event) in self.load_profile_events_seq()? {
+            let content = fs::read(self.profile_content_path(sequence))
+                .with_context(|| format!("reading content for profile sequence {sequence}"))?;
             exported.push(ExportedEvent {
                 signed_event,
                 content,
@@ -253,12 +342,27 @@ impl IdentityStore {
             created_at: now_ms(),
         });
 
+        self.write_event_files(
+            &self.event_path(sequence),
+            &self.content_path(sequence),
+            &signed,
+            &content_bytes,
+        )
+    }
+
+    fn write_event_files(
+        &self,
+        event_path: &Path,
+        content_path: &Path,
+        signed: &SignedEvent,
+        content_bytes: &[u8],
+    ) -> Result<()> {
         let events_dir = self.events_dir();
         fs::create_dir_all(&events_dir)
             .with_context(|| format!("creating {}", events_dir.display()))?;
         restrict_permissions(&events_dir, 0o700);
-        fs::write(self.event_path(sequence), signed.encode_to_vec())?;
-        fs::write(self.content_path(sequence), content_bytes)?;
+        fs::write(event_path, signed.encode_to_vec())?;
+        fs::write(content_path, content_bytes)?;
         Ok(())
     }
 
@@ -298,8 +402,20 @@ impl IdentityStore {
             .collect())
     }
 
-    /// Load `(sequence, SignedEvent)` pairs, ordered by sequence.
+    /// Load identity `(sequence, SignedEvent)` pairs, ordered by sequence.
     fn load_signed_events_seq(&self) -> Result<Vec<(u64, SignedEvent)>> {
+        self.load_events_with_prefix("")
+    }
+
+    /// Load profile `(sequence, SignedEvent)` pairs, ordered by sequence.
+    fn load_profile_events_seq(&self) -> Result<Vec<(u64, SignedEvent)>> {
+        self.load_events_with_prefix(PROFILE_PREFIX)
+    }
+
+    /// Load `(sequence, SignedEvent)` pairs whose filenames match
+    /// `<prefix><sequence>.event`, ordered by sequence. Identity events have
+    /// no prefix; other collections are distinguished by theirs.
+    fn load_events_with_prefix(&self, prefix: &str) -> Result<Vec<(u64, SignedEvent)>> {
         let events_dir = self.events_dir();
         if !events_dir.exists() {
             return Ok(Vec::new());
@@ -313,6 +429,7 @@ impl IdentityStore {
                 .file_name()
                 .and_then(|n| n.to_str())
                 .and_then(|n| n.strip_suffix(".event"))
+                .and_then(|n| n.strip_prefix(prefix))
                 .and_then(|n| n.parse::<u64>().ok())
             else {
                 continue;
@@ -392,6 +509,16 @@ impl IdentityStore {
 
     fn content_path(&self, sequence: u64) -> PathBuf {
         self.events_dir().join(format!("{sequence:06}.content"))
+    }
+
+    fn profile_event_path(&self, sequence: u64) -> PathBuf {
+        self.events_dir()
+            .join(format!("{PROFILE_PREFIX}{sequence:06}.event"))
+    }
+
+    fn profile_content_path(&self, sequence: u64) -> PathBuf {
+        self.events_dir()
+            .join(format!("{PROFILE_PREFIX}{sequence:06}.content"))
     }
 }
 
