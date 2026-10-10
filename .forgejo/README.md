@@ -77,7 +77,7 @@ profile and Maestro (`ios-e2e`).
 Provisioned by harbor-infra (`futo-git/ci_values`, `ci_variables`).
 
 - `REGISTRY_USER` (variable), `REGISTRY_TOKEN`: zot API key of the CI user.
-- `EXPO_TOKEN`, `NPM_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+- `EXPO_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
   `MATTERMOST_RELEASES_WEBHOOK`, `VERIFIER_BOT_ENV_VARS` (base64 `.env`).
 - `STATIC_S3_ENDPOINT`, `STATIC_S3_ACCESS_KEY_ID`,
   `STATIC_S3_SECRET_ACCESS_KEY`; variables `STATIC_S3_BUCKET`,
