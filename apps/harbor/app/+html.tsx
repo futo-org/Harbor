@@ -12,24 +12,16 @@ const ROOT_STYLE =
   'html>body[data-scroll-locked]{overflow:visible!important;margin-right:0!important}' +
   '@media(hover:hover){.underlineOnHover:hover{text-decoration:underline}}';
 
-// Every code point in the Twemoji font, so pages without emoji never fetch it.
-const TWEMOJI_UNICODE_RANGE =
-  'U+23,U+2A,U+30-39,U+A9,U+AE,U+200D,U+203C-3299,U+20E3,U+FE0F,U+1F000-1FAFF,U+E0020-E007F';
-
 // Declared here rather than through expo-font, whose injected @font-face has
 // no font-weight range: browsers then clamp the variable font to 400 and
 // synthesise bold, which Safari renders badly. Twemoji's faces cover every
 // weight and italic too, so emoji are never synthesised bold or slanted; it
 // blocks rather than swaps, so the platform's emoji never show first.
-// TwemojiImage is the same font for `EmojiImage`, with no unicode-range: as
-// the first font covering a space, its metrics place the line's baseline.
 const FONT_STYLE = `
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans.ttf);font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans-Italic.ttf);font-weight:100 900;font-style:italic;font-display:swap}
-@font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:normal;font-display:block;unicode-range:${TWEMOJI_UNICODE_RANGE}}
-@font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:italic;font-display:block;unicode-range:${TWEMOJI_UNICODE_RANGE}}
-@font-face{font-family:TwemojiImage;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:normal;font-display:block}
-@font-face{font-family:TwemojiImage;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:italic;font-display:block}
+@font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:normal;font-display:block}
+@font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:italic;font-display:block}
 `;
 
 export default function Root({ children }: PropsWithChildren) {
@@ -60,6 +52,13 @@ export default function Root({ children }: PropsWithChildren) {
           href="/fonts/NotoSans.ttf"
           as="font"
           type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href={`/fonts/${TWEMOJI_WEB_FONT_FILE}`}
+          as="font"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
         <style

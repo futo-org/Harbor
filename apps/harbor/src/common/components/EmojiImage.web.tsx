@@ -19,7 +19,7 @@ export const EmojiImage = memo(function EmojiImage({ sequence, size }: Props) {
         height: size,
         verticalAlign: 'middle',
         whiteSpace: 'nowrap',
-        fontFamily: 'TwemojiImage',
+        fontFamily: 'Twemoji',
         fontSize: size,
         // The font's ascent and descent are its 1em glyph, so the glyph
         // fills the line.
