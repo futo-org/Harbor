@@ -8,7 +8,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Overview',
       collapsed: false,
-      items: ['intro', 'faq', 'servers', 'support'],
+      items: ['intro', 'faq', 'servers', 'roadmap', 'support'],
     },
     {
       type: 'category',
