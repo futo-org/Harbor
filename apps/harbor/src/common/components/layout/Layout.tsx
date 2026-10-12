@@ -98,8 +98,6 @@ type PrimaryColumnProps = {
 };
 function PrimaryColumn({ children }: PrimaryColumnProps) {
   const { theme } = useTheme();
-  const { height: windowHeight } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
 
   return (
     <View
@@ -114,13 +112,6 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
           borderRightColor: theme.palette.neutral_25,
           borderRightWidth: 1,
         },
-        // Web page-scroll: let the column grow with content so the
-        // borders span the full scrollable height. `self_start` opts
-        // out of the row's cross-axis stretch; `minHeight` keeps
-        // borders painting to the viewport bottom on short-content
-        // pages.
-        isWeb && Atoms.self_start,
-        isWeb && { minHeight: windowHeight },
       ]}
     >
       {children}
@@ -392,7 +383,7 @@ export const LeftSidebar = memo(function LeftSidebar({
             {
               position: 'sticky',
               top: 0,
-              height: '100vh',
+              height: '100dvh',
             },
           ]}
         >
@@ -433,7 +424,7 @@ export const RightSidebar = memo(function RightSidebar() {
       <View
         style={
           isWeb
-            ? { position: 'sticky', top: 0, height: '100vh', width }
+            ? { position: 'sticky', top: 0, height: '100dvh', width }
             : undefined
         }
       >

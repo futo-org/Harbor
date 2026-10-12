@@ -7,7 +7,7 @@ import { APP_NAME } from '@/src/common/constants';
 import type { PropsWithChildren } from 'react';
 
 const ROOT_STYLE =
-  'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100vh}' +
+  'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100dvh}' +
   'html>body[data-scroll-locked]{overflow:visible!important;margin-right:0!important}' +
   '@media(hover:hover){.underlineOnHover:hover{text-decoration:underline}}' +
   '.twemojiSpriteText{color:transparent}' +
@@ -31,7 +31,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1"
+          content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
         />
         <title>{APP_NAME}</title>
         <link rel="icon" href="/favicon.ico" sizes="any" />
