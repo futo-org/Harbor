@@ -132,6 +132,7 @@ const config: Config = {
             { label: 'Introduction', to: '/docs' },
             { label: 'Host a Server', to: '/docs/guides/running-a-server' },
             { label: 'Protocol', to: '/docs/protocol/overview' },
+            { label: 'Roadmap', to: '/docs/roadmap' },
           ],
         },
         {

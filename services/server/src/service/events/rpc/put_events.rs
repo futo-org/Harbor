@@ -397,10 +397,6 @@ fn validate_content(
             // * reply.root & reply.parent in same thread?
             // * quote event exists.
         }
-        ContentBody::Repost(_) => {
-            check_collection(collection, collections::FEED);
-            // TODO: validate.
-        }
         ContentBody::Delete(delete) => {
             if let Some(delete_key) = delete.event_key.as_ref() {
                 check_collection(collection, delete_key.collection);
@@ -439,23 +435,38 @@ fn validate_content(
         }
         ContentBody::AttributedToReaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * at most 1 reaction per URL (attributed item) per user.
         }
         ContentBody::ProfileUpdate(_) => {
             check_collection(collection, collections::PROFILE);
-            // TODO: validate.
         }
         ContentBody::Identity(_) => {
             check_collection(collection, collections::IDENTITY);
             // TODO: validate.
         }
+        ContentBody::Repost(_) => {
+            check_collection(collection, collections::FEED);
+
+            // TODO: needs db for validation of:
+            // * at most 1 reaction per post per user.
+            // * in db only reposting of posts
+        }
         ContentBody::Report(_) => {
             check_collection(collection, collections::REPORTS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * limit the amount of reports per post?
+            // * limit to posts and reposts only?
         }
         ContentBody::Labels(_) => {
             check_collection(collection, collections::LABELS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * limit the amount of labels per key per user in total (accross
+            //   multiple requests)
+            // * limit to posts only?
         }
         ContentBody::VerificationClaim(_) => {
             check_collection(collection, collections::VERIFICATIONS);

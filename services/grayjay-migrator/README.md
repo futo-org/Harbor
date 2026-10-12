@@ -66,7 +66,7 @@ start).
 
 | Variable | Used by | Description |
 | --- | --- | --- |
-| `DATABASE_URL` | both | Migrator's own Postgres (holds the `migrated_identity` table). |
+| `HARBOR_DATABASE_URL` | both | Migrator's own Postgres (holds the `migrated_identity` table). |
 | `HARBOR_GRAYJAY_MIGRATOR_DATABASE_SCHEMA` | both | Schema for this service's tables (default `grayjay_migrator`). |
 | `HARBOR_GRAYJAY_MIGRATOR_LEGACY_DATABASE_URL` | tool | Read-only URL for the legacy (v1) server's Postgres. |
 | `HARBOR_GRAYJAY_MIGRATOR_SIGNING_KEY` | tool | Hex 32-byte ed25519 master seed. **High-value secret.** |

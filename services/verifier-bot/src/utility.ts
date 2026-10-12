@@ -9,11 +9,9 @@ const binaryParser = bodyParser.raw({ type: 'application/octet-stream' });
 const jsonParser = bodyParser.json();
 
 export const OAUTH_CALLBACK_DOMAIN =
-  process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN;
+  process.env.HARBOR_VERIFIER_BOT_OAUTH_CALLBACK_DOMAIN;
 export const PUPPETEER_EXECUTABLE_PATH =
-  process.env.HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH;
+  process.env.HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH;
 
 export function createCookieEnabledAxios(): AxiosInstance {
   const cookieJar = new CookieJar(new MemoryCookieStore());

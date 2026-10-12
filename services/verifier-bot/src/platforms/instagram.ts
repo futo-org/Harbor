@@ -13,12 +13,9 @@ type InstagramTokenRequest = {
   code: string;
 };
 
-const INSTAGRAM_CLIENT_ID =
-  process.env.HARBOR_VERIFIER_BOT_INSTAGRAM_CLIENT_ID ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_ID;
+const INSTAGRAM_CLIENT_ID = process.env.HARBOR_VERIFIER_BOT_INSTAGRAM_CLIENT_ID;
 const INSTAGRAM_CLIENT_SECRET =
-  process.env.HARBOR_VERIFIER_BOT_INSTAGRAM_CLIENT_SECRET ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_INSTAGRAM_CLIENT_SECRET;
+  process.env.HARBOR_VERIFIER_BOT_INSTAGRAM_CLIENT_SECRET;
 
 class InstagramOAuthVerifier extends OAuthVerifier<InstagramTokenRequest> {
   constructor() {

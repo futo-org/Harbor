@@ -29,12 +29,8 @@ export type XOAuthURLResult = {
   secret: string;
 };
 
-const X_API_KEY =
-  process.env.HARBOR_VERIFIER_BOT_X_API_KEY ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_X_API_KEY;
-const X_API_SECRET =
-  process.env.HARBOR_VERIFIER_BOT_X_API_SECRET ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_X_API_SECRET;
+const X_API_KEY = process.env.HARBOR_VERIFIER_BOT_X_API_KEY;
+const X_API_SECRET = process.env.HARBOR_VERIFIER_BOT_X_API_SECRET;
 
 class XOAuthVerifier extends OAuthVerifier<XOAuthCallbackData> {
   constructor() {

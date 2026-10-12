@@ -20,7 +20,7 @@ This starts PostgreSQL on port 5432 with user `postgres` and password `testing`.
 
 ```sh
 cd migration
-DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
+HARBOR_DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 ```
 
 ### 3. Setup .env file
@@ -40,8 +40,9 @@ and plain HTTP routes on the same port.
 
 ## Operator Commands
 
-The server binary also carries maintenance commands that run against `DATABASE_URL`
-and exit. Each prints what it would change; add `--yes` to apply it.
+The server binary also carries maintenance commands that run against
+`HARBOR_DATABASE_URL` and exit. Each prints what it would change; add `--yes` to
+apply it.
 
 ```sh
 # Delete an identity, or every identity a key has signed events for,
@@ -55,7 +56,7 @@ cargo run -p server -- prune-content --yes
 ```
 
 Blob bodies nothing references any more are removed from the object store when the
-`CONTENT_BLOB_OS_*` variables are set, and left in place otherwise. A running server
+`HARBOR_CONTENT_BLOB_OS_*` variables are set, and left in place otherwise. A running server
 caches identity heads in memory, so restart it after deleting events.
 
 ## Environment Variables

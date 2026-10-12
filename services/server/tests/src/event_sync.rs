@@ -2000,14 +2000,66 @@ async fn validation_invalid_content_content_body_reaction_empty_emoji() {
 }
 
 #[tokio::test]
-async fn validation_invalid_content_content_body_reaction_long_emoji() {
+async fn validation_content_content_body_reaction_flags_ok() {
     let mut client = TestClient::new().await;
     client.post_text("Test", 0);
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Reaction(Reaction {
             event_key: Some(event_key),
-            emoji: Some("👍👍".to_owned()),
+            emoji: Some("🇳🇱".to_owned()),
+            positive: true,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    client.submit_events().await; // Shouldn't panic.
+}
+
+#[tokio::test]
+async fn validation_content_content_body_reaction_long_emoji_ok() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Reaction(Reaction {
+            event_key: Some(event_key),
+            // Longest emoji according to
+            // <https://machs.space/posts/whats-the-max-valid-length-of-an-emoji/>.
+            emoji: Some("👨🏻‍❤️‍💋‍👨🏻".to_owned()),
+            positive: true,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    client.submit_events().await; // Shouldn't panic.
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_reaction_emoji_too_long() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Reaction(Reaction {
+            event_key: Some(event_key),
+            emoji: Some("👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍".to_owned()),
             positive: true,
         })),
     };
@@ -2028,7 +2080,1075 @@ async fn validation_invalid_content_content_body_reaction_long_emoji() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body reaction emoji can't be longer than 1 character",
+                "content content body reaction emoji is too long (80), maximum is 40",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_collection()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(attributed_to::To::Link(Link {
+                        title: "Title".to_owned(),
+                        description: Some("Description".to_owned()),
+                        image: Some("Image".to_owned()),
+                        url: "https://example.com".to_owned(),
+                        ..Default::default()
+                    })),
+                }),
+                emoji: Some("👍".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '4'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_no_attributed_to()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: None,
+                emoji: Some("👍".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body attributed to reaction attributed to is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_no_attributed_to_to()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo { to: None }),
+                emoji: Some("👍".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body attributed to reaction attributed to to is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_empty_emoji()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(attributed_to::To::Link(Link {
+                        title: "Title".to_owned(),
+                        description: Some("Description".to_owned()),
+                        image: Some("Image".to_owned()),
+                        url: "https://example.com".to_owned(),
+                        ..Default::default()
+                    })),
+                }),
+                emoji: Some("".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body attributed to reaction emoji can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_attributed_to_reaction_emoji_flags_ok()
+{
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(attributed_to::To::Link(Link {
+                        title: "Title".to_owned(),
+                        description: Some("Description".to_owned()),
+                        image: Some("Image".to_owned()),
+                        url: "https://example.com".to_owned(),
+                        ..Default::default()
+                    })),
+                }),
+                emoji: Some("🇳🇱".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    client.submit_events().await; // Shouldn't panic.
+}
+
+#[tokio::test]
+async fn validation_content_content_body_attributed_to_reaction_emoji_long_ok()
+{
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(attributed_to::To::Link(Link {
+                        title: "Title".to_owned(),
+                        description: Some("Description".to_owned()),
+                        image: Some("Image".to_owned()),
+                        url: "https://example.com".to_owned(),
+                        ..Default::default()
+                    })),
+                }),
+                // Longest emoji according to
+                // <https://machs.space/posts/whats-the-max-valid-length-of-an-emoji/>.
+                emoji: Some("👨🏻‍❤️‍💋‍👨🏻".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    client.submit_events().await; // Shouldn't panic.
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_emoji_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(attributed_to::To::Link(Link {
+                        title: "Title".to_owned(),
+                        description: Some("Description".to_owned()),
+                        image: Some("Image".to_owned()),
+                        url: "https://example.com".to_owned(),
+                        ..Default::default()
+                    })),
+                }),
+                emoji: Some(
+                    "👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍".to_owned(),
+                ),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body attributed to reaction emoji is too long (80), maximum is 40",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_collection() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '3'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_name_empty() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: Some("".to_owned()),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update name can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_name_too_long()
+{
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: Some("n".repeat(51)),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update name is too long (51), maximum is 50",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_avatar_too_large()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: Some(ImageSet {
+                images: vec![Image {
+                    blob: Some(Blob {
+                        digest: None,
+                        mime_type: "image/png".to_owned(),
+                        size: (100 * 1024 * 1024) + 1,
+                    }),
+                    width: 100,
+                    height: 100,
+                }],
+            }),
+            banner: None,
+            description: None,
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[
+            ExpectError {
+                bundle_index: 1,
+                kind: ExpectErrorKind::MsgContains(
+                    "content content body profile update avatar images 0-th blob digest is missing",
+                ),
+            },
+            ExpectError {
+                bundle_index: 1,
+                kind: ExpectErrorKind::MsgContains(
+                    "content content body profile update avatar images 0-th blob size is too large (104857601), maximum is 104857600",
+                ),
+            },
+        ],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_banner_too_large()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: Some(ImageSet {
+                images: vec![Image {
+                    blob: Some(Blob {
+                        digest: None,
+                        mime_type: "image/png".to_owned(),
+                        size: (100 * 1024 * 1024) + 1,
+                    }),
+                    width: 100,
+                    height: 100,
+                }],
+            }),
+            description: None,
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[
+            ExpectError {
+                bundle_index: 1,
+                kind: ExpectErrorKind::MsgContains(
+                    "content content body profile update banner images 0-th blob digest is missing",
+                ),
+            },
+            ExpectError {
+                bundle_index: 1,
+                kind: ExpectErrorKind::MsgContains(
+                    "content content body profile update banner images 0-th blob size is too large (104857601), maximum is 104857600",
+                ),
+            },
+        ],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_description_empty()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: None,
+            description: Some("".to_owned()),
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update description can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_description_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: None,
+            description: Some("a".repeat(161)),
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update description is too long (161), maximum is 160",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_alias_empty() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: Some("".to_owned()),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update alias can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_alias_too_long()
+{
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: Some("b".repeat(101)),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update alias is too long (101), maximum is 100",
+            ),
+        }],
+    );
+}
+
+// TODO: tests for identity events.
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_repost_collection() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Repost(Repost {
+            post: Some(event_key),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '2'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_repost_post_missing() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Repost(Repost { post: None })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body repost post is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+#[ignore = "TODO: implement this validation"]
+async fn validation_content_content_body_repost_post_not_a_post() {
+    let mut client = TestClient::new().await;
+    let event_key = client.get_last_event_key(); // Identity event.
+    let content = Content {
+        content_body: Some(ContentBody::Repost(Repost {
+            post: Some(event_key),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body repost post is not a post",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_report_collection() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Report(Report {
+            event_key: Some(event_key),
+            category: ReportCategory::Spam as i32,
+            additional_info: "Test".to_owned(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '6'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_report_event_key_missing() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Report(Report {
+            event_key: None,
+            category: ReportCategory::Spam as i32,
+            additional_info: "Test".to_owned(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_REPORTS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body report event key is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_report_invalid_category() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Report(Report {
+            event_key: Some(event_key),
+            category: i32::MAX,
+            additional_info: "Test".to_owned(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_REPORTS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body report category is invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_report_additional_info_too_long() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Report(Report {
+            event_key: Some(event_key),
+            category: ReportCategory::Spam as i32,
+            additional_info: "a".repeat(501),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_REPORTS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body report additional info is too long (501), maximum is 500",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_labels_collection() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: vec!["Test".to_owned()],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '7'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_labels_event_key_missing() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: None,
+            label_values: vec!["Test".to_owned()],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels event key is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+#[ignore = "TODO: implement this validation"]
+async fn validation_content_content_body_labels_event_key_not_a_post() {
+    let mut client = TestClient::new().await;
+    let event_key = client.get_last_event_key(); // Identity.
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: vec!["Test".to_owned()],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels event key is not a post",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_labels_labels_values_empty() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: Vec::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels label values can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_labels_labels_values_too_long() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: {
+                let mut l = Vec::new();
+                l.resize(11, "Test".to_owned());
+                l
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels label values is too long (11), maximum is 10",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_labels_labels_values_value_empty() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: vec!["".to_owned()],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels label values 0-th can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_labels_labels_values_value_too_long() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: vec!["l".repeat(201)],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels label values 0-th is too long (201), maximum is 200",
             ),
         }],
     );
