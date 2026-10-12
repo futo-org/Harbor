@@ -54,11 +54,18 @@ const picker = JSON.parse(
   readFileSync(join(app, 'src', 'features', 'reaction', 'emojis.json'), 'utf8'),
 ).emojis.filter((e) => e.category !== 'Component');
 const sheetCodes = [];
+const sheetFiles = [];
 const sheetCategories = [];
 for (const entry of picker) {
   const code = twemojiCode(entry.emoji);
-  if (existsSync(join(pngs, `${code}.png`))) {
+  // Twemoji keeps U+FE0F in its ZWJ sequences' file names, except for
+  // 👁️‍🗨️ (1f441-200d-1f5e8).
+  const file = [`${code}.png`, `${code.replaceAll('-fe0f', '')}.png`].find(
+    (name) => existsSync(join(pngs, name)),
+  );
+  if (file) {
     sheetCodes.push(code);
+    sheetFiles.push(file);
     sheetCategories.push(entry.category);
   } else console.warn(`no twemoji for ${entry.emoji} (${code})`);
 }
@@ -97,18 +104,18 @@ ${sheetCodes.map((c, i) => `  '${c}': ${i},`).join('\n')}
 rmSync(pagesDir, { recursive: true, force: true });
 mkdirSync(pagesDir, { recursive: true });
 for (let page = 0; page < pageStarts.length; page++) {
-  const pageCodes = sheetCodes.slice(pageStarts[page], pageStarts[page + 1]);
+  const pageFiles = sheetFiles.slice(pageStarts[page], pageStarts[page + 1]);
   const pagePng = await sharp({
     create: {
       width: CELL * PAGE_COLUMNS,
-      height: CELL * Math.ceil(pageCodes.length / PAGE_COLUMNS),
+      height: CELL * Math.ceil(pageFiles.length / PAGE_COLUMNS),
       channels: 4,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     },
   })
     .composite(
-      pageCodes.map((code, i) => ({
-        input: join(pngs, `${code}.png`),
+      pageFiles.map((file, i) => ({
+        input: join(pngs, file),
         left: (i % PAGE_COLUMNS) * CELL,
         top: Math.floor(i / PAGE_COLUMNS) * CELL,
       })),
