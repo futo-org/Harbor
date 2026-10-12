@@ -2034,6 +2034,210 @@ async fn validation_invalid_content_content_body_reaction_long_emoji() {
     );
 }
 
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_collection()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(attributed_to::To::Link(Link {
+                        title: "Title".to_owned(),
+                        description: Some("Description".to_owned()),
+                        image: Some("Image".to_owned()),
+                        url: "https://example.com".to_owned(),
+                        ..Default::default()
+                    })),
+                }),
+                emoji: Some("👍".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '4'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_no_attributed_to()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: None,
+                emoji: Some("👍".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body attributed to reaction attributed to is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_no_attributed_to_to()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo { to: None }),
+                emoji: Some("👍".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body attributed to reaction attributed to to is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_empty_emoji()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(attributed_to::To::Link(Link {
+                        title: "Title".to_owned(),
+                        description: Some("Description".to_owned()),
+                        image: Some("Image".to_owned()),
+                        url: "https://example.com".to_owned(),
+                        ..Default::default()
+                    })),
+                }),
+                emoji: Some("".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body attributed to reaction emoji can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_long_emoji()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(attributed_to::To::Link(Link {
+                        title: "Title".to_owned(),
+                        description: Some("Description".to_owned()),
+                        image: Some("Image".to_owned()),
+                        url: "https://example.com".to_owned(),
+                        ..Default::default()
+                    })),
+                }),
+                emoji: Some("👍👍".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body attributed to reaction emoji can't be longer than 1 character",
+            ),
+        }],
+    );
+}
+
 // TODO: tests for the content body variants.
 
 #[tokio::test]
