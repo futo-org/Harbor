@@ -3,30 +3,39 @@
 # dependencies = [
 #   "nanoemoji",
 #   "brotli",
+#   # nanoemoji's CBDT build rasterizes with it.
+#   "resvg-cli",
 #   # nanoemoji needs these but doesn't declare them.
 #   "ninja",
 #   "typing_extensions",
 # ]
 # ///
 #
-# Writes `public/fonts/Twemoji.woff2`, the Twemoji SVGs as a COLRv0 color
-# font, which web text draws emoji with (see `app/+html.tsx`).
+# Writes the Twemoji SVGs as color fonts, which text draws emoji with:
+# - `public/fonts/Twemoji.woff2`: COLRv0, for web (see `app/+html.tsx`).
+# - `src/common/assets/fonts/Twemoji.ttf`: the same, for iOS and Android 10+.
+# - `src/common/assets/fonts/TwemojiCbdt.ttf`: bitmaps (CBDT), for Android 7-9,
+#   which draw COLR glyphs blank.
 #
 #   curl -L -o twemoji.tar.gz https://github.com/jdecked/twemoji/archive/refs/tags/v17.0.3.tar.gz
 #   mkdir twemoji && tar -xzf twemoji.tar.gz -C twemoji --strip-components=1 '*/assets/svg/*'
 #   pnpm -C apps/harbor generate:twemoji-font "$PWD/twemoji"
 #
-# Needs uv (e.g. `brew install uv`). A build takes about 12 minutes.
+# Needs uv (e.g. `brew install uv`). A build takes about 20 minutes.
+import os
 import re
 import subprocess
 import sys
 import tempfile
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
 from fontTools.otlLib.builder import LOOKUP_FLAG_IGNORE_MARKS
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
+from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
 
 # The Twemoji README's `img.emoji` CSS, in font units: a 1em square, margins
 # of 0.1em before and 0.05em after, 0.1em below the baseline.
@@ -35,34 +44,65 @@ SPACE_BEFORE = 100
 SPACE_AFTER = 50
 BASELINE_SHIFT = 100
 
-output_file = Path(__file__).resolve().parent.parent / 'public' / 'fonts' / 'Twemoji.woff2'
+# The Twemoji release's commit time (2026-06-01T22:16:04Z), as the fonts'
+# creation and modification time, so rebuilding gives identical files.
+TWEMOJI_RELEASE_TIME = 1780352164
+
+# The Unicode version of the Twemoji release.
+EMOJI_VARIATION_SEQUENCES_URL = 'https://www.unicode.org/Public/17.0.0/ucd/emoji/emoji-variation-sequences.txt'
+
+app_dir = Path(__file__).resolve().parent.parent
+web_font_file = app_dir / 'public' / 'fonts' / 'Twemoji.woff2'
+native_font_file = app_dir / 'src' / 'common' / 'assets' / 'fonts' / 'Twemoji.ttf'
+native_bitmap_font_file = app_dir / 'src' / 'common' / 'assets' / 'fonts' / 'TwemojiCbdt.ttf'
 
 
 def main():
+    # Read by fontTools here and in nanoemoji's build.
+    os.environ['SOURCE_DATE_EPOCH'] = str(TWEMOJI_RELEASE_TIME)
     svg_dir = Path(sys.argv[1]).resolve() / 'assets' / 'svg'
     with tempfile.TemporaryDirectory() as build_dir:
-        font = TTFont(build_twemoji_font(svg_dir, Path(build_dir)))
-        ignore_variation_selector(font)
-        font.flavor = 'woff2'
-        font.save(output_file)
+        build_dir = Path(build_dir)
+        stage_dir = stage_svgs(svg_dir, build_dir)
+        with ThreadPoolExecutor() as executor:
+            colr_file, cbdt_file = executor.map(
+                lambda color_format: build_twemoji_font(stage_dir, build_dir / color_format, color_format),
+                ['glyf_colr_0', 'cbdt'],
+            )
+
+        web_font = TTFont(colr_file)
+        ignore_variation_selector(web_font)
+        web_font.flavor = 'woff2'
+        web_font.save(web_font_file)
+
+        emoji_style_bases = list_emoji_style_bases()
+        for font_file, output_file in [(colr_file, native_font_file), (cbdt_file, native_bitmap_font_file)]:
+            font = TTFont(font_file)
+            ignore_variation_selector(font)
+            declare_emoji_style_variants(font, emoji_style_bases)
+            font.save(output_file)
 
 
-def build_twemoji_font(svg_dir, build_dir):
+def stage_svgs(svg_dir, build_dir):
     # Only some file names keep VS16 (`fe0f`); without it, every sequence is
     # keyed the same way (see `ignore_variation_selector`).
     stage_dir = build_dir / 'svg'
     stage_dir.mkdir()
     for svg in svg_dir.glob('*.svg'):
         (stage_dir / svg.name.replace('-fe0f', '')).write_text(make_view_box_square(svg.read_text()))
+    return stage_dir
 
+
+def build_twemoji_font(stage_dir, build_dir, color_format):
     # nanoemoji scales each viewBox to fill ascender to descender, centered in
-    # the advance; the transform moves it off center.
+    # the advance; the transform moves it off center. The CBDT build ignores
+    # the transform, so its glyphs stay centered (0.075em on each side).
     subprocess.run(
         [
             sys.executable,
             '-m',
             'nanoemoji.nanoemoji',
-            '--color_format=glyf_colr_0',
+            f'--color_format={color_format}',
             '--family=Twemoji',
             f'--upem={UNITS_PER_EM}',
             f'--ascender={UNITS_PER_EM - BASELINE_SHIFT}',
@@ -103,6 +143,29 @@ def ignore_variation_selector(font):
     addOpenTypeFeaturesFromString(font, 'table GDEF { GlyphClassDef , , [uniFE0F], ; } GDEF;', tables={'GDEF'})
     for lookup in font['GSUB'].table.LookupList.Lookup:
         lookup.LookupFlag |= LOOKUP_FLAG_IGNORE_MARKS
+
+
+# Android picks a font for an emoji with VS16 (❤️, 1️⃣, 🏳️‍🌈) only if the
+# font declares that variant, otherwise the system emoji font draws it. A cmap
+# 14 table declares it for every base Unicode lists. Web must not get it:
+# WebKit then draws over a thousand VS16 sequences with Apple Color Emoji.
+def declare_emoji_style_variants(font, emoji_style_bases):
+    table = CmapSubtable.newSubtable(14)
+    table.platformID = 0
+    table.platEncID = 5
+    table.language = 0xFF
+    table.cmap = {}
+    # Default variants: drawn with the glyph the base character maps to.
+    table.uvsDict = {0xFE0F: [(code_point, None) for code_point in emoji_style_bases]}
+    font['cmap'].tables.append(table)
+
+
+def list_emoji_style_bases():
+    with urllib.request.urlopen(EMOJI_VARIATION_SEQUENCES_URL) as response:
+        lines = response.read().decode().splitlines()
+    # e.g. `2764 FE0F  ; emoji style; # (1.1) HEAVY BLACK HEART`
+    sequences = [line.split(';')[0].split() for line in lines if line and not line.startswith('#')]
+    return sorted(int(base, 16) for base, selector in sequences if selector == 'FE0F')
 
 
 main()

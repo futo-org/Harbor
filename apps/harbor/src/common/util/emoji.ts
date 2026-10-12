@@ -1,5 +1,6 @@
-// Finds emoji in text for `components/EmojiImage`. A scanner, not a regex:
-// JavaScriptCore mismatches mixed BMP/astral classes under the `u` flag.
+// Finds emoji in text, which native `Text` draws in the Twemoji font. A
+// scanner, not a regex: JavaScriptCore mismatches mixed BMP/astral classes
+// under the `u` flag.
 
 type Range = number | readonly [number, number];
 
