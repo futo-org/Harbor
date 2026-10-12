@@ -2385,13 +2385,13 @@ async fn validation_invalid_content_content_body_profile_update_avatar_too_large
             ExpectError {
                 bundle_index: 1,
                 kind: ExpectErrorKind::MsgContains(
-                    "content content body profile update avatar images 0-th is invalid: blob digest is missing",
+                    "content content body profile update avatar images 0-th blob digest is missing",
                 ),
             },
             ExpectError {
                 bundle_index: 1,
                 kind: ExpectErrorKind::MsgContains(
-                    "content content body profile update avatar images 0-th is invalid: blob size is too large (104857601), maximum is 104857600",
+                    "content content body profile update avatar images 0-th blob size is too large (104857601), maximum is 104857600",
                 ),
             },
         ],
@@ -2439,13 +2439,13 @@ async fn validation_invalid_content_content_body_profile_update_banner_too_large
             ExpectError {
                 bundle_index: 1,
                 kind: ExpectErrorKind::MsgContains(
-                    "content content body profile update banner images 0-th is invalid: blob digest is missing",
+                    "content content body profile update banner images 0-th blob digest is missing",
                 ),
             },
             ExpectError {
                 bundle_index: 1,
                 kind: ExpectErrorKind::MsgContains(
-                    "content content body profile update banner images 0-th is invalid: blob size is too large (104857601), maximum is 104857600",
+                    "content content body profile update banner images 0-th blob size is too large (104857601), maximum is 104857600",
                 ),
             },
         ],
