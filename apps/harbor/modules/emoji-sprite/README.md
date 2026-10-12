@@ -7,9 +7,9 @@ Android-only native view that draws an emoji from a shared sprite page.
 Rendering each twemoji cell as its own image is very slow (because each image
 needs to be decoded separately), especially on Android (especially on weaker
 devices). iOS doesn't seem to have this issue (or at least not to the same
-extent). Web already relies on a single sprite image. Android uses multiple
-sprites to use the memory more efficiently. Only meant to be used in the picker,
-elsewhere in the app emojis are still rendered independently.
+extent). Android uses multiple sprites to use the memory more efficiently. Only
+meant to be used in the picker, elsewhere in the app emojis are drawn with the
+Twemoji font.
 
 ## How it works
 
