@@ -48,6 +48,9 @@ SPACE_BEFORE = 100
 SPACE_AFTER = 50
 BASELINE_SHIFT = 100
 
+# The CBDT font's bitmap size in pixels, which larger emoji scale up from.
+CBDT_BITMAP_SIZE = 96
+
 # The Twemoji release's commit time (2026-06-01T22:16:04Z), as the fonts'
 # creation and modification time, so rebuilding gives identical files.
 TWEMOJI_RELEASE_TIME = 1780352164
@@ -141,6 +144,7 @@ def build_twemoji_font(stage_dir, build_dir, color_format):
             f'--width={SPACE_BEFORE + UNITS_PER_EM + SPACE_AFTER}',
             f'--transform=matrix(1 0 0 1 {(SPACE_BEFORE - SPACE_AFTER) / 2} 0)',
             f'--build_dir={build_dir}',
+            *([f'--bitmap_resolution={CBDT_BITMAP_SIZE}'] if color_format == 'cbdt' else []),
             '--output_file=Twemoji.ttf',
             *sorted(str(svg) for svg in stage_dir.iterdir()),
         ],
