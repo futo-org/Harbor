@@ -1,4 +1,4 @@
-import { Platform } from "react-native"
+import { Platform } from 'react-native';
 
 // Embedded by the expo-font plugin in `app.config.ts`. Android draws COLR
 // glyphs blank before 10 (API 29), so older versions get the bitmap (CBDT)
