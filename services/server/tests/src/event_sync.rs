@@ -2238,6 +2238,363 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_long_emo
     );
 }
 
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_collection() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '3'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_name_empty() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: Some("".to_owned()),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update name can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_name_too_long()
+{
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: Some("n".repeat(51)),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update name is too long (51), maximum is 50",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_avatar_too_large()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: Some(ImageSet {
+                images: vec![Image {
+                    blob: Some(Blob {
+                        digest: None,
+                        mime_type: "image/png".to_owned(),
+                        size: (100 * 1024 * 1024) + 1,
+                    }),
+                    width: 100,
+                    height: 100,
+                }],
+            }),
+            banner: None,
+            description: None,
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[
+            ExpectError {
+                bundle_index: 1,
+                kind: ExpectErrorKind::MsgContains(
+                    "content content body profile update avatar images 0-th is invalid: blob digest is missing",
+                ),
+            },
+            ExpectError {
+                bundle_index: 1,
+                kind: ExpectErrorKind::MsgContains(
+                    "content content body profile update avatar images 0-th is invalid: blob size is too large (104857601), maximum is 104857600",
+                ),
+            },
+        ],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_banner_too_large()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: Some(ImageSet {
+                images: vec![Image {
+                    blob: Some(Blob {
+                        digest: None,
+                        mime_type: "image/png".to_owned(),
+                        size: (100 * 1024 * 1024) + 1,
+                    }),
+                    width: 100,
+                    height: 100,
+                }],
+            }),
+            description: None,
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[
+            ExpectError {
+                bundle_index: 1,
+                kind: ExpectErrorKind::MsgContains(
+                    "content content body profile update banner images 0-th is invalid: blob digest is missing",
+                ),
+            },
+            ExpectError {
+                bundle_index: 1,
+                kind: ExpectErrorKind::MsgContains(
+                    "content content body profile update banner images 0-th is invalid: blob size is too large (104857601), maximum is 104857600",
+                ),
+            },
+        ],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_description_empty()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: None,
+            description: Some("".to_owned()),
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update description can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_description_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: None,
+            description: Some("a".repeat(161)),
+            alias: None,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update description is too long (161), maximum is 160",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_alias_empty() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: Some("".to_owned()),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update alias can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_profile_update_alias_too_long()
+{
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
+            name: None,
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: Some("b".repeat(101)),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_PROFILE_UPDATE,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body profile update alias is too long (101), maximum is 100",
+            ),
+        }],
+    );
+}
+
 // TODO: tests for the content body variants.
 
 #[tokio::test]
