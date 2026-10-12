@@ -319,6 +319,7 @@ jobs:
         if: startsWith(github.ref_name, 'v')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPEN_ROUTER_API_TOKEN: ${{ secrets.OPEN_ROUTER_API_TOKEN }}
         run: node .forgejo/scripts/release-notes.mjs release_notes.md
       - name: Publish the APK
         run: |
@@ -339,6 +340,7 @@ jobs:
       - name: Release notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPEN_ROUTER_API_TOKEN: ${{ secrets.OPEN_ROUTER_API_TOKEN }}
         run: node .forgejo/scripts/release-notes.mjs release_notes.md
       - uses: forgejo/upload-artifact@v4
         with:
@@ -352,7 +354,6 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     env:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       HARBOR_CI_TOKEN: ${{ secrets.HARBOR_CI_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -362,8 +363,6 @@ jobs:
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install: 'false'
-      - name: npm auth
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Publish

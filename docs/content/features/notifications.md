@@ -14,6 +14,9 @@ The Notifications tab lists activity on your posts and profile:
 - Verification requests someone sent you, and completed verifications you
   requested
 
+A counter on the Notifications tab shows how many are unread. Opening the
+tab marks them as read.
+
 On Android and iOS, Harbor also sends push notifications. Tapping one takes
 you straight to the post or profile it's about.
 

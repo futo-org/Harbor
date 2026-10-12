@@ -24,7 +24,7 @@ use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::graph::repository::Query as GraphRepository;
-use crate::service::notifications::cached_alias_resolver;
+use crate::service::notifications::{cached_alias_resolver, changes};
 use crate::service::proofs::service::attach_proofs;
 use crate::service::verifications::repository::Query as VerificationsRepository;
 use crate::workers::{MessageHandler, Outcome, WorkerError, run_consumer};
@@ -338,6 +338,16 @@ impl MessageHandler for NotificationWorker {
                     "failed to insert notification"
                 );
                 return Outcome::Retry;
+            }
+        }
+
+        let recipients: HashSet<&str> = notifications
+            .iter()
+            .map(|n| n.to_identity.as_str())
+            .collect();
+        for identity in recipients {
+            if let Err(e) = changes::notify(&self.ctx.db, identity).await {
+                tracing::warn!(worker = Self::NAME, error = %e, "notify failed");
             }
         }
 

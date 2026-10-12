@@ -8,6 +8,7 @@ import {
   PolycentricProvider,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
+import { renderScreenWithSplashHide } from '@/src/common/lib/renderScreenWithSplashHide';
 import { useStripCopiedInlineViewPlaceholders } from '@/src/common/lib/useStripCopiedInlineViewPlaceholders';
 import { APP_NAME } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
@@ -20,7 +21,6 @@ import { Stack } from 'expo-router';
 import { NavigationBar } from 'expo-navigation-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   SafeAreaProvider,
@@ -29,7 +29,8 @@ import {
 import Head from 'expo-router/head';
 
 // Otherwise expo-router hides the splash as soon as navigation mounts, before
-// the providers below have anything to show; RootLayout hides it once ready.
+// the providers below have anything to show; the root stack hides it once a
+// screen is drawn.
 void SplashScreen.preventAutoHideAsync();
 // iOS removes the splash without a fade by default; Android always fades.
 SplashScreen.setOptions({ fade: true });
@@ -64,6 +65,7 @@ function RootStack() {
       <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
       <NavigationBar style={theme.name === 'dark' ? 'light' : 'dark'} />
       <Stack
+        screenLayout={isWeb ? undefined : renderScreenWithSplashHide}
         screenOptions={{
           headerShown: false,
           fullScreenGestureEnabled: !isWeb,
@@ -158,22 +160,7 @@ function RootStack() {
 }
 
 export default function RootLayout() {
-  const [ready, setReady] = useState(false);
-  const onInitialized = useCallback(() => setReady(true), []);
   useStripCopiedInlineViewPlaceholders();
-
-  useEffect(() => {
-    if (!ready) {
-      return;
-    }
-    // Native mounting lags the JS commit; hiding right away fades the splash
-    // into a blank screen. Frame callbacks run after pending mounts.
-    requestAnimationFrame(() => {
-      void SplashScreen.hideAsync().catch(() => {});
-    });
-
-    if (isWeb) hideBootSkeleton();
-  }, [ready]);
 
   return (
     <>
@@ -184,7 +171,9 @@ export default function RootLayout() {
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <ThemeProvider>
             <LinkPreviewsProvider>
-              <PolycentricProvider onInitialized={onInitialized}>
+              <PolycentricProvider
+                onInitialized={isWeb ? hideBootSkeleton : undefined}
+              >
                 <ModerationStatusPrefetch />
                 <TrueSheetProvider>
                   <RootStack />

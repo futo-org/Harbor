@@ -2,7 +2,11 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { createServer } = require('node:http');
 const { createRequestHandler } = require('expo-server/vendor/http');
-const { buildAppleAppSiteAssociation, buildAssetLinks } = require('./appLinks');
+const {
+  buildAppleAppSiteAssociation,
+  buildAssetLinks,
+  buildPolycentricAliases,
+} = require('./appLinks');
 
 const CLIENT_DIR = path.join(__dirname, 'dist', 'client');
 const handler = createRequestHandler({
@@ -65,11 +69,13 @@ const MIME_TYPES = {
   '.wasm': 'application/wasm',
 };
 
-// Verification files for iOS Universal Links and Android App Links, built
-// for the requested host. Other hosts (alt domains, self-hosters) get a 404.
+// Well-known files built for the requested host: verification files for iOS
+// Universal Links and Android App Links, and the polycentric alias document.
+// Other hosts (alt domains, self-hosters) get a 404.
 const APP_LINK_FILE_BUILDERS = {
   '/.well-known/apple-app-site-association': buildAppleAppSiteAssociation,
   '/.well-known/assetlinks.json': buildAssetLinks,
+  '/.well-known/polycentric.json': buildPolycentricAliases,
 };
 
 function serveAppLinkFile(req, res, next) {
@@ -85,6 +91,8 @@ function serveAppLinkFile(req, res, next) {
 
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'public, max-age=3600');
+  // Public documents; alias resolution happens via cross-origin browser fetch.
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.end(JSON.stringify(appLinkFile));
 }
 

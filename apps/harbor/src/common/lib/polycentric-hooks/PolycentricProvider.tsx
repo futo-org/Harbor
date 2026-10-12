@@ -18,6 +18,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
 import { Platform, Text, View } from 'react-native';
 import { Atoms, useTheme } from '../../theme';
 import { registerForPushNotifications } from '../notifications/registerPushToken';
@@ -133,6 +134,11 @@ function DefaultLoadingComponent() {
 }
 
 function DefaultErrorComponent({ error }: { error: Error }) {
+  // The root stack, which hides the splash, never mounts on this path.
+  useEffect(() => {
+    void SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   return (
     <View
       style={{

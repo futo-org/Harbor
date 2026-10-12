@@ -256,6 +256,10 @@ impl TestClient {
         &self.identity
     }
 
+    pub fn public_key(&self) -> PublicKey {
+        public_key_of(&self.key)
+    }
+
     pub fn event_sync_client(
         &mut self,
     ) -> &mut EventSyncServiceClient<tonic::transport::Channel> {
@@ -491,7 +495,10 @@ impl TestClient {
         created_at: u64,
     ) -> Vec<u8> {
         let collection = match &body {
-            ContentBody::Post(_) | ContentBody::Delete(_) => COLLECTION_FEED,
+            ContentBody::Post(_) => COLLECTION_FEED,
+            ContentBody::Delete(delete) => {
+                delete.event_key.as_ref().map_or(0, |k| k.collection)
+            }
             ContentBody::Follow(_) | ContentBody::Block(_) => {
                 COLLECTION_SOCIAL_GRAPH
             }

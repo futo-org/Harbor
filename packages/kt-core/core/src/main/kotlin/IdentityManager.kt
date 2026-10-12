@@ -1,7 +1,9 @@
 package org.futo.polycentric.core
 
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
 import org.futo.polycentric.ffi.ListEventsArgs
@@ -14,6 +16,7 @@ import polycentric.v2.Event
 import polycentric.v2.EventKey
 import polycentric.v2.Identity
 import polycentric.v2.PublicKey
+import polycentric.v2.RevocationBound
 import polycentric.v2.ServerList
 import polycentric.v2.SignedEvent
 import polycentric.v2.VectorClock
@@ -36,6 +39,13 @@ class IdentityState(
      * defaults); an empty list is an intentionally empty list.
      */
     val servers: List<String>?,
+    /** Sequence number bounds that keep pre-revocation events from revoked signers valid. */
+    val revocationBounds: List<RevocationBound> = emptyList(),
+    /**
+     * A key meant for external backups that is authorized to create a new rotation key on
+     * an identity.
+     */
+    val recoveryKey: PublicKey? = null,
 )
 
 class PublishResult(
@@ -75,59 +85,38 @@ class IdentityManager(
     private val mutationMutex = Mutex()
 
     /**
-     * Resolves the current identity state by finding the latest Identity
-     * document on the identity collection for the active key pair.
+     * Resolves the active identity's validated head document from the core
+     * (js-core `resolveIdentity()`). Returns an empty state when there is no
+     * active identity or no valid chain for it is known locally.
      */
-    suspend fun getCurrent(): IdentityState {
-        val activeKey =
-            client.activeIdentityKey
-                ?: return IdentityState(null, emptyList(), emptyList(), null)
-
-        // TODO: Fix this so it doesn't need to go over all events
-        //       (js-core has the same TODO; an (identity, collection)
-        //       index on IEventRepository is the fix for both).
-        var highestSequence = -1L
-        var state = IdentityState(null, emptyList(), emptyList(), null)
-
-        for (signedEvent in client.events.getAll()) {
-            val event = Event.ADAPTER.decode(signedEvent.event_bytes)
-            val key = event.key ?: continue
-            if (key.collection != Collections.IDENTITY) continue
-            if (key.identity != activeKey) continue
-            val digest = event.content_digest ?: continue
-            if (key.sequence <= highestSequence) continue
-
-            val contentBytes = client.contents.get(digest) ?: continue
-            val identity = Content.ADAPTER.decode(contentBytes).identity ?: continue
-
-            highestSequence = key.sequence
-            state =
-                IdentityState(
-                    identityKey = key.identity,
-                    rotationKeys = identity.rotation_keys,
-                    signingKeys = identity.signing_keys,
-                    servers = identity.servers?.urls,
-                )
-        }
-
-        return state
-    }
+    suspend fun getCurrent(): IdentityState =
+        client.activeIdentityKey?.let { resolveIdentity(it) }
+            ?: IdentityState(null, emptyList(), emptyList(), null)
 
     /**
-     * Publishes a new Identity document with the given rotation and
-     * signing keys.
+     * Publishes a new Identity document with the given contents. Every
+     * field is written as given, so a caller updating an existing document
+     * must pass through the fields it is not changing.
      *
      * The identity key is the hex-encoded sha256 of the initial Identity
      * content. For a new identity, pass null and it is computed — the
      * bootstrap event is built by hand (sequence = 1, identitySequence = 1,
      * vectorClock = [1], empty previous signature) because the core cannot
      * resolve an identity document that doesn't exist yet.
+     *
+     * Updates to an existing identity must be signed by one of its rotation
+     * keys. [isLogin] skips that check for specific scenarios: a signing key
+     * republishing the head document, or an identity recovery.
      */
     suspend fun publish(
         identityKey: String?,
         rotationKeys: List<PublicKey>,
         signingKeys: List<PublicKey>,
         servers: List<String>? = null,
+        revocationBounds: List<RevocationBound> = emptyList(),
+        recoveryKey: PublicKey? = null,
+        recoverySignature: ByteString? = null,
+        isLogin: Boolean = false,
     ): PublishResult {
         val keyPair = client.currentKeyPair ?: throw NoActiveKeyPairException()
         val publicKeyProto = keyPair.toPublicKeyProto()
@@ -136,7 +125,10 @@ class IdentityManager(
             Identity(
                 rotation_keys = rotationKeys,
                 signing_keys = signingKeys,
+                revocation_bounds = revocationBounds,
                 servers = servers?.let { ServerList(urls = it) },
+                recovery_key = recoveryKey,
+                recovery_signature = recoverySignature,
             )
         val content = Content(identity = identity)
 
@@ -145,14 +137,21 @@ class IdentityManager(
         if (isBootstrap) {
             if (rotationKeys.size != 1 ||
                 signingKeys.isNotEmpty() ||
+                revocationBounds.isNotEmpty() ||
                 !keysEqual(rotationKeys[0], publicKeyProto)
             ) {
                 throw PolycentricException(
-                    "Initial identity must have exactly one rotation key (the current key) and no signing keys",
+                    "Initial identity must have exactly one rotation key (the current key), no signing keys and no revocation bounds",
                 )
             }
             resolvedIdentityKey = sha256(Identity.ADAPTER.encode(identity)).toHex()
         } else {
+            if (!isLogin) {
+                val oldHead = resolveIdentity(identityKey) ?: throw IdentityNotFoundException(identityKey)
+                if (oldHead.rotationKeys.none { keysEqual(it, publicKeyProto) }) {
+                    throw UnauthorizedKeyException()
+                }
+            }
             resolvedIdentityKey = identityKey
         }
 
@@ -257,45 +256,86 @@ class IdentityManager(
      */
     private fun resolveIdentity(identityKey: String): IdentityState? {
         val bytes = coreCall { client.core.resolveIdentity(identityKey) } ?: return null
-        val identity = Identity.ADAPTER.decode(bytes)
-        return IdentityState(
-            identityKey = identityKey,
-            rotationKeys = identity.rotation_keys,
-            signingKeys = identity.signing_keys,
-            servers = identity.servers?.urls,
-        )
+        return Identity.ADAPTER.decode(bytes).toState(identityKey)
     }
 
     /**
-     * Claims an identity: verifies the current key is authorized on it,
-     * sets it active, pulls the full identity event history, then
-     * re-publishes the same document signed by our own key — proving this
-     * key acknowledged its membership (the only mutation a signing key is
-     * allowed to make).
+     * The state of the Identity document. `recovery_signature` is left out: it only
+     * belongs on the event that performs a recovery.
      */
-    suspend fun claim(identityKey: String): IdentityState {
+    private fun Identity.toState(identityKey: String) =
+        IdentityState(
+            identityKey = identityKey,
+            rotationKeys = rotation_keys,
+            signingKeys = signing_keys,
+            servers = servers?.urls,
+            revocationBounds = revocation_bounds,
+            recoveryKey = recovery_key,
+        )
+
+    /**
+     * Claims an identity after pairing on all servers associated with the
+     * identity, and sets it as the active identity.
+     * On any failure, restores the previous active identity and server list
+     * and rethrows. Returns the adopted identity state.
+     */
+    suspend fun claim(
+        identityKey: String,
+        servers: List<String>? = null,
+    ): IdentityState {
         val keyPair = client.currentKeyPair ?: throw NoActiveKeyPairException()
         val publicKeyProto = keyPair.toPublicKeyProto()
 
-        // Validate authorization via rs-common chain logic before adopting.
-        val state = fetchIdentityState(identityKey)
-        if (!isAuthorized(state, publicKeyProto)) {
-            throw UnauthorizedKeyException()
+        // Store these in case we need to roll back
+        val previousIdentityKey = client.activeIdentityKey
+        val previousServers = client.servers
+
+        try {
+            if (servers != null) {
+                client.adoptServers(servers)
+            }
+
+            // Hydrate the identity's chain from all servers into the core
+            client.listEvents(
+                identity = identityKey,
+                collection = Collections.IDENTITY,
+                limit = IDENTITY_CHAIN_FETCH_SIZE,
+            )
+            val state = resolveIdentity(identityKey)
+            if (state == null || !isAuthorized(state, publicKeyProto)) {
+                throw UnauthorizedKeyException()
+            }
+
+            client.setActiveIdentityKey(identityKey)
+            client.sync(SyncStrategy.PARTIAL_PULL)
+
+            // Re-validate after pulling the full history
+            val pulled = resolveIdentity(identityKey)
+            if (pulled == null || !isAuthorized(pulled, publicKeyProto)) {
+                throw UnauthorizedKeyException()
+            }
+
+            publish(
+                identityKey = identityKey,
+                rotationKeys = pulled.rotationKeys,
+                signingKeys = pulled.signingKeys,
+                servers = pulled.servers,
+                revocationBounds = pulled.revocationBounds,
+                recoveryKey = pulled.recoveryKey,
+                isLogin = true,
+            )
+
+            return pulled
+        } catch (e: Throwable) {
+            // Roll back
+            withContext(NonCancellable) {
+                if (client.activeIdentityKey != previousIdentityKey) {
+                    client.setActiveIdentityKey(previousIdentityKey)
+                }
+                client.adoptServers(previousServers)
+            }
+            throw e
         }
-
-        client.setActiveIdentityKey(identityKey)
-        client.sync(SyncStrategy.PARTIAL_PULL)
-
-        // Re-validate after pulling the full history — authorization could have
-        // been revoked between the check and the pull (js-core #200).
-        val pulled = resolveIdentity(identityKey)
-        if (pulled == null || !isAuthorized(pulled, publicKeyProto)) {
-            throw UnauthorizedKeyException()
-        }
-
-        publish(identityKey, pulled.rotationKeys, pulled.signingKeys, pulled.servers)
-
-        return pulled
     }
 
     /** Whether [state] authorizes [myKey] (present as a rotation or signing key). */
@@ -321,10 +361,12 @@ class IdentityManager(
             val state = getCurrent()
             val identityKey = state.identityKey ?: throw NoActiveIdentityException()
             publish(
-                identityKey,
-                state.rotationKeys,
-                state.signingKeys + publicKey,
-                state.servers,
+                identityKey = identityKey,
+                rotationKeys = state.rotationKeys,
+                signingKeys = state.signingKeys + publicKey,
+                servers = state.servers,
+                revocationBounds = state.revocationBounds,
+                recoveryKey = state.recoveryKey,
             ).signedEvent
         }
 
@@ -337,10 +379,12 @@ class IdentityManager(
                 throw PolycentricException("Rotation key already exists")
             }
             publish(
-                identityKey,
-                state.rotationKeys + publicKey,
-                state.signingKeys,
-                state.servers,
+                identityKey = identityKey,
+                rotationKeys = state.rotationKeys + publicKey,
+                signingKeys = state.signingKeys,
+                servers = state.servers,
+                revocationBounds = state.revocationBounds,
+                recoveryKey = state.recoveryKey,
             ).signedEvent
         }
 
@@ -364,10 +408,12 @@ class IdentityManager(
             coreCall { client.core.getServerInfo(url) }
 
             publish(
-                identityKey,
-                state.rotationKeys,
-                state.signingKeys,
-                servers + url,
+                identityKey = identityKey,
+                rotationKeys = state.rotationKeys,
+                signingKeys = state.signingKeys,
+                servers = servers + url,
+                revocationBounds = state.revocationBounds,
+                recoveryKey = state.recoveryKey,
             ).signedEvent
         }
 
@@ -384,10 +430,12 @@ class IdentityManager(
             }
 
             publish(
-                identityKey,
-                state.rotationKeys,
-                state.signingKeys,
-                servers,
+                identityKey = identityKey,
+                rotationKeys = state.rotationKeys,
+                signingKeys = state.signingKeys,
+                servers = servers,
+                revocationBounds = state.revocationBounds,
+                recoveryKey = state.recoveryKey,
             ).signedEvent
         }
 
