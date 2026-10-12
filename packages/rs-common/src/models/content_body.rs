@@ -3,7 +3,7 @@ use std::fmt;
 use crate::models::protos_v2::content::ContentBody;
 use crate::models::validate::Validate;
 use crate::models::{
-    attributed_to_reaction, block, delete, follow, post, profile_update, reaction,
+    attributed_to_reaction, block, delete, follow, post, profile_update, reaction, repost,
 };
 
 impl Validate for ContentBody {
@@ -35,6 +35,10 @@ impl Validate for ContentBody {
             ContentBody::ProfileUpdate(update) => {
                 update.validate_check(errors, |err| map_err(ValidationError::ProfileUpdate(err)))
             }
+            // TODO: identity.
+            ContentBody::Repost(repost) => {
+                repost.validate_check(errors, |err| map_err(ValidationError::Repost(err)))
+            }
             _ => { /* TODO. */ }
         }
     }
@@ -49,6 +53,7 @@ pub enum ValidationError {
     Reaction(reaction::ValidationError),
     AttributedToReaction(attributed_to_reaction::ValidationError),
     ProfileUpdate(profile_update::ValidationError),
+    Repost(repost::ValidationError),
 }
 
 impl fmt::Display for ValidationError {
@@ -61,6 +66,7 @@ impl fmt::Display for ValidationError {
             ValidationError::Reaction(err) => write!(f, "reaction {err}"),
             ValidationError::AttributedToReaction(err) => write!(f, "attributed to reaction {err}"),
             ValidationError::ProfileUpdate(err) => write!(f, "profile update {err}"),
+            ValidationError::Repost(err) => write!(f, "repost {err}"),
         }
     }
 }

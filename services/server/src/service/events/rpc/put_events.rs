@@ -397,10 +397,6 @@ fn validate_content(
             // * reply.root & reply.parent in same thread?
             // * quote event exists.
         }
-        ContentBody::Repost(_) => {
-            check_collection(collection, collections::FEED);
-            // TODO: validate.
-        }
         ContentBody::Delete(delete) => {
             if let Some(delete_key) = delete.event_key.as_ref() {
                 check_collection(collection, delete_key.collection);
@@ -449,6 +445,13 @@ fn validate_content(
         ContentBody::Identity(_) => {
             check_collection(collection, collections::IDENTITY);
             // TODO: validate.
+        }
+        ContentBody::Repost(_) => {
+            check_collection(collection, collections::FEED);
+
+            // TODO: needs db for validation of:
+            // * at most 1 reaction per post per user.
+            // * in db only reposting of posts
         }
         ContentBody::Report(_) => {
             check_collection(collection, collections::REPORTS);
