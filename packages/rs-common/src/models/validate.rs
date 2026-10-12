@@ -488,7 +488,11 @@ where
         map_err,
         StringConfig {
             min_len: Some(1),
-            max_len: Some(10), // Colouring of emoji results in multiple characters.
+            // According to
+            // <https://machs.space/posts/whats-the-max-valid-length-of-an-emoji/>
+            // the longest emoji is 35 bytes (rendered as a single symbol), so
+            // allow at least that emoji.
+            max_len: Some(40),
             ..Default::default()
         },
     );
