@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::models::attributed_to;
 use crate::models::protos_v2::AttributedToReaction;
-use crate::models::validate::Validate;
+use crate::models::validate::{self, StringError, Validate};
 
 impl Validate for AttributedToReaction {
     type Error = ValidationError;
@@ -24,11 +24,7 @@ impl Validate for AttributedToReaction {
         }
 
         if let Some(emoji) = emoji.as_ref() {
-            if emoji.is_empty() {
-                errors.push(map_err(ValidationError::EmojiEmpty));
-            } else if emoji.chars().count() != 1 {
-                errors.push(map_err(ValidationError::EmojiTooLong));
-            }
+            validate::emoji(emoji, errors, |err| map_err(ValidationError::Emoji(err)));
         }
     }
 }
@@ -37,8 +33,7 @@ impl Validate for AttributedToReaction {
 pub enum ValidationError {
     AttributedTo(attributed_to::ValidationError),
     AttributedToMissing,
-    EmojiEmpty,
-    EmojiTooLong,
+    Emoji(StringError),
 }
 
 impl fmt::Display for ValidationError {
@@ -46,8 +41,7 @@ impl fmt::Display for ValidationError {
         match self {
             ValidationError::AttributedTo(err) => write!(f, "attributed to {err}"),
             ValidationError::AttributedToMissing => write!(f, "attributed to is missing"),
-            ValidationError::EmojiEmpty => write!(f, "emoji can't be empty"),
-            ValidationError::EmojiTooLong => write!(f, "emoji can't be longer than 1 character"),
+            ValidationError::Emoji(err) => write!(f, "emoji {err}"),
         }
     }
 }

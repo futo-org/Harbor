@@ -477,6 +477,23 @@ where
     );
 }
 
+/// Validate an emoji.
+pub(crate) fn emoji<E, F>(emoji: &str, errors: &mut Vec<E>, map_err: F)
+where
+    F: Fn(StringError) -> E,
+{
+    string(
+        emoji,
+        errors,
+        map_err,
+        StringConfig {
+            min_len: Some(1),
+            max_len: Some(10), // Colouring of emoji results in multiple characters.
+            ..Default::default()
+        },
+    );
+}
+
 /// Regex that checks if the string starts with `http://` or `https://`.
 pub(crate) fn url_regex() -> &'static Regex {
     static REGEX: OnceLock<Regex> = OnceLock::new();

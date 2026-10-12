@@ -2000,14 +2000,66 @@ async fn validation_invalid_content_content_body_reaction_empty_emoji() {
 }
 
 #[tokio::test]
-async fn validation_invalid_content_content_body_reaction_long_emoji() {
+async fn validation_content_content_body_reaction_flags_ok() {
     let mut client = TestClient::new().await;
     client.post_text("Test", 0);
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Reaction(Reaction {
             event_key: Some(event_key),
-            emoji: Some("👍👍".to_owned()),
+            emoji: Some("🇳🇱".to_owned()),
+            positive: true,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    client.submit_events().await; // Shouldn't panic.
+}
+
+#[tokio::test]
+async fn validation_content_content_body_reaction_long_emoji_ok() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Reaction(Reaction {
+            event_key: Some(event_key),
+            // Longest emoji according to
+            // <https://machs.space/posts/whats-the-max-valid-length-of-an-emoji/>.
+            emoji: Some("👨🏻‍❤️‍💋‍👨🏻".to_owned()),
+            positive: true,
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    client.submit_events().await; // Shouldn't panic.
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_reaction_emoji_too_long() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Reaction(Reaction {
+            event_key: Some(event_key),
+            emoji: Some("👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍".to_owned()),
             positive: true,
         })),
     };
@@ -2028,7 +2080,7 @@ async fn validation_invalid_content_content_body_reaction_long_emoji() {
         &[ExpectError {
             bundle_index: 2,
             kind: ExpectErrorKind::MsgContains(
-                "content content body reaction emoji can't be longer than 1 character",
+                "content content body reaction emoji is too long (80), maximum is 40",
             ),
         }],
     );
@@ -2195,7 +2247,77 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_empty_em
 }
 
 #[tokio::test]
-async fn validation_invalid_content_content_body_attributed_to_reaction_long_emoji()
+async fn validation_content_content_body_attributed_to_reaction_emoji_flags_ok()
+{
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(attributed_to::To::Link(Link {
+                        title: "Title".to_owned(),
+                        description: Some("Description".to_owned()),
+                        image: Some("Image".to_owned()),
+                        url: "https://example.com".to_owned(),
+                        ..Default::default()
+                    })),
+                }),
+                emoji: Some("🇳🇱".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    client.submit_events().await; // Shouldn't panic.
+}
+
+#[tokio::test]
+async fn validation_content_content_body_attributed_to_reaction_emoji_long_ok()
+{
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::AttributedToReaction(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(attributed_to::To::Link(Link {
+                        title: "Title".to_owned(),
+                        description: Some("Description".to_owned()),
+                        image: Some("Image".to_owned()),
+                        url: "https://example.com".to_owned(),
+                        ..Default::default()
+                    })),
+                }),
+                // Longest emoji according to
+                // <https://machs.space/posts/whats-the-max-valid-length-of-an-emoji/>.
+                emoji: Some("👨🏻‍❤️‍💋‍👨🏻".to_owned()),
+                positive: true,
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    client.submit_events().await; // Shouldn't panic.
+}
+
+#[tokio::test]
+async fn validation_invalid_content_content_body_attributed_to_reaction_emoji_too_long()
  {
     let mut client = TestClient::new().await;
     let content = Content {
@@ -2210,7 +2332,9 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_long_emo
                         ..Default::default()
                     })),
                 }),
-                emoji: Some("👍👍".to_owned()),
+                emoji: Some(
+                    "👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍👍".to_owned(),
+                ),
                 positive: true,
             },
         )),
@@ -2232,7 +2356,7 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_long_emo
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body attributed to reaction emoji can't be longer than 1 character",
+                "content content body attributed to reaction emoji is too long (80), maximum is 40",
             ),
         }],
     );
