@@ -36,30 +36,23 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 pub fn init() -> Result<&'static Config, String> {
     let config = Config {
         database_url: env::var("HARBOR_DATABASE_URL")
-            .or_else(|_| env::var("DATABASE_URL"))
             .unwrap_or_else(|_| "postgres://postgres:testing@localhost:5432".to_string()),
-        ro_database_url: env::var("HARBOR_DATABASE_URL_RO")
-            .or_else(|_| env::var("DATABASE_URL_RO"))
-            .ok(),
+        ro_database_url: env::var("HARBOR_DATABASE_URL_RO").ok(),
         database_schema: env::var("HARBOR_NOTIFICATIONS_DATABASE_SCHEMA")
-            .or_else(|_| env::var("POLYCENTRIC_NOTIFICATIONS_DATABASE_SCHEMA"))
             .unwrap_or_else(|_| "notifications".to_string()),
         database_max_connections: env::var("HARBOR_DATABASE_MAX_CONNECTIONS")
-            .or_else(|_| env::var("POLYCENTRIC_DATABASE_MAX_CONNECTIONS"))
             .ok()
             .and_then(|s| s.trim().parse().ok())
             .unwrap_or(20),
         expo_access_token: env::var("HARBOR_EXPO_ACCESS_TOKEN")
-            .or_else(|_| env::var("EXPO_ACCESS_TOKEN"))
             .ok()
             .filter(|t| !t.is_empty()),
-        main_server: required("HARBOR_MAIN_SERVER", "POLYCENTRIC_MAIN_SERVER")?,
+        main_server: required("HARBOR_MAIN_SERVER")?,
         grpc_addr: env::var("HARBOR_NOTIFICATIONS_GRPC_ADDR")
-            .or_else(|_| env::var("POLYCENTRIC_NOTIFICATIONS_GRPC_ADDR"))
             .unwrap_or_else(|_| "0.0.0.0:3001".to_string())
             .parse()
             .map_err(|e| format!("HARBOR_NOTIFICATIONS_GRPC_ADDR: {e}"))?,
-        query_servers: required_list("HARBOR_QUERY_SERVERS", "POLYCENTRIC_QUERY_SERVERS")?,
+        query_servers: required_list("HARBOR_QUERY_SERVERS")?,
     };
     Ok(CONFIG.get_or_init(|| config))
 }
@@ -69,15 +62,13 @@ pub fn get() -> &'static Config {
     CONFIG.get().expect("config::init not called")
 }
 
-fn required(name: &str, fallback_name: &str) -> Result<String, String> {
-    env::var(name)
-        .or_else(|_| env::var(fallback_name))
-        .map_err(|_| format!("{name} is not set"))
+fn required(name: &str) -> Result<String, String> {
+    env::var(name).map_err(|_| format!("{name} is not set"))
 }
 
 /// A required comma-delimited list; must contain at least one entry.
-fn required_list(name: &str, fallback_name: &str) -> Result<Vec<String>, String> {
-    let items: Vec<String> = required(name, fallback_name)?
+fn required_list(name: &str) -> Result<Vec<String>, String> {
+    let items: Vec<String> = required(name)?
         .split(',')
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
