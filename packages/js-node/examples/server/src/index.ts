@@ -1,4 +1,4 @@
-import { v2 } from '@polycentric/js-core';
+import { COLLECTION, v2 } from '@polycentric/js-core';
 import { createPolycentricNodeClient } from '@polycentric/js-node';
 import ejs from 'ejs';
 import {
@@ -39,9 +39,14 @@ interface PostRow {
 }
 
 async function loadFeed(): Promise<PostRow[]> {
+  const identity = client.activeIdentityKey;
+  if (!identity) return [];
   let bundles: v2.EventBundle[] = [];
   try {
-    bundles = await client.listEvents({ collection: 2 });
+    bundles = await client.listEvents({
+      identity,
+      collection: COLLECTION.FEED,
+    });
   } catch {
     return [];
   }
@@ -181,7 +186,7 @@ route('POST', /^\/post$/, async (req, res) => {
   }
   const content = client.contentManager.build({
     oneofKind: 'post',
-    post: { text, images: imageSets },
+    post: v2.Post.create({ text, images: imageSets }),
   });
   await client.contentManager.save(content);
   const event = await client.buildEvent(content);

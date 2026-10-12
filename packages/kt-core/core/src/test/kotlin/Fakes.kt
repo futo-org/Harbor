@@ -16,6 +16,7 @@ import polycentric.v2.EventBundle
 import polycentric.v2.ListEventsResponse
 import polycentric.v2.SignedEvent
 import polycentric.v2.UploadBlobRequest
+import polycentric.v2.VectorClock
 
 // Port of js-core `polycentric-client.sync.test.ts`.
 
@@ -299,10 +300,11 @@ class FakeCore(
         clearAuthTokensCount++
     }
 
+    // Event building: placeholder values, enough for publishes to go through.
     override fun nextSequence(
         identity: String,
         collection: Int,
-    ): ULong = error("not used by sync tests")
+    ): ULong = 2UL
 
     override fun getIdentitySequence(
         identity: String,
@@ -316,17 +318,17 @@ class FakeCore(
         signedBy: ByteArray,
         currentSequence: ULong,
         identityContent: ByteArray?,
-    ): ByteArray = error("not used by sync tests")
+    ): ByteArray = VectorClock.ADAPTER.encode(VectorClock())
 
     override fun previousSignature(
         identity: String,
         collection: Int,
-    ): ByteArray = error("not used by sync tests")
+    ): ByteArray = ByteArray(0)
 
     override fun previousRoot(
         identity: String,
         collection: Int,
-    ): ByteArray = error("not used by sync tests")
+    ): ByteArray = ByteArray(0)
 
     /** Mirrors the real core: returns canonical SignedEvent bytes signed via the callback. */
     override suspend fun signEvent(
@@ -380,7 +382,7 @@ class FakeCore(
 
     override fun resolveIdentity(identity: String): ByteArray? = options.resolveIdentityResponse
 
-    override suspend fun getServerInfo(serverUrl: String): ByteArray = error("not used by sync tests")
+    override suspend fun getServerInfo(serverUrl: String): ByteArray = ByteArray(0)
 
     override suspend fun getPairingSession(
         serverUrl: String,

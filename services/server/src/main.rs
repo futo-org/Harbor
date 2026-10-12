@@ -87,6 +87,7 @@ async fn main() {
 async fn run_server() {
     common_telemetry::init_metrics("server");
     let (db, ro_db) = connect_db_with_retry(true).await;
+    service::notifications::changes::init(&db);
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");

@@ -42,6 +42,7 @@ import { AppFooter } from './AppFooter';
 import { VerticalNav } from './nav/VerticalNav';
 import Topbar from './Topbar';
 import { SuggestedFollowWidget } from '@/src/features/follow/SuggestedFollowWidget';
+import { LAYOUT_SIZES } from '../metrics';
 
 type MainProps = {
   children: ReactElement | ReactElement[];
@@ -57,12 +58,12 @@ function Main({ children, style }: MainProps) {
     : deviceWidth <= Breakpoints.sm
       ? '100%'
       : deviceWidth <= Breakpoints.md
-        ? 600
+        ? LAYOUT_SIZES.mainUpToMd
         : deviceWidth <= Breakpoints.lg
-          ? 920
+          ? LAYOUT_SIZES.mainUpToLg
           : deviceWidth <= Breakpoints['2xl']
-            ? 990
-            : 1050;
+            ? LAYOUT_SIZES.mainUpTo2xl
+            : LAYOUT_SIZES.mainMax;
 
   const showRightSidebar = isWeb && deviceWidth > Breakpoints.md;
 
@@ -107,7 +108,7 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
         Atoms.flex_1,
         isWeb && Atoms.pb_lg,
         isWeb && {
-          maxWidth: 600,
+          maxWidth: LAYOUT_SIZES.primaryColumnMaxWidth,
           borderLeftColor: theme.palette.neutral_25,
           borderLeftWidth: 1,
           borderRightColor: theme.palette.neutral_25,
@@ -372,6 +373,9 @@ export const LeftSidebar = memo(function LeftSidebar({
   const { width: deviceWidth } = useWindowDimensions();
 
   const narrowSidebar = deviceWidth <= Breakpoints.xl;
+  const sidebarWidth = narrowSidebar
+    ? LAYOUT_SIZES.leftSidebarNarrowWidth
+    : LAYOUT_SIZES.leftSidebarWideWidth;
 
   return (
     <View
@@ -382,7 +386,7 @@ export const LeftSidebar = memo(function LeftSidebar({
         { alignItems: 'flex-end' },
       ]}
     >
-      <View style={{ width: narrowSidebar ? 88 : 275, height: '100%' }}>
+      <View style={{ width: sidebarWidth, height: '100%' }}>
         <View
           style={[
             {
@@ -399,8 +403,10 @@ export const LeftSidebar = memo(function LeftSidebar({
               Atoms.align_center,
               {
                 minHeight: '100%',
-                paddingHorizontal: narrowSidebar ? 0 : 30,
-                width: narrowSidebar ? 88 : 275,
+                paddingHorizontal: narrowSidebar
+                  ? 0
+                  : LAYOUT_SIZES.leftSidebarWidePadding,
+                width: sidebarWidth,
               },
             ]}
           >
@@ -414,9 +420,11 @@ export const LeftSidebar = memo(function LeftSidebar({
 
 export const RightSidebar = memo(function RightSidebar() {
   const { width: deviceWidth } = useWindowDimensions();
-  const width = 350;
+  const width = LAYOUT_SIZES.rightSidebarWidth;
   const narrow = deviceWidth <= Breakpoints['2xl'];
-  const marginRight = narrow ? 10 : 70;
+  const marginRight = narrow
+    ? LAYOUT_SIZES.rightSidebarNarrowMargin
+    : LAYOUT_SIZES.rightSidebarWideMargin;
 
   const { identity } = useCurrentIdentity();
 

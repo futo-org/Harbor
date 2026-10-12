@@ -15,7 +15,8 @@ message ServerVersion {
  */
 message ServerInfo {
     ServerVersion version = 1;
-    // URL used to resolve HTTP assets (blobs, images, etc)
+    // URL used to resolve HTTP assets (blobs, images, etc), the server's
+    // `CDN_URL` setting.
     string cdn_url = 2;
 }
 
@@ -31,8 +32,12 @@ service ServerService {
     rpc GetInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
 }
 
+// Envelope for requests authenticated with a key pair instead of a bearer
+// token.
 message SignedMessage {
+  // Signature by `public_key` over `message_bytes`.
   bytes signature = 1;
+  // The serialized request message, e.g. a RegisterPushNotificationRequest.
   bytes message_bytes = 2;
   PublicKey public_key = 3;
 }

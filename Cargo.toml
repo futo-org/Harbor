@@ -8,10 +8,20 @@ members = [
     "services/server/tests",
     "services/server/perf-tests",
     "services/moderation",
+    "services/moderation/entity",
+    "services/moderation/migration",
     "services/grayjay-migrator",
+    "services/grayjay-migrator/entity",
+    "services/grayjay-migrator/migration",
     "services/push-notifications",
-    "services/common/*",
+    "services/push-notifications/entity",
+    "services/push-notifications/migration",
+    "services/common/dotenv",
+    "services/common/kafka",
+    "services/common/object-store",
+    "services/common/telemetry",
     "tools/identity",
+    # NOTE: `tools/uniffi-bindgen` is excluded because it generates crates.
 ]
 exclude = ["legacy/"]
 resolver = "2"

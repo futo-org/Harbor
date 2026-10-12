@@ -166,7 +166,7 @@ Most traffic is gRPC, but a few plain-HTTP routes are served directly:
 | `GET /blob/{digest}` | Download a blob body by content digest (`{type}_{hex}`, e.g. `1_<sha256 hex>`). |
 | `GET /docs`          | Live API browser generated from gRPC reflection.                     |
 
-See [Protocol → gRPC](../protocol/grpc.md) for the gRPC services.
+See [Protocol → gRPC](../protocol/grpc.mdx) for the gRPC services.
 
 ## Content moderation & removal
 

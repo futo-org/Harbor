@@ -1,3 +1,8 @@
+import {
+  BOOT_SKELETON_STYLE,
+  BOOT_SKELETON_SCRIPT,
+  BootSkeleton,
+} from '@/src/common/components/layout/BootSkeleton';
 import { APP_NAME } from '@/src/common/constants';
 import type { PropsWithChildren } from 'react';
 
@@ -50,8 +55,20 @@ export default function Root({ children }: PropsWithChildren) {
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static stylesheet, no user input
           dangerouslySetInnerHTML={{ __html: FONT_STYLE }}
         />
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static script, no user input
+          dangerouslySetInnerHTML={{ __html: BOOT_SKELETON_SCRIPT }}
+        />
+        <style
+          id="polycentric-boot-skeleton"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static stylesheet, no user input
+          dangerouslySetInnerHTML={{ __html: BOOT_SKELETON_STYLE }}
+        />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <BootSkeleton />
+      </body>
     </html>
   );
 }
