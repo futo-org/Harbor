@@ -7,8 +7,9 @@ use std::sync::OnceLock;
 use regex::Regex;
 
 use crate::models::{
-    application, attributed_to, blob, block, content, content_body, content_digest, delete, event,
-    event_key, follow, image, image_set, link, post, post_reply, public_key, reaction, to,
+    application, attributed_to, attributed_to_reaction, blob, block, content, content_body,
+    content_digest, delete, event, event_key, follow, image, image_set, link, post, post_reply,
+    public_key, reaction, to,
 };
 
 /// Validate a value.
@@ -61,6 +62,7 @@ pub enum ValidationError {
     Follow(follow::ValidationError),
     Block(block::ValidationError),
     Reaction(reaction::ValidationError),
+    AttributedToReaction(attributed_to_reaction::ValidationError),
 }
 
 impl From<event::ValidationError> for ValidationError {
@@ -177,6 +179,12 @@ impl From<reaction::ValidationError> for ValidationError {
     }
 }
 
+impl From<attributed_to_reaction::ValidationError> for ValidationError {
+    fn from(err: attributed_to_reaction::ValidationError) -> ValidationError {
+        ValidationError::AttributedToReaction(err)
+    }
+}
+
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -199,6 +207,7 @@ impl fmt::Display for ValidationError {
             ValidationError::Follow(err) => write!(f, "follow {err}"),
             ValidationError::Block(err) => write!(f, "block {err}"),
             ValidationError::Reaction(err) => write!(f, "reaction {err}"),
+            ValidationError::AttributedToReaction(err) => write!(f, "attributed to reaction {err}"),
         }
     }
 }

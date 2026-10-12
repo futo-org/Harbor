@@ -18,6 +18,7 @@ pub mod traits;
 
 pub mod application;
 pub mod attributed_to;
+pub mod attributed_to_reaction;
 pub mod blob;
 pub mod block;
 pub mod collections;
