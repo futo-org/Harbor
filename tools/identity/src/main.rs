@@ -30,7 +30,12 @@ enum Command {
         /// Public key (hex) of the key to revoke
         public_key: String,
     },
-    /// Publish the identity event chain to a Polycentric server
+    /// Set the profile display name (appends a profile event; `publish` uploads it)
+    SetName {
+        /// The display name to publish on the profile
+        name: String,
+    },
+    /// Publish the identity event chain and profile to a Polycentric server
     Publish {
         /// Server URL (e.g. https://srv1.polycentric.io)
         server: String,
@@ -74,9 +79,14 @@ fn main() -> Result<()> {
             };
             println!("Revoked {label} key {public_key}");
         }
+        Command::SetName { name } => {
+            let sequence = store.set_profile_name(&name)?;
+            println!("Set profile name to {name:?} (profile event #{sequence})");
+            println!("Run `publish <server>` to upload it");
+        }
         Command::Publish { server } => {
             let count = store.publish(&server)?;
-            println!("Published {count} identity events to {server}");
+            println!("Published {count} events to {server}");
         }
         Command::PrivateKey { public_key } => {
             let private = store.private_key(public_key.as_deref())?;
@@ -84,6 +94,9 @@ fn main() -> Result<()> {
         }
         Command::Show => {
             println!("Identity: {}", store.identity()?);
+            if let Some(name) = store.profile()?.and_then(|p| p.name) {
+                println!("Profile name: {name}");
+            }
             let doc = store.current_doc()?;
             println!("Rotation keys ({}):", doc.rotation_keys.len());
             for key in &doc.rotation_keys {

@@ -18,9 +18,9 @@ private const val NONCE_BYTES = 32
 
 /**
  * Device-pairing handshake manager. The pairing session creator publishes a new pairing session to
- * a server, and shares pairing info using a QR code or typable pairing code. After another device
- * joins, the user verifies each device displays the same emoji fingerprint for the pairing session
- * to confirm that no attacker has intercepted the pairing session.
+ * a server, and shares its [PairingInfo] as a link (e.g. shown as a QR code). After another device
+ * joins as a claimer, the user verifies that both devices display the same emoji fingerprint of the
+ * claimer's public key, confirming that no attacker has joined in its place.
  */
 class PairingSessionManager(
     private val client: PolycentricClient,
@@ -84,8 +84,7 @@ class PairingSessionManager(
 
     /** Poll the server's list of claimer public keys. */
     suspend fun pollForClaimers(info: PairingInfo): List<PublicKey> =
-        client.core
-            .pollForClaimers(info.server, info.digest_sha256.toByteArray())
+        coreCall { client.core.pollForClaimers(info.server, info.digest_sha256.toByteArray()) }
             .map { it.toProto() }
 
     /**

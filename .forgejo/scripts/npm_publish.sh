@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 #
-# Publishes every @polycentric package to the Forgejo package registry and,
-# when NPM_TOKEN is set, to public npm. Packages are published one at a time
-# so a version that already exists is skipped instead of aborting the whole
-# release (and blocking the packages ordered after it), keeping re-runs
-# idempotent.
+# Publishes every @polycentric package to the Forgejo package registry.
+# Packages are published one at a time so a version that already exists is
+# skipped instead of aborting the whole release (and blocking the packages
+# ordered after it), keeping re-runs idempotent.
 #
 # Env:
 #   CI_COMMIT_TAG      release tag, e.g. v2.0.2 (the leading "v" is stripped)
 #   GITHUB_SERVER_URL  Forgejo instance URL for the package registry
 #   GITHUB_REPOSITORY  owner/repo; the owner selects the Forgejo registry
 #   HARBOR_CI_TOKEN    Forgejo registry token; Forgejo publish is skipped if unset
-#   NPM_TOKEN          public npm auth token; public publish is skipped if unset
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -70,10 +68,4 @@ if [ -n "${HARBOR_CI_TOKEN:-}" ]; then
   publish_all "${forgejo_registry}" "the Forgejo package registry"
 else
   echo "HARBOR_CI_TOKEN is not set; skipping Forgejo publish" >&2
-fi
-
-if [ -n "${NPM_TOKEN:-}" ]; then
-  publish_all "https://registry.npmjs.org/" "public npm"
-else
-  echo "NPM_TOKEN is not set; skipping public npm publish" >&2
 fi
