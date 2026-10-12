@@ -2820,6 +2820,216 @@ async fn validation_content_content_body_report_additional_info_too_long() {
     );
 }
 
+#[tokio::test]
+async fn validation_invalid_content_content_body_labels_collection() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: vec!["Test".to_owned()],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '7'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_labels_event_key_missing() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: None,
+            label_values: vec!["Test".to_owned()],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels event key is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+#[ignore = "TODO: implement this validation"]
+async fn validation_content_content_body_labels_event_key_not_a_post() {
+    let mut client = TestClient::new().await;
+    let event_key = client.get_last_event_key(); // Identity.
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: vec!["Test".to_owned()],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels event key is not a post",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_labels_labels_values_empty() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: Vec::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels label values can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_labels_labels_values_too_long() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: {
+                let mut l = Vec::new();
+                l.resize(11, "Test".to_owned());
+                l
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels label values is too long (11), maximum is 10",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_labels_labels_values_value_empty() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: vec!["".to_owned()],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels label values 0-th can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_labels_labels_values_value_too_long() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Labels(Labels {
+            event_key: Some(event_key),
+            label_values: vec!["l".repeat(201)],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event =
+        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body labels label values 0-th is too long (201), maximum is 200",
+            ),
+        }],
+    );
+}
+
 // TODO: tests for the content body variants.
 
 #[tokio::test]

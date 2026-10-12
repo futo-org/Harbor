@@ -453,7 +453,7 @@ impl<E: fmt::Display> fmt::Display for SliceError<E> {
                 write!(f, "is too long ({length}), maximum is {max}")
             }
             SliceError::Validate { index, error } => {
-                write!(f, "{index}-th is invalid: {error}")
+                write!(f, "{index}-th {error}")
             }
         }
     }

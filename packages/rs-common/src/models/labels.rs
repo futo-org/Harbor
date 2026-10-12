@@ -25,6 +25,7 @@ impl Validate for Labels {
             errors,
             |err| map_err(ValidationError::LabelValues(err)),
             SliceConfig {
+                min_len: Some(1),
                 max_len: Some(10),
                 ..Default::default()
             },

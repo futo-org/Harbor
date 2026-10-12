@@ -30,7 +30,7 @@ impl Validate for Report {
             |err| map_err(ValidationError::AdditionalInfo(err)),
             StringConfig {
                 // UI allows it to be empty, though it should probably be optional.
-                min_len: Some(0),
+                min_len: None,
                 max_len: Some(500),
                 ..Default::default()
             },
