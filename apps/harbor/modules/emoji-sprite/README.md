@@ -18,8 +18,7 @@ Twemoji font.
   new page at each category) and the page layout (`SPRITE_PAGE_STARTS`,
   `SPRITE_PAGE_COLUMNS`) to `src/common/emoji/twemoji/sheet.ts`.
 - `EmojiGridImage.android.tsx` maps an emoji to a `page` and `cell` and renders
-  `EmojiSprite`. Emoji missing from the pages, such as skin tones, fall back to
-  `EmojiImage`.
+  `EmojiSprite`.
 - `EmojiSpritePages.kt` decodes pages off the main thread, at half size on
   low-RAM devices, into an LRU cache that is cleared when the app is
   backgrounded.
