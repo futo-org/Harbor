@@ -32,6 +32,7 @@ pub mod follow;
 pub mod identity;
 pub mod image;
 pub mod image_set;
+pub mod labels;
 pub mod link;
 pub mod moderation_label;
 pub mod moderation_tag;

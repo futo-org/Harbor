@@ -462,7 +462,11 @@ fn validate_content(
         }
         ContentBody::Labels(_) => {
             check_collection(collection, collections::LABELS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * limit the amount of labels per key per user in total (accross
+            //   multiple requests)
+            // * limit to posts only?
         }
         ContentBody::VerificationClaim(_) => {
             check_collection(collection, collections::VERIFICATIONS);
