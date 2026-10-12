@@ -66,7 +66,7 @@ pub fn sha256(data: &[u8]) -> Vec<u8> {
 }
 
 pub fn random_string() -> String {
-    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 30);
+    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 20);
     // When searching Postgres uses a technique called stemming where it removes
     // the end of certain English words, e.g. "party" and "party" both become
     // "part" so that when you search for "party" it matches both. However, when
