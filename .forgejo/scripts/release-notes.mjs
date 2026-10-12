@@ -1,33 +1,29 @@
-// Release notes in the shape GitLab's changelog API produced: commits since
-// the previous release tag that carry a `Changelog: <category>` line, grouped
-// by category (.gitlab/changelog_config.yml, now inlined here). The line is
-// read from anywhere in the commit body, not only the trailer paragraph: the
-// squash template puts the PR description (where people write it) above
-// Reviewed-on. Needs the full history.
+// User-facing release notes written by Claude (via OpenRouter) from the
+// commits since the previous release tag. The model is told to drop purely
+// technical changes (CI, refactors, dependency bumps, tests) and describe the
+// rest in plain language for app users. Needs the full history.
 //
 //   node release-notes.mjs [output-file]
 //
 // Env: GITHUB_REF_NAME (the tag), GITHUB_REPOSITORY, GITHUB_API_URL and
-// GITHUB_TOKEN (author lookups; without a token nobody is credited).
+// GITHUB_TOKEN (author lookups; without a token nobody is credited),
+// OPEN_ROUTER_API_TOKEN (required), OPEN_ROUTER_MODEL (optional override).
 
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
-
-const CATEGORIES = {
-  feature: '🚀 Features',
-  fix: '🐛 Bug fixes',
-  enhancement: '⚡ Enhancements',
-  security: '🔒 Security',
-  deprecated: '⚠️ Deprecated',
-  'breaking-change': '🚨 Breaking Changes',
-  documentation: '📚 Documentation',
-  other: '📦 Other',
-};
 
 const tag = process.env.GITHUB_REF_NAME;
 const repo = process.env.GITHUB_REPOSITORY;
 const api = process.env.GITHUB_API_URL;
 const token = process.env.GITHUB_TOKEN;
+const openRouterToken = process.env.OPEN_ROUTER_API_TOKEN;
+const model = process.env.OPEN_ROUTER_MODEL || 'anthropic/claude-sonnet-5.5';
+
+if (!openRouterToken) {
+  console.error('OPEN_ROUTER_API_TOKEN is not set; cannot write release notes');
+  process.exit(1);
+}
+
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
 
 let previous = '';
@@ -75,39 +71,78 @@ async function contributor(sha) {
       ['write', 'admin', 'owner'].includes(perm?.permission),
     );
   }
-  return membership.get(login) ? '' : ` by @${login}`;
+  return membership.get(login) ? '' : ` (community contribution by @${login})`;
 }
 
-const entries = new Map();
+const commits = [];
 for (const record of log.split(RECORD)) {
   const [sha, subject, body = ''] = record.trim().split(FIELD);
-  const category = body.match(/^Changelog:[ \t]*(\S+)/im)?.[1].toLowerCase();
-  if (!sha || !category) continue;
-  const pr = body.match(/^Reviewed-on:[ \t]*(\S+)/im)?.[1];
-  const line =
-    `- ${subject} (${repo}@${sha})` +
-    (await contributor(sha)) +
-    (pr ? ` ([pull request](${pr}))` : '');
-  const list = entries.get(category) ?? [];
-  list.push(line);
-  entries.set(category, list);
+  if (!sha || !subject) continue;
+  // The Changelog trailer, where present, is a hint about the author's own
+  // categorisation — pass it along, but every commit goes to the model.
+  const category = body.match(/^Changelog:[ \t]*(\S+)/im)?.[1]?.toLowerCase();
+  commits.push(
+    `- ${subject}${category ? ` [${category}]` : ''}${await contributor(sha)}`,
+  );
 }
 
 const version = tag.replace(/^v/, '');
 const date = new Date().toISOString().slice(0, 10);
-let notes = `## ${version} (${date})\n\n`;
-if (entries.size === 0) {
-  notes += 'No changes.\n';
-} else {
-  // Configured categories first, in order; unknown ones after, by name.
-  const order = [
-    ...Object.keys(CATEGORIES).filter((key) => entries.has(key)),
-    ...[...entries.keys()].filter((key) => !(key in CATEGORIES)).sort(),
-  ];
-  for (const key of order) {
-    notes += `#### ${CATEGORIES[key] ?? key}\n\n${entries.get(key).join('\n')}\n`;
-  }
+const header = `## ${version} (${date})\n\n`;
+
+async function writeNotes(body) {
+  const notes = `${header}${body.trim()}\n`;
+  writeFileSync(process.argv[2] ?? 'release_notes.md', notes);
+  process.stdout.write(notes);
 }
 
-writeFileSync(process.argv[2] ?? 'release_notes.md', notes);
-process.stdout.write(notes);
+if (commits.length === 0) {
+  await writeNotes('No changes.');
+  process.exit(0);
+}
+
+const SYSTEM_PROMPT = `You write release notes for Harbor, a social app built on the Polycentric protocol. Your audience is everyday app users, not developers.
+
+Rules:
+- Plain, friendly language. No jargon, no commit hashes, no file or module names, no protocol internals.
+- Leave out purely technical changes entirely: CI/build/release tooling, refactors, dependency bumps, tests, linting, internal APIs, developer documentation. Do not mention that you left them out.
+- Describe what changed from the user's point of view ("You can now...", "Fixed an issue where...").
+- Group bullets under at most these headings, omitting empty ones: "### ✨ New", "### ⚡ Improvements", "### 🐛 Fixes".
+- Merge related commits into a single bullet. Keep each bullet to one short sentence.
+- Credit community contributions where marked, e.g. "— thanks @login!".
+- If nothing in the list is user-facing, output exactly: "This release contains behind-the-scenes improvements and maintenance."
+- Output only the markdown notes. No title line, no version number, no preamble or sign-off.`;
+
+const userPrompt = `Commits in Harbor release ${version}${previous ? ` (since ${previous})` : ''}:\n\n${commits.join('\n')}`;
+
+const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${openRouterToken}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model,
+    max_tokens: 2000,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userPrompt },
+    ],
+  }),
+});
+
+if (!res.ok) {
+  console.error(`OpenRouter request failed: ${res.status} ${await res.text()}`);
+  process.exit(1);
+}
+
+const completion = await res.json();
+const body = completion.choices?.[0]?.message?.content;
+if (!body) {
+  console.error(
+    `OpenRouter returned no content: ${JSON.stringify(completion).slice(0, 2000)}`,
+  );
+  process.exit(1);
+}
+
+await writeNotes(body);
