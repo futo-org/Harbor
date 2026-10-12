@@ -42,6 +42,7 @@ pub mod profile_update;
 pub mod public_key;
 pub mod query_engine_stats;
 pub mod reaction;
+pub mod report;
 pub mod repost;
 pub mod signed_event;
 pub mod signed_issuer_state;

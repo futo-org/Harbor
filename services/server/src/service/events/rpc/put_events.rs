@@ -455,7 +455,10 @@ fn validate_content(
         }
         ContentBody::Report(_) => {
             check_collection(collection, collections::REPORTS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * limit the amount of reports per post?
+            // * limit to posts and reposts only?
         }
         ContentBody::Labels(_) => {
             check_collection(collection, collections::LABELS);
