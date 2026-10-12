@@ -1,3 +1,4 @@
+import { TWEMOJI_SPACE_BEFORE } from '@/src/common/assets/twemojiSpacing';
 import { memo } from 'react';
 
 type Props = {
@@ -23,8 +24,9 @@ export const EmojiImage = memo(function EmojiImage({ sequence, size }: Props) {
         // The font's ascent and descent are its 1em glyph, so the glyph
         // fills the line.
         lineHeight: 1,
-        // The glyph starts 0.1em into its advance.
-        textIndent: '-0.1em',
+        // The glyph starts after the font's space before it; the space after
+        // it overflows the box unseen.
+        textIndent: `${-TWEMOJI_SPACE_BEFORE}em`,
       }}
     >
       {sequence}

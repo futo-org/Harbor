@@ -1,4 +1,8 @@
 import { twemojiFontFamily } from '@/src/common/assets/twemojiFontFamily';
+import {
+  TWEMOJI_SPACE_AFTER,
+  TWEMOJI_SPACE_BEFORE,
+} from '@/src/common/assets/twemojiSpacing';
 import { memo } from 'react';
 import { Text } from 'react-native';
 
@@ -21,9 +25,9 @@ export const EmojiImage = memo(function EmojiImage({ sequence, size }: Props) {
         // The font's ascent and descent are its 1em glyph, so the glyph
         // fills the line.
         lineHeight: size,
-        // The glyph sits 0.1em into its 1.15em advance.
-        marginLeft: -0.1 * size,
-        marginRight: -0.05 * size,
+        // Trims the font's space around the glyph, leaving its 1em square.
+        marginLeft: -TWEMOJI_SPACE_BEFORE * size,
+        marginRight: -TWEMOJI_SPACE_AFTER * size,
       }}
     >
       {sequence}
