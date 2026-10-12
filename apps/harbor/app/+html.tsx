@@ -3,6 +3,7 @@ import {
   BOOT_SKELETON_SCRIPT,
   BootSkeleton,
 } from '@/src/common/components/layout/BootSkeleton';
+import { TWEMOJI_WEB_FONT_FILE } from '@/src/common/assets/twemojiFont';
 import { APP_NAME } from '@/src/common/constants';
 import type { PropsWithChildren } from 'react';
 
@@ -25,10 +26,10 @@ const TWEMOJI_UNICODE_RANGE =
 const FONT_STYLE = `
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans.ttf);font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans-Italic.ttf);font-weight:100 900;font-style:italic;font-display:swap}
-@font-face{font-family:Twemoji;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:normal;font-display:block;unicode-range:${TWEMOJI_UNICODE_RANGE}}
-@font-face{font-family:Twemoji;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:italic;font-display:block;unicode-range:${TWEMOJI_UNICODE_RANGE}}
-@font-face{font-family:TwemojiImage;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:normal;font-display:block}
-@font-face{font-family:TwemojiImage;src:url(/fonts/Twemoji.woff2);font-weight:100 900;font-style:italic;font-display:block}
+@font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:normal;font-display:block;unicode-range:${TWEMOJI_UNICODE_RANGE}}
+@font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:italic;font-display:block;unicode-range:${TWEMOJI_UNICODE_RANGE}}
+@font-face{font-family:TwemojiImage;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:normal;font-display:block}
+@font-face{font-family:TwemojiImage;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:italic;font-display:block}
 `;
 
 export default function Root({ children }: PropsWithChildren) {

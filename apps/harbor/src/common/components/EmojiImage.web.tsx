@@ -1,4 +1,4 @@
-import { TWEMOJI_SPACE_BEFORE } from '@/src/common/assets/twemojiSpacing';
+import { TWEMOJI_SPACE_BEFORE } from '@/src/common/assets/twemojiFont';
 import { memo } from 'react';
 
 type Props = {

@@ -2,7 +2,7 @@ import { twemojiFontFamily } from '@/src/common/assets/twemojiFontFamily';
 import {
   TWEMOJI_SPACE_AFTER,
   TWEMOJI_SPACE_BEFORE,
-} from '@/src/common/assets/twemojiSpacing';
+} from '@/src/common/assets/twemojiFont';
 import { memo } from 'react';
 import { Text } from 'react-native';
 
