@@ -11,16 +11,17 @@ use prost::Message;
 
 use crate::key::KeyPair;
 
-/// Build the vector clock for an event with `content`, signed by `signer` at
+/// Build the vector clock for an event governed by identity document `doc`
+/// (for identity events, the event's own content), signed by `signer` at
 /// `sequence`. The self entry is `sequence`; every co-signer entry is that
 /// key's highest prior sequence in the collection (`prior_max`).
 pub fn vector_clock(
-    content: &Identity,
+    doc: &Identity,
     signer: &PublicKey,
     sequence: u64,
     prior_max: &HashMap<Vec<u8>, u64>,
 ) -> VectorClock {
-    let dedup = content.deduplicated_keys();
+    let dedup = doc.deduplicated_keys();
     let sequences = dedup
         .iter()
         .map(|key| {
