@@ -2682,6 +2682,144 @@ async fn validation_content_content_body_repost_post_not_a_post() {
     );
 }
 
+#[tokio::test]
+async fn validation_invalid_content_content_body_report_collection() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Report(Report {
+            event_key: Some(event_key),
+            category: ReportCategory::Spam as i32,
+            additional_info: "Test".to_owned(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '6'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_report_event_key_missing() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Report(Report {
+            event_key: None,
+            category: ReportCategory::Spam as i32,
+            additional_info: "Test".to_owned(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_REPORTS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body report event key is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_report_invalid_category() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Report(Report {
+            event_key: Some(event_key),
+            category: i32::MAX,
+            additional_info: "Test".to_owned(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_REPORTS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body report category is invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_report_additional_info_too_long() {
+    let mut client = TestClient::new().await;
+    client.post_text("Test", 0);
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::Report(Report {
+            event_key: Some(event_key),
+            category: ReportCategory::Spam as i32,
+            additional_info: "a".repeat(501),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_REPORTS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body report additional info is too long (501), maximum is 500",
+            ),
+        }],
+    );
+}
+
 // TODO: tests for the content body variants.
 
 #[tokio::test]
