@@ -38,6 +38,7 @@ pub mod moderation_tag;
 pub mod pointer;
 pub mod post;
 pub mod post_reply;
+pub mod profile_update;
 pub mod public_key;
 pub mod query_engine_stats;
 pub mod reaction;

@@ -445,7 +445,6 @@ fn validate_content(
         }
         ContentBody::ProfileUpdate(_) => {
             check_collection(collection, collections::PROFILE);
-            // TODO: validate.
         }
         ContentBody::Identity(_) => {
             check_collection(collection, collections::IDENTITY);
