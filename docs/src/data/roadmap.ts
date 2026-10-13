@@ -20,6 +20,22 @@ export type RoadmapGap = { gap: string; when: string; description: string };
 export const roadmap: (RoadmapItem | RoadmapPhase | RoadmapGap)[] = [
   {
     when: '2027 - Q1',
+    title: 'Lists',
+    description:
+      'Make public lists of people that anyone can browse, follow as a feed or subscribe to, including shared mute and block lists.',
+  },
+  {
+    when: '2027 - Q1',
+    title: 'Custom feeds',
+    description: 'Build your own feeds from the people and topics you choose.',
+  },
+  {
+    when: '2027 - Q1',
+    title: 'Bookmarks',
+    description: 'Save posts to come back to later.',
+  },
+  {
+    when: '2027 - Q1',
     title: 'harbor.surf 🏄‍♂️',
     description:
       'Comment on and react to any page on the web, from a blog post to a video, and see what others are saying about it. Comes with a browser extension.',
