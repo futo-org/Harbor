@@ -20,7 +20,7 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "browserless": "^13.1.6",
+    "browserless": "^14.0.0",
     "html-get": "^2.24.6",
     "metascraper": "^5.50.6",
     "metascraper-description": "^5.50.6",
