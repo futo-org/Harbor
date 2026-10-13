@@ -37,7 +37,7 @@ export interface ServerInfo {
     version?: ServerVersion;
     /**
      * URL used to resolve HTTP assets (blobs, images, etc), the server's
-     * `CDN_URL` setting.
+     * `HARBOR_CDN_URL` setting.
      *
      * @generated from protobuf field: string cdn_url = 2
      */

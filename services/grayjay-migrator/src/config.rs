@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 
 pub struct Config {
     /// Postgres URL for the migrator's OWN database, which holds the
-    /// `migrated_identity` mapping table (`DATABASE_URL`).
+    /// `migrated_identity` mapping table (`HARBOR_DATABASE_URL`).
     pub database_url: String,
     /// Schema owning this service's tables
     /// (`HARBOR_GRAYJAY_MIGRATOR_DATABASE_SCHEMA`).
