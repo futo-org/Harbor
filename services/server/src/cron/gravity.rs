@@ -234,8 +234,12 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 tracing::warn!(error = %err, "failed to commit decayed reaction counts changes");
                 return ControlFlow::Continue(());
             }
-            tracing::info!(elapsed = ?start.elapsed(), "updated all decayed reaction counts");
 
+            if let Err(err) = db.execute_unprepared("VACUUM ANALYZE reaction_tally").await {
+                tracing::warn!(error = %err, "failed to vacuum reaction tallies");
+            }
+
+            tracing::info!(elapsed = ?start.elapsed(), "updated all decayed reaction counts");
             ControlFlow::Continue(())
         }
     });
