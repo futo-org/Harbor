@@ -13,6 +13,9 @@ on:
       - services/scraper/**
       - deploy/charts/harbor-scraper/**
       - .forgejo/workflows/deploy-scraper-staging.yml
+      - .forgejo/actions/setup-pnpm/**
+      - .forgejo/actions/js-build/**
+      - .forgejo/actions/stage-artifact/**
       - .forgejo/actions/service-image/**
       - .forgejo/actions/chart-publish/**
       - .forgejo/actions/deploy-tag/**
@@ -22,8 +25,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    name: Build
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/js-build
+        with:
+          install-args: --filter @polycentric/scraper...
+          build: pnpm --filter @polycentric/scraper build
+          package: '@polycentric/scraper'
+          deploy-args: --legacy --config.allowUnusedPatches=true
+          dist: services/scraper/dist
+          artifact: scraper-build
+
   deploy:
     name: Deploy
+    needs: build
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_REGISTRY || 'registry.futo.org/harbor' }}/ci/buildkit:latest
     env:
@@ -35,7 +56,8 @@ jobs:
           image: scraper
           dockerfile: services/scraper
           registry: ${{ env.REGISTRY }}
-          export-cache: 'true'
+          stage-artifact: scraper-build
+          stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}

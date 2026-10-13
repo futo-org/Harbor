@@ -127,7 +127,7 @@ jobs:
           cargo clippy -p polycentric-common
           cargo clippy -p polycentric-core -- -D warnings
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -153,7 +153,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: cargo clippy -p server -p moderation-service -p push-notifications-service -p grayjay-migrator -- -D warnings
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -335,7 +335,7 @@ jobs:
       - name: Tests
         run: cargo nextest run -P ci -p polycentric-core -p polycentric-common
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -363,7 +363,7 @@ jobs:
       - name: Tests
         run: cargo nextest run -P ci -p server -p moderation-service -p push-notifications-service -p grayjay-migrator
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -473,7 +473,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -491,7 +491,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/android-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -527,7 +527,7 @@ jobs:
           upload-artifact: 'false'
           save-cache: 'false'
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -547,7 +547,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/kt-core-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -580,10 +580,30 @@ jobs:
 
   # Images -------------------------------------------------------------------
 
-  service-images:
-    name: ${{ matrix.label }}
+  # One cargo build for every service image in the plan, outside Docker, so
+  # shared dependencies compile once and the rust-env caches apply.
+  service-binaries:
+    name: Build Rust service binaries
     needs: [changes, setup-images]
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.service_images && needs.setup-images.result != 'failure' }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: List packages
+        id: packages
+        env:
+          ROWS: ${{ toJSON(fromJSON(needs.changes.outputs.plan).matrix.service_images.include) }}
+        run: echo "packages=$(node -p 'JSON.parse(process.env.ROWS).map((row) => row.packages).join(" ")')" >> "$GITHUB_OUTPUT"
+      - uses: ./.forgejo/actions/rust-binaries
+        with:
+          packages: ${{ steps.packages.outputs.packages }}
+
+  service-images:
+    name: ${{ matrix.label }}
+    needs: [changes, service-binaries]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.service_images && needs.service-binaries.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
@@ -597,15 +617,36 @@ jobs:
           image: ${{ matrix.image }}
           dockerfile: ${{ matrix.dockerfile }}
           registry: ${{ needs.changes.outputs.registry }}
-          export-cache: 'true'
+          stage-artifact: rust-service-binaries
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
 
+  # The JS images build in the node image like the Rust ones in ci/rust, and
+  # the image job only adds the runtime stage (js-build, service-image).
+  scraper-build:
+    name: Build scraper
+    needs: changes
+    if: fromJSON(needs.changes.outputs.plan).flags.image_scraper
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/js-build
+        with:
+          install-args: --filter @polycentric/scraper...
+          build: pnpm --filter @polycentric/scraper build
+          package: '@polycentric/scraper'
+          deploy-args: --legacy --config.allowUnusedPatches=true
+          dist: services/scraper/dist
+          artifact: scraper-build
+
   scraper-image:
     name: Build scraper image
-    needs: [changes, setup-images]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.image_scraper && needs.setup-images.result != 'failure' }}
+    needs: [changes, setup-images, scraper-build]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.image_scraper && needs.setup-images.result != 'failure' && needs.scraper-build.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
@@ -616,57 +657,93 @@ jobs:
           image: scraper
           dockerfile: services/scraper
           registry: ${{ needs.changes.outputs.registry }}
-          export-cache: 'true'
+          stage-artifact: scraper-build
+          stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
 
-  verifier-bot-image:
-    name: Build verifier bot image
+  verifier-bot-build:
+    name: Build verifier bot
     needs: [changes, sdks]
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.image_verifier_bot && needs.sdks.result == 'success' }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: '1'
+      HUSKY: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/sdk-artifacts
+      - uses: ./.forgejo/actions/js-build
+        with:
+          install-args: --filter @polycentric/verifier-bot...
+          build: pnpm --filter @polycentric/verifier-bot build
+          package: '@polycentric/verifier-bot'
+          deploy-args: --config.inject-workspace-packages=true --config.allowUnusedPatches=true
+          dist: services/verifier-bot/dist
+          artifact: verifier-bot-build
+
+  verifier-bot-image:
+    name: Build verifier bot image
+    needs: [changes, verifier-bot-build]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.image_verifier_bot && needs.verifier-bot-build.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/service-image
         with:
           image: verifier-bot
           dockerfile: services/verifier-bot
           registry: ${{ needs.changes.outputs.registry }}
-          export-cache: 'true'
+          stage-artifact: verifier-bot-build
+          stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
 
-  web-image:
-    name: Build web image
+  web-build:
+    name: Build web
     needs: [changes, sdks]
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.web_image && needs.sdks.result == 'success' }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      EXPO_PUBLIC_HARBOR_SEED_SERVERS: ${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
+      EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS: ${{ vars.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Resolve version
+        run: echo "APP_VERSION=$(node tools/expo/resolve-version.js)+$(echo "$GITHUB_SHA" | cut -c1-8)" >> "$GITHUB_ENV"
+      - uses: ./.forgejo/actions/sdk-artifacts
+        with:
+          rn-sdk: 'true'
+      - uses: ./.forgejo/actions/js-build
+        with:
+          install-args: --filter polycentric-app...
+          package: polycentric-app
+          deploy-args: --legacy
+          after-deploy: npx expo export --platform web
+          artifact: web-build
+
+  web-image:
+    name: Build web image
+    needs: [changes, web-build]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.web_image && needs.web-build.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Resolve version
-        id: version
-        run: echo "app_version=$(node tools/expo/resolve-version.js)+$(echo "$GITHUB_SHA" | cut -c1-8)" >> "$GITHUB_OUTPUT"
-      - uses: ./.forgejo/actions/sdk-artifacts
-        with:
-          rn-sdk: 'true'
       - uses: ./.forgejo/actions/service-image
         with:
           image: web
           dockerfile: apps/harbor
           registry: ${{ needs.changes.outputs.registry }}
-          export-cache: 'true'
-          build-args: |
-            APP_VERSION=${{ steps.version.outputs.app_version }}
-            EXPO_PUBLIC_HARBOR_SEED_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
-            EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS }}
-            SKIP_WORKSPACE_BUILD=1
+          stage-artifact: web-build
+          stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
@@ -713,7 +790,7 @@ jobs:
           path: target/nextest/ci/junit.xml
           retention-days: 7
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -890,9 +967,13 @@ jobs:
       - kt-core
       - kt-core-lint
       - sdks
+      - service-binaries
       - service-images
+      - scraper-build
       - scraper-image
+      - verifier-bot-build
       - verifier-bot-image
+      - web-build
       - web-image
       - services-integration
       - scraper-integration

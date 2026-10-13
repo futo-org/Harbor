@@ -19,6 +19,9 @@ on:
       - .forgejo/actions/ci-images/**
       - .forgejo/actions/wasm-build/**
       - .forgejo/actions/sdk-build/**
+      - .forgejo/actions/setup-pnpm/**
+      - .forgejo/actions/js-build/**
+      - .forgejo/actions/stage-artifact/**
       - .forgejo/actions/service-image/**
       - .forgejo/actions/chart-publish/**
       - .forgejo/actions/deploy-tag/**
@@ -81,7 +84,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -105,9 +108,29 @@ jobs:
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
+  build:
+    name: Build
+    needs: [changes, sdks]
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: '1'
+      HUSKY: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/sdk-artifacts
+      - uses: ./.forgejo/actions/js-build
+        with:
+          install-args: --filter @polycentric/verifier-bot...
+          build: pnpm --filter @polycentric/verifier-bot build
+          package: '@polycentric/verifier-bot'
+          deploy-args: --config.inject-workspace-packages=true --config.allowUnusedPatches=true
+          dist: services/verifier-bot/dist
+          artifact: verifier-bot-build
+
   deploy:
     name: Deploy
-    needs: [changes, sdks]
+    needs: [changes, build]
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
@@ -115,13 +138,13 @@ jobs:
       REGISTRY: ${{ needs.changes.outputs.registry }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/service-image
         with:
           image: verifier-bot
           dockerfile: services/verifier-bot
           registry: ${{ env.REGISTRY }}
-          export-cache: 'true'
+          stage-artifact: verifier-bot-build
+          stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}

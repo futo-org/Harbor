@@ -1,0 +1,47 @@
+name: rust-binaries
+description: Release-builds Rust service packages in the ci/rust job image with the rust-env caches, and uploads their executables under out/ (stage-artifact). service-image's `stage-artifact` input puts them in place of the Dockerfile's builder stage.
+inputs:
+  packages:
+    description: Cargo packages to build, whitespace separated
+    required: true
+  artifact:
+    description: Artifact name
+    default: rust-service-binaries
+runs:
+  using: composite
+  steps:
+    - uses: ./.forgejo/actions/rust-env
+      with:
+        cache: service-binaries
+    - name: Build
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+      run: |
+        echo "$(nproc) CPUs, $(awk '/^MemTotal:/ { printf "%d", $2 / 1048576 }' /proc/meminfo) GB memory, load $(cut -d' ' -f1-3 /proc/loadavg)"
+        args=()
+        for package in $PACKAGES; do args+=(--package "$package"); done
+        install -d stage/out
+        cargo build --release --jobs "$(nproc)" --timings "${args[@]}" --message-format=json-render-diagnostics |
+          node -e 'require("readline").createInterface({ input: process.stdin }).on("line", (line) => {
+            const message = JSON.parse(line);
+            if (message.reason === "compiler-artifact" && message.executable) console.log(message.executable);
+          })' |
+          xargs -r cp -t stage/out/
+        ls -l stage/out
+        sccache --show-stats
+    - uses: ./.forgejo/actions/r2-cache
+      continue-on-error: true
+      with:
+        mode: save
+        key: ${{ env.RUST_CACHE_KEY }}
+        path: ${{ env.RUST_CACHE_PATHS }}
+    - uses: ./.forgejo/actions/stage-artifact
+      with:
+        artifact: ${{ inputs.artifact }}
+    # Per-crate timeline and CPU use (cargo --timings), to see where the build waits.
+    - uses: forgejo/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact }}-timings
+        path: target/cargo-timings/cargo-timing.html
+        retention-days: 7

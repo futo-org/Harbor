@@ -1,0 +1,60 @@
+name: js-build
+description: Builds a JS service in the node job image and uploads what its Dockerfile's build stage would produce (stage-artifact) - the `pnpm deploy` output at deploy/ and, optionally, the build output at app/<dist> - for service-image's `stage-artifact` input.
+inputs:
+  install-args:
+    description: Arguments for pnpm install (setup-pnpm)
+    required: true
+  build:
+    description: Build command run before the deploy (empty skips)
+    default: ''
+  package:
+    description: pnpm filter of the package to deploy
+    required: true
+  deploy-args:
+    description: Extra pnpm arguments for the deploy
+    default: ''
+  dist:
+    description: Build output, relative to the repo root, copied to app/<dist> (empty skips)
+    default: ''
+  after-deploy:
+    description: Command run inside deploy/ after the deploy (empty skips)
+    default: ''
+  artifact:
+    description: Artifact name
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: ./.forgejo/actions/setup-pnpm
+      with:
+        install-args: ${{ inputs.install-args }}
+    - name: Build
+      if: inputs.build != ''
+      shell: bash
+      env:
+        BUILD: ${{ inputs.build }}
+      run: eval "$BUILD"
+    - name: Deploy
+      shell: bash
+      env:
+        PACKAGE: ${{ inputs.package }}
+        DEPLOY_ARGS: ${{ inputs.deploy-args }}
+        DIST: ${{ inputs.dist }}
+      run: |
+        set -f
+        rm -rf stage
+        pnpm --filter "$PACKAGE" --prod $DEPLOY_ARGS deploy stage/deploy
+        if [ -n "$DIST" ]; then
+          install -d "stage/app/$(dirname "$DIST")"
+          cp -a "$DIST" "stage/app/$DIST"
+        fi
+    - name: After deploy
+      if: inputs.after-deploy != ''
+      shell: bash
+      working-directory: stage/deploy
+      env:
+        AFTER_DEPLOY: ${{ inputs.after-deploy }}
+      run: eval "$AFTER_DEPLOY"
+    - uses: ./.forgejo/actions/stage-artifact
+      with:
+        artifact: ${{ inputs.artifact }}
