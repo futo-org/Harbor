@@ -1,0 +1,44 @@
+appId: ${MAESTRO_APP_ID}
+name: Closing the composer over a draft asks to discard it
+---
+- runFlow: ../elements/load.yaml
+- runFlow: onboarding-create-identity.yaml
+- runFlow: ../steps/open-composer-native.yaml
+# The field has focus when the composer opens.
+- inputText: Draft to discard
+# Keeping the draft leaves the composer open with it. The alert's button
+# shares its label with the composer's Cancel, which sits above the alert.
+- tapOn: ${output.composer.closeNative}
+- assertVisible: ${output.composer.discardTitle}
+- tapOn:
+    text: ${output.composer.keepEditing}
+    below: ${output.composer.discardMessage}
+- assertNotVisible: ${output.composer.discardTitle}
+- assertVisible: Draft to discard
+# Discarding closes the composer.
+- tapOn: ${output.composer.closeNative}
+- tapOn: ${output.composer.discard}
+- extendedWaitUntil:
+    notVisible:
+      id: ${output.composer.submit}
+    timeout: 30000
+# The discarded draft is gone on the next open, and an empty composer closes
+# without asking.
+- runFlow: ../steps/open-composer-native.yaml
+- assertNotVisible: Draft to discard
+- tapOn: ${output.composer.closeNative}
+- extendedWaitUntil:
+    notVisible:
+      id: ${output.composer.submit}
+    timeout: 30000
+- assertNotVisible: ${output.composer.discardTitle}
+# Posting closes the composer without asking either.
+- runFlow: ../steps/open-composer-native.yaml
+- inputText: Posted without asking
+- tapOn:
+    id: ${output.composer.submit}
+- extendedWaitUntil:
+    notVisible:
+      id: ${output.composer.submit}
+    timeout: 30000
+- assertNotVisible: ${output.composer.discardTitle}
