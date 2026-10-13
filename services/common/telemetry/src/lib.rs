@@ -10,8 +10,9 @@ use prometheus::Encoder;
 use tracing_subscriber::EnvFilter;
 
 /// Initialize logging: `RUST_LOG` filters (default `info`), JSON to stdout
-/// in deployments, human-readable text on a terminal. `LOG_FORMAT=json|text`
-/// overrides the format. `log` macros are bridged into `tracing`.
+/// in deployments, human-readable text on a terminal.
+/// `HARBOR_LOG_FORMAT=json|text` overrides the format. `log` macros are
+/// bridged into `tracing`.
 pub fn init() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let json = match env::var("HARBOR_LOG_FORMAT")

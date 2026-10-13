@@ -49,7 +49,7 @@ pub struct ObjectStoreConfig {
 impl ObjectStoreConfig {
     pub fn from_env() -> Result<Self, String> {
         let bucket = env::var("HARBOR_CONTENT_BLOB_OS_BUCKET")
-            .map_err(|_| "CONTENT_BLOB_OS_BUCKET is required".to_string())?;
+            .map_err(|_| "HARBOR_CONTENT_BLOB_OS_BUCKET is required".to_string())?;
         let region =
             env::var("HARBOR_CONTENT_BLOB_OS_REGION").unwrap_or_else(|_| "us-east-1".to_string());
         let endpoint = env::var("HARBOR_CONTENT_BLOB_OS_ENDPOINT").ok();
