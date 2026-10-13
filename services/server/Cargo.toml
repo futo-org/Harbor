@@ -36,6 +36,7 @@ serde = { version = "1", default-features = false, features = ["std", "derive"] 
 serde_json = { version = "1", default-features = false, features = ["std"] }
 sha2.workspace = true
 tokio = { workspace = true, features = ["full"] }
+tokio-stream = { version = "0.1", default-features = false }
 tokio-util = { version = "0.7.18", features = ["rt"] }
 tonic = { workspace = true, features = ["router", "transport"] }
 tonic-reflection = { version = "0.14", default-features = false, features = ["server"] }

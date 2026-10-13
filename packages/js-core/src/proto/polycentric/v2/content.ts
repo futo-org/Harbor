@@ -467,7 +467,7 @@ export interface SyncContentResponse {
 }
 /**
  * *
- * Request message for upoading a blob
+ * Request message for uploading a blob
  *
  * @generated from protobuf message polycentric.v2.UploadBlobRequest
  */

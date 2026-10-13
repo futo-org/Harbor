@@ -12,10 +12,6 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 import { PageInfo } from "./common";
-// *
-// The moderation RPCs are authenticated by the caller's bearer JWT
-// (see `auth_middleware`): the ban endpoints require a moderator.
-
 /**
  * *
  * IsModerator: no extra fields.

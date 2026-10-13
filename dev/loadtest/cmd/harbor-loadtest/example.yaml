@@ -6,7 +6,7 @@ target:
   # Web app origin: sent as Origin/Referer like a browser, and its HTML is
   # fetched by logged-out visitors (browse.loadWebApp).
   webURL: https://staging.harbor.social
-  # Seed servers, in the app's order (EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS).
+  # Seed servers, in the app's order (EXPO_PUBLIC_HARBOR_SEED_SERVERS).
   # srv.staging.harbor.social is the harbor-server namespace,
   # srv.staging.polycentric.io is harbor-server-alt. The first one serves blob
   # and image-proxy GETs.

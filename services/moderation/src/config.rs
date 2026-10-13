@@ -60,46 +60,29 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 /// Read and validate the environment into the process-wide [`Config`].
 /// Called once at startup, after dotenv load.
 pub fn init() -> Result<&'static Config, String> {
-    let identity = required(
-        "HARBOR_MODERATION_IDENTITY",
-        "POLYCENTRIC_MODERATION_IDENTITY",
-    )?
-    .trim()
-    .to_string();
+    let identity = required("HARBOR_MODERATION_IDENTITY")?.trim().to_string();
     if identity.is_empty() {
         return Err("HARBOR_MODERATION_IDENTITY is empty".to_string());
     }
 
     let config = Config {
         database_url: env::var("HARBOR_DATABASE_URL")
-            .or_else(|_| env::var("DATABASE_URL"))
             .unwrap_or_else(|_| "postgres://postgres:testing@localhost:5432".to_string()),
-        ro_database_url: env::var("HARBOR_DATABASE_URL_RO")
-            .or_else(|_| env::var("DATABASE_URL_RO"))
-            .ok(),
+        ro_database_url: env::var("HARBOR_DATABASE_URL_RO").ok(),
         database_schema: env::var("HARBOR_MODERATION_DATABASE_SCHEMA")
-            .or_else(|_| env::var("POLYCENTRIC_MODERATION_DATABASE_SCHEMA"))
             .unwrap_or_else(|_| "moderation".to_string()),
         database_max_connections: env::var("HARBOR_DATABASE_MAX_CONNECTIONS")
-            .or_else(|_| env::var("POLYCENTRIC_DATABASE_MAX_CONNECTIONS"))
             .ok()
             .and_then(|s| s.trim().parse().ok())
             .unwrap_or(20),
-        signing_key: required(
-            "HARBOR_MODERATION_SIGNING_KEY",
-            "POLYCENTRIC_MODERATION_SIGNING_KEY",
-        )?
-        .trim()
-        .to_string(),
+        signing_key: required("HARBOR_MODERATION_SIGNING_KEY")?
+            .trim()
+            .to_string(),
         identity,
-        servers: required_list(
-            "HARBOR_MODERATION_SERVERS",
-            "POLYCENTRIC_MODERATION_SERVERS",
-        )?,
+        servers: required_list("HARBOR_MODERATION_SERVERS")?,
         azure: azure_config()?,
-        photodna_key: optional("HARBOR_PHOTODNA_KEY", "POLYCENTRIC_PHOTODNA_KEY"),
+        photodna_key: optional("HARBOR_PHOTODNA_KEY"),
         photodna_endpoint: env::var("HARBOR_PHOTODNA_ENDPOINT")
-            .or_else(|_| env::var("POLYCENTRIC_PHOTODNA_ENDPOINT"))
             .unwrap_or_else(|_| DEFAULT_PHOTODNA_ENDPOINT.to_string()),
     };
     Ok(CONFIG.get_or_init(|| config))
@@ -112,23 +95,15 @@ pub fn get() -> &'static Config {
 
 fn azure_config() -> Result<Option<AzureConfig>, String> {
     match (
-        optional(
-            "HARBOR_AZURE_CONTENT_SAFETY_ENDPOINT",
-            "POLYCENTRIC_AZURE_CONTENT_SAFETY_ENDPOINT",
-        ),
-        optional(
-            "HARBOR_AZURE_CONTENT_SAFETY_KEY",
-            "POLYCENTRIC_AZURE_CONTENT_SAFETY_KEY",
-        ),
+        optional("HARBOR_AZURE_CONTENT_SAFETY_ENDPOINT"),
+        optional("HARBOR_AZURE_CONTENT_SAFETY_KEY"),
     ) {
         (Some(endpoint), Some(key)) => Ok(Some(AzureConfig {
             endpoint,
             key,
             api_version: env::var("HARBOR_AZURE_CONTENT_SAFETY_API_VERSION")
-                .or_else(|_| env::var("POLYCENTRIC_AZURE_CONTENT_SAFETY_API_VERSION"))
                 .unwrap_or_else(|_| DEFAULT_AZURE_API_VERSION.to_string()),
             multimodal_api_version: env::var("HARBOR_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION")
-                .or_else(|_| env::var("POLYCENTRIC_AZURE_CONTENT_SAFETY_MULTIMODAL_API_VERSION"))
                 .unwrap_or_else(|_| DEFAULT_AZURE_MULTIMODAL_API_VERSION.to_string()),
         })),
         (None, None) => Ok(None),
@@ -138,23 +113,20 @@ fn azure_config() -> Result<Option<AzureConfig>, String> {
     }
 }
 
-fn required(name: &str, fallback_name: &str) -> Result<String, String> {
-    env::var(name)
-        .or_else(|_| env::var(fallback_name))
-        .map_err(|_| format!("{name} is not set"))
+fn required(name: &str) -> Result<String, String> {
+    env::var(name).map_err(|_| format!("{name} is not set"))
 }
 
-fn optional(name: &str, fallback_name: &str) -> Option<String> {
+fn optional(name: &str) -> Option<String> {
     env::var(name)
-        .or_else(|_| env::var(fallback_name))
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
 }
 
 /// A required comma-delimited list; must contain at least one entry.
-fn required_list(name: &str, fallback_name: &str) -> Result<Vec<String>, String> {
-    let items: Vec<String> = required(name, fallback_name)?
+fn required_list(name: &str) -> Result<Vec<String>, String> {
+    let items: Vec<String> = required(name)?
         .split(',')
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())

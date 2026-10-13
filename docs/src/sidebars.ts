@@ -8,7 +8,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Overview',
       collapsed: false,
-      items: ['intro', 'faq', 'servers', 'support'],
+      items: ['intro', 'faq', 'servers', 'roadmap', 'support'],
     },
     {
       type: 'category',
@@ -44,6 +44,7 @@ const sidebars: SidebarsConfig = {
         'developer/setup',
         'developer/project-structure',
         'developer/feed-paging',
+        'developer/unread-notifications',
         'developer/declaring-your-application',
         'developer/e2e-testing',
       ],

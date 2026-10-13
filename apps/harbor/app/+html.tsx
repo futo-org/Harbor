@@ -1,11 +1,20 @@
+import {
+  BOOT_SKELETON_STYLE,
+  BOOT_SKELETON_SCRIPT,
+  BootSkeleton,
+} from '@/src/common/components/layout/BootSkeleton';
 import { APP_NAME } from '@/src/common/constants';
 import type { PropsWithChildren } from 'react';
 
 const ROOT_STYLE =
-  'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100vh}' +
+  'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100dvh}' +
   'html>body[data-scroll-locked]{overflow:visible!important;margin-right:0!important}' +
   '@media(hover:hover){.underlineOnHover:hover{text-decoration:underline}}' +
-  '.transparentText{color:transparent}';
+  '.twemojiSpriteText{color:transparent}' +
+  // Firefox on Linux recolors selected text, revealing the glyph over the sprite.
+  // round(down, alpha) is 1 only for an opaque highlight, which then gets 50%
+  // alpha; macOS's is already translucent and halving it would leave ~25%.
+  '.twemojiSpriteText::selection{color:transparent;background-color:rgb(from Highlight r g b/calc(alpha - 0.5*round(down,alpha)))}';
 
 // Declared here rather than through expo-font, whose injected @font-face has
 // no font-weight range: browsers then clamp the variable font to 400 and
@@ -22,7 +31,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1"
+          content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
         />
         <title>{APP_NAME}</title>
         <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -50,8 +59,20 @@ export default function Root({ children }: PropsWithChildren) {
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static stylesheet, no user input
           dangerouslySetInnerHTML={{ __html: FONT_STYLE }}
         />
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static script, no user input
+          dangerouslySetInnerHTML={{ __html: BOOT_SKELETON_SCRIPT }}
+        />
+        <style
+          id="polycentric-boot-skeleton"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static stylesheet, no user input
+          dangerouslySetInnerHTML={{ __html: BOOT_SKELETON_STYLE }}
+        />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <BootSkeleton />
+      </body>
     </html>
   );
 }

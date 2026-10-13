@@ -15,7 +15,19 @@ import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
 /**
  * *
- * Pairing APIs used for device pairing.
+ * Pairing APIs used for device pairing: linking a new device (the claimer) to
+ * an existing identity (the issuer).
+ *
+ * The issuer creates a session with PutPairingSession by uploading its first
+ * `SignedIssuerState`. The session is addressed by the SHA-256 of the
+ * serialized `PairingSessionDigest` inside that state. The issuer shares a
+ * `PairingInfo` (server URL and digest hash) with the claimer out-of-band, for
+ * example as a QR code. The claimer fetches the session with
+ * GetPairingSession, checks that the digest hashes to the shared value and
+ * that the issuer state is signed by `issuer_signer`, then registers its key
+ * with JoinPairingSession. The issuer polls GetPairingSession for claimers,
+ * authorizes the claimer's key in a new identity event and uploads it in its
+ * next issuer state, which the claimer polls for.
  *
  * @generated from protobuf service polycentric.v2.PairingService
  */
@@ -41,7 +53,19 @@ export interface IPairingServiceClient {
 }
 /**
  * *
- * Pairing APIs used for device pairing.
+ * Pairing APIs used for device pairing: linking a new device (the claimer) to
+ * an existing identity (the issuer).
+ *
+ * The issuer creates a session with PutPairingSession by uploading its first
+ * `SignedIssuerState`. The session is addressed by the SHA-256 of the
+ * serialized `PairingSessionDigest` inside that state. The issuer shares a
+ * `PairingInfo` (server URL and digest hash) with the claimer out-of-band, for
+ * example as a QR code. The claimer fetches the session with
+ * GetPairingSession, checks that the digest hashes to the shared value and
+ * that the issuer state is signed by `issuer_signer`, then registers its key
+ * with JoinPairingSession. The issuer polls GetPairingSession for claimers,
+ * authorizes the claimer's key in a new identity event and uploads it in its
+ * next issuer state, which the claimer polls for.
  *
  * @generated from protobuf service polycentric.v2.PairingService
  */

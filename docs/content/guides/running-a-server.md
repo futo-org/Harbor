@@ -58,9 +58,9 @@ docker compose up -d postgres rustfs rustfs-init
 
 # Apply the schema, pointing at the local database.
 cd services/server/migration
-DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
+HARBOR_DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 
-# Run the server (reads the CONTENT_BLOB_OS_* and DATABASE_URL variables).
+# Run the server (reads the HARBOR_CONTENT_BLOB_OS_* and HARBOR_DATABASE_URL variables).
 cargo run -p server
 ```
 
@@ -86,7 +86,7 @@ loads a `.env` file from the working directory if one is present.
 
 | Variable       | Default                                          | Description                  |
 | -------------- | ------------------------------------------------ | ---------------------------- |
-| `DATABASE_URL` | `postgres://postgres:testing@localhost:5432`     | PostgreSQL connection string |
+| `HARBOR_DATABASE_URL` | `postgres://postgres:testing@localhost:5432`     | PostgreSQL connection string |
 
 ### Object storage (blobs)
 
@@ -166,7 +166,7 @@ Most traffic is gRPC, but a few plain-HTTP routes are served directly:
 | `GET /blob/{digest}` | Download a blob body by content digest (`{type}_{hex}`, e.g. `1_<sha256 hex>`). |
 | `GET /docs`          | Live API browser generated from gRPC reflection.                     |
 
-See [Protocol → gRPC](../protocol/grpc.md) for the gRPC services.
+See [Protocol → gRPC](../protocol/grpc.mdx) for the gRPC services.
 
 ## Content moderation & removal
 
@@ -293,5 +293,5 @@ deployment, terminate TLS at a reverse proxy in front of port `3000` and forward
 the server. The server already sends permissive CORS headers and enables gRPC-Web, so
 browser clients can connect once TLS is in place.
 
-Set `CDN_URL` to the public HTTPS URL of the server so clients fetch blobs over the
-proxy.
+Set `HARBOR_CDN_URL` to the public HTTPS URL of the server so clients fetch
+blobs over the proxy.

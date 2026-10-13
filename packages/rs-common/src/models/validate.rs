@@ -1,14 +1,15 @@
 //! Validation
 
-use std::convert::{Infallible, identity};
+use std::convert::Infallible;
 use std::fmt;
 use std::sync::OnceLock;
 
 use regex::Regex;
 
 use crate::models::{
-    application, attributed_to, blob, content, content_body, content_digest, event, event_key,
-    image, image_set, link, post, post_reply, public_key, to,
+    application, attributed_to, attributed_to_reaction, blob, block, content, content_body,
+    content_digest, delete, event, event_key, follow, image, image_set, labels, link, post,
+    post_reply, profile_update, public_key, reaction, report, repost, to,
 };
 
 /// Validate a value.
@@ -18,7 +19,7 @@ pub trait Validate {
     /// Validate a value, returning all errors.
     fn validate(&self) -> Result<(), Vec<Self::Error>> {
         let mut errors = Vec::new();
-        self.validate_check(&mut errors, identity);
+        self.validate_check(&mut errors, std::convert::identity);
         if errors.is_empty() {
             Ok(())
         } else {
@@ -57,6 +58,15 @@ pub enum ValidationError {
     Link(link::ValidationError),
     AttributedTo(attributed_to::ValidationError),
     To(to::ValidationError),
+    Delete(delete::ValidationError),
+    Follow(follow::ValidationError),
+    Block(block::ValidationError),
+    Reaction(reaction::ValidationError),
+    AttributedToReaction(attributed_to_reaction::ValidationError),
+    ProfileUpdate(profile_update::ValidationError),
+    Repost(repost::ValidationError),
+    Report(report::ValidationError),
+    Labels(labels::ValidationError),
 }
 
 impl From<event::ValidationError> for ValidationError {
@@ -149,6 +159,60 @@ impl From<to::ValidationError> for ValidationError {
     }
 }
 
+impl From<delete::ValidationError> for ValidationError {
+    fn from(err: delete::ValidationError) -> ValidationError {
+        ValidationError::Delete(err)
+    }
+}
+
+impl From<follow::ValidationError> for ValidationError {
+    fn from(err: follow::ValidationError) -> ValidationError {
+        ValidationError::Follow(err)
+    }
+}
+
+impl From<block::ValidationError> for ValidationError {
+    fn from(err: block::ValidationError) -> ValidationError {
+        ValidationError::Block(err)
+    }
+}
+
+impl From<reaction::ValidationError> for ValidationError {
+    fn from(err: reaction::ValidationError) -> ValidationError {
+        ValidationError::Reaction(err)
+    }
+}
+
+impl From<attributed_to_reaction::ValidationError> for ValidationError {
+    fn from(err: attributed_to_reaction::ValidationError) -> ValidationError {
+        ValidationError::AttributedToReaction(err)
+    }
+}
+
+impl From<profile_update::ValidationError> for ValidationError {
+    fn from(err: profile_update::ValidationError) -> ValidationError {
+        ValidationError::ProfileUpdate(err)
+    }
+}
+
+impl From<repost::ValidationError> for ValidationError {
+    fn from(err: repost::ValidationError) -> ValidationError {
+        ValidationError::Repost(err)
+    }
+}
+
+impl From<report::ValidationError> for ValidationError {
+    fn from(err: report::ValidationError) -> ValidationError {
+        ValidationError::Report(err)
+    }
+}
+
+impl From<labels::ValidationError> for ValidationError {
+    fn from(err: labels::ValidationError) -> ValidationError {
+        ValidationError::Labels(err)
+    }
+}
+
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -167,6 +231,15 @@ impl fmt::Display for ValidationError {
             ValidationError::Link(err) => write!(f, "link {err}"),
             ValidationError::AttributedTo(err) => write!(f, "attributed to {err}"),
             ValidationError::To(err) => write!(f, "to {err}"),
+            ValidationError::Delete(err) => write!(f, "delete {err}"),
+            ValidationError::Follow(err) => write!(f, "follow {err}"),
+            ValidationError::Block(err) => write!(f, "block {err}"),
+            ValidationError::Reaction(err) => write!(f, "reaction {err}"),
+            ValidationError::AttributedToReaction(err) => write!(f, "attributed to reaction {err}"),
+            ValidationError::ProfileUpdate(err) => write!(f, "profile update {err}"),
+            ValidationError::Repost(err) => write!(f, "repost {err}"),
+            ValidationError::Report(err) => write!(f, "report {err}"),
+            ValidationError::Labels(err) => write!(f, "labels {err}"),
         }
     }
 }
@@ -183,13 +256,11 @@ where
     } = config;
     let length = input.len();
     if let Some(min) = min_len
-        && Some(min) != max_len // Don't return double error for exact size check.
         && length < min
     {
         let err = StringError::TooShort { length, min };
         errors.push(map_err(err));
-    }
-    if let Some(max) = max_len
+    } else if let Some(max) = max_len
         && length > max
     {
         let err = StringError::TooLong { length, max };
@@ -382,20 +453,59 @@ impl<E: fmt::Display> fmt::Display for SliceError<E> {
                 write!(f, "is too long ({length}), maximum is {max}")
             }
             SliceError::Validate { index, error } => {
-                write!(f, "{index}-th is invalid: {error}")
+                write!(f, "{index}-th {error}")
             }
         }
     }
 }
 
+/// Validate an identity.
+pub(crate) fn identity<E, F>(identity: &str, errors: &mut Vec<E>, map_err: F)
+where
+    F: Fn(StringError) -> E,
+{
+    string(
+        identity,
+        errors,
+        map_err,
+        StringConfig {
+            min_len: Some(64),
+            max_len: Some(64),
+            regex: Some(hex_regex()),
+            ..Default::default()
+        },
+    );
+}
+
+/// Validate an emoji.
+pub(crate) fn emoji<E, F>(emoji: &str, errors: &mut Vec<E>, map_err: F)
+where
+    F: Fn(StringError) -> E,
+{
+    string(
+        emoji,
+        errors,
+        map_err,
+        StringConfig {
+            min_len: Some(1),
+            // According to
+            // <https://machs.space/posts/whats-the-max-valid-length-of-an-emoji/>
+            // the longest emoji is 35 bytes (rendered as a single symbol), so
+            // allow at least that emoji.
+            max_len: Some(40),
+            ..Default::default()
+        },
+    );
+}
+
 /// Regex that checks if the string starts with `http://` or `https://`.
 pub(crate) fn url_regex() -> &'static Regex {
     static REGEX: OnceLock<Regex> = OnceLock::new();
-    REGEX.get_or_init(|| Regex::new("https?:\\/\\/").unwrap())
+    REGEX.get_or_init(|| Regex::new("^https?:\\/\\/").unwrap())
 }
 
-/// Regex that checks if the string is hex encoded
+/// Regex that checks if the string is hex encoded.
 pub(crate) fn hex_regex() -> &'static Regex {
     static REGEX: OnceLock<Regex> = OnceLock::new();
-    REGEX.get_or_init(|| Regex::new("[0-9a-fA-F]+").unwrap())
+    REGEX.get_or_init(|| Regex::new("^[0-9a-fA-F]+$").unwrap())
 }

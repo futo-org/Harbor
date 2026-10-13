@@ -24,7 +24,9 @@ export interface IContentServiceClient {
      */
     syncContent(input: SyncContentRequest, options?: RpcOptions): UnaryCall<SyncContentRequest, SyncContentResponse>;
     /**
-     * Uploads a blob. If the blob is not referenced in a time window, it will be deleted.
+     * Uploads a blob. If the blob is not referenced by an event within a time
+     * window, it will be deleted. Blob bodies are served back over plain HTTP
+     * at `GET /blob/{digest}`.
      *
      * @generated from protobuf rpc: UploadBlob
      */
@@ -55,7 +57,9 @@ export class ContentServiceClient implements IContentServiceClient, ServiceInfo 
         return stackIntercept<SyncContentRequest, SyncContentResponse>("unary", this._transport, method, opt, input);
     }
     /**
-     * Uploads a blob. If the blob is not referenced in a time window, it will be deleted.
+     * Uploads a blob. If the blob is not referenced by an event within a time
+     * window, it will be deleted. Blob bodies are served back over plain HTTP
+     * at `GET /blob/{digest}`.
      *
      * @generated from protobuf rpc: UploadBlob
      */

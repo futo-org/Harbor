@@ -29,15 +29,12 @@ mod verifications;
 /// gRPC server address. Override with `HARBOR_TEST_SERVER` env var.
 pub fn grpc_addr() -> String {
     std::env::var("HARBOR_TEST_SERVER")
-        .or_else(|_| std::env::var("POLYCENTRIC_TEST_SERVER"))
         .unwrap_or_else(|_| "http://localhost:3000".to_string())
 }
 
 /// JWT auth token audience.
 fn audience() -> String {
-    match std::env::var("HARBOR_ALLOW_HOSTS")
-        .or_else(|_| std::env::var("POLYCENTRIC_ALLOW_HOSTS"))
-    {
+    match std::env::var("HARBOR_ALLOW_HOSTS") {
         Ok(hosts) => hosts
             .split(',')
             .map(str::trim)
@@ -46,7 +43,6 @@ fn audience() -> String {
             .expect("invalid HARBOR_ALLOW_HOSTS")
             .to_owned(),
         Err(_) => std::env::var("HARBOR_SERVER_NAME")
-            .or_else(|_| std::env::var("POLYCENTRIC_SERVER_NAME"))
             .unwrap_or_else(|_| "http://localhost:3000".to_string()),
     }
 }
@@ -70,7 +66,7 @@ pub fn sha256(data: &[u8]) -> Vec<u8> {
 }
 
 pub fn random_string() -> String {
-    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 30);
+    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 20);
     // When searching Postgres uses a technique called stemming where it removes
     // the end of certain English words, e.g. "party" and "party" both become
     // "part" so that when you search for "party" it matches both. However, when
@@ -254,6 +250,10 @@ impl TestClient {
 
     pub fn identity(&self) -> &str {
         &self.identity
+    }
+
+    pub fn public_key(&self) -> PublicKey {
+        public_key_of(&self.key)
     }
 
     pub fn event_sync_client(
@@ -491,7 +491,10 @@ impl TestClient {
         created_at: u64,
     ) -> Vec<u8> {
         let collection = match &body {
-            ContentBody::Post(_) | ContentBody::Delete(_) => COLLECTION_FEED,
+            ContentBody::Post(_) => COLLECTION_FEED,
+            ContentBody::Delete(delete) => {
+                delete.event_key.as_ref().map_or(0, |k| k.collection)
+            }
             ContentBody::Follow(_) | ContentBody::Block(_) => {
                 COLLECTION_SOCIAL_GRAPH
             }
