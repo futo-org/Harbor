@@ -125,11 +125,11 @@ The server produces events to Kafka, and its background workers consume them.
 
 ### Logging and metrics
 
-| Variable       | Default   | Description                                                          |
-| -------------- | --------- | --------------------------------------------------------------------- |
-| `RUST_LOG`     | `info`    | Log filter, e.g. `info` or `debug`.                                  |
-| `LOG_FORMAT`   | _(auto)_  | `json` or `text`; defaults to text on a terminal, JSON otherwise.    |
-| `METRICS_PORT` | `9464`    | Port serving Prometheus `GET /metrics`.                              |
+| Variable              | Default   | Description                                                          |
+| --------------------- | --------- | --------------------------------------------------------------------- |
+| `RUST_LOG`            | `info`    | Log filter, e.g. `info` or `debug`.                                  |
+| `HARBOR_LOG_FORMAT`   | _(auto)_  | `json` or `text`; defaults to text on a terminal, JSON otherwise.    |
+| `HARBOR_METRICS_PORT` | `9464`    | Port serving Prometheus `GET /metrics`.                              |
 
 The companion services (moderation, push notifications, scraper) are configured the
 same way; their variables are listed in each service's README under
@@ -185,7 +185,7 @@ one, and you can
 It scans images (for example, matching against PhotoDNA to detect known CSAM),
 deletes matching blobs directly from the object store, and publishes a
 [`Report`](../protocol/data-model.md#report) event recording the violation. Because it
-deletes objects, the moderation service's `CONTENT_BLOB_OS_*` credentials need
+deletes objects, the moderation service's `HARBOR_CONTENT_BLOB_OS_*` credentials need
 delete permission on the bucket, while the server's own credentials do not.
 
 ### Moderation labels
