@@ -940,33 +940,42 @@ export class PolycentricClient {
    */
   async saveBundles(bundles: Proto.EventBundle[]): Promise<void> {
     for (const bundle of bundles) {
-      const signedEvent = bundle.signedEvent;
-      if (!signedEvent) throw new Error('Bundle is missing signedEvent');
+      await this.saveBundle(bundle);
+    }
+  }
 
-      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-      if (!event.key?.signedBy) throw new Error('Event is missing key');
+  /**
+   * Try saving this event bundle, content first.
+   * Throws an error if anything goes wrong.
+   */
+  async saveBundle(bundle: Proto.EventBundle): Promise<void> {
+    const signedEvent = bundle.signedEvent;
+    if (!signedEvent) throw new Error('Bundle is missing signedEvent');
 
-      const contentBytes = bundle.serializedContent?.contentBytes;
-      if (!contentBytes) throw new Error('Bundle is missing content');
+    const event = Proto.Event.fromBinary(signedEvent.eventBytes);
+    if (!event.key?.signedBy) throw new Error('Event is missing key');
 
-      const digest = event.contentDigest;
-      if (
-        !digest ||
-        digest.type !== Proto.ContentDigestType.SHA256 ||
-        !bytesEqual(sha256(contentBytes), digest.value)
-      ) {
-        throw new Error('Content does not match event digest');
-      }
+    const contentBytes = bundle.serializedContent?.contentBytes;
+    if (!contentBytes) throw new Error('Bundle is missing content');
 
-      const content = Proto.Content.fromBinary(contentBytes);
+    const digest = event.contentDigest;
+    if (
+      !digest ||
+      digest.type !== Proto.ContentDigestType.SHA256 ||
+      !bytesEqual(sha256(contentBytes), digest.value)
+    ) {
+      throw new Error('Content does not match event digest');
+    }
 
-      // Both writes can throw.
-      // We will skip saving the event if the content fails to write.
-      if (!(await this.storage.content.get(digest))) {
-        await this.storage.content.save(digest, content);
-      }
+    const content = Proto.Content.fromBinary(contentBytes);
 
-      if (await this.storage.events.getByEventKey(event.key)) continue;
+    // Both writes can throw.
+    // We will skip saving the event if the content fails to write.
+    if (!(await this.storage.content.get(digest))) {
+      await this.storage.content.save(digest, content);
+    }
+
+    if (!(await this.storage.events.getByEventKey(event.key))) {
       await this.storage.events.save(signedEvent);
     }
   }

@@ -175,7 +175,7 @@ function bootstrapClient(): Promise<Bootstrap> {
     await store.getState().refreshIdentities();
 
     if (client.activeIdentityKey) {
-      // Referesh from current local state
+      // Refresh from current local state
       useFollows.getState().refresh(client);
       useReposts.getState().refresh(client);
       useReactions.getState().refresh(client);
@@ -234,15 +234,25 @@ export function PolycentricProvider({
     let cancelled = false;
     let ready: Bootstrap | null = null;
 
+    const refresh = async ({ client, store }: Bootstrap) => {
+      setCurrentIdentity(client.identityManager.resolveIdentity());
+      await Promise.all([
+        store.getState().refreshIdentities(),
+        useFollows.getState().refresh(client),
+        useReposts.getState().refresh(client),
+        useReactions.getState().refresh(client),
+        useBlocks.getState().refresh(client),
+      ]);
+    };
+
     const handleKeyPairChanged = async () => {
       if (cancelled || !ready) return;
-      const { client: c, store: s } = ready;
-      setCurrentIdentity(c.identityManager.resolveIdentity());
-      await s.getState().refreshIdentities();
-      useFollows.getState().refresh(c);
-      useReposts.getState().refresh(c);
-      useReactions.getState().refresh(c);
-      useBlocks.getState().refresh(c);
+
+      try {
+        await refresh(ready);
+      } catch (err) {
+        console.error('Refresh after login failed:', err);
+      }
     };
 
     // Keep identity state up to date.
@@ -266,18 +276,11 @@ export function PolycentricProvider({
     const handlePulled = async (identityKey: string) => {
       if (cancelled || !ready) return;
 
-      const { client: c, store: s } = ready;
-      if (identityKey !== c.activeIdentityKey) return;
+      const { client } = ready;
+      if (identityKey !== client.activeIdentityKey) return;
 
       try {
-        setCurrentIdentity(c.identityManager.resolveIdentity());
-        await Promise.all([
-          s.getState().refreshIdentities(),
-          useFollows.getState().refresh(c),
-          useReposts.getState().refresh(c),
-          useReactions.getState().refresh(c),
-          useBlocks.getState().refresh(c),
-        ]);
+        await refresh(ready);
       } catch (err) {
         console.warn('Failed to refresh stores after pull:', err);
       }
