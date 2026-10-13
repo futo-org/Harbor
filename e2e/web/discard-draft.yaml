@@ -31,6 +31,25 @@ name: Closing the composer over a draft asks to discard it
     script: return document.querySelector('textarea').value
     output: draft
 - assertTrue: ${draft === 'Draft to discard'}
+# Clicking outside the sheet asks too. The runner taps an element's centre,
+# which the card covers on the backdrop, so click its left edge from a script.
+- evalBrowserScript:
+    script: window.confirmMessage = ''; window.confirmAnswer = false; return true
+- evalBrowserScript:
+    script: |
+      const outside = document.elementFromPoint(1, window.innerHeight / 2);
+      outside.click();
+      return outside.getAttribute('aria-label');
+    output: clicked
+- assertTrue: ${clicked === output.composer.backdropWeb}
+- evalBrowserScript:
+    script: return window.confirmMessage
+    output: confirmMessage
+- assertTrue: ${confirmMessage.startsWith(output.composer.discardTitle)}
+- evalBrowserScript:
+    script: return document.querySelector('textarea').value
+    output: draft
+- assertTrue: ${draft === 'Draft to discard'}
 # Escape asks too, and discarding closes the composer.
 - evalBrowserScript:
     script: window.confirmMessage = ''; window.confirmAnswer = true; return true
