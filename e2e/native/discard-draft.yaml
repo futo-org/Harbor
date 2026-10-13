@@ -15,6 +15,24 @@ name: Closing the composer over a draft asks to discard it
     below: ${output.composer.discardMessage}
 - assertNotVisible: ${output.composer.discardTitle}
 - assertVisible: Draft to discard
+# Android's back button asks too.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      # The first press only hides the keyboard if it is up.
+      - repeat:
+          times: 2
+          while:
+            notVisible: ${output.composer.discardTitle}
+          commands:
+            - pressKey: back
+      - assertVisible: ${output.composer.discardTitle}
+      - tapOn:
+          text: ${output.composer.keepEditing}
+          below: ${output.composer.discardMessage}
+      - assertNotVisible: ${output.composer.discardTitle}
+      - assertVisible: Draft to discard
 # Discarding closes the composer.
 - tapOn: ${output.composer.closeNative}
 - tapOn: ${output.composer.discard}
