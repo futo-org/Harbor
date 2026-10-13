@@ -20,6 +20,12 @@ export type RoadmapGap = { gap: string; when: string; description: string };
 export const roadmap: (RoadmapItem | RoadmapPhase | RoadmapGap)[] = [
   {
     when: '2027 - Q1',
+    title: 'Media publishing',
+    description:
+      'Publish videos, music and other media you own on Harbor. Files are shared peer to peer as torrents, so they stay available without depending on one host.',
+  },
+  {
+    when: '2027 - Q1',
     title: 'Lists',
     description:
       'Make public lists of people that anyone can browse, follow as a feed or subscribe to, including shared mute and block lists.',
@@ -45,6 +51,11 @@ export const roadmap: (RoadmapItem | RoadmapPhase | RoadmapGap)[] = [
     title: 'Web of Trust',
     description:
       'Build your own web of trust from your network. The people you trust, and the people they trust, help you tell real accounts from fakes without relying on a central authority.',
+  },
+  {
+    title: 'Verifications in the feed',
+    description:
+      "When someone verifies a claim or vouches for a person, it shows up in their followers' feeds, the way a repost does.",
   },
   {
     title: 'Identity switching',
