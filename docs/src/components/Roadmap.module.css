@@ -136,6 +136,42 @@
   border-top: 1px dashed var(--ifm-color-emphasis-300);
 }
 
+.gap {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--date-width) var(--line-width) 1fr;
+  align-items: center;
+  padding: 2rem 0;
+  margin: 0 0 0.75rem;
+}
+
+.gap::before {
+  content: "";
+  position: absolute;
+  top: -0.75rem;
+  bottom: -0.75rem;
+  left: calc(var(--date-width) + var(--line-width) / 2 - 1px);
+  width: 2px;
+  box-sizing: border-box;
+  border-left: 2px dashed var(--ifm-color-emphasis-500);
+  background: var(--ifm-background-color);
+}
+
+.gap .dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  background: var(--ifm-background-color);
+}
+
+.gap .card {
+  border: 1px dashed var(--ifm-color-emphasis-400);
+  background: transparent;
+}
+
+.gap .title {
+  color: var(--ifm-color-emphasis-700);
+}
+
 @media (max-width: 640px) {
   .roadmap {
     --line-width: 1.5rem;
@@ -146,9 +182,14 @@
   }
 
   .item,
-  .phase {
+  .phase,
+  .gap {
     grid-template-columns: var(--line-width) 1fr;
     align-items: start;
+  }
+
+  .gap::before {
+    left: calc(var(--line-width) / 2 - 1px);
   }
 
   .phaseLabel {
