@@ -1,5 +1,6 @@
 // Newest first. Items without a date are planned, labelled `when` (default
-// "Soon"). A phase entry labels everything below it.
+// "Soon"). A phase entry labels everything below it. A gap entry spans a
+// period without listed items.
 
 export type RoadmapItem = {
   title: string;
@@ -14,7 +15,9 @@ export type RoadmapItem = {
 
 export type RoadmapPhase = { phase: string };
 
-export const roadmap: (RoadmapItem | RoadmapPhase)[] = [
+export type RoadmapGap = { gap: string; when: string; description: string };
+
+export const roadmap: (RoadmapItem | RoadmapPhase | RoadmapGap)[] = [
   {
     when: '2027 - Q1',
     title: 'harbor.surf 🏄‍♂️',
@@ -180,6 +183,26 @@ export const roadmap: (RoadmapItem | RoadmapPhase)[] = [
       label: 'mark@futo.tech',
       to: 'https://harbor.social/mark@futo.tech',
     },
+  },
+  {
+    gap: 'Research and prototyping',
+    when: '2024 - 2025',
+    description:
+      'Experiments on the original protocol. What we learned shaped the redesign that followed.',
+  },
+  {
+    date: '2023-10-10',
+    title: 'Polycentric in Grayjay',
+    description:
+      'Grayjay launches with Polycentric built in. Comments and ratings on videos from any platform are signed by the people who wrote them, not owned by the platform.',
+    link: { label: 'grayjay.app', to: 'https://grayjay.app' },
+  },
+  {
+    date: '2023-06-13',
+    commit: '3a35127d56a718800e2860105df6b2f84dcf9ffd',
+    title: 'The first Harbor',
+    description:
+      'A web app named Harbor shows the accounts people claim on other platforms, and who has vouched for those claims.',
   },
   {
     date: '2022-10-05',

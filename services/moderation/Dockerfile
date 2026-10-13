@@ -1,4 +1,4 @@
-FROM rust:1.97-slim AS chef
+FROM rust:1.99-slim@sha256:2752b332db73fdbb7dc576f06c82ed1f312005784ef913d7e04a28f5f55dc581 AS chef
 WORKDIR /app
 COPY services/common/build-deps.sh build-deps.sh
 RUN sh build-deps.sh
@@ -30,7 +30,7 @@ RUN cargo build --release \
     && mv target/release/moderation-service target/release/moderation-migration /out/ \
     && rm -rf target
 
-FROM rust:1.97-slim
+FROM rust:1.99-slim@sha256:2752b332db73fdbb7dc576f06c82ed1f312005784ef913d7e04a28f5f55dc581
 WORKDIR /app
 COPY services/common/runtime-deps.sh runtime-deps.sh
 RUN sh runtime-deps.sh
