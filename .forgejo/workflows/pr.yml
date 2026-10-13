@@ -33,7 +33,7 @@ jobs:
       have_android: ${{ steps.plan.outputs.have_android }}
       have_ios: ${{ steps.plan.outputs.have_ios }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
       - uses: ./.forgejo/actions/plan
@@ -47,7 +47,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/ci-images
         if: needs.changes.outputs.images_missing == 'true'
         with:
@@ -69,7 +69,7 @@ jobs:
       ZIZMOR_VERSION: 1.30.0
       ZIZMOR_SHA256: ec8c95cd800845abb9bbc5f377ec7c57d2eb8e2386a00a201d3a74ee4092e5ed
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install zizmor
         run: |
           curl -fsSL -o zizmor.tar.gz "https://github.com/zizmorcore/zizmor/releases/download/v$ZIZMOR_VERSION/zizmor-x86_64-unknown-linux-gnu.tar.gz"
@@ -90,7 +90,7 @@ jobs:
       TRIVY_NO_PROGRESS: 'true'
       TRIVY_CACHE_DIR: .trivycache/
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
@@ -115,7 +115,7 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: packages-lint
@@ -143,7 +143,7 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: services-lint
@@ -176,7 +176,7 @@ jobs:
       DB_NAME: postgres
       DB_PORT: 5432
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: services-db-schema
@@ -244,7 +244,7 @@ jobs:
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter polycentric
@@ -260,7 +260,7 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter polycentric --filter @polycentric/scraper...
@@ -280,7 +280,7 @@ jobs:
     steps:
       - name: Install tools
         run: apk add --no-cache bash git helm
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Lint charts
         run: |
           for chart in deploy/charts/*/; do
@@ -296,7 +296,7 @@ jobs:
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter=polycentric-docs...
@@ -310,7 +310,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter polycentric-app...
@@ -328,7 +328,7 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: packages-tests
@@ -356,7 +356,7 @@ jobs:
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: services-tests
@@ -384,7 +384,7 @@ jobs:
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter @polycentric/js-core...
@@ -406,7 +406,7 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter @polycentric/scraper...
@@ -428,7 +428,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter polycentric-app...
@@ -448,7 +448,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/setup-pnpm
         with:
@@ -470,7 +470,7 @@ jobs:
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
         if: always()
@@ -488,7 +488,7 @@ jobs:
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/rust-android:${{ needs.changes.outputs.images_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/android-build
       - uses: ./.forgejo/actions/r2-cache
         if: always()
@@ -507,7 +507,7 @@ jobs:
       CARGO_HOME: ${{ github.workspace }}/.cargo
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/ios-build
 
   kt-core-lint:
@@ -520,7 +520,7 @@ jobs:
     env:
       GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/kt-core-build
         with:
           task: ':core:ktlintCheck'
@@ -544,7 +544,7 @@ jobs:
     env:
       GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/kt-core-build
       - uses: ./.forgejo/actions/r2-cache
         if: always()
@@ -567,7 +567,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/sdk-build
         with:
           registry: ${{ needs.changes.outputs.registry }}
@@ -591,7 +591,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.changes.outputs.plan).matrix.service_images }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/service-image
         with:
           image: ${{ matrix.image }}
@@ -610,7 +610,7 @@ jobs:
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/service-image
         with:
           image: scraper
@@ -629,7 +629,7 @@ jobs:
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/service-image
         with:
@@ -649,7 +649,7 @@ jobs:
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Resolve version
         id: version
         run: echo "app_version=$(node tools/expo/resolve-version.js)+$(echo "$GITHUB_SHA" | cut -c1-8)" >> "$GITHUB_OUTPUT"
@@ -690,7 +690,7 @@ jobs:
       RUST_LOG: warn
       HARBOR_SERVER_FALLBACK_IMAGE: ${{ needs.changes.outputs.registry }}/server:staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: services-integration
@@ -733,7 +733,7 @@ jobs:
     steps:
       - name: Install Chromium
         run: apt-get update && apt-get install -y --no-install-recommends chromium && rm -rf /var/lib/apt/lists/*
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter @polycentric/scraper...
@@ -759,7 +759,7 @@ jobs:
     steps:
       - name: Install Chromium
         run: apt-get update && apt-get install -y --no-install-recommends chromium && rm -rf /var/lib/apt/lists/*
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/setup-pnpm
         with:
@@ -802,7 +802,7 @@ jobs:
           apt-get update && apt-get install -y --no-install-recommends chromium
           printf '#!/bin/sh\nexec /usr/bin/chromium --no-sandbox --unsafely-treat-insecure-origin-as-secure=%s "$@"\n' "$MAESTRO_WEB_URL" > "$MAESTRO_BROWSER"
           chmod +x "$MAESTRO_BROWSER"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # seed.mjs imports the js SDKs.
       - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/setup-pnpm
@@ -826,7 +826,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter=polycentric-docs...
