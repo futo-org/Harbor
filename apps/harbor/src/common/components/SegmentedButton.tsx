@@ -242,8 +242,11 @@ function Segment({
       onHoverOut={onHoverOut}
       onLayout={onLayout}
       style={[
-        { zIndex: ZIndex.raised },
-        hovered && !active && { backgroundColor: theme.palette.neutral_50 },
+        hovered && !active
+          ? // A hovered segment stays below the indicator, so on web its
+            // background can't cover the indicator's edge after pixel rounding.
+            { backgroundColor: theme.palette.neutral_50 }
+          : { zIndex: ZIndex.raised },
         // Keeps the hover background inside the track's rounded ends.
         isFirst && LEFT_ROUNDED,
         isLast && RIGHT_ROUNDED,
