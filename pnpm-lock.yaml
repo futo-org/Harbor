@@ -360,7 +360,7 @@ importers:
         version: 3.10.2(@algolia/client-search@5.53.0)(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(@types/react@19.2.17)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(search-insights@2.17.3)(sharp@0.35.3)(typescript@6.0.3)
       '@docusaurus/theme-mermaid':
         specifier: 3.10.2
-        version: 3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@docusaurus/plugin-content-docs@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@mermaid-js/layout-elk@0.1.9(mermaid@12.1.0))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3)
+        version: 3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@docusaurus/plugin-content-docs@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@mermaid-js/layout-elk@0.2.3(mermaid@12.1.0))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3)
       '@fontsource/open-sans':
         specifier: ^5.3.0
         version: 5.3.0
@@ -368,8 +368,8 @@ importers:
         specifier: ^3.0.0
         version: 3.1.1(@types/react@19.2.17)(react@19.2.3)
       '@mermaid-js/layout-elk':
-        specifier: ^0.1.9
-        version: 0.1.9(mermaid@12.1.0)
+        specifier: ^0.2.0
+        version: 0.2.3(mermaid@12.1.0)
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
@@ -3662,8 +3662,8 @@ packages:
       '@types/react': '>=16'
       react: '>=16'
 
-  '@mermaid-js/layout-elk@0.1.9':
-    resolution: {integrity: sha512-HuvaqFZBr6yT9PpWYockvKAZPJVd89yn/UjOYPxhzbZxlybL2v+2BjVCg7MVH6vRs1irUohb/s42HEdec1CCZw==}
+  '@mermaid-js/layout-elk@0.2.3':
+    resolution: {integrity: sha512-m46RVGfvKK1PSMdAFGDz2nksI4jusEkFxvf0lb48bYWmqLQxZpjtpruiw29MbOy9rlWJtuMf9EzG9fAF8CVZbg==}
     peerDependencies:
       mermaid: ^11.0.2
 
@@ -15489,7 +15489,7 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@docusaurus/theme-mermaid@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@docusaurus/plugin-content-docs@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@mermaid-js/layout-elk@0.1.9(mermaid@12.1.0))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3)':
+  '@docusaurus/theme-mermaid@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@docusaurus/plugin-content-docs@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@mermaid-js/layout-elk@0.2.3(mermaid@12.1.0))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3)':
     dependencies:
       '@docusaurus/core': 3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3)
       '@docusaurus/module-type-aliases': 3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)
@@ -15501,7 +15501,7 @@ snapshots:
       react-dom: 19.2.3(react@19.2.3)
       tslib: 2.8.1
     optionalDependencies:
-      '@mermaid-js/layout-elk': 0.1.9(mermaid@12.1.0)
+      '@mermaid-js/layout-elk': 0.2.3(mermaid@12.1.0)
     transitivePeerDependencies:
       - '@docusaurus/faster'
       - '@docusaurus/plugin-content-docs'
@@ -17419,7 +17419,7 @@ snapshots:
       '@types/react': 19.2.17
       react: 19.2.3
 
-  '@mermaid-js/layout-elk@0.1.9(mermaid@12.1.0)':
+  '@mermaid-js/layout-elk@0.2.3(mermaid@12.1.0)':
     dependencies:
       d3: 7.9.0
       elkjs: 0.9.3
@@ -18912,7 +18912,9 @@ snapshots:
       metro-runtime: 0.84.6
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
     optional: true
 
   '@react-native/metro-config@0.86.2(@babel/core@7.29.7)':
@@ -18923,7 +18925,9 @@ snapshots:
       metro-runtime: 0.84.6
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
@@ -25800,7 +25804,7 @@ snapshots:
       cssnano: 6.1.2(postcss@8.5.29)
       html-minifier-terser: 7.2.0
       postcss: 8.5.29
-      sharp: 0.35.3(@types/node@24.13.1)
+      sharp: 0.35.3
 
   minimizer-webpack-plugin@5.13.0(lightningcss@1.33.0)(sharp@0.35.3)(webpack@5.111.1):
     dependencies:
@@ -25811,7 +25815,7 @@ snapshots:
       webpack: 5.111.1(lightningcss@1.33.0)(sharp@0.35.3)(webpack-cli@7.2.3)
     optionalDependencies:
       lightningcss: 1.33.0
-      sharp: 0.35.3(@types/node@24.13.1)
+      sharp: 0.35.3
 
   minipass@7.1.3: {}
 
