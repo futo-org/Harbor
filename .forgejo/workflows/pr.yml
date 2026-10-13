@@ -580,10 +580,30 @@ jobs:
 
   # Images -------------------------------------------------------------------
 
-  service-images:
-    name: ${{ matrix.label }}
+  # One cargo build for every service image in the plan, outside Docker, so
+  # shared dependencies compile once and the rust-env caches apply.
+  service-binaries:
+    name: Build Rust service binaries
     needs: [changes, setup-images]
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.service_images && needs.setup-images.result != 'failure' }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: List packages
+        id: packages
+        env:
+          ROWS: ${{ toJSON(fromJSON(needs.changes.outputs.plan).matrix.service_images.include) }}
+        run: echo "packages=$(node -p 'JSON.parse(process.env.ROWS).map((row) => row.packages).join(" ")')" >> "$GITHUB_OUTPUT"
+      - uses: ./.forgejo/actions/rust-binaries
+        with:
+          packages: ${{ steps.packages.outputs.packages }}
+
+  service-images:
+    name: ${{ matrix.label }}
+    needs: [changes, service-binaries]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.service_images && needs.service-binaries.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
@@ -592,12 +612,16 @@ jobs:
       matrix: ${{ fromJSON(needs.changes.outputs.plan).matrix.service_images }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: forgejo/download-artifact@v4
+        with:
+          name: rust-service-binaries
+          path: service-bin
       - uses: ./.forgejo/actions/service-image
         with:
           image: ${{ matrix.image }}
           dockerfile: ${{ matrix.dockerfile }}
           registry: ${{ needs.changes.outputs.registry }}
-          export-cache: 'true'
+          binaries: service-bin
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
@@ -661,7 +685,6 @@ jobs:
           image: web
           dockerfile: apps/harbor
           registry: ${{ needs.changes.outputs.registry }}
-          export-cache: 'true'
           build-args: |
             APP_VERSION=${{ steps.version.outputs.app_version }}
             EXPO_PUBLIC_HARBOR_SEED_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
@@ -890,6 +913,7 @@ jobs:
       - kt-core
       - kt-core-lint
       - sdks
+      - service-binaries
       - service-images
       - scraper-image
       - verifier-bot-image

@@ -42,8 +42,8 @@ Components: `server`, `moderation`, `push-notifications`, `grayjay-migrator`,
 
 `deploy-<component>-staging.yml` runs on a push to `develop` that touches the
 component's paths (or the workflow and the actions it uses), and manually. A
-service deploy builds the commit's image (BuildKit's registry cache makes a
-rebuild of unchanged sources a matter of seconds; `web` and `verifier-bot`
+service deploy builds the commit's image (the Rust services build their
+binaries in a job of their own first; `web` and `verifier-bot`
 first build the SDKs, and wasm when its copy is missing), packages and pushes
 the component's chart as
 `<next patch>-<ref>.g<sha>` with the commit as `appVersion`, then moves the
@@ -97,10 +97,16 @@ crates that still compile.
 
 Image builds run rootless BuildKit inside the job container (`ci/buildkit`,
 `buildctl-daemonless.sh`), no docker daemon involved, so nothing survives the
-job: they read and write the registry cache `<image>:cache-develop` with
-`mode=max`, and a build resumes from the step that changed. Rootless BuildKit
-needs the runner to start job containers with seccomp and AppArmor unconfined
-(harbor-ops runner config).
+job. Layers are pushed zstd-compressed. The Rust service images do no cargo
+work in BuildKit: a `ci/rust` job (`rust-binaries`) release-builds the
+packages with the `r2-cache` target and sccache, and `service-image`'s
+`binaries` input puts that artifact in place of the Dockerfile's `builder`
+stage (a named context), so only the runtime stage runs. Local builds still
+run the builder stage. The scraper and verifier bot read and write the
+registry cache `<image>:cache-develop` with `mode=max`. Web has no cache
+export: every layer after `COPY apps` changes on every commit, so the cache
+only cost upload time. Rootless BuildKit needs the runner to start job
+containers with seccomp and AppArmor unconfined (harbor-ops runner config).
 
 ## Release notes
 

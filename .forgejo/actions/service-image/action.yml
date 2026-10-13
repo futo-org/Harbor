@@ -15,6 +15,9 @@ inputs:
   export-cache:
     description: Refresh the shared build cache
     default: 'false'
+  binaries:
+    description: Directory of prebuilt executables (rust-binaries) that replaces the Dockerfile's builder stage
+    default: ''
   registry-user:
     required: true
   registry-token:
@@ -36,6 +39,7 @@ runs:
         DOCKERFILE: ${{ inputs.dockerfile }}
         BUILD_ARGS: ${{ inputs.build-args }}
         EXPORT_CACHE: ${{ inputs.export-cache }}
+        BINARIES: ${{ inputs.binaries }}
       run: |
         # The image sets HOME=/home/user for root too, so the login usually landed there already.
         if [ -f ~/.docker/config.json ] && [ ! ~/.docker/config.json -ef /home/user/.docker/config.json ]; then
@@ -55,7 +59,12 @@ runs:
         done <<< "$BUILD_ARGS"
         set -- "$@" --frontend dockerfile.v0 --local context=. --local "dockerfile=$DOCKERFILE" \
           --import-cache "type=registry,ref=$IMAGE:cache-${DEFAULT_BRANCH:-develop}"
-        build "$@" --output "type=image,name=$IMAGE:$GITHUB_SHA,push=true"
+        if [ -n "$BINARIES" ]; then
+          set -- "$@" --local "bin=$BINARIES" --opt context:builder=local:bin
+        fi
+        # zstd compresses the new layers several times faster than gzip, and
+        # smaller, so less goes up to the registry.
+        build "$@" --output "type=image,name=$IMAGE:$GITHUB_SHA,push=true,compression=zstd"
         # A separate pass: zot drops one of two concurrent uploads of a blob.
         # mode=max keeps the build stages, so a later build resumes from the
         # step that changed instead of the top of the Dockerfile.

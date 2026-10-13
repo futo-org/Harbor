@@ -158,19 +158,36 @@ jobs:
 
   # Images -------------------------------------------------------------------
 
+  server-binaries:
+    name: Build server binaries
+    needs: [changes, setup-images]
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/rust-binaries
+        with:
+          packages: server server-migration
+
   server-image:
     name: Build server image
-    needs: [changes, setup-images]
+    needs: [changes, server-binaries]
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: forgejo/download-artifact@v4
+        with:
+          name: rust-service-binaries
+          path: service-bin
       - uses: ./.forgejo/actions/service-image
         with:
           image: server
           dockerfile: services/server
           registry: ${{ needs.changes.outputs.registry }}
+          binaries: service-bin
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
