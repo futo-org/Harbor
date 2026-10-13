@@ -89,6 +89,9 @@ def main():
             font = TTFont(font_file)
             ignore_variation_selector(font)
             declare_emoji_style_variants(font, emoji_style_bases)
+            # iOS ships only the COLR font.
+            if output_file == native_font_file:
+                reserve_legacy_glyph_ids(font)
             font.save(output_file)
 
     write_font_module(web_font_name)
@@ -193,6 +196,21 @@ def declare_emoji_style_variants(font, emoji_style_bases):
     # Default variants: drawn with the glyph the base character maps to.
     table.uvsDict = {0xFE0F: [(code_point, None) for code_point in emoji_style_bases]}
     font['cmap'].tables.append(table)
+
+
+# iOS text (TextKit 1, which React Native uses) drops format characters (tags,
+# ZWJ) mapped to glyph IDs 1-3, the classic TrueType slots for `.null`,
+# `nonmarkingreturn` and `space`. Tags of the UK flags sat at 2 and 3, so they
+# drew as 🏴. Fills 2 and 3 with empty glyphs; `space` keeps 1.
+def reserve_legacy_glyph_ids(font):
+    # Every table refers to glyphs by name only once decompiled.
+    font.ensureDecompiled()
+    glyph_order = font.getGlyphOrder()
+    font.setGlyphOrder([*glyph_order[:2], '.null', 'nonmarkingreturn', *glyph_order[2:]])
+    font['glyf'].glyphOrder = font.getGlyphOrder()
+    for name in ['.null', 'nonmarkingreturn']:
+        font['glyf'].glyphs[name] = TTGlyphPen(None).glyph()
+        font['hmtx'].metrics[name] = (0, 0)
 
 
 def list_emoji_style_bases():

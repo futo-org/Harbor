@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::models::event_key;
 use crate::models::protos_v2::Reaction;
-use crate::models::validate::Validate;
+use crate::models::validate::{self, StringError, Validate};
 
 impl Validate for Reaction {
     type Error = ValidationError;
@@ -23,11 +23,7 @@ impl Validate for Reaction {
         }
 
         if let Some(emoji) = emoji.as_ref() {
-            if emoji.is_empty() {
-                errors.push(map_err(ValidationError::EmojiEmpty));
-            } else if emoji.chars().count() != 1 {
-                errors.push(map_err(ValidationError::EmojiTooLong));
-            }
+            validate::emoji(emoji, errors, |err| map_err(ValidationError::Emoji(err)));
         }
     }
 }
@@ -36,8 +32,7 @@ impl Validate for Reaction {
 pub enum ValidationError {
     EventKey(event_key::ValidationError),
     EventKeyMissing,
-    EmojiEmpty,
-    EmojiTooLong,
+    Emoji(StringError),
 }
 
 impl fmt::Display for ValidationError {
@@ -45,8 +40,7 @@ impl fmt::Display for ValidationError {
         match self {
             ValidationError::EventKey(err) => write!(f, "event key {err}"),
             ValidationError::EventKeyMissing => write!(f, "event key is missing"),
-            ValidationError::EmojiEmpty => write!(f, "emoji can't be empty"),
-            ValidationError::EmojiTooLong => write!(f, "emoji can't be longer than 1 character"),
+            ValidationError::Emoji(err) => write!(f, "emoji {err}"),
         }
     }
 }
