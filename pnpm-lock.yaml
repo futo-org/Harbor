@@ -360,7 +360,7 @@ importers:
         version: 3.10.2(@algolia/client-search@5.53.0)(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(@types/react@19.2.17)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(search-insights@2.17.3)(sharp@0.35.3)(typescript@6.0.3)
       '@docusaurus/theme-mermaid':
         specifier: 3.10.2
-        version: 3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@docusaurus/plugin-content-docs@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@mermaid-js/layout-elk@0.1.9(mermaid@12.1.0))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3)
+        version: 3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@docusaurus/plugin-content-docs@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@mermaid-js/layout-elk@1.0.1(mermaid@12.1.0))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3)
       '@fontsource/open-sans':
         specifier: ^5.3.0
         version: 5.3.0
@@ -368,8 +368,8 @@ importers:
         specifier: ^3.0.0
         version: 3.1.1(@types/react@19.2.17)(react@19.2.3)
       '@mermaid-js/layout-elk':
-        specifier: ^0.1.9
-        version: 0.1.9(mermaid@12.1.0)
+        specifier: ^1.0.0
+        version: 1.0.1(mermaid@12.1.0)
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
@@ -3662,10 +3662,11 @@ packages:
       '@types/react': '>=16'
       react: '>=16'
 
-  '@mermaid-js/layout-elk@0.1.9':
-    resolution: {integrity: sha512-HuvaqFZBr6yT9PpWYockvKAZPJVd89yn/UjOYPxhzbZxlybL2v+2BjVCg7MVH6vRs1irUohb/s42HEdec1CCZw==}
+  '@mermaid-js/layout-elk@1.0.1':
+    resolution: {integrity: sha512-6KzQTCAy4lSlETy5fBOYyUD0JQtZk/ihacVHSmAyo00hW7REOhKQGjNIxVwAnI+HtJdfpGnSMxkp9qnJDijppw==}
+    engines: {node: '>=22.12.0'}
     peerDependencies:
-      mermaid: ^11.0.2
+      mermaid: ^12.0.0
 
   '@mermaid-js/parser@2.0.1':
     resolution: {integrity: sha512-j37dj/h6p6pots1L7pLPPNuABEEu9WP4OYg9pW1g+nYG331j0+3canE9OagtYdytYvdSAMG+2fKU5cxep6LgjA==}
@@ -15489,7 +15490,7 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@docusaurus/theme-mermaid@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@docusaurus/plugin-content-docs@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@mermaid-js/layout-elk@0.1.9(mermaid@12.1.0))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3)':
+  '@docusaurus/theme-mermaid@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@docusaurus/plugin-content-docs@3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@mermaid-js/layout-elk@1.0.1(mermaid@12.1.0))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3)':
     dependencies:
       '@docusaurus/core': 3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3))(postcss@8.5.29)(sharp@0.35.3))(@mdx-js/react@3.1.1(@types/react@19.2.17)(react@19.2.3))(@rspack/core@1.7.11)(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)(typescript@6.0.3)
       '@docusaurus/module-type-aliases': 3.10.2(@swc/core@1.15.40)(postcss@8.5.29)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(sharp@0.35.3)
@@ -15501,7 +15502,7 @@ snapshots:
       react-dom: 19.2.3(react@19.2.3)
       tslib: 2.8.1
     optionalDependencies:
-      '@mermaid-js/layout-elk': 0.1.9(mermaid@12.1.0)
+      '@mermaid-js/layout-elk': 1.0.1(mermaid@12.1.0)
     transitivePeerDependencies:
       - '@docusaurus/faster'
       - '@docusaurus/plugin-content-docs'
@@ -17419,10 +17420,14 @@ snapshots:
       '@types/react': 19.2.17
       react: 19.2.3
 
-  '@mermaid-js/layout-elk@0.1.9(mermaid@12.1.0)':
+  '@mermaid-js/layout-elk@1.0.1(mermaid@12.1.0)':
     dependencies:
       d3: 7.9.0
+      dagre-d3-es: 7.0.14
+      dayjs: 1.11.23
+      dompurify: 3.4.16
       elkjs: 0.9.3
+      katex: 0.16.47
       mermaid: 12.1.0
 
   '@mermaid-js/parser@2.0.1':
