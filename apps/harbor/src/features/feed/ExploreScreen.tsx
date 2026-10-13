@@ -137,6 +137,7 @@ export default function ExploreScreen({
         {showComposeFab ? (
           <Fab
             onPress={openCompose}
+            accessibilityLabel="New post"
             icon={() => <Icon name="add" size={32} color="white" />}
           />
         ) : null}

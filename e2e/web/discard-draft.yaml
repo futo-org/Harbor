@@ -1,0 +1,98 @@
+url: ${MAESTRO_WEB_URL}
+name: Closing the composer over a draft asks to discard it
+---
+- runFlow: ../elements/load.yaml
+- runFlow: ../steps/fresh-start.yaml
+- runFlow: ../steps/create-identity.yaml
+# window.confirm is answered with window.confirmAnswer and its prompt recorded.
+# Unstubbed, the runner dismisses it, answering "no".
+- evalBrowserScript:
+    script: |
+      window.confirm = (message) => {
+        window.confirmMessage = message;
+        return window.confirmAnswer;
+      };
+      return true;
+- runFlow: ../steps/open-composer-web.yaml
+# The feed behind the sheet shows the same placeholder, so target the input.
+- tapOn:
+    css: 'textarea[placeholder="${output.composer.input}"]'
+- inputText: Draft to discard
+# Declining keeps the composer open with the draft.
+- evalBrowserScript:
+    script: window.confirmMessage = ''; window.confirmAnswer = false; return true
+- tapOn:
+    css: '[aria-label="${output.composer.closeWeb}"]'
+- evalBrowserScript:
+    script: return window.confirmMessage
+    output: confirmMessage
+- assertTrue: ${confirmMessage.startsWith(output.composer.discardTitle)}
+- evalBrowserScript:
+    script: return document.querySelector('textarea').value
+    output: draft
+- assertTrue: ${draft === 'Draft to discard'}
+# Clicking outside the sheet asks too. The runner taps an element's centre,
+# which the card covers on the backdrop, so click its left edge from a script.
+- evalBrowserScript:
+    script: window.confirmMessage = ''; window.confirmAnswer = false; return true
+- evalBrowserScript:
+    script: |
+      const outside = document.elementFromPoint(1, window.innerHeight / 2);
+      outside.click();
+      return outside.getAttribute('aria-label');
+    output: clicked
+- assertTrue: ${clicked === output.composer.backdropWeb}
+- evalBrowserScript:
+    script: return window.confirmMessage
+    output: confirmMessage
+- assertTrue: ${confirmMessage.startsWith(output.composer.discardTitle)}
+- evalBrowserScript:
+    script: return document.querySelector('textarea').value
+    output: draft
+- assertTrue: ${draft === 'Draft to discard'}
+# Escape asks too, and discarding closes the composer.
+- evalBrowserScript:
+    script: window.confirmMessage = ''; window.confirmAnswer = true; return true
+- pressKey: Escape
+- extendedWaitUntil:
+    notVisible:
+      id: ${output.composer.submit}
+    timeout: 30000
+- evalBrowserScript:
+    script: return window.confirmMessage
+    output: confirmMessage
+- assertTrue: ${confirmMessage.startsWith(output.composer.discardTitle)}
+# The discarded draft is gone on the next open, and an empty composer closes
+# without asking.
+- runFlow: ../steps/open-composer-web.yaml
+- evalBrowserScript:
+    script: return document.querySelector('textarea').value
+    output: draft
+- assertTrue: ${draft === ''}
+- evalBrowserScript:
+    script: window.confirmMessage = ''; window.confirmAnswer = false; return true
+- tapOn:
+    css: '[aria-label="${output.composer.closeWeb}"]'
+- extendedWaitUntil:
+    notVisible:
+      id: ${output.composer.submit}
+    timeout: 30000
+- evalBrowserScript:
+    script: return window.confirmMessage
+    output: confirmMessage
+- assertTrue: ${confirmMessage === ''}
+# Posting closes the composer without asking either.
+- runFlow: ../steps/open-composer-web.yaml
+- tapOn:
+    css: 'textarea[placeholder="${output.composer.input}"]'
+- inputText: Posted without asking
+- tapOn:
+    id: ${output.composer.submit}
+- extendedWaitUntil:
+    notVisible:
+      id: ${output.composer.submit}
+    timeout: 30000
+- evalBrowserScript:
+    script: return window.confirmMessage
+    output: confirmMessage
+- assertTrue: ${confirmMessage === ''}
