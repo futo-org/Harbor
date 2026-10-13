@@ -162,7 +162,6 @@ export class IdentityManager {
 
     const digest = this.client.contentManager.buildDigest(content);
     await this.client.storage.content.save(digest, content);
-    await this.client.setActiveIdentityKey(resolvedIdentityKey);
 
     let event: Proto.Event;
     if (isBootstrap) {
@@ -183,19 +182,21 @@ export class IdentityManager {
         application: this.client.application,
       });
     } else {
-      event = await this.client.buildEvent(content, COLLECTION.IDENTITY);
+      event = await this.client.buildEvent(
+        content,
+        COLLECTION.IDENTITY,
+        identityKey,
+      );
     }
 
     const signedEvent = await this.client.signEvent(event);
     await this.client.commitEvent(signedEvent, content);
 
-    // The identity document is the source of truth for the server list, so
-    // adopt it before syncing — a newly added server receives the push.
-    if (identity.servers) {
-      this.client.servers = [...identity.servers.urls];
-      this.client.core.setServers(this.client.servers);
-    }
+    // At this point, we have saved the identity event authorizing us locally
+    // and are fully committed to the switch.
+    await this.client.adoptIdentity(resolvedIdentityKey);
 
+    // Push errors are currently swallowed
     await this.client.sync(SyncStrategy.PARTIAL_PUSH);
 
     return { identityKey: resolvedIdentityKey, signedEvent };
@@ -214,54 +215,35 @@ export class IdentityManager {
     if (!this.client.currentKeyPair) throw new Error('No active key pair');
     const publicKey = this.client.currentKeyPair.publicKey;
 
-    // Store these in case we need to roll back
-    const previousIdentityKey = this.client.activeIdentityKey;
-    const previousServers = [...this.client.servers];
+    // Hydrate all known identity events for `identityKey` to rs-core
+    await this.client.listEvents({
+      identity: identityKey,
+      collection: COLLECTION.IDENTITY,
+      queryOpts: { servers },
+    });
 
-    try {
-      if (servers) {
-        this.client.servers = [...servers];
-        this.client.core.setServers(this.client.servers);
-      }
-
-      // Hydrate all known identity events for `identityKey` to rs-core
-      await this.client.listEvents({
-        identity: identityKey,
-        collection: COLLECTION.IDENTITY,
-      });
-
-      // Check that we are authorized
-      let state = this.resolveIdentity(identityKey);
-      if (!state || !this.checkAuthorized(state, publicKey)) {
-        throw new Error('Unable to verify authorization');
-      }
-
-      // Adopt the identity and pull in its events
-      await this.client.setActiveIdentityKey(identityKey);
-      await this.client.sync(SyncStrategy.PARTIAL_PULL);
-
-      // Ensure we are still authorized after pulling
-      state = this.resolveIdentity(identityKey);
-      if (!state || !this.checkAuthorized(state, publicKey)) {
-        throw new Error('Lost authorization');
-      }
-
-      // Re-publish the same identity document signed by our own key,
-      // proving this key acknowledged its membership.
-      await this.publish({ ...state, isLogin: true });
-
-      return state;
-    } catch (err: unknown) {
-      // Roll back changes as best we can
-      if (this.client.activeIdentityKey !== previousIdentityKey) {
-        await this.client.setActiveIdentityKey(previousIdentityKey);
-      }
-
-      this.client.servers = previousServers;
-      this.client.core.setServers(this.client.servers);
-
-      throw err;
+    // Check that we are authorized
+    const state = this.resolveIdentity(identityKey);
+    if (!state || !this.checkAuthorized(state, publicKey)) {
+      throw new Error('Unable to verify authorization');
     }
+
+    // Persist all of the identity events needed to authorize us.
+    const chain = this.client.resolveIdentityChain(identityKey);
+    await this.client.saveBundles(chain);
+
+    // Re-publish the same identity document signed by our own key,
+    // proving this key acknowledged its membership.
+    // This call will commit another identity event and switch our active
+    // identity to `identityKey`.
+    await this.publish({ ...state, isLogin: true });
+
+    // Sync in this identity's other events in the background.
+    this.client
+      .sync(SyncStrategy.PARTIAL_PULL)
+      .catch((e) => console.error(`Pull error after claim: ${e}`));
+
+    return state;
   }
 
   /**
@@ -310,11 +292,51 @@ export class IdentityManager {
   }
 
   /**
+   * Query all relevant servers for identity events and copy them to rs-core.
+   */
+  private async discoverRemoteIdentityEvents(
+    identityKey: string,
+  ): Promise<void> {
+    const queriedServers = new Set<string>();
+
+    // TODO: online-only fetch mode so that we can skip the local cache here.
+
+    // Each round, query any servers that we have discovered from this identity
+    // but haven't queried yet.
+    // Stop when we have queried all servers.
+    // We expect to have only one round in most cases.
+    while (true) {
+      const identityState = this.resolveIdentity(identityKey);
+      const latestServers = identityState?.servers?.length
+        ? identityState.servers
+        : this.client.servers;
+
+      const serversToQuery = latestServers.filter(
+        (s) => !queriedServers.has(s),
+      );
+      if (serversToQuery.length === 0) break;
+
+      try {
+        // The events discovered by this query will be stored in rs-core
+        await this.client.listEvents({
+          identity: identityKey,
+          collection: COLLECTION.IDENTITY,
+          queryOpts: {
+            servers: [...new Set(serversToQuery)],
+          },
+        });
+      } catch (e) {
+        console.error(`Listing identity events failed: ${e}`);
+      }
+
+      for (const queried of serversToQuery) {
+        queriedServers.add(queried);
+      }
+    }
+  }
+
+  /**
    * Use the backup to authorize the current key pair and log in.
-   *
-   * TODO: make identity handling less stateful so that we don't
-   * have to rollback changes on failure. Also make this more robust
-   * against obscure cases like all servers dropping our events.
    */
   async recoverIdentity(backup: Proto.IdentityBackup): Promise<void> {
     if (!this.client.currentKeyPair) throw new Error('No active key pair');
@@ -324,81 +346,62 @@ export class IdentityManager {
     const recoveryKey = backup.recoveryKey;
     if (!recoveryKey) throw new Error('Backup has no recovery key');
 
-    // Store these in case we need to roll back
-    const previousIdentityKey = this.client.activeIdentityKey;
-    const previousServers = [...this.client.servers];
+    // Copy backup events to rs-core so we can easily read off the identity head
+    this.copyBackupEvents(backup);
 
-    try {
-      // Copy backup events to rs-core so we can easily read off the identity head
-      this.copyBackupEvents(backup);
+    const backupState = this.resolveIdentity(identityKey);
+    if (!backupState) throw new Error('Backup has no valid identity chain');
 
-      const backupState = this.resolveIdentity(identityKey);
-      if (!backupState) throw new Error('Backup has no valid identity chain');
+    // Include remote knowledge of the identity chain
+    await this.discoverRemoteIdentityEvents(identityKey);
 
-      if (backupState.servers?.length) {
-        this.client.servers = [...backupState.servers];
-        this.client.core.setServers(this.client.servers);
-      }
+    // This is the identity head that we will work from
+    const state = this.resolveIdentity(identityKey);
+    if (!state) throw new Error('No valid identity chain to recover');
 
-      // Include server knowledge of the identity chain
-      await this.client.listEvents({
-        identity: identityKey,
-        collection: COLLECTION.IDENTITY,
-      });
-
-      // This is the identity head that we will work from
-      const state = this.resolveIdentity(identityKey);
-      if (!state) throw new Error('No valid identity chain to recover');
-
-      if (state.servers?.length) {
-        this.client.servers = [...state.servers];
-        this.client.core.setServers(this.client.servers);
-      }
-
-      // Confirm that our recovery will be accepted
-      if (!this.checkRecoveryKey(recoveryKey, identityKey)) {
-        throw new Error('Unable to recover this identity with this backup');
-      }
-
-      const payload = new Uint8Array(
-        this.client.core.assembleRecoveryPayload(
-          identityKey,
-          Proto.PublicKey.toBinary(publicKey).buffer as ArrayBuffer,
-        ),
-      );
-
-      const recoverySignature = await this.client.crypto.sign(
-        recoveryKey.key,
-        payload,
-        recoveryKey.keyType,
-      );
-
-      // Only add our key if it's not there already
-      const alreadyListed = state.rotationKeys.some((key) =>
-        IdentityManager.keysEqual(key, publicKey),
-      );
-
-      const rotationKeys = alreadyListed
-        ? state.rotationKeys
-        : [...state.rotationKeys, publicKey];
-
-      await this.publish({
-        ...state,
-        isLogin: true,
-        rotationKeys,
-        recoverySignature,
-      });
-    } catch (err: unknown) {
-      // Roll back changes as best we can
-      if (this.client.activeIdentityKey !== previousIdentityKey) {
-        await this.client.setActiveIdentityKey(previousIdentityKey);
-      }
-
-      this.client.servers = previousServers;
-      this.client.core.setServers(this.client.servers);
-
-      throw err;
+    // Confirm that our recovery will be accepted
+    if (!this.checkRecoveryKey(recoveryKey, identityKey)) {
+      throw new Error('Unable to recover this identity with this backup');
     }
+
+    const payload = new Uint8Array(
+      this.client.core.assembleRecoveryPayload(
+        identityKey,
+        Proto.PublicKey.toBinary(publicKey).buffer as ArrayBuffer,
+      ),
+    );
+
+    const recoverySignature = await this.client.crypto.sign(
+      recoveryKey.key,
+      payload,
+      recoveryKey.keyType,
+    );
+
+    // Only add our key if it's not there already
+    const alreadyListed = state.rotationKeys.some((key) =>
+      IdentityManager.keysEqual(key, publicKey),
+    );
+
+    const rotationKeys = alreadyListed
+      ? state.rotationKeys
+      : [...state.rotationKeys, publicKey];
+
+    const publishArgs: PublishArgs = {
+      ...state,
+      isLogin: true,
+      rotationKeys,
+      recoverySignature,
+    };
+
+    // Ensure we have the required identity events to authorizes ourselves
+    // persisted.
+    // We persist the existing chain now, and then `publish()` tries to add
+    // the final event that we need.
+    const identityChain = this.client.resolveIdentityChain(identityKey);
+    await this.client.saveBundles(identityChain);
+
+    // This call will attempt the identity switch and bail if it fails.
+    await this.publish(publishArgs);
 
     // Best effort sync.
     // We have already published the new identity event, so we won't bail out
