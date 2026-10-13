@@ -39,7 +39,7 @@ export async function publishProfileUpdate(
     oneofKind: 'profileUpdate',
     profileUpdate: {
       name,
-      description,
+      description: description ? description : undefined,
       avatar: nextAvatar,
       banner: banner ?? undefined,
       alias: trimmedAlias ? trimmedAlias : undefined,
