@@ -34,6 +34,47 @@ while a Harbor identity is a set of keys you hold, and your content lives on
 several servers at once. See
 [Compared to federated networks](./intro.md#compared-to-federated-networks).
 
+## How is Harbor different from Nostr?
+
+Both use signed events stored on servers you choose, with no account on any
+server. Nostr keeps its core deliberately minimal and leaves the rest to
+optional extensions. Harbor is more opinionated: it specifies more up front so
+that apps and servers behave the same way.
+
+- **One specification.** Nostr's core is a small JSON event format, and almost
+  everything else, from replies and reactions to deletes and direct messages,
+  comes from optional NIPs that each client and relay may or may not support.
+  The [Polycentric Protocol](./protocol/overview.md) defines its event and
+  content types (posts, replies, reposts, reactions, follows, profiles,
+  reports, labels and verifications) as one typed
+  [Protocol Buffers schema](./protocol/data-model.md), and servers expose the
+  same [gRPC API](./protocol/grpc.mdx). A client can rely on every server
+  understanding the same events.
+- **Keys.** A Nostr identity is a single key pair, copied to every device and
+  app, and if it leaks or is lost the identity goes with it. A Harbor identity
+  is a document of keys: each device gets its own key, keys can be revoked, and
+  the identity can be recovered with a new key. See
+  [Identities and keys](./protocol/overview.md#identities-and-keys).
+- **Complete history.** Each Harbor event links to the ones before it, and
+  carries a vector clock recording the latest event it knew of from each of the
+  identity's other devices. A client can tell when a server is missing or hiding
+  someone's posts, and order posts made on different devices. Nostr events
+  stand alone, so a relay can leave some out without anyone noticing. See
+  [Hash-linking and proofs](./protocol/overview.md#hash-linking-and-proofs) and
+  [Vector clocks](./protocol/overview.md#vector-clocks).
+- **Deleting content.** Harbor events point to their content instead of
+  carrying it, so a post's content can be deleted while the history stays
+  verifiable.
+- **Discovery and moderation.** Search, recommended feeds and
+  [content labels](./features/moderation.md) are part of what every Harbor
+  server provides, and clients combine results from several servers. On Nostr
+  these come from whichever relays and third-party services a client chooses
+  to support.
+- **Verified accounts.** Harbor has
+  [verifications](./features/verifications.md) built in: you can prove you own
+  accounts on other platforms, and people you choose can vouch for claims about
+  you.
+
 ## Is Harbor a blockchain?
 
 No. Harbor provides distributed synchronization and censorship resistance
