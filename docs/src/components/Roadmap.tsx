@@ -42,6 +42,18 @@ export function Roadmap() {
             </li>
           );
         }
+        if ('gap' in entry) {
+          return (
+            <li key={entry.gap} className={styles.gap}>
+              <span className={styles.date}>{entry.when}</span>
+              <span className={styles.dot} aria-hidden />
+              <div className={styles.card}>
+                <span className={styles.title}>{entry.gap}</span>
+                <p className={styles.description}>{entry.description}</p>
+              </div>
+            </li>
+          );
+        }
         return (
           <li
             key={`${entry.title}-${entry.date ?? 'soon'}`}
