@@ -191,9 +191,10 @@ export function ComposerFields({
               Atoms.pt_sm,
               Atoms.text_lg,
               // Android auto-grows the input one frame too late, causing the text to temporarily scroll, which looks
-              // like a blip/flash (react/react-native#46813). If we add an extra space for the new line to go to, no
-              // scroll happens, and the auto-grow has time to catch-up. Negative margin pulls whatever goes below the
-              // input up by the same amount to compensate.
+              // like a blip/flash (https://github.com/react/react-native/issues/46813,
+              // https://github.com/react/react-native/issues/33165). If we add an extra space for the new line to go
+              // to, no scroll happens, and the auto-grow has time to catch-up. Negative margin pulls whatever goes
+              // below the input up by the same amount to compensate.
               hasNewLineHeadroom && {
                 height: textContentHeight + NEW_LINE_HEADROOM,
                 marginBottom: -NEW_LINE_HEADROOM,
