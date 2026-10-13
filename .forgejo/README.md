@@ -97,16 +97,18 @@ crates that still compile.
 
 Image builds run rootless BuildKit inside the job container (`ci/buildkit`,
 `buildctl-daemonless.sh`), no docker daemon involved, so nothing survives the
-job. Layers are pushed zstd-compressed. The Rust service images do no cargo
-work in BuildKit: a `ci/rust` job (`rust-binaries`) release-builds the
-packages with the `r2-cache` target and sccache, and `service-image`'s
-`binaries` input puts that artifact in place of the Dockerfile's `builder`
-stage (a named context), so only the runtime stage runs. Local builds still
-run the builder stage. The scraper and verifier bot read and write the
-registry cache `<image>:cache-develop` with `mode=max`. Web has no cache
-export: every layer after `COPY apps` changes on every commit, so the cache
-only cost upload time. Rootless BuildKit needs the runner to start job
-containers with seccomp and AppArmor unconfined (harbor-ops runner config).
+job. Layers are pushed zstd-compressed. No image compiles or installs in
+BuildKit: a job in the language's image builds what the Dockerfile's build
+stage would, `rust-binaries` in `ci/rust` (the `r2-cache` target and
+sccache, with a `--timings` report kept as an artifact) and `js-build` in the
+node image (`pnpm deploy` plus the build output), and uploads it as one
+tarball (`stage-artifact`). `service-image`'s `stage-artifact` input puts that
+in place of the `stage` (`builder` for Rust, `build` for web, scraper and
+verifier bot) as a named context, so only the runtime stage runs. Its layers (apt installs such as Chromium) are reused through
+cache metadata inlined in the `:staging` image, with no separate cache
+upload. Local builds still run every stage. Rootless BuildKit needs the
+runner to start job containers with seccomp and AppArmor unconfined
+(harbor-ops runner config).
 
 ## Release notes
 

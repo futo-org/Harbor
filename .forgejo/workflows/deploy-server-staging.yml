@@ -12,6 +12,7 @@ on:
       - deploy/charts/harbor-server/**
       - .forgejo/workflows/deploy-server-staging.yml
       - .forgejo/actions/rust-binaries/**
+      - .forgejo/actions/stage-artifact/**
       - .forgejo/actions/rust-env/**
       - .forgejo/actions/r2-cache/**
       - .forgejo/actions/service-image/**
@@ -49,16 +50,12 @@ jobs:
       REGISTRY: ${{ vars.CI_REGISTRY || 'registry.futo.org/harbor' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: forgejo/download-artifact@v4
-        with:
-          name: rust-service-binaries
-          path: service-bin
       - uses: ./.forgejo/actions/service-image
         with:
           image: server
           dockerfile: services/server
           registry: ${{ env.REGISTRY }}
-          binaries: service-bin
+          stage-artifact: rust-service-binaries
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}

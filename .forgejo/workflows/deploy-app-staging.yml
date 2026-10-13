@@ -83,7 +83,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -101,7 +101,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/android-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save

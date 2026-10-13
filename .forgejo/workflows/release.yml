@@ -70,7 +70,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -88,7 +88,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/android-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -126,7 +126,7 @@ jobs:
           cd packages/kt-core
           ./gradlew :core:publishReleasePublicationToForgejoRepository -PktCoreVersion="${GITHUB_REF_NAME#v}"
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -178,45 +178,55 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: forgejo/download-artifact@v4
-        with:
-          name: rust-service-binaries
-          path: service-bin
       - uses: ./.forgejo/actions/service-image
         with:
           image: server
           dockerfile: services/server
           registry: ${{ needs.changes.outputs.registry }}
-          binaries: service-bin
+          stage-artifact: rust-service-binaries
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
 
   # The tag is the version (tools/expo/resolve-version.js reads CI_COMMIT_TAG).
+  web-build:
+    name: Build web
+    needs: [changes, sdks]
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      EXPO_PUBLIC_HARBOR_SEED_SERVERS: ${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
+      EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS: ${{ vars.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Resolve version
+        run: echo "APP_VERSION=$(node tools/expo/resolve-version.js)" >> "$GITHUB_ENV"
+      - uses: ./.forgejo/actions/sdk-artifacts
+        with:
+          rn-sdk: 'true'
+      - uses: ./.forgejo/actions/js-build
+        with:
+          install-args: --filter polycentric-app...
+          package: polycentric-app
+          deploy-args: --legacy
+          after-deploy: npx expo export --platform web
+          artifact: web-build
+
   web-image:
     name: Build web image
-    needs: [changes, sdks]
+    needs: [changes, web-build]
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Resolve version
-        id: version
-        run: echo "app_version=$(node tools/expo/resolve-version.js)" >> "$GITHUB_OUTPUT"
-      - uses: ./.forgejo/actions/sdk-artifacts
-        with:
-          rn-sdk: 'true'
       - uses: ./.forgejo/actions/service-image
         with:
           image: web
           dockerfile: apps/harbor
           registry: ${{ needs.changes.outputs.registry }}
-          build-args: |
-            APP_VERSION=${{ steps.version.outputs.app_version }}
-            EXPO_PUBLIC_HARBOR_SEED_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
-            EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS }}
-            SKIP_WORKSPACE_BUILD=1
+          stage-artifact: web-build
+          stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}

@@ -13,6 +13,9 @@ on:
       - .forgejo/actions/ci-images/**
       - .forgejo/actions/wasm-build/**
       - .forgejo/actions/sdk-build/**
+      - .forgejo/actions/setup-pnpm/**
+      - .forgejo/actions/js-build/**
+      - .forgejo/actions/stage-artifact/**
       - .forgejo/actions/service-image/**
       - .forgejo/actions/chart-publish/**
       - .forgejo/actions/deploy-tag/**
@@ -75,7 +78,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -100,9 +103,32 @@ jobs:
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
+  build:
+    name: Build
+    needs: [changes, sdks]
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      EXPO_PUBLIC_HARBOR_SEED_SERVERS: ${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
+      EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS: ${{ vars.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Resolve version
+        run: echo "APP_VERSION=$(node tools/expo/resolve-version.js)+$(echo "$GITHUB_SHA" | cut -c1-8)" >> "$GITHUB_ENV"
+      - uses: ./.forgejo/actions/sdk-artifacts
+        with:
+          rn-sdk: 'true'
+      - uses: ./.forgejo/actions/js-build
+        with:
+          install-args: --filter polycentric-app...
+          package: polycentric-app
+          deploy-args: --legacy
+          after-deploy: npx expo export --platform web
+          artifact: web-build
+
   deploy:
     name: Deploy
-    needs: [changes, sdks]
+    needs: [changes, build]
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
@@ -115,22 +141,13 @@ jobs:
       STATIC_PUBLIC_BASE_URL: ${{ vars.STATIC_PUBLIC_BASE_URL }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Resolve version
-        id: version
-        run: echo "app_version=$(node tools/expo/resolve-version.js)+$(echo "$GITHUB_SHA" | cut -c1-8)" >> "$GITHUB_OUTPUT"
-      - uses: ./.forgejo/actions/sdk-artifacts
-        with:
-          rn-sdk: 'true'
       - uses: ./.forgejo/actions/service-image
         with:
           image: web
           dockerfile: apps/harbor
           registry: ${{ env.REGISTRY }}
-          build-args: |
-            APP_VERSION=${{ steps.version.outputs.app_version }}
-            EXPO_PUBLIC_HARBOR_SEED_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
-            EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS }}
-            SKIP_WORKSPACE_BUILD=1
+          stage-artifact: web-build
+          stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
