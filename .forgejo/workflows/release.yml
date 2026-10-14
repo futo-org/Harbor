@@ -34,7 +34,7 @@ jobs:
       have_android: ${{ steps.plan.outputs.have_android }}
       have_ios: ${{ steps.plan.outputs.have_ios }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - uses: ./.forgejo/actions/plan
@@ -46,7 +46,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/ci-images
         if: needs.changes.outputs.images_missing == 'true'
         with:
@@ -67,10 +67,10 @@ jobs:
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -85,10 +85,10 @@ jobs:
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/rust-android:${{ needs.changes.outputs.images_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/android-build
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -104,7 +104,7 @@ jobs:
       CARGO_HOME: ${{ github.workspace }}/.cargo
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/ios-build
 
   kt-core:
@@ -116,7 +116,7 @@ jobs:
     env:
       GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/kt-core-build
       - name: Publish the AAR to the Maven registry
         if: startsWith(github.ref_name, 'v')
@@ -126,7 +126,7 @@ jobs:
           cd packages/kt-core
           ./gradlew :core:publishReleasePublicationToForgejoRepository -PktCoreVersion="${GITHUB_REF_NAME#v}"
       - uses: ./.forgejo/actions/r2-cache
-        if: always()
+        if: ${{ !cancelled() }}
         continue-on-error: true
         with:
           mode: save
@@ -144,7 +144,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/sdk-build
         with:
           registry: ${{ needs.changes.outputs.registry }}
@@ -158,48 +158,75 @@ jobs:
 
   # Images -------------------------------------------------------------------
 
+  server-binaries:
+    name: Build server binaries
+    needs: [changes, setup-images]
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/rust-binaries
+        with:
+          packages: server server-migration
+
   server-image:
     name: Build server image
-    needs: [changes, setup-images]
+    needs: [changes, server-binaries]
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/service-image
         with:
           image: server
           dockerfile: services/server
           registry: ${{ needs.changes.outputs.registry }}
+          stage-artifact: rust-service-binaries
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
 
   # The tag is the version (tools/expo/resolve-version.js reads CI_COMMIT_TAG).
+  web-build:
+    name: Build web
+    needs: [changes, sdks]
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      EXPO_PUBLIC_HARBOR_SEED_SERVERS: ${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
+      EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS: ${{ vars.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Resolve version
+        run: echo "APP_VERSION=$(node tools/expo/resolve-version.js)" >> "$GITHUB_ENV"
+      - uses: ./.forgejo/actions/sdk-artifacts
+        with:
+          rn-sdk: 'true'
+      - uses: ./.forgejo/actions/js-build
+        with:
+          install-args: --filter polycentric-app...
+          package: polycentric-app
+          deploy-args: --legacy
+          after-deploy: npx expo export --platform web
+          artifact: web-build
+
   web-image:
     name: Build web image
-    needs: [changes, sdks]
+    needs: [changes, web-build]
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Resolve version
-        id: version
-        run: echo "app_version=$(node tools/expo/resolve-version.js)" >> "$GITHUB_OUTPUT"
-      - uses: ./.forgejo/actions/sdk-artifacts
-        with:
-          rn-sdk: 'true'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/service-image
         with:
           image: web
           dockerfile: apps/harbor
           registry: ${{ needs.changes.outputs.registry }}
-          build-args: |
-            APP_VERSION=${{ steps.version.outputs.app_version }}
-            EXPO_PUBLIC_HARBOR_SEED_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
-            EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS=${{ vars.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS }}
-            SKIP_WORKSPACE_BUILD=1
+          stage-artifact: web-build
+          stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
@@ -226,7 +253,7 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/eas-build
         with:
           platform: ${{ matrix.platform }}
@@ -245,7 +272,7 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/eas-build
         with:
           platform: android
@@ -278,7 +305,7 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: forgejo/download-artifact@v4
         with:
           name: ${{ matrix.build }}
@@ -307,7 +334,7 @@ jobs:
       STATIC_S3_SECRET_ACCESS_KEY: ${{ secrets.STATIC_S3_SECRET_ACCESS_KEY }}
       STATIC_PUBLIC_BASE_URL: ${{ vars.STATIC_PUBLIC_BASE_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - uses: forgejo/download-artifact@v4
@@ -334,7 +361,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Release notes
@@ -356,7 +383,7 @@ jobs:
     env:
       HARBOR_CI_TOKEN: ${{ secrets.HARBOR_CI_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/sdk-artifacts
         with:
           rn-sdk: 'true'
@@ -377,7 +404,7 @@ jobs:
     env:
       HARBOR_CI_TOKEN: ${{ secrets.HARBOR_CI_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Package crates
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -424,7 +451,7 @@ jobs:
     steps:
       - name: Install tools
         run: apk add --no-cache bash git crane
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/registry-login
         with:
           registry: ${{ needs.changes.outputs.registry }}
@@ -443,7 +470,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: forgejo/download-artifact@v4
         with:
           name: release-notes

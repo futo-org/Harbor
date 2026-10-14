@@ -30,12 +30,7 @@ import {
   type ViewProps,
 } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import Reanimated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-import { runOnJS } from 'react-native-worklets';
+import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Icon, { type IconProps } from '../Icon';
 import Topbar from '../layout/Topbar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -87,7 +82,7 @@ export function Sheet(props: SheetProps) {
   return (
     <Portal name={`sheet-${portalId}`}>
       {isWeb ? (
-        <WebModal {...props} navigation={navigation} />
+        <WebModal {...props} />
       ) : (
         <NativeSheet {...props} navigation={navigation} />
       )}
@@ -274,7 +269,6 @@ type WithNavigation<T> = T & {
   navigation: Navigation;
 };
 type NativeInternalProps = WithNavigation<SheetProps>;
-type WebInternalProps = WithNavigation<SheetProps>;
 
 function NativeSheet({
   open,
@@ -399,35 +393,6 @@ function NativeSheet({
   );
 }
 
-/**
- * Fade in on mount, and fade out on dismount
- */
-function useFadeTransition() {
-  const opacity = useSharedValue(0);
-  const exitingRef = useRef(false);
-
-  useEffect(() => {
-    opacity.value = withTiming(1, { duration: FADE_IN_MS });
-  }, [opacity]);
-
-  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-
-  const fadeOut = useCallback(
-    (done: () => void) => {
-      if (exitingRef.current) return;
-      exitingRef.current = true;
-      opacity.value = withTiming(0, { duration: FADE_OUT_MS }, (finished) => {
-        if (finished) runOnJS(done)();
-      });
-    },
-    [opacity],
-  );
-
-  const isExiting = useCallback(() => exitingRef.current, []);
-
-  return { animatedStyle, fadeOut, isExiting };
-}
-
 function WebModal({
   open,
   onClose,
@@ -435,17 +400,15 @@ function WebModal({
   dismissible = true,
   maxWidth,
   height,
-  navigation,
   header,
   footer,
   onPresented,
-}: WebInternalProps) {
+}: SheetProps) {
   const { theme } = useTheme();
   const { width } = useWindowDimensions();
   const compact = width < Breakpoints.sm;
 
   const isInline = open !== undefined;
-  const { animatedStyle, fadeOut, isExiting } = useFadeTransition();
 
   // Mirror native's `onPresented` once the modal has mounted.
   // biome-ignore lint/correctness/useExhaustiveDependencies: fire once on mount
@@ -454,18 +417,9 @@ function WebModal({
   }, []);
 
   const close = useCallback(() => {
-    if (isInline) fadeOut(() => onClose?.());
+    if (isInline) onClose?.();
     else if (router.canGoBack()) router.back();
-  }, [isInline, onClose, fadeOut]);
-
-  useEffect(() => {
-    if (isInline) return;
-    return navigation.addListener('beforeRemove', (e) => {
-      if (isExiting()) return;
-      e.preventDefault();
-      fadeOut(() => navigation.dispatch(e.data.action));
-    });
-  }, [navigation, isInline, fadeOut, isExiting]);
+  }, [isInline, onClose]);
 
   // Escape to dismiss.
   useEffect(() => {
@@ -479,13 +433,15 @@ function WebModal({
 
   return (
     <Reanimated.View
+      entering={FadeIn.duration(FADE_IN_MS)}
+      exiting={FadeOut.duration(FADE_OUT_MS)}
       style={[
-        Atoms.fixed,
-        Atoms.inset_0,
+        // Reanimated fades a copy attached to the `offsetParent`, which a
+        // fixed element doesn't have, so this is absolute in the root view.
+        StyleSheet.absoluteFill,
         // Sit above expo-router's transparentModal drawer, which mounts to
         // document.body via vaul and would otherwise eat backdrop clicks.
         { padding: SHEET_OVERLAY_PADDING, zIndex: ZIndex.modal },
-        animatedStyle,
       ]}
       pointerEvents="box-none"
     >

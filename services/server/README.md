@@ -111,8 +111,8 @@ The shared `services/common` crates read their own variables.
 | Variable | Default | Description |
 |---|---|---|
 | `RUST_LOG` | `info` | Log filter. |
-| `LOG_FORMAT` | _(auto)_ | `json` or `text`; defaults to text on a terminal, JSON otherwise. |
-| `METRICS_PORT` | `9464` | Port serving Prometheus `GET /metrics`. |
+| `HARBOR_LOG_FORMAT` | _(auto)_ | `json` or `text`; defaults to text on a terminal, JSON otherwise. |
+| `HARBOR_METRICS_PORT` | `9464` | Port serving Prometheus `GET /metrics`. |
 
 ## Running Integration Tests
 

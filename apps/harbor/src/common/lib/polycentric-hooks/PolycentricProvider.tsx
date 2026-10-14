@@ -9,6 +9,7 @@ import {
   createPolycentricClient,
   type types,
   type IdentityState,
+  v2,
 } from '@polycentric/react-native';
 import { HARBOR_APPLICATION } from '@/src/common/util/application';
 import {
@@ -174,24 +175,11 @@ function bootstrapClient(): Promise<Bootstrap> {
     await store.getState().refreshIdentities();
 
     if (client.activeIdentityKey) {
-      // Local refresh first, sync refreshes again when done.
+      // Refresh from current local state
       useFollows.getState().refresh(client);
       useReposts.getState().refresh(client);
       useReactions.getState().refresh(client);
       useBlocks.getState().refresh(client);
-      void client
-        .sync()
-        .then(() =>
-          Promise.all([
-            useFollows.getState().refresh(client),
-            useReposts.getState().refresh(client),
-            useReactions.getState().refresh(client),
-            useBlocks.getState().refresh(client),
-          ]),
-        )
-        .catch((syncError) => {
-          console.warn('Initial Polycentric sync failed:', syncError);
-        });
     }
 
     return { client, store };
@@ -246,26 +234,56 @@ export function PolycentricProvider({
     let cancelled = false;
     let ready: Bootstrap | null = null;
 
-    const handleKeyPairChanged = async () => {
-      if (cancelled || !ready) return;
-      const { client: c, store: s } = ready;
-      setCurrentIdentity(c.identityManager.resolveIdentity());
-      await s.getState().refreshIdentities();
-      useFollows.getState().refresh(c);
-      useReposts.getState().refresh(c);
-      useReactions.getState().refresh(c);
-      useBlocks.getState().refresh(c);
+    const refresh = async ({ client, store }: Bootstrap) => {
+      setCurrentIdentity(client.identityManager.resolveIdentity());
+      await Promise.all([
+        store.getState().refreshIdentities(),
+        useFollows.getState().refresh(client),
+        useReposts.getState().refresh(client),
+        useReactions.getState().refresh(client),
+        useBlocks.getState().refresh(client),
+      ]);
     };
 
-    // Onboarding publishes the identity event; adopt it.
+    const handleKeyPairChanged = async () => {
+      if (cancelled || !ready) return;
+
+      try {
+        await refresh(ready);
+      } catch (err) {
+        console.error('Refresh after login failed:', err);
+      }
+    };
+
+    // Keep identity state up to date.
     const handleContentCreated = ({
+      signedEvent,
       content,
     }: {
+      signedEvent: { eventBytes: Uint8Array };
       content?: { contentBody: { oneofKind?: string } };
     }) => {
       if (cancelled || !ready) return;
       if (content?.contentBody.oneofKind !== 'identity') return;
+
+      const event = v2.Event.fromBinary(signedEvent.eventBytes);
+      if (event.key?.identity !== ready.client.activeIdentityKey) return;
+
       setCurrentIdentity(ready.client.identityManager.resolveIdentity());
+    };
+
+    // Refresh stores when we pull from remote servers
+    const handlePulled = async (identityKey: string) => {
+      if (cancelled || !ready) return;
+
+      const { client } = ready;
+      if (identityKey !== client.activeIdentityKey) return;
+
+      try {
+        await refresh(ready);
+      } catch (err) {
+        console.warn('Failed to refresh stores after pull:', err);
+      }
     };
 
     (async () => {
@@ -282,6 +300,12 @@ export function PolycentricProvider({
 
         c.events.onKeyPairChanged(handleKeyPairChanged);
         c.events.onContentCreated(handleContentCreated);
+        c.events.onPulled(handlePulled);
+
+        // Do an initial sync now that we have registered the listener
+        void c.sync().catch((syncError) => {
+          console.warn('Initial Polycentric sync failed:', syncError);
+        });
       } catch (err) {
         if (!cancelled) {
           console.error('Failed to initialize PolycentricProvider:', err);
@@ -295,6 +319,7 @@ export function PolycentricProvider({
       cancelled = true;
       ready?.client.events.offKeyPairChanged(handleKeyPairChanged);
       ready?.client.events.offContentCreated(handleContentCreated);
+      ready?.client.events.offPulled(handlePulled);
     };
   }, []);
 

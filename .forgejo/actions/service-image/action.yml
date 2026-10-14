@@ -1,5 +1,5 @@
 name: service-image
-description: Rootless BuildKit build pushed as <registry>/<image>:<sha> with a registry layer cache (GitLab .service-image). Runs in the ci/buildkit job image, the build itself as its `user`.
+description: Rootless BuildKit build pushed as <registry>/<image>:<sha>. The stage artifact (stage-artifact, from rust-binaries or js-build) stands in for the Dockerfile's build stage, so only the runtime stage builds here. Runs in the ci/buildkit job image, the build itself as its `user`.
 inputs:
   image:
     description: Image name under the registry (server, moderation-service, web, ...)
@@ -12,9 +12,12 @@ inputs:
   build-args:
     description: One KEY=VALUE per line
     default: ''
-  export-cache:
-    description: Refresh the shared build cache
-    default: 'false'
+  stage-artifact:
+    description: Artifact put in place of the Dockerfile stage `stage`
+    required: true
+  stage:
+    description: Dockerfile stage the artifact replaces
+    default: builder
   registry-user:
     required: true
   registry-token:
@@ -30,12 +33,18 @@ runs:
         registry: ${{ inputs.registry }}
         registry-user: ${{ inputs.registry-user }}
         registry-token: ${{ inputs.registry-token }}
+    - uses: forgejo/download-artifact@v4
+      with:
+        name: ${{ inputs.stage-artifact }}
+        path: .stage
+    - shell: bash
+      run: install -d .stage/context && tar -xf .stage/stage.tar -C .stage/context --no-same-owner
     - shell: bash
       env:
         IMAGE: ${{ inputs.registry }}/${{ inputs.image }}
         DOCKERFILE: ${{ inputs.dockerfile }}
         BUILD_ARGS: ${{ inputs.build-args }}
-        EXPORT_CACHE: ${{ inputs.export-cache }}
+        STAGE: ${{ inputs.stage }}
       run: |
         # The image sets HOME=/home/user for root too, so the login usually landed there already.
         if [ -f ~/.docker/config.json ] && [ ! ~/.docker/config.json -ef /home/user/.docker/config.json ]; then
@@ -53,15 +62,15 @@ runs:
         while IFS= read -r arg; do
           [ -n "$arg" ] && set -- "$@" --opt "build-arg:$arg"
         done <<< "$BUILD_ARGS"
-        set -- "$@" --frontend dockerfile.v0 --local context=. --local "dockerfile=$DOCKERFILE" \
-          --import-cache "type=registry,ref=$IMAGE:cache-${DEFAULT_BRANCH:-develop}"
-        build "$@" --output "type=image,name=$IMAGE:$GITHUB_SHA,push=true"
-        # A separate pass: zot drops one of two concurrent uploads of a blob.
-        # mode=max keeps the build stages, so a later build resumes from the
-        # step that changed instead of the top of the Dockerfile.
-        if [ "$EXPORT_CACHE" = true ]; then
-          build "$@" --export-cache "type=registry,ref=$IMAGE:cache-${DEFAULT_BRANCH:-develop},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true"
-        fi
+        # The named context stands in for the build stage, which never runs.
+        # The runtime stage's layers (apt installs) come from the cache
+        # metadata inlined in the :staging image, so there is no separate
+        # cache upload. zstd compresses new layers faster than gzip, and
+        # smaller, so less goes up to the registry.
+        build "$@" --frontend dockerfile.v0 --local context=. --local "dockerfile=$DOCKERFILE" \
+          --local stage=.stage/context --opt "context:$STAGE=local:stage" \
+          --import-cache "type=registry,ref=$IMAGE:staging" --export-cache type=inline \
+          --output "type=image,name=$IMAGE:$GITHUB_SHA,push=true,compression=zstd"
     # Sign the commit's image by digest; the moving tags share that digest.
     - uses: ./.forgejo/actions/cosign-sign
       with:
