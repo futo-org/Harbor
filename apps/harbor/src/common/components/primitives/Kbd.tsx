@@ -2,9 +2,8 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { View } from 'react-native';
 import { Text } from './Text';
 
-// A word's ink is mostly x-height, which sits ~1px below the center of its
-// line box, so a box centered on that line box looks too high.
-const KEY_BOX_DROP = 1;
+// Lowercase-heavy labels make a centered box look slightly too high
+const KEY_BOX_DROP = 0.5;
 
 interface KbdProps {
   children: string;
