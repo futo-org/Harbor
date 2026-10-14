@@ -174,7 +174,7 @@ const flags = {
     docs_lint: docs,
     app_lint: app,
     rs_core: rsCore,
-    js_sdk: jsSdk,
+    js_sdk: jsSdk || rsCore,
     rust_services: server || moderation || pushNotifications || grayjayMigrator,
     scraper,
     app,
@@ -254,7 +254,8 @@ flags.build_sdks ||=
   flags.image_verifier_bot ||
   flags.verifier_bot_tests ||
   flags.web_image ||
-  flags.app_typecheck;
+  flags.app_typecheck ||
+  flags.js_sdk;
 flags.build_rn_sdk ||= flags.web_image;
 
 // Outputs -------------------------------------------------------------------

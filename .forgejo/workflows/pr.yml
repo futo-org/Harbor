@@ -378,13 +378,15 @@ jobs:
 
   js-packages:
     name: Test JS packages
-    needs: changes
-    if: fromJSON(needs.changes.outputs.plan).flags.js_sdk
+    needs: [changes, sdks]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.js_sdk && needs.sdks.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # js-core's tests call into the real rs-core wasm.
+      - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter @polycentric/js-core...

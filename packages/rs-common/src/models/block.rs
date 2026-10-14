@@ -18,6 +18,8 @@ impl Validate for Block {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "BlockValidationError"))]
 pub enum ValidationError {
     Identity(validate::StringError),
     IdentitySelf,

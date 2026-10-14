@@ -20,6 +20,8 @@ impl Validate for To {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "ToValidationError"))]
 pub enum ValidationError {
     Link(link::ValidationError),
 }

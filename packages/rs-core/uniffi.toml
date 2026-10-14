@@ -1,0 +1,4 @@
+[bindings.kotlin]
+package_name = "org.futo.polycentric.ffi"
+cdylib_name = "polycentric_core"
+generate_immutable_records = true

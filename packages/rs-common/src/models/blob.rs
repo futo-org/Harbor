@@ -45,11 +45,13 @@ impl Validate for Blob {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "BlobValidationError"))]
 pub enum ValidationError {
     Digest(content_digest::ValidationError),
     DigestMissing,
     MimeType(StringError),
-    Size(IntError<i64>),
+    Size(IntError),
 }
 
 impl fmt::Display for ValidationError {

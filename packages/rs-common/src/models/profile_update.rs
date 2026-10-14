@@ -64,6 +64,8 @@ impl Validate for ProfileUpdate {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "ProfileUpdateValidationError"))]
 pub enum ValidationError {
     Name(StringError),
     Avatar(image_set::ValidationError),
