@@ -427,8 +427,13 @@ function WebModal({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, {
+      // So Escape still closes the sheet while a TextInput is focused:
+      // RN-web's TextInput stops keydown from bubbling to document.
+      capture: true,
+    });
+    return () =>
+      document.removeEventListener('keydown', onKey, { capture: true });
   }, [dismissible, close]);
 
   return (
