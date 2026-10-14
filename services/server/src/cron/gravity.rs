@@ -207,7 +207,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     .and_where(Expr::col(reaction_tally::Column::EventId.as_column_ref()).in_subquery(event_ids))
                     // Ignore events that will be expired below.
                     .and_where(
-                        Expr::col(event::Column::CreatedAt.as_column_ref()).lt(
+                        Expr::col(event::Column::CreatedAt.as_column_ref()).gt(
                             Expr::from(gravity_timestamp_query.clone()).sub(
                                 Expr::cust(format!("INTERVAL '{} seconds'", expire.as_secs())))
                             )
@@ -258,7 +258,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 )
                 .and_where(Expr::col(reaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
                 .and_where(
-                    Expr::col(event::Column::CreatedAt.as_column_ref()).gt(
+                    Expr::col(event::Column::CreatedAt.as_column_ref()).lt(
                         Expr::from(gravity_timestamp_query).sub(
                             Expr::cust(format!("INTERVAL '{} seconds'", expire.as_secs())))
                         )
