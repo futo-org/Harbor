@@ -207,18 +207,18 @@ if [ "$CI_MODE" = true ]; then
   done
 
 else
+  export HARBOR_DATABASE_URL="${HARBOR_DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
+
   echo "==> Applying migrations…"
   (
     cd services/server/migration
-    DATABASE_URL="${DATABASE_URL:-postgres://postgres:testing@localhost:5432}" \
-      cargo run -- fresh 2>&1
+    cargo run -- fresh 2>&1
   )
   echo "    migrations applied"
 
   echo "==> Starting server…"
   export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   export RUST_LOG="${RUST_LOG:-info}"
-  export HARBOR_DATABASE_URL="${HARBOR_DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
   export HARBOR_CONTENT_BLOB_OS_BUCKET="${HARBOR_CONTENT_BLOB_OS_BUCKET:-harbor-blobs}"
   export HARBOR_CONTENT_BLOB_OS_ENDPOINT="${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-http://localhost:9000}"
   export HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE="${HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}"

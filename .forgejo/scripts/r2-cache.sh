@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Restore or save workspace paths as a tarball in the R2 cache bucket
-# (cache/<key>.tar.zst), immutable per key. No-op without SCCACHE_R2_*.
+# (cache/<key>.tar.zst), immutable per key unless under 1 MiB. No-op without
+# SCCACHE_R2_*.
 # Usage: r2-cache.sh restore|save <key> <path>...
 set -euo pipefail
 
@@ -47,8 +48,14 @@ case "$mode" in
     status=$(request -I -H "x-amz-content-sha256: $empty")
     case "$status" in
       200)
-        echo "r2-cache: $key exists"
-        exit 0
+        # A job cancelled before it built anything once saved a near-empty
+        # tarball, which every later run restored. Replace those.
+        size=$(tr -d '\r' < "$body" | awk 'tolower($1) == "content-length:" { print $2 }')
+        if [ "${size:-0}" -ge 1048576 ]; then
+          echo "r2-cache: $key exists"
+          exit 0
+        fi
+        echo "r2-cache: replacing $key (${size:-0} bytes)"
         ;;
       404) ;;
       *)

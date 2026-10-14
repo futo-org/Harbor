@@ -16,7 +16,7 @@ message ServerVersion {
 message ServerInfo {
     ServerVersion version = 1;
     // URL used to resolve HTTP assets (blobs, images, etc), the server's
-    // `CDN_URL` setting.
+    // `HARBOR_CDN_URL` setting.
     string cdn_url = 2;
 }
 

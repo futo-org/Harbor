@@ -27,6 +27,7 @@ use providers::{
 // Aliased: `Message` above is rdkafka's message trait; this brings the
 // prost decode trait into scope without shadowing it.
 use prost::Message as ProstMessage;
+use sea_orm::error::SqlErr;
 use sea_orm::sea_query::value::prelude::serde_json;
 
 /// Duration before retrying a Retry event
@@ -498,11 +499,21 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
         },
         Ok(None) => {
             // Reserve the row in the PENDING state before processing.
-            if let Err(e) =
+            if let Err(err) =
                 repository::create_pending(&ctx.db, digest_type, digest_bytes.clone()).await
             {
-                tracing::warn!(error = %e, digest = digest_fp(&digest_bytes), "create_pending error");
-                return Outcome::Retry;
+                if let Some(SqlErr::UniqueConstraintViolation(constraint)) = err.sql_err()
+                    && constraint == "processed_content_pkey"
+                {
+                    // The pending row is already created.
+                    //
+                    // Since we don't know if another process is currently
+                    // processing the message or failed to do so previously we
+                    // process the message again.
+                } else {
+                    tracing::warn!(error = %err, digest = digest_fp(&digest_bytes), "create_pending error");
+                    return Outcome::Retry;
+                }
             }
 
             let images = fetch_images(ctx, &content).await;

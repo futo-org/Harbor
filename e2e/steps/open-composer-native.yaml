@@ -1,0 +1,18 @@
+appId: ${MAESTRO_APP_ID}
+---
+# Opens the composer for a new post: the compose tab on iOS, the floating
+# button of Feed or Explore on Android.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: ${output.nav.composeTab}
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn: ${output.nav.compose}
+- extendedWaitUntil:
+    visible:
+      id: ${output.composer.submit}
+    timeout: 30000

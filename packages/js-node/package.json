@@ -23,13 +23,13 @@
     "@polycentric/js-storage-postgres": "workspace:*",
     "@polycentric/js-storage-sqlite": "workspace:*",
     "@polycentric/rs-core-wasm": "workspace:*",
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^13.0.0",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.22.0"
   },
   "devDependencies": {
     "@polycentric/tsconfig": "workspace:*",
-    "@types/better-sqlite3": "^7.6.13",
+    "@types/better-sqlite3": "^9.0.0",
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",
     "typescript": "catalog:"

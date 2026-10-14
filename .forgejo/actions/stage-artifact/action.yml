@@ -1,0 +1,16 @@
+name: stage-artifact
+description: Uploads the job's stage/ directory as one tarball artifact, keeping symlinks and file modes. service-image's `stage-artifact` input puts it in place of a Dockerfile stage.
+inputs:
+  artifact:
+    description: Artifact name
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: tar -C stage -cf stage.tar .
+    - uses: forgejo/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact }}
+        path: stage.tar
+        retention-days: 1

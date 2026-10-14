@@ -47,7 +47,7 @@ async fn connect_db_with_retry(
 }
 
 /// Build the server config served by `ServerService.GetInfo`. Version
-/// comes from the crate's `Cargo.toml`; `CDN_URL` overrides the public
+/// comes from the crate's `Cargo.toml`; `HARBOR_CDN_URL` overrides the public
 /// URL clients use to fetch blob bodies.
 fn server_config() -> ServerConfig {
     ServerConfig {
