@@ -24,11 +24,13 @@ export { PublicKey, KeyType } from './proto/polycentric/v2/keypair';
 
 export type * from './platform-interfaces';
 export { bytesToHex, hexToBytes, toDigestKey } from './utils/hex';
+export { segmentsFromPath } from './platform-interfaces/file-store-driver';
 
 export { StorageHandle } from './datastore';
 export type { Repositories } from './datastore';
 
 export { PolycentricClient } from './polycentric-client';
+export { FileStore } from './file-store';
 export { MemoryStorageDriver, MemoryFileStoreDriver } from './memory-storage';
 export { IdentityManager } from './client-internal/identity-manager';
 export { PairingSessionManager } from './client-internal/pairing-session-manager';

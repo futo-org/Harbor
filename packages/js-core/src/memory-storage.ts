@@ -5,6 +5,7 @@ import type {
   IKeysRepository,
   IStorageDriver,
 } from './platform-interfaces';
+import { segmentsFromPath } from './platform-interfaces/file-store-driver';
 import type { PrivateKey } from './polycentric-client';
 import * as Proto from './proto/v2';
 import { bytesToHex, toDigestKey } from './utils/hex';
@@ -187,23 +188,27 @@ export class MemoryStorageDriver implements IStorageDriver {
   }
 }
 
-/** In-memory counterpart of the blob file store. */
+/** In-memory counterpart of the file store driver. */
 export class MemoryFileStoreDriver implements IFileStoreDriver {
   private readonly map = new Map<string, Uint8Array>();
 
-  async has(digest: Proto.ContentDigest): Promise<boolean> {
-    return this.map.has(toDigestKey(digest));
+  private key(path: string): string {
+    return segmentsFromPath(path).join('/');
   }
 
-  async get(digest: Proto.ContentDigest): Promise<Uint8Array | null> {
-    return this.map.get(toDigestKey(digest)) ?? null;
+  async has(path: string): Promise<boolean> {
+    return this.map.has(this.key(path));
   }
 
-  async put(digest: Proto.ContentDigest, bytes: Uint8Array): Promise<void> {
-    this.map.set(toDigestKey(digest), bytes);
+  async get(path: string): Promise<Uint8Array | null> {
+    return this.map.get(this.key(path)) ?? null;
   }
 
-  async delete(digest: Proto.ContentDigest): Promise<void> {
-    this.map.delete(toDigestKey(digest));
+  async put(path: string, bytes: Uint8Array): Promise<void> {
+    this.map.set(this.key(path), bytes);
+  }
+
+  async delete(path: string): Promise<boolean> {
+    return this.map.delete(this.key(path));
   }
 }

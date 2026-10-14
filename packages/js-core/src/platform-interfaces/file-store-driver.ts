@@ -1,12 +1,31 @@
-import type * as Proto from '../proto/v2';
-
 /**
- * Client-side blob storage for server `/blob/` files (profile pictures,
- * post attachments, etc).
+ * Thin wrapper over a client platform's file system.
  */
 export interface IFileStoreDriver {
-  has(digest: Proto.ContentDigest): Promise<boolean>;
-  get(digest: Proto.ContentDigest): Promise<Uint8Array | null>;
-  put(digest: Proto.ContentDigest, bytes: Uint8Array): Promise<void>;
-  delete(digest: Proto.ContentDigest): Promise<void>;
+  has(path: string): Promise<boolean>;
+  get(path: string): Promise<Uint8Array | null>;
+  put(path: string, bytes: Uint8Array): Promise<void>;
+  delete(path: string): Promise<boolean>;
+}
+
+/**
+ * Split an `IFileStoreDriver` path into its segments.
+ * Paths must have at least one segment.
+ * `.`, `..`, and paths containing `\` are disallowed.
+ */
+export function segmentsFromPath(path: string): string[] {
+  if (path.includes('\\')) {
+    throw new Error(`Invalid file store path (contains '\\'): ${path}`);
+  }
+
+  const segments = path.split('/').filter((s) => s);
+
+  if (segments.some((s) => s === '.' || s === '..')) {
+    throw new Error(`Invalid file store path (contains '.' or '..'): ${path}`);
+  }
+  if (segments.length === 0) {
+    throw new Error(`Invalid file store path (empty): ${path}`);
+  }
+
+  return segments;
 }

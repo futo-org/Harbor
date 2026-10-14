@@ -22,6 +22,7 @@ import type {
 } from './platform-interfaces';
 import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
+import { FileStore } from './file-store';
 import { toDigestKey } from './utils/hex';
 import { bytesEqual } from './utils/bytes';
 import { CryptoManager } from './crypto/crypto-manager';
@@ -113,14 +114,14 @@ export class PolycentricClient {
 
   public storageHandle: StorageHandle | undefined;
   public readonly storageDriver: IStorageDriver;
-  public readonly filestoreDriver: IFileStoreDriver;
+  public readonly fileStore: FileStore;
   public readonly persistentStorage: boolean;
   public readonly application: Proto.Application | undefined;
 
   constructor(config: PolycentricClientConfig) {
     this.core = config.core;
     this.storageDriver = config.storageDriver;
-    this.filestoreDriver = config.filestoreDriver;
+    this.fileStore = new FileStore(config.filestoreDriver);
     this.persistentStorage = config.persistentStorage ?? true;
     this.application = config.application;
     if (config.seedServers && config.seedServers.length > 0) {
@@ -744,7 +745,7 @@ export class PolycentricClient {
       type: Proto.ContentDigestType.SHA256,
       value: sha256(bytes),
     };
-    await this.filestoreDriver.put(digest, bytes);
+    await this.fileStore.put(digest, bytes);
     return Proto.Blob.create({
       digest,
       mimeType,
@@ -1047,7 +1048,7 @@ export class PolycentricClient {
         blobs.map(async (blob) => {
           if (!blob.digest) return;
 
-          const blobData = await this.filestoreDriver.get(blob.digest);
+          const blobData = await this.fileStore.get(blob.digest);
           if (!blobData) return;
 
           await this.uploadBlob(blob, blobData, [server]);

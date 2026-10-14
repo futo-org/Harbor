@@ -1,16 +1,10 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
-import {
-  toDigestKey,
-  type IFileStoreDriver,
-  type v2,
-} from '@polycentric/js-core';
+import { segmentsFromPath, type IFileStoreDriver } from '@polycentric/js-core';
 
 /**
- * Filesystem-backed IFileStoreDriver. Blob bytes are written to one
- * file per digest under `directory`, named `{type}_{hex(value)}` to
- * match the CDN URL convention.
+ * Node.js filesystem-backed IFileStoreDriver.
  */
 export class NodeFileStoreDriver implements IFileStoreDriver {
   private constructor(private readonly directory: string) {}
@@ -20,22 +14,23 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
     return new NodeFileStoreDriver(directory);
   }
 
-  private pathFor(digest: v2.ContentDigest): string {
-    return path.join(this.directory, toDigestKey(digest));
+  private pathFor(p: string): string {
+    return path.join(this.directory, ...segmentsFromPath(p));
   }
 
-  async has(digest: v2.ContentDigest): Promise<boolean> {
+  async has(p: string): Promise<boolean> {
     try {
-      await fs.access(this.pathFor(digest));
+      await fs.access(this.pathFor(p));
       return true;
-    } catch {
-      return false;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw err;
     }
   }
 
-  async get(digest: v2.ContentDigest): Promise<Uint8Array | null> {
+  async get(p: string): Promise<Uint8Array | null> {
     try {
-      const buf = await fs.readFile(this.pathFor(digest));
+      const buf = await fs.readFile(this.pathFor(p));
       return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
@@ -43,18 +38,24 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
     }
   }
 
-  async put(digest: v2.ContentDigest, bytes: Uint8Array): Promise<void> {
-    const final = this.pathFor(digest);
+  async put(p: string, bytes: Uint8Array): Promise<void> {
+    const final = this.pathFor(p);
+    await fs.mkdir(path.dirname(final), { recursive: true });
+
+    // TODO: don't leak on failure
     const tmp = `${final}.tmp.${crypto.randomBytes(8).toString('hex')}`;
     await fs.writeFile(tmp, bytes);
+
     await fs.rename(tmp, final);
   }
 
-  async delete(digest: v2.ContentDigest): Promise<void> {
+  async delete(p: string): Promise<boolean> {
     try {
-      await fs.unlink(this.pathFor(digest));
+      await fs.unlink(this.pathFor(p));
+      return true;
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw err;
     }
   }
 }
