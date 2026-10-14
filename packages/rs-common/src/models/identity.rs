@@ -4,15 +4,17 @@
 
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 use prost::Message;
 use sha2::{Digest, Sha256};
 
-use crate::models::protos_v2::{RevocationBound, ServerList};
-use crate::models::{
-    collections,
-    protos_v2::{Content, Event, EventProofTarget, Identity, PublicKey, content::ContentBody},
+use crate::models::protos_v2::content::ContentBody;
+use crate::models::protos_v2::{
+    Content, Event, EventProofTarget, Identity, PublicKey, RevocationBound, ServerList,
 };
+use crate::models::validate::{self, SliceConfig, SliceError, Validate};
+use crate::models::{collections, public_key, recovation_bound, server_list};
 
 impl Identity {
     /// Derive an identity key hex string from this identity content.
@@ -71,6 +73,87 @@ impl Identity {
             .targets
             .iter()
             .find(|t| t.collection == collection)
+    }
+}
+
+impl Validate for Identity {
+    type Error = ValidationError;
+
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
+        let Identity {
+            rotation_keys,
+            signing_keys,
+            revocation_bounds,
+            servers,
+            recovery_key,
+            recovery_signature,
+        } = self;
+        validate::slice2(
+            rotation_keys,
+            errors,
+            |err| map_err(ValidationError::RotationKeys(err)),
+            SliceConfig {
+                max_len: Some(1000),
+                ..Default::default()
+            },
+            |rotation_key, errors, map_err| rotation_key.validate_check(errors, map_err),
+        );
+        validate::slice2(
+            signing_keys,
+            errors,
+            |err| map_err(ValidationError::SigningKeys(err)),
+            SliceConfig {
+                max_len: Some(1000),
+                ..Default::default()
+            },
+            |signing_key, errors, map_err| signing_key.validate_check(errors, map_err),
+        );
+        validate::slice2(
+            revocation_bounds,
+            errors,
+            |err| map_err(ValidationError::RevocationBound(err)),
+            SliceConfig {
+                max_len: Some(1000),
+                ..Default::default()
+            },
+            |revocation_bound, errors, map_err| revocation_bound.validate_check(errors, map_err),
+        );
+        if let Some(servers) = servers {
+            servers.validate_check(errors, |err| map_err(ValidationError::Servers(err)));
+        }
+        if let Some(recovery_key) = recovery_key {
+            recovery_key.validate_check(errors, |err| map_err(ValidationError::RecoveryKey(err)));
+        }
+        if let Some(recovery_signature) = recovery_signature {
+            // TODO: validation.
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ValidationError {
+    RotationKeys(SliceError<public_key::ValidationError>),
+    SigningKeys(SliceError<public_key::ValidationError>),
+    RevocationBound(SliceError<recovation_bound::ValidationError>),
+    Servers(server_list::ValidationError),
+    RecoveryKey(public_key::ValidationError),
+    //RecoverySignature,
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            /*
+            ValidationError::Root(err) => write!(f, "root {err}"),
+            ValidationError::RootMissing => write!(f, "root is missing"),
+            ValidationError::Parent(err) => write!(f, "parent {err}"),
+            ValidationError::ParentMissing => write!(f, "parent is missing"),
+            */
+            _ => todo!(),
+        }
     }
 }
 

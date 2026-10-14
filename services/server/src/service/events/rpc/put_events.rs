@@ -452,7 +452,6 @@ fn validate_content(
         }
         ContentBody::Identity(_) => {
             check_collection(collection, collections::IDENTITY);
-            // TODO: validate.
         }
         ContentBody::Repost(_) => {
             check_collection(collection, collections::FEED);
