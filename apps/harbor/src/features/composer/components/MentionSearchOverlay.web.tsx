@@ -174,9 +174,12 @@ function useKeyboardControls(
       e.preventDefault();
     };
 
-    // Capture phase: RN-web's TextInput stops keydown propagation at the root.
-    document.addEventListener('keydown', onKeyDown, true);
-    return () => document.removeEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keydown', onKeyDown, {
+      // So we can handle keyboard controls while TextInput is focused
+      capture: true,
+    });
+    return () =>
+      document.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [
     open,
     count,

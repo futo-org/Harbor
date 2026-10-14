@@ -77,6 +77,8 @@ export function ComposeSheet({
       setText={composer.setText}
       attachments={composer.attachments}
       submitting={composer.submitting}
+      canPost={composer.canPost}
+      onPost={composer.handlePost}
       onRemoveAttachment={composer.handleRemoveAttachment}
       linkPreview={composer.linkPreview}
       linkPreviewLoading={composer.linkPreviewLoading}
