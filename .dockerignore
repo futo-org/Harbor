@@ -5,6 +5,10 @@ apps/harbor/dist
 **/.git
 .turbo
 .pnpm-store
+# CI's stage artifacts (service-image), sent as their own context.
+.stage
+stage
+stage.tar
 
 # iOS-only artifacts produced by rn-ios-build — not used by the web image,
 # and the xcframework alone is ~hundreds of MB.

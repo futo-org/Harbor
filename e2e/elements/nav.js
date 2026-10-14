@@ -2,6 +2,7 @@
 // breakpoint, so its text is not there to match.
 output.nav = {
   compose: 'New post',
+  composeTab: 'Compose',
   explore: 'Explore',
   profile: 'Profile',
 };

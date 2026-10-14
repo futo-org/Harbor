@@ -118,7 +118,7 @@ const verifierBot = touches(
 );
 const app = touches(LOCK, 'apps/', CHARTS);
 const e2e = touches('e2e/');
-const docs = touches('docs/');
+const docs = touches('docs/', 'protos/polycentric/v2/', /^buf\.yaml$/);
 const charts = touches(
   CHARTS,
   NODE_ROOT,
@@ -204,24 +204,28 @@ const rustServices = [
     image: 'server',
     label: 'server',
     dockerfile: 'services/server',
+    packages: 'server server-migration',
     changed: server,
   },
   {
     image: 'moderation-service',
     label: 'moderation',
     dockerfile: 'services/moderation',
+    packages: 'moderation-service moderation-migration',
     changed: moderation,
   },
   {
     image: 'push-notifications-service',
     label: 'push notifications',
     dockerfile: 'services/push-notifications',
+    packages: 'push-notifications-service push-notifications-migration',
     changed: pushNotifications,
   },
   {
     image: 'grayjay-migrator',
     label: 'grayjay migrator',
     dockerfile: 'services/grayjay-migrator',
+    packages: 'grayjay-migrator grayjay-migrator-migration',
     changed: grayjayMigrator,
   },
 ];
@@ -229,10 +233,11 @@ const rustServices = [
 const matrix = {
   service_images: rustServices
     .filter((s) => s.changed || ciChanged('pr'))
-    .map(({ image, label, dockerfile }) => ({
+    .map(({ image, label, dockerfile, packages }) => ({
       image,
       label: `Build ${label} image`,
       dockerfile,
+      packages,
     })),
 };
 for (const [name, rows] of Object.entries(matrix)) {

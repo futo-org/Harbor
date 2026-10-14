@@ -20,7 +20,7 @@ async function actAs(client, name) {
     identity: identityKey,
     collection: COLLECTION.IDENTITY,
   });
-  await client.setActiveIdentityKey(identityKey);
+  await client.adoptIdentity(identityKey);
   await client.sync(SyncStrategy.PARTIAL_PULL);
   return identityKey;
 }

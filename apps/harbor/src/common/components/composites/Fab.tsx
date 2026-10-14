@@ -12,9 +12,15 @@ interface FabProps {
   onPress: () => void;
   icon: IconRenderFn;
   title?: string;
+  accessibilityLabel?: string;
 }
 
-export function Fab({ onPress, icon, title = '' }: FabProps) {
+export function Fab({
+  onPress,
+  icon,
+  title = '',
+  accessibilityLabel,
+}: FabProps) {
   const { theme } = useTheme();
   const isLight = theme.scheme === 'light';
   const shadow =
@@ -38,6 +44,7 @@ export function Fab({ onPress, icon, title = '' }: FabProps) {
       <Button
         onPress={onPress}
         title={title}
+        accessibilityLabel={accessibilityLabel}
         variant="primary"
         size="md"
         icon={icon}

@@ -1,4 +1,4 @@
-FROM rust:1.97-slim AS chef
+FROM rust:1.99-slim-bookworm@sha256:2c3a22f0a5533ea2dd5a16627bc841228151faa2d4de2644ac9987e4a2f1f2fa AS chef
 WORKDIR /app
 COPY services/common/build-deps.sh build-deps.sh
 RUN sh build-deps.sh
@@ -30,10 +30,12 @@ RUN cargo build --release \
     && mv target/release/server target/release/server-migration /out/ \
     && rm -rf target
 
-FROM rust:1.97-slim
+# CI builds the binaries outside Docker (.forgejo/actions/rust-binaries) and
+# swaps them in for the builder stage, so bookworm here matches its ci/rust.
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 WORKDIR /app
 COPY services/common/runtime-deps.sh runtime-deps.sh
 RUN sh runtime-deps.sh
-COPY --from=builder /out/server /app/server
-COPY --from=builder /out/server-migration /app/migration
+COPY --chmod=755 --from=builder /out/server /app/server
+COPY --chmod=755 --from=builder /out/server-migration /app/migration
 CMD ["/app/server"]

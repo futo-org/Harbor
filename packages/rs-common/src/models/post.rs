@@ -25,7 +25,6 @@ impl Validate for Post {
             errors,
             |err| map_err(ValidationError::Text(err)),
             StringConfig {
-                min_len: Some(1),
                 max_len: Some(2000),
                 ..Default::default()
             },

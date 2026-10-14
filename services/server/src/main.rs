@@ -47,7 +47,7 @@ async fn connect_db_with_retry(
 }
 
 /// Build the server config served by `ServerService.GetInfo`. Version
-/// comes from the crate's `Cargo.toml`; `CDN_URL` overrides the public
+/// comes from the crate's `Cargo.toml`; `HARBOR_CDN_URL` overrides the public
 /// URL clients use to fetch blob bodies.
 fn server_config() -> ServerConfig {
     ServerConfig {
@@ -87,6 +87,7 @@ async fn main() {
 async fn run_server() {
     common_telemetry::init_metrics("server");
     let (db, ro_db) = connect_db_with_retry(true).await;
+    service::notifications::changes::init(&db);
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");

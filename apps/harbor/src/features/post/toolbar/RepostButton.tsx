@@ -1,15 +1,15 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
-import { openCompose, HARBOR_APP_URL, Routes } from '@/src/common/constants';
+import { openCompose } from '@/src/common/constants';
 import {
   type PostData,
   useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { canShareUrl, nativeShareUrl } from '@/src/common/util/nativeShareUrl';
 import { View } from 'react-native';
+import { buildPostLink } from '../buildPostLink';
 import useReposts from '../hooks/useReposts';
 import PostActionButton from './PostActionButton';
 
@@ -35,13 +35,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
   };
 
   const onSharePress = () => {
-    const path = Routes.tabs.post(
-      post.identity,
-      getKeyFingerprint(post.signedBy) ?? '',
-      post.sequence,
-    );
-    const url = `${HARBOR_APP_URL}${path}`;
-    nativeShareUrl(url);
+    nativeShareUrl(buildPostLink(post));
   };
 
   const button = (

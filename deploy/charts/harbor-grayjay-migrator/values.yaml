@@ -23,7 +23,7 @@ podSecurityContext: {}
 
 securityContext: {}
 
-# DATABASE_URL, HARBOR_GRAYJAY_MIGRATOR_*: put secrets in a Secret
+# HARBOR_DATABASE_URL, HARBOR_GRAYJAY_MIGRATOR_*: put secrets in a Secret
 # referenced via envFrom.
 env: []
 envFrom: []

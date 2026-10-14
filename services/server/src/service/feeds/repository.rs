@@ -301,16 +301,14 @@ impl Query {
                     .eq(Expr::col((RELEVANT_EVENT, "id"))),
             );
         } else {
-            query.from(event::Entity);
-        }
-
-        let relation = content_join();
-        query
-            .inner_join(relation.to_tbl.clone(), relation)
-            .cond_where(
+            query.from(event::Entity).cond_where(
                 Expr::col(event::Column::Collection.as_column_ref())
                     .eq(Expr::Constant(collections::FEED.into())),
             );
+        }
+
+        let relation = content_join();
+        query.inner_join(relation.to_tbl.clone(), relation);
 
         match sort_by {
             SortPostsBy::Default | SortPostsBy::Latest => {}

@@ -423,6 +423,7 @@ function makeCoreMock(opts: CoreMockOptions = {}) {
       queueMicrotask(() => {
         if (opts.pullError !== undefined) {
           observer.error(opts.pullError);
+          observer.complete();
           return;
         }
         try {
@@ -440,6 +441,7 @@ function makeCoreMock(opts: CoreMockOptions = {}) {
         } catch (e) {
           observer.error(String(e));
         }
+        observer.complete();
       });
       return { unsubscribe: () => {}, isClosed: () => false };
     },

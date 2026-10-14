@@ -9,7 +9,9 @@ use common_kafka::FutureRecord;
 use entity::event;
 use polycentric_common::models::protos_v2::Blob;
 use polycentric_common::models::validate::{Validate, ValidationError};
-use polycentric_common::models::{collections, event_key};
+use polycentric_common::models::{
+    block, collections, delete, event_key, follow,
+};
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
@@ -23,8 +25,8 @@ use crate::service::identity::repository::Query as IdentityRepository;
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
-    Application, Content, Delete, Event, EventBundle, PublicKey, PutEventError,
-    PutEventsRequest, PutEventsResponse,
+    Application, Content, Delete, Event, EventBundle, EventKey, PublicKey,
+    PutEventError, PutEventsRequest, PutEventsResponse,
 };
 
 /// Ingest a batch of signed events. Each event is processed in
@@ -40,6 +42,7 @@ pub async fn handle(
     let mut banned_cache = HashMap::new();
     let mut app_cache = HashMap::new();
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
+        let start_warnings = warnings.len();
         match process_event(
             ctx,
             event_bundle,
@@ -54,7 +57,17 @@ pub async fn handle(
         )
         .await
         {
-            Ok(()) => {}
+            Ok(key) => {
+                if warnings.len() != start_warnings {
+                    tracing::debug!(
+                        key = ?key,
+                        warnings = ?&warnings[start_warnings..],
+                        "processed event with warning(s)",
+                    );
+                } else {
+                    tracing::debug!(key = ?key, "processed event");
+                }
+            }
             // We should see internal errors if something is wrong on our end,
             // e.g. when the database is down. In that case in stead of trying
             // to store the remaining events return the error immediately and
@@ -104,7 +117,7 @@ async fn process_event(
     all_blobs: &mut HashSet<Blob>,
     warnings: &mut Vec<PutEventError>,
     map_warning: impl Fn(ValidationError) -> PutEventError,
-) -> Result<(), Status> {
+) -> Result<EventKey, Status> {
     let start_warning_len = warnings.len();
     if !event_bundle.event_proofs.is_empty() {
         return Err(Status::invalid_argument(
@@ -138,7 +151,6 @@ async fn process_event(
     // * event.previous_signature
     // * event.previous_root
     event.validate_check(warnings, |err| map_warning(err.into()));
-    let collection = event.key.as_ref().map(|k| k.collection).unwrap_or(0);
 
     let key = event.key.ok_or_else(|| {
         // Event validation also checks this, don't return an error and warning
@@ -201,19 +213,6 @@ async fn process_event(
     // Encoded here while `key` is whole — its fields are moved out below.
     let event_key_bytes = key.encode_to_vec();
 
-    let signed_by = key.signed_by.ok_or_else(|| {
-        // Event validation also checks this, don't return an error and warning
-        // about the same thing.
-        warnings.truncate(start_warning_len);
-        Status::invalid_argument("event key signed by is missing")
-    })?;
-
-    if !signed_by
-        .sig_matches(&signed_event.signature, &signed_event.event_bytes)
-    {
-        return Err(Status::unauthenticated("signed event signature invalid"));
-    }
-
     let decoded_content = if let (Some(serialized_content), Some(digest)) = (
         event_bundle.serialized_content.as_ref(),
         event.content_digest.as_ref(),
@@ -227,7 +226,7 @@ async fn process_event(
             tracing::debug!(error = %e, "put_events content decode error");
             Status::invalid_argument("invalid content_bytes")
         })?;
-        validate_content(&content, collection, warnings, map_warning);
+        validate_content(&content, &key, warnings, map_warning);
 
         all_blobs.extend(content.blobs().into_iter().cloned());
 
@@ -240,6 +239,19 @@ async fn process_event(
     } else {
         None
     };
+
+    let signed_by = key.signed_by.as_ref().ok_or_else(|| {
+        // Event validation also checks this, don't return an error and warning
+        // about the same thing.
+        warnings.truncate(start_warning_len);
+        Status::invalid_argument("event key signed by is missing")
+    })?;
+
+    if !signed_by
+        .sig_matches(&signed_event.signature, &signed_event.event_bytes)
+    {
+        return Err(Status::unauthenticated("signed event signature invalid"));
+    }
 
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
@@ -269,15 +281,12 @@ async fn process_event(
         .await?;
     }
 
-    let event_identity = key.identity.clone();
-    let event_collection = key.collection;
-
     let active_model = event::ActiveModel {
         id: NotSet,
         collection: Set(key.collection as i16),
-        identity: Set(key.identity),
+        identity: Set(key.identity.clone()),
         public_key_type: Set(signed_by.key_type as i16),
-        public_key: Set(signed_by.key),
+        public_key: Set(signed_by.key.clone()),
         sequence: Set(key.sequence as i64),
         content_digest_type: Set(event
             .content_digest
@@ -314,10 +323,10 @@ async fn process_event(
             })?;
 
             ctx.proof_cache
-                .invalidate_canonical(&event_identity, event_collection)
+                .invalidate_canonical(&key.identity, key.collection)
                 .await;
-            if event_collection == collections::IDENTITY {
-                ctx.proof_cache.invalidate_identity(&event_identity).await;
+            if key.collection == collections::IDENTITY {
+                ctx.proof_cache.invalidate_identity(&key.identity).await;
             }
 
             let producer = ctx.kafka_producer.clone();
@@ -356,7 +365,7 @@ async fn process_event(
         }
     }
 
-    Ok(())
+    Ok(key)
 }
 
 fn banned_error() -> Status {
@@ -365,7 +374,7 @@ fn banned_error() -> Status {
 
 fn validate_content(
     content: &Content,
-    collection: i32,
+    key: &EventKey,
     warnings: &mut Vec<PutEventError>,
     map_warning: impl Fn(ValidationError) -> PutEventError,
 ) {
@@ -385,6 +394,7 @@ fn validate_content(
         }
     };
 
+    let collection = key.collection;
     match content_body {
         ContentBody::Post(post) => {
             check_collection(collection, collections::FEED);
@@ -395,47 +405,76 @@ fn validate_content(
             // * reply.root & reply.parent in same thread?
             // * quote event exists.
         }
-        ContentBody::Repost(_) => {
-            check_collection(collection, collections::FEED);
-            // TODO: validate.
+        ContentBody::Delete(delete) => {
+            if let Some(delete_key) = delete.event_key.as_ref() {
+                check_collection(collection, delete_key.collection);
+                if delete_key.identity != key.identity {
+                    warnings.push(map_warning(
+                        delete::ValidationError::IdentityMismatch.into(),
+                    ));
+                }
+            } // NOTE: if we don't have a key, the validation above would have flagged it already.
         }
-        ContentBody::Delete(_) => {
-            // NOTE: we allow deletion of any event, so the collection can't be
-            // checked here.
-
-            // TODO: validate.
-        }
-        ContentBody::Follow(_) => {
+        ContentBody::Follow(follow) => {
             check_collection(collection, collections::SOCIAL_GRAPH);
-            // TODO: validate.
+            // Can't follow yourself.
+            if follow.identity == key.identity {
+                warnings.push(map_warning(
+                    follow::ValidationError::IdentitySelf.into(),
+                ));
+            }
         }
-        ContentBody::Block(_) => {
+        ContentBody::Block(block) => {
             check_collection(collection, collections::SOCIAL_GRAPH);
-            // TODO: validate.
+            // Can't block yourself.
+            if block.identity == key.identity {
+                warnings.push(map_warning(
+                    block::ValidationError::IdentitySelf.into(),
+                ));
+            }
         }
         ContentBody::Reaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * at most 1 reaction per post per user.
+            // * in db only allow reactions to posts -- don't think we need to
+            //   return a warning for this.
         }
         ContentBody::AttributedToReaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * at most 1 reaction per URL (attributed item) per user.
         }
         ContentBody::ProfileUpdate(_) => {
             check_collection(collection, collections::PROFILE);
-            // TODO: validate.
         }
         ContentBody::Identity(_) => {
             check_collection(collection, collections::IDENTITY);
             // TODO: validate.
         }
+        ContentBody::Repost(_) => {
+            check_collection(collection, collections::FEED);
+
+            // TODO: needs db for validation of:
+            // * at most 1 reaction per post per user.
+            // * in db only reposting of posts
+        }
         ContentBody::Report(_) => {
             check_collection(collection, collections::REPORTS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * limit the amount of reports per post?
+            // * limit to posts and reposts only?
         }
         ContentBody::Labels(_) => {
             check_collection(collection, collections::LABELS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * limit the amount of labels per key per user in total (accross
+            //   multiple requests)
+            // * limit to posts only?
         }
         ContentBody::VerificationClaim(_) => {
             check_collection(collection, collections::VERIFICATIONS);

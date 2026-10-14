@@ -61,7 +61,7 @@
     "@react-native/babel-preset": "0.83.0",
     "@types/jest": "catalog:",
     "@types/react": "^19.2.0",
-    "del-cli": "^7.0.0",
+    "del-cli": "^8.0.0",
     "expo-file-system": "~57.0.0",
     "expo-sqlite": "~57.0.0",
     "jest": "catalog:",

@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 
 pub struct Config {
     /// Postgres URL for the migrator's OWN database, which holds the
-    /// `migrated_identity` mapping table (`DATABASE_URL`).
+    /// `migrated_identity` mapping table (`HARBOR_DATABASE_URL`).
     pub database_url: String,
     /// Schema owning this service's tables
     /// (`HARBOR_GRAYJAY_MIGRATOR_DATABASE_SCHEMA`).
@@ -51,7 +51,7 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 /// Read and validate the environment into the process-wide [`Config`].
 pub fn init() -> Result<&'static Config, String> {
     let config = Config {
-        database_url: std::env::var("DATABASE_URL")
+        database_url: std::env::var("HARBOR_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:testing@localhost:5432".to_string()),
         database_schema: std::env::var("HARBOR_GRAYJAY_MIGRATOR_DATABASE_SCHEMA")
             .unwrap_or_else(|_| "grayjay_migrator".to_string()),

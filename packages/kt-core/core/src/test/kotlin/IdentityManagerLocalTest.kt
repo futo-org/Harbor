@@ -7,85 +7,60 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import polycentric.v2.Content
+import polycentric.v2.Event
 import polycentric.v2.Identity
 import polycentric.v2.ServerList
 
 /**
- * `IdentityManager.getCurrent()` is pure local logic over the local repos
- * (no core calls), and `publish()` validates its bootstrap arguments before
+ * `IdentityManager.getCurrent()` reads the core's resolved head (stubbed by
+ * the fake core), and `publish()` validates its bootstrap arguments before
  * any core call — both testable with the sync fakes.
  */
 class IdentityManagerLocalTest {
     private val signerA = makeSigner(1)
     private val identityA = makeIdentity(listOf(signerA), listOf(makeSigner(2)))
 
+    private fun clientResolving(doc: Identity?) =
+        makeClient {
+            identity = identityA
+            signer = signerA
+            core = FakeCore { resolveIdentityResponse = doc?.let { Identity.ADAPTER.encode(it) } }
+        }
+
     @Test
-    fun `getCurrent picks the highest sequence identity document`() =
+    fun `getCurrent returns the core's resolved head for the active identity`() =
         runTest {
-            // Two identity docs for identityA: seq 1 (no servers) and seq 2 (servers).
-            val doc2 = Identity(rotation_keys = listOf(signerA.publicKey), servers = ServerList(urls = listOf("https://late")))
-            val content2 = Content(identity = doc2)
-            val event2 =
-                makeSignedEvent(
-                    MakeEventArgs(
-                        signer = signerA,
-                        identity = identityA,
-                        collection = Collections.IDENTITY,
-                        sequence = 2,
-                        content = content2,
-                    ),
-                )
-            val f =
-                makeClient {
-                    identity = identityA
-                    signer = signerA
-                    contents = listOf(buildDigest(content2) to content2)
-                    events = listOf(event2)
-                }
+            val head = Identity(rotation_keys = listOf(signerA.publicKey), servers = ServerList(urls = listOf("https://late")))
+            val f = clientResolving(head)
 
             val state = f.client.identityManager.getCurrent()
 
             assertEquals(identityA.key, state.identityKey)
+            assertEquals(head.rotation_keys, state.rotationKeys)
             assertEquals(listOf("https://late"), state.servers)
         }
 
     @Test
-    fun `getCurrent ignores other collections other identities and contentless events`() =
+    fun `getCurrent without a valid chain returns an empty state`() =
         runTest {
-            // A FEED event (wrong collection) and an identity doc whose content
-            // has no identity body are both ignored.
-            val feedEvent =
-                makeSignedEvent(
-                    MakeEventArgs(
-                        signer = signerA,
-                        identity = identityA,
-                        collection = Collections.FEED,
-                        sequence = 1,
-                        content = makeContent("not identity"),
-                    ),
-                )
-            val noDigestSigned =
-                makeIdentityDocEvent(identityA.key, signerA, sequence = 5, content = Content()) // content without identity
-
-            val f =
-                makeClient {
-                    identity = identityA
-                    signer = signerA
-                    events = listOf(feedEvent, noDigestSigned)
-                }
+            // The local store has identityA's genesis, but the core resolves no valid chain.
+            val f = clientResolving(null)
 
             val state = f.client.identityManager.getCurrent()
 
-            // Only the seeded identity doc (identityContents) resolves.
-            assertEquals(identityA.key, state.identityKey)
-            assertNull(state.servers)
-            assertTrue(state.rotationKeys.isNotEmpty())
+            assertNull(state.identityKey)
+            assertEquals(emptyList<Any>(), state.rotationKeys)
         }
 
     @Test
     fun `getCurrent with no active identity returns an empty state`() =
         runTest {
-            val f = makeClient { otherIdentities = listOf(identityA) } // seeded but NOT active
+            val doc = Identity.ADAPTER.encode(Identity(rotation_keys = listOf(signerA.publicKey)))
+            val f =
+                makeClient {
+                    otherIdentities = listOf(identityA) // seeded but NOT active
+                    core = FakeCore { resolveIdentityResponse = doc }
+                }
 
             val state = f.client.identityManager.getCurrent()
 
@@ -98,31 +73,16 @@ class IdentityManagerLocalTest {
     @Test
     fun `servers null vs intentionally empty are preserved as distinct`() =
         runTest {
-            val emptyDoc = Identity(rotation_keys = listOf(signerA.publicKey), servers = ServerList(urls = emptyList()))
-            val emptyContent = Content(identity = emptyDoc)
-            val emptyEvent =
-                makeSignedEvent(
-                    MakeEventArgs(
-                        signer = signerA,
-                        identity = identityA,
-                        collection = Collections.IDENTITY,
-                        sequence = 3,
-                        content = emptyContent,
-                    ),
-                )
-            val f =
-                makeClient {
-                    identity = identityA
-                    signer = signerA
-                    contents = listOf(buildDigest(emptyContent) to emptyContent)
-                    events = listOf(emptyEvent)
-                }
+            val unset = clientResolving(Identity(rotation_keys = listOf(signerA.publicKey)))
+            val empty = clientResolving(Identity(rotation_keys = listOf(signerA.publicKey), servers = ServerList(urls = emptyList())))
 
-            val state = f.client.identityManager.getCurrent()
+            val unsetState = unset.client.identityManager.getCurrent()
+            val emptyState = empty.client.identityManager.getCurrent()
 
-            // "intentionally empty", NOT "never configured" (null).
-            assertNotNull(state.servers)
-            assertEquals(emptyList<String>(), state.servers)
+            // "never configured" (null) vs "intentionally empty".
+            assertNull(unsetState.servers)
+            assertNotNull(emptyState.servers)
+            assertEquals(emptyList<String>(), emptyState.servers)
         }
 
     @Test
@@ -168,32 +128,18 @@ class IdentityManagerLocalTest {
         }
 
     @Test
-    fun `after publish getCurrent sees the new document`() =
+    fun `bootstrap publish saves the document and adopts its servers`() =
         runTest {
             val f = makeClient { signer = signerA }
 
-            f.client.identityManager.publish(null, listOf(signerA.publicKey), emptyList(), servers = listOf("https://home"))
+            val result = f.client.identityManager.publish(null, listOf(signerA.publicKey), emptyList(), servers = listOf("https://home"))
 
-            val state = f.client.identityManager.getCurrent()
-            assertEquals(f.client.activeIdentityKey, state.identityKey)
-            assertEquals(listOf("https://home"), state.servers)
-            // The published event round-tripped through the local repos.
-            assertTrue(f.eventRepository.saved.isNotEmpty())
+            assertEquals(listOf("https://home"), f.client.servers)
+            // The published event and its document round-tripped through the local repos.
+            val saved = f.eventRepository.saved.single()
+            assertEquals(result.signedEvent, saved)
+            val digest = Event.ADAPTER.decode(saved.event_bytes).content_digest!!
+            val doc = Content.ADAPTER.decode(f.contentRepository.get(digest)!!).identity!!
+            assertEquals(listOf("https://home"), doc.servers?.urls)
         }
-
-    private fun makeIdentityDocEvent(
-        identityKey: String,
-        signer: TestSigner,
-        sequence: Long,
-        content: Content,
-    ): polycentric.v2.SignedEvent =
-        makeSignedEvent(
-            MakeEventArgs(
-                signer = signer,
-                identity = identityKey,
-                collection = Collections.IDENTITY,
-                sequence = sequence,
-                content = content,
-            ),
-        )
 }

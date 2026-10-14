@@ -42,6 +42,7 @@ import { AppFooter } from './AppFooter';
 import { VerticalNav } from './nav/VerticalNav';
 import Topbar from './Topbar';
 import { SuggestedFollowWidget } from '@/src/features/follow/SuggestedFollowWidget';
+import { LAYOUT_SIZES } from '../metrics';
 
 type MainProps = {
   children: ReactElement | ReactElement[];
@@ -57,12 +58,12 @@ function Main({ children, style }: MainProps) {
     : deviceWidth <= Breakpoints.sm
       ? '100%'
       : deviceWidth <= Breakpoints.md
-        ? 600
+        ? LAYOUT_SIZES.mainUpToMd
         : deviceWidth <= Breakpoints.lg
-          ? 920
+          ? LAYOUT_SIZES.mainUpToLg
           : deviceWidth <= Breakpoints['2xl']
-            ? 990
-            : 1050;
+            ? LAYOUT_SIZES.mainUpTo2xl
+            : LAYOUT_SIZES.mainMax;
 
   const showRightSidebar = isWeb && deviceWidth > Breakpoints.md;
 
@@ -97,8 +98,6 @@ type PrimaryColumnProps = {
 };
 function PrimaryColumn({ children }: PrimaryColumnProps) {
   const { theme } = useTheme();
-  const { height: windowHeight } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
 
   return (
     <View
@@ -107,19 +106,12 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
         Atoms.flex_1,
         isWeb && Atoms.pb_lg,
         isWeb && {
-          maxWidth: 600,
+          maxWidth: LAYOUT_SIZES.primaryColumnMaxWidth,
           borderLeftColor: theme.palette.neutral_25,
           borderLeftWidth: 1,
           borderRightColor: theme.palette.neutral_25,
           borderRightWidth: 1,
         },
-        // Web page-scroll: let the column grow with content so the
-        // borders span the full scrollable height. `self_start` opts
-        // out of the row's cross-axis stretch; `minHeight` keeps
-        // borders painting to the viewport bottom on short-content
-        // pages.
-        isWeb && Atoms.self_start,
-        isWeb && { minHeight: windowHeight },
       ]}
     >
       {children}
@@ -372,6 +364,9 @@ export const LeftSidebar = memo(function LeftSidebar({
   const { width: deviceWidth } = useWindowDimensions();
 
   const narrowSidebar = deviceWidth <= Breakpoints.xl;
+  const sidebarWidth = narrowSidebar
+    ? LAYOUT_SIZES.leftSidebarNarrowWidth
+    : LAYOUT_SIZES.leftSidebarWideWidth;
 
   return (
     <View
@@ -382,13 +377,13 @@ export const LeftSidebar = memo(function LeftSidebar({
         { alignItems: 'flex-end' },
       ]}
     >
-      <View style={{ width: narrowSidebar ? 88 : 275, height: '100%' }}>
+      <View style={{ width: sidebarWidth, height: '100%' }}>
         <View
           style={[
             {
               position: 'sticky',
               top: 0,
-              height: '100vh',
+              height: '100dvh',
             },
           ]}
         >
@@ -399,8 +394,10 @@ export const LeftSidebar = memo(function LeftSidebar({
               Atoms.align_center,
               {
                 minHeight: '100%',
-                paddingHorizontal: narrowSidebar ? 0 : 30,
-                width: narrowSidebar ? 88 : 275,
+                paddingHorizontal: narrowSidebar
+                  ? 0
+                  : LAYOUT_SIZES.leftSidebarWidePadding,
+                width: sidebarWidth,
               },
             ]}
           >
@@ -414,9 +411,11 @@ export const LeftSidebar = memo(function LeftSidebar({
 
 export const RightSidebar = memo(function RightSidebar() {
   const { width: deviceWidth } = useWindowDimensions();
-  const width = 350;
+  const width = LAYOUT_SIZES.rightSidebarWidth;
   const narrow = deviceWidth <= Breakpoints['2xl'];
-  const marginRight = narrow ? 10 : 70;
+  const marginRight = narrow
+    ? LAYOUT_SIZES.rightSidebarNarrowMargin
+    : LAYOUT_SIZES.rightSidebarWideMargin;
 
   const { identity } = useCurrentIdentity();
 
@@ -425,7 +424,7 @@ export const RightSidebar = memo(function RightSidebar() {
       <View
         style={
           isWeb
-            ? { position: 'sticky', top: 0, height: '100vh', width }
+            ? { position: 'sticky', top: 0, height: '100dvh', width }
             : undefined
         }
       >

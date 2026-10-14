@@ -5,9 +5,8 @@ use sea_orm_migration::prelude::*;
 
 #[tokio::main]
 async fn main() {
-    let schema = env::var("HARBOR_MODERATION_DATABASE_SCHEMA")
-        .or_else(|_| env::var("POLYCENTRIC_MODERATION_DATABASE_SCHEMA"))
-        .unwrap_or_else(|_| "moderation".to_string());
+    let schema =
+        env::var("HARBOR_MODERATION_DATABASE_SCHEMA").unwrap_or_else(|_| "moderation".to_string());
 
     if let Ok(db_url) = env::var("HARBOR_DATABASE_URL") {
         // Needed by SeaORM's CLI.

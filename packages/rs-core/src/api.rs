@@ -6,9 +6,10 @@ use crate::query::{QueryObserver, QueryResultFfi, QueryStatus};
 use crate::sync;
 use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
-    ContentDigest, Event, GetAttributedToReactionCountsRequest, GetServerInfoRequest, Identity,
-    ListEventsResponse, PublicKey, PutEventsRequest, SetBanStatusRequest, SignedEvent,
-    SignedMessage, UploadBlobRequest, UrlInfoRequest, content_service_client::ContentServiceClient,
+    AcknowledgeNotificationsRequest, ContentDigest, Event, GetAttributedToReactionCountsRequest,
+    GetServerInfoRequest, Identity, ListEventsResponse, PublicKey, PutEventsRequest,
+    SetBanStatusRequest, SignedEvent, SignedMessage, UploadBlobRequest, UrlInfoRequest,
+    content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     identity_service_client::IdentityServiceClient,
     notification_service_client::NotificationServiceClient,
@@ -101,6 +102,9 @@ pub enum Query {
     GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
     GetAttributionFeed(crate::query::feed::GetAttributionFeedArgs),
     ListNotifications(crate::query::notification::ListNotificationsArgs),
+    SubscribeUnreadNotificationCount(
+        crate::query::notification::SubscribeUnreadNotificationCountArgs,
+    ),
     ListEvents(crate::query::event::ListEventsArgs),
     ListVerificationClaims(crate::query::verifications::ListVerificationClaimsArgs),
     ListVerificationTargets(crate::query::verifications::ListVerificationTargetsArgs),
@@ -483,6 +487,14 @@ impl PolycentricCore {
                 args,
                 opts,
             ),
+            Query::SubscribeUnreadNotificationCount(args) => {
+                crate::query::notification::subscribe_unread_notification_count(
+                    &self.query_client,
+                    query_key,
+                    args,
+                    opts,
+                )
+            }
             Query::ListEvents(args) => {
                 crate::query::event::list_events(&self.query_client, query_key, args, opts)
             }
@@ -823,6 +835,27 @@ impl PolycentricCore {
             .register_push_notifications(signed)
             .await
             .map_err(|e| CoreError::Network(format!("register_push_notifications: {e}")))?;
+        Ok(())
+    }
+
+    /// Mark the authenticated identity's notifications on a server as read.
+    /// `request_bytes` is a serialized `AcknowledgeNotificationsRequest`.
+    pub async fn acknowledge_notifications(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<(), CoreError> {
+        let request =
+            AcknowledgeNotificationsRequest::decode(request_bytes.as_slice()).map_err(|e| {
+                CoreError::Decode(format!(
+                    "Failed to decode AcknowledgeNotificationsRequest: {e}"
+                ))
+            })?;
+        let mut client = NotificationServiceClient::new(channel(&server_url).await?);
+        client
+            .acknowledge_notifications(request)
+            .await
+            .map_err(|e| CoreError::Network(format!("acknowledge_notifications: {e}")))?;
         Ok(())
     }
 

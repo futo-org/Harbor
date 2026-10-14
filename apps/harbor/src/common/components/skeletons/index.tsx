@@ -13,7 +13,7 @@ import {
 
 export const AVATAR_SIZE = AVATAR_SIZE_MAP.md;
 
-const PULSE_MS = 900;
+export const PULSE_MS = 900;
 
 export function useShimmerOpacity() {
   const opacity = useSharedValue(0.5);
@@ -29,7 +29,7 @@ export function useShimmerOpacity() {
 }
 
 /** Height of a placeholder text bar. */
-const BAR_HEIGHT = 12;
+export const BAR_HEIGHT = 12;
 
 /**
  * A single placeholder rectangle.

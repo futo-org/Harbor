@@ -66,7 +66,7 @@ start).
 
 | Variable | Used by | Description |
 | --- | --- | --- |
-| `DATABASE_URL` | both | Migrator's own Postgres (holds the `migrated_identity` table). |
+| `HARBOR_DATABASE_URL` | both | Migrator's own Postgres (holds the `migrated_identity` table). |
 | `HARBOR_GRAYJAY_MIGRATOR_DATABASE_SCHEMA` | both | Schema for this service's tables (default `grayjay_migrator`). |
 | `HARBOR_GRAYJAY_MIGRATOR_LEGACY_DATABASE_URL` | tool | Read-only URL for the legacy (v1) server's Postgres. |
 | `HARBOR_GRAYJAY_MIGRATOR_SIGNING_KEY` | tool | Hex 32-byte ed25519 master seed. **High-value secret.** |
@@ -108,7 +108,7 @@ and `push` sends only its new bundles. `re-sign` skips systems with no new
 events; `put_events` is idempotent, so a re-run after a partial push is safe.
 Once a run is fully `complete`, `DELETE FROM authored_bundle WHERE pushed`
 reclaims the bundle bytes (the chain can still be resumed from `migrated_chain`).
-`re-sign` needs only `DATABASE_URL` + `SIGNING_KEY`; `push` needs `SERVERS`.
+`re-sign` needs only `HARBOR_DATABASE_URL` + `SIGNING_KEY`; `push` needs `SERVERS`.
 
 Reactions are de-duplicated per target URL: a like/dislike that was later
 changed or retracted in the legacy CRDT yields at most one v2 reaction (or none
@@ -264,7 +264,7 @@ srv1-gj's actual schema before running the tool.
 behind a Service, with the schema migrations as a pre-install/pre-upgrade hook
 Job). `deploy-grayjay-migrator-staging.yml` builds the image and publishes the
 chart on a push to `develop`; `deploy-grayjay-migrator-production.yml` promotes
-the staging tags. `DATABASE_URL` and the `HARBOR_GRAYJAY_MIGRATOR_*`
+the staging tags. `HARBOR_DATABASE_URL` and the `HARBOR_GRAYJAY_MIGRATOR_*`
 variables come from a Secret referenced through `envFrom`.
 
 The image also ships `grayjay-migrate`, so the tool steps can run in-cluster
