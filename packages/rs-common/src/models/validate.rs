@@ -1,6 +1,5 @@
 //! Validation
 
-use std::convert::Infallible;
 use std::fmt;
 use std::sync::OnceLock;
 
@@ -319,10 +318,9 @@ impl fmt::Display for StringError {
 }
 
 /// Validate an integer.
-pub(crate) fn int<Int, E, F>(value: Int, errors: &mut Vec<E>, map_err: F, config: IntConfig<Int>)
+pub(crate) fn int<E, F>(value: i64, errors: &mut Vec<E>, map_err: F, config: IntConfig)
 where
-    Int: Copy + Eq + Ord,
-    F: Fn(IntError<Int>) -> E,
+    F: Fn(IntError) -> E,
 {
     if let Some(min) = config.min
         && value < min
@@ -343,21 +341,22 @@ where
 /// [`validate::int`]: int()
 #[derive(Debug, Default)]
 #[non_exhaustive]
-pub(crate) struct IntConfig<Int> {
-    pub(crate) min: Option<Int>,
-    pub(crate) max: Option<Int>,
+pub(crate) struct IntConfig {
+    pub(crate) min: Option<i64>,
+    pub(crate) max: Option<i64>,
 }
 
 /// Error returned by [`validate::int`].
 ///
 /// [`validate::int`]: int()
 #[derive(Debug)]
-pub enum IntError<Int> {
-    TooSmall { value: Int, min: Int },
-    TooLarge { value: Int, max: Int },
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum IntError {
+    TooSmall { value: i64, min: i64 },
+    TooLarge { value: i64, max: i64 },
 }
 
-impl<Int: fmt::Display> fmt::Display for IntError<Int> {
+impl fmt::Display for IntError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             IntError::TooSmall { value, min } => {
@@ -375,7 +374,7 @@ pub(crate) fn slice<T, E, F>(input: &[T], errors: &mut Vec<E>, map_err: F, confi
 where
     F: Fn(SliceError) -> E,
 {
-    let length = input.len();
+    let length = input.len().try_into().unwrap_or(u32::MAX);
     if let Some(min) = config.min_len
         && length < min
     {
@@ -392,33 +391,27 @@ where
 
 /// Validate a slice with per-item validation.
 ///
-/// If `validate` is not needed use [`validate::slice`].
+/// Errors in an item are mapped with `map_item_err`, which also gets the
+/// item's index. If `validate` is not needed use [`validate::slice`].
 ///
 /// [`validate::slice`]: slice()
-pub(crate) fn slice2<T, E, F, VE, V>(
+pub(crate) fn slice2<T, E, F, VE, M, V>(
     input: &[T],
     errors: &mut Vec<E>,
     map_err: F,
+    map_item_err: M,
     config: SliceConfig,
     validate: V,
 ) where
-    F: Fn(SliceError<VE>) -> E,
+    F: Fn(SliceError) -> E,
+    M: Fn(u32, VE) -> E,
     // Can't use `impl Fn` here (yet), so using `&dyn Fn` for now.
     V: Fn(&T, &mut Vec<E>, &dyn Fn(VE) -> E),
 {
-    slice(
-        input,
-        errors,
-        |err| match err {
-            SliceError::TooShort { length, min } => map_err(SliceError::TooShort { length, min }),
-            SliceError::TooLong { length, max } => map_err(SliceError::TooLong { length, max }),
-        },
-        config,
-    );
+    slice(input, errors, map_err, config);
     for (index, item) in input.iter().enumerate() {
-        validate(item, errors, &|err| {
-            map_err(SliceError::Validate { index, error: err })
-        });
+        let index = index.try_into().unwrap_or(u32::MAX);
+        validate(item, errors, &|err| map_item_err(index, err));
     }
 }
 
@@ -428,21 +421,21 @@ pub(crate) fn slice2<T, E, F, VE, V>(
 #[derive(Debug, Default)]
 #[non_exhaustive]
 pub(crate) struct SliceConfig {
-    pub(crate) min_len: Option<usize>,
-    pub(crate) max_len: Option<usize>,
+    pub(crate) min_len: Option<u32>,
+    pub(crate) max_len: Option<u32>,
 }
 
 /// Error returned by [`validate::slice`].
 ///
 /// [`validate::slice`]: slice()
 #[derive(Debug)]
-pub enum SliceError<E = Infallible> {
-    TooShort { length: usize, min: usize },
-    TooLong { length: usize, max: usize },
-    Validate { index: usize, error: E },
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+pub enum SliceError {
+    TooShort { length: u32, min: u32 },
+    TooLong { length: u32, max: u32 },
 }
 
-impl<E: fmt::Display> fmt::Display for SliceError<E> {
+impl fmt::Display for SliceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SliceError::TooShort { length: _, min: 1 } => {
@@ -453,9 +446,6 @@ impl<E: fmt::Display> fmt::Display for SliceError<E> {
             }
             SliceError::TooLong { length, max } => {
                 write!(f, "is too long ({length}), maximum is {max}")
-            }
-            SliceError::Validate { index, error } => {
-                write!(f, "{index}-th {error}")
             }
         }
     }

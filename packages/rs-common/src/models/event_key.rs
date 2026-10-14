@@ -105,6 +105,8 @@ impl Validate for EventKey {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "EventKeyValidationError"))]
 pub enum ValidationError {
     CollectionInvalid { expected: i32 },
     Identity(validate::StringError),

@@ -64,6 +64,8 @@ impl Validate for Link {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "LinkValidationError"))]
 pub enum ValidationError {
     Title(StringError),
     Description(StringError),
