@@ -541,7 +541,6 @@ function makeClient(args: MakeClientArgs = {}) {
     eventRepository,
     contentRepository,
     keysRepository: {} as any,
-    eventAckRepository: {} as any,
   });
   client.servers = args.servers ?? ['http://server-1'];
   client.activeIdentityKey = args.identity ? args.identity.key : null;

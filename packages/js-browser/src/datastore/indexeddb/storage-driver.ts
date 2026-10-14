@@ -1,6 +1,5 @@
 import type { IStorageDriver } from '@polycentric/js-core';
 import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
-import { IndexedDBEventAckRepository } from './event-ack.repository';
 import { IndexedDBKeysRepository } from './keys.repository';
 import { IndexedDBEventRepository } from './event.repository';
 import { IndexedDBContentRepository } from './content.repository';
@@ -17,7 +16,6 @@ export class IndexedDBStorageDriver implements IStorageDriver {
     IndexedDBEventRepository.createNeededStores(layout);
     IndexedDBContentRepository.createNeededStores(layout);
     IndexedDBKeysRepository.createNeededStores(layout);
-    IndexedDBEventAckRepository.createNeededStores(layout);
 
     this.database = new IndexedDBDatabase(databaseName, layout);
   }
@@ -36,9 +34,6 @@ export class IndexedDBStorageDriver implements IStorageDriver {
   }
   createKeysRepository() {
     return new IndexedDBKeysRepository(this.database);
-  }
-  createEventAckRepository() {
-    return new IndexedDBEventAckRepository(this.database);
   }
 
   async saveActiveIdentityKey(

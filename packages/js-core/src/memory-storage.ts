@@ -1,6 +1,5 @@
 import type {
   IContentRepository,
-  IEventAckRepository,
   IEventRepository,
   IFileStoreDriver,
   IKeysRepository,
@@ -150,87 +149,6 @@ class MemoryKeysRepository implements IKeysRepository {
   }
 }
 
-class MemoryEventAckRepository implements IEventAckRepository {
-  private readonly map = new Map<string, Set<string>>();
-
-  private static key(
-    systemKeyType: bigint,
-    systemKey: Uint8Array,
-    process: Uint8Array,
-    sequence: bigint,
-  ): string {
-    return `${systemKeyType}|${bytesToHex(systemKey)}|${bytesToHex(process)}|${sequence}`;
-  }
-
-  async storeEventAck(
-    systemKeyType: bigint,
-    systemKey: Uint8Array,
-    process: Uint8Array,
-    sequence: bigint,
-    serverUrl: string,
-  ): Promise<void> {
-    const key = MemoryEventAckRepository.key(
-      systemKeyType,
-      systemKey,
-      process,
-      sequence,
-    );
-    const acks = this.map.get(key) ?? new Set<string>();
-    acks.add(serverUrl);
-    this.map.set(key, acks);
-  }
-
-  async getEventAcks(
-    systemKeyType: bigint,
-    systemKey: Uint8Array,
-    process: Uint8Array,
-    sequence: bigint,
-  ): Promise<string[]> {
-    return [
-      ...(this.map.get(
-        MemoryEventAckRepository.key(
-          systemKeyType,
-          systemKey,
-          process,
-          sequence,
-        ),
-      ) ?? []),
-    ];
-  }
-
-  async hasEventAck(
-    systemKeyType: bigint,
-    systemKey: Uint8Array,
-    process: Uint8Array,
-    sequence: bigint,
-    serverUrl: string,
-  ): Promise<boolean> {
-    return (
-      this.map
-        .get(
-          MemoryEventAckRepository.key(
-            systemKeyType,
-            systemKey,
-            process,
-            sequence,
-          ),
-        )
-        ?.has(serverUrl) ?? false
-    );
-  }
-
-  async removeEventAcks(
-    systemKeyType: bigint,
-    systemKey: Uint8Array,
-    process: Uint8Array,
-    sequence: bigint,
-  ): Promise<void> {
-    this.map.delete(
-      MemoryEventAckRepository.key(systemKeyType, systemKey, process, sequence),
-    );
-  }
-}
-
 /**
  * Storage driver that keeps everything in process memory. Nothing survives
  * a reload — for contexts where durable storage is unavailable (e.g.
@@ -240,7 +158,6 @@ export class MemoryStorageDriver implements IStorageDriver {
   private readonly events = new MemoryEventRepository();
   private readonly contents = new MemoryContentRepository();
   private readonly keys = new MemoryKeysRepository();
-  private readonly eventAcks = new MemoryEventAckRepository();
   private readonly activeIdentityKeys = new Map<string, string>();
 
   createEventRepository() {
@@ -251,9 +168,6 @@ export class MemoryStorageDriver implements IStorageDriver {
   }
   createKeysRepository() {
     return this.keys;
-  }
-  createEventAckRepository() {
-    return this.eventAcks;
   }
 
   async saveActiveIdentityKey(
