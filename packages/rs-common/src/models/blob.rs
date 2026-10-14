@@ -26,7 +26,6 @@ impl Validate for Blob {
             errors,
             |err| map_err(ValidationError::MimeType(err)),
             StringConfig {
-                min_len: Some(1),
                 max_len: Some(50),
                 ..Default::default()
             },

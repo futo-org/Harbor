@@ -1965,7 +1965,7 @@ async fn validation_invalid_content_content_body_reaction_no_event_key() {
 }
 
 #[tokio::test]
-async fn validation_invalid_content_content_body_reaction_empty_emoji() {
+async fn validation_content_content_body_reaction_empty_emoji() {
     let mut client = TestClient::new().await;
     client.post_text("Test", 0);
     let event_key = client.get_last_event_key();
@@ -1986,17 +1986,7 @@ async fn validation_invalid_content_content_body_reaction_empty_emoji() {
     );
     client.push_event_bundle2(event, content_bytes);
 
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[],
-        &[ExpectError {
-            bundle_index: 2,
-            kind: ExpectErrorKind::MsgContains(
-                "content content body reaction emoji can't be empty",
-            ),
-        }],
-    );
+    client.submit_events().await; // Shouldn't panic.
 }
 
 #[tokio::test]
@@ -2203,8 +2193,7 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_no_attri
 }
 
 #[tokio::test]
-async fn validation_invalid_content_content_body_attributed_to_reaction_empty_emoji()
- {
+async fn validation_content_content_body_attributed_to_reaction_empty_emoji() {
     let mut client = TestClient::new().await;
     let content = Content {
         content_body: Some(ContentBody::AttributedToReaction(
@@ -2233,17 +2222,7 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_empty_em
     );
     client.push_event_bundle2(event, content_bytes);
 
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[],
-        &[ExpectError {
-            bundle_index: 1,
-            kind: ExpectErrorKind::MsgContains(
-                "content content body attributed to reaction emoji can't be empty",
-            ),
-        }],
-    );
+    client.submit_events().await; // Shouldn't panic.
 }
 
 #[tokio::test]
@@ -2398,7 +2377,7 @@ async fn validation_invalid_content_content_body_profile_update_collection() {
 }
 
 #[tokio::test]
-async fn validation_invalid_content_content_body_profile_update_name_empty() {
+async fn validation_content_content_body_profile_update_name_empty() {
     let mut client = TestClient::new().await;
     let content = Content {
         content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
@@ -2419,17 +2398,7 @@ async fn validation_invalid_content_content_body_profile_update_name_empty() {
     );
     client.push_event_bundle2(event, content_bytes);
 
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[],
-        &[ExpectError {
-            bundle_index: 1,
-            kind: ExpectErrorKind::MsgContains(
-                "content content body profile update name can't be empty",
-            ),
-        }],
-    );
+    client.submit_events().await; // Shouldn't panic.
 }
 
 #[tokio::test]
@@ -2577,8 +2546,7 @@ async fn validation_invalid_content_content_body_profile_update_banner_too_large
 }
 
 #[tokio::test]
-async fn validation_invalid_content_content_body_profile_update_description_empty()
- {
+async fn validation_content_content_body_profile_update_description_empty() {
     let mut client = TestClient::new().await;
     let content = Content {
         content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
@@ -2599,17 +2567,7 @@ async fn validation_invalid_content_content_body_profile_update_description_empt
     );
     client.push_event_bundle2(event, content_bytes);
 
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[],
-        &[ExpectError {
-            bundle_index: 1,
-            kind: ExpectErrorKind::MsgContains(
-                "content content body profile update description can't be empty",
-            ),
-        }],
-    );
+    client.submit_events().await; // Shouldn't panic.
 }
 
 #[tokio::test]
@@ -2649,7 +2607,7 @@ async fn validation_invalid_content_content_body_profile_update_description_too_
 }
 
 #[tokio::test]
-async fn validation_invalid_content_content_body_profile_update_alias_empty() {
+async fn validation_content_content_body_profile_update_alias_empty() {
     let mut client = TestClient::new().await;
     let content = Content {
         content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
@@ -2670,17 +2628,7 @@ async fn validation_invalid_content_content_body_profile_update_alias_empty() {
     );
     client.push_event_bundle2(event, content_bytes);
 
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[],
-        &[ExpectError {
-            bundle_index: 1,
-            kind: ExpectErrorKind::MsgContains(
-                "content content body profile update alias can't be empty",
-            ),
-        }],
-    );
+    client.submit_events().await; // Shouldn't panic.
 }
 
 #[tokio::test]
@@ -3112,17 +3060,7 @@ async fn validation_content_content_body_labels_labels_values_value_empty() {
         client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
     client.push_event_bundle2(event, content_bytes);
 
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[],
-        &[ExpectError {
-            bundle_index: 2,
-            kind: ExpectErrorKind::MsgContains(
-                "content content body labels label values 0-th can't be empty",
-            ),
-        }],
-    );
+    client.submit_events().await; // Shouldn't panic.
 }
 
 #[tokio::test]

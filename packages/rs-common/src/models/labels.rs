@@ -36,7 +36,6 @@ impl Validate for Labels {
                     errors,
                     map_err,
                     StringConfig {
-                        min_len: Some(1),
                         max_len: Some(200),
                         ..Default::default()
                     },

@@ -24,7 +24,6 @@ impl Validate for ProfileUpdate {
                 errors,
                 |err| map_err(ValidationError::Name(err)),
                 StringConfig {
-                    min_len: Some(1),
                     max_len: Some(50),
                     ..Default::default()
                 },
@@ -42,7 +41,6 @@ impl Validate for ProfileUpdate {
                 errors,
                 |err| map_err(ValidationError::Description(err)),
                 StringConfig {
-                    min_len: Some(1),
                     max_len: Some(160),
                     ..Default::default()
                 },
@@ -54,7 +52,6 @@ impl Validate for ProfileUpdate {
                 errors,
                 |err| map_err(ValidationError::Alias(err)),
                 StringConfig {
-                    min_len: Some(1),
                     max_len: Some(100),
                     ..Default::default()
                 },
