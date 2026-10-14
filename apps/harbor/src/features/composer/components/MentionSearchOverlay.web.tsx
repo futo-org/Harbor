@@ -8,7 +8,9 @@ import {
 } from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { Portal } from '@rn-primitives/portal';
+import { Kbd, Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
+import { hasPointerHover, isApplePlatform } from '@/src/common/util/platform';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import {
@@ -17,6 +19,7 @@ import {
   useMentionStore,
 } from '../hooks/useMentionStore';
 import { useMentionSearch } from '../hooks/useMentionSearch';
+import { useKeyboardHintsStore } from '../hooks/useKeyboardHintsStore';
 import { placeMentionOverlay } from '../utils/placeMentionOverlay';
 import {
   measureWebMentionAnchor,
@@ -71,14 +74,14 @@ export function MentionSearchOverlay() {
 
   return (
     <Portal name={portalName}>
-      <ScrollView
+      <View
         // Keep the textarea focused: a blur would close the overlay before
         // the row's click lands.
         onMouseDown={(e) => e.preventDefault()}
-        keyboardShouldPersistTaps="handled"
         style={[
           Atoms.fixed,
           Atoms.rounded_lg,
+          Atoms.overflow_hidden,
           placeMentionOverlay(anchor, win),
           {
             backgroundColor: theme.palette.neutral_0,
@@ -88,16 +91,19 @@ export function MentionSearchOverlay() {
           },
         ]}
       >
-        {entries.map(({ identity }, i) => (
-          <MentionRow
-            key={identity}
-            identity={identity}
-            selected={i === selectedIndex}
-            onHover={() => setSelectedIndex(i)}
-            onPress={insertMention}
-          />
-        ))}
-      </ScrollView>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          {entries.map(({ identity }, i) => (
+            <MentionRow
+              key={identity}
+              identity={identity}
+              selected={i === selectedIndex}
+              onHover={() => setSelectedIndex(i)}
+              onPress={insertMention}
+            />
+          ))}
+        </ScrollView>
+        <MentionShortcutHint />
+      </View>
     </Portal>
   );
 }
@@ -138,6 +144,48 @@ function MentionRow({
   );
 }
 
+function MentionShortcutHint() {
+  const { theme } = useTheme();
+  const isShown = useKeyboardHintsStore(
+    (state) =>
+      hasPointerHover &&
+      !(
+        state.usedShortcuts.mentionNavigate || state.usedShortcuts.mentionInsert
+      ),
+  );
+  if (!isShown) return null;
+
+  return (
+    <View
+      style={[
+        Atoms.flex_row,
+        Atoms.items_center,
+        Atoms.gap_xs,
+        Atoms.px_sm,
+        Atoms.py_xs,
+        {
+          borderTopWidth: 1,
+          borderTopColor: theme.palette.neutral_50,
+        },
+      ]}
+    >
+      <Kbd>↑</Kbd>
+      <Kbd>↓</Kbd>
+      <Text variant="small" color="neutral_500">
+        to choose,
+      </Text>
+      <Kbd>Tab</Kbd>
+      <Text variant="small" color="neutral_500">
+        /
+      </Text>
+      <Kbd>{isApplePlatform ? '⏎' : 'Enter'}</Kbd>
+      <Text variant="small" color="neutral_500">
+        to insert
+      </Text>
+    </View>
+  );
+}
+
 /**
  * Arrow up/down moves the selection (wrapping), Enter/Tab inserts it.
  * Selection resets whenever the result set changes.
@@ -154,6 +202,9 @@ function useKeyboardControls(
   const safeSelectedIndex = Math.min(selectedIndex, count - 1);
   const selectedIdentity = open ? identities[safeSelectedIndex] : undefined;
   const selectedProfile = useProfile(selectedIdentity);
+  const markShortcutUsed = useKeyboardHintsStore(
+    (state) => state.markShortcutUsed,
+  );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset on result change
   useEffect(() => setSelectedIndex(0), [key]);
@@ -162,12 +213,16 @@ function useKeyboardControls(
     if (!open || count === 0) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowDown')
+      if (e.key === 'ArrowDown') {
+        markShortcutUsed('mentionNavigate');
         setSelectedIndex((safeSelectedIndex + 1) % count);
-      else if (e.key === 'ArrowUp')
+      } else if (e.key === 'ArrowUp') {
+        markShortcutUsed('mentionNavigate');
         setSelectedIndex((safeSelectedIndex - 1 + count) % count);
-      else if ((e.key === 'Enter' || e.key === 'Tab') && selectedIdentity)
+      } else if ((e.key === 'Enter' || e.key === 'Tab') && selectedIdentity) {
+        markShortcutUsed('mentionInsert');
         insertMention(selectedIdentity, selectedProfile);
+      }
       // Any other key is handled normally
       else return;
 
@@ -187,6 +242,7 @@ function useKeyboardControls(
     selectedIdentity,
     selectedProfile,
     insertMention,
+    markShortcutUsed,
   ]);
 
   return { selectedIndex: safeSelectedIndex, setSelectedIndex };
