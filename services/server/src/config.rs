@@ -47,6 +47,9 @@ pub struct Config {
     pub dynamic_feeds_gravity_hours: usize,
     /// How often the decayed reaction counts should be updated.
     pub feed_count_update_frequency: Duration,
+    /// How much time events should be considered before their decayed reaction
+    /// count is set to zero.
+    pub feeds_gravity_expire: Duration,
     /// Test hook (`HARBOR_ALIAS_TEST_ORIGIN`): fetch every mention
     /// alias domain's `/.well-known/polycentric.json` from this origin
     /// instead of `https://<domain>`, and allow plain HTTP. `None` in
@@ -112,6 +115,12 @@ pub fn init() -> &'static Config {
                 .ok()
                 .and_then(|s| s.trim().parse().ok())
                 .unwrap_or(5 * 60), // 5 minutes (as seconds).
+            ),
+            feeds_gravity_expire: Duration::from_hours(
+                std::env::var("HARBOR_FEEDS_GRAVITY_EXPIRE_HOURS")
+                    .ok()
+                    .and_then(|s| s.trim().parse().ok())
+                    .unwrap_or(7 * 24), // 1 week.
             ),
             alias_test_origin: std::env::var("HARBOR_ALIAS_TEST_ORIGIN")
                 .ok()
