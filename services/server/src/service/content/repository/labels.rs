@@ -12,11 +12,15 @@ pub(super) fn add_query(
     with: &mut WithClause,
     labels: Labels,
     content_id: (DynIden, DynIden),
-) -> Result<InsertStatement, Status> {
+) -> Result<Option<InsertStatement>, Status> {
     let Labels {
         event_key,
         label_values,
     } = labels;
+    if label_values.is_empty() {
+        return Ok(None); // No point is storing zero labels.
+    }
+
     let key = split_event_key(event_key, "labels content")?;
 
     const LABEL_VALES: &str = "label_values";
@@ -55,5 +59,5 @@ pub(super) fn add_query(
             Status::internal("internal server error")
         })?;
 
-    Ok(query)
+    Ok(Some(query))
 }
