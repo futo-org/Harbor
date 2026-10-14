@@ -109,7 +109,7 @@
     "jest-junit": "catalog:",
     "only-allow": "^1.2.2",
     "react-test-renderer": "19.2.3",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.0"
   },
   "expo": {
     "install": {
