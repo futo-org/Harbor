@@ -487,7 +487,6 @@ where
         errors,
         map_err,
         StringConfig {
-            min_len: Some(1),
             // According to
             // <https://machs.space/posts/whats-the-max-valid-length-of-an-emoji/>
             // the longest emoji is 35 bytes (rendered as a single symbol), so
