@@ -1,0 +1,12 @@
+{
+  "name": "@polycentric/icons",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate:icons": "node generate-icons.ts"
+  },
+  "dependencies": {
+    "ico-endec": "0.1.6",
+    "sharp": "0.35.3"
+  }
+}
