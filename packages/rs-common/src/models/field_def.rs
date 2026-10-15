@@ -28,7 +28,7 @@ impl Validate for FieldDef {
                 ..Default::default()
             },
         );
-        if !FieldKind::is_valid(*kind) {
+        if !FieldKind::is_valid(*kind) && *kind != FieldKind::Unspecified as i32 {
             errors.push(map_err(ValidationError::KindInvalid));
         }
         validate::string(
