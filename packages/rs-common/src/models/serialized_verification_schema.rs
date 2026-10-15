@@ -32,7 +32,11 @@ impl Validate for SerializedVerificationSchema {
             return;
         }
         if let Some(digest) = digest.as_ref() {
+            let errors_start = errors.len();
             digest.validate_check(errors, |err| map_err(ValidationError::Digest(err)));
+            if errors_start != errors.len() {
+                return; // Don't both verifying the content as the digest is invalid.
+            }
             if let Err(err) = digest.verify_against(schema_bytes) {
                 errors.push(map_err(ValidationError::DigestInvalid(err)));
                 return; // Don't decode the schema if it's not valid.

@@ -3092,39 +3092,1679 @@ async fn validation_content_content_body_labels_labels_values_value_too_long() {
     );
 }
 
-// TODO: add tests for verification events.
-//
-// VerificationClaim:
-// wrong collection
-// schema encoded too large: 10MB
-// invalid schema (not correctly encoded)
-// invalid content digest
-// schema doesnt match digest
-// no digest
-// schema name too long 200
-// schema description too long 1000
-// schema too many fields 100
-// schema field key emoty
-// schema field key too long 200
-// schema field kind invalid
-// schema field kind unspecified (0)
-// schema field format too long 100
-// schema field description too long 1000
-// schema field regex too long 100
-// schema field key duplicate.
-// schema missing
-// fields key empty
-// fields key too long 200
-// fields value too long 10000
-// fields too many 1000
-// fields total size (key & value) 10 MB.
-// fields key not in schema
-// fields value not valid string
-// fields value string too long (max_len from schema)
-// fields value invalid integer
-// fields value invalid boolean
-// fields value bytes too long (max_len from schema)
-// fields key required in schema not present.
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_collection() {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Test Verification".to_owned(),
+        description: "Testing.".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '8'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_too_large() {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema_bytes = vec![1; (1 * 1024 * 1024) + 1];
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema bytes is too long (1048577), maximum is 1048576",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_invalid() {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema_bytes = vec![255; 1];
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema bytes invalid: failed to decode Protobuf message: invalid varint",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_digest_invalid() {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Test Verification".to_owned(),
+        description: "Testing.".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: 99,
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema digest type is invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_digest_mismatch() {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Test Verification".to_owned(),
+        description: "Testing.".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&[]),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema digest invalid: content digest does not match",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_digest_missing() {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Test Verification".to_owned(),
+        description: "Testing.".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema digest is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_name_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "n".repeat(201),
+        description: "Testing.".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema name is too long (201), maximum is 200",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_description_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "d".repeat(1001),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema description is too long (1001), maximum is 1000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_too_many_fields()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: (0..101)
+            .into_iter()
+            .map(|n| FieldDef {
+                key: format!("key{n}"),
+                kind: FieldKind::String as i32,
+                format: "".to_owned(),
+                required: false,
+                description: "Key 1".to_owned(),
+                regex: None,
+                max_len: None,
+            })
+            .collect(),
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema fields is too long (101), maximum is 100",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_fields_key_empty()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema fields 0-th key can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_fields_key_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "k".repeat(201),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema fields 0-th key is too long (201), maximum is 200",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_fields_kind_valid()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: 999,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema fields 0-th kind invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_fields_kind_unspecified()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::Unspecified as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema fields 0-th kind invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_fields_format_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "f".repeat(101),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema fields 0-th format is too long (101), maximum is 100",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_fields_description_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "d".repeat(1001),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema fields 0-th description is too long (1001), maximum is 1000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_fields_regex_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: Some("r".repeat(101)),
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema fields 0-th regex is too long (101), maximum is 100",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_fields_duplicate_key()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![
+            FieldDef {
+                key: "key1".to_owned(),
+                kind: FieldKind::String as i32,
+                format: "".to_owned(),
+                required: false,
+                description: "Key 1".to_owned(),
+                regex: None,
+                max_len: None,
+            },
+            FieldDef {
+                key: "key1".to_owned(),
+                kind: FieldKind::String as i32,
+                format: "".to_owned(),
+                required: false,
+                description: "Key 1".to_owned(),
+                regex: None,
+                max_len: None,
+            },
+        ],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema schema fields duplicate 'key1'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_schema_missing() {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: None,
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim schema is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_key_empty() {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: {
+                let mut f = HashMap::new();
+                f.insert("".to_owned(), Vec::new());
+                f
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim field '' can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_key_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: {
+                let mut f = HashMap::new();
+                f.insert("k".repeat(201), Vec::new());
+                f
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim field 'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk' is too long (201), maximum is 200",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_value_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: {
+                let mut f = HashMap::new();
+                f.insert("key1".to_owned(), vec![255; 10001]);
+                f
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim field 'key1' value is too long (10001), maximum is 10000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_too_many() {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: (0..1001)
+                .into_iter()
+                .map(|n| (format!("key{n}"), Vec::new()))
+                .collect(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim too many fields (1001), maximum is 1000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_key_unknown()
+{
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: {
+                let mut f = HashMap::new();
+                f.insert("unknown".to_owned(), vec![0x0]);
+                f
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim field 'unknown' is not part of the schema",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_value_not_valid_string()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: {
+                let mut f = HashMap::new();
+                f.insert("key1".to_owned(), vec![0x80, 0xBF]);
+                f
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim field 'key1' is not a valid UTF-8 string",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_value_string_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: Some(1),
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: {
+                let mut f = HashMap::new();
+                f.insert("key1".to_owned(), vec![b'A'; 2]);
+                f
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim field 'key1' is too long according the schema, maximum is 1",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_value_invalid_integer()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::Int as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: {
+                let mut f = HashMap::new();
+                f.insert("key1".to_owned(), vec![b'A']);
+                f
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim field 'key1' is incorrectly sized (expected 8 bytes)",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_value_invalid_boolean()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::Bool as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: {
+                let mut f = HashMap::new();
+                f.insert("key1".to_owned(), vec![12]);
+                f
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim field 'key1' is invalid, expected 0x0 or 0x1",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_value_bytes_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::Bytes as i32,
+            format: "".to_owned(),
+            required: false,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: Some(1),
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: {
+                let mut f = HashMap::new();
+                f.insert("key1".to_owned(), vec![1, 2, 3]);
+                f
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim field 'key1' is too long according the schema, maximum is 1",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_fields_missing_required_value()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: vec![FieldDef {
+            key: "key1".to_owned(),
+            kind: FieldKind::String as i32,
+            format: "".to_owned(),
+            required: true,
+            description: "Key 1".to_owned(),
+            regex: None,
+            max_len: None,
+        }],
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes: schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim field required field 'key1' missing",
+            ),
+        }],
+    );
+}
 
 #[tokio::test]
 async fn validation_content_content_body_verification_verify_collection() {
