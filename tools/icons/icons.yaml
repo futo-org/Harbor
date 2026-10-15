@@ -50,7 +50,6 @@ icons:
   - files:
       - $APP_IMG/harbor-logo-256.png
       - $DOCS/logo.png
-      - $DOCS/logo-dark.png
     <<: *ios-icon
     clip: circle
     size: 256
@@ -66,7 +65,6 @@ icons:
   # From the Figma design: the tower is top-aligned and centred, the text is centred
   - files:
       - $APP_IMG/harbor-logo-with-text.png
-      - $DOCS/harbor-logo-with-text.png
     size: 857
     tower: { height: 608, top: 0, fill: '#FFFFFF', opacity: 0.9 }
     text:
