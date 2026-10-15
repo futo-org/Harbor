@@ -3,7 +3,7 @@ import { segmentsFromPath, type IFileStoreDriver } from '@polycentric/js-core';
 
 /**
  * expo-file-system-backed IFileStoreDriver.
-   Paths are resolved under `${Paths.document}/${subdir}/`.
+ * Paths are resolved under `${Paths.document}/${subdir}/`.
  */
 export class ExpoFileStoreDriver implements IFileStoreDriver {
   private constructor(private readonly directory: Directory) {}

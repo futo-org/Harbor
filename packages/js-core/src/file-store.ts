@@ -9,7 +9,7 @@ export class FileStore {
   constructor(private driver: IFileStoreDriver) {}
 
   private pathFor(digest: Proto.ContentDigest): string {
-    return `${toDigestKey(digest)}`;
+    return toDigestKey(digest);
   }
 
   has(digest: Proto.ContentDigest): Promise<boolean> {
