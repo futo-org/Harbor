@@ -40,20 +40,20 @@ CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char
 
 
 --
--- Name: reaction_count_decay(bigint, timestamp with time zone, numeric, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+-- Name: reaction_count_decay(bigint, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone, gravity numeric, gravity_time timestamp with time zone) RETURNS numeric
+CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone) RETURNS numeric
     LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
     AS $$
 BEGIN
   RETURN (
     (reaction_count + 1)::NUMERIC / power(
       GREATEST(
-        EXTRACT(epoch FROM (gravity_time - post_created_at))::NUMERIC / 3600::NUMERIC,
+        EXTRACT(epoch FROM ((SELECT calculated_at FROM gravity) - post_created_at))::NUMERIC / 3600::NUMERIC,
         0::NUMERIC
       ) + 2::NUMERIC,
-      gravity
+      (SELECT value FROM gravity)
     )
   )::NUMERIC(20, 11);
 EXCEPTION
@@ -61,45 +61,6 @@ EXCEPTION
       RETURN (0)::numeric;
 END;
 $$;
-
-
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
-
---
--- Name: gravity; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.gravity (
-    value numeric(20,11) NOT NULL,
-    calculated_at timestamp with time zone NOT NULL
-);
-
-
---
--- Name: TABLE gravity; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.gravity IS 'Table to hold the dynamic gravity value.';
-
-
---
--- Name: reaction_count_decay(bigint, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone) RETURNS numeric
-    LANGUAGE sql STABLE PARALLEL SAFE
-    RETURN public.reaction_count_decay(reaction_count, post_created_at, (SELECT gravity.value FROM public.gravity), (SELECT gravity.calculated_at FROM public.gravity));
-
-
---
--- Name: reaction_count_decay(bigint, timestamp with time zone, numeric); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone, gravity numeric) RETURNS numeric
-    LANGUAGE sql STABLE PARALLEL SAFE
-    RETURN public.reaction_count_decay(reaction_count, post_created_at, gravity, (SELECT gravity.calculated_at FROM public.gravity));
 
 
 --
@@ -121,6 +82,10 @@ CREATE FUNCTION public.search_query(query text) RETURNS tsquery
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     RETURN ((COALESCE(to_tsquery('english'::regconfig, query), ''::tsquery) || COALESCE(to_tsquery('simple'::regconfig, query), ''::tsquery)) || (SELECT public.tsquery_agg((data.word)::tsquery) AS tsquery_agg FROM regexp_split_to_table(COALESCE(search_query.query, ''::text), '[[:space:]]'::text) data(word) WHERE ("left"(data.word, '-2'::integer) ~ '^([a-fA-F0-9])*$'::text)));
 
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
 
 --
 -- Name: alias_cache; Type: TABLE; Schema: public; Owner: -
@@ -516,6 +481,23 @@ CREATE TABLE public.follow (
     follower text NOT NULL,
     followee text NOT NULL
 );
+
+
+--
+-- Name: gravity; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gravity (
+    value numeric(20,11) NOT NULL,
+    calculated_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: TABLE gravity; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.gravity IS 'Table to hold the dynamic gravity value.';
 
 
 --
