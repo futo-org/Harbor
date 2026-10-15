@@ -80,7 +80,7 @@ impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ValidationError::SchemaBytes(err) => write!(f, "schema bytes {err}"),
-            ValidationError::SchemaBytesInvalid => write!(f, "schema bytes invalid"),
+            ValidationError::SchemaBytesInvalid => write!(f, "schema bytes are invalid"),
             ValidationError::Schema(err) => write!(f, "schema {err}"),
             ValidationError::Digest(err) => write!(f, "digest {err}"),
             ValidationError::DigestMissing => write!(f, "digest is missing"),
