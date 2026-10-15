@@ -8,6 +8,7 @@
   "dependencies": {
     "ico-endec": "0.1.6",
     "opentype.js": "2.0.0",
-    "sharp": "0.35.3"
+    "sharp": "0.35.3",
+    "yaml": "2.9.1"
   }
 }

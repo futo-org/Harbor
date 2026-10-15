@@ -1,0 +1,78 @@
+# Every icon generate-icons.ts writes, drawn from src/harbor-lighthouse.svg.
+# Paths are relative to the repo root; a leading $NAME is a directory from `dirs`.
+# `canvas` is the drawing's size in units (defaults to `size`), scaled to
+# `size` px. The tower is always centred horizontally; `top` is its distance
+# from the canvas top.
+
+dirs:
+  APP: apps/harbor/src/common/assets/images
+  DOCS: docs/static/img
+
+# Shared values, referenced below as *name; `<<:` copies a mapping in
+shared:
+  orange: &orange '#FF6A00'
+  ios-tower: &ios-tower { height: 929, top: 143 }
+  android-tower: &android-tower { height: 187, top: 162 }
+  ios-icon: &ios-icon
+    canvas: 1024
+    background: *orange
+    tower: { <<: *ios-tower, fill: '#FFFFFF', opacity: 0.9 }
+
+icons:
+  - files:
+      - $APP/app-icons/ios-icon-default.png
+      - $APP/app-icons/ios-icon-dark.png
+    <<: *ios-icon
+    size: 1024
+
+  - files:
+      - $APP/app-icons/ios-icon-monochrome.png
+    size: 1024
+    tower: { <<: *ios-tower, fill: *orange }
+
+  - files:
+      - $APP/app-icons/android-icon-background.png
+    size: 512
+    background: *orange
+
+  - files:
+      - $APP/app-icons/android-icon-foreground.png
+    size: 512
+    tower: { <<: *android-tower, fill: '#FFFFFF', opacity: 0.9 }
+
+  # The launcher only uses this layer's shape, so the colour is arbitrary
+  - files:
+      - $APP/app-icons/android-icon-monochrome.png
+    size: 512
+    tower: { <<: *android-tower, fill: '#354479' }
+
+  - files:
+      - $APP/harbor-logo-256.png
+      - $DOCS/logo.png
+      - $DOCS/logo-dark.png
+    <<: *ios-icon
+    clip: circle
+    size: 256
+
+  # Each size is rendered separately and packed into one .ico
+  - files:
+      - apps/harbor/public/favicon.ico
+      - $DOCS/favicon.ico
+    <<: *ios-icon
+    clip: circle
+    sizes: [48, 32, 16]
+
+  # From the Figma design: the tower is top-aligned and centred, the text is centred
+  - files:
+      - $APP/harbor-logo-with-text.png
+      - $DOCS/harbor-logo-with-text.png
+    size: 857
+    tower: { height: 608, top: 0, fill: '#FFFFFF', opacity: 0.9 }
+    text:
+      content: HARBOR
+      font: tools/icons/fonts/OpenSans-ExtraBold.ttf
+      fontSize: 180
+      # In em
+      letterSpacing: 0.05
+      baselineFromBottom: 14
+      fill: '#FFFFFF'
