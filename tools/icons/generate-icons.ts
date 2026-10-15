@@ -28,7 +28,7 @@ type Icon = {
   background?: string;
   tower?: Tower;
   text?: Text;
-} & ({ size: number } | { sizes: number[] });
+} & ({ size: number | `${number}x${number}` } | { sizes: number[] });
 
 const repoRoot = join(import.meta.dirname, '../..');
 const { dirs, icons } = parse(
@@ -66,12 +66,17 @@ for (const icon of icons) {
 // An Icon Composer bundle: the background becomes its fill and the whole tower
 // a layer moved into place, from which Xcode renders the Liquid Glass. Canvas
 // units are points, and the layer is rendered at 1 px per point.
-async function writeIconComposerBundle(icon: Icon, size: number, path: string) {
+async function writeIconComposerBundle(
+  icon: Icon,
+  size: number | string,
+  path: string,
+) {
   const { background, tower } = icon;
   if (!background || !tower) {
     throw new Error(`${path} needs a background and a tower`);
   }
-  const canvas = icon.canvas ?? size;
+  const [width] = String(size).split('x').map(Number);
+  const canvas = icon.canvas ?? width;
   const [, , viewBoxWidth, viewBoxHeight] = lighthouseViewBox
     .split(' ')
     .map(Number);
@@ -131,27 +136,29 @@ function buildIconComposerColor(hex: string): string {
   return `srgb:${channels.join(',')},1.00000`;
 }
 
-function renderPng(icon: Icon, size: number): Promise<Buffer> {
+function renderPng(icon: Icon, size: number | string): Promise<Buffer> {
   return sharp(Buffer.from(buildIconSvg(icon, size)))
     .png()
     .toBuffer();
 }
 
-function buildIconSvg(icon: Icon, size: number): string {
-  const canvas = icon.canvas ?? size;
+function buildIconSvg(icon: Icon, size: number | string): string {
+  const [width, height = width] = String(size).split('x').map(Number);
+  const canvas = icon.canvas ?? width;
+  const canvasHeight = (canvas * height) / width;
   let content =
     (icon.background
-      ? `<rect width="${canvas}" height="${canvas}" fill="${icon.background}"/>`
+      ? `<rect width="${canvas}" height="${canvasHeight}" fill="${icon.background}"/>`
       : '') +
     (icon.tower ? buildTower(canvas, icon.tower) : '') +
-    (icon.text ? buildText(canvas, icon.text) : '');
+    (icon.text ? buildText(canvas, canvasHeight, icon.text) : '');
   if (icon.clip === 'circle') {
     const radius = canvas / 2;
     content =
       `<clipPath id="circle"><circle cx="${radius}" cy="${radius}" r="${radius}"/></clipPath>` +
       `<g clip-path="url(#circle)">${content}</g>`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${canvas} ${canvas}">${content}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${canvas} ${canvasHeight}">${content}</svg>`;
 }
 
 function buildTower(
@@ -164,6 +171,7 @@ function buildTower(
 
 function buildText(
   canvas: number,
+  canvasHeight: number,
   { content, font, fontSize, letterSpacing, baselineFromBottom, fill }: Text,
 ): string {
   const parsedFont = opentype.parse(
@@ -172,7 +180,7 @@ function buildText(
   const textPath = parsedFont.getPath(
     content,
     0,
-    canvas - baselineFromBottom,
+    canvasHeight - baselineFromBottom,
     fontSize,
     { letterSpacing },
   );

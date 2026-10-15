@@ -110,7 +110,14 @@ function serveStatic(req, res, next) {
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Only Metro's output has content-hashed names; public/ files keep theirs
+    const isHashed = /^\/(_expo|assets)\//.test(urlPath);
+    res.setHeader(
+      'Cache-Control',
+      isHashed
+        ? 'public, max-age=31536000, immutable'
+        : 'public, max-age=86400',
+    );
     fs.createReadStream(filePath).pipe(res);
   });
 }

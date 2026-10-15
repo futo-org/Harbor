@@ -34,7 +34,8 @@ export default function Root({ children }: PropsWithChildren) {
           content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
         />
         <title>{APP_NAME}</title>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         {/* Placeholder replaced with runtime env by server.js at startup. */}
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static placeholder, no user input

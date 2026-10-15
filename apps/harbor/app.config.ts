@@ -57,7 +57,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'polycentric',
   version: process.env.APP_VERSION || PKG_VERSION || '0.0.1',
   orientation: 'default',
-  icon: './src/common/assets/images/app-icons/android-icon-foreground.png',
   scheme: SCHEME,
   web: {
     output: 'server',
@@ -114,10 +113,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        image: './src/common/assets/images/app-icons/ios-icon-default.png',
-        imageWidth: 200,
+        image: './src/common/assets/images/app-icons/splash-icon.png',
+        // The full 288 dp canvas of the Android 12 splash icon
+        imageWidth: 288,
         resizeMode: 'contain',
         backgroundColor: '#FF6A00',
+        dark: {
+          image: './src/common/assets/images/app-icons/splash-icon-dark.png',
+          // darkPalette.neutral_0, the app's dark background
+          backgroundColor: '#0D1016',
+        },
       },
     ],
     [
@@ -167,7 +172,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-image',
-    'expo-notifications',
+    [
+      'expo-notifications',
+      {
+        icon: './src/common/assets/images/app-icons/android-notification-icon.png',
+        color: '#FF6A00',
+      },
+    ],
     [
       'expo-screen-orientation',
       {
