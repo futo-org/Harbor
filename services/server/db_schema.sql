@@ -47,15 +47,18 @@ CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_
     LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
     AS $$
 BEGIN
-  RETURN (
-    (reaction_count + 1)::NUMERIC / power(
-      GREATEST(
-        EXTRACT(epoch FROM ((SELECT calculated_at FROM gravity) - post_created_at))::NUMERIC / 3600::NUMERIC,
-        0::NUMERIC
-      ) + 2::NUMERIC,
-      (SELECT value FROM gravity)
-    )
-  )::NUMERIC(20, 11);
+  RETURN CASE
+    WHEN post_created_at < (SELECT expires_at FROM gravity) THEN 0
+    ELSE (
+      (reaction_count + 1)::NUMERIC / power(
+        GREATEST(
+          EXTRACT(epoch FROM ((SELECT calculated_at FROM gravity) - post_created_at))::NUMERIC / 3600::NUMERIC,
+          0::NUMERIC
+        ) + 2::NUMERIC,
+        (SELECT value FROM gravity)
+      )
+    )::NUMERIC(20, 11)
+  END;
 EXCEPTION
     WHEN numeric_value_out_of_range THEN
       RETURN (0)::numeric;
@@ -489,7 +492,8 @@ CREATE TABLE public.follow (
 
 CREATE TABLE public.gravity (
     value numeric(20,11) NOT NULL,
-    calculated_at timestamp with time zone NOT NULL
+    calculated_at timestamp with time zone NOT NULL,
+    expires_at timestamp with time zone NOT NULL
 );
 
 

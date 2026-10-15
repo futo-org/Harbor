@@ -8,15 +8,18 @@ const NEW: &str = "CREATE FUNCTION reaction_count_decay(reaction_count BIGINT, p
   LANGUAGE plpgsql
 AS $$
 BEGIN
-  RETURN (
-    (reaction_count + 1)::NUMERIC / power(
-      GREATEST(
-        EXTRACT(epoch FROM ((SELECT calculated_at FROM gravity) - post_created_at))::NUMERIC / 3600::NUMERIC,
-        0::NUMERIC
-      ) + 2::NUMERIC,
-      (SELECT value FROM gravity)
-    )
-  )::NUMERIC(20, 11);
+  RETURN CASE
+    WHEN post_created_at < (SELECT expires_at FROM gravity) THEN 0
+    ELSE (
+      (reaction_count + 1)::NUMERIC / power(
+        GREATEST(
+          EXTRACT(epoch FROM ((SELECT calculated_at FROM gravity) - post_created_at))::NUMERIC / 3600::NUMERIC,
+          0::NUMERIC
+        ) + 2::NUMERIC,
+        (SELECT value FROM gravity)
+      )
+    )::NUMERIC(20, 11)
+  END;
 EXCEPTION
     WHEN numeric_value_out_of_range THEN
       RETURN (0)::numeric;
@@ -57,10 +60,27 @@ CREATE OR REPLACE FUNCTION reaction_count_decay(reaction_count bigint, post_crea
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let tx = manager.get_connection();
+
+        // Drop old function versions.
         tx.execute_unprepared("DROP FUNCTION reaction_count_decay(bigint, timestamp with time zone);").await?;
         tx.execute_unprepared("DROP FUNCTION reaction_count_decay(bigint, timestamp with time zone, numeric);").await?;
         tx.execute_unprepared("DROP FUNCTION reaction_count_decay(bigint, timestamp with time zone, numeric, timestamp with time zone);").await?;
+
+        // Add expires_at column, defaulting to 3 weeks ago (will be updated
+        // quickly by the gravity cron job).
+        tx.execute_unprepared("ALTER TABLE gravity ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;").await?;
+        tx.execute_unprepared(
+            "UPDATE gravity SET expires_at = CURRENT_TIMESTAMP - INTERVAL '3 weeks';",
+        )
+        .await?;
+        tx.execute_unprepared(
+            "ALTER TABLE gravity ALTER COLUMN expires_at SET NOT NULL;",
+        )
+        .await?;
+
+        // Add the new function that consider the expire timestamp.
         tx.execute_unprepared(NEW).await?;
+
         Ok(())
     }
 

@@ -112,6 +112,12 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     gravity::Column::CalculatedAt,
                     Expr::current_timestamp(),
                 )
+                .value(
+                    gravity::Column::ExpiresAt,
+                    Expr::current_timestamp().sub(Expr::cust(format!(
+                        "INTERVAL '{} seconds'", every.as_secs()
+                    )))
+                )
                 // Don't update the value if it has been updated in the last
                 // `every` time (e.g. in the last 5 minutes).
                 .cond_where(
