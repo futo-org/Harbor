@@ -478,15 +478,20 @@ fn validate_content(
         }
         ContentBody::VerificationClaim(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-            // TODO: validate.
+
+            // TODO: don't allow spamming of the same claim if it's denied?
         }
         ContentBody::VerificationVerify(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * event key is known.
+            // * event key is a valid claim.
         }
         ContentBody::VerificationTarget(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-            // TODO: validate.
+
+            // TODO: limit the target identities in some way?
         }
     }
 }
