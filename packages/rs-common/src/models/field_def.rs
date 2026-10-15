@@ -33,15 +33,17 @@ impl Validate for FieldDef {
         if !FieldKind::is_valid(*kind) || *kind == FieldKind::Unspecified as i32 {
             errors.push(map_err(ValidationError::KindInvalid));
         }
-        validate::string(
-            format,
-            errors,
-            |err| map_err(ValidationError::Format(err)),
-            StringConfig {
-                max_len: Some(100),
-                ..Default::default()
-            },
-        );
+        if let Some(format) = format {
+            validate::string(
+                format,
+                errors,
+                |err| map_err(ValidationError::Format(err)),
+                StringConfig {
+                    max_len: Some(100),
+                    ..Default::default()
+                },
+            );
+        }
         validate::string(
             description,
             errors,

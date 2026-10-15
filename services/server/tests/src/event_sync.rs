@@ -3104,7 +3104,7 @@ async fn validation_content_content_body_verification_claim_collection() {
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3249,7 +3249,7 @@ async fn validation_content_content_body_verification_claim_digest_invalid() {
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3306,7 +3306,7 @@ async fn validation_content_content_body_verification_claim_digest_mismatch() {
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3363,7 +3363,7 @@ async fn validation_content_content_body_verification_claim_digest_missing() {
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3417,7 +3417,7 @@ async fn validation_content_content_body_verification_claim_schema_name_too_long
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3475,7 +3475,7 @@ async fn validation_content_content_body_verification_claim_schema_description_t
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3535,7 +3535,7 @@ async fn validation_content_content_body_verification_claim_schema_too_many_fiel
             .map(|n| FieldDef {
                 key: format!("key{n}"),
                 kind: FieldKind::String as i32,
-                format: "".to_owned(),
+                format: None,
                 required: false,
                 description: "Key 1".to_owned(),
                 regex: None,
@@ -3594,7 +3594,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_key_em
         fields: vec![FieldDef {
             key: "".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3652,7 +3652,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_key_to
         fields: vec![FieldDef {
             key: "k".repeat(201),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3710,7 +3710,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_kind_v
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: 999,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3768,7 +3768,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_kind_u
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::Unspecified as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3826,7 +3826,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_format
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "f".repeat(101),
+            format: Some("f".repeat(101)),
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -3884,7 +3884,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_descri
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "d".repeat(1001),
             regex: None,
@@ -3942,7 +3942,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_regex_
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: Some("r".repeat(101)),
@@ -4001,7 +4001,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_duplic
             FieldDef {
                 key: "key1".to_owned(),
                 kind: FieldKind::String as i32,
-                format: "".to_owned(),
+                format: None,
                 required: false,
                 description: "Key 1".to_owned(),
                 regex: None,
@@ -4010,7 +4010,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_duplic
             FieldDef {
                 key: "key1".to_owned(),
                 kind: FieldKind::String as i32,
-                format: "".to_owned(),
+                format: None,
                 required: false,
                 description: "Key 1".to_owned(),
                 regex: None,
@@ -4103,7 +4103,7 @@ async fn validation_content_content_body_verification_claim_fields_key_empty() {
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -4165,7 +4165,7 @@ async fn validation_content_content_body_verification_claim_fields_key_too_long(
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -4227,7 +4227,7 @@ async fn validation_content_content_body_verification_claim_fields_value_too_lon
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -4288,7 +4288,7 @@ async fn validation_content_content_body_verification_claim_fields_too_many() {
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -4349,7 +4349,7 @@ async fn validation_content_content_body_verification_claim_fields_key_unknown()
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -4411,7 +4411,7 @@ async fn validation_content_content_body_verification_claim_fields_value_not_val
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -4473,7 +4473,7 @@ async fn validation_content_content_body_verification_claim_fields_value_string_
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -4535,7 +4535,7 @@ async fn validation_content_content_body_verification_claim_fields_value_invalid
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::Int as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -4597,7 +4597,7 @@ async fn validation_content_content_body_verification_claim_fields_value_invalid
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::Bool as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -4659,7 +4659,7 @@ async fn validation_content_content_body_verification_claim_fields_value_bytes_t
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::Bytes as i32,
-            format: "".to_owned(),
+            format: None,
             required: false,
             description: "Key 1".to_owned(),
             regex: None,
@@ -4721,7 +4721,7 @@ async fn validation_content_content_body_verification_claim_fields_missing_requi
         fields: vec![FieldDef {
             key: "key1".to_owned(),
             kind: FieldKind::String as i32,
-            format: "".to_owned(),
+            format: None,
             required: true,
             description: "Key 1".to_owned(),
             regex: None,
