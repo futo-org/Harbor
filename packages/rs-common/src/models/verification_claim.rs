@@ -20,10 +20,7 @@ impl Validate for VerificationClaim {
         } else {
             errors.push(map_err(ValidationError::SchemaMissing));
         }
-        let mut total_fields_size = 0;
         for (key, value) in fields {
-            total_fields_size += key.len();
-            total_fields_size += value.len();
             validate::string(
                 key,
                 errors,
@@ -61,13 +58,6 @@ impl Validate for VerificationClaim {
             errors.push(map_err(ValidationError::FieldsTooMany {
                 length: total_fields,
                 max: total_fields_max,
-            }));
-        }
-        let total_fields_size_max = 1 * 1024 * 1024; // 1 MB.
-        if total_fields_size > total_fields_size_max {
-            errors.push(map_err(ValidationError::FieldsTooLarge {
-                total_length: total_fields_size,
-                max: total_fields_size_max,
             }));
         }
         if let Some(schema) = self.schema.as_ref()
