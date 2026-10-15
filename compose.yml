@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18
+    image: postgres:18@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
     environment:
       POSTGRES_PASSWORD: testing
     volumes:
@@ -158,7 +158,7 @@ services:
         condition: service_started
 
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:latest@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c
     volumes:
       - rustfs-data:/data
     ports:
@@ -176,7 +176,7 @@ services:
       start_period: 10s
 
   rustfs-init:
-    image: rustfs/rc:latest
+    image: rustfs/rc:latest@sha256:ab024bfebee49a750ce886b4c70963ccd9ddaa03f491704a90710641d7a26699
     depends_on:
       rustfs:
         condition: service_healthy
@@ -188,7 +188,7 @@ services:
       rc mb -p rustfs/polycentric-blobs"
 
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:latest@sha256:77e3df9054047a88b520d0cc46e16696d3b22022e1d580aeccd2632df6532837
     container_name: broker
     environment:
       KAFKA_NODE_ID: 1
@@ -245,7 +245,7 @@ services:
         condition: service_started
 
   kafka-ui:
-    image: docker.redpanda.com/redpandadata/console:latest
+    image: docker.redpanda.com/redpandadata/console:latest@sha256:9dc0cd55db172c6be9c2ff8a51f33a14395f7675fa7fbc002c277f3b96115c27
     environment:
       CONFIG_FILEPATH: /etc/console/config.yaml
       KAFKA_BROKERS: kafka:19092
