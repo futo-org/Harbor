@@ -23,7 +23,7 @@ impl Validate for SerializedVerificationSchema {
             errors,
             |err| map_err(ValidationError::SchemaBytes(err)),
             SliceConfig {
-                max_len: Some(10 * 1024 * 1024), // 10 MB.
+                max_len: Some(1 * 1024 * 1024), // 1 MB.
                 ..Default::default()
             },
         );

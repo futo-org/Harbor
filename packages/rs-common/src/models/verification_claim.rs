@@ -63,7 +63,7 @@ impl Validate for VerificationClaim {
                 max: total_fields_max,
             }));
         }
-        let total_fields_size_max = 10 * 1024 * 1024; // 10 MB.
+        let total_fields_size_max = 1 * 1024 * 1024; // 1 MB.
         if total_fields_size > total_fields_size_max {
             errors.push(map_err(ValidationError::FieldsTooLarge {
                 total_length: total_fields_size,
