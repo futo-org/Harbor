@@ -88,9 +88,7 @@ async function writeIconComposerBundle(icon: Icon, size: number, path: string) {
       .png()
       .toBuffer(),
   );
-  const backgroundFill = {
-    'automatic-gradient': buildIconComposerColor(background),
-  };
+  const backgroundFill = { solid: buildIconComposerColor(background) };
   const iconJson = {
     fill: backgroundFill,
     groups: [
