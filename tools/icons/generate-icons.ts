@@ -7,7 +7,13 @@ import opentype from 'opentype.js';
 import sharp from 'sharp';
 import { parse } from 'yaml';
 
-type Tower = { height: number; top: number; fill: string; opacity?: number };
+type Tower = {
+  height: number;
+  top: number;
+  fill: string;
+  opacity?: number;
+  offsetX?: number;
+};
 type Text = {
   content: string;
   font: string;
@@ -75,10 +81,10 @@ function buildIconSvg(icon: Icon, size: number): string {
 
 function buildTower(
   canvas: number,
-  { height, top, fill, opacity = 1 }: Tower,
+  { height, top, fill, opacity = 1, offsetX = 0 }: Tower,
 ): string {
   // The viewBox fits the tower exactly, so the default preserveAspectRatio centres it
-  return `<svg y="${top}" width="${canvas}" height="${height}" viewBox="${lighthouseViewBox}"><path fill="${fill}" fill-opacity="${opacity}" d="${lighthousePathData}"/></svg>`;
+  return `<svg x="${offsetX}" y="${top}" width="${canvas}" height="${height}" viewBox="${lighthouseViewBox}"><path fill="${fill}" fill-opacity="${opacity}" d="${lighthousePathData}"/></svg>`;
 }
 
 function buildText(
