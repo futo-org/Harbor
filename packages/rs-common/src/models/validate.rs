@@ -283,14 +283,14 @@ impl fmt::Display for ValidationError {
             ValidationError::Repost(err) => write!(f, "repost {err}"),
             ValidationError::Report(err) => write!(f, "report {err}"),
             ValidationError::Labels(err) => write!(f, "labels {err}"),
-            ValidationError::VerificationClaim(err) => write!(f, "verfication claim {err}"),
+            ValidationError::VerificationClaim(err) => write!(f, "verification claim {err}"),
             ValidationError::SerializedVerificationSchema(err) => {
                 write!(f, "serialized verification schema {err}")
             }
             ValidationError::VerificationSchema(err) => write!(f, "verification schema {err}"),
             ValidationError::FieldDef(err) => write!(f, "field def {err}"),
-            ValidationError::VerificationVerify(err) => write!(f, "verfication verify {err}"),
-            ValidationError::VerificationTarget(err) => write!(f, "verfication target {err}"),
+            ValidationError::VerificationVerify(err) => write!(f, "verification verify {err}"),
+            ValidationError::VerificationTarget(err) => write!(f, "verification target {err}"),
         }
     }
 }
