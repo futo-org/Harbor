@@ -1,8 +1,81 @@
-use std::fmt;
+use std::{fmt, str};
 
 use crate::models::field_def;
-use crate::models::protos_v2::VerificationSchema;
+use crate::models::protos_v2::{FieldKind, VerificationSchema};
 use crate::models::validate::{self, SliceConfig, SliceError, StringConfig, StringError, Validate};
+
+impl VerificationSchema {
+    pub(crate) fn validate_field(
+        &self,
+        key: &str,
+        value: &[u8],
+    ) -> Result<(), FieldValidationError> {
+        let field_def = self
+            .fields
+            .iter()
+            .find(|def| def.key == key)
+            .ok_or(FieldValidationError::Unknown)?;
+
+        match field_def.kind() {
+            FieldKind::Unspecified => {}
+            // TODO: use `format` (e.g. url or hex) for validation?
+            // TODO: use `regex` for validation? Not sure if it's safe to create
+            // a regex from a potential bad actor (relevant for the server).
+            FieldKind::String => {
+                let value =
+                    str::from_utf8(value).map_err(|_| FieldValidationError::StringInvalidUtf8)?;
+                if let Some(max_len) = field_def.max_len
+                    && value.len() > max_len.try_into().unwrap_or(usize::MAX)
+                {
+                    return Err(FieldValidationError::StringTooLong);
+                }
+            }
+            FieldKind::Int => {
+                if value.len() != 8 {
+                    return Err(FieldValidationError::IntegerInvalid);
+                }
+            }
+            FieldKind::Bool => {
+                if !matches!(value, [0b0] | [0b1]) {
+                    return Err(FieldValidationError::BooleanInvalid);
+                }
+            }
+            FieldKind::Bytes => {
+                if let Some(max_len) = field_def.max_len
+                    && value.len() > max_len.try_into().unwrap_or(usize::MAX)
+                {
+                    return Err(FieldValidationError::StringTooLong);
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum FieldValidationError {
+    Unknown,
+    StringInvalidUtf8,
+    StringTooLong,
+    IntegerInvalid,
+    BooleanInvalid,
+    BytesTooLong,
+}
+
+impl fmt::Display for FieldValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FieldValidationError::Unknown => write!(f, "is not part of the schema"),
+            FieldValidationError::StringInvalidUtf8 => write!(f, "is not a valid UTF-8 string"),
+            FieldValidationError::StringTooLong => write!(f, "is too long"),
+            FieldValidationError::IntegerInvalid => {
+                write!(f, "is incorrectly sized (expected 8 bytes)")
+            }
+            FieldValidationError::BooleanInvalid => write!(f, "is invalid, expected 0x0 or 0x1"),
+            FieldValidationError::BytesTooLong => write!(f, "is too long"),
+        }
+    }
+}
 
 impl Validate for VerificationSchema {
     type Error = ValidationError;

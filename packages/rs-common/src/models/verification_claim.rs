@@ -1,8 +1,10 @@
 use std::fmt;
 
-use crate::models::protos_v2::VerificationClaim;
-use crate::models::serialized_verification_schema;
+use prost::Message;
+
+use crate::models::protos_v2::{VerificationClaim, VerificationSchema};
 use crate::models::validate::{self, SliceConfig, SliceError, StringConfig, StringError, Validate};
+use crate::models::{serialized_verification_schema, verification_schema};
 
 impl Validate for VerificationClaim {
     type Error = ValidationError;
@@ -12,6 +14,7 @@ impl Validate for VerificationClaim {
         F: Fn(Self::Error) -> E,
     {
         let VerificationClaim { schema, fields } = self;
+        let start_errors_len = errors.len();
         if let Some(schema) = schema.as_ref() {
             schema.validate_check(errors, |err| map_err(ValidationError::Schema(err)))
         } else {
@@ -66,6 +69,27 @@ impl Validate for VerificationClaim {
                 max: total_fields_size_max,
             }));
         }
+        if let Some(schema) = self.schema.as_ref()
+            && let Ok(schema) = VerificationSchema::decode(schema.schema_bytes.as_slice())
+            // Only when the schema and fields are valid.
+            && errors.len() == start_errors_len
+        {
+            for (key, value) in fields {
+                if let Err(error) = schema.validate_field(key, value) {
+                    errors.push(map_err(ValidationError::FieldsInvalid {
+                        key: key.clone(),
+                        error,
+                    }));
+                }
+            }
+            for field in schema.fields {
+                if field.required && !fields.contains_key(&field.key) {
+                    errors.push(map_err(ValidationError::FieldsMissing {
+                        key: field.key.clone(),
+                    }));
+                }
+            }
+        }
     }
 }
 
@@ -73,10 +97,29 @@ impl Validate for VerificationClaim {
 pub enum ValidationError {
     Schema(serialized_verification_schema::ValidationError),
     SchemaMissing,
-    FieldsKey { key: String, err: StringError },
-    FieldsValue { key: String, err: SliceError },
-    FieldsTooMany { length: usize, max: usize },
-    FieldsTooLarge { total_length: usize, max: usize },
+    FieldsKey {
+        key: String,
+        err: StringError,
+    },
+    FieldsValue {
+        key: String,
+        err: SliceError,
+    },
+    FieldsTooMany {
+        length: usize,
+        max: usize,
+    },
+    FieldsTooLarge {
+        total_length: usize,
+        max: usize,
+    },
+    FieldsInvalid {
+        key: String,
+        error: verification_schema::FieldValidationError,
+    },
+    FieldsMissing {
+        key: String,
+    },
 }
 
 impl fmt::Display for ValidationError {
@@ -94,6 +137,12 @@ impl fmt::Display for ValidationError {
                     f,
                     "field total size (keys and values) too large ({total_length}), maximum is {max}"
                 )
+            }
+            ValidationError::FieldsInvalid { key, error } => {
+                write!(f, "field '{key}' {error}")
+            }
+            ValidationError::FieldsMissing { key } => {
+                write!(f, "field required field '{key}' missing")
             }
         }
     }
