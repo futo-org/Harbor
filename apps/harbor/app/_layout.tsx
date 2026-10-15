@@ -9,7 +9,6 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { renderScreenWithSplashHide } from '@/src/common/lib/renderScreenWithSplashHide';
-import { useStripCopiedInlineViewPlaceholders } from '@/src/common/lib/useStripCopiedInlineViewPlaceholders';
 import { APP_NAME } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
@@ -160,8 +159,6 @@ function RootStack() {
 }
 
 export default function RootLayout() {
-  useStripCopiedInlineViewPlaceholders();
-
   return (
     <>
       <Head>

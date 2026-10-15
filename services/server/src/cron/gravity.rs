@@ -112,6 +112,12 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     gravity::Column::CalculatedAt,
                     Expr::current_timestamp(),
                 )
+                .value(
+                    gravity::Column::ExpiresAt,
+                    Expr::current_timestamp().sub(Expr::cust(format!(
+                        "INTERVAL '{} seconds'", every.as_secs()
+                    )))
+                )
                 // Don't update the value if it has been updated in the last
                 // `every` time (e.g. in the last 5 minutes).
                 .cond_where(
@@ -183,21 +189,11 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     .table(reaction_tally::Entity)
                     .value(
                         reaction_tally::Column::DecayedCount,
-                        {
-                            let func = Func::cust("reaction_count_decay");
-                            if let Some(gravity) = gravity {
-                                func.args([
-                                    Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
-                                    Expr::col(event::Column::CreatedAt.as_column_ref()),
-                                    Expr::Constant(gravity.into()),
-                                ])
-                            } else {
-                                func.args([
-                                    Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
-                                    Expr::col(event::Column::CreatedAt.as_column_ref()),
-                                ])
-                            }
-                        },
+                        Func::cust("reaction_count_decay")
+                        .args([
+                            Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
+                            Expr::col(event::Column::CreatedAt.as_column_ref()),
+                        ]),
                     )
                     .from(event::Entity)
                     .and_where(
@@ -207,7 +203,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     .and_where(Expr::col(reaction_tally::Column::EventId.as_column_ref()).in_subquery(event_ids))
                     // Ignore events that will be expired below.
                     .and_where(
-                        Expr::col(event::Column::CreatedAt.as_column_ref()).lt(
+                        Expr::col(event::Column::CreatedAt.as_column_ref()).gt(
                             Expr::from(gravity_timestamp_query.clone()).sub(
                                 Expr::cust(format!("INTERVAL '{} seconds'", expire.as_secs())))
                             )
@@ -258,7 +254,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 )
                 .and_where(Expr::col(reaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
                 .and_where(
-                    Expr::col(event::Column::CreatedAt.as_column_ref()).gt(
+                    Expr::col(event::Column::CreatedAt.as_column_ref()).lt(
                         Expr::from(gravity_timestamp_query).sub(
                             Expr::cust(format!("INTERVAL '{} seconds'", expire.as_secs())))
                         )
