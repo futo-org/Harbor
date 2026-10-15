@@ -33,7 +33,7 @@ describe('rs-core validation', () => {
 
   it('returns every error in the content', () => {
     const errors = validateContent(
-      postContent({ text: 'x'.repeat(2001), labels: [''] }),
+      postContent({ text: 'x'.repeat(2001), labels: ['x'.repeat(201)] }),
     );
 
     expect(errors).toEqual([
@@ -45,7 +45,7 @@ describe('rs-core validation', () => {
       postError(
         new PostValidationError.LabelsItem({
           index: 0,
-          error: new StringError.TooShort({ length: 0, min: 1 }),
+          error: new StringError.TooLong({ length: 201, max: 200 }),
         }),
       ),
     ]);
