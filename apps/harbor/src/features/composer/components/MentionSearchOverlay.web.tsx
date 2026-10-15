@@ -176,7 +176,7 @@ function MentionShortcutHint() {
       </Text>
       <Kbd>Tab</Kbd>
       <Text variant="small" color="neutral_500">
-        /
+        or
       </Text>
       <Kbd>{isApplePlatform ? '⏎' : 'Enter'}</Kbd>
       <Text variant="small" color="neutral_500">
