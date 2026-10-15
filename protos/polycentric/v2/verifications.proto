@@ -5,7 +5,7 @@ import "polycentric/v2/common.proto";
 import "polycentric/v2/event_key.proto";
 
 // Schema that defines the verification
-// These are self describing schemas and are intended to be specified in 
+// These are self describing schemas and are intended to be specified in
 // a `VerificationClaim`.
 message VerificationSchema {
   // Human readable name of the schema (ie. X Verification).
@@ -21,7 +21,7 @@ message FieldDef {
   FieldKind kind = 2;
   // Semantic refinement of kind: "url", "email", "iso8601-date", "hex".
   // Free-form so new formats need no proto change.
-  string format = 3;
+  optional string format = 3;
   bool required = 4;
   string description = 5;
   optional string regex = 6;
@@ -40,7 +40,7 @@ enum FieldKind {
 }
 
 // Protobuf serialization is non-deteministic. We hash the serialized schema
-// so we have the canonical hash - this aids with grouping of claims. 
+// so we have the canonical hash - this aids with grouping of claims.
 message SerializedVerificationSchema {
   // Serialized VerificationSchema.
   bytes schema_bytes = 1;

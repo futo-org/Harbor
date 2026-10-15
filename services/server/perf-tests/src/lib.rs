@@ -444,7 +444,7 @@ fn github_verification_schema() -> VerificationSchema {
         fields: vec![FieldDef {
             key: "login".to_owned(),
             kind: FieldKind::String as i32,
-            format: String::new(),
+            format: None,
             required: true,
             description: "Login".to_owned(),
             regex: None,

@@ -55,9 +55,9 @@ export interface FieldDef {
      * Semantic refinement of kind: "url", "email", "iso8601-date", "hex".
      * Free-form so new formats need no proto change.
      *
-     * @generated from protobuf field: string format = 3
+     * @generated from protobuf field: optional string format = 3
      */
-    format: string;
+    format?: string;
     /**
      * @generated from protobuf field: bool required = 4
      */
@@ -247,7 +247,7 @@ class FieldDef$Type extends MessageType<FieldDef> {
         super("polycentric.v2.FieldDef", [
             { no: 1, name: "key", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "kind", kind: "enum", T: () => ["polycentric.v2.FieldKind", FieldKind, "FIELD_KIND_"] },
-            { no: 3, name: "format", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "format", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "required", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 5, name: "description", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 6, name: "regex", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
@@ -258,7 +258,6 @@ class FieldDef$Type extends MessageType<FieldDef> {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.key = "";
         message.kind = 0;
-        message.format = "";
         message.required = false;
         message.description = "";
         if (value !== undefined)
@@ -276,7 +275,7 @@ class FieldDef$Type extends MessageType<FieldDef> {
                 case /* polycentric.v2.FieldKind kind */ 2:
                     message.kind = reader.int32();
                     break;
-                case /* string format */ 3:
+                case /* optional string format */ 3:
                     message.format = reader.string();
                     break;
                 case /* bool required */ 4:
@@ -309,8 +308,8 @@ class FieldDef$Type extends MessageType<FieldDef> {
         /* polycentric.v2.FieldKind kind = 2; */
         if (message.kind !== 0)
             writer.tag(2, WireType.Varint).int32(message.kind);
-        /* string format = 3; */
-        if (message.format !== "")
+        /* optional string format = 3; */
+        if (message.format !== undefined)
             writer.tag(3, WireType.LengthDelimited).string(message.format);
         /* bool required = 4; */
         if (message.required !== false)
