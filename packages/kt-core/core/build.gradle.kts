@@ -155,7 +155,9 @@ val cargoNdkBuild =
 // ── Rust: host build + Kotlin binding generation ───────────────────────
 // uniffi-bindgen reads exported symbols from a HOST cdylib (any target
 // works; host is fastest), then emits Kotlin into build/generated/uniffi.
-// Package/name mapping comes from uniffi.toml next to this file.
+// Package/name mapping comes from the uniffi.toml in each crate's root
+// (rs-core and rs-common). Don't pass --config: it replaces every crate's
+// config, putting both crates in one package with clashing declarations.
 val cargoHostBuild =
     tasks.register<Exec>("cargoHostBuild") {
         group = "rust"
@@ -184,8 +186,6 @@ val uniffiGenerate =
             hostLib.absolutePath,
             "--language",
             "kotlin",
-            "--config",
-            File(projectDir, "uniffi.toml").absolutePath,
             "--out-dir",
             uniffiOutDir.absolutePath,
             "--no-format",

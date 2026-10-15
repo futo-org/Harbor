@@ -87,6 +87,8 @@ impl Validate for Content {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "ContentValidationError"))]
 pub enum ValidationError {
     ContentBody(content_body::ValidationError),
     ContentBodyMissing,

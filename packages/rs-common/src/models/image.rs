@@ -25,6 +25,8 @@ impl Validate for Image {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "ImageValidationError"))]
 pub enum ValidationError {
     Blob(blob::ValidationError),
     BlobMissing,

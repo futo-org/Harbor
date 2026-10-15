@@ -20,11 +20,11 @@ const BATCH_SIZE: u64 = 1000;
 
 pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
     let config = config::get();
-
-    let feeds_gravity = config.feeds_gravity;
+    let gravity = config.feeds_gravity;
     let gravity_per_reaction = config.dynamic_feeds_gravity_per_reaction;
     let hours = config.dynamic_feeds_gravity_hours;
     let every = config.feed_count_update_frequency;
+    let expire = config.feeds_gravity_expire;
     cron.every(every, move || {
         tracing::debug!(gravity_per_reaction, hours, "updating gravity");
         let db = db.clone();
@@ -60,7 +60,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             };
 
             let mut gravity_value = SelectStatement::new();
-            if let Some(gravity) = feeds_gravity {
+            if let Some(gravity) = gravity {
                 gravity_value.expr_as(Expr::Constant(gravity.into()), "gravity");
             } else {
                 // Calculate the dynamic gravity value.
@@ -112,6 +112,12 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     gravity::Column::CalculatedAt,
                     Expr::current_timestamp(),
                 )
+                .value(
+                    gravity::Column::ExpiresAt,
+                    Expr::current_timestamp().sub(Expr::cust(format!(
+                        "INTERVAL '{} seconds'", every.as_secs()
+                    )))
+                )
                 // Don't update the value if it has been updated in the last
                 // `every` time (e.g. in the last 5 minutes).
                 .cond_where(
@@ -149,6 +155,14 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 }
             };
 
+            // The "current" timestamp we use so that all queries use the same
+            // time, even though they're executed in different transactions and
+            // such don't have the same time.
+            let mut gravity_timestamp_query = SelectStatement::new();
+            gravity_timestamp_query
+                .column(gravity::Column::CalculatedAt)
+                .from(gravity::Entity);
+
             // Update all the calculate decayed reaction counts for all
             // reactions in batches.
             let mut event_id = Some(i64::MAX);
@@ -165,7 +179,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     .and_where(Expr::col(reaction_tally::Column::EventId.as_column_ref()).lt(e_id))
                     // If the decayed count was previously already zero there is
                     // no point in calculating it again as it can only go lower.
-                    .and_where(Expr::col(reaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.0.into())))
+                    .and_where(Expr::col(reaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
                     .order_by(reaction_tally::Column::EventId, Order::Desc)
                     .limit(BATCH_SIZE);
 
@@ -175,21 +189,11 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     .table(reaction_tally::Entity)
                     .value(
                         reaction_tally::Column::DecayedCount,
-                        {
-                            let func = Func::cust("reaction_count_decay");
-                            if let Some(feeds_gravity) = feeds_gravity {
-                                func.args([
-                                    Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
-                                    Expr::col(event::Column::CreatedAt.as_column_ref()),
-                                    Expr::Constant(feeds_gravity.into()),
-                                ])
-                            } else {
-                                func.args([
-                                    Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
-                                    Expr::col(event::Column::CreatedAt.as_column_ref()),
-                                ])
-                            }
-                        },
+                        Func::cust("reaction_count_decay")
+                        .args([
+                            Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
+                            Expr::col(event::Column::CreatedAt.as_column_ref()),
+                        ]),
                     )
                     .from(event::Entity)
                     .and_where(
@@ -197,6 +201,13 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                             .eq(Expr::col(reaction_tally::Column::EventId.as_column_ref())),
                     )
                     .and_where(Expr::col(reaction_tally::Column::EventId.as_column_ref()).in_subquery(event_ids))
+                    // Ignore events that will be expired below.
+                    .and_where(
+                        Expr::col(event::Column::CreatedAt.as_column_ref()).gt(
+                            Expr::from(gravity_timestamp_query.clone()).sub(
+                                Expr::cust(format!("INTERVAL '{} seconds'", expire.as_secs())))
+                            )
+                    )
                     .returning_col(reaction_tally::Column::EventId);
 
                 let mut cte = CommonTableExpression::new();
@@ -219,25 +230,53 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     }
                 }
 
-                // If we need to update another batch we commit this batch and
-                // start another transaction. Otherwise we break out of the loop
-                // and commit the last batch below.
-                if event_id.is_some() && let Err(err) = tx.execute_unprepared("COMMIT AND CHAIN").await {
+                // Commit this batch and start another transaction.
+                if let Err(err) = tx.execute_unprepared("COMMIT AND CHAIN").await {
                     tracing::warn!(error = %err, "failed to commit decayed reaction counts changes");
                     return ControlFlow::Continue(());
                 }
                 tracing::debug!(elapsed = ?start.elapsed(), batch_size = BATCH_SIZE, "updated batch of decayed reaction counts");
             }
 
-            // Commit the final batch.
-            if let Err(err) = tx.commit().await {
-                tracing::warn!(error = %err, "failed to commit decayed reaction counts changes");
+            // Expire all old events (set the decayed count to zero).
+            let start_expire = Instant::now();
+            let mut expire_tallies = UpdateStatement::new();
+            expire_tallies
+                .table(reaction_tally::Entity)
+                .value(
+                    reaction_tally::Column::DecayedCount,
+                    Expr::Constant(0.into()),
+                )
+                .from(event::Entity)
+                .and_where(
+                    Expr::col(event::Column::Id.as_column_ref())
+                        .eq(Expr::col(reaction_tally::Column::EventId.as_column_ref())),
+                )
+                .and_where(Expr::col(reaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
+                .and_where(
+                    Expr::col(event::Column::CreatedAt.as_column_ref()).lt(
+                        Expr::from(gravity_timestamp_query).sub(
+                            Expr::cust(format!("INTERVAL '{} seconds'", expire.as_secs())))
+                        )
+                );
+
+            if let Err(err) =  tx.execute(&expire_tallies).await {
+                tracing::warn!(error = %err, "failed to expire decayed reaction counts");
                 return ControlFlow::Continue(());
             }
 
+            // Commit the expiring of events.
+            if let Err(err) = tx.commit().await {
+                tracing::warn!(error = %err, "failed to commit decayed reaction counts expiring");
+                return ControlFlow::Continue(());
+            }
+            tracing::debug!(elapsed = ?start_expire.elapsed(), expire = ?expire, "expired decayed reaction counts");
+
+            let start_vacuum = Instant::now();
             if let Err(err) = db.execute_unprepared("VACUUM ANALYZE reaction_tally").await {
                 tracing::warn!(error = %err, "failed to vacuum reaction tallies");
             }
+            tracing::debug!(elapsed = ?start_vacuum.elapsed(), "vacuumed reaction tallies");
 
             tracing::info!(elapsed = ?start.elapsed(), "updated all decayed reaction counts");
             ControlFlow::Continue(())

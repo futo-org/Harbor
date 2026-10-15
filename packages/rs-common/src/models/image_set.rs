@@ -16,6 +16,7 @@ impl Validate for ImageSet {
             images,
             errors,
             |err| map_err(ValidationError::Images(err)),
+            |index, error| map_err(ValidationError::ImagesItem { index, error }),
             SliceConfig {
                 max_len: Some(10),
                 ..Default::default()
@@ -26,14 +27,21 @@ impl Validate for ImageSet {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "ImageSetValidationError"))]
 pub enum ValidationError {
-    Images(SliceError<image::ValidationError>),
+    Images(SliceError),
+    ImagesItem {
+        index: u32,
+        error: image::ValidationError,
+    },
 }
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ValidationError::Images(err) => write!(f, "images {err}"),
+            ValidationError::ImagesItem { index, error } => write!(f, "images {index}-th {error}"),
         }
     }
 }
