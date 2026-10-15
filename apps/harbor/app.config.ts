@@ -177,6 +177,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     './plugins/withDisableForceDark',
+    './plugins/withDisableEmojiCompat',
   ],
   experiments: {
     typedRoutes: true,
