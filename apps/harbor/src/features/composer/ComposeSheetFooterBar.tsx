@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MAX_POST_LENGTH } from './hooks/useComposer';
-import { useKeyboardHintsStore } from './hooks/useKeyboardHintsStore';
+import { useIsTutorialHintShown } from '@/src/common/lib/useTutorialHintsStore';
 
 export type ComposeSheetFooterBarProps = {
   charCount: number;
@@ -132,10 +132,8 @@ export function ComposeSheetFooterBar({
 }
 
 function PostShortcutHint() {
-  const isShown = useKeyboardHintsStore(
-    (state) => hasPointerHover && !state.usedShortcuts.submitPost,
-  );
-  if (!isShown) return null;
+  const isHintShown = useIsTutorialHintShown('kbSubmitPost');
+  if (!hasPointerHover || !isHintShown) return null;
 
   return (
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}>

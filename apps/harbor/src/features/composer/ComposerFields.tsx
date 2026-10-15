@@ -25,7 +25,7 @@ import { MAX_POST_LENGTH, type useComposer } from './hooks/useComposer';
 import { isAndroid, isIOS, isWeb } from '@/src/common/util/platform';
 
 import { useMentionInputSync } from '@/src/features/composer/hooks/useMentionInputSync';
-import { useKeyboardHintsStore } from '@/src/features/composer/hooks/useKeyboardHintsStore';
+import { useTutorialHintsStore } from '@/src/common/lib/useTutorialHintsStore';
 
 const ATTACHMENT_GAP = Spacing.sm;
 // Spare height below the text on Android: any value that fits one more line
@@ -118,9 +118,7 @@ export function ComposerFields({
     [setText],
   );
 
-  const markShortcutUsed = useKeyboardHintsStore(
-    (state) => state.markShortcutUsed,
-  );
+  const dismissHint = useTutorialHintsStore((state) => state.dismissHint);
   const onKeyPress = useCallback(
     (e: TextInputKeyPressEvent) => {
       // RN-web passes the DOM event, which carries the modifier keys
@@ -134,11 +132,11 @@ export function ComposerFields({
         !e.isDefaultPrevented() &&
         canPost
       ) {
-        markShortcutUsed('submitPost');
+        dismissHint('kbSubmitPost');
         onPost();
       }
     },
-    [canPost, onPost, markShortcutUsed],
+    [canPost, onPost, dismissHint],
   );
 
   // Feeds the host's mention store (query derivation + the overlay's anchor);

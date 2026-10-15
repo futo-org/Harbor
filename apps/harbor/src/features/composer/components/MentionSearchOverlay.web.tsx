@@ -19,7 +19,10 @@ import {
   useMentionStore,
 } from '../hooks/useMentionStore';
 import { useMentionSearch } from '../hooks/useMentionSearch';
-import { useKeyboardHintsStore } from '../hooks/useKeyboardHintsStore';
+import {
+  useIsTutorialHintShown,
+  useTutorialHintsStore,
+} from '@/src/common/lib/useTutorialHintsStore';
 import { placeMentionOverlay } from '../utils/placeMentionOverlay';
 import {
   measureWebMentionAnchor,
@@ -146,14 +149,11 @@ function MentionRow({
 
 function MentionShortcutHint() {
   const { theme } = useTheme();
-  const isShown = useKeyboardHintsStore(
-    (state) =>
-      hasPointerHover &&
-      !(
-        state.usedShortcuts.mentionNavigate || state.usedShortcuts.mentionInsert
-      ),
-  );
-  if (!isShown) return null;
+  const isNavigateHintShown = useIsTutorialHintShown('kbMentionNavigate');
+  const isInsertHintShown = useIsTutorialHintShown('kbMentionInsert');
+  if (!hasPointerHover || !isNavigateHintShown || !isInsertHintShown) {
+    return null;
+  }
 
   return (
     <View
@@ -202,9 +202,7 @@ function useKeyboardControls(
   const safeSelectedIndex = Math.min(selectedIndex, count - 1);
   const selectedIdentity = open ? identities[safeSelectedIndex] : undefined;
   const selectedProfile = useProfile(selectedIdentity);
-  const markShortcutUsed = useKeyboardHintsStore(
-    (state) => state.markShortcutUsed,
-  );
+  const dismissHint = useTutorialHintsStore((state) => state.dismissHint);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset on result change
   useEffect(() => setSelectedIndex(0), [key]);
@@ -214,13 +212,13 @@ function useKeyboardControls(
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
-        markShortcutUsed('mentionNavigate');
+        dismissHint('kbMentionNavigate');
         setSelectedIndex((safeSelectedIndex + 1) % count);
       } else if (e.key === 'ArrowUp') {
-        markShortcutUsed('mentionNavigate');
+        dismissHint('kbMentionNavigate');
         setSelectedIndex((safeSelectedIndex - 1 + count) % count);
       } else if ((e.key === 'Enter' || e.key === 'Tab') && selectedIdentity) {
-        markShortcutUsed('mentionInsert');
+        dismissHint('kbMentionInsert');
         insertMention(selectedIdentity, selectedProfile);
       }
       // Any other key is handled normally
@@ -242,7 +240,7 @@ function useKeyboardControls(
     selectedIdentity,
     selectedProfile,
     insertMention,
-    markShortcutUsed,
+    dismissHint,
   ]);
 
   return { selectedIndex: safeSelectedIndex, setSelectedIndex };
