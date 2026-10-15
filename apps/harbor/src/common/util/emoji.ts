@@ -1,5 +1,6 @@
-// Finds emoji in text for `components/EmojiImage`. A scanner, not a regex:
-// JavaScriptCore mismatches mixed BMP/astral classes under the `u` flag.
+// Finds emoji in text, which native `Text` draws in the Twemoji font. A
+// scanner, not a regex: JavaScriptCore mismatches mixed BMP/astral classes
+// under the `u` flag.
 
 type Range = number | readonly [number, number];
 
@@ -139,10 +140,6 @@ export function splitEmoji(text: string): string[] {
   parts.push(text.slice(textStart));
   return parts;
 }
-
-// Where `public/twemoji/` is served. A separate export so the bundle keeps
-// the literal, which the web deploy rewrites to the static bucket.
-export const TWEMOJI_URL = '/twemoji/';
 
 /**
  * Twemoji's file name for a sequence: code points in hex joined by "-", with

@@ -61,6 +61,8 @@ impl Validate for Application {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "ApplicationValidationError"))]
 pub enum ValidationError {
     Name(validate::StringError),
     Id(validate::StringError),

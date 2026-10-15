@@ -122,7 +122,31 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         backgroundColor: '#FF6A00',
       },
     ],
-    'expo-font',
+    [
+      'expo-font',
+      {
+        // Native families are the file names on Android and the PostScript
+        // (NotoSans) or family (Twemoji) names on iOS.
+        fonts: [
+          'Regular',
+          'Medium',
+          'SemiBold',
+          'Bold',
+          'Italic',
+          'MediumItalic',
+          'SemiBoldItalic',
+          'BoldItalic',
+        ].map((face) => `./src/common/assets/fonts/NotoSans-${face}.ttf`),
+        ios: { fonts: ['./src/common/assets/fonts/Twemoji.ttf'] },
+        // The bitmap build is for Android 7-9 (see `twemojiFontFamily`).
+        android: {
+          fonts: [
+            './src/common/assets/fonts/Twemoji.ttf',
+            './src/common/assets/fonts/TwemojiCbdt.ttf',
+          ],
+        },
+      },
+    ],
     'expo-sqlite',
     'expo-web-browser',
     [
@@ -153,6 +177,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     './plugins/withDisableForceDark',
+    './plugins/withDisableEmojiCompat',
   ],
   experiments: {
     typedRoutes: true,
