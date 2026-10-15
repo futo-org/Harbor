@@ -783,7 +783,7 @@ async fn search_posts_pagination_order_by_top() {
     for n in 1..=3 {
         let mut client = TestClient::new().await;
         let text = format!("{n}. {query}.");
-        client.post_text(&text, DEFAULT_CREATED_AT + n);
+        client.post_text(&text, current_timestamp());
         post_event_keys.push(client.get_last_event_key());
         expected.push(Post {
             text,
@@ -798,7 +798,7 @@ async fn search_posts_pagination_order_by_top() {
     }
     for (n, mut client) in clients.into_iter().enumerate() {
         for post in &post_event_keys[..n + 1] {
-            client.thumbs_up(post.clone(), 0);
+            client.thumbs_up(post.clone(), current_timestamp());
         }
         client.submit_events().await;
     }
