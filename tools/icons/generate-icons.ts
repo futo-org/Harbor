@@ -88,12 +88,19 @@ async function writeIconComposerBundle(icon: Icon, size: number, path: string) {
       .png()
       .toBuffer(),
   );
+  const backgroundFill = {
+    'automatic-gradient': buildIconComposerColor(background),
+  };
   const iconJson = {
-    fill: { 'automatic-gradient': buildIconComposerColor(background) },
+    fill: backgroundFill,
     groups: [
       {
         layers: [
           {
+            // In dark mode the tower takes the background's colour
+            'fill-specializations': [
+              { appearance: 'dark', value: backgroundFill },
+            ],
             'image-name': 'tower.png',
             name: 'tower',
             // Layers start centred on the canvas

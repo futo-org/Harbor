@@ -6,6 +6,14 @@
     {
       "layers": [
         {
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "automatic-gradient": "srgb:1.00000,0.41569,0.00000,1.00000"
+              }
+            }
+          ],
           "image-name": "tower.png",
           "name": "tower",
           "position": {
