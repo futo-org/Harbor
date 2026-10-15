@@ -56,8 +56,8 @@ impl Validate for VerificationClaim {
         let total_fields = fields.len();
         if total_fields > total_fields_max {
             errors.push(map_err(ValidationError::FieldsTooMany {
-                length: total_fields,
-                max: total_fields_max,
+                length: total_fields.try_into().unwrap_or(u32::MAX),
+                max: total_fields_max.try_into().unwrap_or(u32::MAX),
             }));
         }
         if let Some(schema) = self.schema.as_ref()
@@ -85,6 +85,8 @@ impl Validate for VerificationClaim {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "VerificationClaimValidationError"))]
 pub enum ValidationError {
     Schema(serialized_verification_schema::ValidationError),
     SchemaMissing,
@@ -97,12 +99,12 @@ pub enum ValidationError {
         err: SliceError,
     },
     FieldsTooMany {
-        length: usize,
-        max: usize,
+        length: u32,
+        max: u32,
     },
     FieldsTooLarge {
-        total_length: usize,
-        max: usize,
+        total_length: u32,
+        max: u32,
     },
     FieldsInvalid {
         key: String,

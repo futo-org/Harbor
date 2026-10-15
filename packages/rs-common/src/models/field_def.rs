@@ -70,6 +70,8 @@ impl Validate for FieldDef {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "FieldDefValidationError"))]
 pub enum ValidationError {
     Key(StringError),
     KindInvalid,

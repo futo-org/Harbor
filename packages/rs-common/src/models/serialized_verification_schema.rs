@@ -1,6 +1,6 @@
 use std::fmt;
 
-use prost::{DecodeError, Message};
+use prost::Message;
 
 use crate::models::content_digest::{self, DigestError};
 use crate::models::protos_v2::{SerializedVerificationSchema, VerificationSchema};
@@ -38,7 +38,10 @@ impl Validate for SerializedVerificationSchema {
                 return; // Don't both verifying the content as the digest is invalid.
             }
             if let Err(err) = digest.verify_against(schema_bytes) {
-                errors.push(map_err(ValidationError::DigestInvalid(err)));
+                // NOTE: we already checked if the digest type is valid, so only
+                // error left is mismatch
+                debug_assert!(matches!(err, DigestError::Mismatch));
+                errors.push(map_err(ValidationError::DigestMismatch));
                 return; // Don't decode the schema if it's not valid.
             }
         } else {
@@ -50,32 +53,38 @@ impl Validate for SerializedVerificationSchema {
             Ok(schema) => {
                 schema.validate_check(errors, |err| map_err(ValidationError::Schema(err)));
             }
-            Err(err) => {
-                errors.push(map_err(ValidationError::SchemaBytesInvalid(err)));
+            Err(_) => {
+                // NOTE: can't share the error as it doesn't work with uniffi.
+                errors.push(map_err(ValidationError::SchemaBytesInvalid));
             }
         }
     }
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(
+    feature = "uniffi",
+    uniffi(name = "SerializedVerificationSchemaValidationError")
+)]
 pub enum ValidationError {
     SchemaBytes(SliceError),
-    SchemaBytesInvalid(DecodeError),
+    SchemaBytesInvalid,
     Schema(verification_schema::ValidationError),
     Digest(content_digest::ValidationError),
     DigestMissing,
-    DigestInvalid(DigestError),
+    DigestMismatch,
 }
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ValidationError::SchemaBytes(err) => write!(f, "schema bytes {err}"),
-            ValidationError::SchemaBytesInvalid(err) => write!(f, "schema bytes invalid: {err}"),
+            ValidationError::SchemaBytesInvalid => write!(f, "schema bytes invalid"),
             ValidationError::Schema(err) => write!(f, "schema {err}"),
             ValidationError::Digest(err) => write!(f, "digest {err}"),
             ValidationError::DigestMissing => write!(f, "digest is missing"),
-            ValidationError::DigestInvalid(err) => write!(f, "digest invalid: {err}"),
+            ValidationError::DigestMismatch => write!(f, "digest does not match"),
         }
     }
 }

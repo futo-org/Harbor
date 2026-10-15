@@ -43,6 +43,8 @@ impl Validate for VerificationTarget {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "VerificationTargetValidationError"))]
 pub enum ValidationError {
     ClaimEventKey(event_key::ValidationError),
     ClaimEventKeyMissing,

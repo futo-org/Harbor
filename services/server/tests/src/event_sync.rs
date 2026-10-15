@@ -3231,7 +3231,7 @@ async fn validation_content_content_body_verification_claim_schema_invalid() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema schema bytes invalid: failed to decode Protobuf message: invalid varint",
+                "content content body verification claim schema schema bytes are invalid",
             ),
         }],
     );
@@ -3345,7 +3345,7 @@ async fn validation_content_content_body_verification_claim_digest_mismatch() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body verification claim schema digest invalid: content digest does not match",
+                "content content body verification claim schema digest does not match",
             ),
         }],
     );

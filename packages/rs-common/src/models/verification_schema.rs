@@ -53,6 +53,11 @@ impl VerificationSchema {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(
+    feature = "uniffi",
+    uniffi(name = "VerificationSchemaFieldValidationError")
+)]
 pub enum FieldValidationError {
     Unknown,
     StringInvalidUtf8,
@@ -140,6 +145,8 @@ impl Validate for VerificationSchema {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "VerificationSchemaValidationError"))]
 pub enum ValidationError {
     Name(StringError),
     Description(StringError),
