@@ -3092,7 +3092,51 @@ async fn validation_content_content_body_labels_labels_values_value_too_long() {
     );
 }
 
-// TODO: tests for the content body variants.
+// TODO: add tests for verification events.
+//
+// VerificationClaim:
+// schema encoded too large: 10MB
+// invalid schema (not correctly encoded)
+// invalid content digest
+// schema doesnt match digest
+// no digest
+// schema name too long 200
+// schema description too long 1000
+// schema too many fields 100
+// schema field key emoty
+// schema field key too long 200
+// schema field kind invalid
+// schema field kind unspecified (0)
+// schema field format too long 100
+// schema field description too long 1000
+// schema field regex too long 100
+// schema field key duplicate.
+// schema missing
+// fields key empty
+// fields key too long 200
+// fields value too long 10000
+// fields too many 1000
+// fields total size (key & value) 10 MB.
+// fields key not in schema
+// fields value not valid string
+// fields value string too long (max_len from schema)
+// fields value invalid integer
+// fields value invalid boolean
+// fields value bytes too long (max_len from schema)
+// fields key required in schema not present.
+//
+// VerificationVerify:
+// invalid claim event key
+// claim event key collection not verification
+// claim event key missing
+//
+// VerificationTarget:
+// invalid claim event key
+// claim event key collection not verification
+// claim event key missing
+// target identities empty
+// target identities too long (100)
+// target identities not a valid identity
 
 #[tokio::test]
 async fn validation_passed_event_proofs() {
