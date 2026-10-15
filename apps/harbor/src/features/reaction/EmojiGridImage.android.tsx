@@ -15,11 +15,11 @@ type Props = {
 /**
  * An emoji in the picker sheet's grid, drawn from a shared sprite page so
  * scrolling blits bitmaps instead of drawing font glyphs, which is much slower
- * on Android. Emoji missing from the pages (skin tones, newer additions) use
- * the font.
+ * on Android.
  */
 export function EmojiGridImage({ sequence, size }: Props) {
   const sheetIndex = SHEET_INDEX[twemojiCode(sequence)];
+  // Not expected: the pages hold every picker emoji.
   if (sheetIndex === undefined)
     return <EmojiImage sequence={sequence} size={size} />;
 
