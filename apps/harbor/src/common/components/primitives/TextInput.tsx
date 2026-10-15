@@ -15,6 +15,7 @@ import {
   type BorderRadiusToken,
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
+import { WEB_FONT_STACK } from './Text';
 
 export interface TextInputProps
   extends Omit<RNTextInputProps, 'placeholderTextColor'> {
@@ -58,6 +59,8 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       opacity: disabled ? 0.5 : 1,
       ...(Platform.OS === 'web'
         ? ({
+            // As in `Text`, so typed emoji are Twemoji too.
+            fontFamily: WEB_FONT_STACK,
             outlineStyle: 'none',
             outlineWidth: 0,
             resize: 'none',

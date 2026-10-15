@@ -15,6 +15,8 @@ pub struct Model {
     pub value: String,
     /// Time at which the decayed counts were last calculated.
     pub calculated_at: DateTimeWithTimeZone,
+    /// Time at which post expire (decayed count set to zero).
+    pub expires_at: DateTimeWithTimeZone,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
