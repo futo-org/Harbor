@@ -858,6 +858,9 @@ importers:
       ico-endec:
         specifier: 0.1.6
         version: 0.1.6
+      opentype.js:
+        specifier: 2.0.0
+        version: 2.0.0
       sharp:
         specifier: 0.35.3
         version: 0.35.3
@@ -10188,6 +10191,10 @@ packages:
 
   opener@1.5.2:
     resolution: {integrity: sha512-ur5UIdyw5Y7yEj9wLzhqXiy6GZ3Mwx0yGI+5sMn2r0N0v3cKJvUmFH5yPP+WXh9e0xfyzyJX95D8l088DNFj7A==}
+    hasBin: true
+
+  opentype.js@2.0.0:
+    resolution: {integrity: sha512-kCyjv6xdDY1W/jLWZ/L3QhhTlKUqDZMQ5+Jdlw12b3dXkKNpYBqqlMMj0YDQPShWFTMwgZI1hG14kN3XUDSg/A==}
     hasBin: true
 
   ora@3.4.0:
@@ -26080,6 +26087,8 @@ snapshots:
       is-wsl: 2.2.0
 
   opener@1.5.2: {}
+
+  opentype.js@2.0.0: {}
 
   ora@3.4.0:
     dependencies:
