@@ -452,6 +452,8 @@ fn validate_content(
         }
         ContentBody::Identity(_) => {
             check_collection(collection, collections::IDENTITY);
+
+            // TODO: add validation of signature etc. based on previous events.
         }
         ContentBody::Repost(_) => {
             check_collection(collection, collections::FEED);

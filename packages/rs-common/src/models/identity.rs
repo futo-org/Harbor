@@ -95,6 +95,7 @@ impl Validate for Identity {
             rotation_keys,
             errors,
             |err| map_err(ValidationError::RotationKeys(err)),
+            |index, error| map_err(ValidationError::RotationKeysItem { index, error }),
             SliceConfig {
                 max_len: Some(1000),
                 ..Default::default()
@@ -105,6 +106,7 @@ impl Validate for Identity {
             signing_keys,
             errors,
             |err| map_err(ValidationError::SigningKeys(err)),
+            |index, error| map_err(ValidationError::SigningKeysItem { index, error }),
             SliceConfig {
                 max_len: Some(1000),
                 ..Default::default()
@@ -115,6 +117,7 @@ impl Validate for Identity {
             revocation_bounds,
             errors,
             |err| map_err(ValidationError::RevocationBound(err)),
+            |index, error| map_err(ValidationError::RevocationBoundItem { index, error }),
             SliceConfig {
                 max_len: Some(1000),
                 ..Default::default()
@@ -128,31 +131,60 @@ impl Validate for Identity {
             recovery_key.validate_check(errors, |err| map_err(ValidationError::RecoveryKey(err)));
         }
         if let Some(recovery_signature) = recovery_signature {
-            // TODO: validation.
+            validate::slice(
+                recovery_signature,
+                errors,
+                |err| map_err(ValidationError::RecoverySignature(err)),
+                SliceConfig {
+                    min_len: Some(64),
+                    max_len: Some(64),
+                    ..Default::default()
+                },
+            );
         }
     }
 }
 
 #[derive(Debug)]
 pub enum ValidationError {
-    RotationKeys(SliceError<public_key::ValidationError>),
-    SigningKeys(SliceError<public_key::ValidationError>),
-    RevocationBound(SliceError<recovation_bound::ValidationError>),
+    RotationKeys(SliceError),
+    RotationKeysItem {
+        index: u32,
+        error: public_key::ValidationError,
+    },
+    SigningKeys(SliceError),
+    SigningKeysItem {
+        index: u32,
+        error: public_key::ValidationError,
+    },
+    RevocationBound(SliceError),
+    RevocationBoundItem {
+        index: u32,
+        error: recovation_bound::ValidationError,
+    },
     Servers(server_list::ValidationError),
     RecoveryKey(public_key::ValidationError),
-    //RecoverySignature,
+    RecoverySignature(SliceError),
 }
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            /*
-            ValidationError::Root(err) => write!(f, "root {err}"),
-            ValidationError::RootMissing => write!(f, "root is missing"),
-            ValidationError::Parent(err) => write!(f, "parent {err}"),
-            ValidationError::ParentMissing => write!(f, "parent is missing"),
-            */
-            _ => todo!(),
+            ValidationError::RotationKeys(err) => write!(f, "rotation keys {err}"),
+            ValidationError::RotationKeysItem { index, error } => {
+                write!(f, "rotation keys {index}-th {error}")
+            }
+            ValidationError::SigningKeys(err) => write!(f, "signing keys {err}"),
+            ValidationError::SigningKeysItem { index, error } => {
+                write!(f, "signing keys {index}-th {error}")
+            }
+            ValidationError::RevocationBound(err) => write!(f, "revocation bound {err}"),
+            ValidationError::RevocationBoundItem { index, error } => {
+                write!(f, "revocation bound {index}-th {error}")
+            }
+            ValidationError::Servers(err) => write!(f, "servers {err}"),
+            ValidationError::RecoveryKey(err) => write!(f, "recovery key {err}"),
+            ValidationError::RecoverySignature(err) => write!(f, "recovery signature {err}"),
         }
     }
 }

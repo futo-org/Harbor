@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::models::protos_v2::EventProofTarget;
-use crate::models::validate::{self, Validate};
+use crate::models::validate::{self, SliceConfig, SliceError, Validate};
 
 impl Validate for EventProofTarget {
     type Error = ValidationError;
@@ -11,23 +11,45 @@ impl Validate for EventProofTarget {
         F: Fn(Self::Error) -> E,
     {
         let EventProofTarget {
-            collection,
+            collection: _,
             signature,
             root,
-            leaf_count,
+            leaf_count: _,
         } = self;
+        validate::slice(
+            signature,
+            errors,
+            |err| map_err(ValidationError::Signature(err)),
+            SliceConfig {
+                min_len: Some(64),
+                max_len: Some(64),
+                ..Default::default()
+            },
+        );
+        validate::slice(
+            root,
+            errors,
+            |err| map_err(ValidationError::Signature(err)),
+            SliceConfig {
+                min_len: Some(32),
+                max_len: Some(32),
+                ..Default::default()
+            },
+        );
     }
 }
 
 #[derive(Debug)]
 pub enum ValidationError {
-    // TODO.
+    Signature(SliceError),
+    Root(SliceError),
 }
 
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            _ => Ok(()), // TODO.
+            ValidationError::Signature(err) => write!(f, "signature {err}"),
+            ValidationError::Root(err) => write!(f, "root {err}"),
         }
     }
 }

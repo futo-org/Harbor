@@ -24,9 +24,9 @@ impl Validate for RevocationBound {
             targets,
             errors,
             |err| map_err(ValidationError::Targets(err)),
+            |index, error| map_err(ValidationError::TargetsItem { index, error }),
             SliceConfig {
-                // Currently we have 7 collections, so this limit should be fine.
-                max_len: Some(50),
+                max_len: Some(200),
                 ..Default::default()
             },
             |target, errors, map_err| target.validate_check(errors, map_err),
@@ -38,7 +38,11 @@ impl Validate for RevocationBound {
 pub enum ValidationError {
     RevokedKey(public_key::ValidationError),
     RevokedKeyMissing,
-    Targets(SliceError<event_proof_target::ValidationError>),
+    Targets(SliceError),
+    TargetsItem {
+        index: u32,
+        error: event_proof_target::ValidationError,
+    },
 }
 
 impl fmt::Display for ValidationError {
@@ -47,6 +51,9 @@ impl fmt::Display for ValidationError {
             ValidationError::RevokedKey(err) => write!(f, "revoked key {err}"),
             ValidationError::RevokedKeyMissing => write!(f, "revoked key is missing"),
             ValidationError::Targets(err) => write!(f, "targets {err}"),
+            ValidationError::TargetsItem { index, error } => {
+                write!(f, "targets {index}-th {error}")
+            }
         }
     }
 }
