@@ -103,7 +103,7 @@ async fn banning_removes_follows() {
 #[tokio::test]
 async fn banning_removes_posts() {
     let mut banned_client = TestClient::new().await;
-    banned_client.post_text("Hello", 0);
+    banned_client.post_text("Hello", current_timestamp());
     banned_client.submit_events().await;
     let banned_identity = banned_client.identity();
 
