@@ -33,9 +33,10 @@ impl Validate for VerificationClaim {
                         err,
                     })
                 },
+                // Matches `FieldDef::key` validation.
                 StringConfig {
                     min_len: Some(1),
-                    max_len: Some(1000),
+                    max_len: Some(200),
                     ..Default::default()
                 },
             );

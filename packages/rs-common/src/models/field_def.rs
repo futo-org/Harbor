@@ -23,7 +23,9 @@ impl Validate for FieldDef {
             key,
             errors,
             |err| map_err(ValidationError::Key(err)),
+            // Matches `VerificationClaim::fields`'s key validation.
             StringConfig {
+                min_len: Some(1),
                 max_len: Some(200),
                 ..Default::default()
             },
@@ -60,7 +62,8 @@ impl Validate for FieldDef {
                 },
             );
         }
-        // TODO: validate that the regex is valid?
+        // TODO: validate that the regex is valid? Note sure if we have a safe
+        // way to check this using the regex crate.
     }
 }
 
