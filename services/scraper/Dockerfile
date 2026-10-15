@@ -11,7 +11,7 @@ RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 # the feed is unreachable or returns garbage, so the egress set can't silently
 # ship empty/weak. The reserved-IP list is RFC-stable, so refreshes are rare:
 # bump BOGONS_REV (or build with --no-cache) to bust the layer cache and re-pull.
-FROM debian:bookworm-slim AS bogons
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS bogons
 ARG BOGONS_REV=2026-06-22
 RUN echo "bogon snapshot rev: ${BOGONS_REV}" \
   && apt-get update \
