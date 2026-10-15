@@ -24,10 +24,10 @@ impl VerificationSchema {
             FieldKind::String => {
                 let value =
                     str::from_utf8(value).map_err(|_| FieldValidationError::StringInvalidUtf8)?;
-                if let Some(max_len) = field_def.max_len
-                    && value.len() > max_len.try_into().unwrap_or(usize::MAX)
+                if let Some(max) = field_def.max_len
+                    && value.len() > max.try_into().unwrap_or(usize::MAX)
                 {
-                    return Err(FieldValidationError::StringTooLong);
+                    return Err(FieldValidationError::StringTooLong { max });
                 }
             }
             FieldKind::Int => {
@@ -41,10 +41,10 @@ impl VerificationSchema {
                 }
             }
             FieldKind::Bytes => {
-                if let Some(max_len) = field_def.max_len
-                    && value.len() > max_len.try_into().unwrap_or(usize::MAX)
+                if let Some(max) = field_def.max_len
+                    && value.len() > max.try_into().unwrap_or(usize::MAX)
                 {
-                    return Err(FieldValidationError::StringTooLong);
+                    return Err(FieldValidationError::BytesTooLong { max });
                 }
             }
         }
@@ -56,10 +56,10 @@ impl VerificationSchema {
 pub enum FieldValidationError {
     Unknown,
     StringInvalidUtf8,
-    StringTooLong,
+    StringTooLong { max: u32 },
     IntegerInvalid,
     BooleanInvalid,
-    BytesTooLong,
+    BytesTooLong { max: u32 },
 }
 
 impl fmt::Display for FieldValidationError {
@@ -67,12 +67,16 @@ impl fmt::Display for FieldValidationError {
         match self {
             FieldValidationError::Unknown => write!(f, "is not part of the schema"),
             FieldValidationError::StringInvalidUtf8 => write!(f, "is not a valid UTF-8 string"),
-            FieldValidationError::StringTooLong => write!(f, "is too long"),
+            FieldValidationError::StringTooLong { max } => {
+                write!(f, "is too long according the schema, maximum is {max}")
+            }
             FieldValidationError::IntegerInvalid => {
                 write!(f, "is incorrectly sized (expected 8 bytes)")
             }
             FieldValidationError::BooleanInvalid => write!(f, "is invalid, expected 0x0 or 0x1"),
-            FieldValidationError::BytesTooLong => write!(f, "is too long"),
+            FieldValidationError::BytesTooLong { max } => {
+                write!(f, "is too long according the schema, maximum is {max}")
+            }
         }
     }
 }
