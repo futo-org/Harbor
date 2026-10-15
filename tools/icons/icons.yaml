@@ -5,7 +5,8 @@
 # from the canvas top.
 
 dirs:
-  APP: apps/harbor/src/common/assets/images
+  APP_IMG: apps/harbor/src/common/assets/images
+  APP_PUBLIC: apps/harbor/public
   DOCS: docs/static/img
 
 # Shared values, referenced below as *name; `<<:` copies a mapping in
@@ -20,34 +21,34 @@ shared:
 
 icons:
   - files:
-      - $APP/app-icons/ios-icon-default.png
-      - $APP/app-icons/ios-icon-dark.png
+      - $APP_IMG/app-icons/ios-icon-default.png
+      - $APP_IMG/app-icons/ios-icon-dark.png
     <<: *ios-icon
     size: 1024
 
   - files:
-      - $APP/app-icons/ios-icon-monochrome.png
+      - $APP_IMG/app-icons/ios-icon-monochrome.png
     size: 1024
     tower: { <<: *ios-tower, fill: *orange }
 
   - files:
-      - $APP/app-icons/android-icon-background.png
+      - $APP_IMG/app-icons/android-icon-background.png
     size: 512
     background: *orange
 
   - files:
-      - $APP/app-icons/android-icon-foreground.png
+      - $APP_IMG/app-icons/android-icon-foreground.png
     size: 512
     tower: { <<: *android-tower, fill: '#FFFFFF', opacity: 0.9 }
 
   # The launcher only uses this layer's shape, so the colour is arbitrary
   - files:
-      - $APP/app-icons/android-icon-monochrome.png
+      - $APP_IMG/app-icons/android-icon-monochrome.png
     size: 512
     tower: { <<: *android-tower, fill: '#354479' }
 
   - files:
-      - $APP/harbor-logo-256.png
+      - $APP_IMG/harbor-logo-256.png
       - $DOCS/logo.png
       - $DOCS/logo-dark.png
     <<: *ios-icon
@@ -56,7 +57,7 @@ icons:
 
   # Each size is rendered separately and packed into one .ico
   - files:
-      - apps/harbor/public/favicon.ico
+      - $APP_PUBLIC/favicon.ico
       - $DOCS/favicon.ico
     <<: *ios-icon
     clip: circle
@@ -64,7 +65,7 @@ icons:
 
   # From the Figma design: the tower is top-aligned and centred, the text is centred
   - files:
-      - $APP/harbor-logo-with-text.png
+      - $APP_IMG/harbor-logo-with-text.png
       - $DOCS/harbor-logo-with-text.png
     size: 857
     tower: { height: 608, top: 0, fill: '#FFFFFF', opacity: 0.9 }
