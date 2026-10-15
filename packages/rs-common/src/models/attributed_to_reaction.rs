@@ -30,6 +30,11 @@ impl Validate for AttributedToReaction {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(
+    feature = "uniffi",
+    uniffi(name = "AttributedToReactionValidationError")
+)]
 pub enum ValidationError {
     AttributedTo(attributed_to::ValidationError),
     AttributedToMissing,

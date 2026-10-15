@@ -21,7 +21,6 @@ impl Validate for Link {
             errors,
             |err| map_err(ValidationError::Title(err)),
             StringConfig {
-                min_len: Some(1),
                 max_len: Some(100),
                 ..Default::default()
             },
@@ -32,7 +31,6 @@ impl Validate for Link {
                 errors,
                 |err| map_err(ValidationError::Description(err)),
                 StringConfig {
-                    min_len: Some(1),
                     max_len: Some(200),
                     ..Default::default()
                 },
@@ -44,7 +42,6 @@ impl Validate for Link {
                 errors,
                 |err| map_err(ValidationError::Image(err)),
                 StringConfig {
-                    min_len: Some(1),
                     max_len: Some(200),
                     ..Default::default()
                 },
@@ -64,6 +61,8 @@ impl Validate for Link {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "LinkValidationError"))]
 pub enum ValidationError {
     Title(StringError),
     Description(StringError),

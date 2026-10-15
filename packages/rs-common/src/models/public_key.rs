@@ -130,6 +130,8 @@ impl Validate for PublicKey {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "PublicKeyValidationError"))]
 pub enum ValidationError {
     KeyTypeInvalid,
     Key(validate::SliceError),

@@ -39,6 +39,8 @@ impl Validate for Report {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "ReportValidationError"))]
 pub enum ValidationError {
     EventKey(event_key::ValidationError),
     EventKeyMissing,

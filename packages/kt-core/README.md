@@ -156,8 +156,9 @@ which runs, in order:
    four Android ABIs into `core/src/main/jniLibs/` via cargo-ndk.
 2. `cargoHostBuild` + `uniffiGenerate` builds a host cdylib and runs
    `tools/uniffi-bindgen` (`uniffi-bindgen generate --library ... --language
-   kotlin --config core/uniffi.toml`) into `core/build/generated/uniffi/`.
-   The generated package is `org.futo.polycentric.ffi`.
+   kotlin`) into `core/build/generated/uniffi/`. Packages come from each
+   crate's `uniffi.toml`: `org.futo.polycentric.ffi` (rs-core) and
+   `org.futo.polycentric.ffi.common` (rs-common, e.g. validation errors).
 3. Wire proto generation + normal Kotlin/AAR build.
 
 To rebuild Kotlin components without rebuilding Rust: `./gradlew build -PskipRust=true`.

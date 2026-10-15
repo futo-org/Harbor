@@ -21,6 +21,8 @@ impl Validate for Delete {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "DeleteValidationError"))]
 pub enum ValidationError {
     EventKey(event_key::ValidationError),
     EventKeyMissing,
