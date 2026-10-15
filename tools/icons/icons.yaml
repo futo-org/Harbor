@@ -1,8 +1,8 @@
 # Every icon generate-icons.ts writes, drawn from src/harbor-lighthouse.svg.
 # Paths are relative to the repo root; a leading $NAME is a directory from `dirs`.
 # `canvas` is the drawing's size in units (defaults to `size`), scaled to
-# `size` px. The tower is centred horizontally, then moved right by `offsetX`;
-# `top` is its distance from the canvas top.
+# `size` px. The tower is centred horizontally; `top` is its distance from the
+# canvas top.
 
 dirs:
   APP_IMG: apps/harbor/src/common/assets/images
@@ -13,9 +13,6 @@ dirs:
 shared:
   orange: &orange '#FF6A00'
   ios-tower: &ios-tower { height: 929, top: 143 }
-  # iOS 26 only gives a flat PNG icon its Liquid Glass layers for some exact
-  # images; the centred tower doesn't get them, 1 px to the right does
-  ios-tower-shifted: &ios-tower-shifted { <<: *ios-tower, offsetX: 1 }
   android-tower: &android-tower { height: 187, top: 162 }
   ios-icon: &ios-icon
     canvas: 1024
@@ -23,17 +20,18 @@ shared:
     tower: { <<: *ios-tower, fill: '#FFFFFF', opacity: 0.9 }
 
 icons:
+  # An Icon Composer bundle (a folder): the background is its fill, the tower
+  # a layer moved into place on the 1024 pt canvas
   - files:
-      - $APP_IMG/app-icons/ios-icon-default.png
-      - $APP_IMG/app-icons/ios-icon-dark.png
+      - $APP_IMG/app-icons/ios-icon.icon
     <<: *ios-icon
     size: 1024
-    tower: { <<: *ios-tower-shifted, fill: '#FFFFFF', opacity: 0.9 }
 
+  # The splash screen image
   - files:
-      - $APP_IMG/app-icons/ios-icon-monochrome.png
+      - $APP_IMG/app-icons/ios-icon-default.png
+    <<: *ios-icon
     size: 1024
-    tower: { <<: *ios-tower-shifted, fill: *orange }
 
   - files:
       - $APP_IMG/app-icons/android-icon-background.png

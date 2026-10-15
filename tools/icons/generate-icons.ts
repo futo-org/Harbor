@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 // @ts-expect-error ico-endec ships no type declarations
 import icoEndec from 'ico-endec';
@@ -12,7 +12,6 @@ type Tower = {
   top: number;
   fill: string;
   opacity?: number;
-  offsetX?: number;
 };
 type Text = {
   content: string;
@@ -44,16 +43,87 @@ const lighthouseViewBox = readSvgAttribute(lighthouseSvg, 'viewBox');
 const lighthousePathData = readSvgAttribute(lighthouseSvg, 'd');
 
 for (const icon of icons) {
+  const paths = icon.files.map((file) =>
+    join(
+      repoRoot,
+      file.replace(/^\$(\w+)/, (_, name) => dirs[name]),
+    ),
+  );
+  if ('size' in icon && paths.every((path) => path.endsWith('.icon'))) {
+    for (const path of paths)
+      await writeIconComposerBundle(icon, icon.size, path);
+    continue;
+  }
   const image =
     'sizes' in icon
       ? icoEndec.encode(
           await Promise.all(icon.sizes.map((size) => renderPng(icon, size))),
         )
       : await renderPng(icon, icon.size);
-  for (const file of icon.files) {
-    const path = file.replace(/^\$(\w+)/, (_, name) => dirs[name]);
-    writeFileSync(join(repoRoot, path), image);
+  for (const path of paths) writeFileSync(path, image);
+}
+
+// An Icon Composer bundle: the background becomes its fill and the whole tower
+// a layer moved into place, from which Xcode renders the Liquid Glass. Canvas
+// units are points, and the layer is rendered at 1 px per point.
+async function writeIconComposerBundle(icon: Icon, size: number, path: string) {
+  const { background, tower } = icon;
+  if (!background || !tower) {
+    throw new Error(`${path} needs a background and a tower`);
   }
+  const canvas = icon.canvas ?? size;
+  const [, , viewBoxWidth, viewBoxHeight] = lighthouseViewBox
+    .split(' ')
+    .map(Number);
+  const towerWidth = Math.ceil((tower.height * viewBoxWidth) / viewBoxHeight);
+  rmSync(path, { recursive: true, force: true });
+  mkdirSync(join(path, 'Assets'), { recursive: true });
+  writeFileSync(
+    join(path, 'Assets/tower.png'),
+    await sharp(
+      Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${towerWidth}" height="${tower.height}">${buildTower(towerWidth, { ...tower, top: 0 })}</svg>`,
+      ),
+    )
+      .png()
+      .toBuffer(),
+  );
+  const iconJson = {
+    fill: { 'automatic-gradient': buildIconComposerColor(background) },
+    groups: [
+      {
+        layers: [
+          {
+            'image-name': 'tower.png',
+            name: 'tower',
+            // Layers start centred on the canvas
+            position: {
+              scale: 1,
+              'translation-in-points': [
+                0,
+                tower.top + tower.height / 2 - canvas / 2,
+              ],
+            },
+          },
+        ],
+        shadow: { kind: 'neutral', opacity: 0.5 },
+        translucency: { enabled: true, value: 0.3 },
+      },
+    ],
+    'supported-platforms': { circles: ['watchOS'], squares: 'shared' },
+  };
+  writeFileSync(
+    join(path, 'icon.json'),
+    `${JSON.stringify(iconJson, null, 2)}\n`,
+  );
+}
+
+// '#FF6A00' -> 'srgb:1.00000,0.41569,0.00000,1.00000'
+function buildIconComposerColor(hex: string): string {
+  const channels = [1, 3, 5].map((start) =>
+    (Number.parseInt(hex.slice(start, start + 2), 16) / 255).toFixed(5),
+  );
+  return `srgb:${channels.join(',')},1.00000`;
 }
 
 function renderPng(icon: Icon, size: number): Promise<Buffer> {
@@ -81,10 +151,10 @@ function buildIconSvg(icon: Icon, size: number): string {
 
 function buildTower(
   canvas: number,
-  { height, top, fill, opacity = 1, offsetX = 0 }: Tower,
+  { height, top, fill, opacity = 1 }: Tower,
 ): string {
   // The viewBox fits the tower exactly, so the default preserveAspectRatio centres it
-  return `<svg x="${offsetX}" y="${top}" width="${canvas}" height="${height}" viewBox="${lighthouseViewBox}"><path fill="${fill}" fill-opacity="${opacity}" d="${lighthousePathData}"/></svg>`;
+  return `<svg y="${top}" width="${canvas}" height="${height}" viewBox="${lighthouseViewBox}"><path fill="${fill}" fill-opacity="${opacity}" d="${lighthousePathData}"/></svg>`;
 }
 
 function buildText(

@@ -64,11 +64,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   userInterfaceStyle: 'automatic',
   ios: {
-    icon: {
-      dark: './src/common/assets/images/app-icons/ios-icon-dark.png',
-      light: './src/common/assets/images/app-icons/ios-icon-default.png',
-      tinted: './src/common/assets/images/app-icons/ios-icon-monochrome.png',
-    },
+    // An Icon Composer bundle: Xcode renders the Liquid Glass icon and the flat
+    // ones for older iOS from it
+    icon: './src/common/assets/images/app-icons/ios-icon.icon',
     requireFullScreen: true,
     supportsTablet: true,
     bundleIdentifier: ID,
