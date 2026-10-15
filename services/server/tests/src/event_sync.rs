@@ -3095,6 +3095,7 @@ async fn validation_content_content_body_labels_labels_values_value_too_long() {
 // TODO: add tests for verification events.
 //
 // VerificationClaim:
+// wrong collection
 // schema encoded too large: 10MB
 // invalid schema (not correctly encoded)
 // invalid content digest
@@ -3126,17 +3127,271 @@ async fn validation_content_content_body_labels_labels_values_value_too_long() {
 // fields key required in schema not present.
 //
 // VerificationVerify:
+// wrong collection
 // invalid claim event key
 // claim event key collection not verification
 // claim event key missing
-//
-// VerificationTarget:
-// invalid claim event key
-// claim event key collection not verification
-// claim event key missing
-// target identities empty
-// target identities too long (100)
-// target identities not a valid identity
+
+#[tokio::test]
+async fn validation_content_content_body_verification_target_collection() {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+    let content = Content {
+        content_body: Some(ContentBody::VerificationTarget(
+            VerificationTarget {
+                claim_event_key: Some(event_key),
+                target_identities: vec![client.identity().to_owned()],
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_INTERACTIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '8'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_target_claim_event_key_invalid()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+    event_key.signed_by = None;
+    let content = Content {
+        content_body: Some(ContentBody::VerificationTarget(
+            VerificationTarget {
+                claim_event_key: Some(event_key),
+                target_identities: vec![client.identity().to_owned()],
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification target claim event key signed by is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_target_claim_event_key_wrong()
+ {
+    let mut client = TestClient::new().await;
+    let event_key = client.get_last_event_key();
+    let content = Content {
+        content_body: Some(ContentBody::VerificationTarget(
+            VerificationTarget {
+                claim_event_key: Some(event_key),
+                target_identities: vec![client.identity().to_owned()],
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification target claim event key collection invalid, expected '8'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_target_claim_event_key_missing()
+ {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::VerificationTarget(
+            VerificationTarget {
+                claim_event_key: None,
+                target_identities: vec![client.identity().to_owned()],
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification target claim event key is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_target_identities_empty()
+{
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+    let content = Content {
+        content_body: Some(ContentBody::VerificationTarget(
+            VerificationTarget {
+                claim_event_key: Some(event_key),
+                target_identities: Vec::new(),
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification target target identities can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_target_identities_too_long()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+    let identity = client.identity().to_owned();
+    let content = Content {
+        content_body: Some(ContentBody::VerificationTarget(
+            VerificationTarget {
+                claim_event_key: Some(event_key),
+                target_identities: {
+                    let mut i = Vec::new();
+                    i.resize(101, identity);
+                    i
+                },
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification target target identities is too long (101), maximum is 100",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_target_identities_invalid()
+ {
+    let mut client = TestClient::new().await;
+    let mut event_key = client.get_last_event_key();
+    event_key.collection = COLLECTION_VERIFICATIONS;
+    let content = Content {
+        content_body: Some(ContentBody::VerificationTarget(
+            VerificationTarget {
+                claim_event_key: Some(event_key),
+                target_identities: vec!["invalid000000000000000000000000000000000000000000000000000000000".to_owned()],
+            },
+        )),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification target target identities 0-th is not a valid identity",
+            ),
+        }],
+    );
+}
 
 #[tokio::test]
 async fn validation_passed_event_proofs() {

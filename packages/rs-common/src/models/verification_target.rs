@@ -56,6 +56,12 @@ impl fmt::Display for ValidationError {
             ValidationError::ClaimEventKey(err) => write!(f, "claim event key {err}"),
             ValidationError::ClaimEventKeyMissing => write!(f, "claim event key is missing"),
             ValidationError::TargetIdentities(err) => write!(f, "target identities {err}"),
+            ValidationError::TargetIdentitiesItem {
+                index,
+                error: StringError::FailsRegex { .. },
+            } => {
+                write!(f, "target identities {index}-th is not a valid identity")
+            }
             ValidationError::TargetIdentitiesItem { index, error } => {
                 write!(f, "target identities {index}-th {error}")
             }
