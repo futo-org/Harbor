@@ -53,7 +53,7 @@ impl Validate for VerificationClaim {
         }
         let total_fields_max = 1000;
         let total_fields = fields.len();
-        if total_fields >= total_fields_max {
+        if total_fields > total_fields_max {
             errors.push(map_err(ValidationError::FieldsTooMany {
                 length: total_fields,
                 max: total_fields_max,
