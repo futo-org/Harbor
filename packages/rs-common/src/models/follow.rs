@@ -18,6 +18,8 @@ impl Validate for Follow {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "FollowValidationError"))]
 pub enum ValidationError {
     Identity(validate::StringError),
     IdentitySelf,

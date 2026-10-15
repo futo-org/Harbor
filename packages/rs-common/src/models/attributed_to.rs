@@ -21,6 +21,8 @@ impl Validate for AttributedTo {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "AttributedToValidationError"))]
 pub enum ValidationError {
     To(to::ValidationError),
     ToMissing,

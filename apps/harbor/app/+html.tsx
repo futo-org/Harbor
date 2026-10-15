@@ -3,25 +3,25 @@ import {
   BOOT_SKELETON_SCRIPT,
   BootSkeleton,
 } from '@/src/common/components/layout/BootSkeleton';
+import { TWEMOJI_WEB_FONT_FILE } from '@/src/common/assets/twemojiFont';
 import { APP_NAME } from '@/src/common/constants';
 import type { PropsWithChildren } from 'react';
 
 const ROOT_STYLE =
   'html{overflow-y:scroll}#root{display:flex;flex-direction:column;min-height:100dvh}' +
   'html>body[data-scroll-locked]{overflow:visible!important;margin-right:0!important}' +
-  '@media(hover:hover){.underlineOnHover:hover{text-decoration:underline}}' +
-  '.twemojiSpriteText{color:transparent}' +
-  // Firefox on Linux recolors selected text, revealing the glyph over the sprite.
-  // round(down, alpha) is 1 only for an opaque highlight, which then gets 50%
-  // alpha; macOS's is already translucent and halving it would leave ~25%.
-  '.twemojiSpriteText::selection{color:transparent;background-color:rgb(from Highlight r g b/calc(alpha - 0.5*round(down,alpha)))}';
+  '@media(hover:hover){.underlineOnHover:hover{text-decoration:underline}}';
 
 // Declared here rather than through expo-font, whose injected @font-face has
 // no font-weight range: browsers then clamp the variable font to 400 and
-// synthesise bold, which Safari renders badly.
+// synthesise bold, which Safari renders badly. Twemoji's faces cover every
+// weight and italic too, so emoji are never synthesised bold or slanted; it
+// blocks rather than swaps, so the platform's emoji never show first.
 const FONT_STYLE = `
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans.ttf);font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans-Italic.ttf);font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:normal;font-display:block}
+@font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:italic;font-display:block}
 `;
 
 export default function Root({ children }: PropsWithChildren) {
@@ -52,6 +52,13 @@ export default function Root({ children }: PropsWithChildren) {
           href="/fonts/NotoSans.ttf"
           as="font"
           type="font/ttf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href={`/fonts/${TWEMOJI_WEB_FONT_FILE}`}
+          as="font"
+          type="font/woff2"
           crossOrigin="anonymous"
         />
         <style

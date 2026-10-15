@@ -26,6 +26,8 @@ impl Validate for PostReply {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "PostReplyValidationError"))]
 pub enum ValidationError {
     Root(event_key::ValidationError),
     RootMissing,

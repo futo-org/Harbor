@@ -24,6 +24,7 @@ impl Validate for Labels {
             label_values,
             errors,
             |err| map_err(ValidationError::LabelValues(err)),
+            |index, error| map_err(ValidationError::LabelValuesItem { index, error }),
             SliceConfig {
                 min_len: Some(1),
                 max_len: Some(10),
@@ -35,7 +36,6 @@ impl Validate for Labels {
                     errors,
                     map_err,
                     StringConfig {
-                        min_len: Some(1),
                         max_len: Some(200),
                         ..Default::default()
                     },
@@ -46,10 +46,13 @@ impl Validate for Labels {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "LabelsValidationError"))]
 pub enum ValidationError {
     EventKey(event_key::ValidationError),
     EventKeyMissing,
-    LabelValues(SliceError<StringError>),
+    LabelValues(SliceError),
+    LabelValuesItem { index: u32, error: StringError },
 }
 
 impl fmt::Display for ValidationError {
@@ -58,6 +61,9 @@ impl fmt::Display for ValidationError {
             ValidationError::EventKey(err) => write!(f, "event key {err}"),
             ValidationError::EventKeyMissing => write!(f, "event key is missing"),
             ValidationError::LabelValues(err) => write!(f, "label values {err}"),
+            ValidationError::LabelValuesItem { index, error } => {
+                write!(f, "label values {index}-th {error}")
+            }
         }
     }
 }

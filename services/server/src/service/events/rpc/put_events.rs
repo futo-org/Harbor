@@ -42,6 +42,7 @@ pub async fn handle(
     let mut banned_cache = HashMap::new();
     let mut app_cache = HashMap::new();
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
+        let start_warnings = warnings.len();
         match process_event(
             ctx,
             event_bundle,
@@ -56,7 +57,17 @@ pub async fn handle(
         )
         .await
         {
-            Ok(()) => {}
+            Ok(key) => {
+                if warnings.len() != start_warnings {
+                    tracing::debug!(
+                        key = ?key,
+                        warnings = ?&warnings[start_warnings..],
+                        "processed event with warning(s)",
+                    );
+                } else {
+                    tracing::debug!(key = ?key, "processed event");
+                }
+            }
             // We should see internal errors if something is wrong on our end,
             // e.g. when the database is down. In that case in stead of trying
             // to store the remaining events return the error immediately and
@@ -106,7 +117,7 @@ async fn process_event(
     all_blobs: &mut HashSet<Blob>,
     warnings: &mut Vec<PutEventError>,
     map_warning: impl Fn(ValidationError) -> PutEventError,
-) -> Result<(), Status> {
+) -> Result<EventKey, Status> {
     let start_warning_len = warnings.len();
     if !event_bundle.event_proofs.is_empty() {
         return Err(Status::invalid_argument(
@@ -229,7 +240,7 @@ async fn process_event(
         None
     };
 
-    let signed_by = key.signed_by.ok_or_else(|| {
+    let signed_by = key.signed_by.as_ref().ok_or_else(|| {
         // Event validation also checks this, don't return an error and warning
         // about the same thing.
         warnings.truncate(start_warning_len);
@@ -270,15 +281,12 @@ async fn process_event(
         .await?;
     }
 
-    let event_identity = key.identity.clone();
-    let event_collection = key.collection;
-
     let active_model = event::ActiveModel {
         id: NotSet,
         collection: Set(key.collection as i16),
-        identity: Set(key.identity),
+        identity: Set(key.identity.clone()),
         public_key_type: Set(signed_by.key_type as i16),
-        public_key: Set(signed_by.key),
+        public_key: Set(signed_by.key.clone()),
         sequence: Set(key.sequence as i64),
         content_digest_type: Set(event
             .content_digest
@@ -315,10 +323,10 @@ async fn process_event(
             })?;
 
             ctx.proof_cache
-                .invalidate_canonical(&event_identity, event_collection)
+                .invalidate_canonical(&key.identity, key.collection)
                 .await;
-            if event_collection == collections::IDENTITY {
-                ctx.proof_cache.invalidate_identity(&event_identity).await;
+            if key.collection == collections::IDENTITY {
+                ctx.proof_cache.invalidate_identity(&key.identity).await;
             }
 
             let producer = ctx.kafka_producer.clone();
@@ -357,7 +365,7 @@ async fn process_event(
         }
     }
 
-    Ok(())
+    Ok(key)
 }
 
 fn banned_error() -> Status {
