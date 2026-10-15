@@ -34,7 +34,7 @@ impl Validate for VerificationTarget {
             |index, error| map_err(ValidationError::TargetIdentitiesItem { index, error }),
             SliceConfig {
                 min_len: Some(1),
-                max_len: Some(10),
+                max_len: Some(100),
                 ..Default::default()
             },
             |target_identity, errors, map_err| validate::identity(target_identity, errors, map_err),
