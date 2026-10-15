@@ -1,4 +1,3 @@
-use crate::config;
 use crate::service::content::content_repository::Mutation as ContentRepository;
 use crate::service::content::repository::Mutation as ContentChildRepository;
 use crate::service::content::repository::{EventKeyParts, split_event_key};
@@ -1077,13 +1076,9 @@ fn select_not_deleted_event_id(key: EventKeyParts) -> SelectStatement {
 }
 
 fn reaction_count_decay(positive_count: Expr, created_at: Expr) -> Expr {
-    let mut func = Func::cust("reaction_count_decay");
-    func = if let Some(gravity) = config::get().feeds_gravity {
-        func.args([positive_count, created_at, Expr::Constant(gravity.into())])
-    } else {
-        func.args([positive_count, created_at])
-    };
-    func.into()
+    Func::cust("reaction_count_decay")
+        .args([positive_count, created_at])
+        .into()
 }
 
 /* TODO: move to integration tests.

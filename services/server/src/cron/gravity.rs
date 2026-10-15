@@ -183,21 +183,11 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     .table(reaction_tally::Entity)
                     .value(
                         reaction_tally::Column::DecayedCount,
-                        {
-                            let func = Func::cust("reaction_count_decay");
-                            if let Some(gravity) = gravity {
-                                func.args([
-                                    Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
-                                    Expr::col(event::Column::CreatedAt.as_column_ref()),
-                                    Expr::Constant(gravity.into()),
-                                ])
-                            } else {
-                                func.args([
-                                    Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
-                                    Expr::col(event::Column::CreatedAt.as_column_ref()),
-                                ])
-                            }
-                        },
+                        Func::cust("reaction_count_decay")
+                        .args([
+                            Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
+                            Expr::col(event::Column::CreatedAt.as_column_ref()),
+                        ]),
                     )
                     .from(event::Entity)
                     .and_where(
