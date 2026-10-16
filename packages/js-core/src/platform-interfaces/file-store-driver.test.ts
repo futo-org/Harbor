@@ -4,6 +4,7 @@ import {
   type FileStoreErrorCode,
   MAX_PATH_BYTES,
   MAX_SEGMENT_BYTES,
+  isValidPathSegment,
   segmentsFromPath,
 } from './file-store-driver';
 
@@ -16,6 +17,32 @@ const codeOf = (fn: () => unknown): FileStoreErrorCode | undefined => {
   }
   return undefined;
 };
+
+const DIGEST_KEY =
+  '1_e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+
+const VALID_SEGMENTS = [
+  'a',
+  'b-c',
+  'd_e.f',
+  '.hidden',
+  '0123',
+  'trailing.',
+  DIGEST_KEY,
+  'a'.repeat(MAX_SEGMENT_BYTES),
+];
+
+const INVALID_SEGMENTS: [string, string][] = [
+  ['uppercase', 'A'],
+  ['space', 'a b'],
+  ['backslash', 'a\\b'],
+  ['null byte', 'a\0b'],
+  ['colon', 'a:b'],
+  ['non-ascii', 'é'],
+  ['dot', '.'],
+  ['dot-dot', '..'],
+  ['long', 'a'.repeat(MAX_SEGMENT_BYTES + 1)],
+];
 
 describe('segmentsFromPath', () => {
   it('splits valid paths', () => {
@@ -30,25 +57,26 @@ describe('segmentsFromPath', () => {
   });
 
   it('accepts digest keys', () => {
-    const key =
-      '1_e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
-    expect(segmentsFromPath(key)).toEqual([key]);
+    expect(segmentsFromPath(DIGEST_KEY)).toEqual([DIGEST_KEY]);
   });
 
   it.each([
     ['empty', ''],
     ['only separators', '///'],
-    ['uppercase', 'A'],
-    ['space', 'a b'],
-    ['backslash', 'a\\b'],
-    ['null byte', 'a\0b'],
-    ['colon', 'a:b'],
-    ['non-ascii', 'é'],
-    ['dot segment', 'a/./b'],
-    ['dot-dot segment', 'a/../b'],
-    ['long segment', 'a'.repeat(MAX_SEGMENT_BYTES + 1)],
-  ])('rejects %s', (_, path) => {
+  ])('rejects %s path', (_, path) => {
     expect(codeOf(() => segmentsFromPath(path))).toBe('invalid path');
+  });
+
+  it.each(INVALID_SEGMENTS)('rejects %s segment', (_, segment) => {
+    expect(codeOf(() => segmentsFromPath(`a/${segment}/b`))).toBe(
+      'invalid path',
+    );
+  });
+
+  it('allows empty paths when requested', () => {
+    expect(segmentsFromPath('', true)).toEqual([]);
+    expect(segmentsFromPath('///', true)).toEqual([]);
+    expect(codeOf(() => segmentsFromPath('A', true))).toBe('invalid path');
   });
 
   it('enforces segment and path length limits', () => {
@@ -65,5 +93,22 @@ describe('segmentsFromPath', () => {
     expect(atLimit.length).toBe(MAX_PATH_BYTES);
     expect(codeOf(() => segmentsFromPath(atLimit))).toBe(undefined);
     expect(codeOf(() => segmentsFromPath(`${atLimit}/c`))).toBe('invalid path');
+  });
+});
+
+describe('isValidPathSegment', () => {
+  it.each(VALID_SEGMENTS)('accepts %s', (segment) => {
+    expect(isValidPathSegment(segment)).toBe(true);
+  });
+
+  it.each(INVALID_SEGMENTS)('rejects %s', (_, segment) => {
+    expect(isValidPathSegment(segment)).toBe(false);
+  });
+
+  it.each([
+    ['empty', ''],
+    ['separator', 'a/b'],
+  ])('rejects %s', (_, segment) => {
+    expect(isValidPathSegment(segment)).toBe(false);
   });
 });
