@@ -11,7 +11,7 @@ use polycentric_common::models::protos_v2::{
     attributed_to::To, content::ContentBody,
 };
 use prost::Message as _;
-use sea_orm::DbConn;
+use sea_orm::ConnectionTrait;
 
 use crate::data::EventWithContentRow;
 use crate::service::context::ServiceContext;
@@ -152,8 +152,8 @@ impl Input {
     }
 }
 
-async fn find_event_by_key(
-    db: &DbConn,
+async fn find_event_by_key<C: ConnectionTrait>(
+    db: &C,
     key: EventKey,
 ) -> Result<Option<EventWithContentRow>, WorkerError> {
     let Some(signer) = key.signed_by else {
@@ -175,8 +175,8 @@ async fn find_event_by_key(
 
 /// Try to find the content for the event with key `key`.
 /// Returns `Ok(None)` on failures other than DB errors.
-async fn find_content_by_key(
-    db: &DbConn,
+async fn find_content_by_key<C: ConnectionTrait>(
+    db: &C,
     key: EventKey,
 ) -> Result<Option<ContentBody>, WorkerError> {
     let Some((_, Some(content_row))) = find_event_by_key(db, key).await? else {

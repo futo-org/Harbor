@@ -27,8 +27,8 @@ pub struct Query;
 
 impl Query {
     /// Authorized keys for `identity`'s validated chain head.
-    pub async fn authorized_keys(
-        db: &DbConn,
+    pub async fn authorized_keys<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
     ) -> Result<Vec<AuthorizedKey>, DbErr> {
         let Some(content) =
@@ -69,8 +69,8 @@ impl Query {
     }
 
     /// True when `public_key` is a rotation key on the latest identity state.
-    pub async fn is_rotation_key(
-        db: &DbConn,
+    pub async fn is_rotation_key<C: ConnectionTrait>(
+        db: &C,
         identity_key: &str,
         public_key: &[u8],
     ) -> Result<bool, DbErr> {
@@ -81,8 +81,8 @@ impl Query {
     }
 
     /// True when `identity` has a row in the `moderator` table.
-    pub async fn is_moderator(
-        db: &DbConn,
+    pub async fn is_moderator<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
     ) -> Result<bool, DbErr> {
         moderator::Entity::find_by_id(identity).exists(db).await
@@ -145,8 +145,8 @@ impl Query {
     /// even when timestamps collide. `after` continues after a previous
     /// page's last row; `query` keeps only identities that begin with it
     /// (case-insensitive prefix). Returns up to `limit` rows.
-    pub async fn list_bans(
-        db: &DbConn,
+    pub async fn list_bans<C: ConnectionTrait>(
+        db: &C,
         limit: u64,
         after: Option<&BanCursor>,
         query: Option<&str>,

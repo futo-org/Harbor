@@ -223,8 +223,7 @@ pub async fn list_profile_events<A>(
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     FeedsRepository::Query::list_latest_profiles_for_identities(
-        &ctx.db,
-        identities,
+        &ctx.db, identities,
     )
     .await
     .map_err(map_db_err)

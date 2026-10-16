@@ -13,7 +13,7 @@ use entity::pairing_session;
 use polycentric_common::error::CoreError;
 use sea_orm::entity::prelude::DateTimeUtc;
 use sea_orm::{
-    ActiveValue::Set, DatabaseConnection, DatabaseTransaction, TransactionTrait,
+    ActiveValue::Set, ConnectionTrait, DatabaseTransaction, TransactionTrait,
 };
 use sha2::{Digest, Sha256};
 use tonic::Status;
@@ -120,8 +120,8 @@ fn extract_and_validate_input(
 }
 
 /// Checks that the signer is authorized to rotate the identity.
-async fn verify_authorization(
-    db: &DatabaseConnection,
+async fn verify_authorization<C: ConnectionTrait>(
+    db: &C,
     input: &Input,
 ) -> Result<(), Status> {
     let is_authorized = id_repo::Query::is_rotation_key(

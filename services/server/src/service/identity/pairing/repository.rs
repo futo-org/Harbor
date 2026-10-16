@@ -6,8 +6,8 @@ pub struct Query;
 
 impl Query {
     /// Returns the pairing session with this digest hash, if one exists.
-    pub async fn get_pairing_session(
-        db: &DbConn,
+    pub async fn get_pairing_session<C: ConnectionTrait>(
+        db: &C,
         digest_sha256: &[u8],
     ) -> Result<Option<pairing_session::Model>, DbErr> {
         pairing_session::Entity::find()
@@ -17,8 +17,8 @@ impl Query {
     }
 
     /// Lists the claimers that have joined the session with this digest hash.
-    pub async fn list_claimers(
-        db: &DbConn,
+    pub async fn list_claimers<C: ConnectionTrait>(
+        db: &C,
         digest_sha256: &[u8],
     ) -> Result<Vec<Proto::PublicKey>, DbErr> {
         let rows = pairing_session_claimer::Entity::find()
@@ -39,8 +39,8 @@ impl Query {
 
     /// Records a claimer for the session with this digest hash.
     /// Claimers that have already joined are ignored.
-    pub async fn add_claimer(
-        db: &DbConn,
+    pub async fn add_claimer<C: ConnectionTrait>(
+        db: &C,
         issuer_identity: &str,
         digest_sha256: &[u8],
         claimer_key: &Proto::PublicKey,

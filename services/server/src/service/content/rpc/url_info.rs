@@ -9,7 +9,8 @@ use chrono::{TimeDelta, Utc};
 use entity::url_info_cache;
 use sea_orm::sea_query::{OnConflict, Query as SeaQuery};
 use sea_orm::{
-    ColumnTrait, DbConn, EntityTrait, Order, PaginatorTrait, QueryFilter, Set,
+    ColumnTrait, ConnectionTrait, EntityTrait, Order, PaginatorTrait,
+    QueryFilter, Set,
 };
 use serde::Deserialize;
 use tonic::{Code, Status};
@@ -49,7 +50,10 @@ fn ttl(row: &url_info_cache::Model) -> TimeDelta {
 
 /// Read a fresh cached outcome for `url`. Expired rows and database
 /// errors are both treated as cache misses.
-async fn get_cached(db: &DbConn, url: &str) -> Option<ScrapeOutcome> {
+async fn get_cached<C: ConnectionTrait>(
+    db: &C,
+    url: &str,
+) -> Option<ScrapeOutcome> {
     let row = url_info_cache::Entity::find_by_id(url)
         .one(db)
         .await
@@ -75,8 +79,8 @@ async fn get_cached(db: &DbConn, url: &str) -> Option<ScrapeOutcome> {
 /// Upsert an outcome for `url`, evicting the oldest rows once the
 /// cache is full. All statements are best-effort: failures are logged
 /// and the response is served regardless.
-async fn insert_cached(
-    db: &DbConn,
+async fn insert_cached<C: ConnectionTrait>(
+    db: &C,
     url: &str,
     outcome: &ScrapeOutcome,
     raw_response: Option<String>,
@@ -133,7 +137,7 @@ async fn insert_cached(
 
 /// Delete the `EVICTION_BATCH` oldest rows once the cache holds at
 /// least `MAX_CACHED_URLS` entries.
-async fn evict_if_full(db: &DbConn) {
+async fn evict_if_full<C: ConnectionTrait>(db: &C) {
     let count = match url_info_cache::Entity::find().count(db).await {
         Ok(count) => count,
         Err(e) => {
