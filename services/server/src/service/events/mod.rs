@@ -1,3 +1,4 @@
+pub mod heads_pubsub;
 pub mod repository;
 pub mod rpc;
 pub mod tombstone;

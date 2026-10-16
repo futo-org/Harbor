@@ -50,7 +50,7 @@ echo "==> Bringing up infrastructure…"
 # the scraper cannot start because its nftables egress firewall requires
 # CAP_NET_ADMIN, and an exited dependency container causes compose v2 to
 # return a non-zero exit code, aborting the script.
-docker compose up -d --build --wait postgres rustfs kafka
+docker compose up -d --build --wait postgres rustfs kafka valkey
 
 echo "==> Creating object-store bucket…"
 docker compose run --rm rustfs-init

@@ -22,6 +22,7 @@ mod banning;
 mod event_sync;
 mod feeds;
 mod graph;
+mod heads;
 mod notifications;
 mod search;
 mod verifications;

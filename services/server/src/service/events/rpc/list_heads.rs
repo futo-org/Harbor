@@ -8,13 +8,22 @@ use polycentric_common::models::protos_v2::{
     EventKey, ListHeadsRequest, ListHeadsResponse,
 };
 
+use sea_orm::DbConn;
 use tonic::Status;
 
 pub async fn handle(
     ctx: &ServiceContext,
     req: ListHeadsRequest,
 ) -> Result<ListHeadsResponse, Status> {
-    let rows = EventsRepository::Query::list_heads(&ctx.ro_db, &req.identity)
+    heads(&ctx.ro_db, &req.identity).await
+}
+
+/// The heads of `identity` as stored in `db`.
+pub async fn heads(
+    db: &DbConn,
+    identity: &str,
+) -> Result<ListHeadsResponse, Status> {
+    let rows = EventsRepository::Query::list_heads(db, identity)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "list_heads db error");
@@ -23,7 +32,7 @@ pub async fn handle(
 
     let output = rows
         .into_iter()
-        .map(|row| row_to_event_key(&req.identity, row))
+        .map(|row| row_to_event_key(identity, row))
         .collect::<Vec<_>>();
 
     Ok(ListHeadsResponse { heads: output })

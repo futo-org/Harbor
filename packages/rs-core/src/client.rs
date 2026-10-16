@@ -350,6 +350,27 @@ impl PolycentricClient {
         self.event_store.find_collections_and_signers(identity)
     }
 
+    /// Highest local event per (collection, signer) of `identity`.
+    pub fn local_heads(&self, identity: &str) -> Vec<protos_v2::EventKey> {
+        let (collections, signers) = self.find_collections_and_signers(identity);
+        collections
+            .into_iter()
+            .flat_map(|collection| {
+                signers.iter().filter_map(move |signer| {
+                    let (key, _) = self
+                        .get_sync_events(identity, collection, signer.key_type, &signer.key, 0)
+                        .next_back()?;
+                    Some(protos_v2::EventKey {
+                        collection,
+                        identity: identity.to_string(),
+                        signed_by: Some(signer.clone()),
+                        sequence: key.sequence,
+                    })
+                })
+            })
+            .collect()
+    }
+
     /// Max `sequence` of identity events signed by `signer` for `identity`,
     /// or `None` if this signer has no identity events.
     pub fn get_identity_sequence(
@@ -1274,6 +1295,33 @@ mod tests {
                 .find_event_bundle_by_sequence(&identity, 2, 1, Some("ffff"))
                 .is_none()
         );
+    }
+
+    #[test]
+    fn local_heads_are_the_highest_event_per_collection_and_signer() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let identity = add_identity_event(&mut client, &a, None, 1, vec![a.public.clone()], vec![]);
+        for sequence in 1..=2 {
+            let post = sign_event(
+                &a,
+                &identity,
+                2,
+                sequence,
+                1,
+                vec![sequence],
+                dummy_post_digest(),
+            );
+            client.copy_event(post).expect("copy post");
+        }
+
+        let mut heads: Vec<_> = client
+            .local_heads(&identity)
+            .into_iter()
+            .map(|key| (key.collection, key.sequence))
+            .collect();
+        heads.sort();
+        assert_eq!(heads, [(collections::IDENTITY, 1), (2, 2)]);
     }
 
     #[test]

@@ -30,6 +30,7 @@ pub mod event;
 pub mod event_key;
 pub mod field_def;
 pub mod follow;
+pub mod heads;
 pub mod identity;
 pub mod image;
 pub mod image_set;

@@ -24,6 +24,7 @@ entity = { path = "./entity" }
 axum = { version = "0.8.8", default-features = false, features = ["http2"] }
 base64.workspace = true
 chrono.workspace = true
+fred = { version = "10.1.0", default-features = false, features = ["i-pubsub", "subscriber-client", "enable-rustls"] }
 hex.workspace = true
 log = { version = "0.4.34", default-features = false }
 polycentric-common.workspace = true

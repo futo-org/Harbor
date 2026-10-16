@@ -11,4 +11,11 @@ class ListEvents {
   }
 }
 
-export const Query = { ListEvents };
+class SubscribeHeads {
+  readonly inner: [unknown];
+  constructor(args: unknown) {
+    this.inner = [args];
+  }
+}
+
+export const Query = { ListEvents, SubscribeHeads };
