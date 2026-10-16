@@ -1,16 +1,11 @@
 //! gRPC `PairingService` impl. Each method delegates to a handler
 //! under `pairing/rpc/`.
 
-pub mod common;
-pub mod get_pairing_session;
-pub mod join_pairing_session;
-pub mod put_pairing_session;
-
 use std::sync::Arc;
 
 use tonic::{Request, Response, Status};
 
-use crate::service::context::ServiceContext;
+use crate::service::context::{PublicContext, ServiceContext};
 use crate::service::proto::pairing_service_server::{
     PairingService, PairingServiceServer,
 };
@@ -19,6 +14,11 @@ use crate::service::proto::{
     JoinPairingSessionRequest, JoinPairingSessionResponse,
     PutPairingSessionRequest, PutPairingSessionResponse,
 };
+
+pub mod common;
+pub mod get_pairing_session;
+pub mod join_pairing_session;
+pub mod put_pairing_session;
 
 pub struct PairingServiceImpl {
     ctx: Arc<ServiceContext>,
@@ -30,9 +30,15 @@ impl PairingService for PairingServiceImpl {
         &self,
         request: Request<PutPairingSessionRequest>,
     ) -> Result<Response<PutPairingSessionResponse>, Status> {
+        let ctx = PublicContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            put_pairing_session::handle(&self.ctx, request.into_inner())
-                .await?,
+            put_pairing_session::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -40,9 +46,15 @@ impl PairingService for PairingServiceImpl {
         &self,
         request: Request<GetPairingSessionRequest>,
     ) -> Result<Response<GetPairingSessionResponse>, Status> {
+        let ctx = PublicContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            get_pairing_session::handle(&self.ctx, request.into_inner())
-                .await?,
+            get_pairing_session::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -50,9 +62,15 @@ impl PairingService for PairingServiceImpl {
         &self,
         request: Request<JoinPairingSessionRequest>,
     ) -> Result<Response<JoinPairingSessionResponse>, Status> {
+        let ctx = PublicContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            join_pairing_session::handle(&self.ctx, request.into_inner())
-                .await?,
+            join_pairing_session::handle(ctx, request.into_inner()).await?,
         ))
     }
 }

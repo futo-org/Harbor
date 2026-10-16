@@ -1,6 +1,8 @@
-use crate::service::proto as Proto;
 use ::entity::{pairing_session, pairing_session_claimer};
 use sea_orm::*;
+
+use crate::db::DbTx;
+use crate::service::proto as Proto;
 
 pub struct Query;
 
@@ -73,7 +75,7 @@ impl Query {
 
     /// Returns the pairing session currently stored for `issuer_identity`.
     pub async fn get_latest_pairing_session(
-        txn: &DatabaseTransaction,
+        txn: &DbTx<'_>,
         issuer_identity: &str,
     ) -> Result<Option<pairing_session::Model>, DbErr> {
         pairing_session::Entity::find_by_id(issuer_identity)
@@ -84,7 +86,7 @@ impl Query {
 
     /// Deletes every claimer of every session issued by `issuer_identity`.
     pub async fn clear_claimers(
-        txn: &DatabaseTransaction,
+        txn: &DbTx<'_>,
         issuer_identity: &str,
     ) -> Result<(), DbErr> {
         pairing_session_claimer::Entity::delete_many()
@@ -101,7 +103,7 @@ impl Query {
     /// Writes the issuer state for a pairing session, replacing whatever
     /// session was stored for this issuer.
     pub async fn put_issuer_state(
-        txn: &DatabaseTransaction,
+        txn: &DbTx<'_>,
         row: pairing_session::ActiveModel,
     ) -> Result<(), DbErr> {
         pairing_session::Entity::insert(row)
