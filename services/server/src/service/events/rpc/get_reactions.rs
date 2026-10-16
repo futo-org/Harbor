@@ -67,7 +67,7 @@ async fn hydrate(
         .collect::<Vec<_>>();
 
     let (identity_events, profile_events) =
-        list_identity_and_profile_events(ctx, identities).await?;
+        list_identity_and_profile_events(&ctx2, identities).await?;
 
     Ok(HydrationState {
         deletes_by_target,

@@ -689,8 +689,8 @@ impl Query {
     /// identity for each of `identities`. Used as `event_hints` on
     /// feed/thread responses so clients can populate author profiles
     /// without a follow-up round-trip.
-    pub async fn list_latest_profiles_for_identities(
-        db: &DbConn,
+    pub async fn list_latest_profiles_for_identities<C: ConnectionTrait>(
+        db: &C,
         identities: Vec<String>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         if identities.is_empty() {

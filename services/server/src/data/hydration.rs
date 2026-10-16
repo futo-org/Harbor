@@ -154,8 +154,8 @@ where
     let identities: Vec<_> = identities.into_iter().collect();
 
     let identity_events =
-        list_identity_events(ctx.service, identities.clone()).await?;
-    let profile_events = list_profile_events(ctx.service, identities).await?;
+        list_identity_events(&ctx2, identities.clone()).await?;
+    let profile_events = list_profile_events(&ctx2, identities).await?;
 
     let mut quote_post_events = Vec::new();
     let mut repost_events = Vec::new();

@@ -4,7 +4,7 @@
 
 use crate::data::EventWithContentRow;
 use crate::service::content::content_filestore::ContentFilestore;
-use crate::service::context::ServiceContext;
+use crate::service::context::Context;
 use crate::service::feeds::repository::{self as FeedsRepository};
 use crate::service::identity::chain;
 use crate::service::identity::repository::{
@@ -189,8 +189,8 @@ async fn delete_blobs(
 /// The identity-chain and profile events for `identities`. Fetched
 /// sequentially so MockDatabase-backed tests stay deterministic; skips the
 /// lookups entirely for an empty list.
-pub async fn list_identity_and_profile_events(
-    ctx: &ServiceContext,
+pub async fn list_identity_and_profile_events<A>(
+    ctx: &Context<A>,
     identities: Vec<String>,
 ) -> Result<(Vec<EventWithContentRow>, Vec<EventWithContentRow>), Status> {
     if identities.is_empty() {
@@ -204,27 +204,27 @@ pub async fn list_identity_and_profile_events(
 /// Fetch the latest identity events (rotation/signing key chain) for
 /// each identity in `identities`, and warm the proof cache from
 /// whichever Identity content payload is freshest per identity.
-pub async fn list_identity_events(
-    ctx: &ServiceContext,
+pub async fn list_identity_events<A>(
+    ctx: &Context<A>,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
-    let rows = IdentityRepo::list_identity_events_for_identities(
-        &ctx.ro_db, identities,
-    )
-    .await
-    .map_err(map_db_err)?;
+    let rows =
+        IdentityRepo::list_identity_events_for_identities(ctx.db(), identities)
+            .await
+            .map_err(map_db_err)?;
     warm_identity_cache(ctx, &rows).await;
     Ok(rows)
 }
 
 /// Fetch the latest profile event (display name, avatar, banner)
 /// for each identity in `identities`.
-pub async fn list_profile_events(
-    ctx: &ServiceContext,
+pub async fn list_profile_events<A>(
+    ctx: &Context<A>,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     FeedsRepository::Query::list_latest_profiles_for_identities(
-        &ctx.ro_db, identities,
+        ctx.db(),
+        identities,
     )
     .await
     .map_err(map_db_err)
@@ -239,8 +239,8 @@ pub async fn list_profile_events(
 /// cached. Caching raw events instead would let a forged, unauthorized
 /// IDENTITY event poison the cache and impersonate the identity for
 /// everything that reads it (auth, event-write authorization, proofs).
-async fn warm_identity_cache(
-    ctx: &ServiceContext,
+async fn warm_identity_cache<A>(
+    ctx: &Context<A>,
     rows: &[EventWithContentRow],
 ) {
     let mut by_identity: HashMap<&str, Vec<&EventWithContentRow>> =
@@ -255,7 +255,7 @@ async fn warm_identity_cache(
         if let Some(content) =
             chain::validated_chain_head(identity, identity_rows)
         {
-            ctx.proof_cache
+            ctx.proof_cache()
                 .warm_identity_content(identity, content)
                 .await;
         }

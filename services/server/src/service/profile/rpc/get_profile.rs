@@ -19,14 +19,14 @@ pub async fn handle(
         return Err(Status::invalid_argument("identity is required"));
     }
 
-    let profile_rows =
-        list_profile_events(ctx, vec![req.identity.clone()]).await?;
-    let mut event_bundles = rows_into_bundles(profile_rows);
     let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
+    let profile_rows =
+        list_profile_events(&ctx2, vec![req.identity.clone()]).await?;
+    let mut event_bundles = rows_into_bundles(profile_rows);
     attach_proofs(&ctx2, &mut event_bundles).await?;
 
     let identity_rows =
-        list_identity_events(ctx, vec![req.identity.clone()]).await?;
+        list_identity_events(&ctx2, vec![req.identity.clone()]).await?;
     // The identity's key chain, so clients can validate the bundles.
     let event_hints = rows_into_hints(identity_rows);
 

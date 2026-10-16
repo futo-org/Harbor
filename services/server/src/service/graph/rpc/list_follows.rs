@@ -126,7 +126,7 @@ async fn hydrate(
 
     let identities = collect_identities(fetched.rows.iter());
     let (identity_events, profile_events) =
-        list_identity_and_profile_events(ctx, identities).await?;
+        list_identity_and_profile_events(&ctx2, identities).await?;
 
     Ok(HydrationState {
         deletes_by_target,

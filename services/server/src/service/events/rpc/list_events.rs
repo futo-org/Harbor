@@ -104,13 +104,14 @@ async fn hydrate(
         .map(|(event, _)| TargetEventKey::of(event))
         .collect::<Vec<_>>();
 
-    let identity_events = list_identity_events(ctx, identities.clone()).await?;
+    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
+    let identity_events =
+        list_identity_events(&ctx2, identities.clone()).await?;
 
-    let profile_events = list_profile_events(ctx, identities).await?;
+    let profile_events = list_profile_events(&ctx2, identities).await?;
 
     // We won't filter out tombstoned events, but we still collect deletions
     // so that we can send them as hints.
-    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
     let deletes_by_target =
         tombstone::validated_tombstones(&ctx2, &keys).await?;
 

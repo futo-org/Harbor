@@ -144,9 +144,10 @@ async fn hydrate(
             .await
             .map_err(map_db_err)?;
 
+    let ctx2 = ctx.service.to_context_ro().await?; // TODO: move to argument.
     let identity_events =
-        list_identity_events(ctx.service, identities.clone()).await?;
-    let profile_events = list_profile_events(ctx.service, identities).await?;
+        list_identity_events(&ctx2, identities.clone()).await?;
+    let profile_events = list_profile_events(&ctx2, identities).await?;
 
     let stats =
         gather_stats_for(&ctx.service.ro_db, fetched.iter().map(|(e, _)| e.id))
@@ -162,7 +163,6 @@ async fn hydrate(
     .await
     .map_err(map_db_err)?;
 
-    let ctx2 = ctx.service.to_context_ro().await?; // TODO: move to argument.
     let blocked = GraphRepository::blocked_set_for_caller(&ctx2).await?;
 
     let fetched_keys: Vec<_> =
