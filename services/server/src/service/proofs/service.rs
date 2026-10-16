@@ -79,16 +79,14 @@ async fn build_revocation_proof<Auth>(
 
 /// Add a revocation `EventProof` to each bundle whose signer is recorded
 /// as revoked in the latest identity content for that identity.
-pub async fn attach_proofs<'a, II, I>(
-    ctx: &ServiceContext,
+pub async fn attach_proofs<'a, II, I, Auth>(
+    ctx: &Context<Auth>,
     bundles: II,
 ) -> Result<(), Status>
 where
     II: IntoIterator<Item = &'a mut EventBundle, IntoIter = I>,
     I: Iterator<Item = &'a mut EventBundle> + 'a,
 {
-    let ctx = ctx.to_context_ro().await?;
-
     for bundle in bundles {
         let Some(signed) = bundle.signed_event.as_ref() else {
             continue;

@@ -184,12 +184,13 @@ pub(crate) mod claim_bundles {
             });
         }
 
+        let ctx = ctx.to_context_ro().await?; // TODO: move to argument.
         for bundle in &mut claim_bundles {
             if let Some(claim) = bundle.claim.as_mut() {
-                attach_proofs(ctx, std::slice::from_mut(claim)).await?;
+                attach_proofs(&ctx, std::slice::from_mut(claim)).await?;
             }
-            attach_proofs(ctx, &mut bundle.targets).await?;
-            attach_proofs(ctx, &mut bundle.verifies).await?;
+            attach_proofs(&ctx, &mut bundle.targets).await?;
+            attach_proofs(&ctx, &mut bundle.verifies).await?;
         }
         Ok(View {
             claim_bundles,
@@ -265,7 +266,8 @@ pub(crate) mod event_list {
         hydration: HydrationState,
     ) -> Result<View, Status> {
         let mut event_bundles = assemble_bundles(rows, &hydration.stats);
-        attach_proofs(ctx, &mut event_bundles).await?;
+        let ctx = ctx.to_context_ro().await?; // TODO: move to argument.
+        attach_proofs(&ctx, &mut event_bundles).await?;
         Ok(View {
             event_bundles,
             event_hints: hydration.identity_profile_hints(),

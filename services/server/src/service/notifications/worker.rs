@@ -81,7 +81,8 @@ impl NotificationWorker {
         };
 
         let mut bundles = vec![row_into_bundle(row)];
-        attach_proofs(&self.ctx, &mut bundles).await?;
+        let ctx = self.ctx.to_context_ro().await?; // TODO: move to argument.
+        attach_proofs(&ctx, &mut bundles).await?;
         Ok(bundles.into_iter().next())
     }
 

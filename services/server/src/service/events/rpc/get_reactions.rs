@@ -102,7 +102,8 @@ async fn view(
     hydration: HydrationState,
 ) -> Result<GetReactionsResponse, Status> {
     let mut event_bundles = assemble_bundles(rows, &hydration.stats);
-    attach_proofs(ctx, &mut event_bundles).await?;
+    let ctx = ctx.to_context_ro().await?; // TODO: move to argument.
+    attach_proofs(&ctx, &mut event_bundles).await?;
 
     Ok(GetReactionsResponse {
         event_bundles,

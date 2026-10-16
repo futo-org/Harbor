@@ -263,7 +263,8 @@ pub async fn view<SortedBy>(
         ..
     } = hydration;
 
-    attach_proofs(ctx, &mut tombstone_bundles).await?;
+    let ctx = ctx.to_context_ro().await?; // TODO: move to argument.
+    attach_proofs(&ctx, &mut tombstone_bundles).await?;
 
     let mut results = assemble_results(live_rows, &stats);
     // SAFETY: we've just assembled the result above where the event_bundle is
@@ -271,10 +272,10 @@ pub async fn view<SortedBy>(
     let results_iter = results
         .iter_mut()
         .map(|result| result.event_bundle.as_mut().unwrap());
-    attach_proofs(ctx, results_iter).await?;
+    attach_proofs(&ctx, results_iter).await?;
 
     let mut label_bundles = assemble_bundles(label_events, &stats);
-    attach_proofs(ctx, &mut label_bundles).await?;
+    attach_proofs(&ctx, &mut label_bundles).await?;
 
     // Identity, profile, referenced (quote / repost) posts, tombstones,
     // and moderation labels all ship as hints.

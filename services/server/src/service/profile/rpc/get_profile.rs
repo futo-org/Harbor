@@ -22,7 +22,8 @@ pub async fn handle(
     let profile_rows =
         list_profile_events(ctx, vec![req.identity.clone()]).await?;
     let mut event_bundles = rows_into_bundles(profile_rows);
-    attach_proofs(ctx, &mut event_bundles).await?;
+    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
+    attach_proofs(&ctx2, &mut event_bundles).await?;
 
     let identity_rows =
         list_identity_events(ctx, vec![req.identity.clone()]).await?;

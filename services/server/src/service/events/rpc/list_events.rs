@@ -153,10 +153,9 @@ async fn view(
     let mut tombstone_bundles: Vec<EventBundle> =
         deletes_by_target.into_values().flatten().collect();
 
-    tokio::try_join!(
-        attach_proofs(ctx, &mut event_bundles),
-        attach_proofs(ctx, &mut tombstone_bundles),
-    )?;
+    let ctx = ctx.to_context_ro().await?; // TODO: move to argument.
+    attach_proofs(&ctx, &mut event_bundles).await?;
+    attach_proofs(&ctx, &mut tombstone_bundles).await?;
 
     let mut event_hints = identity_events
         .into_iter()
