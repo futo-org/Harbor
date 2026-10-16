@@ -2,7 +2,7 @@ use crate::config;
 use crate::data::{
     EventRow, EventWithContentRow, assemble_hint, row_into_hint,
 };
-use crate::service::context::RequestContext;
+use crate::service::context::{Auth, Context};
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{self as feeds_repository};
 use crate::service::graph::repository::Query as GraphRepository;
@@ -81,13 +81,14 @@ pub struct HydrateConfig {
     verification_target: bool,
 }
 
-pub async fn hydrate<Row>(
-    ctx: &RequestContext<'_>,
+pub async fn hydrate<Row, A>(
+    ctx: &Context<A>,
     rows: &[Row],
     config: &HydrateConfig,
 ) -> Result<HydrationState, Status>
 where
     Row: EventRow,
+    Context<A>: Auth,
 {
     let keys: Vec<TargetEventKey> = rows
         .iter()
@@ -104,18 +105,17 @@ where
         target_event_keys.into_iter().collect()
     };
 
-    let ctx2 = ctx.service.to_context_ro().await?; // TODO: move to argument.
     let deletes_by_target =
-        tombstone::validated_tombstones(&ctx2, &display_keys).await?;
+        tombstone::validated_tombstones(ctx, &display_keys).await?;
     let referenced =
-        feeds_repository::Query::list_events_by_keys(ctx2.db(), &ref_keys)
+        feeds_repository::Query::list_events_by_keys(ctx.db(), &ref_keys)
             .await
             .map_err(|err| {
                 tracing::error!(error = %err, "failed to list events");
                 Status::internal("internal server error")
             })?;
     let label_events = feeds_repository::Query::list_labels_for_event_keys(
-        ctx2.db(),
+        ctx.db(),
         &display_keys,
     )
     .await
@@ -124,14 +124,14 @@ where
         Status::internal("internal server error")
     })?;
     let stats =
-        gather_stats_for(ctx2.db(), rows.iter().map(|row| row.event_id()))
+        gather_stats_for(ctx.db(), rows.iter().map(|row| row.event_id()))
             .await
             .map_err(|err| {
                 tracing::error!(error = %err, "failed to gather stats");
                 Status::internal("internal server error")
             })?;
     let blocked_identities =
-        GraphRepository::blocked_set_for_caller(&ctx2).await?;
+        GraphRepository::blocked_set_for_caller(ctx).await?;
 
     // For all rows we return and for all hints, return the latest identity and
     // profile update events.
@@ -153,9 +153,8 @@ where
     }
     let identities: Vec<_> = identities.into_iter().collect();
 
-    let identity_events =
-        list_identity_events(&ctx2, identities.clone()).await?;
-    let profile_events = list_profile_events(&ctx2, identities).await?;
+    let identity_events = list_identity_events(ctx, identities.clone()).await?;
+    let profile_events = list_profile_events(ctx, identities).await?;
 
     let mut quote_post_events = Vec::new();
     let mut repost_events = Vec::new();
@@ -189,12 +188,13 @@ where
 ///   referenced.
 /// * Latest profile event (display name / avatar / banner) for every identity
 ///   referenced.
-pub async fn post_hydrate<Row>(
-    ctx: &RequestContext<'_>,
+pub async fn post_hydrate<Row, A>(
+    ctx: &Context<A>,
     rows: &[Row],
 ) -> Result<HydrationState, Status>
 where
     Row: EventRow,
+    Context<A>: Auth,
 {
     let config = HydrateConfig {
         post: true,
