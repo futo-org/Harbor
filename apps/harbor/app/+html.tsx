@@ -24,6 +24,9 @@ const FONT_STYLE = `
 @font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:italic;font-display:block}
 `;
 
+// Switches to dev icons on local builds. Deployed apps use icons defined by server.js
+const ICON_SUFFIX = process.env.APP_VARIANT === 'dev' ? '-dev' : '';
+
 export default function Root({ children }: PropsWithChildren) {
   return (
     <html lang="en">
@@ -34,8 +37,15 @@ export default function Root({ children }: PropsWithChildren) {
           content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
         />
         <title>{APP_NAME}</title>
-        <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link
+          rel="icon"
+          href={`/favicon${ICON_SUFFIX}.ico`}
+          sizes="16x16 32x32 48x48"
+        />
+        <link
+          rel="apple-touch-icon"
+          href={`/apple-touch-icon${ICON_SUFFIX}.png`}
+        />
         {/* Placeholder replaced with runtime env by server.js at startup. */}
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static placeholder, no user input

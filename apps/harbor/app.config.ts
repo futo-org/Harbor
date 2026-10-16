@@ -24,6 +24,8 @@ const ID = IS_DEV
 
 const SCHEME = IS_DEV ? 'harbor.dev' : IS_STAGING ? 'harbor.staging' : 'harbor';
 
+const ICON_SUFFIX = IS_DEV ? '-dev' : IS_STAGING ? '-staging' : '';
+
 // Web host whose links open this app (none for dev: verification needs a
 // public HTTPS domain). Claims the whole host; appLinks.js excludes paths.
 const APP_LINK_HOST: string | undefined = appLinks[VARIANT]?.host;
@@ -65,7 +67,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     // An Icon Composer bundle: Xcode renders the Liquid Glass icon and the flat
     // ones for older iOS from it
-    icon: './src/common/assets/images/app-icons/ios-icon.icon',
+    icon: `./src/common/assets/images/app-icons/ios-icon${ICON_SUFFIX}.icon`,
     requireFullScreen: true,
     supportsTablet: true,
     bundleIdentifier: ID,
@@ -77,13 +79,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      foregroundImage:
-        './src/common/assets/images/app-icons/android-icon-foreground.png',
+      foregroundImage: `./src/common/assets/images/app-icons/android-icon-foreground${ICON_SUFFIX}.png`,
       monochromeImage:
         './src/common/assets/images/app-icons/android-icon-monochrome.png',
-      backgroundImage:
-        './src/common/assets/images/app-icons/android-icon-background.png',
-      backgroundColor: '#FF6A00',
+      backgroundImage: `./src/common/assets/images/app-icons/android-icon-background${ICON_SUFFIX}.png`,
     },
     package: ANDROID_ID,
     permissions: [
