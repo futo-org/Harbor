@@ -11,7 +11,7 @@ import { Sheet } from '@/src/common/components/sheet';
 import { Routes } from '@/src/common/constants/routes';
 import { Atoms, type Palette, useTheme } from '@/src/common/theme';
 import { usePairIdentityIssuer } from '@/src/features/identity-pairing/hooks/usePairIdentityIssuer';
-import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
+import { EmojiFingerprint } from '@/src/features/identity-pairing/components/EmojiFingerprint';
 import { router } from 'expo-router';
 import { type ReactNode, useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
@@ -345,9 +345,8 @@ function ApprovalSheet({
         {renderContent ? (
           <>
             <View style={[Atoms.items_center, Atoms.gap_md]}>
-              <Text variant="title" style={{ fontSize: 64, lineHeight: 72 }}>
-                {publicKeyEmojiFingerprint(displayClaimer).join(' ')}
-              </Text>
+              <EmojiFingerprint publicKey={displayClaimer} bare />
+
               <Text
                 variant="small"
                 color="neutral_500"
