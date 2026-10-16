@@ -21,6 +21,7 @@ common-telemetry = { path = "../common/telemetry" }
 entity = { path = "./entity" }
 
 # 3rd Party
+async-trait = { version = "0.1", default-features = false }
 axum = { version = "0.8.8", default-features = false, features = ["http2"] }
 base64.workspace = true
 chrono.workspace = true
@@ -32,7 +33,8 @@ prost-types.workspace = true
 rdkafka.workspace = true
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "query"] }
 sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio", "macros", "mock", "postgres-array"] }
-sqlx = { version = "0.9", features = ["postgres"] }
+sea-query-sqlx = { version = "0.9", default-features = false }
+sqlx = { version = "0.9", default-features = false, features = ["postgres"] }
 serde = { version = "1", default-features = false, features = ["std", "derive"] }
 serde_json = { version = "1", default-features = false, features = ["std"] }
 sha2.workspace = true
