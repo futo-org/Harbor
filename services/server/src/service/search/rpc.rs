@@ -1,12 +1,10 @@
 //! gRPC `SearchService` impl. Each method delegates to a handler under
 //! `search/rpc/`.
 
-pub mod common;
-pub mod search_posts;
-pub mod search_users;
+use std::sync::Arc;
+use tonic::{Request, Response, Status};
 
-use crate::service::auth::authenticated_identity;
-use crate::service::context::{RequestContext, ServiceContext};
+use crate::service::context::{PublicContext, ServiceContext};
 use crate::service::proto::search_service_server::{
     SearchService, SearchServiceServer,
 };
@@ -14,8 +12,10 @@ use crate::service::proto::{
     SearchPostsRequest, SearchPostsResponse, SearchUsersRequest,
     SearchUsersResponse,
 };
-use std::sync::Arc;
-use tonic::{Request, Response, Status};
+
+pub mod common;
+pub mod search_posts;
+pub mod search_users;
 
 pub use common::*;
 
@@ -29,10 +29,15 @@ impl SearchService for SearchServiceImpl {
         &self,
         request: Request<SearchUsersRequest>,
     ) -> Result<Response<SearchUsersResponse>, Status> {
-        let caller = authenticated_identity(&request);
-        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
+        let ctx = PublicContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            search_users::handle(&ctx, request.into_inner()).await?,
+            search_users::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -40,10 +45,15 @@ impl SearchService for SearchServiceImpl {
         &self,
         request: Request<SearchPostsRequest>,
     ) -> Result<Response<SearchPostsResponse>, Status> {
-        let caller = authenticated_identity(&request);
-        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
+        let ctx = PublicContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            search_posts::handle(&ctx, request.into_inner()).await?,
+            search_posts::handle(ctx, request.into_inner()).await?,
         ))
     }
 }

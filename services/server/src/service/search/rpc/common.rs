@@ -1,10 +1,16 @@
+use std::collections::HashSet;
+
+use entity::{content, event};
+use serde::Deserialize;
+use tonic::Status;
+
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline::Fetched;
 use crate::data::{
     CursorFilter, EventRow, EventWithContentRow, PageInfo, PaginationParams,
     assemble_bundle, assemble_bundles, assemble_hint, bundle_into_hint,
 };
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::rpc::common::{
     Referenced, has_matching_label, referenced_target2,
@@ -12,10 +18,6 @@ use crate::service::feeds::rpc::common::{
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{EventBundle, EventHint, PageParams, SearchResult};
 use crate::service::stats::service::EventStats;
-use entity::{content, event};
-use serde::Deserialize;
-use std::collections::HashSet;
-use tonic::Status;
 
 // TODO: dedup with the logic in `src/service/feeds/rpc/common.rs`, a lot of it
 // is the same, but the types are slightly different. We could unify it and move
@@ -245,7 +247,7 @@ pub async fn filter<SortedBy>(
 /// Build bundles from live rows, attach revocation proofs, and merge
 /// identity, profile and tombstone hints.
 pub async fn view<SortedBy>(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     filtered: SearchResponseFilter<SortedBy>,
     hydration: HydrationState,
 ) -> Result<SearchResponseView<SortedBy>, Status> {
@@ -263,7 +265,6 @@ pub async fn view<SortedBy>(
         ..
     } = hydration;
 
-    let ctx = ctx.to_context_ro().await?; // TODO: move to argument.
     attach_proofs(&ctx, &mut tombstone_bundles).await?;
 
     let mut results = assemble_results(live_rows, &stats);
