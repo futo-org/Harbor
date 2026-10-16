@@ -1,12 +1,14 @@
 import type {
   IContentRepository,
   IEventRepository,
+  FileStoreEntry,
   IFileStoreDriver,
   IKeysRepository,
   IStorageDriver,
 } from './platform-interfaces';
 import {
   FileStoreError,
+  isValidPathSegment,
   segmentsFromPath,
 } from './platform-interfaces/file-store-driver';
 import type { PrivateKey } from './polycentric-client';
@@ -211,6 +213,23 @@ export class MemoryFileStoreDriver implements IFileStoreDriver {
     const name = segments.pop();
     if (!name) throw new FileStoreError('invalid path', 'path has no segments');
 
+    const dir = this.dirAt(path, segments, create);
+    if (!dir) return null;
+
+    return { dir, name };
+  }
+
+  /**
+   * Walk to the directory at `segments`.
+   * Creates missing directories when `create` is true.
+   * Returns `null` if a directory is missing and `create` is false.
+   * Throws a `'path conflict'` error if it or a parent is a file.
+   */
+  private dirAt(
+    path: string,
+    segments: string[],
+    create: boolean,
+  ): MemoryDirectory | null {
     let dir = this.root;
     for (const segment of segments) {
       let next = dir.get(segment);
@@ -231,7 +250,7 @@ export class MemoryFileStoreDriver implements IFileStoreDriver {
       dir = next;
     }
 
-    return { dir, name };
+    return dir;
   }
 
   /**
@@ -274,5 +293,31 @@ export class MemoryFileStoreDriver implements IFileStoreDriver {
     const found = this.fileAt(path);
     if (!found) return false;
     return found.dir.delete(found.name);
+  }
+
+  async list(path: string): Promise<FileStoreEntry[] | null> {
+    const dir = this.dirAt(path, segmentsFromPath(path, true), false);
+    if (!dir) return null;
+
+    const entries: FileStoreEntry[] = [];
+
+    for (const [name, entry] of dir) {
+      if (!isValidPathSegment(name)) continue;
+      entries.push({ kind: entry instanceof Map ? 'dir' : 'file', name });
+    }
+
+    return entries;
+  }
+
+  async deleteSubpath(path: string): Promise<void> {
+    const parent = this.parentOf(path, false);
+    if (!parent) return;
+
+    const entry = parent.dir.get(parent.name);
+    if (entry instanceof Uint8Array) {
+      throw new FileStoreError('path conflict', `not a directory: ${path}`);
+    }
+
+    parent.dir.delete(parent.name);
   }
 }

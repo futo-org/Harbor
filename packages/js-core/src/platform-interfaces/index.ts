@@ -4,6 +4,7 @@ export type { ICryptoManager } from './crypto-manager';
 export type { IStorageDriver } from './storage-driver';
 export type {
   IFileStoreDriver,
+  FileStoreEntry,
   FileStoreErrorCode,
 } from './file-store-driver';
 export type { IKeysRepository } from './keys-repository';

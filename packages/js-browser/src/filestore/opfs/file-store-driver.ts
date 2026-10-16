@@ -1,6 +1,8 @@
 import {
   FileStoreError,
+  isValidPathSegment,
   segmentsFromPath,
+  type FileStoreEntry,
   type FileStoreErrorCode,
   type IFileStoreDriver,
 } from '@polycentric/js-core';
@@ -27,7 +29,7 @@ export class OpfsFileStoreDriver implements IFileStoreDriver {
   /**
    * Walk to the directory containing `path`.
    * Creates parent directories when `create` is true.
-   * Throws `NotFoundError` if a directory is missing and `create` is unset.
+   * May throw errors that need wrapping on failure.
    */
   private async resolve(
     path: string,
@@ -38,12 +40,24 @@ export class OpfsFileStoreDriver implements IFileStoreDriver {
     const name = segments.pop();
     if (!name) throw new FileStoreError('invalid path', 'path has no segments');
 
+    return { dir: await this.resolveDir(segments, create), name };
+  }
+
+  /**
+   * Walk to the directory at `segments`.
+   * Creates missing directories when `create` is true.
+   * May throw errors that need wrapping on failure.
+   */
+  private async resolveDir(
+    segments: string[],
+    create: boolean,
+  ): Promise<FileSystemDirectoryHandle> {
     let dir = this.directory;
     for (const segment of segments) {
       dir = await dir.getDirectoryHandle(segment, { create });
     }
 
-    return { dir, name };
+    return dir;
   }
 
   async has(path: string): Promise<boolean> {
@@ -99,6 +113,36 @@ export class OpfsFileStoreDriver implements IFileStoreDriver {
       return true;
     } catch (err) {
       if (isNotFound(err)) return false;
+      throw toFileStoreError(err, path);
+    }
+  }
+
+  async list(path: string): Promise<FileStoreEntry[] | null> {
+    try {
+      const dir = await this.resolveDir(segmentsFromPath(path, true), false);
+
+      const entries: FileStoreEntry[] = [];
+      for await (const [name, handle] of dir.entries()) {
+        if (!isValidPathSegment(name)) continue;
+        entries.push({ kind: handle.kind === 'file' ? 'file' : 'dir', name });
+      }
+
+      return entries;
+    } catch (err) {
+      if (isNotFound(err)) return null;
+      throw toFileStoreError(err, path);
+    }
+  }
+
+  async deleteSubpath(path: string): Promise<void> {
+    try {
+      const { dir, name } = await this.resolve(path, false);
+      // Access the directory first to discover if the path is not a directory
+      // or does not exist.
+      await dir.getDirectoryHandle(name);
+      await dir.removeEntry(name, { recursive: true });
+    } catch (err) {
+      if (isNotFound(err)) return;
       throw toFileStoreError(err, path);
     }
   }

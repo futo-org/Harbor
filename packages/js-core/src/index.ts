@@ -26,6 +26,7 @@ export type * from './platform-interfaces';
 export { bytesToHex, hexToBytes, toDigestKey } from './utils/hex';
 export {
   segmentsFromPath,
+  isValidPathSegment,
   FileStoreError,
   MAX_SEGMENT_BYTES,
   MAX_PATH_BYTES,

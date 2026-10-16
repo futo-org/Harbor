@@ -2,7 +2,9 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import {
   FileStoreError,
+  isValidPathSegment,
   segmentsFromPath,
+  type FileStoreEntry,
   type FileStoreErrorCode,
   type IFileStoreDriver,
 } from '@polycentric/js-core';
@@ -23,8 +25,8 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
     return new NodeFileStoreDriver(directory);
   }
 
-  private pathFor(p: string): string {
-    return path.join(this.directory, ...segmentsFromPath(p));
+  private pathFor(p: string, allowEmpty = false): string {
+    return path.join(this.directory, ...segmentsFromPath(p, allowEmpty));
   }
 
   async has(p: string): Promise<boolean> {
@@ -63,6 +65,44 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
       return true;
     } catch (err) {
       if (getErrno(err) === 'ENOENT') return false;
+      throw toFileStoreError(err, p);
+    }
+  }
+
+  async list(p: string): Promise<FileStoreEntry[] | null> {
+    try {
+      const dirents = await fs.readdir(this.pathFor(p, true), {
+        withFileTypes: true,
+      });
+
+      const entries: FileStoreEntry[] = [];
+      for (const dirent of dirents) {
+        if (!isValidPathSegment(dirent.name)) continue;
+        if (dirent.isFile()) {
+          entries.push({ kind: 'file', name: dirent.name });
+        } else if (dirent.isDirectory()) {
+          entries.push({ kind: 'dir', name: dirent.name });
+        }
+      }
+
+      return entries;
+    } catch (err) {
+      if (getErrno(err) === 'ENOENT') return null;
+      throw toFileStoreError(err, p);
+    }
+  }
+
+  async deleteSubpath(p: string): Promise<void> {
+    try {
+      const target = this.pathFor(p);
+      const stats = await fs.lstat(target);
+      if (!stats.isDirectory()) {
+        throw new FileStoreError('path conflict', `not a directory: ${p}`);
+      }
+
+      await fs.rm(target, { recursive: true, force: true });
+    } catch (err) {
+      if (getErrno(err) === 'ENOENT') return;
       throw toFileStoreError(err, p);
     }
   }
