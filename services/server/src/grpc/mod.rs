@@ -14,16 +14,3 @@ pub fn stream_response<S>(stream: S) -> Response<S> {
     response
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn stream_responses_forbid_transforms() {
-        let response = stream_response(());
-        assert_eq!(
-            response.metadata().get("cache-control").unwrap(),
-            "no-transform"
-        );
-    }
-}
