@@ -6,11 +6,12 @@ import {
 } from '@/src/common/components/primitives';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   type LayoutChangeEvent,
   Pressable,
+  ScrollView,
   type TextInput as RNTextInput,
   View,
 } from 'react-native';
@@ -21,7 +22,6 @@ import type { v2 } from '@polycentric/react-native';
 import { singleImageAspectRatio } from './utils/attachmentLayout';
 import { MAX_POST_LENGTH, type useComposer } from './hooks/useComposer';
 import { isIOS, isWeb } from '@/src/common/util/platform';
-import { ScrollView } from '@/src/common/components/ScrollView';
 
 import { useMentionInputSync } from '@/src/features/composer/hooks/useMentionInputSync';
 
@@ -55,8 +55,7 @@ type ComposerFieldsProps = {
 
 /**
  * The composer form body (reply/quote previews, error, avatar + text area,
- * attachment thumbnails). Shared by the sheet composer and the full-screen
- * compose tab; each caller supplies its own padded, flex container.
+ * attachment thumbnails). The caller supplies the padded container.
  */
 export function ComposerFields({
   isReply,
@@ -114,10 +113,12 @@ export function ComposerFields({
   const mentionInput = useMentionInputSync({ text, onChangeText, inputRef });
 
   return (
+    // On native this ScrollView never scrolls (the host's does), but Android
+    // needs it: without it, tapping tall text scrolls its bottom edge to the
+    // viewport's, hiding the tapped line under the footer.
     <ScrollView
-      style={[Atoms.flex_1]}
+      style={Atoms.flex_1}
       contentContainerStyle={Atoms.flex_grow_1}
-      keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
     >
       {/* Reply preview */}
