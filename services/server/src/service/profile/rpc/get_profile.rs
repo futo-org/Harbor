@@ -2,7 +2,7 @@
 //! follow counters.
 
 use crate::data::{rows_into_bundles, rows_into_hints};
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{
     list_identity_events, list_profile_events,
@@ -12,31 +12,28 @@ use crate::service::proto::{GetProfileRequest, GetProfileResponse};
 use tonic::Status;
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: GetProfileRequest,
 ) -> Result<GetProfileResponse, Status> {
     if req.identity.is_empty() {
         return Err(Status::invalid_argument("identity is required"));
     }
 
-    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
     let profile_rows =
-        list_profile_events(&ctx2, vec![req.identity.clone()]).await?;
+        list_profile_events(&ctx, vec![req.identity.clone()]).await?;
     let mut event_bundles = rows_into_bundles(profile_rows);
-    attach_proofs(&ctx2, &mut event_bundles).await?;
+    attach_proofs(&ctx, &mut event_bundles).await?;
 
     let identity_rows =
-        list_identity_events(&ctx2, vec![req.identity.clone()]).await?;
+        list_identity_events(&ctx, vec![req.identity.clone()]).await?;
     // The identity's key chain, so clients can validate the bundles.
     let event_hints = rows_into_hints(identity_rows);
 
-    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
-
     let following_count =
-        GraphRepository::count_following(&ctx2, &req.identity).await?;
+        GraphRepository::count_following(&ctx, &req.identity).await?;
 
     let followers_count =
-        GraphRepository::count_followers(&ctx2, &req.identity).await?;
+        GraphRepository::count_followers(&ctx, &req.identity).await?;
 
     Ok(GetProfileResponse {
         event_bundles,
