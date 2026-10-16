@@ -186,6 +186,9 @@ message ListHeadsResponse {
   repeated EventKey heads = 1;
 }
 
+// Empty: the identity comes from the auth token
+message SubscribeHeadsRequest {}
+
 message GetReactionsRequest {
   // Event key of the event to get reactions for
   EventKey target = 1;
@@ -221,6 +224,8 @@ service EventSyncService {
   // Returns the latest sequence number seen by the server for each
   // (signing key, collection) for the given identity
   rpc ListHeads(ListHeadsRequest) returns (ListHeadsResponse);
+  // Streams the authenticated identity's heads, again on each new event
+  rpc SubscribeHeads(SubscribeHeadsRequest) returns (stream ListHeadsResponse);
   // Get the reactions targeting an event.
   rpc GetReactions(GetReactionsRequest) returns (GetReactionsResponse);
   // Get the reaction counts for an out-of-network target (e.g. a video URL).

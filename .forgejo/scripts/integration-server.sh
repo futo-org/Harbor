@@ -2,7 +2,7 @@
 #
 # Run the server integration test suite.
 #
-# Starts PostgreSQL + RustFS + Kafka (if not already running), applies
+# Starts PostgreSQL + RustFS + Kafka + Valkey (if not already running), applies
 # migrations, starts the server with a deterministic test moderator identity,
 # runs `cargo test -p integration-tests`, then cleans up.
 #
@@ -14,7 +14,7 @@
 #
 # Run the server integration test suite.
 #
-# Starts PostgreSQL + RustFS + Kafka (if not already running), applies
+# Starts PostgreSQL + RustFS + Kafka + Valkey (if not already running), applies
 # migrations, starts the server with a deterministic test moderator identity,
 # runs `cargo test -p integration-tests`, then cleans up.
 #
@@ -83,16 +83,16 @@ trap cleanup EXIT INT TERM
 docker compose down -v >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------------------
-# 1. Backing services (PostgreSQL, RustFS, Kafka)
+# 1. Backing services (PostgreSQL, RustFS, Kafka, Valkey)
 # ---------------------------------------------------------------------------
 if [ "$NO_DEPS" = false ]; then
-  echo "==> Starting PostgreSQL, RustFS, and Kafka…"
+  echo "==> Starting PostgreSQL, RustFS, Kafka, and Valkey…"
   if [ "$CI_MODE" = true ]; then
     # CI: docker compose builds the image explicitly; --wait blocks until all
     # services are healthy.
-    docker compose up -d --build --wait postgres rustfs kafka
+    docker compose up -d --build --wait postgres rustfs kafka valkey
   else
-    docker compose up -d postgres rustfs rustfs-init kafka
+    docker compose up -d postgres rustfs rustfs-init kafka valkey
 
     echo "    waiting for postgres (port 5432)…"
     for i in $(seq 1 30); do
@@ -226,6 +226,7 @@ else
   export HARBOR_CONTENT_BLOB_OS_SECRET_KEY="${HARBOR_CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}"
   # Kafka is reached on the EXTERNAL listener for local connections.
   export HARBOR_KAFKA_BROKERS="${HARBOR_KAFKA_BROKERS:-localhost:9092}"
+  export HARBOR_VALKEY_URL="${HARBOR_VALKEY_URL:-redis://localhost:6379}"
   # The test crate reads this to know where to reach the server.
   export HARBOR_TEST_SERVER="${HARBOR_TEST_SERVER:-http://localhost:3000}"
 

@@ -22,7 +22,7 @@ import type {
 } from './platform-interfaces';
 import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
-import { toDigestKey } from './utils/hex';
+import { bytesToHex, toDigestKey } from './utils/hex';
 import { bytesEqual } from './utils/bytes';
 import { CryptoManager } from './crypto/crypto-manager';
 import { createServerJwt, DEFAULT_EXPIRY_SECONDS } from './crypto/server-jwt';
@@ -39,6 +39,10 @@ import {
 } from '@polycentric/rs-core-wasm/generated';
 
 type CoreType = PolycentricCoreLike;
+
+/** The (collection, signer) event stream of `key`. */
+const streamId = (key: Proto.EventKey): string =>
+  `${key.collection}:${key.signedBy?.keyType}:${bytesToHex(key.signedBy?.key ?? new Uint8Array())}`;
 
 export type {
   IdentityState,
@@ -804,18 +808,22 @@ export class PolycentricClient {
   /**
    * Pull signed events for the active identity from all configured servers
    * and persist new ones locally. Existing events/content are not overwritten.
-   * Emits `pulled` if any new events were persisted.
+   * Emits `pulled` if any new events were persisted, or with `coreHeads` if
+   * any events reached the core (another tab may have stored them already).
    *
    * @returns The number of new events persisted
    */
-  private async pull(partial: boolean): Promise<number> {
+  private async pull(
+    partial: boolean,
+    coreHeads?: Proto.EventKey[],
+  ): Promise<number> {
     if (!this.activeIdentityKey) throw new Error('No active identity');
     const identity = this.activeIdentityKey;
 
     // Only filter by heads when doing a partial pull
-    let heads: Proto.EventKey[] | undefined;
+    let heads = coreHeads;
 
-    if (partial) {
+    if (partial && !heads) {
       // Partial pulls will skip events at or before each event stream head.
       // Find each head event and then map it to the filter format.
       const headEvents = await this.storage.events.getByIdentity(identity, {
@@ -858,7 +866,9 @@ export class PolycentricClient {
     // Catch any of our own referenced blobs so they persist locally.
     await this.contentManager.pullBlobs(blobs);
 
-    if (newCount > 0) this.events.emitPulled(identity);
+    if (newCount > 0 || (coreHeads && bundles.length > 0)) {
+      this.events.emitPulled(identity);
+    }
     return newCount;
   }
 
@@ -1072,6 +1082,84 @@ export class PolycentricClient {
     } else {
       throw pullResult.reason;
     }
+  }
+
+  /**
+   * Pull the active identity's events as its other devices publish them.
+   * Follows identity switches. Returns a function that stops it.
+   */
+  startLiveSync(): () => void {
+    let unsubscribe = this.subscribeHeads();
+    const resubscribe = () => {
+      unsubscribe?.();
+      unsubscribe = this.subscribeHeads();
+    };
+    this.events.onKeyPairChanged(resubscribe);
+    return () => {
+      this.events.offKeyPairChanged(resubscribe);
+      unsubscribe?.();
+    };
+  }
+
+  /** Pulls whenever the active identity's heads move. Returns `unsubscribe`. */
+  private subscribeHeads(): (() => void) | undefined {
+    const identity = this.activeIdentityKey;
+    if (!identity) return undefined;
+
+    // One pull at a time, plus one if heads arrive during it.
+    let pulling = false;
+    let again = false;
+    const pull = async () => {
+      if (pulling) {
+        again = true;
+        return;
+      }
+      pulling = true;
+      try {
+        do {
+          again = false;
+          if (this.activeIdentityKey !== identity) return;
+          await this.pull(true, this.coreHeads(identity)).catch((err) => {
+            console.warn('Live sync pull failed:', err);
+          });
+        } while (again);
+      } finally {
+        pulling = false;
+      }
+    };
+
+    const subscription = this.core
+      .fetchQuery(['heads', identity], new Query.SubscribeHeads({}), undefined)
+      .subscribe({
+        next: (result) => {
+          if (!result.data) return;
+          const remote = Proto.ListHeadsResponse.fromBinary(
+            new Uint8Array(result.data),
+          ).heads;
+          if (this.isBehind(identity, remote)) void pull();
+        },
+        // The core reconnects by itself.
+        error: () => {},
+        complete: () => {},
+      });
+    return () => subscription.unsubscribe();
+  }
+
+  /** The heads of the events the core holds, which may lag shared storage. */
+  private coreHeads(identity: string): Proto.EventKey[] {
+    return Proto.ListHeadsResponse.fromBinary(
+      new Uint8Array(this.core.localHeads(identity)),
+    ).heads;
+  }
+
+  /** Whether any of `remote` is ahead of the core's heads of `identity`. */
+  private isBehind(identity: string, remote: Proto.EventKey[]): boolean {
+    const local = new Map(
+      this.coreHeads(identity).map((key) => [streamId(key), key.sequence]),
+    );
+    return remote.some(
+      (head) => (local.get(streamId(head)) ?? -1n) < head.sequence,
+    );
   }
 
   public async setCurrentKeyPair(keyPair: KeyPair): Promise<void> {

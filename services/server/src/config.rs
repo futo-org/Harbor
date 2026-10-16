@@ -24,6 +24,8 @@ pub struct Config {
     /// Hex identity string of the trusted moderation service
     /// (`HARBOR_MODERATION_IDENTITY`). `None` means no content labels.
     pub trusted_moderator: Option<String>,
+    /// Valkey URL for live sync (`HARBOR_VALKEY_URL`). `None` turns it off.
+    pub valkey_url: Option<String>,
     /// Gravity constant used in the reaction_count_decay function.
     ///
     /// Essentially the higher the number the larger the impact of the decay.
@@ -90,6 +92,10 @@ pub fn init() -> &'static Config {
             scraper_url: std::env::var("HARBOR_SCRAPER_URL")
                 .unwrap_or_else(|_| "http://localhost:8855".to_string()),
             trusted_moderator: std::env::var("HARBOR_MODERATION_IDENTITY")
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty()),
+            valkey_url: std::env::var("HARBOR_VALKEY_URL")
                 .ok()
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),

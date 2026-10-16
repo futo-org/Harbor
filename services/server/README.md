@@ -73,6 +73,7 @@ All service variables are read and validated once at startup by
 | `HARBOR_CDN_URL` | `http://localhost:3000` | Public URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`. |
 | `HARBOR_SCRAPER_URL` | `http://localhost:8855` | Base URL of the internal scraper service (link-preview metadata and image proxy). |
 | `HARBOR_MODERATION_IDENTITY` | _(unset)_ | Hex identity string of the trusted moderation service. Unset means no content labels are served. |
+| `HARBOR_VALKEY_URL` | _(unset)_ | Valkey/Redis URL for live sync (`SubscribeHeads`), e.g. `redis://localhost:6379`. Unset turns live sync off. See `docs/content/developer/live-sync.md`. |
 
 ## Common Environment Variables
 

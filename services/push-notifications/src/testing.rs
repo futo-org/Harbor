@@ -11,7 +11,7 @@ use polycentric_common::models::{
         GetAttributedToReactionCountsResponse, GetReactionsRequest, GetReactionsResponse, Identity,
         KeyType, ListEventsRequest, ListEventsResponse, ListHeadsRequest, ListHeadsResponse, Post,
         PostReply, ProfileUpdate, PublicKey, PutEventsRequest, PutEventsResponse,
-        SerializedContent, SignedEvent,
+        SerializedContent, SignedEvent, SubscribeHeadsRequest,
         content::ContentBody,
         event_sync_service_server::{EventSyncService, EventSyncServiceServer},
     },
@@ -96,6 +96,14 @@ impl EventSyncService for MockEventSync {
         &self,
         _request: Request<ListHeadsRequest>,
     ) -> Result<Response<ListHeadsResponse>, Status> {
+        Err(Status::unimplemented("not needed for these tests"))
+    }
+
+    type SubscribeHeadsStream = tonic::codegen::BoxStream<ListHeadsResponse>;
+    async fn subscribe_heads(
+        &self,
+        _request: Request<SubscribeHeadsRequest>,
+    ) -> Result<Response<Self::SubscribeHeadsStream>, Status> {
         Err(Status::unimplemented("not needed for these tests"))
     }
 

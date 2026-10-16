@@ -10,6 +10,7 @@ pub mod client;
 pub mod event;
 pub mod feed;
 pub mod graph;
+pub mod heads;
 pub mod moderation;
 pub mod notification;
 pub mod pagination;
