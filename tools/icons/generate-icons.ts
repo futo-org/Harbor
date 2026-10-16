@@ -141,7 +141,8 @@ async function writeIconComposerBundle(
     join(path, 'Assets/tower.png'),
     await sharp(
       Buffer.from(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${towerWidth}" height="${tower.height}">${buildTower(towerWidth, { ...tower, top: 0 })}</svg>`,
+        // Opaque: icon.json sets the layer's opacity per appearance
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${towerWidth}" height="${tower.height}">${buildTower(towerWidth, { ...tower, top: 0, opacity: 1 })}</svg>`,
       ),
     )
       .png()
@@ -160,6 +161,11 @@ async function writeIconComposerBundle(
             ],
             'image-name': 'tower.png',
             name: 'tower',
+            // The default, then the fully opaque dark-mode tower
+            'opacity-specializations': [
+              { value: tower.opacity ?? 1 },
+              { appearance: 'dark', value: 1 },
+            ],
             // Layers start centred on the canvas
             position: {
               scale: 1,
