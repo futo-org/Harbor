@@ -1,5 +1,5 @@
 import { Atoms, Breakpoints, Spacing, ZIndex } from '@/src/common/theme';
-import { isIOS } from '@/src/common/util/platform';
+import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Portal } from '@rn-primitives/portal';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
@@ -29,7 +29,9 @@ export function Toaster() {
         <View
           pointerEvents="box-none"
           style={[
-            Atoms.absolute,
+            // Web scrolls the whole page, so pin toasts to the viewport there;
+            // native has no `fixed`.
+            isWeb ? Atoms.fixed : Atoms.absolute,
             Atoms.inset_0,
             Atoms.justify_start,
             Atoms.px_lg,
