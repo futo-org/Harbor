@@ -35,10 +35,11 @@ impl ServiceContext {
     }
 
     pub(crate) async fn to_context_ro(&self) -> Result<PublicContext, Status> {
-        PublicContext::new(
+        PublicContext::with_auth(
             &self.ro_db,
             self.proof_cache.clone(),
             self.kafka_producer.clone(),
+            None,
         )
         .await
     }
@@ -62,8 +63,8 @@ impl<'a> RequestContext<'a> {
 /// Request [`Context`] where the user is authenticated.
 pub(crate) type AuthContext = Context<String>;
 
-/// Request [`Context`] where the user is not authenticated.
-pub(crate) type PublicContext = Context<()>;
+/// Request [`Context`] where the user is optionally authenticated.
+pub(crate) type PublicContext = Context<Option<String>>;
 
 /// Request context.
 ///
@@ -77,6 +78,22 @@ pub(crate) struct Context<Auth> {
 }
 
 impl<Auth> Context<Auth> {
+    /// Use [`PublicContext::new`] or [`AuthContext::new`] instead.
+    async fn with_auth(
+        pool: &DatabaseConnection,
+        proof_cache: Arc<ProofCache>,
+        kafka_producer: FutureProducer,
+        auth: Auth,
+    ) -> Result<Context<Auth>, Status> {
+        let db = DbConn::from_pool(pool).await?;
+        Ok(Context {
+            db,
+            proof_cache,
+            kafka_producer,
+            auth,
+        })
+    }
+
     /// Returns the database connection.
     pub(crate) fn db(&self) -> &DbConn {
         &self.db
@@ -94,20 +111,15 @@ impl<Auth> Context<Auth> {
 }
 
 impl PublicContext {
-    /// Create a new context without authentication information.
-    pub(crate) async fn new(
+    /// Create a new context with optional authentication information.
+    pub(crate) async fn new<T>(
         pool: &DatabaseConnection,
         proof_cache: Arc<ProofCache>,
         kafka_producer: FutureProducer,
+        request: &tonic::Request<T>,
     ) -> Result<PublicContext, Status> {
-        let db = DbConn::from_pool(pool).await?;
-
-        Ok(Context {
-            db,
-            proof_cache,
-            kafka_producer,
-            auth: (),
-        })
+        let auth = authenticated_identity(request);
+        Context::with_auth(pool, proof_cache, kafka_producer, auth).await
     }
 }
 
@@ -122,15 +134,7 @@ impl AuthContext {
         let auth = authenticated_identity(request).ok_or_else(|| {
             Status::unauthenticated("authentication required")
         })?;
-
-        let ctx = PublicContext::new(pool, proof_cache, kafka_producer).await?;
-
-        Ok(Context {
-            db: ctx.db,
-            proof_cache: ctx.proof_cache,
-            kafka_producer: ctx.kafka_producer,
-            auth,
-        })
+        Context::with_auth(pool, proof_cache, kafka_producer, auth).await
     }
 
     /// Returns the identity of the authenticated caller.
