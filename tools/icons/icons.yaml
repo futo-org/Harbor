@@ -117,4 +117,4 @@ icons:
     size: 1200x630
     background: *orange
     tower: { height: 288, top: 115, fill: '#FFFFFF', opacity: 0.9 }
-    text: { <<: *wordmark, fontSize: 85, baselineFromBottom: 115 }
+    text: { <<: *wordmark, fontSize: 85, baselineFromBottom: 115, opacity: 0.9 }

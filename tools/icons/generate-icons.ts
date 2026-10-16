@@ -20,6 +20,7 @@ type Text = {
   letterSpacing: number;
   baselineFromBottom: number;
   fill: string;
+  opacity?: number;
 };
 type Icon = {
   files: string[];
@@ -172,7 +173,15 @@ function buildTower(
 function buildText(
   canvas: number,
   canvasHeight: number,
-  { content, font, fontSize, letterSpacing, baselineFromBottom, fill }: Text,
+  {
+    content,
+    font,
+    fontSize,
+    letterSpacing,
+    baselineFromBottom,
+    fill,
+    opacity = 1,
+  }: Text,
 ): string {
   const parsedFont = opentype.parse(
     new Uint8Array(readFileSync(join(repoRoot, font))).buffer,
@@ -187,7 +196,7 @@ function buildText(
   // Centres the letters themselves, not their advance widths
   const textBounds = textPath.getBoundingBox();
   const textX = (canvas - textBounds.x1 - textBounds.x2) / 2;
-  return `<path fill="${fill}" transform="translate(${textX} 0)" d="${textPath.toPathData(2)}"/>`;
+  return `<path fill="${fill}" fill-opacity="${opacity}" transform="translate(${textX} 0)" d="${textPath.toPathData(2)}"/>`;
 }
 
 function readSvgAttribute(svg: string, name: string): string {
