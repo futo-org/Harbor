@@ -1,14 +1,11 @@
 //! gRPC `ServerService` impl. Each method delegates to a handler
 //! under `server/rpc/`.
 
-pub mod acknowledge_notifications;
-pub mod list_notifications;
-pub mod subscribe_unread_notification_count;
-
 use std::sync::Arc;
 
-use crate::service::auth::authenticated_identity;
-use crate::service::context::{RequestContext, ServiceContext};
+use tonic::{Request, Response, Status};
+
+use crate::service::context::{AuthContext, PublicContext, ServiceContext};
 use crate::service::notifications::changes;
 use crate::service::proto::notification_service_server::{
     NotificationService, NotificationServiceServer,
@@ -20,7 +17,10 @@ use polycentric_common::models::protos_v2::{
     SubscribeUnreadNotificationCountRequest,
     UnregisterPushNotificationResponse,
 };
-use tonic::{Request, Response, Status};
+
+pub mod acknowledge_notifications;
+pub mod list_notifications;
+pub mod subscribe_unread_notification_count;
 
 pub struct NotificationServiceImpl {
     ctx: Arc<ServiceContext>,
@@ -32,22 +32,38 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<ListNotificationsRequest>,
     ) -> Result<Response<ListNotificationsResponse>, Status> {
-        let caller = authenticated_identity(&request);
-        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
+        let ctx = PublicContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            list_notifications::handle(&ctx, request.into_inner()).await?,
+            list_notifications::handle(ctx, request.into_inner()).await?,
         ))
     }
+
     async fn acknowledge_notifications(
         &self,
         request: Request<AcknowledgeNotificationsRequest>,
     ) -> Result<Response<AcknowledgeNotificationsResponse>, Status> {
+        let ctx = AuthContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            acknowledge_notifications::handle(&self.ctx, request).await?,
+            acknowledge_notifications::handle(ctx, request.into_inner())
+                .await?,
         ))
     }
+
     type SubscribeUnreadNotificationCountStream =
         subscribe_unread_notification_count::CountStream;
+
     async fn subscribe_unread_notification_count(
         &self,
         request: Request<SubscribeUnreadNotificationCountRequest>,
@@ -62,6 +78,7 @@ impl NotificationService for NotificationServiceImpl {
             .await?,
         ))
     }
+
     async fn register_push_notifications(
         &self,
         _request: Request<SignedMessage>,
@@ -70,6 +87,7 @@ impl NotificationService for NotificationServiceImpl {
             "Not implemented here. Use a push service.",
         ));
     }
+
     async fn unregister_push_notifications(
         &self,
         _request: Request<SignedMessage>,
