@@ -1726,15 +1726,15 @@ const headsBytes = (heads: Proto.EventKey[]) =>
     .buffer;
 
 /**
- * `makeCoreMock` holding `coreHeads`, with a `SubscribeHeads` stream driven
+ * `makeCoreMock` holding `localHeads`, with a `SubscribeHeads` stream driven
  * by `emitHeads`.
  */
 function makeLiveCore(
   opts: CoreMockOptions = {},
-  coreHeads: Proto.EventKey[] = [],
+  localHeads: Proto.EventKey[] = [],
 ) {
   const core = makeCoreMock(opts);
-  core.localHeads = vi.fn(() => headsBytes(coreHeads));
+  core.localHeads = vi.fn(() => headsBytes(localHeads));
   const otherQuery = core.fetchQuery.getMockImplementation();
   let observer: any;
   const unsubscribe = vi.fn();
@@ -1781,7 +1781,7 @@ describe('PolycentricClient live sync', () => {
     content,
   });
 
-  it('pulls past the core heads when a server is ahead', async () => {
+  it('pulls past the local heads when a server is ahead', async () => {
     const { core, emitHeads } = makeLiveCore(
       { pullBundles: () => [makeBundle(remote, content)] },
       [keyOf(seeded[0])],

@@ -808,20 +808,21 @@ export class PolycentricClient {
   /**
    * Pull signed events for the active identity from all configured servers
    * and persist new ones locally. Existing events/content are not overwritten.
-   * Emits `pulled` if any new events were persisted, or with `coreHeads` if
-   * any events reached the core (another tab may have stored them already).
+   * Emits `pulled` if any new events were persisted, or with `after` if any
+   * events came back (another tab may have stored them already).
    *
+   * @param after Heads to pull past instead of the stored ones.
    * @returns The number of new events persisted
    */
   private async pull(
     partial: boolean,
-    coreHeads?: Proto.EventKey[],
+    after?: Proto.EventKey[],
   ): Promise<number> {
     if (!this.activeIdentityKey) throw new Error('No active identity');
     const identity = this.activeIdentityKey;
 
     // Only filter by heads when doing a partial pull
-    let heads = coreHeads;
+    let heads = after;
 
     if (partial && !heads) {
       // Partial pulls will skip events at or before each event stream head.
@@ -866,7 +867,7 @@ export class PolycentricClient {
     // Catch any of our own referenced blobs so they persist locally.
     await this.contentManager.pullBlobs(blobs);
 
-    if (newCount > 0 || (coreHeads && bundles.length > 0)) {
+    if (newCount > 0 || (after && bundles.length > 0)) {
       this.events.emitPulled(identity);
     }
     return newCount;
@@ -1119,7 +1120,7 @@ export class PolycentricClient {
         do {
           again = false;
           if (this.activeIdentityKey !== identity) return;
-          await this.pull(true, this.coreHeads(identity)).catch((err) => {
+          await this.pull(true, this.localHeads(identity)).catch((err) => {
             console.warn('Live sync pull failed:', err);
           });
         } while (again);
@@ -1145,17 +1146,17 @@ export class PolycentricClient {
     return () => subscription.unsubscribe();
   }
 
-  /** The heads of the events the core holds, which may lag shared storage. */
-  private coreHeads(identity: string): Proto.EventKey[] {
+  /** Heads of the events loaded in this client, which may lag shared storage. */
+  private localHeads(identity: string): Proto.EventKey[] {
     return Proto.ListHeadsResponse.fromBinary(
       new Uint8Array(this.core.localHeads(identity)),
     ).heads;
   }
 
-  /** Whether any of `remote` is ahead of the core's heads of `identity`. */
+  /** Whether any of `remote` is ahead of the local heads of `identity`. */
   private isBehind(identity: string, remote: Proto.EventKey[]): boolean {
     const local = new Map(
-      this.coreHeads(identity).map((key) => [streamId(key), key.sequence]),
+      this.localHeads(identity).map((key) => [streamId(key), key.sequence]),
     );
     return remote.some(
       (head) => (local.get(streamId(head)) ?? -1n) < head.sequence,
