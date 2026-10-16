@@ -41,11 +41,14 @@ export interface IFileStoreDriver {
    */
   delete(path: string): Promise<boolean>;
 
-  /** List the files and directories at `path`. */
+  /**
+   * List the files and directoring under the directory specified by `path`.
+   * Returns `null` when the directory does not exist.
+   */
   list(path: string): Promise<FileStoreEntry[] | null>;
 
   /**
-   * Delete all files and directories under this subpath.
+   * Delete all files and directories under this subdirectory.
    * For safety reasons, an empty path is not accepted here.
    */
   deleteSubpath(path: string): Promise<void>;

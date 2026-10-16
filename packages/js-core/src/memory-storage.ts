@@ -8,7 +8,6 @@ import type {
 } from './platform-interfaces';
 import {
   FileStoreError,
-  isValidPathSegment,
   segmentsFromPath,
 } from './platform-interfaces/file-store-driver';
 import type { PrivateKey } from './polycentric-client';
@@ -302,7 +301,6 @@ export class MemoryFileStoreDriver implements IFileStoreDriver {
     const entries: FileStoreEntry[] = [];
 
     for (const [name, entry] of dir) {
-      if (!isValidPathSegment(name)) continue;
       entries.push({ kind: entry instanceof Map ? 'dir' : 'file', name });
     }
 
