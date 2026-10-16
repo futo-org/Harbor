@@ -45,21 +45,6 @@ impl ServiceContext {
     }
 }
 
-pub struct RequestContext<'a> {
-    pub service: &'a ServiceContext,
-    /// The authenticated caller--`None` for anonymous requests.
-    pub caller: Option<&'a str>,
-}
-
-impl<'a> RequestContext<'a> {
-    pub fn new(
-        service: &'a ServiceContext,
-        caller: Option<&'a str>,
-    ) -> RequestContext<'a> {
-        RequestContext { service, caller }
-    }
-}
-
 /// Request [`Context`] where the user is authenticated.
 pub(crate) type AuthContext = Context<String>;
 
