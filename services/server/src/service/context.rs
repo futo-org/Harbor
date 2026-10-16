@@ -56,8 +56,8 @@ pub(crate) type PublicContext = Context<Option<String>>;
 /// See [`AuthContext`] and [`PublicContext`].
 pub(crate) struct Context<Auth> {
     /// Read/write or read-only database connection.
-    db: DbConn,
-    proof_cache: Arc<ProofCache>,
+    pub(crate) db: DbConn,
+    pub(crate) proof_cache: Arc<ProofCache>,
     kafka_producer: FutureProducer,
     auth: Auth,
 }

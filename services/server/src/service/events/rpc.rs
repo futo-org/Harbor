@@ -1,13 +1,14 @@
 //! gRPC `EventSyncService` impl. Each method delegates to a handler
 //! under `events/rpc/`.
 
-pub mod get_attributed_to_reaction_counts;
-pub mod get_reactions;
-pub mod list_events;
-pub mod list_heads;
-pub mod put_events;
+use std::sync::Arc;
 
-use crate::service::context::ServiceContext;
+use polycentric_common::models::protos_v2::{
+    ListHeadsRequest, ListHeadsResponse,
+};
+use tonic::{Request, Response, Status};
+
+use crate::service::context::{PublicContext, ServiceContext};
 use crate::service::proto::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
 };
@@ -17,11 +18,12 @@ use crate::service::proto::{
     GetReactionsResponse, ListEventsRequest, ListEventsResponse,
     PutEventsRequest, PutEventsResponse,
 };
-use polycentric_common::models::protos_v2::{
-    ListHeadsRequest, ListHeadsResponse,
-};
-use std::sync::Arc;
-use tonic::{Request, Response, Status};
+
+pub mod get_attributed_to_reaction_counts;
+pub mod get_reactions;
+pub mod list_events;
+pub mod list_heads;
+pub mod put_events;
 
 pub struct EventSyncServiceImpl {
     ctx: Arc<ServiceContext>,
@@ -33,8 +35,15 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<ListEventsRequest>,
     ) -> Result<Response<ListEventsResponse>, Status> {
+        let ctx = PublicContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            list_events::handle(&self.ctx, request.into_inner()).await?,
+            list_events::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -42,8 +51,15 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<PutEventsRequest>,
     ) -> Result<Response<PutEventsResponse>, Status> {
+        let ctx = PublicContext::new(
+            &self.ctx.db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            put_events::handle(&self.ctx, request.into_inner()).await?,
+            put_events::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -51,8 +67,15 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<ListHeadsRequest>,
     ) -> Result<Response<ListHeadsResponse>, Status> {
+        let ctx = PublicContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            list_heads::handle(&self.ctx, request.into_inner()).await?,
+            list_heads::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -60,8 +83,15 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<GetReactionsRequest>,
     ) -> Result<Response<GetReactionsResponse>, Status> {
+        let ctx = PublicContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            get_reactions::handle(&self.ctx, request.into_inner()).await?,
+            get_reactions::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -69,12 +99,16 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<GetAttributedToReactionCountsRequest>,
     ) -> Result<Response<GetAttributedToReactionCountsResponse>, Status> {
+        let ctx = PublicContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
+        let request = request.into_inner();
         Ok(Response::new(
-            get_attributed_to_reaction_counts::handle(
-                &self.ctx,
-                request.into_inner(),
-            )
-            .await?,
+            get_attributed_to_reaction_counts::handle(ctx, request).await?,
         ))
     }
 }

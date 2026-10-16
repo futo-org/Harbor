@@ -15,11 +15,10 @@ use polycentric_common::models::{
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::TransactionTrait;
 use tonic::{Code, Status};
 
 use crate::service::content::content_repository as ContentRepository;
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::repository as EventsRepository;
 use crate::service::identity::repository::Query as IdentityRepository;
 use crate::service::identity::service::authorize_event_signer;
@@ -32,7 +31,7 @@ use crate::service::proto::{
 /// Ingest a batch of signed events. Each event is processed in
 /// isolation with failures reported back in `PutEventsResponse.errors`
 pub async fn handle(
-    ctx: &ServiceContext,
+    mut ctx: PublicContext,
     req: PutEventsRequest,
 ) -> Result<PutEventsResponse, Status> {
     let mut errors: Vec<PutEventError> = Vec::new();
@@ -44,7 +43,7 @@ pub async fn handle(
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
         let start_warnings = warnings.len();
         match process_event(
-            ctx,
+            &mut ctx,
             event_bundle,
             &mut banned_cache,
             &mut app_cache,
@@ -90,7 +89,7 @@ pub async fn handle(
         }
     }
 
-    let missing_blobs = remove_present_blobs(ctx, all_blobs)
+    let missing_blobs = remove_present_blobs(&ctx, all_blobs)
         .await
         .unwrap_or_else(|e| {
             // A failure occurred while checking what blobs the server already has.
@@ -110,7 +109,7 @@ pub async fn handle(
 /// Validate and persist an event.
 /// Returns all blobs referenced by the event.
 async fn process_event(
-    ctx: &ServiceContext,
+    ctx: &mut PublicContext,
     event_bundle: EventBundle,
     banned_cache: &mut HashMap<Box<str>, bool>,
     app_cache: &mut HashMap<Application, i32>,
@@ -166,7 +165,7 @@ async fn process_event(
         Some(false) => { /* Ok to continue. */ }
         None => {
             let is_banned = IdentityRepository::is_banned(
-                &ctx.ro_db,
+                ctx.db(),
                 &key.identity,
             )
             .await
@@ -192,7 +191,7 @@ async fn process_event(
             let mut app_errors = Vec::<()>::new();
             app.validate_check(&mut app_errors, |_| ());
             if app_errors.is_empty() {
-                let app_id = EventsRepository::Mutation::application_id(&ctx.db, app)
+                let app_id = EventsRepository::Mutation::application_id(ctx.db(), app)
                     .await
                     .map_err(|e| {
                         tracing::error!(error = %e, "put_events application db error");
@@ -322,14 +321,14 @@ async fn process_event(
                 Status::internal("internal server error")
             })?;
 
-            ctx.proof_cache
+            ctx.proof_cache()
                 .invalidate_canonical(&key.identity, key.collection)
                 .await;
             if key.collection == collections::IDENTITY {
-                ctx.proof_cache.invalidate_identity(&key.identity).await;
+                ctx.proof_cache().invalidate_identity(&key.identity).await;
             }
 
-            let producer = ctx.kafka_producer.clone();
+            let producer = ctx.kafka().clone();
             let topic = common_kafka::prefixed("events");
             tokio::spawn(async move {
                 if let Err((e, _)) = producer
@@ -538,7 +537,7 @@ pub fn event_is_authorised(identity: &str, content: Option<&Content>) -> bool {
 
 /// Keep only the blobs that are not already present
 async fn remove_present_blobs(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     blobs: HashSet<Blob>,
 ) -> Result<Vec<Blob>, Status> {
     let digests: Vec<_> = blobs
@@ -547,7 +546,7 @@ async fn remove_present_blobs(
         .collect();
 
     let already_present =
-        ContentRepository::Query::find_digests_in_db(&ctx.ro_db, &digests)
+        ContentRepository::Query::find_digests_in_db(ctx.db(), &digests)
             .await
             .map_err(|e| {
                 tracing::error!(error = %e, "put_events blob db error");

@@ -1,20 +1,17 @@
-use crate::service::events::repository as EventsRepository;
-use crate::service::proto::PublicKey;
-use crate::service::{
-    context::ServiceContext, events::repository::HeadInfoRow,
-};
-
 use polycentric_common::models::protos_v2::{
     EventKey, ListHeadsRequest, ListHeadsResponse,
 };
-
 use tonic::Status;
 
+use crate::service::events::repository as EventsRepository;
+use crate::service::proto::PublicKey;
+use crate::service::{context::PublicContext, events::repository::HeadInfoRow};
+
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: ListHeadsRequest,
 ) -> Result<ListHeadsResponse, Status> {
-    let rows = EventsRepository::Query::list_heads(&ctx.ro_db, &req.identity)
+    let rows = EventsRepository::Query::list_heads(ctx.db(), &req.identity)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "list_heads db error");

@@ -1,4 +1,4 @@
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::proto::{
     GetAttributedToReactionCountsRequest,
     GetAttributedToReactionCountsResponse, attributed_to::To,
@@ -10,7 +10,7 @@ use tonic::Status;
 /// (e.g. a video URL). Counts are kept up to date by the stats worker in
 /// `attributed_to_reaction_summaries`; this just reads them.
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: GetAttributedToReactionCountsRequest,
 ) -> Result<GetAttributedToReactionCountsResponse, Status> {
     let url = match req.attributed_to.and_then(|a| a.to) {
@@ -23,7 +23,7 @@ pub async fn handle(
     };
 
     let (upvote_count, downvote_count) =
-        Mutation::get_attributed_reaction_summary(&ctx.ro_db, &url)
+        Mutation::get_attributed_reaction_summary(ctx.db(), &url)
             .await
             .map_err(|_| Status::internal("internal server error"))?;
 
