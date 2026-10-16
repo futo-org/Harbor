@@ -142,3 +142,25 @@ impl AuthContext {
         self.auth.as_str()
     }
 }
+
+/// Authentication of a context.
+///
+/// This provides optional autentication, when authentication is required use
+/// [`AuthContext`].
+pub(crate) trait Auth {
+    /// Returns the identity of the authenticated caller, if the caller is
+    /// authenticated.
+    fn identity(&self) -> Option<&str>;
+}
+
+impl Auth for AuthContext {
+    fn identity(&self) -> Option<&str> {
+        Some(self.identity())
+    }
+}
+
+impl Auth for PublicContext {
+    fn identity(&self) -> Option<&str> {
+        self.auth.as_deref()
+    }
+}
