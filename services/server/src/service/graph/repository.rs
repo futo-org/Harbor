@@ -14,7 +14,7 @@ use tonic::Status;
 use crate::data::EventWithContentRow;
 use crate::data::hydration::event_identities;
 use crate::data::{Cursor, CursorFilter, EventRow};
-use crate::service::context::{RequestContext, ServiceContext};
+use crate::service::context::{Auth, Context, ServiceContext};
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
 use crate::service::proto::Content;
@@ -97,8 +97,8 @@ impl Query {
     /// Identities `caller` has blocked, read from the `block` cache table.
     /// No tombstone filtering is required here: the cache only holds rows
     /// for blocks that have not been deleted.
-    pub async fn list_blocked_identities(
-        ctx: &ServiceContext,
+    async fn list_blocked_identities<A>(
+        ctx: &Context<A>,
         caller: &str,
     ) -> Result<Vec<String>, Status> {
         block::Entity::find()
@@ -107,15 +107,15 @@ impl Query {
             .distinct()
             .filter(block::Column::Blocker.eq(caller))
             .into_tuple::<String>()
-            .all(&ctx.ro_db)
+            .all(ctx.db())
             .await
             .map_err(map_db_err)
     }
 
     /// [`Query::list_blocked_identities`] as a deduplicated set, for
     /// filtering the identities a response may carry.
-    pub async fn blocked_set(
-        ctx: &ServiceContext,
+    async fn blocked_set<A>(
+        ctx: &Context<A>,
         identity: &str,
     ) -> Result<HashSet<String>, Status> {
         Ok(Self::list_blocked_identities(ctx, identity)
@@ -127,11 +127,14 @@ impl Query {
     /// [`Query::blocked_set`] for the caller of a request. Empty when the
     /// request arrived unauthenticated, as there is then no caller whose
     /// blocks could apply.
-    pub async fn blocked_set_for_caller(
-        ctx: &RequestContext<'_>,
-    ) -> Result<HashSet<String>, Status> {
-        match ctx.caller {
-            Some(caller) => Self::blocked_set(ctx.service, caller).await,
+    pub async fn blocked_set_for_caller<A>(
+        ctx: &Context<A>,
+    ) -> Result<HashSet<String>, Status>
+    where
+        Context<A>: Auth,
+    {
+        match ctx.identity() {
+            Some(caller) => Self::blocked_set(ctx, caller).await,
             None => Ok(HashSet::new()),
         }
     }

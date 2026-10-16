@@ -516,8 +516,8 @@ impl Query {
     /// Bulk-fetch events (with joined content) by their EventKey
     /// tuples. Keys missing a `signed_by` are skipped. Used to hydrate
     /// referenced posts (quote / repost targets) as `event_hints`.
-    pub async fn list_events_by_keys(
-        db: &DbConn,
+    pub async fn list_events_by_keys<C: ConnectionTrait>(
+        db: &C,
         keys: &[crate::service::proto::EventKey],
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let mut filter = Condition::any();
@@ -555,8 +555,8 @@ impl Query {
     /// the trusted moderator are returned, using a join through
     /// `content_label` → `content` → `events` to check the label
     /// author's identity. Returns empty when no moderator is configured.
-    pub async fn list_labels_for_event_keys(
-        db: &DbConn,
+    pub async fn list_labels_for_event_keys<C: ConnectionTrait>(
+        db: &C,
         keys: &[TargetEventKey],
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let Some(moderator) = config::get().trusted_moderator.as_deref() else {

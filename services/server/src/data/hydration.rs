@@ -107,17 +107,15 @@ where
     let ctx2 = ctx.service.to_context_ro().await?; // TODO: move to argument.
     let deletes_by_target =
         tombstone::validated_tombstones(&ctx2, &display_keys).await?;
-    let referenced = feeds_repository::Query::list_events_by_keys(
-        &ctx.service.ro_db,
-        &ref_keys,
-    )
-    .await
-    .map_err(|err| {
-        tracing::error!(error = %err, "failed to list events");
-        Status::internal("internal server error")
-    })?;
+    let referenced =
+        feeds_repository::Query::list_events_by_keys(ctx2.db(), &ref_keys)
+            .await
+            .map_err(|err| {
+                tracing::error!(error = %err, "failed to list events");
+                Status::internal("internal server error")
+            })?;
     let label_events = feeds_repository::Query::list_labels_for_event_keys(
-        &ctx.service.ro_db,
+        ctx2.db(),
         &display_keys,
     )
     .await
@@ -125,17 +123,15 @@ where
         tracing::error!(error = %err, "failed to list labels");
         Status::internal("internal server error")
     })?;
-    let stats = gather_stats_for(
-        &ctx.service.ro_db,
-        rows.iter().map(|row| row.event_id()),
-    )
-    .await
-    .map_err(|err| {
-        tracing::error!(error = %err, "failed to gather stats");
-        Status::internal("internal server error")
-    })?;
+    let stats =
+        gather_stats_for(ctx2.db(), rows.iter().map(|row| row.event_id()))
+            .await
+            .map_err(|err| {
+                tracing::error!(error = %err, "failed to gather stats");
+                Status::internal("internal server error")
+            })?;
     let blocked_identities =
-        GraphRepository::blocked_set_for_caller(ctx).await?;
+        GraphRepository::blocked_set_for_caller(&ctx2).await?;
 
     // For all rows we return and for all hints, return the latest identity and
     // profile update events.

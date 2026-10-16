@@ -162,7 +162,8 @@ async fn hydrate(
     .await
     .map_err(map_db_err)?;
 
-    let blocked = GraphRepository::blocked_set_for_caller(ctx).await?;
+    let ctx2 = ctx.service.to_context_ro().await?; // TODO: move to argument.
+    let blocked = GraphRepository::blocked_set_for_caller(&ctx2).await?;
 
     let fetched_keys: Vec<_> =
         fetched.iter().map(|(e, _)| TargetEventKey::of(e)).collect();

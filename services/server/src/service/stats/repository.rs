@@ -18,8 +18,8 @@ impl Query {
     /// For each event in `events`, estimate the number of replies it has.
     /// Results are returned as a map from each event's key to its reply count.
     /// Events without any replies may be excluded from the output map.
-    pub async fn count_replies(
-        db: &DbConn,
+    pub async fn count_replies<C: ConnectionTrait>(
+        db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
     ) -> Result<HashMap<EventId, i64>, DbErr> {
         if event_ids.len() == 0 {
@@ -49,8 +49,8 @@ impl Query {
     /// For each event in `events`, get our estimates for the reaction summary counts.
     /// Results are returned as a map from each event's key to its reaction summary.
     /// Events with no reactions may be excluded from the output map.
-    pub async fn summarize_reactions(
-        db: &DbConn,
+    pub async fn summarize_reactions<C: ConnectionTrait>(
+        db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
     ) -> Result<HashMap<EventId, ReactionSummary>, DbErr> {
         if event_ids.len() == 0 {
@@ -104,8 +104,8 @@ impl Query {
     /// the events specified by `event_keys`.
     /// Up to `limit` rows will be returned for each event key ordered by most
     /// popular to least.
-    pub async fn tally_reactions(
-        db: &DbConn,
+    pub async fn tally_reactions<C: ConnectionTrait>(
+        db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
     ) -> Result<HashMap<EventId, Vec<ReactionTally>>, DbErr> {
         if event_ids.len() == 0 {
