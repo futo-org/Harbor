@@ -20,7 +20,7 @@ use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::{ActiveModelTrait, NotSet, Set};
 
 use crate::data::row_into_bundle;
-use crate::service::context::ServiceContext;
+use crate::service::context::{ServiceContext, WorkerContext};
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::graph::repository::Query as GraphRepository;
@@ -61,6 +61,7 @@ impl NotificationWorker {
     /// a DB/proof error propagates so the message is retried.
     async fn hydrate_target(
         &self,
+        ctx: &WorkerContext,
         key: &EventKey,
     ) -> Result<Option<EventBundle>, WorkerError> {
         let Some(signed_by) = key.signed_by.as_ref() else {
@@ -68,7 +69,7 @@ impl NotificationWorker {
         };
 
         let Some(row) = FeedsRepository::find_event_by_key(
-            &self.ctx.ro_db,
+            &ctx.db,
             key.collection as i16,
             &key.identity,
             signed_by.key_type as i16,
@@ -81,7 +82,6 @@ impl NotificationWorker {
         };
 
         let mut bundles = vec![row_into_bundle(row)];
-        let ctx = self.ctx.to_context_ro().await?; // TODO: move to argument.
         attach_proofs(&ctx, &mut bundles).await?;
         Ok(bundles.into_iter().next())
     }
@@ -90,6 +90,7 @@ impl NotificationWorker {
     /// the claim's own owner — to verify the claim at `claim_key`.
     async fn verification_was_requested(
         &self,
+        ctx: &WorkerContext,
         claim_key: &Option<EventKey>,
         verifier: &str,
     ) -> Result<bool, WorkerError> {
@@ -109,9 +110,7 @@ impl NotificationWorker {
             sequence: claim_key.sequence as i64,
         };
         Ok(VerificationsRepository::was_verification_requested(
-            &self.ctx.ro_db,
-            &key,
-            verifier,
+            &ctx.db, &key, verifier,
         )
         .await?)
     }
@@ -121,6 +120,7 @@ impl NotificationWorker {
     /// nor a push.
     async fn drop_recipients_blocking_author(
         &self,
+        ctx: &WorkerContext,
         mut notifications: Vec<PendingNotification>,
         author: &str,
     ) -> Result<Vec<PendingNotification>, WorkerError> {
@@ -130,7 +130,7 @@ impl NotificationWorker {
         // TODO: the query called in `identites_blocking` could be more
         // efficient. See the method's doc comment.
         let blockers = GraphRepository::identities_blocking(
-            &self.ctx.ro_db,
+            &ctx.db,
             notifications.iter().map(|n| n.to_identity.as_str()),
             author,
         )
@@ -144,6 +144,7 @@ impl NotificationWorker {
     // push-notifications service. The message key carries the recipient.
     async fn emit(
         &self,
+        ctx: &WorkerContext,
         to_identity: &str,
         kind: NotificationKind,
         trigger: EventBundle,
@@ -165,8 +166,7 @@ impl NotificationWorker {
                 value: Some(crate::config::get().server_name.as_str()),
             }));
 
-        self.ctx
-            .kafka_producer
+        ctx.kafka_producer
             .send(record, Duration::from_secs(0))
             .await
             .map(|_| ())
@@ -215,6 +215,24 @@ impl MessageHandler for NotificationWorker {
         let author = &trigger_key.identity;
         let event_notifications = build_notifications(author, &content);
 
+        let ctx = match WorkerContext::new(
+            &self.ctx.db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+        )
+        .await
+        {
+            Ok(ctx) => ctx,
+            Err(err) => {
+                tracing::error!(
+                    worker = Self::NAME,
+                    error = %err,
+                    "failed create worker context"
+                );
+                return Outcome::Retry;
+            }
+        };
+
         // A post also notifies the identities it mentions. Alias mentions
         // resolve through their domain's `.well-known/polycentric.json`; a
         // failed lookup drops that mention rather than retrying, so a dead
@@ -223,7 +241,7 @@ impl MessageHandler for NotificationWorker {
             Some(ContentBody::Post(post)) => {
                 let identity_by_alias_map =
                     cached_alias_resolver::resolve_aliases(
-                        &self.ctx.db,
+                        &ctx.db,
                         &extract_mentioned_aliases(&post.text),
                     )
                     .await;
@@ -246,7 +264,7 @@ impl MessageHandler for NotificationWorker {
             ..
         }) = event_notifications.first()
         {
-            match self.verification_was_requested(target, author).await {
+            match self.verification_was_requested(&ctx, target, author).await {
                 Ok(true) => {}
                 Ok(false) => return Outcome::Commit,
                 Err(e) => {
@@ -262,6 +280,7 @@ impl MessageHandler for NotificationWorker {
 
         let notifications = match self
             .drop_recipients_blocking_author(
+                &ctx,
                 event_notifications
                     .into_iter()
                     .chain(mention_notifications)
@@ -332,7 +351,7 @@ impl MessageHandler for NotificationWorker {
                 updated_at: Set(now),
             };
 
-            if let Err(e) = row.insert(&self.ctx.db).await {
+            if let Err(e) = row.insert(&ctx.db).await {
                 tracing::warn!(
                     worker = Self::NAME,
                     error = %e,
@@ -347,7 +366,7 @@ impl MessageHandler for NotificationWorker {
             .map(|n| n.to_identity.as_str())
             .collect();
         for identity in recipients {
-            if let Err(e) = changes::notify(&self.ctx.db, identity).await {
+            if let Err(e) = changes::notify(&ctx.db, identity).await {
                 tracing::warn!(worker = Self::NAME, error = %e, "notify failed");
             }
         }
@@ -358,7 +377,7 @@ impl MessageHandler for NotificationWorker {
         // when it has one; follows and mentions have none.
         let target_event =
             match notifications.iter().find_map(|n| n.target.as_ref()) {
-                Some(key) => match self.hydrate_target(key).await {
+                Some(key) => match self.hydrate_target(&ctx, key).await {
                     Ok(bundle) => bundle,
                     Err(e) => {
                         tracing::warn!(
@@ -377,6 +396,7 @@ impl MessageHandler for NotificationWorker {
         for notification in &notifications {
             if let Err(e) = self
                 .emit(
+                    &ctx,
                     &notification.to_identity,
                     notification.kind,
                     bundle.clone(),

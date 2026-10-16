@@ -33,16 +33,6 @@ impl ServiceContext {
             kafka_producer,
         })
     }
-
-    pub(crate) async fn to_context_ro(&self) -> Result<PublicContext, Status> {
-        PublicContext::with_auth(
-            &self.ro_db,
-            self.proof_cache.clone(),
-            self.kafka_producer.clone(),
-            None,
-        )
-        .await
-    }
 }
 
 /// Request [`Context`] where the user is optionally authenticated.
