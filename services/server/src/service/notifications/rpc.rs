@@ -7,6 +7,7 @@ pub mod subscribe_unread_notification_count;
 
 use std::sync::Arc;
 
+use crate::grpc::stream_response;
 use crate::service::auth::authenticated_identity;
 use crate::service::context::{RequestContext, ServiceContext};
 use crate::service::notifications::changes;
@@ -53,7 +54,7 @@ impl NotificationService for NotificationServiceImpl {
         request: Request<SubscribeUnreadNotificationCountRequest>,
     ) -> Result<Response<Self::SubscribeUnreadNotificationCountStream>, Status>
     {
-        Ok(Response::new(
+        Ok(stream_response(
             subscribe_unread_notification_count::handle(
                 self.ctx.clone(),
                 request,
