@@ -1,8 +1,10 @@
 //! VerificationTarget events for a claim: who has been asked to verify.
 
+use tonic::Status;
+
 use crate::data::EventWithContentRow;
 use crate::data::pipeline;
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::TargetEventKey;
 use crate::service::proto::{
     ListVerificationTargetsRequest, ListVerificationTargetsResponse,
@@ -10,7 +12,6 @@ use crate::service::proto::{
 use crate::service::verifications::repository::{
     Query as Repository, VerificationEventDto,
 };
-use tonic::Status;
 
 use super::common::{self, event_list};
 
@@ -19,7 +20,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: ListVerificationTargetsRequest,
 ) -> Result<ListVerificationTargetsResponse, Status> {
     let params = Params {
@@ -29,7 +30,7 @@ pub async fn handle(
         )?,
     };
     let view = pipeline::create_pipeline(
-        ctx,
+        &ctx,
         &params,
         fetch,
         event_list::hydrate,
@@ -44,11 +45,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     Ok(Repository::list_target_events_for_claims(
-        &ctx.ro_db,
+        ctx.db(),
         std::slice::from_ref(&params.claim_key),
     )
     .await

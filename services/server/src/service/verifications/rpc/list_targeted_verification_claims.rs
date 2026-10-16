@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use tonic::Status;
 
 use crate::data::pipeline;
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::tombstoned_keys;
 use crate::service::proto::{
@@ -23,9 +23,10 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: ListTargetedVerificationClaimsRequest,
 ) -> Result<ListTargetedVerificationClaimsResponse, Status> {
+    // TODO: use AuthContext here.
     if req.target_identity.is_empty() {
         return Err(Status::invalid_argument("target_identity is required"));
     }
@@ -34,7 +35,7 @@ pub async fn handle(
         target_identity: req.target_identity,
     };
     let view = pipeline::create_pipeline(
-        ctx,
+        &ctx,
         &params,
         fetch,
         claim_bundles::hydrate,
@@ -51,11 +52,11 @@ pub async fn handle(
 /// Fetches claims that are targeted at an identity and returns relevant
 /// VerificationClaim, VerificationTarget and VerificationVerify events
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
     let targets = Repository::list_targets_for_identity(
-        &ctx.ro_db,
+        ctx.db(),
         &params.target_identity,
     )
     .await
@@ -63,8 +64,7 @@ async fn fetch(
 
     let target_keys: Vec<TargetEventKey> =
         targets.iter().map(|t| t.target_key.clone()).collect();
-    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
-    let revoked = tombstoned_keys(&ctx2, &target_keys).await?;
+    let revoked = tombstoned_keys(ctx, &target_keys).await?;
 
     let mut seen: HashSet<TargetEventKey> = HashSet::new();
     let claim_keys: Vec<TargetEventKey> = targets
@@ -74,7 +74,7 @@ async fn fetch(
         .filter(|key| seen.insert(key.clone()))
         .collect();
 
-    let claims = Repository::list_claim_events_by_keys(&ctx.ro_db, &claim_keys)
+    let claims = Repository::list_claim_events_by_keys(ctx.db(), &claim_keys)
         .await
         .map_err(map_db_err)?;
 

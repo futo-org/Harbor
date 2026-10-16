@@ -1,13 +1,14 @@
 //! Claims an identity has made (owns) returns relevant
 //! VerificationClaim, VerificationTarget and VerificationVerify events.
 
+use tonic::Status;
+
 use crate::data::pipeline;
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::proto::{
     ListVerificationClaimsRequest, ListVerificationClaimsResponse,
 };
 use crate::service::verifications::repository::Query as Repository;
-use tonic::Status;
 
 use super::common::claim_bundles::{self, FetchedClaims};
 use super::common::map_db_err;
@@ -17,9 +18,10 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: ListVerificationClaimsRequest,
 ) -> Result<ListVerificationClaimsResponse, Status> {
+    // TODO: use AuthContext here.
     if req.claimed_by_identity.is_empty() {
         return Err(Status::invalid_argument(
             "claimed_by_identity is required",
@@ -30,7 +32,7 @@ pub async fn handle(
         identity: req.claimed_by_identity,
     };
     let view = pipeline::create_pipeline(
-        ctx,
+        &ctx,
         &params,
         fetch,
         claim_bundles::hydrate,
@@ -45,15 +47,13 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
-    let claims = Repository::list_claim_events_for_identity(
-        &ctx.ro_db,
-        &params.identity,
-    )
-    .await
-    .map_err(map_db_err)?;
+    let claims =
+        Repository::list_claim_events_for_identity(ctx.db(), &params.identity)
+            .await
+            .map_err(map_db_err)?;
     claim_bundles::fetch_verification_state(ctx, claims).await
 }
 

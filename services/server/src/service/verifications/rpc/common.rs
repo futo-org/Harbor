@@ -13,9 +13,14 @@ pub(crate) fn map_db_err(e: sea_orm::DbErr) -> Status {
 /// Stages producing `VerificationClaimBundle`s: each claim wrapped with the
 /// targets and verifies referencing it.
 pub(crate) mod claim_bundles {
+    use std::collections::HashMap;
+
+    use entity::{content, event};
+    use tonic::Status;
+
     use crate::data::hydration::{HydrationState, collect_identities};
     use crate::data::{EventWithContentRow, assemble_bundles, row_into_bundle};
-    use crate::service::context::ServiceContext;
+    use crate::service::context::Context;
     use crate::service::events::TargetEventKey;
     use crate::service::events::tombstone::{self, HasEventKey};
     use crate::service::identity::service::list_identity_and_profile_events;
@@ -24,9 +29,6 @@ pub(crate) mod claim_bundles {
     use crate::service::verifications::repository::{
         Query as Repository, VerificationEventDto,
     };
-    use entity::{content, event};
-    use std::collections::HashMap;
-    use tonic::Status;
 
     use super::map_db_err;
 
@@ -39,19 +41,19 @@ pub(crate) mod claim_bundles {
 
     /// Complete a handler's `fetch` stage: the targets and verifies
     /// referencing `claims`.
-    pub(crate) async fn fetch_verification_state(
-        ctx: &ServiceContext,
+    pub(crate) async fn fetch_verification_state<A>(
+        ctx: &Context<A>,
         claims: Vec<EventWithContentRow>,
     ) -> Result<FetchedClaims, Status> {
         let claim_keys: Vec<TargetEventKey> =
             claims.iter().map(HasEventKey::event_key).collect();
 
         let targets =
-            Repository::list_target_events_for_claims(&ctx.ro_db, &claim_keys)
+            Repository::list_target_events_for_claims(ctx.db(), &claim_keys)
                 .await
                 .map_err(map_db_err)?;
         let verifies =
-            Repository::list_verify_events_for_claims(&ctx.ro_db, &claim_keys)
+            Repository::list_verify_events_for_claims(ctx.db(), &claim_keys)
                 .await
                 .map_err(map_db_err)?;
         Ok(FetchedClaims {
@@ -63,9 +65,9 @@ pub(crate) mod claim_bundles {
 
     /// Validated tombstones for every fetched event (in one lookup), plus
     /// identity-chain and profile events for every referenced identity.
-    pub(crate) async fn hydrate<P>(
-        ctx: &ServiceContext,
-        _params: &P,
+    pub(crate) async fn hydrate<P, A>(
+        ctx: &Context<A>,
+        _: &P,
         fetched: &FetchedClaims,
     ) -> Result<HydrationState, Status> {
         let keys: Vec<TargetEventKey> = fetched
@@ -75,9 +77,8 @@ pub(crate) mod claim_bundles {
             .chain(fetched.targets.iter().map(HasEventKey::event_key))
             .chain(fetched.verifies.iter().map(HasEventKey::event_key))
             .collect();
-        let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
         let deletes_by_target =
-            tombstone::validated_tombstones(&ctx2, &keys).await?;
+            tombstone::validated_tombstones(ctx, &keys).await?;
 
         let identities =
             collect_identities::<(&event::Model, Option<&content::Model>)>(
@@ -99,7 +100,7 @@ pub(crate) mod claim_bundles {
                     ),
             );
         let (identity_events, profile_events) =
-            list_identity_and_profile_events(&ctx2, identities).await?;
+            list_identity_and_profile_events(ctx, identities).await?;
 
         Ok(HydrationState {
             deletes_by_target,
@@ -110,9 +111,9 @@ pub(crate) mod claim_bundles {
     }
 
     /// Drop tombstoned claims, targets, and verifies.
-    pub(crate) async fn filter<P>(
-        _ctx: &ServiceContext,
-        _params: &P,
+    pub(crate) async fn filter<P, A>(
+        _: &Context<A>,
+        _: &P,
         fetched: FetchedClaims,
         hydration: &HydrationState,
     ) -> Result<FetchedClaims, Status> {
@@ -142,9 +143,9 @@ pub(crate) mod claim_bundles {
 
     /// Group targets and verifies under their claim, attach proofs, and
     /// ship the hydrated identity/profile events as hints.
-    pub(crate) async fn view<P>(
-        ctx: &ServiceContext,
-        _params: &P,
+    pub(crate) async fn view<P, A>(
+        ctx: &Context<A>,
+        _: &P,
         filtered: FetchedClaims,
         hydration: HydrationState,
     ) -> Result<View, Status> {
@@ -185,13 +186,12 @@ pub(crate) mod claim_bundles {
             });
         }
 
-        let ctx = ctx.to_context_ro().await?; // TODO: move to argument.
         for bundle in &mut claim_bundles {
             if let Some(claim) = bundle.claim.as_mut() {
-                attach_proofs(&ctx, std::slice::from_mut(claim)).await?;
+                attach_proofs(ctx, std::slice::from_mut(claim)).await?;
             }
-            attach_proofs(&ctx, &mut bundle.targets).await?;
-            attach_proofs(&ctx, &mut bundle.verifies).await?;
+            attach_proofs(ctx, &mut bundle.targets).await?;
+            attach_proofs(ctx, &mut bundle.verifies).await?;
         }
         Ok(View {
             claim_bundles,
@@ -202,33 +202,33 @@ pub(crate) mod claim_bundles {
 
 /// Stages producing a flat `EventBundle` list.
 pub(crate) mod event_list {
+    use tonic::Status;
+
     use crate::data::hydration::{HydrationState, collect_identities};
     use crate::data::{EventWithContentRow, assemble_bundles};
-    use crate::service::context::ServiceContext;
+    use crate::service::context::Context;
     use crate::service::events::TargetEventKey;
     use crate::service::events::tombstone::{self, HasEventKey};
     use crate::service::identity::service::list_identity_and_profile_events;
     use crate::service::proofs::service::attach_proofs;
     use crate::service::proto::{EventBundle, EventHint};
-    use tonic::Status;
 
     /// Validated tombstones for the fetched events, plus identity-chain
     /// and profile events for every referenced identity.
     #[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
-    pub(crate) async fn hydrate<P>(
-        ctx: &ServiceContext,
-        _params: &P,
+    pub(crate) async fn hydrate<P, A>(
+        ctx: &Context<A>,
+        _: &P,
         rows: &Vec<EventWithContentRow>,
     ) -> Result<HydrationState, Status> {
         let keys: Vec<TargetEventKey> =
             rows.iter().map(HasEventKey::event_key).collect();
-        let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
         let deletes_by_target =
-            tombstone::validated_tombstones(&ctx2, &keys).await?;
+            tombstone::validated_tombstones(ctx, &keys).await?;
 
         let identities = collect_identities(rows.iter());
         let (identity_events, profile_events) =
-            list_identity_and_profile_events(&ctx2, identities).await?;
+            list_identity_and_profile_events(ctx, identities).await?;
 
         Ok(HydrationState {
             deletes_by_target,
@@ -239,9 +239,9 @@ pub(crate) mod event_list {
     }
 
     /// Drop tombstoned rows.
-    pub(crate) async fn filter<P>(
-        _ctx: &ServiceContext,
-        _params: &P,
+    pub(crate) async fn filter<P, A>(
+        _: &Context<A>,
+        _: &P,
         rows: Vec<EventWithContentRow>,
         hydration: &HydrationState,
     ) -> Result<Vec<EventWithContentRow>, Status> {
@@ -261,15 +261,14 @@ pub(crate) mod event_list {
 
     /// Bundle the rows, attach proofs, and ship the hydrated
     /// identity/profile events as hints.
-    pub(crate) async fn view<P>(
-        ctx: &ServiceContext,
-        _params: &P,
+    pub(crate) async fn view<P, A>(
+        ctx: &Context<A>,
+        _: &P,
         rows: Vec<EventWithContentRow>,
         hydration: HydrationState,
     ) -> Result<View, Status> {
         let mut event_bundles = assemble_bundles(rows, &hydration.stats);
-        let ctx = ctx.to_context_ro().await?; // TODO: move to argument.
-        attach_proofs(&ctx, &mut event_bundles).await?;
+        attach_proofs(ctx, &mut event_bundles).await?;
         Ok(View {
             event_bundles,
             event_hints: hydration.identity_profile_hints(),
@@ -279,26 +278,28 @@ pub(crate) mod event_list {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::service::context::ServiceContext;
-    use crate::service::proto::content::ContentBody;
-    use crate::service::proto::{
-        Content, EventKey, PublicKey, VerificationClaim, VerificationTarget,
-        VerificationVerify,
-    };
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+
     use chrono::DateTime;
     use entity::{
         content, content_verification_target, content_verification_verify,
         event,
     };
     use polycentric_common::models::collections;
-    use prost::Message as _;
+    use prost::Message;
     use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{
         DatabaseConnection, EntityTrait, IdenStatic, IntoMockRow, Iterable,
         MockRow, ModelTrait, SelectA, SelectB, SelectC, Value,
     };
-    use std::collections::BTreeMap;
-    use std::sync::Arc;
+
+    use crate::service::context::ServiceContext;
+    use crate::service::proto::content::ContentBody;
+    use crate::service::proto::{
+        Content, EventKey, PublicKey, VerificationClaim, VerificationTarget,
+        VerificationVerify,
+    };
 
     pub(crate) async fn ctx(db: DatabaseConnection) -> Arc<ServiceContext> {
         let kafka_producer = common_kafka::build_producer()
