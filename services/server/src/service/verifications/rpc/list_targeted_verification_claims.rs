@@ -63,7 +63,8 @@ async fn fetch(
 
     let target_keys: Vec<TargetEventKey> =
         targets.iter().map(|t| t.target_key.clone()).collect();
-    let revoked = tombstoned_keys(ctx, &target_keys).await?;
+    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
+    let revoked = tombstoned_keys(&ctx2, &target_keys).await?;
 
     let mut seen: HashSet<TargetEventKey> = HashSet::new();
     let claim_keys: Vec<TargetEventKey> = targets

@@ -8,7 +8,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 use tonic::Status;
 
-use crate::service::context::{Context, ServiceContext};
+use crate::service::context::Context;
 
 /// Build an `EventProof` for `leaf_signature` (in `(identity,
 /// collection)`) against a `target`.

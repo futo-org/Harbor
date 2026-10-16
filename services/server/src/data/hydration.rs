@@ -104,8 +104,9 @@ where
         target_event_keys.into_iter().collect()
     };
 
+    let ctx2 = ctx.service.to_context_ro().await?; // TODO: move to argument.
     let deletes_by_target =
-        tombstone::validated_tombstones(ctx.service, &display_keys).await?;
+        tombstone::validated_tombstones(&ctx2, &display_keys).await?;
     let referenced = feeds_repository::Query::list_events_by_keys(
         &ctx.service.ro_db,
         &ref_keys,

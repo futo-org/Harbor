@@ -55,7 +55,9 @@ async fn hydrate(
     let keys: Vec<TargetEventKey> =
         rows.iter().map(HasEventKey::event_key).collect();
 
-    let deletes_by_target = tombstone::validated_tombstones(ctx, &keys).await?;
+    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
+    let deletes_by_target =
+        tombstone::validated_tombstones(&ctx2, &keys).await?;
 
     let identities = rows
         .iter()

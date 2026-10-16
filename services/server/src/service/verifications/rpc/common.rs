@@ -75,8 +75,9 @@ pub(crate) mod claim_bundles {
             .chain(fetched.targets.iter().map(HasEventKey::event_key))
             .chain(fetched.verifies.iter().map(HasEventKey::event_key))
             .collect();
+        let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
         let deletes_by_target =
-            tombstone::validated_tombstones(ctx, &keys).await?;
+            tombstone::validated_tombstones(&ctx2, &keys).await?;
 
         let identities =
             collect_identities::<(&event::Model, Option<&content::Model>)>(
@@ -221,8 +222,9 @@ pub(crate) mod event_list {
     ) -> Result<HydrationState, Status> {
         let keys: Vec<TargetEventKey> =
             rows.iter().map(HasEventKey::event_key).collect();
+        let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
         let deletes_by_target =
-            tombstone::validated_tombstones(ctx, &keys).await?;
+            tombstone::validated_tombstones(&ctx2, &keys).await?;
 
         let identities = collect_identities(rows.iter());
         let (identity_events, profile_events) =

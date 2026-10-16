@@ -121,7 +121,8 @@ async fn hydrate(
     let raw = tombstone::list_tombstones_for_event_keys(&ctx.ro_db, &keys)
         .await
         .map_err(map_db_err)?;
-    let deletes_by_target = tombstone::validate_tombstones(ctx, raw).await?;
+    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
+    let deletes_by_target = tombstone::validate_tombstones(&ctx2, raw).await?;
 
     let identities = collect_identities(fetched.rows.iter());
     let (identity_events, profile_events) =

@@ -218,8 +218,9 @@ impl Query {
             tombstone::list_tombstones_for_event_keys(&ctx.ro_db, &keys)
                 .await
                 .map_err(map_db_err)?;
+        let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
         let valid_tombstones =
-            tombstone::validate_tombstones(ctx, raw_tombstones).await?;
+            tombstone::validate_tombstones(&ctx2, raw_tombstones).await?;
 
         let followers: HashSet<&str> = rows
             .iter()
@@ -550,8 +551,9 @@ async fn list_graph_targets(
         tombstone::list_tombstones_for_event_keys(&ctx.ro_db, &keys)
             .await
             .map_err(map_db_err)?;
+    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
     let valid_tombstones =
-        tombstone::validate_tombstones(ctx, raw_tombstones).await?;
+        tombstone::validate_tombstones(&ctx2, raw_tombstones).await?;
 
     let mut seen: HashSet<String> = HashSet::new();
     let mut result: Vec<String> = Vec::new();

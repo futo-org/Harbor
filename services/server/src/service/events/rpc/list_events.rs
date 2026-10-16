@@ -110,7 +110,9 @@ async fn hydrate(
 
     // We won't filter out tombstoned events, but we still collect deletions
     // so that we can send them as hints.
-    let deletes_by_target = tombstone::validated_tombstones(ctx, &keys).await?;
+    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
+    let deletes_by_target =
+        tombstone::validated_tombstones(&ctx2, &keys).await?;
 
     let stats = gather_stats_for(&ctx.ro_db, rows.iter().map(|(e, _)| e.id))
         .await

@@ -1,18 +1,20 @@
-use crate::data::EventWithContentRow;
-use crate::service::context::ServiceContext;
-use crate::service::identity::service::authorize_event_signer;
-use crate::service::proto::{
-    Event, EventBundle, SerializedContent, SignedEvent,
-};
+use std::collections::{HashMap, HashSet};
+
 use entity::{content, content_delete, event};
 use prost::Message;
 use sea_orm::sea_query::{Expr, ExprTrait, IntoCondition};
 use sea_orm::{
-    ColumnTrait, Condition, DbConn, DbErr, DerivePartialModel, EntityTrait,
-    JoinType, QueryFilter, QuerySelect, RelationDef,
+    ColumnTrait, Condition, ConnectionTrait, DbErr, DerivePartialModel,
+    EntityTrait, JoinType, QueryFilter, QuerySelect, RelationDef,
 };
-use std::collections::{HashMap, HashSet};
 use tonic::{Code, Status};
+
+use crate::data::EventWithContentRow;
+use crate::service::context::Context;
+use crate::service::identity::service::authorize_event_signer;
+use crate::service::proto::{
+    Event, EventBundle, SerializedContent, SignedEvent,
+};
 
 use super::TargetEventKey;
 
@@ -28,11 +30,11 @@ impl HasEventKey for EventWithContentRow {
 }
 
 /// The valid Delete tombstones for `keys`, by tombstoned event key.
-pub async fn validated_tombstones(
-    ctx: &ServiceContext,
+pub async fn validated_tombstones<Auth>(
+    ctx: &Context<Auth>,
     keys: &[TargetEventKey],
 ) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, Status> {
-    let raw = list_tombstones_for_event_keys(&ctx.ro_db, keys)
+    let raw = list_tombstones_for_event_keys(ctx.db(), keys)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "tombstone db error");
@@ -42,8 +44,8 @@ pub async fn validated_tombstones(
 }
 
 /// The subset of `keys` whose events have a valid Delete tombstone.
-pub async fn tombstoned_keys(
-    ctx: &ServiceContext,
+pub async fn tombstoned_keys<Auth>(
+    ctx: &Context<Auth>,
     keys: &[TargetEventKey],
 ) -> Result<HashSet<TargetEventKey>, Status> {
     Ok(validated_tombstones(ctx, keys).await?.into_keys().collect())
@@ -51,8 +53,8 @@ pub async fn tombstoned_keys(
 
 /// List all tombstone events
 /// WARNING: These events are unvalidated and can not be trusted
-pub async fn list_tombstones_for_event_keys(
-    db: &DbConn,
+pub async fn list_tombstones_for_event_keys<C: ConnectionTrait>(
+    db: &C,
     keys: &[TargetEventKey],
 ) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, DbErr> {
     if keys.is_empty() {
@@ -186,8 +188,8 @@ fn content_to_delete_event_join() -> RelationDef {
 ///      identity (you can only delete your own content).
 ///   2. The Delete event's signer is authorized under the
 ///      identity's chain
-pub async fn validate_tombstones(
-    ctx: &ServiceContext,
+pub async fn validate_tombstones<Auth>(
+    ctx: &Context<Auth>,
     deletes_by_target: HashMap<TargetEventKey, Vec<EventBundle>>,
 ) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, Status> {
     let mut validated: HashMap<TargetEventKey, Vec<EventBundle>> =
@@ -208,8 +210,8 @@ pub async fn validate_tombstones(
     Ok(validated)
 }
 
-async fn is_tombstone_authorized(
-    ctx: &ServiceContext,
+async fn is_tombstone_authorized<Auth>(
+    ctx: &Context<Auth>,
     target_key: &TargetEventKey,
     bundle: &EventBundle,
 ) -> Result<bool, Status> {
@@ -233,8 +235,8 @@ async fn is_tombstone_authorized(
     }
 
     match authorize_event_signer(
-        &ctx.ro_db,
-        &ctx.proof_cache,
+        ctx.db(),
+        ctx.proof_cache(),
         &key.identity,
         signer,
         key.collection,
@@ -250,17 +252,23 @@ async fn is_tombstone_authorized(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::proto::{EventKey, PublicKey};
-    use sea_orm::{DbBackend, MockDatabase};
     use std::sync::Arc;
 
-    async fn mock_ctx() -> Arc<ServiceContext> {
+    use sea_orm::{DbBackend, MockDatabase};
+
+    use crate::service::context::PublicContext;
+    use crate::service::proto::{EventKey, PublicKey};
+
+    use super::*;
+
+    async fn mock_ctx() -> PublicContext {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
         let kafka_producer = common_kafka::build_producer()
             .await
             .expect("failed to build Kafka producer");
         ServiceContext::new(db.clone(), db, kafka_producer)
+            .to_context_ro()
+            .unwrap()
     }
 
     fn target_key(identity: &str) -> TargetEventKey {
@@ -321,7 +329,7 @@ mod tests {
             meta: None,
         };
         let result =
-            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+            is_tombstone_authorized(ctx, &target_key("alice"), &bundle).await;
         assert!(!result.unwrap());
     }
 
