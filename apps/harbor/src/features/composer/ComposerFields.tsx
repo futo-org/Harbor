@@ -21,11 +21,15 @@ import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
 import type { v2 } from '@polycentric/react-native';
 import { singleImageAspectRatio } from './utils/attachmentLayout';
 import { MAX_POST_LENGTH, type useComposer } from './hooks/useComposer';
-import { isIOS, isWeb } from '@/src/common/util/platform';
+import { isAndroid, isIOS, isWeb } from '@/src/common/util/platform';
 
 import { useMentionInputSync } from '@/src/features/composer/hooks/useMentionInputSync';
 
 const ATTACHMENT_GAP = Spacing.sm;
+// Spare height below the text on Android: any value that fits one more line
+// (a 16px system-font line is ~19-21px). Once inputs use the app font with an
+// explicit lineHeight, set this to that lineHeight.
+const NEW_LINE_HEADROOM = 30;
 
 type Attachment = ReturnType<typeof useComposer>['attachments'][number];
 
@@ -112,6 +116,12 @@ export function ComposerFields({
   // the autocomplete itself renders in MentionSearchOverlay, in the host.
   const mentionInput = useMentionInputSync({ text, onChangeText, inputRef });
 
+  // Android only: the field's measured text height, null until first reported.
+  const [textContentHeight, setTextContentHeight] = useState<number | null>(
+    null,
+  );
+  const hasNewLineHeadroom = isAndroid && textContentHeight !== null;
+
   return (
     // On native this ScrollView never scrolls (the host's does), but Android
     // needs it: without it, tapping tall text scrolls its bottom edge to the
@@ -175,12 +185,38 @@ export function ComposerFields({
             maxLength={MAX_POST_LENGTH}
             numberOfLines={isWeb ? 1 : undefined}
             scrollEnabled={false}
-            style={[Atoms.px_0, Atoms.py_0, Atoms.pt_sm, Atoms.text_lg]}
-            onLayout={mentionInput.onLayout}
+            style={[
+              Atoms.px_0,
+              Atoms.py_0,
+              Atoms.pt_sm,
+              Atoms.text_lg,
+              // Android auto-grows the input one frame too late, causing the text to temporarily scroll, which looks
+              // like a blip/flash (https://github.com/react/react-native/issues/46813,
+              // https://github.com/react/react-native/issues/33165). If we add an extra space for the new line to go
+              // to, no scroll happens, and the auto-grow has time to catch-up. Negative margin pulls whatever goes
+              // below the input up by the same amount to compensate.
+              hasNewLineHeadroom && {
+                height: textContentHeight + NEW_LINE_HEADROOM,
+                marginBottom: -NEW_LINE_HEADROOM,
+              },
+            ]}
+            onLayout={(e) => {
+              const { layout } = e.nativeEvent;
+              mentionInput.setInputLayout(
+                hasNewLineHeadroom
+                  ? //  Mention box also need compensation for the new line headroom.
+                    { ...layout, height: layout.height - NEW_LINE_HEADROOM }
+                  : layout,
+              );
+            }}
             onSelectionChange={mentionInput.onSelectionChange}
             onFocus={mentionInput.onFocus}
             onBlur={mentionInput.onBlur}
-            onContentSizeChange={mentionInput.onContentSizeChange}
+            onContentSizeChange={
+              isAndroid
+                ? (e) => setTextContentHeight(e.nativeEvent.contentSize.height)
+                : undefined
+            }
           />
 
           {attachments.length > 0 && (
