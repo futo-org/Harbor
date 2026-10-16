@@ -5,17 +5,13 @@
 //
 //   node release-notes.mjs [output-file]
 //
-// Env: GITHUB_REF_NAME (the tag), GITHUB_REPOSITORY, GITHUB_API_URL and
-// GITHUB_TOKEN (author lookups; without a token nobody is credited),
-// OPEN_ROUTER_API_TOKEN (required), OPEN_ROUTER_MODEL (optional override).
+// Env: GITHUB_REF_NAME (the tag), OPEN_ROUTER_API_TOKEN (required),
+// OPEN_ROUTER_MODEL (optional override).
 
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 
 const tag = process.env.GITHUB_REF_NAME;
-const repo = process.env.GITHUB_REPOSITORY;
-const api = process.env.GITHUB_API_URL;
-const token = process.env.GITHUB_TOKEN;
 const openRouterToken = process.env.OPEN_ROUTER_API_TOKEN;
 const model = process.env.OPEN_ROUTER_MODEL || 'anthropic/claude-sonnet-5.5';
 
@@ -48,32 +44,6 @@ const log = git(
   previous ? `${previous}..${tag}` : tag,
 );
 
-// Members of the repo (write or better) are not credited, like GitLab's
-// `author.contributor`. Cached per login; a failed lookup credits nobody.
-const membership = new Map();
-async function get(path) {
-  if (!api || !token) return null;
-  const res = await fetch(`${api}/repos/${repo}${path}`, {
-    headers: { Authorization: `token ${token}` },
-  });
-  return res.ok ? res.json() : null;
-}
-async function contributor(sha) {
-  const commit = await get(`/git/commits/${sha}`);
-  const login = commit?.author?.login;
-  if (!login) return '';
-  if (!membership.has(login)) {
-    const perm = await get(
-      `/collaborators/${encodeURIComponent(login)}/permission`,
-    );
-    membership.set(
-      login,
-      ['write', 'admin', 'owner'].includes(perm?.permission),
-    );
-  }
-  return membership.get(login) ? '' : ` (community contribution by @${login})`;
-}
-
 const commits = [];
 for (const record of log.split(RECORD)) {
   const [sha, subject, body = ''] = record.trim().split(FIELD);
@@ -81,9 +51,7 @@ for (const record of log.split(RECORD)) {
   // The Changelog trailer, where present, is a hint about the author's own
   // categorisation — pass it along, but every commit goes to the model.
   const category = body.match(/^Changelog:[ \t]*(\S+)/im)?.[1]?.toLowerCase();
-  commits.push(
-    `- ${subject}${category ? ` [${category}]` : ''}${await contributor(sha)}`,
-  );
+  commits.push(`- ${subject}${category ? ` [${category}]` : ''}`);
 }
 
 const version = tag.replace(/^v/, '');
@@ -109,7 +77,7 @@ Rules:
 - Describe what changed from the user's point of view ("You can now...", "Fixed an issue where...").
 - Group bullets under at most these headings, omitting empty ones: "### ✨ New", "### ⚡ Improvements", "### 🐛 Fixes".
 - Merge related commits into a single bullet. Keep each bullet to one short sentence.
-- Credit community contributions where marked, e.g. "— thanks @login!".
+- Do not name, credit or thank anyone.
 - If nothing in the list is user-facing, output exactly: "This release contains behind-the-scenes improvements and maintenance."
 - Output only the markdown notes. No title line, no version number, no preamble or sign-off.`;
 
