@@ -17,8 +17,8 @@ dirs:
 # image resizing darkens semi-transparent pixels, so layers it resizes can't use opacity.
 variants:
   production: { suffix: '', accent: '#FF6A00', white-on-accent: { opacity: 0.9 } }
-  staging: { suffix: '-staging', accent: '#A649FD', white-on-accent: { opacity: 0.9 } }
-  dev: { suffix: '-dev', accent: '#F5C20A', white-on-accent: { opacity: 0.9 } }
+  staging: { suffix: '-staging', accent: '#FFBB29', white-on-accent: { opacity: 0.9 } }
+  dev: { suffix: '-dev', accent: '#07CF5E', white-on-accent: { opacity: 1 } }
 
 # Shared values, referenced below as *name; `<<:` copies a mapping in
 shared:
@@ -95,27 +95,18 @@ icons:
     size: 256
 
   # At the site root, where iOS looks first; iOS rounds the corners itself.
-  # server.js serves the variant's copy at /apple-touch-icon.png.
+  # The web app's server.js serves staging's copy at /apple-touch-icon.png.
   - files:
       - $APP_PUBLIC/apple-touch-icon{suffix}.png
-    <<: *ios-icon
-    size: 180
-
-  - files:
-      - $DOCS_ROOT/apple-touch-icon.png
+      - $DOCS_ROOT/apple-touch-icon{suffix}.png
     <<: *ios-icon
     size: 180
 
   # Each size is rendered separately and packed into one .ico.
-  # server.js serves the variant's copy at /favicon.ico.
+  # The web app's server.js serves staging's copy at /favicon.ico.
   - files:
       - $APP_PUBLIC/favicon{suffix}.ico
-    <<: *ios-icon
-    clip: circle
-    sizes: [48, 32, 16]
-
-  - files:
-      - $DOCS/favicon.ico
+      - $DOCS/favicon{suffix}.ico
     <<: *ios-icon
     clip: circle
     sizes: [48, 32, 16]
