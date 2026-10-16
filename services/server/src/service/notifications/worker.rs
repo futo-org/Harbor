@@ -130,7 +130,7 @@ impl NotificationWorker {
         // TODO: the query called in `identites_blocking` could be more
         // efficient. See the method's doc comment.
         let blockers = GraphRepository::identities_blocking(
-            &self.ctx,
+            &self.ctx.ro_db,
             notifications.iter().map(|n| n.to_identity.as_str()),
             author,
         )

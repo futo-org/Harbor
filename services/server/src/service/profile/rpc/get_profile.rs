@@ -30,11 +30,13 @@ pub async fn handle(
     // The identity's key chain, so clients can validate the bundles.
     let event_hints = rows_into_hints(identity_rows);
 
+    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
+
     let following_count =
-        GraphRepository::count_following(ctx, &req.identity).await?;
+        GraphRepository::count_following(&ctx2, &req.identity).await?;
 
     let followers_count =
-        GraphRepository::count_followers(ctx, &req.identity).await?;
+        GraphRepository::count_followers(&ctx2, &req.identity).await?;
 
     Ok(GetProfileResponse {
         event_bundles,
