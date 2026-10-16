@@ -237,8 +237,8 @@ impl Query {
 
     /// Follow events authored by `identity` — who they follow. Newest
     /// first, keyset-paginated, tombstones NOT yet filtered.
-    pub async fn list_following_events(
-        db: &DbConn,
+    pub async fn list_following_events<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
         limit: u32,
         cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -250,8 +250,8 @@ impl Query {
 
     /// Follow events targeting `identity` — who follows them. Newest
     /// first, keyset-paginated, tombstones NOT yet filtered.
-    pub async fn list_followers_events(
-        db: &DbConn,
+    pub async fn list_followers_events<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
         limit: u32,
         cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -263,8 +263,8 @@ impl Query {
 
     /// `identity` is `None` for an anonymous caller, who follows nobody and
     /// so only gets the default suggestions.
-    pub async fn suggest_follow(
-        db: &DbConn,
+    pub async fn suggest_follow<C: ConnectionTrait>(
+        db: &C,
         identity: Option<&str>,
         cursor_filter: &CursorFilter<FollowSuggestionsSortedBy>,
         limit: u32,
@@ -363,8 +363,8 @@ impl Query {
 
     /// The latest identity event of each row in `suggestions` (columns
     /// (followee, followers)), most followers first, keyset-paginated.
-    async fn page_suggestions(
-        db: &DbConn,
+    async fn page_suggestions<C: ConnectionTrait>(
+        db: &C,
         suggestions: SelectStatement,
         cursor_filter: &CursorFilter<FollowSuggestionsSortedBy>,
         limit: u32,
@@ -493,8 +493,8 @@ impl Query {
     }
 
     /// `follows` is (followee, follower).
-    pub async fn follow_events(
-        db: &DbConn,
+    pub async fn follow_events<C: ConnectionTrait>(
+        db: &C,
         // NOTE: we should use an iterator here, but that triggers a "known
         // limitation" in the compiler:
         // > lifetime bound not satisfied
@@ -595,8 +595,8 @@ fn follow_join() -> RelationDef {
 
 /// Apply the (created_at, id) keyset cursor and fetch, newest first.
 /// Mirrors the feeds repository's pagination.
-async fn page_follow_events(
-    db: &DbConn,
+async fn page_follow_events<C: ConnectionTrait>(
+    db: &C,
     query: SelectTwo<event::Entity, content::Entity>,
     limit: u32,
     cursor_filter: &CursorFilter<EventCreatedAt>,

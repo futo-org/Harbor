@@ -7,7 +7,7 @@ use crate::data::filter::{self, Filtered};
 use crate::data::hydration::{self, HydrateConfig, HydrationState};
 use crate::data::pipeline::{self, Fetched};
 use crate::data::{Marker, PaginationParams, assemble_bundle};
-use crate::service::context::RequestContext;
+use crate::service::context::{Auth, PublicContext};
 use crate::service::graph::repository::{
     FollowSuggestionEvent, FollowSuggestionsSortedBy, Query,
 };
@@ -17,27 +17,18 @@ use crate::service::proto::{
 
 struct Params {
     pagination: PaginationParams<FollowSuggestionsSortedBy>,
-    /// `None` for an anonymous caller.
-    identity: Option<String>,
 }
 
 pub async fn handle(
-    ctx: &RequestContext<'_>,
+    ctx: PublicContext,
     req: SuggestFollowRequest,
 ) -> Result<SuggestFollowResponse, Status> {
-    let identity = ctx
-        .caller
-        .filter(|identity| !identity.is_empty())
-        .map(str::to_owned);
     let pagination =
         PaginationParams::from_req_params(req.page_params.as_ref())?;
-    let params = Params {
-        pagination,
-        identity,
-    };
+    let params = Params { pagination };
 
     pipeline::create_pipeline(
-        ctx,
+        &ctx,
         &params,
         fetch,
         hydrate,
@@ -48,12 +39,12 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<Fetched<FollowSuggestionEvent, FollowSuggestionsSortedBy>, Status> {
     let mut rows = Query::suggest_follow(
-        &ctx.service.ro_db,
-        params.identity.as_deref(),
+        ctx.db(),
+        ctx.identity().filter(|identity| !identity.is_empty()),
         &params.pagination.cursor_filter,
         params.pagination.limit + 1, // For pagination.
     )
@@ -76,13 +67,12 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _: &Params,
     fetched: &Fetched<FollowSuggestionEvent, FollowSuggestionsSortedBy>,
 ) -> Result<HydrationState, Status> {
-    let ctx2 = ctx.service.to_context_ro().await?; // TODO: move to argument.
     let mut hydration =
-        hydration::hydrate(&ctx2, &fetched.rows, &HydrateConfig::default())
+        hydration::hydrate(ctx, &fetched.rows, &HydrateConfig::default())
             .await?;
 
     let follows = fetched
@@ -94,19 +84,20 @@ async fn hydrate(
                 .map(|follower| (&*row.event.identity, &**follower))
         })
         .collect::<Vec<_>>();
-    let follow_events = Query::follow_events(&ctx.service.ro_db, follows)
-        .await
-        .map_err(|err| {
-            tracing::error!(error = %err, "failed to get follow events");
-            Status::internal("internal server error")
-        })?;
+    let follow_events =
+        Query::follow_events(ctx.db(), follows)
+            .await
+            .map_err(|err| {
+                tracing::error!(error = %err, "failed to get follow events");
+                Status::internal("internal server error")
+            })?;
     hydration.follow_events.extend(follow_events);
 
     Ok(hydration)
 }
 
 async fn view(
-    _: &RequestContext<'_>,
+    _: &PublicContext,
     _: &Params,
     filtered: Filtered<FollowSuggestionEvent, FollowSuggestionsSortedBy>,
     hydration: HydrationState,

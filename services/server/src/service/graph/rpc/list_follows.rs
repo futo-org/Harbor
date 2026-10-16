@@ -1,13 +1,16 @@
 //! Shared handler for `ListFollowing` / `ListFollowers`: a page of
 //! Follow events, tombstone-filtered, newest first.
 
+use sea_orm::ConnectionTrait;
+use tonic::Status;
+
 use crate::data::filter::{self, Filtered};
 use crate::data::hydration::{HydrationState, collect_identities};
 use crate::data::pipeline::{self, Fetched};
 use crate::data::{
     CursorFilter, EventWithContentRow, PaginationParams, assemble_bundles,
 };
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::EventCreatedAt;
 use crate::service::feeds::rpc::common as feeds_pipeline;
@@ -15,8 +18,6 @@ use crate::service::feeds::util::map_db_err;
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::list_identity_and_profile_events;
 use crate::service::proto::{ListFollowsResponse, PageParams};
-use sea_orm::DbConn;
-use tonic::Status;
 
 /// Which side of the follow edge to list.
 pub enum Direction {
@@ -31,7 +32,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     identity: String,
     page_params: Option<&PageParams>,
     direction: Direction,
@@ -47,7 +48,7 @@ pub async fn handle(
     };
 
     pipeline::create_pipeline(
-        ctx,
+        &ctx,
         &params,
         fetch,
         hydrate,
@@ -57,8 +58,8 @@ pub async fn handle(
     .await
 }
 
-async fn list_page(
-    db: &DbConn,
+async fn list_page<C: ConnectionTrait>(
+    db: &C,
     params: &Params,
     limit: u32,
     cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -86,11 +87,11 @@ async fn list_page(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<Fetched<EventWithContentRow, EventCreatedAt>, Status> {
     let mut rows = list_page(
-        &ctx.ro_db,
+        ctx.db(),
         params,
         params.pagination.limit + 1, // Check for next page
         &params.pagination.cursor_filter,
@@ -108,7 +109,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     _params: &Params,
     fetched: &Fetched<EventWithContentRow, EventCreatedAt>,
 ) -> Result<HydrationState, Status> {
@@ -118,15 +119,14 @@ async fn hydrate(
         .map(|(e, _)| TargetEventKey::of(e))
         .collect();
 
-    let raw = tombstone::list_tombstones_for_event_keys(&ctx.ro_db, &keys)
+    let raw = tombstone::list_tombstones_for_event_keys(ctx.db(), &keys)
         .await
         .map_err(map_db_err)?;
-    let ctx2 = ctx.to_context_ro().await?; // TODO: move to argument.
-    let deletes_by_target = tombstone::validate_tombstones(&ctx2, raw).await?;
+    let deletes_by_target = tombstone::validate_tombstones(ctx, raw).await?;
 
     let identities = collect_identities(fetched.rows.iter());
     let (identity_events, profile_events) =
-        list_identity_and_profile_events(&ctx2, identities).await?;
+        list_identity_and_profile_events(ctx, identities).await?;
 
     Ok(HydrationState {
         deletes_by_target,
@@ -137,7 +137,7 @@ async fn hydrate(
 }
 
 async fn view(
-    _ctx: &ServiceContext,
+    _ctx: &PublicContext,
     _params: &Params,
     filtered: Filtered<EventWithContentRow, EventCreatedAt>,
     hydration: HydrationState,
