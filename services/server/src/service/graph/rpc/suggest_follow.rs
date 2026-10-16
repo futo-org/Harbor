@@ -80,8 +80,9 @@ async fn hydrate(
     _: &Params,
     fetched: &Fetched<FollowSuggestionEvent, FollowSuggestionsSortedBy>,
 ) -> Result<HydrationState, Status> {
+    let ctx2 = ctx.service.to_context_ro().await?; // TODO: move to argument.
     let mut hydration =
-        hydration::hydrate(ctx, &fetched.rows, &HydrateConfig::default())
+        hydration::hydrate(&ctx2, &fetched.rows, &HydrateConfig::default())
             .await?;
 
     let follows = fetched

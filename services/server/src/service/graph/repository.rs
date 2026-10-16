@@ -175,15 +175,15 @@ impl Query {
             .map_err(map_db_err)
     }
 
-    pub async fn blocks_identity(
-        ctx: &ServiceContext,
+    pub async fn blocks_identity<C: ConnectionTrait>(
+        db: &C,
         blocker: &str,
         blocked: &str,
     ) -> Result<bool, Status> {
         let row = block::Entity::find()
             .filter(block::Column::Blocker.eq(blocker))
             .filter(block::Column::Blocked.eq(blocked))
-            .one(&ctx.ro_db)
+            .one(db)
             .await
             .map_err(map_db_err)?;
 

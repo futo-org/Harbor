@@ -1,22 +1,24 @@
 //! Common functions for feed rpc requests
 //! Mostly pipeline related
 
+use std::collections::HashSet;
+
+use entity::content;
+use prost::Message;
+use serde::Deserialize;
+use tonic::Status;
+
 use crate::data::hydration::{HydrationState, to_target_event_key};
 use crate::data::{
     CursorFilter, EventWithContentRow, Marker, PageInfo, PaginationParams,
     assemble_bundles, assemble_hint, bundle_into_hint, pipeline,
 };
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::EventCreatedAt;
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{Content, EventBundle, EventHint, PageParams};
-use entity::content;
-use prost::Message;
-use serde::Deserialize;
-use std::collections::HashSet;
-use tonic::Status;
 
 /// Common feed parameters needed for shared pagination logic in `finalize_fetch()`.
 pub struct Params<SortedBy = EventCreatedAt> {
@@ -291,7 +293,7 @@ async fn filter_rows<SortedBy>(
 /// Build bundles from live rows, attach revocation proofs, and merge
 /// identity, profile and tombstone hints.
 pub async fn view<SortedBy>(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     filtered: GetFeedResponseFilter<SortedBy>,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView<SortedBy>, Status> {
@@ -309,7 +311,6 @@ pub async fn view<SortedBy>(
         ..
     } = hydration;
 
-    let ctx = ctx.to_context_ro().await?; // TODO: move to argument.
     attach_proofs(&ctx, &mut tombstone_bundles).await?;
 
     let mut event_bundles = assemble_bundles(live_rows, &stats);

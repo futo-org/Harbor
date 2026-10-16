@@ -1,6 +1,8 @@
+use tonic::Status;
+
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::{Cursor, PageInfo, pipeline};
-use crate::service::context::RequestContext;
+use crate::service::context::PublicContext;
 use crate::service::feeds::repository::Query;
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
@@ -8,10 +10,8 @@ use crate::service::feeds::rpc::common::{
 use crate::service::feeds::util::map_db_err;
 use crate::service::proto::{GetPostRequest, GetPostResponse};
 
-use tonic::Status;
-
 pub async fn handle(
-    ctx: &RequestContext<'_>,
+    ctx: PublicContext,
     req: GetPostRequest,
 ) -> Result<GetPostResponse, Status> {
     let params = Params {
@@ -21,7 +21,7 @@ pub async fn handle(
     };
 
     let result =
-        pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
+        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
             .await?;
 
     Ok(GetPostResponse {
@@ -37,11 +37,11 @@ struct Params {
 }
 
 async fn fetch(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = Query::list_events_at_sequence(
-        &ctx.service.ro_db,
+        ctx.db(),
         &params.identity,
         params.sequence,
     )
@@ -60,7 +60,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
@@ -68,7 +68,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &RequestContext<'_>,
+    _: &PublicContext,
     params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -77,10 +77,10 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {
-    feeds_pipeline::view(ctx.service, filtered, hydration).await
+    feeds_pipeline::view(ctx, filtered, hydration).await
 }
