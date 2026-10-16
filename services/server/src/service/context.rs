@@ -33,6 +33,15 @@ impl ServiceContext {
             kafka_producer,
         })
     }
+
+    pub(crate) async fn to_context_ro(&self) -> Result<PublicContext, Status> {
+        PublicContext::new(
+            &self.ro_db,
+            self.proof_cache.clone(),
+            self.kafka_producer.clone(),
+        )
+        .await
+    }
 }
 
 pub struct RequestContext<'a> {

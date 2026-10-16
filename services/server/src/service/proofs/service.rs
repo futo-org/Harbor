@@ -8,20 +8,20 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 use tonic::Status;
 
-use crate::service::context::ServiceContext;
+use crate::service::context::{Context, ServiceContext};
 
 /// Build an `EventProof` for `leaf_signature` (in `(identity,
 /// collection)`) against a `target`.
-pub async fn build_proof_against(
-    ctx: &ServiceContext,
+async fn build_proof_against<Auth>(
+    ctx: &Context<Auth>,
     identity: &str,
     collection: i32,
     target: &EventProofTarget,
     leaf_signature: &[u8],
 ) -> Result<Option<EventProof>, Status> {
     let canonical = ctx
-        .proof_cache
-        .canonical(&ctx.ro_db, identity, collection)
+        .proof_cache()
+        .canonical(ctx.db(), identity, collection)
         .await
         .map_err(db_err)?;
 
@@ -58,14 +58,15 @@ pub async fn build_proof_against(
 /// Find the rotator's recorded target for `(signer, collection)` in the
 /// latest cached identity content and build a proof against it. Requires
 /// the cache to have been warmed (e.g. via `build_identity_hints`).
-pub async fn build_revocation_proof(
-    ctx: &ServiceContext,
+async fn build_revocation_proof<Auth>(
+    ctx: &Context<Auth>,
     identity: &str,
     collection: i32,
     signer: &PublicKey,
     leaf_signature: &[u8],
 ) -> Result<Option<EventProof>, Status> {
-    let Some(content) = ctx.proof_cache.identity_content(identity).await else {
+    let Some(content) = ctx.proof_cache().identity_content(identity).await
+    else {
         return Ok(None);
     };
     let Some(target) = content.revocation_target_for(signer, collection) else {
@@ -86,6 +87,8 @@ where
     II: IntoIterator<Item = &'a mut EventBundle, IntoIter = I>,
     I: Iterator<Item = &'a mut EventBundle> + 'a,
 {
+    let ctx = ctx.to_context_ro().await?;
+
     for bundle in bundles {
         let Some(signed) = bundle.signed_event.as_ref() else {
             continue;
@@ -101,7 +104,7 @@ where
         };
 
         if let Some(proof) = build_revocation_proof(
-            ctx,
+            &ctx,
             &key.identity,
             key.collection,
             signer,
