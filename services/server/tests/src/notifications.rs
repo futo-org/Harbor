@@ -173,11 +173,16 @@ async fn unread_count_stream_follows_new_notifications_and_acknowledge() {
     request
         .metadata_mut()
         .insert("authorization", auth_token.clone().try_into().unwrap());
-    let mut stream = subscriber
+    let response = subscriber
         .subscribe_unread_notification_count(request)
         .await
-        .expect("subscribe failed")
-        .into_inner();
+        .expect("subscribe failed");
+    assert_eq!(
+        response.metadata().get("cache-control").unwrap(),
+        "no-transform",
+        "proxies must not compress the stream"
+    );
+    let mut stream = response.into_inner();
 
     assert_eq!(
         next_count(&mut stream).await,
