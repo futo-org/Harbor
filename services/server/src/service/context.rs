@@ -45,11 +45,14 @@ impl ServiceContext {
     }
 }
 
+/// Request [`Context`] where the user is optionally authenticated.
+pub(crate) type PublicContext = Context<Option<String>>;
+
 /// Request [`Context`] where the user is authenticated.
 pub(crate) type AuthContext = Context<String>;
 
-/// Request [`Context`] where the user is optionally authenticated.
-pub(crate) type PublicContext = Context<Option<String>>;
+/// Request [`Context`] for a worker.
+pub(crate) type WorkerContext = Context<()>;
 
 /// Request context.
 ///
@@ -115,6 +118,17 @@ impl AuthContext {
     }
 }
 
+impl WorkerContext {
+    /// Create a new context for a worker (no authentication).
+    pub(crate) async fn new(
+        pool: &DatabaseConnection,
+        proof_cache: Arc<ProofCache>,
+        kafka_producer: FutureProducer,
+    ) -> Result<WorkerContext, Status> {
+        Context::with_auth(pool, proof_cache, kafka_producer, ()).await
+    }
+}
+
 /// Authentication of a context.
 ///
 /// This provides optional autentication, when authentication is required use
@@ -125,14 +139,20 @@ pub(crate) trait Auth {
     fn identity(&self) -> Option<&str>;
 }
 
+impl Auth for PublicContext {
+    fn identity(&self) -> Option<&str> {
+        self.auth.as_deref()
+    }
+}
+
 impl Auth for AuthContext {
     fn identity(&self) -> Option<&str> {
         Some(self.identity())
     }
 }
 
-impl Auth for PublicContext {
+impl Auth for WorkerContext {
     fn identity(&self) -> Option<&str> {
-        self.auth.as_deref()
+        None
     }
 }
