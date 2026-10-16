@@ -5,7 +5,10 @@ import type {
   IKeysRepository,
   IStorageDriver,
 } from './platform-interfaces';
-import { segmentsFromPath } from './platform-interfaces/file-store-driver';
+import {
+  FileStoreError,
+  segmentsFromPath,
+} from './platform-interfaces/file-store-driver';
 import type { PrivateKey } from './polycentric-client';
 import * as Proto from './proto/v2';
 import { bytesToHex, toDigestKey } from './utils/hex';
@@ -188,27 +191,88 @@ export class MemoryStorageDriver implements IStorageDriver {
   }
 }
 
+type MemoryDirectory = Map<string, Uint8Array | MemoryDirectory>;
+type MemoryLocation = { dir: MemoryDirectory; name: string };
+
 /** In-memory counterpart of the file store driver. */
 export class MemoryFileStoreDriver implements IFileStoreDriver {
-  private readonly map = new Map<string, Uint8Array>();
+  private readonly root: MemoryDirectory = new Map();
 
-  private key(path: string): string {
-    return segmentsFromPath(path).join('/');
+  /**
+   * Walk to the directory containing `path`.
+   * Creates missing directories when `create` is true.
+   * Throws a `'path conflict'` error if a parent is a file.
+   */
+  private parentOf(path: string, create: true): MemoryLocation;
+  private parentOf(path: string, create: false): MemoryLocation | null;
+  private parentOf(path: string, create: boolean): MemoryLocation | null {
+    const segments = segmentsFromPath(path);
+
+    const name = segments.pop();
+    if (!name) throw new FileStoreError('invalid path', 'path has no segments');
+
+    let dir = this.root;
+    for (const segment of segments) {
+      let next = dir.get(segment);
+
+      // Create the directory if needed.
+      if (!next) {
+        if (!create) return null;
+
+        next = new Map();
+        dir.set(segment, next);
+      }
+
+      // Detect path conflicts.
+      if (next instanceof Uint8Array) {
+        throw new FileStoreError('path conflict', `not a directory: ${path}`);
+      }
+
+      dir = next;
+    }
+
+    return { dir, name };
+  }
+
+  /**
+   * Get the file contents at `path` along with its location.
+   * Returns `null` if the file is not present.
+   * Throws a `'path conflict'` error if it is a directory.
+   */
+  private fileAt(path: string): (MemoryLocation & { file: Uint8Array }) | null {
+    const parent = this.parentOf(path, false);
+    if (!parent) return null;
+
+    const entry = parent.dir.get(parent.name);
+    if (entry === undefined) return null;
+    if (entry instanceof Map) {
+      throw new FileStoreError('path conflict', `Is a directory: ${path}`);
+    }
+
+    return { ...parent, file: entry };
   }
 
   async has(path: string): Promise<boolean> {
-    return this.map.has(this.key(path));
+    return this.fileAt(path) !== null;
   }
 
   async get(path: string): Promise<Uint8Array | null> {
-    return this.map.get(this.key(path)) ?? null;
+    return this.fileAt(path)?.file.slice() ?? null;
   }
 
   async put(path: string, bytes: Uint8Array): Promise<void> {
-    this.map.set(this.key(path), bytes);
+    const { dir, name } = this.parentOf(path, true);
+
+    if (dir.get(name) instanceof Map) {
+      throw new FileStoreError('path conflict', `is a directory: ${path}`);
+    }
+
+    dir.set(name, bytes.slice());
   }
 
   async delete(path: string): Promise<boolean> {
-    return this.map.delete(this.key(path));
+    const found = this.fileAt(path);
+    if (!found) return false;
+    return found.dir.delete(found.name);
   }
 }

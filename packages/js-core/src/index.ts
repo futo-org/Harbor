@@ -24,7 +24,12 @@ export { PublicKey, KeyType } from './proto/polycentric/v2/keypair';
 
 export type * from './platform-interfaces';
 export { bytesToHex, hexToBytes, toDigestKey } from './utils/hex';
-export { segmentsFromPath } from './platform-interfaces/file-store-driver';
+export {
+  segmentsFromPath,
+  FileStoreError,
+  MAX_SEGMENT_BYTES,
+  MAX_PATH_BYTES,
+} from './platform-interfaces/file-store-driver';
 
 export { StorageHandle } from './datastore';
 export type { Repositories } from './datastore';
