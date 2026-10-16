@@ -17,9 +17,10 @@ shared:
   # semi-transparent pixels, so layers it resizes can't use opacity
   cream: &cream '#FFF0E6'
   ios-tower: &ios-tower { height: 929, top: 143 }
-  # In dp of the 108 dp adaptive canvas. Android wants the logo 48-66 dp; at 60 dp
-  # the base corners stay inside the 66 dp safe circle.
-  android-tower: &android-tower { height: 60, top: 24 }
+  # In dp of the 108 dp adaptive canvas. Android wants the logo 48-66 dp, within
+  # the 66 dp safe circle; 48 dp leaves room around it inside launcher masks.
+  android-tower: &android-tower { height: 48, top: 30 }
+  splash-tower: &splash-tower { height: 60, top: 24 }
   wordmark: &wordmark
     content: HARBOR
     font: tools/icons/fonts/OpenSans-ExtraBold.ttf
@@ -57,20 +58,20 @@ icons:
     canvas: 108
     tower: { <<: *android-tower, fill: '#354479' }
 
-  # The launcher foreground scaled to the 288 dp splash canvas (1152 px is xxxhdpi),
+  # The 108 dp canvas scaled to the 288 dp splash canvas (1152 px is xxxhdpi),
   # which keeps the tower inside Android's 192 dp splash circle
   - files:
       - $APP_IMG/app-icons/splash-icon.png
     size: 1152
     canvas: 108
-    tower: { <<: *android-tower, fill: *cream }
+    tower: { <<: *splash-tower, fill: *cream }
 
   # The dark-mode splash, drawn on the app's dark background
   - files:
       - $APP_IMG/app-icons/splash-icon-dark.png
     size: 1152
     canvas: 108
-    tower: { <<: *android-tower, fill: *orange }
+    tower: { <<: *splash-tower, fill: *orange }
 
   # Android draws only the alpha channel, so the tower must be fully opaque.
   # 22 of 24 dp tall leaves the 1 dp padding of the notification icon grid.
