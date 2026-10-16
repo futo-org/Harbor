@@ -13,4 +13,3 @@ pub fn stream_response<S>(stream: S) -> Response<S> {
         .insert("cache-control", MetadataValue::from_static("no-transform"));
     response
 }
-
