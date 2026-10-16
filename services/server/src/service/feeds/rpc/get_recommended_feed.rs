@@ -55,7 +55,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched<SortedBy>, Status> {
     let mut rows = FeedsRepository::recommended_feed(
-        ctx.db(),
+        &ctx.db,
         &params.identity,
         params.sort_by,
         params.common.limit + 1, // For pagination.

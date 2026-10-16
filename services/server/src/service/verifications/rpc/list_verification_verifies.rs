@@ -49,7 +49,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     Ok(Repository::list_verify_events_for_claims(
-        ctx.db(),
+        &ctx.db,
         std::slice::from_ref(&params.claim_key),
     )
     .await

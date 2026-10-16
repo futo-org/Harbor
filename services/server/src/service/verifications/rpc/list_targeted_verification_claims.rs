@@ -56,7 +56,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
     let targets = Repository::list_targets_for_identity(
-        ctx.db(),
+        &ctx.db,
         &params.target_identity,
     )
     .await
@@ -74,7 +74,7 @@ async fn fetch(
         .filter(|key| seen.insert(key.clone()))
         .collect();
 
-    let claims = Repository::list_claim_events_by_keys(ctx.db(), &claim_keys)
+    let claims = Repository::list_claim_events_by_keys(&ctx.db, &claim_keys)
         .await
         .map_err(map_db_err)?;
 

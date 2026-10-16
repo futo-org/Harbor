@@ -108,14 +108,14 @@ where
     let deletes_by_target =
         tombstone::validated_tombstones(ctx, &display_keys).await?;
     let referenced =
-        feeds_repository::Query::list_events_by_keys(ctx.db(), &ref_keys)
+        feeds_repository::Query::list_events_by_keys(&ctx.db, &ref_keys)
             .await
             .map_err(|err| {
                 tracing::error!(error = %err, "failed to list events");
                 Status::internal("internal server error")
             })?;
     let label_events = feeds_repository::Query::list_labels_for_event_keys(
-        ctx.db(),
+        &ctx.db,
         &display_keys,
     )
     .await
@@ -124,7 +124,7 @@ where
         Status::internal("internal server error")
     })?;
     let stats =
-        gather_stats_for(ctx.db(), rows.iter().map(|row| row.event_id()))
+        gather_stats_for(&ctx.db, rows.iter().map(|row| row.event_id()))
             .await
             .map_err(|err| {
                 tracing::error!(error = %err, "failed to gather stats");

@@ -86,7 +86,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<Fetched, Status> {
     let raw = NotificationRepository::list_for_identity(
-        ctx.db(),
+        &ctx.db,
         &params.identity,
         params.limit + 1, // over-fetch for pagination
         params.after_id,
@@ -141,21 +141,21 @@ async fn hydrate(
     // Bulk-fetch the referenced events, build bundles with proofs, and index
     // them by their comparable key for the view stage.
     let proto_keys: Vec<EventKey> = cmp_keys.iter().map(to_proto_key).collect();
-    let fetched = FeedsRepository::list_events_by_keys(ctx.db(), &proto_keys)
+    let fetched = FeedsRepository::list_events_by_keys(&ctx.db, &proto_keys)
         .await
         .map_err(map_db_err)?;
 
     let identity_events = list_identity_events(ctx, identities.clone()).await?;
     let profile_events = list_profile_events(ctx, identities).await?;
 
-    let stats = gather_stats_for(ctx.db(), fetched.iter().map(|(e, _)| e.id))
+    let stats = gather_stats_for(&ctx.db, fetched.iter().map(|(e, _)| e.id))
         .await
         .map_err(map_db_err)?;
 
     // Fetch label events for trigger events only: we assume recipient is the target's
     // author and does not object to their own posts.
     let label_rows =
-        FeedsRepository::list_labels_for_event_keys(ctx.db(), &trigger_keys)
+        FeedsRepository::list_labels_for_event_keys(&ctx.db, &trigger_keys)
             .await
             .map_err(map_db_err)?;
 

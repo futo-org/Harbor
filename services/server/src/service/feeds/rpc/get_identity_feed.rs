@@ -62,7 +62,7 @@ async fn caller_blocks_subject(
     else {
         return Ok(false);
     };
-    GraphRepository::blocks_identity(ctx.db(), caller, subject).await
+    GraphRepository::blocks_identity(&ctx.db, caller, subject).await
 }
 
 /// Produce a terminal empty page (`has_next_page: false`) for profile feeds
@@ -86,7 +86,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = FeedsRepository::list_feed_events_by_identities(
-        ctx.db(),
+        &ctx.db,
         vec![params.identity.clone()],
         params.common.limit + 1, // Check for next page
         &params.common.cursor_filter,

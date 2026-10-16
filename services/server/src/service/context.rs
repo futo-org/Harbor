@@ -57,9 +57,11 @@ pub(crate) type PublicContext = Context<Option<String>>;
 pub(crate) struct Context<Auth> {
     /// Read/write or read-only database connection.
     pub(crate) db: DbConn,
+    /// Cache for identities proofs.
     pub(crate) proof_cache: Arc<ProofCache>,
-    kafka_producer: FutureProducer,
-    auth: Auth,
+    /// Message sending to kafka.
+    pub(crate) kafka_producer: FutureProducer,
+    pub(crate) auth: Auth,
 }
 
 impl<Auth> Context<Auth> {
@@ -77,21 +79,6 @@ impl<Auth> Context<Auth> {
             kafka_producer,
             auth,
         })
-    }
-
-    /// Returns the database connection.
-    pub(crate) fn db(&self) -> &DbConn {
-        &self.db
-    }
-
-    /// Cache for identities proofs.
-    pub(crate) fn proof_cache(&self) -> &ProofCache {
-        &self.proof_cache
-    }
-
-    /// Message sending to kafka.
-    pub(crate) fn kafka(&self) -> &FutureProducer {
-        &self.kafka_producer
     }
 }
 

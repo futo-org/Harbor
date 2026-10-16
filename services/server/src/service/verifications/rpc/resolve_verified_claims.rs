@@ -79,7 +79,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
     let claims = Repository::list_claim_events_by_fields(
-        ctx.db(),
+        &ctx.db,
         params.schema_digest.clone(),
         params.match_fields.clone(),
         &params.verified_by,

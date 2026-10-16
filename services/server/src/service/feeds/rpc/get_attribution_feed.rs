@@ -59,7 +59,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = FeedsRepository::list_feed_events_by_attributed_url(
-        ctx.db(),
+        &ctx.db,
         params.url.clone(),
         params.common.limit + 1, // Check for next page
         &params.common.cursor_filter,

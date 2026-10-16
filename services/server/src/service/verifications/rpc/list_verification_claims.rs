@@ -51,7 +51,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
     let claims =
-        Repository::list_claim_events_for_identity(ctx.db(), &params.identity)
+        Repository::list_claim_events_for_identity(&ctx.db, &params.identity)
             .await
             .map_err(map_db_err)?;
     claim_bundles::fetch_verification_state(ctx, claims).await

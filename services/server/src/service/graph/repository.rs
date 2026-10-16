@@ -134,7 +134,7 @@ impl Query {
         Context<A>: Auth,
     {
         match ctx.identity() {
-            Some(caller) => Self::blocked_set(ctx.db(), caller).await,
+            Some(caller) => Self::blocked_set(&ctx.db, caller).await,
             None => Ok(HashSet::new()),
         }
     }
@@ -209,7 +209,7 @@ impl Query {
     ) -> Result<u64, Status> {
         let rows: Vec<EventWithContentRow> = follow_events_query()
             .filter(content_follow::Column::IdentityId.eq(identity))
-            .all(ctx.db())
+            .all(&ctx.db)
             .await
             .map_err(map_db_err)?;
 
@@ -218,7 +218,7 @@ impl Query {
             .map(|(event, _)| TargetEventKey::of(event))
             .collect();
         let raw_tombstones =
-            tombstone::list_tombstones_for_event_keys(ctx.db(), &keys)
+            tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
                 .await
                 .map_err(map_db_err)?;
         let valid_tombstones =
@@ -541,7 +541,7 @@ async fn list_graph_targets<A>(
         .join(JoinType::InnerJoin, content_join())
         .filter(event::Column::Collection.eq(collections::SOCIAL_GRAPH))
         .filter(event::Column::Identity.eq(caller))
-        .all(ctx.db())
+        .all(&ctx.db)
         .await
         .map_err(map_db_err)?;
 
@@ -550,7 +550,7 @@ async fn list_graph_targets<A>(
         .map(|(event, _)| TargetEventKey::of(event))
         .collect();
     let raw_tombstones =
-        tombstone::list_tombstones_for_event_keys(ctx.db(), &keys)
+        tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
             .await
             .map_err(map_db_err)?;
     let valid_tombstones =

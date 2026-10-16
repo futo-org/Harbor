@@ -20,8 +20,8 @@ async fn build_proof_against<Auth>(
     leaf_signature: &[u8],
 ) -> Result<Option<EventProof>, Status> {
     let canonical = ctx
-        .proof_cache()
-        .canonical(ctx.db(), identity, collection)
+        .proof_cache
+        .canonical(&ctx.db, identity, collection)
         .await
         .map_err(db_err)?;
 
@@ -65,8 +65,7 @@ async fn build_revocation_proof<Auth>(
     signer: &PublicKey,
     leaf_signature: &[u8],
 ) -> Result<Option<EventProof>, Status> {
-    let Some(content) = ctx.proof_cache().identity_content(identity).await
-    else {
+    let Some(content) = ctx.proof_cache.identity_content(identity).await else {
         return Ok(None);
     };
     let Some(target) = content.revocation_target_for(signer, collection) else {

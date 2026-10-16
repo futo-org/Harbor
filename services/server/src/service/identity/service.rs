@@ -209,7 +209,7 @@ pub async fn list_identity_events<A>(
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     let rows =
-        IdentityRepo::list_identity_events_for_identities(ctx.db(), identities)
+        IdentityRepo::list_identity_events_for_identities(&ctx.db, identities)
             .await
             .map_err(map_db_err)?;
     warm_identity_cache(ctx, &rows).await;
@@ -223,7 +223,7 @@ pub async fn list_profile_events<A>(
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     FeedsRepository::Query::list_latest_profiles_for_identities(
-        ctx.db(),
+        &ctx.db,
         identities,
     )
     .await
@@ -255,7 +255,7 @@ async fn warm_identity_cache<A>(
         if let Some(content) =
             chain::validated_chain_head(identity, identity_rows)
         {
-            ctx.proof_cache()
+            ctx.proof_cache
                 .warm_identity_content(identity, content)
                 .await;
         }

@@ -34,7 +34,7 @@ pub async fn validated_tombstones<Auth>(
     ctx: &Context<Auth>,
     keys: &[TargetEventKey],
 ) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, Status> {
-    let raw = list_tombstones_for_event_keys(ctx.db(), keys)
+    let raw = list_tombstones_for_event_keys(&ctx.db, keys)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "tombstone db error");
@@ -235,8 +235,8 @@ async fn is_tombstone_authorized<Auth>(
     }
 
     match authorize_event_signer(
-        ctx.db(),
-        ctx.proof_cache(),
+        &ctx.db,
+        &ctx.proof_cache,
         &key.identity,
         signer,
         key.collection,

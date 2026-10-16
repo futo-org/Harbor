@@ -91,7 +91,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<Fetched<EventWithContentRow, EventCreatedAt>, Status> {
     let mut rows = list_page(
-        ctx.db(),
+        &ctx.db,
         params,
         params.pagination.limit + 1, // Check for next page
         &params.pagination.cursor_filter,
@@ -119,7 +119,7 @@ async fn hydrate(
         .map(|(e, _)| TargetEventKey::of(e))
         .collect();
 
-    let raw = tombstone::list_tombstones_for_event_keys(ctx.db(), &keys)
+    let raw = tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
         .await
         .map_err(map_db_err)?;
     let deletes_by_target = tombstone::validate_tombstones(ctx, raw).await?;

@@ -49,7 +49,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched<SortedBy>, Status> {
     let mut rows = FeedsRepository::explore_feed(
-        ctx.db(),
+        &ctx.db,
         params.sort_by,
         params.common.limit + 1, // For pagination.
         &params.common.cursor_filter,
