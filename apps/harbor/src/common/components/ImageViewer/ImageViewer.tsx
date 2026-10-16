@@ -18,7 +18,7 @@ import { ImagePane } from './components/ImagePane';
 import { NavArrow } from './components/NavArrow';
 import { useImageViewerGestures } from './hooks/useImageViewerGestures';
 import { NavDots } from '@/src/common/components/ImageViewer/components/NavDots';
-import { isWeb } from '@/src/common/util/platform';
+import { hasPointerHover } from '@/src/common/util/platform';
 
 /**
  * Full-screen viewer for any `ImageSet`s (post attachments, avatars,
@@ -38,12 +38,6 @@ export function ImageViewer({
   onClose: () => void;
   onIndexChange?: (index: number) => void;
 }) {
-  // Don't show nav arrows on devices where primary input is touch-based since
-  // swiping is preferable then
-  const [showNavArrows] = useState(
-    () => isWeb && !matchMedia('(pointer: coarse)').matches,
-  );
-
   const client = usePolycentric();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -203,7 +197,9 @@ export function ImageViewer({
         <Icon name="close" size={24} color="white" />
       </Pressable>
 
-      {showNavArrows && (
+      {/* No nav arrows where the primary input is touch: swiping is
+          preferable then */}
+      {hasPointerHover && (
         <>
           {hasPrev && <NavArrow side="left" onPress={goPrev} bg={chipBg} />}
           {hasNext && <NavArrow side="right" onPress={goNext} bg={chipBg} />}

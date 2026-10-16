@@ -13,6 +13,7 @@ import {
   Pressable,
   ScrollView,
   type TextInput as RNTextInput,
+  type TextInputKeyPressEvent,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -24,6 +25,7 @@ import { MAX_POST_LENGTH, type useComposer } from './hooks/useComposer';
 import { isAndroid, isIOS, isWeb } from '@/src/common/util/platform';
 
 import { useMentionInputSync } from '@/src/features/composer/hooks/useMentionInputSync';
+import { useTutorialHintsStore } from '@/src/common/lib/useTutorialHintsStore';
 
 const ATTACHMENT_GAP = Spacing.sm;
 // Spare height below the text on Android: any value that fits one more line
@@ -44,6 +46,8 @@ type ComposerFieldsProps = {
   setText: (text: string) => void;
   attachments: Attachment[];
   submitting: boolean;
+  canPost: boolean;
+  onPost: () => void;
   onRemoveAttachment: (id: string) => void;
   /** Live link preview for the first URL in the draft, once resolved. */
   linkPreview: v2.Link | null;
@@ -72,6 +76,8 @@ export function ComposerFields({
   setText,
   attachments,
   submitting,
+  canPost,
+  onPost,
   onRemoveAttachment,
   linkPreview,
   linkPreviewLoading,
@@ -110,6 +116,27 @@ export function ComposerFields({
       setText(next);
     },
     [setText],
+  );
+
+  const dismissHint = useTutorialHintsStore((state) => state.dismissHint);
+  const onKeyPress = useCallback(
+    (e: TextInputKeyPressEvent) => {
+      // RN-web passes the DOM event, which carries the modifier keys
+      const { key, ctrlKey, metaKey } =
+        e.nativeEvent as unknown as KeyboardEvent;
+      if (
+        key === 'Enter' &&
+        // Cmd on macOS
+        (ctrlKey || metaKey) &&
+        // Skipped when the mention overlay claimed the Enter
+        !e.isDefaultPrevented() &&
+        canPost
+      ) {
+        dismissHint('kbSubmitPost');
+        onPost();
+      }
+    },
+    [canPost, onPost, dismissHint],
   );
 
   // Feeds the host's mention store (query derivation + the overlay's anchor);
@@ -217,6 +244,7 @@ export function ComposerFields({
                 ? (e) => setTextContentHeight(e.nativeEvent.contentSize.height)
                 : undefined
             }
+            onKeyPress={isWeb ? onKeyPress : undefined}
           />
 
           {attachments.length > 0 && (
