@@ -14,7 +14,7 @@ use polycentric_common::models::protos_v2::{EventKey, ListHeadsResponse};
 use prost::Message;
 use sea_orm::DatabaseConnection;
 use tokio::sync::broadcast::error::RecvError;
-use tokio::sync::{Mutex, watch};
+use tokio::sync::{Mutex, broadcast, watch};
 use tokio::task::JoinSet;
 use tonic::Status;
 
@@ -28,13 +28,17 @@ const REFRESH_CONCURRENCY: usize = 16;
 
 static PUBSUB: OnceLock<HeadsPubSub> = OnceLock::new();
 
-/// Starts the pub/sub. Connects in the background, retrying forever.
+/// Starts the pub/sub, connecting in the background. Failed attempts are
+/// logged and retried forever; only an invalid `url` is an error.
 pub fn init(
     url: &str,
     server_name: &str,
     db: DatabaseConnection,
 ) -> Result<(), Error> {
-    let mut builder = Builder::from_config(Config::from_url(url)?);
+    let mut config = Config::from_url(url)?;
+    // Retry the first connection too, rather than giving up on it.
+    config.fail_fast = false;
+    let mut builder = Builder::from_config(config);
     builder
         .with_performance_config(|perf| {
             perf.broadcast_channel_capacity = 4096;
@@ -43,6 +47,8 @@ pub fn init(
         .set_policy(ReconnectPolicy::new_exponential(0, 100, 5_000, 2));
     let publisher = builder.build()?;
     let subscriber = builder.build_subscriber_client()?;
+    tokio::spawn(log_errors(publisher.error_rx()));
+    tokio::spawn(log_errors(subscriber.error_rx()));
     publisher.connect();
     subscriber.connect();
 
@@ -181,7 +187,8 @@ impl HeadsPubSub {
         let mut reconnects = self.subscriber.reconnect_rx();
         loop {
             match reconnects.recv().await {
-                Ok(_) | Err(RecvError::Lagged(_)) => {}
+                Ok(server) => tracing::info!(%server, "valkey reconnected"),
+                Err(RecvError::Lagged(_)) => {}
                 Err(RecvError::Closed) => return,
             }
             if let Err(e) = self.subscriber.resubscribe_all().await {
@@ -237,6 +244,19 @@ impl HeadsPubSub {
     ) -> std::sync::RwLockWriteGuard<'_, HashMap<Arc<str>, watch::Sender<Heads>>>
     {
         self.watches.write().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
+/// Logs connection and protocol errors, which no command sees.
+async fn log_errors(mut errors: broadcast::Receiver<(Error, Option<Server>)>) {
+    loop {
+        match errors.recv().await {
+            Ok((error, server)) => {
+                tracing::error!(%error, ?server, "valkey error")
+            }
+            Err(RecvError::Lagged(_)) => {}
+            Err(RecvError::Closed) => return,
+        }
     }
 }
 

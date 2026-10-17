@@ -151,16 +151,17 @@ merges into the same heads, so nothing falls in the gap.
 
 ## Failures
 
-- **Valkey restarts or the connection drops.** The client reconnects with
-  backoff, resubscribes to every channel the process follows, then re-reads
-  those identities' heads from the database, since messages sent while
-  disconnected are lost.
+- **Valkey restarts or the connection drops.** Each failed attempt is logged
+  as a `valkey error`. The client reconnects with backoff (logging `valkey
+  reconnected`), resubscribes to every channel the process follows, then
+  re-reads those identities' heads from the database, since messages sent
+  while disconnected are lost.
 - **The subscriber falls behind.** Messages for the whole process pass through one
   buffer of 4096. If it overflows, the process re-reads the heads of every
   identity it follows, as after a reconnect.
-- **Valkey is down at startup.** The server starts anyway and keeps trying to
-  connect. Until it connects, `SubscribeHeads` answers `UNAVAILABLE` and
-  `PutEvents` skips publishing.
+- **Valkey is unreachable at startup.** The server starts anyway, logs a
+  `valkey error` on each attempt and keeps retrying. Until it connects,
+  `SubscribeHeads` answers `UNAVAILABLE` and `PutEvents` logs failed publishes.
 - **A server deploy or crash** ends the streams on that process. Clients
   reopen them on another replica, and the heads sent on open repair anything
   missed meanwhile.
