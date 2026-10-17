@@ -110,7 +110,7 @@ importers:
         version: 5.2.14(27e03eec2c5daa065e34e906132e0479)
       '@lodev09/react-native-true-sheet':
         specifier: ^3.10.1
-        version: 3.11.16(cbde0b7ddcd64bcda36676f188f2c3db)
+        version: 3.11.18(cbde0b7ddcd64bcda36676f188f2c3db)
       '@noble/curves':
         specifier: 'catalog:'
         version: 2.4.0
@@ -3627,8 +3627,8 @@ packages:
   '@leichtgewicht/ip-codec@2.0.5':
     resolution: {integrity: sha512-Vo+PSpZG2/fmgmiNzYK9qWRh8h/CHrwD0mo1h1DzL4yzHNSfWYujGTYsWGreD000gcgmZ7K4Ys6Tx9TxtsKdDw==}
 
-  '@lodev09/react-native-true-sheet@3.11.16':
-    resolution: {integrity: sha512-7wldNZ68fpzjEbzPmZkWC8fqujp6b5+HAuhx9dY+klAEVfKtkxqoD7FX0K8dHC0xr0mrCkhT9xuxBpZDqZvlvQ==}
+  '@lodev09/react-native-true-sheet@3.11.18':
+    resolution: {integrity: sha512-Rf2Eux/8DcwtK16qLrWiLy+8lG3+jLQAVlaT3ZaK1T+Rq7+ZowY48TXEmvW7ewKkz72DU+sdrxn8475u/ih4Tw==}
     peerDependencies:
       '@radix-ui/react-dialog': '>=1'
       '@radix-ui/react-presence': '>=1'
@@ -17328,7 +17328,7 @@ snapshots:
 
   '@leichtgewicht/ip-codec@2.0.5': {}
 
-  '@lodev09/react-native-true-sheet@3.11.16(cbde0b7ddcd64bcda36676f188f2c3db)':
+  '@lodev09/react-native-true-sheet@3.11.18(cbde0b7ddcd64bcda36676f188f2c3db)':
     dependencies:
       react: 19.2.3
       react-native: 0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
@@ -18872,7 +18872,9 @@ snapshots:
       metro-runtime: 0.84.6
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
     optional: true
 
   '@react-native/metro-config@0.86.2(@babel/core@7.29.7)':
@@ -18883,7 +18885,9 @@ snapshots:
       metro-runtime: 0.84.6
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
