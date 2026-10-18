@@ -799,7 +799,7 @@ importers:
         version: 2.3.0
       node-html-parser:
         specifier: ^9.0.0
-        version: 9.0.2
+        version: 9.0.4
       prom-client:
         specifier: 'catalog:'
         version: 15.1.3
@@ -10010,8 +10010,8 @@ packages:
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
     hasBin: true
 
-  node-html-parser@9.0.2:
-    resolution: {integrity: sha512-XhM0CTeF4Hkw3el7VCyasGJCEvp500Xf0s1J3ZigYfTOkVqZRQRY3EiAw1CbJzNrxaKSDthXiT9c/4CBwIJyfw==}
+  node-html-parser@9.0.4:
+    resolution: {integrity: sha512-reUSrZkF1rO7hEYe5mJwtbVcQ6mB5QrViCZH6Wv+iz3er/PA9Q50gol15dMLQRDfdli4VzqPMPR24HNRFgVKFw==}
 
   node-int64@0.4.0:
     resolution: {integrity: sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw==}
@@ -25837,7 +25837,7 @@ snapshots:
       undici: 8.12.1
       which: 7.0.0
 
-  node-html-parser@9.0.2:
+  node-html-parser@9.0.4:
     dependencies:
       css-select: 5.2.2
       entities: 8.1.0
