@@ -549,7 +549,7 @@ importers:
         version: 13.0.3
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(@op-engineering/op-sqlite@15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(pg@8.23.0)
+        version: 0.45.4(@op-engineering/op-sqlite@15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(pg@8.23.0)
       pg:
         specifier: ^8.22.0
         version: 8.23.0
@@ -577,7 +577,7 @@ importers:
         version: link:../..
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(@op-engineering/op-sqlite@15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(pg@8.23.0)
+        version: 0.45.4(@op-engineering/op-sqlite@15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(pg@8.23.0)
       ejs:
         specifier: ^3.1.10
         version: 3.1.10
@@ -599,7 +599,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(@op-engineering/op-sqlite@15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(pg@8.23.0)
+        version: 0.45.4(@op-engineering/op-sqlite@15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(pg@8.23.0)
       pg:
         specifier: ^8.16.0
         version: 8.23.0
@@ -621,7 +621,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(@op-engineering/op-sqlite@15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(pg@8.23.0)
+        version: 0.45.4(@op-engineering/op-sqlite@15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(pg@8.23.0)
     devDependencies:
       '@polycentric/js-core':
         specifier: workspace:*
@@ -658,7 +658,7 @@ importers:
         version: 0.31.0-5
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(@op-engineering/op-sqlite@15.2.5(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(pg@8.23.0)
+        version: 0.45.4(@op-engineering/op-sqlite@15.2.5(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(pg@8.23.0)
       fast-text-encoding:
         specifier: ^1.0.6
         version: 1.0.6
@@ -7202,8 +7202,8 @@ packages:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
     engines: {node: '>=12'}
 
-  drizzle-orm@0.45.2:
-    resolution: {integrity: sha512-kY0BSaTNYWnoDMVoyY8uxmyHjpJW1geOmBMdSSicKo9CIIWkSxMIj2rkeSR51b8KAPB7m+qysjuHme5nKP+E5Q==}
+  drizzle-orm@0.45.4:
+    resolution: {integrity: sha512-NiM1YZpJ2UxyeE67DpDDZ+Tsw4YLX3trSlkNT7Tm9eKoUNb1LvaAaQzXgYQsWs+AQ9TUmmwMmBOCXuqqxUWKKQ==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -7211,6 +7211,7 @@ packages:
       '@libsql/client': '>=0.10.0'
       '@libsql/client-wasm': '>=0.10.0'
       '@neondatabase/serverless': '>=0.10.0'
+      '@netlify/db': '>=0.4.0'
       '@op-engineering/op-sqlite': '>=2'
       '@opentelemetry/api': ^1.4.1
       '@planetscale/database': '>=1.13'
@@ -7246,6 +7247,8 @@ packages:
       '@libsql/client-wasm':
         optional: true
       '@neondatabase/serverless':
+        optional: true
+      '@netlify/db':
         optional: true
       '@op-engineering/op-sqlite':
         optional: true
@@ -21766,7 +21769,7 @@ snapshots:
 
   dotenv@17.4.2: {}
 
-  drizzle-orm@0.45.2(@op-engineering/op-sqlite@15.2.5(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(pg@8.23.0):
+  drizzle-orm@0.45.4(@op-engineering/op-sqlite@15.2.5(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(pg@8.23.0):
     optionalDependencies:
       '@op-engineering/op-sqlite': 15.2.5(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       '@opentelemetry/api': 1.9.1
@@ -21776,7 +21779,7 @@ snapshots:
       expo-sqlite: 57.0.1(expo@57.0.15)(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       pg: 8.23.0
 
-  drizzle-orm@0.45.2(@op-engineering/op-sqlite@15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(pg@8.23.0):
+  drizzle-orm@0.45.4(@op-engineering/op-sqlite@15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.21.0)(better-sqlite3@13.0.3)(expo-sqlite@57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(pg@8.23.0):
     optionalDependencies:
       '@op-engineering/op-sqlite': 15.2.5(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       '@opentelemetry/api': 1.9.1
