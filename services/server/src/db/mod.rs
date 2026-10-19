@@ -9,12 +9,6 @@ use tonic::Status;
 
 pub mod client;
 
-/// Read/write database connection.
-pub(crate) type RwDbConn = DbConn;
-
-/// Read-only database connection.
-pub(crate) type RoDbConn = DbConn;
-
 /// Database connection.
 ///
 /// Prefer to use [`RwDbConn`] for queries that write and [`RoDbConn`] for
