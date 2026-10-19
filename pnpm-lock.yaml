@@ -321,7 +321,7 @@ importers:
         version: 19.2.17
       '@types/react-test-renderer':
         specifier: ^19.1.0
-        version: 19.1.0
+        version: 19.3.0
       emojibase-data:
         specifier: ^17.0.0
         version: 17.0.0(emojibase@17.0.0)
@@ -5471,8 +5471,8 @@ packages:
   '@types/react-router@5.1.20':
     resolution: {integrity: sha512-jGjmu/ZqS7FjSH6owMcD5qpq19+1RS9DeVRqfl1FeBMxTDQAGwlMWOcs52NDoXaNKyG3d1cYQFMs9rCrb88o9Q==}
 
-  '@types/react-test-renderer@19.1.0':
-    resolution: {integrity: sha512-XD0WZrHqjNrxA/MaR9O22w/RNidWR9YZmBdRGI7wcnWGrv/3dA8wKCJ8m63Sn+tLJhcjmuhOi629N66W6kgWzQ==}
+  '@types/react-test-renderer@19.3.0':
+    resolution: {integrity: sha512-TX4p2D4Z2oigM3SXU7+QyLSUnSR0vR1S1Pfxm/qFL9nHQ3jclgi6ioGoWQmlIr1DeKRVmPJrmNlhgM0JlWlLUg==}
 
   '@types/react@19.2.17':
     resolution: {integrity: sha512-MXfmqaVPEVgkBT/aY0aGCkRWWtByiYQXo3xdQ8r5RzuFrPiRn8Gar2tQdXSUQ2GKV3bkXckek89V8wQBY2Q/Aw==}
@@ -18604,9 +18604,7 @@ snapshots:
       metro-runtime: 0.84.6
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
     optional: true
 
   '@react-native/metro-config@0.86.2(@babel/core@7.29.7)':
@@ -18617,9 +18615,7 @@ snapshots:
       metro-runtime: 0.84.6
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
@@ -19684,7 +19680,7 @@ snapshots:
       '@types/history': 4.7.11
       '@types/react': 19.2.17
 
-  '@types/react-test-renderer@19.1.0':
+  '@types/react-test-renderer@19.3.0':
     dependencies:
       '@types/react': 19.2.17
 
@@ -26769,7 +26765,7 @@ snapshots:
   react-native-gesture-handler@2.32.0(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3):
     dependencies:
       '@egjs/hammerjs': 2.0.17
-      '@types/react-test-renderer': 19.1.0
+      '@types/react-test-renderer': 19.3.0
       hoist-non-react-statics: 3.3.2
       invariant: 2.2.4
       react: 19.2.3
@@ -26779,7 +26775,7 @@ snapshots:
   react-native-gesture-handler@2.32.0(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3):
     dependencies:
       '@egjs/hammerjs': 2.0.17
-      '@types/react-test-renderer': 19.1.0
+      '@types/react-test-renderer': 19.3.0
       hoist-non-react-statics: 3.3.2
       invariant: 2.2.4
       react: 19.2.3
@@ -26788,7 +26784,7 @@ snapshots:
   react-native-gesture-handler@2.32.0(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7):
     dependencies:
       '@egjs/hammerjs': 2.0.17
-      '@types/react-test-renderer': 19.1.0
+      '@types/react-test-renderer': 19.3.0
       hoist-non-react-statics: 3.3.2
       invariant: 2.2.4
       react: 19.2.7
