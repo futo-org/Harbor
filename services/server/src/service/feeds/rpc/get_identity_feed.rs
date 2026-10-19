@@ -125,11 +125,14 @@ async fn view(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::context::ServiceContext;
+    use std::sync::Arc;
+
     use entity::block;
     use sea_orm::{DbBackend, MockDatabase};
-    use std::sync::Arc;
+
+    use crate::service::context::ServiceContext;
+
+    use super::*;
 
     async fn ctx_where_alice_blocks_bob() -> Arc<ServiceContext> {
         let db = MockDatabase::new(DbBackend::Postgres)
@@ -148,11 +151,10 @@ mod tests {
     #[tokio::test]
     async fn a_blocked_identity_feed_is_empty_and_terminal() {
         let ctx = ctx_where_alice_blocks_bob().await;
-
-        let ctx = RequestContext::new(&ctx, Some("alice"));
+        let ctx = ctx.test_public("alice").await;
 
         let response = handle(
-            &ctx,
+            ctx,
             GetIdentityFeedRequest {
                 identity: "bob".to_string(),
                 ..Default::default()
@@ -180,10 +182,9 @@ mod tests {
     #[tokio::test]
     async fn an_empty_identity_is_rejected() {
         let ctx = ctx_where_alice_blocks_bob().await;
+        let ctx = ctx.test_public("alice").await;
 
-        let ctx = RequestContext::new(&ctx, Some("alice"));
-
-        let result = handle(&ctx, GetIdentityFeedRequest::default()).await;
+        let result = handle(ctx, GetIdentityFeedRequest::default()).await;
 
         assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
     }

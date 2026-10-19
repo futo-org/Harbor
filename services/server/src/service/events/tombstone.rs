@@ -252,11 +252,9 @@ async fn is_tombstone_authorized<Auth>(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use sea_orm::{DbBackend, MockDatabase};
 
-    use crate::service::context::PublicContext;
+    use crate::service::context::{PublicContext, ServiceContext};
     use crate::service::proto::{EventKey, PublicKey};
 
     use super::*;
@@ -267,7 +265,8 @@ mod tests {
             .await
             .expect("failed to build Kafka producer");
         ServiceContext::new(db.clone(), db, kafka_producer)
-            .to_context_ro()
+            .public_ro(&tonic::Request::new(()))
+            .await
             .unwrap()
     }
 
@@ -329,7 +328,7 @@ mod tests {
             meta: None,
         };
         let result =
-            is_tombstone_authorized(ctx, &target_key("alice"), &bundle).await;
+            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
         assert!(!result.unwrap());
     }
 

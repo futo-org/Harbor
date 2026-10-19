@@ -80,13 +80,14 @@ pub fn build_identity_service(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::auth::AuthenticatedIdentity;
-    use crate::service::verifications::rpc::common::tests::ctx;
     use chrono::Utc;
     use entity::{ban, moderator};
     use sea_orm::{DbBackend, MockDatabase};
     use tonic::Code;
+
+    use crate::service::verifications::rpc::common::tests::ctx;
+
+    use super::*;
 
     const MODERATOR: &str = "moderator-identity";
     const OTHER: &str = "some-other-identity";
@@ -110,16 +111,6 @@ mod tests {
         }
     }
 
-    /// A request carrying an authenticated identity, as `auth_middleware`
-    /// would have populated it.
-    fn authed<T>(message: T, identity: &str) -> Request<T> {
-        let mut request = Request::new(message);
-        request
-            .extensions_mut()
-            .insert(AuthenticatedIdentity(identity.to_string()));
-        request
-    }
-
     /// A context whose `is_moderator` lookup (the first query every
     /// moderation handler runs) reports whether the caller is a moderator.
     async fn ctx_moderator(is_moderator: bool) -> Arc<ServiceContext> {
@@ -134,64 +125,55 @@ mod tests {
         ctx(db).await
     }
 
-    /// A context with no queued query results — for the unauthenticated
-    /// paths, which must reject before touching the database.
-    async fn ctx_empty() -> Arc<ServiceContext> {
-        ctx(MockDatabase::new(DbBackend::Postgres).into_connection()).await
-    }
-
+    /* TODO: move to integration tests, no longer possible as unit test.
     #[tokio::test]
     async fn is_moderator_rejects_unauthenticated() {
         let ctx = ctx_empty().await;
         let err =
-            is_moderator::handle(&ctx, Request::new(IsModeratorRequest {}))
+            is_moderator::handle(ctx, Request::new(IsModeratorRequest {}))
                 .await
                 .unwrap_err();
         assert_eq!(err.code(), Code::Unauthenticated);
     }
+    */
 
     #[tokio::test]
     async fn is_moderator_false_for_non_moderator() {
-        let ctx = ctx_moderator(false).await;
-        let response =
-            is_moderator::handle(&ctx, authed(IsModeratorRequest {}, OTHER))
-                .await
-                .unwrap();
+        let ctx = ctx_moderator(false).await.test_auth(OTHER).await;
+        let response = is_moderator::handle(ctx, IsModeratorRequest {})
+            .await
+            .unwrap();
         assert!(!response.is_moderator);
     }
 
     #[tokio::test]
     async fn is_moderator_true_for_moderator() {
-        let ctx = ctx_moderator(true).await;
-        let response = is_moderator::handle(
-            &ctx,
-            authed(IsModeratorRequest {}, MODERATOR),
-        )
-        .await
-        .unwrap();
+        let ctx = ctx_moderator(true).await.test_auth(MODERATOR).await;
+        let response = is_moderator::handle(ctx, IsModeratorRequest {})
+            .await
+            .unwrap();
         assert!(response.is_moderator);
     }
 
+    /* TODO: move to integration tests, no longer possible as unit test.
     #[tokio::test]
     async fn is_banned_rejects_unauthenticated() {
         let ctx = ctx_empty().await;
         let request = Request::new(IsBannedRequest {
             target_identity: "target".to_string(),
         });
-        let err = is_banned::handle(&ctx, request).await.unwrap_err();
+        let err = is_banned::handle(ctx, request).await.unwrap_err();
         assert_eq!(err.code(), Code::Unauthenticated);
     }
+    */
 
     #[tokio::test]
     async fn is_banned_rejects_non_moderator() {
-        let ctx = ctx_moderator(false).await;
-        let request = authed(
-            IsBannedRequest {
-                target_identity: "target".to_string(),
-            },
-            OTHER,
-        );
-        let err = is_banned::handle(&ctx, request).await.unwrap_err();
+        let ctx = ctx_moderator(false).await.test_auth(OTHER).await;
+        let request = IsBannedRequest {
+            target_identity: "target".to_string(),
+        };
+        let err = is_banned::handle(ctx, request).await.unwrap_err();
         assert_eq!(err.code(), Code::PermissionDenied);
     }
 
@@ -202,22 +184,19 @@ mod tests {
             .append_query_results([vec![moderator_row()]])
             .append_query_results([vec![ban_row("target")]])
             .into_connection();
-        let ctx = ctx(db).await;
-        let request = authed(
-            IsBannedRequest {
-                target_identity: "target".to_string(),
-            },
-            MODERATOR,
-        );
-        let response = is_banned::handle(&ctx, request).await.unwrap();
+        let ctx = ctx(db).await.test_auth(MODERATOR).await;
+        let request = IsBannedRequest {
+            target_identity: "target".to_string(),
+        };
+        let response = is_banned::handle(ctx, request).await.unwrap();
         assert!(response.is_banned);
     }
 
     #[tokio::test]
     async fn list_bans_rejects_non_moderator() {
-        let ctx = ctx_moderator(false).await;
-        let request = authed(ListBansRequest::default(), OTHER);
-        let err = list_bans::handle(&ctx, request).await.unwrap_err();
+        let ctx = ctx_moderator(false).await.test_auth(OTHER).await;
+        let request = ListBansRequest::default();
+        let err = list_bans::handle(ctx, request).await.unwrap_err();
         assert_eq!(err.code(), Code::PermissionDenied);
     }
 
@@ -228,19 +207,17 @@ mod tests {
             .append_query_results([vec![moderator_row()]])
             .append_query_results([vec![ban_row("aaa"), ban_row("bbb")]])
             .into_connection();
-        let ctx = ctx(db).await;
-        let response = list_bans::handle(
-            &ctx,
-            authed(ListBansRequest::default(), MODERATOR),
-        )
-        .await
-        .unwrap();
+        let ctx = ctx(db).await.test_auth(MODERATOR).await;
+        let response = list_bans::handle(ctx, ListBansRequest::default())
+            .await
+            .unwrap();
         assert_eq!(
             response.banned_identities,
             vec!["aaa".to_string(), "bbb".to_string()]
         );
     }
 
+    /* TODO: move to integration tests, no longer possible as unit test.
     #[tokio::test]
     async fn set_ban_status_rejects_unauthenticated() {
         let ctx = ctx_empty().await;
@@ -248,21 +225,19 @@ mod tests {
             target_identity: "target".to_string(),
             banned: true,
         });
-        let err = set_ban_status::handle(&ctx, request).await.unwrap_err();
+        let err = set_ban_status::handle(ctx, request).await.unwrap_err();
         assert_eq!(err.code(), Code::Unauthenticated);
     }
+    */
 
     #[tokio::test]
     async fn set_ban_status_rejects_non_moderator() {
-        let ctx = ctx_moderator(false).await;
-        let request = authed(
-            SetBanStatusRequest {
-                target_identity: "target".to_string(),
-                banned: true,
-            },
-            OTHER,
-        );
-        let err = set_ban_status::handle(&ctx, request).await.unwrap_err();
+        let ctx = ctx_moderator(false).await.test_auth(OTHER).await;
+        let request = SetBanStatusRequest {
+            target_identity: "target".to_string(),
+            banned: true,
+        };
+        let err = set_ban_status::handle(ctx, request).await.unwrap_err();
         assert_eq!(err.code(), Code::PermissionDenied);
     }
 }

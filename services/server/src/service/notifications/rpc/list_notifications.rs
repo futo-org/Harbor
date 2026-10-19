@@ -313,15 +313,18 @@ fn to_proto_key(key: &TargetEventKey) -> EventKey {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::context::ServiceContext;
-    use crate::service::proto::content::ContentBody;
-    use crate::service::proto::{Content, Labels};
+    use std::sync::Arc;
+
     use chrono::DateTime;
     use entity::{content, event};
     use prost::Message;
     use sea_orm::{DbBackend, MockDatabase};
-    use std::sync::Arc;
+
+    use crate::service::context::ServiceContext;
+    use crate::service::proto::content::ContentBody;
+    use crate::service::proto::{Content, Labels};
+
+    use super::*;
 
     fn notification_row(id: i64, from_identity: &str) -> notification::Model {
         let ts = chrono::DateTime::from_timestamp(0, 0).unwrap();
@@ -430,7 +433,7 @@ mod tests {
     #[tokio::test]
     async fn notifications_from_blocked_identities_are_dropped() {
         let service = service().await;
-        let ctx = RequestContext::new(&service, Some("recipient"));
+        let ctx = service.test_public("recipient").await;
         let fetched = Fetched {
             rows: vec![
                 notification_row(1, "bob"),
@@ -457,7 +460,7 @@ mod tests {
     #[tokio::test]
     async fn a_page_of_only_blocked_notifications_comes_back_empty() {
         let service = service().await;
-        let ctx = RequestContext::new(&service, Some("recipient"));
+        let ctx = service.test_public("recipient").await;
         let fetched = Fetched {
             rows: vec![notification_row(1, "bob")],
             has_next_page: true,
@@ -476,7 +479,7 @@ mod tests {
     #[tokio::test]
     async fn an_anonymous_caller_sees_every_notification() {
         let service = service().await;
-        let ctx = RequestContext::new(&service, None);
+        let ctx = service.public_rw(&tonic::Request::new(())).await.unwrap();
         let fetched = Fetched {
             rows: vec![notification_row(1, "bob")],
             has_next_page: false,
@@ -492,7 +495,7 @@ mod tests {
     #[tokio::test]
     async fn notifications_with_an_omitted_trigger_label_are_dropped() {
         let service = service().await;
-        let ctx = RequestContext::new(&service, Some("recipient"));
+        let ctx = service.test_public("recipient").await;
         let labeled = notification_row(1, "bob");
         let clean = notification_row(2, "alice");
         let hydrated =
@@ -519,7 +522,7 @@ mod tests {
     #[tokio::test]
     async fn a_label_outside_the_omit_set_keeps_the_notification() {
         let service = service().await;
-        let ctx = RequestContext::new(&service, Some("recipient"));
+        let ctx = service.test_public("recipient").await;
         let labeled = notification_row(1, "bob");
         let hydrated =
             hydrated_with_labels(vec![label_event(&labeled, &["spam"])]);
@@ -540,7 +543,7 @@ mod tests {
     #[tokio::test]
     async fn labels_are_ignored_without_an_omit_set() {
         let service = service().await;
-        let ctx = RequestContext::new(&service, Some("recipient"));
+        let ctx = service.test_public("recipient").await;
         let labeled = notification_row(1, "bob");
         let hydrated =
             hydrated_with_labels(vec![label_event(&labeled, &["spam"])]);

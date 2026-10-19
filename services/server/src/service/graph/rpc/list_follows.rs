@@ -151,15 +151,19 @@ async fn view(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::proto::{Content, Follow, content::ContentBody};
+    use std::sync::Arc;
+
     use chrono::DateTime;
     use entity::{content, event};
     use polycentric_common::models::collections;
-    use prost::Message as _;
+    use prost::Message;
     use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, MockRow};
-    use std::sync::Arc;
+
+    use super::*;
+    use crate::service::context::ServiceContext;
+    use crate::service::proto::content::ContentBody;
+    use crate::service::proto::{Content, Follow};
 
     async fn ctx(db: DatabaseConnection) -> Arc<ServiceContext> {
         let kafka_producer = common_kafka::build_producer()
@@ -234,10 +238,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             "target".to_string(),
             Some(&PageParams {
                 limit: Some(2),
@@ -264,10 +272,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             "target".to_string(),
             Some(&PageParams {
                 limit: Some(2),
@@ -291,10 +303,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response =
-            handle(&ctx, "target".to_string(), None, Direction::Followers)
+            handle(ctx, "target".to_string(), None, Direction::Followers)
                 .await
                 .unwrap();
 
@@ -320,10 +336,14 @@ mod tests {
     #[tokio::test]
     async fn rejects_an_empty_identity() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let result =
-            handle(&ctx, String::new(), None, Direction::Followers).await;
+            handle(ctx, String::new(), None, Direction::Followers).await;
         assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
     }
 }

@@ -650,15 +650,19 @@ fn map_db_err(e: sea_orm::DbErr) -> Status {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::proto::{Block, Follow};
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+
     use chrono::Utc;
     use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{
         DatabaseConnection, DbBackend, MockDatabase, MockRow, Value,
     };
-    use std::collections::BTreeMap;
-    use std::sync::Arc;
+
+    use crate::service::context::ServiceContext;
+    use crate::service::proto::{Block, Follow};
+
+    use super::*;
 
     async fn ctx(db: DatabaseConnection) -> Arc<ServiceContext> {
         let kafka_producer = common_kafka::build_producer()
@@ -748,7 +752,11 @@ mod tests {
             ]])
             .append_query_results([no_tombstones()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let count = Query::count_followers(&ctx, "target").await.unwrap();
         assert_eq!(count, 2);
@@ -764,7 +772,11 @@ mod tests {
             ]])
             .append_query_results([no_tombstones()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let count = Query::count_following(&ctx, "alice").await.unwrap();
         assert_eq!(count, 2);
@@ -778,9 +790,8 @@ mod tests {
                 blocked_column_row("carol"),
             ]])
             .into_connection();
-        let ctx = ctx(db).await;
 
-        let blocked = Query::blocked_set(&ctx, "alice").await.unwrap();
+        let blocked = Query::blocked_set(&db, "alice").await.unwrap();
         assert_eq!(
             blocked,
             HashSet::from(["bob".to_string(), "carol".to_string()])
@@ -790,9 +801,12 @@ mod tests {
     #[tokio::test]
     async fn an_anonymous_caller_blocks_nobody() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
-        let ctx = RequestContext::new(&ctx, None);
         let blocked = Query::blocked_set_for_caller(&ctx).await.unwrap();
         assert!(blocked.is_empty());
     }
@@ -806,7 +820,11 @@ mod tests {
             ]])
             .append_query_results([no_tombstones()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         assert_eq!(
             Query::list_followed_identities(&ctx, "alice")
@@ -821,9 +839,8 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![block_row(1, "alice", "bob")]])
             .into_connection();
-        let ctx = ctx(db).await;
 
-        assert!(Query::blocks_identity(&ctx, "alice", "bob").await.unwrap());
+        assert!(Query::blocks_identity(&db, "alice", "bob").await.unwrap());
     }
 
     #[tokio::test]
@@ -831,9 +848,8 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([Vec::<block::Model>::new()])
             .into_connection();
-        let ctx = ctx(db).await;
 
-        assert!(!Query::blocks_identity(&ctx, "alice", "bob").await.unwrap());
+        assert!(!Query::blocks_identity(&db, "alice", "bob").await.unwrap());
     }
 
     #[tokio::test]

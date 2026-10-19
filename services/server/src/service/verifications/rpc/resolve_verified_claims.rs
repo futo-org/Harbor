@@ -128,13 +128,15 @@ fn retain_trusted(
 
 #[cfg(test)]
 mod tests {
-    use super::{FetchedClaims, retain_trusted};
+    use std::collections::HashSet;
+
     use crate::service::events::TargetEventKey;
     use crate::service::verifications::repository::VerificationEventDto;
     use crate::service::verifications::rpc::common::tests::{
         claim_row, event_row,
     };
-    use std::collections::HashSet;
+
+    use super::{FetchedClaims, retain_trusted};
 
     fn trusted(identities: &[&str]) -> HashSet<String> {
         identities.iter().map(|s| s.to_string()).collect()

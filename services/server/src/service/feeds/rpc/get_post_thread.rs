@@ -189,20 +189,23 @@ async fn view(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+
+    use chrono::DateTime;
+    use entity::{content, event};
+    use prost::Message;
+    use sea_orm::prelude::DateTimeWithTimeZone;
+    use sea_orm::{DbBackend, MockDatabase, MockRow, Value};
+
     use crate::data::hydration::HydrationState;
     use crate::service::context::ServiceContext;
     use crate::service::proto::content::ContentBody;
     use crate::service::proto::{
         Content, EventKey, Post, PostReply, PublicKey,
     };
-    use chrono::DateTime;
-    use entity::{content, event};
-    use prost::Message;
-    use sea_orm::prelude::DateTimeWithTimeZone;
-    use sea_orm::{DbBackend, MockDatabase, MockRow, Value};
-    use std::collections::BTreeMap;
-    use std::sync::Arc;
+
+    use super::*;
 
     const POST_COLLECTION: i16 = 2;
 
@@ -336,8 +339,7 @@ mod tests {
             ]])
             .into_connection();
         let ctx = ctx(db).await;
-
-        let ctx = RequestContext::new(&ctx, Some("caller"));
+        let ctx = ctx.test_public("caller").await;
 
         let fetched = fetch(&ctx, &params()).await.unwrap();
         let fetched_identities: Vec<&str> = fetched

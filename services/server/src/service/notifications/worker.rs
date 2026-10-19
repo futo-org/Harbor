@@ -600,13 +600,15 @@ impl From<&EventKey> for KeyColumns {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::BTreeMap;
+
     use polycentric_common::models::protos_v2::{
         Block, Follow, Post, PostReply, PublicKey, Reaction, Repost,
         VerificationTarget, VerificationVerify,
     };
     use sea_orm::{DatabaseConnection, DbBackend, DbErr, MockDatabase, Value};
-    use std::collections::BTreeMap;
+
+    use super::*;
 
     /// A fully-populated `EventKey` for `identity`.
     fn event_key(identity: &str) -> EventKey {
@@ -856,9 +858,11 @@ mod tests {
             .append_query_results([vec![blocker_row("bob")]])
             .into_connection();
         let worker = worker(db).await;
+        let ctx = worker.ctx.worker_rw().await.unwrap();
 
         let notifications = worker
             .drop_recipients_blocking_author(
+                &ctx,
                 vec![pending("bob"), pending("carol")],
                 "alice",
             )
@@ -873,9 +877,11 @@ mod tests {
             .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
             .into_connection();
         let worker = worker(db).await;
+        let ctx = worker.ctx.worker_rw().await.unwrap();
 
         let notifications = worker
             .drop_recipients_blocking_author(
+                &ctx,
                 vec![pending("bob"), pending("carol")],
                 "alice",
             )
@@ -890,10 +896,15 @@ mod tests {
             .append_query_errors([DbErr::Custom("db is down".to_string())])
             .into_connection();
         let worker = worker(db).await;
+        let ctx = worker.ctx.worker_rw().await.unwrap();
 
         assert!(
             worker
-                .drop_recipients_blocking_author(vec![pending("bob")], "alice")
+                .drop_recipients_blocking_author(
+                    &ctx,
+                    vec![pending("bob")],
+                    "alice"
+                )
                 .await
                 .is_err()
         );
@@ -904,9 +915,10 @@ mod tests {
         // No `append_query_results`, so the mock errors if a query runs.
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
         let worker = worker(db).await;
+        let ctx = worker.ctx.worker_rw().await.unwrap();
 
         let notifications = worker
-            .drop_recipients_blocking_author(vec![], "alice")
+            .drop_recipients_blocking_author(&ctx, vec![], "alice")
             .await
             .expect("no lookup should be attempted");
         assert!(notifications.is_empty());

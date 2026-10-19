@@ -104,6 +104,30 @@ impl ServiceContext {
         )
         .await
     }
+
+    #[cfg(test)]
+    pub(crate) async fn test_public(&self, identity: &str) -> PublicContext {
+        RequestContext::new(
+            &self.db,
+            self.proof_cache.clone(),
+            self.kafka_producer.clone(),
+            Some(identity.into()),
+        )
+        .await
+        .unwrap()
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn test_auth(&self, identity: &str) -> AuthContext {
+        RequestContext::new(
+            &self.db,
+            self.proof_cache.clone(),
+            self.kafka_producer.clone(),
+            identity.into(),
+        )
+        .await
+        .unwrap()
+    }
 }
 
 fn auth_error() -> Status {

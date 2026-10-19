@@ -45,9 +45,13 @@ pub async fn handle(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use sea_orm::{DbBackend, MockDatabase};
     use std::sync::Arc;
+
+    use sea_orm::{DbBackend, MockDatabase};
+
+    use crate::service::context::ServiceContext;
+
+    use super::*;
 
     // Only the sequential guard is tested here. The counters and event listings
     // it composes are covered by the graph repository tests.
@@ -57,10 +61,13 @@ mod tests {
         let kafka_producer = common_kafka::build_producer()
             .await
             .expect("failed to build Kafka producer");
-        let ctx = Arc::new(ServiceContext::new(db.clone(), db, kafka_producer));
+        let ctx = Arc::new(ServiceContext::new(db.clone(), db, kafka_producer))
+            .public_ro(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let result = handle(
-            &ctx,
+            ctx,
             GetProfileRequest {
                 identity: String::new(),
             },

@@ -81,11 +81,13 @@ async fn fetch(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use sea_orm::{DbBackend, MockDatabase};
+
     use crate::service::verifications::rpc::common::tests::{
         claim_row, ctx, no_rows, target_row, target_table_row,
     };
-    use sea_orm::{DbBackend, MockDatabase};
+
+    use super::*;
 
     #[tokio::test]
     async fn returns_claims_targeting_the_identity() {
@@ -102,10 +104,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: "bob".to_string(),
             },
@@ -148,10 +154,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: "bob".to_string(),
             },
@@ -173,10 +183,14 @@ mod tests {
                 entity::content_verification_target::Model,
             )>::new()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: "bob".to_string(),
             },
@@ -190,10 +204,14 @@ mod tests {
     #[tokio::test]
     async fn rejects_an_empty_identity() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let result = handle(
-            &ctx,
+            ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: String::new(),
             },
