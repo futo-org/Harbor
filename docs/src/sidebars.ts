@@ -59,7 +59,11 @@ const sidebars: SidebarsConfig = {
         'guides/setting-up-an-alias',
       ],
     },
-    'privacy-policy',
+    {
+      type: 'category',
+      label: 'Policies',
+      items: ['privacy-policy', 'content-policy', 'content-policy-app-stores'],
+    },
   ],
 };
 

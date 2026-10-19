@@ -6,10 +6,23 @@ import grpcApiPlugin from './plugins/grpc-api/index';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+const SOCIAL_CARD_ALT = 'Harbor';
+// `docusaurus start` runs in development, `docusaurus build` in production
+const ICON_SUFFIX = process.env.NODE_ENV === 'development' ? '-dev' : '';
+
 const config: Config = {
   title: 'Harbor',
   tagline: 'Share to the world, not platforms.',
-  favicon: 'img/favicon.ico',
+  favicon: `img/favicon${ICON_SUFFIX}.ico`,
+  headTags: [
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'apple-touch-icon',
+        href: `/apple-touch-icon${ICON_SUFFIX}.png`,
+      },
+    },
+  ],
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -60,6 +73,7 @@ const config: Config = {
           // docs are served under /docs.
           routeBasePath: 'docs',
           sidebarPath: './src/sidebars.ts',
+          editUrl: 'https://code.futo.org/harbor/harbor/_edit/develop/docs/',
         },
         // No blog.
         blog: false,
@@ -76,6 +90,19 @@ const config: Config = {
   themes: ['@docusaurus/theme-mermaid'],
 
   themeConfig: {
+    // The link preview card, shared with the web app
+    image: 'img/harbor-social-card.png',
+    // Docusaurus emits og:image and twitter:image but no alt text for them
+    metadata: [
+      {
+        property: 'og:image:alt',
+        content: SOCIAL_CARD_ALT,
+      },
+      {
+        name: 'twitter:image:alt',
+        content: SOCIAL_CARD_ALT,
+      },
+    ],
     colorMode: {
       // Default to dark, but still honor the user's stored/OS preference and
       // keep the toggle.
@@ -88,7 +115,6 @@ const config: Config = {
       logo: {
         alt: 'Harbor',
         src: 'img/logo.png',
-        srcDark: 'img/logo-dark.png',
       },
       items: [
         {
