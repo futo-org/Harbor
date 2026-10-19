@@ -7,9 +7,10 @@ import {
   type ModerationLabelEntry,
 } from '@/src/common/settings/moderationLabels';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { router } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { View } from 'react-native';
 import { isWeb } from '@/src/common/util/platform';
+import { CONTENT_POLICY_URL } from '@/src/common/constants';
 
 const LEVELS: { level: ModerationLevel; label: string }[] = [
   { level: 'hide', label: 'Hide' },
@@ -90,6 +91,16 @@ export default function ModerationSettingsSheet() {
             isLast={index === entries.length - 1}
           />
         ))}
+        <Link
+          href={CONTENT_POLICY_URL}
+          target="_blank"
+          accessibilityRole="link"
+          style={[Atoms.px_lg, Atoms.py_md]}
+        >
+          <Text variant="small" color="neutral_500">
+            Content policy for the FUTO servers ↗
+          </Text>
+        </Link>
       </Sheet.Content>
     </Sheet>
   );
