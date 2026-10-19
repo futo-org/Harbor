@@ -9,6 +9,9 @@ export const DEFAULT_IDENTITY_NAME = 'Anonymous';
 
 export const FUTO_URL = 'https://futo.tech';
 export const SOURCE_CODE_URL = 'https://code.futo.org/harbor/harbor';
+export const DOCS_URL = 'https://join.harbor.social/docs/';
+export const FAQ_URL = 'https://join.harbor.social/docs/faq/';
+export const SUPPORT_URL = 'https://join.harbor.social/docs/support/';
 export const ROADMAP_URL = 'https://join.harbor.social/docs/roadmap/';
 export const PRIVACY_POLICY_URL =
   'https://join.harbor.social/docs/privacy-policy/';
