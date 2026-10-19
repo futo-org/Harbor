@@ -222,11 +222,14 @@ impl PolycentricClient {
     }
 
     /// Assemble the stored bundle for an event already located in the store.
+    /// When `for_client` is true, event proofs and event metadata are included.
+    /// When `for_upload` is false, we only include the event and content, since
+    /// that is what servers expect.
     pub(crate) fn bundle_for(
         &self,
         key: &EventKey,
         signed_event: &SignedEvent,
-        include_proofs: bool,
+        for_client: bool,
     ) -> Result<EventBundle, CoreError> {
         let event = Event::decode(signed_event.event_bytes.as_slice())
             .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
@@ -236,17 +239,23 @@ impl PolycentricClient {
             .as_ref()
             .and_then(|digest| self.find_content_from_digest(digest));
 
-        let event_proofs = if include_proofs {
+        let event_proofs = if for_client {
             self.event_proofs_store.get(key).to_vec()
         } else {
             Vec::new()
+        };
+
+        let meta = if for_client {
+            self.meta_store.get(key).cloned()
+        } else {
+            None
         };
 
         Ok(EventBundle {
             signed_event: Some(signed_event.clone()),
             serialized_content,
             event_proofs,
-            meta: self.meta_store.get(key).cloned(),
+            meta,
         })
     }
 
