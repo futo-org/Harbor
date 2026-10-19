@@ -33,6 +33,81 @@ impl ServiceContext {
             kafka_producer,
         })
     }
+
+    /// Create a public request context with read-only database access.
+    pub(crate) async fn public_ro<T>(
+        &self,
+        request: &tonic::Request<T>,
+    ) -> Result<PublicContext, Status> {
+        let auth = authenticated_identity(request);
+        RequestContext::new(
+            &self.ro_db,
+            self.proof_cache.clone(),
+            self.kafka_producer.clone(),
+            auth,
+        )
+        .await
+    }
+
+    /// Create a public request context with read-write database access.
+    pub(crate) async fn public_rw<T>(
+        &self,
+        request: &tonic::Request<T>,
+    ) -> Result<PublicContext, Status> {
+        let auth = authenticated_identity(request);
+        RequestContext::new(
+            &self.db,
+            self.proof_cache.clone(),
+            self.kafka_producer.clone(),
+            auth,
+        )
+        .await
+    }
+
+    /// Create an authenticated request context with read-only database access.
+    pub(crate) async fn authenticted_ro<T>(
+        &self,
+        request: &tonic::Request<T>,
+    ) -> Result<AuthContext, Status> {
+        let auth = authenticated_identity(request).ok_or_else(auth_error)?;
+        RequestContext::new(
+            &self.db,
+            self.proof_cache.clone(),
+            self.kafka_producer.clone(),
+            auth,
+        )
+        .await
+    }
+
+    /// Create an authenticated request context with read-write database access.
+    pub(crate) async fn authenticted_rw<T>(
+        &self,
+        request: &tonic::Request<T>,
+    ) -> Result<AuthContext, Status> {
+        let auth = authenticated_identity(request).ok_or_else(auth_error)?;
+        RequestContext::new(
+            &self.db,
+            self.proof_cache.clone(),
+            self.kafka_producer.clone(),
+            auth,
+        )
+        .await
+    }
+
+    /// Create a worker request context with read-write database access.
+    pub(crate) async fn worker_rw(&self) -> Result<WorkerContext, Status> {
+        RequestContext::new(
+            &self.db,
+            self.proof_cache.clone(),
+            self.kafka_producer.clone(),
+            (), // No auth information.
+        )
+        .await
+    }
+}
+
+fn auth_error() -> Status {
+    Status::unauthenticated("authentication required")
 }
 
 /// [`RequestContext`] where the user is optionally authenticated.
@@ -46,7 +121,8 @@ pub(crate) type WorkerContext = RequestContext<()>;
 
 /// Request context.
 ///
-/// See [`AuthContext`] and [`PublicContext`].
+/// See [`AuthContext`], [`PublicContext`] and [`WorkerContext`]. Request
+/// context can be created from a [`ServiceContext`].
 pub(crate) struct RequestContext<Auth> {
     /// Read/write or read-only database connection.
     pub(crate) db: DbConn,
@@ -58,8 +134,7 @@ pub(crate) struct RequestContext<Auth> {
 }
 
 impl<Auth> RequestContext<Auth> {
-    /// Use [`PublicContext::new`] or [`AuthContext::new`] instead.
-    async fn with_auth(
+    async fn new(
         pool: &DatabaseConnection,
         proof_cache: Arc<ProofCache>,
         kafka_producer: FutureProducer,
@@ -75,47 +150,10 @@ impl<Auth> RequestContext<Auth> {
     }
 }
 
-impl PublicContext {
-    /// Create a new context with optional authentication information.
-    pub(crate) async fn new<T>(
-        pool: &DatabaseConnection,
-        proof_cache: Arc<ProofCache>,
-        kafka_producer: FutureProducer,
-        request: &tonic::Request<T>,
-    ) -> Result<PublicContext, Status> {
-        let auth = authenticated_identity(request);
-        RequestContext::with_auth(pool, proof_cache, kafka_producer, auth).await
-    }
-}
-
 impl AuthContext {
-    /// Create a new context with authentication information.
-    pub(crate) async fn new<T>(
-        pool: &DatabaseConnection,
-        proof_cache: Arc<ProofCache>,
-        kafka_producer: FutureProducer,
-        request: &tonic::Request<T>,
-    ) -> Result<AuthContext, Status> {
-        let auth = authenticated_identity(request).ok_or_else(|| {
-            Status::unauthenticated("authentication required")
-        })?;
-        RequestContext::with_auth(pool, proof_cache, kafka_producer, auth).await
-    }
-
     /// Returns the identity of the authenticated caller.
     pub(crate) fn identity(&self) -> &str {
         self.auth.as_str()
-    }
-}
-
-impl WorkerContext {
-    /// Create a new context for a worker (no authentication).
-    pub(crate) async fn new(
-        pool: &DatabaseConnection,
-        proof_cache: Arc<ProofCache>,
-        kafka_producer: FutureProducer,
-    ) -> Result<WorkerContext, Status> {
-        RequestContext::with_auth(pool, proof_cache, kafka_producer, ()).await
     }
 }
 

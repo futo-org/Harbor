@@ -13,7 +13,7 @@ use polycentric_common::models::protos_v2::{
 use tonic::{Request, Response, Status};
 
 use crate::grpc::stream_response;
-use crate::service::context::{AuthContext, PublicContext, ServiceContext};
+use crate::service::context::ServiceContext;
 
 use crate::service::notifications::changes;
 use crate::service::proto::notification_service_server::{
@@ -34,13 +34,7 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<ListNotificationsRequest>,
     ) -> Result<Response<ListNotificationsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             list_notifications::handle(ctx, request.into_inner()).await?,
         ))
@@ -50,13 +44,7 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<AcknowledgeNotificationsRequest>,
     ) -> Result<Response<AcknowledgeNotificationsResponse>, Status> {
-        let ctx = AuthContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.authenticted_rw(&request).await?;
         Ok(Response::new(
             acknowledge_notifications::handle(ctx, request.into_inner())
                 .await?,

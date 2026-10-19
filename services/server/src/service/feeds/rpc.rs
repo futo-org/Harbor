@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use tonic::{Request, Response, Status};
 
-use crate::service::context::{PublicContext, ServiceContext};
+use crate::service::context::ServiceContext;
 use crate::service::proto::feeds_service_server::{
     FeedsService, FeedsServiceServer,
 };
@@ -34,13 +34,7 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetIdentityFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_identity_feed::handle(ctx, request.into_inner()).await?,
         ))
@@ -50,13 +44,7 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetFollowingFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_following_feed::handle(ctx, request.into_inner()).await?,
         ))
@@ -66,13 +54,7 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetFollowingFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_recommended_feed::handle(ctx, request.into_inner()).await?,
         ))
@@ -82,13 +64,7 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetExploreFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_explore_feed::handle(ctx, request.into_inner()).await?,
         ))
@@ -98,13 +74,7 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetPostRequest>,
     ) -> Result<Response<GetPostResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_post::handle(ctx, request.into_inner()).await?,
         ))
@@ -114,13 +84,7 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetPostThreadRequest>,
     ) -> Result<Response<GetPostThreadResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_post_thread::handle(ctx, request.into_inner()).await?,
         ))
@@ -130,13 +94,7 @@ impl FeedsService for FeedsServiceImpl {
         &self,
         request: Request<GetAttributionFeedRequest>,
     ) -> Result<Response<GetFeedResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_attribution_feed::handle(ctx, request.into_inner()).await?,
         ))

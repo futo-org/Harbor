@@ -2,7 +2,7 @@
 
 pub mod get_profile;
 
-use crate::service::context::{PublicContext, ServiceContext};
+use crate::service::context::ServiceContext;
 use crate::service::proto::profile_service_server::{
     ProfileService, ProfileServiceServer,
 };
@@ -20,13 +20,7 @@ impl ProfileService for ProfileServiceImpl {
         &self,
         request: Request<GetProfileRequest>,
     ) -> Result<Response<GetProfileResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_profile::handle(ctx, request.into_inner()).await?,
         ))

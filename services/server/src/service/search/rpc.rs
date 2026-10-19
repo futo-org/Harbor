@@ -4,7 +4,7 @@
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-use crate::service::context::{PublicContext, ServiceContext};
+use crate::service::context::ServiceContext;
 use crate::service::proto::search_service_server::{
     SearchService, SearchServiceServer,
 };
@@ -29,13 +29,7 @@ impl SearchService for SearchServiceImpl {
         &self,
         request: Request<SearchUsersRequest>,
     ) -> Result<Response<SearchUsersResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             search_users::handle(ctx, request.into_inner()).await?,
         ))
@@ -45,13 +39,7 @@ impl SearchService for SearchServiceImpl {
         &self,
         request: Request<SearchPostsRequest>,
     ) -> Result<Response<SearchPostsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             search_posts::handle(ctx, request.into_inner()).await?,
         ))

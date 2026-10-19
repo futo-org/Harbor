@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use tonic::{Request, Response, Status};
 
-use crate::service::context::{PublicContext, ServiceContext};
+use crate::service::context::ServiceContext;
 use crate::service::proto::pairing_service_server::{
     PairingService, PairingServiceServer,
 };
@@ -30,13 +30,7 @@ impl PairingService for PairingServiceImpl {
         &self,
         request: Request<PutPairingSessionRequest>,
     ) -> Result<Response<PutPairingSessionResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             put_pairing_session::handle(ctx, request.into_inner()).await?,
         ))
@@ -46,13 +40,7 @@ impl PairingService for PairingServiceImpl {
         &self,
         request: Request<GetPairingSessionRequest>,
     ) -> Result<Response<GetPairingSessionResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_pairing_session::handle(ctx, request.into_inner()).await?,
         ))
@@ -62,13 +50,7 @@ impl PairingService for PairingServiceImpl {
         &self,
         request: Request<JoinPairingSessionRequest>,
     ) -> Result<Response<JoinPairingSessionResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             join_pairing_session::handle(ctx, request.into_inner()).await?,
         ))

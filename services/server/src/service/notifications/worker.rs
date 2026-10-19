@@ -215,13 +215,7 @@ impl MessageHandler for NotificationWorker {
         let author = &trigger_key.identity;
         let event_notifications = build_notifications(author, &content);
 
-        let ctx = match WorkerContext::new(
-            &self.ctx.db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-        )
-        .await
-        {
+        let ctx = match self.ctx.worker_rw().await {
             Ok(ctx) => ctx,
             Err(err) => {
                 tracing::error!(

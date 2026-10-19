@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-use crate::service::context::{PublicContext, ServiceContext};
+use crate::service::context::ServiceContext;
 use crate::service::proto::graph_service_server::{
     GraphService, GraphServiceServer,
 };
@@ -27,13 +27,7 @@ impl GraphService for GraphServiceImpl {
         &self,
         request: Request<ListFollowingRequest>,
     ) -> Result<Response<ListFollowsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         let req = request.into_inner();
         Ok(Response::new(
             list_follows::handle(
@@ -50,13 +44,7 @@ impl GraphService for GraphServiceImpl {
         &self,
         request: Request<ListFollowersRequest>,
     ) -> Result<Response<ListFollowsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         let req = request.into_inner();
         Ok(Response::new(
             list_follows::handle(
@@ -73,13 +61,7 @@ impl GraphService for GraphServiceImpl {
         &self,
         request: Request<SuggestFollowRequest>,
     ) -> Result<Response<SuggestFollowResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             suggest_follow::handle(ctx, request.into_inner()).await?,
         ))

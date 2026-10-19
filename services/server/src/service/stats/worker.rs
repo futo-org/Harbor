@@ -14,7 +14,7 @@ use prost::Message as _;
 use sea_orm::ConnectionTrait;
 
 use crate::data::EventWithContentRow;
-use crate::service::context::{ServiceContext, WorkerContext};
+use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::stats::repository::Mutation;
@@ -43,12 +43,7 @@ impl StatsWorker {
             return Ok(());
         };
 
-        let ctx = WorkerContext::new(
-            &self.ctx.db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-        )
-        .await?;
+        let ctx = self.ctx.worker_rw().await?;
 
         match input.content_body {
             ContentBody::Delete(delete) => {

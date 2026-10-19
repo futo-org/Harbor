@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use tonic::{Request, Response, Status};
 
-use crate::service::context::{PublicContext, ServiceContext};
+use crate::service::context::ServiceContext;
 use crate::service::proto::verifications_service_server::{
     VerificationsService, VerificationsServiceServer,
 };
@@ -34,13 +34,7 @@ impl VerificationsService for VerificationsServiceImpl {
         &self,
         request: Request<ListVerificationClaimsRequest>,
     ) -> Result<Response<ListVerificationClaimsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             list_verification_claims::handle(ctx, request.into_inner()).await?,
         ))
@@ -50,13 +44,7 @@ impl VerificationsService for VerificationsServiceImpl {
         &self,
         request: Request<ListVerificationTargetsRequest>,
     ) -> Result<Response<ListVerificationTargetsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             list_verification_targets::handle(ctx, request.into_inner())
                 .await?,
@@ -67,13 +55,7 @@ impl VerificationsService for VerificationsServiceImpl {
         &self,
         request: Request<ListVerificationVerifiesRequest>,
     ) -> Result<Response<ListVerificationVerifiesResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             list_verification_verifies::handle(ctx, request.into_inner())
                 .await?,
@@ -84,13 +66,7 @@ impl VerificationsService for VerificationsServiceImpl {
         &self,
         request: Request<ListTargetedVerificationClaimsRequest>,
     ) -> Result<Response<ListTargetedVerificationClaimsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             list_targeted_verification_claims::handle(
                 ctx,
@@ -104,13 +80,7 @@ impl VerificationsService for VerificationsServiceImpl {
         &self,
         request: Request<ResolveVerifiedClaimsRequest>,
     ) -> Result<Response<ResolveVerifiedClaimsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             resolve_verified_claims::handle(ctx, request.into_inner()).await?,
         ))

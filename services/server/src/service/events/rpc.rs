@@ -16,7 +16,7 @@ use polycentric_common::models::protos_v2::{
 use tonic::{Request, Response, Status};
 
 use crate::grpc::stream_response;
-use crate::service::context::{PublicContext, ServiceContext};
+use crate::service::context::ServiceContext;
 use crate::service::events::heads_pubsub;
 
 pub mod get_attributed_to_reaction_counts;
@@ -36,13 +36,7 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<ListEventsRequest>,
     ) -> Result<Response<ListEventsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             list_events::handle(ctx, request.into_inner()).await?,
         ))
@@ -52,13 +46,7 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<PutEventsRequest>,
     ) -> Result<Response<PutEventsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_rw(&request).await?;
         Ok(Response::new(
             put_events::handle(ctx, request.into_inner()).await?,
         ))
@@ -68,13 +56,7 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<ListHeadsRequest>,
     ) -> Result<Response<ListHeadsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             list_heads::handle(ctx, request.into_inner()).await?,
         ))
@@ -94,13 +76,7 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<GetReactionsRequest>,
     ) -> Result<Response<GetReactionsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_reactions::handle(ctx, request.into_inner()).await?,
         ))
@@ -110,13 +86,7 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<GetAttributedToReactionCountsRequest>,
     ) -> Result<Response<GetAttributedToReactionCountsResponse>, Status> {
-        let ctx = PublicContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.public_ro(&request).await?;
         let request = request.into_inner();
         Ok(Response::new(
             get_attributed_to_reaction_counts::handle(ctx, request).await?,

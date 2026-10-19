@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-use crate::service::context::{AuthContext, ServiceContext};
+use crate::service::context::ServiceContext;
 use crate::service::proto::identity_service_server::{
     IdentityService, IdentityServiceServer,
 };
@@ -34,13 +34,7 @@ impl IdentityService for IdentityServiceImpl {
         &self,
         request: Request<IsModeratorRequest>,
     ) -> Result<Response<IsModeratorResponse>, Status> {
-        let ctx = AuthContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.authenticted_ro(&request).await?;
         Ok(Response::new(
             is_moderator::handle(ctx, request.into_inner()).await?,
         ))
@@ -50,13 +44,7 @@ impl IdentityService for IdentityServiceImpl {
         &self,
         request: Request<SetBanStatusRequest>,
     ) -> Result<Response<SetBanStatusResponse>, Status> {
-        let ctx = AuthContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.authenticted_rw(&request).await?;
         Ok(Response::new(
             set_ban_status::handle(ctx, request.into_inner()).await?,
         ))
@@ -66,13 +54,7 @@ impl IdentityService for IdentityServiceImpl {
         &self,
         request: Request<IsBannedRequest>,
     ) -> Result<Response<IsBannedResponse>, Status> {
-        let ctx = AuthContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.authenticted_ro(&request).await?;
         Ok(Response::new(
             is_banned::handle(ctx, request.into_inner()).await?,
         ))
@@ -82,13 +64,7 @@ impl IdentityService for IdentityServiceImpl {
         &self,
         request: Request<ListBansRequest>,
     ) -> Result<Response<ListBansResponse>, Status> {
-        let ctx = AuthContext::new(
-            &self.ctx.ro_db,
-            self.ctx.proof_cache.clone(),
-            self.ctx.kafka_producer.clone(),
-            &request,
-        )
-        .await?;
+        let ctx = self.ctx.authenticted_ro(&request).await?;
         Ok(Response::new(
             list_bans::handle(ctx, request.into_inner()).await?,
         ))
