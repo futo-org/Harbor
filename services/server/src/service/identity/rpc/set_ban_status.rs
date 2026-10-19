@@ -25,7 +25,7 @@ pub async fn handle(
         &txn,
         &req.target_identity,
         req.banned,
-        &moderator_identity,
+        moderator_identity,
     )
     .await
     .map_err(|e| {

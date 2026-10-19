@@ -53,6 +53,10 @@ impl DbConn {
                 tracing::error!("database pool disconnected");
                 Err(Status::unavailable("unavailable"))
             }
+            // We only use the mocked db connection for internal testing,
+            // otherwise it shouldn't be used.
+            #[allow(unused)]
+            _ => unreachable!(),
         }
     }
 

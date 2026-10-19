@@ -101,7 +101,7 @@ where
         };
 
         if let Some(proof) = build_revocation_proof(
-            &ctx,
+            ctx,
             &key.identity,
             key.collection,
             signer,

@@ -14,10 +14,9 @@ pub async fn handle(
 ) -> Result<IsModeratorResponse, Status> {
     let identity = ctx.identity();
 
-    let is_moderator =
-        id_repo::Query::is_moderator(&ctx.db, &identity)
-            .await
-            .map_err(|_| Status::internal("internal server error"))?;
+    let is_moderator = id_repo::Query::is_moderator(&ctx.db, identity)
+        .await
+        .map_err(|_| Status::internal("internal server error"))?;
 
     Ok(IsModeratorResponse { is_moderator })
 }

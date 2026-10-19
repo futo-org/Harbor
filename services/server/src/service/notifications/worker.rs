@@ -82,7 +82,7 @@ impl NotificationWorker {
         };
 
         let mut bundles = vec![row_into_bundle(row)];
-        attach_proofs(&ctx, &mut bundles).await?;
+        attach_proofs(ctx, &mut bundles).await?;
         Ok(bundles.into_iter().next())
     }
 
