@@ -43,11 +43,9 @@ impl DbConn {
     }
 
     /// Begin a transaction.
-    pub(crate) async fn begin<'c>(
-        &'c mut self,
-    ) -> Result<DbTx<'c>, sqlx::Error> {
+    pub(crate) async fn begin<'c>(&'c mut self) -> Result<DbTx<'c>, DbErr> {
         use sqlx::Acquire;
-        let tx = self.0.get_mut().begin().await?;
+        let tx = self.0.get_mut().begin().await.map_err(into_seaorm_error)?;
         Ok(DbTx(Mutex::new(tx)))
     }
 }
@@ -63,7 +61,7 @@ impl ConnectionTrait for DbConn {
         let mut conn = self.0.lock().await;
         match query.execute(&mut **conn).await {
             Ok(res) => Ok(res.into()),
-            Err(err) => Err(sqlx_error_to_exec_err(err)),
+            Err(err) => Err(into_seaorm_error(err)),
         }
     }
 
@@ -74,7 +72,7 @@ impl ConnectionTrait for DbConn {
         let mut conn = self.0.lock().await;
         match conn.execute(sqlx::AssertSqlSafe(sql.to_owned())).await {
             Ok(res) => Ok(res.into()),
-            Err(err) => Err(sqlx_error_to_exec_err(err)),
+            Err(err) => Err(into_seaorm_error(err)),
         }
     }
 
@@ -88,7 +86,7 @@ impl ConnectionTrait for DbConn {
             Ok(row) => Ok(Some(row.into())),
             Err(err) => match err {
                 sqlx::Error::RowNotFound => Ok(None),
-                _ => Err(sqlx_error_to_query_err(err)),
+                _ => Err(into_seaorm_error(err)),
             },
         }
     }
@@ -101,7 +99,7 @@ impl ConnectionTrait for DbConn {
         let mut conn = self.0.lock().await;
         match query.fetch_all(&mut **conn).await {
             Ok(rows) => Ok(rows.into_iter().map(|r| r.into()).collect()),
-            Err(err) => Err(sqlx_error_to_query_err(err)),
+            Err(err) => Err(into_seaorm_error(err)),
         }
     }
 }
@@ -113,13 +111,21 @@ pub(crate) struct DbTx<'c>(Mutex<sqlx::Transaction<'c, sqlx::Postgres>>);
 
 impl<'c> DbTx<'c> {
     /// Commits this transaction.
-    pub(crate) async fn commit(self) -> Result<(), sqlx::Error> {
-        self.0.into_inner().commit().await
+    pub(crate) async fn commit(self) -> Result<(), DbErr> {
+        self.0
+            .into_inner()
+            .commit()
+            .await
+            .map_err(into_seaorm_error)
     }
 
     /// Abort this transaction.
-    pub(crate) async fn rollback(self) -> Result<(), sqlx::Error> {
-        self.0.into_inner().rollback().await
+    pub(crate) async fn rollback(self) -> Result<(), DbErr> {
+        self.0
+            .into_inner()
+            .rollback()
+            .await
+            .map_err(into_seaorm_error)
     }
 }
 
@@ -134,7 +140,7 @@ impl<'c> ConnectionTrait for DbTx<'c> {
         let mut conn = self.0.lock().await;
         match query.execute(&mut **conn).await {
             Ok(res) => Ok(res.into()),
-            Err(err) => Err(sqlx_error_to_exec_err(err)),
+            Err(err) => Err(into_seaorm_error(err)),
         }
     }
 
@@ -145,7 +151,7 @@ impl<'c> ConnectionTrait for DbTx<'c> {
         let mut conn = self.0.lock().await;
         match conn.execute(sqlx::AssertSqlSafe(sql.to_owned())).await {
             Ok(res) => Ok(res.into()),
-            Err(err) => Err(sqlx_error_to_exec_err(err)),
+            Err(err) => Err(into_seaorm_error(err)),
         }
     }
 
@@ -159,7 +165,7 @@ impl<'c> ConnectionTrait for DbTx<'c> {
             Ok(row) => Ok(Some(row.into())),
             Err(err) => match err {
                 sqlx::Error::RowNotFound => Ok(None),
-                _ => Err(sqlx_error_to_query_err(err)),
+                _ => Err(into_seaorm_error(err)),
             },
         }
     }
@@ -172,7 +178,7 @@ impl<'c> ConnectionTrait for DbTx<'c> {
         let mut conn = self.0.lock().await;
         match query.fetch_all(&mut **conn).await {
             Ok(rows) => Ok(rows.into_iter().map(|r| r.into()).collect()),
-            Err(err) => Err(sqlx_error_to_query_err(err)),
+            Err(err) => Err(into_seaorm_error(err)),
         }
     }
 }
@@ -187,10 +193,6 @@ fn sqlx_query(
     sqlx::query_with(sqlx::AssertSqlSafe(stmt.sql.as_str()), SqlxValues(values))
 }
 
-fn sqlx_error_to_exec_err(err: sqlx::Error) -> sea_orm::DbErr {
-    DbErr::Exec(RuntimeErr::SqlxError(err.into()))
-}
-
-fn sqlx_error_to_query_err(err: sqlx::Error) -> DbErr {
+fn into_seaorm_error(err: sqlx::Error) -> DbErr {
     DbErr::Query(RuntimeErr::SqlxError(err.into()))
 }

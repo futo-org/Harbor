@@ -5,13 +5,10 @@
 //! identity (populated by `auth_middleware` from the bearer JWT and read
 //! from the request extensions): the ban endpoints require a moderator.
 
-pub mod common;
-pub mod is_banned;
-pub mod is_moderator;
-pub mod list_bans;
-pub mod set_ban_status;
+use std::sync::Arc;
+use tonic::{Request, Response, Status};
 
-use crate::service::context::ServiceContext;
+use crate::service::context::{AuthContext, ServiceContext};
 use crate::service::proto::identity_service_server::{
     IdentityService, IdentityServiceServer,
 };
@@ -20,8 +17,12 @@ use crate::service::proto::{
     ListBansRequest, ListBansResponse, SetBanStatusRequest,
     SetBanStatusResponse,
 };
-use std::sync::Arc;
-use tonic::{Request, Response, Status};
+
+pub mod common;
+pub mod is_banned;
+pub mod is_moderator;
+pub mod list_bans;
+pub mod set_ban_status;
 
 pub struct IdentityServiceImpl {
     ctx: Arc<ServiceContext>,
@@ -33,8 +34,15 @@ impl IdentityService for IdentityServiceImpl {
         &self,
         request: Request<IsModeratorRequest>,
     ) -> Result<Response<IsModeratorResponse>, Status> {
+        let ctx = AuthContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            is_moderator::handle(&self.ctx, request).await?,
+            is_moderator::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -42,8 +50,15 @@ impl IdentityService for IdentityServiceImpl {
         &self,
         request: Request<SetBanStatusRequest>,
     ) -> Result<Response<SetBanStatusResponse>, Status> {
+        let ctx = AuthContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            set_ban_status::handle(&self.ctx, request).await?,
+            set_ban_status::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -51,14 +66,32 @@ impl IdentityService for IdentityServiceImpl {
         &self,
         request: Request<IsBannedRequest>,
     ) -> Result<Response<IsBannedResponse>, Status> {
-        Ok(Response::new(is_banned::handle(&self.ctx, request).await?))
+        let ctx = AuthContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
+        Ok(Response::new(
+            is_banned::handle(ctx, request.into_inner()).await?,
+        ))
     }
 
     async fn list_bans(
         &self,
         request: Request<ListBansRequest>,
     ) -> Result<Response<ListBansResponse>, Status> {
-        Ok(Response::new(list_bans::handle(&self.ctx, request).await?))
+        let ctx = AuthContext::new(
+            &self.ctx.ro_db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
+        Ok(Response::new(
+            list_bans::handle(ctx, request.into_inner()).await?,
+        ))
     }
 }
 
