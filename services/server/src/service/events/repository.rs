@@ -952,7 +952,8 @@ impl Mutation {
                                     Expr::col(
                                         reaction_tally::Column::PositiveCount
                                             .as_column_ref(),
-                                    ),
+                                    )
+                                    .sub(Expr::Constant(1.into())),
                                     Expr::col(
                                         event::Column::CreatedAt
                                             .as_column_ref(),

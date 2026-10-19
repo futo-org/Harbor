@@ -213,6 +213,8 @@ export function PolycentricProvider({
     }
   }, [isLoading, onInitialized]);
 
+  useEffect(() => client?.startLiveSync(), [client]);
+
   const currentIdentityKey = currentIdentity?.identityKey;
   useEffect(() => {
     if (!client || !currentIdentityKey) return;

@@ -19,6 +19,7 @@ use tonic::{Code, Status};
 
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::context::PublicContext;
+use crate::service::events::heads_pubsub;
 use crate::service::events::repository as EventsRepository;
 use crate::service::identity::repository::Query as IdentityRepository;
 use crate::service::identity::service::authorize_event_signer;
@@ -40,6 +41,7 @@ pub async fn handle(
 
     let mut banned_cache = HashMap::new();
     let mut app_cache = HashMap::new();
+    let mut stored = HashMap::<String, Vec<EventKey>>::new();
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
         let start_warnings = warnings.len();
         match process_event(
@@ -56,7 +58,7 @@ pub async fn handle(
         )
         .await
         {
-            Ok(key) => {
+            Ok((key, is_new)) => {
                 if warnings.len() != start_warnings {
                     tracing::debug!(
                         key = ?key,
@@ -65,6 +67,9 @@ pub async fn handle(
                     );
                 } else {
                     tracing::debug!(key = ?key, "processed event");
+                }
+                if is_new {
+                    stored.entry(key.identity.clone()).or_default().push(key);
                 }
             }
             // We should see internal errors if something is wrong on our end,
@@ -89,6 +94,16 @@ pub async fn handle(
         }
     }
 
+    if let Some(pubsub) = heads_pubsub::get()
+        && !stored.is_empty()
+    {
+        tokio::spawn(async move {
+            for (identity, keys) in stored {
+                pubsub.publish(&identity, keys).await;
+            }
+        });
+    }
+
     let missing_blobs = remove_present_blobs(&ctx, all_blobs)
         .await
         .unwrap_or_else(|e| {
@@ -106,8 +121,8 @@ pub async fn handle(
     })
 }
 
-/// Validate and persist an event.
-/// Returns all blobs referenced by the event.
+/// Validate and persist an event, adding its blobs to `all_blobs`.
+/// Returns its key and whether it was newly stored.
 async fn process_event(
     ctx: &mut PublicContext,
     event_bundle: EventBundle,
@@ -116,7 +131,7 @@ async fn process_event(
     all_blobs: &mut HashSet<Blob>,
     warnings: &mut Vec<PutEventError>,
     map_warning: impl Fn(ValidationError) -> PutEventError,
-) -> Result<EventKey, Status> {
+) -> Result<(EventKey, bool), Status> {
     let start_warning_len = warnings.len();
     if !event_bundle.event_proofs.is_empty() {
         return Err(Status::invalid_argument(
@@ -308,7 +323,7 @@ async fn process_event(
         synced_at: Set(Utc::now().fixed_offset()),
     };
 
-    match EventsRepository::Mutation::add_event(
+    let stored = match EventsRepository::Mutation::add_event(
         &txn,
         active_model,
         decoded_content,
@@ -349,6 +364,7 @@ async fn process_event(
                     tracing::warn!(error = %e, "put_events kafka publish error");
                 }
             });
+            true
         }
         Ok(false) => {
             // Duplicate event — already stored, treat as success, but revert
@@ -357,14 +373,15 @@ async fn process_event(
                 tracing::error!(error = %err, "put_events txn abort error");
                 Status::internal("internal server error")
             })?;
+            false
         }
         Err(err) => {
             tracing::error!(error = %err, "put_events db error");
             return Err(Status::internal("internal server error"));
         }
-    }
+    };
 
-    Ok(key)
+    Ok((key, stored))
 }
 
 fn banned_error() -> Status {
@@ -477,15 +494,20 @@ fn validate_content(
         }
         ContentBody::VerificationClaim(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-            // TODO: validate.
+
+            // TODO: don't allow spamming of the same claim if it's denied?
         }
         ContentBody::VerificationVerify(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * event key is known.
+            // * event key is a valid claim.
         }
         ContentBody::VerificationTarget(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-            // TODO: validate.
+
+            // TODO: limit the target identities in some way?
         }
     }
 }

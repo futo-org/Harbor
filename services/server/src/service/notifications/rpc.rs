@@ -3,19 +3,21 @@
 
 use std::sync::Arc;
 
-use tonic::{Request, Response, Status};
-
-use crate::service::context::{AuthContext, PublicContext, ServiceContext};
-use crate::service::notifications::changes;
-use crate::service::proto::notification_service_server::{
-    NotificationService, NotificationServiceServer,
-};
 use polycentric_common::models::protos_v2::{
     AcknowledgeNotificationsRequest, AcknowledgeNotificationsResponse,
     ListNotificationsRequest, ListNotificationsResponse,
     RegisterPushNotificationResponse, SignedMessage,
     SubscribeUnreadNotificationCountRequest,
     UnregisterPushNotificationResponse,
+};
+use tonic::{Request, Response, Status};
+
+use crate::grpc::stream_response;
+use crate::service::context::{AuthContext, PublicContext, ServiceContext};
+
+use crate::service::notifications::changes;
+use crate::service::proto::notification_service_server::{
+    NotificationService, NotificationServiceServer,
 };
 
 pub mod acknowledge_notifications;
@@ -69,7 +71,7 @@ impl NotificationService for NotificationServiceImpl {
         request: Request<SubscribeUnreadNotificationCountRequest>,
     ) -> Result<Response<Self::SubscribeUnreadNotificationCountStream>, Status>
     {
-        Ok(Response::new(
+        Ok(stream_response(
             subscribe_unread_notification_count::handle(
                 self.ctx.clone(),
                 request,

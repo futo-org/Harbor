@@ -427,8 +427,13 @@ function WebModal({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, {
+      // So Escape still closes the sheet while a TextInput is focused:
+      // RN-web's TextInput stops keydown from bubbling to document.
+      capture: true,
+    });
+    return () =>
+      document.removeEventListener('keydown', onKey, { capture: true });
   }, [dismissible, close]);
 
   return (
@@ -441,44 +446,51 @@ function WebModal({
         StyleSheet.absoluteFill,
         // Sit above expo-router's transparentModal drawer, which mounts to
         // document.body via vaul and would otherwise eat backdrop clicks.
-        { padding: SHEET_OVERLAY_PADDING, zIndex: ZIndex.modal },
+        { zIndex: ZIndex.modal },
       ]}
       pointerEvents="box-none"
     >
-      <Pressable
-        accessibilityLabel="Dismiss"
-        style={[
-          Atoms.fixed,
-          Atoms.inset_0,
-          { backgroundColor: 'rgba(0,0,0,0.45)' },
-        ]}
-        onPress={dismissible ? close : undefined}
-      />
+      {/* Fixed so the modal stays put while the page behind it scrolls; the
+          fade only animates opacity, which keeps this relative to the viewport. */}
       <View
-        style={[
-          Atoms.w_full,
-          // Content-sized up to the viewport; taller content scrolls inside
-          // the card body so the modal itself never exceeds the screen.
-          Atoms.max_h_full,
-          height !== undefined && { height },
-          Atoms.overflow_hidden,
-          Atoms.flex_col,
-          { maxWidth: 600, marginVertical: 'auto', marginHorizontal: 'auto' },
-          compact && Atoms.max_w_full,
-          maxWidth !== undefined && { maxWidth },
-          {
-            backgroundColor: theme.palette.neutral_0,
-            borderRadius: BorderRadius.xl,
-          },
-        ]}
+        style={[Atoms.fixed, Atoms.inset_0, { padding: SHEET_OVERLAY_PADDING }]}
+        pointerEvents="box-none"
       >
-        {header}
-        {/* The scroll container between the pinned header and footer. A
-            scroll container's automatic minimum size is 0, so it shrinks to
-            the space the card has left instead of forcing the card past its
-            max height, and grows to fill a fixed-height card. */}
-        <View style={[Atoms.flex_1, Atoms.overflow_auto]}>{children}</View>
-        {footer}
+        <Pressable
+          accessibilityLabel="Dismiss"
+          style={[
+            Atoms.fixed,
+            Atoms.inset_0,
+            { backgroundColor: 'rgba(0,0,0,0.45)' },
+          ]}
+          onPress={dismissible ? close : undefined}
+        />
+        <View
+          style={[
+            Atoms.w_full,
+            // Content-sized up to the viewport; taller content scrolls inside
+            // the card body so the modal itself never exceeds the screen.
+            Atoms.max_h_full,
+            height !== undefined && { height },
+            Atoms.overflow_hidden,
+            Atoms.flex_col,
+            { maxWidth: 600, marginVertical: 'auto', marginHorizontal: 'auto' },
+            compact && Atoms.max_w_full,
+            maxWidth !== undefined && { maxWidth },
+            {
+              backgroundColor: theme.palette.neutral_0,
+              borderRadius: BorderRadius.xl,
+            },
+          ]}
+        >
+          {header}
+          {/* The scroll container between the pinned header and footer. A
+              scroll container's automatic minimum size is 0, so it shrinks to
+              the space the card has left instead of forcing the card past its
+              max height, and grows to fill a fixed-height card. */}
+          <View style={[Atoms.flex_1, Atoms.overflow_auto]}>{children}</View>
+          {footer}
+        </View>
       </View>
     </Reanimated.View>
   );

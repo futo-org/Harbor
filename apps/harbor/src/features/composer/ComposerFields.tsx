@@ -6,12 +6,14 @@ import {
 } from '@/src/common/components/primitives';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   type LayoutChangeEvent,
   Pressable,
+  ScrollView,
   type TextInput as RNTextInput,
+  type TextInputKeyPressEvent,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -20,12 +22,16 @@ import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
 import type { v2 } from '@polycentric/react-native';
 import { singleImageAspectRatio } from './utils/attachmentLayout';
 import { MAX_POST_LENGTH, type useComposer } from './hooks/useComposer';
-import { isIOS, isWeb } from '@/src/common/util/platform';
-import { ScrollView } from '@/src/common/components/ScrollView';
+import { isAndroid, isIOS, isWeb } from '@/src/common/util/platform';
 
 import { useMentionInputSync } from '@/src/features/composer/hooks/useMentionInputSync';
+import { useTutorialHintsStore } from '@/src/common/lib/useTutorialHintsStore';
 
 const ATTACHMENT_GAP = Spacing.sm;
+// Spare height below the text on Android: any value that fits one more line
+// (a 16px system-font line is ~19-21px). Once inputs use the app font with an
+// explicit lineHeight, set this to that lineHeight.
+const NEW_LINE_HEADROOM = 30;
 
 type Attachment = ReturnType<typeof useComposer>['attachments'][number];
 
@@ -40,6 +46,8 @@ type ComposerFieldsProps = {
   setText: (text: string) => void;
   attachments: Attachment[];
   submitting: boolean;
+  canPost: boolean;
+  onPost: () => void;
   onRemoveAttachment: (id: string) => void;
   /** Live link preview for the first URL in the draft, once resolved. */
   linkPreview: v2.Link | null;
@@ -55,8 +63,7 @@ type ComposerFieldsProps = {
 
 /**
  * The composer form body (reply/quote previews, error, avatar + text area,
- * attachment thumbnails). Shared by the sheet composer and the full-screen
- * compose tab; each caller supplies its own padded, flex container.
+ * attachment thumbnails). The caller supplies the padded container.
  */
 export function ComposerFields({
   isReply,
@@ -69,6 +76,8 @@ export function ComposerFields({
   setText,
   attachments,
   submitting,
+  canPost,
+  onPost,
   onRemoveAttachment,
   linkPreview,
   linkPreviewLoading,
@@ -109,15 +118,44 @@ export function ComposerFields({
     [setText],
   );
 
+  const dismissHint = useTutorialHintsStore((state) => state.dismissHint);
+  const onKeyPress = useCallback(
+    (e: TextInputKeyPressEvent) => {
+      // RN-web passes the DOM event, which carries the modifier keys
+      const { key, ctrlKey, metaKey } =
+        e.nativeEvent as unknown as KeyboardEvent;
+      if (
+        key === 'Enter' &&
+        // Cmd on macOS
+        (ctrlKey || metaKey) &&
+        // Skipped when the mention overlay claimed the Enter
+        !e.isDefaultPrevented() &&
+        canPost
+      ) {
+        dismissHint('kbSubmitPost');
+        onPost();
+      }
+    },
+    [canPost, onPost, dismissHint],
+  );
+
   // Feeds the host's mention store (query derivation + the overlay's anchor);
   // the autocomplete itself renders in MentionSearchOverlay, in the host.
   const mentionInput = useMentionInputSync({ text, onChangeText, inputRef });
 
+  // Android only: the field's measured text height, null until first reported.
+  const [textContentHeight, setTextContentHeight] = useState<number | null>(
+    null,
+  );
+  const hasNewLineHeadroom = isAndroid && textContentHeight !== null;
+
   return (
+    // On native this ScrollView never scrolls (the host's does), but Android
+    // needs it: without it, tapping tall text scrolls its bottom edge to the
+    // viewport's, hiding the tapped line under the footer.
     <ScrollView
-      style={[Atoms.flex_1]}
+      style={Atoms.flex_1}
       contentContainerStyle={Atoms.flex_grow_1}
-      keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
     >
       {/* Reply preview */}
@@ -174,12 +212,39 @@ export function ComposerFields({
             maxLength={MAX_POST_LENGTH}
             numberOfLines={isWeb ? 1 : undefined}
             scrollEnabled={false}
-            style={[Atoms.px_0, Atoms.py_0, Atoms.pt_sm, Atoms.text_lg]}
-            onLayout={mentionInput.onLayout}
+            style={[
+              Atoms.px_0,
+              Atoms.py_0,
+              Atoms.pt_sm,
+              Atoms.text_lg,
+              // Android auto-grows the input one frame too late, causing the text to temporarily scroll, which looks
+              // like a blip/flash (https://github.com/react/react-native/issues/46813,
+              // https://github.com/react/react-native/issues/33165). If we add an extra space for the new line to go
+              // to, no scroll happens, and the auto-grow has time to catch-up. Negative margin pulls whatever goes
+              // below the input up by the same amount to compensate.
+              hasNewLineHeadroom && {
+                height: textContentHeight + NEW_LINE_HEADROOM,
+                marginBottom: -NEW_LINE_HEADROOM,
+              },
+            ]}
+            onLayout={(e) => {
+              const { layout } = e.nativeEvent;
+              mentionInput.setInputLayout(
+                hasNewLineHeadroom
+                  ? //  Mention box also need compensation for the new line headroom.
+                    { ...layout, height: layout.height - NEW_LINE_HEADROOM }
+                  : layout,
+              );
+            }}
             onSelectionChange={mentionInput.onSelectionChange}
             onFocus={mentionInput.onFocus}
             onBlur={mentionInput.onBlur}
-            onContentSizeChange={mentionInput.onContentSizeChange}
+            onContentSizeChange={
+              isAndroid
+                ? (e) => setTextContentHeight(e.nativeEvent.contentSize.height)
+                : undefined
+            }
+            onKeyPress={isWeb ? onKeyPress : undefined}
           />
 
           {attachments.length > 0 && (

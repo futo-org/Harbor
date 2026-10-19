@@ -3,27 +3,28 @@
 
 use std::sync::Arc;
 
-use polycentric_common::models::protos_v2::{
-    ListHeadsRequest, ListHeadsResponse,
-};
-use tonic::{Request, Response, Status};
-
-use crate::service::context::{PublicContext, ServiceContext};
-use crate::service::proto::event_sync_service_server::{
+use polycentric_common::models::protos_v2::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
 };
-use crate::service::proto::{
+use polycentric_common::models::protos_v2::{
     GetAttributedToReactionCountsRequest,
     GetAttributedToReactionCountsResponse, GetReactionsRequest,
     GetReactionsResponse, ListEventsRequest, ListEventsResponse,
-    PutEventsRequest, PutEventsResponse,
+    ListHeadsRequest, ListHeadsResponse, PutEventsRequest, PutEventsResponse,
+    SubscribeHeadsRequest,
 };
+use tonic::{Request, Response, Status};
+
+use crate::grpc::stream_response;
+use crate::service::context::{PublicContext, ServiceContext};
+use crate::service::events::heads_pubsub;
 
 pub mod get_attributed_to_reaction_counts;
 pub mod get_reactions;
 pub mod list_events;
 pub mod list_heads;
 pub mod put_events;
+pub mod subscribe_heads;
 
 pub struct EventSyncServiceImpl {
     ctx: Arc<ServiceContext>,
@@ -76,6 +77,16 @@ impl EventSyncService for EventSyncServiceImpl {
         .await?;
         Ok(Response::new(
             list_heads::handle(ctx, request.into_inner()).await?,
+        ))
+    }
+
+    type SubscribeHeadsStream = subscribe_heads::HeadsStream;
+    async fn subscribe_heads(
+        &self,
+        request: Request<SubscribeHeadsRequest>,
+    ) -> Result<Response<Self::SubscribeHeadsStream>, Status> {
+        Ok(stream_response(
+            subscribe_heads::handle(heads_pubsub::get(), request).await?,
         ))
     }
 

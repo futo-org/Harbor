@@ -37,6 +37,7 @@ services:
       # In-network listener: the default (localhost:9092) points at the server
       # container itself, making Kafka unreachable
       - HARBOR_KAFKA_BROKERS=${HARBOR_KAFKA_BROKERS:-kafka:19092}
+      - HARBOR_VALKEY_URL=${HARBOR_VALKEY_URL:-redis://valkey:6379}
       # Reached over the isolated `scraper_link` network (see below).
       - HARBOR_SCRAPER_URL=${HARBOR_SCRAPER_URL:-http://scraper:8855}
       # Accepted JWT audiences (emulator needs 10.0.2.2). Defaults to SERVER_NAME.
@@ -55,6 +56,8 @@ services:
         condition: service_completed_successfully
       kafka:
         condition: service_started
+      valkey:
+        condition: service_healthy
       scraper:
         condition: service_started
 
@@ -209,6 +212,17 @@ services:
       - 9092:9092
     volumes:
       - kafka-data:/var/lib/kafka/data
+
+  valkey:
+    image: valkey/valkey:8
+    command: ['valkey-server', '--save', '', '--appendonly', 'no']
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Opt-in. Needs an identity published to the server first. See
   # services/moderation/create-local-identity.sh.
