@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 
-import { QueryStatus } from '@polycentric/rs-core-wasm/generated';
+import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
 import { PolycentricClient } from './polycentric-client';
 import { StorageHandle } from './datastore/storage-handle';
 import { COLLECTION, SyncStrategy } from './constants';
@@ -1702,5 +1702,154 @@ describe('PolycentricClient sync', () => {
       expect(blobs).toHaveLength(0);
       expect(contentRepository.saved).toHaveLength(0);
     });
+  });
+});
+
+const headsBytes = (heads: Proto.EventKey[]) =>
+  Proto.ListHeadsResponse.toBinary(Proto.ListHeadsResponse.create({ heads }))
+    .buffer;
+
+/**
+ * `makeCoreMock` holding `localHeads`, with a `SubscribeHeads` stream driven
+ * by `emitHeads`.
+ */
+function makeLiveCore(
+  opts: CoreMockOptions = {},
+  localHeads: Proto.EventKey[] = [],
+) {
+  const core = makeCoreMock(opts);
+  core.localHeads = vi.fn(() => headsBytes(localHeads));
+  const otherQuery = core.fetchQuery.getMockImplementation();
+  let observer: any;
+  const unsubscribe = vi.fn();
+  core.fetchQuery.mockImplementation(
+    (queryKey: unknown, query: any, queryOpts: unknown) => {
+      if (!(query instanceof Query.SubscribeHeads)) {
+        return otherQuery(queryKey, query, queryOpts);
+      }
+      return {
+        subscribe(o: any) {
+          observer = o;
+          return { unsubscribe, isClosed: () => false };
+        },
+      };
+    },
+  );
+  const emitHeads = (heads: Proto.EventKey[]) =>
+    observer.next({ data: headsBytes(heads), status: QueryStatus.Success });
+  return { core, emitHeads, unsubscribe };
+}
+
+const keyOf = (event: Proto.SignedEvent): Proto.EventKey =>
+  Proto.Event.fromBinary(event.eventBytes).key!;
+
+const queriesOf = (core: any, type: unknown): any[] =>
+  core.fetchQuery.mock.calls.filter(([, query]: any) => query instanceof type);
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+describe('PolycentricClient live sync', () => {
+  const seeded = makeStream({
+    signer: signerA,
+    identity: identityA,
+    collection: COLLECTION.FEED,
+    count: 1,
+    label: 'seeded',
+  });
+  const content = makeContent('from another device');
+  const remote = makeSignedEvent({
+    signer: signerA,
+    identity: identityA,
+    collection: COLLECTION.FEED,
+    sequence: 2,
+    content,
+  });
+
+  it('pulls past the local heads when a server is ahead', async () => {
+    const { core, emitHeads } = makeLiveCore(
+      { pullBundles: () => [makeBundle(remote, content)] },
+      [keyOf(seeded[0])],
+    );
+    const { client, eventRepository } = makeClient({
+      core,
+      identity: identityA,
+      signer: signerA,
+      events: seeded,
+    });
+
+    const stop = client.startLiveSync();
+    emitHeads([keyOf(remote)]);
+
+    await vi.waitFor(async () =>
+      expect(await eventRepository.getByEventKey(keyOf(remote))).toEqual(
+        remote,
+      ),
+    );
+    expect(queriesOf(core, Query.ListEvents)[0][1].inner[0].heads).toEqual([
+      expect.objectContaining({ sequence: 1n }),
+    ]);
+    stop();
+  });
+
+  it('refreshes when another tab already stored the events', async () => {
+    const { core, emitHeads } = makeLiveCore(
+      { pullBundles: () => [makeBundle(remote, content)] },
+      [keyOf(seeded[0])],
+    );
+    const { client } = makeClient({
+      core,
+      identity: identityA,
+      signer: signerA,
+      events: [...seeded, remote],
+    });
+    const pulled = vi.fn();
+    client.events.onPulled(pulled);
+
+    const stop = client.startLiveSync();
+    emitHeads([keyOf(remote)]);
+
+    await vi.waitFor(() => expect(pulled).toHaveBeenCalledWith(identityA.key));
+    stop();
+  });
+
+  it('does not pull when the core is up to date', async () => {
+    const { core, emitHeads } = makeLiveCore({}, [keyOf(remote)]);
+    const { client } = makeClient({
+      core,
+      identity: identityA,
+      signer: signerA,
+    });
+
+    const stop = client.startLiveSync();
+    emitHeads([keyOf(remote)]);
+    await settle();
+
+    expect(queriesOf(core, Query.ListEvents)).toHaveLength(0);
+    stop();
+  });
+
+  it('follows identity switches and stops when asked', async () => {
+    const { core, unsubscribe } = makeLiveCore();
+    const { client } = makeClient({
+      core,
+      identity: identityA,
+      signer: signerA,
+    });
+
+    const stop = client.startLiveSync();
+    client.activeIdentityKey = identityB.key;
+    client.events.emitKeyPairChanged(null);
+
+    const subscriptions = queriesOf(core, Query.SubscribeHeads);
+    expect(subscriptions.map(([queryKey]) => queryKey)).toEqual([
+      ['heads', identityA.key],
+      ['heads', identityB.key],
+    ]);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+
+    stop();
+    expect(unsubscribe).toHaveBeenCalledTimes(2);
+    client.events.emitKeyPairChanged(null);
+    expect(queriesOf(core, Query.SubscribeHeads)).toHaveLength(2);
   });
 });

@@ -366,7 +366,7 @@ async fn erase_collected(
              UPDATE reaction_tally SET
                positive_count = positive_count - grouped_deleted_reaction.positive_count_diff,
                negative_count = negative_count - grouped_deleted_reaction.negative_count_diff,
-               decayed_count = reaction_count_decay(positive_count + grouped_deleted_reaction.positive_count_diff, events.created_at)
+               decayed_count = reaction_count_decay(positive_count - grouped_deleted_reaction.positive_count_diff, events.created_at)
              FROM grouped_deleted_reaction
              INNER JOIN events ON grouped_deleted_reaction.on_post = events.id
              WHERE reaction_tally.event_id = grouped_deleted_reaction.on_post",

@@ -6,8 +6,11 @@ pub mod get_reactions;
 pub mod list_events;
 pub mod list_heads;
 pub mod put_events;
+pub mod subscribe_heads;
 
+use crate::grpc::stream_response;
 use crate::service::context::ServiceContext;
+use crate::service::events::heads_pubsub;
 use crate::service::proto::event_sync_service_server::{
     EventSyncService, EventSyncServiceServer,
 };
@@ -18,7 +21,7 @@ use crate::service::proto::{
     PutEventsRequest, PutEventsResponse,
 };
 use polycentric_common::models::protos_v2::{
-    ListHeadsRequest, ListHeadsResponse,
+    ListHeadsRequest, ListHeadsResponse, SubscribeHeadsRequest,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -53,6 +56,16 @@ impl EventSyncService for EventSyncServiceImpl {
     ) -> Result<Response<ListHeadsResponse>, Status> {
         Ok(Response::new(
             list_heads::handle(&self.ctx, request.into_inner()).await?,
+        ))
+    }
+
+    type SubscribeHeadsStream = subscribe_heads::HeadsStream;
+    async fn subscribe_heads(
+        &self,
+        request: Request<SubscribeHeadsRequest>,
+    ) -> Result<Response<Self::SubscribeHeadsStream>, Status> {
+        Ok(stream_response(
+            subscribe_heads::handle(heads_pubsub::get(), request).await?,
         ))
     }
 

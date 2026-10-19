@@ -43,8 +43,6 @@ export type MentionStore = {
   onChangeText: ((next: string) => void) | null;
   inputLayout: LayoutRectangle;
   inputPageY: number;
-  /** Text last pushed into the native field by `insertMention`. */
-  lastNativeText: string | null;
 
   setSelection: (selection: MentionStore['selection']) => void;
   setIsFocused: (isFocused: boolean) => void;
@@ -73,7 +71,6 @@ export function createMentionStore(): StoreApi<MentionStore> {
     onChangeText: null,
     inputLayout: { x: 0, y: 0, width: 0, height: 0 },
     inputPageY: 0,
-    lastNativeText: null,
 
     setSelection: (selection) => set({ selection }),
     setIsFocused: (isFocused) => set({ isFocused }),
@@ -119,7 +116,6 @@ export function createMentionStore(): StoreApi<MentionStore> {
       set({
         text: newText,
         selection: { start: newCaret, end: newCaret },
-        lastNativeText: newText,
       });
 
       pushTextToInput(inputRef, newText, newCaret);

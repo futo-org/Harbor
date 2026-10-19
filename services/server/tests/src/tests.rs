@@ -22,6 +22,7 @@ mod banning;
 mod event_sync;
 mod feeds;
 mod graph;
+mod heads;
 mod notifications;
 mod search;
 mod verifications;
@@ -650,7 +651,7 @@ fn github_verification_schema() -> VerificationSchema {
         fields: vec![FieldDef {
             key: "login".to_owned(),
             kind: FieldKind::String as i32,
-            format: String::new(),
+            format: None,
             required: true,
             description: "Login".to_owned(),
             regex: None,
@@ -1061,7 +1062,7 @@ pub fn make_verification_claim_bundle(
         fields: vec![FieldDef {
             key: "handle".to_string(),
             kind: FieldKind::String as i32,
-            format: String::new(),
+            format: None,
             required: true,
             description: "Handle".to_string(),
             regex: None,

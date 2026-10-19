@@ -189,7 +189,7 @@ flowchart TB
     SB[server B] -- stream --> TB[task B]
     subgraph task["each task"]
         direction LR
-        O[open] --> R[read loop] --> RC[reconnect after 10s] --> O
+        O[open] --> R[read loop] --> RC[reconnect after 10 to 20s] --> O
     end
     TA -- value --> ST[(per-key state:\nlatest value per server)]
     TB -- value --> ST
@@ -207,8 +207,10 @@ flowchart TB
 - **Status.** `Loading` until every server has sent its first value, then
   `Success`. The observable never completes while subscribed.
 - **Reconnect.** A stream that ends, for instance on a server deploy, or that
-  fails is re-opened after ten seconds. The server sends the current count on
-  every open, so a reconnect also repairs any change missed in between.
+  fails is re-opened after 10 to 20 seconds, spread per client so the clients
+  of a restarted server don't all return at once. The server sends the current
+  count on every open, so a reconnect also repairs any change missed in
+  between.
 - **Unsubscribe.** Unsubscribing only flips a flag. Each task checks it once a
   second while idle and stops, which closes the HTTP stream and ends the
   server task.
@@ -216,6 +218,10 @@ flowchart TB
 The web client uses gRPC-web, which carries server streaming as a chunked
 response. A proxy in front of the server must not buffer responses, or the
 counts arrive only when the stream closes.
+
+It must not compress them either: a compressor buffers, so no counts arrive
+(Firefox times out the open). The server sends `Cache-Control: no-transform`
+on its streams, which Envoy and other compliant proxies respect.
 
 ## Where the code is
 

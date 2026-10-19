@@ -14,7 +14,7 @@ catalog:
   "@noble/hashes": ^2.2.0
   puppeteer: ^25.1.0
   "@types/jest": ^29.5.14
-  "@types/node": ^24.0.0
+  "@types/node": ^24.19.2
   "@ubjs/core": 0.31.0-5
   "@ubjs/wasm": 0.31.0-5
   jest: ^29.7.0

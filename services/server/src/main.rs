@@ -88,6 +88,14 @@ async fn run_server() {
     common_telemetry::init_metrics("server");
     let (db, ro_db) = connect_db_with_retry(true).await;
     service::notifications::changes::init(&db);
+    if let Some(url) = &config::get().valkey_url {
+        service::events::heads_pubsub::init(
+            url,
+            &config::get().server_name,
+            db.clone(),
+        )
+        .expect("invalid HARBOR_VALKEY_URL");
+    }
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");

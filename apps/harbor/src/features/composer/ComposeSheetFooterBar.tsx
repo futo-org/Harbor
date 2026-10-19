@@ -1,7 +1,9 @@
 import Icon from '@/src/common/components/Icon';
 import { CharCount } from '@/src/common/components/composites/CharCount';
+import { Kbd, Text } from '@/src/common/components/primitives';
 import { useKeyboardOffset } from '@/src/common/lib/animation';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { hasPointerHover, isApplePlatform } from '@/src/common/util/platform';
 import { Pressable, View } from 'react-native';
 import Animated, {
   Extrapolation,
@@ -10,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MAX_POST_LENGTH } from './hooks/useComposer';
+import { useIsTutorialHintShown } from '@/src/common/lib/useTutorialHintsStore';
 
 export type ComposeSheetFooterBarProps = {
   charCount: number;
@@ -105,6 +108,7 @@ export function ComposeSheetFooterBar({
         ]}
       >
         {leading}
+        <PostShortcutHint />
       </View>
     );
   }
@@ -123,6 +127,22 @@ export function ComposeSheetFooterBar({
         {leading}
       </View>
       <Animated.View style={bottomInsetStyle} />
+    </View>
+  );
+}
+
+function PostShortcutHint() {
+  const isHintShown = useIsTutorialHintShown('kbSubmitPost');
+  if (!hasPointerHover || !isHintShown) return null;
+
+  return (
+    <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}>
+      {(isApplePlatform ? ['⌘', '⏎'] : ['Ctrl', 'Enter']).map((key) => (
+        <Kbd key={key}>{key}</Kbd>
+      ))}
+      <Text variant="small" color="neutral_500">
+        to post
+      </Text>
     </View>
   );
 }

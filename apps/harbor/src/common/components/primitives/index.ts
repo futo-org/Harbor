@@ -6,6 +6,7 @@ export * from './Button';
 export * from './Chip';
 export * from './HorizontalScrollGroup';
 export * from './IconButton';
+export * from './Kbd';
 export * from './LinkButton';
 export * from './PillButton';
 export * from './Text';

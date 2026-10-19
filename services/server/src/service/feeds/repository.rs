@@ -17,7 +17,7 @@ use sea_orm::{
     *,
 };
 use sea_query::query::{CommonTableExpression, WithClause};
-use sea_query::{Func, SelectStatement, UnionType};
+use sea_query::{Func, PgFunc, SelectStatement, UnionType};
 use serde::{Deserialize, Serialize};
 use tonic::Status;
 
@@ -194,8 +194,8 @@ impl Query {
         if let Some(for_identity) = for_identity {
             // List of identities the `for_identity` is following and
             // themselves.
-            let mut following = SelectStatement::new();
-            following
+            let mut following_rows = SelectStatement::new();
+            following_rows
                 .column(follow::Column::Followee)
                 .from(follow::Entity)
                 .and_where(
@@ -203,23 +203,41 @@ impl Query {
                         .eq(for_identity),
                 );
             if include_own_posts {
-                following.union(UnionType::All, {
+                following_rows.union(UnionType::All, {
                     let mut q = SelectStatement::new();
                     q.expr(Expr::value(for_identity));
                     q
                 });
             }
 
-            let mut with = WithClause::new();
+            // Aggregated into a single array so it's computed once.
             const FOLLOWING_TABLE: &str = "following";
+            const IDENTITIES_COLUMN: &str = "identities";
+            let mut following = SelectStatement::new();
+            following
+                .expr_as(
+                    PgFunc::array_agg(Expr::col(follow::Column::Followee)),
+                    IDENTITIES_COLUMN,
+                )
+                .from_subquery(following_rows, "following_rows");
+
+            let mut with = WithClause::new();
             let mut cte = CommonTableExpression::new();
             cte.table_name(FOLLOWING_TABLE).query(following);
             with.cte(cte);
 
-            let mut select_followee = SelectStatement::new();
-            select_followee
-                .column(follow::Column::Followee)
+            let mut select_following = SelectStatement::new();
+            select_following
+                .column(IDENTITIES_COLUMN)
                 .from(FOLLOWING_TABLE);
+
+            // `identity = ANY((SELECT identities FROM following)::TEXT[])`.
+            let in_following = |identity: Expr| {
+                identity.eq(PgFunc::any(Func::cast_as(
+                    select_following.clone(),
+                    "TEXT[]",
+                )))
+            };
 
             let mut relevant_events = SelectStatement::new();
 
@@ -227,10 +245,10 @@ impl Query {
             relevant_events
                 .column(event::Column::Id)
                 .from(event::Entity)
-                .cond_where(
-                    event::Column::Identity
-                        .in_subquery(select_followee.clone()),
-                )
+                .cond_where(in_following(Expr::col((
+                    event::Entity,
+                    event::Column::Identity,
+                ))))
                 .and_where(
                     Expr::col(event::Column::Collection.as_column_ref())
                         .eq(Expr::Constant(collections::FEED.into())),
@@ -243,10 +261,10 @@ impl Query {
                     let mut q = SelectStatement::new();
                     q.column(reaction::Column::OnPost)
                         .from(reaction::Entity)
-                        .and_where(
-                            reaction::Column::Identity
-                                .in_subquery(select_followee.clone()),
-                        );
+                        .and_where(in_following(Expr::col((
+                            reaction::Entity,
+                            reaction::Column::Identity,
+                        ))));
                     q
                 });
                 // Reposted by an identity the `for_identity` is following.
@@ -254,10 +272,10 @@ impl Query {
                     let mut q = SelectStatement::new();
                     q.column(repost::Column::Post)
                         .from(repost::Entity)
-                        .and_where(
-                            repost::Column::Identity
-                                .in_subquery(select_followee.clone()),
-                        );
+                        .and_where(in_following(Expr::col((
+                            repost::Entity,
+                            repost::Column::Identity,
+                        ))));
                     q
                 });
                 // Quoted by an identity the `for_identity` is following.
@@ -265,10 +283,10 @@ impl Query {
                     let mut q = SelectStatement::new();
                     q.column(quote::Column::Post)
                         .from(quote::Entity)
-                        .and_where(
-                            quote::Column::Identity
-                                .in_subquery(select_followee.clone()),
-                        );
+                        .and_where(in_following(Expr::col((
+                            quote::Entity,
+                            quote::Column::Identity,
+                        ))));
                     q
                 });
                 // Replied to by an identity the `for_identity` is following.
@@ -276,10 +294,10 @@ impl Query {
                     let mut q = SelectStatement::new();
                     q.column(reply::Column::Post)
                         .from(reply::Entity)
-                        .and_where(
-                            reply::Column::Identity
-                                .in_subquery(select_followee),
-                        );
+                        .and_where(in_following(Expr::col((
+                            reply::Entity,
+                            reply::Column::Identity,
+                        ))));
                     q
                 });
             }
