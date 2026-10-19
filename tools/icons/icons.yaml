@@ -1,53 +1,91 @@
 # Every icon generate-icons.ts writes, drawn from src/harbor-lighthouse.svg.
 # Paths are relative to the repo root; a leading $NAME is a directory from `dirs`.
-# `canvas` is the drawing's size in units (defaults to `size`), scaled to
-# `size` px. The tower is centred horizontally; `top` is its distance from the
-# canvas top.
+# `size` is in px, `WIDTHxHEIGHT` for a non-square image. `canvas` is the
+# drawing's width in units (defaults to the width in px), scaled to `size`.
+# The tower is centred horizontally; `top` is its distance from the canvas top.
+# Colours can be `accent` or `white-on-accent`, taken from the variant; see `variants`.
 
 dirs:
   APP_IMG: apps/harbor/src/common/assets/images
   APP_PUBLIC: apps/harbor/public
   DOCS: docs/static/img
+  DOCS_ROOT: docs/static
+
+# The app icons and favicons of each build variant (APP_VARIANT). An icon whose
+# files contain {suffix} is written once per variant; the others use production.
+# `white-on-accent` is white at its opacity over the accent, made opaque: Expo's
+# image resizing darkens semi-transparent pixels, so layers it resizes can't use opacity.
+variants:
+  production: { suffix: '', accent: '#FF6A00', white-on-accent: { opacity: 0.9 } }
+  staging: { suffix: '-staging', accent: '#FFBB29', white-on-accent: { opacity: 0.9 } }
+  dev: { suffix: '-dev', accent: '#07CF5E', white-on-accent: { opacity: 0.9 } }
 
 # Shared values, referenced below as *name; `<<:` copies a mapping in
 shared:
-  orange: &orange '#FF6A00'
   ios-tower: &ios-tower { height: 929, top: 143 }
-  android-tower: &android-tower { height: 187, top: 162 }
+  # In dp of the 108 dp adaptive canvas. Android wants the logo 48-66 dp, within
+  # the 66 dp safe circle; 48 dp leaves room around it inside launcher masks.
+  android-tower: &android-tower { height: 48, top: 30 }
+  splash-tower: &splash-tower { height: 60, top: 24 }
+  wordmark: &wordmark
+    content: HARBOR
+    font: tools/icons/fonts/OpenSans-ExtraBold.ttf
+    # In em
+    letterSpacing: 0.05
+    fill: '#FFFFFF'
   ios-icon: &ios-icon
     canvas: 1024
-    background: *orange
+    background: accent
     tower: { <<: *ios-tower, fill: '#FFFFFF', opacity: 0.9 }
 
 icons:
   # An Icon Composer bundle (a folder): the background is its fill, the tower
   # a layer moved into place on the 1024 pt canvas
   - files:
-      - $APP_IMG/app-icons/ios-icon.icon
-    <<: *ios-icon
-    size: 1024
-
-  # The splash screen image
-  - files:
-      - $APP_IMG/app-icons/ios-icon-default.png
+      - $APP_IMG/app-icons/ios-icon{suffix}.icon
     <<: *ios-icon
     size: 1024
 
   - files:
-      - $APP_IMG/app-icons/android-icon-background.png
+      - $APP_IMG/app-icons/android-icon-background{suffix}.png
     size: 512
-    background: *orange
+    background: accent
 
   - files:
-      - $APP_IMG/app-icons/android-icon-foreground.png
+      - $APP_IMG/app-icons/android-icon-foreground{suffix}.png
     size: 512
-    tower: { <<: *android-tower, fill: '#FFFFFF', opacity: 0.9 }
+    canvas: 108
+    tower: { <<: *android-tower, fill: white-on-accent }
 
   # The launcher only uses this layer's shape, so the colour is arbitrary
   - files:
       - $APP_IMG/app-icons/android-icon-monochrome.png
     size: 512
+    canvas: 108
     tower: { <<: *android-tower, fill: '#354479' }
+
+  # The 108 dp canvas scaled to the 288 dp splash canvas (1152 px is xxxhdpi),
+  # which keeps the tower inside Android's 192 dp splash circle
+  - files:
+      - $APP_IMG/app-icons/splash-icon.png
+    size: 1152
+    canvas: 108
+    tower: { <<: *splash-tower, fill: white-on-accent }
+
+  # The dark-mode splash, drawn on the app's dark background
+  - files:
+      - $APP_IMG/app-icons/splash-icon-dark.png
+    size: 1152
+    canvas: 108
+    tower: { <<: *splash-tower, fill: accent }
+
+  # Android draws only the alpha channel, so the tower must be fully opaque.
+  # 22 of 24 dp tall leaves the 1 dp padding of the notification icon grid.
+  - files:
+      - $APP_IMG/app-icons/android-notification-icon.png
+    size: 96
+    canvas: 24
+    tower: { height: 22, top: 1, fill: '#FFFFFF' }
 
   - files:
       - $APP_IMG/harbor-logo-256.png
@@ -56,10 +94,19 @@ icons:
     clip: circle
     size: 256
 
-  # Each size is rendered separately and packed into one .ico
+  # At the site root, where iOS looks first; iOS rounds the corners itself.
+  # The web app's server.js serves staging's copy at /apple-touch-icon.png.
   - files:
-      - $APP_PUBLIC/favicon.ico
-      - $DOCS/favicon.ico
+      - $APP_PUBLIC/apple-touch-icon{suffix}.png
+      - $DOCS_ROOT/apple-touch-icon{suffix}.png
+    <<: *ios-icon
+    size: 180
+
+  # Each size is rendered separately and packed into one .ico.
+  # The web app's server.js serves staging's copy at /favicon.ico.
+  - files:
+      - $APP_PUBLIC/favicon{suffix}.ico
+      - $DOCS/favicon{suffix}.ico
     <<: *ios-icon
     clip: circle
     sizes: [48, 32, 16]
@@ -69,11 +116,14 @@ icons:
       - $APP_IMG/harbor-logo-with-text.png
     size: 857
     tower: { height: 608, top: 0, fill: '#FFFFFF', opacity: 0.9 }
-    text:
-      content: HARBOR
-      font: tools/icons/fonts/OpenSans-ExtraBold.ttf
-      fontSize: 180
-      # In em
-      letterSpacing: 0.05
-      baselineFromBottom: 14
-      fill: '#FFFFFF'
+    text: { <<: *wordmark, fontSize: 180, baselineFromBottom: 14 }
+
+  # The link preview card (og:image) of the docs and the web app: the logo with
+  # text above, scaled to 400 px tall and centred
+  - files:
+      - $APP_PUBLIC/harbor-social-card.png
+      - $DOCS/harbor-social-card.png
+    size: 1200x630
+    background: accent
+    tower: { height: 288, top: 115, fill: '#FFFFFF', opacity: 0.9 }
+    text: { <<: *wordmark, fontSize: 85, baselineFromBottom: 115, opacity: 0.9 }

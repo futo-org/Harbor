@@ -16,6 +16,15 @@
           ],
           "image-name": "tower.png",
           "name": "tower",
+          "opacity-specializations": [
+            {
+              "value": 0.9
+            },
+            {
+              "appearance": "dark",
+              "value": 1
+            }
+          ],
           "position": {
             "scale": 1,
             "translation-in-points": [
