@@ -60,6 +60,7 @@ const config: Config = {
           // docs are served under /docs.
           routeBasePath: 'docs',
           sidebarPath: './src/sidebars.ts',
+          editUrl: 'https://code.futo.org/harbor/harbor/_edit/develop/docs/',
         },
         // No blog.
         blog: false,
