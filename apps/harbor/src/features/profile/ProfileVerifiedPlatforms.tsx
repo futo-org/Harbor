@@ -90,7 +90,7 @@ function VerifiedPlatformRow({
         color: theme.palette[platform.color],
       })}
       <Text
-        variant="secondary"
+        variant="small"
         color="neutral_500"
         numberOfLines={1}
         style={{ flexShrink: 1 }}
@@ -100,7 +100,7 @@ function VerifiedPlatformRow({
       </Text>
       {/* A generic platform's account is the website itself. */}
       {platform.generic ? null : (
-        <Text variant="secondary" color="neutral_300" numberOfLines={1}>
+        <Text variant="small" color="neutral_300" numberOfLines={1}>
           on {platform.name}
           {comma}
         </Text>
