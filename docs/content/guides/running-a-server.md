@@ -35,7 +35,7 @@ docker compose exec -T server /app/migration fresh
 ```
 
 The bundled `compose.yml` starts PostgreSQL, RustFS (with its `polycentric-blobs`
-bucket created automatically), and the server. By default the server is published on
+bucket created automatically), Kafka, Valkey, and the server. By default the server is published on
 host port `3000`; override it with `HARBOR_SERVER_PORT`.
 
 Confirm it is up:
@@ -54,14 +54,14 @@ file. With the Rust toolchain installed:
 
 ```bash
 # Start only the backing services.
-docker compose up -d postgres rustfs rustfs-init
+docker compose up -d postgres rustfs rustfs-init kafka valkey
 
 # Apply the schema, pointing at the local database.
 cd services/server/migration
 HARBOR_DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 
 # Run the server (reads the HARBOR_CONTENT_BLOB_OS_* and HARBOR_DATABASE_URL variables).
-cargo run -p server
+HARBOR_VALKEY_URL=redis://localhost:6379 cargo run -p server
 ```
 
 See [`services/server/README.md`](https://code.futo.org/harbor/harbor/src/branch/develop/services/server/README.md)
@@ -122,6 +122,18 @@ The server produces events to Kafka, and its background workers consume them.
 | `HARBOR_KAFKA_SSL_KEY`                | _(unset)_        | Client key, inline PEM.                          |
 | `HARBOR_KAFKA_BROKER_ADDRESS_FAMILY`  | `any`            | Kafka `broker.address.family`.                   |
 | `HARBOR_KAFKA_AUTO_OFFSET_RESET`      | `latest`         | Consumer `auto.offset.reset` (workers only).     |
+
+### Valkey (live sync)
+
+Optional. When set, the server streams new heads to an identity's other devices
+and tabs over `EventSyncService.SubscribeHeads`, so they pull new events right
+away. Needs Valkey (or Redis) 7 or newer. It stores nothing, so it needs no
+persistence. See [Live Sync](../developer/live-sync.md) for the design and
+scaling notes.
+
+| Variable            | Default   | Description                                                                                       |
+| ------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| `HARBOR_VALKEY_URL` | _(unset)_ | `redis://host:6379`, `rediss://` for TLS, or `redis-cluster://host:6379` for a cluster. Unset turns live sync off. |
 
 ### Logging and metrics
 

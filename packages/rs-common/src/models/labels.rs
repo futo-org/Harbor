@@ -41,7 +41,7 @@ impl Validate for Labels {
                     },
                 );
             },
-        )
+        );
     }
 }
 

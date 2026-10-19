@@ -620,8 +620,13 @@ where
     successful: Arc<AtomicUsize>,
 }
 
+/// A per-client fraction in `[0, 1)`, from the clock (no RNG on every target).
+fn jitter() -> f64 {
+    (crate::time::now_millis().wrapping_mul(2_654_435_761) % 1000) as f64 / 1000.0
+}
+
 /// Keeps one server's stream open for as long as the subscriber is,
-/// re-opening it after `RECONNECT_DELAY` whenever it ends.
+/// re-opening it after `RECONNECT_DELAY` (plus jitter) whenever it ends.
 async fn run_stream<T>(context: StreamContext<T>, server_url: String)
 where
     T: Clone + Send + Sync + 'static,
@@ -670,8 +675,10 @@ where
             }
         }
 
+        // Spread reconnects after a server restart.
+        let delay = RECONNECT_DELAY + RECONNECT_DELAY.mul_f64(jitter());
         let mut waited = Duration::ZERO;
-        while waited < RECONNECT_DELAY {
+        while waited < delay {
             if context.subscriber.is_closed() {
                 return;
             }

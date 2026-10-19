@@ -28,8 +28,21 @@ export const TextArea = forwardRef<RNTextInput, TextAreaProps>(
       if (Platform.OS !== 'web') return;
       const node = innerRef.current as unknown as HTMLTextAreaElement | null;
       if (!node?.style) return;
+
+      // Save scrolled ancestors' positions: collapsing to `auto` shrinks their
+      // content, so the browser clamps them.
+      const scrollTopOfAncestors = new Map<HTMLElement, number>();
+      for (let el = node.parentElement; el; el = el.parentElement) {
+        if (el.scrollTop > 0) scrollTopOfAncestors.set(el, el.scrollTop);
+      }
+
       node.style.height = 'auto';
       node.style.height = `${Math.max(minHeight, node.scrollHeight)}px`;
+
+      // Restore them now that the content has regrown.
+      for (const [el, scrollTop] of scrollTopOfAncestors) {
+        el.scrollTop = scrollTop;
+      }
     }, [minHeight]);
 
     // Controlled usage: re-measure whenever `value` changes.

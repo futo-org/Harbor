@@ -15,7 +15,9 @@ use polycentric_common::models::protos_v2::{
     notification_service_client::NotificationServiceClient,
     server_service_client::ServerServiceClient,
 };
-use polycentric_common::models::protos_v2::{ListHeadsRequest, PutEventsResponse};
+use polycentric_common::models::protos_v2::{
+    ListHeadsRequest, ListHeadsResponse, PutEventsResponse,
+};
 use polycentric_common::models::traits::Serializable;
 use prost::Message;
 use std::sync::{Arc, Mutex};
@@ -105,6 +107,7 @@ pub enum Query {
     SubscribeUnreadNotificationCount(
         crate::query::notification::SubscribeUnreadNotificationCountArgs,
     ),
+    SubscribeHeads(crate::query::heads::SubscribeHeadsArgs),
     ListEvents(crate::query::event::ListEventsArgs),
     ListVerificationClaims(crate::query::verifications::ListVerificationClaimsArgs),
     ListVerificationTargets(crate::query::verifications::ListVerificationTargetsArgs),
@@ -256,6 +259,15 @@ impl PolycentricCore {
             .client
             .lock_recover()
             .get_identity_sequence(&identity, &pk))
+    }
+
+    /// Serialized `ListHeadsResponse` of the events this core holds for
+    /// `identity`.
+    pub fn local_heads(&self, identity: String) -> Vec<u8> {
+        ListHeadsResponse {
+            heads: self.client.lock_recover().local_heads(&identity),
+        }
+        .encode_to_vec()
     }
 
     /// Returns the latest known valid identity document for `identity`, if any.
@@ -494,6 +506,9 @@ impl PolycentricCore {
                     args,
                     opts,
                 )
+            }
+            Query::SubscribeHeads(args) => {
+                crate::query::heads::subscribe_heads(&self.query_client, query_key, args, opts)
             }
             Query::ListEvents(args) => {
                 crate::query::event::list_events(&self.query_client, query_key, args, opts)
