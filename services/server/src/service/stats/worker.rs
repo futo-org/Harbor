@@ -14,7 +14,7 @@ use prost::Message as _;
 use sea_orm::ConnectionTrait;
 
 use crate::data::EventWithContentRow;
-use crate::service::context::ServiceContext;
+use crate::service::context::{ServiceContext, WorkerContext};
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::stats::repository::Mutation;
@@ -43,6 +43,13 @@ impl StatsWorker {
             return Ok(());
         };
 
+        let ctx = WorkerContext::new(
+            &self.ctx.db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+        )
+        .await?;
+
         match input.content_body {
             ContentBody::Delete(delete) => {
                 let Some(target) = delete.event_key else {
@@ -56,7 +63,7 @@ impl StatsWorker {
 
                 // Try retrieving the content of the deleted event
                 let Some(content_body) =
-                    find_content_by_key(&self.ctx.ro_db, target).await?
+                    find_content_by_key(&ctx.db, target).await?
                 else {
                     return Ok(());
                 };
@@ -67,7 +74,7 @@ impl StatsWorker {
                     && let Some(url) = attributed_reaction_url(&reaction)
                 {
                     Mutation::remove_attributed_reaction_for(
-                        &self.ctx.db,
+                        &ctx.db,
                         url,
                         reaction.positive,
                     )
@@ -79,7 +86,7 @@ impl StatsWorker {
             ContentBody::AttributedToReaction(reaction) => {
                 if let Some(url) = attributed_reaction_url(&reaction) {
                     Mutation::count_attributed_reaction_for(
-                        &self.ctx.db,
+                        &ctx.db,
                         url,
                         reaction.positive,
                     )
