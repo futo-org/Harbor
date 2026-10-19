@@ -1,6 +1,15 @@
 import type { PaletteColorToken } from '@/src/common/theme';
-import { FontAwesome6 } from '@expo/vector-icons';
+// Per-icon modules: importing from the package index would bundle every icon.
+import * as faDiscord from '@fortawesome/free-brands-svg-icons/faDiscord';
+import * as faGithub from '@fortawesome/free-brands-svg-icons/faGithub';
+import * as faHackerNews from '@fortawesome/free-brands-svg-icons/faHackerNews';
+import * as faTwitch from '@fortawesome/free-brands-svg-icons/faTwitch';
+import * as faXTwitter from '@fortawesome/free-brands-svg-icons/faXTwitter';
+import * as faYoutube from '@fortawesome/free-brands-svg-icons/faYoutube';
+import * as faCirclePlay from '@fortawesome/free-solid-svg-icons/faCirclePlay';
+import * as faGlobe from '@fortawesome/free-solid-svg-icons/faGlobe';
 import { createElement, type ReactNode } from 'react';
+import Svg, { Path } from 'react-native-svg';
 
 // Every platform claim shares one verification schema; which platform a claim
 // is for is carried by the verifier route it's sent to, not the schema.
@@ -25,21 +34,35 @@ export interface Platform {
   generic?: boolean;
 }
 
-const brandLogo =
-  (name: string) =>
+// Drawn as SVG rather than through the FontAwesome font, which loads on first
+// render and leaves the logo blank until it arrives. `size` is the height,
+// like a font glyph's; the width follows the icon's aspect ratio.
+const svgLogo =
+  ({
+    width,
+    height,
+    svgPathData,
+  }: {
+    width: number;
+    height: number;
+    svgPathData: string;
+  }) =>
   ({ size, color }: { size: number; color: string }): ReactNode =>
-    createElement(FontAwesome6, { name, brand: true, size, color });
-
-const solidLogo =
-  (name: string) =>
-  ({ size, color }: { size: number; color: string }): ReactNode =>
-    createElement(FontAwesome6, { name, size, color });
+    createElement(
+      Svg,
+      {
+        width: (size * width) / height,
+        height: size,
+        viewBox: `0 0 ${width} ${height}`,
+      },
+      createElement(Path, { d: svgPathData, fill: color }),
+    );
 
 export const PLATFORMS: Platform[] = [
   {
     name: 'X',
     slug: 'x',
-    logo: brandLogo('x-twitter'),
+    logo: svgLogo(faXTwitter),
     color: 'neutral_900',
     location: 'bio',
     placeholder: 'x.com/futo',
@@ -48,7 +71,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'YouTube',
     slug: 'youtube',
-    logo: brandLogo('youtube'),
+    logo: svgLogo(faYoutube),
     color: 'negative_500',
     location: 'channel description',
     // The verifier only accepts @handle or /channel/<id> URLs.
@@ -57,7 +80,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'GitHub',
     slug: 'github',
-    logo: brandLogo('github'),
+    logo: svgLogo(faGithub),
     color: 'neutral_600',
     location: 'profile bio',
     placeholder: 'github.com/futo-org',
@@ -65,7 +88,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Discord',
     slug: 'discord',
-    logo: brandLogo('discord'),
+    logo: svgLogo(faDiscord),
     color: 'primary_500',
     location: 'About Me',
     placeholder: 'discord.gg/futo',
@@ -73,16 +96,16 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Hacker News',
     slug: 'hacker-news',
-    logo: brandLogo('hacker-news'),
+    logo: svgLogo(faHackerNews),
     color: 'warning_500',
     location: 'about section',
     placeholder: 'news.ycombinator.com/user?id=futo',
   },
-  // FontAwesome6 has no Rumble brand glyph; use a generic play icon.
+  // FontAwesome has no Rumble brand glyph; use a generic play icon.
   {
     name: 'Rumble',
     slug: 'rumble',
-    logo: solidLogo('circle-play'),
+    logo: svgLogo(faCirclePlay),
     color: 'positive_500',
     location: 'channel description',
     placeholder: 'rumble.com/c/futo',
@@ -90,7 +113,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Twitch',
     slug: 'twitch',
-    logo: brandLogo('twitch'),
+    logo: svgLogo(faTwitch),
     color: 'primary_400',
     location: 'bio',
     placeholder: 'twitch.tv/futo',
@@ -98,7 +121,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Other',
     slug: 'website',
-    logo: solidLogo('globe'),
+    logo: svgLogo(faGlobe),
     color: 'neutral_500',
     location: 'profile',
     placeholder: 'example.com',
