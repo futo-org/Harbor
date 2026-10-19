@@ -308,8 +308,14 @@ impl Query {
                 FOLLOWERS_COLUMN,
             )
             .from(follow::Entity)
+            // `follower = ANY(ARRAY(SELECT followee FROM follow ...))`.
             .and_where(
-                follow::Column::Follower.in_subquery(select_following.clone()),
+                Expr::col((follow::Entity, follow::Column::Follower)).eq(
+                    PgFunc::any(Expr::cust_with_expr(
+                        "ARRAY($1)",
+                        select_following.clone(),
+                    )),
+                ),
             )
             .group_by_col(follow::Column::Followee);
         let default_suggestions = Self::build_default_suggestions();

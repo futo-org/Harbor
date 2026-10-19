@@ -8,6 +8,8 @@ import type { GetAttributedToReactionCountsResponse } from "./events";
 import type { GetAttributedToReactionCountsRequest } from "./events";
 import type { GetReactionsResponse } from "./events";
 import type { GetReactionsRequest } from "./events";
+import type { SubscribeHeadsRequest } from "./events";
+import type { ServerStreamingCall } from "@protobuf-ts/runtime-rpc";
 import type { ListHeadsResponse } from "./events";
 import type { ListHeadsRequest } from "./events";
 import type { PutEventsResponse } from "./events";
@@ -42,6 +44,12 @@ export interface IEventSyncServiceClient {
      * @generated from protobuf rpc: ListHeads
      */
     listHeads(input: ListHeadsRequest, options?: RpcOptions): UnaryCall<ListHeadsRequest, ListHeadsResponse>;
+    /**
+     * Streams the authenticated identity's heads, again on each new event
+     *
+     * @generated from protobuf rpc: SubscribeHeads
+     */
+    subscribeHeads(input: SubscribeHeadsRequest, options?: RpcOptions): ServerStreamingCall<SubscribeHeadsRequest, ListHeadsResponse>;
     /**
      * Get the reactions targeting an event.
      *
@@ -95,12 +103,21 @@ export class EventSyncServiceClient implements IEventSyncServiceClient, ServiceI
         return stackIntercept<ListHeadsRequest, ListHeadsResponse>("unary", this._transport, method, opt, input);
     }
     /**
+     * Streams the authenticated identity's heads, again on each new event
+     *
+     * @generated from protobuf rpc: SubscribeHeads
+     */
+    subscribeHeads(input: SubscribeHeadsRequest, options?: RpcOptions): ServerStreamingCall<SubscribeHeadsRequest, ListHeadsResponse> {
+        const method = this.methods[3], opt = this._transport.mergeOptions(options);
+        return stackIntercept<SubscribeHeadsRequest, ListHeadsResponse>("serverStreaming", this._transport, method, opt, input);
+    }
+    /**
      * Get the reactions targeting an event.
      *
      * @generated from protobuf rpc: GetReactions
      */
     getReactions(input: GetReactionsRequest, options?: RpcOptions): UnaryCall<GetReactionsRequest, GetReactionsResponse> {
-        const method = this.methods[3], opt = this._transport.mergeOptions(options);
+        const method = this.methods[4], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetReactionsRequest, GetReactionsResponse>("unary", this._transport, method, opt, input);
     }
     /**
@@ -109,7 +126,7 @@ export class EventSyncServiceClient implements IEventSyncServiceClient, ServiceI
      * @generated from protobuf rpc: GetAttributedToReactionCounts
      */
     getAttributedToReactionCounts(input: GetAttributedToReactionCountsRequest, options?: RpcOptions): UnaryCall<GetAttributedToReactionCountsRequest, GetAttributedToReactionCountsResponse> {
-        const method = this.methods[4], opt = this._transport.mergeOptions(options);
+        const method = this.methods[5], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetAttributedToReactionCountsRequest, GetAttributedToReactionCountsResponse>("unary", this._transport, method, opt, input);
     }
 }

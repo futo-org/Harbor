@@ -1,6 +1,7 @@
 import Icon from '@/src/common/components/Icon';
 import {
   Atoms,
+  Spacing,
   THEME_PREFERENCE_OPTIONS,
   typography,
   useTheme,
@@ -8,17 +9,25 @@ import {
 import { type ExternalPathString, Link } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { Pressable, View } from 'react-native';
-import { FUTO_URL, SOURCE_CODE_URL } from '../../constants';
+import {
+  CONTENT_POLICY_URL,
+  DOCS_URL,
+  FAQ_URL,
+  FUTO_URL,
+  PRIVACY_POLICY_URL,
+  ROADMAP_URL,
+  SOURCE_CODE_URL,
+  SUPPORT_URL,
+} from '../../constants';
 
 const LINKS: { text: string; href: ExternalPathString }[] = [
-  {
-    text: 'Privacy Policy',
-    href: 'https://join.harbor.social/docs/privacy-policy/',
-  },
-  {
-    text: 'Source Code',
-    href: SOURCE_CODE_URL,
-  },
+  { text: 'Docs', href: DOCS_URL },
+  { text: 'FAQ', href: FAQ_URL },
+  { text: 'Support', href: SUPPORT_URL },
+  { text: 'Roadmap', href: ROADMAP_URL },
+  { text: 'Code', href: SOURCE_CODE_URL },
+  { text: 'Privacy Policy', href: PRIVACY_POLICY_URL },
+  { text: 'Content Policy', href: CONTENT_POLICY_URL },
   { text: 'FUTO © 2026.', href: FUTO_URL },
 ];
 
@@ -33,10 +42,10 @@ export function AppFooter({ style, ...props }: ComponentProps<typeof View>) {
         Atoms.flex_row,
         Atoms.items_center,
         Atoms.w_full,
-        Atoms.py_sm,
+        Atoms.pt_sm,
         Atoms.px_sm,
-        Atoms.gap_sm,
         Atoms.flex_wrap,
+        { columnGap: Spacing.md, rowGap: Spacing.xs },
         style,
       ]}
       {...props}
@@ -88,6 +97,7 @@ function FooterLink({ href, text }: FooterLinkProps) {
     <Link
       className="underlineOnHover"
       href={href}
+      target="_blank"
       accessibilityLabel={text}
       style={theme.atoms.text_neutral_low}
     >

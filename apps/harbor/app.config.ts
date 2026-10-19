@@ -1,5 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 import fs from 'fs';
+// Written by tools/icons/generate-icons.ts from icons.yaml
+import accentByVariant from './src/common/assets/images/app-icons/variant-accents.json';
 
 const { version: PKG_VERSION } = require('./package.json');
 const { appLinks } = require('./appLinks');
@@ -23,6 +25,12 @@ const ID = IS_DEV
     : 'org.futo.polycentric';
 
 const SCHEME = IS_DEV ? 'harbor.dev' : IS_STAGING ? 'harbor.staging' : 'harbor';
+
+const ICON_SUFFIX = IS_DEV ? '-dev' : IS_STAGING ? '-staging' : '';
+// Unknown variants fall back to production, like the values above
+const ACCENT =
+  (accentByVariant as Record<string, string | undefined>)[VARIANT] ??
+  accentByVariant.production;
 
 // Web host whose links open this app (none for dev: verification needs a
 // public HTTPS domain). Claims the whole host; appLinks.js excludes paths.
@@ -57,18 +65,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'polycentric',
   version: process.env.APP_VERSION || PKG_VERSION || '0.0.1',
   orientation: 'default',
-  icon: './src/common/assets/images/app-icons/android-icon-foreground.png',
   scheme: SCHEME,
   web: {
     output: 'server',
   },
   userInterfaceStyle: 'automatic',
   ios: {
-    icon: {
-      dark: './src/common/assets/images/app-icons/ios-icon-dark.png',
-      light: './src/common/assets/images/app-icons/ios-icon-default.png',
-      tinted: './src/common/assets/images/app-icons/ios-icon-monochrome.png',
-    },
+    // An Icon Composer bundle: Xcode renders the Liquid Glass icon and the flat
+    // ones for older iOS from it
+    icon: `./src/common/assets/images/app-icons/ios-icon${ICON_SUFFIX}.icon`,
     requireFullScreen: true,
     supportsTablet: true,
     bundleIdentifier: ID,
@@ -80,13 +85,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      foregroundImage:
-        './src/common/assets/images/app-icons/android-icon-foreground.png',
+      foregroundImage: `./src/common/assets/images/app-icons/android-icon-foreground${ICON_SUFFIX}.png`,
       monochromeImage:
         './src/common/assets/images/app-icons/android-icon-monochrome.png',
-      backgroundImage:
-        './src/common/assets/images/app-icons/android-icon-background.png',
-      backgroundColor: '#FF6A00',
+      backgroundImage: `./src/common/assets/images/app-icons/android-icon-background${ICON_SUFFIX}.png`,
     },
     package: ANDROID_ID,
     permissions: [
@@ -116,10 +118,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        image: './src/common/assets/images/app-icons/ios-icon-default.png',
-        imageWidth: 200,
+        image: './src/common/assets/images/app-icons/splash-icon.png',
+        // The full 288 dp canvas of the Android 12 splash icon
+        imageWidth: 288,
         resizeMode: 'contain',
-        backgroundColor: '#FF6A00',
+        // splash-icon.png is only drawn over production's accent
+        backgroundColor: accentByVariant.production,
+        dark: {
+          image: './src/common/assets/images/app-icons/splash-icon-dark.png',
+          // darkPalette.neutral_0, the app's dark background
+          backgroundColor: '#0D1016',
+        },
       },
     ],
     [
@@ -169,7 +178,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-image',
-    'expo-notifications',
+    [
+      'expo-notifications',
+      {
+        icon: './src/common/assets/images/app-icons/android-notification-icon.png',
+        color: ACCENT,
+      },
+    ],
     [
       'expo-screen-orientation',
       {

@@ -3117,7 +3117,7 @@ async fn validation_content_content_body_verification_claim_collection() {
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3161,7 +3161,7 @@ async fn validation_content_content_body_verification_claim_schema_too_large() {
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3205,7 +3205,7 @@ async fn validation_content_content_body_verification_claim_schema_invalid() {
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3262,7 +3262,7 @@ async fn validation_content_content_body_verification_claim_digest_invalid() {
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3319,7 +3319,7 @@ async fn validation_content_content_body_verification_claim_digest_mismatch() {
         value: sha256(&[]),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3372,7 +3372,7 @@ async fn validation_content_content_body_verification_claim_digest_missing() {
     };
     let schema_bytes = schema.encode_to_vec();
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: None,
     };
     let content = Content {
@@ -3430,7 +3430,7 @@ async fn validation_content_content_body_verification_claim_schema_name_too_long
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3488,7 +3488,7 @@ async fn validation_content_content_body_verification_claim_schema_description_t
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3549,7 +3549,7 @@ async fn validation_content_content_body_verification_claim_schema_too_many_fiel
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3607,7 +3607,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_key_em
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3665,7 +3665,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_key_to
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3723,7 +3723,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_kind_v
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3781,7 +3781,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_kind_u
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3839,7 +3839,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_format
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3897,7 +3897,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_descri
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -3955,7 +3955,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_regex_
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4024,7 +4024,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_duplic
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4116,7 +4116,7 @@ async fn validation_content_content_body_verification_claim_fields_key_empty() {
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4178,7 +4178,7 @@ async fn validation_content_content_body_verification_claim_fields_key_too_long(
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4240,7 +4240,7 @@ async fn validation_content_content_body_verification_claim_fields_value_too_lon
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4301,7 +4301,7 @@ async fn validation_content_content_body_verification_claim_fields_too_many() {
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4362,7 +4362,7 @@ async fn validation_content_content_body_verification_claim_fields_key_unknown()
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4424,7 +4424,7 @@ async fn validation_content_content_body_verification_claim_fields_value_not_val
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4486,7 +4486,7 @@ async fn validation_content_content_body_verification_claim_fields_value_string_
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4548,7 +4548,7 @@ async fn validation_content_content_body_verification_claim_fields_value_invalid
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4610,7 +4610,7 @@ async fn validation_content_content_body_verification_claim_fields_value_invalid
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4672,7 +4672,7 @@ async fn validation_content_content_body_verification_claim_fields_value_bytes_t
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
@@ -4734,7 +4734,7 @@ async fn validation_content_content_body_verification_claim_fields_missing_requi
         value: sha256(&schema_bytes),
     };
     let serialized_schema = SerializedVerificationSchema {
-        schema_bytes: schema_bytes,
+        schema_bytes,
         digest: Some(digest),
     };
     let content = Content {
