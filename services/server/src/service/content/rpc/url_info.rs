@@ -173,6 +173,8 @@ struct ScrapedMetadata {
 }
 
 pub async fn handle(
+    // NOTE: not use a request Context because we don't want to hold a database
+    // connection while we're requesting the URL (as that might take a while).
     ctx: &ServiceContext,
     req: UrlInfoRequest,
 ) -> Result<UrlInfoResponse, Status> {

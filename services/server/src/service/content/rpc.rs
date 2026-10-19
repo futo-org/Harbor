@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 use crate::service::content::content_filestore::ContentFilestore;
-use crate::service::context::ServiceContext;
+use crate::service::context::{PublicContext, ServiceContext};
 use crate::service::proto::content_service_server::{
     ContentService, ContentServiceServer,
 };
@@ -31,12 +31,7 @@ impl ContentService for ContentServiceImpl {
         request: Request<SyncContentRequest>,
     ) -> Result<Response<SyncContentResponse>, Status> {
         Ok(Response::new(
-            sync_content::handle(
-                &self.ctx,
-                &self.filestore,
-                request.into_inner(),
-            )
-            .await?,
+            sync_content::handle(&self.filestore, request.into_inner()).await?,
         ))
     }
 
@@ -44,13 +39,16 @@ impl ContentService for ContentServiceImpl {
         &self,
         request: Request<UploadBlobRequest>,
     ) -> Result<Response<UploadBlobResponse>, Status> {
+        let ctx = PublicContext::new(
+            &self.ctx.db,
+            self.ctx.proof_cache.clone(),
+            self.ctx.kafka_producer.clone(),
+            &request,
+        )
+        .await?;
         Ok(Response::new(
-            upload_blob::handle(
-                &self.ctx,
-                &self.filestore,
-                request.into_inner(),
-            )
-            .await?,
+            upload_blob::handle(ctx, &self.filestore, request.into_inner())
+                .await?,
         ))
     }
 
