@@ -90,7 +90,7 @@ function VerifiedPlatformRow({
         variant="small"
         color="neutral_500"
         numberOfLines={1}
-        style={styles.account}
+        style={Atoms.flex_shrink_1}
       >
         {account}
         {platform.generic ? comma : null}
@@ -111,6 +111,5 @@ const useStyles = createThemedStyles((_theme, define) =>
     list: [Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_xs],
     row: [Atoms.flex_row, Atoms.items_center, Atoms.gap_xs],
     rowPressed: { opacity: 0.5 },
-    account: Atoms.flex_shrink_1,
   }),
 );
