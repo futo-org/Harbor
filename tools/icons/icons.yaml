@@ -3,6 +3,7 @@
 # `size` is in px, `WIDTHxHEIGHT` for a non-square image. `canvas` is the
 # drawing's width in units (defaults to the width in px), scaled to `size`.
 # The tower is centred horizontally; `top` is its distance from the canvas top.
+# Colours can be `accent` or `white-on-accent`, taken from the variant; see `variants`.
 
 dirs:
   APP_IMG: apps/harbor/src/common/assets/images
@@ -10,12 +11,17 @@ dirs:
   DOCS: docs/static/img
   DOCS_ROOT: docs/static
 
+# The app icons and favicons of each build variant (APP_VARIANT). An icon whose
+# files contain {suffix} is written once per variant; the others use production.
+# `white-on-accent` is white at its opacity over the accent, made opaque: Expo's
+# image resizing darkens semi-transparent pixels, so layers it resizes can't use opacity.
+variants:
+  production: { suffix: '', accent: '#FF6A00', white-on-accent: { opacity: 0.9 } }
+  staging: { suffix: '-staging', accent: '#FFBB29', white-on-accent: { opacity: 0.9 } }
+  dev: { suffix: '-dev', accent: '#07CF5E', white-on-accent: { opacity: 0.9 } }
+
 # Shared values, referenced below as *name; `<<:` copies a mapping in
 shared:
-  orange: &orange '#FF6A00'
-  # White at 0.9 over orange, made opaque: Expo's image resizing darkens
-  # semi-transparent pixels, so layers it resizes can't use opacity
-  cream: &cream '#FFF0E6'
   ios-tower: &ios-tower { height: 929, top: 143 }
   # In dp of the 108 dp adaptive canvas. Android wants the logo 48-66 dp, within
   # the 66 dp safe circle; 48 dp leaves room around it inside launcher masks.
@@ -29,27 +35,27 @@ shared:
     fill: '#FFFFFF'
   ios-icon: &ios-icon
     canvas: 1024
-    background: *orange
+    background: accent
     tower: { <<: *ios-tower, fill: '#FFFFFF', opacity: 0.9 }
 
 icons:
   # An Icon Composer bundle (a folder): the background is its fill, the tower
   # a layer moved into place on the 1024 pt canvas
   - files:
-      - $APP_IMG/app-icons/ios-icon.icon
+      - $APP_IMG/app-icons/ios-icon{suffix}.icon
     <<: *ios-icon
     size: 1024
 
   - files:
-      - $APP_IMG/app-icons/android-icon-background.png
+      - $APP_IMG/app-icons/android-icon-background{suffix}.png
     size: 512
-    background: *orange
+    background: accent
 
   - files:
-      - $APP_IMG/app-icons/android-icon-foreground.png
+      - $APP_IMG/app-icons/android-icon-foreground{suffix}.png
     size: 512
     canvas: 108
-    tower: { <<: *android-tower, fill: *cream }
+    tower: { <<: *android-tower, fill: white-on-accent }
 
   # The launcher only uses this layer's shape, so the colour is arbitrary
   - files:
@@ -64,14 +70,14 @@ icons:
       - $APP_IMG/app-icons/splash-icon.png
     size: 1152
     canvas: 108
-    tower: { <<: *splash-tower, fill: *cream }
+    tower: { <<: *splash-tower, fill: white-on-accent }
 
   # The dark-mode splash, drawn on the app's dark background
   - files:
       - $APP_IMG/app-icons/splash-icon-dark.png
     size: 1152
     canvas: 108
-    tower: { <<: *splash-tower, fill: *orange }
+    tower: { <<: *splash-tower, fill: accent }
 
   # Android draws only the alpha channel, so the tower must be fully opaque.
   # 22 of 24 dp tall leaves the 1 dp padding of the notification icon grid.
@@ -88,17 +94,19 @@ icons:
     clip: circle
     size: 256
 
-  # At the site root, where iOS looks first; iOS rounds the corners itself
+  # At the site root, where iOS looks first; iOS rounds the corners itself.
+  # The web app's server.js serves staging's copy at /apple-touch-icon.png.
   - files:
-      - $APP_PUBLIC/apple-touch-icon.png
-      - $DOCS_ROOT/apple-touch-icon.png
+      - $APP_PUBLIC/apple-touch-icon{suffix}.png
+      - $DOCS_ROOT/apple-touch-icon{suffix}.png
     <<: *ios-icon
     size: 180
 
-  # Each size is rendered separately and packed into one .ico
+  # Each size is rendered separately and packed into one .ico.
+  # The web app's server.js serves staging's copy at /favicon.ico.
   - files:
-      - $APP_PUBLIC/favicon.ico
-      - $DOCS/favicon.ico
+      - $APP_PUBLIC/favicon{suffix}.ico
+      - $DOCS/favicon{suffix}.ico
     <<: *ios-icon
     clip: circle
     sizes: [48, 32, 16]
@@ -116,6 +124,6 @@ icons:
       - $APP_PUBLIC/harbor-social-card.png
       - $DOCS/harbor-social-card.png
     size: 1200x630
-    background: *orange
+    background: accent
     tower: { height: 288, top: 115, fill: '#FFFFFF', opacity: 0.9 }
     text: { <<: *wordmark, fontSize: 85, baselineFromBottom: 115, opacity: 0.9 }

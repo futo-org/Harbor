@@ -7,15 +7,20 @@ import grpcApiPlugin from './plugins/grpc-api/index';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const SOCIAL_CARD_ALT = 'Harbor';
+// `docusaurus start` runs in development, `docusaurus build` in production
+const ICON_SUFFIX = process.env.NODE_ENV === 'development' ? '-dev' : '';
 
 const config: Config = {
   title: 'Harbor',
   tagline: 'Share to the world, not platforms.',
-  favicon: 'img/favicon.ico',
+  favicon: `img/favicon${ICON_SUFFIX}.ico`,
   headTags: [
     {
       tagName: 'link',
-      attributes: { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+      attributes: {
+        rel: 'apple-touch-icon',
+        href: `/apple-touch-icon${ICON_SUFFIX}.png`,
+      },
     },
   ],
 

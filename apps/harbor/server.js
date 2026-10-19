@@ -22,6 +22,13 @@ for (const [key, value] of Object.entries(process.env)) {
 // SSR reads the same global.
 globalThis.__HARBOR_ENV__ = runtimeEnv;
 
+// One web image serves every environment, so staging icons are served on its
+// host, under the usual URLs
+const STAGING_ICON_FILE_BY_URL_PATH = {
+  '/favicon.ico': '/favicon-staging.ico',
+  '/apple-touch-icon.png': '/apple-touch-icon-staging.png',
+};
+
 // Base URL for the exported bundle (e.g. the static CDN). CI uploads the
 // same /_expo and /assets tree under it and rewrites the js/css to match.
 const assetsBaseUrl = (process.env.HARBOR_STATIC_ASSETS_URL ?? '').replace(
@@ -99,7 +106,11 @@ function serveStatic(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
-  const filePath = path.join(CLIENT_DIR, urlPath);
+  const staticFilePath =
+    (req.headers.host === 'staging.harbor.social' &&
+      STAGING_ICON_FILE_BY_URL_PATH[urlPath]) ||
+    urlPath;
+  const filePath = path.join(CLIENT_DIR, staticFilePath);
 
   if (!filePath.startsWith(CLIENT_DIR)) return next();
 
