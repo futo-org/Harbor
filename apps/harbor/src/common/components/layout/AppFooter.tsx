@@ -8,16 +8,30 @@ import {
 import { type ExternalPathString, Link } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { Pressable, View } from 'react-native';
-import { FUTO_URL, SOURCE_CODE_URL } from '../../constants';
+import {
+  CONTENT_POLICY_URL,
+  FUTO_URL,
+  PRIVACY_POLICY_URL,
+  ROADMAP_URL,
+  SOURCE_CODE_URL,
+} from '../../constants';
 
 const LINKS: { text: string; href: ExternalPathString }[] = [
   {
     text: 'Privacy Policy',
-    href: 'https://join.harbor.social/docs/privacy-policy/',
+    href: PRIVACY_POLICY_URL,
   },
   {
-    text: 'Source Code',
+    text: 'Content Policy',
+    href: CONTENT_POLICY_URL,
+  },
+  {
+    text: 'Code',
     href: SOURCE_CODE_URL,
+  },
+  {
+    text: 'Roadmap',
+    href: ROADMAP_URL,
   },
   { text: 'FUTO © 2026.', href: FUTO_URL },
 ];
@@ -33,9 +47,9 @@ export function AppFooter({ style, ...props }: ComponentProps<typeof View>) {
         Atoms.flex_row,
         Atoms.items_center,
         Atoms.w_full,
-        Atoms.py_sm,
+        Atoms.pt_sm,
         Atoms.px_sm,
-        Atoms.gap_sm,
+        Atoms.gap_md,
         Atoms.flex_wrap,
         style,
       ]}
@@ -88,6 +102,7 @@ function FooterLink({ href, text }: FooterLinkProps) {
     <Link
       className="underlineOnHover"
       href={href}
+      target="_blank"
       accessibilityLabel={text}
       style={theme.atoms.text_neutral_low}
     >
