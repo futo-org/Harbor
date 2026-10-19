@@ -389,6 +389,7 @@ mod tests {
                 event_bytes: vec![row.id as u8],
                 created_at: ts,
                 synced_at: ts,
+                content_type: None,
             },
             Some(content::Model {
                 id: 900 + row.id,

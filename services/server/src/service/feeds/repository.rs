@@ -8,8 +8,8 @@ use ::entity::{
     content_reaction as Contentreaction, event, follow, quote, reaction,
     reaction_tally, reply, repost,
 };
-use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::SortPostsBy;
+use polycentric_common::models::{collections, content_types};
 use sea_orm::{
     Condition, FromQueryResult,
     entity::prelude::*,
@@ -253,6 +253,18 @@ impl Query {
                     Expr::col(event::Column::Collection.as_column_ref())
                         .eq(Expr::Constant(collections::FEED.into())),
                 );
+            if include_own_posts {
+                // But not the identity's own reposts.
+                let content_type =
+                    Expr::col((event::Entity, event::Column::ContentType));
+                relevant_events.and_where(
+                    Expr::col((event::Entity, event::Column::Identity))
+                        .ne(for_identity)
+                        .or(content_type.clone().is_null())
+                        .or(content_type
+                            .ne(Expr::Constant(content_types::REPOST.into()))),
+                );
+            }
 
             // Include additional interactions.
             if !posts_created_only {
@@ -319,10 +331,18 @@ impl Query {
                     .eq(Expr::col((RELEVANT_EVENT, "id"))),
             );
         } else {
-            query.from(event::Entity).cond_where(
-                Expr::col(event::Column::Collection.as_column_ref())
-                    .eq(Expr::Constant(collections::FEED.into())),
-            );
+            // Only posts, not reposts. Matches the `events_feed_posts_idx`
+            // index.
+            query
+                .from(event::Entity)
+                .cond_where(
+                    Expr::col(event::Column::Collection.as_column_ref())
+                        .eq(Expr::Constant(collections::FEED.into())),
+                )
+                .and_where(
+                    Expr::col(event::Column::ContentType.as_column_ref())
+                        .eq(Expr::Constant(content_types::POST.into())),
+                );
         }
 
         let relation = content_join();

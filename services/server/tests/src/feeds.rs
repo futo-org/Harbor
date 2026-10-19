@@ -1256,6 +1256,40 @@ async fn explore_feed_exists() {
 }
 
 #[tokio::test]
+async fn explore_feed_excludes_reposts() {
+    let mut feeds = connect_feeds().await;
+
+    let mut client = TestClient::new().await;
+    client.post_text("Post 1", current_timestamp());
+    let post_key = client.get_last_event_key();
+    client.repost_key(post_key.clone(), current_timestamp());
+    let repost_key = client.get_last_event_key();
+    client.submit_events().await;
+
+    let request = GetExploreFeedRequest {
+        identity: None,
+        page_params: None,
+        omit_labels: Vec::new(),
+        sort_by: Some(SortPostsBy::Latest.into()),
+    };
+    let result = feeds.get_explore_feed(request).await.unwrap().into_inner();
+
+    let keys: Vec<EventKey> = result
+        .event_bundles
+        .iter()
+        .map(|event| {
+            Event::decode(&*event.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap()
+                .key
+                .unwrap()
+        })
+        .collect();
+    // Both are the newest Feed events, but only the post should be shown.
+    assert!(keys.contains(&post_key), "post missing: {keys:#?}");
+    assert!(!keys.contains(&repost_key), "repost shown: {keys:#?}");
+}
+
+#[tokio::test]
 async fn following_feed_empty() {
     let mut client = TestClient::new().await;
     client.submit_events().await;
@@ -1271,6 +1305,19 @@ async fn following_feed_includes_own_posts() {
 
     client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
+    client.submit_events().await;
+    let follower = client.identity();
+
+    following_feed(follower, &[post1_key]).await;
+}
+
+#[tokio::test]
+async fn following_feed_excludes_own_reposts() {
+    let mut client = TestClient::new().await;
+
+    client.post_text("Post 1", current_timestamp());
+    let post1_key = client.get_last_event_key();
+    client.repost_key(post1_key.clone(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 

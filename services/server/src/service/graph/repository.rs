@@ -691,6 +691,7 @@ mod tests {
             event_bytes: vec![id as u8],
             created_at: now(),
             synced_at: now(),
+            content_type: None,
         }
     }
 
