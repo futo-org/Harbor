@@ -62,6 +62,18 @@ for (const icon of icons) {
   }
 }
 
+// For app.config.ts, which sets native colours that must match the icons
+writeFileSync(
+  join(repoRoot, dirs.APP_IMG, 'app-icons/variant-accents.json'),
+  `${JSON.stringify(
+    Object.fromEntries(
+      Object.entries(variants).map(([name, variant]) => [name, variant.accent]),
+    ),
+    null,
+    2,
+  )}\n`,
+);
+
 async function writeIcon(icon: Icon) {
   const paths = icon.files.map((file) =>
     join(

@@ -1,5 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 import fs from 'fs';
+// Written by tools/icons/generate-icons.ts from icons.yaml
+import accentByVariant from './src/common/assets/images/app-icons/variant-accents.json';
 
 const { version: PKG_VERSION } = require('./package.json');
 const { appLinks } = require('./appLinks');
@@ -25,6 +27,10 @@ const ID = IS_DEV
 const SCHEME = IS_DEV ? 'harbor.dev' : IS_STAGING ? 'harbor.staging' : 'harbor';
 
 const ICON_SUFFIX = IS_DEV ? '-dev' : IS_STAGING ? '-staging' : '';
+// Unknown variants fall back to production, like the values above
+const ACCENT =
+  (accentByVariant as Record<string, string | undefined>)[VARIANT] ??
+  accentByVariant.production;
 
 // Web host whose links open this app (none for dev: verification needs a
 // public HTTPS domain). Claims the whole host; appLinks.js excludes paths.
@@ -116,7 +122,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         // The full 288 dp canvas of the Android 12 splash icon
         imageWidth: 288,
         resizeMode: 'contain',
-        backgroundColor: '#FF6A00',
+        // splash-icon.png is only drawn over production's accent
+        backgroundColor: accentByVariant.production,
         dark: {
           image: './src/common/assets/images/app-icons/splash-icon-dark.png',
           // darkPalette.neutral_0, the app's dark background
@@ -175,7 +182,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-notifications',
       {
         icon: './src/common/assets/images/app-icons/android-notification-icon.png',
-        color: '#FF6A00',
+        color: ACCENT,
       },
     ],
     [

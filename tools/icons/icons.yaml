@@ -15,6 +15,7 @@ dirs:
 # files contain {suffix} is written once per variant; the others use production.
 # `white-on-accent` is white at its opacity over the accent, made opaque: Expo's
 # image resizing darkens semi-transparent pixels, so layers it resizes can't use opacity.
+# The accents are also written to $APP_IMG/app-icons/variant-accents.json for app.config.ts.
 variants:
   production: { suffix: '', accent: '#FF6A00', white-on-accent: { opacity: 0.9 } }
   staging: { suffix: '-staging', accent: '#FFBB29', white-on-accent: { opacity: 0.9 } }
