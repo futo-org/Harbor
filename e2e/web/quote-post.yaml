@@ -10,17 +10,31 @@ name: I can quote a post
 - tapOn:
     role: menuitem
     text: ${output.post.quote}
-# The composer previews the quoted post under "Quoting <author>".
+# The composer previews the quoted post under "Quoting <author>", once the
+# author's profile has loaded (it shows "Quoting …" until then).
 - assertVisible: ${output.composer.quoting}
+- extendedWaitUntil:
+    notVisible: ${output.composer.quoting} …
+    timeout: 30000
 - evalBrowserScript:
     script: |
-      const heading = [...document.querySelectorAll('div')].find(
-        (el) => el.childElementCount === 0 && el.textContent.startsWith('Quoting '),
-      );
+      // The sheet overlays the feed, where a post's text may also start with
+      // "Quoting ", so search the nearest ancestor of the composer's submit
+      // button that holds the heading.
+      const submit = document.querySelector('[data-testid="composeSubmit"]');
+      let heading;
+      for (let scope = submit; scope && !heading; scope = scope.parentElement) {
+        heading = [...scope.querySelectorAll('div')].find(
+          (el) => el.childElementCount === 0 && el.textContent.startsWith('Quoting '),
+        );
+      }
       return heading.textContent.slice('Quoting '.length).replace(/…$/, '');
     output: quotedAuthor
 - tapOn: ${output.composer.input}
-- inputText: Sharing this one
+# Unique per run, so it can't be confused with an earlier run's quote (which
+# may well be the post being quoted).
+- evalScript: ${output.quoteText = 'Sharing this one ' + Date.now().toString(36)}
+- inputText: ${output.quoteText}
 - tapOn:
     id: ${output.composer.submit}
 - extendedWaitUntil:
@@ -31,11 +45,13 @@ name: I can quote a post
 - tapOn:
     id: ${output.nav.profile}
 - extendedWaitUntil:
-    visible: Sharing this one
+    visible: ${output.quoteText}
     timeout: 30000
-- tapOn: Sharing this one
-- assertVisible: Sharing this one
-- evalBrowserScript:
-    script: return document.body.innerText
-    output: threadText
-- assertTrue: ${threadText.includes(quotedAuthor)}
+- tapOn: ${output.quoteText}
+- extendedWaitUntil:
+    visible: ${output.post.replyPrompt}
+    timeout: 30000
+# The quoted post loads separately from the thread.
+- extendedWaitUntil:
+    visible: ${quotedAuthor}
+    timeout: 30000

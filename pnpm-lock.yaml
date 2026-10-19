@@ -327,7 +327,7 @@ importers:
         version: 19.2.17
       '@types/react-test-renderer':
         specifier: ^19.1.0
-        version: 19.1.0
+        version: 19.3.0
       emojibase-data:
         specifier: ^17.0.0
         version: 17.0.0(emojibase@17.0.0)
@@ -858,6 +858,21 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+
+  tools/icons:
+    dependencies:
+      ico-endec:
+        specifier: 0.1.6
+        version: 0.1.6
+      opentype.js:
+        specifier: 2.0.0
+        version: 2.0.0
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@24.19.2)
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
   tools/static-bucket: {}
 
@@ -5489,8 +5504,8 @@ packages:
   '@types/react-router@5.1.20':
     resolution: {integrity: sha512-jGjmu/ZqS7FjSH6owMcD5qpq19+1RS9DeVRqfl1FeBMxTDQAGwlMWOcs52NDoXaNKyG3d1cYQFMs9rCrb88o9Q==}
 
-  '@types/react-test-renderer@19.1.0':
-    resolution: {integrity: sha512-XD0WZrHqjNrxA/MaR9O22w/RNidWR9YZmBdRGI7wcnWGrv/3dA8wKCJ8m63Sn+tLJhcjmuhOi629N66W6kgWzQ==}
+  '@types/react-test-renderer@19.3.0':
+    resolution: {integrity: sha512-TX4p2D4Z2oigM3SXU7+QyLSUnSR0vR1S1Pfxm/qFL9nHQ3jclgi6ioGoWQmlIr1DeKRVmPJrmNlhgM0JlWlLUg==}
 
   '@types/react@19.2.17':
     resolution: {integrity: sha512-MXfmqaVPEVgkBT/aY0aGCkRWWtByiYQXo3xdQ8r5RzuFrPiRn8Gar2tQdXSUQ2GKV3bkXckek89V8wQBY2Q/Aw==}
@@ -8297,6 +8312,9 @@ packages:
   hyphenate-style-name@1.1.0:
     resolution: {integrity: sha512-WDC/ui2VVRrz3jOVi+XtjqkDjiVjTtFaAGiW37k6b+ohyQ5wYDOGkvCZa8+H0nx3gyvv0+BST9xuOgIyGQ00gw==}
 
+  ico-endec@0.1.6:
+    resolution: {integrity: sha512-ZdLU38ZoED3g1j3iEyzcQj+wAkY2xfWNkymszfJPoxucIUhK7NayQ+/C4Kv0nDFMIsbtbEHldv3V8PU494/ueQ==}
+
   iconv-lite@0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}
     engines: {node: '>=0.10.0'}
@@ -10006,6 +10024,10 @@ packages:
 
   opener@1.5.2:
     resolution: {integrity: sha512-ur5UIdyw5Y7yEj9wLzhqXiy6GZ3Mwx0yGI+5sMn2r0N0v3cKJvUmFH5yPP+WXh9e0xfyzyJX95D8l088DNFj7A==}
+    hasBin: true
+
+  opentype.js@2.0.0:
+    resolution: {integrity: sha512-kCyjv6xdDY1W/jLWZ/L3QhhTlKUqDZMQ5+Jdlw12b3dXkKNpYBqqlMMj0YDQPShWFTMwgZI1hG14kN3XUDSg/A==}
     hasBin: true
 
   ora@3.4.0:
@@ -19708,7 +19730,7 @@ snapshots:
       '@types/history': 4.7.11
       '@types/react': 19.2.17
 
-  '@types/react-test-renderer@19.1.0':
+  '@types/react-test-renderer@19.3.0':
     dependencies:
       '@types/react': 19.2.17
 
@@ -23358,6 +23380,8 @@ snapshots:
 
   hyphenate-style-name@1.1.0: {}
 
+  ico-endec@0.1.6: {}
+
   iconv-lite@0.4.24:
     dependencies:
       safer-buffer: 2.1.2
@@ -25716,6 +25740,8 @@ snapshots:
 
   opener@1.5.2: {}
 
+  opentype.js@2.0.0: {}
+
   ora@3.4.0:
     dependencies:
       chalk: 2.4.2
@@ -26793,7 +26819,7 @@ snapshots:
   react-native-gesture-handler@2.32.0(react-native@0.86.0(@babel/core@7.29.7)(@react-native/jest-preset@0.86.0(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3):
     dependencies:
       '@egjs/hammerjs': 2.0.17
-      '@types/react-test-renderer': 19.1.0
+      '@types/react-test-renderer': 19.3.0
       hoist-non-react-statics: 3.3.2
       invariant: 2.2.4
       react: 19.2.3
@@ -26803,7 +26829,7 @@ snapshots:
   react-native-gesture-handler@2.32.0(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.3))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3):
     dependencies:
       '@egjs/hammerjs': 2.0.17
-      '@types/react-test-renderer': 19.1.0
+      '@types/react-test-renderer': 19.3.0
       hoist-non-react-statics: 3.3.2
       invariant: 2.2.4
       react: 19.2.3
@@ -26812,7 +26838,7 @@ snapshots:
   react-native-gesture-handler@2.32.0(react-native@0.86.2(@babel/core@7.29.7)(@react-native/jest-preset@0.86.2(@babel/core@7.29.7)(react@19.2.7))(@react-native/metro-config@0.86.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7):
     dependencies:
       '@egjs/hammerjs': 2.0.17
-      '@types/react-test-renderer': 19.1.0
+      '@types/react-test-renderer': 19.3.0
       hoist-non-react-statics: 3.3.2
       invariant: 2.2.4
       react: 19.2.7
