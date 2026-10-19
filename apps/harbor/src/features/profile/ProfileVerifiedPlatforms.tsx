@@ -1,6 +1,6 @@
 import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms, createThemedStyles, useTheme } from '@/src/common/theme';
 import type { ClaimWithStatus } from '@/src/features/verifications/utils/claim-status';
 import {
   getPlatformFromClaim,
@@ -18,6 +18,7 @@ export function ProfileVerifiedPlatforms({
   identityKey: string;
   logoSize: number;
 }) {
+  const styles = useStyles();
   const { claims } = useClaimsList(identityKey);
 
   const verifiedPlatformClaims = claims.flatMap((claim) => {
@@ -31,7 +32,7 @@ export function ProfileVerifiedPlatforms({
   if (verifiedPlatformClaims.length === 0) return null;
 
   return (
-    <View style={[Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_xs]}>
+    <View style={styles.list}>
       {verifiedPlatformClaims.map(({ claim, platform, account }, index) => (
         <VerifiedPlatformRow
           key={`${claim.keyFingerprint}-${claim.sequence}`}
@@ -60,6 +61,7 @@ function VerifiedPlatformRow({
   hasTrailingComma: boolean;
 }) {
   const { theme } = useTheme();
+  const styles = useStyles();
   // Attached to the row's last word so it never wraps onto next line on its own
   const comma = hasTrailingComma ? ',' : '';
 
@@ -78,12 +80,7 @@ function VerifiedPlatformRow({
           ),
         )
       }
-      style={({ pressed }) => [
-        Atoms.flex_row,
-        Atoms.items_center,
-        Atoms.gap_xs,
-        pressed && { opacity: 0.5 },
-      ]}
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       {platform.logo({
         size: logoSize,
@@ -93,7 +90,7 @@ function VerifiedPlatformRow({
         variant="small"
         color="neutral_500"
         numberOfLines={1}
-        style={{ flexShrink: 1 }}
+        style={styles.account}
       >
         {account}
         {platform.generic ? comma : null}
@@ -108,3 +105,12 @@ function VerifiedPlatformRow({
     </Pressable>
   );
 }
+
+const useStyles = createThemedStyles((_theme, define) =>
+  define({
+    list: [Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_xs],
+    row: [Atoms.flex_row, Atoms.items_center, Atoms.gap_xs],
+    rowPressed: { opacity: 0.5 },
+    account: Atoms.flex_shrink_1,
+  }),
+);
