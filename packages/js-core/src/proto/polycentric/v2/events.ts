@@ -417,6 +417,13 @@ export interface ListHeadsResponse {
     heads: EventKey[];
 }
 /**
+ * Empty: the identity comes from the auth token
+ *
+ * @generated from protobuf message polycentric.v2.SubscribeHeadsRequest
+ */
+export interface SubscribeHeadsRequest {
+}
+/**
  * @generated from protobuf message polycentric.v2.GetReactionsRequest
  */
 export interface GetReactionsRequest {
@@ -1528,6 +1535,44 @@ class ListHeadsResponse$Type extends MessageType<ListHeadsResponse> {
  */
 export const ListHeadsResponse = new ListHeadsResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class SubscribeHeadsRequest$Type extends MessageType<SubscribeHeadsRequest> {
+    constructor() {
+        super("polycentric.v2.SubscribeHeadsRequest", []);
+    }
+    create(value?: PartialMessage<SubscribeHeadsRequest>): SubscribeHeadsRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<SubscribeHeadsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SubscribeHeadsRequest): SubscribeHeadsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: SubscribeHeadsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.SubscribeHeadsRequest
+ */
+export const SubscribeHeadsRequest = new SubscribeHeadsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class GetReactionsRequest$Type extends MessageType<GetReactionsRequest> {
     constructor() {
         super("polycentric.v2.GetReactionsRequest", [
@@ -1757,6 +1802,7 @@ export const EventSyncService = new ServiceType("polycentric.v2.EventSyncService
     { name: "ListEvents", options: {}, I: ListEventsRequest, O: ListEventsResponse },
     { name: "PutEvents", options: {}, I: PutEventsRequest, O: PutEventsResponse },
     { name: "ListHeads", options: {}, I: ListHeadsRequest, O: ListHeadsResponse },
+    { name: "SubscribeHeads", serverStreaming: true, options: {}, I: SubscribeHeadsRequest, O: ListHeadsResponse },
     { name: "GetReactions", options: {}, I: GetReactionsRequest, O: GetReactionsResponse },
     { name: "GetAttributedToReactionCounts", options: {}, I: GetAttributedToReactionCountsRequest, O: GetAttributedToReactionCountsResponse }
 ]);
