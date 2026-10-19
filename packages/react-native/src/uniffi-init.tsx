@@ -11,11 +11,13 @@ if (!rustInstalled) {
 }
 
 // Export the generated bindings to the app.
+export * from './generated/rn/polycentric_common';
 export * from './generated/rn/polycentric_core';
 
 // Now import the bindings so we can:
 // - intialize them
 // - export them as namespaced objects as the default export.
+import * as polycentric_common from './generated/rn/polycentric_common';
 import * as polycentric_core from './generated/rn/polycentric_core';
 
 // Initialize the generated bindings: mostly checksums, but also callbacks.
@@ -23,6 +25,7 @@ import * as polycentric_core from './generated/rn/polycentric_core';
 //   is reloaded (e.g. during development with metro).
 let initialized = false;
 if (!initialized) {
+  polycentric_common.default.initialize();
   polycentric_core.default.initialize();
   initialized = true;
 }
@@ -36,6 +39,7 @@ export async function uniffiInitAsync() {
 
 // Export the crates as individually namespaced objects.
 export default {
+  polycentric_common,
   polycentric_core,
 };
 
