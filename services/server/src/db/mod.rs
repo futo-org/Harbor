@@ -15,32 +15,61 @@ pub mod client;
 /// queries that only read.
 // NOTE: we should only use the connection for one request, so this mutex should
 // never be contented, but its required for the ConnectionTrait implementation.
-pub(crate) struct DbConn(Mutex<sqlx::pool::PoolConnection<sqlx::Postgres>>);
+pub(crate) struct DbConn(DbInner);
+
+enum DbInner {
+    // TODO: remove the Mutex once we use our own connection type through out
+    // the code base and can remove the sea_orm::ConnectionTrait implementation.
+    Sqlx(Mutex<sqlx::pool::PoolConnection<sqlx::Postgres>>),
+    /// Mocked connection.
+    ///
+    /// Only used in internal tests.
+    #[cfg(test)]
+    Mock(std::sync::Arc<sea_orm::MockDatabaseConnection>),
+}
 
 impl DbConn {
     /// Acquire a database connection from the `pool`.
     pub(crate) async fn from_pool(
         pool: &sea_orm::DatabaseConnection,
     ) -> Result<DbConn, Status> {
-        let conn = pool
-            .get_postgres_connection_pool()
-            .acquire()
-            .await
-            .map_err(|err| {
-                tracing::error!(
-                    error = %err,
-                    "failed to acquire database connection"
-                );
-                Status::unavailable("unavailable")
-            })?;
-        Ok(DbConn(Mutex::new(conn)))
+        match &pool.inner {
+            sea_orm::DatabaseConnectionType::SqlxPostgresPoolConnection(_) => {
+                let pool = pool.get_postgres_connection_pool();
+                let conn = pool.acquire().await.map_err(|err| {
+                    tracing::error!(
+                        error = %err,
+                        "failed to acquire database connection"
+                    );
+                    Status::unavailable("unavailable")
+                })?;
+                Ok(DbConn(DbInner::Sqlx(Mutex::new(conn))))
+            }
+            #[cfg(test)]
+            sea_orm::DatabaseConnectionType::MockDatabaseConnection(conn) => {
+                Ok(DbConn(DbInner::Mock(conn.clone())))
+            }
+            sea_orm::DatabaseConnectionType::Disconnected => {
+                tracing::error!("database pool disconnected");
+                Err(Status::unavailable("unavailable"))
+            }
+        }
     }
 
     /// Begin a transaction.
     pub(crate) async fn begin<'c>(&'c mut self) -> Result<DbTx<'c>, DbErr> {
-        use sqlx::Acquire;
-        let tx = self.0.get_mut().begin().await.map_err(into_seaorm_error)?;
-        Ok(DbTx(Mutex::new(tx)))
+        match &mut self.0 {
+            DbInner::Sqlx(conn) => {
+                use sqlx::Acquire;
+                let tx =
+                    conn.get_mut().begin().await.map_err(into_seaorm_error)?;
+                Ok(DbTx(Mutex::new(tx)))
+            }
+            #[cfg(test)]
+            DbInner::Mock(_) => {
+                panic!("mocked database transaction not implemented")
+            }
+        }
     }
 }
 
@@ -51,11 +80,17 @@ impl ConnectionTrait for DbConn {
     }
 
     async fn execute_raw(&self, stmt: Statement) -> Result<ExecResult, DbErr> {
-        let query = sqlx_query(&stmt);
-        let mut conn = self.0.lock().await;
-        match query.execute(&mut **conn).await {
-            Ok(res) => Ok(res.into()),
-            Err(err) => Err(into_seaorm_error(err)),
+        match &self.0 {
+            DbInner::Sqlx(conn) => {
+                let query = sqlx_query(&stmt);
+                let mut conn = conn.lock().await;
+                match query.execute(&mut **conn).await {
+                    Ok(res) => Ok(res.into()),
+                    Err(err) => Err(into_seaorm_error(err)),
+                }
+            }
+            #[cfg(test)]
+            DbInner::Mock(conn) => conn.execute(stmt),
         }
     }
 
@@ -63,10 +98,20 @@ impl ConnectionTrait for DbConn {
         &self,
         sql: &str,
     ) -> Result<sea_orm::ExecResult, DbErr> {
-        let mut conn = self.0.lock().await;
-        match conn.execute(sqlx::AssertSqlSafe(sql.to_owned())).await {
-            Ok(res) => Ok(res.into()),
-            Err(err) => Err(into_seaorm_error(err)),
+        match &self.0 {
+            DbInner::Sqlx(conn) => {
+                let mut conn = conn.lock().await;
+                match conn.execute(sqlx::AssertSqlSafe(sql.to_owned())).await {
+                    Ok(res) => Ok(res.into()),
+                    Err(err) => Err(into_seaorm_error(err)),
+                }
+            }
+            #[cfg(test)]
+            DbInner::Mock(conn) => {
+                let db_backend = conn.get_database_backend();
+                let stmt = Statement::from_string(db_backend, sql);
+                conn.execute(stmt)
+            }
         }
     }
 
@@ -74,14 +119,20 @@ impl ConnectionTrait for DbConn {
         &self,
         stmt: Statement,
     ) -> Result<Option<QueryResult>, DbErr> {
-        let query = sqlx_query(&stmt);
-        let mut conn = self.0.lock().await;
-        match query.fetch_one(&mut **conn).await {
-            Ok(row) => Ok(Some(row.into())),
-            Err(err) => match err {
-                sqlx::Error::RowNotFound => Ok(None),
-                _ => Err(into_seaorm_error(err)),
-            },
+        match &self.0 {
+            DbInner::Sqlx(conn) => {
+                let query = sqlx_query(&stmt);
+                let mut conn = conn.lock().await;
+                match query.fetch_one(&mut **conn).await {
+                    Ok(row) => Ok(Some(row.into())),
+                    Err(err) => match err {
+                        sqlx::Error::RowNotFound => Ok(None),
+                        _ => Err(into_seaorm_error(err)),
+                    },
+                }
+            }
+            #[cfg(test)]
+            DbInner::Mock(conn) => conn.query_one(stmt),
         }
     }
 
@@ -89,11 +140,27 @@ impl ConnectionTrait for DbConn {
         &self,
         stmt: Statement,
     ) -> Result<Vec<QueryResult>, DbErr> {
-        let query = sqlx_query(&stmt);
-        let mut conn = self.0.lock().await;
-        match query.fetch_all(&mut **conn).await {
-            Ok(rows) => Ok(rows.into_iter().map(|r| r.into()).collect()),
-            Err(err) => Err(into_seaorm_error(err)),
+        match &self.0 {
+            DbInner::Sqlx(conn) => {
+                let query = sqlx_query(&stmt);
+                let mut conn = conn.lock().await;
+                match query.fetch_all(&mut **conn).await {
+                    Ok(rows) => {
+                        Ok(rows.into_iter().map(|r| r.into()).collect())
+                    }
+                    Err(err) => Err(into_seaorm_error(err)),
+                }
+            }
+            #[cfg(test)]
+            DbInner::Mock(conn) => conn.query_all(stmt),
+        }
+    }
+
+    fn is_mock_connection(&self) -> bool {
+        match &self.0 {
+            DbInner::Sqlx(_) => false,
+            #[cfg(test)]
+            DbInner::Mock(_) => true,
         }
     }
 }

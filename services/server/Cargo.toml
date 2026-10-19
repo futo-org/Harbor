@@ -33,7 +33,7 @@ prost.workspace = true
 prost-types.workspace = true
 rdkafka.workspace = true
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "query"] }
-sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio", "macros", "mock", "postgres-array"] }
+sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio", "postgres-array"] }
 sea-query-sqlx = { version = "0.9", default-features = false }
 sqlx = { version = "0.9", default-features = false, features = ["postgres"] }
 serde = { version = "1", default-features = false, features = ["std", "derive"] }
@@ -54,4 +54,5 @@ http = { version = "1", default-features = false, features = ["std"] }
 [dev-dependencies]
 ed25519-dalek.workspace = true
 mockito = { version = "1", default-features = false }
+sea-orm = { workspace = true, features = ["mock"] }
 tower = { version = "0.5", default-features = false }
