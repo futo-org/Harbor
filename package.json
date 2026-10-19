@@ -1,7 +1,7 @@
 {
   "name": "polycentric",
   "author": "FUTO",
-  "packageManager": "pnpm@10.34.5",
+  "packageManager": "pnpm@10.34.7",
   "scripts": {
     "dev": "turbo run dev --concurrency=20",
     "build": "turbo run build",
