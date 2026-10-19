@@ -10,7 +10,7 @@ use sea_orm::{
 use tonic::{Code, Status};
 
 use crate::data::EventWithContentRow;
-use crate::service::context::Context;
+use crate::service::context::RequestContext;
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::{
     Event, EventBundle, SerializedContent, SignedEvent,
@@ -31,7 +31,7 @@ impl HasEventKey for EventWithContentRow {
 
 /// The valid Delete tombstones for `keys`, by tombstoned event key.
 pub async fn validated_tombstones<Auth>(
-    ctx: &Context<Auth>,
+    ctx: &RequestContext<Auth>,
     keys: &[TargetEventKey],
 ) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, Status> {
     let raw = list_tombstones_for_event_keys(&ctx.db, keys)
@@ -45,7 +45,7 @@ pub async fn validated_tombstones<Auth>(
 
 /// The subset of `keys` whose events have a valid Delete tombstone.
 pub async fn tombstoned_keys<Auth>(
-    ctx: &Context<Auth>,
+    ctx: &RequestContext<Auth>,
     keys: &[TargetEventKey],
 ) -> Result<HashSet<TargetEventKey>, Status> {
     Ok(validated_tombstones(ctx, keys).await?.into_keys().collect())
@@ -189,7 +189,7 @@ fn content_to_delete_event_join() -> RelationDef {
 ///   2. The Delete event's signer is authorized under the
 ///      identity's chain
 pub async fn validate_tombstones<Auth>(
-    ctx: &Context<Auth>,
+    ctx: &RequestContext<Auth>,
     deletes_by_target: HashMap<TargetEventKey, Vec<EventBundle>>,
 ) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, Status> {
     let mut validated: HashMap<TargetEventKey, Vec<EventBundle>> =
@@ -211,7 +211,7 @@ pub async fn validate_tombstones<Auth>(
 }
 
 async fn is_tombstone_authorized<Auth>(
-    ctx: &Context<Auth>,
+    ctx: &RequestContext<Auth>,
     target_key: &TargetEventKey,
     bundle: &EventBundle,
 ) -> Result<bool, Status> {

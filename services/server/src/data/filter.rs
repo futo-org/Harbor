@@ -3,11 +3,11 @@ use tonic::Status;
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline::Fetched;
 use crate::data::{EventRow, PageInfo};
-use crate::service::context::Context;
+use crate::service::context::RequestContext;
 
 /// Filter out deleted events.
 pub async fn deleted<Params, Row, SortedBy, A>(
-    _: &Context<A>,
+    _: &RequestContext<A>,
     _: &Params,
     fetched: Fetched<Row, SortedBy>,
     hydration: &HydrationState,
@@ -27,7 +27,7 @@ where
 
 /// Filter out deleted events or events by blocked identities.
 pub async fn deleted_or_blocked<Params, Row, SortedBy, A>(
-    _: &Context<A>,
+    _: &RequestContext<A>,
     _: &Params,
     fetched: Fetched<Row, SortedBy>,
     hydration: &HydrationState,

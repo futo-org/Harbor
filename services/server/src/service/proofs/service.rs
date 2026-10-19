@@ -8,12 +8,12 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 use tonic::Status;
 
-use crate::service::context::Context;
+use crate::service::context::RequestContext;
 
 /// Build an `EventProof` for `leaf_signature` (in `(identity,
 /// collection)`) against a `target`.
 async fn build_proof_against<Auth>(
-    ctx: &Context<Auth>,
+    ctx: &RequestContext<Auth>,
     identity: &str,
     collection: i32,
     target: &EventProofTarget,
@@ -59,7 +59,7 @@ async fn build_proof_against<Auth>(
 /// latest cached identity content and build a proof against it. Requires
 /// the cache to have been warmed (e.g. via `build_identity_hints`).
 async fn build_revocation_proof<Auth>(
-    ctx: &Context<Auth>,
+    ctx: &RequestContext<Auth>,
     identity: &str,
     collection: i32,
     signer: &PublicKey,
@@ -79,7 +79,7 @@ async fn build_revocation_proof<Auth>(
 /// Add a revocation `EventProof` to each bundle whose signer is recorded
 /// as revoked in the latest identity content for that identity.
 pub async fn attach_proofs<'a, II, I, Auth>(
-    ctx: &Context<Auth>,
+    ctx: &RequestContext<Auth>,
     bundles: II,
 ) -> Result<(), Status>
 where

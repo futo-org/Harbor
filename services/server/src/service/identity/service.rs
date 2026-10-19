@@ -12,7 +12,7 @@ use tonic::Status;
 use crate::data::EventWithContentRow;
 use crate::db::DbConn;
 use crate::service::content::content_filestore::ContentFilestore;
-use crate::service::context::Context;
+use crate::service::context::RequestContext;
 use crate::service::feeds::repository::{self as FeedsRepository};
 use crate::service::identity::chain;
 use crate::service::identity::repository::{
@@ -224,7 +224,7 @@ async fn delete_blobs(
 /// sequentially so MockDatabase-backed tests stay deterministic; skips the
 /// lookups entirely for an empty list.
 pub async fn list_identity_and_profile_events<A>(
-    ctx: &Context<A>,
+    ctx: &RequestContext<A>,
     identities: Vec<String>,
 ) -> Result<(Vec<EventWithContentRow>, Vec<EventWithContentRow>), Status> {
     if identities.is_empty() {
@@ -239,7 +239,7 @@ pub async fn list_identity_and_profile_events<A>(
 /// each identity in `identities`, and warm the proof cache from
 /// whichever Identity content payload is freshest per identity.
 pub async fn list_identity_events<A>(
-    ctx: &Context<A>,
+    ctx: &RequestContext<A>,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     let rows =
@@ -253,7 +253,7 @@ pub async fn list_identity_events<A>(
 /// Fetch the latest profile event (display name, avatar, banner)
 /// for each identity in `identities`.
 pub async fn list_profile_events<A>(
-    ctx: &Context<A>,
+    ctx: &RequestContext<A>,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     FeedsRepository::Query::list_latest_profiles_for_identities(
@@ -273,7 +273,7 @@ pub async fn list_profile_events<A>(
 /// IDENTITY event poison the cache and impersonate the identity for
 /// everything that reads it (auth, event-write authorization, proofs).
 async fn warm_identity_cache<A>(
-    ctx: &Context<A>,
+    ctx: &RequestContext<A>,
     rows: &[EventWithContentRow],
 ) {
     let mut by_identity: HashMap<&str, Vec<&EventWithContentRow>> =

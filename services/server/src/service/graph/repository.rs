@@ -14,7 +14,7 @@ use tonic::Status;
 use crate::data::EventWithContentRow;
 use crate::data::hydration::event_identities;
 use crate::data::{Cursor, CursorFilter, EventRow};
-use crate::service::context::{Auth, Context};
+use crate::service::context::{Auth, RequestContext};
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
 use crate::service::proto::Content;
@@ -88,7 +88,7 @@ impl Query {
     /// TODO: We can either cache these OR keep a follower table that we update on ingest.
     /// This current query is inefficient.
     pub async fn list_followed_identities<A>(
-        ctx: &Context<A>,
+        ctx: &RequestContext<A>,
         caller: &str,
     ) -> Result<Vec<String>, Status> {
         list_graph_targets(ctx, caller, decode_followed_identity).await
@@ -128,10 +128,10 @@ impl Query {
     /// request arrived unauthenticated, as there is then no caller whose
     /// blocks could apply.
     pub async fn blocked_set_for_caller<A>(
-        ctx: &Context<A>,
+        ctx: &RequestContext<A>,
     ) -> Result<HashSet<String>, Status>
     where
-        Context<A>: Auth,
+        RequestContext<A>: Auth,
     {
         match ctx.identity() {
             Some(caller) => Self::blocked_set(&ctx.db, caller).await,
@@ -195,7 +195,7 @@ impl Query {
     /// TODO: same inefficiency as `list_followed_identities` — a
     /// maintained counter would avoid scanning the graph rows.
     pub async fn count_following<A>(
-        ctx: &Context<A>,
+        ctx: &RequestContext<A>,
         identity: &str,
     ) -> Result<u64, Status> {
         Ok(Self::list_followed_identities(ctx, identity).await?.len() as u64)
@@ -204,7 +204,7 @@ impl Query {
     /// Count of distinct identities following `identity`
     /// (tombstone-aware).
     pub async fn count_followers<A>(
-        ctx: &Context<A>,
+        ctx: &RequestContext<A>,
         identity: &str,
     ) -> Result<u64, Status> {
         let rows: Vec<EventWithContentRow> = follow_events_query()
@@ -532,7 +532,7 @@ impl Query {
 /// Obtains the targets of graph events authored by `caller`. The `extract`
 /// function filters for specific types of graph events.
 async fn list_graph_targets<A>(
-    ctx: &Context<A>,
+    ctx: &RequestContext<A>,
     caller: &str,
     extract: fn(&content::Model) -> Option<String>,
 ) -> Result<Vec<String>, Status> {

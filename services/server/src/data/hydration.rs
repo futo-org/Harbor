@@ -2,7 +2,7 @@ use crate::config;
 use crate::data::{
     EventRow, EventWithContentRow, assemble_hint, row_into_hint,
 };
-use crate::service::context::{Auth, Context};
+use crate::service::context::{Auth, RequestContext};
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{self as feeds_repository};
 use crate::service::graph::repository::Query as GraphRepository;
@@ -82,13 +82,13 @@ pub struct HydrateConfig {
 }
 
 pub async fn hydrate<Row, A>(
-    ctx: &Context<A>,
+    ctx: &RequestContext<A>,
     rows: &[Row],
     config: &HydrateConfig,
 ) -> Result<HydrationState, Status>
 where
     Row: EventRow,
-    Context<A>: Auth,
+    RequestContext<A>: Auth,
 {
     let keys: Vec<TargetEventKey> = rows
         .iter()
@@ -189,12 +189,12 @@ where
 /// * Latest profile event (display name / avatar / banner) for every identity
 ///   referenced.
 pub async fn post_hydrate<Row, A>(
-    ctx: &Context<A>,
+    ctx: &RequestContext<A>,
     rows: &[Row],
 ) -> Result<HydrationState, Status>
 where
     Row: EventRow,
-    Context<A>: Auth,
+    RequestContext<A>: Auth,
 {
     let config = HydrateConfig {
         post: true,
