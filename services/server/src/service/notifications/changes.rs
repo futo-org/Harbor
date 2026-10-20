@@ -76,8 +76,8 @@ pub fn subscribe() -> broadcast::Receiver<Change> {
 }
 
 /// Announces that `identity`'s notifications changed.
-pub async fn notify(
-    db: &DatabaseConnection,
+pub async fn notify<C: ConnectionTrait>(
+    db: &C,
     identity: &str,
 ) -> Result<(), DbErr> {
     db.execute_raw(Statement::from_sql_and_values(

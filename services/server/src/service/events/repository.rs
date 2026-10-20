@@ -1,7 +1,3 @@
-use crate::service::content::content_repository::Mutation as ContentRepository;
-use crate::service::content::repository::Mutation as ContentChildRepository;
-use crate::service::content::repository::{EventKeyParts, split_event_key};
-use crate::service::events::rpc::put_events::event_is_authorised;
 use ::entity::{
     application, block, content, content_delete, event, follow, profile, quote,
     reaction, reaction_tally, reply, repost,
@@ -20,6 +16,11 @@ use sea_orm::sea_query::{
 use sea_orm::*;
 use tonic::Status;
 
+use crate::service::content::content_repository::Mutation as ContentRepository;
+use crate::service::content::repository::Mutation as ContentChildRepository;
+use crate::service::content::repository::{EventKeyParts, split_event_key};
+use crate::service::events::rpc::put_events::event_is_authorised;
+
 const COLLECTION_FEED: i16 = collections::FEED as i16;
 const COLLECTION_PROFILE: i16 = collections::PROFILE as i16;
 const COLLECTION_SOCIAL: i16 = collections::SOCIAL_GRAPH as i16;
@@ -29,8 +30,8 @@ pub struct Query;
 
 impl Query {
     #[allow(clippy::too_many_arguments)]
-    pub async fn list_events(
-        db: &DbConn,
+    pub async fn list_events<C: ConnectionTrait>(
+        db: &C,
         mut limit: Option<u64>,
         collection: Option<i32>,
         identity: String,
@@ -110,8 +111,8 @@ impl Query {
     }
 
     /// Find the latest sequence numbers for an identity
-    pub async fn list_heads(
-        db: &DbConn,
+    pub async fn list_heads<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
     ) -> Result<Vec<HeadInfoRow>, DbErr> {
         event::Entity::find()
