@@ -13,14 +13,18 @@ import {
   BorderRadius,
   type PaletteColorToken,
   type BorderRadiusToken,
+  type FontSizeToken,
+  type LineHeightToken,
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
-import { WEB_FONT_STACK } from './Text';
+import { NATIVE_FONTS, WEB_FONT_STACK } from './Text';
 
 export interface TextInputProps
   extends Omit<RNTextInputProps, 'placeholderTextColor'> {
   variant?: 'default' | 'plain';
   rounded?: BorderRadiusToken;
+  fontSize?: FontSizeToken;
+  lineHeight?: LineHeightToken;
   placeholderTextColor?: PaletteColorToken;
   disabled?: boolean;
   error?: boolean;
@@ -35,6 +39,8 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       placeholderTextColor,
       variant = 'default',
       rounded = 'md',
+      fontSize = 'md',
+      lineHeight = 'md',
       disabled = false,
       error = false,
       autoCorrect = false,
@@ -54,8 +60,9 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     const baseStyle: TextStyle = {
       paddingVertical: 12,
       paddingHorizontal: 12,
-      fontSize: typography.fontSize.md,
-      color: disabled ? theme.palette.neutral_500 : theme.palette.neutral_1000,
+      fontSize: typography.fontSize[fontSize],
+      lineHeight: typography.lineHeight[lineHeight],
+      color: disabled ? theme.palette.neutral_500 : theme.palette.neutral_900,
       opacity: disabled ? 0.5 : 1,
       ...(Platform.OS === 'web'
         ? ({
@@ -65,13 +72,13 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
             outlineWidth: 0,
             resize: 'none',
           } as unknown as TextStyle)
-        : null),
+        : { fontFamily: NATIVE_FONTS['400'].normal }),
     };
 
     const multilineStyle: TextStyle = multiline
       ? {
           ...(numberOfLines && {
-            minHeight: numberOfLines * typography.lineHeight.md,
+            minHeight: numberOfLines * typography.lineHeight[lineHeight],
           }),
           textAlignVertical: 'top',
         }
