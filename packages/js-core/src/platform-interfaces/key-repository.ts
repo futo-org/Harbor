@@ -11,8 +11,8 @@ export interface KeyPair {
   publicKey: PublicKey;
 }
 
-export type PersistedKeyPair = {
-  keyPair: KeyPair;
+export type PersistedKey = {
+  publicKey: PublicKey;
   identity: string;
   status: KeyPairStatus;
 };
@@ -94,7 +94,7 @@ export interface IKeyRepository {
    * Update the status field of the key pair.
    * Fails if the status is set to `'pendingDeletion'`.
    */
-  changeKeyPairStatus(
+  changeKeyStatus(
     publicKey: PublicKey,
     newStatus: KeyPairStatus,
   ): Promise<void>;
@@ -102,7 +102,12 @@ export interface IKeyRepository {
   /**
    * List the key pairs, optionally filtered by the associated identity.
    */
-  listKeyPairs(identity?: string): Promise<PersistedKeyPair[]>;
+  listKeys(identity?: string): Promise<PersistedKey[]>;
+
+  /**
+   * Get the private key associated with a public key.
+   */
+  getPrivateKey(publicKey: PublicKey): Promise<PrivateKey | null>;
 
   /**
    * Delete a key pair from the local repository.
