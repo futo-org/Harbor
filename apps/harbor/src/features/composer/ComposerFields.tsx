@@ -5,7 +5,13 @@ import {
   TextArea,
 } from '@/src/common/components/primitives';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
+import {
+  Atoms,
+  Spacing,
+  typography,
+  useTheme,
+  withHexOpacity,
+} from '@/src/common/theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,10 +34,8 @@ import { useMentionInputSync } from '@/src/features/composer/hooks/useMentionInp
 import { useTutorialHintsStore } from '@/src/common/lib/useTutorialHintsStore';
 
 const ATTACHMENT_GAP = Spacing.sm;
-// Spare height below the text on Android: any value that fits one more line
-// (a 16px system-font line is ~19-21px). Once inputs use the app font with an
-// explicit lineHeight, set this to that lineHeight.
-const NEW_LINE_HEADROOM = 30;
+// Spare height below the text on Android, enough for one more line.
+const NEW_LINE_HEADROOM = typography.lineHeight.lg;
 
 type Attachment = ReturnType<typeof useComposer>['attachments'][number];
 
@@ -216,7 +220,10 @@ export function ComposerFields({
               Atoms.px_0,
               Atoms.py_0,
               Atoms.pt_sm,
-              Atoms.text_lg,
+              {
+                fontSize: typography.fontSize.lg,
+                lineHeight: typography.lineHeight.lg,
+              },
               // Android auto-grows the input one frame too late, causing the text to temporarily scroll, which looks
               // like a blip/flash (https://github.com/react/react-native/issues/46813,
               // https://github.com/react/react-native/issues/33165). If we add an extra space for the new line to go
