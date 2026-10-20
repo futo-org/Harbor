@@ -5,9 +5,7 @@ use std::collections::HashMap;
 use std::hash::{BuildHasher, RandomState};
 use std::sync::{Arc, OnceLock, PoisonError, RwLock};
 
-use common_valkey::{
-    AsyncTypedCommands, Clients, PubSubCommands, PubSubMessage,
-};
+use common_valkey::{Clients, Message as PubSubMessage};
 use polycentric_common::models::heads::Heads;
 use polycentric_common::models::protos_v2::{EventKey, ListHeadsResponse};
 use prost::Message;
@@ -42,6 +40,7 @@ pub fn init(
         hasher: RandomState::new(),
     });
     tokio::spawn(pubsub.receive());
+    tokio::spawn(pubsub.refresh_on_resubscribe());
 }
 
 /// The pub/sub, or `None` when `HARBOR_VALKEY_URL` isn't set.
@@ -63,11 +62,8 @@ impl HeadsPubSub {
     /// Announces that `identity` stored the events with `keys`.
     pub async fn publish(&self, identity: &str, keys: Vec<EventKey>) {
         let payload = Heads::from_iter(keys).to_response().encode_to_vec();
-        if let Err(e) = self
-            .valkey
-            .publisher
-            .publish(self.channel(identity), payload)
-            .await
+        if let Err(e) =
+            self.valkey.publish(&self.channel(identity), payload).await
         {
             tracing::warn!(error = %e, "heads publish error");
         }
@@ -85,8 +81,7 @@ impl HeadsPubSub {
             Some(rx) => rx,
             None => {
                 self.valkey
-                    .subscriber
-                    .subscribe(&[self.channel(identity)])
+                    .subscribe(&self.channel(identity))
                     .await
                     .map_err(|e| {
                         tracing::warn!(error = %e, "heads subscribe error");
@@ -124,11 +119,8 @@ impl HeadsPubSub {
             }
         };
         if unused
-            && let Err(e) = self
-                .valkey
-                .subscriber
-                .unsubscribe(&[self.channel(identity)])
-                .await
+            && let Err(e) =
+                self.valkey.unsubscribe(&self.channel(identity)).await
         {
             tracing::warn!(error = %e, "heads unsubscribe error");
         }
@@ -149,16 +141,25 @@ impl HeadsPubSub {
     }
 
     fn on_message(&self, message: PubSubMessage) {
-        let Ok(channel) = std::str::from_utf8(&message.channel) else {
-            return;
-        };
-        let Some(identity) = channel_identity(channel, &self.channel_prefix)
+        // The subscriber is shared, so other features' channels pass by here.
+        let Some(identity) =
+            channel_identity(message.get_channel_name(), &self.channel_prefix)
         else {
             return;
         };
-        match ListHeadsResponse::decode(message.payload) {
+        match ListHeadsResponse::decode(message.get_payload_bytes()) {
             Ok(response) => self.merge(identity, response.heads),
             Err(e) => tracing::warn!(error = %e, "heads message decode error"),
+        }
+    }
+
+    async fn refresh_on_resubscribe(&'static self) {
+        let mut resubscribed = self.valkey.resubscribed();
+        loop {
+            match resubscribed.recv().await {
+                Ok(()) | Err(RecvError::Lagged(_)) => self.refresh().await,
+                Err(RecvError::Closed) => return,
+            }
         }
     }
 

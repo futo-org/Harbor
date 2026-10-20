@@ -88,19 +88,18 @@ async fn main() {
 static VALKEY: OnceLock<common_valkey::Clients> = OnceLock::new();
 
 /// Valkey clients when `HARBOR_VALKEY_URL` is set.
-async fn connect_valkey() -> Option<&'static common_valkey::Clients> {
+fn connect_valkey() -> Option<&'static common_valkey::Clients> {
     let url = config::get().valkey_url.as_deref()?;
-    let clients = common_valkey::Clients::connect(url)
-        .await
-        .expect("invalid HARBOR_VALKEY_URL");
-    Some(VALKEY.get_or_init(|| clients))
+    Some(VALKEY.get_or_init(|| {
+        common_valkey::Clients::connect(url).expect("invalid HARBOR_VALKEY_URL")
+    }))
 }
 
 /// Run the API server: gRPC + HTTP merged onto a single port.
 async fn run_server() {
     common_telemetry::init_metrics("server");
     let (db, ro_db) = connect_db_with_retry(true).await;
-    let valkey = connect_valkey().await;
+    let valkey = connect_valkey();
     service::notifications::changes::init(valkey, &config::get().server_name);
     if let Some(valkey) = valkey {
         service::events::heads_pubsub::init(
@@ -152,7 +151,7 @@ async fn run_workers(only: Vec<String>) {
     // Workers write rebuildable caches; skip the WAL flush wait per commit.
     let (db, ro_db) = connect_db_with_retry(false).await;
     service::notifications::changes::init(
-        connect_valkey().await,
+        connect_valkey(),
         &config::get().server_name,
     );
     let kafka_producer = build_producer()

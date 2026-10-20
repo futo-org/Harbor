@@ -79,7 +79,7 @@ flowchart LR
     W --> S1 & S2
     S1 -- heads --> D1[device A]
     S2 -- heads --> D2[tab B]
-    SUB -. "once per subscription" .-> PG
+    SUB -. "once per subscription,\nand after a reconnect" .-> PG
 ```
 
 Each `server serve` process holds two Valkey connections for the life of the
@@ -104,7 +104,7 @@ events, receives the newest heads and skips the ones in between.
 | ------------------------------ | ---------------------------------------------- |
 | Stream opens                   | one `ListHeads` query on the primary           |
 | Event stored                   | none (the heads travel in the message)         |
-| Subscriber lag                 | one `ListHeads` per identity followed on the process, 16 at a time |
+| Valkey reconnect or lag        | one `ListHeads` per identity followed on the process, 16 at a time |
 | Idle                           | none                                           |
 
 ## A new event
@@ -148,13 +148,13 @@ merges into the same heads, so nothing falls in the gap.
 
 ## Failures
 
-- **Valkey restarts or the connection drops.** GLIDE reconnects with backoff
-  and resubscribes to every channel the process follows. Messages sent while
-  disconnected are lost; a client that misses one catches up on the next head
-  or when it reopens its stream.
+- **Valkey restarts or the connection drops.** The client reconnects with
+  backoff and resubscribes to every channel the process follows, then the
+  process re-reads those identities' heads from the database, since messages
+  sent while disconnected are lost.
 - **The subscriber falls behind.** Messages for the whole process pass through one
   buffer of 4096. If it overflows, the process re-reads the heads of every
-  identity it follows.
+  identity it follows, as after a reconnect.
 - **Valkey is unreachable at startup.** The server starts anyway, logs a
   `valkey error` on each attempt and keeps retrying. Until it connects,
   `SubscribeHeads` answers `UNAVAILABLE` and `PutEvents` logs failed publishes.
@@ -191,8 +191,7 @@ With `N` events per second and `R` server replicas:
   for that identity, so outgoing traffic is about `N` times the number of
   replicas following the identity, independent of `R`. A single Valkey node
   handles a few hundred thousand small publishes per second. Beyond that, a
-  cluster would need the cluster client and sharded channels (`SPUBLISH`),
-  which GLIDE only offers in cluster mode.
+  cluster would need the cluster client and sharded channels (`SPUBLISH`).
 - **Server replicas.** Each holds two Valkey connections and one `watch` per
   followed identity, and does a hash lookup per message it receives.
 - **Load balancer.** Streams are long-lived HTTP/2 requests. Allow long or no
@@ -208,9 +207,9 @@ With `N` events per second and `R` server replicas:
 | `HARBOR_VALKEY_URL` | _(unset)_ | Valkey or Redis URL: `redis://[user:password@]host:6379`, or `rediss://` for TLS. Unset turns live sync off and keeps the [unread notifications](unread-notifications.md) change feed in-process. |
 
 Valkey holds no data for this, so it needs no persistence or backups. The dev
-stack in `compose.yml` runs one. The services use Valkey's own client,
-[GLIDE](https://valkey.io/valkey-glide/), through the `common-valkey` crate,
-over RESP3 (pub/sub pushes need it).
+stack in `compose.yml` runs one. The services talk to it with
+[redis-rs](https://github.com/redis-rs/redis-rs) through the `common-valkey`
+crate, over RESP3 (pub/sub pushes need it).
 
 ## Where the code is
 

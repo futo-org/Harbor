@@ -4,6 +4,6 @@ version = "0.0.1"
 edition = "2024"
 
 [dependencies]
-valkey-glide.workspace = true
-tokio = { workspace = true, features = ["rt", "sync"] }
+redis = { workspace = true, features = ["tokio-comp", "connection-manager", "tokio-rustls-comp"] }
+tokio = { workspace = true, features = ["rt", "sync", "time"] }
 tracing.workspace = true

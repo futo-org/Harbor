@@ -79,12 +79,10 @@ holds one Valkey subscriber connection, shared with live heads, and
 `changes::init` subscribes it to the deployment's channel at startup.
 Everything received is copied onto a `tokio::sync::broadcast` channel. A
 subscription is a tokio task holding a receiver on that channel: no
-connection, no polling. If the Valkey connection drops, GLIDE reconnects and
-resubscribes. Valkey does not queue messages sent while nobody listens, so
-the feed broadcasts a "changed for everyone" message when it first
-subscribes and whenever its buffer overflows, and each open stream re-counts.
-A change published during a disconnect reaches the stream on the identity's
-next change, or when the client reopens the stream.
+connection, no polling. If the Valkey connection drops, the client reconnects
+and resubscribes. Valkey does not queue messages sent while nobody listens, so
+after every (re)connect, and whenever the feed's buffer overflows, it
+broadcasts a "changed for everyone" message and each open stream re-counts.
 
 The feed used Postgres `LISTEN`/`NOTIFY` before. That cannot cross a
 transaction-mode PgBouncer: `LISTEN` sticks to the backend connection, which

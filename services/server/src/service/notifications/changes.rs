@@ -4,13 +4,11 @@
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use common_valkey::{
-    AsyncTypedCommands, Clients, PubSubCommands, PubSubMessage,
-};
+use common_valkey::{Clients, Message};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::error::RecvError;
 
-/// `All` follows a connect or a lag, when changes may have been missed.
+/// `All` follows a (re)connect or a lag, when changes may have been missed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Change {
     Identity(Arc<str>),
@@ -38,16 +36,12 @@ pub fn init(valkey: Option<&'static Clients>, server_name: &str) {
         channel: channel_name(server_name),
     });
     tokio::spawn(feed.receive());
+    tokio::spawn(feed.announce_resubscribes());
 }
 
 impl Feed {
     async fn receive(&'static self) {
-        while let Err(e) = self
-            .valkey
-            .subscriber
-            .subscribe(&[self.channel.as_str()])
-            .await
-        {
+        while let Err(e) = self.valkey.subscribe(&self.channel).await {
             tracing::warn!(error = %e, "notification feed subscribe error");
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
@@ -66,12 +60,30 @@ impl Feed {
         }
     }
 
-    fn on_message(&self, message: PubSubMessage) {
-        if message.channel != self.channel {
+    fn on_message(&self, message: Message) {
+        // The subscriber is shared, so other features' channels pass by here.
+        if message.get_channel_name() != self.channel {
             return;
         }
-        if let Ok(identity) = std::str::from_utf8(&message.payload) {
-            let _ = sender().send(Change::Identity(identity.into()));
+        match std::str::from_utf8(message.get_payload_bytes()) {
+            Ok(identity) => {
+                let _ = sender().send(Change::Identity(identity.into()));
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "notification feed payload is not an identity")
+            }
+        }
+    }
+
+    async fn announce_resubscribes(&'static self) {
+        let mut resubscribed = self.valkey.resubscribed();
+        loop {
+            match resubscribed.recv().await {
+                Ok(()) | Err(RecvError::Lagged(_)) => {
+                    let _ = sender().send(Change::All);
+                }
+                Err(RecvError::Closed) => return,
+            }
         }
     }
 }
@@ -85,12 +97,7 @@ pub fn subscribe() -> broadcast::Receiver<Change> {
 pub async fn notify(identity: &str) {
     match FEED.get() {
         Some(feed) => {
-            if let Err(e) = feed
-                .valkey
-                .publisher
-                .publish(feed.channel.as_str(), identity)
-                .await
-            {
+            if let Err(e) = feed.valkey.publish(&feed.channel, identity).await {
                 tracing::warn!(error = %e, "notification feed publish error");
             }
         }
