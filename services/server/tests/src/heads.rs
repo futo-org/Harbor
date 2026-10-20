@@ -33,7 +33,7 @@ async fn heads_stream_follows_events_from_another_device() {
     let initial = next_heads(&mut stream).await;
     assert!(!initial.is_empty(), "the identity event is a head");
 
-    device.post_text("from another device", DEFAULT_CREATED_AT + HOUR);
+    device.post_text("from another device", current_timestamp() + 1);
     let post = device.get_last_event_key();
     device.submit_events().await;
 

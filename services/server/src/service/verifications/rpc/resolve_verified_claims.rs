@@ -1,17 +1,20 @@
 //! Reverse lookup: claims whose fields match given values and that a trusted
 //! identity has verified, optionally scoped to a schema by digest. Returns
 //! each matching claim with its targets and verifies.
+
+use std::collections::HashSet;
+
+use tonic::Status;
+
 use crate::data::hydration::HydrationState;
 use crate::data::pipeline;
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::HasEventKey;
 use crate::service::proto::{
     ResolveVerifiedClaimsRequest, ResolveVerifiedClaimsResponse,
 };
 use crate::service::verifications::repository::Query as Repository;
-use std::collections::HashSet;
-use tonic::Status;
 
 use super::common::claim_bundles::{self, FetchedClaims};
 use super::common::map_db_err;
@@ -23,7 +26,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: ResolveVerifiedClaimsRequest,
 ) -> Result<ResolveVerifiedClaimsResponse, Status> {
     if req.verified_by_identities.is_empty() {
@@ -57,7 +60,7 @@ pub async fn handle(
         verified_by: req.verified_by_identities.into_iter().collect(),
     };
     let view = pipeline::create_pipeline(
-        ctx,
+        &ctx,
         &params,
         fetch,
         claim_bundles::hydrate,
@@ -72,11 +75,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
     let claims = Repository::list_claim_events_by_fields(
-        &ctx.ro_db,
+        &ctx.db,
         params.schema_digest.clone(),
         params.match_fields.clone(),
         &params.verified_by,
@@ -91,7 +94,7 @@ async fn fetch(
 /// revoked (tombstoned) verify would still confer verified status on its claim
 /// even though it is stripped from the returned bundle.
 async fn filter(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
     fetched: FetchedClaims,
     hydration: &HydrationState,
@@ -125,13 +128,15 @@ fn retain_trusted(
 
 #[cfg(test)]
 mod tests {
-    use super::{FetchedClaims, retain_trusted};
+    use std::collections::HashSet;
+
     use crate::service::events::TargetEventKey;
     use crate::service::verifications::repository::VerificationEventDto;
     use crate::service::verifications::rpc::common::tests::{
         claim_row, event_row,
     };
-    use std::collections::HashSet;
+
+    use super::{FetchedClaims, retain_trusted};
 
     fn trusted(identities: &[&str]) -> HashSet<String> {
         identities.iter().map(|s| s.to_string()).collect()

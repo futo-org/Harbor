@@ -51,6 +51,10 @@ pub struct Model {
     // Timestamp the server received the event
     pub synced_at: DateTimeWithTimeZone,
 
+    // Type of the content (see `content_types`), denormalized from the
+    // content for filtering. None if the event was stored without content.
+    pub content_type: Option<i16>,
+
     /// Only if this is a follow event.
     #[sea_orm(has_one)] // Really has zero or one.
     pub follow: HasOne<super::follow::Entity>,

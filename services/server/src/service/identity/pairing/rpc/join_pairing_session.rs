@@ -2,7 +2,7 @@
 
 use tonic::Status;
 
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::identity::pairing::rpc::common::{
     list_claimers, session_state,
@@ -12,7 +12,7 @@ use crate::service::proto::{
 };
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: JoinPairingSessionRequest,
 ) -> Result<JoinPairingSessionResponse, Status> {
     let claimer_key = req

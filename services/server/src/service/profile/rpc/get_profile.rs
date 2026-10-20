@@ -2,7 +2,7 @@
 //! follow counters.
 
 use crate::data::{rows_into_bundles, rows_into_hints};
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{
     list_identity_events, list_profile_events,
@@ -12,7 +12,7 @@ use crate::service::proto::{GetProfileRequest, GetProfileResponse};
 use tonic::Status;
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: GetProfileRequest,
 ) -> Result<GetProfileResponse, Status> {
     if req.identity.is_empty() {
@@ -20,20 +20,20 @@ pub async fn handle(
     }
 
     let profile_rows =
-        list_profile_events(ctx, vec![req.identity.clone()]).await?;
+        list_profile_events(&ctx, vec![req.identity.clone()]).await?;
     let mut event_bundles = rows_into_bundles(profile_rows);
-    attach_proofs(ctx, &mut event_bundles).await?;
+    attach_proofs(&ctx, &mut event_bundles).await?;
 
     let identity_rows =
-        list_identity_events(ctx, vec![req.identity.clone()]).await?;
+        list_identity_events(&ctx, vec![req.identity.clone()]).await?;
     // The identity's key chain, so clients can validate the bundles.
     let event_hints = rows_into_hints(identity_rows);
 
     let following_count =
-        GraphRepository::count_following(ctx, &req.identity).await?;
+        GraphRepository::count_following(&ctx, &req.identity).await?;
 
     let followers_count =
-        GraphRepository::count_followers(ctx, &req.identity).await?;
+        GraphRepository::count_followers(&ctx, &req.identity).await?;
 
     Ok(GetProfileResponse {
         event_bundles,
@@ -45,9 +45,13 @@ pub async fn handle(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use sea_orm::{DbBackend, MockDatabase};
     use std::sync::Arc;
+
+    use sea_orm::{DbBackend, MockDatabase};
+
+    use crate::service::context::ServiceContext;
+
+    use super::*;
 
     // Only the sequential guard is tested here. The counters and event listings
     // it composes are covered by the graph repository tests.
@@ -57,10 +61,13 @@ mod tests {
         let kafka_producer = common_kafka::build_producer()
             .await
             .expect("failed to build Kafka producer");
-        let ctx = Arc::new(ServiceContext::new(db.clone(), db, kafka_producer));
+        let ctx = Arc::new(ServiceContext::new(db.clone(), db, kafka_producer))
+            .public_ro(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let result = handle(
-            &ctx,
+            ctx,
             GetProfileRequest {
                 identity: String::new(),
             },

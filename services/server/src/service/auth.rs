@@ -308,6 +308,7 @@ mod tests {
             event_bytes: vec![1],
             created_at: now,
             synced_at: now,
+            content_type: None,
         };
         let content_row = content::Model {
             id: 1,
