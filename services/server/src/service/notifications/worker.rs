@@ -360,9 +360,7 @@ impl MessageHandler for NotificationWorker {
             .map(|n| n.to_identity.as_str())
             .collect();
         for identity in recipients {
-            if let Err(e) = changes::notify(&ctx.db, identity).await {
-                tracing::warn!(worker = Self::NAME, error = %e, "notify failed");
-            }
+            changes::notify(identity).await;
         }
 
         // Hydrate the target event (the post replied to / reposted / reacted

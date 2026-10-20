@@ -1,19 +1,14 @@
 //! Feed of "notifications changed" events, shared across server and worker
-//! processes through Postgres LISTEN/NOTIFY.
+//! processes over Valkey pub/sub. Without Valkey it stays in-process.
 
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use sea_orm::sqlx::postgres::{PgListener, PgPool};
-use sea_orm::{
-    ConnectionTrait, DatabaseConnection, DbBackend, DbErr, Statement,
-};
+use common_valkey::{Clients, Message};
 use tokio::sync::broadcast;
+use tokio::sync::broadcast::error::RecvError;
 
-const CHANNEL: &str = "notification_changed";
-
-/// Postgres drops notifications sent while nobody listens, so `All`
-/// follows every (re)connect of the listener.
+/// `All` follows a (re)connect or a lag, when changes may have been missed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Change {
     Identity(Arc<str>),
@@ -21,53 +16,76 @@ pub enum Change {
 }
 
 static CHANGES: OnceLock<broadcast::Sender<Change>> = OnceLock::new();
+static FEED: OnceLock<Feed> = OnceLock::new();
+
+struct Feed {
+    valkey: &'static Clients,
+    channel: String,
+}
 
 fn sender() -> &'static broadcast::Sender<Change> {
     CHANGES.get_or_init(|| broadcast::channel(1024).0)
 }
 
-/// Starts listening on `db`. Called once at server startup.
-pub fn init(db: &DatabaseConnection) {
-    let pool = db.get_postgres_connection_pool().clone();
-    tokio::spawn(listen(pool, sender().clone()));
+/// Called once at startup. Without `valkey`, `notify` only reaches this
+/// process.
+pub fn init(valkey: Option<&'static Clients>, server_name: &str) {
+    let Some(valkey) = valkey else { return };
+    let feed = FEED.get_or_init(|| Feed {
+        valkey,
+        channel: channel_name(server_name),
+    });
+    tokio::spawn(feed.receive());
+    tokio::spawn(feed.announce_resubscribes());
 }
 
-async fn listen(pool: PgPool, tx: broadcast::Sender<Change>) {
-    loop {
-        match connect(&pool).await {
-            Ok(mut listener) => {
-                let _ = tx.send(Change::All);
-                loop {
-                    match listener.try_recv().await {
-                        Ok(Some(notification)) => {
-                            let _ = tx.send(Change::Identity(
-                                notification.payload().into(),
-                            ));
-                        }
-                        // Reconnected underneath us: anything sent
-                        // meanwhile is gone.
-                        Ok(None) => {
-                            let _ = tx.send(Change::All);
-                        }
-                        Err(e) => {
-                            tracing::warn!(error = %e, "notification listener lost");
-                            break;
-                        }
-                    }
+impl Feed {
+    async fn receive(&'static self) {
+        while let Err(e) = self.valkey.subscribe(&self.channel).await {
+            tracing::warn!(error = %e, "notification feed subscribe error");
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        }
+        let _ = sender().send(Change::All);
+
+        let mut messages = self.valkey.messages();
+        loop {
+            match messages.recv().await {
+                Ok(message) => self.on_message(message),
+                Err(RecvError::Lagged(skipped)) => {
+                    tracing::warn!(skipped, "notification feed lagged");
+                    let _ = sender().send(Change::All);
                 }
-            }
-            Err(e) => {
-                tracing::warn!(error = %e, "notification listener connect failed")
+                Err(RecvError::Closed) => return,
             }
         }
-        tokio::time::sleep(Duration::from_secs(5)).await;
     }
-}
 
-async fn connect(pool: &PgPool) -> Result<PgListener, sea_orm::sqlx::Error> {
-    let mut listener = PgListener::connect_with(pool).await?;
-    listener.listen(CHANNEL).await?;
-    Ok(listener)
+    fn on_message(&self, message: Message) {
+        // The subscriber is shared, so other features' channels pass by here.
+        if message.get_channel_name() != self.channel {
+            return;
+        }
+        match std::str::from_utf8(message.get_payload_bytes()) {
+            Ok(identity) => {
+                let _ = sender().send(Change::Identity(identity.into()));
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "notification feed payload is not an identity")
+            }
+        }
+    }
+
+    async fn announce_resubscribes(&'static self) {
+        let mut resubscribed = self.valkey.resubscribed();
+        loop {
+            match resubscribed.recv().await {
+                Ok(()) | Err(RecvError::Lagged(_)) => {
+                    let _ = sender().send(Change::All);
+                }
+                Err(RecvError::Closed) => return,
+            }
+        }
+    }
 }
 
 /// Changes from every process. Nothing arrives before `init`.
@@ -76,45 +94,43 @@ pub fn subscribe() -> broadcast::Receiver<Change> {
 }
 
 /// Announces that `identity`'s notifications changed.
-pub async fn notify<C: ConnectionTrait>(
-    db: &C,
-    identity: &str,
-) -> Result<(), DbErr> {
-    db.execute_raw(Statement::from_sql_and_values(
-        DbBackend::Postgres,
-        "SELECT pg_notify($1, $2)",
-        [CHANNEL.into(), identity.into()],
-    ))
-    .await?;
-    Ok(())
+pub async fn notify(identity: &str) {
+    match FEED.get() {
+        Some(feed) => {
+            if let Err(e) = feed.valkey.publish(&feed.channel, identity).await {
+                tracing::warn!(error = %e, "notification feed publish error");
+            }
+        }
+        None => {
+            let _ = sender().send(Change::Identity(identity.into()));
+        }
+    }
+}
+
+/// `notifications:{server}`, so deployments can share a Valkey.
+fn channel_name(server_name: &str) -> String {
+    format!("notifications:{server_name}")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sea_orm::{DbBackend, MockDatabase, MockExecResult};
-    use tokio::sync::broadcast::error::TryRecvError;
 
     #[tokio::test]
-    async fn notify_sends_the_identity_on_the_channel() {
-        let db = MockDatabase::new(DbBackend::Postgres)
-            .append_exec_results([MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 1,
-            }])
-            .into_connection();
-
-        notify(&db, "bob").await.unwrap();
-
-        let sql = format!("{:?}", db.into_transaction_log());
-        assert!(sql.contains("pg_notify"), "uses NOTIFY: {sql}");
-        assert!(sql.contains(CHANNEL), "on the change channel: {sql}");
-        assert!(sql.contains("\"bob\""), "with the identity: {sql}");
+    async fn notify_broadcasts_in_process_without_valkey() {
+        let mut changes = subscribe();
+        notify("bob").await;
+        assert_eq!(
+            changes.recv().await.unwrap(),
+            Change::Identity("bob".into())
+        );
     }
 
     #[test]
-    fn subscribe_before_init_receives_nothing() {
-        let mut rx = subscribe();
-        assert_eq!(rx.try_recv(), Err(TryRecvError::Empty));
+    fn channel_is_per_server() {
+        assert_eq!(
+            channel_name("https://srv.example"),
+            "notifications:https://srv.example"
+        );
     }
 }
