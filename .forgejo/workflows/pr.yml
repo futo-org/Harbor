@@ -211,6 +211,7 @@ jobs:
           PG_IP="$(docker inspect -f '{{(index .NetworkSettings.Networks "'harbor_default'").IPAddress}}' harbor-postgres-1 2>/dev/null)"
           echo "DB_HOST=${PG_IP}" >> "${FORGEJO_ENV}"
           echo "HARBOR_DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${PG_IP}:${DB_PORT}" >> "${FORGEJO_ENV}"
+          echo "HARBOR_RO_DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${PG_IP}:${DB_PORT}?options=-c%20default_transaction_read_only=on" >> "${FORGEJO_ENV}"
       - name: Check server's DB schema up-to-date
         run: |
           cd services/server/migration
