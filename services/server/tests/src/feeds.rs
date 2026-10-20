@@ -24,7 +24,7 @@ async fn trusted_labels_served_in_feed_response() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -34,7 +34,7 @@ async fn trusted_labels_served_in_feed_response() {
         &author_key,
         "hello label world",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -42,7 +42,7 @@ async fn trusted_labels_served_in_feed_response() {
     let labels_sig = moderator.label_key(
         target_key.clone(),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -131,7 +131,7 @@ async fn labeler_identity_served_with_feed_response() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -141,14 +141,14 @@ async fn labeler_identity_served_with_feed_response() {
         &author_key,
         "post labeled by a stranger",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
     moderator.label_key(
         get_post_event_key(&author_identity, &author_key),
         vec!["violence".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -207,7 +207,7 @@ async fn omit_labels_hides_labeled_post() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -217,7 +217,7 @@ async fn omit_labels_hides_labeled_post() {
         &author_key,
         "hide-me post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -225,7 +225,7 @@ async fn omit_labels_hides_labeled_post() {
     moderator.label_key(
         target_key,
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -286,14 +286,14 @@ async fn attribution_feed_returns_only_matching_posts() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
     publish_genesis(
         &mut event,
         &other_identity,
         &other_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -303,7 +303,7 @@ async fn attribution_feed_returns_only_matching_posts() {
         &author_key,
         "post about the url",
         &[&url],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
     let other_sig = publish_post(
@@ -312,7 +312,7 @@ async fn attribution_feed_returns_only_matching_posts() {
         &other_key,
         "post about a different url",
         &[&other_url],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -363,7 +363,7 @@ async fn attribution_feed_omit_labels_hides_labeled_post() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -373,7 +373,7 @@ async fn attribution_feed_omit_labels_hides_labeled_post() {
         &author_key,
         "labeled post about the url",
         &[&url],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -381,7 +381,7 @@ async fn attribution_feed_omit_labels_hides_labeled_post() {
     moderator.label_key(
         target_key,
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -460,7 +460,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -470,7 +470,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
         &author_key,
         "warn-label post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -478,7 +478,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
     let labels_sig = moderator.label_key(
         target_key.clone(),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -548,7 +548,7 @@ async fn untrusted_labels_not_indexed() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -558,7 +558,7 @@ async fn untrusted_labels_not_indexed() {
         &author_key,
         "test unmoderated",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -569,7 +569,7 @@ async fn untrusted_labels_not_indexed() {
     let impostor_labels_sig = impostor.label_key(
         target_key.clone(),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     impostor.submit_events().await;
 
@@ -631,7 +631,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -641,7 +641,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         &author_key,
         "impostor-labeled post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -650,7 +650,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
     impostor.label_key(
         get_post_event_key(&author_identity, &author_key),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     impostor.submit_events().await;
 
@@ -755,7 +755,7 @@ async fn thread_no_labels_returns_post() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -765,7 +765,7 @@ async fn thread_no_labels_returns_post() {
         &author_key,
         "thread test post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -830,7 +830,7 @@ async fn thread_omit_labels_matching_hides_post() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -840,7 +840,7 @@ async fn thread_omit_labels_matching_hides_post() {
         &author_key,
         "hide-me thread post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -848,7 +848,7 @@ async fn thread_omit_labels_matching_hides_post() {
     let labels_sig = moderator.label_key(
         target_key.clone(),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -918,7 +918,7 @@ async fn thread_omit_labels_not_matching_keeps_post() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -928,7 +928,7 @@ async fn thread_omit_labels_not_matching_keeps_post() {
         &author_key,
         "warn thread post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -936,7 +936,7 @@ async fn thread_omit_labels_not_matching_keeps_post() {
     let labels_sig = moderator.label_key(
         target_key.clone(),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -984,7 +984,7 @@ async fn thread_omit_labels_not_matching_keeps_post() {
 #[tokio::test]
 async fn get_post() {
     let mut client = TestClient::new().await;
-    client.post_text("Text", DEFAULT_CREATED_AT);
+    client.post_text("Text", current_timestamp());
     let target_key = client.get_last_event_key();
     client.submit_events().await;
 
@@ -1008,7 +1008,7 @@ async fn get_post() {
 #[tokio::test]
 async fn get_post_not_created() {
     let mut client = TestClient::new().await;
-    client.post_text("Text", DEFAULT_CREATED_AT);
+    client.post_text("Text", current_timestamp());
     let target_key = client.get_last_event_key();
     client.pending.clear();
     // NOTE: not submitting the post event.
@@ -1019,9 +1019,9 @@ async fn get_post_not_created() {
 #[tokio::test]
 async fn get_post_deleted() {
     let mut client = TestClient::new().await;
-    client.post_text("Text", DEFAULT_CREATED_AT);
+    client.post_text("Text", current_timestamp());
     let target_key = client.get_last_event_key();
-    client.delete_key(target_key.clone(), DEFAULT_CREATED_AT + 1);
+    client.delete_key(target_key.clone(), current_timestamp() + 1);
     client.submit_events().await;
 
     test_get_post(
@@ -1041,9 +1041,9 @@ async fn get_post_deleted() {
 #[tokio::test]
 async fn get_post_with_quotes() {
     let mut client = TestClient::new().await;
-    client.post_text("Text", DEFAULT_CREATED_AT);
+    client.post_text("Text", current_timestamp());
     let quoted_post = client.get_last_event_key();
-    client.quote(quoted_post.clone(), "Text that quotes", DEFAULT_CREATED_AT);
+    client.quote(quoted_post.clone(), "Text that quotes", current_timestamp());
     let post_with_quote = client.get_last_event_key();
     client.submit_events().await;
 
@@ -1086,9 +1086,9 @@ async fn get_post_with_quotes() {
 #[tokio::test]
 async fn get_post_with_reposts() {
     let mut client = TestClient::new().await;
-    client.post_text("Text", DEFAULT_CREATED_AT);
+    client.post_text("Text", current_timestamp());
     let post = client.get_last_event_key();
-    client.repost_key(post.clone(), DEFAULT_CREATED_AT);
+    client.repost_key(post.clone(), current_timestamp());
     client.submit_events().await;
 
     test_get_post(
@@ -1111,13 +1111,13 @@ async fn get_post_with_reposts() {
 #[tokio::test]
 async fn get_post_with_labels() {
     let mut client = TestClient::new().await;
-    client.post_text("Text", DEFAULT_CREATED_AT);
+    client.post_text("Text", current_timestamp());
     let post = client.get_last_event_key();
     client.submit_events().await;
 
     let (mut moderator, guard) = TestClient::trusted_moderator().await;
     let labels = vec!["Label".into()];
-    moderator.label_key(post.clone(), labels.clone(), DEFAULT_CREATED_AT);
+    moderator.label_key(post.clone(), labels.clone(), current_timestamp());
     moderator.submit_events().await;
     drop(guard);
 
@@ -1145,14 +1145,14 @@ async fn get_post_with_labels() {
 #[tokio::test]
 async fn get_post_with_reactions() {
     let mut client = TestClient::new().await;
-    client.post_text("Text", DEFAULT_CREATED_AT);
+    client.post_text("Text", current_timestamp());
     let post = client.get_last_event_key();
-    client.thumbs_up(post.clone(), DEFAULT_CREATED_AT);
+    client.thumbs_up(post.clone(), current_timestamp());
     client.submit_events().await;
     let post_identity = client.identity().to_owned();
 
     let mut client = TestClient::new().await;
-    client.thumbs_up(post.clone(), DEFAULT_CREATED_AT);
+    client.thumbs_up(post.clone(), current_timestamp());
     client.submit_events().await;
 
     test_get_post(
