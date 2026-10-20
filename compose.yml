@@ -214,7 +214,7 @@ services:
       - kafka-data:/var/lib/kafka/data
 
   valkey:
-    image: valkey/valkey:8
+    image: valkey/valkey:8@sha256:640c5e62cea04b6d6f2084232651d0cc70362d31f4f805e7be94dbed6855e8f2
     command: ['valkey-server', '--save', '', '--appendonly', 'no']
     ports:
       - 6379:6379
