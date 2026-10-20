@@ -424,7 +424,7 @@ importers:
         version: link:../packages/rs-core-wasm
       maestro-runner:
         specifier: ^1.1.25
-        version: 1.1.28
+        version: 1.1.29
 
   packages/js-browser:
     dependencies:
@@ -2213,23 +2213,23 @@ packages:
     peerDependencies:
       postcss: ^8.4
 
-  '@devicelab/maestro-runner-darwin-arm64@1.1.28':
-    resolution: {integrity: sha512-WjEPNfZw+5LfzNdXFSgI3WIlWXJiBOkhFB2iPiCBJarmdTDRA+s5pusDK8+ojIxkT55kq9/XRh9DE47698gRkA==}
+  '@devicelab/maestro-runner-darwin-arm64@1.1.29':
+    resolution: {integrity: sha512-dVbIOf6qVQnJcDmCWcb5jDZKpTaBhrmTw9rEeMpTXI9O3z8cduEFHGT7FxKEItA6T3meSvYgJiNTlUocVXn2ww==}
     cpu: [arm64]
     os: [darwin]
 
-  '@devicelab/maestro-runner-darwin-x64@1.1.28':
-    resolution: {integrity: sha512-XMYc3tyZThGQeyQ42GwTMIZnaSVjav/+g+HF1AadUDIrtjC97VPsgpLe8Age3HCpK1M+wWoMP51VsG/EN5ng4g==}
+  '@devicelab/maestro-runner-darwin-x64@1.1.29':
+    resolution: {integrity: sha512-MhO/ZiWwrK/K8T39wcRXOS3DvJEcJk+0vNX6j27etYChyo2mjooipxIE8WzILUau4Qcr9Tubra3yacr9dOpbbg==}
     cpu: [x64]
     os: [darwin]
 
-  '@devicelab/maestro-runner-linux-arm64@1.1.28':
-    resolution: {integrity: sha512-O6rQeuwpSErrCOXnHtsvsmWab+AKd0/7dZueZaCBl5qMRhWphopRbQEbC9MmGn3SzeEIyLMkyG43fTB8NQg3Bw==}
+  '@devicelab/maestro-runner-linux-arm64@1.1.29':
+    resolution: {integrity: sha512-6l11xzwSa8vABHUqeR1ckQ/LkyM5+j7AKSaikaOgFhxEpfca3RRy2zgwNj/e1NGNlDRGZ2z6qYFCNvSkYaFpwA==}
     cpu: [arm64]
     os: [linux]
 
-  '@devicelab/maestro-runner-linux-x64@1.1.28':
-    resolution: {integrity: sha512-peo+I2OPmP8lKgZlOuHo2hW70rGPE1Lfe1s2gehPevf3PUOz3tPzfAS5ClHDQSX7Mk5qs/hAtBNr5aZxAXoKkw==}
+  '@devicelab/maestro-runner-linux-x64@1.1.29':
+    resolution: {integrity: sha512-+4aY3o+BPgw8t5xlEF2WhrmwBH25cG5LK3iqlumATnk9fERaZ4OuAuQDMZRqyNWs+/FkbXLR1bcYNIOxUVlq2Q==}
     cpu: [x64]
     os: [linux]
 
@@ -9204,8 +9204,8 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  maestro-runner@1.1.28:
-    resolution: {integrity: sha512-LvfoEIydc3XFY/yw+UuKu1n14rb8tf3VKN6ZNAi4ibV988NMALIwZ8B8Md4qO3yhBF6Qf//Kaa9PQHj9c+DSQw==}
+  maestro-runner@1.1.29:
+    resolution: {integrity: sha512-1Qx5KdRXA5acwKiPAO/Tyl54wC6y/iiAhIcpqA1aBPqWCVKf1L7Wxec9w5uaDjt9yS27GmVDOqJIQXqnPDo0Cg==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -14428,16 +14428,16 @@ snapshots:
     dependencies:
       postcss: 8.5.31
 
-  '@devicelab/maestro-runner-darwin-arm64@1.1.28':
+  '@devicelab/maestro-runner-darwin-arm64@1.1.29':
     optional: true
 
-  '@devicelab/maestro-runner-darwin-x64@1.1.28':
+  '@devicelab/maestro-runner-darwin-x64@1.1.29':
     optional: true
 
-  '@devicelab/maestro-runner-linux-arm64@1.1.28':
+  '@devicelab/maestro-runner-linux-arm64@1.1.29':
     optional: true
 
-  '@devicelab/maestro-runner-linux-x64@1.1.28':
+  '@devicelab/maestro-runner-linux-x64@1.1.29':
     optional: true
 
   '@discoveryjs/json-ext@0.5.7': {}
@@ -24429,12 +24429,12 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  maestro-runner@1.1.28:
+  maestro-runner@1.1.29:
     optionalDependencies:
-      '@devicelab/maestro-runner-darwin-arm64': 1.1.28
-      '@devicelab/maestro-runner-darwin-x64': 1.1.28
-      '@devicelab/maestro-runner-linux-arm64': 1.1.28
-      '@devicelab/maestro-runner-linux-x64': 1.1.28
+      '@devicelab/maestro-runner-darwin-arm64': 1.1.29
+      '@devicelab/maestro-runner-darwin-x64': 1.1.29
+      '@devicelab/maestro-runner-linux-arm64': 1.1.29
+      '@devicelab/maestro-runner-linux-x64': 1.1.29
 
   magic-string@0.30.21:
     dependencies:
