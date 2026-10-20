@@ -1,7 +1,7 @@
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { describe, expect, it } from 'vitest';
 import { KEY_TYPE } from '../constants';
-import type { KeyPair } from '../polycentric-client';
+import type { KeyPair } from '../platform-interfaces/key-repository';
 import { bytesToHex } from '../utils/hex';
 import { createServerJwt } from './server-jwt';
 

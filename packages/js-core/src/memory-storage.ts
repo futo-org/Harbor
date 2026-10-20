@@ -10,7 +10,7 @@ import {
   FileStoreError,
   segmentsFromPath,
 } from './platform-interfaces/file-store-driver';
-import type { PrivateKey } from './polycentric-client';
+import type { PrivateKey } from './platform-interfaces/key-repository';
 import * as Proto from './proto/v2';
 import { bytesToHex, toDigestKey } from './utils/hex';
 

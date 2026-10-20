@@ -3,7 +3,7 @@ import { ContentStore } from './content.store';
 import { KeysStore } from './keys-store';
 import type { IEventRepository } from '../platform-interfaces/event.repository';
 import type { IContentRepository } from '../platform-interfaces/content.repository';
-import type { IKeysRepository } from '../platform-interfaces/keys-repository';
+import type { IKeysRepository } from '../platform-interfaces/key-repository';
 
 export interface Repositories {
   eventRepository: IEventRepository;

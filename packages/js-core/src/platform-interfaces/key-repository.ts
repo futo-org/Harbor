@@ -1,5 +1,15 @@
-import type { PrivateKey } from '../polycentric-client';
-import type { PublicKey } from '../proto/v2';
+import type { KeyType, PublicKey } from '../proto/v2';
+
+export interface PrivateKey {
+  keyType: KeyType;
+  key: Uint8Array;
+}
+
+export interface KeyPair {
+  keyType: KeyType;
+  privateKey: PrivateKey;
+  publicKey: PublicKey;
+}
 
 /**
  * KeysRepository interface for storing and retrieving cryptographic keys in a database

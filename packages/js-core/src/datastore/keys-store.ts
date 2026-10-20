@@ -1,5 +1,5 @@
 import type { IKeysRepository } from '../platform-interfaces';
-import type { PrivateKey } from '../polycentric-client';
+import type { PrivateKey } from '../platform-interfaces/key-repository';
 import type { PublicKey } from '../proto/v2';
 
 /**

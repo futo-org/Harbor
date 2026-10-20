@@ -1,5 +1,5 @@
 import EventEmitter from 'eventemitter3';
-import type { KeyPair } from '../polycentric-client';
+import type { KeyPair } from '../platform-interfaces/key-repository';
 import type { SignedEvent } from '../proto/polycentric/v2/events';
 import type { Content } from '../proto/polycentric/v2/content';
 

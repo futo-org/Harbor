@@ -1,6 +1,6 @@
 import type { IEventRepository } from './event.repository';
 import type { IContentRepository } from './content.repository';
-import type { IKeysRepository } from './keys-repository';
+import type { IKeysRepository } from './key-repository';
 
 export interface IStorageDriver {
   createEventRepository: () => IEventRepository;

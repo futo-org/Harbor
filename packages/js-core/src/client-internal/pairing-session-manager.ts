@@ -1,6 +1,7 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { randomBytes } from '@noble/hashes/utils.js';
-import type { KeyPair, PolycentricClient } from '../polycentric-client';
+import type { KeyPair } from '../platform-interfaces/key-repository';
+import type { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { IdentityManager } from './identity-manager';
 

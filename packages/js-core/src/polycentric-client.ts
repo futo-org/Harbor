@@ -20,6 +20,7 @@ import type {
   IFileStoreDriver,
   IStorageDriver,
 } from './platform-interfaces';
+import type { KeyPair } from './platform-interfaces/key-repository';
 import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
 import { FileStore } from './file-store';
@@ -50,18 +51,6 @@ export type {
   PublishArgs,
   IdentityUpdate,
 } from './client-internal/identity-manager';
-
-/** Private key — same shape as PublicKey, holds the secret key bytes. */
-export interface PrivateKey {
-  keyType: Proto.KeyType;
-  key: Uint8Array;
-}
-
-export interface KeyPair {
-  keyType: Proto.KeyType;
-  privateKey: PrivateKey;
-  publicKey: Proto.PublicKey;
-}
 
 /**
  * PolycentricClientConfig defines the dependencies and configuration for a PolycentricClient.

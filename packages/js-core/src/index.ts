@@ -43,12 +43,15 @@ export { PairingSessionManager } from './client-internal/pairing-session-manager
 export type { PairingSession } from './client-internal/pairing-session-manager';
 export type {
   PolycentricClientConfig,
-  KeyPair,
-  PrivateKey,
   IdentityState,
   PublishArgs,
   IdentityUpdate,
 } from './polycentric-client';
+
+export type {
+  PrivateKey,
+  KeyPair,
+} from './platform-interfaces/key-repository';
 
 export * from './errors';
 export * as Errors from './errors';
