@@ -7,4 +7,4 @@ export type {
   FileStoreEntry,
   FileStoreErrorCode,
 } from './file-store-driver';
-export type { IKeysRepository } from './key-repository';
+export type { IKeyRepository } from './key-repository';
