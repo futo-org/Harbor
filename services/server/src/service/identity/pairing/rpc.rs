@@ -30,7 +30,7 @@ impl PairingService for PairingServiceImpl {
         &self,
         request: Request<PutPairingSessionRequest>,
     ) -> Result<Response<PutPairingSessionResponse>, Status> {
-        let ctx = self.ctx.public_ro(&request).await?;
+        let ctx = self.ctx.public_rw(&request).await?;
         Ok(Response::new(
             put_pairing_session::handle(ctx, request.into_inner()).await?,
         ))
