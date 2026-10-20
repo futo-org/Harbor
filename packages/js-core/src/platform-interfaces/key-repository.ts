@@ -62,22 +62,25 @@ export type KeyPairStatus =
   | 'revoked'
 
   /**
- * We are in the process of deleting this key pair, but we have not yet
- * confirmed that the private key has been deleted.
- * Key pairs with inline private keys should skip this status and just delete
- * row from the DB.
- * This status is most useful when the private key is stored elsewhere.
-
- * Assume any function can throw unless specified otherwise.
- * Implementations should only throw instances of `KeyRepositoryError`.
- */
+   * We are in the process of deleting this key pair, but we have not yet
+   * confirmed that the private key has been deleted.
+   *
+   * Key pairs with inline private keys should skip this status and just delete
+   * row from the DB.
+   * This status is most useful when the private key is stored elsewhere.
+   *
+   * Key pairs with this status should be handled by the next sweep and other
+   * functions will ignore them.
+   */
   | 'pendingDeletion';
 
 /**
  * "Low level" interface for storing key pairs that each platform should
  * implement.
  * Application code should interface with the key store instead.
- * Assume
+ *
+ * Assume any function can throw unless specified otherwise.
+ * Implementations should only throw instances of `KeyRepositoryError`.
  */
 export interface IKeyRepository {
   /**
