@@ -15,7 +15,7 @@ import {
   type BorderRadiusToken,
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
-import { WEB_FONT_STACK } from './Text';
+import { NATIVE_FONTS, WEB_FONT_STACK } from './Text';
 
 export interface TextInputProps
   extends Omit<RNTextInputProps, 'placeholderTextColor'> {
@@ -65,7 +65,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
             outlineWidth: 0,
             resize: 'none',
           } as unknown as TextStyle)
-        : null),
+        : { fontFamily: NATIVE_FONTS['400'].normal }),
     };
 
     const multilineStyle: TextStyle = multiline

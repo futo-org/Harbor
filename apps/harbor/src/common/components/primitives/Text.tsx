@@ -21,7 +21,7 @@ export const WEB_FONT_STACK =
 // its own family (see `src/common/assets`). Keyed by every weight the theme
 // can produce, so adding a token without a face fails to compile.
 type FontWeightValue = (typeof typography.fontWeight)[FontWeightToken];
-const NATIVE_FONTS: Record<
+export const NATIVE_FONTS: Record<
   FontWeightValue,
   { normal: string; italic: string }
 > = {
