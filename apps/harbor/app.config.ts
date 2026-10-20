@@ -136,18 +136,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         // Native families are the file names on Android and the PostScript
         // (NotoSans) or family (Twemoji) names on iOS.
-        fonts: [
-          'Regular',
-          'Medium',
-          'SemiBold',
-          'Bold',
-          'Italic',
-          'MediumItalic',
-          'SemiBoldItalic',
-          'BoldItalic',
-        ]
-          .map((face) => `./src/common/assets/fonts/NotoSans-${face}.ttf`)
-          .concat('./src/common/assets/fonts/NotoSansMono-Regular.ttf'),
+        fonts: ['Regular', 'SemiBold', 'Bold'].flatMap((face) => [
+          `./src/common/assets/fonts/NotoSans-${face}.ttf`,
+          `./src/common/assets/fonts/NotoSansMono-${face}.ttf`,
+        ]),
         ios: { fonts: ['./src/common/assets/fonts/Twemoji.ttf'] },
         // The bitmap build is for Android 7-9 (see `twemojiFontFamily`).
         android: {

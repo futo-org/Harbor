@@ -17,7 +17,12 @@ import {
   type LineHeightToken,
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
-import { MONOSPACE_FONT_FAMILY, NATIVE_FONTS, WEB_FONT_STACK } from './Text';
+import {
+  NATIVE_FONTS,
+  NATIVE_MONOSPACE_FONTS,
+  WEB_FONT_STACK,
+  WEB_MONOSPACE_FONT_STACK,
+} from './Text';
 
 export interface TextInputProps
   extends Omit<RNTextInputProps, 'placeholderTextColor'> {
@@ -59,12 +64,13 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     const [isFocused, setIsFocused] = useState(false);
     const isPlain = variant === 'plain';
 
-    const fontFamily = monospace
-      ? MONOSPACE_FONT_FAMILY
-      : Platform.OS === 'web'
-        ? // As in `Text`, so typed emoji are Twemoji too.
-          WEB_FONT_STACK
-        : NATIVE_FONTS['400'].normal;
+    const fontFamily =
+      Platform.OS === 'web'
+        ? monospace
+          ? WEB_MONOSPACE_FONT_STACK
+          : // As in `Text`, so typed emoji are Twemoji too.
+            WEB_FONT_STACK
+        : (monospace ? NATIVE_MONOSPACE_FONTS : NATIVE_FONTS)['400'];
 
     const baseStyle: TextStyle = {
       paddingVertical: 12,
