@@ -606,7 +606,7 @@ dependencies = [
  "lru",
  "percent-encoding",
  "regex-lite",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "tracing",
  "url",
 ]
@@ -654,7 +654,7 @@ dependencies = [
  "hmac",
  "http",
  "percent-encoding",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "time",
  "tracing",
 ]
@@ -687,7 +687,7 @@ dependencies = [
  "md-5",
  "pin-project-lite",
  "sha1",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "tracing",
 ]
 
@@ -1645,7 +1645,7 @@ checksum = "6ebaa1a2bf1290ab3bfe5a7b771d050ebffab2711c19a81691c683a5144a25de"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "subtle",
 ]
 
@@ -2112,7 +2112,7 @@ dependencies = [
  "sea-orm",
  "serde",
  "serde_json",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "time",
  "tokio",
  "tonic",
@@ -2591,7 +2591,7 @@ dependencies = [
  "prost",
  "rand 0.10.3",
  "serde_json",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "tokio",
  "tonic",
 ]
@@ -3012,7 +3012,7 @@ dependencies = [
  "reqwest",
  "sea-orm",
  "serde_json",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "time",
  "tokio",
  "tracing",
@@ -3356,7 +3356,7 @@ dependencies = [
  "prost",
  "rand 0.10.3",
  "serde_json",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "tokio",
  "tonic",
 ]
@@ -3460,7 +3460,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "thiserror",
  "tonic",
  "tonic-prost",
@@ -3486,7 +3486,7 @@ dependencies = [
  "prost-build",
  "serde",
  "serde_json",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "thiserror",
  "tokio",
  "tonic",
@@ -3509,7 +3509,7 @@ dependencies = [
  "polycentric-common",
  "polycentric-core",
  "prost",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "tokio",
 ]
 
@@ -3726,7 +3726,7 @@ dependencies = [
  "reqwest",
  "sea-orm",
  "serde",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "time",
  "tokio",
  "tokio-stream",
@@ -4628,7 +4628,7 @@ dependencies = [
  "sea-orm",
  "serde",
  "serde_json",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "tokio",
  "tokio-stream",
  "tokio-util",
@@ -4678,9 +4678,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.11.0"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4"
+checksum = "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.1",
@@ -4960,7 +4960,7 @@ dependencies = [
  "rust_decimal",
  "serde",
  "sha1",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "sqlx-core",
  "thiserror",
  "time",
@@ -4996,7 +4996,7 @@ dependencies = [
  "rust_decimal",
  "serde",
  "serde_json",
- "sha2 0.11.0",
+ "sha2 0.11.1",
  "smallvec",
  "sqlx-core",
  "stringprep",
