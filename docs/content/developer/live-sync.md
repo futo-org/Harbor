@@ -22,13 +22,11 @@ per second.
 - **Heads stream.** `EventSyncService.SubscribeHeads` sends the authenticated
   identity's heads when it opens, then the latest heads whenever the server
   stores a new event for that identity.
-- **Heads channel.** A Valkey sharded pub/sub channel per identity,
-  `heads:{server name}:{identity}`, with literal braces around the identity.
-  The braces are a cluster hash tag, so everything keyed by an identity lands
-  on the same shard, and the `heads:` prefix keeps the channels easy to list
-  (`PUBSUB SHARDCHANNELS heads:*`) and to scope in ACLs. `PutEvents`
-  publishes to it, and only the
-  server processes with a stream open for that identity subscribe to it.
+- **Heads channel.** A Valkey pub/sub channel per identity,
+  `heads:{server name}:{identity}`. The `heads:` prefix keeps the channels
+  easy to list (`PUBSUB CHANNELS heads:*`) and to scope in ACLs. `PutEvents`
+  publishes to it, and only the server processes with a stream open for that
+  identity subscribe to it.
 
 | RPC              | Kind             | Served by |
 | ---------------- | ---------------- | --------- |
@@ -43,17 +41,16 @@ alone instead of retrying it.
 
 The obvious transports don't hold up at the target rate:
 
-- **Postgres `NOTIFY`**, which [unread notifications](unread-notifications.md)
-  use, serializes the commits that send it behind one global lock, and every
-  listening process receives every notification. Fine for notification
-  counts, a bottleneck for every stored event.
+- **Postgres `NOTIFY`** serializes the commits that send it behind one global
+  lock, every listening process receives every notification, and it does not
+  work through a transaction-mode PgBouncer.
 - **Kafka** already carries every event, but a consumer can't fetch only the
   messages it cares about. Every server process would read the whole stream,
   so broker traffic grows with the event rate times the number of server
   processes, whether or not they have subscribers.
 
-Valkey sharded pub/sub delivers a message only to the connections subscribed
-to its channel. A server process subscribes only to the identities that have
+Valkey pub/sub delivers a message only to the connections subscribed to its
+channel. A server process subscribes only to the identities that have
 a stream open on it, so its traffic follows its own subscribers, not the
 total event rate. Messages are fire and forget, which suits a signal the
 client can always recover from by reconnecting: a missed message costs
@@ -67,7 +64,7 @@ flowchart LR
         P[PutEvents]
     end
     subgraph valkey["Valkey"]
-        CH{{"heads:server:#123;identity#125;"}}
+        CH{{"heads:server:identity"}}
     end
     subgraph serve["server (replica with streams)"]
         SUB["HeadsPubSub\n(one subscriber connection)"]
@@ -76,7 +73,7 @@ flowchart LR
         S2[stream task B]
     end
     PG[(Postgres)]
-    P -- SPUBLISH new heads --> CH
+    P -- PUBLISH new heads --> CH
     CH -- only subscribed channels --> SUB
     SUB --> W
     W --> S1 & S2
@@ -126,7 +123,7 @@ sequenceDiagram
     A->>Put: PutEvents(bundles)
     Put->>PG: store events (commit)
     Put-->>A: response
-    Put->>V: SPUBLISH heads:server:#123;identity#125; (new heads)
+    Put->>V: PUBLISH heads:server:identity (new heads)
     V-->>PubSub: message
     PubSub->>PubSub: merge into the identity's watch
     PubSub-->>Task: watch changed
@@ -151,11 +148,10 @@ merges into the same heads, so nothing falls in the gap.
 
 ## Failures
 
-- **Valkey restarts or the connection drops.** Each failed attempt is logged
-  as a `valkey error`. The client reconnects with backoff (logging `valkey
-  reconnected`), resubscribes to every channel the process follows, then
-  re-reads those identities' heads from the database, since messages sent
-  while disconnected are lost.
+- **Valkey restarts or the connection drops.** The client reconnects with
+  backoff and resubscribes to every channel the process follows, then the
+  process re-reads those identities' heads from the database, since messages
+  sent while disconnected are lost.
 - **The subscriber falls behind.** Messages for the whole process pass through one
   buffer of 4096. If it overflows, the process re-reads the heads of every
   identity it follows, as after a reconnect.
@@ -189,14 +185,13 @@ stores.
 
 With `N` events per second and `R` server replicas:
 
-- **Writes.** One `SPUBLISH` per identity per `PutEvents` request, of a few
+- **Writes.** One `PUBLISH` per identity per `PutEvents` request, of a few
   hundred bytes. No Postgres work.
 - **Valkey.** Delivers each message only to the replicas with a stream open
   for that identity, so outgoing traffic is about `N` times the number of
   replicas following the identity, independent of `R`. A single Valkey node
-  handles a few hundred thousand small publishes per second. Beyond that, run
-  Valkey in cluster mode: sharded pub/sub spreads channels across shards by
-  hash slot, and the server's client routes each channel to its shard.
+  handles a few hundred thousand small publishes per second. Beyond that, a
+  cluster would need the cluster client and sharded channels (`SPUBLISH`).
 - **Server replicas.** Each holds two Valkey connections and one `watch` per
   followed identity, and does a hash lookup per message it receives.
 - **Load balancer.** Streams are long-lived HTTP/2 requests. Allow long or no
@@ -209,17 +204,20 @@ With `N` events per second and `R` server replicas:
 
 | Variable            | Default   | Description |
 | ------------------- | --------- | ----------- |
-| `HARBOR_VALKEY_URL` | _(unset)_ | Valkey or Redis URL. `redis://host:6379` for a single node, `rediss://` for TLS, `redis-cluster://host:6379?node=host2:6379` for a cluster. Unset turns live sync off. |
+| `HARBOR_VALKEY_URL` | _(unset)_ | Valkey or Redis URL: `redis://[user:password@]host:6379`, or `rediss://` for TLS. Unset turns live sync off and keeps the [unread notifications](unread-notifications.md) change feed in-process. |
 
-Valkey 7 or newer is required (sharded pub/sub). It holds no data, so it
-needs no persistence or backups. The dev stack in `compose.yml` runs one.
+Valkey holds no data for this, so it needs no persistence or backups. The dev
+stack in `compose.yml` runs one. The services talk to it with
+[redis-rs](https://github.com/redis-rs/redis-rs) through the `common-valkey`
+crate, over RESP3 (pub/sub pushes need it).
 
 ## Where the code is
 
 | Piece                         | Path                                                               |
 | ----------------------------- | ------------------------------------------------------------------ |
 | Proto                         | `protos/polycentric/v2/events.proto`                               |
-| Heads pub/sub (Valkey, registry) | `services/server/src/service/events/heads_pubsub.rs`            |
+| Valkey connections            | `services/common/valkey/src/lib.rs`                                |
+| Heads pub/sub (registry)      | `services/server/src/service/events/heads_pubsub.rs`               |
 | Stream handler                | `services/server/src/service/events/rpc/subscribe_heads.rs`        |
 | Publish                       | `services/server/src/service/events/rpc/put_events.rs`             |
 | Integration tests             | `services/server/tests/src/heads.rs`                               |

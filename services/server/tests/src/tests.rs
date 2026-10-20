@@ -48,10 +48,6 @@ fn audience() -> String {
     }
 }
 
-/// 2025-01-15T12:00:00Z in milliseconds.
-pub const DEFAULT_CREATED_AT: u64 = 1736942400000;
-pub const HOUR: u64 = 3_600_000;
-
 pub const COLLECTION_IDENTITY: i32 = 1;
 pub const COLLECTION_FEED: i32 = 2;
 pub const COLLECTION_PROFILE_UPDATE: i32 = 3;
@@ -245,7 +241,7 @@ impl TestClient {
             identity_sequence: Sequence::new(),
             collection_sequences: [const { Sequence::new() }; _],
         };
-        client.set_identity(identity, DEFAULT_CREATED_AT);
+        client.set_identity(identity, current_timestamp());
         client
     }
 

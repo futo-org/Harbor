@@ -14,14 +14,13 @@ const ROOT_STYLE =
 
 // Declared here rather than through expo-font, whose injected @font-face has
 // no font-weight range: browsers then clamp the variable font to 400 and
-// synthesise bold, which Safari renders badly. Twemoji's faces cover every
-// weight and italic too, so emoji are never synthesised bold or slanted; it
-// blocks rather than swaps, so the platform's emoji never show first.
+// synthesise bold, which Safari renders badly. Twemoji's face covers every
+// weight too, so emoji are never synthesised bold; it blocks rather than
+// swaps, so the platform's emoji never show first.
 const FONT_STYLE = `
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans.ttf);font-weight:100 900;font-style:normal;font-display:swap}
-@font-face{font-family:NotoSans;src:url(/fonts/NotoSans-Italic.ttf);font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:NotoSansMono;src:url(/fonts/NotoSansMono.ttf);font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:normal;font-display:block}
-@font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:italic;font-display:block}
 `;
 
 // Switches to dev icons on local builds. Deployed apps use icons defined by server.js

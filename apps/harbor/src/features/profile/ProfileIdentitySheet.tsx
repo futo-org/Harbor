@@ -13,11 +13,22 @@ import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
 import { ServerRow } from '@/src/features/settings/servers/ServerRow';
 import { useServerSettings } from '@/src/features/settings/servers/useServerSettings';
-import { FetchMode, IdentityManager, type v2 } from '@polycentric/react-native';
+import {
+  COLLECTION,
+  FetchMode,
+  IdentityManager,
+  type v2,
+} from '@polycentric/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
-import { ActivityIndicator, type TextStyle, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  type TextStyle,
+  View,
+} from 'react-native';
 import { isWeb } from '@/src/common/util/platform';
+import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
 import { useIdentityState } from './hooks/useIdentityState';
 
 type KeyEntry = {
@@ -36,6 +47,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
 
   const isSelf = selfKey === identityKey;
   const deviceKey = client.currentKeyPair?.publicKey;
+  const [showInfoSheet, setShowInfoSheet] = useState(false);
 
   const keys = useMemo<KeyEntry[]>(() => {
     if (!state) return [];
@@ -68,6 +80,11 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
         title="Identity"
         onClose={() => router.canGoBack() && router.back()}
       />
+      <EventInfoSheet
+        source={{ identity: identityKey, collection: COLLECTION.IDENTITY }}
+        open={showInfoSheet}
+        onClose={() => setShowInfoSheet(false)}
+      />
       <Sheet.Content style={[Atoms.gap_xl]}>
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
           <ProfileAvatar identityKey={identityKey} size="massive" />
@@ -96,6 +113,30 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
               IDENTITY KEY
             </Text>
             <CopyableValue value={identityKey} label="identity key" />
+            <Pressable
+              onPress={() => setShowInfoSheet(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Identity info"
+              style={[
+                Atoms.flex_row,
+                Atoms.items_center,
+                Atoms.gap_xs,
+                Atoms.self_start,
+              ]}
+            >
+              {({ pressed }) => (
+                <>
+                  <Icon name="infoOutline" size={16} color="neutral_500" />
+                  <Text
+                    variant="small"
+                    color="neutral_700"
+                    style={pressed && { opacity: 0.65 }}
+                  >
+                    Identity info
+                  </Text>
+                </>
+              )}
+            </Pressable>
           </View>
 
           {divider}
@@ -200,9 +241,10 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
       <Text
         variant="secondary"
+        monospace
         style={[
           Atoms.flex_1,
-          { fontFamily: 'monospace', minWidth: 0 },
+          { minWidth: 0 },
           isWeb && ({ wordBreak: 'break-all' } as unknown as TextStyle),
         ]}
         selectable

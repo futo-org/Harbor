@@ -1,21 +1,20 @@
 //! `get_identity_feed`: posts authored by a specific identity,
 //! newest first.
 
+use tonic::Status;
+
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::{Cursor, PageInfo, pipeline};
-use crate::service::{
-    context::RequestContext,
-    feeds::{
-        repository::{EventCreatedAt, Query as FeedsRepository},
-        rpc::common::{
-            self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
-        },
-        util::map_db_err,
-    },
-    graph::repository::Query as GraphRepository,
-    proto::{GetFeedResponse, GetIdentityFeedRequest},
+use crate::service::context::{Auth, PublicContext};
+use crate::service::feeds::repository::{
+    EventCreatedAt, Query as FeedsRepository,
 };
-use tonic::Status;
+use crate::service::feeds::rpc::common::{
+    self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
+};
+use crate::service::feeds::util::map_db_err;
+use crate::service::graph::repository::Query as GraphRepository;
+use crate::service::proto::{GetFeedResponse, GetIdentityFeedRequest};
 
 pub struct Params {
     pub common: feeds_pipeline::Params,
@@ -23,14 +22,14 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: &RequestContext<'_>,
+    ctx: PublicContext,
     req: GetIdentityFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
     if req.identity.is_empty() {
         return Err(Status::invalid_argument("identity is required"));
     }
 
-    if caller_blocks_subject(ctx, &req.identity).await? {
+    if caller_blocks_subject(&ctx, &req.identity).await? {
         return blocked_identity_response();
     }
 
@@ -44,7 +43,7 @@ pub async fn handle(
     };
 
     let result =
-        pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
+        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
             .await?;
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
@@ -56,13 +55,14 @@ pub async fn handle(
 /// Whether the caller blocks the identity whose feed was requested. A caller
 /// never blocks their own feed.
 async fn caller_blocks_subject(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     subject: &str,
 ) -> Result<bool, Status> {
-    let Some(caller) = ctx.caller.filter(|caller| *caller != subject) else {
+    let Some(caller) = ctx.identity().filter(|caller| *caller != subject)
+    else {
         return Ok(false);
     };
-    GraphRepository::blocks_identity(ctx.service, caller, subject).await
+    GraphRepository::blocks_identity(&ctx.db, caller, subject).await
 }
 
 /// Produce a terminal empty page (`has_next_page: false`) for profile feeds
@@ -82,11 +82,11 @@ fn blocked_identity_response() -> Result<GetFeedResponse, Status> {
 }
 
 async fn fetch(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = FeedsRepository::list_feed_events_by_identities(
-        &ctx.service.ro_db,
+        &ctx.db,
         vec![params.identity.clone()],
         params.common.limit + 1, // Check for next page
         &params.common.cursor_filter,
@@ -97,7 +97,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
@@ -105,7 +105,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _ctx: &RequestContext<'_>,
+    _: &PublicContext,
     _params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -115,21 +115,24 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _params: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {
-    feeds_pipeline::view(ctx.service, filtered, hydration).await
+    feeds_pipeline::view(ctx, filtered, hydration).await
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::context::ServiceContext;
+    use std::sync::Arc;
+
     use entity::block;
     use sea_orm::{DbBackend, MockDatabase};
-    use std::sync::Arc;
+
+    use crate::service::context::ServiceContext;
+
+    use super::*;
 
     async fn ctx_where_alice_blocks_bob() -> Arc<ServiceContext> {
         let db = MockDatabase::new(DbBackend::Postgres)
@@ -148,11 +151,10 @@ mod tests {
     #[tokio::test]
     async fn a_blocked_identity_feed_is_empty_and_terminal() {
         let ctx = ctx_where_alice_blocks_bob().await;
-
-        let ctx = RequestContext::new(&ctx, Some("alice"));
+        let ctx = ctx.test_public("alice").await;
 
         let response = handle(
-            &ctx,
+            ctx,
             GetIdentityFeedRequest {
                 identity: "bob".to_string(),
                 ..Default::default()
@@ -180,10 +182,9 @@ mod tests {
     #[tokio::test]
     async fn an_empty_identity_is_rejected() {
         let ctx = ctx_where_alice_blocks_bob().await;
+        let ctx = ctx.test_public("alice").await;
 
-        let ctx = RequestContext::new(&ctx, Some("alice"));
-
-        let result = handle(&ctx, GetIdentityFeedRequest::default()).await;
+        let result = handle(ctx, GetIdentityFeedRequest::default()).await;
 
         assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
     }

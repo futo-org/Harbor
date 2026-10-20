@@ -4,11 +4,10 @@
 use tonic::Status;
 
 use crate::service::content::content_filestore::ContentFilestore;
-use crate::service::context::ServiceContext;
 use crate::service::proto::{SyncContentRequest, SyncContentResponse};
 
 pub async fn handle(
-    _: &ServiceContext,
+    //_: PublicContext,
     _: &ContentFilestore,
     _: SyncContentRequest,
 ) -> Result<SyncContentResponse, Status> {

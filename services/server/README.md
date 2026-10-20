@@ -11,7 +11,7 @@
 
 ```sh
 # In the root of the repo.
-docker compose up -d postgres kafka
+docker compose up -d postgres kafka valkey
 ```
 
 This starts PostgreSQL on port 5432 with user `postgres` and password `testing`.

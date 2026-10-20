@@ -1,9 +1,12 @@
 //! `search_users`: searches users.
 
+use serde::{Deserialize, Serialize};
+use tonic::Status;
+
 use crate::data::Marker;
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::pipeline::{Fetched, create_pipeline, finalize_fetch};
-use crate::service::context::RequestContext;
+use crate::service::context::PublicContext;
 use crate::service::proto::{
     SearchUsersRequest, SearchUsersResponse, SortUsersBy,
 };
@@ -11,8 +14,6 @@ use crate::service::search::repository::Query;
 use crate::service::search::rpc::{
     self, SearchResponseFilter, SearchResponseView, SearchRow,
 };
-use serde::{Deserialize, Serialize};
-use tonic::Status;
 
 struct Params {
     common: rpc::Params<SortedUsersBy>,
@@ -20,14 +21,14 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &RequestContext<'_>,
+    ctx: PublicContext,
     req: SearchUsersRequest,
 ) -> Result<SearchUsersResponse, Status> {
     let sort_by = req.sort_by();
     let common = rpc::Params::from_req_params(req.query, &req.page_params)?;
     let params = Params { common, sort_by };
     let result =
-        create_pipeline(ctx, &params, fetch, hydrate, filter, view).await?;
+        create_pipeline(&ctx, &params, fetch, hydrate, filter, view).await?;
     Ok(SearchUsersResponse {
         results: result.results,
         event_hints: result.event_hints,
@@ -36,11 +37,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<Fetched<SearchRow, SortedUsersBy>, Status> {
     let mut rows = Query::search_users(
-        &ctx.service.ro_db,
+        &ctx.db,
         &params.common.query,
         params.sort_by,
         params.common.limit + 1, // For pagination.
@@ -85,7 +86,7 @@ impl SortedUsersBy {
 }
 
 async fn hydrate(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _params: &Params,
     fetched: &Fetched<SearchRow, SortedUsersBy>,
 ) -> Result<HydrationState, Status> {
@@ -93,7 +94,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &RequestContext<'_>,
+    _: &PublicContext,
     _params: &Params,
     fetched: Fetched<SearchRow, SortedUsersBy>,
     hydration: &HydrationState,
@@ -103,10 +104,10 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _: &Params,
     filtered: SearchResponseFilter<SortedUsersBy>,
     hydration: HydrationState,
 ) -> Result<SearchResponseView<SortedUsersBy>, Status> {
-    rpc::view(ctx.service, filtered, hydration).await
+    rpc::view(ctx, filtered, hydration).await
 }

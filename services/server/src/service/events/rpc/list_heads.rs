@@ -1,26 +1,25 @@
-use crate::service::events::repository as EventsRepository;
-use crate::service::proto::PublicKey;
-use crate::service::{
-    context::ServiceContext, events::repository::HeadInfoRow,
-};
+use sea_orm::ConnectionTrait;
+use tonic::Status;
 
 use polycentric_common::models::protos_v2::{
     EventKey, ListHeadsRequest, ListHeadsResponse,
 };
 
-use sea_orm::DbConn;
-use tonic::Status;
+use crate::service::context::PublicContext;
+use crate::service::events::repository as EventsRepository;
+use crate::service::events::repository::HeadInfoRow;
+use crate::service::proto::PublicKey;
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: ListHeadsRequest,
 ) -> Result<ListHeadsResponse, Status> {
-    heads(&ctx.ro_db, &req.identity).await
+    heads(&ctx.db, &req.identity).await
 }
 
 /// The heads of `identity` as stored in `db`.
-pub async fn heads(
-    db: &DbConn,
+pub async fn heads<C: ConnectionTrait>(
+    db: &C,
     identity: &str,
 ) -> Result<ListHeadsResponse, Status> {
     let rows = EventsRepository::Query::list_heads(db, identity)

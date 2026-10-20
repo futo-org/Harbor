@@ -8,12 +8,12 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 use tonic::Status;
 
-use crate::service::context::ServiceContext;
+use crate::service::context::RequestContext;
 
 /// Build an `EventProof` for `leaf_signature` (in `(identity,
 /// collection)`) against a `target`.
-pub async fn build_proof_against(
-    ctx: &ServiceContext,
+async fn build_proof_against<Auth>(
+    ctx: &RequestContext<Auth>,
     identity: &str,
     collection: i32,
     target: &EventProofTarget,
@@ -21,7 +21,7 @@ pub async fn build_proof_against(
 ) -> Result<Option<EventProof>, Status> {
     let canonical = ctx
         .proof_cache
-        .canonical(&ctx.ro_db, identity, collection)
+        .canonical(&ctx.db, identity, collection)
         .await
         .map_err(db_err)?;
 
@@ -58,8 +58,8 @@ pub async fn build_proof_against(
 /// Find the rotator's recorded target for `(signer, collection)` in the
 /// latest cached identity content and build a proof against it. Requires
 /// the cache to have been warmed (e.g. via `build_identity_hints`).
-pub async fn build_revocation_proof(
-    ctx: &ServiceContext,
+async fn build_revocation_proof<Auth>(
+    ctx: &RequestContext<Auth>,
     identity: &str,
     collection: i32,
     signer: &PublicKey,
@@ -78,8 +78,8 @@ pub async fn build_revocation_proof(
 
 /// Add a revocation `EventProof` to each bundle whose signer is recorded
 /// as revoked in the latest identity content for that identity.
-pub async fn attach_proofs<'a, II, I>(
-    ctx: &ServiceContext,
+pub async fn attach_proofs<'a, II, I, Auth>(
+    ctx: &RequestContext<Auth>,
     bundles: II,
 ) -> Result<(), Status>
 where

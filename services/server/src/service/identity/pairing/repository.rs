@@ -1,13 +1,15 @@
-use crate::service::proto as Proto;
 use ::entity::{pairing_session, pairing_session_claimer};
 use sea_orm::*;
+
+use crate::db::DbTx;
+use crate::service::proto as Proto;
 
 pub struct Query;
 
 impl Query {
     /// Returns the pairing session with this digest hash, if one exists.
-    pub async fn get_pairing_session(
-        db: &DbConn,
+    pub async fn get_pairing_session<C: ConnectionTrait>(
+        db: &C,
         digest_sha256: &[u8],
     ) -> Result<Option<pairing_session::Model>, DbErr> {
         pairing_session::Entity::find()
@@ -17,8 +19,8 @@ impl Query {
     }
 
     /// Lists the claimers that have joined the session with this digest hash.
-    pub async fn list_claimers(
-        db: &DbConn,
+    pub async fn list_claimers<C: ConnectionTrait>(
+        db: &C,
         digest_sha256: &[u8],
     ) -> Result<Vec<Proto::PublicKey>, DbErr> {
         let rows = pairing_session_claimer::Entity::find()
@@ -39,8 +41,8 @@ impl Query {
 
     /// Records a claimer for the session with this digest hash.
     /// Claimers that have already joined are ignored.
-    pub async fn add_claimer(
-        db: &DbConn,
+    pub async fn add_claimer<C: ConnectionTrait>(
+        db: &C,
         issuer_identity: &str,
         digest_sha256: &[u8],
         claimer_key: &Proto::PublicKey,
@@ -73,7 +75,7 @@ impl Query {
 
     /// Returns the pairing session currently stored for `issuer_identity`.
     pub async fn get_latest_pairing_session(
-        txn: &DatabaseTransaction,
+        txn: &DbTx<'_>,
         issuer_identity: &str,
     ) -> Result<Option<pairing_session::Model>, DbErr> {
         pairing_session::Entity::find_by_id(issuer_identity)
@@ -84,7 +86,7 @@ impl Query {
 
     /// Deletes every claimer of every session issued by `issuer_identity`.
     pub async fn clear_claimers(
-        txn: &DatabaseTransaction,
+        txn: &DbTx<'_>,
         issuer_identity: &str,
     ) -> Result<(), DbErr> {
         pairing_session_claimer::Entity::delete_many()
@@ -101,7 +103,7 @@ impl Query {
     /// Writes the issuer state for a pairing session, replacing whatever
     /// session was stored for this issuer.
     pub async fn put_issuer_state(
-        txn: &DatabaseTransaction,
+        txn: &DbTx<'_>,
         row: pairing_session::ActiveModel,
     ) -> Result<(), DbErr> {
         pairing_session::Entity::insert(row)
