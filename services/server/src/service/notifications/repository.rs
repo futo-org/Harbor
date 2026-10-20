@@ -10,8 +10,8 @@ pub struct Mutation;
 impl Query {
     /// Notifications addressed to `identity` newer than its read marker,
     /// counted up to `cap`.
-    pub async fn unread_count(
-        db: &DbConn,
+    pub async fn unread_count<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
         cap: u64,
     ) -> Result<u64, DbErr> {
@@ -42,8 +42,8 @@ impl Query {
 
     /// Id of the notification to `identity` that `trigger` produced, if this
     /// server has it. The newest one, since redelivery can duplicate rows.
-    pub async fn id_of_trigger(
-        db: &DbConn,
+    pub async fn id_of_trigger<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
         trigger: &TargetEventKey,
     ) -> Result<Option<i64>, DbErr> {
@@ -78,8 +78,8 @@ impl Query {
     }
 
     /// Id of the newest notification addressed to `identity`.
-    pub async fn newest_id(
-        db: &DbConn,
+    pub async fn newest_id<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
     ) -> Result<Option<i64>, DbErr> {
         notification::Entity::find()
@@ -93,8 +93,8 @@ impl Query {
     }
 
     /// Notifications addressed to `to_identity`, newest first.
-    pub async fn list_for_identity(
-        db: &DbConn,
+    pub async fn list_for_identity<C: ConnectionTrait>(
+        db: &C,
         to_identity: &str,
         limit: u64,
         after_id: Option<i64>,
@@ -114,8 +114,8 @@ impl Query {
 
 impl Mutation {
     /// Moves `identity`'s read marker up to `up_to_id`, never backwards.
-    pub async fn mark_read(
-        db: &DbConn,
+    pub async fn mark_read<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
         up_to_id: i64,
     ) -> Result<(), DbErr> {

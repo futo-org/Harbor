@@ -2,22 +2,20 @@
 //! verifying the caller is a moderator. The ban is attributed to the
 //! authenticated moderator identity.
 
-use sea_orm::TransactionTrait;
-use tonic::{Request, Status};
+use tonic::Status;
 
-use crate::service::context::ServiceContext;
+use crate::service::context::AuthContext;
 use crate::service::identity::repository;
 use crate::service::identity::rpc::common::require_moderator;
 use crate::service::identity::service::erase_identity;
 use crate::service::proto::{SetBanStatusRequest, SetBanStatusResponse};
 
 pub async fn handle(
-    ctx: &ServiceContext,
-    request: Request<SetBanStatusRequest>,
+    mut ctx: AuthContext,
+    req: SetBanStatusRequest,
 ) -> Result<SetBanStatusResponse, Status> {
-    let moderator_identity = require_moderator(ctx, &request).await?;
-
-    let body = request.into_inner();
+    require_moderator(&ctx).await?;
+    let moderator_identity = &ctx.auth;
 
     let txn = ctx.db.begin().await.map_err(|e| {
         tracing::error!(error = %e, "set_ban_status txn begin error");
@@ -25,9 +23,9 @@ pub async fn handle(
     })?;
     repository::Mutation::set_banned(
         &txn,
-        &body.target_identity,
-        body.banned,
-        &moderator_identity,
+        &req.target_identity,
+        req.banned,
+        moderator_identity,
     )
     .await
     .map_err(|e| {
@@ -41,17 +39,17 @@ pub async fn handle(
 
     tracing::info!(
         moderator = moderator_identity,
-        target = body.target_identity,
-        banned = body.banned,
+        target = req.target_identity,
+        banned = req.banned,
         "ban status changed"
     );
 
-    if body.banned {
+    if req.banned {
         erase_identity(
-            &ctx.db,
+            &mut ctx.db,
             None,
             Some(&ctx.proof_cache),
-            &body.target_identity,
+            &req.target_identity,
         )
         .await
         .map_err(|e| {

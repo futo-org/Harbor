@@ -28,7 +28,7 @@ async fn list_verification_claims_one() {
     let mut verifications = verifications_service().await;
 
     let mut client = TestClient::new().await;
-    client.github_verification_claim("Alice", DEFAULT_CREATED_AT);
+    client.github_verification_claim("Alice", current_timestamp());
     let verification_claim_key = client.get_last_event_key();
     client.submit_events().await;
 

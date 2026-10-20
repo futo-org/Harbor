@@ -457,7 +457,8 @@ CREATE TABLE public.events (
     event_bytes bytea NOT NULL,
     created_at timestamp with time zone NOT NULL,
     synced_at timestamp with time zone NOT NULL,
-    application_id integer
+    application_id integer,
+    content_type smallint
 );
 
 
@@ -1122,6 +1123,13 @@ CREATE INDEX events_collection_created_at_id_idx ON public.events USING btree (c
 --
 
 CREATE INDEX events_content_digest_idx ON public.events USING btree (content_digest_type, content_digest_bytes);
+
+
+--
+-- Name: events_feed_posts_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX events_feed_posts_idx ON public.events USING btree (created_at DESC, id DESC) WHERE ((collection = 2) AND (content_type = 2));
 
 
 --

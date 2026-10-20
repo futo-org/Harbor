@@ -1,3 +1,12 @@
+//! Example
+//!
+//! ```sh
+//! cargo run --bin gen-data -- http://127.0.0.1:3000 --amount 10000 --clients 100 post
+//! ```
+//!
+//! Don't set the client to a value higher than
+//! `HARBOR_DATABASE_MAX_CONNECTIONS`, it will cause performance issues.
+
 use std::process::exit;
 use std::time::Instant;
 use std::{env, panic};

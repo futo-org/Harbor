@@ -3,6 +3,7 @@ use polycentric_common::models::collections;
 use sea_orm::*;
 
 use crate::data::EventWithContentRow;
+use crate::db::DbTx;
 use crate::service::feeds::repository::content_join;
 use crate::service::identity::chain;
 use crate::service::proto::{ContentDigest, Identity, PublicKey};
@@ -27,8 +28,8 @@ pub struct Query;
 
 impl Query {
     /// Authorized keys for `identity`'s validated chain head.
-    pub async fn authorized_keys(
-        db: &DbConn,
+    pub async fn authorized_keys<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
     ) -> Result<Vec<AuthorizedKey>, DbErr> {
         let Some(content) =
@@ -69,8 +70,8 @@ impl Query {
     }
 
     /// True when `public_key` is a rotation key on the latest identity state.
-    pub async fn is_rotation_key(
-        db: &DbConn,
+    pub async fn is_rotation_key<C: ConnectionTrait>(
+        db: &C,
         identity_key: &str,
         public_key: &[u8],
     ) -> Result<bool, DbErr> {
@@ -81,8 +82,8 @@ impl Query {
     }
 
     /// True when `identity` has a row in the `moderator` table.
-    pub async fn is_moderator(
-        db: &DbConn,
+    pub async fn is_moderator<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
     ) -> Result<bool, DbErr> {
         moderator::Entity::find_by_id(identity).exists(db).await
@@ -145,8 +146,8 @@ impl Query {
     /// even when timestamps collide. `after` continues after a previous
     /// page's last row; `query` keeps only identities that begin with it
     /// (case-insensitive prefix). Returns up to `limit` rows.
-    pub async fn list_bans(
-        db: &DbConn,
+    pub async fn list_bans<C: ConnectionTrait>(
+        db: &C,
         limit: u64,
         after: Option<&BanCursor>,
         query: Option<&str>,
@@ -246,7 +247,7 @@ impl Mutation {
     /// Works through temp tables so nothing scales with the event count on
     /// the client, hence the transaction. Returns `None` once no events match.
     pub async fn erase_events_batch(
-        db: &DatabaseTransaction,
+        db: &mut DbTx<'_>,
         identity: &str,
         limit: u64,
     ) -> Result<ErasedBatch, DbErr> {
@@ -271,7 +272,7 @@ impl Mutation {
     /// Erases every event `public_key` signed, in one pass. The operator
     /// command's path for a key with many identities.
     pub async fn erase_events_signed_by(
-        db: &DatabaseTransaction,
+        db: &mut DbTx<'_>,
         public_key: &[u8],
     ) -> Result<ErasedBatch, DbErr> {
         let res = db
@@ -293,8 +294,8 @@ impl Mutation {
     /// Deletes what is keyed by the identity rather than by event: the
     /// notifications and per-event counts. Run once after the batches.
     /// Counts on other events that include their interactions are left as-is.
-    pub async fn erase_derived(
-        db: &DatabaseTransaction,
+    pub async fn erase_derived<C: ConnectionTrait>(
+        db: &C,
         identities: &[String],
     ) -> Result<(), DbErr> {
         for (table, column) in CACHE_EVENT_IDENTITY_COLUMNS {
@@ -311,9 +312,7 @@ impl Mutation {
 
 /// Deletes the events listed in the `erase_events` temp table, the cache
 /// rows and tallies derived from them, and the content only they used.
-async fn erase_collected(
-    db: &DatabaseTransaction,
-) -> Result<ErasedBatch, DbErr> {
+async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
     db.execute_unprepared(
             "CREATE TEMP TABLE erase_content ON COMMIT DROP AS
              SELECT DISTINCT content.id
@@ -405,7 +404,7 @@ impl Mutation {
     /// Deletes content no event references. Returns the count and the blobs
     /// left for the caller to remove.
     pub async fn prune_orphan_content(
-        db: &DatabaseTransaction,
+        db: &mut DbTx<'_>,
     ) -> Result<(u64, Vec<ContentDigest>), DbErr> {
         db.execute_unprepared(&format!(
             "CREATE TEMP TABLE erase_content ON COMMIT DROP AS \
@@ -481,7 +480,7 @@ pub struct ErasedBatch {
 /// their child rows. Returns the count and the blobs no content references
 /// any more.
 async fn delete_content_rows(
-    db: &DatabaseTransaction,
+    db: &mut DbTx<'_>,
 ) -> Result<(u64, Vec<ContentDigest>), DbErr> {
     db.execute_unprepared(
         "CREATE TEMP TABLE erase_blobs ON COMMIT DROP AS \

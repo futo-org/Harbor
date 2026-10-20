@@ -2,27 +2,19 @@
 //! posts about a URL), newest first. For a link, "attributed to" means an
 //! exact URL match, ignoring the other Link metadata.
 
-use crate::{
-    data::{
-        hydration::{HydrationState, post_hydrate},
-        pipeline,
-    },
-    service::{
-        context::RequestContext,
-        feeds::{
-            repository::Query as FeedsRepository,
-            rpc::common::{
-                self as feeds_pipeline, GetFeedResponseFilter,
-                GetFeedResponseView,
-            },
-            util::map_db_err,
-        },
-        proto::{
-            GetAttributionFeedRequest, GetFeedResponse, attributed_to::To,
-        },
-    },
-};
 use tonic::Status;
+
+use crate::data::hydration::{HydrationState, post_hydrate};
+use crate::data::pipeline;
+use crate::service::context::PublicContext;
+use crate::service::feeds::repository::Query as FeedsRepository;
+use crate::service::feeds::rpc::common::{
+    self as feeds_pipeline, GetFeedResponseFilter, GetFeedResponseView,
+};
+use crate::service::feeds::util::map_db_err;
+use crate::service::proto::{
+    GetAttributionFeedRequest, GetFeedResponse, attributed_to::To,
+};
 
 pub struct Params {
     pub common: feeds_pipeline::Params,
@@ -30,7 +22,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: &RequestContext<'_>,
+    ctx: PublicContext,
     req: GetAttributionFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
     // Only link attribution is queryable today; extract its URL.
@@ -53,7 +45,7 @@ pub async fn handle(
     let params = Params { common, url };
 
     let result =
-        pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
+        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
             .await?;
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
@@ -63,11 +55,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = FeedsRepository::list_feed_events_by_attributed_url(
-        &ctx.service.ro_db,
+        &ctx.db,
         params.url.clone(),
         params.common.limit + 1, // Check for next page
         &params.common.cursor_filter,
@@ -78,7 +70,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
@@ -86,7 +78,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _ctx: &RequestContext<'_>,
+    _ctx: &PublicContext,
     params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -95,10 +87,10 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _params: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {
-    feeds_pipeline::view(ctx.service, filtered, hydration).await
+    feeds_pipeline::view(ctx, filtered, hydration).await
 }
