@@ -1,35 +1,34 @@
 //! `list_bans`: a paginated, optionally filtered list of the identities
 //! banned on this server. Requires the caller to be a moderator.
 
-use crate::service::context::ServiceContext;
+use chrono::DateTime;
+use entity::ban;
+use tonic::Status;
+
+use crate::service::context::AuthContext;
 use crate::service::identity::repository::{self as id_repo, BanCursor};
 use crate::service::identity::rpc::common::require_moderator;
 use crate::service::proto::{ListBansRequest, ListBansResponse, PageInfo};
-use chrono::DateTime;
-use entity::ban;
-use tonic::{Request, Status};
 
 const DEFAULT_LIMIT: u32 = 10;
 const MAX_LIMIT: u32 = 200;
 
 pub async fn handle(
-    ctx: &ServiceContext,
-    request: Request<ListBansRequest>,
+    ctx: AuthContext,
+    req: ListBansRequest,
 ) -> Result<ListBansResponse, Status> {
-    require_moderator(ctx, &request).await?;
+    require_moderator(&ctx).await?;
 
-    let body = request.into_inner();
+    let limit = req.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as u64;
 
-    let limit = body.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as u64;
-
-    let after = match body.after.as_deref() {
+    let after = match req.after.as_deref() {
         None | Some("") => None,
         Some(cursor) => Some(decode_cursor(cursor)?),
     };
 
     // Identities are lowercase hex, so lowercasing the query makes the
     // prefix match effectively case-insensitive.
-    let query = body
+    let query = req
         .query
         .as_deref()
         .map(str::trim)
@@ -55,7 +54,7 @@ pub async fn handle(
 
     // Over-fetch one to detect a following page.
     let mut rows = id_repo::Query::list_bans(
-        &ctx.ro_db,
+        &ctx.db,
         limit + 1,
         after.as_ref(),
         query.as_deref(),

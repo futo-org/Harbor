@@ -1,11 +1,6 @@
 //! gRPC `PairingService` impl. Each method delegates to a handler
 //! under `pairing/rpc/`.
 
-pub mod common;
-pub mod get_pairing_session;
-pub mod join_pairing_session;
-pub mod put_pairing_session;
-
 use std::sync::Arc;
 
 use tonic::{Request, Response, Status};
@@ -20,6 +15,11 @@ use crate::service::proto::{
     PutPairingSessionRequest, PutPairingSessionResponse,
 };
 
+pub mod common;
+pub mod get_pairing_session;
+pub mod join_pairing_session;
+pub mod put_pairing_session;
+
 pub struct PairingServiceImpl {
     ctx: Arc<ServiceContext>,
 }
@@ -30,9 +30,9 @@ impl PairingService for PairingServiceImpl {
         &self,
         request: Request<PutPairingSessionRequest>,
     ) -> Result<Response<PutPairingSessionResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            put_pairing_session::handle(&self.ctx, request.into_inner())
-                .await?,
+            put_pairing_session::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -40,9 +40,9 @@ impl PairingService for PairingServiceImpl {
         &self,
         request: Request<GetPairingSessionRequest>,
     ) -> Result<Response<GetPairingSessionResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            get_pairing_session::handle(&self.ctx, request.into_inner())
-                .await?,
+            get_pairing_session::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -50,9 +50,9 @@ impl PairingService for PairingServiceImpl {
         &self,
         request: Request<JoinPairingSessionRequest>,
     ) -> Result<Response<JoinPairingSessionResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            join_pairing_session::handle(&self.ctx, request.into_inner())
-                .await?,
+            join_pairing_session::handle(ctx, request.into_inner()).await?,
         ))
     }
 }

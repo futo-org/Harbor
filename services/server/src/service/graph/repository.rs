@@ -14,7 +14,7 @@ use tonic::Status;
 use crate::data::EventWithContentRow;
 use crate::data::hydration::event_identities;
 use crate::data::{Cursor, CursorFilter, EventRow};
-use crate::service::context::{RequestContext, ServiceContext};
+use crate::service::context::{Auth, RequestContext};
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
 use crate::service::proto::Content;
@@ -87,8 +87,8 @@ impl Query {
     ///
     /// TODO: We can either cache these OR keep a follower table that we update on ingest.
     /// This current query is inefficient.
-    pub async fn list_followed_identities(
-        ctx: &ServiceContext,
+    pub async fn list_followed_identities<A>(
+        ctx: &RequestContext<A>,
         caller: &str,
     ) -> Result<Vec<String>, Status> {
         list_graph_targets(ctx, caller, decode_followed_identity).await
@@ -97,8 +97,8 @@ impl Query {
     /// Identities `caller` has blocked, read from the `block` cache table.
     /// No tombstone filtering is required here: the cache only holds rows
     /// for blocks that have not been deleted.
-    pub async fn list_blocked_identities(
-        ctx: &ServiceContext,
+    async fn list_blocked_identities<C: ConnectionTrait>(
+        db: &C,
         caller: &str,
     ) -> Result<Vec<String>, Status> {
         block::Entity::find()
@@ -107,18 +107,18 @@ impl Query {
             .distinct()
             .filter(block::Column::Blocker.eq(caller))
             .into_tuple::<String>()
-            .all(&ctx.ro_db)
+            .all(db)
             .await
             .map_err(map_db_err)
     }
 
     /// [`Query::list_blocked_identities`] as a deduplicated set, for
     /// filtering the identities a response may carry.
-    pub async fn blocked_set(
-        ctx: &ServiceContext,
+    async fn blocked_set<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
     ) -> Result<HashSet<String>, Status> {
-        Ok(Self::list_blocked_identities(ctx, identity)
+        Ok(Self::list_blocked_identities(db, identity)
             .await?
             .into_iter()
             .collect())
@@ -127,11 +127,14 @@ impl Query {
     /// [`Query::blocked_set`] for the caller of a request. Empty when the
     /// request arrived unauthenticated, as there is then no caller whose
     /// blocks could apply.
-    pub async fn blocked_set_for_caller(
-        ctx: &RequestContext<'_>,
-    ) -> Result<HashSet<String>, Status> {
-        match ctx.caller {
-            Some(caller) => Self::blocked_set(ctx.service, caller).await,
+    pub async fn blocked_set_for_caller<A>(
+        ctx: &RequestContext<A>,
+    ) -> Result<HashSet<String>, Status>
+    where
+        RequestContext<A>: Auth,
+    {
+        match ctx.identity() {
+            Some(caller) => Self::blocked_set(&ctx.db, caller).await,
             None => Ok(HashSet::new()),
         }
     }
@@ -142,8 +145,8 @@ impl Query {
     /// on the blocked cache is `(blocker, blocked)`. Eventually, we should
     /// add index such that we can efficiently query only the blocked identity
     /// and get all blockers.
-    pub async fn identities_blocking<'a, I>(
-        ctx: &ServiceContext,
+    pub async fn identities_blocking<'a, I, C: ConnectionTrait>(
+        db: &C,
         potential_blockers: I,
         blocked: &str,
     ) -> Result<HashSet<String>, Status>
@@ -166,21 +169,21 @@ impl Query {
                     .eq(PgFunc::any(potential_blockers)),
             )
             .into_tuple::<String>()
-            .all(&ctx.ro_db)
+            .all(db)
             .await
             .map(HashSet::from_iter)
             .map_err(map_db_err)
     }
 
-    pub async fn blocks_identity(
-        ctx: &ServiceContext,
+    pub async fn blocks_identity<C: ConnectionTrait>(
+        db: &C,
         blocker: &str,
         blocked: &str,
     ) -> Result<bool, Status> {
         let row = block::Entity::find()
             .filter(block::Column::Blocker.eq(blocker))
             .filter(block::Column::Blocked.eq(blocked))
-            .one(&ctx.ro_db)
+            .one(db)
             .await
             .map_err(map_db_err)?;
 
@@ -191,8 +194,8 @@ impl Query {
     ///
     /// TODO: same inefficiency as `list_followed_identities` — a
     /// maintained counter would avoid scanning the graph rows.
-    pub async fn count_following(
-        ctx: &ServiceContext,
+    pub async fn count_following<A>(
+        ctx: &RequestContext<A>,
         identity: &str,
     ) -> Result<u64, Status> {
         Ok(Self::list_followed_identities(ctx, identity).await?.len() as u64)
@@ -200,13 +203,13 @@ impl Query {
 
     /// Count of distinct identities following `identity`
     /// (tombstone-aware).
-    pub async fn count_followers(
-        ctx: &ServiceContext,
+    pub async fn count_followers<A>(
+        ctx: &RequestContext<A>,
         identity: &str,
     ) -> Result<u64, Status> {
         let rows: Vec<EventWithContentRow> = follow_events_query()
             .filter(content_follow::Column::IdentityId.eq(identity))
-            .all(&ctx.ro_db)
+            .all(&ctx.db)
             .await
             .map_err(map_db_err)?;
 
@@ -215,7 +218,7 @@ impl Query {
             .map(|(event, _)| TargetEventKey::of(event))
             .collect();
         let raw_tombstones =
-            tombstone::list_tombstones_for_event_keys(&ctx.ro_db, &keys)
+            tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
                 .await
                 .map_err(map_db_err)?;
         let valid_tombstones =
@@ -233,8 +236,8 @@ impl Query {
 
     /// Follow events authored by `identity` — who they follow. Newest
     /// first, keyset-paginated, tombstones NOT yet filtered.
-    pub async fn list_following_events(
-        db: &DbConn,
+    pub async fn list_following_events<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
         limit: u32,
         cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -246,8 +249,8 @@ impl Query {
 
     /// Follow events targeting `identity` — who follows them. Newest
     /// first, keyset-paginated, tombstones NOT yet filtered.
-    pub async fn list_followers_events(
-        db: &DbConn,
+    pub async fn list_followers_events<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
         limit: u32,
         cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -259,8 +262,8 @@ impl Query {
 
     /// `identity` is `None` for an anonymous caller, who follows nobody and
     /// so only gets the default suggestions.
-    pub async fn suggest_follow(
-        db: &DbConn,
+    pub async fn suggest_follow<C: ConnectionTrait>(
+        db: &C,
         identity: Option<&str>,
         cursor_filter: &CursorFilter<FollowSuggestionsSortedBy>,
         limit: u32,
@@ -365,8 +368,8 @@ impl Query {
 
     /// The latest identity event of each row in `suggestions` (columns
     /// (followee, followers)), most followers first, keyset-paginated.
-    async fn page_suggestions(
-        db: &DbConn,
+    async fn page_suggestions<C: ConnectionTrait>(
+        db: &C,
         suggestions: SelectStatement,
         cursor_filter: &CursorFilter<FollowSuggestionsSortedBy>,
         limit: u32,
@@ -495,8 +498,8 @@ impl Query {
     }
 
     /// `follows` is (followee, follower).
-    pub async fn follow_events(
-        db: &DbConn,
+    pub async fn follow_events<C: ConnectionTrait>(
+        db: &C,
         // NOTE: we should use an iterator here, but that triggers a "known
         // limitation" in the compiler:
         // > lifetime bound not satisfied
@@ -534,8 +537,8 @@ impl Query {
 
 /// Obtains the targets of graph events authored by `caller`. The `extract`
 /// function filters for specific types of graph events.
-async fn list_graph_targets(
-    ctx: &ServiceContext,
+async fn list_graph_targets<A>(
+    ctx: &RequestContext<A>,
     caller: &str,
     extract: fn(&content::Model) -> Option<String>,
 ) -> Result<Vec<String>, Status> {
@@ -544,7 +547,7 @@ async fn list_graph_targets(
         .join(JoinType::InnerJoin, content_join())
         .filter(event::Column::Collection.eq(collections::SOCIAL_GRAPH))
         .filter(event::Column::Identity.eq(caller))
-        .all(&ctx.ro_db)
+        .all(&ctx.db)
         .await
         .map_err(map_db_err)?;
 
@@ -553,7 +556,7 @@ async fn list_graph_targets(
         .map(|(event, _)| TargetEventKey::of(event))
         .collect();
     let raw_tombstones =
-        tombstone::list_tombstones_for_event_keys(&ctx.ro_db, &keys)
+        tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
             .await
             .map_err(map_db_err)?;
     let valid_tombstones =
@@ -596,8 +599,8 @@ fn follow_join() -> RelationDef {
 
 /// Apply the (created_at, id) keyset cursor and fetch, newest first.
 /// Mirrors the feeds repository's pagination.
-async fn page_follow_events(
-    db: &DbConn,
+async fn page_follow_events<C: ConnectionTrait>(
+    db: &C,
     query: SelectTwo<event::Entity, content::Entity>,
     limit: u32,
     cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -653,15 +656,19 @@ fn map_db_err(e: sea_orm::DbErr) -> Status {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::proto::{Block, Follow};
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+
     use chrono::Utc;
     use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{
         DatabaseConnection, DbBackend, MockDatabase, MockRow, Value,
     };
-    use std::collections::BTreeMap;
-    use std::sync::Arc;
+
+    use crate::service::context::ServiceContext;
+    use crate::service::proto::{Block, Follow};
+
+    use super::*;
 
     async fn ctx(db: DatabaseConnection) -> Arc<ServiceContext> {
         let kafka_producer = common_kafka::build_producer()
@@ -751,7 +758,11 @@ mod tests {
             ]])
             .append_query_results([no_tombstones()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let count = Query::count_followers(&ctx, "target").await.unwrap();
         assert_eq!(count, 2);
@@ -767,7 +778,11 @@ mod tests {
             ]])
             .append_query_results([no_tombstones()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let count = Query::count_following(&ctx, "alice").await.unwrap();
         assert_eq!(count, 2);
@@ -781,9 +796,8 @@ mod tests {
                 blocked_column_row("carol"),
             ]])
             .into_connection();
-        let ctx = ctx(db).await;
 
-        let blocked = Query::blocked_set(&ctx, "alice").await.unwrap();
+        let blocked = Query::blocked_set(&db, "alice").await.unwrap();
         assert_eq!(
             blocked,
             HashSet::from(["bob".to_string(), "carol".to_string()])
@@ -793,9 +807,12 @@ mod tests {
     #[tokio::test]
     async fn an_anonymous_caller_blocks_nobody() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
-        let ctx = RequestContext::new(&ctx, None);
         let blocked = Query::blocked_set_for_caller(&ctx).await.unwrap();
         assert!(blocked.is_empty());
     }
@@ -809,7 +826,11 @@ mod tests {
             ]])
             .append_query_results([no_tombstones()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         assert_eq!(
             Query::list_followed_identities(&ctx, "alice")
@@ -824,9 +845,8 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![block_row(1, "alice", "bob")]])
             .into_connection();
-        let ctx = ctx(db).await;
 
-        assert!(Query::blocks_identity(&ctx, "alice", "bob").await.unwrap());
+        assert!(Query::blocks_identity(&db, "alice", "bob").await.unwrap());
     }
 
     #[tokio::test]
@@ -834,9 +854,8 @@ mod tests {
         let db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([Vec::<block::Model>::new()])
             .into_connection();
-        let ctx = ctx(db).await;
 
-        assert!(!Query::blocks_identity(&ctx, "alice", "bob").await.unwrap());
+        assert!(!Query::blocks_identity(&db, "alice", "bob").await.unwrap());
     }
 
     #[tokio::test]
