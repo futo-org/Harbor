@@ -85,11 +85,11 @@ export type KeyPairStatus =
 export interface IKeyRepository {
   /**
    * Insert a new key pair.
-   * Fails if there is already a key pair with the same public key present.
+   * Fails if this identity already has a key pair with the same public key.
    */
   putKeyPair(
-    keyPair: KeyPair,
     identity: string,
+    keyPair: KeyPair,
     status: KeyPairStatus,
   ): Promise<void>;
 
@@ -110,13 +110,16 @@ export interface IKeyRepository {
   /**
    * Get the private key associated with a public key.
    */
-  getPrivateKey(publicKey: PublicKey): Promise<PrivateKey | null>;
+  getPrivateKey(
+    identity: string,
+    publicKey: PublicKey,
+  ): Promise<PrivateKey | null>;
 
   /**
    * Delete a key pair from the local repository.
    * This may not be atomic if the private key is not stored inline.
    */
-  deleteKeyPair(publicKey: PublicKey): Promise<void>;
+  deleteKeyPair(identity: string, publicKey: PublicKey): Promise<void>;
 
   /**
    * Process any pending deletions and do cleanup.
