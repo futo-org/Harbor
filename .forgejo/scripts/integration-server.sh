@@ -208,6 +208,7 @@ if [ "$CI_MODE" = true ]; then
 
 else
   export HARBOR_DATABASE_URL="${HARBOR_DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
+  export HARBOR_DATABASE_URL_RO="${HARBOR_DATABASE_URL_RO:-postgres://postgres:testing@localhost:5432?options=-c%20default_transaction_read_only=on}"
 
   echo "==> Applying migrations…"
   (
