@@ -207,6 +207,8 @@ export function ComposerFields({
             key={autoFocus ? 'autofocus' : 'no-autofocus'}
             ref={inputRef}
             variant="plain"
+            fontSize="lg"
+            lineHeight="lg"
             placeholder={placeholder}
             autoFocus={autoFocus}
             value={isIOS ? text : undefined}
@@ -220,10 +222,6 @@ export function ComposerFields({
               Atoms.px_0,
               Atoms.py_0,
               Atoms.pt_sm,
-              {
-                fontSize: typography.fontSize.lg,
-                lineHeight: typography.lineHeight.lg,
-              },
               // Android auto-grows the input one frame too late, causing the text to temporarily scroll, which looks
               // like a blip/flash (https://github.com/react/react-native/issues/46813,
               // https://github.com/react/react-native/issues/33165). If we add an extra space for the new line to go
