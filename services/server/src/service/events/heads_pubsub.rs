@@ -141,9 +141,15 @@ impl HeadsPubSub {
     }
 
     fn on_message(&self, message: PubSubMessage) {
+        let channel: String = match message.get_channel() {
+            Ok(channel) => channel,
+            Err(e) => {
+                tracing::warn!(error = %e, "heads message on an unreadable channel");
+                return;
+            }
+        };
         // The subscriber is shared, so other features' channels pass by here.
-        let Some(identity) =
-            channel_identity(message.get_channel_name(), &self.channel_prefix)
+        let Some(identity) = channel_identity(&channel, &self.channel_prefix)
         else {
             return;
         };
