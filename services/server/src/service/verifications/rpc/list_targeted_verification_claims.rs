@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use tonic::Status;
 
 use crate::data::pipeline;
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::tombstoned_keys;
 use crate::service::proto::{
@@ -23,9 +23,10 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: ListTargetedVerificationClaimsRequest,
 ) -> Result<ListTargetedVerificationClaimsResponse, Status> {
+    // TODO: use AuthContext here.
     if req.target_identity.is_empty() {
         return Err(Status::invalid_argument("target_identity is required"));
     }
@@ -34,7 +35,7 @@ pub async fn handle(
         target_identity: req.target_identity,
     };
     let view = pipeline::create_pipeline(
-        ctx,
+        &ctx,
         &params,
         fetch,
         claim_bundles::hydrate,
@@ -51,15 +52,13 @@ pub async fn handle(
 /// Fetches claims that are targeted at an identity and returns relevant
 /// VerificationClaim, VerificationTarget and VerificationVerify events
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
-    let targets = Repository::list_targets_for_identity(
-        &ctx.ro_db,
-        &params.target_identity,
-    )
-    .await
-    .map_err(map_db_err)?;
+    let targets =
+        Repository::list_targets_for_identity(&ctx.db, &params.target_identity)
+            .await
+            .map_err(map_db_err)?;
 
     let target_keys: Vec<TargetEventKey> =
         targets.iter().map(|t| t.target_key.clone()).collect();
@@ -73,7 +72,7 @@ async fn fetch(
         .filter(|key| seen.insert(key.clone()))
         .collect();
 
-    let claims = Repository::list_claim_events_by_keys(&ctx.ro_db, &claim_keys)
+    let claims = Repository::list_claim_events_by_keys(&ctx.db, &claim_keys)
         .await
         .map_err(map_db_err)?;
 
@@ -82,11 +81,13 @@ async fn fetch(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use sea_orm::{DbBackend, MockDatabase};
+
     use crate::service::verifications::rpc::common::tests::{
         claim_row, ctx, no_rows, target_row, target_table_row,
     };
-    use sea_orm::{DbBackend, MockDatabase};
+
+    use super::*;
 
     #[tokio::test]
     async fn returns_claims_targeting_the_identity() {
@@ -103,10 +104,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: "bob".to_string(),
             },
@@ -149,10 +154,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: "bob".to_string(),
             },
@@ -174,10 +183,14 @@ mod tests {
                 entity::content_verification_target::Model,
             )>::new()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: "bob".to_string(),
             },
@@ -191,10 +204,14 @@ mod tests {
     #[tokio::test]
     async fn rejects_an_empty_identity() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let result = handle(
-            &ctx,
+            ctx,
             ListTargetedVerificationClaimsRequest {
                 target_identity: String::new(),
             },

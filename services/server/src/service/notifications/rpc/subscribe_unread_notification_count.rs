@@ -23,6 +23,8 @@ pub type CountStream = BoxStream<SubscribeUnreadNotificationCountResponse>;
 /// Sends the current count, then a new one each time `changes` names the
 /// identity (or everyone) and the count differs.
 pub async fn handle(
+    // NOTE: we don't want to use a Context here as we don't want to keep a
+    // database connection alive while the stream is active.
     ctx: Arc<ServiceContext>,
     request: Request<SubscribeUnreadNotificationCountRequest>,
     mut changes: broadcast::Receiver<Change>,

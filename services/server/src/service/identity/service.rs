@@ -2,9 +2,17 @@
 //! feed/list/thread responses. Split into per-data-source functions
 //! so the pipeline's hydrate stage can fan them out in parallel.
 
+use std::collections::HashMap;
+use std::time::{Duration, Instant};
+
+use polycentric_common::models::collections;
+use sea_orm::{ConnectionTrait, DbErr, RuntimeErr};
+use tonic::Status;
+
 use crate::data::EventWithContentRow;
+use crate::db::DbConn;
 use crate::service::content::content_filestore::ContentFilestore;
-use crate::service::context::ServiceContext;
+use crate::service::context::RequestContext;
 use crate::service::feeds::repository::{self as FeedsRepository};
 use crate::service::identity::chain;
 use crate::service::identity::repository::{
@@ -12,13 +20,6 @@ use crate::service::identity::repository::{
 };
 use crate::service::proofs::cache::ProofCache;
 use crate::service::proto::{ContentDigest, PublicKey};
-use polycentric_common::models::collections;
-use sea_orm::{
-    ConnectionTrait, DatabaseConnection, DbErr, RuntimeErr, TransactionTrait,
-};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use tonic::Status;
 
 const ALL_COLLECTIONS: [i32; 8] = [
     collections::IDENTITY,
@@ -38,7 +39,7 @@ const ERASE_BATCH: u64 = 100;
 /// Erases an identity's events, deletes blobs nothing references any more,
 /// and drops its cached chain state. Used by bans and the operator command.
 pub async fn erase_identity(
-    db: &DatabaseConnection,
+    db: &mut DbConn,
     filestore: Option<&ContentFilestore>,
     proof_cache: Option<&ProofCache>,
     identity: &str,
@@ -46,18 +47,18 @@ pub async fn erase_identity(
     let mut total = Erased::default();
     loop {
         let started = Instant::now();
-        let batch = retry_deadlocks(|| async {
-            let txn = db.begin().await?;
+        let mut run = async || {
+            let mut tx = db.begin().await?;
             let batch = IdentityMutation::erase_events_batch(
-                &txn,
+                &mut tx,
                 identity,
                 ERASE_BATCH,
             )
             .await?;
-            txn.commit().await?;
+            tx.commit().await?;
             Ok(batch)
-        })
-        .await?;
+        };
+        let batch = retry_deadlocks_inline!(run);
 
         delete_blobs(filestore, &batch.blobs).await;
         total.events += batch.erased.events;
@@ -76,12 +77,13 @@ pub async fn erase_identity(
             break;
         }
     }
-    retry_deadlocks(|| async {
+
+    let mut run = async || {
         let txn = db.begin().await?;
         IdentityMutation::erase_derived(&txn, &[identity.to_string()]).await?;
         txn.commit().await
-    })
-    .await?;
+    };
+    retry_deadlocks_inline!(run);
 
     if let Some(cache) = proof_cache {
         cache.invalidate_identity(identity).await;
@@ -96,17 +98,18 @@ pub async fn erase_identity(
 /// `identities` (the ones it signed for), in one transaction. For the
 /// operator command; a running server's caches are not invalidated.
 pub async fn erase_signed_by(
-    db: &DatabaseConnection,
+    db: &mut DbConn,
     filestore: Option<&ContentFilestore>,
     public_key: &[u8],
     identities: &[String],
 ) -> Result<Erased, DbErr> {
-    let batch = retry_deadlocks(|| async {
-        let txn = db.begin().await?;
+    let batch = retry_deadlocks(async || {
+        let mut tx = db.begin().await?;
         let batch =
-            IdentityMutation::erase_events_signed_by(&txn, public_key).await?;
-        IdentityMutation::erase_derived(&txn, identities).await?;
-        txn.commit().await?;
+            IdentityMutation::erase_events_signed_by(&mut tx, public_key)
+                .await?;
+        IdentityMutation::erase_derived(&tx, identities).await?;
+        tx.commit().await?;
         Ok(batch)
     })
     .await?;
@@ -116,13 +119,13 @@ pub async fn erase_signed_by(
 
 /// Deletes content rows no event references, and their blob bodies.
 pub async fn prune_content(
-    db: &DatabaseConnection,
+    db: &mut DbConn,
     filestore: Option<&ContentFilestore>,
 ) -> Result<Erased, DbErr> {
-    let (content, blobs) = retry_deadlocks(|| async {
-        let txn = db.begin().await?;
-        let pruned = IdentityMutation::prune_orphan_content(&txn).await?;
-        txn.commit().await?;
+    let (content, blobs) = retry_deadlocks(async || {
+        let mut tx = db.begin().await?;
+        let pruned = IdentityMutation::prune_orphan_content(&mut tx).await?;
+        tx.commit().await?;
         Ok(pruned)
     })
     .await?;
@@ -140,10 +143,9 @@ const DEADLOCK_RETRIES: u32 = 5;
 /// Reruns `run` when Postgres aborts it as a deadlock victim. The erase
 /// contends with the tally cron and workers, which lock rows in another
 /// order.
-async fn retry_deadlocks<T, F, Fut>(mut run: F) -> Result<T, DbErr>
+async fn retry_deadlocks<T, F>(mut run: F) -> Result<T, DbErr>
 where
-    F: FnMut() -> Fut,
-    Fut: Future<Output = Result<T, DbErr>>,
+    F: AsyncFnMut() -> Result<T, DbErr>,
 {
     let mut attempt = 0;
     loop {
@@ -158,6 +160,38 @@ where
         }
     }
 }
+
+/// Version of the `retry_deadlocks` function to work around a highe-ranked
+/// lifetime error:
+///
+/// ```log
+/// error: higher-ranked lifetime error
+///   --> services/server/src/service/identity/rpc.rs:49:5
+///    |
+/// 49 |     async fn set_ban_status(
+///    |     ^^^^^
+///    |
+///    = note: could not prove `Pin<Box<{async block@services/server/src/service/identity/rpc.rs:49:5: 49:10}>>: CoerceUnsized<Pin<Box<dyn Future<Output = std::result::Result<tonic::Response<polycentric_common::models::protos_v2::SetBanStatusResponse>, tonic::Status>> + Send>>>`
+/// ```
+macro_rules! retry_deadlocks_inline {
+    ($run: ident) => {{
+        let mut attempt = 0;
+        loop {
+            match $run().await {
+                Ok(ok) => break ok,
+                Err(err) if attempt < DEADLOCK_RETRIES && is_deadlock(&err) => {
+                    attempt += 1;
+                    tracing::warn!(attempt, "deadlock detected, retrying");
+                    tokio::time::sleep(Duration::from_secs(u64::from(attempt)))
+                        .await;
+                }
+                Err(err) => return Err(err),
+            }
+        }
+    }};
+}
+
+use retry_deadlocks_inline;
 
 fn is_deadlock(err: &DbErr) -> bool {
     let (DbErr::Exec(RuntimeErr::SqlxError(err))
@@ -189,8 +223,8 @@ async fn delete_blobs(
 /// The identity-chain and profile events for `identities`. Fetched
 /// sequentially so MockDatabase-backed tests stay deterministic; skips the
 /// lookups entirely for an empty list.
-pub async fn list_identity_and_profile_events(
-    ctx: &ServiceContext,
+pub async fn list_identity_and_profile_events<A>(
+    ctx: &RequestContext<A>,
     identities: Vec<String>,
 ) -> Result<(Vec<EventWithContentRow>, Vec<EventWithContentRow>), Status> {
     if identities.is_empty() {
@@ -204,27 +238,26 @@ pub async fn list_identity_and_profile_events(
 /// Fetch the latest identity events (rotation/signing key chain) for
 /// each identity in `identities`, and warm the proof cache from
 /// whichever Identity content payload is freshest per identity.
-pub async fn list_identity_events(
-    ctx: &ServiceContext,
+pub async fn list_identity_events<A>(
+    ctx: &RequestContext<A>,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
-    let rows = IdentityRepo::list_identity_events_for_identities(
-        &ctx.ro_db, identities,
-    )
-    .await
-    .map_err(map_db_err)?;
+    let rows =
+        IdentityRepo::list_identity_events_for_identities(&ctx.db, identities)
+            .await
+            .map_err(map_db_err)?;
     warm_identity_cache(ctx, &rows).await;
     Ok(rows)
 }
 
 /// Fetch the latest profile event (display name, avatar, banner)
 /// for each identity in `identities`.
-pub async fn list_profile_events(
-    ctx: &ServiceContext,
+pub async fn list_profile_events<A>(
+    ctx: &RequestContext<A>,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     FeedsRepository::Query::list_latest_profiles_for_identities(
-        &ctx.ro_db, identities,
+        &ctx.db, identities,
     )
     .await
     .map_err(map_db_err)
@@ -239,8 +272,8 @@ pub async fn list_profile_events(
 /// cached. Caching raw events instead would let a forged, unauthorized
 /// IDENTITY event poison the cache and impersonate the identity for
 /// everything that reads it (auth, event-write authorization, proofs).
-async fn warm_identity_cache(
-    ctx: &ServiceContext,
+async fn warm_identity_cache<A>(
+    ctx: &RequestContext<A>,
     rows: &[EventWithContentRow],
 ) {
     let mut by_identity: HashMap<&str, Vec<&EventWithContentRow>> =

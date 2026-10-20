@@ -1,8 +1,10 @@
 //! `get_explore_feed`: recent Feed events across all identities.
 
+use tonic::Status;
+
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::{Marker, pipeline};
-use crate::service::context::RequestContext;
+use crate::service::context::PublicContext;
 use crate::service::feeds::repository::{Query as FeedsRepository, SortedBy};
 use crate::service::feeds::rpc::common::{
     self as feeds_pipeline, Fetched, GetFeedResponseFilter, GetFeedResponseView,
@@ -10,7 +12,6 @@ use crate::service::feeds::rpc::common::{
 use crate::service::proto::{
     GetExploreFeedRequest, GetFeedResponse, SortPostsBy,
 };
-use tonic::Status;
 
 pub struct Params {
     pub common: feeds_pipeline::Params<SortedBy>,
@@ -18,7 +19,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: &RequestContext<'_>,
+    ctx: PublicContext,
     req: GetExploreFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
     let sort_by = req.sort_by();
@@ -34,7 +35,7 @@ pub async fn handle(
     let params = Params { common, sort_by };
 
     let result =
-        pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
+        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
             .await?;
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
@@ -44,11 +45,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched<SortedBy>, Status> {
     let mut rows = FeedsRepository::explore_feed(
-        &ctx.service.ro_db,
+        &ctx.db,
         params.sort_by,
         params.common.limit + 1, // For pagination.
         &params.common.cursor_filter,
@@ -82,7 +83,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _: &Params,
     fetched: &feeds_pipeline::Fetched<SortedBy>,
 ) -> Result<HydrationState, Status> {
@@ -90,7 +91,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &RequestContext<'_>,
+    _: &PublicContext,
     params: &Params,
     fetched: feeds_pipeline::Fetched<SortedBy>,
     hydration: &HydrationState,
@@ -99,10 +100,10 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _: &Params,
     filtered: GetFeedResponseFilter<SortedBy>,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView<SortedBy>, Status> {
-    feeds_pipeline::view(ctx.service, filtered, hydration).await
+    feeds_pipeline::view(ctx, filtered, hydration).await
 }

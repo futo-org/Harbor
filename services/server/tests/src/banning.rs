@@ -9,7 +9,7 @@ async fn ban_after_identity_creation() {
 
     set_ban_status(client.identity(), true).await;
 
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
 
     let event_bundles = take(&mut client.pending);
     let response = client
@@ -52,7 +52,8 @@ async fn banning_removes_follows() {
     let not_banned_identity = not_banned_client.identity();
 
     let mut banned_client = TestClient::new().await;
-    banned_client.follow_identity(not_banned_identity.to_owned(), 0);
+    banned_client
+        .follow_identity(not_banned_identity.to_owned(), current_timestamp());
     banned_client.submit_events().await;
     let banned_identity = banned_client.identity();
 
@@ -108,7 +109,8 @@ async fn banning_removes_posts() {
     let banned_identity = banned_client.identity();
 
     let mut not_banned_client = TestClient::new().await;
-    not_banned_client.follow_identity(banned_identity.to_owned(), 0);
+    not_banned_client
+        .follow_identity(banned_identity.to_owned(), current_timestamp());
     not_banned_client.submit_events().await;
     let not_banned_identity = not_banned_client.identity();
 
@@ -141,13 +143,16 @@ async fn banning_removes_reactions() {
     let mut banned_client = TestClient::new().await;
 
     let mut not_banned_client = TestClient::new().await;
-    not_banned_client.post_text("Hello", 0);
+    not_banned_client.post_text("Hello", current_timestamp());
     let post_key = not_banned_client.get_last_event_key();
-    not_banned_client.follow_identity(banned_client.identity().to_owned(), 0);
+    not_banned_client.follow_identity(
+        banned_client.identity().to_owned(),
+        current_timestamp(),
+    );
     not_banned_client.submit_events().await;
     let not_banned_identity = not_banned_client.identity();
 
-    banned_client.thumbs_up(post_key, 0);
+    banned_client.thumbs_up(post_key, current_timestamp());
     banned_client.submit_events().await;
     let banned_identity = banned_client.identity();
 

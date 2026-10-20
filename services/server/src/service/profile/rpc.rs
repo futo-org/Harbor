@@ -20,8 +20,9 @@ impl ProfileService for ProfileServiceImpl {
         &self,
         request: Request<GetProfileRequest>,
     ) -> Result<Response<GetProfileResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            get_profile::handle(&self.ctx, request.into_inner()).await?,
+            get_profile::handle(ctx, request.into_inner()).await?,
         ))
     }
 }
