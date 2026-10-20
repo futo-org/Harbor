@@ -5,11 +5,31 @@ import { View } from 'react-native';
 import type { PairIdentityCameraComponent } from './PairIdentityCamera.types';
 import { PairIdentityManualEntry } from './PairIdentityManualEntry';
 
-function supportsGetUserMedia() {
-  return (
-    typeof navigator !== 'undefined' &&
-    Boolean(navigator.mediaDevices?.getUserMedia)
-  );
+// Cached promise used by `supportsQrScanning()` so that we only need to check once
+// per session.
+let qrScanningSupport: Promise<boolean> | null = null;
+
+function supportsQrScanning(): Promise<boolean> {
+  qrScanningSupport ??= (async () => {
+    if (
+      typeof window === 'undefined' ||
+      !navigator.mediaDevices?.getUserMedia ||
+      !('BarcodeDetector' in window)
+    ) {
+      return false;
+    }
+
+    try {
+      const formats: string[] =
+        // @ts-expect-error BarcodeDetector is not in lib.dom
+        await window.BarcodeDetector.getSupportedFormats();
+      return formats.includes('qr_code');
+    } catch {
+      return false;
+    }
+  })();
+
+  return qrScanningSupport;
 }
 
 export const PairIdentityCamera: PairIdentityCameraComponent = ({
@@ -17,12 +37,25 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
 }) => {
   const [input, setInput] = useState('');
   const [useCamera, setUseCamera] = useState(true);
+  const [qrSupported, setQrSupported] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannedRef = useRef(false);
   const { theme } = useTheme();
 
-  const canProbeCamera = supportsGetUserMedia();
+  const canProbeCamera = qrSupported === true;
   const canUseCamera = useCamera && canProbeCamera;
+
+  useEffect(() => {
+    let cancelled = false;
+    void supportsQrScanning().then((supported) => {
+      if (!cancelled) {
+        setQrSupported(supported);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!canUseCamera || !videoRef.current) {
@@ -45,12 +78,6 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
         stream = nextStream;
         videoRef.current.srcObject = nextStream;
         await videoRef.current.play();
-
-        // @ts-expect-error BarcodeDetector is not in lib.dom
-        if (!window.BarcodeDetector) {
-          setUseCamera(false);
-          return;
-        }
 
         // @ts-expect-error BarcodeDetector is not in lib.dom
         const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
@@ -100,6 +127,10 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
     if (!input.trim()) return;
     onCodeScanned(input);
   };
+
+  if (qrSupported === null) {
+    return null;
+  }
 
   return (
     <>
