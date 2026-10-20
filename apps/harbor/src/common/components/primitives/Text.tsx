@@ -17,6 +17,11 @@ import { isWeb } from '@/src/common/util/platform';
 export const WEB_FONT_STACK =
   'NotoSans, Twemoji, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
+// Always regular: there's one native face, and on web it covers every weight.
+export const MONOSPACE_FONT_FAMILY = isWeb
+  ? 'NotoSansMono, monospace'
+  : 'NotoSansMono-Regular';
+
 // Native font APIs can't select a variable font's weights, so each face is
 // its own family (see `src/common/assets`). Keyed by every weight the theme
 // can produce, so adding a token without a face fails to compile.
@@ -66,6 +71,7 @@ interface TextProps extends RNTextProps {
   fontSize?: FontSizeToken | number;
   lineHeight?: LineHeightToken | number;
   italic?: boolean;
+  monospace?: boolean;
 }
 
 export function Text({
@@ -75,6 +81,7 @@ export function Text({
   fontSize,
   lineHeight,
   italic,
+  monospace = false,
   style,
   children,
   ...props
@@ -100,9 +107,11 @@ export function Text({
     ? typography.fontWeight[fontWeight]
     : typography.fontWeight[config.defaultWeight];
 
-  const fontFamily = isWeb
-    ? WEB_FONT_STACK
-    : NATIVE_FONTS[resolvedFontWeight][wantsItalic ? 'italic' : 'normal'];
+  const fontFamily = monospace
+    ? MONOSPACE_FONT_FAMILY
+    : isWeb
+      ? WEB_FONT_STACK
+      : NATIVE_FONTS[resolvedFontWeight][wantsItalic ? 'italic' : 'normal'];
 
   return (
     <UITextView

@@ -25,7 +25,8 @@ export function ServerRow({
     <>
       <Text
         variant="secondary"
-        style={[{ fontFamily: 'monospace', flex: 1 }, Atoms.py_sm]}
+        monospace
+        style={[{ flex: 1 }, Atoms.py_sm]}
         numberOfLines={1}
       >
         {server}

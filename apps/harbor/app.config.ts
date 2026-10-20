@@ -145,7 +145,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'MediumItalic',
           'SemiBoldItalic',
           'BoldItalic',
-        ].map((face) => `./src/common/assets/fonts/NotoSans-${face}.ttf`),
+        ]
+          .map((face) => `./src/common/assets/fonts/NotoSans-${face}.ttf`)
+          .concat('./src/common/assets/fonts/NotoSansMono-Regular.ttf'),
         ios: { fonts: ['./src/common/assets/fonts/Twemoji.ttf'] },
         // The bitmap build is for Android 7-9 (see `twemojiFontFamily`).
         android: {

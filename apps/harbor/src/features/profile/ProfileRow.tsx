@@ -80,7 +80,7 @@ export function ProfileRow({
             color="neutral_500"
             numberOfLines={1}
             selectable={false}
-            style={alias ? undefined : { fontFamily: 'monospace' }}
+            monospace={!alias}
           >
             {alias ?? shortenIdentityId(identity)}
           </Text>

@@ -17,9 +17,11 @@ const ROOT_STYLE =
 // synthesise bold, which Safari renders badly. Twemoji's faces cover every
 // weight and italic too, so emoji are never synthesised bold or slanted; it
 // blocks rather than swaps, so the platform's emoji never show first.
+// NotoSansMono is only ever regular, so its one face covers every weight.
 const FONT_STYLE = `
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans.ttf);font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans-Italic.ttf);font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:NotoSansMono;src:url(/fonts/NotoSansMono-Regular.ttf);font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:normal;font-display:block}
 @font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:italic;font-display:block}
 `;
