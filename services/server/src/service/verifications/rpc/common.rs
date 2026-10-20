@@ -344,6 +344,7 @@ pub(crate) mod tests {
             event_bytes: vec![id as u8],
             created_at: ts(id),
             synced_at: ts(id),
+            content_type: None,
         }
     }
 

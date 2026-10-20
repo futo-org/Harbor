@@ -321,6 +321,7 @@ async fn process_event(
         .unwrap_or(Utc::now())
         .fixed_offset()),
         synced_at: Set(Utc::now().fixed_offset()),
+        content_type: NotSet, // Set by `add_event`.
     };
 
     let stored = match EventsRepository::Mutation::add_event(
