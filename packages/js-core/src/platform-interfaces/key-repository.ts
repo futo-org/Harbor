@@ -125,7 +125,7 @@ export interface IKeyRepository {
 
 /**
  * Key repository implementations should use these error codes.
- * Implementations may fall back to `'io'` even when a more specific error code
+ * Implementations may fall back to `'db'` even when a more specific error code
  * is applicable.
  */
 export type KeyRepositoryErrorCode =
@@ -134,8 +134,10 @@ export type KeyRepositoryErrorCode =
   | 'unsupported key location'
   | 'invalid identity key'
   | 'invalid status'
-  /** Attempted to use a key pair that is pending deletion. */
-  | 'deleted'
+  | 'already exists'
+  | 'not found'
+  /** Generic error related to the private key storage provider. */
+  | 'private key storage'
   /** Generic database error. */
   | 'db';
 
