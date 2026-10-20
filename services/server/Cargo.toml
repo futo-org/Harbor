@@ -18,6 +18,7 @@ common-dotenv = { path = "../common/dotenv" }
 common-kafka = { path = "../common/kafka" }
 common-object-store = { path = "../common/object-store" }
 common-telemetry = { path = "../common/telemetry" }
+common-valkey = { path = "../common/valkey" }
 entity = { path = "./entity" }
 
 # 3rd Party
@@ -25,7 +26,6 @@ async-trait = { version = "0.1", default-features = false }
 axum = { version = "0.8.8", default-features = false, features = ["http2"] }
 base64.workspace = true
 chrono.workspace = true
-fred = { version = "10.1.0", default-features = false, features = ["i-pubsub", "subscriber-client", "enable-rustls"] }
 hex.workspace = true
 log = { version = "0.4.34", default-features = false }
 polycentric-common.workspace = true

@@ -23,9 +23,11 @@ streams of several servers.
   client names, never backwards.
 - **Unread count.** Rows above the marker, counted up to 100. The client
   shows anything at the cap as `99+`.
-- **Change feed.** A Postgres `NOTIFY` on the `notification_changed` channel
-  with the identity as payload. Any process that writes notifications or the
-  marker sends one. The server listens and fans it out to open streams.
+- **Change feed.** A Valkey pub/sub message on the `notifications:{server}`
+  channel with the identity as payload. Any process that writes notifications
+  or the marker publishes one. Each server process subscribes and fans it out
+  to open streams. Without `HARBOR_VALKEY_URL` the feed stays inside the
+  process.
 
 The RPCs live in `NotificationService`:
 
@@ -41,45 +43,51 @@ Both take the identity from the bearer token, see
 
 The server runs as two processes against one database: `server serve` answers
 RPCs and `server workers` consumes Kafka. They do not share memory, so the
-change feed goes through Postgres.
+change feed goes through Valkey, on the same two connections
+[live sync](live-sync.md) uses.
 
 ```mermaid
 flowchart LR
     subgraph workers["server workers"]
         W[notification worker]
     end
-    subgraph pg["Postgres"]
-        N[(notification)]
-        C{{"NOTIFY notification_changed"}}
+    PG[(notification)]
+    subgraph valkey["Valkey"]
+        C{{"notifications:server"}}
     end
     subgraph serve["server serve"]
-        L["changes::listen\n(one LISTEN connection)"]
+        L["changes::receive\n(shared subscriber connection)"]
         B(("broadcast\nchannel"))
         S1[stream task A]
         S2[stream task B]
         S3[stream task ...]
         ACK[acknowledge handler]
     end
-    W -- INSERT --> N
-    W -- pg_notify --> C
-    ACK -- pg_notify --> C
+    W -- INSERT --> PG
+    W -- PUBLISH --> C
+    ACK -- PUBLISH --> C
     C -- payload: identity --> L
     L --> B
     B --> S1 & S2 & S3
-    S1 -- SELECT count --> N
+    S1 -- SELECT count --> PG
     S1 -- count --> D1[client A]
     S2 -- count --> D2[client B]
 ```
 
-**Subscriptions do not open their own Postgres connection.** Each `server
-serve` process holds exactly one `LISTEN` connection, opened by
-`changes::init` at startup from the write pool and kept for the life of the
-process. Everything received on it is copied onto a `tokio::sync::broadcast`
-channel. A subscription is a tokio task holding a receiver on that channel: no
-connection, no polling. If the `LISTEN` connection drops, the listener
-reconnects after five seconds. Postgres does not queue notifications sent
-while nobody listens, so after every connect the listener broadcasts a
-"changed for everyone" message and each open stream re-counts.
+**Subscriptions do not open their own Postgres connection.** Each process
+holds one Valkey subscriber connection, shared with live heads, and
+`changes::init` subscribes it to the deployment's channel at startup.
+Everything received is copied onto a `tokio::sync::broadcast` channel. A
+subscription is a tokio task holding a receiver on that channel: no
+connection, no polling. If the Valkey connection drops, the client reconnects
+and resubscribes. Valkey does not queue messages sent while nobody listens, so
+after every (re)connect, and whenever the feed's buffer overflows, it
+broadcasts a "changed for everyone" message and each open stream re-counts.
+
+The feed used Postgres `LISTEN`/`NOTIFY` before. That cannot cross a
+transaction-mode PgBouncer: `LISTEN` sticks to the backend connection, which
+the pooler then hands to other clients, who receive the notifications as
+protocol errors.
 
 A subscription touches the pool only briefly:
 
@@ -89,9 +97,8 @@ A subscription touches the pool only briefly:
 | Change arrives for its identity| one pooled connection, released after the re-count    |
 | Idle                           | none                                        |
 
-The worker and the acknowledge handler send `NOTIFY` through their ordinary
-pooled connection with `SELECT pg_notify(...)`, so they need nothing extra
-either.
+The worker and the acknowledge handler publish through the process's shared
+Valkey publisher connection, so they need nothing extra either.
 
 ## A new notification
 
@@ -102,16 +109,17 @@ sequenceDiagram
     participant Kafka
     participant Worker as notification worker
     participant PG as Postgres
-    participant Listener as changes::listen
+    participant Valkey
+    participant Feed as changes::receive
     participant Task as stream task (recipient)
     participant Client
 
     Author->>Kafka: event
     Kafka->>Worker: events topic
     Worker->>PG: INSERT notification rows
-    Worker->>PG: SELECT pg_notify('notification_changed', recipient)
-    PG-->>Listener: NOTIFY payload = recipient
-    Listener->>Task: broadcast(recipient)
+    Worker->>Valkey: PUBLISH notifications:{server} recipient
+    Valkey-->>Feed: message payload = recipient
+    Feed->>Task: broadcast(recipient)
     Note over Task: ignores identities that are not its own
     Task->>PG: SELECT count above marker (primary)
     PG-->>Task: count
@@ -121,8 +129,8 @@ sequenceDiagram
     end
 ```
 
-The worker notifies once per distinct recipient of the event, after all of its
-rows are inserted. A failed notify is logged and does not retry the message:
+The worker publishes once per distinct recipient of the event, after all of
+its rows are inserted. A failed publish is logged and does not retry the message:
 the next change for that identity, or a reconnect, catches the count up.
 
 The stream task for a recipient:
@@ -150,6 +158,7 @@ sequenceDiagram
     participant A as device A
     participant Server as acknowledge handler
     participant PG as Postgres
+    participant Valkey
     participant Task as stream task (device B)
     participant B as device B
 
@@ -157,9 +166,9 @@ sequenceDiagram
     A->>Server: AcknowledgeNotifications(last_seen)
     Server->>PG: SELECT id of the notification last_seen triggered
     Server->>PG: UPSERT read marker to GREATEST(current, id)
-    Server->>PG: SELECT pg_notify('notification_changed', identity)
+    Server->>Valkey: PUBLISH notifications:{server} identity
     Server-->>A: ok
-    PG-->>Task: NOTIFY via listener and broadcast
+    Valkey-->>Task: message via feed and broadcast
     Task->>PG: SELECT count
     PG-->>Task: 0
     Task-->>B: count 0
@@ -228,7 +237,8 @@ on its streams, which Envoy and other compliant proxies respect.
 | Piece                                   | Path                                                                          |
 | --------------------------------------- | ----------------------------------------------------------------------------- |
 | Proto                                   | `protos/polycentric/v2/notifications.proto`                                   |
-| Change feed (listen, broadcast, notify) | `services/server/src/service/notifications/changes.rs`                        |
+| Change feed (subscribe, broadcast, notify) | `services/server/src/service/notifications/changes.rs`                     |
+| Valkey connections                      | `services/common/valkey/src/lib.rs`                                           |
 | Stream handler                          | `services/server/src/service/notifications/rpc/subscribe_unread_notification_count.rs` |
 | Acknowledge handler                     | `services/server/src/service/notifications/rpc/acknowledge_notifications.rs`  |
 | Worker notify                           | `services/server/src/service/notifications/worker.rs`                         |

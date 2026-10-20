@@ -1,0 +1,9 @@
+[package]
+name = "common-valkey"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+redis = { workspace = true, features = ["tokio-comp", "connection-manager", "tokio-rustls-comp"] }
+tokio = { workspace = true, features = ["rt", "sync", "time"] }
+tracing.workspace = true
