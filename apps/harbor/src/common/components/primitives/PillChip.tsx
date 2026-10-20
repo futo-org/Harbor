@@ -10,11 +10,7 @@ interface IdentityTagProps {
 
 export function IdentityTag({ identity, style }: IdentityTagProps) {
   return (
-    <Text
-      variant="secondary"
-      color="neutral_500"
-      style={[{ fontFamily: 'monospace' }, style]}
-    >
+    <Text variant="secondary" color="neutral_500" monospace style={style}>
       {shortenIdentityId(identity)}
     </Text>
   );

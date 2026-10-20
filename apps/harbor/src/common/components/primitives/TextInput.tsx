@@ -17,7 +17,12 @@ import {
   type LineHeightToken,
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
-import { NATIVE_FONTS, WEB_FONT_STACK } from './Text';
+import {
+  NATIVE_FONTS,
+  NATIVE_MONOSPACE_FONTS,
+  WEB_FONT_STACK,
+  WEB_MONOSPACE_FONT_STACK,
+} from './Text';
 
 export interface TextInputProps
   extends Omit<RNTextInputProps, 'placeholderTextColor'> {
@@ -25,6 +30,7 @@ export interface TextInputProps
   rounded?: BorderRadiusToken;
   fontSize?: FontSizeToken;
   lineHeight?: LineHeightToken;
+  monospace?: boolean;
   placeholderTextColor?: PaletteColorToken;
   disabled?: boolean;
   error?: boolean;
@@ -41,6 +47,7 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       rounded = 'md',
       fontSize = 'md',
       lineHeight = 'md',
+      monospace = false,
       disabled = false,
       error = false,
       autoCorrect = false,
@@ -57,22 +64,29 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
     const [isFocused, setIsFocused] = useState(false);
     const isPlain = variant === 'plain';
 
+    const fontFamily =
+      Platform.OS === 'web'
+        ? monospace
+          ? WEB_MONOSPACE_FONT_STACK
+          : // As in `Text`, so typed emoji are Twemoji too.
+            WEB_FONT_STACK
+        : (monospace ? NATIVE_MONOSPACE_FONTS : NATIVE_FONTS)['400'];
+
     const baseStyle: TextStyle = {
       paddingVertical: 12,
       paddingHorizontal: 12,
+      fontFamily,
       fontSize: typography.fontSize[fontSize],
       lineHeight: typography.lineHeight[lineHeight],
       color: disabled ? theme.palette.neutral_500 : theme.palette.neutral_900,
       opacity: disabled ? 0.5 : 1,
       ...(Platform.OS === 'web'
         ? ({
-            // As in `Text`, so typed emoji are Twemoji too.
-            fontFamily: WEB_FONT_STACK,
             outlineStyle: 'none',
             outlineWidth: 0,
             resize: 'none',
           } as unknown as TextStyle)
-        : { fontFamily: NATIVE_FONTS['400'].normal }),
+        : null),
     };
 
     const multilineStyle: TextStyle = multiline

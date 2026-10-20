@@ -214,8 +214,8 @@ function CountdownTimer({
         Valid for{'  '}
         <Text
           variant="small"
+          monospace
           style={{
-            fontFamily: 'monospace',
             color: theme.palette.primary_500,
           }}
         >
@@ -350,7 +350,8 @@ function ApprovalSheet({
               <Text
                 variant="small"
                 color="neutral_500"
-                style={{ fontFamily: 'monospace', textAlign: 'center' }}
+                monospace
+                style={{ textAlign: 'center' }}
                 selectable
               >
                 {displayClaimer}

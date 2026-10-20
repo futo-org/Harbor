@@ -64,11 +64,7 @@ export function IdentitySettingsSheet({
             <Text variant="small" color="neutral_500">
               IDENTITY
             </Text>
-            <Text
-              variant="secondary"
-              style={{ fontFamily: 'monospace' }}
-              selectable
-            >
+            <Text variant="secondary" monospace selectable>
               {identityKey}
             </Text>
           </View>
@@ -84,11 +80,7 @@ export function IdentitySettingsSheet({
             <Text variant="small" color="neutral_500">
               SIGNING KEY
             </Text>
-            <Text
-              variant="secondary"
-              style={{ fontFamily: 'monospace' }}
-              selectable
-            >
+            <Text variant="secondary" monospace selectable>
               {signingKey}
             </Text>
           </View>
