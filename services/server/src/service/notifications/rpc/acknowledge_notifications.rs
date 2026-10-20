@@ -36,9 +36,7 @@ pub async fn handle(
         .await
         .map_err(internal)?;
 
-    if let Err(e) = changes::notify(&ctx.db, &identity).await {
-        tracing::warn!(error = %e, "acknowledge_notifications notify error");
-    }
+    changes::notify(&identity).await;
 
     Ok(AcknowledgeNotificationsResponse {})
 }

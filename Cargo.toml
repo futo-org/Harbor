@@ -20,6 +20,7 @@ members = [
     "services/common/kafka",
     "services/common/object-store",
     "services/common/telemetry",
+    "services/common/valkey",
     "tools/identity",
     # NOTE: `tools/uniffi-bindgen` is excluded because it generates crates.
 ]
@@ -34,6 +35,7 @@ polycentric-common = { path = "packages/rs-common", version = "0.0.0" }
 tokio = { version = "1.50.0", default-features = false }
 uniffi = { version = "=0.31.0", default-features = false, features = ["tokio"] }
 rdkafka = { version = "0.39", default-features = false }
+valkey-glide = { version = "0.9.0", default-features = false }
 sea-orm = { version = "2.0.1", default-features = false }
 sea-orm-migration = { version = "2.0.1", default-features = false }
 

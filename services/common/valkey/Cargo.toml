@@ -1,0 +1,9 @@
+[package]
+name = "common-valkey"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+valkey-glide.workspace = true
+tokio = { workspace = true, features = ["rt", "sync"] }
+tracing.workspace = true
