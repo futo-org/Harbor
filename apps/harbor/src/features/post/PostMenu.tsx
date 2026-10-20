@@ -11,6 +11,7 @@ import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
 import { useState } from 'react';
 import { View } from 'react-native';
+import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
 import ReportSheet from '../moderation/ReportSheet';
 import { buildPostLink } from './buildPostLink';
 import usePostActions from './hooks/usePostActions';
@@ -29,6 +30,7 @@ export default function PostMenu({ post }: PostMenuProps) {
   const { copyToClipboard } = useCopyToClipboard({ showToast: true });
 
   const [showReportSheet, setShowReportSheet] = useState<boolean>(false);
+  const [showInfoSheet, setShowInfoSheet] = useState<boolean>(false);
 
   const onDeletePress = async () => {
     // Wait for confirm
@@ -86,6 +88,13 @@ export default function PostMenu({ post }: PostMenuProps) {
               Copy Link
             </Text>
           </DropdownMenu.Item>
+          {/* Info */}
+          <DropdownMenu.Item onPress={() => setShowInfoSheet(true)}>
+            <Icon name="infoOutline" color="neutral_500" size={16} />
+            <Text variant="secondary" fontWeight="bold">
+              Post info
+            </Text>
+          </DropdownMenu.Item>
           {/* Delete  */}
           {isPostAuthor && (
             <DropdownMenu.Item onPress={onDeletePress}>
@@ -114,6 +123,11 @@ export default function PostMenu({ post }: PostMenuProps) {
         eventId={post.id}
         open={showReportSheet}
         onClose={() => setShowReportSheet(false)}
+      />
+      <EventInfoSheet
+        source={{ signedEvent: post.signedEvent }}
+        open={showInfoSheet}
+        onClose={() => setShowInfoSheet(false)}
       />
     </>
   );
