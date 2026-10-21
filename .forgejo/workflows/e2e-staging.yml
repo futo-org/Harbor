@@ -110,9 +110,6 @@ jobs:
       E2E_SERVER_URL: https://srv.staging.harbor.social
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Wait for staging
-        id: wait
-        run: node .forgejo/scripts/wait-staging.mjs
       - name: Install Chromium
         run: |
           apt-get update && apt-get install -y --no-install-recommends chromium
@@ -122,6 +119,10 @@ jobs:
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter harbor-e2e...
+      # After the setup, which then overlaps with deploys still building.
+      - name: Wait for staging
+        id: wait
+        run: node .forgejo/scripts/wait-staging.mjs
       - name: Web e2e
         run: pnpm --filter harbor-e2e test:web
       - uses: forgejo/upload-artifact@v4
