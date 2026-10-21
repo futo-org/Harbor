@@ -1,6 +1,6 @@
 import type { IKeysRepository, PrivateKey } from '@polycentric/js-core';
 import { v2, DatabaseError } from '@polycentric/js-core';
-import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
+import { IndexedDBDatabase } from './database';
 
 interface PersistedKey {
   key_type: number;
@@ -15,19 +15,6 @@ export class IndexedDBKeysRepository implements IKeysRepository {
   private readonly database: IndexedDBDatabase;
 
   private static readonly STORE_NAME = 'keys';
-
-  /**
-   * Adds the stores that this repository needs to an IndexedDBDatabaseLayout object
-   */
-  static createNeededStores(layout: IndexedDBDatabaseLayout) {
-    layout.stores.push({
-      name: IndexedDBKeysRepository.STORE_NAME,
-      options: {
-        keyPath: 'public_key',
-      },
-      indexes: [],
-    });
-  }
 
   constructor(database: IndexedDBDatabase) {
     this.database = database;

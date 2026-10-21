@@ -1,5 +1,5 @@
 import type { IStorageDriver } from '@polycentric/js-core';
-import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
+import { IndexedDBDatabase } from './database';
 import { IndexedDBKeysRepository } from './keys.repository';
 import { IndexedDBEventRepository } from './event.repository';
 import { IndexedDBContentRepository } from './content.repository';
@@ -8,16 +8,7 @@ export class IndexedDBStorageDriver implements IStorageDriver {
   private readonly database: IndexedDBDatabase;
 
   private constructor(databaseName: string) {
-    const layout: IndexedDBDatabaseLayout = {
-      version: 3,
-      stores: [],
-    };
-
-    IndexedDBEventRepository.createNeededStores(layout);
-    IndexedDBContentRepository.createNeededStores(layout);
-    IndexedDBKeysRepository.createNeededStores(layout);
-
-    this.database = new IndexedDBDatabase(databaseName, layout);
+    this.database = new IndexedDBDatabase(databaseName);
   }
 
   static async create(databaseName: string): Promise<IndexedDBStorageDriver> {
