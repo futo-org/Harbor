@@ -3,6 +3,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
 use polycentric_common::jwt::ServerJwtClaims;
 use polycentric_common::models::protos_v2::content::ContentBody;
+use polycentric_common::models::protos_v2::content_service_client::ContentServiceClient;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
@@ -19,6 +20,7 @@ use std::time::SystemTime;
 use tokio::sync::{Mutex, MutexGuard};
 
 mod banning;
+mod blobs;
 mod event_sync;
 mod feeds;
 mod graph;
@@ -122,6 +124,13 @@ pub async fn identity_service()
 pub async fn verifications_service()
 -> VerificationsServiceClient<tonic::transport::Channel> {
     VerificationsServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn content_service() -> ContentServiceClient<tonic::transport::Channel>
+{
+    ContentServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
