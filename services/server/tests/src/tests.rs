@@ -26,6 +26,7 @@ mod feeds;
 mod graph;
 mod heads;
 mod notifications;
+mod pairing;
 mod search;
 mod verifications;
 
