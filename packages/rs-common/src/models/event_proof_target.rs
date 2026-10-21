@@ -40,6 +40,8 @@ impl Validate for EventProofTarget {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "EventProofTargetValidationError"))]
 pub enum ValidationError {
     Signature(SliceError),
     Root(SliceError),

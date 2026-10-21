@@ -37,6 +37,8 @@ impl Validate for ServerList {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "ServerListValidationError"))]
 pub enum ValidationError {
     Urls(SliceError),
     UrlsItem { index: u32, error: StringError },

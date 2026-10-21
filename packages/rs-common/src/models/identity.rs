@@ -146,6 +146,8 @@ impl Validate for Identity {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "IdentityValidationError"))]
 pub enum ValidationError {
     RotationKeys(SliceError),
     RotationKeysItem {

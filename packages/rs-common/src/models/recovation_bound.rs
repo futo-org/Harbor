@@ -35,6 +35,8 @@ impl Validate for RevocationBound {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "RevocationBoundValidationError"))]
 pub enum ValidationError {
     RevokedKey(public_key::ValidationError),
     RevokedKeyMissing,
