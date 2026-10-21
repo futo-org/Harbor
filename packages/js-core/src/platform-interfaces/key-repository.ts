@@ -98,6 +98,7 @@ export interface IKeyRepository {
    * Fails if the status is set to `'pendingDeletion'`.
    */
   changeKeyStatus(
+    identity: string,
     publicKey: PublicKey,
     newStatus: KeyPairStatus,
   ): Promise<void>;
