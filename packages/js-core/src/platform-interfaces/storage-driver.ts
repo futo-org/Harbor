@@ -1,11 +1,11 @@
 import type { IEventRepository } from './event.repository';
 import type { IContentRepository } from './content.repository';
-import type { IKeysRepository } from './key-repository';
+import type { IKeyRepository } from './key-repository';
 
 export interface IStorageDriver {
   createEventRepository: () => IEventRepository;
   createContentRepository: () => IContentRepository;
-  createKeysRepository: () => IKeysRepository;
+  createKeyRepository: () => IKeyRepository;
   /** Persist which v2 identity is active for this signing public key (Ed25519: 32 bytes). */
   saveActiveIdentityKey: (
     publicKey: Uint8Array,

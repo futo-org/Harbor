@@ -12,8 +12,8 @@ export interface KeyPair {
 }
 
 export type PersistedKey = {
-  publicKey: PublicKey;
   identity: string;
+  publicKey: PublicKey;
   status: KeyPairStatus;
 };
 

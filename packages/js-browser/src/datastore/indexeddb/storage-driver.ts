@@ -1,8 +1,9 @@
 import type { IStorageDriver } from '@polycentric/js-core';
 import { IndexedDBDatabase } from './database';
-import { IndexedDBKeysRepository } from './keys.repository';
+import { IndexedDBKeyRepository } from './key-repository';
 import { IndexedDBEventRepository } from './event.repository';
 import { IndexedDBContentRepository } from './content.repository';
+import { activeIdentityKey } from './active-identity';
 
 export class IndexedDBStorageDriver implements IStorageDriver {
   private readonly database: IndexedDBDatabase;
@@ -23,8 +24,8 @@ export class IndexedDBStorageDriver implements IStorageDriver {
   createContentRepository() {
     return new IndexedDBContentRepository(this.database);
   }
-  createKeysRepository() {
-    return new IndexedDBKeysRepository(this.database);
+  createKeyRepository() {
+    return new IndexedDBKeyRepository(this.database);
   }
 
   async saveActiveIdentityKey(
@@ -32,7 +33,7 @@ export class IndexedDBStorageDriver implements IStorageDriver {
     identityKey: string | null,
   ): Promise<void> {
     try {
-      const key = IndexedDBStorageDriver.activeIdentityKey(publicKey);
+      const key = activeIdentityKey(publicKey);
       if (identityKey) {
         localStorage.setItem(key, identityKey);
       } else {
@@ -43,21 +44,9 @@ export class IndexedDBStorageDriver implements IStorageDriver {
 
   async loadActiveIdentityKey(publicKey: Uint8Array): Promise<string | null> {
     try {
-      return localStorage.getItem(
-        IndexedDBStorageDriver.activeIdentityKey(publicKey),
-      );
+      return localStorage.getItem(activeIdentityKey(publicKey));
     } catch {
       return null;
     }
-  }
-
-  private static activeIdentityKey(publicKey: Uint8Array): string {
-    return `polycentric:activeIdentity:${IndexedDBStorageDriver.toHex(publicKey, 32)}`;
-  }
-
-  private static toHex(bytes: Uint8Array, len = 8): string {
-    return Array.from(bytes.slice(0, len))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
   }
 }

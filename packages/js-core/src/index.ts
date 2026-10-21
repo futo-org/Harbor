@@ -51,7 +51,12 @@ export type {
 export type {
   PrivateKey,
   KeyPair,
+  KeyPairStatus,
+  KeyRepositoryErrorCode,
+  PersistedKey,
+  PrivateKeyLocation,
 } from './platform-interfaces/key-repository';
+export { KeyRepositoryError } from './platform-interfaces/key-repository';
 
 export * from './errors';
 export * as Errors from './errors';

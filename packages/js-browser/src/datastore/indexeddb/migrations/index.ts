@@ -1,6 +1,7 @@
 import { DatabaseError } from '@polycentric/js-core';
 import { m000003_20261020_initial } from './m000003_20261020_initial';
 import { m000004_20261021_drop_event_acks } from './m000004_20261021_drop_event_acks';
+import { m000005_20261021_key_repository } from './m000005_20261021_key_repository';
 
 /**
  * A single schema migration for the indexedDB database
@@ -23,6 +24,7 @@ export interface IndexedDBMigration {
 const MIGRATIONS: readonly IndexedDBMigration[] = [
   m000003_20261020_initial,
   m000004_20261021_drop_event_acks,
+  m000005_20261021_key_repository,
 ];
 
 // Sanity check the migration versions
