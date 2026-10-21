@@ -91,6 +91,7 @@ if [ "$NO_DEPS" = false ]; then
     # CI: docker compose builds the image explicitly; --wait blocks until all
     # services are healthy.
     docker compose up -d --build --wait postgres rustfs kafka valkey
+    docker compose run --rm --no-deps -T rustfs-init
   else
     docker compose up -d postgres rustfs rustfs-init kafka valkey
 
@@ -220,7 +221,7 @@ else
   echo "==> Starting server…"
   export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   export RUST_LOG="${RUST_LOG:-info}"
-  export HARBOR_CONTENT_BLOB_OS_BUCKET="${HARBOR_CONTENT_BLOB_OS_BUCKET:-harbor-blobs}"
+  export HARBOR_CONTENT_BLOB_OS_BUCKET="${HARBOR_CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}"
   export HARBOR_CONTENT_BLOB_OS_ENDPOINT="${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-http://localhost:9000}"
   export HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE="${HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}"
   export HARBOR_CONTENT_BLOB_OS_ACCESS_KEY="${HARBOR_CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}"
