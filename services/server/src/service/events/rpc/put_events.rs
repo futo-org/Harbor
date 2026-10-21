@@ -358,7 +358,13 @@ async fn process_event(
                                     crate::config::get().server_name.as_str(),
                                 ),
                             })),
-                        Duration::from_secs(0),
+                        // Setting this to a non-zero value allows the send
+                        // operation to be retried.
+                        //
+                        // NOTE: this timeout is only for internal queuing
+                        // within librdkafka, actual delivering uses
+                        // delivery.timeout.ms as (another) timeout.
+                        Duration::from_secs(60),
                     )
                     .await
                 {
