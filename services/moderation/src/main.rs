@@ -369,7 +369,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Listen to a Kafka topic of all events.
-    let consumer = common_kafka::build_consumer("events", &["events"]).await;
+    let consumer = common_kafka::build_consumer("moderation", &["events"]).await;
 
     // Failure counts for messages currently being retried.
     let mut attempts: HashMap<(i32, i64), u32> = HashMap::new();
