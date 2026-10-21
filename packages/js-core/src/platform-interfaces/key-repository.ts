@@ -89,7 +89,9 @@ export interface IKeyRepository {
    */
   putKeyPair(
     identity: string,
-    keyPair: KeyPair,
+    keyType: KeyType,
+    publicKey: Uint8Array,
+    privateKey: Uint8Array,
     status: KeyPairStatus,
   ): Promise<void>;
 
@@ -99,7 +101,8 @@ export interface IKeyRepository {
    */
   changeKeyStatus(
     identity: string,
-    publicKey: PublicKey,
+    keyType: KeyType,
+    publicKey: Uint8Array,
     newStatus: KeyPairStatus,
   ): Promise<void>;
 
@@ -113,14 +116,19 @@ export interface IKeyRepository {
    */
   getPrivateKey(
     identity: string,
-    publicKey: PublicKey,
+    keyType: KeyType,
+    publicKey: Uint8Array,
   ): Promise<PrivateKey | null>;
 
   /**
    * Delete a key pair from the local repository.
    * This may not be atomic if the private key is not stored inline.
    */
-  deleteKeyPair(identity: string, publicKey: PublicKey): Promise<void>;
+  deleteKeyPair(
+    identity: string,
+    keyType: KeyType,
+    publicKey: Uint8Array,
+  ): Promise<void>;
 
   /**
    * Process any pending deletions and do cleanup.
