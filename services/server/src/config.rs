@@ -57,6 +57,9 @@ pub struct Config {
     /// instead of `https://<domain>`, and allow plain HTTP. `None` in
     /// production.
     pub alias_test_origin: Option<String>,
+    /// The commit this server was built from (`HARBOR_COMMIT`), set by the
+    /// chart. Served on `/version`. `None` outside the cluster.
+    pub commit: Option<String>,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -131,6 +134,10 @@ pub fn init() -> &'static Config {
             alias_test_origin: std::env::var("HARBOR_ALIAS_TEST_ORIGIN")
                 .ok()
                 .map(|s| s.trim().trim_end_matches('/').to_string())
+                .filter(|s| !s.is_empty()),
+            commit: std::env::var("HARBOR_COMMIT")
+                .ok()
+                .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),
             server_name,
         }
