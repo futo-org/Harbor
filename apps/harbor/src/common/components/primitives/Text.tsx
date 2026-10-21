@@ -17,18 +17,21 @@ import { isWeb } from '@/src/common/util/platform';
 export const WEB_FONT_STACK =
   'NotoSans, Twemoji, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
+export const WEB_MONOSPACE_FONT_STACK = 'NotoSansMono, monospace';
+
 // Native font APIs can't select a variable font's weights, so each face is
 // its own family (see `src/common/assets`). Keyed by every weight the theme
 // can produce, so adding a token without a face fails to compile.
 type FontWeightValue = (typeof typography.fontWeight)[FontWeightToken];
-const NATIVE_FONTS: Record<
-  FontWeightValue,
-  { normal: string; italic: string }
-> = {
-  '400': { normal: 'NotoSans-Regular', italic: 'NotoSans-Italic' },
-  '500': { normal: 'NotoSans-Medium', italic: 'NotoSans-MediumItalic' },
-  '600': { normal: 'NotoSans-SemiBold', italic: 'NotoSans-SemiBoldItalic' },
-  '700': { normal: 'NotoSans-Bold', italic: 'NotoSans-BoldItalic' },
+export const NATIVE_FONTS: Record<FontWeightValue, string> = {
+  '400': 'NotoSans-Regular',
+  '600': 'NotoSans-SemiBold',
+  '700': 'NotoSans-Bold',
+};
+export const NATIVE_MONOSPACE_FONTS: Record<FontWeightValue, string> = {
+  '400': 'NotoSansMono-Regular',
+  '600': 'NotoSansMono-SemiBold',
+  '700': 'NotoSansMono-Bold',
 };
 
 // Native text has no font fallback list, so emoji runs get the Twemoji
@@ -65,7 +68,7 @@ interface TextProps extends RNTextProps {
   fontWeight?: FontWeightToken;
   fontSize?: FontSizeToken | number;
   lineHeight?: LineHeightToken | number;
-  italic?: boolean;
+  monospace?: boolean;
 }
 
 export function Text({
@@ -74,7 +77,7 @@ export function Text({
   fontWeight,
   fontSize,
   lineHeight,
-  italic,
+  monospace = false,
   style,
   children,
   ...props
@@ -82,7 +85,6 @@ export function Text({
   const { theme } = useTheme();
 
   const config = VARIANT_CONFIG[variant];
-  const wantsItalic = italic && variant !== 'title' && variant !== 'subtitle';
 
   const resolvedFontSize = fontSize
     ? typeof fontSize === 'number'
@@ -101,8 +103,10 @@ export function Text({
     : typography.fontWeight[config.defaultWeight];
 
   const fontFamily = isWeb
-    ? WEB_FONT_STACK
-    : NATIVE_FONTS[resolvedFontWeight][wantsItalic ? 'italic' : 'normal'];
+    ? monospace
+      ? WEB_MONOSPACE_FONT_STACK
+      : WEB_FONT_STACK
+    : (monospace ? NATIVE_MONOSPACE_FONTS : NATIVE_FONTS)[resolvedFontWeight];
 
   return (
     <UITextView
@@ -115,12 +119,7 @@ export function Text({
           color: color ? theme.palette[color] : theme.palette.neutral_900,
           fontSize: resolvedFontSize,
           lineHeight: resolvedLineHeight,
-          ...(isWeb
-            ? {
-                fontWeight: resolvedFontWeight,
-                ...(wantsItalic ? { fontStyle: 'italic' as const } : {}),
-              }
-            : {}),
+          ...(isWeb ? { fontWeight: resolvedFontWeight } : {}),
         },
         style,
       ]}

@@ -26,7 +26,6 @@ export function Kbd({ children }: KbdProps) {
     >
       <Text
         variant="small"
-        fontWeight="medium"
         color="neutral_500"
         // Words stay on the neighboring text's baseline; single glyphs
         // (⌘, ⏎, ↑) have no baseline to keep and move with the box.

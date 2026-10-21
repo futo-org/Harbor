@@ -1,11 +1,8 @@
 //! gRPC `VerificationsService` impl.
 
-pub mod common;
-pub mod list_targeted_verification_claims;
-pub mod list_verification_claims;
-pub mod list_verification_targets;
-pub mod list_verification_verifies;
-pub mod resolve_verified_claims;
+use std::sync::Arc;
+
+use tonic::{Request, Response, Status};
 
 use crate::service::context::ServiceContext;
 use crate::service::proto::verifications_service_server::{
@@ -19,8 +16,13 @@ use crate::service::proto::{
     ListVerificationVerifiesResponse, ResolveVerifiedClaimsRequest,
     ResolveVerifiedClaimsResponse,
 };
-use std::sync::Arc;
-use tonic::{Request, Response, Status};
+
+pub mod common;
+pub mod list_targeted_verification_claims;
+pub mod list_verification_claims;
+pub mod list_verification_targets;
+pub mod list_verification_verifies;
+pub mod resolve_verified_claims;
 
 pub struct VerificationsServiceImpl {
     ctx: Arc<ServiceContext>,
@@ -32,9 +34,9 @@ impl VerificationsService for VerificationsServiceImpl {
         &self,
         request: Request<ListVerificationClaimsRequest>,
     ) -> Result<Response<ListVerificationClaimsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            list_verification_claims::handle(&self.ctx, request.into_inner())
-                .await?,
+            list_verification_claims::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -42,8 +44,9 @@ impl VerificationsService for VerificationsServiceImpl {
         &self,
         request: Request<ListVerificationTargetsRequest>,
     ) -> Result<Response<ListVerificationTargetsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            list_verification_targets::handle(&self.ctx, request.into_inner())
+            list_verification_targets::handle(ctx, request.into_inner())
                 .await?,
         ))
     }
@@ -52,8 +55,9 @@ impl VerificationsService for VerificationsServiceImpl {
         &self,
         request: Request<ListVerificationVerifiesRequest>,
     ) -> Result<Response<ListVerificationVerifiesResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            list_verification_verifies::handle(&self.ctx, request.into_inner())
+            list_verification_verifies::handle(ctx, request.into_inner())
                 .await?,
         ))
     }
@@ -62,9 +66,10 @@ impl VerificationsService for VerificationsServiceImpl {
         &self,
         request: Request<ListTargetedVerificationClaimsRequest>,
     ) -> Result<Response<ListTargetedVerificationClaimsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             list_targeted_verification_claims::handle(
-                &self.ctx,
+                ctx,
                 request.into_inner(),
             )
             .await?,
@@ -75,9 +80,9 @@ impl VerificationsService for VerificationsServiceImpl {
         &self,
         request: Request<ResolveVerifiedClaimsRequest>,
     ) -> Result<Response<ResolveVerifiedClaimsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            resolve_verified_claims::handle(&self.ctx, request.into_inner())
-                .await?,
+            resolve_verified_claims::handle(ctx, request.into_inner()).await?,
         ))
     }
 }

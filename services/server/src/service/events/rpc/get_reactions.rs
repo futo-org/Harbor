@@ -1,6 +1,10 @@
+use std::collections::HashSet;
+
+use tonic::Status;
+
 use crate::data::hydration::HydrationState;
 use crate::data::{EventWithContentRow, assemble_bundles, pipeline};
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::TargetEventKey;
 use crate::service::events::tombstone::{self, HasEventKey};
 use crate::service::feeds::repository::Query as FeedsRepository;
@@ -9,9 +13,6 @@ use crate::service::identity::service::list_identity_and_profile_events;
 use crate::service::proofs::service::attach_proofs;
 use crate::service::proto::{GetReactionsRequest, GetReactionsResponse};
 
-use std::collections::HashSet;
-use tonic::Status;
-
 struct Params {
     target: TargetEventKey,
     emoji: Option<String>,
@@ -19,7 +20,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: GetReactionsRequest,
 ) -> Result<GetReactionsResponse, Status> {
     // TODO: support pagination
@@ -29,15 +30,15 @@ pub async fn handle(
         limit: page_limit(&req.page_params),
     };
 
-    pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view).await
+    pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view).await
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     FeedsRepository::get_reactions(
-        &ctx.ro_db,
+        &ctx.db,
         &params.target,
         params.emoji.as_deref(),
         params.limit,
@@ -48,8 +49,8 @@ async fn fetch(
 
 #[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
 async fn hydrate(
-    ctx: &ServiceContext,
-    _params: &Params,
+    ctx: &PublicContext,
+    _: &Params,
     rows: &Vec<EventWithContentRow>,
 ) -> Result<HydrationState, Status> {
     let keys: Vec<TargetEventKey> =
@@ -77,8 +78,8 @@ async fn hydrate(
 
 /// Remove any deleted or superseded reaction events.
 async fn filter(
-    _ctx: &ServiceContext,
-    _params: &Params,
+    _: &PublicContext,
+    _: &Params,
     rows: Vec<EventWithContentRow>,
     hydration: &HydrationState,
 ) -> Result<Vec<EventWithContentRow>, Status> {
@@ -96,8 +97,8 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &ServiceContext,
-    _params: &Params,
+    ctx: &PublicContext,
+    _: &Params,
     rows: Vec<EventWithContentRow>,
     hydration: HydrationState,
 ) -> Result<GetReactionsResponse, Status> {

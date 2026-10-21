@@ -1,10 +1,14 @@
 //! `get_post_thread`: ancestors (root → direct parent), the subject
 //! itself, then descendants (one branch deep for now).
 
+use std::collections::HashMap;
+
+use tonic::Status;
+
 use crate::data::EventWithContentRow;
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::{Cursor, PageInfo, pipeline};
-use crate::service::context::RequestContext;
+use crate::service::context::PublicContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::feeds::rpc::common::{
@@ -12,8 +16,6 @@ use crate::service::feeds::rpc::common::{
 };
 use crate::service::feeds::util::map_db_err;
 use crate::service::proto::{GetPostThreadRequest, GetPostThreadResponse};
-use std::collections::HashMap;
-use tonic::Status;
 
 const PARENT_HEIGHT_LIMIT: i32 = 50;
 const DESCENDANT_DEPTH_LIMIT: i32 = 50;
@@ -32,7 +34,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: &RequestContext<'_>,
+    ctx: PublicContext,
     req: GetPostThreadRequest,
 ) -> Result<GetPostThreadResponse, Status> {
     let descendants_limit = if req.limit <= 0 {
@@ -54,7 +56,7 @@ pub async fn handle(
     };
 
     let result =
-        pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
+        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
             .await?;
     Ok(GetPostThreadResponse {
         thread: result.event_bundles,
@@ -63,11 +65,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let subject_row = FeedsRepository::find_event_by_key(
-        &ctx.service.ro_db,
+        &ctx.db,
         params.collection,
         &params.identity,
         params.public_key_type,
@@ -80,7 +82,7 @@ async fn fetch(
     let subject_id = subject_row.0.id;
 
     let ancestor_refs = FeedsRepository::list_ancestor_refs(
-        &ctx.service.ro_db,
+        &ctx.db,
         subject_id,
         PARENT_HEIGHT_LIMIT,
     )
@@ -88,7 +90,7 @@ async fn fetch(
     .map_err(map_db_err)?;
 
     let descendant_refs = FeedsRepository::list_descendant_refs(
-        &ctx.service.ro_db,
+        &ctx.db,
         subject_id,
         DESCENDANT_DEPTH_LIMIT,
         params.descendants_limit,
@@ -128,7 +130,7 @@ async fn fetch(
     all_ids.extend(ancestor_refs.iter().map(|r| r.event_id));
     all_ids.extend(descendant_order.iter().copied());
     let mut by_id: HashMap<i64, EventWithContentRow> =
-        FeedsRepository::list_events_by_ids(&ctx.service.ro_db, all_ids)
+        FeedsRepository::list_events_by_ids(&ctx.db, all_ids)
             .await
             .map_err(map_db_err)?
             .into_iter()
@@ -160,7 +162,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
@@ -168,7 +170,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &RequestContext<'_>,
+    _: &PublicContext,
     params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -177,30 +179,33 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {
-    feeds_pipeline::view(ctx.service, filtered, hydration).await
+    feeds_pipeline::view(ctx, filtered, hydration).await
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+
+    use chrono::DateTime;
+    use entity::{content, event};
+    use prost::Message;
+    use sea_orm::prelude::DateTimeWithTimeZone;
+    use sea_orm::{DbBackend, MockDatabase, MockRow, Value};
+
     use crate::data::hydration::HydrationState;
     use crate::service::context::ServiceContext;
     use crate::service::proto::content::ContentBody;
     use crate::service::proto::{
         Content, EventKey, Post, PostReply, PublicKey,
     };
-    use chrono::DateTime;
-    use entity::{content, event};
-    use prost::Message;
-    use sea_orm::prelude::DateTimeWithTimeZone;
-    use sea_orm::{DbBackend, MockDatabase, MockRow, Value};
-    use std::collections::BTreeMap;
-    use std::sync::Arc;
+
+    use super::*;
 
     const POST_COLLECTION: i16 = 2;
 
@@ -225,6 +230,7 @@ mod tests {
             event_bytes: vec![id as u8],
             created_at: ts(id),
             synced_at: ts(id),
+            content_type: None,
         }
     }
 
@@ -334,8 +340,7 @@ mod tests {
             ]])
             .into_connection();
         let ctx = ctx(db).await;
-
-        let ctx = RequestContext::new(&ctx, Some("caller"));
+        let ctx = ctx.test_public("caller").await;
 
         let fetched = fetch(&ctx, &params()).await.unwrap();
         let fetched_identities: Vec<&str> = fetched
