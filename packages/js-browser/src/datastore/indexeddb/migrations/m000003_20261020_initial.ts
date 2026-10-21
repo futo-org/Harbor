@@ -52,7 +52,7 @@ const STORES: {
  */
 export const m000003_20261020_initial: IndexedDBMigration = {
   version: 3,
-  apply(transaction) {
+  async apply(transaction) {
     const db = transaction.db;
 
     for (const store of STORES) {

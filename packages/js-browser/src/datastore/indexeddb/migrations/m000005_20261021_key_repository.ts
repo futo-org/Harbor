@@ -1,5 +1,6 @@
 import { bytesToHex, v2 as Proto } from '@polycentric/js-core';
 import { activeIdentityKey } from '../active-identity';
+import { requestAsPromise } from '../request';
 import type { IndexedDBMigration } from './index';
 
 const IDENTITY_COLLECTION = 1;
@@ -18,7 +19,7 @@ interface LegacyKey {
  */
 export const m000005_20261021_key_repository: IndexedDBMigration = {
   version: 5,
-  apply(transaction) {
+  async apply(transaction) {
     const db = transaction.db;
 
     // Rename old store
@@ -34,153 +35,128 @@ export const m000005_20261021_key_repository: IndexedDBMigration = {
     keys.createIndex('idx_keys_status', 'status');
 
     // Migrate existing key pair
-    const cursorRequest = legacyKeys.openCursor();
-    cursorRequest.onsuccess = () => {
-      const cursor = cursorRequest.result;
-      if (!cursor) {
-        return;
-      }
+    const [legacy] = await requestAsPromise<LegacyKey[]>(
+      legacyKeys.getAll(undefined, 1),
+    );
+    if (!legacy) {
+      return;
+    }
 
-      const legacy = cursor.value as LegacyKey;
+    let identity: string | null;
+    try {
+      identity = localStorage.getItem(activeIdentityKey(legacy.public_key));
+    } catch {
+      identity = null;
+    }
 
-      let identity: string | null;
-      try {
-        identity = localStorage.getItem(activeIdentityKey(legacy.public_key));
-      } catch {
-        identity = null;
-      }
+    if (!identity) {
+      return;
+    }
 
-      if (!identity) {
-        return;
-      }
+    const status = await lookupStatus(transaction, identity, legacy);
 
-      const migrate = (status: string) => {
-        keys.add({
-          identity,
-          keyType: legacy.key_type,
-          publicKeyHex: bytesToHex(legacy.public_key),
-          status,
-          privateKeyLocation: 'inline',
-          privateKeyHex: bytesToHex(legacy.private_key),
-        });
-      };
-
-      migrateWithStatus(transaction, identity, legacy, migrate);
-    };
+    await requestAsPromise(
+      keys.add({
+        identity,
+        keyType: legacy.key_type,
+        publicKeyHex: bytesToHex(legacy.public_key),
+        status,
+        privateKeyLocation: 'inline',
+        privateKeyHex: bytesToHex(legacy.private_key),
+      }),
+    );
   },
 };
 
 /**
- * Derive the status of the legacy key pair and migrate it.
+ * Derive the status of the legacy key pair from the latest identity event.
  * Falls back to `liveRotationKey` on failure.
  */
-function migrateWithStatus(
+async function lookupStatus(
   transaction: IDBTransaction,
   identity: string,
   legacy: LegacyKey,
-  done: (status: string) => void,
-): void {
-  const fallback = () => done('liveRotationKey');
-  const suppress = (event: Event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    fallback();
-  };
+): Promise<string> {
+  try {
+    // Read all events
+    const rows = await requestAsPromise(
+      transaction
+        .objectStore('events')
+        .getAll(IDBKeyRange.bound([identity], [identity, []])),
+      { preventAbort: true },
+    );
 
-  let latest: { sequence: number; eventBytes: Uint8Array } | null = null;
+    // Find latest identity event
+    let latest: { sequence: number; eventBytes: Uint8Array } | null = null;
 
-  const eventsRequest = transaction
-    .objectStore('events')
-    .openCursor(IDBKeyRange.bound([identity], [identity, []]));
-
-  eventsRequest.onerror = suppress;
-
-  eventsRequest.onsuccess = () => {
-    const cursor = eventsRequest.result;
-
-    if (cursor) {
-      const row = cursor.value;
+    for (const row of rows) {
       if (
         row.collection === IDENTITY_COLLECTION &&
         (!latest || row.sequence > latest.sequence)
       ) {
-        latest = { sequence: row.sequence, eventBytes: row.eventBytes };
+        latest = row;
       }
-      cursor.continue();
-      return;
     }
 
     if (!latest) {
-      fallback();
-      return;
+      return 'liveRotationKey';
     }
 
-    let digestHex: string;
-    try {
-      const event = Proto.Event.fromBinary(latest.eventBytes);
-
-      if (!event.contentDigest) {
-        fallback();
-        return;
-      }
-
-      digestHex = bytesToHex(Proto.ContentDigest.toBinary(event.contentDigest));
-    } catch {
-      fallback();
-      return;
+    // Get matching identity content
+    const event = Proto.Event.fromBinary(latest.eventBytes);
+    if (!event.contentDigest) {
+      return 'liveRotationKey';
     }
 
-    const contentRequest = transaction.objectStore('content').get(digestHex);
+    const digestHex = bytesToHex(
+      Proto.ContentDigest.toBinary(event.contentDigest),
+    );
 
-    contentRequest.onerror = suppress;
+    const row = await requestAsPromise(
+      transaction.objectStore('content').get(digestHex),
+      { preventAbort: true },
+    );
 
-    contentRequest.onsuccess = () => {
-      let doc: Proto.Identity;
+    if (!row) {
+      return 'liveRotationKey';
+    }
 
-      try {
-        const row = contentRequest.result;
+    const content = Proto.Content.fromBinary(row.contentBytes);
+    if (content.contentBody.oneofKind !== 'identity') {
+      return 'liveRotationKey';
+    }
 
-        if (!row) {
-          fallback();
-          return;
-        }
-
-        const content = Proto.Content.fromBinary(row.contentBytes);
-        if (content.contentBody.oneofKind !== 'identity') {
-          fallback();
-          return;
-        }
-
-        doc = content.contentBody.identity;
-      } catch {
-        fallback();
-        return;
-      }
-
-      const matches = (key: Proto.PublicKey) => {
-        if (key.keyType !== legacy.key_type) return false;
-        return bytesEqual(key.key, legacy.public_key);
-      };
-
-      if (doc.rotationKeys.some(matches)) {
-        done('liveRotationKey');
-      } else if (doc.signingKeys.some(matches)) {
-        done('liveSigningKey');
-      } else {
-        done('revoked');
-      }
+    // Derive key pair status
+    const doc = content.contentBody.identity;
+    const matches = (key: Proto.PublicKey) => {
+      if (key.keyType !== legacy.key_type) return false;
+      return bytesEqual(key.key, legacy.public_key);
     };
-  };
+
+    if (doc.rotationKeys.some(matches)) {
+      return 'liveRotationKey';
+    }
+
+    if (doc.signingKeys.some(matches)) {
+      return 'liveSigningKey';
+    }
+
+    return 'revoked';
+  } catch {
+    return 'liveRotationKey';
+  }
 }
 
 function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) {
     return false;
   }
+
   for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i]) {
       return false;
     }
   }
+
   return true;
 }

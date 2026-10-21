@@ -1,5 +1,6 @@
 import { DatabaseError } from '@polycentric/js-core';
 import { DATABASE_VERSION, onUpgradeNeeded } from './migrations';
+import { requestAsPromise } from './request';
 
 /**
  * indexedDB database implementation
@@ -47,7 +48,9 @@ export class IndexedDBDatabase {
 
       request.onupgradeneeded = (event) => {
         try {
-          onUpgradeNeeded(event);
+          onUpgradeNeeded(event).catch((error) => {
+            upgradeError = error;
+          });
         } catch (error) {
           upgradeError = error;
         }
@@ -97,10 +100,7 @@ export class IndexedDBDatabase {
    * Wraps an IDBRequest in a promise
    */
   static async requestAsPromise<T>(request: IDBRequest<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    return requestAsPromise(request);
   }
 
   /**

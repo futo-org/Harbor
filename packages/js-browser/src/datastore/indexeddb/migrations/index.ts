@@ -6,15 +6,15 @@ import { m000005_20261021_key_repository } from './m000005_20261021_key_reposito
 /**
  * A single schema migration for the indexedDB database
  *
- * All un-applied migrations are intended to run in one `versionchange`
+ * All un-applied migrations run sequentially in one `versionchange`
  * transaction.
- * To facilitate this, implementions of `apply()` must be synchronous and only
- * queue database operations using the transaction provided.
+ * Implementations of `apply()` may only `await` requests made on the
+ * transaction provided.
  * The transaction may auto-commit if `await` is used on anything else.
  */
 export interface IndexedDBMigration {
   readonly version: number;
-  apply(transaction: IDBTransaction): void;
+  apply(transaction: IDBTransaction): Promise<void>;
 }
 
 /**
@@ -58,7 +58,7 @@ export const DATABASE_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
  * Should be called from the `onupgradeneeded` handler of an `IDBOpenDBRequest`.
  * On any error, the transaction is aborted and the error is rethrown.
  */
-export function onUpgradeNeeded(event: IDBVersionChangeEvent): void {
+export function onUpgradeNeeded(event: IDBVersionChangeEvent): Promise<void> {
   const transaction = (event.target as IDBOpenDBRequest).transaction;
   if (!transaction) {
     throw new DatabaseError('No transaction available for IndexedDB upgrade');
@@ -67,14 +67,26 @@ export function onUpgradeNeeded(event: IDBVersionChangeEvent): void {
   const oldVersion = event.oldVersion;
   const newVersion = event.newVersion ?? DATABASE_VERSION;
 
+  return applyMigrations(transaction, oldVersion, newVersion);
+}
+
+async function applyMigrations(
+  transaction: IDBTransaction,
+  oldVersion: number,
+  newVersion: number,
+): Promise<void> {
   try {
     for (const migration of MIGRATIONS) {
       if (migration.version > oldVersion && migration.version <= newVersion) {
-        migration.apply(transaction);
+        await migration.apply(transaction);
       }
     }
   } catch (error) {
-    transaction.abort();
+    try {
+      transaction.abort();
+    } catch {
+      // Already aborted by a failed request
+    }
     throw error;
   }
 }
