@@ -95,6 +95,62 @@ async fn upload_blob_rejects_size_mismatch() {
         "upload_blob accepted a blob whose size does not match its body",
     );
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(
+        err.message(),
+        "upload_blob: declared size 29 does not match body length 28"
+    );
+}
+
+#[tokio::test]
+async fn upload_blob_validation_blob_too_large() {
+    let (mut blob, body) = random_blob();
+    blob.size += (100 * 1024 * 1024) + 1;
+
+    let err = upload(&blob, &body).await.unwrap_err();
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(
+        err.message(),
+        "upload_blob: blob is invalid: size is too large (104857629), maximum is 104857600"
+    );
+}
+
+#[tokio::test]
+async fn upload_blob_validation_blob_digest_missing() {
+    let (mut blob, body) = random_blob();
+    blob.digest = None;
+
+    let err = upload(&blob, &body).await.unwrap_err();
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(
+        err.message(),
+        "upload_blob: blob is invalid: digest is missing",
+    );
+}
+
+#[tokio::test]
+async fn upload_blob_validation_blob_digest_invalid() {
+    let (mut blob, body) = random_blob();
+    blob.digest.as_mut().unwrap().r#type = 999;
+
+    let err = upload(&blob, &body).await.unwrap_err();
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(
+        err.message(),
+        "upload_blob: blob is invalid: digest type is invalid",
+    );
+}
+
+#[tokio::test]
+async fn upload_blob_validation_blob_mime_type_too_large() {
+    let (mut blob, body) = random_blob();
+    blob.mime_type = "m".repeat(51);
+
+    let err = upload(&blob, &body).await.unwrap_err();
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(
+        err.message(),
+        "upload_blob: blob is invalid: mime type is too long (51), maximum is 50",
+    );
 }
 
 #[tokio::test]

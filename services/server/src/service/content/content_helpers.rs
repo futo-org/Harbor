@@ -1,5 +1,7 @@
-use crate::service::proto::{Blob, ContentDigest, UploadBlobRequest};
+use polycentric_common::models::validate::Validate;
 use tonic::Status;
+
+use crate::service::proto::{Blob, ContentDigest, UploadBlobRequest};
 
 /// Pull the blob, digest, and body out of an `UploadBlobRequest`,
 /// returning `InvalidArgument` for any structural or integrity problem.
@@ -11,8 +13,21 @@ pub fn parse_upload_blob_request(
     let blob = blob.ok_or_else(|| {
         Status::invalid_argument("upload_blob: blob is required")
     })?;
+
+    if let Err(errors) = blob.validate()
+        && let Some(err) = errors.first()
+    {
+        return Err(Status::invalid_argument(format!(
+            "upload_blob: blob is invalid: {err}",
+        )));
+    }
+
     let digest = blob.digest.clone().ok_or_else(|| {
-        Status::invalid_argument("upload_blob: blob.digest is required")
+        // NOTE: should be unreachable after validating the blob, but just in
+        // case we match the error message.
+        Status::invalid_argument(
+            "upload_blob: blob is invalid: digest is missing",
+        )
     })?;
 
     if blob.size as usize != body.len() {

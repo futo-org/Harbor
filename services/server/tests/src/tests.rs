@@ -944,7 +944,7 @@ pub fn make_identity_bundle(
     created_at: u64,
 ) -> EventBundle {
     let content = Content {
-        content_body: Some(content::ContentBody::Identity(identity_content)),
+        content_body: Some(ContentBody::Identity(identity_content)),
     };
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
@@ -975,7 +975,7 @@ pub fn make_profile_update_bundle(
     created_at: u64,
 ) -> EventBundle {
     let content = Content {
-        content_body: Some(content::ContentBody::ProfileUpdate(update)),
+        content_body: Some(ContentBody::ProfileUpdate(update)),
     };
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
@@ -1022,7 +1022,7 @@ pub fn make_post_bundle(
         })
         .collect();
     let content = Content {
-        content_body: Some(content::ContentBody::Post(Post {
+        content_body: Some(ContentBody::Post(Post {
             text: text.to_string(),
             reply: None,
             images: vec![],
@@ -1084,15 +1084,13 @@ pub fn make_verification_claim_bundle(
     fields.insert("handle".to_string(), handle.as_bytes().to_vec());
 
     let content = Content {
-        content_body: Some(content::ContentBody::VerificationClaim(
-            VerificationClaim {
-                schema: Some(SerializedVerificationSchema {
-                    schema_bytes,
-                    digest: Some(schema_digest),
-                }),
-                fields,
-            },
-        )),
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(SerializedVerificationSchema {
+                schema_bytes,
+                digest: Some(schema_digest),
+            }),
+            fields,
+        })),
     };
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
@@ -1242,7 +1240,7 @@ fn assert_is_labels_bundle(
     let content = Content::decode(sc.content_bytes.as_slice())
         .expect("valid content protobuf");
     match &content.content_body {
-        Some(content::ContentBody::Labels(labels)) => {
+        Some(ContentBody::Labels(labels)) => {
             let ek = labels.event_key.as_ref().expect("Labels has event_key");
             assert_eq!(ek.collection, expected_target.collection);
             assert_eq!(ek.identity, expected_target.identity);
