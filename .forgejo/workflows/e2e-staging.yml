@@ -97,8 +97,6 @@ jobs:
     name: Test web e2e on staging
     needs: sdks
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    outputs:
-      wait_failure: ${{ steps.wait.outputs.failure }}
     # Up to 45 minutes of deploys, 10 of rollout, then the flows.
     timeout-minutes: 70
     container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
@@ -121,7 +119,6 @@ jobs:
           install-args: --filter harbor-e2e...
       # After the setup, which then overlaps with deploys still building.
       - name: Wait for staging
-        id: wait
         run: node .forgejo/scripts/wait-staging.mjs
       - name: Web e2e
         run: pnpm --filter harbor-e2e test:web
@@ -131,23 +128,3 @@ jobs:
           name: e2e-web-report
           path: e2e/reports
           retention-days: 7
-
-  # Any failing job above, so a failed SDK build (which skips e2e) is reported
-  # too. A run superseded by a newer commit is cancelled, not failed.
-  report:
-    name: Report failure
-    needs: [changes, setup-images, wasm, sdks, e2e]
-    if: always()
-    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    timeout-minutes: 5
-    container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Report failure
-        env:
-          NEEDS: ${{ toJSON(needs) }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-          # TODO: with the Zulip posting (see report-e2e-staging.mjs):
-          # ZULIP_BOT_EMAIL: ${{ vars.ZULIP_BOT_EMAIL }}
-          # ZULIP_BOT_API_KEY: ${{ secrets.ZULIP_BOT_API_KEY }}
-        run: node .forgejo/scripts/report-e2e-staging.mjs
