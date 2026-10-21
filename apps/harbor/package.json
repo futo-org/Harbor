@@ -23,7 +23,8 @@
     "prebuild": "APP_VARIANT=dev expo prebuild --clean",
     "typecheck": "tsc && tsc -p tsconfig.test.json",
     "generate:emoji-tags": "node scripts/generate-emoji-tags.mts && biome format --write src/features/reaction/emojiTags.json",
-    "generate:twemoji-font": "uv run scripts/generate-twemoji-font.py"
+    "generate:twemoji-font": "uv run scripts/generate-twemoji-font.py",
+    "generate:grayjay-emoji": "uv run scripts/generate-grayjay-emoji.py"
   },
   "dependencies": {
     "@bsky.app/react-native-uitextview": "^2.7.1",
