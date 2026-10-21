@@ -48,7 +48,7 @@ impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ValidationError::Urls(err) => write!(f, "urls {err}"),
-            ValidationError::UrlsItem { index, error } => write!(f, "urls {index}-ith {error}"),
+            ValidationError::UrlsItem { index, error } => write!(f, "urls {index}-th {error}"),
         }
     }
 }

@@ -116,8 +116,8 @@ impl Validate for Identity {
         validate::slice2(
             revocation_bounds,
             errors,
-            |err| map_err(ValidationError::RevocationBound(err)),
-            |index, error| map_err(ValidationError::RevocationBoundItem { index, error }),
+            |err| map_err(ValidationError::RevocationBounds(err)),
+            |index, error| map_err(ValidationError::RevocationBoundsItem { index, error }),
             SliceConfig {
                 max_len: Some(1000),
                 ..Default::default()
@@ -159,8 +159,8 @@ pub enum ValidationError {
         index: u32,
         error: public_key::ValidationError,
     },
-    RevocationBound(SliceError),
-    RevocationBoundItem {
+    RevocationBounds(SliceError),
+    RevocationBoundsItem {
         index: u32,
         error: revocation_bound::ValidationError,
     },
@@ -180,9 +180,9 @@ impl fmt::Display for ValidationError {
             ValidationError::SigningKeysItem { index, error } => {
                 write!(f, "signing keys {index}-th {error}")
             }
-            ValidationError::RevocationBound(err) => write!(f, "revocation bound {err}"),
-            ValidationError::RevocationBoundItem { index, error } => {
-                write!(f, "revocation bound {index}-th {error}")
+            ValidationError::RevocationBounds(err) => write!(f, "revocation bounds {err}"),
+            ValidationError::RevocationBoundsItem { index, error } => {
+                write!(f, "revocation bounds {index}-th {error}")
             }
             ValidationError::Servers(err) => write!(f, "servers {err}"),
             ValidationError::RecoveryKey(err) => write!(f, "recovery key {err}"),
