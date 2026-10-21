@@ -29,7 +29,7 @@ impl Validate for EventProofTarget {
         validate::slice(
             root,
             errors,
-            |err| map_err(ValidationError::Signature(err)),
+            |err| map_err(ValidationError::Root(err)),
             SliceConfig {
                 min_len: Some(32),
                 max_len: Some(32),
