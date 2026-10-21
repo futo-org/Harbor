@@ -9,6 +9,7 @@ import {
   createPolycentricClient,
   type types,
   type IdentityState,
+  v2,
 } from '@polycentric/react-native';
 import { HARBOR_APPLICATION } from '@/src/common/util/application';
 import {
@@ -18,6 +19,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
 import { Platform, Text, View } from 'react-native';
 import { Atoms, useTheme } from '../../theme';
 import { registerForPushNotifications } from '../notifications/registerPushToken';
@@ -53,8 +55,7 @@ export const DEFAULT_SEED_SERVERS: string[] = (() => {
   const raw = (
     publicEnv(
       'EXPO_PUBLIC_HARBOR_SEED_SERVERS',
-      process.env.EXPO_PUBLIC_HARBOR_SEED_SERVERS ??
-        process.env.EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS,
+      process.env.EXPO_PUBLIC_HARBOR_SEED_SERVERS,
     ) ?? ''
   ).trim();
   const parsed = raw
@@ -78,8 +79,7 @@ export const DEFAULT_NOTIFICATION_SERVERS: string[] = (() => {
   const raw = (
     publicEnv(
       'EXPO_PUBLIC_HARBOR_NOTIFICATION_SERVERS',
-      process.env.EXPO_PUBLIC_HARBOR_NOTIFICATION_SERVERS ??
-        process.env.EXPO_PUBLIC_POLYCENTRIC_NOTIFICATION_SERVERS,
+      process.env.EXPO_PUBLIC_HARBOR_NOTIFICATION_SERVERS,
     ) ?? ''
   ).trim();
   const parsed = raw
@@ -99,8 +99,7 @@ export const DEFAULT_VERIFIER_SERVERS: string[] = (() => {
   const raw = (
     publicEnv(
       'EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS',
-      process.env.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS ??
-        process.env.EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS,
+      process.env.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS,
     ) ?? ''
   ).trim();
   const parsed = raw
@@ -133,6 +132,11 @@ function DefaultLoadingComponent() {
 }
 
 function DefaultErrorComponent({ error }: { error: Error }) {
+  // The root stack, which hides the splash, never mounts on this path.
+  useEffect(() => {
+    void SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   return (
     <View
       style={{
@@ -171,24 +175,11 @@ function bootstrapClient(): Promise<Bootstrap> {
     await store.getState().refreshIdentities();
 
     if (client.activeIdentityKey) {
-      // Local refresh first, sync refreshes again when done.
+      // Refresh from current local state
       useFollows.getState().refresh(client);
       useReposts.getState().refresh(client);
       useReactions.getState().refresh(client);
       useBlocks.getState().refresh(client);
-      void client
-        .sync()
-        .then(() =>
-          Promise.all([
-            useFollows.getState().refresh(client),
-            useReposts.getState().refresh(client),
-            useReactions.getState().refresh(client),
-            useBlocks.getState().refresh(client),
-          ]),
-        )
-        .catch((syncError) => {
-          console.warn('Initial Polycentric sync failed:', syncError);
-        });
     }
 
     return { client, store };
@@ -222,6 +213,8 @@ export function PolycentricProvider({
     }
   }, [isLoading, onInitialized]);
 
+  useEffect(() => client?.startLiveSync(), [client]);
+
   const currentIdentityKey = currentIdentity?.identityKey;
   useEffect(() => {
     if (!client || !currentIdentityKey) return;
@@ -243,26 +236,56 @@ export function PolycentricProvider({
     let cancelled = false;
     let ready: Bootstrap | null = null;
 
-    const handleKeyPairChanged = async () => {
-      if (cancelled || !ready) return;
-      const { client: c, store: s } = ready;
-      setCurrentIdentity(c.identityManager.resolveIdentity());
-      await s.getState().refreshIdentities();
-      useFollows.getState().refresh(c);
-      useReposts.getState().refresh(c);
-      useReactions.getState().refresh(c);
-      useBlocks.getState().refresh(c);
+    const refresh = async ({ client, store }: Bootstrap) => {
+      setCurrentIdentity(client.identityManager.resolveIdentity());
+      await Promise.all([
+        store.getState().refreshIdentities(),
+        useFollows.getState().refresh(client),
+        useReposts.getState().refresh(client),
+        useReactions.getState().refresh(client),
+        useBlocks.getState().refresh(client),
+      ]);
     };
 
-    // Onboarding publishes the identity event; adopt it.
+    const handleKeyPairChanged = async () => {
+      if (cancelled || !ready) return;
+
+      try {
+        await refresh(ready);
+      } catch (err) {
+        console.error('Refresh after login failed:', err);
+      }
+    };
+
+    // Keep identity state up to date.
     const handleContentCreated = ({
+      signedEvent,
       content,
     }: {
+      signedEvent: { eventBytes: Uint8Array };
       content?: { contentBody: { oneofKind?: string } };
     }) => {
       if (cancelled || !ready) return;
       if (content?.contentBody.oneofKind !== 'identity') return;
+
+      const event = v2.Event.fromBinary(signedEvent.eventBytes);
+      if (event.key?.identity !== ready.client.activeIdentityKey) return;
+
       setCurrentIdentity(ready.client.identityManager.resolveIdentity());
+    };
+
+    // Refresh stores when we pull from remote servers
+    const handlePulled = async (identityKey: string) => {
+      if (cancelled || !ready) return;
+
+      const { client } = ready;
+      if (identityKey !== client.activeIdentityKey) return;
+
+      try {
+        await refresh(ready);
+      } catch (err) {
+        console.warn('Failed to refresh stores after pull:', err);
+      }
     };
 
     (async () => {
@@ -279,6 +302,12 @@ export function PolycentricProvider({
 
         c.events.onKeyPairChanged(handleKeyPairChanged);
         c.events.onContentCreated(handleContentCreated);
+        c.events.onPulled(handlePulled);
+
+        // Do an initial sync now that we have registered the listener
+        void c.sync().catch((syncError) => {
+          console.warn('Initial Polycentric sync failed:', syncError);
+        });
       } catch (err) {
         if (!cancelled) {
           console.error('Failed to initialize PolycentricProvider:', err);
@@ -292,6 +321,7 @@ export function PolycentricProvider({
       cancelled = true;
       ready?.client.events.offKeyPairChanged(handleKeyPairChanged);
       ready?.client.events.offContentCreated(handleContentCreated);
+      ready?.client.events.offPulled(handlePulled);
     };
   }, []);
 
@@ -374,9 +404,16 @@ export function useCurrentIdentity() {
   };
 }
 
-export function useUsername(identityKey: string | null | undefined): string {
+export function useUsername(
+  identityKey: string | null | undefined,
+  options?: { fallbackName?: string | null },
+): string {
   const profile = useProfile(identityKey);
-  return profile.name ?? DEFAULT_IDENTITY_NAME;
+  if (profile.name) return profile.name;
+  if (options?.fallbackName) return options.fallbackName;
+  if (profile.isLoading || !profile.isResolved) return '…';
+  // An empty fallback reaches here too, and hides the default name.
+  return options?.fallbackName ?? DEFAULT_IDENTITY_NAME;
 }
 
 /**

@@ -12,6 +12,11 @@ let mockContext: {
   alias: string | null;
 };
 
+jest.mock('@/src/features/follow/FollowingBadge', () => ({
+  __esModule: true,
+  FollowingBadge: () => null,
+}));
+
 jest.mock('./ProfileContext', () => ({
   useProfileContext: () => mockContext,
 }));
@@ -46,7 +51,10 @@ jest.mock('@/src/common/components/Icon', () => ({
   __esModule: true,
   default: () => null,
 }));
-jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
+jest.mock('expo-router', () => ({ router: { navigate: jest.fn() } }));
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 jest.mock('../follow/FollowButton', () => ({
   __esModule: true,
   default: () => null,
@@ -56,6 +64,13 @@ jest.mock('../follow/FollowButton', () => ({
 jest.mock('./ProfileMenu', () => ({
   __esModule: true,
   default: () => null,
+}));
+jest.mock('./ProfileShareSheet', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+jest.mock('./ProfileVerifiedPlatforms', () => ({
+  ProfileVerifiedPlatforms: () => null,
 }));
 jest.mock('@/src/common/components/composites', () => ({
   BackButton: () => null,
@@ -67,9 +82,11 @@ jest.mock('@/src/common/components/primitives', () => {
   const react = require('react');
   const { Text: Native } = require('react-native');
   return {
+    AVATAR_SIZE_MAP: { xl: 0 },
     Text: ({ children }: { children: unknown }) =>
       react.createElement(Native, null, children),
     Button: () => null,
+    IconButton: () => null,
     ProfileAvatar: () => null,
   };
 });
@@ -86,7 +103,7 @@ jest.mock('@/src/common/constants', () => ({
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   identiconUrl: () => 'u',
   truncateName: (name: string) => name,
-  useUsername: () => 'fallback',
+  useUsername: () => 'Alice',
 }));
 jest.mock('@/src/common/theme', () => ({
   ...jest.requireActual('@/src/common/theme'),
@@ -95,7 +112,10 @@ jest.mock('@/src/common/theme', () => ({
 }));
 
 import { router } from 'expo-router';
+import type { SharedValue } from 'react-native-reanimated';
 import { ProfileHeader } from './ProfileHeader';
+
+const scrollY = { value: 0 } as SharedValue<number>;
 
 const baseContext = {
   identityKey: IDENTITY,
@@ -109,7 +129,11 @@ describe('ProfileHeader alias', () => {
   it('shows the alias under the id when present in context', async () => {
     mockContext = { ...baseContext, alias: 'test@domain.com' };
     const { queryByText } = await render(
-      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+      <ProfileHeader
+        bannerColors={['#a', '#b']}
+        onBack={() => undefined}
+        scrollY={scrollY}
+      />,
     );
     expect(queryByText('test@domain.com')).not.toBeNull();
     expect(queryByText(IDENTITY)).not.toBeNull();
@@ -118,7 +142,11 @@ describe('ProfileHeader alias', () => {
   it('shows only the id when there is no alias', async () => {
     mockContext = { ...baseContext, alias: null };
     const { queryByText } = await render(
-      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+      <ProfileHeader
+        bannerColors={['#a', '#b']}
+        onBack={() => undefined}
+        scrollY={scrollY}
+      />,
     );
     expect(queryByText(IDENTITY)).not.toBeNull();
     // No alias-style text rendered.
@@ -129,16 +157,20 @@ describe('ProfileHeader alias', () => {
 describe('ProfileHeader identity key', () => {
   beforeEach(() => {
     mockContext = { ...baseContext };
-    (router.push as jest.Mock).mockClear();
+    (router.navigate as jest.Mock).mockClear();
   });
 
   it('opens the identity sheet when the key is pressed', async () => {
     const { getByText } = await render(
-      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+      <ProfileHeader
+        bannerColors={['#a', '#b']}
+        onBack={() => undefined}
+        scrollY={scrollY}
+      />,
     );
 
     await fireEvent.press(getByText(IDENTITY));
-    expect(router.push).toHaveBeenCalledWith('/x/identity');
+    expect(router.navigate).toHaveBeenCalledWith('/x/identity');
   });
 });
 
@@ -146,13 +178,17 @@ describe('ProfileHeader follow counters', () => {
   beforeEach(() => {
     mockContext = { ...baseContext };
     mockCounts = { followingCount: 0, followersCount: 0 };
-    (router.push as jest.Mock).mockClear();
+    (router.navigate as jest.Mock).mockClear();
   });
 
   it('renders the counts from the profile', async () => {
     mockCounts = { followingCount: 3, followersCount: 7 };
     const { getByText } = await render(
-      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+      <ProfileHeader
+        bannerColors={['#a', '#b']}
+        onBack={() => undefined}
+        scrollY={scrollY}
+      />,
     );
 
     expect(getByText('3')).toBeTruthy();
@@ -163,13 +199,17 @@ describe('ProfileHeader follow counters', () => {
 
   it('links to the following and followers lists', async () => {
     const { getByText } = await render(
-      <ProfileHeader bannerColors={['#a', '#b']} onBack={() => undefined} />,
+      <ProfileHeader
+        bannerColors={['#a', '#b']}
+        onBack={() => undefined}
+        scrollY={scrollY}
+      />,
     );
 
     await fireEvent.press(getByText(/Following/));
-    expect(router.push).toHaveBeenCalledWith('/x/following');
+    expect(router.navigate).toHaveBeenCalledWith('/x/following');
 
     await fireEvent.press(getByText(/Followers/));
-    expect(router.push).toHaveBeenCalledWith('/x/followers');
+    expect(router.navigate).toHaveBeenCalledWith('/x/followers');
   });
 });

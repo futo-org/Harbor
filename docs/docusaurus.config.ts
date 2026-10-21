@@ -2,13 +2,27 @@ import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import tailwindPostcss from '@tailwindcss/postcss';
+import grpcApiPlugin from './plugins/grpc-api/index';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
+
+const SOCIAL_CARD_ALT = 'Harbor';
+// `docusaurus start` runs in development, `docusaurus build` in production
+const ICON_SUFFIX = process.env.NODE_ENV === 'development' ? '-dev' : '';
 
 const config: Config = {
   title: 'Harbor',
   tagline: 'Share to the world, not platforms.',
-  favicon: 'img/favicon.ico',
+  favicon: `img/favicon${ICON_SUFFIX}.ico`,
+  headTags: [
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'apple-touch-icon',
+        href: `/apple-touch-icon${ICON_SUFFIX}.png`,
+      },
+    },
+  ],
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -34,6 +48,8 @@ const config: Config = {
   },
 
   plugins: [
+    // The gRPC API reference, generated from the proto files.
+    grpcApiPlugin,
     // Tailwind (v4) for the landing pages; docs pages stay on Infima.
     async function tailwindPlugin() {
       return {
@@ -57,6 +73,7 @@ const config: Config = {
           // docs are served under /docs.
           routeBasePath: 'docs',
           sidebarPath: './src/sidebars.ts',
+          editUrl: 'https://code.futo.org/harbor/harbor/_edit/develop/docs/',
         },
         // No blog.
         blog: false,
@@ -67,7 +84,25 @@ const config: Config = {
     ],
   ],
 
+  markdown: {
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
+
   themeConfig: {
+    // The link preview card, shared with the web app
+    image: 'img/harbor-social-card.png',
+    // Docusaurus emits og:image and twitter:image but no alt text for them
+    metadata: [
+      {
+        property: 'og:image:alt',
+        content: SOCIAL_CARD_ALT,
+      },
+      {
+        name: 'twitter:image:alt',
+        content: SOCIAL_CARD_ALT,
+      },
+    ],
     colorMode: {
       // Default to dark, but still honor the user's stored/OS preference and
       // keep the toggle.
@@ -80,7 +115,6 @@ const config: Config = {
       logo: {
         alt: 'Harbor',
         src: 'img/logo.png',
-        srcDark: 'img/logo-dark.png',
       },
       items: [
         {
@@ -95,7 +129,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://gitlab.futo.org/harbor/harbor',
+          href: 'https://code.futo.org/harbor/harbor',
           label: 'Code',
           position: 'right',
         },
@@ -124,6 +158,7 @@ const config: Config = {
             { label: 'Introduction', to: '/docs' },
             { label: 'Host a Server', to: '/docs/guides/running-a-server' },
             { label: 'Protocol', to: '/docs/protocol/overview' },
+            { label: 'Roadmap', to: '/docs/roadmap' },
           ],
         },
         {
@@ -135,8 +170,8 @@ const config: Config = {
           items: [
             { label: 'App', href: 'https://harbor.social' },
             {
-              label: 'GitLab',
-              href: 'https://gitlab.futo.org/polycentric/polycentric',
+              label: 'Forgejo',
+              href: 'https://code.futo.org/harbor/harbor',
             },
           ],
         },

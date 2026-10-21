@@ -17,7 +17,6 @@ import {
   Platform,
   Pressable,
   type PressableProps,
-  StyleProp,
   StyleSheet,
   View,
   type ViewStyle,
@@ -111,7 +110,7 @@ export function Button({
     onPress?.();
     if (!href) return;
     event?.preventDefault?.();
-    router.push(href);
+    router.navigate(href);
   };
 
   const pressable = (
@@ -139,7 +138,7 @@ export function Button({
       ]}
       {...props}
     >
-      <View style={[styles.content]}>
+      <View style={[styles.content, iconOnly && styles.iconOnlyContent]}>
         {icon &&
           (typeof icon === 'function' ? (
             icon({ size: sizeConfig.iconSize, color: iconColor })
@@ -168,7 +167,7 @@ export function Button({
   return <Animated.View style={animatedStyle}>{pressable}</Animated.View>;
 }
 
-const BORDER_WIDTH = 1.5;
+const BORDER_WIDTH = 1;
 
 const styles = StyleSheet.create({
   base: {
@@ -185,9 +184,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  iconOnlyContent: {
+    aspectRatio: 1,
+  },
 });
 
-const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
+export const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
   primary: 'white',
   secondary: 'primary_600',
   tertiary: 'neutral_1000',
@@ -196,7 +198,7 @@ const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
 
-function getVariantStyle(theme: Theme, variant: ButtonVariant) {
+export function getVariantStyle(theme: Theme, variant: ButtonVariant) {
   switch (variant) {
     case 'primary':
       return {

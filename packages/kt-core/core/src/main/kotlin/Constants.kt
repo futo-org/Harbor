@@ -33,10 +33,13 @@ object KeyTypes {
 enum class SyncStrategy {
     /** Push and pull all events. */
     FULL,
+
     /** Push all events; pull nothing. */
     FULL_PUSH,
+
     /** Pull all events; push nothing. */
     FULL_PULL,
+
     /** Push and pull only events believed to be missing. */
     PARTIAL,
     PARTIAL_PUSH,

@@ -25,10 +25,10 @@ To have yours listed here:
 
 1. Make sure it's reachable over HTTPS and that
    `https://your.server/status` responds with `OK.`
-2. Open a merge request adding it to
-   [`docs/src/data/servers.json`](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/docs/src/data/servers.json),
+2. Open a pull request adding it to
+   [`docs/src/data/servers.json`](https://code.futo.org/harbor/harbor/src/branch/develop/docs/src/data/servers.json),
    with the URL, who operates it, and a one-line description.
 
-If you'd rather not open a merge request, file a
-[work item](https://gitlab.futo.org/polycentric/polycentric/-/work_items)
+If you'd rather not open a pull request, file an
+[issue](https://code.futo.org/harbor/harbor/issues)
 with the same details instead.

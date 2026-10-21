@@ -12,7 +12,9 @@ import polycentric.v2.SignedEvent
 enum class ClientState { UNINITIALIZED, INITIALIZING, READY, ERROR }
 
 /** Port of js-core `InitializationStep` (display strings preserved). */
-enum class InitializationStep(val label: String) {
+enum class InitializationStep(
+    val label: String,
+) {
     STARTING("Starting initialization..."),
     INITIALIZING_CORE("Initializing core..."),
     SETTING_UP_STORAGE("Setting up storage..."),
@@ -86,7 +88,10 @@ class EventService {
         _hydrationStatus.value = status
     }
 
-    internal suspend fun emitKeyPairChanged(keyPair: StoredKeyPair?, identityKey: String? = null) {
+    internal suspend fun emitKeyPairChanged(
+        keyPair: StoredKeyPair?,
+        identityKey: String? = null,
+    ) {
         _keyPairChanged.emit(
             keyPair?.let {
                 KeyPairChangedPayload(

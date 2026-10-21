@@ -54,7 +54,7 @@ impl Mutation {
             ContentBody::Identity(identity) => identity::add_query(identity, content_id, event_identity)?.into(),
             ContentBody::Repost(repost) => return repost::add_query(repost, content_id).map(|q| q.map(Into::into)),
             ContentBody::Report(report) => report::add_query(report, content_id)?.into(),
-            ContentBody::Labels(labels) => labels::add_query(with, labels, content_id)?.into(),
+            ContentBody::Labels(labels) => return labels::add_query(with, labels, content_id).map(|q| q.map(Into::into)),
             ContentBody::VerificationClaim(claim) => verification_claim::add_query(with, claim, content_id)?.into(),
             ContentBody::VerificationTarget(target) => return verification_target::add_query(with, target, content_id).map(|q| q.map(Into::into)),
             ContentBody::VerificationVerify(verify) => verification_verify::add_query(verify, content_id)?.into(),

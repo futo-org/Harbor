@@ -15,12 +15,12 @@
   },
   "devDependencies": {
     "@polycentric/tsconfig": "workspace:*",
-    "@types/node": "^24.0.0",
+    "@types/node": "^24.19.2",
     "tsx": "^4.20.0",
     "typescript": "catalog:"
   },
   "dependencies": {
-    "browserless": "^13.1.6",
+    "browserless": "^14.0.0",
     "html-get": "^2.24.6",
     "metascraper": "^5.50.6",
     "metascraper-description": "^5.50.6",

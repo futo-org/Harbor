@@ -1,11 +1,14 @@
 import { Toaster } from '@/src/common/components/toast';
+import { hideBootSkeleton } from '@/src/common/components/layout/BootSkeleton';
 import { AppUpdater } from '@/src/features/core/apk-update';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
+import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import {
   PolycentricProvider,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
+import { renderScreenWithSplashHide } from '@/src/common/lib/renderScreenWithSplashHide';
 import { APP_NAME } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
@@ -14,15 +17,22 @@ import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
+import { NavigationBar } from 'expo-navigation-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
 import Head from 'expo-router/head';
+
+// Otherwise expo-router hides the splash as soon as navigation mounts, before
+// the providers below have anything to show; the root stack hides it once a
+// screen is drawn.
+void SplashScreen.preventAutoHideAsync();
+// iOS removes the splash without a fade by default; Android always fades.
+SplashScreen.setOptions({ fade: true });
 
 const imageViewerScreenOptions = {
   presentation: 'transparentModal' as const,
@@ -52,7 +62,9 @@ function RootStack() {
   const stack = (
     <>
       <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
+      <NavigationBar style={theme.name === 'dark' ? 'light' : 'dark'} />
       <Stack
+        screenLayout={isWeb ? undefined : renderScreenWithSplashHide}
         screenOptions={{
           headerShown: false,
           fullScreenGestureEnabled: !isWeb,
@@ -147,16 +159,6 @@ function RootStack() {
 }
 
 export default function RootLayout() {
-  const [ready, setReady] = useState(false);
-  const onInitialized = useCallback(() => setReady(true), []);
-
-  useEffect(() => {
-    if (!ready) {
-      return;
-    }
-    void SplashScreen.hideAsync().catch(() => {});
-  }, [ready]);
-
   return (
     <>
       <Head>
@@ -166,13 +168,16 @@ export default function RootLayout() {
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <ThemeProvider>
             <LinkPreviewsProvider>
-              <PolycentricProvider onInitialized={onInitialized}>
+              <PolycentricProvider
+                onInitialized={isWeb ? hideBootSkeleton : undefined}
+              >
                 <ModerationStatusPrefetch />
                 <TrueSheetProvider>
                   <RootStack />
                   <PortalHost />
                   <Toaster />
                   <AuthGateSheet />
+                  <EmojiPickerSheet />
                   <AppUpdater />
                 </TrueSheetProvider>
               </PolycentricProvider>

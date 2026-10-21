@@ -6,8 +6,8 @@ import org.futo.polycentric.ffi.GetIdentityFeedArgs
 import org.futo.polycentric.ffi.GetPostThreadArgs
 import org.futo.polycentric.ffi.GetProfileArgs
 import org.futo.polycentric.ffi.ListVerificationClaimsArgs
-import org.futo.polycentric.ffi.ResolveVerifiedClaimsArgs
 import org.futo.polycentric.ffi.Query
+import org.futo.polycentric.ffi.ResolveVerifiedClaimsArgs
 import polycentric.v2.AttributedTo
 import polycentric.v2.EventBundle
 import polycentric.v2.EventKey
@@ -23,9 +23,8 @@ import polycentric.v2.ResolveVerifiedClaimsResponse
  * status via [awaitQuery].
  */
 
-
 suspend fun PolycentricClient.getProfile(identity: String): GetProfileResponse? =
-    coreCall { core.awaitQuery(Query.GetProfile(GetProfileArgs(identity))) }
+    coreCall { core.awaitQuery(Query.GetProfile(GetProfileArgs(identity)), null, null) }
         ?.let { GetProfileResponse.ADAPTER.decode(it) }
 
 /** Returns the single event bundle for a key, or null when no server has it. */
@@ -39,6 +38,8 @@ suspend fun PolycentricClient.getEvent(
     coreCall {
         core.awaitQuery(
             Query.GetEvent(GetEventArgs(identity, collection, sequence.toULong(), signerKeyPrefix)),
+            null,
+            null,
         )
     }?.let { EventBundle.ADAPTER.decode(it) }
 
@@ -47,7 +48,7 @@ suspend fun PolycentricClient.getPostThread(
     limit: Int = 50,
     omitLabels: List<String> = emptyList(),
 ): GetPostThreadResponse? =
-    coreCall { core.awaitQuery(Query.GetPostThread(GetPostThreadArgs(postKey.toFfiOrThrow(), limit, omitLabels))) }
+    coreCall { core.awaitQuery(Query.GetPostThread(GetPostThreadArgs(postKey.toFfiOrThrow(), limit, omitLabels)), null, null) }
         ?.let { GetPostThreadResponse.ADAPTER.decode(it) }
 
 suspend fun PolycentricClient.getIdentityFeed(
@@ -63,6 +64,8 @@ suspend fun PolycentricClient.getIdentityFeed(
             Query.GetIdentityFeed(
                 GetIdentityFeedArgs(identity, limit, backwardToken, forwardToken, omitLabels, windowSize),
             ),
+            null,
+            null,
         )
     }?.let { GetFeedResponse.ADAPTER.decode(it) }
 
@@ -92,15 +95,17 @@ suspend fun PolycentricClient.getAttributionFeed(
                     windowSize,
                 ),
             ),
+            null,
+            null,
         )
     }?.let { GetFeedResponse.ADAPTER.decode(it) }
 
-suspend fun PolycentricClient.listVerificationClaims(
-    claimedByIdentity: String,
-): ListVerificationClaimsResponse? =
+suspend fun PolycentricClient.listVerificationClaims(claimedByIdentity: String): ListVerificationClaimsResponse? =
     coreCall {
         core.awaitQuery(
             Query.ListVerificationClaims(ListVerificationClaimsArgs(claimedByIdentity)),
+            null,
+            null,
         )
     }?.let { ListVerificationClaimsResponse.ADAPTER.decode(it) }
 
@@ -125,5 +130,7 @@ suspend fun PolycentricClient.resolveVerifiedClaims(
                     verifiedByIdentities,
                 ),
             ),
+            null,
+            null,
         )
     }?.let { ResolveVerifiedClaimsResponse.ADAPTER.decode(it) }

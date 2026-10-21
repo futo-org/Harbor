@@ -3,7 +3,7 @@
   "author": "FUTO",
   "version": "0.0.1",
   "private": true,
-  "packageManager": "pnpm@10.34.5",
+  "packageManager": "pnpm@10.34.7",
   "scripts": {
     "docusaurus": "docusaurus",
     "dev": "docusaurus start --port 3001",
@@ -17,11 +17,14 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.11.0",
     "@docusaurus/core": "3.10.2",
     "@docusaurus/faster": "3.10.2",
     "@docusaurus/preset-classic": "3.10.2",
+    "@docusaurus/theme-mermaid": "3.10.2",
     "@fontsource/open-sans": "^5.3.0",
     "@mdx-js/react": "^3.0.0",
+    "@mermaid-js/layout-elk": "^1.0.0",
     "@tailwindcss/postcss": "^4.3.3",
     "clsx": "^2.0.0",
     "prism-react-renderer": "^2.3.0",
@@ -30,9 +33,11 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@bufbuild/buf": "^1.71.0",
     "@docusaurus/module-type-aliases": "3.10.2",
     "@docusaurus/tsconfig": "3.10.2",
     "@docusaurus/types": "3.10.2",
+    "@types/node": "catalog:",
     "@types/react": "^19.0.0",
     "typescript": "~6.0.2"
   }

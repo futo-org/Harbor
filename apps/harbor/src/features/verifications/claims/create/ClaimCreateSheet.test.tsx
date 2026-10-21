@@ -87,9 +87,9 @@ jest.mock('@/src/common/components/toast', () => ({
   useToast: () => mockToast,
 }));
 
-const mockPush = jest.fn();
+const mockNavigate = jest.fn();
 jest.mock('expo-router', () => ({
-  router: { push: (...args: unknown[]) => mockPush(...args) },
+  router: { navigate: (...args: unknown[]) => mockNavigate(...args) },
 }));
 
 jest.mock('react-native-reanimated', () => {
@@ -220,7 +220,7 @@ describe('ClaimCreateSheet without a verifier', () => {
 
     expect(mockToast.success).toHaveBeenCalledWith('Claim created');
     expect(onClose).toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith(
+    expect(mockNavigate).toHaveBeenCalledWith(
       '/me/verifications/fp/1?requestVerification=1',
     );
   });
@@ -251,7 +251,7 @@ describe('ClaimCreateSheet with a verifier', () => {
     });
     expect(mockToast.success).toHaveBeenCalledWith('Verification requested');
     expect(onClose).toHaveBeenCalled();
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('creates a new claim without navigating', async () => {
@@ -265,7 +265,7 @@ describe('ClaimCreateSheet with a verifier', () => {
       'Claim created — verification requested',
     );
     expect(onClose).toHaveBeenCalled();
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('stays open and shows an error when the request fails', async () => {

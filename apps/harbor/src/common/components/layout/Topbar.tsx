@@ -82,7 +82,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
               onPress={
                 identityKey
                   ? () =>
-                      router.push({
+                      router.navigate({
                         pathname: '/[identityId]',
                         params: { identityId: identityKey },
                       })

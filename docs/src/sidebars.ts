@@ -8,7 +8,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Overview',
       collapsed: false,
-      items: ['intro', 'faq', 'servers', 'support'],
+      items: ['intro', 'faq', 'servers', 'roadmap', 'support'],
     },
     {
       type: 'category',
@@ -44,6 +44,7 @@ const sidebars: SidebarsConfig = {
         'developer/setup',
         'developer/project-structure',
         'developer/feed-paging',
+        'developer/unread-notifications',
         'developer/declaring-your-application',
         'developer/submitting-events',
         'developer/e2e-testing',
@@ -59,7 +60,11 @@ const sidebars: SidebarsConfig = {
         'guides/setting-up-an-alias',
       ],
     },
-    'privacy-policy',
+    {
+      type: 'category',
+      label: 'Policies',
+      items: ['privacy-policy', 'content-policy', 'content-policy-app-stores'],
+    },
   ],
 };
 

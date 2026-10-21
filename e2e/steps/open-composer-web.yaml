@@ -1,0 +1,10 @@
+appId: ${MAESTRO_APP_ID}
+---
+# Opens the composer for a new post from the sidebar.
+- runFlow: mark-sidebar.yaml
+- tapOn:
+    css: '#sidebar [aria-label="${output.nav.compose}"]'
+- extendedWaitUntil:
+    visible:
+      id: ${output.composer.submit}
+    timeout: 30000

@@ -38,6 +38,7 @@ export enum HydrationStatus {
 interface EventMap {
   identityChanged: KeyPair | null;
   contentCreated: ContentCreatedPayload;
+  pulled: string; // Identity key of the sync/pull
   stateChanged: ClientState;
   hydrationStatus: HydrationStatus;
   progress: InitializationStep;
@@ -85,6 +86,17 @@ export class EventService {
   }
   offContentCreated(listener: (payload: ContentCreatedPayload) => void) {
     this.off('contentCreated', listener);
+  }
+
+  // Pull events
+  emitPulled(identityKey: string) {
+    this.emit('pulled', identityKey);
+  }
+  onPulled(listener: (identityKey: string) => void) {
+    this.on('pulled', listener);
+  }
+  offPulled(listener: (identityKey: string) => void) {
+    this.off('pulled', listener);
   }
 
   // State events

@@ -3,6 +3,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
 use polycentric_common::jwt::ServerJwtClaims;
 use polycentric_common::models::protos_v2::content::ContentBody;
+use polycentric_common::models::protos_v2::content_service_client::ContentServiceClient;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
@@ -19,9 +20,11 @@ use std::time::SystemTime;
 use tokio::sync::{Mutex, MutexGuard};
 
 mod banning;
+mod blobs;
 mod event_sync;
 mod feeds;
 mod graph;
+mod heads;
 mod notifications;
 mod search;
 mod verifications;
@@ -29,15 +32,12 @@ mod verifications;
 /// gRPC server address. Override with `HARBOR_TEST_SERVER` env var.
 pub fn grpc_addr() -> String {
     std::env::var("HARBOR_TEST_SERVER")
-        .or_else(|_| std::env::var("POLYCENTRIC_TEST_SERVER"))
         .unwrap_or_else(|_| "http://localhost:3000".to_string())
 }
 
 /// JWT auth token audience.
 fn audience() -> String {
-    match std::env::var("HARBOR_ALLOW_HOSTS")
-        .or_else(|_| std::env::var("POLYCENTRIC_ALLOW_HOSTS"))
-    {
+    match std::env::var("HARBOR_ALLOW_HOSTS") {
         Ok(hosts) => hosts
             .split(',')
             .map(str::trim)
@@ -46,14 +46,9 @@ fn audience() -> String {
             .expect("invalid HARBOR_ALLOW_HOSTS")
             .to_owned(),
         Err(_) => std::env::var("HARBOR_SERVER_NAME")
-            .or_else(|_| std::env::var("POLYCENTRIC_SERVER_NAME"))
             .unwrap_or_else(|_| "http://localhost:3000".to_string()),
     }
 }
-
-/// 2025-01-15T12:00:00Z in milliseconds.
-pub const DEFAULT_CREATED_AT: u64 = 1736942400000;
-pub const HOUR: u64 = 3_600_000;
 
 pub const COLLECTION_IDENTITY: i32 = 1;
 pub const COLLECTION_FEED: i32 = 2;
@@ -70,7 +65,7 @@ pub fn sha256(data: &[u8]) -> Vec<u8> {
 }
 
 pub fn random_string() -> String {
-    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 30);
+    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 20);
     // When searching Postgres uses a technique called stemming where it removes
     // the end of certain English words, e.g. "party" and "party" both become
     // "part" so that when you search for "party" it matches both. However, when
@@ -129,6 +124,13 @@ pub async fn identity_service()
 pub async fn verifications_service()
 -> VerificationsServiceClient<tonic::transport::Channel> {
     VerificationsServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn content_service() -> ContentServiceClient<tonic::transport::Channel>
+{
+    ContentServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -248,12 +250,16 @@ impl TestClient {
             identity_sequence: Sequence::new(),
             collection_sequences: [const { Sequence::new() }; _],
         };
-        client.set_identity(identity, DEFAULT_CREATED_AT);
+        client.set_identity(identity, current_timestamp());
         client
     }
 
     pub fn identity(&self) -> &str {
         &self.identity
+    }
+
+    pub fn public_key(&self) -> PublicKey {
+        public_key_of(&self.key)
     }
 
     pub fn event_sync_client(
@@ -341,7 +347,7 @@ impl TestClient {
         let post = Post {
             text: text.to_owned(),
             reply: Some(PostReply {
-                root: None,
+                root: Some(post.clone()),
                 parent: Some(post),
             }),
             images: Vec::new(),
@@ -491,7 +497,10 @@ impl TestClient {
         created_at: u64,
     ) -> Vec<u8> {
         let collection = match &body {
-            ContentBody::Post(_) | ContentBody::Delete(_) => COLLECTION_FEED,
+            ContentBody::Post(_) => COLLECTION_FEED,
+            ContentBody::Delete(delete) => {
+                delete.event_key.as_ref().map_or(0, |k| k.collection)
+            }
             ContentBody::Follow(_) | ContentBody::Block(_) => {
                 COLLECTION_SOCIAL_GRAPH
             }
@@ -518,6 +527,14 @@ impl TestClient {
             digest,
             created_at,
         );
+        self.push_event_bundle2(event, content_bytes)
+    }
+
+    fn push_event_bundle2(
+        &mut self,
+        event: Event,
+        content_bytes: Vec<u8>,
+    ) -> Vec<u8> {
         let event_bundle = bundle(sign(&self.key, event), content_bytes);
         let signature = bundle_signature(&event_bundle);
         self.pending.push(event_bundle);
@@ -549,9 +566,30 @@ impl TestClient {
 
     /// Submit all pending events.
     pub async fn submit_events(&mut self) {
+        if let Err(errors) = self.try_submit_events().await {
+            let SubmitErrors { errors, warnings } = errors;
+            let n = errors.len();
+            for (n, err) in errors.iter().enumerate() {
+                eprintln!("Error {}:", n + 1);
+                eprintln!("Error in {:?}", err.bundle);
+                eprintln!("Error: {}", err.message);
+            }
+
+            let m = warnings.len();
+            for (n, err) in warnings.iter().enumerate() {
+                eprintln!("Warning {}:", n + 1);
+                eprintln!("Warning in {:?}", err.bundle);
+                eprintln!("Warning: {}", err.message);
+            }
+
+            panic!("{n} unexpected error(s) and {m} unexpected warning(s)");
+        }
+    }
+
+    pub async fn try_submit_events(&mut self) -> Result<(), SubmitErrors> {
         let event_bundles = take(&mut self.pending);
         if event_bundles.is_empty() {
-            return;
+            return Ok(());
         }
 
         let response = self
@@ -563,17 +601,22 @@ impl TestClient {
             .expect("put_events failed")
             .into_inner();
 
-        if !response.errors.is_empty() {
-            let n = response.errors.len();
-            for (n, err) in response.errors.iter().enumerate() {
-                eprintln!("Error {}:", n + 1);
-                eprintln!(
-                    "Error in {:?}",
-                    event_bundles[err.event_bundle_index as usize]
-                );
-                eprintln!("Error: {}", err.message);
-            }
-            panic!("{n} unexpected error(s)");
+        if response.errors.is_empty() && response.warnings.is_empty() {
+            Ok(())
+        } else {
+            let map_err = |err: PutEventError| {
+                let idx = err.event_bundle_index as usize;
+                let bundle = event_bundles[idx].clone();
+                SubmitError {
+                    message: err.message,
+                    bundle_index: idx,
+                    bundle,
+                }
+            };
+            Err(SubmitErrors {
+                errors: response.errors.into_iter().map(map_err).collect(),
+                warnings: response.warnings.into_iter().map(map_err).collect(),
+            })
         }
     }
 
@@ -613,7 +656,7 @@ fn github_verification_schema() -> VerificationSchema {
         fields: vec![FieldDef {
             key: "login".to_owned(),
             kind: FieldKind::String as i32,
-            format: String::new(),
+            format: None,
             required: true,
             description: "Login".to_owned(),
             regex: None,
@@ -637,6 +680,19 @@ impl Drop for TestClient {
 
 pub fn current_timestamp() -> u64 {
     SystemTime::UNIX_EPOCH.elapsed().unwrap().as_millis() as u64
+}
+
+#[derive(Debug)]
+pub struct SubmitErrors {
+    errors: Vec<SubmitError>,
+    warnings: Vec<SubmitError>,
+}
+
+#[derive(Debug)]
+pub struct SubmitError {
+    message: String,
+    bundle_index: usize,
+    bundle: EventBundle,
 }
 
 #[derive(Debug)]
@@ -858,7 +914,12 @@ fn make_event(
         previous_root,
         content_digest: Some(digest),
         created_at,
-        application: None,
+        application: Some(Application {
+            name: "Server Integration Tests".to_owned(),
+            id: "social.harbor.tests".to_owned(),
+            version: "0.0.1".to_owned(),
+            url: "https://code.futo.org/harbor/harbor".to_owned(),
+        }),
     }
 }
 
@@ -883,7 +944,7 @@ pub fn make_identity_bundle(
     created_at: u64,
 ) -> EventBundle {
     let content = Content {
-        content_body: Some(content::ContentBody::Identity(identity_content)),
+        content_body: Some(ContentBody::Identity(identity_content)),
     };
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
@@ -914,7 +975,7 @@ pub fn make_profile_update_bundle(
     created_at: u64,
 ) -> EventBundle {
     let content = Content {
-        content_body: Some(content::ContentBody::ProfileUpdate(update)),
+        content_body: Some(ContentBody::ProfileUpdate(update)),
     };
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
@@ -952,13 +1013,16 @@ pub fn make_post_bundle(
         .iter()
         .map(|url| AttributedTo {
             to: Some(attributed_to::To::Link(Link {
+                title: "Title".to_owned(),
+                description: Some("Description".to_owned()),
+                image: Some("Image".to_owned()),
                 url: url.to_string(),
                 ..Default::default()
             })),
         })
         .collect();
     let content = Content {
-        content_body: Some(content::ContentBody::Post(Post {
+        content_body: Some(ContentBody::Post(Post {
             text: text.to_string(),
             reply: None,
             images: vec![],
@@ -1003,7 +1067,7 @@ pub fn make_verification_claim_bundle(
         fields: vec![FieldDef {
             key: "handle".to_string(),
             kind: FieldKind::String as i32,
-            format: String::new(),
+            format: None,
             required: true,
             description: "Handle".to_string(),
             regex: None,
@@ -1020,15 +1084,13 @@ pub fn make_verification_claim_bundle(
     fields.insert("handle".to_string(), handle.as_bytes().to_vec());
 
     let content = Content {
-        content_body: Some(content::ContentBody::VerificationClaim(
-            VerificationClaim {
-                schema: Some(SerializedVerificationSchema {
-                    schema_bytes,
-                    digest: Some(schema_digest),
-                }),
-                fields,
-            },
-        )),
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(SerializedVerificationSchema {
+                schema_bytes,
+                digest: Some(schema_digest),
+            }),
+            fields,
+        })),
     };
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
@@ -1114,12 +1176,14 @@ async fn publish_genesis(
     let bundle =
         make_identity_bundle(identity, key, 1, 1, vec![1], initial, created_at);
     let sig = bundle_signature(&bundle);
-    client
+    let response = client
         .put_events(PutEventsRequest {
             event_bundles: vec![bundle],
         })
         .await
-        .expect("genesis put failed");
+        .expect("genesis put failed")
+        .into_inner();
+    assert!(response.errors.is_empty(), "response: {response:?}");
     sig
 }
 
@@ -1143,12 +1207,14 @@ async fn publish_post(
         created_at,
     );
     let sig = bundle_signature(&bundle);
-    client
+    let response = client
         .put_events(PutEventsRequest {
             event_bundles: vec![bundle],
         })
         .await
-        .expect("post put failed");
+        .expect("post put failed")
+        .into_inner();
+    assert!(response.errors.is_empty(), "response: {response:?}");
     sig
 }
 
@@ -1174,7 +1240,7 @@ fn assert_is_labels_bundle(
     let content = Content::decode(sc.content_bytes.as_slice())
         .expect("valid content protobuf");
     match &content.content_body {
-        Some(content::ContentBody::Labels(labels)) => {
+        Some(ContentBody::Labels(labels)) => {
             let ek = labels.event_key.as_ref().expect("Labels has event_key");
             assert_eq!(ek.collection, expected_target.collection);
             assert_eq!(ek.identity, expected_target.identity);

@@ -1,13 +1,29 @@
 import { publicEnv } from '@/src/common/util/env';
+import Constants from 'expo-constants';
 
 export const APP_NAME = 'Harbor';
 
 export const WEB_MAX_CONTENT_WIDTH = 600;
 
-export const DEFAULT_IDENTITY_NAME = 'Anon';
+export const DEFAULT_IDENTITY_NAME = 'Anonymous';
 
 export const FUTO_URL = 'https://futo.tech';
-export const SOURCE_CODE_URL = 'https://gitlab.futo.org/harbor/harbor';
+export const SOURCE_CODE_URL = 'https://code.futo.org/harbor/harbor';
+export const DOCS_URL = 'https://join.harbor.social/docs/';
+export const FAQ_URL = 'https://join.harbor.social/docs/faq/';
+export const SUPPORT_URL = 'https://join.harbor.social/docs/support/';
+export const ROADMAP_URL = 'https://join.harbor.social/docs/roadmap/';
+export const PRIVACY_POLICY_URL =
+  'https://join.harbor.social/docs/privacy-policy/';
+/**
+ * Content policy for the FUTO servers. Builds installed from Google Play or
+ * the App Store are bound by the stricter app store policy instead (see
+ * `APP_DISTRIBUTION` in app.config.ts).
+ */
+export const CONTENT_POLICY_URL =
+  Constants.expoConfig?.extra?.distribution === 'store'
+    ? 'https://join.harbor.social/docs/content-policy-app-stores/'
+    : 'https://join.harbor.social/docs/content-policy/';
 export const REPORT_BUG_URL = 'https://chat.futo.org/login/';
 
 /**
@@ -18,8 +34,7 @@ export const REPORT_BUG_URL = 'https://chat.futo.org/login/';
 export const HARBOR_APP_URL = (
   publicEnv(
     'EXPO_PUBLIC_HARBOR_APP_URL',
-    process.env.EXPO_PUBLIC_HARBOR_APP_URL ??
-      process.env.EXPO_PUBLIC_POLYCENTRIC_APP_URL,
+    process.env.EXPO_PUBLIC_HARBOR_APP_URL,
   ) ?? 'https://harbor.social'
 ).replace(/\/+$/, '');
 
@@ -30,7 +45,6 @@ export const HARBOR_APP_URL = (
 export const HARBOR_STATIC_URL = (
   publicEnv(
     'EXPO_PUBLIC_HARBOR_STATIC_URL',
-    process.env.EXPO_PUBLIC_HARBOR_STATIC_URL ??
-      process.env.EXPO_PUBLIC_POLYCENTRIC_STATIC_URL,
+    process.env.EXPO_PUBLIC_HARBOR_STATIC_URL,
   ) ?? 'https://static.harbor.social'
 ).replace(/\/+$/, '');

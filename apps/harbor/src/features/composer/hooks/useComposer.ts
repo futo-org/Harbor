@@ -1,7 +1,9 @@
 import { toast } from '@/src/common/components/toast/useToast';
+import { confirm } from '@/src/common/lib/dialogs';
 import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/loadBoundedImage';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
+  eventKeyId,
   hexToBytes,
   truncateName,
   useCurrentIdentity,
@@ -17,10 +19,20 @@ import {
   injectReplyIntoThreadCache,
   threadQueryKey,
 } from '@/src/features/feed/hooks/feedCache';
-import { COLLECTION, type types, v2 } from '@polycentric/react-native';
+import {
+  COLLECTION,
+  type types,
+  v2,
+  type PolycentricClient,
+  FetchMode,
+  Query,
+} from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useEffect, useRef } from 'react';
+import { useNavigation } from 'expo-router';
+import { usePreventRemove } from 'expo-router/react-navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
+import { isWeb } from '@/src/common/util/platform';
 import { useComposerStore } from './useComposerStore';
 import { rewriteIdentityMentions } from '../utils/rewriteIdentityMentions';
 import { useLinkPreview } from './useLinkPreview';
@@ -28,6 +40,10 @@ import {
   ImageUploadError,
   formatImageUploadErrorOrFallback,
 } from '@/src/common/lib/images/ImageUploadError';
+import {
+  decodePostBundle,
+  getKeyFingerprint,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 
 export const MAX_ATTACHMENTS = 4;
 export const MAX_POST_LENGTH = 2000;
@@ -65,9 +81,8 @@ export type UseComposerArgs = {
 };
 
 /**
- * All composer state + behavior, shared between the sheet/modal composer
- * (`ComposeSheet`) and the full-screen compose tab (`ComposeTabScreen`). The
- * presentation chrome (Sheet vs Screen) and dismiss target live in the callers.
+ * All composer state + behavior for `ComposeSheet`, which owns the
+ * presentation chrome and dismiss target.
  */
 export function useComposer({
   onPostCreated,
@@ -121,14 +136,15 @@ export function useComposer({
 
   const isReply = !!replyTo;
   const title = isReply ? 'Reply' : 'New Post';
+  const hasDraft = text.trim().length > 0 || attachments.length > 0;
   // While the link preview is fetching, hold the Post button so the user
   // either waits for the card (it gets embedded in the signed post) or
   // removes it with the X, which clears the loading state.
-  const canPost =
-    (text.trim().length > 0 || attachments.length > 0) &&
-    !submitting &&
-    !linkPreviewLoading;
+  const canPost = hasDraft && !submitting && !linkPreviewLoading;
   const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
+
+  const [posted, setPosted] = useState(false);
+  useDiscardDraftConfirmation(hasDraft && !posted, isReply);
 
   // Reset composer state and drop any in-flight/cached uploads so nothing
   // carries over to the next open.
@@ -177,10 +193,7 @@ export function useComposer({
   const handleClose = useCallback(() => {
     if (submitting) return;
     onClose();
-    // Reset here too: the native compose tab stays mounted after closing,
-    // so the unmount reset below wouldn't fire for it.
-    resetAll();
-  }, [submitting, onClose, resetAll]);
+  }, [submitting, onClose]);
 
   // Turn picked/captured assets into attachments: show the thumbnails
   const ingestAssets = useCallback(
@@ -295,7 +308,7 @@ export function useComposer({
       // null yields no card).
       const link = await resolveLinkForPost();
 
-      const post: types.v2.Post = {
+      const post: v2.Post = {
         text: rewriteIdentityMentions(
           text.trim(),
           useComposerStore.getState().mentions,
@@ -336,35 +349,23 @@ export function useComposer({
       });
       const identity = currentIdentityKey ?? '';
 
-      // Optimistically add the new event to the below query
-      if (isReply && replyTo) {
-        injectReplyIntoThreadCache(newBundle);
-        alterPostReplyCount(threadQueryKey(replyTo.id), replyTo.id, 1);
-        alterPostReplyCount(feedQueryKeys.following(identity), replyTo.id, 1);
-        alterPostReplyCount(feedQueryKeys.identity(identity), replyTo.id, 1);
-        alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
-      }
-
-      injectPostIntoFeedCache(feedQueryKeys.following(identity), newBundle);
-      injectPostIntoFeedCache(feedQueryKeys.identity(identity), newBundle);
-      injectPostIntoFeedCache(feedQueryKeys.explore(identity), newBundle);
+      // Optimistically add the new event to feeds and threads
+      injectLocally(identity, newBundle, replyTo ?? undefined);
 
       // `commitEvent` persists the event locally
       await client.commitEvent(signedEvent, content);
 
       setSubmitting(false);
       toast.success(isReply ? 'Reply posted' : 'Post published');
-      onClose();
-      resetAll();
+
+      // Don't close the composer here: the "Discard post?" guard is still on and
+      // would show. Setting `posted` turns the guard off, and the effect below then
+      // closes the composer. Its draft is cleared when the composer unmounts.
+      setPosted(true);
 
       void client
         .sync()
-        .then(() => {
-          // Invalidate all the caches now the post has been successfully submitted
-          invalidateQuery(client, feedQueryKeys.following(identity));
-          invalidateQuery(client, feedQueryKeys.identity(identity));
-          invalidateQuery(client, feedQueryKeys.explore(identity));
-        })
+        .then(() => refreshAfterPosting(client, identity, post))
         .catch((err) => {
           console.warn('compose sync failed:', err);
         });
@@ -391,11 +392,13 @@ export function useComposer({
     replyToEventKey,
     replyRootEventKey,
     resolveLinkForPost,
-    resetAll,
     setSubmitting,
     setError,
-    onClose,
   ]);
+
+  useEffect(() => {
+    if (posted) onClose();
+  }, [posted, onClose]);
 
   const placeholder = isReply
     ? `Reply to ${truncateName(replyAuthorName, 16)}...`
@@ -427,4 +430,134 @@ export function useComposer({
     handleRemoveAttachment,
     handleRemoveLinkPreview,
   };
+}
+
+function useDiscardDraftConfirmation(
+  hasUnpostedDraft: boolean,
+  isReply: boolean,
+) {
+  const navigation = useNavigation();
+
+  // Every way of closing removes this route (Cancel/X, Escape, backdrop,
+  // swipe back, hardware back), so guard the removal itself. Browser back
+  // isn't caught until expo-router 58.
+  usePreventRemove(hasUnpostedDraft, ({ data }) => {
+    void confirm({
+      title: isReply ? 'Discard reply?' : 'Discard post?',
+      message: "Your changes won't be saved.",
+      confirmText: 'Discard',
+      destructive: true,
+      onConfirm: () => navigation.dispatch(data.action),
+    });
+  });
+
+  // Reloading or closing the browser tab bypasses navigation entirely.
+  // Remove on expo-router 58, whose usePreventRemove handles this itself.
+  useEffect(() => {
+    if (!isWeb || !hasUnpostedDraft) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasUnpostedDraft]);
+}
+
+/**
+ * Adjust some local feed/thread caches and counters to account for this new
+ * post.
+ */
+function injectLocally(
+  identity: string,
+  bundle: v2.EventBundle,
+  replyTo: PostData | undefined,
+): void {
+  if (replyTo) {
+    injectReplyIntoThreadCache(bundle);
+    alterPostReplyCount(threadQueryKey(replyTo.id), replyTo.id, 1);
+    alterPostReplyCount(feedQueryKeys.following(identity), replyTo.id, 1);
+    alterPostReplyCount(feedQueryKeys.identity(identity), replyTo.id, 1);
+    alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
+  }
+
+  injectPostIntoFeedCache(feedQueryKeys.following(identity), bundle);
+  injectPostIntoFeedCache(feedQueryKeys.identity(identity), bundle);
+  injectPostIntoFeedCache(feedQueryKeys.explore(identity), bundle);
+}
+
+/**
+ * After the new post has been synced to servers, refresh queries
+ * that could contain this post by fetching new server responses.
+ */
+async function refreshAfterPosting(
+  client: PolycentricClient,
+  identity: string,
+  post: v2.Post,
+): Promise<void> {
+  // Feeds
+  invalidateQuery(client, feedQueryKeys.following(identity));
+  invalidateQuery(client, feedQueryKeys.identity(identity));
+  invalidateQuery(client, feedQueryKeys.explore(identity));
+
+  // Threads
+  const ancestors: Set<string> = new Set();
+  const parent = post.reply?.parent;
+  if (!parent) return;
+
+  try {
+    for (
+      let current: string | undefined = eventKeyId(parent);
+      current;
+      current = await getParentPost(client, current)
+    ) {
+      if (ancestors.has(current)) break;
+      ancestors.add(current);
+    }
+  } catch (e) {
+    console.warn(`error while walking new post ancestors: ${e}`);
+  }
+
+  for (const postId of ancestors) {
+    invalidateQuery(client, threadQueryKey(postId));
+  }
+}
+
+/**
+ * Fetches the parent of the post identified by `postId` from rs-core's store,
+ * or returns undefined if the post has no parent that we have locally.
+ * Returns the post id of the parent if we find it.
+ */
+async function getParentPost(
+  client: PolycentricClient,
+  postId: string,
+): Promise<string | undefined> {
+  const key = v2.EventKey.fromBinary(hexToBytes(postId));
+
+  const data = await new Promise<ArrayBuffer | undefined>((resolve) => {
+    let latest: ArrayBuffer | undefined;
+    client.core
+      .fetchQuery(
+        undefined,
+        new Query.GetEvent({
+          identity: key.identity,
+          collection: COLLECTION.FEED,
+          sequence: key.sequence,
+          signerKeyPrefix: getKeyFingerprint(key.signedBy),
+        }),
+        { fetchMode: FetchMode.OfflineOnly },
+      )
+      .subscribe({
+        next: (result) => {
+          latest = result.data;
+        },
+        error: () => resolve(undefined),
+        complete: () => resolve(latest),
+      });
+  });
+
+  if (!data?.byteLength) return undefined;
+
+  const post = decodePostBundle(
+    v2.EventBundle.fromBinary(new Uint8Array(data)),
+  );
+
+  return post?.reply?.parentId;
 }

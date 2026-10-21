@@ -28,7 +28,7 @@ async fn search_users_match_profile_name() {
         description: None,
         alias: None,
     };
-    client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+    client.profile_update(profile_update.clone(), current_timestamp());
     client.submit_events().await;
 
     expect_searched_users(
@@ -54,7 +54,7 @@ async fn search_users_does_not_match_description() {
         description: Some(description.clone()),
         alias: None,
     };
-    client.profile_update(profile_update, DEFAULT_CREATED_AT);
+    client.profile_update(profile_update, current_timestamp());
     client.submit_events().await;
 
     expect_searched_users(
@@ -80,7 +80,7 @@ async fn search_users_match_alias() {
         description: None,
         alias: Some(alias.clone()),
     };
-    client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+    client.profile_update(profile_update.clone(), current_timestamp());
     client.submit_events().await;
 
     expect_searched_users(
@@ -106,7 +106,7 @@ async fn search_users_match_identity() {
         description: None,
         alias: Some(alias.clone()),
     };
-    client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+    client.profile_update(profile_update.clone(), current_timestamp());
     client.submit_events().await;
     let identity = client.identity().to_owned();
 
@@ -133,7 +133,7 @@ async fn search_users_only_consider_latest_update() {
         description: None,
         alias: Some(old_alias.clone()),
     };
-    client.profile_update(profile_update, DEFAULT_CREATED_AT);
+    client.profile_update(profile_update, current_timestamp());
     // Remove the alias, so we shouldn't match any more.
     let profile_update = ProfileUpdate {
         name: Some(random_string()),
@@ -142,7 +142,7 @@ async fn search_users_only_consider_latest_update() {
         description: None,
         alias: None,
     };
-    client.profile_update(profile_update, DEFAULT_CREATED_AT + 1);
+    client.profile_update(profile_update, current_timestamp() + 1);
     client.submit_events().await;
 
     expect_searched_users(
@@ -168,7 +168,7 @@ async fn search_users_do_not_consider_deleted_updates() {
         description: None,
         alias: Some(alias.clone()),
     };
-    client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+    client.profile_update(profile_update.clone(), current_timestamp());
     let event_key = client.get_last_event_key();
     client.submit_events().await;
 
@@ -183,7 +183,7 @@ async fn search_users_do_not_consider_deleted_updates() {
     .await;
 
     // After the profile update is deleted we shouldn't find the user any more.
-    client.delete_key(event_key, DEFAULT_CREATED_AT + 1);
+    client.delete_key(event_key, current_timestamp() + 1);
     client.submit_events().await;
 
     expect_searched_users(
@@ -209,7 +209,7 @@ async fn search_users_match_on_hashtags() {
         description: None,
         alias: None,
     };
-    client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+    client.profile_update(profile_update.clone(), current_timestamp());
     client.submit_events().await;
 
     expect_searched_users(
@@ -243,7 +243,7 @@ async fn search_users_order_by_rank() {
             description: None,
             alias: Some(alias),
         };
-        client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+        client.profile_update(profile_update.clone(), current_timestamp());
         client.submit_events().await;
         expected.push(profile_update);
     }
@@ -276,7 +276,7 @@ async fn search_users_order_by_alpha() {
             description: None,
             alias: Some(alias),
         };
-        client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+        client.profile_update(profile_update.clone(), current_timestamp());
         client.submit_events().await;
         expected.push(profile_update);
     }
@@ -308,7 +308,7 @@ async fn search_users_pagination_order_by_rank() {
             description: None,
             alias: Some(alias),
         };
-        client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+        client.profile_update(profile_update.clone(), current_timestamp());
         client.submit_events().await;
         expected.push(profile_update);
     }
@@ -400,7 +400,7 @@ async fn search_users_pagination_order_by_alpha() {
             description: None,
             alias: Some(alias),
         };
-        client.profile_update(profile_update.clone(), DEFAULT_CREATED_AT);
+        client.profile_update(profile_update.clone(), current_timestamp());
         client.submit_events().await;
         expected.push(profile_update);
     }
@@ -474,6 +474,63 @@ async fn search_users_pagination_order_by_alpha() {
     assert!(!page_info.as_ref().unwrap().has_previous_page);
 }
 
+#[tokio::test]
+async fn regression_1658() {
+    // Identity that is parsed as "Scientific notation" when parsing ts vectors.
+    // For example:
+    // ```
+    // SELECT description, token FROM ts_debug('simple', '36052e2fefa35676d356782f00f3745886519595be110aa38b18ff1f287fb22c');
+    // ```
+    let seed = Sha256::digest(b"regression_1658_oHiUY7S8HD7kDANc")
+        .try_into()
+        .unwrap();
+    let key = SigningKey::from_bytes(&seed);
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let profile_update = ProfileUpdate {
+        name: Some("Regression #1658".to_owned()),
+        avatar: None,
+        banner: None,
+        description: None,
+        alias: None,
+    };
+    client.profile_update(profile_update.clone(), current_timestamp());
+    client.submit_events().await;
+
+    // Search using full identity.
+    expect_searched_users(
+        SearchUsersRequest {
+            query: client.identity().to_owned(),
+            sort_by: None,
+            page_params: None,
+        },
+        vec![profile_update.clone()],
+    )
+    .await;
+
+    // Search using partial identity.
+    expect_searched_users(
+        SearchUsersRequest {
+            query: client.identity()[..10].to_owned(),
+            sort_by: None,
+            page_params: None,
+        },
+        vec![profile_update.clone()],
+    )
+    .await;
+
+    // Not valid hex, but part of it.
+    expect_searched_users(
+        SearchUsersRequest {
+            query: client.identity()[..11].to_owned(),
+            sort_by: None,
+            page_params: None,
+        },
+        vec![profile_update.clone()],
+    )
+    .await;
+}
+
 async fn expect_searched_users(
     request: SearchUsersRequest,
     expected: Vec<ProfileUpdate>,
@@ -542,7 +599,7 @@ async fn search_posts_match_text() {
     let mut client = TestClient::new().await;
 
     let post_text = random_string();
-    client.post_text(&post_text, DEFAULT_CREATED_AT);
+    client.post_text(&post_text, current_timestamp());
     client.submit_events().await;
 
     expect_searched_posts(
@@ -570,7 +627,7 @@ async fn search_posts_match_on_hashtags() {
     let mut client = TestClient::new().await;
 
     let post_text = "#a #some";
-    client.post_text(&post_text, DEFAULT_CREATED_AT);
+    client.post_text(&post_text, current_timestamp());
     client.submit_events().await;
 
     expect_searched_posts(
@@ -599,14 +656,16 @@ async fn search_posts_match_on_hashtags() {
 }
 
 #[tokio::test]
-async fn search_posts_order_by_rank() {
+async fn search_posts_order_by_default() {
     let mut client = TestClient::new().await;
 
     let query = random_string();
     let post_text1 = format!("{query} first.");
-    let post_text2 = format!("{query} second. {query}");
-    client.post_text(&post_text1, DEFAULT_CREATED_AT);
-    client.post_text(&post_text2, DEFAULT_CREATED_AT + 1);
+    let post_text2 = format!("{query} second.");
+    client.post_text(&post_text1, current_timestamp());
+    client.post_text(&post_text2, current_timestamp() + 1);
+    let post2_key = client.get_last_event_key();
+    client.thumbs_up(post2_key, current_timestamp() + 2);
     client.submit_events().await;
 
     expect_searched_posts(
@@ -647,8 +706,8 @@ async fn search_posts_order_by_latest() {
     let query = random_string();
     let post_text1 = format!("{query} first.");
     let post_text2 = format!("{query} second.");
-    client.post_text(&post_text1, DEFAULT_CREATED_AT);
-    client.post_text(&post_text2, DEFAULT_CREATED_AT + 1);
+    client.post_text(&post_text1, current_timestamp());
+    client.post_text(&post_text2, current_timestamp() + 1);
     client.submit_events().await;
 
     expect_searched_posts(
@@ -688,7 +747,7 @@ async fn search_posts_omit_labels() {
     let label = random_string();
 
     let mut client = TestClient::new().await;
-    client.post_text(&query, DEFAULT_CREATED_AT);
+    client.post_text(&query, current_timestamp());
     let post_event_key = client.get_last_event_key();
     client.submit_events().await;
 
@@ -698,7 +757,7 @@ async fn search_posts_omit_labels() {
             event_key: Some(post_event_key),
             label_values: vec![label.clone()],
         },
-        DEFAULT_CREATED_AT + 1,
+        current_timestamp() + 1,
     );
     trusted_moderator.submit_events().await;
 
@@ -715,99 +774,6 @@ async fn search_posts_omit_labels() {
 }
 
 #[tokio::test]
-async fn search_posts_pagination_order_by_rank() {
-    let mut search = search_service().await;
-    let mut client = TestClient::new().await;
-
-    let query = random_string();
-    let mut expected = Vec::new();
-    for n in 1..=3 {
-        let text = format!("{n}. {}", repeated_string(n, &query, " "));
-        client.post_text(&text, DEFAULT_CREATED_AT);
-        expected.push(Post {
-            text,
-            reply: None,
-            images: vec![],
-            quote: None,
-            links: vec![],
-            labels: vec![],
-            attributed_to: vec![],
-        });
-    }
-    expected.reverse();
-    client.submit_events().await;
-
-    // Forward.
-    let mut page_info: Option<PageInfo> = None;
-    let mut expected_iter = expected.clone().into_iter();
-    while let Some(expected) = expected_iter.next() {
-        expect_searched_posts2(
-            SearchPostsRequest {
-                query: query.clone(),
-                sort_by: None,
-                page_params: Some(PageParams {
-                    limit: Some(1),
-                    backward_token: None,
-                    forward_token: page_info.take().map(|i| i.end_cursor),
-                }),
-                omit_labels: Vec::new(),
-            },
-            vec![expected],
-            |request| async {
-                let SearchPostsResponse {
-                    results,
-                    page_info: p_i,
-                    ..
-                } = search.search_posts(request).await.unwrap().into_inner();
-                page_info = p_i;
-                results
-            },
-        )
-        .await;
-
-        let page_info = page_info.as_ref().unwrap();
-        assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
-        assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
-    }
-    assert!(!page_info.as_ref().unwrap().has_next_page);
-
-    // Backward.
-    expected.reverse();
-    let mut expected_iter = expected.clone().into_iter();
-    let _ = expected_iter.next(); // Skip first (previously last) result.
-    while let Some(expected) = expected_iter.next() {
-        expect_searched_posts2(
-            SearchPostsRequest {
-                query: query.clone(),
-                sort_by: None,
-                page_params: Some(PageParams {
-                    limit: Some(1),
-                    backward_token: page_info.take().map(|i| i.start_cursor),
-                    forward_token: None,
-                }),
-                omit_labels: Vec::new(),
-            },
-            vec![expected],
-            |request| async {
-                let SearchPostsResponse {
-                    results,
-                    page_info: p_i,
-                    ..
-                } = search.search_posts(request).await.unwrap().into_inner();
-                page_info = p_i;
-                results
-            },
-        )
-        .await;
-
-        let page_info = page_info.as_ref().unwrap();
-        assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
-        assert_eq!(page_info.has_next_page, true);
-    }
-    assert!(!page_info.as_ref().unwrap().has_previous_page);
-}
-
-#[tokio::test]
 async fn search_posts_pagination_order_by_top() {
     let mut search = search_service().await;
     let query = random_string();
@@ -817,7 +783,7 @@ async fn search_posts_pagination_order_by_top() {
     for n in 1..=3 {
         let mut client = TestClient::new().await;
         let text = format!("{n}. {query}.");
-        client.post_text(&text, DEFAULT_CREATED_AT + n);
+        client.post_text(&text, current_timestamp());
         post_event_keys.push(client.get_last_event_key());
         expected.push(Post {
             text,
@@ -832,7 +798,7 @@ async fn search_posts_pagination_order_by_top() {
     }
     for (n, mut client) in clients.into_iter().enumerate() {
         for post in &post_event_keys[..n + 1] {
-            client.thumbs_up(post.clone(), 0);
+            client.thumbs_up(post.clone(), current_timestamp());
         }
         client.submit_events().await;
     }
@@ -916,7 +882,7 @@ async fn search_posts_pagination_order_by_latest() {
     let mut expected = Vec::new();
     for n in 1..=3 {
         let text = format!("{n}. {query}.");
-        client.post_text(&text, DEFAULT_CREATED_AT + n);
+        client.post_text(&text, current_timestamp() + n);
         expected.push(Post {
             text,
             reply: None,
@@ -998,6 +964,47 @@ async fn search_posts_pagination_order_by_latest() {
         assert_eq!(page_info.has_next_page, true);
     }
     assert!(!page_info.as_ref().unwrap().has_previous_page);
+}
+
+#[tokio::test]
+async fn regression_1570() {
+    let mut client = TestClient::new().await;
+
+    let post_text = "First line\n#some\n#the";
+    client.post_text(post_text, current_timestamp());
+    let post_key = client.get_last_event_key();
+    client.submit_events().await;
+
+    let mut search = search_service().await;
+    let request = SearchPostsRequest {
+        query: "some the".to_owned(),
+        sort_by: Some(SortPostsBy::Latest as _),
+        page_params: Some(PageParams {
+            limit: Some(2),
+            ..Default::default()
+        }),
+        omit_labels: Vec::new(),
+    };
+    let response = search.search_posts(request).await.unwrap();
+    let results = response.into_inner().results;
+
+    // We can match results, as long as one of them is the text we expect.
+    assert!(results.iter().any(|result| {
+        let key = Event::decode(
+            &*result
+                .event_bundle
+                .as_ref()
+                .unwrap()
+                .signed_event
+                .as_ref()
+                .unwrap()
+                .event_bytes,
+        )
+        .unwrap()
+        .key
+        .unwrap();
+        key == post_key
+    }));
 }
 
 async fn expect_searched_posts(

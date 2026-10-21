@@ -1,19 +1,33 @@
 import Icon from '@/src/common/components/Icon';
-import { Atoms, typography, useTheme } from '@/src/common/theme';
+import {
+  Atoms,
+  Spacing,
+  THEME_PREFERENCE_OPTIONS,
+  typography,
+  useTheme,
+} from '@/src/common/theme';
 import { type ExternalPathString, Link } from 'expo-router';
-import { type ComponentProps, useCallback } from 'react';
+import type { ComponentProps } from 'react';
 import { Pressable, View } from 'react-native';
-import { FUTO_URL } from '../../constants';
+import {
+  CONTENT_POLICY_URL,
+  DOCS_URL,
+  FAQ_URL,
+  FUTO_URL,
+  PRIVACY_POLICY_URL,
+  ROADMAP_URL,
+  SOURCE_CODE_URL,
+  SUPPORT_URL,
+} from '../../constants';
 
 const LINKS: { text: string; href: ExternalPathString }[] = [
-  {
-    text: 'Privacy Policy',
-    href: 'https://join.harbor.social/docs/privacy-policy/',
-  },
-  {
-    text: 'Source Code',
-    href: 'https://gitlab.futo.org/polycentric/polycentric',
-  },
+  { text: 'Docs', href: DOCS_URL },
+  { text: 'FAQ', href: FAQ_URL },
+  { text: 'Support', href: SUPPORT_URL },
+  { text: 'Roadmap', href: ROADMAP_URL },
+  { text: 'Code', href: SOURCE_CODE_URL },
+  { text: 'Privacy Policy', href: PRIVACY_POLICY_URL },
+  { text: 'Content Policy', href: CONTENT_POLICY_URL },
   { text: 'FUTO © 2026.', href: FUTO_URL },
 ];
 
@@ -22,44 +36,54 @@ const LINKS: { text: string; href: ExternalPathString }[] = [
  * sidebar and on the onboarding welcome screen.
  */
 export function AppFooter({ style, ...props }: ComponentProps<typeof View>) {
-  const { theme, setActiveThemeName } = useTheme();
-
-  const toggleTheme = useCallback(() => {
-    const next = theme.name === 'dark' ? 'light' : 'dark';
-    setActiveThemeName(next);
-  }, [setActiveThemeName, theme.name]);
-
   return (
     <View
       style={[
         Atoms.flex_row,
         Atoms.items_center,
         Atoms.w_full,
-        Atoms.py_sm,
+        Atoms.pt_sm,
         Atoms.px_sm,
-        Atoms.gap_sm,
         Atoms.flex_wrap,
+        { columnGap: Spacing.md, rowGap: Spacing.xs },
         style,
       ]}
       {...props}
     >
-      <Pressable
-        accessibilityLabel="Toggle color theme"
-        accessibilityRole="button"
-        hitSlop={8}
-        onPress={toggleTheme}
-        style={({ pressed }) => [pressed && { opacity: 0.65 }]}
-      >
-        <Icon
-          name={theme.name === 'dark' ? 'themeLight' : 'themeDark'}
-          size={typography.fontSize.sm}
-          color="neutral_500"
-        />
-      </Pressable>
+      <ThemeSwitcher />
       {LINKS.map(({ text, href }) => (
         <FooterLink key={href} href={href} text={text} />
       ))}
     </View>
+  );
+}
+
+function ThemeSwitcher() {
+  const { themePreference, setThemePreference } = useTheme();
+
+  const currentIndex = THEME_PREFERENCE_OPTIONS.findIndex(
+    ({ preference }) => preference === themePreference,
+  );
+  const current = THEME_PREFERENCE_OPTIONS[currentIndex];
+  const next =
+    THEME_PREFERENCE_OPTIONS[
+      (currentIndex + 1) % THEME_PREFERENCE_OPTIONS.length
+    ];
+
+  return (
+    <Pressable
+      accessibilityLabel={`${current.label} theme, switch to ${next.label.toLowerCase()}`}
+      accessibilityRole="button"
+      hitSlop={8}
+      onPress={() => setThemePreference(next.preference)}
+      style={({ pressed }) => [pressed && { opacity: 0.65 }]}
+    >
+      <Icon
+        name={current.icon}
+        size={typography.fontSize.sm}
+        color="neutral_500"
+      />
+    </Pressable>
   );
 }
 
@@ -73,6 +97,7 @@ function FooterLink({ href, text }: FooterLinkProps) {
     <Link
       className="underlineOnHover"
       href={href}
+      target="_blank"
       accessibilityLabel={text}
       style={theme.atoms.text_neutral_low}
     >

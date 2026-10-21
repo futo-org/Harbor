@@ -3,8 +3,8 @@
 //!
 //! A standalone `@` (not glued to a preceding word character, so an email's
 //! `@` never starts one) begins a mention:
-//! - `@{<64 hex>,Name}` / `@{<64 hex>}` — identity mention, rendered as the
-//!   bare name (or `@<64 hex>` without one).
+//! - `@{<64 hex>,Name}` / `@{<64 hex>}` — identity mention, rendered as
+//!   `@Name` (or `@<64 hex>` without one).
 //! - `@<64 hex>` — identity mention.
 //! - anything else containing a dot (`@user@domain.com`) — alias mention.
 //! - otherwise plain text.
@@ -74,7 +74,7 @@ fn scan_mentions(text: &str) -> Vec<FoundMention> {
                 }
                 let rendered = match name.is_empty() {
                     true => format!("@{identity}"),
-                    false => name.to_string(),
+                    false => format!("@{name}"),
                 };
                 (Mention::Identity(identity.to_string()), rendered)
             } else {
@@ -104,7 +104,7 @@ pub fn extract_mentions(text: &str) -> Vec<Mention> {
     scan_mentions(text).into_iter().map(|f| f.mention).collect()
 }
 
-/// `text` as the client renders it: `@{<64 hex>,Name}` becomes `Name` and
+/// `text` as the client renders it: `@{<64 hex>,Name}` becomes `@Name` and
 /// `@{<64 hex>}` becomes `@<64 hex>`. Anything else, including a malformed
 /// `@{...}`, stays as is.
 pub fn mentions_to_plain_text(text: &str) -> String {

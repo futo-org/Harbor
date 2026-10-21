@@ -9,7 +9,8 @@ use chrono::{TimeDelta, Utc};
 use entity::url_info_cache;
 use sea_orm::sea_query::{OnConflict, Query as SeaQuery};
 use sea_orm::{
-    ColumnTrait, DbConn, EntityTrait, Order, PaginatorTrait, QueryFilter, Set,
+    ColumnTrait, ConnectionTrait, EntityTrait, Order, PaginatorTrait,
+    QueryFilter, Set,
 };
 use serde::Deserialize;
 use tonic::{Code, Status};
@@ -49,7 +50,10 @@ fn ttl(row: &url_info_cache::Model) -> TimeDelta {
 
 /// Read a fresh cached outcome for `url`. Expired rows and database
 /// errors are both treated as cache misses.
-async fn get_cached(db: &DbConn, url: &str) -> Option<ScrapeOutcome> {
+async fn get_cached<C: ConnectionTrait>(
+    db: &C,
+    url: &str,
+) -> Option<ScrapeOutcome> {
     let row = url_info_cache::Entity::find_by_id(url)
         .one(db)
         .await
@@ -75,8 +79,8 @@ async fn get_cached(db: &DbConn, url: &str) -> Option<ScrapeOutcome> {
 /// Upsert an outcome for `url`, evicting the oldest rows once the
 /// cache is full. All statements are best-effort: failures are logged
 /// and the response is served regardless.
-async fn insert_cached(
-    db: &DbConn,
+async fn insert_cached<C: ConnectionTrait>(
+    db: &C,
     url: &str,
     outcome: &ScrapeOutcome,
     raw_response: Option<String>,
@@ -93,13 +97,9 @@ async fn insert_cached(
             None,
             None,
         ),
-        Err((code, message)) => (
-            String::new(),
-            String::new(),
-            String::new(),
-            Some(*code as i32),
-            Some(message.clone()),
-        ),
+        Err((code, message)) => {
+            (None, None, None, Some(*code as i32), Some(message.clone()))
+        }
     };
 
     let row = url_info_cache::ActiveModel {
@@ -137,7 +137,7 @@ async fn insert_cached(
 
 /// Delete the `EVICTION_BATCH` oldest rows once the cache holds at
 /// least `MAX_CACHED_URLS` entries.
-async fn evict_if_full(db: &DbConn) {
+async fn evict_if_full<C: ConnectionTrait>(db: &C) {
     let count = match url_info_cache::Entity::find().count(db).await {
         Ok(count) => count,
         Err(e) => {
@@ -173,6 +173,8 @@ struct ScrapedMetadata {
 }
 
 pub async fn handle(
+    // NOTE: not use a request Context because we don't want to hold a database
+    // connection while we're requesting the URL (as that might take a while).
     ctx: &ServiceContext,
     req: UrlInfoRequest,
 ) -> Result<UrlInfoResponse, Status> {
@@ -250,9 +252,9 @@ async fn fetch_metadata(
     })?;
 
     let response = UrlInfoResponse {
-        title: meta.title.unwrap_or_default(),
-        description: meta.description.unwrap_or_default(),
-        image: meta.image.unwrap_or_default(),
+        title: meta.title,
+        description: meta.description,
+        image: meta.image,
     };
     Ok((response, raw))
 }
@@ -290,9 +292,9 @@ mod tests {
             .await
             .expect("should map metadata");
 
-        assert_eq!(resp.title, "Example");
-        assert_eq!(resp.description, "Desc");
-        assert_eq!(resp.image, "https://img/x.png");
+        assert_eq!(resp.title.as_deref(), Some("Example"));
+        assert_eq!(resp.description.as_deref(), Some("Desc"));
+        assert_eq!(resp.image.as_deref(), Some("https://img/x.png"));
         assert_eq!(
             raw,
             r#"{"title":"Example","description":"Desc","image":"https://img/x.png"}"#,
@@ -318,9 +320,9 @@ mod tests {
             .await
             .expect("should map metadata");
 
-        assert_eq!(resp.title, "Only title");
-        assert_eq!(resp.description, "");
-        assert_eq!(resp.image, "");
+        assert_eq!(resp.title.as_deref(), Some("Only title"));
+        assert_eq!(resp.description, None);
+        assert_eq!(resp.image, None);
     }
 
     #[tokio::test]
@@ -376,9 +378,9 @@ mod tests {
     ) -> url_info_cache::Model {
         url_info_cache::Model {
             url: url.to_string(),
-            title: title.to_string(),
-            description: String::new(),
-            image: String::new(),
+            title: Some(title.to_string()),
+            description: None,
+            image: None,
             raw_response: None,
             error_code: None,
             error_message: None,
@@ -446,8 +448,8 @@ mod tests {
             .await
             .expect("second lookup should succeed");
 
-        assert_eq!(first.title, "Cached");
-        assert_eq!(second.title, "Cached");
+        assert_eq!(first.title.as_deref(), Some("Cached"));
+        assert_eq!(second.title.as_deref(), Some("Cached"));
         mock.assert_async().await;
     }
 
@@ -477,7 +479,7 @@ mod tests {
             .await
             .expect("expired row should be refetched");
 
-        assert_eq!(resp.title, "Fresh");
+        assert_eq!(resp.title.as_deref(), Some("Fresh"));
         mock.assert_async().await;
     }
 
@@ -504,7 +506,7 @@ mod tests {
         let resp = lookup(&ctx, &scrape_url, "https://example.com")
             .await
             .expect("lookup should succeed");
-        assert_eq!(resp.title, "Evicting");
+        assert_eq!(resp.title.as_deref(), Some("Evicting"));
         mock.assert_async().await;
 
         let statements = ctx.db.clone().into_transaction_log();
@@ -579,7 +581,7 @@ mod tests {
             .await
             .expect("padded URL should be trimmed and scraped");
 
-        assert_eq!(resp.title, "Normalized");
+        assert_eq!(resp.title.as_deref(), Some("Normalized"));
         mock.assert_async().await;
     }
 
@@ -642,7 +644,7 @@ mod tests {
             .await
             .expect("retry after recovery should succeed");
 
-        assert_eq!(recovered.title, "Recovered");
+        assert_eq!(recovered.title.as_deref(), Some("Recovered"));
         mock.assert_async().await;
     }
 

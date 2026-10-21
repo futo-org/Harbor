@@ -67,7 +67,6 @@ impl Cron {
 #[derive(Copy, Clone, Debug)]
 enum AdvisoryLock {
     Gravity = 0,
-    DecayedReactionCounts = 1,
 }
 
 impl AdvisoryLock {

@@ -22,7 +22,7 @@ import type {
 } from './platform-interfaces';
 import * as Proto from './proto/v2';
 import { StorageHandle } from './datastore/storage-handle';
-import { toDigestKey } from './utils/hex';
+import { bytesToHex, toDigestKey } from './utils/hex';
 import { bytesEqual } from './utils/bytes';
 import { CryptoManager } from './crypto/crypto-manager';
 import { createServerJwt, DEFAULT_EXPIRY_SECONDS } from './crypto/server-jwt';
@@ -32,9 +32,17 @@ import type { PolycentricCoreLike, EventKey } from '@polycentric/rs-core-wasm';
 // class and QueryStatus enum without dragging in the wasm asset. The
 // uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
 // externalised in webpack.config.js so consumers resolve it at runtime.
-import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
+import {
+  Query,
+  QueryStatus,
+  type QueryOpts,
+} from '@polycentric/rs-core-wasm/generated';
 
 type CoreType = PolycentricCoreLike;
+
+/** The (collection, signer) event stream of `key`. */
+const streamId = (key: Proto.EventKey): string =>
+  `${key.collection}:${key.signedBy?.keyType}:${bytesToHex(key.signedBy?.key ?? new Uint8Array())}`;
 
 export type {
   IdentityState,
@@ -191,7 +199,7 @@ export class PolycentricClient {
       // Push the JS-side server list into the rust core so that
       // observables that fan out to every configured server (e.g.
       // `getIdentityFeed`) actually have somewhere to call.
-      await this.refreshServers();
+      this.refreshServers();
 
       this.setStep(InitializationStep.COMPLETE);
       this.setState(ClientState.READY);
@@ -263,6 +271,31 @@ export class PolycentricClient {
   }
 
   /**
+   * Mark every notification of the active identity as read on each
+   * configured server (`NotificationService.AcknowledgeNotifications`), up to
+   * the notification `lastSeen` triggered. Per-server failures are logged
+   * but do not throw.
+   */
+  async acknowledgeNotifications(lastSeen: Proto.EventKey): Promise<void> {
+    const body = Proto.AcknowledgeNotificationsRequest.toBinary(
+      Proto.AcknowledgeNotificationsRequest.create({ lastSeen }),
+    );
+    const results = await Promise.allSettled(
+      this.servers.map((server) =>
+        this.core.acknowledgeNotifications(server, body.buffer as ArrayBuffer),
+      ),
+    );
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.warn(
+          'acknowledgeNotifications failed for a server:',
+          result.reason,
+        );
+      }
+    }
+  }
+
+  /**
    * Looks at existing keys and will pick the first one
    */
   private async restoreKeyPair(): Promise<boolean> {
@@ -318,16 +351,18 @@ export class PolycentricClient {
   async buildEvent(
     content: Proto.Content,
     collection: Collection | number = COLLECTION.FEED,
+    identityKey?: string,
   ): Promise<Proto.Event> {
     if (!this.currentKeyPair) {
       throw new Error('No keypair set');
     }
 
-    if (!this.activeIdentityKey) {
+    const identity = identityKey ?? this.activeIdentityKey;
+    if (!identity) {
       throw new Error('No active identity');
     }
 
-    const sequence = this.core.nextSequence(this.activeIdentityKey, collection);
+    const sequence = this.core.nextSequence(identity, collection);
 
     // identity_sequence must reference an identity event signed by the
     // current keypair.
@@ -335,7 +370,7 @@ export class PolycentricClient {
       collection === COLLECTION.IDENTITY
         ? sequence
         : this.core.getIdentitySequence(
-            this.activeIdentityKey,
+            identity,
             Proto.PublicKey.toBinary(this.currentKeyPair.publicKey)
               .buffer as ArrayBuffer,
           );
@@ -347,16 +382,16 @@ export class PolycentricClient {
     }
 
     const previousSignature = new Uint8Array(
-      this.core.previousSignature(this.activeIdentityKey, collection),
+      this.core.previousSignature(identity, collection),
     );
     const previousRoot = new Uint8Array(
-      this.core.previousRoot(this.activeIdentityKey, collection),
+      this.core.previousRoot(identity, collection),
     );
 
     const event = Proto.Event.create({
       key: Proto.EventKey.create({
         collection,
-        identity: this.activeIdentityKey,
+        identity,
         signedBy: this.currentKeyPair.publicKey,
         sequence,
       }),
@@ -469,9 +504,9 @@ export class PolycentricClient {
    * per-server emission, and resolves once the observable completes.
    * Does not persist — callers decide what to do with the response.
    */
-  async listEvents(options?: {
+  async listEvents(options: {
     limit?: number | null;
-    identity?: string | null;
+    identity: string;
     collection?: number | null;
     signedBy?: Proto.PublicKey | null;
     /** Exclusive lower bound on EventKey.sequence. */
@@ -480,6 +515,7 @@ export class PolycentricClient {
     sequenceLt?: number | bigint | null;
     heads?: Proto.EventKey[] | null;
     queryKey?: string[] | null;
+    queryOpts?: QueryOpts | null;
   }): Promise<Proto.EventBundle[]> {
     const sequenceGt =
       options?.sequenceGt != null ? BigInt(options.sequenceGt) : undefined;
@@ -504,38 +540,75 @@ export class PolycentricClient {
         options?.queryKey ?? undefined,
         new Query.ListEvents({
           size: options?.limit ?? undefined,
-          identity: options?.identity ?? undefined,
+          identity: options.identity,
           collection: options?.collection ?? undefined,
           signedBy,
           sequenceGt,
           sequenceLt,
           heads,
         }),
-        undefined,
+        options?.queryOpts ?? undefined,
       );
 
-      let latest: Proto.EventBundle[] = [];
-      // Observable never `complete()`s — resolve on the Loading→Success
-      // transition once every server slot has reported.
-      const subscription = observable.subscribe({
-        next: (result) => {
-          if (result.data) {
+      // Most up-to-date emission from the query.
+      let latest: ArrayBuffer | undefined;
+
+      // Error to return if we get no success responses but at least one error.
+      let firstError: string | undefined;
+
+      // It's possible for the query to complete before or after `subscribe()`
+      // returns.
+      // We need some extra tracking to manage the subscription's lifetime.
+      let settled = false;
+      let subscription: ReturnType<typeof observable.subscribe> | undefined;
+      const settle = () => {
+        // Manage subscription lifetime
+        settled = true;
+        subscription?.unsubscribe();
+
+        // Finalize the promise
+        if (latest) {
+          try {
             const response = Proto.ListEventsResponse.fromBinary(
-              new Uint8Array(result.data),
+              new Uint8Array(latest),
             );
-            latest = response.eventBundles;
+            resolve(response.eventBundles);
+          } catch (e) {
+            reject(e);
           }
-          if (result.status === QueryStatus.Success) {
-            subscription.unsubscribe();
-            resolve(latest);
+        } else if (firstError) {
+          reject(new Error(firstError));
+        } else {
+          resolve([]);
+        }
+      };
+
+      subscription = observable.subscribe({
+        next: (result) => {
+          if (settled) return;
+
+          if (result.data) {
+            latest = result.data;
+
+            // Resolve if the query is no longer loading
+            if (result.status === QueryStatus.Success) {
+              settle();
+            }
           }
         },
+
         error: (message: string) => {
-          subscription.unsubscribe();
-          reject(new Error(message));
+          if (settled) return;
+          if (!firstError) firstError = message;
         },
-        complete: () => {},
+
+        complete: () => {
+          if (settled) return;
+          settle();
+        },
       });
+
+      if (settled) subscription.unsubscribe();
     });
   }
 
@@ -735,17 +808,23 @@ export class PolycentricClient {
   /**
    * Pull signed events for the active identity from all configured servers
    * and persist new ones locally. Existing events/content are not overwritten.
+   * Emits `pulled` if any new events were persisted, or with `after` if any
+   * events came back (another tab may have stored them already).
    *
+   * @param after Heads to pull past instead of the stored ones.
    * @returns The number of new events persisted
    */
-  private async pull(partial: boolean): Promise<number> {
+  private async pull(
+    partial: boolean,
+    after?: Proto.EventKey[],
+  ): Promise<number> {
     if (!this.activeIdentityKey) throw new Error('No active identity');
     const identity = this.activeIdentityKey;
 
     // Only filter by heads when doing a partial pull
-    let heads: Proto.EventKey[] | undefined;
+    let heads = after;
 
-    if (partial) {
+    if (partial && !heads) {
       // Partial pulls will skip events at or before each event stream head.
       // Find each head event and then map it to the filter format.
       const headEvents = await this.storage.events.getByIdentity(identity, {
@@ -787,6 +866,10 @@ export class PolycentricClient {
 
     // Catch any of our own referenced blobs so they persist locally.
     await this.contentManager.pullBlobs(blobs);
+
+    if (newCount > 0 || (after && bundles.length > 0)) {
+      this.events.emitPulled(identity);
+    }
     return newCount;
   }
 
@@ -859,6 +942,52 @@ export class PolycentricClient {
     } catch (e) {
       console.warn('Pull event content:', e);
       return false;
+    }
+  }
+
+  /**
+   * Persist each event bundle in order.
+   * Throws on the first malformed bundle or failed write.
+   */
+  async saveBundles(bundles: Proto.EventBundle[]): Promise<void> {
+    for (const bundle of bundles) {
+      await this.saveBundle(bundle);
+    }
+  }
+
+  /**
+   * Try saving this event bundle, content first.
+   * Throws an error if anything goes wrong.
+   */
+  async saveBundle(bundle: Proto.EventBundle): Promise<void> {
+    const signedEvent = bundle.signedEvent;
+    if (!signedEvent) throw new Error('Bundle is missing signedEvent');
+
+    const event = Proto.Event.fromBinary(signedEvent.eventBytes);
+    if (!event.key?.signedBy) throw new Error('Event is missing key');
+
+    const contentBytes = bundle.serializedContent?.contentBytes;
+    if (!contentBytes) throw new Error('Bundle is missing content');
+
+    const digest = event.contentDigest;
+    if (
+      !digest ||
+      digest.type !== Proto.ContentDigestType.SHA256 ||
+      !bytesEqual(sha256(contentBytes), digest.value)
+    ) {
+      throw new Error('Content does not match event digest');
+    }
+
+    const content = Proto.Content.fromBinary(contentBytes);
+
+    // Both writes can throw.
+    // We will skip saving the event if the content fails to write.
+    if (!(await this.storage.content.get(digest))) {
+      await this.storage.content.save(digest, content);
+    }
+
+    if (!(await this.storage.events.getByEventKey(event.key))) {
+      await this.storage.events.save(signedEvent);
     }
   }
 
@@ -956,6 +1085,84 @@ export class PolycentricClient {
     }
   }
 
+  /**
+   * Pull the active identity's events as its other devices publish them.
+   * Follows identity switches. Returns a function that stops it.
+   */
+  startLiveSync(): () => void {
+    let unsubscribe = this.subscribeHeads();
+    const resubscribe = () => {
+      unsubscribe?.();
+      unsubscribe = this.subscribeHeads();
+    };
+    this.events.onKeyPairChanged(resubscribe);
+    return () => {
+      this.events.offKeyPairChanged(resubscribe);
+      unsubscribe?.();
+    };
+  }
+
+  /** Pulls whenever the active identity's heads move. Returns `unsubscribe`. */
+  private subscribeHeads(): (() => void) | undefined {
+    const identity = this.activeIdentityKey;
+    if (!identity) return undefined;
+
+    // One pull at a time, plus one if heads arrive during it.
+    let pulling = false;
+    let again = false;
+    const pull = async () => {
+      if (pulling) {
+        again = true;
+        return;
+      }
+      pulling = true;
+      try {
+        do {
+          again = false;
+          if (this.activeIdentityKey !== identity) return;
+          await this.pull(true, this.localHeads(identity)).catch((err) => {
+            console.warn('Live sync pull failed:', err);
+          });
+        } while (again);
+      } finally {
+        pulling = false;
+      }
+    };
+
+    const subscription = this.core
+      .fetchQuery(['heads', identity], new Query.SubscribeHeads({}), undefined)
+      .subscribe({
+        next: (result) => {
+          if (!result.data) return;
+          const remote = Proto.ListHeadsResponse.fromBinary(
+            new Uint8Array(result.data),
+          ).heads;
+          if (this.isBehind(identity, remote)) void pull();
+        },
+        // The core reconnects by itself.
+        error: () => {},
+        complete: () => {},
+      });
+    return () => subscription.unsubscribe();
+  }
+
+  /** Heads of the events loaded in this client, which may lag shared storage. */
+  private localHeads(identity: string): Proto.EventKey[] {
+    return Proto.ListHeadsResponse.fromBinary(
+      new Uint8Array(this.core.localHeads(identity)),
+    ).heads;
+  }
+
+  /** Whether any of `remote` is ahead of the local heads of `identity`. */
+  private isBehind(identity: string, remote: Proto.EventKey[]): boolean {
+    const local = new Map(
+      this.localHeads(identity).map((key) => [streamId(key), key.sequence]),
+    );
+    return remote.some(
+      (head) => (local.get(streamId(head)) ?? -1n) < head.sequence,
+    );
+  }
+
   public async setCurrentKeyPair(keyPair: KeyPair): Promise<void> {
     this.currentKeyPair = keyPair;
     // Restore saved identity key for this key pair
@@ -964,7 +1171,7 @@ export class PolycentricClient {
     );
     this.core.setActiveIdentity(this.activeIdentityKey ?? undefined);
     if (this.storageHandle) {
-      await this.refreshServers();
+      this.refreshServers();
     }
   }
 
@@ -973,7 +1180,7 @@ export class PolycentricClient {
    * Identities that have never configured a server list keep the current
    * (seed) list.
    */
-  public async refreshServers(): Promise<void> {
+  public refreshServers(): void {
     if (this.activeIdentityKey) {
       const state = this.identityManager.resolveIdentity();
       if (state?.servers) {
@@ -984,18 +1191,33 @@ export class PolycentricClient {
   }
 
   /**
-   * Explicitly set the active identity key and persist it.
+   * Update our state to match this identity.
    */
-  public async setActiveIdentityKey(identityKey: string | null): Promise<void> {
-    this.activeIdentityKey = identityKey;
-    this.core.setActiveIdentity(identityKey ?? undefined);
-    // Tokens minted for the previous identity must not be reused.
-    this.core.clearAuthTokens();
-    if (!this.currentKeyPair) return;
-    await this.storageDriver.saveActiveIdentityKey(
-      this.currentKeyPair.publicKey.key,
-      identityKey,
-    );
+  public async adoptIdentity(identityKey: string | null): Promise<void> {
+    const changedIdentity = identityKey !== this.activeIdentityKey;
+
+    if (changedIdentity && this.currentKeyPair) {
+      await this.storageDriver.saveActiveIdentityKey(
+        this.currentKeyPair.publicKey.key,
+        identityKey,
+      );
+    }
+
+    if (changedIdentity) {
+      this.activeIdentityKey = identityKey;
+      this.core.setActiveIdentity(identityKey ?? undefined);
+
+      // Tokens minted for the previous identity must not be reused.
+      this.core.clearAuthTokens();
+    }
+
+    // Use the latest server list from the latest identity state
+    this.refreshServers();
+
+    if (changedIdentity) {
+      // This is really an 'identityChanged' event underneath
+      this.events.emitKeyPairChanged(this.currentKeyPair);
+    }
   }
 
   /**

@@ -8,21 +8,34 @@ members = [
     "services/server/tests",
     "services/server/perf-tests",
     "services/moderation",
+    "services/moderation/entity",
+    "services/moderation/migration",
+    "services/grayjay-migrator",
+    "services/grayjay-migrator/entity",
+    "services/grayjay-migrator/migration",
     "services/push-notifications",
-    "services/common/*",
+    "services/push-notifications/entity",
+    "services/push-notifications/migration",
+    "services/common/dotenv",
+    "services/common/kafka",
+    "services/common/object-store",
+    "services/common/telemetry",
+    "services/common/valkey",
     "tools/identity",
+    # NOTE: `tools/uniffi-bindgen` is excluded because it generates crates.
 ]
 exclude = ["legacy/"]
 resolver = "2"
 
 [workspace.dependencies]
 # Internal crates
-polycentric-common = { path = "packages/rs-common" }
+polycentric-common = { path = "packages/rs-common", version = "0.0.0" }
 
 # Async runtime / service frameworks
 tokio = { version = "1.50.0", default-features = false }
 uniffi = { version = "=0.31.0", default-features = false, features = ["tokio"] }
 rdkafka = { version = "0.39", default-features = false }
+redis = { version = "1.7.1", default-features = false }
 sea-orm = { version = "2.0.1", default-features = false }
 sea-orm-migration = { version = "2.0.1", default-features = false }
 
@@ -44,9 +57,9 @@ thiserror = { version = "2.0", default-features = false }
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "json"] }
-opentelemetry = { version = "0.32", default-features = false, features = ["metrics"] }
-opentelemetry_sdk = { version = "0.32", default-features = false, features = ["metrics"] }
-opentelemetry-prometheus = { version = "0.32", default-features = false }
+opentelemetry = { version = "0.33", default-features = false, features = ["metrics"] }
+opentelemetry_sdk = { version = "0.33", default-features = false, features = ["metrics"] }
+opentelemetry-prometheus = { version = "0.33", default-features = false }
 prometheus = { version = "0.14", default-features = false }
 time = { version = "0.3.55", default-features = false }
 base64 = { version = "0.22.1", default-features = false }

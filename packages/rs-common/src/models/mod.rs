@@ -16,21 +16,49 @@ pub mod protos_v2 {
 
 pub mod traits;
 
+pub mod application;
+pub mod attributed_to;
+pub mod attributed_to_reaction;
+pub mod blob;
+pub mod block;
 pub mod collections;
 pub mod content;
+pub mod content_body;
 pub mod content_digest;
+pub mod content_types;
+pub mod delete;
 pub mod event;
 pub mod event_key;
+pub mod field_def;
+pub mod follow;
+pub mod heads;
 pub mod identity;
+pub mod image;
+pub mod image_set;
+pub mod labels;
+pub mod link;
 pub mod moderation_label;
 pub mod moderation_tag;
 pub mod pointer;
+pub mod post;
+pub mod post_reply;
+pub mod profile_update;
 pub mod public_key;
 pub mod query_engine_stats;
+pub mod reaction;
+pub mod report;
+pub mod repost;
+pub mod serialized_verification_schema;
 pub mod signed_event;
 pub mod signed_issuer_state;
 pub mod signed_message;
+pub mod to;
+pub mod validate;
 pub mod vector_clock;
+pub mod verification_claim;
+pub mod verification_schema;
+pub mod verification_target;
+pub mod verification_verify;
 
 pub use traits::Serializable;
 

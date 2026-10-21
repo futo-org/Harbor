@@ -14,6 +14,7 @@ import {
 } from '@/src/features/identity-backup/components/BackupFilePicker';
 import { BackupStatus } from '@/src/features/identity-backup/components/BackupStatus';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
+import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
 import { router } from 'expo-router';
 import { type ReactNode, useState } from 'react';
 import { View } from 'react-native';
@@ -51,6 +52,9 @@ export default function RecoverIdentityScreen() {
     }
 
     try {
+      // Bail if the user was logged in elsewhere in the meantime
+      if (await redirectIfLoggedIn(client)) return;
+
       await client.identityManager.recoverIdentity(backup);
     } catch (err: unknown) {
       console.warn('Recovery failed:', err);

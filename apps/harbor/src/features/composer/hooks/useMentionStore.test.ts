@@ -129,7 +129,6 @@ describe('insertMention', () => {
     const caret = 'some @ann.example.com '.length;
     expect(store.getState().text).toBe('some @ann.example.com other');
     expect(store.getState().selection).toEqual({ start: caret, end: caret });
-    expect(store.getState().lastNativeText).toBe(store.getState().text);
   });
 
   it('adds a space before a following newline', () => {

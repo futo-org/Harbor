@@ -26,18 +26,14 @@ class SqliteStorageDriver(
     private val helper = PolycentricDbHelper(context.applicationContext, databaseName)
     private val db: SQLiteDatabase get() = helper.writableDatabase
 
-    override fun createEventRepository(): IEventRepository =
-        SqlEventRepository(db)
+    override fun createEventRepository(): IEventRepository = SqlEventRepository(db)
 
-    override fun createContentRepository(): IContentRepository =
-        SqlContentRepository(db)
+    override fun createContentRepository(): IContentRepository = SqlContentRepository(db)
 
-    override fun createKeysRepository(): IKeysRepository =
-        SqlKeysRepository(db)
+    override fun createKeysRepository(): IKeysRepository = SqlKeysRepository(db)
 
     // EventAcks aren't currently used (same as js-storage-sqlite).
-    override fun createEventAckRepository(): IEventAckRepository =
-        NoopEventAckRepository
+    override fun createEventAckRepository(): IEventAckRepository = NoopEventAckRepository
 
     override suspend fun saveActiveIdentityKey(
         publicKey: ByteArray,
@@ -64,16 +60,17 @@ class SqliteStorageDriver(
 
     override suspend fun loadActiveIdentityKey(publicKey: ByteArray): String? =
         withContext(Dispatchers.IO) {
-            db.rawQuery(
-                "SELECT identity_key FROM active_identity_for_key WHERE hex(public_key) = ? LIMIT 1",
-                arrayOf(publicKey.toHexUpper()),
-            ).use { cursor ->
-                if (cursor.moveToFirst() && !cursor.isNull(0)) {
-                    cursor.getString(0)
-                } else {
-                    null
+            db
+                .rawQuery(
+                    "SELECT identity_key FROM active_identity_for_key WHERE hex(public_key) = ? LIMIT 1",
+                    arrayOf(publicKey.toHexUpper()),
+                ).use { cursor ->
+                    if (cursor.moveToFirst() && !cursor.isNull(0)) {
+                        cursor.getString(0)
+                    } else {
+                        null
+                    }
                 }
-            }
         }
 
     override suspend fun saveActiveSession(identityKey: String?) =
@@ -92,16 +89,17 @@ class SqliteStorageDriver(
 
     override suspend fun loadActiveSession(): String? =
         withContext(Dispatchers.IO) {
-            db.rawQuery(
-                "SELECT identity_key FROM active_session WHERE id = 0 LIMIT 1",
-                null,
-            ).use { cursor ->
-                if (cursor.moveToFirst() && !cursor.isNull(0)) {
-                    cursor.getString(0)
-                } else {
-                    null
+            db
+                .rawQuery(
+                    "SELECT identity_key FROM active_session WHERE id = 0 LIMIT 1",
+                    null,
+                ).use { cursor ->
+                    if (cursor.moveToFirst() && !cursor.isNull(0)) {
+                        cursor.getString(0)
+                    } else {
+                        null
+                    }
                 }
-            }
         }
 
     fun close() = helper.close()
@@ -109,6 +107,13 @@ class SqliteStorageDriver(
 
 /** Ack tracking is unused today; mirrors js-storage-sqlite's no-op impl. */
 private object NoopEventAckRepository : IEventAckRepository {
-    override suspend fun recordAck(server: String, key: EventKey) {}
-    override suspend fun isAcked(server: String, key: EventKey): Boolean = false
+    override suspend fun recordAck(
+        server: String,
+        key: EventKey,
+    ) {}
+
+    override suspend fun isAcked(
+        server: String,
+        key: EventKey,
+    ): Boolean = false
 }

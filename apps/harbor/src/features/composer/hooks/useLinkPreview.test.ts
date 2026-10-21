@@ -6,12 +6,45 @@ import { useLinkPreview, type UseLinkPreviewResult } from './useLinkPreview';
 // --- Mocks ----------------------------------------------------------------
 
 const mockClient = {
-  urlInfo: jest.fn(async () => ({
-    url: 'https://example.com',
-    title: 't',
-    description: 'd',
-    image: 'i',
-  })),
+  urlInfo: jest.fn(async (url) => {
+    switch (url) {
+      case 'https://undefined.com':
+        return {
+          url: undefined,
+          title: undefined,
+          description: undefined,
+          image: undefined,
+        };
+      case 'https://undefined-with-url.com':
+        return {
+          url: 'https://undefined-with-url.com',
+          title: undefined,
+          description: undefined,
+          image: undefined,
+        };
+      case 'https://undefined-with-title.com':
+        return {
+          url: 'https://undefined-with-title.com',
+          title: 'Title',
+          description: undefined,
+          image: undefined,
+        };
+      case 'https://undefined-with-description.com':
+        return {
+          url: 'https://undefined-with-description.com',
+          title: 'Title',
+          description: 'Description',
+          image: undefined,
+        };
+      default:
+        return {
+          url: 'https://example.com',
+          title: 't',
+          description: 'd',
+          image: 'i',
+        };
+    }
+  }),
 };
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
@@ -323,6 +356,53 @@ describe('useLinkPreview', () => {
 
     expect(mockClient.urlInfo).not.toHaveBeenCalled();
     expect(link).toBeNull();
+  });
+
+  it('skips links with unusable metadata', async () => {
+    jest.useFakeTimers();
+    try {
+      const { result, setText } = renderHook();
+
+      const tests: {
+        url: string;
+        title?: string;
+        description?: string;
+        preview: boolean;
+      }[] = [
+        { url: 'https://undefined-with-url.com', preview: false },
+        {
+          url: 'https://undefined-with-title.com',
+          title: 'Title',
+          preview: true,
+        },
+        {
+          url: 'https://undefined-with-description.com',
+          title: 'Title',
+          description: 'Description',
+          preview: true,
+        },
+      ];
+
+      for (const test of tests) {
+        setText(`'New link ${test.url}`);
+        await act(async () => {
+          jest.advanceTimersByTime(1000);
+        });
+
+        expect(mockClient.urlInfo).toHaveBeenCalledWith(test.url);
+        if (test.preview) {
+          expect(result.current.linkPreview).not.toBeNull();
+          expect(result.current.linkPreview?.title).toBe(test.title);
+          expect(result.current.linkPreview?.description).toBe(
+            test.description,
+          );
+        } else {
+          expect(result.current.linkPreview).toBeNull();
+        }
+      }
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('reset clears the current preview and loading state', async () => {

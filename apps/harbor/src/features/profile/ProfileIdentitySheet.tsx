@@ -1,23 +1,34 @@
 import { IconButton, ProfileAvatar, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
-import { useToast } from '@/src/common/components/toast';
 import {
   publicKeyToString,
   useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
+import { useCopyToClipboard } from '@/src/common/lib/useCopyToClipboard';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { Username } from '@/src/features/profile/Username';
 import { ServerRow } from '@/src/features/settings/servers/ServerRow';
 import { useServerSettings } from '@/src/features/settings/servers/useServerSettings';
-import { IdentityManager, type v2 } from '@polycentric/react-native';
-import * as Clipboard from 'expo-clipboard';
+import {
+  COLLECTION,
+  FetchMode,
+  IdentityManager,
+  type v2,
+} from '@polycentric/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
-import { ActivityIndicator, type TextStyle, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  type TextStyle,
+  View,
+} from 'react-native';
 import { isWeb } from '@/src/common/util/platform';
+import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
 import { useIdentityState } from './hooks/useIdentityState';
 
 type KeyEntry = {
@@ -29,7 +40,6 @@ type KeyEntry = {
 export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
   const { theme } = useTheme();
   const client = usePolycentric();
-  const profile = useProfile(identityKey);
   const { identityKey: selfKey } = useCurrentIdentity();
   const { state, isLoading } = useIdentityState(identityKey);
   const { servers: ownServers, addServer, isBusy } = useServerSettings();
@@ -37,6 +47,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
 
   const isSelf = selfKey === identityKey;
   const deviceKey = client.currentKeyPair?.publicKey;
+  const [showInfoSheet, setShowInfoSheet] = useState(false);
 
   const keys = useMemo<KeyEntry[]>(() => {
     if (!state) return [];
@@ -69,18 +80,22 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
         title="Identity"
         onClose={() => router.canGoBack() && router.back()}
       />
+      <EventInfoSheet
+        source={{ identity: identityKey, collection: COLLECTION.IDENTITY }}
+        open={showInfoSheet}
+        onClose={() => setShowInfoSheet(false)}
+      />
       <Sheet.Content style={[Atoms.gap_xl]}>
         <View style={[Atoms.items_center, Atoms.gap_md, { paddingTop: 8 }]}>
           <ProfileAvatar identityKey={identityKey} size="massive" />
-          <Text
+          <Username
+            identity={identityKey}
             variant="title"
             fontWeight="bold"
             numberOfLines={2}
             ellipsizeMode="tail"
-            style={[Atoms.text_center, Atoms.max_w_full]}
-          >
-            {profile.name || 'Anonymous'}
-          </Text>
+            style={Atoms.text_center}
+          />
         </View>
 
         <View
@@ -98,6 +113,30 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
               IDENTITY KEY
             </Text>
             <CopyableValue value={identityKey} label="identity key" />
+            <Pressable
+              onPress={() => setShowInfoSheet(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Identity info"
+              style={[
+                Atoms.flex_row,
+                Atoms.items_center,
+                Atoms.gap_xs,
+                Atoms.self_start,
+              ]}
+            >
+              {({ pressed }) => (
+                <>
+                  <Icon name="infoOutline" size={16} color="neutral_500" />
+                  <Text
+                    variant="small"
+                    color="neutral_700"
+                    style={pressed && { opacity: 0.65 }}
+                  >
+                    Identity info
+                  </Text>
+                </>
+              )}
+            </Pressable>
           </View>
 
           {divider}
@@ -194,20 +233,18 @@ function SigningKeyRow({
 }
 
 function CopyableValue({ value, label }: { value: string; label: string }) {
-  const toast = useToast();
-
-  const onCopy = () => {
-    void Clipboard.setStringAsync(value);
-    toast.success('Copied to clipboard');
-  };
+  const { copyToClipboard, justCopied } = useCopyToClipboard({
+    showToast: true,
+  });
 
   return (
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
       <Text
         variant="secondary"
+        monospace
         style={[
           Atoms.flex_1,
-          { fontFamily: 'monospace', minWidth: 0 },
+          { minWidth: 0 },
           isWeb && ({ wordBreak: 'break-all' } as unknown as TextStyle),
         ]}
         selectable
@@ -218,8 +255,14 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
         variant="ghost"
         compact
         accessibilityLabel={`Copy ${label}`}
-        icon={() => <Icon name="copy" size={16} color="neutral_500" />}
-        onPress={onCopy}
+        icon={() => (
+          <Icon
+            name={justCopied ? 'checkmark' : 'copy'}
+            size={16}
+            color={justCopied ? 'positive_500' : 'neutral_500'}
+          />
+        )}
+        onPress={() => copyToClipboard(value)}
       />
     </View>
   );
@@ -227,6 +270,8 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
 
 export default function ProfileIdentityScreen() {
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
+  // Opened by URL, nothing underneath has fetched this profile.
+  useProfile(identityId ?? null, { fetchMode: FetchMode.OfflineFirst });
   if (!identityId) return null;
   return <ProfileIdentitySheet identityKey={identityId} />;
 }

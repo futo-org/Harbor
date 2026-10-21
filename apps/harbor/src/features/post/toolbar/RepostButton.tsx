@@ -1,16 +1,15 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
-import { openCompose, HARBOR_APP_URL, Routes } from '@/src/common/constants';
+import { openCompose } from '@/src/common/constants';
 import {
   type PostData,
   useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
-import { isIOS } from '@/src/common/util/platform';
-import { Share, View } from 'react-native';
-import useCanShare from '../hooks/useCanShare';
+import { canShareUrl, nativeShareUrl } from '@/src/common/util/nativeShareUrl';
+import { View } from 'react-native';
+import { buildPostLink } from '../buildPostLink';
 import useReposts from '../hooks/useReposts';
 import PostActionButton from './PostActionButton';
 
@@ -19,7 +18,6 @@ type RepostButtonProps = { post: PostData };
 export default function RepostButton({ post }: RepostButtonProps) {
   const client = usePolycentric();
   const { hasIdentity } = useCurrentIdentity();
-  const canShare = useCanShare();
   const hasReposted = useReposts((s) => s.hasReposted(post.id));
   const addRepost = useReposts((s) => s.addRepost);
   const removeRepost = useReposts((s) => s.removeRepost);
@@ -37,15 +35,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
   };
 
   const onSharePress = () => {
-    const path = Routes.tabs.post(
-      post.identity,
-      getKeyFingerprint(post.signedBy) ?? '',
-      post.sequence,
-    );
-    const url = `${HARBOR_APP_URL}${path}`;
-    // expo-sharing only shares local files on Android; RN Share handles URLs.
-    // iOS shares `url`; Android only reads `message`.
-    void Share.share(isIOS ? { url } : { message: url }).catch(() => {});
+    nativeShareUrl(buildPostLink(post));
   };
 
   const button = (
@@ -82,7 +72,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
             <Icon name="quote" color="neutral_500" size={16} />
             <Text fontWeight="bold">Quote</Text>
           </DropdownMenu.Item>
-          {canShare ? (
+          {canShareUrl ? (
             <DropdownMenu.Item onPress={onSharePress}>
               <Icon name="share" color="neutral_500" size={16} />
               <Text fontWeight="bold">Share link</Text>

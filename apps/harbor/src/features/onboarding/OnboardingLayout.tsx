@@ -3,8 +3,10 @@ import SCENE_SPLASH from '@/src/common/assets/images/harbor-scene-splash.svg';
 import { BackButton } from '@/src/common/components/composites/BackButton';
 import { CloseButton } from '@/src/common/components/composites/CloseButton';
 import { Routes } from '@/src/common/constants';
+import { useVirtualKeyboardOverlap } from '@/src/common/lib/useVirtualKeyboardOverlap';
 import { Atoms, Breakpoints, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
+import { useRedirectWhenLoggedIn } from '@/src/features/onboarding/hooks/useRedirectWhenLoggedIn';
 import { Image } from 'expo-image';
 import { router, Slot, usePathname } from 'expo-router';
 import { KeyboardAvoidingView, useWindowDimensions, View } from 'react-native';
@@ -21,6 +23,7 @@ export default function OnboardingLayout() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { width } = useWindowDimensions();
+  const keyboardOverlap = useVirtualKeyboardOverlap();
   const pathname = usePathname();
 
   const close = () => {
@@ -34,6 +37,10 @@ export default function OnboardingLayout() {
   const isFlowEnd = pathname.endsWith('/success');
   const showBack =
     !isFlowEnd && !FLOW_ENTRY_ROUTES.includes(pathname) && router.canGoBack();
+
+  // Guard the user from accessing an onboarding screen while already logged in.
+  // Exempt flow end screens since they should be shown after a successful login.
+  useRedirectWhenLoggedIn(!isFlowEnd);
 
   return (
     <View
@@ -61,7 +68,8 @@ export default function OnboardingLayout() {
               maxWidth: CONTENT_WIDTH,
               // Clears the status bar / notch the scene sits behind.
               paddingTop: insets.top,
-              paddingBottom: insets.bottom,
+              // Web keeps bottom actions above the keyboard; it covers the inset.
+              paddingBottom: Math.max(insets.bottom, keyboardOverlap),
             },
           ]}
         >

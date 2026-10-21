@@ -35,12 +35,13 @@ async fn create_pool(
     schema: &str,
 ) -> Result<DatabaseConnection, sea_orm::DbErr> {
     let mut opt = ConnectOptions::new(with_utc_timezone(url));
-    opt.max_connections(max)
+    opt.set_application_name("harbor-push-notifications")
+        .set_schema_search_path(schema)
+        .max_connections(max)
         .min_connections(2)
         .idle_timeout(Duration::from_secs(600))
         .max_lifetime(Duration::from_secs(1800))
-        .sqlx_logging(false)
-        .set_schema_search_path(schema);
+        .sqlx_logging(false);
 
     let db = Database::connect(opt).await?;
 

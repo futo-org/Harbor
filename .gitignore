@@ -48,6 +48,7 @@ docker-compose.live*
 .docusaurus
 .cache-loader
 docs/build
+docs/content/protocol/_grpc-reference.mdx
 
 # Secrets
 .env

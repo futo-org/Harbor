@@ -101,6 +101,13 @@ const pushNotifications = touches(
   'services/common/',
   CHARTS,
 );
+const grayjayMigrator = touches(
+  CARGO,
+  'services/grayjay-migrator/',
+  'services/moderation/entity/',
+  'services/common/',
+  CHARTS,
+);
 const scraper = touches(NODE_ROOT, 'services/scraper/', CHARTS);
 const verifierBot = touches(
   NODE_ROOT,
@@ -110,7 +117,8 @@ const verifierBot = touches(
   CHARTS,
 );
 const app = touches(LOCK, 'apps/', CHARTS);
-const docs = touches('docs/');
+const e2e = touches('e2e/');
+const docs = touches('docs/', 'protos/polycentric/v2/', /^buf\.yaml$/);
 const charts = touches(
   CHARTS,
   NODE_ROOT,
@@ -157,28 +165,32 @@ const flags = {
     workflows: touches('.forgejo/'),
     scan: pr,
     rs_core_lint: rsCore,
-    rust_services_lint: server || moderation || pushNotifications,
+    rust_services_lint:
+      server || moderation || pushNotifications || grayjayMigrator,
+    services_db_schema: server || moderation || pushNotifications,
     js_sdk_lint: jsSdk,
     js_services_lint: scraper || verifierBot,
     charts_lint: charts,
     docs_lint: docs,
     app_lint: app,
     rs_core: rsCore,
-    js_sdk: jsSdk,
-    rust_services: server || moderation || pushNotifications,
+    js_sdk: jsSdk || rsCore,
+    rust_services: server || moderation || pushNotifications || grayjayMigrator,
     scraper,
     app,
+    app_typecheck: app || jsSdk || rnSdk || rsCore,
     build_sdks: rsCore || jsSdk || rnSdk || app || verifierBot,
     build_rn_sdk: rnSdk || rsCore || app,
+    kt_core_lint: ktCore,
     kt_core_build: ktCore,
     image_scraper: scraper,
     image_verifier_bot: verifierBot,
-    web_image: app,
+    web_image: app || e2e,
     server_integration: serverIntegration,
     moderation_integration: moderationIntegration,
     scraper_integration: scraper,
     verifier_bot_tests: verifierBot,
-    web_e2e: app,
+    web_e2e: app || e2e,
     docs,
     docs_preview: docs && pr,
   }),
@@ -192,29 +204,40 @@ const rustServices = [
     image: 'server',
     label: 'server',
     dockerfile: 'services/server',
+    packages: 'server server-migration',
     changed: server,
   },
   {
     image: 'moderation-service',
     label: 'moderation',
     dockerfile: 'services/moderation',
+    packages: 'moderation-service moderation-migration',
     changed: moderation,
   },
   {
     image: 'push-notifications-service',
     label: 'push notifications',
     dockerfile: 'services/push-notifications',
+    packages: 'push-notifications-service push-notifications-migration',
     changed: pushNotifications,
+  },
+  {
+    image: 'grayjay-migrator',
+    label: 'grayjay migrator',
+    dockerfile: 'services/grayjay-migrator',
+    packages: 'grayjay-migrator grayjay-migrator-migration',
+    changed: grayjayMigrator,
   },
 ];
 
 const matrix = {
   service_images: rustServices
     .filter((s) => s.changed || ciChanged('pr'))
-    .map(({ image, label, dockerfile }) => ({
+    .map(({ image, label, dockerfile, packages }) => ({
       image,
       label: `Build ${label} image`,
       dockerfile,
+      packages,
     })),
 };
 for (const [name, rows] of Object.entries(matrix)) {
@@ -228,7 +251,11 @@ if (!flags.service_images) {
 }
 // Jobs that download the SDK artifacts (sdk-artifacts action) need them built.
 flags.build_sdks ||=
-  flags.image_verifier_bot || flags.verifier_bot_tests || flags.web_image;
+  flags.image_verifier_bot ||
+  flags.verifier_bot_tests ||
+  flags.web_image ||
+  flags.app_typecheck ||
+  flags.js_sdk;
 flags.build_rn_sdk ||= flags.web_image;
 
 // Outputs -------------------------------------------------------------------

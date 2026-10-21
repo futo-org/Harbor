@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # Project Structure
 
-The [repository](https://gitlab.futo.org/polycentric/polycentric) is a pnpm +
+The [repository](https://code.futo.org/harbor/harbor) is a pnpm +
 Cargo monorepo. Builds are orchestrated by [Turbo](https://turborepo.com), so
 each package declares its own `build`, `test`, and `lint` tasks and the root
 scripts fan out across them.
@@ -20,6 +20,7 @@ scripts fan out across them.
 | `services/` | Server-side processes.                                                                    |
 | `protos/`   | Protobuf definitions for the [Polycentric Protocol](../protocol/overview.md). The Rust and TypeScript types are generated from these. |
 | `docs/`     | This documentation site (Docusaurus).                                                     |
+| `dev/`      | Developer tooling for testing |
 
 ## Apps
 
@@ -40,6 +41,7 @@ scripts fan out across them.
 | `packages/js-node`            | Node.js SDK, storing data in sqlite3.                                                         |
 | `packages/js-storage-sqlite`  | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                  |
 | `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                             |
+| `packages/kt-core`            | Core library holding the protocol logic and generated protobuf types, for Android development. This is a Kotlin port of `js-core`. |
 
 ## Services
 
@@ -48,6 +50,7 @@ scripts fan out across them.
 | `services/server`             | The Polycentric server: ingests events, serves feeds, search, and blobs. See [Running a Server](../guides/running-a-server.md). |
 | `services/moderation`         | Labels content pushed to FUTO-run servers and publishes a labelling feed other servers can poll. |
 | `services/push-notifications` | Consumes the server's `notifications` Kafka topic, delivers Expo push notifications, and serves the gRPC `NotificationService` clients register device tokens with. |
+| `services/grayjay-migrator`   | Re-signs legacy (v1) Grayjay systems as Harbor identities and serves the legacy key to identity lookup. |
 | `services/scraper`            | Fetches link metadata for link previews.                                                        |
 | `services/verifier-bot`       | Verifies platform claims. See [Verifiers](../protocol/verifiers.md).                             |
 | `services/common`             | Shared Rust crates for the services — `dotenv`, `kafka`, `object-store`, and `telemetry`.       |

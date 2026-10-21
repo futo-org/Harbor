@@ -1,5 +1,5 @@
 # Stage 1: Base - Node + pnpm
-FROM node:24-slim AS base
+FROM node:24-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
@@ -11,7 +11,7 @@ RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 # the feed is unreachable or returns garbage, so the egress set can't silently
 # ship empty/weak. The reserved-IP list is RFC-stable, so refreshes are rare:
 # bump BOGONS_REV (or build with --no-cache) to bust the layer cache and re-pull.
-FROM debian:bookworm-slim AS bogons
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS bogons
 ARG BOGONS_REV=2026-06-22
 RUN echo "bogon snapshot rev: ${BOGONS_REV}" \
   && apt-get update \
@@ -35,7 +35,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD=1
 # `tools` (for @polycentric/tsconfig), and the service itself. The other
 # workspace packages (apps/*, packages/*) are absent here - pnpm tolerates
 # missing workspace members and installs only what's present.
-COPY .npmrc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY patches patches
 COPY tools tools
 COPY services/scraper services/scraper

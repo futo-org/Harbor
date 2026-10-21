@@ -3,12 +3,18 @@ import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon, { type IconName } from '@/src/common/components/Icon';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { COLLECTION } from '@polycentric/react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
+import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
 import useBlocks from '../block/hooks/useBlocks';
 import BanSheet from '../moderation/BanSheet';
 import useModerationStatus from '../moderation/hooks/useModerationStatus';
 import { useProfileContext } from './ProfileContext';
+
+type ProfileMenuProps = {
+  onSharePress: () => void;
+};
 
 type MenuItem = {
   key: string;
@@ -19,10 +25,10 @@ type MenuItem = {
 };
 
 /**
- * The "..." context menu on a profile page. Renders nothing when no
- * menu items apply to the viewed profile.
+ * The "..." context menu on a profile page. Renders nothing until the
+ * profile's identity is known.
  */
-export default function ProfileMenu() {
+export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
   const { theme } = useTheme();
   const client = usePolycentric();
   const { identityKey, isSelf } = useProfileContext();
@@ -32,8 +38,18 @@ export default function ProfileMenu() {
   const removeBlock = useBlocks((s) => s.removeBlock);
 
   const [showBanSheet, setShowBanSheet] = useState<boolean>(false);
+  const [showInfoSheet, setShowInfoSheet] = useState<boolean>(false);
 
   const items: MenuItem[] = [];
+  // On your own profile, the header's share button is enough.
+  if (identityKey) {
+    items.push({
+      key: 'share',
+      icon: 'share',
+      label: 'Share',
+      onPress: onSharePress,
+    });
+  }
   if (isModerator && !isSelf) {
     items.push({
       key: 'ban',
@@ -55,7 +71,14 @@ export default function ProfileMenu() {
     });
   }
 
-  if (items.length === 0 || !identityKey) return null;
+  if (!identityKey) return null;
+
+  items.push({
+    key: 'info',
+    icon: 'infoOutline',
+    label: 'Profile info',
+    onPress: () => setShowInfoSheet(true),
+  });
 
   return (
     <>
@@ -106,6 +129,11 @@ export default function ProfileMenu() {
         identityKey={identityKey}
         open={showBanSheet}
         onClose={() => setShowBanSheet(false)}
+      />
+      <EventInfoSheet
+        source={{ identity: identityKey, collection: COLLECTION.PROFILE }}
+        open={showInfoSheet}
+        onClose={() => setShowInfoSheet(false)}
       />
     </>
   );

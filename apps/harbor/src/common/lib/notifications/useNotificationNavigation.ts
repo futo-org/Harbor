@@ -19,7 +19,7 @@ function navigateFromResponse(response: Notifications.NotificationResponse) {
   const { path } = Linking.parse(url);
   if (!path) return;
 
-  router.push(`/${path}` as never);
+  router.navigate(`/${path}` as never);
 }
 
 /**
@@ -28,7 +28,7 @@ function navigateFromResponse(response: Notifications.NotificationResponse) {
  *
  * `ready` must be `true` only once the router is mounted (i.e. the provider
  * has finished initializing and is rendering the navigation tree), otherwise
- * `router.push` has no navigator to act on and the navigation is silently lost.
+ * `router.navigate` has no navigator to act on and the navigation is silently lost.
  */
 export function useNotificationNavigation(ready: boolean) {
   useEffect(() => {

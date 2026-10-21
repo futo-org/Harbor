@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use common_kafka::{
-    BorrowedMessage, CommitMode, Consumer, Message, Offset, build_consumer,
+    BorrowedMessage, Consumer, Message, Offset, build_consumer,
 };
 use tokio::task::JoinSet;
 
@@ -58,13 +58,13 @@ pub fn validate_worker_names(only: &[String]) {
 /// Backoff before a `Retry` message is re-delivered.
 const RETRY_BACKOFF: Duration = Duration::from_secs(2);
 
-/// Number of times a message is retried before it is skipped (committed
-/// past without being processed) so the partition can make progress.
+/// Number of times a message is retried before it is skipped so the
+/// partition can make progress.
 const MAX_RETRIES: u32 = 5;
 
-/// Whether the consumed message's offset should be committed.
+/// What to do with the consumed message's offset.
 pub enum Outcome {
-    /// Done with this message — commit so it is not redelivered.
+    /// Done. Store the offset so it is committed and not redelivered.
     Commit,
     /// Transient failure — re-deliver and retry. Skipped after
     /// [`MAX_RETRIES`]. Not yet returned by any worker (materialization is
@@ -125,7 +125,7 @@ pub async fn run_all_workers(ctx: Arc<ServiceContext>, only: Vec<String>) {
     set.shutdown().await;
 }
 
-/// Subscribe `group_id` to `topics` and run the consume/commit/retry loop,
+/// Subscribe `group_id` to `topics` and run the consume/retry loop,
 /// dispatching every message to `handler`. Loops forever; only returns on a
 /// fatal setup error.
 pub async fn run_consumer(
@@ -153,10 +153,8 @@ pub async fn run_consumer(
             Outcome::Commit => {
                 attempts.remove(&coord);
                 count_message(group_id, "committed");
-                if let Err(e) =
-                    consumer.commit_message(&message, CommitMode::Async)
-                {
-                    tracing::warn!(group_id, error = %e, "failed to commit offset");
+                if let Err(e) = consumer.store_offset_from_message(&message) {
+                    tracing::warn!(group_id, error = %e, "failed to store offset");
                 }
             }
             Outcome::Retry => match record_failure(&mut attempts, coord) {
@@ -169,13 +167,12 @@ pub async fn run_consumer(
                         max_retries = MAX_RETRIES,
                         "message exceeded retries; skipping"
                     );
-                    if let Err(e) =
-                        consumer.commit_message(&message, CommitMode::Async)
+                    if let Err(e) = consumer.store_offset_from_message(&message)
                     {
                         tracing::warn!(
                             group_id,
                             error = %e,
-                            "failed to commit offset after skip"
+                            "failed to store offset after skip"
                         );
                     }
                 }
@@ -203,7 +200,7 @@ pub async fn run_consumer(
 enum RetryAction {
     /// Re-deliver and retry after a backoff.
     Backoff,
-    /// Retries exhausted — skip (commit past) so the partition progresses.
+    /// Retries exhausted. Skip so the partition progresses.
     Skip,
 }
 

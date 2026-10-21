@@ -11,7 +11,8 @@
 
 ```sh
 # In the root of the repo.
-docker compose up -d postgres kafka
+docker compose up -d postgres kafka valkey rustfs
+docker compose run --rm --no-deps -T rustfs-init
 ```
 
 This starts PostgreSQL on port 5432 with user `postgres` and password `testing`.
@@ -20,7 +21,7 @@ This starts PostgreSQL on port 5432 with user `postgres` and password `testing`.
 
 ```sh
 cd migration
-DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
+HARBOR_DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 ```
 
 ### 3. Setup .env file
@@ -40,8 +41,9 @@ and plain HTTP routes on the same port.
 
 ## Operator Commands
 
-The server binary also carries maintenance commands that run against `DATABASE_URL`
-and exit. Each prints what it would change; add `--yes` to apply it.
+The server binary also carries maintenance commands that run against
+`HARBOR_DATABASE_URL` and exit. Each prints what it would change; add `--yes` to
+apply it.
 
 ```sh
 # Delete an identity, or every identity a key has signed events for,
@@ -55,7 +57,7 @@ cargo run -p server -- prune-content --yes
 ```
 
 Blob bodies nothing references any more are removed from the object store when the
-`CONTENT_BLOB_OS_*` variables are set, and left in place otherwise. A running server
+`HARBOR_CONTENT_BLOB_OS_*` variables are set, and left in place otherwise. A running server
 caches identity heads in memory, so restart it after deleting events.
 
 ## Environment Variables
@@ -72,6 +74,7 @@ All service variables are read and validated once at startup by
 | `HARBOR_CDN_URL` | `http://localhost:3000` | Public URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`. |
 | `HARBOR_SCRAPER_URL` | `http://localhost:8855` | Base URL of the internal scraper service (link-preview metadata and image proxy). |
 | `HARBOR_MODERATION_IDENTITY` | _(unset)_ | Hex identity string of the trusted moderation service. Unset means no content labels are served. |
+| `HARBOR_VALKEY_URL` | _(unset)_ | Valkey/Redis URL for live sync (`SubscribeHeads`), e.g. `redis://localhost:6379`. Unset turns live sync off. See `docs/content/developer/live-sync.md`. |
 
 ## Common Environment Variables
 
@@ -110,8 +113,8 @@ The shared `services/common` crates read their own variables.
 | Variable | Default | Description |
 |---|---|---|
 | `RUST_LOG` | `info` | Log filter. |
-| `LOG_FORMAT` | _(auto)_ | `json` or `text`; defaults to text on a terminal, JSON otherwise. |
-| `METRICS_PORT` | `9464` | Port serving Prometheus `GET /metrics`. |
+| `HARBOR_LOG_FORMAT` | _(auto)_ | `json` or `text`; defaults to text on a terminal, JSON otherwise. |
+| `HARBOR_METRICS_PORT` | `9464` | Port serving Prometheus `GET /metrics`. |
 
 ## Running Integration Tests
 

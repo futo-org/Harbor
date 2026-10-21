@@ -27,7 +27,7 @@ export function ServersSettingsSheet() {
   // sheet before pushing it.
   const openModerationDashboard = (server: string) => {
     if (router.canGoBack()) router.back();
-    router.push(
+    router.navigate(
       `${Routes.tabs.moderation.dashboard}?server=${encodeURIComponent(
         server,
       )}`,

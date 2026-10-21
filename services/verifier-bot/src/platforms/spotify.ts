@@ -14,12 +14,9 @@ type SpotifyTokenRequest = {
   code: string;
 };
 
-const SPOTIFY_CLIENT_ID =
-  process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_ID ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_ID;
+const SPOTIFY_CLIENT_ID = process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_ID;
 const SPOTIFY_CLIENT_SECRET =
-  process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET ??
-  process.env.POLYCENTRIC_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET;
+  process.env.HARBOR_VERIFIER_BOT_SPOTIFY_CLIENT_SECRET;
 
 class SpotifyOAuthVerifier extends OAuthVerifier<SpotifyTokenRequest> {
   constructor() {

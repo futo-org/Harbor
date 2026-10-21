@@ -1,13 +1,17 @@
 import { Base64 } from 'js-base64';
 import { bytesToHex, hexToBytes, v2 } from '@polycentric/react-native';
+import {
+  HARBOR_APP_URL,
+  PAIRING_CODE_PARAM,
+  Routes,
+} from '@/src/common/constants';
 
 /**
  * -----------------------------------------------------------------------------
  * The `PairingInfo` protobuf message contains the information we need to join
  * a pairing session securely.
- * For the QR code, we don't care about readability but we want the payload size
- * to be small so that it is easy to scan.
- * For the manual entry, we want it to look like a random token string.
+ * We used to encode it as either hex or base64 depending on the context,
+ * but we should only use pairing links now.
  * -----------------------------------------------------------------------------
  */
 
@@ -60,4 +64,43 @@ export function decodePairingCode(
   } catch {
     return undefined;
   }
+}
+
+/** Build a pairing link to share to another device. */
+export function pairingLinkFrom(info: v2.PairingInfo): string {
+  const url = new URL(`${HARBOR_APP_URL}${Routes.onboarding.pair}`);
+
+  url.searchParams.set(
+    PAIRING_CODE_PARAM,
+    encodePairingCode(info, EncodingMode.BASE64),
+  );
+
+  return url.toString();
+}
+
+/** Extract the pairing info from a pairing link or pairing code. */
+export function extractPairingInfo(input: string): v2.PairingInfo | undefined {
+  const trimmed = input.trim();
+  let code = trimmed;
+
+  // Try extracting the pairing code if the input is a pairing link.
+  // Depending on the platform, a non-url input may throw or just resolve to
+  // a `/` pathname.
+  try {
+    const url = new URL(trimmed);
+    const path = url.pathname.replace(/\/+$/, ''); // Remove trailing slashes
+    if (path === Routes.onboarding.pair) {
+      const param = url.searchParams.get(PAIRING_CODE_PARAM);
+
+      // Either we found a code or we have a pairing link without one
+      if (param === null) return undefined;
+      code = param;
+    }
+  } catch {}
+
+  // Accept either a hex-encoded or base64-encoded pairing code.
+  return (
+    decodePairingCode(code, EncodingMode.HEX) ??
+    decodePairingCode(code, EncodingMode.BASE64)
+  );
 }

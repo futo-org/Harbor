@@ -168,7 +168,7 @@ impl PolycentricClient {
                 .list_events(ListEventsRequest {
                     filters: Some(ListEventsFilters {
                         collection: Some(collection),
-                        identity: Some(self.identity.clone()),
+                        identity: self.identity.clone(),
                         ..Default::default()
                     }),
                     size: None,

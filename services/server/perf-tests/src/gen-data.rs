@@ -1,4 +1,12 @@
-use std::cmp::{max, min};
+//! Example
+//!
+//! ```sh
+//! cargo run --bin gen-data -- http://127.0.0.1:3000 --amount 10000 --clients 100 post
+//! ```
+//!
+//! Don't set the client to a value higher than
+//! `HARBOR_DATABASE_MAX_CONNECTIONS`, it will cause performance issues.
+
 use std::process::exit;
 use std::time::Instant;
 use std::{env, panic};
@@ -142,7 +150,7 @@ async fn create_identities(
     amount: usize,
 ) -> Box<[Box<str>]> {
     let mut set = JoinSet::new();
-    let clients = max(min(clients, 10), 1);
+    let clients = clients.clamp(1, 10);
     let amount_per = amount / clients;
     let mut left = amount % clients;
     for _ in 0..clients {
@@ -178,7 +186,7 @@ async fn create_posts(
     amount: usize,
 ) -> Box<[EventKey]> {
     let mut set = JoinSet::new();
-    let clients = max(min(clients, 10), 1);
+    let clients = clients.clamp(1, 10);
     let amount_per = amount / clients;
     let mut left = amount % clients;
     for _ in 0..clients {
@@ -303,11 +311,11 @@ async fn gen_post(mut client: Client, amount: usize, reply: GenReply) {
                 root = Some(client.get_last_event_key());
             }
             last = Some(client.get_last_event_key());
-        } else if let GenReply::ToOne = reply {
-            if root.is_none() {
-                root = Some(client.get_last_event_key());
-                last = Some(client.get_last_event_key());
-            }
+        } else if let GenReply::ToOne = reply
+            && root.is_none()
+        {
+            root = Some(client.get_last_event_key());
+            last = Some(client.get_last_event_key());
         }
 
         if client.pending().len() > MAX_EVENTS_PER_REQUEST {

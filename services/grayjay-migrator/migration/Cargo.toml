@@ -1,0 +1,16 @@
+[package]
+edition      = "2024"
+name         = "grayjay-migrator-migration"
+publish      = false
+rust-version = "1.85.0"
+version      = "0.1.0"
+
+[lib]
+name = "grayjay_migrator_migration"
+path = "src/lib.rs"
+
+[dependencies]
+grayjay-migrator-entity = { path = "../entity" }
+sea-orm = { workspace = true, features = [ "sqlx-postgres", "runtime-tokio", "macros" ] }
+sea-orm-migration = { workspace = true, features = ["cli", "sqlx-postgres", "runtime-tokio"] }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }

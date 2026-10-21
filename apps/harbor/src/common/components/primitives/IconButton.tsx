@@ -83,7 +83,7 @@ export function IconButton({
 
   const chromeBorder = {
     borderWidth: 1,
-    borderColor: withHexOpacity(theme.palette.neutral_500, '20'),
+    borderColor: withHexOpacity(theme.palette.neutral_500, '60'),
   };
 
   const showChrome = !(variant === 'ghost' && compact);

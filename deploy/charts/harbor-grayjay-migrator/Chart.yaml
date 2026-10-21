@@ -1,0 +1,6 @@
+apiVersion: v2
+name: harbor-grayjay-migrator
+description: Harbor grayjay-migrator, the legacy system key to v2 identity lookup service
+type: application
+version: 0.1.0
+appVersion: "0.0.1"

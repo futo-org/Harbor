@@ -37,7 +37,7 @@ export function SidebarSearch() {
   const submit = () => {
     if (!phrase) return;
     setQuery('');
-    router.push(
+    router.navigate(
       `${Routes.tabs.explore.search}?q=${encodeURIComponent(phrase)}`,
     );
   };
@@ -90,7 +90,7 @@ export function SidebarSearch() {
               identity={entry.identity}
               onPress={() => {
                 setQuery('');
-                router.push(Routes.tabs.profile(entry.identity));
+                router.navigate(Routes.tabs.profile(entry.identity));
               }}
             />
           ))}

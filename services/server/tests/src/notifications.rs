@@ -38,7 +38,7 @@ async fn mentions_notify_identities_and_aliases_and_skip_the_reply_target() {
         .await;
 
     let mut parent_author = TestClient::new().await;
-    parent_author.post_text("parent", DEFAULT_CREATED_AT);
+    parent_author.post_text("parent", current_timestamp());
     let parent_key = parent_author.get_last_event_key();
     parent_author.submit_events().await;
 
@@ -61,7 +61,7 @@ async fn mentions_notify_identities_and_aliases_and_skip_the_reply_target() {
             curly_mentioned.identity(),
             parent_author.identity(),
         ),
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     );
     author.submit_events().await;
 
@@ -94,7 +94,7 @@ async fn mentions_notify_identities_and_aliases_and_skip_the_reply_target() {
     let mut second_author = TestClient::new().await;
     second_author.post_text(
         &format!("again @{alias_local}@example.com @{unlisted_alias_local}@example.com"),
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     second_author.submit_events().await;
 
@@ -154,4 +154,99 @@ async fn wait_for_notifications(
         }
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
+}
+
+/// The unread count stream starts at the current count, rises when the
+/// workers insert a notification, and drops to zero on acknowledge from
+/// another connection. Needs the `workers` process running.
+#[tokio::test]
+async fn unread_count_stream_follows_new_notifications_and_acknowledge() {
+    let mut recipient = TestClient::new().await;
+    recipient.submit_events().await;
+    let auth_token = recipient.create_auth_token();
+
+    let mut subscriber = NotificationServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server");
+    let mut request =
+        tonic::Request::new(SubscribeUnreadNotificationCountRequest {});
+    request
+        .metadata_mut()
+        .insert("authorization", auth_token.clone().try_into().unwrap());
+    let response = subscriber
+        .subscribe_unread_notification_count(request)
+        .await
+        .expect("subscribe failed");
+    assert_eq!(
+        response.metadata().get("cache-control").unwrap(),
+        "no-transform",
+        "proxies must not compress the stream"
+    );
+    let mut stream = response.into_inner();
+
+    assert_eq!(
+        next_count(&mut stream).await,
+        0,
+        "a new identity has nothing unread"
+    );
+
+    let mut follower = TestClient::new().await;
+    follower
+        .follow_identity(recipient.identity().to_owned(), current_timestamp());
+    let follow_key = follower.get_last_event_key();
+    follower.submit_events().await;
+
+    assert_eq!(
+        next_count(&mut stream).await,
+        1,
+        "the follow is pushed to the open stream"
+    );
+
+    let mut acknowledger = NotificationServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server");
+    let mut request = tonic::Request::new(AcknowledgeNotificationsRequest {
+        last_seen: Some(follow_key),
+    });
+    request
+        .metadata_mut()
+        .insert("authorization", auth_token.try_into().unwrap());
+    acknowledger
+        .acknowledge_notifications(request)
+        .await
+        .expect("acknowledge failed");
+
+    assert_eq!(
+        next_count(&mut stream).await,
+        0,
+        "acknowledging clears the count"
+    );
+}
+
+#[tokio::test]
+async fn unread_count_stream_rejects_unauthenticated() {
+    let mut client = NotificationServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server");
+    let result = client
+        .subscribe_unread_notification_count(
+            SubscribeUnreadNotificationCountRequest {},
+        )
+        .await;
+    match result {
+        Err(status) => assert_eq!(status.code(), tonic::Code::Unauthenticated),
+        Ok(_) => panic!("unauthenticated subscribe must fail"),
+    }
+}
+
+/// Next count from the stream, or a panic after `NOTIFICATION_TIMEOUT`.
+async fn next_count(
+    stream: &mut tonic::Streaming<SubscribeUnreadNotificationCountResponse>,
+) -> u32 {
+    tokio::time::timeout(NOTIFICATION_TIMEOUT, stream.message())
+        .await
+        .expect("no count within the timeout")
+        .expect("stream failed")
+        .expect("stream ended")
+        .count
 }

@@ -1,0 +1,46 @@
+# Find the knee: ramp readers and writers up in steps, holding each level
+# long enough (>= 2 scrape intervals) to read platform metrics. Watch the
+# dashboard and pause or lower rates when latency or errors climb.
+run:
+  duration: 0          # ends when the longest ramp is done
+  gracefulStop: 30s
+scenarios:
+  browse:
+    rate: 0
+    stages:
+      - {duration: 2m, target: 5}
+      - {duration: 3m, target: 5}
+      - {duration: 2m, target: 20}
+      - {duration: 3m, target: 20}
+      - {duration: 2m, target: 50}
+      - {duration: 3m, target: 50}
+      - {duration: 2m, target: 100}
+      - {duration: 3m, target: 100}
+  browse_user:
+    rate: 0
+    stages:
+      - {duration: 2m, target: 2}
+      - {duration: 3m, target: 2}
+      - {duration: 2m, target: 8}
+      - {duration: 3m, target: 8}
+      - {duration: 2m, target: 20}
+      - {duration: 3m, target: 20}
+      - {duration: 2m, target: 40}
+      - {duration: 3m, target: 40}
+  register: {rate: 1}
+  post:
+    rate: 0
+    stages:
+      - {duration: 5m, target: 1}
+      - {duration: 5m, target: 5}
+      - {duration: 5m, target: 15}
+      - {duration: 5m, target: 30}
+  react:
+    rate: 0
+    stages:
+      - {duration: 5m, target: 3}
+      - {duration: 5m, target: 10}
+      - {duration: 5m, target: 30}
+      - {duration: 5m, target: 60}
+  reply: {rate: 0.5}
+  follow: {rate: 0.5}

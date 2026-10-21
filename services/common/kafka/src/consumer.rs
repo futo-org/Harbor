@@ -2,11 +2,14 @@ use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::ConsumerContext;
 use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::error::KafkaError;
+use rdkafka::error::{KafkaError, KafkaResult};
+use rdkafka::topic_partition_list::TopicPartitionList;
 
-pub use rdkafka::consumer::{CommitMode, Consumer};
+pub use rdkafka::consumer::Consumer;
 
-use crate::config::{auto_offset_reset, max_poll_interval_ms, prefixed, set_defaults};
+use crate::config::{
+    auto_commit_interval_ms, auto_offset_reset, max_poll_interval_ms, prefixed, set_defaults,
+};
 
 pub struct CustomContext;
 
@@ -37,16 +40,27 @@ impl ClientContext for CustomContext {
     }
 }
 
-impl ConsumerContext for CustomContext {}
+impl ConsumerContext for CustomContext {
+    fn commit_callback(&self, result: KafkaResult<()>, offsets: &TopicPartitionList) {
+        if let Err(error) = result {
+            tracing::warn!(target: "rdkafka", %error, ?offsets, "offset commit failed");
+        }
+    }
+}
 
-/// Build a subscribed `StreamConsumer` with auto-commit disabled. The group
-/// id and topics are prefixed with the cluster id via [`prefixed`].
+/// Build a subscribed `StreamConsumer`. The group id and topics are prefixed
+/// with the cluster id via [`prefixed`].
+///
+/// Only offsets stored with [`Consumer::store_offset_from_message`] are
+/// committed, on an interval and on partition revoke.
 pub async fn build_consumer(group_id: &str, topics: &[&str]) -> StreamConsumer<CustomContext> {
     let mut config = ClientConfig::new();
     set_defaults(&mut config);
     config
         .set("group.id", prefixed(group_id))
-        .set("enable.auto.commit", "false")
+        .set("enable.auto.commit", "true")
+        .set("enable.auto.offset.store", "false")
+        .set("auto.commit.interval.ms", auto_commit_interval_ms())
         .set("auto.offset.reset", auto_offset_reset())
         .set("max.poll.interval.ms", max_poll_interval_ms());
 

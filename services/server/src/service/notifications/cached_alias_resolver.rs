@@ -8,7 +8,7 @@ use std::future::Future;
 use chrono::{TimeDelta, Utc};
 use entity::alias_cache;
 use sea_orm::sea_query::OnConflict;
-use sea_orm::{ColumnTrait, DbConn, EntityTrait, QueryFilter, Set};
+use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Set};
 
 use super::alias_resolver;
 
@@ -19,8 +19,8 @@ const CACHE_TTL: TimeDelta = TimeDelta::minutes(5);
 /// Malformed aliases, failed fetches and aliases the domain doesn't list are
 /// absent. Fresh cache rows are served as-is; only the misses are fetched.
 /// `aliases` are cached verbatim, so pass them lowercased and deduplicated.
-pub async fn resolve_aliases(
-    db: &DbConn,
+pub async fn resolve_aliases<C: ConnectionTrait>(
+    db: &C,
     aliases: &[String],
 ) -> HashMap<String, String> {
     resolve_aliases_with(db, aliases, |misses| async move {
@@ -31,8 +31,8 @@ pub async fn resolve_aliases(
 
 /// `resolve_aliases` with the fetch injected, so tests can stub the network.
 /// `fetch` returns an outcome for each alias it actually looked up.
-async fn resolve_aliases_with<Fut>(
-    db: &DbConn,
+async fn resolve_aliases_with<Fut, C: ConnectionTrait>(
+    db: &C,
     aliases: &[String],
     fetch: impl FnOnce(Vec<String>) -> Fut,
 ) -> HashMap<String, String>
@@ -58,8 +58,8 @@ where
 
 /// Fresh cache rows for `aliases`: alias -> identity (`None` when the last
 /// lookup found nothing). Expired rows and DB errors are misses.
-async fn find_fresh_cached(
-    db: &DbConn,
+async fn find_fresh_cached<C: ConnectionTrait>(
+    db: &C,
     aliases: &[String],
 ) -> HashMap<String, Option<String>> {
     if aliases.is_empty() {
@@ -80,7 +80,10 @@ async fn find_fresh_cached(
 /// Upsert the looked-up outcomes, dropping expired rows on the way so the
 /// table stays bounded. Best-effort: failures are logged and resolution
 /// proceeds.
-async fn insert_cached(db: &DbConn, fetched: &HashMap<String, Option<String>>) {
+async fn insert_cached<C: ConnectionTrait>(
+    db: &C,
+    fetched: &HashMap<String, Option<String>>,
+) {
     if fetched.is_empty() {
         return;
     }

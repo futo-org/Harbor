@@ -1,12 +1,12 @@
 //! Operator commands. Without `--yes` they only report what would change.
 
+use crate::db::DbConn;
 use crate::db::client::build_db_clients;
 use crate::service::content::content_filestore::{
     ContentFilestore, ContentFilestoreConfig,
 };
-use crate::service::identity::repository::{Erased, Query};
+use crate::service::identity::repository::Query;
 use crate::service::identity::service as identity_service;
-use sea_orm::DatabaseConnection;
 
 pub const USAGE: &str = "usage: server delete-events (--identity <hex> | --public-key <hex>) [--yes]
        server prune-content [--yes]";
@@ -24,25 +24,26 @@ pub async fn delete_events(args: Vec<String>) {
             _ => usage_error(&format!("unexpected argument: {arg}")),
         }
     }
-    let db = connect().await;
-    let identities = match (identity, public_key) {
-        (Some(identity), None) => vec![identity],
+    let mut db = connect().await;
+    let (identities, count, public_key) = match (identity, public_key) {
+        (Some(identity), None) => {
+            let count = Query::count_events(&db, &identity)
+                .await
+                .expect("failed to count events");
+            (vec![identity], count, None)
+        }
         (None, Some(key)) => {
             let key = hex::decode(key)
                 .unwrap_or_else(|_| usage_error("--public-key must be hex"));
-            Query::identities_signed_by(&db, &key)
+            let counts = Query::identities_signed_by(&db, &key)
                 .await
-                .expect("failed to find identities")
+                .expect("failed to find identities");
+            let count = counts.iter().map(|(_, n)| *n as u64).sum();
+            let identities = counts.into_iter().map(|(i, _)| i).collect();
+            (identities, count, Some(key))
         }
         _ => usage_error("pass exactly one of --identity or --public-key"),
     };
-
-    let mut count = 0;
-    for identity in &identities {
-        count += Query::count_events(&db, identity)
-            .await
-            .expect("failed to count events");
-    }
     if !yes {
         println!(
             "{count} events across {} identities would be deleted; add --yes to delete them",
@@ -52,20 +53,24 @@ pub async fn delete_events(args: Vec<String>) {
     }
 
     let filestore = filestore().await;
-    let mut total = Erased::default();
-    for identity in &identities {
-        let erased = identity_service::erase_identity(
-            &db,
+    let total = match public_key {
+        Some(key) => identity_service::erase_signed_by(
+            &mut db,
             filestore.as_ref(),
-            None,
-            identity,
+            &key,
+            &identities,
         )
         .await
-        .expect("failed to delete events");
-        total.events += erased.events;
-        total.content += erased.content;
-        total.blobs += erased.blobs;
-    }
+        .expect("failed to delete events"),
+        None => identity_service::erase_identity(
+            &mut db,
+            filestore.as_ref(),
+            None,
+            &identities[0],
+        )
+        .await
+        .expect("failed to delete events"),
+    };
     println!(
         "deleted {} events, {} orphaned content rows and {} blobs across {} identities",
         total.events,
@@ -82,7 +87,7 @@ pub async fn prune_content(args: Vec<String>) {
         _ => usage_error("unexpected arguments"),
     };
 
-    let db = connect().await;
+    let mut db = connect().await;
     if !yes {
         let count = Query::count_orphan_content(&db)
             .await
@@ -94,7 +99,7 @@ pub async fn prune_content(args: Vec<String>) {
     }
 
     let filestore = filestore().await;
-    let pruned = identity_service::prune_content(&db, filestore.as_ref())
+    let pruned = identity_service::prune_content(&mut db, filestore.as_ref())
         .await
         .expect("failed to prune content");
     println!(
@@ -103,11 +108,15 @@ pub async fn prune_content(args: Vec<String>) {
     );
 }
 
-async fn connect() -> DatabaseConnection {
-    build_db_clients(true)
+/// No statement timeout: finding a key's identities scans every event.
+async fn connect() -> DbConn {
+    let pool = build_db_clients(true, None)
         .await
         .expect("failed to connect to database")
-        .0
+        .0;
+    DbConn::from_pool(&pool)
+        .await
+        .expect("failed to connect to database")
 }
 
 async fn filestore() -> Option<ContentFilestore> {

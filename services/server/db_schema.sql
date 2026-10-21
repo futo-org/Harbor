@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict pDfhDFSWlMVwKJJCtVjCu9jpArxFvkN6yDVEZFQGYIycOWdbwu1Quua6JieaPNw
+\restrict harborServerDB
 
 -- Dumped from database version 18.6 (Debian 18.6-1.pgdg13+2)
--- Dumped by pg_dump version 18.4 (Homebrew)
+-- Dumped by pg_dump version 18.6 (Debian 18.6-1.pgdg12+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -36,37 +36,7 @@ CREATE AGGREGATE public.tsvector_agg(tsvector) (
 
 CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char") RETURNS tsvector
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM string_to_table(COALESCE(create_tsvector.text, ''::text), ' '::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
-
-
---
--- Name: reaction_count_decay(bigint, timestamp with time zone, numeric, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone, gravity numeric, gravity_time timestamp with time zone) RETURNS numeric
-    LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN ((((reaction_count + 1))::numeric / power((GREATEST((EXTRACT(epoch FROM (gravity_time - post_created_at)) / (3600)::numeric), (0)::numeric) + (2)::numeric), gravity)))::numeric(20,11);
-
-
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
-
---
--- Name: gravity; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.gravity (
-    value numeric(20,11) NOT NULL,
-    calculated_at timestamp with time zone NOT NULL
-);
-
-
---
--- Name: TABLE gravity; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.gravity IS 'Table to hold the dynamic gravity value.';
+    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
 
 
 --
@@ -74,17 +44,37 @@ COMMENT ON TABLE public.gravity IS 'Table to hold the dynamic gravity value.';
 --
 
 CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone) RETURNS numeric
-    LANGUAGE sql STABLE PARALLEL SAFE
-    RETURN public.reaction_count_decay(reaction_count, post_created_at, (SELECT gravity.value FROM public.gravity), (SELECT gravity.calculated_at FROM public.gravity));
+    LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
+    AS $$
+BEGIN
+  RETURN CASE
+    WHEN post_created_at < (SELECT expires_at FROM gravity) THEN 0
+    ELSE (
+      (reaction_count + 1)::NUMERIC / power(
+        GREATEST(
+          EXTRACT(epoch FROM ((SELECT calculated_at FROM gravity) - post_created_at))::NUMERIC / 3600::NUMERIC,
+          0::NUMERIC
+        ) + 2::NUMERIC,
+        (SELECT value FROM gravity)
+      )
+    )::NUMERIC(20, 11)
+  END;
+EXCEPTION
+    WHEN numeric_value_out_of_range THEN
+      RETURN (0)::numeric;
+END;
+$$;
 
 
 --
--- Name: reaction_count_decay(bigint, timestamp with time zone, numeric); Type: FUNCTION; Schema: public; Owner: -
+-- Name: tsquery_agg(tsquery); Type: AGGREGATE; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone, gravity numeric) RETURNS numeric
-    LANGUAGE sql STABLE PARALLEL SAFE
-    RETURN public.reaction_count_decay(reaction_count, post_created_at, gravity, (SELECT gravity.calculated_at FROM public.gravity));
+CREATE AGGREGATE public.tsquery_agg(tsquery) (
+    SFUNC = tsquery_or,
+    STYPE = tsquery,
+    INITCOND = ''
+);
 
 
 --
@@ -93,7 +83,22 @@ CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_
 
 CREATE FUNCTION public.search_query(query text) RETURNS tsquery
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (COALESCE(to_tsquery('english'::regconfig, query), to_tsquery('simple'::regconfig, ''::text)) || COALESCE(to_tsquery('simple'::regconfig, query), to_tsquery('simple'::regconfig, ''::text)));
+    RETURN ((COALESCE(to_tsquery('english'::regconfig, query), ''::tsquery) || COALESCE(to_tsquery('simple'::regconfig, query), ''::tsquery)) || (SELECT public.tsquery_agg((data.word)::tsquery) AS tsquery_agg FROM regexp_split_to_table(COALESCE(search_query.query, ''::text), '[[:space:]]'::text) data(word) WHERE ("left"(data.word, '-2'::integer) ~ '^([a-fA-F0-9])*$'::text)));
+
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: alias_cache; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.alias_cache (
+    alias character varying NOT NULL,
+    identity character varying,
+    updated_at timestamp with time zone NOT NULL
+);
 
 
 --
@@ -452,7 +457,8 @@ CREATE TABLE public.events (
     event_bytes bytea NOT NULL,
     created_at timestamp with time zone NOT NULL,
     synced_at timestamp with time zone NOT NULL,
-    application_id integer
+    application_id integer,
+    content_type smallint
 );
 
 
@@ -479,6 +485,24 @@ CREATE TABLE public.follow (
     follower text NOT NULL,
     followee text NOT NULL
 );
+
+
+--
+-- Name: gravity; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gravity (
+    value numeric(20,11) NOT NULL,
+    calculated_at timestamp with time zone NOT NULL,
+    expires_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: TABLE gravity; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.gravity IS 'Table to hold the dynamic gravity value.';
 
 
 --
@@ -527,6 +551,17 @@ ALTER TABLE public.notification ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDEN
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
+);
+
+
+--
+-- Name: notification_read_marker; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.notification_read_marker (
+    identity character varying NOT NULL,
+    last_read_id bigint NOT NULL,
+    updated_at timestamp with time zone NOT NULL
 );
 
 
@@ -642,9 +677,9 @@ CREATE TABLE public.seaql_migrations (
 
 CREATE TABLE public.url_info_cache (
     url character varying NOT NULL,
-    title character varying NOT NULL,
-    description character varying NOT NULL,
-    image character varying NOT NULL,
+    title text,
+    description text,
+    image text,
     raw_response character varying,
     error_code integer,
     error_message character varying,
@@ -663,6 +698,14 @@ CREATE TABLE public.verification_schema (
     schema_bytes bytea NOT NULL,
     schema jsonb NOT NULL
 );
+
+
+--
+-- Name: alias_cache alias_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alias_cache
+    ADD CONSTRAINT alias_cache_pkey PRIMARY KEY (alias);
 
 
 --
@@ -863,6 +906,14 @@ ALTER TABLE ONLY public.moderator
 
 ALTER TABLE ONLY public.notification
     ADD CONSTRAINT notification_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: notification_read_marker notification_read_marker_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notification_read_marker
+    ADD CONSTRAINT notification_read_marker_pkey PRIMARY KEY (identity);
 
 
 --
@@ -1075,6 +1126,13 @@ CREATE INDEX events_content_digest_idx ON public.events USING btree (content_dig
 
 
 --
+-- Name: events_feed_posts_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX events_feed_posts_idx ON public.events USING btree (created_at DESC, id DESC) WHERE ((collection = 2) AND (content_type = 2));
+
+
+--
 -- Name: events_identity_heads_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1208,6 +1266,13 @@ CREATE INDEX reaction_tally_decayed_count ON public.reaction_tally USING btree (
 
 
 --
+-- Name: reaction_tally_decayed_count_update; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX reaction_tally_decayed_count_update ON public.reaction_tally USING btree (event_id DESC) WHERE (decayed_count > (0)::numeric);
+
+
+--
 -- Name: reply_identity_post; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1287,5 +1352,5 @@ ALTER TABLE ONLY public.events
 -- PostgreSQL database dump complete
 --
 
-\unrestrict pDfhDFSWlMVwKJJCtVjCu9jpArxFvkN6yDVEZFQGYIycOWdbwu1Quua6JieaPNw
+\unrestrict harborServerDB
 

@@ -1,9 +1,8 @@
 import { type PaletteColorToken, useTheme } from '@/src/common/theme';
-import {
-  Ionicons,
-  MaterialCommunityIcons,
-  MaterialIcons,
-} from '@expo/vector-icons';
+// Per-set imports: the package index bundles every icon set and its fonts.
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { ComponentProps, ComponentType, ReactNode } from 'react';
 import { HarborSvg, type HarborSvgName } from './HarborSvg';
 
@@ -33,9 +32,11 @@ export const IconsMap = {
   add: defineIcon(Ionicons, 'add'),
   addCircleOutline: defineIcon(MaterialCommunityIcons, 'plus-circle-outline'),
   addOutline: defineIcon(Ionicons, 'add-circle-outline'),
+  airplane: defineIcon(MaterialCommunityIcons, 'airplane'),
   arrowBack: defineIcon(Ionicons, 'arrow-back'),
   at: defineIcon(Ionicons, 'at'),
   ban: defineIcon(Ionicons, 'ban'),
+  basketball: defineIcon(MaterialCommunityIcons, 'basketball'),
   bookOutline: defineIcon(MaterialCommunityIcons, 'book-open-outline'),
   briefcaseOutline: defineIcon(MaterialCommunityIcons, 'briefcase-outline'),
   camera: defineIcon(Ionicons, 'camera-outline'),
@@ -53,26 +54,36 @@ export const IconsMap = {
   close: defineIcon(Ionicons, 'close'),
   closeCircle: defineIcon(Ionicons, 'close-circle'),
   closeSharp: defineIcon(Ionicons, 'close-sharp'),
+  contrast: defineIcon(Ionicons, 'contrast'),
   copy: defineIcon(Ionicons, 'copy-outline'),
   document: defineIcon(Ionicons, 'document-outline'),
   dotsVertical: defineIcon(MaterialCommunityIcons, 'dots-vertical'),
   download: defineIcon(Ionicons, 'download-outline'),
   edit: defineIcon(MaterialCommunityIcons, 'pencil-outline'),
   emoji: defineIcon(MaterialIcons, 'emoji-emotions'),
+  emoticonHappy: defineIcon(MaterialCommunityIcons, 'emoticon-happy-outline'),
   flag: defineIcon(Ionicons, 'flag-outline'),
+  flagAlt: defineIcon(MaterialCommunityIcons, 'flag-outline'),
+  foodApple: defineIcon(MaterialCommunityIcons, 'food-apple-outline'),
   form: defineIcon(MaterialCommunityIcons, 'form-select'),
+  handWave: defineIcon(MaterialCommunityIcons, 'hand-wave-outline'),
   home: defineIcon(Ionicons, 'home-outline'),
   image: defineIcon(Ionicons, 'image-outline'),
   images: defineIcon(Ionicons, 'images-outline'),
   infoOutline: defineIcon(MaterialCommunityIcons, 'information-outline'),
   key: defineIcon(MaterialIcons, 'vpn-key'),
+  lightbulb: defineIcon(MaterialCommunityIcons, 'lightbulb-variant-outline'),
   menu: defineIcon(Ionicons, 'menu'),
   more: defineIcon(Ionicons, 'ellipsis-horizontal'),
   notification: defineIcon(MaterialCommunityIcons, 'bell-outline'),
-  personAdd: defineIcon(Ionicons, 'person-add'),
-  personAddOutline: defineIcon(Ionicons, 'person-add-outline'),
-  personOutline: defineIcon(Ionicons, 'person-outline'),
-  personRemove: defineIcon(Ionicons, 'person-remove'),
+  people: defineIcon(Ionicons, 'people'),
+  paw: defineIcon(MaterialCommunityIcons, 'paw'),
+  personAdd: defineIcon(MaterialCommunityIcons, 'account-plus'),
+  personAddOutline: defineIcon(MaterialCommunityIcons, 'account-plus-outline'),
+  personCheck: defineIcon(MaterialCommunityIcons, 'account-check'),
+  personOutline: defineIcon(MaterialCommunityIcons, 'account-outline'),
+  personRemove: defineIcon(MaterialCommunityIcons, 'account-minus'),
+  pound: defineIcon(MaterialCommunityIcons, 'pound'),
   quote: defineHarborIcon('quote'),
   reaction: defineHarborIcon('reaction'),
   reactionOutline: defineHarborIcon('reactionOutline'),

@@ -1,6 +1,5 @@
 package org.futo.polycentric.core
 
-import java.util.Base64
 import kotlinx.coroutines.runBlocking
 import org.futo.polycentric.core.KeyTypes
 import org.futo.polycentric.core.PolycentricException
@@ -10,6 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Base64
 
 /**
  * Port of js-core `crypto/server-jwt.test.ts`.
@@ -19,35 +19,40 @@ import org.junit.Test
  * java.util.Base64 before API 26), so it is pinned against the JDK here.
  */
 class ServerJwtTest {
-
     private val crypto = Ed25519CryptoManager()
 
     private val privateKey = ByteArray(32) { 7 }
     private val publicKey = crypto.derivePublicKey(privateKey, KeyTypes.ED25519)
-    private val keyPair = StoredKeyPair(
-        keyType = KeyTypes.ED25519,
-        publicKey = publicKey,
-        privateKey = privateKey,
-    )
+    private val keyPair =
+        StoredKeyPair(
+            keyType = KeyTypes.ED25519,
+            publicKey = publicKey,
+            privateKey = privateKey,
+        )
 
     private val identity = "identity-key-hex"
     private val server = "https://server.example.com"
 
-    private class Parts(val header: String, val claims: String, val signature: String)
+    private class Parts(
+        val header: String,
+        val claims: String,
+        val signature: String,
+    )
 
-    private fun createParts(expirySeconds: Long? = null): Parts = runBlocking {
-        val jwt = if (expirySeconds != null) {
-            ServerJwt.create(crypto, keyPair, iss = identity, aud = server, expirySeconds = expirySeconds)
-        } else {
-            ServerJwt.create(crypto, keyPair, iss = identity, aud = server)
+    private fun createParts(expirySeconds: Long? = null): Parts =
+        runBlocking {
+            val jwt =
+                if (expirySeconds != null) {
+                    ServerJwt.create(crypto, keyPair, iss = identity, aud = server, expirySeconds = expirySeconds)
+                } else {
+                    ServerJwt.create(crypto, keyPair, iss = identity, aud = server)
+                }
+            val (header, claims, signature) = jwt.split(".")
+            Parts(header, claims, signature)
         }
-        val (header, claims, signature) = jwt.split(".")
-        Parts(header, claims, signature)
-    }
 
     /** java.util.Base64's URL decoder accepts the unpadded form RFC 7515 requires. */
-    private fun decodeSegment(segment: String): JSONObject =
-        JSONObject(String(Base64.getUrlDecoder().decode(segment), Charsets.UTF_8))
+    private fun decodeSegment(segment: String): JSONObject = JSONObject(String(Base64.getUrlDecoder().decode(segment), Charsets.UTF_8))
 
     @Test
     fun `carries the issuer, audience, and signing key`() {
@@ -89,12 +94,13 @@ class ServerJwtTest {
     fun `signs header claims with the keypair EdDSA`() {
         val parts = createParts()
 
-        val verified = crypto.verify(
-            publicKey,
-            "${parts.header}.${parts.claims}".toByteArray(Charsets.US_ASCII),
-            Base64.getUrlDecoder().decode(parts.signature),
-            KeyTypes.ED25519,
-        )
+        val verified =
+            crypto.verify(
+                publicKey,
+                "${parts.header}.${parts.claims}".toByteArray(Charsets.US_ASCII),
+                Base64.getUrlDecoder().decode(parts.signature),
+                KeyTypes.ED25519,
+            )
         assertTrue(verified)
     }
 
@@ -102,9 +108,10 @@ class ServerJwtTest {
     fun `rejects a non-ed25519 keypair`() {
         val badPair = StoredKeyPair(keyType = 0, publicKey = publicKey, privateKey = privateKey)
 
-        val e = assertThrows(PolycentricException::class.java) {
-            runBlocking { ServerJwt.create(crypto, badPair, iss = identity, aud = server) }
-        }
+        val e =
+            assertThrows(PolycentricException::class.java) {
+                runBlocking { ServerJwt.create(crypto, badPair, iss = identity, aud = server) }
+            }
         assertTrue(e.message!!.contains("Unsupported key type"))
     }
 

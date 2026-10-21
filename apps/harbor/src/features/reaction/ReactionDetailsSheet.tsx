@@ -142,7 +142,7 @@ export default function ReactionDetailsSheet({
         fetchMode={FetchMode.OfflineFirst}
         onPress={() => {
           onClose();
-          router.push(Routes.tabs.profile(item.identity));
+          router.navigate(Routes.tabs.profile(item.identity));
         }}
         trailing={
           <Text fontSize="lg" lineHeight="lg">

@@ -1,7 +1,8 @@
 import { Button, Text } from '@/src/common/components/primitives';
+import { CONTENT_POLICY_URL } from '@/src/common/constants';
 import { Atoms } from '@/src/common/theme';
 import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
-import { router } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { View } from 'react-native';
 
 export default function SetModerationScreen() {
@@ -24,6 +25,15 @@ export default function SetModerationScreen() {
         <Text variant="body" color="neutral_500">
           This setting can be changed at any time in your settings.
         </Text>
+        <Link
+          href={CONTENT_POLICY_URL}
+          target="_blank"
+          accessibilityRole="link"
+        >
+          <Text variant="body" color="neutral_500">
+            Content policy for the FUTO servers ↗
+          </Text>
+        </Link>
         <Text variant="body" color="primary_500">
           dev note: Make this more succinct. maybe put some in an info window.
         </Text>

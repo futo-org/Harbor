@@ -6,6 +6,7 @@ import {
   type FontWeightToken,
   type PaletteColorToken,
 } from '@/src/common/theme';
+import { type Href, Link, router } from 'expo-router';
 import {
   Animated,
   Pressable,
@@ -17,8 +18,9 @@ import { Text, type TextVariant } from './Text';
 
 type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 
-interface LinkButtonProps extends Omit<PressableProps, 'style'> {
-  onPress: () => void;
+interface LinkButtonProps extends Omit<PressableProps, 'style' | 'href'> {
+  onPress?: () => void;
+  href?: Href;
   title: string;
   color?: PaletteColorToken;
   icon?: IconRenderFn;
@@ -26,12 +28,12 @@ interface LinkButtonProps extends Omit<PressableProps, 'style'> {
   containerStyle?: StyleProp<ViewStyle>;
   variant?: TextVariant;
   fontWeight?: FontWeightToken;
-  italic?: boolean;
   underlineOnHover?: boolean;
 }
 
 export function LinkButton({
   onPress,
+  href,
   title,
   color = 'primary_500',
   icon,
@@ -39,7 +41,6 @@ export function LinkButton({
   containerStyle,
   variant = 'body',
   fontWeight = 'semibold',
-  italic,
   underlineOnHover = false,
   disabled,
   ...props
@@ -50,10 +51,19 @@ export function LinkButton({
 
   const textColor = theme.palette[color];
 
+  const linkHref = href && !disabled ? Link.resolveHref(href) : undefined;
+  const handlePress = (event?: { preventDefault?: () => void }) => {
+    onPress?.();
+    if (!href) return;
+    event?.preventDefault?.();
+    router.navigate(href);
+  };
+
   return (
     <Animated.View style={[animatedStyle, containerStyle]}>
       <Pressable
-        onPress={onPress}
+        href={linkHref}
+        onPress={handlePress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         onHoverIn={onHoverIn}
@@ -74,7 +84,6 @@ export function LinkButton({
           variant={variant}
           fontWeight={fontWeight}
           color={color}
-          italic={italic}
           style={
             hovered && underlineOnHover && !disabled
               ? { textDecorationLine: 'underline' }

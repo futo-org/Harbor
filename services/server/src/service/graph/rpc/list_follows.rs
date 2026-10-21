@@ -1,13 +1,16 @@
 //! Shared handler for `ListFollowing` / `ListFollowers`: a page of
 //! Follow events, tombstone-filtered, newest first.
 
+use sea_orm::ConnectionTrait;
+use tonic::Status;
+
 use crate::data::filter::{self, Filtered};
 use crate::data::hydration::{HydrationState, collect_identities};
 use crate::data::pipeline::{self, Fetched};
 use crate::data::{
     CursorFilter, EventWithContentRow, PaginationParams, assemble_bundles,
 };
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::EventCreatedAt;
 use crate::service::feeds::rpc::common as feeds_pipeline;
@@ -15,8 +18,6 @@ use crate::service::feeds::util::map_db_err;
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::list_identity_and_profile_events;
 use crate::service::proto::{ListFollowsResponse, PageParams};
-use sea_orm::DbConn;
-use tonic::Status;
 
 /// Which side of the follow edge to list.
 pub enum Direction {
@@ -31,7 +32,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     identity: String,
     page_params: Option<&PageParams>,
     direction: Direction,
@@ -47,7 +48,7 @@ pub async fn handle(
     };
 
     pipeline::create_pipeline(
-        ctx,
+        &ctx,
         &params,
         fetch,
         hydrate,
@@ -57,8 +58,8 @@ pub async fn handle(
     .await
 }
 
-async fn list_page(
-    db: &DbConn,
+async fn list_page<C: ConnectionTrait>(
+    db: &C,
     params: &Params,
     limit: u32,
     cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -86,11 +87,11 @@ async fn list_page(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<Fetched<EventWithContentRow, EventCreatedAt>, Status> {
     let mut rows = list_page(
-        &ctx.ro_db,
+        &ctx.db,
         params,
         params.pagination.limit + 1, // Check for next page
         &params.pagination.cursor_filter,
@@ -108,7 +109,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     _params: &Params,
     fetched: &Fetched<EventWithContentRow, EventCreatedAt>,
 ) -> Result<HydrationState, Status> {
@@ -118,15 +119,12 @@ async fn hydrate(
         .map(|(e, _)| TargetEventKey::of(e))
         .collect();
 
-    let raw = tombstone::list_tombstones_for_event_keys(&ctx.ro_db, &keys)
+    let raw = tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
         .await
         .map_err(map_db_err)?;
     let deletes_by_target = tombstone::validate_tombstones(ctx, raw).await?;
 
-    let identities = collect_identities(
-        ctx.trusted_moderator.as_deref(),
-        fetched.rows.iter(),
-    );
+    let identities = collect_identities(fetched.rows.iter());
     let (identity_events, profile_events) =
         list_identity_and_profile_events(ctx, identities).await?;
 
@@ -139,7 +137,7 @@ async fn hydrate(
 }
 
 async fn view(
-    _ctx: &ServiceContext,
+    _ctx: &PublicContext,
     _params: &Params,
     filtered: Filtered<EventWithContentRow, EventCreatedAt>,
     hydration: HydrationState,
@@ -153,15 +151,19 @@ async fn view(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::proto::{Content, Follow, content::ContentBody};
+    use std::sync::Arc;
+
     use chrono::DateTime;
     use entity::{content, event};
     use polycentric_common::models::collections;
-    use prost::Message as _;
+    use prost::Message;
     use sea_orm::prelude::DateTimeWithTimeZone;
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, MockRow};
-    use std::sync::Arc;
+
+    use super::*;
+    use crate::service::context::ServiceContext;
+    use crate::service::proto::content::ContentBody;
+    use crate::service::proto::{Content, Follow};
 
     async fn ctx(db: DatabaseConnection) -> Arc<ServiceContext> {
         let kafka_producer = common_kafka::build_producer()
@@ -203,6 +205,7 @@ mod tests {
                 event_bytes: vec![id as u8],
                 created_at: ts(id),
                 synced_at: ts(id),
+                content_type: None,
             },
             content::Model {
                 id,
@@ -236,10 +239,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             "target".to_string(),
             Some(&PageParams {
                 limit: Some(2),
@@ -266,10 +273,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             "target".to_string(),
             Some(&PageParams {
                 limit: Some(2),
@@ -293,10 +304,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response =
-            handle(&ctx, "target".to_string(), None, Direction::Followers)
+            handle(ctx, "target".to_string(), None, Direction::Followers)
                 .await
                 .unwrap();
 
@@ -322,10 +337,14 @@ mod tests {
     #[tokio::test]
     async fn rejects_an_empty_identity() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let result =
-            handle(&ctx, String::new(), None, Direction::Followers).await;
+            handle(ctx, String::new(), None, Direction::Followers).await;
         assert_eq!(result.unwrap_err().code(), tonic::Code::InvalidArgument);
     }
 }

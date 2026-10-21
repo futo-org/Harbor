@@ -4,6 +4,10 @@ import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { decodeProfile } from '../lib/decodeProfile';
 
 export interface ProfileHookResult {
+  /**
+   * Only for exceptions (page titles, moderation labels, the edit form).
+   * Display names render through `Username` or `useUsername`.
+   */
   name: string | null;
   description: string | null;
   avatar: v2.ImageSet | null;
@@ -12,6 +16,11 @@ export interface ProfileHookResult {
   followingCount: number;
   followersCount: number;
   isLoading: boolean;
+  /**
+   * False until a server has answered or the local store had profile events,
+   * so an empty `name` is only meaningful once this is true.
+   */
+  isResolved: boolean;
   error: Error | null;
   refresh: () => void;
 }
@@ -25,7 +34,7 @@ export interface UseProfileOptions {
 
 const EMPTY_PROFILE: Omit<
   ProfileHookResult,
-  'isLoading' | 'error' | 'refresh'
+  'isLoading' | 'isResolved' | 'error' | 'refresh'
 > = {
   name: null,
   description: null,
@@ -74,6 +83,9 @@ export function useProfile(
     followingCount: decoded.followingCount,
     followersCount: decoded.followersCount,
     isLoading: query.isLoading,
+    // A local miss emits an empty response, indistinguishable by data alone.
+    isResolved:
+      query.successfulServers > 0 || (query.data?.byteLength ?? 0) > 0,
     error: query.error ? new Error(query.error) : null,
     refresh: () => query.refresh(RefreshStrategy.Fetch),
   };

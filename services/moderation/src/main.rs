@@ -9,7 +9,7 @@ mod repository;
 use std::collections::HashMap;
 use std::time::Duration;
 
-use common_kafka::{BorrowedMessage, CommitMode, Consumer, Message, Offset};
+use common_kafka::{BorrowedMessage, Consumer, Message, Offset};
 use common_object_store::{ObjectStore, ObjectStoreConfig};
 use context::Context;
 use polycentric::{PolycentricClient, PublishError};
@@ -27,18 +27,18 @@ use providers::{
 // Aliased: `Message` above is rdkafka's message trait; this brings the
 // prost decode trait into scope without shadowing it.
 use prost::Message as ProstMessage;
+use sea_orm::error::SqlErr;
 use sea_orm::sea_query::value::prelude::serde_json;
 
 /// Duration before retrying a Retry event
 const RETRY_BACKOFF: Duration = Duration::from_secs(2);
 
-/// Number of times a message is retried before it is skipped (committed
-/// past without being processed).
+/// Number of times a message is retried before it is skipped.
 const MAX_RETRIES: u32 = 5;
 
-/// Whether the consumed message's offset should be committed.
+/// What to do with the consumed message's offset.
 enum Outcome {
-    /// Done with this message — commit so it is not redelivered.
+    /// Done. Store the offset so it is committed and not redelivered.
     Commit,
     /// Transient failure — seek back so the message is re-delivered and
     /// retried (see the consume loop). After [`MAX_RETRIES`] it is skipped.
@@ -149,9 +149,15 @@ fn content_text(content: &Content) -> Option<String> {
             }
             // Link previews carry user-/site-supplied text worth moderating.
             for link in &post.links {
-                for field in [&link.title, &link.description, &link.url] {
-                    if !field.is_empty() {
-                        parts.push(field.as_str());
+                for field in [
+                    Some(&*link.title),
+                    link.description.as_deref(),
+                    Some(&*link.url),
+                ] {
+                    if let Some(field) = field
+                        && !field.is_empty()
+                    {
+                        parts.push(field);
                     }
                 }
             }
@@ -363,7 +369,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Listen to a Kafka topic of all events.
-    let consumer = common_kafka::build_consumer("events", &["events"]).await;
+    let consumer = common_kafka::build_consumer("moderation", &["events"]).await;
 
     // Failure counts for messages currently being retried.
     let mut attempts: HashMap<(i32, i64), u32> = HashMap::new();
@@ -383,8 +389,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Outcome::Commit => {
                 attempts.remove(&coord);
                 count_message("committed");
-                if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
-                    tracing::warn!(error = %e, "failed to commit offset");
+                if let Err(e) = consumer.store_offset_from_message(&message) {
+                    tracing::warn!(error = %e, "failed to store offset");
                 }
             }
             Outcome::Retry => {
@@ -396,8 +402,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if failures > MAX_RETRIES {
                     count_message("skipped");
-                    // Retries exhausted — give up and commit past this message
-                    // so the partition can make progress.
+                    // Retries exhausted. Skip so the partition can make progress.
                     tracing::error!(
                         partition = coord.0,
                         offset = coord.1,
@@ -405,8 +410,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         "message failed repeatedly; skipping"
                     );
                     attempts.remove(&coord);
-                    if let Err(e) = consumer.commit_message(&message, CommitMode::Async) {
-                        tracing::warn!(error = %e, "failed to commit offset after skip");
+                    if let Err(e) = consumer.store_offset_from_message(&message) {
+                        tracing::warn!(error = %e, "failed to store offset after skip");
                     }
                 } else {
                     count_message("retried");
@@ -472,12 +477,9 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
 
     // Obtain the Azure result: reuse a prior one if this content was already
     // processed, otherwise run Azure now and persist the outcome.
-    let azure_response = match repository::get_content(
-        &ctx.ro_db,
-        digest_type,
-        digest_bytes.clone(),
-    )
-    .await
+    // Read from primary db to avoid potential collissions.
+    let azure_response = match repository::get_content(&ctx.db, digest_type, digest_bytes.clone())
+        .await
     {
         // Already processed by Azure — skip the Azure step and reuse the
         // stored result (we still confirm the labels event below).
@@ -497,11 +499,21 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
         },
         Ok(None) => {
             // Reserve the row in the PENDING state before processing.
-            if let Err(e) =
+            if let Err(err) =
                 repository::create_pending(&ctx.db, digest_type, digest_bytes.clone()).await
             {
-                tracing::warn!(error = %e, digest = digest_fp(&digest_bytes), "create_pending error");
-                return Outcome::Retry;
+                if let Some(SqlErr::UniqueConstraintViolation(constraint)) = err.sql_err()
+                    && constraint == "processed_content_pkey"
+                {
+                    // The pending row is already created.
+                    //
+                    // Since we don't know if another process is currently
+                    // processing the message or failed to do so previously we
+                    // process the message again.
+                } else {
+                    tracing::warn!(error = %err, digest = digest_fp(&digest_bytes), "create_pending error");
+                    return Outcome::Retry;
+                }
             }
 
             let images = fetch_images(ctx, &content).await;

@@ -37,13 +37,13 @@ Rules:
 
 ## Deploys
 
-Components: `server`, `moderation`, `push-notifications`, `scraper`,
-`verifier-bot`, `web`, `app`, `docs`.
+Components: `server`, `moderation`, `push-notifications`, `grayjay-migrator`,
+`scraper`, `verifier-bot`, `web`, `app`, `docs`.
 
 `deploy-<component>-staging.yml` runs on a push to `develop` that touches the
 component's paths (or the workflow and the actions it uses), and manually. A
-service deploy builds the commit's image (BuildKit's registry cache makes a
-rebuild of unchanged sources a matter of seconds; `web` and `verifier-bot`
+service deploy builds the commit's image (the Rust services build their
+binaries in a job of their own first; `web` and `verifier-bot`
 first build the SDKs, and wasm when its copy is missing), packages and pushes
 the component's chart as
 `<next patch>-<ref>.g<sha>` with the commit as `appVersion`, then moves the
@@ -77,15 +77,16 @@ profile and Maestro (`ios-e2e`).
 Provisioned by harbor-infra (`futo-git/ci_values`, `ci_variables`).
 
 - `REGISTRY_USER` (variable), `REGISTRY_TOKEN`: zot API key of the CI user.
-- `EXPO_TOKEN`, `NPM_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+- `EXPO_TOKEN`, `OPEN_ROUTER_API_TOKEN`, `CLOUDFLARE_API_TOKEN`,
+  `CLOUDFLARE_ACCOUNT_ID`,
   `MATTERMOST_RELEASES_WEBHOOK`, `VERIFIER_BOT_ENV_VARS` (base64 `.env`).
 - `STATIC_S3_ENDPOINT`, `STATIC_S3_ACCESS_KEY_ID`,
   `STATIC_S3_SECRET_ACCESS_KEY`; variables `STATIC_S3_BUCKET`,
   `STATIC_PUBLIC_BASE_URL`.
 - `SCCACHE_R2_ENDPOINT`, `SCCACHE_R2_ACCESS_KEY_ID`,
   `SCCACHE_R2_SECRET_ACCESS_KEY`; variable `SCCACHE_R2_BUCKET`.
-- Variables `EXPO_PUBLIC_POLYCENTRIC_SEED_SERVERS`,
-  `EXPO_PUBLIC_POLYCENTRIC_VERIFIER_SERVERS`.
+- Variables `EXPO_PUBLIC_HARBOR_SEED_SERVERS`,
+  `EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS`.
 
 ## Caching
 
@@ -96,9 +97,17 @@ crates that still compile.
 
 Image builds run rootless BuildKit inside the job container (`ci/buildkit`,
 `buildctl-daemonless.sh`), no docker daemon involved, so nothing survives the
-job: they read and write the registry cache `<image>:cache-develop` with
-`mode=max`, and a build resumes from the step that changed. Rootless BuildKit
-needs the runner to start job containers with seccomp and AppArmor unconfined
+job. Layers are pushed zstd-compressed. No image compiles or installs in
+BuildKit: a job in the language's image builds what the Dockerfile's build
+stage would, `rust-binaries` in `ci/rust` (the `r2-cache` target and
+sccache, with a `--timings` report kept as an artifact) and `js-build` in the
+node image (`pnpm deploy` plus the build output), and uploads it as one
+tarball (`stage-artifact`). `service-image`'s `stage-artifact` input puts that
+in place of the `stage` (`builder` for Rust, `build` for web, scraper and
+verifier bot) as a named context, so only the runtime stage runs. Its layers (apt installs such as Chromium) are reused through
+cache metadata inlined in the `:staging` image, with no separate cache
+upload. Local builds still run every stage. Rootless BuildKit needs the
+runner to start job containers with seccomp and AppArmor unconfined
 (harbor-ops runner config).
 
 ## Release notes

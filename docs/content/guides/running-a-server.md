@@ -24,8 +24,8 @@ It depends on two backing services:
 Requires `git`, `docker`, and Docker Compose v2.
 
 ```bash
-git clone https://gitlab.futo.org/polycentric/polycentric.git
-cd polycentric
+git clone https://code.futo.org/harbor/harbor.git
+cd harbor
 
 # Build and start postgres, the object store, and the server.
 docker compose up -d --build
@@ -35,7 +35,7 @@ docker compose exec -T server /app/migration fresh
 ```
 
 The bundled `compose.yml` starts PostgreSQL, RustFS (with its `polycentric-blobs`
-bucket created automatically), and the server. By default the server is published on
+bucket created automatically), Kafka, Valkey, and the server. By default the server is published on
 host port `3000`; override it with `HARBOR_SERVER_PORT`.
 
 Confirm it is up:
@@ -54,17 +54,20 @@ file. With the Rust toolchain installed:
 
 ```bash
 # Start only the backing services.
-docker compose up -d postgres rustfs rustfs-init
+docker compose up -d postgres rustfs rustfs-init kafka valkey
 
 # Apply the schema, pointing at the local database.
 cd services/server/migration
-DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
+HARBOR_DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 
-# Run the server (reads the CONTENT_BLOB_OS_* and DATABASE_URL variables).
+# Setup a .env file:
+cd services/server
+cp .env.example .env
+# Run the server.
 cargo run -p server
 ```
 
-See [`services/server/README.md`](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/server/README.md)
+See [`services/server/README.md`](https://code.futo.org/harbor/harbor/src/branch/develop/services/server/README.md)
 for details.
 
 ## Configuration
@@ -86,7 +89,7 @@ loads a `.env` file from the working directory if one is present.
 
 | Variable       | Default                                          | Description                  |
 | -------------- | ------------------------------------------------ | ---------------------------- |
-| `DATABASE_URL` | `postgres://postgres:testing@localhost:5432`     | PostgreSQL connection string |
+| `HARBOR_DATABASE_URL` | `postgres://postgres:testing@localhost:5432`     | PostgreSQL connection string |
 
 ### Object storage (blobs)
 
@@ -123,17 +126,29 @@ The server produces events to Kafka, and its background workers consume them.
 | `HARBOR_KAFKA_BROKER_ADDRESS_FAMILY`  | `any`            | Kafka `broker.address.family`.                   |
 | `HARBOR_KAFKA_AUTO_OFFSET_RESET`      | `latest`         | Consumer `auto.offset.reset` (workers only).     |
 
+### Valkey (live sync)
+
+Optional. When set, the server streams new heads to an identity's other devices
+and tabs over `EventSyncService.SubscribeHeads`, so they pull new events right
+away. Needs Valkey (or Redis) 7 or newer. It stores nothing, so it needs no
+persistence. See [Live Sync](../developer/live-sync.md) for the design and
+scaling notes.
+
+| Variable            | Default   | Description                                                                                       |
+| ------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| `HARBOR_VALKEY_URL` | _(unset)_ | `redis://host:6379`, `rediss://` for TLS, or `redis-cluster://host:6379` for a cluster. Unset turns live sync off. |
+
 ### Logging and metrics
 
-| Variable       | Default   | Description                                                          |
-| -------------- | --------- | --------------------------------------------------------------------- |
-| `RUST_LOG`     | `info`    | Log filter, e.g. `info` or `debug`.                                  |
-| `LOG_FORMAT`   | _(auto)_  | `json` or `text`; defaults to text on a terminal, JSON otherwise.    |
-| `METRICS_PORT` | `9464`    | Port serving Prometheus `GET /metrics`.                              |
+| Variable              | Default   | Description                                                          |
+| --------------------- | --------- | --------------------------------------------------------------------- |
+| `RUST_LOG`            | `info`    | Log filter, e.g. `info` or `debug`.                                  |
+| `HARBOR_LOG_FORMAT`   | _(auto)_  | `json` or `text`; defaults to text on a terminal, JSON otherwise.    |
+| `HARBOR_METRICS_PORT` | `9464`    | Port serving Prometheus `GET /metrics`.                              |
 
 The companion services (moderation, push notifications, scraper) are configured the
 same way; their variables are listed in each service's README under
-[`services/`](https://gitlab.futo.org/polycentric/polycentric/-/tree/develop/services).
+[`services/`](https://code.futo.org/harbor/harbor/src/branch/develop/services).
 
 `HARBOR_SERVER_PORT` is read by `compose.yml` to choose the published host port;
 the server process itself always binds `3000` inside the container.
@@ -166,7 +181,7 @@ Most traffic is gRPC, but a few plain-HTTP routes are served directly:
 | `GET /blob/{digest}` | Download a blob body by content digest (`{type}_{hex}`, e.g. `1_<sha256 hex>`). |
 | `GET /docs`          | Live API browser generated from gRPC reflection.                     |
 
-See [Protocol → gRPC](../protocol/grpc.md) for the gRPC services.
+See [Protocol → gRPC](../protocol/grpc.mdx) for the gRPC services.
 
 ## Content moderation & removal
 
@@ -181,11 +196,11 @@ remain in the object store.
 
 Removing blob bodies can be done by a separate moderation service. FUTO runs
 one, and you can
-[run your own](https://gitlab.futo.org/polycentric/polycentric/-/blob/develop/services/moderation/README.md).
+[run your own](https://code.futo.org/harbor/harbor/src/branch/develop/services/moderation/README.md).
 It scans images (for example, matching against PhotoDNA to detect known CSAM),
 deletes matching blobs directly from the object store, and publishes a
 [`Report`](../protocol/data-model.md#report) event recording the violation. Because it
-deletes objects, the moderation service's `CONTENT_BLOB_OS_*` credentials need
+deletes objects, the moderation service's `HARBOR_CONTENT_BLOB_OS_*` credentials need
 delete permission on the bucket, while the server's own credentials do not.
 
 ### Moderation labels
@@ -293,5 +308,5 @@ deployment, terminate TLS at a reverse proxy in front of port `3000` and forward
 the server. The server already sends permissive CORS headers and enables gRPC-Web, so
 browser clients can connect once TLS is in place.
 
-Set `CDN_URL` to the public HTTPS URL of the server so clients fetch blobs over the
-proxy.
+Set `HARBOR_CDN_URL` to the public HTTPS URL of the server so clients fetch
+blobs over the proxy.

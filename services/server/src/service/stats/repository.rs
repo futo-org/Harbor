@@ -6,9 +6,7 @@ use sea_orm::sea_query::{
     Asterisk, ColumnRef, Expr, ExprTrait, Func, OnConflict, Order,
     SelectStatement,
 };
-use sea_orm::{
-    ColumnTrait, ConnectionTrait, DbConn, DbErr, EntityTrait, QueryFilter,
-};
+use sea_orm::{ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter};
 
 use crate::data::EventId;
 
@@ -18,8 +16,8 @@ impl Query {
     /// For each event in `events`, estimate the number of replies it has.
     /// Results are returned as a map from each event's key to its reply count.
     /// Events without any replies may be excluded from the output map.
-    pub async fn count_replies(
-        db: &DbConn,
+    pub async fn count_replies<C: ConnectionTrait>(
+        db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
     ) -> Result<HashMap<EventId, i64>, DbErr> {
         if event_ids.len() == 0 {
@@ -49,8 +47,8 @@ impl Query {
     /// For each event in `events`, get our estimates for the reaction summary counts.
     /// Results are returned as a map from each event's key to its reaction summary.
     /// Events with no reactions may be excluded from the output map.
-    pub async fn summarize_reactions(
-        db: &DbConn,
+    pub async fn summarize_reactions<C: ConnectionTrait>(
+        db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
     ) -> Result<HashMap<EventId, ReactionSummary>, DbErr> {
         if event_ids.len() == 0 {
@@ -104,8 +102,8 @@ impl Query {
     /// the events specified by `event_keys`.
     /// Up to `limit` rows will be returned for each event key ordered by most
     /// popular to least.
-    pub async fn tally_reactions(
-        db: &DbConn,
+    pub async fn tally_reactions<C: ConnectionTrait>(
+        db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
     ) -> Result<HashMap<EventId, Vec<ReactionTally>>, DbErr> {
         if event_ids.len() == 0 {
@@ -186,8 +184,8 @@ impl Mutation {
     /// Increment the upvote/downvote count for an out-of-network (URL)
     /// reaction, creating the summary row with a count of 1 if none exists yet.
     /// Mirrors `count_reaction_for` but keyed by URL.
-    pub async fn count_attributed_reaction_for(
-        db: &DbConn,
+    pub async fn count_attributed_reaction_for<C: ConnectionTrait>(
+        db: &C,
         url: String,
         positive: bool,
     ) -> Result<(), DbErr> {
@@ -226,8 +224,8 @@ impl Mutation {
 
     /// Decrement the upvote/downvote count for an out-of-network (URL)
     /// reaction, only when that count is greater than zero.
-    pub async fn remove_attributed_reaction_for(
-        db: &DbConn,
+    pub async fn remove_attributed_reaction_for<C: ConnectionTrait>(
+        db: &C,
         url: String,
         positive: bool,
     ) -> Result<(), DbErr> {
@@ -252,8 +250,8 @@ impl Mutation {
 
     /// Read the maintained `(upvote, downvote)` counts for a URL; `(0, 0)` if
     /// no reactions have been recorded for it yet.
-    pub async fn get_attributed_reaction_summary(
-        db: &DbConn,
+    pub async fn get_attributed_reaction_summary<C: ConnectionTrait>(
+        db: &C,
         url: &str,
     ) -> Result<(i64, i64), DbErr> {
         let row =

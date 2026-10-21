@@ -8,18 +8,26 @@ use crate::config;
 ///
 /// With `durable_commits` off connections run `synchronous_commit=off`;
 /// only for the workers, whose writes are caches rebuilt by Kafka replay.
+/// `statement_timeout` is unset for the operator commands.
 pub async fn build_db_clients(
     durable_commits: bool,
+    statement_timeout: Option<Duration>,
 ) -> Result<(DatabaseConnection, DatabaseConnection), sea_orm::DbErr> {
     let config = config::get();
     let max = config.database_max_connections;
 
-    let db =
-        create_pool("server-rw", &config.database_url, max, durable_commits)
-            .await?;
+    let db = create_pool(
+        "server-rw",
+        &config.database_url,
+        max,
+        durable_commits,
+        statement_timeout,
+    )
+    .await?;
 
     let ro_db = if let Some(url) = config.ro_database_url.as_deref() {
-        create_pool("server-ro", url, max, durable_commits).await?
+        create_pool("server-ro", url, max, durable_commits, statement_timeout)
+            .await?
     } else {
         // If no read-only instance is available reuse the read-write pool.
         db.clone()
@@ -33,17 +41,34 @@ async fn create_pool(
     url: &str,
     max: u32,
     durable_commits: bool,
+    statement_timeout: Option<Duration>,
 ) -> Result<DatabaseConnection, sea_orm::DbErr> {
     let mut opt =
         ConnectOptions::new(with_connection_options(url, durable_commits));
-    opt.max_connections(max)
+    opt.set_application_name("harbor-server")
+        .set_schema_search_path("public")
+        .max_connections(max)
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))
         .acquire_timeout(Duration::from_secs(8))
         .idle_timeout(Duration::from_secs(600))
         .max_lifetime(Duration::from_secs(1800))
-        .sqlx_logging(false)
-        .set_schema_search_path("public");
+        .record_stmt_in_spans(false)
+        // Only log slow execution of queries.
+        .sqlx_logging(true)
+        .sqlx_logging_level(log::LevelFilter::Off)
+        .sqlx_slow_statements_logging_settings(
+            log::LevelFilter::Warn,
+            Duration::from_secs(1),
+        )
+        .map_sqlx_postgres_pool_opts(|options| {
+            options
+                .acquire_slow_level(log::LevelFilter::Warn)
+                .acquire_slow_threshold(Duration::from_secs(1))
+        });
+    if let Some(timeout) = statement_timeout {
+        opt.statement_timeout(timeout);
+    }
 
     let db = Database::connect(opt).await?;
 

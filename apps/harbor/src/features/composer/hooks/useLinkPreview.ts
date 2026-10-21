@@ -104,8 +104,12 @@ export function useLinkPreview(text: string): UseLinkPreviewResult {
     void client.urlInfo(previewUrl).then((info) => {
       if (cancelled) return;
       // The endpoint returns metadata only; attach the URL we requested.
+      // The title is required, if we can't extract that we don't use the link
+      // preview.
       setLinkPreview(
-        info ? v2.Link.create({ ...info, url: previewUrl }) : null,
+        info && info?.title
+          ? v2.Link.create({ ...info, url: previewUrl })
+          : null,
       );
       setLinkPreviewLoading(false);
     });
@@ -145,7 +149,11 @@ export function useLinkPreview(text: string): UseLinkPreviewResult {
     if (linkPreview && linkPreview.url === targetUrl) return linkPreview;
     const info = await client.urlInfo(targetUrl);
     // Metadata-only response; populate the URL we requested.
-    return info ? v2.Link.create({ ...info, url: targetUrl }) : null;
+    // The title is required, if we can't extract that we don't use the link
+    // preview.
+    return info && info?.title
+      ? v2.Link.create({ ...info, url: targetUrl })
+      : null;
   }, [enabled, settlePreviewUrl, linkPreview, client]);
 
   return {

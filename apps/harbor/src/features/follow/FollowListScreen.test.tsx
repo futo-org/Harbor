@@ -123,16 +123,23 @@ jest.mock('@/src/common/components/Avatar/ProfileAvatar', () => ({
   ProfileAvatar: () => null,
 }));
 
-const mockPush = jest.fn();
+const mockNavigate = jest.fn();
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   router: {
-    push: (...args: unknown[]) => mockPush(...args),
+    navigate: (...args: unknown[]) => mockNavigate(...args),
     replace: (...args: unknown[]) => mockReplace(...args),
   },
   useLocalSearchParams: () => ({ identityId: 'profile-id' }),
   useFocusEffect: () => undefined,
 }));
+
+jest.mock('@/src/features/follow/FollowingBadge', () => ({
+  __esModule: true,
+  FollowingBadge: () => null,
+}));
+
+jest.mock('@polycentric/react-native', () => ({ FetchMode: { Default: 'd' } }));
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -142,7 +149,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shortenIdentityId: (id: string) => `short-${id}`,
   truncateName: (name: string) => name,
   useCurrentIdentity: () => ({ identityKey: 'me' }),
-  useUsername: () => 'fallback',
+  useUsername: () => 'Alice',
 }));
 
 let mockProfileAlias: string | null = null;
@@ -232,7 +239,7 @@ describe('FollowListScreen rows', () => {
     const screen = await render(<FollowListScreen mode="followers" />);
 
     await fireEvent.press(screen.getByText('short-alice-id'));
-    expect(mockPush).toHaveBeenCalledWith('/alice-id');
+    expect(mockNavigate).toHaveBeenCalledWith('/alice-id');
     expect(screen.getByTestId('follow-bob-id')).toBeTruthy();
   });
 

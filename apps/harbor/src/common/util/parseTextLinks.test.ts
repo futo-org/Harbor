@@ -282,7 +282,7 @@ describe('parseTextLinks', () => {
 
   describe('raw offsets', () => {
     it('offsets stay raw after a curly mention (value ≠ raw slice)', () => {
-      // The curly mention renders as "Jane" but occupies far more raw chars;
+      // The curly mention renders as "@Jane" but occupies far more raw chars;
       // the alias after it must still report its true position.
       const input = `@{${HEX64},Jane} @user.example.com`;
       const alias = parseTextLinks(input).find((s) => s.type === 'alias');
@@ -344,7 +344,7 @@ describe('truncateSegments', () => {
 
     it('keeps raw offsets consistent when the cut segment starts late', () => {
       const text = `@{${HEX64},Jo} abcdef`;
-      const [, cut] = truncate(text, 5).segments;
+      const [, cut] = truncate(text, 6).segments;
       const start = text.indexOf(' ');
       expect(cut).toEqual({
         type: 'text',
@@ -358,10 +358,10 @@ describe('truncateSegments', () => {
   describe('curly mentions', () => {
     it('counts by display name, not raw length', () => {
       const text = `hi @{${HEX64},Jane} bye`;
-      expect(rendered(text, 6)).toBe('hi ');
-      expect(rendered(text, 7)).toBe('hi Jane');
-      expect(rendered(text, 8)).toBe('hi Jane ');
-      expect(rendered(text, 100)).toBe('hi Jane bye');
+      expect(rendered(text, 7)).toBe('hi ');
+      expect(rendered(text, 8)).toBe('hi @Jane');
+      expect(rendered(text, 9)).toBe('hi @Jane ');
+      expect(rendered(text, 100)).toBe('hi @Jane bye');
     });
 
     it('counts a nameless curly mention by its rendered @identity', () => {
@@ -372,7 +372,7 @@ describe('truncateSegments', () => {
 
     it('is dropped whole when it does not fit', () => {
       expect(rendered(`hi @{${HEX64},Jane Doe} bye`, 6)).toBe('hi ');
-      expect(rendered(`hi @{${HEX64},Jane Doe} bye`, 10)).toBe('hi ');
+      expect(rendered(`hi @{${HEX64},Jane Doe} bye`, 11)).toBe('hi ');
     });
 
     it('yields nothing when it is the first segment and wider than the limit', () => {
@@ -384,9 +384,9 @@ describe('truncateSegments', () => {
 
     it('spends the budget across several mentions', () => {
       const text = `@{${HEX64},Al} @{${HEX64},Bo} @{${HEX64},Cy}`;
-      expect(rendered(text, 5)).toBe('Al Bo');
-      expect(rendered(text, 7)).toBe('Al Bo ');
-      expect(rendered(text, 8)).toBe('Al Bo Cy');
+      expect(rendered(text, 7)).toBe('@Al @Bo');
+      expect(rendered(text, 9)).toBe('@Al @Bo ');
+      expect(rendered(text, 11)).toBe('@Al @Bo @Cy');
     });
   });
 
@@ -424,15 +424,15 @@ describe('truncateSegments', () => {
 
   describe('boundaries', () => {
     it('adds no empty text segment when the budget ends at a segment boundary', () => {
-      const { segments } = truncate(`hi @{${HEX64},Jane} bye`, 7);
+      const { segments } = truncate(`hi @{${HEX64},Jane} bye`, 8);
       expect(segments).toHaveLength(2);
       expect(segments.at(-1)?.type).toBe('identity');
     });
 
     it('reports truncated only when something was cut', () => {
       const text = `hi @{${HEX64},Jane}`;
-      expect(truncate(text, 7).truncated).toBe(false);
-      expect(truncate(text, 6).truncated).toBe(true);
+      expect(truncate(text, 8).truncated).toBe(false);
+      expect(truncate(text, 7).truncated).toBe(true);
       expect(truncate('hello', 5).truncated).toBe(false);
       expect(truncate('hello', 4).truncated).toBe(true);
     });

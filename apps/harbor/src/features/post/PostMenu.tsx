@@ -2,6 +2,7 @@ import { Text } from '@/src/common/components/primitives/Text';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
 import { withIdentity } from '@/src/common/lib/authGate';
+import { useCopyToClipboard } from '@/src/common/lib/useCopyToClipboard';
 import {
   type PostData,
   useCurrentIdentity,
@@ -10,7 +11,9 @@ import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
 import { useState } from 'react';
 import { View } from 'react-native';
+import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
 import ReportSheet from '../moderation/ReportSheet';
+import { buildPostLink } from './buildPostLink';
 import usePostActions from './hooks/usePostActions';
 
 type PostMenuProps = {
@@ -24,8 +27,10 @@ export default function PostMenu({ post }: PostMenuProps) {
   const isPostAuthor = currIdentity?.identityKey === post.identity;
 
   const { deleteAsync } = usePostActions(post);
+  const { copyToClipboard } = useCopyToClipboard({ showToast: true });
 
   const [showReportSheet, setShowReportSheet] = useState<boolean>(false);
+  const [showInfoSheet, setShowInfoSheet] = useState<boolean>(false);
 
   const onDeletePress = async () => {
     // Wait for confirm
@@ -74,6 +79,22 @@ export default function PostMenu({ post }: PostMenuProps) {
           )}
         </DropdownMenu.Trigger>
         <DropdownMenu.Content>
+          {/* Copy Link */}
+          <DropdownMenu.Item
+            onPress={() => copyToClipboard(buildPostLink(post))}
+          >
+            <Icon name="copy" color="neutral_500" size={16} />
+            <Text variant="secondary" fontWeight="bold">
+              Copy Link
+            </Text>
+          </DropdownMenu.Item>
+          {/* Info */}
+          <DropdownMenu.Item onPress={() => setShowInfoSheet(true)}>
+            <Icon name="infoOutline" color="neutral_500" size={16} />
+            <Text variant="secondary" fontWeight="bold">
+              Post info
+            </Text>
+          </DropdownMenu.Item>
           {/* Delete  */}
           {isPostAuthor && (
             <DropdownMenu.Item onPress={onDeletePress}>
@@ -102,6 +123,11 @@ export default function PostMenu({ post }: PostMenuProps) {
         eventId={post.id}
         open={showReportSheet}
         onClose={() => setShowReportSheet(false)}
+      />
+      <EventInfoSheet
+        source={{ signedEvent: post.signedEvent }}
+        open={showInfoSheet}
+        onClose={() => setShowInfoSheet(false)}
       />
     </>
   );

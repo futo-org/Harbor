@@ -24,6 +24,8 @@ pub struct Config {
     /// Hex identity string of the trusted moderation service
     /// (`HARBOR_MODERATION_IDENTITY`). `None` means no content labels.
     pub trusted_moderator: Option<String>,
+    /// Valkey URL for live sync (`HARBOR_VALKEY_URL`). `None` turns it off.
+    pub valkey_url: Option<String>,
     /// Gravity constant used in the reaction_count_decay function.
     ///
     /// Essentially the higher the number the larger the impact of the decay.
@@ -47,6 +49,9 @@ pub struct Config {
     pub dynamic_feeds_gravity_hours: usize,
     /// How often the decayed reaction counts should be updated.
     pub feed_count_update_frequency: Duration,
+    /// How much time events should be considered before their decayed reaction
+    /// count is set to zero.
+    pub feeds_gravity_expire: Duration,
     /// Test hook (`HARBOR_ALIAS_TEST_ORIGIN`): fetch every mention
     /// alias domain's `/.well-known/polycentric.json` from this origin
     /// instead of `https://<domain>`, and allow plain HTTP. `None` in
@@ -61,12 +66,9 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 pub fn init() -> &'static Config {
     CONFIG.get_or_init(|| {
         let server_name = std::env::var("HARBOR_SERVER_NAME")
-            .or_else(|_| std::env::var("POLYCENTRIC_SERVER_NAME"))
             .unwrap_or_else(|_| "http://localhost:3000".to_string());
         Config {
-            allow_hosts: match std::env::var("HARBOR_ALLOW_HOSTS")
-                .or_else(|_| std::env::var("POLYCENTRIC_ALLOW_HOSTS"))
-            {
+            allow_hosts: match std::env::var("HARBOR_ALLOW_HOSTS") {
                 Ok(hosts) => hosts
                     .split(',')
                     .map(str::trim)
@@ -75,51 +77,58 @@ pub fn init() -> &'static Config {
                     .collect(),
                 Err(_) => vec![server_name.clone()],
             },
-            database_url: std::env::var("HARBOR_DATABASE_URL")
-                .or_else(|_| std::env::var("DATABASE_URL"))
-                .unwrap_or_else(|_| "postgres://postgres:testing@localhost:5432".to_string()),
-            ro_database_url: std::env::var("HARBOR_DATABASE_URL_RO")
-                .or_else(|_| std::env::var("DATABASE_URL_RO"))
-                .ok(),
-            database_max_connections: std::env::var("HARBOR_DATABASE_MAX_CONNECTIONS")
-                .or_else(|_| std::env::var("POLYCENTRIC_DATABASE_MAX_CONNECTIONS"))
-                .ok()
-                .and_then(|s| s.trim().parse().ok())
-                .unwrap_or(100),
+            database_url: std::env::var("HARBOR_DATABASE_URL").unwrap_or_else(
+                |_| "postgres://postgres:testing@localhost:5432".to_string(),
+            ),
+            ro_database_url: std::env::var("HARBOR_DATABASE_URL_RO").ok(),
+            database_max_connections: std::env::var(
+                "HARBOR_DATABASE_MAX_CONNECTIONS",
+            )
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(100),
             cdn_url: std::env::var("HARBOR_CDN_URL")
-                .or_else(|_| std::env::var("CDN_URL"))
                 .unwrap_or_else(|_| "http://localhost:3000".to_string()),
             scraper_url: std::env::var("HARBOR_SCRAPER_URL")
-                .or_else(|_| std::env::var("POLYCENTRIC_SCRAPER_URL"))
                 .unwrap_or_else(|_| "http://localhost:8855".to_string()),
             trusted_moderator: std::env::var("HARBOR_MODERATION_IDENTITY")
-                .or_else(|_| std::env::var("POLYCENTRIC_MODERATION_IDENTITY"))
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty()),
+            valkey_url: std::env::var("HARBOR_VALKEY_URL")
                 .ok()
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),
             feeds_gravity: std::env::var("HARBOR_FEEDS_GRAVITY")
-                .or_else(|_| std::env::var("POLYCENTRIC_FEEDS_GRAVITY"))
                 .ok()
                 .and_then(|s| s.trim().parse().ok()),
-            dynamic_feeds_gravity_per_reaction: std::env::var("HARBOR_FEEDS_GRAVITY_PER_REACTION")
-                .or_else(|_| std::env::var("POLYCENTRIC_FEEDS_GRAVITY_PER_REACTION"))
-                .ok()
-                .and_then(|s| s.trim().parse().ok())
-                .unwrap_or(0.0005),
-            dynamic_feeds_gravity_hours: std::env::var("HARBOR_FEEDS_GRAVITY_HOURS")
-                .or_else(|_| std::env::var("POLYCENTRIC_FEEDS_GRAVITY_HOURS"))
-                .ok()
-                .and_then(|s| s.trim().parse().ok())
-                .unwrap_or(24),
+            dynamic_feeds_gravity_per_reaction: std::env::var(
+                "HARBOR_FEEDS_GRAVITY_PER_REACTION",
+            )
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(0.0005),
+            dynamic_feeds_gravity_hours: std::env::var(
+                "HARBOR_FEEDS_GRAVITY_HOURS",
+            )
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(24),
             feed_count_update_frequency: Duration::from_secs(
-                std::env::var("HARBOR_FEEDS_GRAVITY_COUNTS_UPDATE_FREQUENCY_SECS")
-                .or_else(|_| std::env::var("POLYCENTRIC_FEEDS_GRAVITY_COUNTS_UPDATE_FREQUENCY_SECS"))
+                std::env::var(
+                    "HARBOR_FEEDS_GRAVITY_COUNTS_UPDATE_FREQUENCY_SECS",
+                )
                 .ok()
                 .and_then(|s| s.trim().parse().ok())
                 .unwrap_or(5 * 60), // 5 minutes (as seconds).
             ),
+            feeds_gravity_expire: Duration::from_hours(
+                std::env::var("HARBOR_FEEDS_GRAVITY_EXPIRE_HOURS")
+                    .ok()
+                    .and_then(|s| s.trim().parse().ok())
+                    .unwrap_or(7 * 24), // 1 week.
+            ),
             alias_test_origin: std::env::var("HARBOR_ALIAS_TEST_ORIGIN")
-                .or_else(|_| std::env::var("POLYCENTRIC_ALIAS_TEST_ORIGIN"))
                 .ok()
                 .map(|s| s.trim().trim_end_matches('/').to_string())
                 .filter(|s| !s.is_empty()),

@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18
+    image: postgres:18@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
     environment:
       POSTGRES_PASSWORD: testing
     volumes:
@@ -16,33 +16,35 @@ services:
 
   server:
     # CI points this at the image built earlier in the pipeline.
-    image: ${HARBOR_SERVER_IMAGE:-${POLYCENTRIC_SERVER_IMAGE:-harbor-server}}
+    image: ${HARBOR_SERVER_IMAGE:-harbor-server}
     build:
       context: .
       dockerfile: services/server/Dockerfile
     ports:
-      - ${HARBOR_SERVER_PORT:-${POLYCENTRIC_SERVER_PORT:-3000}}:3000
+      - ${HARBOR_SERVER_PORT:-3000}:3000
     environment: &server-env
-      - RUST_LOG=debug
-      - HARBOR_DATABASE_URL=${DATABASE_URL:-postgres://postgres:testing@postgres:5432}
-      - HARBOR_CONTENT_BLOB_OS_BUCKET=${CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}
-      - HARBOR_CONTENT_BLOB_OS_ENDPOINT=${CONTENT_BLOB_OS_ENDPOINT:-http://rustfs:9000}
-      - HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE=${CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}
-      - HARBOR_CONTENT_BLOB_OS_ACCESS_KEY=${CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}
-      - HARBOR_CONTENT_BLOB_OS_SECRET_KEY=${CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}
-      - HARBOR_MODERATION_IDENTITY=${POLYCENTRIC_MODERATION_IDENTITY:-}
+      - RUST_LOG=${RUST_LOG:-debug}
+      - HARBOR_DATABASE_URL=${HARBOR_DATABASE_URL:-postgres://postgres:testing@postgres:5432}
+      - HARBOR_DATABASE_URL_RO=${HARBOR_DATABASE_URL_RO:-postgres://postgres:testing@postgres:5432?options=-c%20default_transaction_read_only=on}
+      - HARBOR_CONTENT_BLOB_OS_BUCKET=${HARBOR_CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}
+      - HARBOR_CONTENT_BLOB_OS_ENDPOINT=${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-http://rustfs:9000}
+      - HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE=${HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}
+      - HARBOR_CONTENT_BLOB_OS_ACCESS_KEY=${HARBOR_CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}
+      - HARBOR_CONTENT_BLOB_OS_SECRET_KEY=${HARBOR_CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}
+      - HARBOR_MODERATION_IDENTITY=${HARBOR_MODERATION_IDENTITY:-}
       # Canonical name of this server. Must exactly match the server URL
       # clients use.
-      - HARBOR_SERVER_NAME=${POLYCENTRIC_SERVER_NAME:-http://localhost:3000}
+      - HARBOR_SERVER_NAME=${HARBOR_SERVER_NAME:-http://localhost:3000}
       # In-network listener: the default (localhost:9092) points at the server
       # container itself, making Kafka unreachable
-      - HARBOR_KAFKA_BROKERS=${POLYCENTRIC_KAFKA_BROKERS:-kafka:19092}
+      - HARBOR_KAFKA_BROKERS=${HARBOR_KAFKA_BROKERS:-kafka:19092}
+      - HARBOR_VALKEY_URL=${HARBOR_VALKEY_URL:-redis://valkey:6379}
       # Reached over the isolated `scraper_link` network (see below).
-      - HARBOR_SCRAPER_URL=${POLYCENTRIC_SCRAPER_URL:-http://scraper:8855}
+      - HARBOR_SCRAPER_URL=${HARBOR_SCRAPER_URL:-http://scraper:8855}
       # Accepted JWT audiences (emulator needs 10.0.2.2). Defaults to SERVER_NAME.
-      - HARBOR_ALLOW_HOSTS=${POLYCENTRIC_ALLOW_HOSTS:-http://localhost:3000}
+      - HARBOR_ALLOW_HOSTS=${HARBOR_ALLOW_HOSTS:-http://localhost:3000}
       # Test hook only (see integration-server.sh); unset in real deployments.
-      - HARBOR_ALIAS_TEST_ORIGIN=${POLYCENTRIC_ALIAS_TEST_ORIGIN:-}
+      - HARBOR_ALIAS_TEST_ORIGIN=${HARBOR_ALIAS_TEST_ORIGIN:-}
     # On both the shared app network and the isolated scraper link, so it can
     # talk to postgres/kafka/etc. AND to the scraper.
     networks:
@@ -55,6 +57,8 @@ services:
         condition: service_completed_successfully
       kafka:
         condition: service_started
+      valkey:
+        condition: service_healthy
       scraper:
         condition: service_started
 
@@ -65,7 +69,7 @@ services:
   server-workers:
     profiles:
       - push
-    image: ${HARBOR_SERVER_IMAGE:-${POLYCENTRIC_SERVER_IMAGE:-harbor-server}}
+    image: ${HARBOR_SERVER_IMAGE:-harbor-server}
     build:
       context: .
       dockerfile: services/server/Dockerfile
@@ -118,12 +122,12 @@ services:
       # no host prebuild or CI artifacts are needed.
       dockerfile: services/verifier-bot/Dockerfile.dev
     ports:
-      - ${HARBOR_VERIFIER_BOT_PORT:-${POLYCENTRIC_VERIFIER_BOT_PORT:-3002}}:3002
+      - ${HARBOR_VERIFIER_BOT_PORT:-3002}:3002
     environment:
-      - HARBOR_VERIFIER_BOT_SERVERS=${POLYCENTRIC_VERIFIER_BOT_SERVERS:-http://server:3000}
+      - HARBOR_VERIFIER_BOT_SERVERS=${HARBOR_VERIFIER_BOT_SERVERS:-http://server:3000}
       # The bot's identity persists in postgres under its own schema, so no
       # sqlite state volume is needed.
-      - HARBOR_VERIFIER_BOT_DATABASE_URL=${POLYCENTRIC_VERIFIER_BOT_DATABASE_URL:-postgres://postgres:testing@postgres:5432?schema=verifier_bot}
+      - HARBOR_VERIFIER_BOT_DATABASE_URL=${HARBOR_VERIFIER_BOT_DATABASE_URL:-postgres://postgres:testing@postgres:5432?schema=verifier_bot}
     depends_on:
       server:
         condition: service_started
@@ -139,16 +143,16 @@ services:
       context: .
       dockerfile: services/push-notifications/Dockerfile
     ports:
-      - ${HARBOR_NOTIFICATIONS_PORT:-${POLYCENTRIC_NOTIFICATIONS_PORT:-3001}}:3001
+      - ${HARBOR_NOTIFICATIONS_PORT:-3001}:3001
     environment:
       - RUST_LOG=debug
-      - HARBOR_DATABASE_URL=${POLYCENTRIC_DATABASE_URL:-postgres://postgres:testing@postgres:5432}
-      - HARBOR_KAFKA_BROKERS=${POLYCENTRIC_KAFKA_BROKERS:-kafka:19092}
+      - HARBOR_DATABASE_URL=${HARBOR_DATABASE_URL:-postgres://postgres:testing@postgres:5432}
+      - HARBOR_KAFKA_BROKERS=${HARBOR_KAFKA_BROKERS:-kafka:19092}
       # Must exactly match the server's HARBOR_SERVER_NAME — the consumer
       # skips notifications whose Kafka SOURCE_SERVER header differs.
-      - HARBOR_MAIN_SERVER=${HARBOR_SERVER_NAME:-${POLYCENTRIC_SERVER_NAME:-http://localhost:3000}}
+      - HARBOR_MAIN_SERVER=${HARBOR_SERVER_NAME:-http://localhost:3000}
       # Queried at push time for the sender's profile (name/avatar).
-      - HARBOR_QUERY_SERVERS=${POLYCENTRIC_QUERY_SERVERS:-http://server:3000}
+      - HARBOR_QUERY_SERVERS=${HARBOR_QUERY_SERVERS:-http://server:3000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -158,7 +162,7 @@ services:
         condition: service_started
 
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:latest@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b
     volumes:
       - rustfs-data:/data
     ports:
@@ -176,7 +180,7 @@ services:
       start_period: 10s
 
   rustfs-init:
-    image: rustfs/rc:latest
+    image: rustfs/rc:latest@sha256:ab024bfebee49a750ce886b4c70963ccd9ddaa03f491704a90710641d7a26699
     depends_on:
       rustfs:
         condition: service_healthy
@@ -188,7 +192,7 @@ services:
       rc mb -p rustfs/polycentric-blobs"
 
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:latest@sha256:77e3df9054047a88b520d0cc46e16696d3b22022e1d580aeccd2632df6532837
     container_name: broker
     environment:
       KAFKA_NODE_ID: 1
@@ -210,6 +214,17 @@ services:
     volumes:
       - kafka-data:/var/lib/kafka/data
 
+  valkey:
+    image: valkey/valkey:9@sha256:418652cfb58ef879d4978c33553735d7147016032d5aefaa14c828e611eb9dfd
+    command: ['valkey-server', '--save', '', '--appendonly', 'no']
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # Opt-in. Needs an identity published to the server first. See
   # services/moderation/create-local-identity.sh.
   #
@@ -222,18 +237,18 @@ services:
       dockerfile: services/moderation/Dockerfile
     environment:
       - RUST_LOG=info
-      - HARBOR_DATABASE_URL=${DATABASE_URL:-postgres://postgres:testing@postgres:5432}
-      - HARBOR_KAFKA_BROKERS=${POLYCENTRIC_KAFKA_BROKERS:-kafka:19092}
-      - HARBOR_MODERATION_IDENTITY=${POLYCENTRIC_MODERATION_IDENTITY:-}
-      - HARBOR_MODERATION_SIGNING_KEY=${POLYCENTRIC_MODERATION_SIGNING_KEY:-}
-      - HARBOR_MODERATION_SERVERS=${POLYCENTRIC_MODERATION_SERVERS:-http://server:3000}
+      - HARBOR_DATABASE_URL=${HARBOR_DATABASE_URL:-postgres://postgres:testing@postgres:5432}
+      - HARBOR_KAFKA_BROKERS=${HARBOR_KAFKA_BROKERS:-kafka:19092}
+      - HARBOR_MODERATION_IDENTITY=${HARBOR_MODERATION_IDENTITY:-}
+      - HARBOR_MODERATION_SIGNING_KEY=${HARBOR_MODERATION_SIGNING_KEY:-}
+      - HARBOR_MODERATION_SERVERS=${HARBOR_MODERATION_SERVERS:-http://server:3000}
       # Azure and PhotoDNA are unset, so labels come only from moderator
       # reports. Set the Azure endpoint and key together to enable scoring.
-      - HARBOR_CONTENT_BLOB_OS_BUCKET=${CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}
-      - HARBOR_CONTENT_BLOB_OS_ENDPOINT=${CONTENT_BLOB_OS_ENDPOINT:-http://rustfs:9000}
-      - HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE=${CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}
-      - HARBOR_CONTENT_BLOB_OS_ACCESS_KEY=${CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}
-      - HARBOR_CONTENT_BLOB_OS_SECRET_KEY=${CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}
+      - HARBOR_CONTENT_BLOB_OS_BUCKET=${HARBOR_CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}
+      - HARBOR_CONTENT_BLOB_OS_ENDPOINT=${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-http://rustfs:9000}
+      - HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE=${HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}
+      - HARBOR_CONTENT_BLOB_OS_ACCESS_KEY=${HARBOR_CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}
+      - HARBOR_CONTENT_BLOB_OS_SECRET_KEY=${HARBOR_CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}
     depends_on:
       postgres:
         condition: service_healthy
@@ -245,7 +260,7 @@ services:
         condition: service_started
 
   kafka-ui:
-    image: docker.redpanda.com/redpandadata/console:latest
+    image: docker.redpanda.com/redpandadata/console:latest@sha256:9dc0cd55db172c6be9c2ff8a51f33a14395f7675fa7fbc002c277f3b96115c27
     environment:
       CONFIG_FILEPATH: /etc/console/config.yaml
       KAFKA_BROKERS: kafka:19092

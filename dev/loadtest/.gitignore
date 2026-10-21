@@ -1,0 +1,4 @@
+/bin/
+/results/
+# Load-test identities, including their private keys.
+/state/

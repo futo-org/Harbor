@@ -9,10 +9,10 @@ import { useEffect, useRef } from 'react';
 // would land on the feed instead of the modal's parent.
 let returnAvailable = false;
 
-/** Push a route, marking that close can return to the current screen. */
+/** Navigate to a route, marking that close can return to the current screen. */
 export function openWithReturn(href: Href) {
   returnAvailable = true;
-  router.push(href);
+  router.navigate(href);
 }
 
 /**

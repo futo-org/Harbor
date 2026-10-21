@@ -1,12 +1,11 @@
 import {
-  Text,
   type AvatarSizePreset,
   IdentityTag,
   ProfileAvatar,
   type TextVariant,
 } from '@/src/common/components/primitives';
-import { useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, type SpacingToken } from '@/src/common/theme';
+import { Username } from '@/src/features/profile/Username';
 import { View } from 'react-native';
 
 type BadgeSize = 'md' | 'lg';
@@ -24,8 +23,6 @@ export function IdentityBadge({
   showAvatar = true,
   showId = true,
 }: IdentityBadgeProps) {
-  const username = useUsername(identityKey);
-
   const sizeConfig = CONFIG[size];
   const rowGap = size === 'lg' ? Atoms.gap_md : Atoms.gap_sm;
 
@@ -41,14 +38,11 @@ export function IdentityBadge({
           { flex: 1, alignItems: 'baseline' },
         ]}
       >
-        <Text
+        <Username
+          identity={identityKey}
           variant={sizeConfig.textVariant}
           fontWeight="semibold"
-          numberOfLines={1}
-          style={{ flexShrink: 1 }}
-        >
-          {username}
-        </Text>
+        />
         {showId && <IdentityTag identity={identityKey} />}
       </View>
     </View>

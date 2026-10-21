@@ -1,9 +1,14 @@
 //! `search_posts`: searches posts.
 
+use sea_orm::prelude::DateTimeWithTimeZone;
+use serde::{Deserialize, Serialize};
+use tonic::Status;
+
 use crate::data::Marker;
 use crate::data::hydration::{HydrationState, post_hydrate};
 use crate::data::pipeline::{Fetched, create_pipeline, finalize_fetch};
-use crate::service::context::RequestContext;
+use crate::service::context::PublicContext;
+use crate::service::feeds::repository::DecayedReactionCount;
 use crate::service::proto::{
     SearchPostsRequest, SearchPostsResponse, SortPostsBy,
 };
@@ -11,9 +16,6 @@ use crate::service::search::repository::Query;
 use crate::service::search::rpc::{
     self, SearchResponseFilter, SearchResponseView, SearchRow,
 };
-use sea_orm::prelude::DateTimeWithTimeZone;
-use serde::{Deserialize, Serialize};
-use tonic::Status;
 
 struct Params {
     common: rpc::Params<SortedPostsBy>,
@@ -22,7 +24,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &RequestContext<'_>,
+    ctx: PublicContext,
     req: SearchPostsRequest,
 ) -> Result<SearchPostsResponse, Status> {
     let sort_by = req.sort_by();
@@ -34,7 +36,7 @@ pub async fn handle(
         omit_labels: req.omit_labels,
     };
     let result =
-        create_pipeline(ctx, &params, fetch, hydrate, filter, view).await?;
+        create_pipeline(&ctx, &params, fetch, hydrate, filter, view).await?;
     Ok(SearchPostsResponse {
         results: result.results,
         event_hints: result.event_hints,
@@ -43,14 +45,14 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<Fetched<SearchRow, SortedPostsBy>, Status> {
     let mut rows = Query::search_posts(
-        &ctx.service.ro_db,
+        &ctx.db,
         &params.common.query,
         params.sort_by,
-        params.common.limit,
+        params.common.limit + 1, // For pagination.
         &params.common.cursor_filter,
     )
     .await?;
@@ -60,9 +62,8 @@ async fn fetch(
         params.common.limit as u32,
         |row| Marker {
             sorted_by: match params.sort_by {
-                SortPostsBy::Default => SortedPostsBy::Rank(row.search_rank),
-                SortPostsBy::Top => {
-                    SortedPostsBy::PositiveReactions(row.positive_reactions)
+                SortPostsBy::Default | SortPostsBy::Top => {
+                    SortedPostsBy::DecayedReactionCount(row.reactions.clone())
                 }
                 SortPostsBy::Latest => {
                     SortedPostsBy::Latest(row.event.created_at)
@@ -80,10 +81,8 @@ async fn fetch(
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum SortedPostsBy {
-    /// ts_rank rank returned by Postgres.
-    Rank(f32),
-    /// Amount of positive reactions on the post.
-    PositiveReactions(i64),
+    /// Decayed reaction count on the post.
+    DecayedReactionCount(DecayedReactionCount),
     /// Event creation timestamp.
     Latest(DateTimeWithTimeZone),
 }
@@ -91,15 +90,16 @@ pub enum SortedPostsBy {
 impl SortedPostsBy {
     pub fn matches(&self, sort_by: SortPostsBy) -> bool {
         match self {
-            SortedPostsBy::Rank(_) => sort_by == SortPostsBy::Default,
-            SortedPostsBy::PositiveReactions(_) => sort_by == SortPostsBy::Top,
+            SortedPostsBy::DecayedReactionCount(_) => {
+                matches!(sort_by, SortPostsBy::Default | SortPostsBy::Top)
+            }
             SortedPostsBy::Latest(_) => sort_by == SortPostsBy::Latest,
         }
     }
 }
 
 async fn hydrate(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _params: &Params,
     fetched: &Fetched<SearchRow, SortedPostsBy>,
 ) -> Result<HydrationState, Status> {
@@ -107,7 +107,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &RequestContext<'_>,
+    _: &PublicContext,
     params: &Params,
     fetched: Fetched<SearchRow, SortedPostsBy>,
     hydration: &HydrationState,
@@ -116,10 +116,10 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &RequestContext<'_>,
+    ctx: &PublicContext,
     _: &Params,
     filtered: SearchResponseFilter<SortedPostsBy>,
     hydration: HydrationState,
 ) -> Result<SearchResponseView<SortedPostsBy>, Status> {
-    rpc::view(ctx.service, filtered, hydration).await
+    rpc::view(ctx, filtered, hydration).await
 }

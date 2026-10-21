@@ -5,5 +5,6 @@ appId: ${MAESTRO_APP_ID}
 - runScript: onboarding.js
 - runScript: nav.js
 - runScript: composer.js
+- runScript: explore.js
 - runScript: post.js
 - runScript: verifications.js

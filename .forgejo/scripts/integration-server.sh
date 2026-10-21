@@ -2,19 +2,19 @@
 #
 # Run the server integration test suite.
 #
-# Starts PostgreSQL + RustFS + Kafka (if not already running), applies
+# Starts PostgreSQL + RustFS + Kafka + Valkey (if not already running), applies
 # migrations, starts the server with a deterministic test moderator identity,
 # runs `cargo test -p integration-tests`, then cleans up.
 #
 # Usage:
-#   .forgejo/scripts/integration-server.sh              # full run
+#   .forgejo/scripts/integration-server.sh               # full run
 #   .forgejo/scripts/integration-server.sh --no-deps     # skip docker services (already up)
 #   .forgejo/scripts/integration-server.sh --no-cleanup  # keep server + docker running
 #   .forgejo/scripts/integration-server.sh --ci          # CI mode
 #
 # Run the server integration test suite.
 #
-# Starts PostgreSQL + RustFS + Kafka (if not already running), applies
+# Starts PostgreSQL + RustFS + Kafka + Valkey (if not already running), applies
 # migrations, starts the server with a deterministic test moderator identity,
 # runs `cargo test -p integration-tests`, then cleans up.
 #
@@ -83,16 +83,17 @@ trap cleanup EXIT INT TERM
 docker compose down -v >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------------------
-# 1. Backing services (PostgreSQL, RustFS, Kafka)
+# 1. Backing services (PostgreSQL, RustFS, Kafka, Valkey)
 # ---------------------------------------------------------------------------
 if [ "$NO_DEPS" = false ]; then
-  echo "==> Starting PostgreSQL, RustFS, and Kafka…"
+  echo "==> Starting PostgreSQL, RustFS, Kafka, and Valkey…"
   if [ "$CI_MODE" = true ]; then
     # CI: docker compose builds the image explicitly; --wait blocks until all
     # services are healthy.
-    docker compose up -d --build --wait postgres rustfs kafka
+    docker compose up -d --build --wait postgres rustfs kafka valkey
+    docker compose run --rm --no-deps -T rustfs-init
   else
-    docker compose up -d postgres rustfs rustfs-init kafka
+    docker compose up -d postgres rustfs rustfs-init kafka valkey
 
     echo "    waiting for postgres (port 5432)…"
     for i in $(seq 1 30); do
@@ -147,26 +148,35 @@ if [ "$CI_MODE" = true ]; then
   echo "==> Joining job container to the stack network ($NETWORK)…"
   docker network connect "$NETWORK" "$(self_container)"
 
+  if [ -n "${HARBOR_SERVER_IMAGE:-}" ]; then
+    echo "==> Pulling server and server-worker images…"
+    docker pull -q "$HARBOR_SERVER_IMAGE"
+    echo "    images built"
+  else
+    echo "==> Building server and server-worker images…"
+    docker compose build --no-deps --build server server-workers
+    echo "    images pulled"
+  fi
+
+  echo "==> Applying migrations via docker compose exec…"
+  docker compose run --no-deps -T server /app/migration up
+  echo "    migrations applied"
+
   echo "==> Starting server and workers…"
-  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   # The mention integration test serves the alias document from a mock server
   # in this job container; the workers reach it over the stack network (see
   # ALIAS_MOCK_PORT in services/server/tests/src/notifications.rs).
   JOB_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' "$(self_container)")
-  export POLYCENTRIC_ALIAS_TEST_ORIGIN="http://${JOB_IP}:3999"
-  echo "    alias test origin: ${POLYCENTRIC_ALIAS_TEST_ORIGIN}"
+  export HARBOR_ALIAS_TEST_ORIGIN="http://${JOB_IP}:3999"
+  echo "    alias test origin: ${HARBOR_ALIAS_TEST_ORIGIN}"
   # server-workers materializes notifications (the mention/reply integration
   # tests poll for them); it is behind the `push` profile in compose.yml.
   export COMPOSE_PROFILES=push
   # --no-deps avoids pulling in the `scraper` dependency, which requires
   # NET_ADMIN for its nftables egress firewall and cannot start in CI's
   # Docker-in-Docker environment.
-  if [ -n "${POLYCENTRIC_SERVER_IMAGE:-}" ]; then
-    docker pull -q "$POLYCENTRIC_SERVER_IMAGE"
-    docker compose up -d --no-deps --no-build --wait server server-workers
-  else
-    docker compose up -d --no-deps --build --wait server server-workers
-  fi
+  docker compose up -d --no-deps --no-build --wait server server-workers
 
   # Resolve the server container's IP on the compose network and use it
   # directly, bypassing Docker embedded DNS (which can be flaky when the job
@@ -176,11 +186,11 @@ if [ "$CI_MODE" = true ]; then
   SERVER_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' harbor-server-1 2>/dev/null)
   if [ -n "$SERVER_IP" ]; then
     SERVER_HOST=$SERVER_IP
-    export POLYCENTRIC_TEST_SERVER="http://${SERVER_IP}:3000"
+    export HARBOR_TEST_SERVER="http://${SERVER_IP}:3000"
     echo "    server IP: ${SERVER_IP}"
   else
-    export POLYCENTRIC_TEST_SERVER="${POLYCENTRIC_TEST_SERVER:-http://localhost:3000}"
-    echo "    (no server IP found; using ${POLYCENTRIC_TEST_SERVER})"
+    export HARBOR_TEST_SERVER="${HARBOR_TEST_SERVER:-http://localhost:3000}"
+    echo "    (no server IP found; using ${HARBOR_TEST_SERVER})"
   fi
 
   echo "    waiting for server (port ${SERVER_HOST}:3000)…"
@@ -197,31 +207,30 @@ if [ "$CI_MODE" = true ]; then
     sleep 1
   done
 
-  echo "==> Applying migrations via docker compose exec…"
-  docker compose exec -T server /app/migration up
-  echo "    migrations applied"
 else
+  export HARBOR_DATABASE_URL="${HARBOR_DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
+  export HARBOR_DATABASE_URL_RO="${HARBOR_DATABASE_URL_RO:-postgres://postgres:testing@localhost:5432?options=-c%20default_transaction_read_only=on}"
+
   echo "==> Applying migrations…"
   (
     cd services/server/migration
-    DATABASE_URL="${DATABASE_URL:-postgres://postgres:testing@localhost:5432}" \
-      cargo run -- fresh 2>&1
+    cargo run -- fresh 2>&1
   )
   echo "    migrations applied"
 
   echo "==> Starting server…"
-  export POLYCENTRIC_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
   export RUST_LOG="${RUST_LOG:-info}"
-  export DATABASE_URL="${DATABASE_URL:-postgres://postgres:testing@localhost:5432}"
-  export CONTENT_BLOB_OS_BUCKET="${CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}"
-  export CONTENT_BLOB_OS_ENDPOINT="${CONTENT_BLOB_OS_ENDPOINT:-http://localhost:9000}"
-  export CONTENT_BLOB_OS_FORCE_PATH_STYLE="${CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}"
-  export CONTENT_BLOB_OS_ACCESS_KEY="${CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}"
-  export CONTENT_BLOB_OS_SECRET_KEY="${CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}"
+  export HARBOR_CONTENT_BLOB_OS_BUCKET="${HARBOR_CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}"
+  export HARBOR_CONTENT_BLOB_OS_ENDPOINT="${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-http://localhost:9000}"
+  export HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE="${HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}"
+  export HARBOR_CONTENT_BLOB_OS_ACCESS_KEY="${HARBOR_CONTENT_BLOB_OS_ACCESS_KEY:-rustfsadmin}"
+  export HARBOR_CONTENT_BLOB_OS_SECRET_KEY="${HARBOR_CONTENT_BLOB_OS_SECRET_KEY:-rustfsadmin}"
   # Kafka is reached on the EXTERNAL listener for local connections.
-  export POLYCENTRIC_KAFKA_BROKERS="${POLYCENTRIC_KAFKA_BROKERS:-localhost:9092}"
+  export HARBOR_KAFKA_BROKERS="${HARBOR_KAFKA_BROKERS:-localhost:9092}"
+  export HARBOR_VALKEY_URL="${HARBOR_VALKEY_URL:-redis://localhost:6379}"
   # The test crate reads this to know where to reach the server.
-  export POLYCENTRIC_TEST_SERVER="${POLYCENTRIC_TEST_SERVER:-http://localhost:3000}"
+  export HARBOR_TEST_SERVER="${HARBOR_TEST_SERVER:-http://localhost:3000}"
 
   cargo run -p server &
   SERVER_PID=$!
@@ -249,8 +258,16 @@ fi
 echo ""
 echo "==> Running integration tests…"
 if [ "$CI_MODE" = true ]; then
+  set +e # Don't stop on test failure, want to print the server logs in that case.
+
   # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
   cargo nextest run -P ci -p integration-tests 2>&1
+
+  if [ "$?" != 0 ]; then
+    cd "$REPO_ROOT"
+    docker compose logs server
+    exit 1
+  fi
 else
   cargo test -p integration-tests 2>&1
 fi

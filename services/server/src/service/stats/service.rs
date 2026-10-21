@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use polycentric_common::models::protos_v2::{
     EventMetadata, ReactionTally as ProtoReactionTally,
 };
-use sea_orm::{DbConn, DbErr};
+use sea_orm::{ConnectionTrait, DbErr};
 
 use crate::data::EventId;
 use crate::service::stats::repository::{
@@ -18,15 +18,14 @@ pub struct EventStats {
 }
 
 /// Gather reply counts, reaction summaries, and emoji tallies for events.
-pub async fn gather_stats_for(
-    db: &DbConn,
+pub async fn gather_stats_for<C: ConnectionTrait>(
+    db: &C,
     event_ids: impl ExactSizeIterator<Item = EventId> + Clone,
 ) -> Result<EventStats, DbErr> {
-    let (reply_counts, reaction_summaries, reaction_tallies) = tokio::try_join!(
-        Query::count_replies(db, event_ids.clone()),
-        Query::summarize_reactions(db, event_ids.clone()),
-        Query::tally_reactions(db, event_ids),
-    )?;
+    let reply_counts = Query::count_replies(db, event_ids.clone()).await?;
+    let reaction_summaries =
+        Query::summarize_reactions(db, event_ids.clone()).await?;
+    let reaction_tallies = Query::tally_reactions(db, event_ids).await?;
 
     Ok(EventStats {
         reply_counts,

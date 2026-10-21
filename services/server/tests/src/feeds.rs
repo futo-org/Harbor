@@ -24,7 +24,7 @@ async fn trusted_labels_served_in_feed_response() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -34,7 +34,7 @@ async fn trusted_labels_served_in_feed_response() {
         &author_key,
         "hello label world",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -42,7 +42,7 @@ async fn trusted_labels_served_in_feed_response() {
     let labels_sig = moderator.label_key(
         target_key.clone(),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -131,7 +131,7 @@ async fn labeler_identity_served_with_feed_response() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -141,14 +141,14 @@ async fn labeler_identity_served_with_feed_response() {
         &author_key,
         "post labeled by a stranger",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
     moderator.label_key(
         get_post_event_key(&author_identity, &author_key),
         vec!["violence".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -207,7 +207,7 @@ async fn omit_labels_hides_labeled_post() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -217,7 +217,7 @@ async fn omit_labels_hides_labeled_post() {
         &author_key,
         "hide-me post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -225,7 +225,7 @@ async fn omit_labels_hides_labeled_post() {
     moderator.label_key(
         target_key,
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -286,14 +286,14 @@ async fn attribution_feed_returns_only_matching_posts() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
     publish_genesis(
         &mut event,
         &other_identity,
         &other_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -303,7 +303,7 @@ async fn attribution_feed_returns_only_matching_posts() {
         &author_key,
         "post about the url",
         &[&url],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
     let other_sig = publish_post(
@@ -312,7 +312,7 @@ async fn attribution_feed_returns_only_matching_posts() {
         &other_key,
         "post about a different url",
         &[&other_url],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -363,7 +363,7 @@ async fn attribution_feed_omit_labels_hides_labeled_post() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -373,7 +373,7 @@ async fn attribution_feed_omit_labels_hides_labeled_post() {
         &author_key,
         "labeled post about the url",
         &[&url],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -381,7 +381,7 @@ async fn attribution_feed_omit_labels_hides_labeled_post() {
     moderator.label_key(
         target_key,
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -460,7 +460,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -470,7 +470,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
         &author_key,
         "warn-label post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -478,7 +478,7 @@ async fn omit_labels_non_matching_keeps_post_and_labels() {
     let labels_sig = moderator.label_key(
         target_key.clone(),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -548,7 +548,7 @@ async fn untrusted_labels_not_indexed() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -558,7 +558,7 @@ async fn untrusted_labels_not_indexed() {
         &author_key,
         "test unmoderated",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -569,7 +569,7 @@ async fn untrusted_labels_not_indexed() {
     let impostor_labels_sig = impostor.label_key(
         target_key.clone(),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     impostor.submit_events().await;
 
@@ -631,7 +631,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -641,7 +641,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
         &author_key,
         "impostor-labeled post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -650,7 +650,7 @@ async fn omit_labels_untrusted_label_does_not_hide() {
     impostor.label_key(
         get_post_event_key(&author_identity, &author_key),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     impostor.submit_events().await;
 
@@ -755,7 +755,7 @@ async fn thread_no_labels_returns_post() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -765,7 +765,7 @@ async fn thread_no_labels_returns_post() {
         &author_key,
         "thread test post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -830,7 +830,7 @@ async fn thread_omit_labels_matching_hides_post() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -840,7 +840,7 @@ async fn thread_omit_labels_matching_hides_post() {
         &author_key,
         "hide-me thread post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -848,7 +848,7 @@ async fn thread_omit_labels_matching_hides_post() {
     let labels_sig = moderator.label_key(
         target_key.clone(),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -918,7 +918,7 @@ async fn thread_omit_labels_not_matching_keeps_post() {
         &mut event,
         &author_identity,
         &author_key,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     )
     .await;
 
@@ -928,7 +928,7 @@ async fn thread_omit_labels_not_matching_keeps_post() {
         &author_key,
         "warn thread post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     )
     .await;
 
@@ -936,7 +936,7 @@ async fn thread_omit_labels_not_matching_keeps_post() {
     let labels_sig = moderator.label_key(
         target_key.clone(),
         vec!["sexually-suggestive".to_string()],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     moderator.submit_events().await;
 
@@ -982,6 +982,257 @@ async fn thread_omit_labels_not_matching_keeps_post() {
 }
 
 #[tokio::test]
+async fn get_post() {
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let target_key = client.get_last_event_key();
+    client.submit_events().await;
+
+    test_get_post(
+        target_key,
+        Some(EventMetadata {
+            reply_count: None,
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn get_post_not_created() {
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let target_key = client.get_last_event_key();
+    client.pending.clear();
+    // NOTE: not submitting the post event.
+
+    test_get_post(target_key, None, Vec::new()).await;
+}
+
+#[tokio::test]
+async fn get_post_deleted() {
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let target_key = client.get_last_event_key();
+    client.delete_key(target_key.clone(), current_timestamp() + 1);
+    client.submit_events().await;
+
+    test_get_post(
+        target_key.clone(),
+        // We don't expect a post to be returned, but we do expect the deletion
+        // event.
+        None,
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+            ExpectHint::Delete(target_key),
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn get_post_with_quotes() {
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let quoted_post = client.get_last_event_key();
+    client.quote(quoted_post.clone(), "Text that quotes", current_timestamp());
+    let post_with_quote = client.get_last_event_key();
+    client.submit_events().await;
+
+    // The original post that was quoted.
+    test_get_post(
+        quoted_post.clone(),
+        Some(EventMetadata {
+            reply_count: None,
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+        ],
+    )
+    .await;
+
+    // The post that quotes the other one.
+    test_get_post(
+        post_with_quote,
+        Some(EventMetadata {
+            reply_count: None,
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+            ExpectHint::Post(quoted_post.clone()),
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn get_post_with_reposts() {
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let post = client.get_last_event_key();
+    client.repost_key(post.clone(), current_timestamp());
+    client.submit_events().await;
+
+    test_get_post(
+        post.clone(),
+        Some(EventMetadata {
+            reply_count: None,
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn get_post_with_labels() {
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let post = client.get_last_event_key();
+    client.submit_events().await;
+
+    let (mut moderator, guard) = TestClient::trusted_moderator().await;
+    let labels = vec!["Label".into()];
+    moderator.label_key(post.clone(), labels.clone(), current_timestamp());
+    moderator.submit_events().await;
+    drop(guard);
+
+    test_get_post(
+        post.clone(),
+        Some(EventMetadata {
+            reply_count: None,
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+            ExpectHint::Labels {
+                post,
+                values: labels,
+            },
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn get_post_with_reactions() {
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let post = client.get_last_event_key();
+    client.thumbs_up(post.clone(), current_timestamp());
+    client.submit_events().await;
+    let post_identity = client.identity().to_owned();
+
+    let mut client = TestClient::new().await;
+    client.thumbs_up(post.clone(), current_timestamp());
+    client.submit_events().await;
+
+    test_get_post(
+        post,
+        Some(EventMetadata {
+            reply_count: None,
+            reaction_count: Some(2),
+            upvote_count: Some(2),
+            downvote_count: Some(0),
+            emoji_reactions: vec![ReactionTally {
+                emoji: "👍".to_owned(),
+                positive: true,
+                count: 2,
+            }],
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(post_identity),
+            /* Reactions are not included in the hints (yet).
+            ExpectHint::Reaction("👍".to_owned(), true),
+            ExpectHint::Reaction("👍".to_owned(), true),
+            */
+        ],
+    )
+    .await;
+}
+
+/// Run a `get_post` query using `target` to derive the filter.
+/// Expect an event bundle with metadata matching `metadata` if present
+/// or no candidates to be returned if `None`.
+async fn test_get_post(
+    target: EventKey,
+    metadata: Option<EventMetadata>,
+    hints: Vec<ExpectHint>,
+) {
+    let mut feed = connect_feeds().await;
+    let response = feed
+        .get_post(GetPostRequest {
+            identity: target.identity.clone(),
+            sequence: target.sequence,
+            omit_labels: Vec::new(),
+        })
+        .await
+        .expect("failed to get post")
+        .into_inner();
+
+    eprintln!("Got candidates: {:#?}", response.candidates);
+
+    if let Some(metadata) = metadata {
+        assert_eq!(response.candidates.len(), 1, "expected a single candidate");
+        let event_bundle = &response.candidates[0];
+
+        let content = Content::decode(
+            &*event_bundle
+                .serialized_content
+                .as_ref()
+                .unwrap()
+                .content_bytes,
+        )
+        .unwrap();
+        if !matches!(&content.content_body, Some(ContentBody::Post(_))) {
+            panic!("unexpected event content: {content:?}");
+        };
+
+        let event = Event::decode(
+            &*event_bundle.signed_event.as_ref().unwrap().event_bytes,
+        )
+        .unwrap();
+        let key = event.key.as_ref().unwrap();
+        assert_eq!(*key, target, "expected: {target:?}, event: {key:?}");
+
+        assert_eq!(event_bundle.meta, Some(metadata));
+    } else {
+        assert!(response.candidates.is_empty(), "unexpected post");
+    }
+
+    expect_hints(&response.event_hints, hints);
+}
+
+#[tokio::test]
 async fn explore_feed_exists() {
     let mut feeds = connect_feeds().await;
 
@@ -1005,6 +1256,40 @@ async fn explore_feed_exists() {
 }
 
 #[tokio::test]
+async fn explore_feed_excludes_reposts() {
+    let mut feeds = connect_feeds().await;
+
+    let mut client = TestClient::new().await;
+    client.post_text("Post 1", current_timestamp());
+    let post_key = client.get_last_event_key();
+    client.repost_key(post_key.clone(), current_timestamp());
+    let repost_key = client.get_last_event_key();
+    client.submit_events().await;
+
+    let request = GetExploreFeedRequest {
+        identity: None,
+        page_params: None,
+        omit_labels: Vec::new(),
+        sort_by: Some(SortPostsBy::Latest.into()),
+    };
+    let result = feeds.get_explore_feed(request).await.unwrap().into_inner();
+
+    let keys: Vec<EventKey> = result
+        .event_bundles
+        .iter()
+        .map(|event| {
+            Event::decode(&*event.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap()
+                .key
+                .unwrap()
+        })
+        .collect();
+    // Both are the newest Feed events, but only the post should be shown.
+    assert!(keys.contains(&post_key), "post missing: {keys:#?}");
+    assert!(!keys.contains(&repost_key), "repost shown: {keys:#?}");
+}
+
+#[tokio::test]
 async fn following_feed_empty() {
     let mut client = TestClient::new().await;
     client.submit_events().await;
@@ -1020,6 +1305,19 @@ async fn following_feed_includes_own_posts() {
 
     client.post_text("Post 1", current_timestamp());
     let post1_key = client.get_last_event_key();
+    client.submit_events().await;
+    let follower = client.identity();
+
+    following_feed(follower, &[post1_key]).await;
+}
+
+#[tokio::test]
+async fn following_feed_excludes_own_reposts() {
+    let mut client = TestClient::new().await;
+
+    client.post_text("Post 1", current_timestamp());
+    let post1_key = client.get_last_event_key();
+    client.repost_key(post1_key.clone(), current_timestamp());
     client.submit_events().await;
     let follower = client.identity();
 
@@ -1090,7 +1388,7 @@ async fn following_feed_pagination() {
     let follower = client3.identity().to_owned();
 
     // Post 0, 1 reaction.
-    client2.thumbs_up(post1_key.clone(), current_timestamp());
+    client2.thumbs_up(post0_key.clone(), current_timestamp());
     // Post 1, 1 reaction.
     client3.thumbs_up(post1_key.clone(), current_timestamp());
     // Post 2, 2 reactions.
@@ -1144,10 +1442,10 @@ async fn following_feed_pagination() {
     assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
+    eprintln!("Backward:");
     let mut expected_iter = [post1_key, post2_key, post3_key].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
-            let mut feeds = connect_feeds().await;
             let request = GetFollowingFeedRequest {
                 follower_identity: follower.clone(),
                 page_params: Some(PageParams {
@@ -1501,10 +1799,10 @@ async fn recommended_feed_pagination() {
     assert!(!page_info.as_ref().unwrap().has_next_page);
 
     // Backward.
+    eprintln!("Backward:");
     let mut expected_iter = [post1_key, post2_key, post3_key].into_iter();
     while let Some(expected) = expected_iter.next() {
         let request = async {
-            let mut feeds = connect_feeds().await;
             let request = GetFollowingFeedRequest {
                 follower_identity: follower.clone(),
                 page_params: Some(PageParams {

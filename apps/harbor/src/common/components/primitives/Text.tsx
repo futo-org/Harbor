@@ -1,7 +1,7 @@
+import { twemojiFontFamily } from '@/src/common/assets/twemojiFontFamily';
 import { UITextView } from '@bsky.app/react-native-uitextview';
 import { Children, type ReactNode } from 'react';
 import { type TextProps as RNTextProps, StyleSheet } from 'react-native';
-import { EmojiImage } from '@/src/common/components/EmojiImage';
 import {
   useTheme,
   typography,
@@ -13,59 +13,50 @@ import {
 import { splitEmoji } from '@/src/common/util/emoji';
 import { isWeb } from '@/src/common/util/platform';
 
-const WEB_FONT_STACK =
-  'NotoSans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+// Twemoji draws the emoji (see `app/+html.tsx`).
+export const WEB_FONT_STACK =
+  'NotoSans, Twemoji, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+export const WEB_MONOSPACE_FONT_STACK = 'NotoSansMono, monospace';
 
 // Native font APIs can't select a variable font's weights, so each face is
 // its own family (see `src/common/assets`). Keyed by every weight the theme
 // can produce, so adding a token without a face fails to compile.
 type FontWeightValue = (typeof typography.fontWeight)[FontWeightToken];
-const NATIVE_FONTS: Record<
-  FontWeightValue,
-  { normal: string; italic: string }
-> = {
-  '400': { normal: 'NotoSans-Regular', italic: 'NotoSans-Italic' },
-  '500': { normal: 'NotoSans-Medium', italic: 'NotoSans-MediumItalic' },
-  '600': { normal: 'NotoSans-SemiBold', italic: 'NotoSans-SemiBoldItalic' },
-  '700': { normal: 'NotoSans-Bold', italic: 'NotoSans-BoldItalic' },
+export const NATIVE_FONTS: Record<FontWeightValue, string> = {
+  '400': 'NotoSans-Regular',
+  '600': 'NotoSans-SemiBold',
+  '700': 'NotoSans-Bold',
+};
+export const NATIVE_MONOSPACE_FONTS: Record<FontWeightValue, string> = {
+  '400': 'NotoSansMono-Regular',
+  '600': 'NotoSansMono-SemiBold',
+  '700': 'NotoSansMono-Bold',
 };
 
-// Inline Twemoji images, kept within the ascent (iOS clips above it) and
-// nudged below the baseline like a platform emoji glyph.
-const EMOJI_SIZE = 1.05;
-const EMOJI_BASELINE_SHIFT = 0.12;
-const EMOJI_GAP = 0.1;
-
-function withEmojiImages(text: string, fontSize: number): ReactNode {
+// Native text has no font fallback list, so emoji runs get the Twemoji
+// family themselves.
+function withTwemoji(text: string): ReactNode {
   const parts = splitEmoji(text);
   if (parts.length === 1) return text;
-  const size = Math.round(fontSize * EMOJI_SIZE);
-  const shift = Math.round(fontSize * EMOJI_BASELINE_SHIFT);
-  const gap = Math.round(fontSize * EMOJI_GAP);
   return parts.map((part, i) =>
     i % 2 ? (
-      <EmojiImage
-        // biome-ignore lint/suspicious/noArrayIndexKey: runs are positional, derived from the string
-        key={i}
-        sequence={part}
-        size={size}
-        style={[
-          // iOS ignores margins on text attachments.
-          isWeb ? { marginHorizontal: gap } : { width: size + 2 * gap },
-          { transform: [{ translateY: shift }] },
-        ]}
-      />
+      // UITextView, so a selectable parent UITextView renders it as native text.
+      // biome-ignore lint/suspicious/noArrayIndexKey: runs are positional, derived from the string
+      <UITextView key={i} style={styles.twemoji}>
+        {part}
+      </UITextView>
     ) : (
       part
     ),
   );
 }
 
-function renderChildren(children: ReactNode, fontSize: number): ReactNode {
-  if (typeof children === 'string') return withEmojiImages(children, fontSize);
+function renderChildren(children: ReactNode): ReactNode {
+  if (typeof children === 'string') return withTwemoji(children);
   if (!Array.isArray(children)) return children;
   return Children.map(children, (child) =>
-    typeof child === 'string' ? withEmojiImages(child, fontSize) : child,
+    typeof child === 'string' ? withTwemoji(child) : child,
   );
 }
 
@@ -77,7 +68,7 @@ interface TextProps extends RNTextProps {
   fontWeight?: FontWeightToken;
   fontSize?: FontSizeToken | number;
   lineHeight?: LineHeightToken | number;
-  italic?: boolean;
+  monospace?: boolean;
 }
 
 export function Text({
@@ -86,7 +77,7 @@ export function Text({
   fontWeight,
   fontSize,
   lineHeight,
-  italic,
+  monospace = false,
   style,
   children,
   ...props
@@ -94,7 +85,6 @@ export function Text({
   const { theme } = useTheme();
 
   const config = VARIANT_CONFIG[variant];
-  const wantsItalic = italic && variant !== 'title' && variant !== 'subtitle';
 
   const resolvedFontSize = fontSize
     ? typeof fontSize === 'number'
@@ -113,8 +103,10 @@ export function Text({
     : typography.fontWeight[config.defaultWeight];
 
   const fontFamily = isWeb
-    ? WEB_FONT_STACK
-    : NATIVE_FONTS[resolvedFontWeight][wantsItalic ? 'italic' : 'normal'];
+    ? monospace
+      ? WEB_MONOSPACE_FONT_STACK
+      : WEB_FONT_STACK
+    : (monospace ? NATIVE_MONOSPACE_FONTS : NATIVE_FONTS)[resolvedFontWeight];
 
   return (
     <UITextView
@@ -127,32 +119,30 @@ export function Text({
           color: color ? theme.palette[color] : theme.palette.neutral_900,
           fontSize: resolvedFontSize,
           lineHeight: resolvedLineHeight,
-          ...(isWeb
-            ? {
-                fontWeight: resolvedFontWeight,
-                ...(wantsItalic ? { fontStyle: 'italic' as const } : {}),
-              }
-            : {}),
+          ...(isWeb ? { fontWeight: resolvedFontWeight } : {}),
         },
         style,
       ]}
       {...props}
     >
-      {renderChildren(
-        children,
-        StyleSheet.flatten(style)?.fontSize ?? resolvedFontSize,
-      )}
+      {isWeb ? children : renderChildren(children)}
     </UITextView>
   );
 }
 
-const VARIANT_CONFIG: Record<
-  TextVariant,
-  { size: FontSizeToken; defaultWeight: FontWeightToken }
-> = {
+export const VARIANT_CONFIG = {
   title: { size: 'lg', defaultWeight: 'bold' },
   subtitle: { size: 'lg', defaultWeight: 'semibold' },
   body: { size: 'md', defaultWeight: 'regular' },
   secondary: { size: 'md', defaultWeight: 'regular' },
   small: { size: 'xs', defaultWeight: 'semibold' },
-} as const;
+} as const satisfies Record<
+  TextVariant,
+  { size: FontSizeToken; defaultWeight: FontWeightToken }
+>;
+
+export type TextVariantSize = (typeof VARIANT_CONFIG)[TextVariant]['size'];
+
+const styles = StyleSheet.create({
+  twemoji: { fontFamily: twemojiFontFamily },
+});

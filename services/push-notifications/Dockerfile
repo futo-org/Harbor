@@ -1,4 +1,4 @@
-FROM rust:1.97-slim AS chef
+FROM rust:1.99-slim-bookworm@sha256:a24e292b4af7bdee351a31d3a6379972a5652f0ea22a1b6d6883324ac4f5097c AS chef
 WORKDIR /app
 COPY services/common/build-deps.sh build-deps.sh
 RUN sh build-deps.sh
@@ -30,10 +30,12 @@ RUN cargo build --release \
     && mv target/release/push-notifications-service target/release/push-notifications-migration /out/ \
     && rm -rf target
 
-FROM rust:1.97-slim
+# CI builds the binaries outside Docker (.forgejo/actions/rust-binaries) and
+# swaps them in for the builder stage, so bookworm here matches its ci/rust.
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 WORKDIR /app
 COPY services/common/runtime-deps.sh runtime-deps.sh
 RUN sh runtime-deps.sh
-COPY --from=builder /out/push-notifications-service /app/push-notifications-service
-COPY --from=builder /out/push-notifications-migration /app/push-notifications-migration
+COPY --chmod=755 --from=builder /out/push-notifications-service /app/push-notifications-service
+COPY --chmod=755 --from=builder /out/push-notifications-migration /app/push-notifications-migration
 CMD ["/app/push-notifications-service"]

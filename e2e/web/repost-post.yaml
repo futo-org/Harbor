@@ -4,6 +4,7 @@ name: I can repost a post
 - runFlow: ../elements/load.yaml
 - runFlow: ../steps/fresh-start.yaml
 - runFlow: ../steps/create-identity.yaml
+- runFlow: ../steps/sort-explore-latest.yaml
 - runFlow: ../steps/scroll-down.yaml
 - runFlow: ../steps/open-post-menu.yaml
 - tapOn:
@@ -13,3 +14,16 @@ name: I can repost a post
 - assertVisible:
     role: menuitem
     text: ${output.post.undoRepost}
+# The open menu blocks the page.
+- pressKey: Escape
+- extendedWaitUntil:
+    notVisible:
+      role: menuitem
+      text: ${output.post.undoRepost}
+    timeout: 5000
+# Reposts are hidden from Explore, but still show in the reposter's profile.
+- tapOn:
+    id: ${output.nav.profile}
+- extendedWaitUntil:
+    visible: ${output.identityName} ${output.post.reposted} · now
+    timeout: 30000

@@ -170,14 +170,14 @@ mod tests {
     }
 
     #[test]
-    fn reply_renders_curly_mentions_as_display_names() {
+    fn reply_renders_curly_mentions_as_at_display_names() {
         let hex = "a".repeat(64);
         let text = format!("hi @{{{hex},Jane Doe}} and @{{{hex}}} not @{{nope,x}} @{{{hex}");
         let rendered =
             render(NotificationKind::Reply, &key("alice"), &post(&text)).expect("should render");
         assert_eq!(
             rendered.body,
-            format!("Replied: hi Jane Doe and @{hex} not @{{nope,x}} @{{{hex}")
+            format!("Replied: hi @Jane Doe and @{hex} not @{{nope,x}} @{{{hex}")
         );
     }
 
@@ -187,7 +187,7 @@ mod tests {
         let text = format!("hey @{{{identity},Jane Doe}} look");
         let rendered =
             render(NotificationKind::Mention, &key("alice"), &post(&text)).expect("should render");
-        assert_eq!(rendered.body, "Mentioned you: hey Jane Doe look");
+        assert_eq!(rendered.body, "Mentioned you: hey @Jane Doe look");
         assert_eq!(
             rendered.url.as_deref(),
             Some("harbor:///alice/post/abababababababab/7")

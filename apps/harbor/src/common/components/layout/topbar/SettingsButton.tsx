@@ -7,7 +7,7 @@ export function TopbarSettingsButton() {
   const { theme } = useTheme();
   return (
     <Pressable
-      onPress={() => router.push({ pathname: '/settings' })}
+      onPress={() => router.navigate({ pathname: '/settings' })}
       style={({ pressed }) => [
         Atoms.p_xs,
         Atoms.rounded_full,

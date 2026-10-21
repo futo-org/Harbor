@@ -1,11 +1,9 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
-import {
-  shortenIdentityId,
-  truncateName,
-} from '@/src/common/lib/polycentric-hooks';
+import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile, type ProfileHookResult } from './hooks/useProfile';
+import { Username } from './Username';
 import type { FetchMode } from '@polycentric/react-native';
 import type { ReactNode } from 'react';
 import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
@@ -41,7 +39,6 @@ export function ProfileRow({
 }) {
   const { theme } = useTheme();
   const profile = useProfile(identity, { fetchMode });
-  const name = profile.name ?? fallbackName;
   const alias = profile.alias ?? fallbackAlias;
 
   return (
@@ -71,20 +68,19 @@ export function ProfileRow({
       >
         <ProfileAvatar identityKey={identity} size={size} />
         <View style={Atoms.flex_1}>
-          <Text
+          <Username
+            identity={identity}
+            fallbackName={fallbackName}
             variant="secondary"
             fontWeight="semibold"
-            numberOfLines={1}
             selectable={false}
-          >
-            {name ? truncateName(name, 32) : 'Anonymous'}
-          </Text>
+          />
           <Text
             variant="small"
             color="neutral_500"
             numberOfLines={1}
             selectable={false}
-            style={alias ? undefined : { fontFamily: 'monospace' }}
+            monospace={!alias}
           >
             {alias ?? shortenIdentityId(identity)}
           </Text>

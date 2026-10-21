@@ -10,9 +10,9 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub url: String,
-    pub title: String,
-    pub description: String,
-    pub image: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub image: Option<String>,
     // Raw JSON body the scraper returned for a successful scrape.
     pub raw_response: Option<String>,
     pub error_code: Option<i32>,

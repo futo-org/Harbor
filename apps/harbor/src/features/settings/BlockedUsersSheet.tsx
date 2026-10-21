@@ -18,7 +18,7 @@ export default function BlockedUsersSheet() {
   // The profile is outside this sheet's stack, so close the sheet first.
   const openProfile = (identity: string) => {
     if (router.canGoBack()) router.back();
-    router.push(Routes.tabs.profile(identity));
+    router.navigate(Routes.tabs.profile(identity));
   };
 
   return (

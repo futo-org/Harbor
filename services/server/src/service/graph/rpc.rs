@@ -1,10 +1,9 @@
 //! gRPC `GraphService` impl: paginated follow-edge listings.
 
-pub mod list_follows;
-pub mod suggest_follow;
+use std::sync::Arc;
+use tonic::{Request, Response, Status};
 
-use crate::service::auth::authenticated_identity;
-use crate::service::context::{RequestContext, ServiceContext};
+use crate::service::context::ServiceContext;
 use crate::service::proto::graph_service_server::{
     GraphService, GraphServiceServer,
 };
@@ -12,9 +11,11 @@ use crate::service::proto::{
     ListFollowersRequest, ListFollowingRequest, ListFollowsResponse,
     SuggestFollowRequest, SuggestFollowResponse,
 };
+
+pub mod list_follows;
+pub mod suggest_follow;
+
 use list_follows::Direction;
-use std::sync::Arc;
-use tonic::{Request, Response, Status};
 
 pub struct GraphServiceImpl {
     ctx: Arc<ServiceContext>,
@@ -26,10 +27,11 @@ impl GraphService for GraphServiceImpl {
         &self,
         request: Request<ListFollowingRequest>,
     ) -> Result<Response<ListFollowsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         let req = request.into_inner();
         Ok(Response::new(
             list_follows::handle(
-                &self.ctx,
+                ctx,
                 req.identity,
                 req.page_params.as_ref(),
                 Direction::Following,
@@ -42,10 +44,11 @@ impl GraphService for GraphServiceImpl {
         &self,
         request: Request<ListFollowersRequest>,
     ) -> Result<Response<ListFollowsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         let req = request.into_inner();
         Ok(Response::new(
             list_follows::handle(
-                &self.ctx,
+                ctx,
                 req.identity,
                 req.page_params.as_ref(),
                 Direction::Followers,
@@ -58,10 +61,9 @@ impl GraphService for GraphServiceImpl {
         &self,
         request: Request<SuggestFollowRequest>,
     ) -> Result<Response<SuggestFollowResponse>, Status> {
-        let caller = authenticated_identity(&request);
-        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            suggest_follow::handle(&ctx, request.into_inner()).await?,
+            suggest_follow::handle(ctx, request.into_inner()).await?,
         ))
     }
 }

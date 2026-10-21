@@ -22,7 +22,7 @@ import { useFeedDataStore } from '../../feed/hooks/feedCache';
 import { EMPTY_POSTS, type FeedHookResult } from '../../feed/hooks/types';
 import { useChainedExtend } from '../../feed/hooks/useChainedExtend';
 
-export type PostSearchSort = 'top' | 'latest';
+export type PostSearchSort = 'top' | 'popular' | 'latest';
 
 export const searchQueryKeys = {
   posts: (sort: PostSearchSort, query: string): string[] => [
@@ -111,6 +111,12 @@ function useSearchPostsPageInfo(
   return pageInfo;
 }
 
+const SORT_TYPE_MAP: Record<PostSearchSort, SearchPostsSort> = {
+  top: SearchPostsSort.Default,
+  popular: SearchPostsSort.Top,
+  latest: SearchPostsSort.Latest,
+};
+
 export function useSearchPosts(
   searchQuery: string,
   options?: {
@@ -129,8 +135,7 @@ export function useSearchPosts(
     (_status, data) =>
       new Query.SearchPosts({
         query: searchQuery,
-        sortBy:
-          sort === 'latest' ? SearchPostsSort.Latest : SearchPostsSort.Default,
+        sortBy: SORT_TYPE_MAP[sort],
         limit: options?.perServerLimit,
         forwardToken: extractToken(data),
         omitLabels,

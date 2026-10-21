@@ -2,6 +2,11 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { createServer } = require('node:http');
 const { createRequestHandler } = require('expo-server/vendor/http');
+const {
+  buildAppleAppSiteAssociation,
+  buildAssetLinks,
+  buildPolycentricAliases,
+} = require('./appLinks');
 
 const CLIENT_DIR = path.join(__dirname, 'dist', 'client');
 const handler = createRequestHandler({
@@ -17,13 +22,19 @@ for (const [key, value] of Object.entries(process.env)) {
 // SSR reads the same global.
 globalThis.__HARBOR_ENV__ = runtimeEnv;
 
+// One web image serves every environment, so staging icons are served on its
+// host, under the usual URLs
+const STAGING_ICON_FILE_BY_URL_PATH = {
+  '/favicon.ico': '/favicon-staging.ico',
+  '/apple-touch-icon.png': '/apple-touch-icon-staging.png',
+};
+
 // Base URL for the exported bundle (e.g. the static CDN). CI uploads the
 // same /_expo and /assets tree under it and rewrites the js/css to match.
-const assetsBaseUrl = (
-  process.env.HARBOR_STATIC_ASSETS_URL ??
-  process.env.POLYCENTRIC_STATIC_ASSETS_URL ??
-  ''
-).replace(/\/$/, '');
+const assetsBaseUrl = (process.env.HARBOR_STATIC_ASSETS_URL ?? '').replace(
+  /\/$/,
+  '',
+);
 
 // Substitute the runtime env into the +html.tsx script of every exported
 // HTML template. Matches the whole assignment, so restarts re-patch.
@@ -64,11 +75,42 @@ const MIME_TYPES = {
   '.wasm': 'application/wasm',
 };
 
+// Well-known files built for the requested host: verification files for iOS
+// Universal Links and Android App Links, and the polycentric alias document.
+// Other hosts (alt domains, self-hosters) get a 404.
+const APP_LINK_FILE_BUILDERS = {
+  '/.well-known/apple-app-site-association': buildAppleAppSiteAssociation,
+  '/.well-known/assetlinks.json': buildAssetLinks,
+  '/.well-known/polycentric.json': buildPolycentricAliases,
+};
+
+function serveAppLinkFile(req, res, next) {
+  const buildAppLinkFile = APP_LINK_FILE_BUILDERS[req.url.split('?')[0]];
+  if (!buildAppLinkFile) return next();
+
+  const appLinkFile = buildAppLinkFile(req.headers.host);
+  if (!appLinkFile) {
+    res.statusCode = 404;
+    res.end('Not Found');
+    return;
+  }
+
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  // Public documents; alias resolution happens via cross-origin browser fetch.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.end(JSON.stringify(appLinkFile));
+}
+
 function serveStatic(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
-  const filePath = path.join(CLIENT_DIR, urlPath);
+  const staticFilePath =
+    (req.headers.host === 'staging.harbor.social' &&
+      STAGING_ICON_FILE_BY_URL_PATH[urlPath]) ||
+    urlPath;
+  const filePath = path.join(CLIENT_DIR, staticFilePath);
 
   if (!filePath.startsWith(CLIENT_DIR)) return next();
 
@@ -79,19 +121,28 @@ function serveStatic(req, res, next) {
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Only Metro's output has content-hashed names; public/ files keep theirs
+    const isHashed = /^\/(_expo|assets)\//.test(urlPath);
+    res.setHeader(
+      'Cache-Control',
+      isHashed
+        ? 'public, max-age=31536000, immutable'
+        : 'public, max-age=86400',
+    );
     fs.createReadStream(filePath).pipe(res);
   });
 }
 
 createServer((req, res) => {
-  serveStatic(req, res, () => {
-    handler(req, res, (err) => {
-      if (err) {
-        console.error(err);
-        res.statusCode = 500;
-        res.end('Internal Server Error');
-      }
+  serveAppLinkFile(req, res, () => {
+    serveStatic(req, res, () => {
+      handler(req, res, (err) => {
+        if (err) {
+          console.error(err);
+          res.statusCode = 500;
+          res.end('Internal Server Error');
+        }
+      });
     });
   });
 }).listen(port, () => {

@@ -12,10 +12,11 @@ import polycentric.v2.PublicKey
  * the KeyType enum), and the UniFFI record types (plain Int/ByteArray).
  */
 
-internal fun StoredKeyPair.toPublicKeyProto(): PublicKey = PublicKey(
-    key_type = KeyType.fromValue(keyType) ?: KeyType.KEY_TYPE_UNSPECIFIED,
-    key = publicKey.toByteString(),
-)
+internal fun StoredKeyPair.toPublicKeyProto(): PublicKey =
+    PublicKey(
+        key_type = KeyType.fromValue(keyType) ?: KeyType.KEY_TYPE_UNSPECIFIED,
+        key = publicKey.toByteString(),
+    )
 
 internal fun PublicKey.toFfi(): org.futo.polycentric.ffi.PublicKey =
     org.futo.polycentric.ffi.PublicKey(
