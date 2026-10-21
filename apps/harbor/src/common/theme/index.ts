@@ -1,5 +1,6 @@
 export { darkPalette, lightPalette, withHexOpacity } from './palette';
 export type { Palette, PaletteColorToken } from './palette';
+export { createThemedStyles } from './createThemedStyles';
 export { Context, ThemeProvider, useTheme } from './provider';
 export { createTheme, themes } from './themes';
 export { THEME_PREFERENCE_OPTIONS } from './themePreferenceOptions';
