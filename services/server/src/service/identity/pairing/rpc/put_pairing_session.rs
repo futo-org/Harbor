@@ -1,6 +1,15 @@
 //! `put_pairing_session`: creates or updates a pairing session.
 
-use crate::service::context::ServiceContext;
+use chrono::{DateTime, TimeDelta, Utc};
+use entity::pairing_session;
+use polycentric_common::error::CoreError;
+use sea_orm::entity::prelude::DateTimeUtc;
+use sea_orm::{ActiveValue::Set, ConnectionTrait};
+use sha2::{Digest, Sha256};
+use tonic::Status;
+
+use crate::db::DbTx;
+use crate::service::context::PublicContext;
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::identity::pairing::rpc::common::load_session_state;
 use crate::service::identity::repository as id_repo;
@@ -8,15 +17,6 @@ use crate::service::proto as Proto;
 use crate::service::proto::{
     PutPairingSessionRequest, PutPairingSessionResponse,
 };
-use chrono::{DateTime, TimeDelta, Utc};
-use entity::pairing_session;
-use polycentric_common::error::CoreError;
-use sea_orm::entity::prelude::DateTimeUtc;
-use sea_orm::{
-    ActiveValue::Set, DatabaseConnection, DatabaseTransaction, TransactionTrait,
-};
-use sha2::{Digest, Sha256};
-use tonic::Status;
 
 /// How far an issuer's timestamp may drift from the server's clock.
 const MAX_INITIAL_TIMESTAMP_SKEW: TimeDelta = TimeDelta::minutes(1);
@@ -34,7 +34,7 @@ struct Input {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    mut ctx: PublicContext,
     req: PutPairingSessionRequest,
 ) -> Result<PutPairingSessionResponse, Status> {
     // Ensure the request is legitimate and extract content
@@ -42,7 +42,7 @@ pub async fn handle(
     verify_authorization(&ctx.db, &input).await?;
 
     // Use a transaction to prevent TOCTOU problems
-    let txn = ctx.db.begin().await.map_err(|e| {
+    let mut txn = ctx.db.begin().await.map_err(|e| {
         tracing::error!(error = %e, "put_pairing_session txn begin error");
         Status::internal("internal server error")
     })?;
@@ -69,7 +69,7 @@ pub async fn handle(
     // Perform update if needed
     let response_digest = match existing {
         Some(stored) if is_stale(&input, &stored) => stored.digest_sha256,
-        _ => update_session(&txn, input, is_new_session).await?,
+        _ => update_session(&mut txn, input, is_new_session).await?,
     };
 
     txn.commit().await.map_err(|e| {
@@ -120,8 +120,8 @@ fn extract_and_validate_input(
 }
 
 /// Checks that the signer is authorized to rotate the identity.
-async fn verify_authorization(
-    db: &DatabaseConnection,
+async fn verify_authorization<C: ConnectionTrait>(
+    db: &C,
     input: &Input,
 ) -> Result<(), Status> {
     let is_authorized = id_repo::Query::is_rotation_key(
@@ -183,12 +183,12 @@ fn is_stale(input: &Input, existing: &pairing_session::Model) -> bool {
 /// Update the database state to reflect the new input.
 /// Returns the SHA256 hash of the digest we are storing after this update.
 async fn update_session(
-    txn: &DatabaseTransaction,
+    tx: &mut DbTx<'_>,
     input: Input,
     is_new_session: bool,
 ) -> Result<Vec<u8>, Status> {
     if is_new_session {
-        pair_repo::Query::clear_claimers(txn, &input.issuer_identity)
+        pair_repo::Query::clear_claimers(tx, &input.issuer_identity)
             .await
             .map_err(|e| {
                 tracing::error!(error = %e, "put_pairing_session clear claimers db error");
@@ -206,7 +206,7 @@ async fn update_session(
         sequence: Set(input.sequence),
     };
 
-    pair_repo::Query::put_issuer_state(txn, row)
+    pair_repo::Query::put_issuer_state(tx, row)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "put_pairing_session write db error");

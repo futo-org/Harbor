@@ -1,0 +1,5 @@
+{
+  "production": "#FF6A00",
+  "staging": "#FFBB29",
+  "dev": "#07CF5E"
+}

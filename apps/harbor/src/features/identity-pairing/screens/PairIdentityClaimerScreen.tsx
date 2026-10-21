@@ -1,4 +1,3 @@
-import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { AVATAR_SIZE_MAP } from '@/src/common/components/Avatar/Avatar';
 import {
   Button,
@@ -15,7 +14,7 @@ import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { PairIdentityCamera } from '@/src/features/identity-pairing/components/PairIdentityCamera';
 import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
-import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
+import { EmojiFingerprint } from '@/src/features/identity-pairing/components/EmojiFingerprint';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { PAIRING_CODE_PARAM, Routes } from '@/src/common/constants';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -145,8 +144,6 @@ function PairingEmojiCard() {
     ? publicKeyToString(client.currentKeyPair.publicKey)
     : '';
 
-  const pubKeyEmojis = pubKeyStr ? publicKeyEmojiFingerprint(pubKeyStr) : [];
-
   return (
     <View
       style={[
@@ -165,32 +162,15 @@ function PairingEmojiCard() {
         Your matching code
       </Text>
 
-      <View
-        style={[
-          Atoms.w_full,
-          Atoms.flex_row,
-          Atoms.items_center,
-          Atoms.justify_center,
-          Atoms.gap_lg,
-          Atoms.rounded_lg,
-          Atoms.flex_wrap,
-          Atoms.py_lg,
-          Atoms.px_lg,
-          { backgroundColor: theme.palette.white },
-        ]}
-      >
-        {pubKeyEmojis.map((emoji, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: short emoji sequence that doesn't reorder
-          <EmojiImage key={i} sequence={emoji} size={60} />
-        ))}
-      </View>
+      {pubKeyStr ? <EmojiFingerprint publicKey={pubKeyStr} /> : null}
 
       <Text
         variant="small"
         color="neutral_500"
         selectable
+        monospace
         style={[
-          { fontFamily: 'monospace', textAlign: 'center' },
+          { textAlign: 'center' },
           // The pubkey string is a long string with no whitespace
           isWeb && { wordBreak: 'break-all' },
         ]}
@@ -289,8 +269,9 @@ function IssuerProfile({ identityKey }: { identityKey: string }) {
         variant="secondary"
         color="neutral_500"
         selectable
+        monospace
         style={[
-          { fontFamily: 'monospace', textAlign: 'center' },
+          { textAlign: 'center' },
           // The identity key is a long string with no whitespace
           isWeb && { wordBreak: 'break-all' },
         ]}

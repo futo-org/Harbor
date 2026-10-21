@@ -15,11 +15,11 @@ use polycentric_common::models::{
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::TransactionTrait;
 use tonic::{Code, Status};
 
 use crate::service::content::content_repository as ContentRepository;
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
+use crate::service::events::heads_pubsub;
 use crate::service::events::repository as EventsRepository;
 use crate::service::identity::repository::Query as IdentityRepository;
 use crate::service::identity::service::authorize_event_signer;
@@ -32,7 +32,7 @@ use crate::service::proto::{
 /// Ingest a batch of signed events. Each event is processed in
 /// isolation with failures reported back in `PutEventsResponse.errors`
 pub async fn handle(
-    ctx: &ServiceContext,
+    mut ctx: PublicContext,
     req: PutEventsRequest,
 ) -> Result<PutEventsResponse, Status> {
     let mut errors: Vec<PutEventError> = Vec::new();
@@ -41,10 +41,11 @@ pub async fn handle(
 
     let mut banned_cache = HashMap::new();
     let mut app_cache = HashMap::new();
+    let mut stored = HashMap::<String, Vec<EventKey>>::new();
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
         let start_warnings = warnings.len();
         match process_event(
-            ctx,
+            &mut ctx,
             event_bundle,
             &mut banned_cache,
             &mut app_cache,
@@ -57,7 +58,7 @@ pub async fn handle(
         )
         .await
         {
-            Ok(key) => {
+            Ok((key, is_new)) => {
                 if warnings.len() != start_warnings {
                     tracing::debug!(
                         key = ?key,
@@ -66,6 +67,9 @@ pub async fn handle(
                     );
                 } else {
                     tracing::debug!(key = ?key, "processed event");
+                }
+                if is_new {
+                    stored.entry(key.identity.clone()).or_default().push(key);
                 }
             }
             // We should see internal errors if something is wrong on our end,
@@ -90,7 +94,17 @@ pub async fn handle(
         }
     }
 
-    let missing_blobs = remove_present_blobs(ctx, all_blobs)
+    if let Some(pubsub) = heads_pubsub::get()
+        && !stored.is_empty()
+    {
+        tokio::spawn(async move {
+            for (identity, keys) in stored {
+                pubsub.publish(&identity, keys).await;
+            }
+        });
+    }
+
+    let missing_blobs = remove_present_blobs(&ctx, all_blobs)
         .await
         .unwrap_or_else(|e| {
             // A failure occurred while checking what blobs the server already has.
@@ -107,17 +121,17 @@ pub async fn handle(
     })
 }
 
-/// Validate and persist an event.
-/// Returns all blobs referenced by the event.
+/// Validate and persist an event, adding its blobs to `all_blobs`.
+/// Returns its key and whether it was newly stored.
 async fn process_event(
-    ctx: &ServiceContext,
+    ctx: &mut PublicContext,
     event_bundle: EventBundle,
     banned_cache: &mut HashMap<Box<str>, bool>,
     app_cache: &mut HashMap<Application, i32>,
     all_blobs: &mut HashSet<Blob>,
     warnings: &mut Vec<PutEventError>,
     map_warning: impl Fn(ValidationError) -> PutEventError,
-) -> Result<EventKey, Status> {
+) -> Result<(EventKey, bool), Status> {
     let start_warning_len = warnings.len();
     if !event_bundle.event_proofs.is_empty() {
         return Err(Status::invalid_argument(
@@ -166,7 +180,7 @@ async fn process_event(
         Some(false) => { /* Ok to continue. */ }
         None => {
             let is_banned = IdentityRepository::is_banned(
-                &ctx.ro_db,
+                &ctx.db,
                 &key.identity,
             )
             .await
@@ -307,9 +321,10 @@ async fn process_event(
         .unwrap_or(Utc::now())
         .fixed_offset()),
         synced_at: Set(Utc::now().fixed_offset()),
+        content_type: NotSet, // Set by `add_event`.
     };
 
-    match EventsRepository::Mutation::add_event(
+    let stored = match EventsRepository::Mutation::add_event(
         &txn,
         active_model,
         decoded_content,
@@ -350,6 +365,7 @@ async fn process_event(
                     tracing::warn!(error = %e, "put_events kafka publish error");
                 }
             });
+            true
         }
         Ok(false) => {
             // Duplicate event — already stored, treat as success, but revert
@@ -358,14 +374,15 @@ async fn process_event(
                 tracing::error!(error = %err, "put_events txn abort error");
                 Status::internal("internal server error")
             })?;
+            false
         }
         Err(err) => {
             tracing::error!(error = %err, "put_events db error");
             return Err(Status::internal("internal server error"));
         }
-    }
+    };
 
-    Ok(key)
+    Ok((key, stored))
 }
 
 fn banned_error() -> Status {
@@ -479,15 +496,20 @@ fn validate_content(
         }
         ContentBody::VerificationClaim(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-            // TODO: validate.
+
+            // TODO: don't allow spamming of the same claim if it's denied?
         }
         ContentBody::VerificationVerify(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-            // TODO: validate.
+
+            // TODO: needs db for validation of:
+            // * event key is known.
+            // * event key is a valid claim.
         }
         ContentBody::VerificationTarget(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-            // TODO: validate.
+
+            // TODO: limit the target identities in some way?
         }
     }
 }
@@ -539,7 +561,7 @@ pub fn event_is_authorised(identity: &str, content: Option<&Content>) -> bool {
 
 /// Keep only the blobs that are not already present
 async fn remove_present_blobs(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     blobs: HashSet<Blob>,
 ) -> Result<Vec<Blob>, Status> {
     let digests: Vec<_> = blobs
@@ -548,7 +570,7 @@ async fn remove_present_blobs(
         .collect();
 
     let already_present =
-        ContentRepository::Query::find_digests_in_db(&ctx.ro_db, &digests)
+        ContentRepository::Query::find_digests_in_db(&ctx.db, &digests)
             .await
             .map_err(|e| {
                 tracing::error!(error = %e, "put_events blob db error");

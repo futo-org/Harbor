@@ -70,6 +70,7 @@ mod m20261002_000002_fix_reaction_count_decay_overflow;
 mod m20261008_000001_analyze_all_tables;
 mod m20261009_000001_notification_read_marker_table;
 mod m20261015_000001_gravity_expire_time;
+mod m20261019_000001_events_content_type;
 
 mod old_entity;
 
@@ -149,6 +150,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20261008_000001_analyze_all_tables::Migration),
             Box::new(m20261009_000001_notification_read_marker_table::Migration),
             Box::new(m20261015_000001_gravity_expire_time::Migration),
+            Box::new(m20261019_000001_events_content_type::Migration),
         ]
     }
 }

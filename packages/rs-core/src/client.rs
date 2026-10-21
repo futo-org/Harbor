@@ -222,11 +222,14 @@ impl PolycentricClient {
     }
 
     /// Assemble the stored bundle for an event already located in the store.
+    /// When `for_client` is true, event proofs and event metadata are included.
+    /// When `for_upload` is false, we only include the event and content, since
+    /// that is what servers expect.
     pub(crate) fn bundle_for(
         &self,
         key: &EventKey,
         signed_event: &SignedEvent,
-        include_proofs: bool,
+        for_client: bool,
     ) -> Result<EventBundle, CoreError> {
         let event = Event::decode(signed_event.event_bytes.as_slice())
             .map_err(|e| CoreError::InvalidEvent(format!("Failed to decode event: {}", e)))?;
@@ -236,17 +239,23 @@ impl PolycentricClient {
             .as_ref()
             .and_then(|digest| self.find_content_from_digest(digest));
 
-        let event_proofs = if include_proofs {
+        let event_proofs = if for_client {
             self.event_proofs_store.get(key).to_vec()
         } else {
             Vec::new()
+        };
+
+        let meta = if for_client {
+            self.meta_store.get(key).cloned()
+        } else {
+            None
         };
 
         Ok(EventBundle {
             signed_event: Some(signed_event.clone()),
             serialized_content,
             event_proofs,
-            meta: self.meta_store.get(key).cloned(),
+            meta,
         })
     }
 
@@ -348,6 +357,27 @@ impl PolycentricClient {
     /// without further aggregation or validity checking.
     pub fn find_collections_and_signers(&self, identity: &str) -> (Vec<i32>, Vec<PublicKey>) {
         self.event_store.find_collections_and_signers(identity)
+    }
+
+    /// Highest local event per (collection, signer) of `identity`.
+    pub fn local_heads(&self, identity: &str) -> Vec<protos_v2::EventKey> {
+        let (collections, signers) = self.find_collections_and_signers(identity);
+        collections
+            .into_iter()
+            .flat_map(|collection| {
+                signers.iter().filter_map(move |signer| {
+                    let (key, _) = self
+                        .get_sync_events(identity, collection, signer.key_type, &signer.key, 0)
+                        .next_back()?;
+                    Some(protos_v2::EventKey {
+                        collection,
+                        identity: identity.to_string(),
+                        signed_by: Some(signer.clone()),
+                        sequence: key.sequence,
+                    })
+                })
+            })
+            .collect()
     }
 
     /// Max `sequence` of identity events signed by `signer` for `identity`,
@@ -1274,6 +1304,33 @@ mod tests {
                 .find_event_bundle_by_sequence(&identity, 2, 1, Some("ffff"))
                 .is_none()
         );
+    }
+
+    #[test]
+    fn local_heads_are_the_highest_event_per_collection_and_signer() {
+        let mut client = PolycentricClient::new();
+        let a = keypair(1);
+        let identity = add_identity_event(&mut client, &a, None, 1, vec![a.public.clone()], vec![]);
+        for sequence in 1..=2 {
+            let post = sign_event(
+                &a,
+                &identity,
+                2,
+                sequence,
+                1,
+                vec![sequence],
+                dummy_post_digest(),
+            );
+            client.copy_event(post).expect("copy post");
+        }
+
+        let mut heads: Vec<_> = client
+            .local_heads(&identity)
+            .into_iter()
+            .map(|key| (key.collection, key.sequence))
+            .collect();
+        heads.sort();
+        assert_eq!(heads, [(collections::IDENTITY, 1), (2, 2)]);
     }
 
     #[test]

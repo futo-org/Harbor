@@ -8,8 +8,8 @@ use ::entity::{
     content_reaction as Contentreaction, event, follow, quote, reaction,
     reaction_tally, reply, repost,
 };
-use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::SortPostsBy;
+use polycentric_common::models::{collections, content_types};
 use sea_orm::{
     Condition, FromQueryResult,
     entity::prelude::*,
@@ -17,7 +17,7 @@ use sea_orm::{
     *,
 };
 use sea_query::query::{CommonTableExpression, WithClause};
-use sea_query::{Func, SelectStatement, UnionType};
+use sea_query::{Func, PgFunc, SelectStatement, UnionType};
 use serde::{Deserialize, Serialize};
 use tonic::Status;
 
@@ -108,8 +108,8 @@ const NOT_OWN_POSTS: bool = false;
 
 impl Query {
     /// Returns posts for the global Explore feed.
-    pub async fn explore_feed(
-        db: &DbConn,
+    pub async fn explore_feed<C: ConnectionTrait>(
+        db: &C,
         sort_by: SortPostsBy,
         limit: u64,
         cursor_filter: &CursorFilter<SortedBy>,
@@ -127,8 +127,8 @@ impl Query {
     }
 
     /// Returns posts for the Following feed.
-    pub async fn following_feed(
-        db: &DbConn,
+    pub async fn following_feed<C: ConnectionTrait>(
+        db: &C,
         for_identity: &str,
         sort_by: SortPostsBy,
         limit: u64,
@@ -147,8 +147,8 @@ impl Query {
     }
 
     /// Returns posts for the Recommended / For You feed.
-    pub async fn recommended_feed(
-        db: &DbConn,
+    pub async fn recommended_feed<C: ConnectionTrait>(
+        db: &C,
         for_identity: &str,
         sort_by: SortPostsBy,
         limit: u64,
@@ -174,8 +174,8 @@ impl Query {
     /// If `posts_created_only` is true only posts created by an identity
     /// `for_identity` is following will be shown. If it's false any interaction
     /// (reaction, repost, etc.) by a followee will include the post.
-    async fn explore_posts(
-        db: &DbConn,
+    async fn explore_posts<C: ConnectionTrait>(
+        db: &C,
         for_identity: Option<&str>,
         posts_created_only: bool,
         include_own_posts: bool,
@@ -194,8 +194,8 @@ impl Query {
         if let Some(for_identity) = for_identity {
             // List of identities the `for_identity` is following and
             // themselves.
-            let mut following = SelectStatement::new();
-            following
+            let mut following_rows = SelectStatement::new();
+            following_rows
                 .column(follow::Column::Followee)
                 .from(follow::Entity)
                 .and_where(
@@ -203,23 +203,41 @@ impl Query {
                         .eq(for_identity),
                 );
             if include_own_posts {
-                following.union(UnionType::All, {
+                following_rows.union(UnionType::All, {
                     let mut q = SelectStatement::new();
                     q.expr(Expr::value(for_identity));
                     q
                 });
             }
 
-            let mut with = WithClause::new();
+            // Aggregated into a single array so it's computed once.
             const FOLLOWING_TABLE: &str = "following";
+            const IDENTITIES_COLUMN: &str = "identities";
+            let mut following = SelectStatement::new();
+            following
+                .expr_as(
+                    PgFunc::array_agg(Expr::col(follow::Column::Followee)),
+                    IDENTITIES_COLUMN,
+                )
+                .from_subquery(following_rows, "following_rows");
+
+            let mut with = WithClause::new();
             let mut cte = CommonTableExpression::new();
             cte.table_name(FOLLOWING_TABLE).query(following);
             with.cte(cte);
 
-            let mut select_followee = SelectStatement::new();
-            select_followee
-                .column(follow::Column::Followee)
+            let mut select_following = SelectStatement::new();
+            select_following
+                .column(IDENTITIES_COLUMN)
                 .from(FOLLOWING_TABLE);
+
+            // `identity = ANY((SELECT identities FROM following)::TEXT[])`.
+            let in_following = |identity: Expr| {
+                identity.eq(PgFunc::any(Func::cast_as(
+                    select_following.clone(),
+                    "TEXT[]",
+                )))
+            };
 
             let mut relevant_events = SelectStatement::new();
 
@@ -227,14 +245,26 @@ impl Query {
             relevant_events
                 .column(event::Column::Id)
                 .from(event::Entity)
-                .cond_where(
-                    event::Column::Identity
-                        .in_subquery(select_followee.clone()),
-                )
+                .cond_where(in_following(Expr::col((
+                    event::Entity,
+                    event::Column::Identity,
+                ))))
                 .and_where(
                     Expr::col(event::Column::Collection.as_column_ref())
                         .eq(Expr::Constant(collections::FEED.into())),
                 );
+            if include_own_posts {
+                // But not the identity's own reposts.
+                let content_type =
+                    Expr::col((event::Entity, event::Column::ContentType));
+                relevant_events.and_where(
+                    Expr::col((event::Entity, event::Column::Identity))
+                        .ne(for_identity)
+                        .or(content_type.clone().is_null())
+                        .or(content_type
+                            .ne(Expr::Constant(content_types::REPOST.into()))),
+                );
+            }
 
             // Include additional interactions.
             if !posts_created_only {
@@ -243,10 +273,10 @@ impl Query {
                     let mut q = SelectStatement::new();
                     q.column(reaction::Column::OnPost)
                         .from(reaction::Entity)
-                        .and_where(
-                            reaction::Column::Identity
-                                .in_subquery(select_followee.clone()),
-                        );
+                        .and_where(in_following(Expr::col((
+                            reaction::Entity,
+                            reaction::Column::Identity,
+                        ))));
                     q
                 });
                 // Reposted by an identity the `for_identity` is following.
@@ -254,10 +284,10 @@ impl Query {
                     let mut q = SelectStatement::new();
                     q.column(repost::Column::Post)
                         .from(repost::Entity)
-                        .and_where(
-                            repost::Column::Identity
-                                .in_subquery(select_followee.clone()),
-                        );
+                        .and_where(in_following(Expr::col((
+                            repost::Entity,
+                            repost::Column::Identity,
+                        ))));
                     q
                 });
                 // Quoted by an identity the `for_identity` is following.
@@ -265,10 +295,10 @@ impl Query {
                     let mut q = SelectStatement::new();
                     q.column(quote::Column::Post)
                         .from(quote::Entity)
-                        .and_where(
-                            quote::Column::Identity
-                                .in_subquery(select_followee.clone()),
-                        );
+                        .and_where(in_following(Expr::col((
+                            quote::Entity,
+                            quote::Column::Identity,
+                        ))));
                     q
                 });
                 // Replied to by an identity the `for_identity` is following.
@@ -276,10 +306,10 @@ impl Query {
                     let mut q = SelectStatement::new();
                     q.column(reply::Column::Post)
                         .from(reply::Entity)
-                        .and_where(
-                            reply::Column::Identity
-                                .in_subquery(select_followee),
-                        );
+                        .and_where(in_following(Expr::col((
+                            reply::Entity,
+                            reply::Column::Identity,
+                        ))));
                     q
                 });
             }
@@ -301,10 +331,18 @@ impl Query {
                     .eq(Expr::col((RELEVANT_EVENT, "id"))),
             );
         } else {
-            query.from(event::Entity).cond_where(
-                Expr::col(event::Column::Collection.as_column_ref())
-                    .eq(Expr::Constant(collections::FEED.into())),
-            );
+            // Only posts, not reposts. Matches the `events_feed_posts_idx`
+            // index.
+            query
+                .from(event::Entity)
+                .cond_where(
+                    Expr::col(event::Column::Collection.as_column_ref())
+                        .eq(Expr::Constant(collections::FEED.into())),
+                )
+                .and_where(
+                    Expr::col(event::Column::ContentType.as_column_ref())
+                        .eq(Expr::Constant(content_types::POST.into())),
+                );
         }
 
         let relation = content_join();
@@ -421,8 +459,8 @@ impl Query {
 
     /// List events restricted to events authored by any of `identities`.
     /// Short-circuits with an empty Vec when the identity list is empty.
-    pub async fn list_feed_events_by_identities(
-        db: &DbConn,
+    pub async fn list_feed_events_by_identities<C: ConnectionTrait>(
+        db: &C,
         identities: Vec<String>,
         limit: u64,
         cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -441,8 +479,8 @@ impl Query {
     /// `Post.attributed_to[].link`). "Attributed to a URL" means an exact URL
     /// match, ignoring the other Link metadata.
     /// Short-circuits with an empty Vec when `url` is empty.
-    pub async fn list_feed_events_by_attributed_url(
-        db: &DbConn,
+    pub async fn list_feed_events_by_attributed_url<C: ConnectionTrait>(
+        db: &C,
         url: String,
         limit: u64,
         cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -454,8 +492,8 @@ impl Query {
             .await
     }
 
-    async fn do_list_feed_events(
-        db: &DbConn,
+    async fn do_list_feed_events<C: ConnectionTrait>(
+        db: &C,
         limit: u64,
         only_identities: Option<Vec<String>>,
         only_attributed_url: Option<String>,
@@ -516,8 +554,8 @@ impl Query {
     /// Bulk-fetch events (with joined content) by their EventKey
     /// tuples. Keys missing a `signed_by` are skipped. Used to hydrate
     /// referenced posts (quote / repost targets) as `event_hints`.
-    pub async fn list_events_by_keys(
-        db: &DbConn,
+    pub async fn list_events_by_keys<C: ConnectionTrait>(
+        db: &C,
         keys: &[crate::service::proto::EventKey],
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let mut filter = Condition::any();
@@ -555,8 +593,8 @@ impl Query {
     /// the trusted moderator are returned, using a join through
     /// `content_label` → `content` → `events` to check the label
     /// author's identity. Returns empty when no moderator is configured.
-    pub async fn list_labels_for_event_keys(
-        db: &DbConn,
+    pub async fn list_labels_for_event_keys<C: ConnectionTrait>(
+        db: &C,
         keys: &[TargetEventKey],
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let Some(moderator) = config::get().trusted_moderator.as_deref() else {
@@ -665,8 +703,8 @@ impl Query {
     }
 
     /// Look up a single event (with joined content) by its EventKey tuple.
-    pub async fn find_event_by_key(
-        db: &DbConn,
+    pub async fn find_event_by_key<C: ConnectionTrait>(
+        db: &C,
         collection: i16,
         identity: &str,
         public_key_type: i16,
@@ -689,8 +727,8 @@ impl Query {
     /// identity for each of `identities`. Used as `event_hints` on
     /// feed/thread responses so clients can populate author profiles
     /// without a follow-up round-trip.
-    pub async fn list_latest_profiles_for_identities(
-        db: &DbConn,
+    pub async fn list_latest_profiles_for_identities<C: ConnectionTrait>(
+        db: &C,
         identities: Vec<String>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         if identities.is_empty() {
@@ -719,8 +757,8 @@ impl Query {
 
     /// Bulk-fetch event rows by primary key, joining content. Order of the
     /// returned Vec is unspecified — caller reorders against the input list.
-    pub async fn list_events_by_ids(
-        db: &DbConn,
+    pub async fn list_events_by_ids<C: ConnectionTrait>(
+        db: &C,
         ids: Vec<i64>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         if ids.is_empty() {
@@ -735,8 +773,8 @@ impl Query {
     }
 
     /// Return ids (and height) of ancestors
-    pub async fn list_ancestor_refs(
-        db: &DbConn,
+    pub async fn list_ancestor_refs<C: ConnectionTrait>(
+        db: &C,
         subject_event_id: i64,
         max_height: i32,
     ) -> Result<Vec<AncestorRef>, DbErr> {
@@ -787,8 +825,8 @@ impl Query {
     /// Return every descendant of the subject as `(event_id, parent_event_id,
     /// depth)`, ordered (depth ASC, created_at DESC) so per-parent groupings
     /// come newest-first. Caller applies branching/sort/flatten.
-    pub async fn list_descendant_refs(
-        db: &DbConn,
+    pub async fn list_descendant_refs<C: ConnectionTrait>(
+        db: &C,
         subject_event_id: i64,
         max_depth: i32,
         limit: u64,
@@ -844,8 +882,8 @@ impl Query {
 
     /// List feed events at a given sequence by a given identity.
     /// This is useful when we don't know the full signing key.
-    pub(super) async fn list_events_at_sequence(
-        db: &DbConn,
+    pub(super) async fn list_events_at_sequence<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
         sequence: u64,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
@@ -868,8 +906,8 @@ impl Query {
     /// outdated reactions from a user that have been superseded without also
     /// getting the newest one.
     /// Optionally, filter events to only include reactions with `emoji`.
-    pub async fn get_reactions(
-        db: &DbConn,
+    pub async fn get_reactions<C: ConnectionTrait>(
+        db: &C,
         target: &TargetEventKey,
         emoji: Option<&str>,
         limit: u64,

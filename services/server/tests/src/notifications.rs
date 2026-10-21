@@ -38,7 +38,7 @@ async fn mentions_notify_identities_and_aliases_and_skip_the_reply_target() {
         .await;
 
     let mut parent_author = TestClient::new().await;
-    parent_author.post_text("parent", DEFAULT_CREATED_AT);
+    parent_author.post_text("parent", current_timestamp());
     let parent_key = parent_author.get_last_event_key();
     parent_author.submit_events().await;
 
@@ -61,7 +61,7 @@ async fn mentions_notify_identities_and_aliases_and_skip_the_reply_target() {
             curly_mentioned.identity(),
             parent_author.identity(),
         ),
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     );
     author.submit_events().await;
 
@@ -94,7 +94,7 @@ async fn mentions_notify_identities_and_aliases_and_skip_the_reply_target() {
     let mut second_author = TestClient::new().await;
     second_author.post_text(
         &format!("again @{alias_local}@example.com @{unlisted_alias_local}@example.com"),
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     second_author.submit_events().await;
 
@@ -173,11 +173,16 @@ async fn unread_count_stream_follows_new_notifications_and_acknowledge() {
     request
         .metadata_mut()
         .insert("authorization", auth_token.clone().try_into().unwrap());
-    let mut stream = subscriber
+    let response = subscriber
         .subscribe_unread_notification_count(request)
         .await
-        .expect("subscribe failed")
-        .into_inner();
+        .expect("subscribe failed");
+    assert_eq!(
+        response.metadata().get("cache-control").unwrap(),
+        "no-transform",
+        "proxies must not compress the stream"
+    );
+    let mut stream = response.into_inner();
 
     assert_eq!(
         next_count(&mut stream).await,
@@ -187,7 +192,7 @@ async fn unread_count_stream_follows_new_notifications_and_acknowledge() {
 
     let mut follower = TestClient::new().await;
     follower
-        .follow_identity(recipient.identity().to_owned(), DEFAULT_CREATED_AT);
+        .follow_identity(recipient.identity().to_owned(), current_timestamp());
     let follow_key = follower.get_last_event_key();
     follower.submit_events().await;
 

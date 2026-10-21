@@ -14,7 +14,7 @@ async fn following() {
         let mut followee = TestClient::new().await;
         followee.submit_events().await; // Create the indetity.
         let id = followee.identity().to_owned();
-        follower.follow_identity(id.clone(), DEFAULT_CREATED_AT);
+        follower.follow_identity(id.clone(), current_timestamp());
         followees.push(id);
     }
     let last_follow = follower.get_last_event_key();
@@ -27,7 +27,7 @@ async fn following() {
     check_followers(&mut search, followees[1].clone(), &[follower.identity()])
         .await;
 
-    follower.delete_key(last_follow, DEFAULT_CREATED_AT + 1);
+    follower.delete_key(last_follow, current_timestamp() + 1);
     let no_followers = followees.pop().unwrap();
     follower.submit_events().await;
 
@@ -131,14 +131,14 @@ async fn suggest_follow_no_profile_updates() {
     let mut followees = Vec::with_capacity(2);
     for _ in 0..followees.capacity() {
         let mut client = TestClient::new().await;
-        client.follow_identity(suggested.to_owned(), DEFAULT_CREATED_AT);
+        client.follow_identity(suggested.to_owned(), current_timestamp());
         client.submit_events().await;
         followees.push(client.identity().to_owned());
     }
 
     let mut client = TestClient::new().await;
     for followee in followees.iter() {
-        client.follow_identity(followee.clone(), DEFAULT_CREATED_AT);
+        client.follow_identity(followee.clone(), current_timestamp());
     }
     client.submit_events().await;
 
@@ -178,7 +178,7 @@ async fn suggest_follow_with_profile_updates() {
             description: None,
             alias: None,
         },
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     );
     client.submit_events().await;
     let suggested = client.identity();
@@ -194,16 +194,16 @@ async fn suggest_follow_with_profile_updates() {
                 description: None,
                 alias: None,
             },
-            DEFAULT_CREATED_AT,
+            current_timestamp(),
         );
-        client.follow_identity(suggested.to_owned(), DEFAULT_CREATED_AT);
+        client.follow_identity(suggested.to_owned(), current_timestamp());
         client.submit_events().await;
         followees.push(client.identity().to_owned());
     }
 
     let mut client = TestClient::new().await;
     for followee in followees.iter() {
-        client.follow_identity(followee.clone(), DEFAULT_CREATED_AT);
+        client.follow_identity(followee.clone(), current_timestamp());
     }
     client.submit_events().await;
 
@@ -237,7 +237,7 @@ async fn suggest_follow_no_duplicate_identities() {
     // Create an identity with multiple identity and profile events, ensure we
     // only return the latests of both kinds.
     let mut client = TestClient::new().await;
-    client.second_identity(DEFAULT_CREATED_AT);
+    client.second_identity(current_timestamp());
     client.profile_update(
         ProfileUpdate {
             name: Some(random_string()),
@@ -246,7 +246,7 @@ async fn suggest_follow_no_duplicate_identities() {
             description: None,
             alias: None,
         },
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     );
     client.profile_update(
         ProfileUpdate {
@@ -256,7 +256,7 @@ async fn suggest_follow_no_duplicate_identities() {
             description: Some(random_string()),
             alias: None,
         },
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     );
     client.submit_events().await;
     let suggested = client.identity();
@@ -270,16 +270,16 @@ async fn suggest_follow_no_duplicate_identities() {
             description: None,
             alias: None,
         },
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     );
     // Duplicate identitiy and profile events.
     client.pending.extend(client.pending.clone());
-    client.follow_identity(suggested.to_owned(), DEFAULT_CREATED_AT);
+    client.follow_identity(suggested.to_owned(), current_timestamp());
     client.submit_events().await;
     let followee = client.identity().to_owned();
 
     let mut client = TestClient::new().await;
-    client.follow_identity(followee.clone(), DEFAULT_CREATED_AT);
+    client.follow_identity(followee.clone(), current_timestamp());
     client.submit_events().await;
 
     let expected_hints = vec![
@@ -312,11 +312,11 @@ async fn suggest_follow_exclude_self() {
     for _ in 0..2 {
         let mut followee_client = TestClient::new().await;
         followee_client
-            .follow_identity(client.identity().to_owned(), DEFAULT_CREATED_AT);
+            .follow_identity(client.identity().to_owned(), current_timestamp());
         followee_client.submit_events().await;
         client.follow_identity(
             followee_client.identity().to_owned(),
-            DEFAULT_CREATED_AT,
+            current_timestamp(),
         );
     }
     client.submit_events().await;
@@ -342,18 +342,18 @@ async fn suggest_follow_exclude_already_following() {
         let mut followee_client = TestClient::new().await;
         followee_client.follow_identity(
             suggested_client.identity().to_owned(),
-            DEFAULT_CREATED_AT,
+            current_timestamp(),
         );
         followee_client.submit_events().await;
         client.follow_identity(
             followee_client.identity().to_owned(),
-            DEFAULT_CREATED_AT,
+            current_timestamp(),
         );
     }
 
     client.follow_identity(
         suggested_client.identity().to_owned(),
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     );
     client.submit_events().await;
 
@@ -377,7 +377,7 @@ async fn suggest_follow_pagination() {
                 description: None,
                 alias: None,
             },
-            DEFAULT_CREATED_AT,
+            current_timestamp(),
         );
         client.submit_events().await;
         suggested.push(client.identity().to_owned());
@@ -394,10 +394,10 @@ async fn suggest_follow_pagination() {
                 description: None,
                 alias: None,
             },
-            DEFAULT_CREATED_AT,
+            current_timestamp(),
         );
         for identity in &suggested[0..suggested.len() - n] {
-            client.follow_identity(identity.to_owned(), DEFAULT_CREATED_AT);
+            client.follow_identity(identity.to_owned(), current_timestamp());
         }
         client.submit_events().await;
         followees.push(client.identity().to_owned());
@@ -405,7 +405,7 @@ async fn suggest_follow_pagination() {
 
     let mut client = TestClient::new().await;
     for followee in followees.iter() {
-        client.follow_identity(followee.clone(), DEFAULT_CREATED_AT);
+        client.follow_identity(followee.clone(), current_timestamp());
     }
     client.submit_events().await;
 

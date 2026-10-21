@@ -1,18 +1,8 @@
 //! gRPC `ServerService` impl. Each method delegates to a handler
 //! under `server/rpc/`.
 
-pub mod acknowledge_notifications;
-pub mod list_notifications;
-pub mod subscribe_unread_notification_count;
-
 use std::sync::Arc;
 
-use crate::service::auth::authenticated_identity;
-use crate::service::context::{RequestContext, ServiceContext};
-use crate::service::notifications::changes;
-use crate::service::proto::notification_service_server::{
-    NotificationService, NotificationServiceServer,
-};
 use polycentric_common::models::protos_v2::{
     AcknowledgeNotificationsRequest, AcknowledgeNotificationsResponse,
     ListNotificationsRequest, ListNotificationsResponse,
@@ -21,6 +11,18 @@ use polycentric_common::models::protos_v2::{
     UnregisterPushNotificationResponse,
 };
 use tonic::{Request, Response, Status};
+
+use crate::grpc::stream_response;
+use crate::service::context::ServiceContext;
+
+use crate::service::notifications::changes;
+use crate::service::proto::notification_service_server::{
+    NotificationService, NotificationServiceServer,
+};
+
+pub mod acknowledge_notifications;
+pub mod list_notifications;
+pub mod subscribe_unread_notification_count;
 
 pub struct NotificationServiceImpl {
     ctx: Arc<ServiceContext>,
@@ -32,28 +34,32 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<ListNotificationsRequest>,
     ) -> Result<Response<ListNotificationsResponse>, Status> {
-        let caller = authenticated_identity(&request);
-        let ctx = RequestContext::new(&self.ctx, caller.as_deref());
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            list_notifications::handle(&ctx, request.into_inner()).await?,
+            list_notifications::handle(ctx, request.into_inner()).await?,
         ))
     }
+
     async fn acknowledge_notifications(
         &self,
         request: Request<AcknowledgeNotificationsRequest>,
     ) -> Result<Response<AcknowledgeNotificationsResponse>, Status> {
+        let ctx = self.ctx.authenticted_rw(&request).await?;
         Ok(Response::new(
-            acknowledge_notifications::handle(&self.ctx, request).await?,
+            acknowledge_notifications::handle(ctx, request.into_inner())
+                .await?,
         ))
     }
+
     type SubscribeUnreadNotificationCountStream =
         subscribe_unread_notification_count::CountStream;
+
     async fn subscribe_unread_notification_count(
         &self,
         request: Request<SubscribeUnreadNotificationCountRequest>,
     ) -> Result<Response<Self::SubscribeUnreadNotificationCountStream>, Status>
     {
-        Ok(Response::new(
+        Ok(stream_response(
             subscribe_unread_notification_count::handle(
                 self.ctx.clone(),
                 request,
@@ -62,6 +68,7 @@ impl NotificationService for NotificationServiceImpl {
             .await?,
         ))
     }
+
     async fn register_push_notifications(
         &self,
         _request: Request<SignedMessage>,
@@ -70,6 +77,7 @@ impl NotificationService for NotificationServiceImpl {
             "Not implemented here. Use a push service.",
         ));
     }
+
     async fn unregister_push_notifications(
         &self,
         _request: Request<SignedMessage>,
@@ -88,18 +96,21 @@ pub fn build_notifications_service(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::service::auth::AuthenticatedIdentity;
-    use crate::service::notifications::changes::Change;
-    use crate::service::proto::{EventKey, PublicKey};
-    use entity::notification_read_marker;
-    use sea_orm::{DbBackend, MockDatabase, MockExecResult, Value};
     use std::collections::BTreeMap;
     use std::time::{Duration, Instant};
+
+    use entity::notification_read_marker;
+    use sea_orm::{DbBackend, MockDatabase, MockExecResult, Value};
     use tokio::sync::broadcast;
     use tokio::time::timeout;
     use tokio_stream::StreamExt;
     use tonic::Code;
+
+    use crate::service::auth::AuthenticatedIdentity;
+    use crate::service::notifications::changes::Change;
+    use crate::service::proto::{EventKey, PublicKey};
+
+    use super::*;
 
     fn id_row(id: i64) -> BTreeMap<&'static str, Value> {
         BTreeMap::from([("id", Value::BigInt(Some(id)))])
@@ -120,18 +131,20 @@ mod tests {
         request
     }
 
+    /* TODO: move to integration test, no longer possible as unit test.
     #[tokio::test]
     async fn acknowledge_rejects_unauthenticated() {
-        let ctx =
-            ctx(MockDatabase::new(DbBackend::Postgres).into_connection()).await;
+        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let ctx = ctx(db);
         let err = acknowledge_notifications::handle(
-            &ctx,
+            ctx,
             Request::new(AcknowledgeNotificationsRequest { last_seen: None }),
         )
         .await
         .unwrap_err();
         assert_eq!(err.code(), Code::Unauthenticated);
     }
+    */
 
     #[tokio::test]
     async fn acknowledge_moves_the_marker() {
@@ -140,13 +153,10 @@ mod tests {
             .append_query_results([vec![id_row(9)]])
             .append_exec_results([exec_ok(), exec_ok()])
             .into_connection();
-        let ctx = ctx(db).await;
-        acknowledge_notifications::handle(
-            &ctx,
-            authed(acknowledge_request(), "bob"),
-        )
-        .await
-        .unwrap();
+        let ctx = ctx(db).await.test_auth("bob").await;
+        acknowledge_notifications::handle(ctx, acknowledge_request())
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -157,22 +167,19 @@ mod tests {
             .append_query_results([vec![id_row(5)]])
             .append_exec_results([exec_ok(), exec_ok()])
             .into_connection();
-        let ctx = ctx(db).await;
-        acknowledge_notifications::handle(
-            &ctx,
-            authed(acknowledge_request(), "bob"),
-        )
-        .await
-        .unwrap();
+        let ctx = ctx(db).await.test_auth("bob").await;
+        acknowledge_notifications::handle(ctx, acknowledge_request())
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
     async fn acknowledge_requires_last_seen() {
-        let ctx =
-            ctx(MockDatabase::new(DbBackend::Postgres).into_connection()).await;
+        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let ctx = ctx(db).await.test_auth("bob").await;
         let err = acknowledge_notifications::handle(
-            &ctx,
-            authed(AcknowledgeNotificationsRequest { last_seen: None }, "bob"),
+            ctx,
+            AcknowledgeNotificationsRequest { last_seen: None },
         )
         .await
         .unwrap_err();
@@ -261,8 +268,8 @@ mod tests {
 
     #[tokio::test]
     async fn subscribe_unread_count_rejects_unauthenticated() {
-        let ctx =
-            ctx(MockDatabase::new(DbBackend::Postgres).into_connection()).await;
+        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let ctx = ctx(db).await;
         let result = subscribe_unread_notification_count::handle(
             ctx,
             Request::new(SubscribeUnreadNotificationCountRequest {}),

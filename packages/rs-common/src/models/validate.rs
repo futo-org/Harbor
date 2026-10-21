@@ -7,9 +7,10 @@ use regex::Regex;
 
 use crate::models::{
     application, attributed_to, attributed_to_reaction, blob, block, content, content_body,
-    content_digest, delete, event, event_key, event_proof_target, follow, identity, image,
-    image_set, labels, link, post, post_reply, profile_update, public_key, reaction,
-    recovation_bound, report, repost, server_list, to,
+    content_digest, delete, event, event_key, event_proof_target, field_def, follow, identity,
+    image, image_set, labels, link, post, post_reply, profile_update, public_key, reaction,
+    recovation_bound, report, repost, serialized_verification_schema, server_list, to,
+    verification_claim, verification_schema, verification_target, verification_verify,
 };
 
 /// Validate a value.
@@ -71,6 +72,12 @@ pub enum ValidationError {
     Repost(repost::ValidationError),
     Report(report::ValidationError),
     Labels(labels::ValidationError),
+    VerificationClaim(verification_claim::ValidationError),
+    SerializedVerificationSchema(serialized_verification_schema::ValidationError),
+    VerificationSchema(verification_schema::ValidationError),
+    FieldDef(field_def::ValidationError),
+    VerificationVerify(verification_verify::ValidationError),
+    VerificationTarget(verification_target::ValidationError),
 }
 
 impl From<event::ValidationError> for ValidationError {
@@ -241,6 +248,42 @@ impl From<labels::ValidationError> for ValidationError {
     }
 }
 
+impl From<verification_claim::ValidationError> for ValidationError {
+    fn from(err: verification_claim::ValidationError) -> ValidationError {
+        ValidationError::VerificationClaim(err)
+    }
+}
+
+impl From<serialized_verification_schema::ValidationError> for ValidationError {
+    fn from(err: serialized_verification_schema::ValidationError) -> ValidationError {
+        ValidationError::SerializedVerificationSchema(err)
+    }
+}
+
+impl From<verification_schema::ValidationError> for ValidationError {
+    fn from(err: verification_schema::ValidationError) -> ValidationError {
+        ValidationError::VerificationSchema(err)
+    }
+}
+
+impl From<field_def::ValidationError> for ValidationError {
+    fn from(err: field_def::ValidationError) -> ValidationError {
+        ValidationError::FieldDef(err)
+    }
+}
+
+impl From<verification_verify::ValidationError> for ValidationError {
+    fn from(err: verification_verify::ValidationError) -> ValidationError {
+        ValidationError::VerificationVerify(err)
+    }
+}
+
+impl From<verification_target::ValidationError> for ValidationError {
+    fn from(err: verification_target::ValidationError) -> ValidationError {
+        ValidationError::VerificationTarget(err)
+    }
+}
+
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -272,6 +315,14 @@ impl fmt::Display for ValidationError {
             ValidationError::Repost(err) => write!(f, "repost {err}"),
             ValidationError::Report(err) => write!(f, "report {err}"),
             ValidationError::Labels(err) => write!(f, "labels {err}"),
+            ValidationError::VerificationClaim(err) => write!(f, "verification claim {err}"),
+            ValidationError::SerializedVerificationSchema(err) => {
+                write!(f, "serialized verification schema {err}")
+            }
+            ValidationError::VerificationSchema(err) => write!(f, "verification schema {err}"),
+            ValidationError::FieldDef(err) => write!(f, "field def {err}"),
+            ValidationError::VerificationVerify(err) => write!(f, "verification verify {err}"),
+            ValidationError::VerificationTarget(err) => write!(f, "verification target {err}"),
         }
     }
 }
@@ -403,29 +454,42 @@ impl fmt::Display for IntError {
 }
 
 /// Validate a slice.
-pub(crate) fn slice<T, E, F>(input: &[T], errors: &mut Vec<E>, map_err: F, config: SliceConfig)
+///
+/// Returns true if an error was encountered (and added to `errors`).
+pub(crate) fn slice<T, E, F>(
+    input: &[T],
+    errors: &mut Vec<E>,
+    map_err: F,
+    config: SliceConfig,
+) -> bool
 where
     F: Fn(SliceError) -> E,
 {
+    let mut returned_error = false;
     let length = input.len().try_into().unwrap_or(u32::MAX);
     if let Some(min) = config.min_len
         && length < min
     {
         let err = SliceError::TooShort { length, min };
         errors.push(map_err(err));
+        returned_error = true;
     }
     if let Some(max) = config.max_len
         && length > max
     {
         let err = SliceError::TooLong { length, max };
         errors.push(map_err(err));
+        returned_error = true;
     }
+    returned_error
 }
 
 /// Validate a slice with per-item validation.
 ///
 /// Errors in an item are mapped with `map_item_err`, which also gets the
 /// item's index. If `validate` is not needed use [`validate::slice`].
+///
+/// Returns true if an error was encountered (and added to `errors`).
 ///
 /// [`validate::slice`]: slice()
 pub(crate) fn slice2<T, E, F, VE, M, V>(
@@ -435,17 +499,20 @@ pub(crate) fn slice2<T, E, F, VE, M, V>(
     map_item_err: M,
     config: SliceConfig,
     validate: V,
-) where
+) -> bool
+where
     F: Fn(SliceError) -> E,
     M: Fn(u32, VE) -> E,
     // Can't use `impl Fn` here (yet), so using `&dyn Fn` for now.
     V: Fn(&T, &mut Vec<E>, &dyn Fn(VE) -> E),
 {
+    let start_len = errors.len();
     slice(input, errors, map_err, config);
     for (index, item) in input.iter().enumerate() {
         let index = index.try_into().unwrap_or(u32::MAX);
         validate(item, errors, &|err| map_item_err(index, err));
     }
+    errors.len() > start_len // Encountered an error.
 }
 
 /// Argument to [`validate::slice`].

@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18
+    image: postgres:18@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
     environment:
       POSTGRES_PASSWORD: testing
     volumes:
@@ -37,6 +37,7 @@ services:
       # In-network listener: the default (localhost:9092) points at the server
       # container itself, making Kafka unreachable
       - HARBOR_KAFKA_BROKERS=${HARBOR_KAFKA_BROKERS:-kafka:19092}
+      - HARBOR_VALKEY_URL=${HARBOR_VALKEY_URL:-redis://valkey:6379}
       # Reached over the isolated `scraper_link` network (see below).
       - HARBOR_SCRAPER_URL=${HARBOR_SCRAPER_URL:-http://scraper:8855}
       # Accepted JWT audiences (emulator needs 10.0.2.2). Defaults to SERVER_NAME.
@@ -55,6 +56,8 @@ services:
         condition: service_completed_successfully
       kafka:
         condition: service_started
+      valkey:
+        condition: service_healthy
       scraper:
         condition: service_started
 
@@ -158,7 +161,7 @@ services:
         condition: service_started
 
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:latest@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b
     volumes:
       - rustfs-data:/data
     ports:
@@ -176,7 +179,7 @@ services:
       start_period: 10s
 
   rustfs-init:
-    image: rustfs/rc:latest
+    image: rustfs/rc:latest@sha256:ab024bfebee49a750ce886b4c70963ccd9ddaa03f491704a90710641d7a26699
     depends_on:
       rustfs:
         condition: service_healthy
@@ -188,7 +191,7 @@ services:
       rc mb -p rustfs/polycentric-blobs"
 
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:latest@sha256:77e3df9054047a88b520d0cc46e16696d3b22022e1d580aeccd2632df6532837
     container_name: broker
     environment:
       KAFKA_NODE_ID: 1
@@ -209,6 +212,17 @@ services:
       - 9092:9092
     volumes:
       - kafka-data:/var/lib/kafka/data
+
+  valkey:
+    image: valkey/valkey:9@sha256:418652cfb58ef879d4978c33553735d7147016032d5aefaa14c828e611eb9dfd
+    command: ['valkey-server', '--save', '', '--appendonly', 'no']
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Opt-in. Needs an identity published to the server first. See
   # services/moderation/create-local-identity.sh.
@@ -245,7 +259,7 @@ services:
         condition: service_started
 
   kafka-ui:
-    image: docker.redpanda.com/redpandadata/console:latest
+    image: docker.redpanda.com/redpandadata/console:latest@sha256:9dc0cd55db172c6be9c2ff8a51f33a14395f7675fa7fbc002c277f3b96115c27
     environment:
       CONFIG_FILEPATH: /etc/console/config.yaml
       KAFKA_BROKERS: kafka:19092

@@ -74,11 +74,7 @@ export function AddServerForm({ isBusy, error, onSubmit }: AddServerFormProps) {
             </Text>
           </Text>
           {showErrorLogs && (
-            <Text
-              variant="secondary"
-              color="neutral_500"
-              style={{ fontFamily: 'monospace' }}
-            >
+            <Text variant="secondary" color="neutral_500" monospace>
               {error.stack ?? error.message}
             </Text>
           )}

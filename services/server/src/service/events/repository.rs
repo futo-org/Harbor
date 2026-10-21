@@ -1,17 +1,13 @@
-use crate::service::content::content_repository::Mutation as ContentRepository;
-use crate::service::content::repository::Mutation as ContentChildRepository;
-use crate::service::content::repository::{EventKeyParts, split_event_key};
-use crate::service::events::rpc::put_events::event_is_authorised;
 use ::entity::{
     application, block, content, content_delete, event, follow, profile, quote,
     reaction, reaction_tally, reply, repost,
 };
-use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
     Application, Block, Content, ContentDigest, Delete, EventKey, Follow, Post,
     ProfileUpdate, Reaction, Repost,
 };
+use polycentric_common::models::{collections, content_types};
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, Func, InsertStatement,
     IntoCondition, IntoTableRef, OnConflict, SelectExpr, SelectStatement,
@@ -19,6 +15,11 @@ use sea_orm::sea_query::{
 };
 use sea_orm::*;
 use tonic::Status;
+
+use crate::service::content::content_repository::Mutation as ContentRepository;
+use crate::service::content::repository::Mutation as ContentChildRepository;
+use crate::service::content::repository::{EventKeyParts, split_event_key};
+use crate::service::events::rpc::put_events::event_is_authorised;
 
 const COLLECTION_FEED: i16 = collections::FEED as i16;
 const COLLECTION_PROFILE: i16 = collections::PROFILE as i16;
@@ -29,8 +30,8 @@ pub struct Query;
 
 impl Query {
     #[allow(clippy::too_many_arguments)]
-    pub async fn list_events(
-        db: &DbConn,
+    pub async fn list_events<C: ConnectionTrait>(
+        db: &C,
         mut limit: Option<u64>,
         collection: Option<i32>,
         identity: String,
@@ -110,8 +111,8 @@ impl Query {
     }
 
     /// Find the latest sequence numbers for an identity
-    pub async fn list_heads(
-        db: &DbConn,
+    pub async fn list_heads<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
     ) -> Result<Vec<HeadInfoRow>, DbErr> {
         event::Entity::find()
@@ -255,7 +256,7 @@ impl Mutation {
     /// already stored.
     pub async fn add_event<C: ConnectionTrait>(
         db: &C,
-        event: event::ActiveModel,
+        mut event: event::ActiveModel,
         decoded_content: Option<(&[u8], Content, &ContentDigest)>,
     ) -> Result<bool, Status> {
         // We're going to build one big query using Common Table Expressions
@@ -270,6 +271,9 @@ impl Mutation {
         let identity = event.identity.try_as_ref().map_or("", |s| &**s);
         let content = decoded_content.as_ref().map(|(_, c, _)| c);
         let is_authorised = event_is_authorised(identity, content);
+        event.content_type = Set(content
+            .and_then(|content| content.content_body.as_ref())
+            .map(|body| content_types::of(body) as i16));
 
         // Store the event itself into the `events` table.
         const INSERTED_EVENT: &str = "inserted_event";
@@ -951,7 +955,8 @@ impl Mutation {
                                     Expr::col(
                                         reaction_tally::Column::PositiveCount
                                             .as_column_ref(),
-                                    ),
+                                    )
+                                    .sub(Expr::Constant(1.into())),
                                     Expr::col(
                                         event::Column::CreatedAt
                                             .as_column_ref(),

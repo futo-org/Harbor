@@ -10,12 +10,20 @@ name: I can repost a post
 - tapOn:
     role: menuitem
     text: ${output.post.repost}
-# On Latest the repost joins the top of the feed and pushes the posts down.
-# Wait for it, so the menu step doesn't see the page move.
-- extendedWaitUntil:
-    visible: ${output.identityName} ${output.post.reposted} · now
-    timeout: 30000
 - runFlow: ../steps/open-post-menu.yaml
 - assertVisible:
     role: menuitem
     text: ${output.post.undoRepost}
+# The open menu blocks the page.
+- pressKey: Escape
+- extendedWaitUntil:
+    notVisible:
+      role: menuitem
+      text: ${output.post.undoRepost}
+    timeout: 5000
+# Reposts are hidden from Explore, but still show in the reposter's profile.
+- tapOn:
+    id: ${output.nav.profile}
+- extendedWaitUntil:
+    visible: ${output.identityName} ${output.post.reposted} · now
+    timeout: 30000

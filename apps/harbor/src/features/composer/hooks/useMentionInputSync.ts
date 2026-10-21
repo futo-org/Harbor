@@ -1,10 +1,6 @@
-import type {
-  TextInput,
-  TextInputSelectionChangeEvent,
-  LayoutChangeEvent,
-} from 'react-native';
+import type { TextInput, TextInputSelectionChangeEvent } from 'react-native';
 import { useEffect } from 'react';
-import { isAndroid, isWeb } from '@/src/common/util/platform';
+import { isWeb } from '@/src/common/util/platform';
 import { useMentionStoreApi } from '@/src/features/composer/hooks/useMentionStore';
 
 /**
@@ -70,19 +66,6 @@ export function useMentionInputSync({
       measureInput();
     },
     onBlur: () => setIsFocused(false),
-    onLayout: (e: LayoutChangeEvent) => setInputLayout(e.nativeEvent.layout),
-    // Android: Fabric lays out a `setNativeProps` commit before the native
-    // field applies the text, so it measures the EditText's stale cached
-    // spannable and the field doesn't grow. Native reports the new content
-    // size only after refreshing that cache, so re-sending the same prop then
-    // (a no-op for the field itself) just re-runs layout against the fresh
-    // one. Guarded to the inserted text so a later wrap while typing never
-    // pushes stale text into the field.
-    onContentSizeChange: () => {
-      const { text, lastNativeText, inputRef } = store.getState();
-      if (isAndroid && text === lastNativeText) {
-        inputRef?.setNativeProps({ text });
-      }
-    },
+    setInputLayout,
   };
 }

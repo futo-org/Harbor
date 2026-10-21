@@ -62,8 +62,15 @@ fn raw_channel(server_url: &str) -> Result<RawChannel, String> {
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
 fn raw_channel(server_url: &str) -> Result<RawChannel, String> {
+    use std::time::Duration;
+
     let mut endpoint = tonic::transport::Channel::from_shared(server_url.to_string())
-        .map_err(|e| format!("Invalid server url: {e}"))?;
+        .map_err(|e| format!("Invalid server url: {e}"))?
+        .connect_timeout(Duration::from_secs(10))
+        .http2_keep_alive_interval(Duration::from_secs(30))
+        .keep_alive_timeout(Duration::from_secs(10))
+        .keep_alive_while_idle(true)
+        .tcp_keepalive(Some(Duration::from_secs(60)));
     if server_url.starts_with("https://") {
         let tls = tonic::transport::ClientTlsConfig::new().with_webpki_roots();
         endpoint = endpoint

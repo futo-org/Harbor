@@ -25,6 +25,7 @@ include_directories(
 
 add_library(polycentric-react-native            SHARED
     ../cpp/polycentric-react-native.cpp
+    ../cpp/generated/polycentric_common.cpp
     ../cpp/generated/polycentric_core.cpp
     cpp-adapter.cpp
 )

@@ -4,7 +4,7 @@ use crate::models::protos_v2::content::ContentBody;
 use crate::models::validate::Validate;
 use crate::models::{
     attributed_to_reaction, block, delete, follow, identity, labels, post, profile_update,
-    reaction, report, repost,
+    reaction, report, repost, verification_claim, verification_target, verification_verify,
 };
 
 impl Validate for ContentBody {
@@ -48,7 +48,15 @@ impl Validate for ContentBody {
             ContentBody::Labels(label) => {
                 label.validate_check(errors, |err| map_err(ValidationError::Labels(err)))
             }
-            _ => { /* TODO. */ }
+            ContentBody::VerificationClaim(claim) => claim.validate_check(errors, |err| {
+                map_err(ValidationError::VerificationClaim(err))
+            }),
+            ContentBody::VerificationVerify(verify) => verify.validate_check(errors, |err| {
+                map_err(ValidationError::VerificationVerify(err))
+            }),
+            ContentBody::VerificationTarget(target) => target.validate_check(errors, |err| {
+                map_err(ValidationError::VerificationTarget(err))
+            }),
         }
     }
 }
@@ -68,6 +76,9 @@ pub enum ValidationError {
     Repost(repost::ValidationError),
     Report(report::ValidationError),
     Labels(labels::ValidationError),
+    VerificationClaim(verification_claim::ValidationError),
+    VerificationVerify(verification_verify::ValidationError),
+    VerificationTarget(verification_target::ValidationError),
 }
 
 impl fmt::Display for ValidationError {
@@ -84,6 +95,9 @@ impl fmt::Display for ValidationError {
             ValidationError::Repost(err) => write!(f, "repost {err}"),
             ValidationError::Report(err) => write!(f, "report {err}"),
             ValidationError::Labels(err) => write!(f, "labels {err}"),
+            ValidationError::VerificationClaim(err) => write!(f, "verification claim {err}"),
+            ValidationError::VerificationVerify(err) => write!(f, "verification verify {err}"),
+            ValidationError::VerificationTarget(err) => write!(f, "verification target {err}"),
         }
     }
 }

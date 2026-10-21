@@ -14,15 +14,17 @@ const ROOT_STYLE =
 
 // Declared here rather than through expo-font, whose injected @font-face has
 // no font-weight range: browsers then clamp the variable font to 400 and
-// synthesise bold, which Safari renders badly. Twemoji's faces cover every
-// weight and italic too, so emoji are never synthesised bold or slanted; it
-// blocks rather than swaps, so the platform's emoji never show first.
+// synthesise bold, which Safari renders badly. Twemoji's face covers every
+// weight too, so emoji are never synthesised bold; it blocks rather than
+// swaps, so the platform's emoji never show first.
 const FONT_STYLE = `
 @font-face{font-family:NotoSans;src:url(/fonts/NotoSans.ttf);font-weight:100 900;font-style:normal;font-display:swap}
-@font-face{font-family:NotoSans;src:url(/fonts/NotoSans-Italic.ttf);font-weight:100 900;font-style:italic;font-display:swap}
+@font-face{font-family:NotoSansMono;src:url(/fonts/NotoSansMono.ttf);font-weight:100 900;font-style:normal;font-display:swap}
 @font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:normal;font-display:block}
-@font-face{font-family:Twemoji;src:url(/fonts/${TWEMOJI_WEB_FONT_FILE});font-weight:100 900;font-style:italic;font-display:block}
 `;
+
+// Switches to dev icons on local builds. Deployed apps use icons defined by server.js
+const ICON_SUFFIX = process.env.APP_VARIANT === 'dev' ? '-dev' : '';
 
 export default function Root({ children }: PropsWithChildren) {
   return (
@@ -34,7 +36,15 @@ export default function Root({ children }: PropsWithChildren) {
           content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
         />
         <title>{APP_NAME}</title>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link
+          rel="icon"
+          href={`/favicon${ICON_SUFFIX}.ico`}
+          sizes="16x16 32x32 48x48"
+        />
+        <link
+          rel="apple-touch-icon"
+          href={`/apple-touch-icon${ICON_SUFFIX}.png`}
+        />
         {/* Placeholder replaced with runtime env by server.js at startup. */}
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static placeholder, no user input

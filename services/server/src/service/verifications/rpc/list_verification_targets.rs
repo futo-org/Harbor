@@ -1,8 +1,10 @@
 //! VerificationTarget events for a claim: who has been asked to verify.
 
+use tonic::Status;
+
 use crate::data::EventWithContentRow;
 use crate::data::pipeline;
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::TargetEventKey;
 use crate::service::proto::{
     ListVerificationTargetsRequest, ListVerificationTargetsResponse,
@@ -10,7 +12,6 @@ use crate::service::proto::{
 use crate::service::verifications::repository::{
     Query as Repository, VerificationEventDto,
 };
-use tonic::Status;
 
 use super::common::{self, event_list};
 
@@ -19,7 +20,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: ListVerificationTargetsRequest,
 ) -> Result<ListVerificationTargetsResponse, Status> {
     let params = Params {
@@ -29,7 +30,7 @@ pub async fn handle(
         )?,
     };
     let view = pipeline::create_pipeline(
-        ctx,
+        &ctx,
         &params,
         fetch,
         event_list::hydrate,
@@ -44,11 +45,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     Ok(Repository::list_target_events_for_claims(
-        &ctx.ro_db,
+        &ctx.db,
         std::slice::from_ref(&params.claim_key),
     )
     .await
@@ -60,11 +61,13 @@ async fn fetch(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use sea_orm::{DbBackend, MockDatabase};
+
     use crate::service::verifications::rpc::common::tests::{
         claim_event_key, ctx, no_rows, target_row,
     };
-    use sea_orm::{DbBackend, MockDatabase};
+
+    use super::*;
 
     #[tokio::test]
     async fn returns_target_bundles_newest_first() {
@@ -77,10 +80,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             ListVerificationTargetsRequest {
                 claim_event_key: Some(claim_event_key("alice")),
             },
@@ -102,10 +109,14 @@ mod tests {
     #[tokio::test]
     async fn rejects_a_missing_claim_key() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let result = handle(
-            &ctx,
+            ctx,
             ListVerificationTargetsRequest {
                 claim_event_key: None,
             },
@@ -117,12 +128,16 @@ mod tests {
     #[tokio::test]
     async fn rejects_a_claim_key_without_a_signer() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let mut key = claim_event_key("alice");
         key.signed_by = None;
         let result = handle(
-            &ctx,
+            ctx,
             ListVerificationTargetsRequest {
                 claim_event_key: Some(key),
             },

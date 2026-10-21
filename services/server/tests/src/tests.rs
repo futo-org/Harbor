@@ -22,6 +22,7 @@ mod banning;
 mod event_sync;
 mod feeds;
 mod graph;
+mod heads;
 mod notifications;
 mod search;
 mod verifications;
@@ -46,10 +47,6 @@ fn audience() -> String {
             .unwrap_or_else(|_| "http://localhost:3000".to_string()),
     }
 }
-
-/// 2025-01-15T12:00:00Z in milliseconds.
-pub const DEFAULT_CREATED_AT: u64 = 1736942400000;
-pub const HOUR: u64 = 3_600_000;
 
 pub const COLLECTION_IDENTITY: i32 = 1;
 pub const COLLECTION_FEED: i32 = 2;
@@ -244,7 +241,7 @@ impl TestClient {
             identity_sequence: Sequence::new(),
             collection_sequences: [const { Sequence::new() }; _],
         };
-        client.set_identity(identity, DEFAULT_CREATED_AT);
+        client.set_identity(identity, current_timestamp());
         client
     }
 
@@ -650,7 +647,7 @@ fn github_verification_schema() -> VerificationSchema {
         fields: vec![FieldDef {
             key: "login".to_owned(),
             kind: FieldKind::String as i32,
-            format: String::new(),
+            format: None,
             required: true,
             description: "Login".to_owned(),
             regex: None,
@@ -1061,7 +1058,7 @@ pub fn make_verification_claim_bundle(
         fields: vec![FieldDef {
             key: "handle".to_string(),
             kind: FieldKind::String as i32,
-            format: String::new(),
+            format: None,
             required: true,
             description: "Handle".to_string(),
             regex: None,
