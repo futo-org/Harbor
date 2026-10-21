@@ -1,0 +1,152 @@
+name: E2E on staging
+
+# Web e2e against staging once it runs this develop commit: waits for the
+# staging deploys the push started (any, or none) and their rollout, then runs
+# the flows against the deployed web app and server. Nothing is built but the
+# SDKs the e2e scripts import.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop]
+
+# A newer commit supersedes a run that's still waiting.
+concurrency:
+  group: e2e-staging
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+  SCCACHE_R2_BUCKET: ${{ vars.SCCACHE_R2_BUCKET }}
+  SCCACHE_R2_ENDPOINT: ${{ secrets.SCCACHE_R2_ENDPOINT }}
+  SCCACHE_R2_ACCESS_KEY_ID: ${{ secrets.SCCACHE_R2_ACCESS_KEY_ID }}
+  SCCACHE_R2_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_R2_SECRET_ACCESS_KEY }}
+
+jobs:
+  changes:
+    name: Plan
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    outputs:
+      registry: ${{ steps.plan.outputs.registry }}
+      images_tag: ${{ steps.plan.outputs.images_tag }}
+      images_missing: ${{ steps.plan.outputs.images_missing }}
+      have_wasm: ${{ steps.plan.outputs.have_wasm }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.forgejo/actions/plan
+        id: plan
+
+  setup-images:
+    name: Build CI images
+    needs: changes
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/ci-images
+        if: needs.changes.outputs.images_missing == 'true'
+        with:
+          registry: ${{ needs.changes.outputs.registry }}
+          tag: ${{ needs.changes.outputs.images_tag }}
+          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+          cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+
+  # wasm only when the registry has no copy for these sources.
+  wasm:
+    name: Build wasm
+    needs: [changes, setup-images]
+    if: ${{ !cancelled() && needs.changes.outputs.have_wasm != 'true' && needs.setup-images.result != 'failure' }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/wasm-build
+      - uses: ./.forgejo/actions/r2-cache
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        with:
+          mode: save
+          key: ${{ env.RUST_CACHE_KEY }}
+          path: ${{ env.RUST_CACHE_PATHS }}
+
+  # seed.mjs and verify.mjs import the js SDKs.
+  sdks:
+    name: Build SDKs
+    needs: [changes, wasm]
+    if: >-
+      ${{ !cancelled() && needs.changes.result == 'success' &&
+      (needs.wasm.result == 'success' || needs.changes.outputs.have_wasm == 'true') }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/sdk-build
+        with:
+          registry: ${{ needs.changes.outputs.registry }}
+          wasm-artifact: ${{ needs.wasm.result == 'success' }}
+          registry-user: ${{ vars.REGISTRY_USER }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+  e2e:
+    name: Test web e2e on staging
+    needs: sdks
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    outputs:
+      wait_failure: ${{ steps.wait.outputs.failure }}
+    # Up to 45 minutes of deploys, 10 of rollout, then the flows.
+    timeout-minutes: 70
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      MAESTRO_WEB_URL: https://staging.harbor.social
+      MAESTRO_BROWSER: /usr/local/bin/e2e-chromium
+      MAESTRO_OUTPUT: reports
+      # run.mjs seeds the identities the flows search for on the app's server.
+      E2E_SERVER_URL: https://srv.staging.harbor.social
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Wait for staging
+        id: wait
+        run: node .forgejo/scripts/wait-staging.mjs
+      - name: Install Chromium
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends chromium
+          printf '#!/bin/sh\nexec /usr/bin/chromium --no-sandbox "$@"\n' > "$MAESTRO_BROWSER"
+          chmod +x "$MAESTRO_BROWSER"
+      - uses: ./.forgejo/actions/sdk-artifacts
+      - uses: ./.forgejo/actions/setup-pnpm
+        with:
+          install-args: --filter harbor-e2e...
+      - name: Web e2e
+        run: pnpm --filter harbor-e2e test:web
+      - uses: forgejo/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-web-report
+          path: e2e/reports
+          retention-days: 7
+
+  # Any failing job above, so a failed SDK build (which skips e2e) is reported
+  # too. A run superseded by a newer commit is cancelled, not failed.
+  report:
+    name: Report failure
+    needs: [changes, setup-images, wasm, sdks, e2e]
+    if: always()
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 5
+    container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Report failure
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          # TODO: with the Zulip posting (see report-e2e-staging.mjs):
+          # ZULIP_BOT_EMAIL: ${{ vars.ZULIP_BOT_EMAIL }}
+          # ZULIP_BOT_API_KEY: ${{ secrets.ZULIP_BOT_API_KEY }}
+        run: node .forgejo/scripts/report-e2e-staging.mjs
