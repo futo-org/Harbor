@@ -75,6 +75,20 @@ impl DbConn {
             }
         }
     }
+
+    /// Return the connection to the pool.
+    ///
+    /// # Notes
+    ///
+    /// This happens asynchronously when the connection is dropped, this methods
+    /// allows it to be done inline.
+    pub(crate) async fn return_to_pool(self) {
+        match self.0 {
+            DbInner::Sqlx(conn) => conn.into_inner().return_to_pool().await,
+            #[cfg(test)]
+            DbInner::Mock(_) => {}
+        }
+    }
 }
 
 #[async_trait::async_trait]

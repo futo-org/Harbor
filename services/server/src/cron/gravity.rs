@@ -35,7 +35,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     return ControlFlow::Continue(());
                 },
             };
-            _ = db; // Don't use the pool any more.
+            drop(db); // Don't use the pool any more.
             let mut tx = match conn.begin().await {
                 Ok(tx) => tx,
                 Err(err) => {
@@ -296,6 +296,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             }
             tracing::debug!(elapsed = ?start_vacuum.elapsed(), "vacuumed reaction tallies");
 
+            conn.return_to_pool().await;
             tracing::info!(elapsed = ?start.elapsed(), "updated all decayed reaction counts");
             ControlFlow::Continue(())
         }
