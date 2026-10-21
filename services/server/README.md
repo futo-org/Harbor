@@ -11,7 +11,8 @@
 
 ```sh
 # In the root of the repo.
-docker compose up -d postgres kafka valkey
+docker compose up -d postgres kafka valkey rustfs
+docker compose run --rm --no-deps -T rustfs-init
 ```
 
 This starts PostgreSQL on port 5432 with user `postgres` and password `testing`.
