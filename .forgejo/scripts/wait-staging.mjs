@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Waits until staging runs what this commit deployed: first the staging
-// deploy runs its push started, then the Flux rollout, until server and web
-// serve on /version the commit their chart's `staging` tag pins.
-// Env: GITHUB_SHA, GITHUB_SERVER_URL, GITHUB_REPOSITORY (set by Forgejo).
+// Waits until staging runs develop: first the latest server and web staging
+// deploys, then the Flux rollout, until server and web serve on /version the
+// commit their chart's `staging` tag pins.
+// Env: GITHUB_SERVER_URL, GITHUB_REPOSITORY (set by Forgejo).
 
 import { appendFileSync } from 'node:fs';
 import { chartAt } from './registry-helpers.mjs';
@@ -37,17 +37,13 @@ async function waitForDeploys() {
   for (;;) {
     let state;
     try {
-      const deployRuns = await listDeployRuns();
-      if (deployRuns.length === 0) {
-        console.log('This commit started no staging deploys');
-        return;
-      }
+      const deployRuns = await Promise.all(DEPLOY_WORKFLOWS.map(findLatestRun));
       const failedRun = deployRuns.find(
         (run) => isFinal(run.status) && run.status !== 'success',
       );
       if (failedRun) {
         fail(
-          `Staging deploy ${failedRun.status}: ${failedRun.workflow_id} ${failedRun.html_url}`,
+          `Staging deploy ${failedRun.status}: ${describeRun(failedRun)} ${failedRun.html_url}`,
         );
       }
       if (deployRuns.every((run) => run.status === 'success')) {
@@ -55,7 +51,7 @@ async function waitForDeploys() {
         return;
       }
       state = deployRuns
-        .map((run) => `${run.workflow_id}: ${run.status}`)
+        .map((run) => `${describeRun(run)}: ${run.status}`)
         .join(', ');
     } catch (error) {
       state = `runs API: ${error.message}`;
@@ -94,15 +90,20 @@ async function waitForRollout() {
   }
 }
 
-async function listDeployRuns() {
+// Each workflow's deploys run one at a time in push order (its concurrency
+// group), so once the latest is done, so are the ones before it. It may be
+// this commit's, an earlier commit's still deploying, or a newer commit's,
+// which cancels this run anyway.
+async function findLatestRun(workflowId) {
   const response = await fetch(
-    `${env.GITHUB_SERVER_URL}/api/v1/repos/${env.GITHUB_REPOSITORY}/actions/runs?head_sha=${env.GITHUB_SHA}&limit=50`,
+    `${env.GITHUB_SERVER_URL}/api/v1/repos/${env.GITHUB_REPOSITORY}/actions/runs?workflow_id=${workflowId}&ref=refs/heads/develop&event=push&limit=1&page=1`,
   );
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const { workflow_runs } = await response.json();
-  return workflow_runs.filter(
-    (run) => DEPLOY_WORKFLOWS.includes(run.workflow_id) && run.event === 'push',
-  );
+  return (await response.json()).workflow_runs[0];
+}
+
+function describeRun(run) {
+  return `${run.workflow_id} (${run.commit_sha.slice(0, 8)})`;
 }
 
 function isFinal(status) {
