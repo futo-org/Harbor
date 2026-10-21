@@ -17,7 +17,7 @@ impl Validate for ServerList {
             |err| map_err(ValidationError::Urls(err)),
             |index, error| map_err(ValidationError::UrlsItem { index, error }),
             SliceConfig {
-                max_len: Some(1000),
+                max_len: Some(100),
                 ..Default::default()
             },
             |url, errors, map_err| {
