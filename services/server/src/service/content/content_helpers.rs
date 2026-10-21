@@ -93,7 +93,10 @@ mod tests {
         };
         let err = parse_upload_blob_request(req).unwrap_err();
         assert_eq!(err.code(), Code::InvalidArgument);
-        assert!(err.message().contains("blob.digest is required"));
+        assert!(
+            err.message()
+                .contains("upload_blob: blob is invalid: digest is missing")
+        );
     }
 
     #[test]
@@ -139,7 +142,7 @@ mod tests {
         };
         let err = parse_upload_blob_request(req).unwrap_err();
         assert_eq!(err.code(), Code::InvalidArgument);
-        assert!(err.message().contains("unsupported content digest type"));
+        assert!(err.message().contains("digest type is invalid"));
     }
 
     #[test]
