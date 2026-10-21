@@ -11,7 +11,7 @@ const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 
 const DEPLOY_TIMEOUT_MS = 45 * MINUTE;
-const DEPLOY_POLL_MS = 30 * SECOND;
+const DEPLOY_POLL_MS = 10 * SECOND;
 const ROLLOUT_TIMEOUT_MS = 10 * MINUTE;
 const ROLLOUT_POLL_MS = 10 * SECOND;
 // Old and new pods both answer for a while during a rolling update.
