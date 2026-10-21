@@ -192,9 +192,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // `sync-legacy`: copy the rows we need from the remote legacy DB into local
-    // cache tables. Afterwards the migrate step reads only local.
+    // `sync-legacy [--full]`: copy the rows we need from the remote legacy DB
+    // into local cache tables - incrementally from the last run's watermark, or
+    // everything with `--full`. Afterwards the migrate step reads only local.
     if command == "sync-legacy" {
+        let full = std::env::args().skip(2).any(|a| a == "--full");
         let legacy_url = cfg
             .legacy_database_url
             .as_deref()
@@ -209,15 +211,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         pb.enable_steady_tick(std::time::Duration::from_millis(120));
         pb.set_message("copying legacy rows into local cache…");
-        legacy::sync_to_cache(
+        let summary = legacy::sync_to_cache(
             &legacy_db,
             &db,
+            full,
             |n| pb.set_message(format!("caching posts/profiles… {} rows", fmt_count(n))),
             |n| pb.set_message(format!("caching opinions… {} rows", fmt_count(n))),
         )
         .await?;
         pb.finish_with_message("legacy cache populated");
-        println!("sync-legacy complete - you can now run the migration (reads local cache)");
+        match summary.since {
+            Some(since) => println!(
+                "sync-legacy complete - incremental, legacy event id {since} -> {}",
+                summary.watermark
+            ),
+            None => println!(
+                "sync-legacy complete - full copy up to legacy event id {}",
+                summary.watermark
+            ),
+        }
+        println!("you can now run the migration (reads local cache)");
         return Ok(());
     }
 

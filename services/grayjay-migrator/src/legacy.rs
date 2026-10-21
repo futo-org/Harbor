@@ -165,12 +165,54 @@ const MIGRATED_CONTENT_TYPES: &str = "3,4,5,6";
 const EVENTS_CACHE: &str = "legacy_events_cache";
 const OPINIONS_CACHE: &str = "legacy_opinions_cache";
 
-/// Insert a batch of pre-flattened rows into `table` (`cols` columns each).
+/// `legacy_sync_state` key: the highest legacy `events.id` the cache is known
+/// to cover. Both the events table and the `lww_element_latest_reference_*`
+/// tables carry it (the latter as `event_id`, bumped when a row is replaced by
+/// a newer opinion), so one watermark drives both incremental copies.
+const SYNC_STATE_KEY: &str = "legacy_event_id";
+
+/// Ids below the watermark re-read on every incremental sync. The watermark is
+/// `max(id)` of *committed* events when a run starts; transactions still in
+/// flight then may commit lower ids afterwards. The upserts make the re-read
+/// idempotent, and ids are burnt far faster than rows are added, so this covers
+/// only a few thousand rows.
+const WATERMARK_OVERLAP: i64 = 100_000;
+
+/// Re-reads of an already-cached event only refresh its moderation verdict.
+const EVENTS_ON_CONFLICT: &str = "ON CONFLICT (legacy_id) DO UPDATE SET \
+    moderation_status = EXCLUDED.moderation_status, moderation_tags = EXCLUDED.moderation_tags";
+
+/// A newer opinion on an already-cached target replaces the cached one.
+const OPINIONS_ON_CONFLICT: &str = "ON CONFLICT (kind, system_key, subject, t_system_key, t_process, t_logical_clock) \
+     DO UPDATE SET value = EXCLUDED.value, ts = EXCLUDED.ts, event_id = EXCLUDED.event_id";
+
+/// What a [`sync_to_cache`] run covered.
+pub struct SyncSummary {
+    /// The watermark the copy resumed from, or `None` for a full copy.
+    pub since: Option<i64>,
+    /// The watermark recorded for the next run.
+    pub watermark: i64,
+}
+
+/// The watermark left by the last completed sync, if any.
+async fn load_watermark(local: &DatabaseConnection) -> Result<Option<i64>, DbErr> {
+    let row = local
+        .query_one_raw(Statement::from_sql_and_values(
+            DatabaseBackend::Postgres,
+            "SELECT value FROM legacy_sync_state WHERE key = $1",
+            [SYNC_STATE_KEY.into()],
+        ))
+        .await?;
+    row.map(|r| r.try_get::<i64>("", "value")).transpose()
+}
+
+/// Upsert a batch of pre-flattened rows into `table` (`cols` columns each).
 async fn flush_batch(
     local: &DatabaseConnection,
     table: &str,
     columns: &str,
     cols: usize,
+    on_conflict: &str,
     params: &mut Vec<sea_orm::Value>,
 ) -> Result<(), DbErr> {
     if params.is_empty() {
@@ -191,7 +233,7 @@ async fn flush_batch(
         }
         placeholders.push(')');
     }
-    let sql = format!("INSERT INTO {table} ({columns}) VALUES {placeholders}");
+    let sql = format!("INSERT INTO {table} ({columns}) VALUES {placeholders} {on_conflict}");
     local
         .execute_raw(Statement::from_sql_and_values(
             DatabaseBackend::Postgres,
@@ -203,27 +245,61 @@ async fn flush_batch(
 }
 
 /// Copy the rows the migrator needs from the remote legacy DB into the local
-/// cache tables (one big streamed scan each). Run once before migrating.
+/// cache tables. Incremental: resumes from the watermark the previous run left
+/// (rows above it are streamed and upserted) and records a new one on success.
+/// With no watermark, or `full`, the caches are truncated and rebuilt - which
+/// is also the only way to pick up moderation changes on old events.
 pub async fn sync_to_cache(
     remote: &DatabaseConnection,
     local: &DatabaseConnection,
+    full: bool,
     mut on_events: impl FnMut(u64),
     mut on_opinions: impl FnMut(u64),
-) -> Result<(), DbErr> {
-    local
-        .execute_unprepared(&format!("TRUNCATE {EVENTS_CACHE}"))
-        .await?;
-    local
-        .execute_unprepared(&format!("TRUNCATE {OPINIONS_CACHE}"))
-        .await?;
+) -> Result<SyncSummary, DbErr> {
+    let since = if full {
+        None
+    } else {
+        load_watermark(local).await?
+    };
+
+    // Read before streaming, so whatever the streams miss is above it.
+    let watermark: i64 = remote
+        .query_one_raw(Statement::from_string(
+            DatabaseBackend::Postgres,
+            format!("SELECT max(id) AS id FROM {EVENTS_TABLE}"),
+        ))
+        .await?
+        .map(|row| row.try_get::<Option<i64>>("", "id"))
+        .transpose()?
+        .flatten()
+        .unwrap_or(0);
+
+    let (ev_filter, op_filter) = match since {
+        Some(since) => {
+            let from = since - WATERMARK_OVERLAP;
+            (
+                format!(" AND id > {from}"),
+                format!(" AND r.event_id > {from}"),
+            )
+        }
+        None => {
+            local
+                .execute_unprepared(&format!("TRUNCATE {EVENTS_CACHE}"))
+                .await?;
+            local
+                .execute_unprepared(&format!("TRUNCATE {OPINIONS_CACHE}"))
+                .await?;
+            (String::new(), String::new())
+        }
+    };
 
     // --- events (posts/profiles) ---
     let ev_sql = format!(
         "SELECT {COL_SYSTEM_KEY} AS sk, {COL_RAW_EVENT} AS raw, \
                 {COL_MODERATION_STATUS}::text AS moderation_status, \
-                to_jsonb({COL_MODERATION_TAGS})::text AS moderation_tags \
+                to_jsonb({COL_MODERATION_TAGS})::text AS moderation_tags, id AS legacy_id \
          FROM {EVENTS_TABLE} \
-         WHERE {COL_SYSTEM_KEY_TYPE} = 1 AND content_type IN ({MIGRATED_CONTENT_TYPES})"
+         WHERE {COL_SYSTEM_KEY_TYPE} = 1 AND content_type IN ({MIGRATED_CONTENT_TYPES}){ev_filter}"
     );
     {
         let mut stream = remote
@@ -237,17 +313,20 @@ pub async fn sync_to_cache(
             let raw: Vec<u8> = row.try_get("", "raw")?;
             let ms: Option<String> = row.try_get("", "moderation_status")?;
             let mt: Option<String> = row.try_get("", "moderation_tags")?;
+            let id = get_i64(&row, "legacy_id")?;
             params.push(sk.into());
             params.push(raw.into());
             params.push(ms.into());
             params.push(mt.into());
+            params.push(id.into());
             batch += 1;
             if batch >= 1000 {
                 flush_batch(
                     local,
                     EVENTS_CACHE,
-                    "system_key, raw_event, moderation_status, moderation_tags",
-                    4,
+                    EVENT_CACHE_COLS,
+                    5,
+                    EVENTS_ON_CONFLICT,
                     &mut params,
                 )
                 .await?;
@@ -259,8 +338,9 @@ pub async fn sync_to_cache(
         flush_batch(
             local,
             EVENTS_CACHE,
-            "system_key, raw_event, moderation_status, moderation_tags",
-            4,
+            EVENT_CACHE_COLS,
+            5,
+            EVENTS_ON_CONFLICT,
             &mut params,
         )
         .await?;
@@ -273,18 +353,18 @@ pub async fn sync_to_cache(
         "SELECT 'b' AS kind, r.{COL_SYSTEM_KEY} AS sk, le.value AS value, \
                 r.lww_element_unix_milliseconds AS ts, r.subject AS subject, \
                 NULL::bytea AS t_system_key, NULL::bytea AS t_process, \
-                NULL::bigint AS t_logical_clock \
+                NULL::bigint AS t_logical_clock, r.event_id AS event_id \
          FROM lww_element_latest_reference_bytes r \
          JOIN lww_elements le ON le.event_id = r.event_id \
-         WHERE r.content_type = {CT_OPINION} AND r.{COL_SYSTEM_KEY_TYPE} = 1 \
+         WHERE r.content_type = {CT_OPINION} AND r.{COL_SYSTEM_KEY_TYPE} = 1{op_filter} \
          UNION ALL \
          SELECT 'p' AS kind, r.{COL_SYSTEM_KEY} AS sk, le.value AS value, \
                 r.lww_element_unix_milliseconds AS ts, NULL::bytea AS subject, \
                 r.subject_system_key AS t_system_key, r.subject_process AS t_process, \
-                r.subject_logical_clock AS t_logical_clock \
+                r.subject_logical_clock AS t_logical_clock, r.event_id AS event_id \
          FROM lww_element_latest_reference_pointer r \
          JOIN lww_elements le ON le.event_id = r.event_id \
-         WHERE r.content_type = {CT_OPINION} AND r.{COL_SYSTEM_KEY_TYPE} = 1"
+         WHERE r.content_type = {CT_OPINION} AND r.{COL_SYSTEM_KEY_TYPE} = 1{op_filter}"
     );
     {
         let mut stream = remote
@@ -302,6 +382,7 @@ pub async fn sync_to_cache(
             let tsk: Option<Vec<u8>> = row.try_get("", "t_system_key")?;
             let tp: Option<Vec<u8>> = row.try_get("", "t_process")?;
             let tlc: Option<i64> = row.try_get("", "t_logical_clock")?;
+            let event_id = get_i64(&row, "event_id")?;
             params.push(kind.into());
             params.push(sk.into());
             params.push(value.into());
@@ -310,24 +391,53 @@ pub async fn sync_to_cache(
             params.push(tsk.into());
             params.push(tp.into());
             params.push(tlc.into());
+            params.push(event_id.into());
             batch += 1;
             if batch >= 1000 {
-                flush_batch(local, OPINIONS_CACHE, OPINION_CACHE_COLS, 8, &mut params).await?;
+                flush_batch(
+                    local,
+                    OPINIONS_CACHE,
+                    OPINION_CACHE_COLS,
+                    9,
+                    OPINIONS_ON_CONFLICT,
+                    &mut params,
+                )
+                .await?;
                 seen += batch as u64;
                 on_opinions(seen);
                 batch = 0;
             }
         }
-        flush_batch(local, OPINIONS_CACHE, OPINION_CACHE_COLS, 8, &mut params).await?;
+        flush_batch(
+            local,
+            OPINIONS_CACHE,
+            OPINION_CACHE_COLS,
+            9,
+            OPINIONS_ON_CONFLICT,
+            &mut params,
+        )
+        .await?;
         seen += batch as u64;
         on_opinions(seen);
     }
 
-    Ok(())
+    local
+        .execute_raw(Statement::from_sql_and_values(
+            DatabaseBackend::Postgres,
+            "INSERT INTO legacy_sync_state (key, value) VALUES ($1, $2) \
+             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+            [SYNC_STATE_KEY.into(), watermark.into()],
+        ))
+        .await?;
+
+    Ok(SyncSummary { since, watermark })
 }
 
+const EVENT_CACHE_COLS: &str =
+    "system_key, raw_event, moderation_status, moderation_tags, legacy_id";
+
 const OPINION_CACHE_COLS: &str =
-    "kind, system_key, value, ts, subject, t_system_key, t_process, t_logical_clock";
+    "kind, system_key, value, ts, subject, t_system_key, t_process, t_logical_clock, event_id";
 
 /// Enumerate every cached system (any that has a cached post/profile or
 /// opinion). All cached systems are key_type 1.
