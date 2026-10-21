@@ -1,6 +1,6 @@
-import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { Atoms, createThemedStyles, useTheme } from '@/src/common/theme';
+import { Atoms, createThemedStyles } from '@/src/common/theme';
+import { ClaimTypeChip } from '@/src/features/verifications/claims/toolbar/ClaimTypeChip';
 import type { ClaimWithStatus } from '@/src/features/verifications/utils/claim-status';
 import {
   getPlatformFromClaim,
@@ -10,13 +10,11 @@ import { useClaimsList } from '@/src/features/verifications/hooks/useClaimsList'
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
-// The identity's verified platform accounts as a comma-separated, wrapping list of "<logo> <account> on <platform>".
+// The identity's verified platform accounts as a wrapping list of "<logo> <platform>: <account>" pills.
 export function ProfileVerifiedPlatforms({
   identityKey,
-  logoSize,
 }: {
   identityKey: string;
-  logoSize: number;
 }) {
   const styles = useStyles();
   const { claims } = useClaimsList(identityKey);
@@ -33,43 +31,34 @@ export function ProfileVerifiedPlatforms({
 
   return (
     <View style={styles.list}>
-      {verifiedPlatformClaims.map(({ claim, platform, account }, index) => (
-        <VerifiedPlatformRow
+      {verifiedPlatformClaims.map(({ claim, platform, account }) => (
+        <VerifiedPlatformPill
           key={`${claim.keyFingerprint}-${claim.sequence}`}
           claim={claim}
           platform={platform}
           account={account}
-          logoSize={logoSize}
-          hasTrailingComma={index < verifiedPlatformClaims.length - 1}
         />
       ))}
     </View>
   );
 }
 
-function VerifiedPlatformRow({
+function VerifiedPlatformPill({
   claim,
   platform,
   account,
-  logoSize,
-  hasTrailingComma,
 }: {
   claim: ClaimWithStatus;
   platform: Platform;
   account: string;
-  logoSize: number;
-  hasTrailingComma: boolean;
 }) {
-  const { theme } = useTheme();
   const styles = useStyles();
-  // Attached to the row's last word so it never wraps onto next line on its own
-  const comma = hasTrailingComma ? ',' : '';
 
   return (
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={
-        platform.generic ? account : `${account} on ${platform.name}`
+        platform.generic ? account : `${platform.name}: ${account}`
       }
       onPress={() =>
         router.navigate(
@@ -80,28 +69,16 @@ function VerifiedPlatformRow({
           ),
         )
       }
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      style={({ pressed }) => pressed && styles.pillPressed}
     >
-      {platform.logo({
-        size: logoSize,
-        color: theme.palette[platform.color],
-      })}
-      <Text
-        variant="small"
-        color="neutral_500"
-        numberOfLines={1}
-        style={Atoms.flex_shrink_1}
-      >
-        {account}
-        {platform.generic ? comma : null}
-      </Text>
-      {/* A generic platform's account is the website itself. */}
-      {platform.generic ? null : (
-        <Text variant="small" color="neutral_300" numberOfLines={1}>
-          on {platform.name}
-          {comma}
-        </Text>
-      )}
+      <ClaimTypeChip
+        // A generic platform's account is the website itself.
+        name={platform.generic ? undefined : platform.name}
+        value={account}
+        icon="verify"
+        logo={platform.logo}
+        color={platform.color}
+      />
     </Pressable>
   );
 }
@@ -109,7 +86,6 @@ function VerifiedPlatformRow({
 const useStyles = createThemedStyles((_theme, define) =>
   define({
     list: [Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_xs],
-    row: [Atoms.flex_row, Atoms.items_center, Atoms.gap_xs],
-    rowPressed: { opacity: 0.5 },
+    pillPressed: { opacity: 0.5 },
   }),
 );

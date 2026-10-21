@@ -190,10 +190,7 @@ function ProfileHeaderInner({
         </Pressable>
         {alias ? <AliasLabel alias={alias} /> : null}
         {identityKey ? (
-          <ProfileVerifiedPlatforms
-            identityKey={identityKey}
-            logoSize={HEADER_ROW_ICON_SIZE}
-          />
+          <ProfileVerifiedPlatforms identityKey={identityKey} />
         ) : null}
         {profile.description ? (
           <View style={Atoms.mt_sm}>
