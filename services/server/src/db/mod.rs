@@ -184,6 +184,18 @@ impl<'c> DbTx<'c> {
             .map_err(into_seaorm_error)
     }
 
+    /// Commits this transaction and start another.
+    pub(crate) async fn commit_and_chain(&mut self) -> Result<(), DbErr> {
+        let res = self
+            .0
+            .get_mut()
+            .execute("COMMIT AND CHAIN")
+            .await
+            .map_err(into_seaorm_error);
+        dbg!(&res);
+        Ok(())
+    }
+
     /// Abort this transaction.
     pub(crate) async fn rollback(self) -> Result<(), DbErr> {
         self.0

@@ -8,13 +8,11 @@ use sea_orm::sea_query::{
     Asterisk, CommonTableExpression, Expr, Func, Order, SelectStatement,
     UpdateStatement, WithClause,
 };
-use sea_orm::{
-    ColumnTrait, ConnectionTrait, DatabaseConnection, ExprTrait,
-    TransactionTrait,
-};
+use sea_orm::{ColumnTrait, ConnectionTrait, DatabaseConnection, ExprTrait};
 
 use crate::config;
 use crate::cron::{AdvisoryLock, Cron};
+use crate::db::DbConn;
 
 const BATCH_SIZE: u64 = 1000;
 
@@ -30,6 +28,21 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
         let db = db.clone();
         async move {
             let start = Instant::now();
+            let mut conn = match DbConn::from_pool(&db).await {
+                Ok(conn) => conn,
+                Err(err) => {
+                    tracing::warn!(error = %err, "failed acquire database connection");
+                    return ControlFlow::Continue(());
+                },
+            };
+            _ = db; // Don't use the pool any more.
+            let mut tx = match conn.begin().await {
+                Ok(tx) => tx,
+                Err(err) => {
+                    tracing::warn!(error = %err, "failed to start transaction");
+                    return ControlFlow::Continue(());
+                },
+            };
 
             // First we need to update the gravity calculate timestamp, and if
             // we're using dynamic gravity calculate the gravity value.
@@ -49,10 +62,15 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             // Luckily this job should run pretty often so it's a time
             // window of a couple of minutes were this could be the case.
 
-            let tx = match AdvisoryLock::Gravity.try_lock(&db).await {
-                Ok(Some(tx)) => tx,
+            match AdvisoryLock::Gravity.try_lock(&mut tx).await {
+                Ok(true) => {},
                 // Another instance is doing the work.
-                Ok(None) => return ControlFlow::Continue(()),
+                Ok(false) => {
+                    if let Err(err) = tx.rollback().await {
+                        tracing::warn!(error = %err, "failed to abort transaction");
+                    }
+                    return ControlFlow::Continue(());
+                },
                 Err(err) => {
                     tracing::warn!(error = %err, "failed acquire gravity lock");
                     return ControlFlow::Continue(());
@@ -147,7 +165,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             // NOTE: the updating the of the gravity value should ensure we're
             // the only cron job updating the decayed reaction counts.
             let start = Instant::now();
-            let tx = match db.begin().await {
+            let mut tx = match conn.begin().await {
                 Ok(tx) => tx,
                 Err(err) => {
                     tracing::warn!(error = %err, "failed to start transaction to update decayed reaction counts");
@@ -231,7 +249,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 }
 
                 // Commit this batch and start another transaction.
-                if let Err(err) = tx.execute_unprepared("COMMIT AND CHAIN").await {
+                if let Err(err) = tx.commit_and_chain().await {
                     tracing::warn!(error = %err, "failed to commit decayed reaction counts changes");
                     return ControlFlow::Continue(());
                 }
@@ -273,7 +291,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             tracing::debug!(elapsed = ?start_expire.elapsed(), expire = ?expire, "expired decayed reaction counts");
 
             let start_vacuum = Instant::now();
-            if let Err(err) = db.execute_unprepared("VACUUM ANALYZE reaction_tally").await {
+            if let Err(err) = conn.execute_unprepared("VACUUM ANALYZE reaction_tally").await {
                 tracing::warn!(error = %err, "failed to vacuum reaction tallies");
             }
             tracing::debug!(elapsed = ?start_vacuum.elapsed(), "vacuumed reaction tallies");
