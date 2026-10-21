@@ -116,15 +116,14 @@ async function readVersions([chart, url]) {
   return { chart, wanted, live: await readLiveVersion(url) };
 }
 
-// Anything but a commit (404 before the first deploy that sets it, an error
-// page, a refused connection) is reported as is and means "not yet".
+// Anything but a commit (an error status, a page served before /version
+// existed, a refused connection) is reported as is and means "not yet".
 async function readLiveVersion(url) {
   try {
     const response = await fetch(url);
+    if (!response.ok) return `HTTP ${response.status}`;
     const body = (await response.text()).trim();
-    return response.ok && /^[0-9a-f]{40}$/.test(body)
-      ? body
-      : `HTTP ${response.status}`;
+    return /^[0-9a-f]{40}$/.test(body) ? body : 'invalid body';
   } catch (error) {
     return error.cause?.code ?? error.message;
   }
