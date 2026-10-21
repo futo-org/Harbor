@@ -42,7 +42,16 @@ export class IndexedDBDatabase {
         DATABASE_VERSION,
       );
 
-      request.onupgradeneeded = onUpgradeNeeded;
+      // Capture errors here since they originate from event callback handlers.
+      let upgradeError: unknown;
+
+      request.onupgradeneeded = (event) => {
+        try {
+          onUpgradeNeeded(event);
+        } catch (error) {
+          upgradeError = error;
+        }
+      };
 
       request.onblocked = () => {
         console.warn(
@@ -55,7 +64,12 @@ export class IndexedDBDatabase {
       };
 
       request.onerror = () => {
-        reject(new DatabaseError('Failed to open database', request.error));
+        reject(
+          new DatabaseError(
+            'Failed to open database',
+            upgradeError ?? request.error,
+          ),
+        );
       };
     });
 

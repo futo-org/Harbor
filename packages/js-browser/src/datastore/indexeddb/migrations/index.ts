@@ -1,4 +1,6 @@
-import { m20261020_000001_initial } from './m20261020_000001_initial';
+import { DatabaseError } from '@polycentric/js-core';
+import { m000003_20261020_initial } from './m000003_20261020_initial';
+import { m000004_20261021_drop_event_acks } from './m000004_20261021_drop_event_acks';
 
 /**
  * A single schema migration for the indexedDB database
@@ -18,7 +20,10 @@ export interface IndexedDBMigration {
  * The list of migrations to apply.
  * Must be ordered by strictly increasing version.
  */
-const MIGRATIONS: readonly IndexedDBMigration[] = [m20261020_000001_initial];
+const MIGRATIONS: readonly IndexedDBMigration[] = [
+  m000003_20261020_initial,
+  m000004_20261021_drop_event_acks,
+];
 
 // Sanity check the migration versions
 for (let i = 0; i < MIGRATIONS.length; i++) {
@@ -26,14 +31,14 @@ for (let i = 0; i < MIGRATIONS.length; i++) {
 
   // Must be positive integer
   if (!Number.isInteger(version) || version < 1) {
-    throw new Error(`Invalid IndexedDB version: ${version}`);
+    throw new DatabaseError(`Invalid IndexedDB version: ${version}`);
   }
 
   // Must increase version number
   if (i > 0) {
     const prevVersion = MIGRATIONS[i - 1].version;
     if (version <= prevVersion) {
-      throw new Error(
+      throw new DatabaseError(
         `IndexedDB migration fails to increase version: ${prevVersion} -> ${version}`,
       );
     }
@@ -48,13 +53,13 @@ export const DATABASE_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 /**
  * Applies all pending migrations within the upgrade transaction.
  *
- * Should be used as the `onupgradeneeded` handler of an `IDBOpenDBRequest`.
- * The transaction is aborted on any error.
+ * Should be called from the `onupgradeneeded` handler of an `IDBOpenDBRequest`.
+ * On any error, the transaction is aborted and the error is rethrown.
  */
 export function onUpgradeNeeded(event: IDBVersionChangeEvent): void {
   const transaction = (event.target as IDBOpenDBRequest).transaction;
   if (!transaction) {
-    throw new Error('No transaction available for IndexedDB upgrade');
+    throw new DatabaseError('No transaction available for IndexedDB upgrade');
   }
 
   const oldVersion = event.oldVersion;
