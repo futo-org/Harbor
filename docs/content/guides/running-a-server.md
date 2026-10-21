@@ -60,8 +60,11 @@ docker compose up -d postgres rustfs rustfs-init kafka valkey
 cd services/server/migration
 HARBOR_DATABASE_URL=postgres://postgres:testing@localhost:5432 cargo run -- fresh
 
-# Run the server (reads the HARBOR_CONTENT_BLOB_OS_* and HARBOR_DATABASE_URL variables).
-HARBOR_VALKEY_URL=redis://localhost:6379 cargo run -p server
+# Setup a .env file:
+cd services/server
+cp .env.example .env
+# Run the server.
+cargo run -p server
 ```
 
 See [`services/server/README.md`](https://code.futo.org/harbor/harbor/src/branch/develop/services/server/README.md)
