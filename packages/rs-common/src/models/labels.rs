@@ -20,13 +20,14 @@ impl Validate for Labels {
         } else {
             errors.push(map_err(ValidationError::EventKeyMissing));
         }
+        // An empty set is valid: the newest `Labels` event for a target is
+        // the one in force, so it clears the labels before it.
         validate::slice2(
             label_values,
             errors,
             |err| map_err(ValidationError::LabelValues(err)),
             |index, error| map_err(ValidationError::LabelValuesItem { index, error }),
             SliceConfig {
-                min_len: Some(1),
                 max_len: Some(10),
                 ..Default::default()
             },

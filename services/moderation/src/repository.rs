@@ -1,7 +1,7 @@
 use moderation_entity::processed_content_model::{
     ActiveModel, Entity as ProcessedContent, Model as ProcessedContentModel, Status,
 };
-use moderation_entity::{created_content_model, created_event_model, moderator_model};
+use moderation_entity::{created_content_model, created_event_model};
 use polycentric_common::merkle;
 use polycentric_common::models::protos_v2::{EventBundle, SerializedContent, SignedEvent};
 use sea_orm::{
@@ -177,12 +177,6 @@ pub async fn created_content_exists<C: ConnectionTrait>(
     digest_bytes: Vec<u8>,
 ) -> Result<bool, DbErr> {
     created_content_model::Entity::find_by_id((digest_type, digest_bytes))
-        .exists(db)
-        .await
-}
-
-pub async fn is_moderator<C: ConnectionTrait>(db: &C, identity: &str) -> Result<bool, DbErr> {
-    moderator_model::Entity::find_by_id(identity.to_owned())
         .exists(db)
         .await
 }

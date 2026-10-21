@@ -375,7 +375,12 @@ against a set of label values. Labels are signed events in collection 7
 serves only labels from its configured trusted moderation service (set via
 `HARBOR_MODERATION_IDENTITY` on the server side). Labels from any other identity
 are stored and synced as normal events but are not indexed or served when
-querying feeds.
+querying feeds. Moderators do not sign labels themselves; their decisions
+reach the service through the server (`ModerationService.SetLabels`).
+
+For each target, the most recently received trusted `Labels` event is the
+one in force: a newer event replaces the label values of an older one, and
+an empty `label_values` clears them.
 
 The server returns matching `Labels` events as `EventHint` entries alongside
 feed results; the client correlates each hint's event bundle to its target

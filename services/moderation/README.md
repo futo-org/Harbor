@@ -27,38 +27,17 @@ All service variables are read and validated once at startup by
 Additionally various shared variables are read, see the table in
 [`services/server/README.md`](../server/README.md#common-environment-variables).
 
-## Moderator reports
+## Moderator labels
 
-Besides scoring content, the service publishes labels corresponding to moderator
-reports, where moderators are a set of identities in the `moderator` table. There
-is no admin UI, so moderators must be inserted with SQL as follows:
-
-```sql
-INSERT INTO moderation.moderator (identity, created_at, updated_at)
-VALUES ('<hex identity>', now(), now())
-ON CONFLICT (identity) DO NOTHING;
-```
-
-The list is independent of any server's `moderator` table. When the two share a
-database, you may seed it with:
-
-```sql
-INSERT INTO moderation.moderator (identity, created_at, updated_at)
-SELECT identity, now(), now() FROM public.moderator
-ON CONFLICT (identity) DO NOTHING;
-```
-
-Report categories map to labels as follows; every other category is ignored.
-
-| Report category | Label |
-|---|---|
-| `REPORT_CATEGORY_HATE` | `hate` |
-| `REPORT_CATEGORY_SELF_HARM` | `self-harm` |
-| `REPORT_CATEGORY_SEXUALLY_EXPLICIT` | `sexually-explicit` |
-| `REPORT_CATEGORY_VIOLENCE` | `violence` |
-
-See the "Our Labels and Azure AI Content Safety Ratings" section below for more
-details on labels.
+Besides automated scoring, the service publishes the label decisions
+moderators make in the app. The server authenticates the moderator
+(`ModerationService.SetLabels`, checked against its `moderator` table) and
+produces a `LabelRequest` to the `label-requests` Kafka topic; this service
+consumes it and publishes a `Labels` event with the requested label values,
+signed by its own identity. A newer `Labels` event replaces an older one on
+the same post, so a decision can also clear labels or override automated
+scoring. See the "Our Labels and Azure AI Content Safety Ratings" section
+below for details on labels.
 
 ## Local development
 
@@ -86,13 +65,6 @@ infrastructure or secrets. They can be run as follows:
 ```sh
 .gitlab/ci/scripts/integration-moderation.sh
 ```
-
-### Moderator report pipeline, end-to-end
-
-`tests/report_label_pipeline.rs` publishes a report from an identity in the
-`moderator` table and asserts the service publishes the matching label. It
-also tests that a report from an identity absent from that table publishes
-nothing.
 
 ### CSAM pipeline, end-to-end
 

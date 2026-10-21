@@ -589,10 +589,11 @@ impl Query {
             .await
     }
 
-    /// Fetch label events that target any of `keys`. Only labels from
-    /// the trusted moderator are returned, using a join through
-    /// `content_label` → `content` → `events` to check the label
-    /// author's identity. Returns empty when no moderator is configured.
+    /// Fetch the label event in force for each of `keys`: the most recently
+    /// received `Labels` event from the trusted moderator, found through
+    /// `content_label` → `content` → `events`. A later event replaces an
+    /// earlier one, so labels can be changed or cleared. Returns empty when
+    /// no moderator is configured.
     pub async fn list_labels_for_event_keys<C: ConnectionTrait>(
         db: &C,
         keys: &[TargetEventKey],
@@ -633,12 +634,20 @@ impl Query {
             );
         }
 
-        // Join label information with the identity that signed the label,
-        // then filter based on the event key filter constructed above. Also,
-        // only select events from the trusted moderator identity
+        // Join labels with the event that signed them, keep the trusted
+        // moderator and the requested targets, and take the newest event per
+        // target.
+        let target_cols = [
+            content_label::Column::EventKeyCollection,
+            content_label::Column::EventKeyIdentity,
+            content_label::Column::EventKeyPublicKeyType,
+            content_label::Column::EventKeyPublicKey,
+            content_label::Column::EventKeySequence,
+        ];
         let mut query = SeaQuery::select();
         query
-            .column((content_label::Entity, content_label::Column::ContentId))
+            .distinct_on(target_cols.map(|col| (content_label::Entity, col)))
+            .column((event::Entity, event::Column::Id))
             .from(content_label::Entity)
             .inner_join(
                 content::Entity,
@@ -668,8 +677,11 @@ impl Query {
                     .eq(moderator.to_owned()),
             )
             .and_where(event_key_filter.into());
+        for col in target_cols {
+            query.order_by((content_label::Entity, col), Order::Asc);
+        }
+        query.order_by((event::Entity, event::Column::Id), Order::Desc);
 
-        // Build the query
         let (sql, values) = query.build(PostgresQueryBuilder);
         let stmt = Statement::from_sql_and_values(
             db.get_database_backend(),
@@ -677,27 +689,25 @@ impl Query {
             values,
         );
 
-        // Collect the content IDs that match the query
         #[derive(Debug, FromQueryResult)]
-        struct LabelContentId {
-            content_id: i64,
+        struct LabelEventId {
+            id: i64,
         }
-        let label_ids: Vec<LabelContentId> =
-            LabelContentId::find_by_statement(stmt).all(db).await?;
-        let mut content_ids: Vec<i64> =
-            label_ids.into_iter().map(|r| r.content_id).collect();
-        content_ids.sort_unstable();
-        content_ids.dedup();
+        let event_ids: Vec<i64> = LabelEventId::find_by_statement(stmt)
+            .all(db)
+            .await?
+            .into_iter()
+            .map(|r| r.id)
+            .collect();
 
-        if content_ids.is_empty() {
+        if event_ids.is_empty() {
             return Ok(Vec::new());
         }
 
-        // Return event entities that match the content IDs
         event::Entity::find()
             .select_also(content::Entity)
             .join(JoinType::LeftJoin, content_join())
-            .filter(content::Column::Id.is_in(content_ids))
+            .filter(event::Column::Id.is_in(event_ids))
             .all(db)
             .await
     }

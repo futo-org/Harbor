@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use entity::notification;
 use tonic::Status;
 
-use crate::config;
 use crate::data::{
     EventWithContentRow, assemble_hint, bundle_into_hint, pipeline,
     rows_into_bundles,
@@ -127,13 +126,15 @@ async fn hydrate(
         identities.insert(row.to_identity.clone());
     }
 
-    // Add moderation service identity to every request, such that clients can verify label events.
-    // This ships the identity events more times than the client needs, and even when labels aren't
-    // present in the feed page--can be optimized later.
-    if let Some(moderator) = config::get().trusted_moderator.as_deref()
-        && !identities.is_empty()
-    {
-        identities.insert(moderator.to_owned());
+    // Fetch label events for trigger events only: we assume recipient is the target's
+    // author and does not object to their own posts. Labelers are included
+    // in the identities so clients can verify the label events.
+    let label_rows =
+        FeedsRepository::list_labels_for_event_keys(&ctx.db, &trigger_keys)
+            .await
+            .map_err(map_db_err)?;
+    for (event, _) in label_rows.iter() {
+        identities.insert(event.identity.clone());
     }
 
     let identities: Vec<String> = identities.into_iter().collect();
@@ -151,13 +152,6 @@ async fn hydrate(
     let stats = gather_stats_for(&ctx.db, fetched.iter().map(|(e, _)| e.id))
         .await
         .map_err(map_db_err)?;
-
-    // Fetch label events for trigger events only: we assume recipient is the target's
-    // author and does not object to their own posts.
-    let label_rows =
-        FeedsRepository::list_labels_for_event_keys(&ctx.db, &trigger_keys)
-            .await
-            .map_err(map_db_err)?;
 
     let blocked = GraphRepository::blocked_set_for_caller(ctx).await?;
 

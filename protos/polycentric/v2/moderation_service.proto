@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package polycentric.v2;
+
+import "polycentric/v2/event_key.proto";
+
+/**
+ * SetLabels: set the labels on a post. The server forwards the request to
+ * its moderation service, which publishes a `Labels` event signed by the
+ * trusted moderation identity. The newest such event is the one in force,
+ * so `label_values` replaces the post's labels, and an empty set clears
+ * them.
+ */
+message SetLabelsRequest {
+  EventKey target = 1;
+  repeated string label_values = 2;
+}
+
+message SetLabelsResponse {}
+
+/**
+ * A moderator's label decision, sent by the server to the moderation
+ * service over Kafka (topic `label-requests`, keyed by the target's
+ * serialized `EventKey`).
+ */
+message LabelRequest {
+  EventKey target = 1;
+  repeated string label_values = 2;
+  // Moderator who made the decision.
+  string requested_by = 3;
+}
+
+/**
+ * Moderator tooling. The caller is authenticated by its bearer JWT (see
+ * `auth_middleware`) and must be a moderator on this server.
+ */
+service ModerationService {
+  // Sets the labels on a post through the moderation service.
+  rpc SetLabels(SetLabelsRequest) returns (SetLabelsResponse);
+}

@@ -241,8 +241,9 @@ services:
       - HARBOR_MODERATION_IDENTITY=${HARBOR_MODERATION_IDENTITY:-}
       - HARBOR_MODERATION_SIGNING_KEY=${HARBOR_MODERATION_SIGNING_KEY:-}
       - HARBOR_MODERATION_SERVERS=${HARBOR_MODERATION_SERVERS:-http://server:3000}
-      # Azure and PhotoDNA are unset, so labels come only from moderator
-      # reports. Set the Azure endpoint and key together to enable scoring.
+      # Azure and PhotoDNA are unset, so labels come only from moderators'
+      # decisions in the app. Set the Azure endpoint and key together to
+      # enable scoring.
       - HARBOR_CONTENT_BLOB_OS_BUCKET=${HARBOR_CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}
       - HARBOR_CONTENT_BLOB_OS_ENDPOINT=${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-http://rustfs:9000}
       - HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE=${HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}

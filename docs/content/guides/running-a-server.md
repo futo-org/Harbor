@@ -210,8 +210,14 @@ service is `hate`, `self-harm`, `sexually-suggestive`, `sexually-explicit`, and 
 #### Trusting a moderation service
 Set the **single** moderation service the server trusts via an environment
 variable `HARBOR_MODERATION_IDENTITY`. It should be equal to the hex identity
-string of the trusted moderation service. This identity is always consider a
-moderator, even if it's not stored in the moderator table as such.
+string of the trusted moderation service. This identity is always considered a
+moderator, even if it's not stored in the moderator table as such. Labels
+signed by anyone else are stored and synced as normal events but are neither
+indexed nor served.
+
+For each labeled post, the most recently received `Labels` event from the
+trusted service is the one in force. A newer event replaces the labels of an
+older one, and an event with no label values clears them.
 
 Until the identity is set, clients will not be served label events alongside the
 feed events such that they can filter locally, nor will the labels they wish to
@@ -245,51 +251,18 @@ The moderation service inspects:
 The `Labels` event always target a post or profile event, and indirectly
 target any media or blob linked to that event.
 
-#### Labels from moderator reports
+#### Labels from moderators
 
-Labels are also published in response to
-[`Report`](../protocol/data-model.md#report) events, but only when the report was
-signed by an identity the moderation service recognises as a moderator. Those
-identities live in the `moderator` table in the moderation service's own
-Postgres schema (`moderation` by default), so each service decides who it
-listens to. This list is separate from a server's moderator list. The two
-moderator lists may overlap, but neither is derived from the other.
-
-Currently there is no admin UI to add moderators, so you must add them
-directly to the database using SQL:
-
-```sql
-INSERT INTO moderation.moderator (identity, created_at, updated_at)
-VALUES ('<hex identity>', now(), now())
-ON CONFLICT (identity) DO NOTHING;
-```
-
-Note that removing a moderator (deleting the row) will not remove the label
-events that have been signed for that moderator's reports.
-
-Conveniently, if the moderation service shares a database with a server, you
-can seed the list from that server's moderators:
-
-```sql
-INSERT INTO moderation.moderator (identity, created_at, updated_at)
-SELECT identity, now(), now() FROM public.moderator
-ON CONFLICT (identity) DO NOTHING;
-```
-
-Report categories must correspond to a label value to produce a label event.
-This correspondence is as follows:
-
-| Report category | Label |
-|---|---|
-| `REPORT_CATEGORY_HATE` | `hate` |
-| `REPORT_CATEGORY_SELF_HARM` | `self-harm` |
-| `REPORT_CATEGORY_SEXUALLY_EXPLICIT` | `sexually-explicit` |
-| `REPORT_CATEGORY_VIOLENCE` | `violence` |
-
-All other reports will not produce a label. The `sexually-suggestive` label
-is also deliberately not reportable, as the confusion between suggestive/explicit
-would be a burden on moderator time. Only automated scoring makes the distinction
-between explicit/suggestive.
+Moderators label posts from the app, which calls `ModerationService.SetLabels`
+on the server. The server checks the caller against its `moderator` table and
+forwards the decision to the moderation service over Kafka (topic
+`label-requests`, prefixed with `HARBOR_KAFKA_CLUSTER_ID` like `events`).
+The service publishes a `Labels` event signed by the trusted identity, so
+moderators never sign label events themselves and clients only ever see one
+labeler. Since the newest event is in force, a moderator can also correct
+or clear what the service applied. Kafka and the moderation service must be
+running for labels to be applied; the request fails with `UNAVAILABLE`
+when the server cannot reach the broker.
 
 #### Changing the trusted service
 Any identity can sign label events for any content, even if the server only

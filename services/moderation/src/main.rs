@@ -16,8 +16,8 @@ use polycentric::{PolycentricClient, PublishError};
 use polycentric_common::models::{
     collections,
     protos_v2::{
-        Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, Report, ReportCategory,
-        content::ContentBody,
+        Content, ContentDigest, Event, EventBundle, EventKey, ImageSet, LabelRequest,
+        ReportCategory, content::ContentBody,
     },
 };
 use providers::{
@@ -36,6 +36,10 @@ const RETRY_BACKOFF: Duration = Duration::from_secs(2);
 /// Number of times a message is retried before it is skipped.
 const MAX_RETRIES: u32 = 5;
 
+/// Kafka topic of moderators' label decisions, produced by the server's
+/// `ModerationService.SetLabels`.
+const LABEL_REQUESTS_TOPIC: &str = "label-requests";
+
 /// What to do with the consumed message's offset.
 enum Outcome {
     /// Done. Store the offset so it is committed and not redelivered.
@@ -47,7 +51,6 @@ enum Outcome {
 
 /// The content carried by an `EventBundle`, keyed by its content digest.
 struct BundleContent {
-    author_identity: String,
     digest_type: i32,
     digest_bytes: Vec<u8>,
     content: Content,
@@ -109,14 +112,6 @@ fn content_from_bundle(bundle: EventBundle) -> Option<BundleContent> {
         }
     };
 
-    let author_identity = match event.key {
-        Some(key) => key.identity,
-        None => {
-            tracing::warn!("event missing key");
-            return None;
-        }
-    };
-
     let content = match Content::decode(serialized_content.content_bytes.as_slice()) {
         Ok(c) => c,
         Err(e) => {
@@ -126,7 +121,6 @@ fn content_from_bundle(bundle: EventBundle) -> Option<BundleContent> {
     };
 
     Some(BundleContent {
-        author_identity,
         digest_type: digest.r#type,
         digest_bytes: digest.value,
         content,
@@ -328,9 +322,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &azure.multimodal_api_version,
         )),
         None => {
-            tracing::warn!(
-                "Azure Content Safety not configured; labels now published only from moderator reports"
-            );
+            tracing::warn!("Azure Content Safety not configured; no labels will be published");
             None
         }
     };
@@ -368,8 +360,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         polycentric,
     };
 
-    // Listen to a Kafka topic of all events.
-    let consumer = common_kafka::build_consumer("events", &["events"]).await;
+    // Listen to the topic of all events, and to the label decisions servers
+    // forward from their moderators.
+    let consumer = common_kafka::build_consumer("events", &["events", LABEL_REQUESTS_TOPIC]).await;
 
     // Failure counts for messages currently being retried.
     let mut attempts: HashMap<(i32, i64), u32> = HashMap::new();
@@ -434,6 +427,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Validate, deduplicate, and run moderation for a single consumed message.
 async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
+    if message.topic() == common_kafka::prefixed(LABEL_REQUESTS_TOPIC) {
+        return process_label_request(ctx, message).await;
+    }
+
     // Key is a protobuf-encoded EventKey, payload a protobuf EventBundle
     // (see the server's put_events Kafka publish).
     let key = message
@@ -458,7 +455,6 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
     };
 
     let BundleContent {
-        author_identity,
         digest_type,
         digest_bytes,
         content,
@@ -466,10 +462,6 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
         Some(c) => c,
         None => return Outcome::Commit,
     };
-
-    if let Some(ContentBody::Report(report)) = &content.content_body {
-        return process_moderator_report(ctx, &author_identity, report).await;
-    }
 
     if !has_scorable_media(&content) {
         return Outcome::Commit;
@@ -618,6 +610,32 @@ async fn process(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
     Outcome::Commit
 }
 
+/// Publish the labels a moderator decided on (payload: a `LabelRequest`
+/// from the server's `SetLabels`). Always publishes, even content we have
+/// published before: the newest event is the one in force, so repeating
+/// an earlier label set after a change must produce a new event.
+async fn process_label_request(ctx: &Context, message: &BorrowedMessage<'_>) -> Outcome {
+    let request = match message.payload().map(LabelRequest::decode) {
+        Some(Ok(request)) => request,
+        Some(Err(e)) => {
+            tracing::warn!(error = ?e, "failed to decode LabelRequest");
+            return Outcome::Commit;
+        }
+        None => return Outcome::Commit,
+    };
+    let Some(target) = request.target else {
+        tracing::warn!("label request missing target");
+        return Outcome::Commit;
+    };
+    tracing::info!(
+        key = ?target,
+        labels = ?request.label_values,
+        moderator = request.requested_by,
+        "label request"
+    );
+    publish_labels(ctx, target, request.label_values).await
+}
+
 /// Publish a labels event for `target` and persist what we created to the
 /// moderation DB. Returns `Retry` on any failure (transient, persistence,
 /// or a not-ready identity) so the label is never silently dropped.
@@ -667,53 +685,6 @@ async fn publish_labels(ctx: &Context, target: EventKey, labels: Vec<String>) ->
         }
         Err(PublishError::Transient(e)) => {
             tracing::warn!(error = %e, "labels publish failed");
-            Outcome::Retry
-        }
-    }
-}
-
-/// If processing a report from a moderator that corresponds to a label,
-/// publish that label.
-async fn process_moderator_report(
-    ctx: &Context,
-    author_identity: &str,
-    report: &Report,
-) -> Outcome {
-    match repository::is_moderator(&ctx.ro_db, author_identity).await {
-        Ok(true) => {}
-        Ok(false) => {
-            tracing::debug!(author = author_identity, "report author is not a moderator");
-            return Outcome::Commit;
-        }
-        Err(e) => {
-            tracing::warn!(error = %e, author = author_identity, "is_moderator error");
-            return Outcome::Retry;
-        }
-    }
-
-    let Some(label) = labels::label_from_report_category(report.category) else {
-        tracing::debug!(
-            category = report.category,
-            "report category has no label counterpart"
-        );
-        return Outcome::Commit;
-    };
-
-    let Some(target) = report.event_key.clone() else {
-        tracing::warn!("moderator report missing event_key");
-        return Outcome::Commit;
-    };
-
-    let labels = vec![label.value().to_string()];
-    let digest = polycentric::labels_content(&target, &labels).1;
-    match repository::created_content_exists(&ctx.ro_db, digest.r#type, digest.value).await {
-        Ok(true) => {
-            tracing::debug!(key = ?target, "labels event already created, skipping");
-            Outcome::Commit
-        }
-        Ok(false) => publish_labels(ctx, target, labels).await,
-        Err(e) => {
-            tracing::warn!(error = %e, "created_content_exists error");
             Outcome::Retry
         }
     }

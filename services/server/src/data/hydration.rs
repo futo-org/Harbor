@@ -1,4 +1,3 @@
-use crate::config;
 use crate::data::{
     EventRow, EventWithContentRow, assemble_hint, row_into_hint,
 };
@@ -142,14 +141,9 @@ where
     for row in referenced.iter() {
         row.collect_identities(&mut identities);
     }
-    // Add moderation service identity to every request, such that clients can
-    // verify label events. This ships the identity events more times than the
-    // client needs, and even when labels aren't present in the feed page -- can
-    // be optimized later.
-    if let Some(moderator) = config::get().trusted_moderator.as_deref()
-        && !identities.is_empty()
-    {
-        identities.insert(moderator.to_owned());
+    // Labelers too, so clients can verify the label events.
+    for (event, _) in label_events.iter() {
+        identities.insert(event.identity.clone());
     }
     let identities: Vec<_> = identities.into_iter().collect();
 
@@ -345,16 +339,6 @@ where
     let mut identities = HashSet::new();
     for row in rows {
         row.collect_identities(&mut identities);
-    }
-
-    // Add moderation service identity to every request, such that clients can
-    // verify label events. This ships the identity events more times than the
-    // client needs, and even when labels aren't present in the feed page -- can
-    // be optimized later.
-    if let Some(moderator) = config::get().trusted_moderator.as_deref()
-        && !identities.is_empty()
-    {
-        identities.insert(moderator.to_owned());
     }
 
     identities.into_iter().collect()
