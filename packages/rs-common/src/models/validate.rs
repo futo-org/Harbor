@@ -8,9 +8,9 @@ use regex::Regex;
 use crate::models::{
     application, attributed_to, attributed_to_reaction, blob, block, content, content_body,
     content_digest, delete, event, event_key, event_proof_target, field_def, follow, identity,
-    image, image_set, labels, link, post, post_reply, profile_update, public_key, reaction,
-    recovation_bound, report, repost, serialized_verification_schema, server_list, to,
-    verification_claim, verification_schema, verification_target, verification_verify,
+    image, image_set, labels, link, post, post_reply, profile_update, public_key, reaction, report,
+    repost, revocation_bound, serialized_verification_schema, server_list, to, verification_claim,
+    verification_schema, verification_target, verification_verify,
 };
 
 /// Validate a value.
@@ -66,7 +66,7 @@ pub enum ValidationError {
     AttributedToReaction(attributed_to_reaction::ValidationError),
     ProfileUpdate(profile_update::ValidationError),
     Identity(identity::ValidationError),
-    RecovationBound(recovation_bound::ValidationError),
+    RecovationBound(revocation_bound::ValidationError),
     EventProofTarget(event_proof_target::ValidationError),
     ServerList(server_list::ValidationError),
     Repost(repost::ValidationError),
@@ -212,8 +212,8 @@ impl From<identity::ValidationError> for ValidationError {
     }
 }
 
-impl From<recovation_bound::ValidationError> for ValidationError {
-    fn from(err: recovation_bound::ValidationError) -> ValidationError {
+impl From<revocation_bound::ValidationError> for ValidationError {
+    fn from(err: revocation_bound::ValidationError) -> ValidationError {
         ValidationError::RecovationBound(err)
     }
 }

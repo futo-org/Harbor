@@ -14,7 +14,7 @@ use crate::models::protos_v2::{
     Content, Event, EventProofTarget, Identity, PublicKey, RevocationBound, ServerList,
 };
 use crate::models::validate::{self, SliceConfig, SliceError, Validate};
-use crate::models::{collections, public_key, recovation_bound, server_list};
+use crate::models::{collections, public_key, revocation_bound, server_list};
 
 impl Identity {
     /// Derive an identity key hex string from this identity content.
@@ -162,7 +162,7 @@ pub enum ValidationError {
     RevocationBound(SliceError),
     RevocationBoundItem {
         index: u32,
-        error: recovation_bound::ValidationError,
+        error: revocation_bound::ValidationError,
     },
     Servers(server_list::ValidationError),
     RecoveryKey(public_key::ValidationError),
