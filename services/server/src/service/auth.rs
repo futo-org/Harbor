@@ -57,7 +57,7 @@ pub async fn auth_middleware(
                 request.extensions_mut().insert(identity);
             }
             Err(status) if status.code() == tonic::Code::FailedPrecondition => {
-                tracing::warn!(
+                tracing::debug!(
                     reason = status.message(),
                     "auth token unverifiable"
                 );
