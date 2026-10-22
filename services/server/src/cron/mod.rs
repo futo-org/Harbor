@@ -5,13 +5,12 @@ use std::ops::ControlFlow;
 use std::time::Duration;
 
 use sea_orm::sea_query::{Expr, PgFunc, SelectStatement};
-use sea_orm::{
-    ConnectionTrait, DatabaseConnection, DatabaseTransaction, DbErr,
-    TransactionTrait,
-};
+use sea_orm::{ConnectionTrait, DatabaseConnection, DbErr};
 use tokio::time::{MissedTickBehavior, interval};
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
+
+use crate::db::DbTx;
 
 mod gravity;
 
@@ -89,25 +88,18 @@ impl AdvisoryLock {
     /// We could use row level locking as well, but then we lock all out all
     /// other users of the rows, which is not ideal for rows that are accessed a
     /// lot (especially if it's not needed).
-    async fn try_lock(
-        self,
-        db: &DatabaseConnection,
-    ) -> Result<Option<DatabaseTransaction>, DbErr> {
-        let tx = db.begin().await?;
-
+    async fn try_lock(self, tx: &mut DbTx<'_>) -> Result<bool, DbErr> {
         let lock_key = self as i64;
         let mut query = SelectStatement::new();
         query.expr(PgFunc::try_advisory_lock(Expr::Constant(lock_key.into())));
-        if db
+        if tx
             .query_one(&query)
             .await?
             .map_or(Ok(false), |r| r.try_get_by(0))?
         {
-            Ok(Some(tx))
+            Ok(true)
         } else {
-            // Another instance already holds the lock.
-            tx.rollback().await?;
-            Ok(None)
+            Ok(false)
         }
     }
 }
