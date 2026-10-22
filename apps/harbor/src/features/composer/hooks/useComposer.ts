@@ -34,7 +34,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
 import { isWeb } from '@/src/common/util/platform';
 import { useComposerStore } from './useComposerStore';
-import { rewriteIdentityMentions } from '../utils/rewriteIdentityMentions';
+import { rewriteMentions } from '../utils/rewriteMentions';
 import { useLinkPreview } from './useLinkPreview';
 import {
   ImageUploadError,
@@ -309,7 +309,7 @@ export function useComposer({
       const link = await resolveLinkForPost();
 
       const post: v2.Post = {
-        text: rewriteIdentityMentions(
+        text: rewriteMentions(
           text.trim(),
           useComposerStore.getState().mentions,
         ),

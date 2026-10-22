@@ -1,6 +1,7 @@
 // The server mirrors the mention rules below in
 // `packages/rs-common/src/mentions.rs` (to notify mentioned users). Keep the
-// two in sync.
+// two in sync. Alias mentions are only links for older posts: new ones are
+// posted in the curly form and the server never notifies for them.
 type SegmentBody =
   | { type: 'text'; value: string }
   | { type: 'link'; value: string; url: string }
@@ -73,7 +74,7 @@ const HAS_SCHEME = /^https?:\/\//i;
  *   `@displayName`; identity must be 64 hex chars. The default form.
  * - `@<64-hex>` — identity mention.
  * - anything else containing a dot (`@user@domain.com`, `@domain.com`) — alias
- *   mention.
+ *   mention, from posts made before aliases were posted in the curly form.
  * - otherwise it's left as plain text.
  *
  * Links are http(s) URLs, `www.` domains, and bare domains with a known TLD.

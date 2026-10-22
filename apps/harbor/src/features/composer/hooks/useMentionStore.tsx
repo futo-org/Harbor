@@ -56,8 +56,8 @@ export type MentionStore = {
   measureInput: () => void;
 
   /**
-   * Replace the `@` + query (extended through the word at the caret) with an
-   * alias or identity mention that `parseTextLinks` understands.
+   * Replace the `@` + query with `@alias` (or `@identity` without one), which
+   * `rewriteMentions` turns into a curly mention on post.
    */
   insertMention: (identity: string, profile: ProfileHookResult) => void;
 };
@@ -88,11 +88,15 @@ export function createMentionStore(): StoreApi<MentionStore> {
       if (!ctx || !onChangeText) return;
 
       // todo: when rich text is supported, we can drop the in-memory replacer logic and just do smth like
-      //  const mention = profile.name ? `@{${identity},${profile.name}}` : `@{${identity}}`;
-      const mention = `@${profile.alias ?? identity}`;
-      if (profile.name) {
-        useComposerStore.getState().rememberMention(identity, profile.name);
+      //  const mention = renderAs ? `@{${identity},${renderAs}}` : `@{${identity}}`;
+      const insertedText = profile.alias ?? identity;
+      const renderAs = profile.alias ?? profile.name;
+      if (renderAs) {
+        useComposerStore
+          .getState()
+          .rememberMention(insertedText, { identity, renderAs });
       }
+      const mention = `@${insertedText}`;
 
       // Replace the `@` + query, with one space after the mention: reuse the
       // one already there (mid-text insert) instead of doubling it. The space
