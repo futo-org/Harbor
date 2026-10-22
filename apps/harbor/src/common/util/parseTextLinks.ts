@@ -18,8 +18,11 @@ export type TextSegment = SegmentBody & { start: number; end: number };
 const TLD =
   '(?:com|org|net|edu|gov|mil|io|dev|app|co|me|gg|xyz|info|biz|tv|news|social|link|so|ai|sh|to|fm|fyi|page|site|blog|uk|us|ca|de|fr|nl|eu|es|it|jp|au|in|br|ru|ch|se|no|pl)';
 
-// A dotted hostname whose final label is a known TLD.
-const DOMAIN = `(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+${TLD}`;
+// A dotted hostname whose final label is a known TLD. It must not be glued to
+// a word on either side (`foo_bar.com`, `america.jpeg`), or start right after a
+// `.` (`café.co.uk`, and keeps `a.a.a.a…` from backtracking quadratically). An
+// `@` after it means it's an email's local part (`john.co@gmail.com`).
+const DOMAIN = `(?<![\\p{L}\\p{N}_.-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+${TLD}(?![\\p{L}\\p{N}_@-])`;
 
 // A polycentric identity: exactly 64 hex chars (a SHA-256 hash).
 const HEX64 = /^[0-9a-fA-F]{64}$/;
@@ -37,14 +40,15 @@ const LINK_REGEX = new RegExp(
     '@[^\\s]+',
     '#[\\p{L}\\p{N}_]+',
     'https?:\\/\\/[^\\s]+',
-    'www\\.[^\\s]+',
-    `${DOMAIN}(?:\\/[^\\s]*)?`,
+    'www\\.(?=[\\p{L}\\p{N}])[^\\s]+',
+    `${DOMAIN}(?::\\d+)?(?:[/?#][^\\s]*)?`,
   ].join('|'),
   'giu',
 );
 
-// Punctuation that commonly trails a URL in prose but isn't part of it.
-const TRAILING_PUNCT = /[.,!?;:'")\]}]+$/;
+// Punctuation that commonly trails a URL in prose but isn't part of it,
+// including a possessive `'s` (`google.com's`).
+const TRAILING_PUNCT = /(?:['’]s)?[.,!?;:'’")\]}>”]*$/i;
 
 // A char that glues an `@`/`#` to the preceding word — an email's local part
 // (`a@b.com`, in any script), `foo#bar`, another `@` — disqualifying it as a
@@ -101,7 +105,15 @@ export function parseTextLinks(text: string): TextSegment[] {
       raw[0] === '@' && raw[1] === '{' && raw.endsWith('}');
 
     if (!isCurlyMention) {
-      const trail = raw.match(TRAILING_PUNCT)?.[0] ?? '';
+      let trail = raw.match(TRAILING_PUNCT)?.[0] ?? '';
+      const rawWithoutTrail = raw.slice(0, raw.length - trail.length);
+      // A `)` closing a `(` inside the link (`wiki/Foo_(bar)`) is part of it.
+      if (
+        trail[0] === ')' &&
+        rawWithoutTrail.split('(').length > rawWithoutTrail.split(')').length
+      ) {
+        trail = trail.slice(1);
+      }
       if (trail) raw = raw.slice(0, raw.length - trail.length);
       if (!raw) continue;
     }
