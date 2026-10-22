@@ -89,6 +89,22 @@ impl DbConn {
             DbInner::Mock(_) => {}
         }
     }
+
+    /// Close the connection.
+    ///
+    /// # Notes
+    ///
+    /// This not required to be called, by default the connection is returned to
+    /// the pool.
+    pub(crate) async fn close(self) -> Result<(), DbErr> {
+        match self.0 {
+            DbInner::Sqlx(conn) => {
+                conn.into_inner().close().await.map_err(into_seaorm_error)
+            }
+            #[cfg(test)]
+            DbInner::Mock(_) => Ok(()),
+        }
+    }
 }
 
 #[async_trait::async_trait]

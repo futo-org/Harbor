@@ -78,6 +78,13 @@ pub async fn handle(
             // not as an event specific errors as it's unlikely to be related to
             // the event.
             Err(status) if status.code() == Code::Internal => {
+                // Close the connection to be prevent it from being reused.
+                // We've seen some unusual errors potentially (but not known for
+                // sure) caused by incomplete transactions.
+                // See #1982 for more information
+                if let Err(err) = ctx.db.close().await {
+                    tracing::error!(error = %err, "failed to close connection");
+                }
                 return Err(status);
             }
             Err(status) => {
