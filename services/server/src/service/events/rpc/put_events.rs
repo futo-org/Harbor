@@ -287,6 +287,7 @@ async fn process_event(
     // by a key whose revocation bound still vouches for this
     // signature.
     if key.collection != collections::IDENTITY {
+        #[allow(clippy::collapsible_if)] // Easier to understand this way.
         if let Err(err) = authorize_event_signer(
             &tx,
             &ctx.proof_cache,
@@ -595,7 +596,6 @@ async fn remove_present_blobs(
             .await
             .map_err(|err| {
                 tracing::error!(error = %err, "failed to find digest of blob");
-                ()
             })?;
 
     let missing_blobs = blobs
