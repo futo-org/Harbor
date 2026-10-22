@@ -4,12 +4,12 @@ import { sha256 } from '@noble/hashes/sha2.js';
 
 import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
 import { PolycentricClient } from './polycentric-client';
-import { StorageHandle } from './datastore/storage-handle';
+import { StorageHandle } from './data-store/storage-handle';
 import { COLLECTION, SyncStrategy } from './constants';
 import { bytesToHex, toDigestKey } from './utils/hex';
 import * as Proto from './proto/v2';
-import { FileStore } from './file-store';
-import { MemoryFileStoreDriver } from './memory-storage';
+import { FileStore } from './file-store/file-store';
+import { MemoryFileStoreDriver } from './memory-storage/memory-storage';
 import type {
   IContentRepository,
   IEventRepository,

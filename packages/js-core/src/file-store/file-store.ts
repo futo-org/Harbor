@@ -1,6 +1,6 @@
-import type { IFileStoreDriver } from './platform-interfaces';
-import type * as Proto from './proto/v2';
-import { toDigestKey } from './utils/hex';
+import type { IFileStoreDriver } from '../platform-interfaces';
+import type * as Proto from '../proto/v2';
+import { toDigestKey } from '../utils/hex';
 
 /**
  * Manage blobs that have been persisted locally by the client.

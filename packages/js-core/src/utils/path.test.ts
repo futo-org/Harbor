@@ -4,9 +4,8 @@ import {
   type FileStoreErrorCode,
   MAX_PATH_BYTES,
   MAX_SEGMENT_BYTES,
-  isValidPathSegment,
-  segmentsFromPath,
-} from './file-store-driver';
+} from '../platform-interfaces/file-store-driver';
+import { isValidPathSegment, segmentsFromPath } from './path';
 
 const codeOf = (fn: () => unknown): FileStoreErrorCode | undefined => {
   try {
