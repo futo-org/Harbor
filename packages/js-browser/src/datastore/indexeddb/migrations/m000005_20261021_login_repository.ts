@@ -1,5 +1,4 @@
 import { bytesToHex, v2 as Proto } from '@polycentric/js-core';
-import { activeIdentityKey } from '../active-identity';
 import { requestAsPromise } from '../request';
 import type { IndexedDBMigration } from './index';
 
@@ -16,6 +15,9 @@ interface LegacyKey {
  *
  * The old store is kept as `legacyKeys`.
  * We migrate the first keypair as a login if it has an active identity.
+ *
+ * Also creates the `loginState` key-value store and records the migrated
+ * login as the active login.
  */
 export const m000005_20261021_login_repository: IndexedDBMigration = {
   version: 5,
@@ -33,6 +35,9 @@ export const m000005_20261021_login_repository: IndexedDBMigration = {
 
     // Create status index for efficient sweeping
     logins.createIndex('idx_logins_status', 'status');
+
+    // Create key-value store for login state
+    const loginState = db.createObjectStore('loginState', { keyPath: 'name' });
 
     // Migrate existing key pair
     const [legacy] = await requestAsPromise<LegacyKey[]>(
@@ -65,8 +70,27 @@ export const m000005_20261021_login_repository: IndexedDBMigration = {
         privateKeyHex: bytesToHex(legacy.private_key),
       }),
     );
+
+    // Mark the migrated login as active
+    await requestAsPromise(
+      loginState.add({
+        name: 'activeLogin',
+        identity,
+        publicKey: Proto.PublicKey.create({
+          keyType: legacy.key_type,
+          key: legacy.public_key,
+        }),
+      }),
+    );
   },
 };
+
+/**
+ * The legacy `localStorage` key that maps a public key to its active identity.
+ */
+function activeIdentityKey(publicKey: Uint8Array): string {
+  return `polycentric:activeIdentity:${bytesToHex(publicKey, 32)}`;
+}
 
 /**
  * Derive the status of the legacy key pair from the latest identity event.

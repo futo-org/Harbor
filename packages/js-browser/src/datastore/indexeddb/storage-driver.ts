@@ -1,12 +1,20 @@
-import type { IStorageDriver } from '@polycentric/js-core';
+import type { ActiveLogin, IStorageDriver } from '@polycentric/js-core';
+import { DatabaseError, v2 as Proto } from '@polycentric/js-core';
 import { IndexedDBDatabase } from './database';
 import { IndexedDBLoginRepository } from './login-repository';
 import { IndexedDBEventRepository } from './event.repository';
 import { IndexedDBContentRepository } from './content.repository';
-import { activeIdentityKey } from './active-identity';
+
+/**
+ * Stored representation of the active login in the `loginState` store.
+ */
+type ActiveLoginEntry = ActiveLogin & { name: 'activeLogin' };
 
 export class IndexedDBStorageDriver implements IStorageDriver {
   private readonly database: IndexedDBDatabase;
+
+  private static readonly LOGIN_STATE_STORE = 'loginState';
+  private static readonly ACTIVE_LOGIN_KEY = 'activeLogin';
 
   private constructor(databaseName: string) {
     this.database = new IndexedDBDatabase(databaseName);
@@ -28,25 +36,56 @@ export class IndexedDBStorageDriver implements IStorageDriver {
     return new IndexedDBLoginRepository(this.database);
   }
 
-  async saveActiveIdentityKey(
-    publicKey: Uint8Array,
-    identityKey: string | null,
-  ): Promise<void> {
+  async setActiveLogin(login: ActiveLogin | null): Promise<void> {
     try {
-      const key = activeIdentityKey(publicKey);
-      if (identityKey) {
-        localStorage.setItem(key, identityKey);
+      const store = this.loginStateStore('readwrite');
+
+      if (login) {
+        const entry: ActiveLoginEntry = {
+          ...login,
+          name: IndexedDBStorageDriver.ACTIVE_LOGIN_KEY,
+        };
+
+        await IndexedDBDatabase.requestAsPromise(store.put(entry));
       } else {
-        localStorage.removeItem(key);
+        await IndexedDBDatabase.requestAsPromise(
+          store.delete(IndexedDBStorageDriver.ACTIVE_LOGIN_KEY),
+        );
       }
-    } catch {}
+
+      store.transaction.commit();
+    } catch (error) {
+      throw new DatabaseError('Failed to set active login', error);
+    }
   }
 
-  async loadActiveIdentityKey(publicKey: Uint8Array): Promise<string | null> {
+  async getActiveLogin(): Promise<ActiveLogin | null> {
     try {
-      return localStorage.getItem(activeIdentityKey(publicKey));
-    } catch {
-      return null;
+      const store = this.loginStateStore('readonly');
+
+      const entry = await IndexedDBDatabase.requestAsPromise<
+        ActiveLoginEntry | undefined
+      >(store.get(IndexedDBStorageDriver.ACTIVE_LOGIN_KEY));
+
+      if (!entry) {
+        return null;
+      }
+
+      return {
+        identity: entry.identity,
+        publicKey: Proto.PublicKey.create({
+          keyType: entry.publicKey.keyType,
+          key: entry.publicKey.key,
+        }),
+      };
+    } catch (error) {
+      throw new DatabaseError('Failed to get active login', error);
     }
+  }
+
+  private loginStateStore(mode: IDBTransactionMode): IDBObjectStore {
+    return this.database
+      .createTransaction(IndexedDBStorageDriver.LOGIN_STATE_STORE, mode)
+      .objectStore(IndexedDBStorageDriver.LOGIN_STATE_STORE);
   }
 }
