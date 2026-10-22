@@ -2,9 +2,10 @@
 // Waits until staging runs develop: first the latest server and web staging
 // deploys, then the Flux rollout, until server and web serve on /version the
 // commit their chart's `staging` tag pins.
-// Env: GITHUB_SERVER_URL, GITHUB_REPOSITORY (set by Forgejo).
+// Env: GITHUB_SERVER_URL, GITHUB_REPOSITORY (set by Forgejo), and what
+// post-e2e-staging-failure.mjs needs to post a failure.
 
-import { appendFileSync } from 'node:fs';
+import { postE2eStagingFailure } from './post-e2e-staging-failure.mjs';
 import { chartAt } from './registry-helpers.mjs';
 
 const SECOND = 1000;
@@ -42,7 +43,7 @@ async function waitForDeploys() {
         (run) => isFinal(run.status) && run.status !== 'success',
       );
       if (failedRun) {
-        fail(
+        await fail(
           `Staging deploy ${failedRun.status}: ${describeRun(failedRun)} ${failedRun.html_url}`,
         );
       }
@@ -57,7 +58,8 @@ async function waitForDeploys() {
       state = `runs API: ${error.message}`;
     }
     lastState = logChange(lastState, state);
-    if (Date.now() > deadline) fail(`Staging deploys timed out: ${state}`);
+    if (Date.now() > deadline)
+      await fail(`Staging deploys timed out: ${state}`);
     await sleep(DEPLOY_POLL_MS);
   }
 }
@@ -85,7 +87,8 @@ async function waitForRollout() {
       state = `registry: ${error.message}`;
     }
     lastState = logChange(lastState, state);
-    if (Date.now() > deadline) fail(`Staging rollout timed out: ${state}`);
+    if (Date.now() > deadline)
+      await fail(`Staging rollout timed out: ${state}`);
     await sleep(ROLLOUT_POLL_MS);
   }
 }
@@ -152,10 +155,14 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function fail(message) {
+// Exits even when posting fails, which would otherwise land in the callers'
+// catch and keep the wait going.
+async function fail(message) {
   console.error(message);
-  // The workflow's failure report quotes it.
-  if (env.GITHUB_OUTPUT)
-    appendFileSync(env.GITHUB_OUTPUT, `failure=${message}\n`);
+  try {
+    await postE2eStagingFailure(message);
+  } catch (error) {
+    console.error(error.message);
+  }
   process.exit(1);
 }
