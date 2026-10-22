@@ -118,6 +118,8 @@ const verifierBot = touches(
 );
 const app = touches(LOCK, 'apps/', CHARTS);
 const e2e = touches('e2e/');
+// Web e2e drives the web image (app and SDKs) against this run's server.
+const webE2e = app || e2e || jsSdk || rnSdk || rsCore || server;
 const docs = touches('docs/', 'protos/polycentric/v2/', /^buf\.yaml$/);
 const charts = touches(
   CHARTS,
@@ -185,12 +187,12 @@ const flags = {
     kt_core_build: ktCore,
     image_scraper: scraper,
     image_verifier_bot: verifierBot,
-    web_image: app || e2e,
+    web_image: webE2e,
     server_integration: serverIntegration,
     moderation_integration: moderationIntegration,
     scraper_integration: scraper,
     verifier_bot_tests: verifierBot,
-    web_e2e: app || e2e,
+    web_e2e: webE2e,
     docs,
     docs_preview: docs && pr,
   }),
@@ -205,7 +207,8 @@ const rustServices = [
     label: 'server',
     dockerfile: 'services/server',
     packages: 'server server-migration',
-    changed: server,
+    // Web e2e runs against this run's server image.
+    changed: server || webE2e,
   },
   {
     image: 'moderation-service',
