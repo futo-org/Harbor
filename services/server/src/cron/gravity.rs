@@ -73,6 +73,9 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 },
                 Err(err) => {
                     tracing::warn!(error = %err, "failed acquire gravity lock");
+                    if let Err(err) = tx.rollback().await {
+                        tracing::warn!(error = %err, "failed to abort transaction");
+                    }
                     return ControlFlow::Continue(());
                 }
             };
@@ -153,6 +156,9 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 Ok(_) => { /* Update decayed reaction counts below. */ }
                 Err(err) => {
                     tracing::warn!(error = %err, "failed to update gravity value & timestamp");
+                    if let Err(err) = tx.rollback().await {
+                        tracing::warn!(error = %err, "failed to abort transaction");
+                    }
                     return ControlFlow::Continue(());
                 },
             }
@@ -244,6 +250,9 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     Ok(None) => event_id = None, // No more batches.
                     Err(err) => {
                         tracing::warn!(error = %err, "failed to update decayed reaction counts");
+                        if let Err(err) = tx.rollback().await {
+                            tracing::warn!(error = %err, "failed to abort transaction");
+                        }
                         return ControlFlow::Continue(());
                     }
                 }
@@ -251,6 +260,9 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 // Commit this batch and start another transaction.
                 if let Err(err) = tx.commit_and_chain().await {
                     tracing::warn!(error = %err, "failed to commit decayed reaction counts changes");
+                    if let Err(err) = tx.rollback().await {
+                        tracing::warn!(error = %err, "failed to abort transaction");
+                    }
                     return ControlFlow::Continue(());
                 }
                 tracing::debug!(elapsed = ?start.elapsed(), batch_size = BATCH_SIZE, "updated batch of decayed reaction counts");
@@ -280,6 +292,9 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
 
             if let Err(err) =  tx.execute(&expire_tallies).await {
                 tracing::warn!(error = %err, "failed to expire decayed reaction counts");
+                if let Err(err) = tx.rollback().await {
+                    tracing::warn!(error = %err, "failed to abort transaction");
+                }
                 return ControlFlow::Continue(());
             }
 

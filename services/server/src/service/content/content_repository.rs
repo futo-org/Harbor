@@ -1,4 +1,5 @@
-use crate::service::proto::Blob;
+use std::collections::HashSet;
+
 use ::entity::{content, content_blob};
 use chrono::Utc;
 use polycentric_common::models::protos_v2::{ContentDigest, ContentDigestType};
@@ -7,7 +8,9 @@ use sea_orm::ActiveValue::{NotSet, Set};
 use sea_orm::sea_query::{Expr, InsertStatement, OnConflict};
 use sea_orm::*;
 use sha2::{Digest, Sha256};
-use std::collections::HashSet;
+
+use crate::db::DbTx;
+use crate::service::proto::Blob;
 
 pub struct Query;
 
@@ -103,8 +106,8 @@ impl Mutation {
         query
     }
 
-    pub async fn save_blob<C: ConnectionTrait>(
-        db: &C,
+    pub async fn save_blob(
+        db: &mut DbTx<'_>,
         blob: &Blob,
     ) -> Result<(), DbErr> {
         // Digest for the actual blob data
