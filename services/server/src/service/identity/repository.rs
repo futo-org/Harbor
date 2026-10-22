@@ -314,23 +314,23 @@ impl Mutation {
 /// rows and tallies derived from them, and the content only they used.
 async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
     db.execute_unprepared(
-            "CREATE TEMP TABLE erase_content ON COMMIT DROP AS
-             SELECT DISTINCT content.id
-             FROM erase_events
-             INNER JOIN events ON events.id = erase_events.id
-             INNER JOIN content ON events.content_digest_type = content.digest_type
-               AND events.content_digest_bytes = content.digest_bytes"
-        )
-        .await?;
+        "CREATE TEMP TABLE erase_content ON COMMIT DROP AS
+         SELECT DISTINCT content.id
+         FROM erase_events
+         INNER JOIN events ON events.id = erase_events.id
+         INNER JOIN content ON events.content_digest_type = content.digest_type
+           AND events.content_digest_bytes = content.digest_bytes",
+    )
+    .await?;
     db.execute_unprepared("ANALYZE erase_events; ANALYZE erase_content")
         .await?;
 
     // Delete from tables based on event id.
     for (table, column) in CACHE_EVENT_ID_COLUMNS {
         db.execute_unprepared(&format!(
-                "DELETE FROM {table} WHERE {column} IN (SELECT id FROM erase_events)"
-            ))
-            .await?;
+            "DELETE FROM {table} WHERE {column} IN (SELECT id FROM erase_events)"
+        ))
+        .await?;
     }
 
     // NOTE: this can conflict the gravity cron job, which rewrites every
@@ -344,39 +344,106 @@ async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
     )
     .await?;
 
-    // Delete reactions and update the tallies.
-    db.execute_unprepared(
-            "WITH
-             deleted_reaction AS (
-               DELETE FROM reaction
-               USING erase_events
-               WHERE reaction.event_id = erase_events.id
-                 OR reaction.on_post = erase_events.id
-               RETURNING on_post, positive
-             ),
-             grouped_deleted_reaction AS (
-               SELECT
-                 deleted_reaction.on_post,
-                 SUM(CASE WHEN deleted_reaction.positive THEN 1 ELSE 0 END) AS positive_count_diff,
-                 SUM(CASE WHEN deleted_reaction.positive THEN 0 ELSE 1 END) AS negative_count_diff
-               FROM deleted_reaction
-               GROUP BY deleted_reaction.on_post
-             )
-             UPDATE interaction_tally SET
-               positive_count = positive_count - grouped_deleted_reaction.positive_count_diff,
-               negative_count = negative_count - grouped_deleted_reaction.negative_count_diff,
-               decayed_count = reaction_count_decay(positive_count - grouped_deleted_reaction.positive_count_diff, events.created_at)
-             FROM grouped_deleted_reaction
-             INNER JOIN events ON grouped_deleted_reaction.on_post = events.id
-             WHERE interaction_tally.event_id = grouped_deleted_reaction.on_post",
+    // Delete reactions, replies, reposts and quotes and update the tallies.
+    db.execute_unprepared("
+        WITH
+        deleted_reaction AS (
+          DELETE FROM reaction
+          USING erase_events
+          WHERE reaction.event_id = erase_events.id
+             OR reaction.on_post = erase_events.id
+          RETURNING on_post, positive
+        ),
+        deleted_replies AS (
+          DELETE FROM reply
+          USING erase_events
+          WHERE reply.event_id = erase_events.id
+             OR reply.post = erase_events.id
+          RETURNING post
+        ),
+        deleted_reposts AS (
+          DELETE FROM repost
+          USING erase_events
+          WHERE repost.event_id = erase_events.id
+             OR repost.post = erase_events.id
+          RETURNING post
+        ),
+        deleted_quotes AS (
+          DELETE FROM quote
+          USING erase_events
+          WHERE quote.event_id = erase_events.id
+             OR quote.post = erase_events.id
+          RETURNING post
+        ),
+        grouped_updates AS (
+          SELECT
+            post,
+            SUM(positive_count_diff) AS positive_count_diff,
+            SUM(negative_count_diff) AS negative_count_diff,
+            SUM(reply_count_diff) AS reply_count_diff,
+            SUM(repost_count_diff) AS repost_count_diff,
+            SUM(quote_count_diff) AS quote_count_diff
+          FROM (
+            -- Reactions.
+            SELECT
+              deleted_reaction.on_post AS post,
+              CASE WHEN deleted_reaction.positive THEN 1 ELSE 0 END AS positive_count_diff,
+              CASE WHEN deleted_reaction.positive THEN 0 ELSE 1 END AS negative_count_diff,
+              0 AS reply_count_diff,
+              0 AS repost_count_diff,
+              0 AS quote_count_diff
+            FROM deleted_reaction
+            -- Replies.
+            UNION ALL
+            SELECT
+              deleted_replies.post,
+              0 AS positive_count_diff,
+              0 AS negative_count_diff,
+              1 AS reply_count_diff,
+              0 AS repost_count_diff,
+              0 AS quote_count_diff
+            FROM deleted_replies
+            -- Reposts.
+            UNION ALL
+            SELECT
+              deleted_reposts.post,
+              0 AS positive_count_diff,
+              0 AS negative_count_diff,
+              0 AS reply_count_diff,
+              1 AS repost_count_diff,
+              0 AS quote_count_diff
+            FROM deleted_reposts
+            -- Quotes
+            UNION ALL
+            SELECT
+              deleted_quotes.post,
+              0 AS positive_count_diff,
+              0 AS negative_count_diff,
+              0 AS reply_count_diff,
+              0 AS repost_count_diff,
+              1 AS quote_count_diff
+            FROM deleted_quotes
+          )
+          GROUP BY post
         )
-        .await?;
+        UPDATE interaction_tally SET
+          reaction_positive_count = reaction_positive_count - grouped_updates.positive_count_diff,
+          reaction_negative_count = reaction_negative_count - grouped_updates.negative_count_diff,
+          reply_count = reply_count - grouped_updates.reply_count_diff,
+          repost_count = repost_count - grouped_updates.repost_count_diff,
+          quote_count = quote_count - grouped_updates.quote_count_diff,
+          decayed_count = reaction_count_decay(reaction_positive_count - grouped_updates.positive_count_diff, events.created_at)
+        FROM grouped_updates
+        INNER JOIN events ON grouped_updates.post = events.id
+        WHERE interaction_tally.event_id = grouped_updates.post",
+    )
+    .await?;
 
     // Actually delete the events.
     let events = db
-            .execute_unprepared("DELETE FROM events USING erase_events WHERE events.id = erase_events.id")
-            .await?
-            .rows_affected();
+        .execute_unprepared("DELETE FROM events USING erase_events WHERE events.id = erase_events.id")
+        .await?
+        .rows_affected();
 
     // Delete the content rows which are unique to the events we've deleted
     // above.
@@ -425,11 +492,8 @@ const CACHE_EVENT_ID_COLUMNS: &[(&str, &str)] = &[
     ("follow", "event_id"),
     ("block", "event_id"),
     ("repost", "event_id"),
-    ("repost", "post"),
     ("quote", "event_id"),
-    ("quote", "post"),
     ("reply", "event_id"),
-    ("reply", "post"),
     ("profile", "event_id"),
 ];
 

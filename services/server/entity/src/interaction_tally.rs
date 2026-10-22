@@ -25,6 +25,12 @@ pub struct Model {
     /// Total amount of positive reactions (as determined by
     /// `NOT reaction.positive`).
     pub reaction_negative_count: i64,
+    /// Total amount of replies.
+    pub reply_count: i64,
+    /// Total amount of reposts.
+    pub repost_count: i64,
+    /// Total amount of quotes.
+    pub quote_count: i64,
     /// Decayed count calculated by `reaction_count_decay`.
     ///
     /// NOTE: actual type `NUMERIC(20, 11)`.

@@ -382,7 +382,7 @@ impl Mutation {
                     .map(|q| Some(q.into()))
             }
             ContentBody::Repost(repost) => {
-                Mutation::repost_query(repost, event_id_identity)
+                Mutation::repost_query(with, repost, event_id_identity)
                     .map(|q| Some(q.into()))
             }
             ContentBody::Delete(delete) => Mutation::delete_query(with, delete),
@@ -402,16 +402,22 @@ impl Mutation {
                 interaction_tally::Column::EventId,
                 interaction_tally::Column::ReactionPositiveCount,
                 interaction_tally::Column::ReactionNegativeCount,
+                interaction_tally::Column::ReplyCount,
+                interaction_tally::Column::RepostCount,
+                interaction_tally::Column::QuoteCount,
                 interaction_tally::Column::DecayedCount,
             ])
             .select_from({
                 let mut q = SelectStatement::new();
                 q.from(event_table.clone())
                     .expr(Expr::col((event_table.clone(), event_id.clone())))
-                    .expr(Expr::Constant(0.into()))
-                    .expr(Expr::Constant(0.into()))
+                    .expr(Expr::Constant(0.into())) // Reaction positive.
+                    .expr(Expr::Constant(0.into())) // Reaction negative.
+                    .expr(Expr::Constant(0.into())) // Reply.
+                    .expr(Expr::Constant(0.into())) // Repost.
+                    .expr(Expr::Constant(0.into())) // Quote.
                     .expr(reaction_count_decay(
-                        Expr::Constant(0.into()), // Reaction count.
+                        Expr::Constant(0.into()), // Interaction count.
                         Expr::col((
                             event_table.clone(),
                             event::Column::CreatedAt,
@@ -465,10 +471,33 @@ impl Mutation {
                 })
                 .map_err(|err| {
                     DbErr::Custom(format!("incorrect amount of values: {err}"))
-                })?;
+                })?
+                .returning_col(quote::Column::Post);
 
             let mut cte = CommonTableExpression::new();
-            cte.table_name("inserted_quote").query(insert_quote);
+            const INSERTED_QUOTE: &str = "inserted_quote";
+            cte.table_name(INSERTED_QUOTE).query(insert_quote);
+            with.cte(cte);
+
+            let mut update_interaction_tally = UpdateStatement::new();
+            update_interaction_tally
+                .table(interaction_tally::Entity)
+                .value(
+                    interaction_tally::Column::QuoteCount,
+                    Expr::col(interaction_tally::Column::QuoteCount)
+                        .add(Expr::Constant(1.into())),
+                )
+                .cond_where(Expr::col(interaction_tally::Column::EventId).eq(
+                    {
+                        let mut q = SelectStatement::new();
+                        q.column(quote::Column::Post).from(INSERTED_QUOTE);
+                        Expr::from(q)
+                    },
+                ));
+
+            let mut cte = CommonTableExpression::new();
+            cte.table_name("update_interaction_tally_quote")
+                .query(update_interaction_tally);
             with.cte(cte);
         }
 
@@ -514,10 +543,33 @@ impl Mutation {
                 })
                 .map_err(|err| {
                     DbErr::Custom(format!("incorrect amount of values: {err}"))
-                })?;
+                })?
+                .returning_col(reply::Column::Post);
 
             let mut cte = CommonTableExpression::new();
-            cte.table_name("inserted_reply").query(insert_reply);
+            const INSERTED_REPLY: &str = "inserted_reply";
+            cte.table_name(INSERTED_REPLY).query(insert_reply);
+            with.cte(cte);
+
+            let mut update_interaction_tally = UpdateStatement::new();
+            update_interaction_tally
+                .table(interaction_tally::Entity)
+                .value(
+                    interaction_tally::Column::ReplyCount,
+                    Expr::col(interaction_tally::Column::ReplyCount)
+                        .add(Expr::Constant(1.into())),
+                )
+                .cond_where(Expr::col(interaction_tally::Column::EventId).eq(
+                    {
+                        let mut q = SelectStatement::new();
+                        q.column(reply::Column::Post).from(INSERTED_REPLY);
+                        Expr::from(q)
+                    },
+                ));
+
+            let mut cte = CommonTableExpression::new();
+            cte.table_name("update_interaction_tally_reply")
+                .query(update_interaction_tally);
             with.cte(cte);
         }
 
@@ -748,15 +800,16 @@ impl Mutation {
     }
 
     fn repost_query(
+        with: &mut WithClause,
         repost: &Repost,
         (event_table, event_id, identity): (DynIden, DynIden, DynIden),
-    ) -> Result<InsertStatement, DbErr> {
+    ) -> Result<UpdateStatement, DbErr> {
         let key = split_event_key(repost.post.clone(), "repost")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
         let mut post_event_id = select_not_deleted_event_id(key);
 
-        let mut query = InsertStatement::new();
-        query
+        let mut insert_repost = InsertStatement::new();
+        insert_repost
             .into_table(repost::Entity)
             .columns([
                 repost::Column::EventId,
@@ -786,9 +839,29 @@ impl Mutation {
             })
             .map_err(|err| {
                 DbErr::Custom(format!("incorrect amount of values: {err}"))
-            })?;
+            })?
+            .returning_col(repost::Column::Post);
 
-        Ok(query)
+        let mut cte = CommonTableExpression::new();
+        const INSERTED_REPOST: &str = "inserted_repost";
+        cte.table_name(INSERTED_REPOST).query(insert_repost);
+        with.cte(cte);
+
+        let mut update_interaction_tally = UpdateStatement::new();
+        update_interaction_tally
+            .table(interaction_tally::Entity)
+            .value(
+                interaction_tally::Column::RepostCount,
+                Expr::col(interaction_tally::Column::RepostCount)
+                    .add(Expr::Constant(1.into())),
+            )
+            .cond_where(Expr::col(interaction_tally::Column::EventId).eq({
+                let mut q = SelectStatement::new();
+                q.column(repost::Column::Post).from(INSERTED_REPOST);
+                Expr::from(q)
+            }));
+
+        Ok(update_interaction_tally)
     }
 
     fn delete_query(

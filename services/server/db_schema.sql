@@ -513,7 +513,10 @@ CREATE TABLE public.interaction_tally (
     event_id bigint NOT NULL,
     reaction_positive_count bigint NOT NULL,
     reaction_negative_count bigint NOT NULL,
-    decayed_count numeric(20,11) NOT NULL
+    decayed_count numeric(20,11) NOT NULL,
+    reply_count bigint NOT NULL,
+    repost_count bigint NOT NULL,
+    quote_count bigint NOT NULL
 );
 
 
