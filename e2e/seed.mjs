@@ -17,6 +17,8 @@ export const SEEDED_USERS = {
   MAESTRO_VERIFIER_B: 'Maestro Verifier Bravo',
 };
 
+const POSTS_PER_SEEDED_USER = 15;
+
 // The server the app under test talks to.
 const SERVER_URL = process.env.E2E_SERVER_URL ?? 'http://localhost:3000';
 const STATE_DIR = new URL('.seed/', import.meta.url).pathname;
@@ -74,6 +76,17 @@ async function ensureUser(client, name) {
   await client.contentManager.save(content);
   const event = await client.buildEvent(content, COLLECTION.PROFILE);
   await client.commitEvent(await client.signEvent(event), content);
+  // A fresh server (CI's) has no posts, and the Explore flows scroll past a
+  // screen of them.
+  for (let i = 1; i <= POSTS_PER_SEEDED_USER; i++) {
+    const postContent = client.contentManager.build({
+      oneofKind: 'post',
+      post: v2.Post.create({ text: `Seeded post ${i} by ${name}` }),
+    });
+    await client.contentManager.save(postContent);
+    const postEvent = await client.buildEvent(postContent);
+    await client.commitEvent(await client.signEvent(postEvent), postContent);
+  }
   await client.sync();
   console.log(`${name}: ${client.activeIdentityKey}`);
 }
