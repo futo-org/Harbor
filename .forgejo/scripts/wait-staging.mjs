@@ -4,6 +4,7 @@
 // commit their chart's `staging` tag pins.
 // Env: GITHUB_SERVER_URL, GITHUB_REPOSITORY (set by Forgejo).
 
+import { appendFileSync } from 'node:fs';
 import { chartAt } from './registry-helpers.mjs';
 
 const SECOND = 1000;
@@ -153,5 +154,8 @@ function sleep(ms) {
 
 function fail(message) {
   console.error(message);
+  // The workflow's failure report quotes it.
+  if (env.GITHUB_OUTPUT)
+    appendFileSync(env.GITHUB_OUTPUT, `failure=${message}\n`);
   process.exit(1);
 }
