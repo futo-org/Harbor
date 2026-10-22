@@ -8,7 +8,8 @@ name: E2E on staging
 on:
   workflow_dispatch:
   push:
-    branches: [develop]
+    # TODO: drop dp/e2e-staging before merging; it is here for a test run.
+    branches: [develop, dp/e2e-staging]
 
 # A newer commit supersedes a run that's still waiting.
 concurrency:
