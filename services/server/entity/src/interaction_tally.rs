@@ -1,8 +1,8 @@
-//! Model for the `reaction_tally` table.
+//! Model for the `interaction_tally` table.
 
 use sea_orm::entity::prelude::*;
 
-/// Cache for reaction counters.
+/// Cache for interaction counters.
 ///
 /// This table contains the positive and negative sum of each *not-deleted*
 /// reaction, based on the (valid) reaction and deletion events in `events`
@@ -12,9 +12,9 @@ use sea_orm::entity::prelude::*;
 /// `events` table and this table can be fully recreated based on it.
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "reaction_tally")]
+#[sea_orm(table_name = "interaction_tally")]
 pub struct Model {
-    /// Id of the event that contains the reaction.
+    /// Id of the event that contains the post.
     ///
     /// Also a foreign key to the event (`events` table).
     #[sea_orm(primary_key, auto_increment = false)]

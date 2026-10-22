@@ -506,6 +506,18 @@ COMMENT ON TABLE public.gravity IS 'Table to hold the dynamic gravity value.';
 
 
 --
+-- Name: interaction_tally; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.interaction_tally (
+    event_id bigint NOT NULL,
+    positive_count bigint NOT NULL,
+    negative_count bigint NOT NULL,
+    decayed_count numeric(20,11) NOT NULL
+);
+
+
+--
 -- Name: moderator; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -624,18 +636,6 @@ CREATE TABLE public.reaction (
     emoji text,
     positive boolean NOT NULL,
     identity text NOT NULL
-);
-
-
---
--- Name: reaction_tally; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.reaction_tally (
-    event_id bigint NOT NULL,
-    positive_count bigint NOT NULL,
-    negative_count bigint NOT NULL,
-    decayed_count numeric(20,11) NOT NULL
 );
 
 
@@ -893,6 +893,14 @@ ALTER TABLE ONLY public.follow
 
 
 --
+-- Name: interaction_tally interaction_tally_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_tally
+    ADD CONSTRAINT interaction_tally_pkey PRIMARY KEY (event_id);
+
+
+--
 -- Name: moderator moderator_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -970,14 +978,6 @@ ALTER TABLE ONLY public.quote
 
 ALTER TABLE ONLY public.reaction
     ADD CONSTRAINT reaction_pkey PRIMARY KEY (event_id);
-
-
---
--- Name: reaction_tally reaction_tally_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.reaction_tally
-    ADD CONSTRAINT reaction_tally_pkey PRIMARY KEY (event_id);
 
 
 --
@@ -1196,6 +1196,20 @@ CREATE INDEX idx_url_info_cache_updated_at ON public.url_info_cache USING btree 
 
 
 --
+-- Name: interaction_tally_decayed_count; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX interaction_tally_decayed_count ON public.interaction_tally USING btree (decayed_count DESC, event_id DESC) WHERE (decayed_count > (0)::numeric);
+
+
+--
+-- Name: interaction_tally_decayed_count_update; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX interaction_tally_decayed_count_update ON public.interaction_tally USING btree (event_id DESC) WHERE (decayed_count > (0)::numeric);
+
+
+--
 -- Name: notification_to_identity_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1256,20 +1270,6 @@ CREATE INDEX reaction_identity_on_post ON public.reaction USING btree (identity,
 --
 
 CREATE INDEX reaction_on_post_idx ON public.reaction USING btree (on_post);
-
-
---
--- Name: reaction_tally_decayed_count; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX reaction_tally_decayed_count ON public.reaction_tally USING btree (decayed_count DESC, event_id DESC) WHERE (decayed_count > (0)::numeric);
-
-
---
--- Name: reaction_tally_decayed_count_update; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX reaction_tally_decayed_count_update ON public.reaction_tally USING btree (event_id DESC) WHERE (decayed_count > (0)::numeric);
 
 
 --

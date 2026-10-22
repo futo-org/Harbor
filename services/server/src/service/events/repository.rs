@@ -1,6 +1,6 @@
 use ::entity::{
-    application, block, content, content_delete, event, follow, profile, quote,
-    reaction, reaction_tally, reply, repost,
+    application, block, content, content_delete, event, follow,
+    interaction_tally, profile, quote, reaction, reply, repost,
 };
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
@@ -397,12 +397,12 @@ impl Mutation {
     ) -> Result<InsertStatement, DbErr> {
         let mut query = InsertStatement::new();
         query
-            .into_table(reaction_tally::Entity)
+            .into_table(interaction_tally::Entity)
             .columns([
-                reaction_tally::Column::EventId,
-                reaction_tally::Column::PositiveCount,
-                reaction_tally::Column::NegativeCount,
-                reaction_tally::Column::DecayedCount,
+                interaction_tally::Column::EventId,
+                interaction_tally::Column::PositiveCount,
+                interaction_tally::Column::NegativeCount,
+                interaction_tally::Column::DecayedCount,
             ])
             .select_from({
                 let mut q = SelectStatement::new();
@@ -640,18 +640,18 @@ impl Mutation {
         let negative = if reaction.positive { 0 } else { 1 };
 
         let mut query = UpdateStatement::new();
-        query.table(reaction_tally::Entity).values([
+        query.table(interaction_tally::Entity).values([
             (
-                reaction_tally::Column::PositiveCount,
+                interaction_tally::Column::PositiveCount,
                 Expr::col(
-                    reaction_tally::Column::PositiveCount.as_column_ref(),
+                    interaction_tally::Column::PositiveCount.as_column_ref(),
                 )
                 .add(Expr::Constant(positive.into())),
             ),
             (
-                reaction_tally::Column::NegativeCount,
+                interaction_tally::Column::NegativeCount,
                 Expr::col(
-                    reaction_tally::Column::NegativeCount.as_column_ref(),
+                    interaction_tally::Column::NegativeCount.as_column_ref(),
                 )
                 .add(Expr::Constant(negative.into())),
             ),
@@ -659,10 +659,11 @@ impl Mutation {
 
         if reaction.positive {
             query.value(
-                reaction_tally::Column::DecayedCount,
+                interaction_tally::Column::DecayedCount,
                 reaction_count_decay(
                     Expr::col(
-                        reaction_tally::Column::PositiveCount.as_column_ref(),
+                        interaction_tally::Column::PositiveCount
+                            .as_column_ref(),
                     )
                     .add(Expr::Constant(positive.into())),
                     Expr::col(event::Column::CreatedAt.as_column_ref()),
@@ -680,7 +681,7 @@ impl Mutation {
                     .eq(Expr::Column((INSERTED_REACTION, "on_post").into())),
             )
             .and_where(
-                Expr::Column(("reaction_tally", "event_id").into())
+                Expr::Column(("interaction_tally", "event_id").into())
                     .eq(Expr::Column((INSERTED_REACTION, "on_post").into())),
             );
 
@@ -805,21 +806,20 @@ impl Mutation {
                 with.cte(cte);
 
                 // Delete the tally for the post.
-                let mut delete_reaction_tally = DeleteStatement::new();
-                delete_reaction_tally
-                    .from_table(reaction_tally::Entity)
+                let mut delete_interaction_tally = DeleteStatement::new();
+                delete_interaction_tally
+                    .from_table(interaction_tally::Entity)
                     .cond_where(
-                        Expr::col(reaction_tally::Column::EventId).in_subquery(
-                            {
+                        Expr::col(interaction_tally::Column::EventId)
+                            .in_subquery({
                                 let mut q = SelectStatement::new();
                                 q.column("id").from("event_id");
                                 q
-                            },
-                        ),
+                            }),
                     );
                 let mut cte = CommonTableExpression::new();
-                cte.table_name("deleted_reaction_tally")
-                    .query(delete_reaction_tally);
+                cte.table_name("deleted_interaction_tally")
+                    .query(delete_interaction_tally);
                 with.cte(cte);
 
                 // Delete quotes from the posts itself and quoting the deleted
@@ -917,12 +917,12 @@ impl Mutation {
 
                 let mut query = UpdateStatement::new();
                 query
-                    .table(reaction_tally::Entity)
+                    .table(interaction_tally::Entity)
                     .values([
                         (
-                            reaction_tally::Column::PositiveCount,
+                            interaction_tally::Column::PositiveCount,
                             Expr::col(
-                                reaction_tally::Column::PositiveCount
+                                interaction_tally::Column::PositiveCount
                                     .as_column_ref(),
                             )
                             .sub(
@@ -934,9 +934,9 @@ impl Mutation {
                             ),
                         ),
                         (
-                            reaction_tally::Column::NegativeCount,
+                            interaction_tally::Column::NegativeCount,
                             Expr::col(
-                                reaction_tally::Column::NegativeCount
+                                interaction_tally::Column::NegativeCount
                                     .as_column_ref(),
                             )
                             .sub(
@@ -948,12 +948,12 @@ impl Mutation {
                             ),
                         ),
                         (
-                            reaction_tally::Column::DecayedCount,
+                            interaction_tally::Column::DecayedCount,
                             Expr::case(
                                 Expr::Column("positive".into()),
                                 reaction_count_decay(
                                     Expr::col(
-                                        reaction_tally::Column::PositiveCount
+                                        interaction_tally::Column::PositiveCount
                                             .as_column_ref(),
                                     )
                                     .sub(Expr::Constant(1.into())),
@@ -965,7 +965,7 @@ impl Mutation {
                             )
                             // No change.
                             .finally(Expr::col(
-                                reaction_tally::Column::DecayedCount
+                                interaction_tally::Column::DecayedCount
                                     .as_column_ref(),
                             ))
                             .into(),
@@ -977,12 +977,12 @@ impl Mutation {
                     .from(event::Entity)
                     .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
                         Expr::col(
-                            reaction_tally::Column::EventId.as_column_ref(),
+                            interaction_tally::Column::EventId.as_column_ref(),
                         ),
                     ))
                     .and_where(
                         Expr::col(
-                            reaction_tally::Column::EventId.as_column_ref(),
+                            interaction_tally::Column::EventId.as_column_ref(),
                         )
                         .eq(Expr::Column(
                             ("deleted_reaction", "on_post").into(),

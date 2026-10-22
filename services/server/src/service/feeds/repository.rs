@@ -5,8 +5,8 @@ use crate::service::events::TargetEventKey;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use ::entity::{
     content, content_label, content_post_attributed_url,
-    content_reaction as Contentreaction, event, follow, quote, reaction,
-    reaction_tally, reply, repost,
+    content_reaction as Contentreaction, event, follow, interaction_tally,
+    quote, reaction, reply, repost,
 };
 use polycentric_common::models::protos_v2::SortPostsBy;
 use polycentric_common::models::{collections, content_types};
@@ -353,8 +353,8 @@ impl Query {
             SortPostsBy::Top => {
                 query
                     .inner_join(
-                        reaction_tally::Entity,
-                        reaction_tally::Relation::Event.def().rev(),
+                        interaction_tally::Entity,
+                        interaction_tally::Relation::Event.def().rev(),
                     )
                     // We can't decode numerics as we don't have a type for it,
                     // so we have to use floats, but those lose precision, so
@@ -362,7 +362,7 @@ impl Query {
                     .expr_as(
                         Func::cast_as(
                             Expr::col(
-                                reaction_tally::Column::DecayedCount
+                                interaction_tally::Column::DecayedCount
                                     .as_column_ref(),
                             ),
                             "TEXT",
@@ -370,10 +370,10 @@ impl Query {
                         REACTION_COUNT_COLUMN,
                     )
                     // Filter out posts that aren't relevant (anymore).
-                    // Matches the `reaction_tally_decayed_count` index.
+                    // Matches the `interaction_tally_decayed_count` index.
                     .cond_where(
                         Expr::col(
-                            reaction_tally::Column::DecayedCount
+                            interaction_tally::Column::DecayedCount
                                 .as_column_ref(),
                         )
                         .gt(Expr::Constant(0.0.into())),
@@ -987,7 +987,7 @@ fn sort_posts_by_column(sort_by: SortPostsBy) -> Expr {
             Expr::col(event::Column::CreatedAt.as_column_ref())
         }
         SortPostsBy::Top => {
-            Expr::col(reaction_tally::Column::DecayedCount.as_column_ref())
+            Expr::col(interaction_tally::Column::DecayedCount.as_column_ref())
         }
     }
 }

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use entity::{attributed_to_reaction_summary, reaction, reaction_tally, reply};
+use entity::{
+    attributed_to_reaction_summary, interaction_tally, reaction, reply,
+};
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{
     Asterisk, ColumnRef, Expr, ExprTrait, Func, OnConflict, Order,
@@ -57,25 +59,25 @@ impl Query {
 
         let mut query = SelectStatement::new();
         query
-            .from(reaction_tally::Entity)
+            .from(interaction_tally::Entity)
             .expr_as(
-                Expr::col(reaction_tally::Column::EventId.as_column_ref()),
+                Expr::col(interaction_tally::Column::EventId.as_column_ref()),
                 "event_id",
             )
             .expr_as(
                 Expr::col(
-                    reaction_tally::Column::PositiveCount.as_column_ref(),
+                    interaction_tally::Column::PositiveCount.as_column_ref(),
                 ),
                 "positive_count",
             )
             .expr_as(
                 Expr::col(
-                    reaction_tally::Column::NegativeCount.as_column_ref(),
+                    interaction_tally::Column::NegativeCount.as_column_ref(),
                 ),
                 "negative_count",
             )
             .cond_where(
-                Expr::col(reaction_tally::Column::EventId.as_column_ref())
+                Expr::col(interaction_tally::Column::EventId.as_column_ref())
                     .is_in(event_ids),
             );
 

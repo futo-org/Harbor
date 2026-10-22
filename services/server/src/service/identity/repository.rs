@@ -338,9 +338,9 @@ async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
     // need to update the tallies based on deleted reactions below, which
     // would be lost if we skipped deletion here.
     db.execute_unprepared(
-        "DELETE FROM reaction_tally
+        "DELETE FROM interaction_tally
              USING erase_events
-             WHERE reaction_tally.event_id = erase_events.id",
+             WHERE interaction_tally.event_id = erase_events.id",
     )
     .await?;
 
@@ -362,13 +362,13 @@ async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
                FROM deleted_reaction
                GROUP BY deleted_reaction.on_post
              )
-             UPDATE reaction_tally SET
+             UPDATE interaction_tally SET
                positive_count = positive_count - grouped_deleted_reaction.positive_count_diff,
                negative_count = negative_count - grouped_deleted_reaction.negative_count_diff,
                decayed_count = reaction_count_decay(positive_count - grouped_deleted_reaction.positive_count_diff, events.created_at)
              FROM grouped_deleted_reaction
              INNER JOIN events ON grouped_deleted_reaction.on_post = events.id
-             WHERE reaction_tally.event_id = grouped_deleted_reaction.on_post",
+             WHERE interaction_tally.event_id = grouped_deleted_reaction.on_post",
         )
         .await?;
 
