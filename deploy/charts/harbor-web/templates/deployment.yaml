@@ -40,6 +40,9 @@ spec:
           env:
             - name: PORT
               value: {{ .Values.containerPort | quote }}
+            # Served on /version; CI polls it to tell when a deploy has rolled out.
+            - name: HARBOR_COMMIT
+              value: {{ .Chart.AppVersion | quote }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
