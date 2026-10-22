@@ -15,11 +15,10 @@ use polycentric_common::models::{
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
-use sea_orm::TransactionTrait;
 use tonic::{Code, Status};
 
 use crate::service::content::content_repository as ContentRepository;
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::heads_pubsub;
 use crate::service::events::repository as EventsRepository;
 use crate::service::identity::repository::Query as IdentityRepository;
@@ -33,7 +32,7 @@ use crate::service::proto::{
 /// Ingest a batch of signed events. Each event is processed in
 /// isolation with failures reported back in `PutEventsResponse.errors`
 pub async fn handle(
-    ctx: &ServiceContext,
+    mut ctx: PublicContext,
     req: PutEventsRequest,
 ) -> Result<PutEventsResponse, Status> {
     let mut errors: Vec<PutEventError> = Vec::new();
@@ -46,7 +45,7 @@ pub async fn handle(
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
         let start_warnings = warnings.len();
         match process_event(
-            ctx,
+            &mut ctx,
             event_bundle,
             &mut banned_cache,
             &mut app_cache,
@@ -79,6 +78,13 @@ pub async fn handle(
             // not as an event specific errors as it's unlikely to be related to
             // the event.
             Err(status) if status.code() == Code::Internal => {
+                // Close the connection to be prevent it from being reused.
+                // We've seen some unusual errors potentially (but not known for
+                // sure) caused by incomplete transactions.
+                // See #1982 for more information
+                if let Err(err) = ctx.db.close().await {
+                    tracing::error!(error = %err, "failed to close connection");
+                }
                 return Err(status);
             }
             Err(status) => {
@@ -105,13 +111,12 @@ pub async fn handle(
         });
     }
 
-    let missing_blobs = remove_present_blobs(ctx, all_blobs)
+    let missing_blobs = remove_present_blobs(&ctx, all_blobs)
         .await
-        .unwrap_or_else(|e| {
+        .unwrap_or_else(|()| {
             // A failure occurred while checking what blobs the server already has.
             // Assume the server is not in a condition to accept new blobs and silently
             // return no missing blobs to the client.
-            tracing::warn!(error = %e, "put_events blob processing");
             vec![]
         });
 
@@ -125,7 +130,7 @@ pub async fn handle(
 /// Validate and persist an event, adding its blobs to `all_blobs`.
 /// Returns its key and whether it was newly stored.
 async fn process_event(
-    ctx: &ServiceContext,
+    ctx: &mut PublicContext,
     event_bundle: EventBundle,
     banned_cache: &mut HashMap<Box<str>, bool>,
     app_cache: &mut HashMap<Application, i32>,
@@ -153,8 +158,8 @@ async fn process_event(
         .ok_or_else(|| Status::invalid_argument("signed event missing"))?;
 
     let event =
-        Event::decode(signed_event.event_bytes.as_slice()).map_err(|e| {
-            tracing::debug!(error = %e, "put_events decode error");
+        Event::decode(signed_event.event_bytes.as_slice()).map_err(|err| {
+            tracing::debug!(error = %err, "failed to decode event");
             Status::invalid_argument("signed event bytes invalid")
         })?;
     // TODO: validate:
@@ -181,12 +186,12 @@ async fn process_event(
         Some(false) => { /* Ok to continue. */ }
         None => {
             let is_banned = IdentityRepository::is_banned(
-                &ctx.ro_db,
+                &ctx.db,
                 &key.identity,
             )
             .await
-            .map_err(|e| {
-                tracing::error!(error = %e, "put_events ban check db error");
+            .map_err(|err| {
+                tracing::error!(error = %err, "failed to check if identity is banned");
                 Status::internal("internal server error")
             })?;
             banned_cache.insert(Box::from(&*key.identity), is_banned);
@@ -210,7 +215,7 @@ async fn process_event(
                 let app_id = EventsRepository::Mutation::application_id(&ctx.db, app)
                     .await
                     .map_err(|e| {
-                        tracing::error!(error = %e, "put_events application db error");
+                        tracing::error!(error = %e, "failed to get/store application info");
                         Status::internal("internal server error")
                     })?;
 
@@ -238,7 +243,7 @@ async fn process_event(
 
         let content_bytes = serialized_content.content_bytes.as_slice();
         let content = Content::decode(content_bytes).map_err(|e| {
-            tracing::debug!(error = %e, "put_events content decode error");
+            tracing::debug!(error = %e, "failed to decode event content");
             Status::invalid_argument("invalid content_bytes")
         })?;
         validate_content(&content, &key, warnings, map_warning);
@@ -270,8 +275,8 @@ async fn process_event(
 
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
-    let txn = ctx.db.begin().await.map_err(|e| {
-        tracing::error!(error = %e, "put_events txn begin error");
+    let tx = ctx.db.begin().await.map_err(|e| {
+        tracing::error!(error = %e, "failed to begin transaction");
         Status::internal("internal server error")
     })?;
 
@@ -282,8 +287,9 @@ async fn process_event(
     // by a key whose revocation bound still vouches for this
     // signature.
     if key.collection != collections::IDENTITY {
-        authorize_event_signer(
-            &txn,
+        #[allow(clippy::collapsible_if)] // Easier to understand this way.
+        if let Err(err) = authorize_event_signer(
+            &tx,
             &ctx.proof_cache,
             &key.identity,
             &PublicKey {
@@ -293,7 +299,13 @@ async fn process_event(
             key.collection,
             &signed_event.signature,
         )
-        .await?;
+        .await
+        {
+            if let Err(err) = tx.rollback().await {
+                tracing::warn!(error = %err, "failed to rollback transaction");
+            }
+            return Err(err);
+        }
     }
 
     let active_model = event::ActiveModel {
@@ -322,18 +334,19 @@ async fn process_event(
         .unwrap_or(Utc::now())
         .fixed_offset()),
         synced_at: Set(Utc::now().fixed_offset()),
+        content_type: NotSet, // Set by `add_event`.
     };
 
     let stored = match EventsRepository::Mutation::add_event(
-        &txn,
+        &tx,
         active_model,
         decoded_content,
     )
     .await
     {
         Ok(true) => {
-            txn.commit().await.map_err(|err| {
-                tracing::error!(error = %err, "put_events txn commit error");
+            tx.commit().await.map_err(|err| {
+                tracing::error!(error = %err, "failed to commit transaction");
                 Status::internal("internal server error")
             })?;
 
@@ -358,11 +371,17 @@ async fn process_event(
                                     crate::config::get().server_name.as_str(),
                                 ),
                             })),
-                        Duration::from_secs(0),
+                        // Setting this to a non-zero value allows the send
+                        // operation to be retried.
+                        //
+                        // NOTE: this timeout is only for internal queuing
+                        // within librdkafka, actual delivering uses
+                        // delivery.timeout.ms as (another) timeout.
+                        Duration::from_secs(60),
                     )
                     .await
                 {
-                    tracing::warn!(error = %e, "put_events kafka publish error");
+                    tracing::warn!(error = %e, "failed to publish message to kafka");
                 }
             });
             true
@@ -370,15 +389,19 @@ async fn process_event(
         Ok(false) => {
             // Duplicate event — already stored, treat as success, but revert
             // the content changes.
-            txn.rollback().await.map_err(|err| {
-                tracing::error!(error = %err, "put_events txn abort error");
+            tx.rollback().await.map_err(|err| {
+                tracing::error!(error = %err, "failed to rollback transaction");
                 Status::internal("internal server error")
             })?;
             false
         }
         Err(err) => {
-            tracing::error!(error = %err, "put_events db error");
-            return Err(Status::internal("internal server error"));
+            // NOTE: don't log the error as that's already done in add_event.
+            // The returned status is safe to return to the user.
+            if let Err(err) = tx.rollback().await {
+                tracing::warn!(error = %err, "failed to rollback transaction");
+            }
+            return Err(err);
         }
     };
 
@@ -558,22 +581,21 @@ pub fn event_is_authorised(identity: &str, content: Option<&Content>) -> bool {
     }
 }
 
-/// Keep only the blobs that are not already present
+/// Keep only the blobs that are not already present.
 async fn remove_present_blobs(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     blobs: HashSet<Blob>,
-) -> Result<Vec<Blob>, Status> {
+) -> Result<Vec<Blob>, ()> {
     let digests: Vec<_> = blobs
         .iter()
         .filter_map(|blob| blob.digest.as_ref())
         .collect();
 
     let already_present =
-        ContentRepository::Query::find_digests_in_db(&ctx.ro_db, &digests)
+        ContentRepository::Query::find_digests_in_db(&ctx.db, &digests)
             .await
-            .map_err(|e| {
-                tracing::error!(error = %e, "put_events blob db error");
-                Status::internal("internal server error")
+            .map_err(|err| {
+                tracing::error!(error = %err, "failed to find digest of blob");
             })?;
 
     let missing_blobs = blobs

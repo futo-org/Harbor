@@ -1,3 +1,9 @@
+//! Example
+//!
+//! ```sh
+//! cargo run --bin time -- http://127.0.0.1:3000 --amount 10000 --clients 100 GetExploreFeed
+//! ```
+
 use std::process::exit;
 use std::time::{Duration, Instant};
 use std::{env, panic};

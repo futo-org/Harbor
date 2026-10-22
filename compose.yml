@@ -25,6 +25,7 @@ services:
     environment: &server-env
       - RUST_LOG=${RUST_LOG:-debug}
       - HARBOR_DATABASE_URL=${HARBOR_DATABASE_URL:-postgres://postgres:testing@postgres:5432}
+      - HARBOR_DATABASE_URL_RO=${HARBOR_DATABASE_URL_RO:-postgres://postgres:testing@postgres:5432?options=-c%20default_transaction_read_only=on}
       - HARBOR_CONTENT_BLOB_OS_BUCKET=${HARBOR_CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}
       - HARBOR_CONTENT_BLOB_OS_ENDPOINT=${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-http://rustfs:9000}
       - HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE=${HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}
@@ -161,7 +162,7 @@ services:
         condition: service_started
 
   rustfs:
-    image: rustfs/rustfs:latest@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c
+    image: rustfs/rustfs:latest@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b
     volumes:
       - rustfs-data:/data
     ports:
@@ -214,7 +215,7 @@ services:
       - kafka-data:/var/lib/kafka/data
 
   valkey:
-    image: valkey/valkey:8
+    image: valkey/valkey:9@sha256:418652cfb58ef879d4978c33553735d7147016032d5aefaa14c828e611eb9dfd
     command: ['valkey-server', '--save', '', '--appendonly', 'no']
     ports:
       - 6379:6379

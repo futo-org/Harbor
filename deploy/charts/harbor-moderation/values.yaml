@@ -37,6 +37,11 @@ migrations:
 
 resources: {}
 
+# `external: true` leaves replicas to an autoscaler managed elsewhere (e.g. a
+# KEDA ScaledObject on Kafka lag); replicaCount is then ignored.
+autoscaling:
+  external: false
+
 nodeSelector: {}
 
 tolerations: []

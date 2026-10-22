@@ -6,7 +6,7 @@ use crate::*;
 async fn put_then_list_round_trip() {
     let mut client = TestClient::new().await;
 
-    let post_signature = client.post_text("hello", DEFAULT_CREATED_AT + HOUR);
+    let post_signature = client.post_text("hello", current_timestamp() + 1);
 
     client.submit_events().await;
 
@@ -57,7 +57,7 @@ async fn invalid_signature_rejected() {
         vec![],
         "tampered",
         &[],
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     );
     if let Some(ref mut signed) = bundle.signed_event {
         signed.signature[0] ^= 0xFF;
@@ -109,7 +109,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         1,
         vec![1, 0],
         initial.clone(),
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     );
     client
         .put_events(PutEventsRequest {
@@ -129,7 +129,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         vec![],
         "first post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     );
     let sig_1 = bundle_signature(&post_1);
     client
@@ -151,7 +151,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         root_after_1.clone(),
         "second post",
         &[],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     let sig_2 = bundle_signature(&post_2);
     client
@@ -184,7 +184,7 @@ async fn revoked_key_pre_revocation_events_remain_valid() {
         1,
         vec![2, 0],
         revoked_content,
-        DEFAULT_CREATED_AT + 3 * HOUR,
+        current_timestamp() + 3,
     );
     client
         .put_events(PutEventsRequest {
@@ -291,7 +291,7 @@ async fn post_revocation_event_returns_without_proof() {
         1,
         vec![1, 0],
         initial.clone(),
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     );
     client
         .put_events(PutEventsRequest {
@@ -310,7 +310,7 @@ async fn post_revocation_event_returns_without_proof() {
         vec![],
         "first post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     );
     let sig_1 = bundle_signature(&post_1);
     client
@@ -330,7 +330,7 @@ async fn post_revocation_event_returns_without_proof() {
         root_after_1.clone(),
         "second post",
         &[],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     let sig_2 = bundle_signature(&post_2);
     client
@@ -362,7 +362,7 @@ async fn post_revocation_event_returns_without_proof() {
         1,
         vec![2, 0],
         revoked,
-        DEFAULT_CREATED_AT + 3 * HOUR,
+        current_timestamp() + 3,
     );
     client
         .put_events(PutEventsRequest {
@@ -382,7 +382,7 @@ async fn post_revocation_event_returns_without_proof() {
         node_hash(&leaf_hash(&sig_1), &leaf_hash(&sig_2)),
         "forged post",
         &[],
-        DEFAULT_CREATED_AT + 4 * HOUR,
+        current_timestamp() + 4,
     );
     let sig_3 = bundle_signature(&post_3);
 
@@ -455,7 +455,7 @@ async fn rewritten_event_invalidates_proofs() {
         1,
         vec![1, 0],
         initial.clone(),
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     );
     client
         .put_events(PutEventsRequest {
@@ -474,7 +474,7 @@ async fn rewritten_event_invalidates_proofs() {
         vec![],
         "first post",
         &[],
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     );
     let sig_1 = bundle_signature(&post_1);
 
@@ -489,7 +489,7 @@ async fn rewritten_event_invalidates_proofs() {
         leaf_hash(&sig_1),
         "ORIGINAL second post",
         &[],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
     let sig_2_original = bundle_signature(&post_2_original);
 
@@ -506,7 +506,7 @@ async fn rewritten_event_invalidates_proofs() {
         root_after_2_original.clone(),
         "third post",
         &[],
-        DEFAULT_CREATED_AT + 3 * HOUR,
+        current_timestamp() + 3,
     );
     let sig_3 = bundle_signature(&post_3);
 
@@ -521,7 +521,7 @@ async fn rewritten_event_invalidates_proofs() {
         leaf_hash(&sig_1),
         "REWRITTEN second post",
         &[],
-        DEFAULT_CREATED_AT + 2 * HOUR,
+        current_timestamp() + 2,
     );
 
     // A revokes B. Target pins post_3 as head with the rotator's-view root.
@@ -546,7 +546,7 @@ async fn rewritten_event_invalidates_proofs() {
         1,
         vec![2, 0],
         revoked,
-        DEFAULT_CREATED_AT + 4 * HOUR,
+        current_timestamp() + 4,
     );
 
     // PUT in order. Note: post_2_rewritten replaces post_2_original — the
@@ -601,7 +601,7 @@ async fn rewritten_event_invalidates_proofs() {
             leaf_hash(&sig_1),
             "REWRITTEN second post",
             &[],
-            DEFAULT_CREATED_AT + 2 * HOUR,
+            current_timestamp() + 2,
         ))),
     );
     assert_ne!(
@@ -632,7 +632,7 @@ async fn put_verification_claim_is_ingested_and_listable() {
         1,
         vec![1],
         initial,
-        DEFAULT_CREATED_AT,
+        current_timestamp(),
     );
     let claim = make_verification_claim_bundle(
         &identity,
@@ -641,7 +641,7 @@ async fn put_verification_claim_is_ingested_and_listable() {
         1,
         vec![1],
         "alice",
-        DEFAULT_CREATED_AT + HOUR,
+        current_timestamp() + 1,
     );
     let claim_signature = bundle_signature(&claim);
 
@@ -684,7 +684,7 @@ async fn put_verification_claim_is_ingested_and_listable() {
 #[tokio::test]
 async fn events_submitted_twice_are_ignored() {
     let mut client = TestClient::new().await;
-    let post_signature = client.post_text("hello", DEFAULT_CREATED_AT + HOUR);
+    let post_signature = client.post_text("hello", current_timestamp() + 1);
     let pending = client.pending.clone();
     // Submit everything.
     client.submit_events().await;
@@ -834,8 +834,13 @@ async fn validation_invalid_event_collection() {
         content_body: Some(ContentBody::Post(post)),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let mut event =
-        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    let mut event = client.make_event(
+        COLLECTION_FEED,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     event.key.as_mut().unwrap().collection = 9999;
     client.push_event_bundle2(event, content_bytes);
 
@@ -1639,8 +1644,13 @@ async fn validation_missing_content_content_body_delete_event_key() {
         content_body: Some(ContentBody::Delete(Delete { event_key: None })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_FEED,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -1670,8 +1680,13 @@ async fn validation_invalid_content_content_body_delete_event_key_collection() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_FEED,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -1703,8 +1718,13 @@ async fn validation_invalid_content_content_body_delete_event_key_identity() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_FEED,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -1729,8 +1749,13 @@ async fn validation_invalid_content_content_body_follow_collection() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_FEED,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -1817,8 +1842,13 @@ async fn validation_invalid_content_content_body_block_collection() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_FEED,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -1899,7 +1929,7 @@ async fn validation_invalid_content_content_body_block_identity_self() {
 #[tokio::test]
 async fn validation_invalid_content_content_body_reaction_collection() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Reaction(Reaction {
@@ -1967,7 +1997,7 @@ async fn validation_invalid_content_content_body_reaction_no_event_key() {
 #[tokio::test]
 async fn validation_content_content_body_reaction_empty_emoji() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Reaction(Reaction {
@@ -1992,7 +2022,7 @@ async fn validation_content_content_body_reaction_empty_emoji() {
 #[tokio::test]
 async fn validation_content_content_body_reaction_flags_ok() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Reaction(Reaction {
@@ -2017,7 +2047,7 @@ async fn validation_content_content_body_reaction_flags_ok() {
 #[tokio::test]
 async fn validation_content_content_body_reaction_long_emoji_ok() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Reaction(Reaction {
@@ -2044,7 +2074,7 @@ async fn validation_content_content_body_reaction_long_emoji_ok() {
 #[tokio::test]
 async fn validation_invalid_content_content_body_reaction_emoji_too_long() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Reaction(Reaction {
@@ -2672,7 +2702,7 @@ async fn validation_invalid_content_content_body_profile_update_alias_too_long()
 #[tokio::test]
 async fn validation_invalid_content_content_body_repost_collection() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Repost(Repost {
@@ -2709,8 +2739,13 @@ async fn validation_content_content_body_repost_post_missing() {
         content_body: Some(ContentBody::Repost(Repost { post: None })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_FEED,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -2737,8 +2772,13 @@ async fn validation_content_content_body_repost_post_not_a_post() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_FEED, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_FEED,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -2757,7 +2797,7 @@ async fn validation_content_content_body_repost_post_not_a_post() {
 #[tokio::test]
 async fn validation_invalid_content_content_body_report_collection() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Report(Report {
@@ -2825,7 +2865,7 @@ async fn validation_content_content_body_report_event_key_missing() {
 #[tokio::test]
 async fn validation_content_content_body_report_invalid_category() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Report(Report {
@@ -2860,7 +2900,7 @@ async fn validation_content_content_body_report_invalid_category() {
 #[tokio::test]
 async fn validation_content_content_body_report_additional_info_too_long() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Report(Report {
@@ -2895,7 +2935,7 @@ async fn validation_content_content_body_report_additional_info_too_long() {
 #[tokio::test]
 async fn validation_invalid_content_content_body_labels_collection() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Labels(Labels {
@@ -2936,8 +2976,13 @@ async fn validation_content_content_body_labels_event_key_missing() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_LABELS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -2965,8 +3010,13 @@ async fn validation_content_content_body_labels_event_key_not_a_post() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_LABELS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -2985,7 +3035,7 @@ async fn validation_content_content_body_labels_event_key_not_a_post() {
 #[tokio::test]
 async fn validation_content_content_body_labels_labels_values_empty() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Labels(Labels {
@@ -2994,8 +3044,13 @@ async fn validation_content_content_body_labels_labels_values_empty() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_LABELS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -3014,7 +3069,7 @@ async fn validation_content_content_body_labels_labels_values_empty() {
 #[tokio::test]
 async fn validation_content_content_body_labels_labels_values_too_long() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Labels(Labels {
@@ -3027,8 +3082,13 @@ async fn validation_content_content_body_labels_labels_values_too_long() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_LABELS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;
@@ -3047,7 +3107,7 @@ async fn validation_content_content_body_labels_labels_values_too_long() {
 #[tokio::test]
 async fn validation_content_content_body_labels_labels_values_value_empty() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Labels(Labels {
@@ -3056,8 +3116,13 @@ async fn validation_content_content_body_labels_labels_values_value_empty() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_LABELS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     client.submit_events().await; // Shouldn't panic.
@@ -3066,7 +3131,7 @@ async fn validation_content_content_body_labels_labels_values_value_empty() {
 #[tokio::test]
 async fn validation_content_content_body_labels_labels_values_value_too_long() {
     let mut client = TestClient::new().await;
-    client.post_text("Test", 0);
+    client.post_text("Test", current_timestamp());
     let event_key = client.get_last_event_key();
     let content = Content {
         content_body: Some(ContentBody::Labels(Labels {
@@ -3075,8 +3140,13 @@ async fn validation_content_content_body_labels_labels_values_value_too_long() {
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
-    let event =
-        client.make_event(COLLECTION_LABELS, Vec::new(), Vec::new(), digest, 0);
+    let event = client.make_event(
+        COLLECTION_LABELS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        current_timestamp(),
+    );
     client.push_event_bundle2(event, content_bytes);
 
     let result = client.try_submit_events().await;

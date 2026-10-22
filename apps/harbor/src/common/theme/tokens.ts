@@ -16,8 +16,6 @@ export const Spacing = {
 
 export type SpacingToken = keyof typeof Spacing;
 
-export const Tracking: TextStyle['letterSpacing'] = 0;
-
 export const BorderRadius = {
   '0': 0,
   sm: 6,
@@ -41,7 +39,6 @@ export const typography = {
   } as const,
   fontWeight: {
     regular: '400',
-    medium: '500',
     semibold: '600',
     bold: '700',
   } as const,
@@ -215,33 +212,8 @@ const atomStyles = {
   },
 
   /**
-   * Typography
+   * Text
    */
-  text_xs: {
-    fontSize: 10,
-    letterSpacing: Tracking,
-  },
-  text_sm: {
-    fontSize: 12,
-    letterSpacing: Tracking,
-  },
-  text_md: {
-    fontSize: 14,
-    letterSpacing: Tracking,
-  },
-  text_lg: {
-    fontSize: 16,
-    letterSpacing: Tracking,
-  },
-  text_xl: {
-    fontSize: 18,
-    letterSpacing: Tracking,
-  },
-  text_2xl: {
-    fontSize: 20,
-    letterSpacing: Tracking,
-  },
-
   text_left: {
     textAlign: 'left',
   },
@@ -251,22 +223,8 @@ const atomStyles = {
   text_right: {
     textAlign: 'right',
   },
-
   text_underline: {
     textDecorationLine: 'underline',
-  },
-
-  font_normal: {
-    fontWeight: 400,
-  },
-  font_medium: {
-    fontWeight: 500,
-  },
-  font_semibold: {
-    fontWeight: 600,
-  },
-  font_bold: {
-    fontWeight: 700,
   },
 
   /**

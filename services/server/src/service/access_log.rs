@@ -41,8 +41,8 @@ pub async fn access_log_middleware(
     next: Next,
 ) -> Response {
     let path = request.uri().path().to_owned();
-    // Probe noise.
-    if path == "/status" {
+    // Probe noise: health checks and CI's deploy polling.
+    if path == "/status" || path == "/version" {
         return next.run(request).await;
     }
 

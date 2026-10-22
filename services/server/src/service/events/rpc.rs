@@ -1,30 +1,30 @@
 //! gRPC `EventSyncService` impl. Each method delegates to a handler
 //! under `events/rpc/`.
 
+use std::sync::Arc;
+
+use polycentric_common::models::protos_v2::event_sync_service_server::{
+    EventSyncService, EventSyncServiceServer,
+};
+use polycentric_common::models::protos_v2::{
+    GetAttributedToReactionCountsRequest,
+    GetAttributedToReactionCountsResponse, GetReactionsRequest,
+    GetReactionsResponse, ListEventsRequest, ListEventsResponse,
+    ListHeadsRequest, ListHeadsResponse, PutEventsRequest, PutEventsResponse,
+    SubscribeHeadsRequest,
+};
+use tonic::{Request, Response, Status};
+
+use crate::grpc::stream_response;
+use crate::service::context::ServiceContext;
+use crate::service::events::heads_pubsub;
+
 pub mod get_attributed_to_reaction_counts;
 pub mod get_reactions;
 pub mod list_events;
 pub mod list_heads;
 pub mod put_events;
 pub mod subscribe_heads;
-
-use crate::grpc::stream_response;
-use crate::service::context::ServiceContext;
-use crate::service::events::heads_pubsub;
-use crate::service::proto::event_sync_service_server::{
-    EventSyncService, EventSyncServiceServer,
-};
-use crate::service::proto::{
-    GetAttributedToReactionCountsRequest,
-    GetAttributedToReactionCountsResponse, GetReactionsRequest,
-    GetReactionsResponse, ListEventsRequest, ListEventsResponse,
-    PutEventsRequest, PutEventsResponse,
-};
-use polycentric_common::models::protos_v2::{
-    ListHeadsRequest, ListHeadsResponse, SubscribeHeadsRequest,
-};
-use std::sync::Arc;
-use tonic::{Request, Response, Status};
 
 pub struct EventSyncServiceImpl {
     ctx: Arc<ServiceContext>,
@@ -36,8 +36,9 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<ListEventsRequest>,
     ) -> Result<Response<ListEventsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            list_events::handle(&self.ctx, request.into_inner()).await?,
+            list_events::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -45,8 +46,9 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<PutEventsRequest>,
     ) -> Result<Response<PutEventsResponse>, Status> {
+        let ctx = self.ctx.public_rw(&request).await?;
         Ok(Response::new(
-            put_events::handle(&self.ctx, request.into_inner()).await?,
+            put_events::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -54,8 +56,9 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<ListHeadsRequest>,
     ) -> Result<Response<ListHeadsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            list_heads::handle(&self.ctx, request.into_inner()).await?,
+            list_heads::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -73,8 +76,9 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<GetReactionsRequest>,
     ) -> Result<Response<GetReactionsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
-            get_reactions::handle(&self.ctx, request.into_inner()).await?,
+            get_reactions::handle(ctx, request.into_inner()).await?,
         ))
     }
 
@@ -82,12 +86,10 @@ impl EventSyncService for EventSyncServiceImpl {
         &self,
         request: Request<GetAttributedToReactionCountsRequest>,
     ) -> Result<Response<GetAttributedToReactionCountsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
+        let request = request.into_inner();
         Ok(Response::new(
-            get_attributed_to_reaction_counts::handle(
-                &self.ctx,
-                request.into_inner(),
-            )
-            .await?,
+            get_attributed_to_reaction_counts::handle(ctx, request).await?,
         ))
     }
 }

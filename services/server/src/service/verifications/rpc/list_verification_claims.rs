@@ -1,13 +1,14 @@
 //! Claims an identity has made (owns) returns relevant
 //! VerificationClaim, VerificationTarget and VerificationVerify events.
 
+use tonic::Status;
+
 use crate::data::pipeline;
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::proto::{
     ListVerificationClaimsRequest, ListVerificationClaimsResponse,
 };
 use crate::service::verifications::repository::Query as Repository;
-use tonic::Status;
 
 use super::common::claim_bundles::{self, FetchedClaims};
 use super::common::map_db_err;
@@ -17,9 +18,10 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: ListVerificationClaimsRequest,
 ) -> Result<ListVerificationClaimsResponse, Status> {
+    // TODO: use AuthContext here.
     if req.claimed_by_identity.is_empty() {
         return Err(Status::invalid_argument(
             "claimed_by_identity is required",
@@ -30,7 +32,7 @@ pub async fn handle(
         identity: req.claimed_by_identity,
     };
     let view = pipeline::create_pipeline(
-        ctx,
+        &ctx,
         &params,
         fetch,
         claim_bundles::hydrate,
@@ -45,25 +47,25 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
-    let claims = Repository::list_claim_events_for_identity(
-        &ctx.ro_db,
-        &params.identity,
-    )
-    .await
-    .map_err(map_db_err)?;
+    let claims =
+        Repository::list_claim_events_for_identity(&ctx.db, &params.identity)
+            .await
+            .map_err(map_db_err)?;
     claim_bundles::fetch_verification_state(ctx, claims).await
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use sea_orm::{DbBackend, MockDatabase};
+
     use crate::service::verifications::rpc::common::tests::{
         claim_row, ctx, no_rows, target_row, verify_row,
     };
-    use sea_orm::{DbBackend, MockDatabase};
+
+    use super::*;
 
     #[tokio::test]
     async fn wraps_each_claim_with_its_targets_and_verifies() {
@@ -77,10 +79,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             ListVerificationClaimsRequest {
                 claimed_by_identity: "alice".to_string(),
             },
@@ -115,10 +121,14 @@ mod tests {
             .append_query_results([no_rows()])
             .append_query_results([no_rows()])
             .into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let response = handle(
-            &ctx,
+            ctx,
             ListVerificationClaimsRequest {
                 claimed_by_identity: "alice".to_string(),
             },
@@ -134,10 +144,14 @@ mod tests {
     #[tokio::test]
     async fn rejects_an_empty_identity() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = ctx(db).await;
+        let ctx = ctx(db)
+            .await
+            .public_rw(&tonic::Request::new(()))
+            .await
+            .unwrap();
 
         let result = handle(
-            &ctx,
+            ctx,
             ListVerificationClaimsRequest {
                 claimed_by_identity: String::new(),
             },

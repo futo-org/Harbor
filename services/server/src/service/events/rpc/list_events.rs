@@ -2,12 +2,16 @@
 //! the query produced, **including tombstoned ones** — callers
 //! (sync clients, debug tools) need the unfiltered stream.
 
+use polycentric_common::models::protos_v2::EventBundle;
+use sea_orm::DbErr;
+use tonic::Status;
+
 use crate::data::hydration::{HydrationState, collect_identities};
 use crate::data::{
     EventWithContentRow, assemble_bundles, assemble_hint, bundle_into_hint,
     pipeline,
 };
-use crate::service::context::ServiceContext;
+use crate::service::context::PublicContext;
 use crate::service::events::repository::Query as EventsRepository;
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::identity::service::{
@@ -18,9 +22,6 @@ use crate::service::proto::{
     EventHint, EventKey, ListEventsRequest, ListEventsResponse, PublicKey,
 };
 use crate::service::stats::service::gather_stats_for;
-use polycentric_common::models::protos_v2::EventBundle;
-use sea_orm::DbErr;
-use tonic::Status;
 
 #[derive(Default)]
 pub struct Filtered {
@@ -44,7 +45,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: &ServiceContext,
+    ctx: PublicContext,
     req: ListEventsRequest,
 ) -> Result<ListEventsResponse, Status> {
     let size = req.size.unwrap_or(200).min(200) as u64;
@@ -64,7 +65,7 @@ pub async fn handle(
     }
 
     let result =
-        pipeline::create_pipeline(ctx, &params, fetch, hydrate, filter, view)
+        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
             .await?;
 
     Ok(ListEventsResponse {
@@ -74,11 +75,11 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     EventsRepository::list_events(
-        &ctx.ro_db,
+        &ctx.db,
         Some(params.size),
         params.collection,
         params.identity.clone(),
@@ -93,7 +94,7 @@ async fn fetch(
 
 #[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
 async fn hydrate(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     _params: &Params,
     rows: &Vec<EventWithContentRow>,
 ) -> Result<HydrationState, Status> {
@@ -112,7 +113,7 @@ async fn hydrate(
     // so that we can send them as hints.
     let deletes_by_target = tombstone::validated_tombstones(ctx, &keys).await?;
 
-    let stats = gather_stats_for(&ctx.ro_db, rows.iter().map(|(e, _)| e.id))
+    let stats = gather_stats_for(&ctx.db, rows.iter().map(|(e, _)| e.id))
         .await
         .map_err(map_db_err)?;
 
@@ -126,7 +127,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _ctx: &ServiceContext,
+    _: &PublicContext,
     _params: &Params,
     rows: Vec<EventWithContentRow>,
     _hydration: &HydrationState,
@@ -135,7 +136,7 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &ServiceContext,
+    ctx: &PublicContext,
     _params: &Params,
     filtered: Filtered,
     hydration: HydrationState,
@@ -153,10 +154,8 @@ async fn view(
     let mut tombstone_bundles: Vec<EventBundle> =
         deletes_by_target.into_values().flatten().collect();
 
-    tokio::try_join!(
-        attach_proofs(ctx, &mut event_bundles),
-        attach_proofs(ctx, &mut tombstone_bundles),
-    )?;
+    attach_proofs(ctx, &mut event_bundles).await?;
+    attach_proofs(ctx, &mut tombstone_bundles).await?;
 
     let mut event_hints = identity_events
         .into_iter()

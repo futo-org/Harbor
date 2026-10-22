@@ -45,7 +45,7 @@ export default function BanListScreen() {
               <Text
                 variant="secondary"
                 color="neutral_500"
-                style={{ fontFamily: 'monospace' }}
+                monospace
                 numberOfLines={1}
               >
                 {server}
@@ -164,8 +164,9 @@ function BanListRow({
     >
       <Text
         variant="secondary"
+        monospace
         style={[
-          { fontFamily: 'monospace', flex: 1 },
+          { flex: 1 },
           // An unbroken 64-char hash never wraps on web without an
           // explicit break rule; native Text breaks mid-word on its own.
           isWeb && ({ wordBreak: 'break-all' } as unknown as TextStyle),

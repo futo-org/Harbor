@@ -168,8 +168,9 @@ function PairingEmojiCard() {
         variant="small"
         color="neutral_500"
         selectable
+        monospace
         style={[
-          { fontFamily: 'monospace', textAlign: 'center' },
+          { textAlign: 'center' },
           // The pubkey string is a long string with no whitespace
           isWeb && { wordBreak: 'break-all' },
         ]}
@@ -268,8 +269,9 @@ function IssuerProfile({ identityKey }: { identityKey: string }) {
         variant="secondary"
         color="neutral_500"
         selectable
+        monospace
         style={[
-          { fontFamily: 'monospace', textAlign: 'center' },
+          { textAlign: 'center' },
           // The identity key is a long string with no whitespace
           isWeb && { wordBreak: 'break-all' },
         ]}

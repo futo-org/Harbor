@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "harbor-push-notifications.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.external }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "harbor-push-notifications.selectorLabels" . | nindent 6 }}

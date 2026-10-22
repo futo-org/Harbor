@@ -7,11 +7,14 @@ import { ChipIcon } from './ChipIcon';
 
 export function ClaimTypeChip({
   name,
+  value,
   icon,
   logo,
   color,
 }: {
-  name: string;
+  name?: string;
+  // Shown after the name, as "<name>: <value>".
+  value?: string;
   icon: IconName;
   // Brand logo (e.g. a Platform claim's platform) shown instead of `icon`.
   logo?: (props: { size: number; color: string }) => ReactNode;
@@ -24,9 +27,17 @@ export function ClaimTypeChip({
         variant="small"
         color="neutral_700"
         fontWeight="semibold"
+        numberOfLines={1}
         selectable={false}
+        style={Atoms.flex_shrink_1}
       >
         {name}
+        {name && value ? ': ' : null}
+        {value ? (
+          <Text variant="small" color="neutral_500">
+            {value}
+          </Text>
+        ) : null}
       </Text>
     </Chip>
   );

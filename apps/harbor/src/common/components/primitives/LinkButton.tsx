@@ -28,7 +28,6 @@ interface LinkButtonProps extends Omit<PressableProps, 'style' | 'href'> {
   containerStyle?: StyleProp<ViewStyle>;
   variant?: TextVariant;
   fontWeight?: FontWeightToken;
-  italic?: boolean;
   underlineOnHover?: boolean;
 }
 
@@ -42,7 +41,6 @@ export function LinkButton({
   containerStyle,
   variant = 'body',
   fontWeight = 'semibold',
-  italic,
   underlineOnHover = false,
   disabled,
   ...props
@@ -86,7 +84,6 @@ export function LinkButton({
           variant={variant}
           fontWeight={fontWeight}
           color={color}
-          italic={italic}
           style={
             hovered && underlineOnHover && !disabled
               ? { textDecorationLine: 'underline' }

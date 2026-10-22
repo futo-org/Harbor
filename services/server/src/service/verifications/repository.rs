@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use ::entity::{
     content, content_verification_claim, content_verification_target,
     content_verification_verify, event,
@@ -6,7 +8,6 @@ use polycentric_common::models::collections;
 use sea_orm::sea_query::extension::postgres::PgBinOper;
 use sea_orm::sea_query::{Alias, Expr, Query as SeaQuery};
 use sea_orm::*;
-use std::collections::HashSet;
 
 use crate::data::EventWithContentRow;
 use crate::service::events::TargetEventKey;
@@ -98,8 +99,8 @@ pub struct Query;
 
 impl Query {
     /// VerificationClaim events published by an identity.
-    pub async fn list_claim_events_for_identity(
-        db: &DbConn,
+    pub async fn list_claim_events_for_identity<C: ConnectionTrait>(
+        db: &C,
         identity: &str,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         event::Entity::find()
@@ -127,8 +128,8 @@ impl Query {
     /// actually verified — a set the attacker cannot inflate — closes that.
     /// (A claim admitted via a since-revoked verify is dropped later, when
     /// tombstones are validated.)
-    pub async fn list_claim_events_by_fields(
-        db: &DbConn,
+    pub async fn list_claim_events_by_fields<C: ConnectionTrait>(
+        db: &C,
         schema_digest: Option<(i32, Vec<u8>)>,
         match_fields: serde_json::Value,
         verified_by: &HashSet<String>,
@@ -172,8 +173,8 @@ impl Query {
 
     /// VerificationTarget events published by the claims' owners that
     /// reference any of `claim_keys`.
-    pub async fn list_target_events_for_claims(
-        db: &DbConn,
+    pub async fn list_target_events_for_claims<C: ConnectionTrait>(
+        db: &C,
         claim_keys: &[TargetEventKey],
     ) -> Result<Vec<VerificationEventDto>, DbErr> {
         if claim_keys.is_empty() {
@@ -221,8 +222,8 @@ impl Query {
 
     /// VerificationVerify events verifying any of `claim_keys`, from any
     /// identity.
-    pub async fn list_verify_events_for_claims(
-        db: &DbConn,
+    pub async fn list_verify_events_for_claims<C: ConnectionTrait>(
+        db: &C,
         claim_keys: &[TargetEventKey],
     ) -> Result<Vec<VerificationEventDto>, DbErr> {
         if claim_keys.is_empty() {
@@ -262,8 +263,8 @@ impl Query {
     /// Verification requests naming `target_identity`, restricted to
     /// targets published by the referenced claim's own owner. Newest first,
     /// tombstones NOT yet filtered.
-    pub async fn list_targets_for_identity(
-        db: &DbConn,
+    pub async fn list_targets_for_identity<C: ConnectionTrait>(
+        db: &C,
         target_identity: &str,
     ) -> Result<Vec<VerificationTargetDto>, DbErr> {
         let rows = event::Entity::find()
@@ -303,8 +304,8 @@ impl Query {
     /// True when the claim's own owner has published a VerificationTarget
     /// naming `target_identity` for `claim_key` — i.e. that identity was
     /// requested to verify the claim.
-    pub async fn was_verification_requested(
-        db: &DbConn,
+    pub async fn was_verification_requested<C: ConnectionTrait>(
+        db: &C,
         claim_key: &TargetEventKey,
         target_identity: &str,
     ) -> Result<bool, DbErr> {
@@ -334,8 +335,8 @@ impl Query {
 
     /// VerificationClaim events matching the given keys exactly. Newest
     /// first by sequence, tombstones NOT yet filtered.
-    pub async fn list_claim_events_by_keys(
-        db: &DbConn,
+    pub async fn list_claim_events_by_keys<C: ConnectionTrait>(
+        db: &C,
         keys: &[TargetEventKey],
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         if keys.is_empty() {

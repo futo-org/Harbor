@@ -27,7 +27,7 @@ export function PairIdentityManualEntry({
           value={input}
           onChangeText={setInput}
           autoCapitalize="none"
-          style={{ fontFamily: 'monospace' }}
+          monospace
           multiline
           placeholder="Paste pairing link"
         />

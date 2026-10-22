@@ -22,7 +22,7 @@ hex.workspace = true
 opentelemetry.workspace = true
 tracing.workspace = true
 prost.workspace = true
-sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio", "macros", "mock"] }
+sea-orm = { workspace = true, features = ["sqlx-postgres", "runtime-tokio"] }
 sha2.workspace = true
 time.workspace = true
 tokio = { workspace = true, features = ["full"] }
@@ -30,7 +30,7 @@ tonic = { workspace = true, features = ["router", "transport"] }
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
 serde = { version = "1", features = ["derive"] }
 
-
 [dev-dependencies]
 mockito = "1"
+sea-orm = { workspace = true, features = ["mock"] }
 tokio-stream = { version = "0.1", features = ["net"] }
