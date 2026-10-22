@@ -31,6 +31,7 @@ import { MAX_POST_LENGTH, type useComposer } from './hooks/useComposer';
 import { isAndroid, isIOS, isWeb } from '@/src/common/util/platform';
 
 import { useMentionInputSync } from '@/src/features/composer/hooks/useMentionInputSync';
+import { pushTextToInput } from '@/src/features/composer/hooks/useMentionStore';
 import { useTutorialHintsStore } from '@/src/common/lib/useTutorialHintsStore';
 
 const ATTACHMENT_GAP = Spacing.sm;
@@ -47,7 +48,7 @@ type ComposerFieldsProps = {
   currentIdentityKey: string | null;
   placeholder: string;
   text: string;
-  setText: (text: string) => void;
+  setText: (text: string) => { text: string; caret: number };
   attachments: Attachment[];
   submitting: boolean;
   canPost: boolean;
@@ -116,8 +117,12 @@ export function ComposerFields({
 
   const onChangeText = useCallback(
     (next: string) => {
-      fieldTextRef.current = next;
-      setText(next);
+      const applied = setText(next);
+      fieldTextRef.current = applied.text;
+      // The edit reached into a mention, which went whole: show that.
+      if (applied.text !== next) {
+        pushTextToInput(inputRef.current, applied.text, applied.caret);
+      }
     },
     [setText],
   );

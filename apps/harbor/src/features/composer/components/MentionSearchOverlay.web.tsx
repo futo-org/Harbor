@@ -44,7 +44,8 @@ export function MentionSearchOverlay() {
   const inputRef = useMentionStore((state) => state.inputRef);
   const atIndex = useMentionStore(
     (state) =>
-      findMentionContext(state.text, state.selection.start)?.start ?? -1,
+      findMentionContext(state.text, state.selection.start, state.mentionRanges)
+        ?.start ?? -1,
   );
   const caretIndex = useMentionStore((state) => state.selection.start);
   const text = useMentionStore((state) => state.text);

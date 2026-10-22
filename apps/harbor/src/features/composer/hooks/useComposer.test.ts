@@ -401,23 +401,19 @@ describe('useComposer handlePost', () => {
     expect(useComposerStore.getState().text).toBe('');
   });
 
-  it('rewrites remembered identity and alias mentions to the curly form', async () => {
-    const id = 'a'.repeat(64);
+  it('posts inserted mentions in the curly form', async () => {
+    const nameId = 'a'.repeat(64);
     const aliasId = 'b'.repeat(64);
     const accountAliasId = 'c'.repeat(64);
     const { result } = await renderComposer();
     act(() => {
-      result.current.setText(`hi @${id} @ann.example.com @bob@example.com `);
-      const { rememberMention } = useComposerStore.getState();
-      rememberMention(id, { identity: id, renderAs: 'Jane' });
-      rememberMention('ann.example.com', {
-        identity: aliasId,
-        renderAs: 'ann.example.com',
-      });
-      rememberMention('bob@example.com', {
-        identity: accountAliasId,
-        renderAs: 'bob@example.com',
-      });
+      result.current.setText(
+        ' hi @Jane Doe @ann.example.com @bob@example.com ',
+      );
+      const { addMentionRange } = useComposerStore.getState();
+      addMentionRange({ start: 4, end: 13, identity: nameId });
+      addMentionRange({ start: 14, end: 30, identity: aliasId });
+      addMentionRange({ start: 31, end: 47, identity: accountAliasId });
     });
 
     await act(async () => {
@@ -427,13 +423,13 @@ describe('useComposer handlePost', () => {
     expect(mockClient.contentManager.build).toHaveBeenCalledWith(
       expect.objectContaining({
         post: expect.objectContaining({
-          text: `hi @{${id},Jane} @{${aliasId},ann.example.com} @{${accountAliasId},bob@example.com}`,
+          text: `hi @{${nameId},Jane Doe} @{${aliasId},ann.example.com} @{${accountAliasId},bob@example.com}`,
         }),
       }),
     );
-    // Memory is cleared with the rest of the composer.
+    // Ranges are cleared with the rest of the composer.
     act(() => renderers.at(-1)?.unmount());
-    expect(useComposerStore.getState().mentions).toEqual({});
+    expect(useComposerStore.getState().mentionRanges).toEqual([]);
   });
 
   it('awaits the in-flight upload before committing the post', async () => {
