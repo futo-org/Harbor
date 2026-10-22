@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "harbor-moderation.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.external }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "harbor-moderation.selectorLabels" . | nindent 6 }}
