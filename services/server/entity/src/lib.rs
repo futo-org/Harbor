@@ -57,7 +57,6 @@
 //! will remove it from the cache table, but the original event remains in the
 //! `events` table.
 
-pub mod alias_cache;
 pub mod application;
 pub mod attributed_to_reaction_summary;
 pub mod ban;
