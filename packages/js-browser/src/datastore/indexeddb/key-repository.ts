@@ -48,6 +48,13 @@ export class IndexedDBKeyRepository implements IKeyRepository {
     privateKey: Uint8Array,
     status: KeyPairStatus,
   ): Promise<void> {
+    if (status === 'pendingDeletion') {
+      throw new KeyRepositoryError(
+        'invalid status',
+        'put key pair: pendingDeletion',
+      );
+    }
+
     const entry: KeyEntry = {
       identity,
       keyType,
@@ -75,7 +82,7 @@ export class IndexedDBKeyRepository implements IKeyRepository {
     if (newStatus === 'pendingDeletion') {
       throw new KeyRepositoryError(
         'invalid status',
-        'cannot change key status to pendingDeletion',
+        'change key status: pendingDeletion',
       );
     }
 

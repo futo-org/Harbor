@@ -1,14 +1,14 @@
 import { EventStore } from './event-store';
 import { ContentStore } from './content.store';
-import { KeysStore } from './keys-store';
+import { KeyStore } from './key-store';
 import type { IEventRepository } from '../platform-interfaces/event.repository';
 import type { IContentRepository } from '../platform-interfaces/content.repository';
-import type { IKeysRepository } from '../platform-interfaces/key-repository';
+import type { IKeyRepository } from '../platform-interfaces/key-repository';
 
 export interface Repositories {
   eventRepository: IEventRepository;
   contentRepository: IContentRepository;
-  keysRepository: IKeysRepository;
+  keyRepository: IKeyRepository;
 }
 
 /**
@@ -31,12 +31,12 @@ export class StorageHandle {
   public readonly _repositories: Repositories;
   public readonly events: EventStore;
   public readonly content: ContentStore;
-  public readonly keys: KeysStore;
+  public readonly keys: KeyStore;
 
   constructor(repositories: Repositories) {
     this._repositories = repositories;
     this.events = new EventStore(this._repositories.eventRepository);
     this.content = new ContentStore(this._repositories.contentRepository);
-    this.keys = new KeysStore(this._repositories.keysRepository);
+    this.keys = new KeyStore(this._repositories.keyRepository);
   }
 }

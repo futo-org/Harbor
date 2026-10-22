@@ -162,7 +162,7 @@ export class PolycentricClient {
       this.storageHandle = new StorageHandle({
         eventRepository: this.storageDriver.createEventRepository(),
         contentRepository: this.storageDriver.createContentRepository(),
-        keysRepository: this.storageDriver.createKeysRepository(),
+        keyRepository: this.storageDriver.createKeyRepository(),
       });
 
       this.setStep(InitializationStep.LOADING_PROCESS_ID);

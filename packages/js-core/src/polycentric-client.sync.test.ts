@@ -520,7 +520,7 @@ function makeClient(args: MakeClientArgs = {}) {
   (client as any).storageHandle = new StorageHandle({
     eventRepository,
     contentRepository,
-    keysRepository: {} as any,
+    keyRepository: {} as any,
   });
   client.servers = args.servers ?? ['http://server-1'];
   client.activeIdentityKey = args.identity ? args.identity.key : null;

@@ -3,14 +3,19 @@ import type {
   IEventRepository,
   FileStoreEntry,
   IFileStoreDriver,
-  IKeysRepository,
+  IKeyRepository,
   IStorageDriver,
 } from './platform-interfaces';
 import {
   FileStoreError,
   segmentsFromPath,
 } from './platform-interfaces/file-store-driver';
-import type { PrivateKey } from './platform-interfaces/key-repository';
+import type {
+  KeyPairStatus,
+  PersistedKey,
+  PrivateKey,
+} from './platform-interfaces/key-repository';
+import { KeyRepositoryError } from './platform-interfaces/key-repository';
 import * as Proto from './proto/v2';
 import { bytesToHex, toDigestKey } from './utils/hex';
 
@@ -126,32 +131,118 @@ class MemoryContentRepository implements IContentRepository {
   }
 }
 
-type StoredKeyPair = { privateKey: PrivateKey; publicKey: Proto.PublicKey };
+type StoredKeyPair = {
+  identity: string;
+  keyType: Proto.KeyType;
+  publicKey: Uint8Array;
+  privateKey: Uint8Array;
+  status: KeyPairStatus;
+};
 
-function publicKeyString(publicKey: Proto.PublicKey): string {
-  return `${publicKey.keyType}:${bytesToHex(publicKey.key)}`;
+/** Canonical string identity of a key pair, used as the store's map key. */
+function keyPairString(
+  identity: string,
+  keyType: Proto.KeyType,
+  publicKey: Uint8Array,
+): string {
+  return `${identity}|${keyType}|${bytesToHex(publicKey)}`;
 }
 
-class MemoryKeysRepository implements IKeysRepository {
+class MemoryKeyRepository implements IKeyRepository {
   private readonly map = new Map<string, StoredKeyPair>();
 
-  async storeKeys(keys: StoredKeyPair): Promise<void> {
-    this.map.set(publicKeyString(keys.publicKey), keys);
+  async putKeyPair(
+    identity: string,
+    keyType: Proto.KeyType,
+    publicKey: Uint8Array,
+    privateKey: Uint8Array,
+    status: KeyPairStatus,
+  ): Promise<void> {
+    if (status === 'pendingDeletion') {
+      throw new KeyRepositoryError(
+        'invalid status',
+        'put key pair: pendingDeletion',
+      );
+    }
+
+    const key = keyPairString(identity, keyType, publicKey);
+
+    if (this.map.has(key)) {
+      throw new KeyRepositoryError('already exists', 'key pair already exists');
+    }
+
+    this.map.set(key, {
+      identity,
+      keyType,
+      publicKey: publicKey.slice(),
+      privateKey: privateKey.slice(),
+      status,
+    });
   }
 
-  async retrieveKeysByPublicKey(
-    publicKey: Proto.PublicKey,
-  ): Promise<StoredKeyPair | null> {
-    return this.map.get(publicKeyString(publicKey)) ?? null;
+  async changeKeyStatus(
+    identity: string,
+    keyType: Proto.KeyType,
+    publicKey: Uint8Array,
+    newStatus: KeyPairStatus,
+  ): Promise<void> {
+    if (newStatus === 'pendingDeletion') {
+      throw new KeyRepositoryError(
+        'invalid status',
+        'change key status: pendingDeletion',
+      );
+    }
+
+    const entry = this.map.get(keyPairString(identity, keyType, publicKey));
+
+    if (!entry) {
+      throw new KeyRepositoryError('not found', 'key pair not found');
+    }
+    entry.status = newStatus;
   }
 
-  async removeKeys(publicKey: Proto.PublicKey): Promise<void> {
-    this.map.delete(publicKeyString(publicKey));
+  async listKeys(identity?: string): Promise<PersistedKey[]> {
+    const isMatchingEntry = (entry: StoredKeyPair) => {
+      if (!identity) return true;
+      return entry.identity === identity;
+    };
+
+    const toOutputFormat = (entry: StoredKeyPair): PersistedKey => ({
+      identity: entry.identity,
+      publicKey: Proto.PublicKey.create({
+        keyType: entry.keyType,
+        key: entry.publicKey,
+      }),
+      status: entry.status,
+    });
+
+    return [...this.map.values()].filter(isMatchingEntry).map(toOutputFormat);
   }
 
-  async getAllKeys(): Promise<StoredKeyPair[]> {
-    return [...this.map.values()];
+  async getPrivateKey(
+    identity: string,
+    keyType: Proto.KeyType,
+    publicKey: Uint8Array,
+  ): Promise<PrivateKey | null> {
+    const entry = this.map.get(keyPairString(identity, keyType, publicKey));
+
+    if (!entry) {
+      return null;
+    }
+
+    return { keyType: entry.keyType, key: entry.privateKey };
   }
+
+  async deleteKeyPair(
+    identity: string,
+    keyType: Proto.KeyType,
+    publicKey: Uint8Array,
+  ): Promise<void> {
+    this.map.delete(keyPairString(identity, keyType, publicKey));
+  }
+
+  /** Private keys are always inline; nothing to sweep. */
+  async sweep(): Promise<void> {}
 }
 
 /**
@@ -162,7 +253,7 @@ class MemoryKeysRepository implements IKeysRepository {
 export class MemoryStorageDriver implements IStorageDriver {
   private readonly events = new MemoryEventRepository();
   private readonly contents = new MemoryContentRepository();
-  private readonly keys = new MemoryKeysRepository();
+  private readonly keys = new MemoryKeyRepository();
   private readonly activeIdentityKeys = new Map<string, string>();
 
   createEventRepository() {
@@ -171,7 +262,7 @@ export class MemoryStorageDriver implements IStorageDriver {
   createContentRepository() {
     return this.contents;
   }
-  createKeysRepository() {
+  createKeyRepository() {
     return this.keys;
   }
 
