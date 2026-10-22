@@ -31,6 +31,7 @@ docker compose down -v >/dev/null 2>&1 || true
 
 echo "==> Starting PostgreSQL, RustFS, Kafka, and Valkey…"
 docker compose up -d --wait postgres rustfs kafka valkey
+docker compose run --rm --no-deps -T rustfs-init
 
 echo "==> Joining job container to the stack network ($NETWORK)…"
 docker network connect "$NETWORK" "$(self_container)"
