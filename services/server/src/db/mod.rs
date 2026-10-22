@@ -186,6 +186,7 @@ impl ConnectionTrait for DbConn {
 /// Database transaction.
 // NOTE: we should only use the connection for one request, so this mutex should
 // never be contented, but its required for the ConnectionTrait implementation.
+#[must_use]
 pub(crate) struct DbTx<'c>(Mutex<sqlx::Transaction<'c, sqlx::Postgres>>);
 
 impl<'c> DbTx<'c> {
