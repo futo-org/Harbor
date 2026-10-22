@@ -21,6 +21,10 @@ export async function postE2eStagingFailure(whatFailed) {
     `[Run #${env.GITHUB_RUN_NUMBER}](${repoUrl}/actions/runs/${env.GITHUB_RUN_NUMBER})`,
   ].join('\n');
 
-  // Channel 4 is #harbor
-  await postToZulip(4, 'staging-e2e', content);
+  await postToZulip(
+    // #harbor-alerts
+    123,
+    'harbor-staging',
+    content,
+  );
 }
