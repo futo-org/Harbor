@@ -106,11 +106,10 @@ pub async fn handle(
 
     let missing_blobs = remove_present_blobs(&ctx, all_blobs)
         .await
-        .unwrap_or_else(|e| {
+        .unwrap_or_else(|()| {
             // A failure occurred while checking what blobs the server already has.
             // Assume the server is not in a condition to accept new blobs and silently
             // return no missing blobs to the client.
-            tracing::warn!(error = %e, "put_events blob processing");
             vec![]
         });
 
@@ -152,8 +151,8 @@ async fn process_event(
         .ok_or_else(|| Status::invalid_argument("signed event missing"))?;
 
     let event =
-        Event::decode(signed_event.event_bytes.as_slice()).map_err(|e| {
-            tracing::debug!(error = %e, "put_events decode error");
+        Event::decode(signed_event.event_bytes.as_slice()).map_err(|err| {
+            tracing::debug!(error = %err, "failed to decode event");
             Status::invalid_argument("signed event bytes invalid")
         })?;
     // TODO: validate:
@@ -184,8 +183,8 @@ async fn process_event(
                 &key.identity,
             )
             .await
-            .map_err(|e| {
-                tracing::error!(error = %e, "put_events ban check db error");
+            .map_err(|err| {
+                tracing::error!(error = %err, "failed to check if identity is banned");
                 Status::internal("internal server error")
             })?;
             banned_cache.insert(Box::from(&*key.identity), is_banned);
@@ -209,7 +208,7 @@ async fn process_event(
                 let app_id = EventsRepository::Mutation::application_id(&ctx.db, app)
                     .await
                     .map_err(|e| {
-                        tracing::error!(error = %e, "put_events application db error");
+                        tracing::error!(error = %e, "failed to get/store application info");
                         Status::internal("internal server error")
                     })?;
 
@@ -237,7 +236,7 @@ async fn process_event(
 
         let content_bytes = serialized_content.content_bytes.as_slice();
         let content = Content::decode(content_bytes).map_err(|e| {
-            tracing::debug!(error = %e, "put_events content decode error");
+            tracing::debug!(error = %e, "failed to decode event content");
             Status::invalid_argument("invalid content_bytes")
         })?;
         validate_content(&content, &key, warnings, map_warning);
@@ -269,8 +268,8 @@ async fn process_event(
 
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
-    let txn = ctx.db.begin().await.map_err(|e| {
-        tracing::error!(error = %e, "put_events txn begin error");
+    let tx = ctx.db.begin().await.map_err(|e| {
+        tracing::error!(error = %e, "failed to begin transaction");
         Status::internal("internal server error")
     })?;
 
@@ -282,7 +281,7 @@ async fn process_event(
     // signature.
     if key.collection != collections::IDENTITY {
         authorize_event_signer(
-            &txn,
+            &tx,
             &ctx.proof_cache,
             &key.identity,
             &PublicKey {
@@ -325,15 +324,15 @@ async fn process_event(
     };
 
     let stored = match EventsRepository::Mutation::add_event(
-        &txn,
+        &tx,
         active_model,
         decoded_content,
     )
     .await
     {
         Ok(true) => {
-            txn.commit().await.map_err(|err| {
-                tracing::error!(error = %err, "put_events txn commit error");
+            tx.commit().await.map_err(|err| {
+                tracing::error!(error = %err, "failed to commit transaction");
                 Status::internal("internal server error")
             })?;
 
@@ -368,7 +367,7 @@ async fn process_event(
                     )
                     .await
                 {
-                    tracing::warn!(error = %e, "put_events kafka publish error");
+                    tracing::warn!(error = %e, "failed to publish message to kafka");
                 }
             });
             true
@@ -376,14 +375,14 @@ async fn process_event(
         Ok(false) => {
             // Duplicate event — already stored, treat as success, but revert
             // the content changes.
-            txn.rollback().await.map_err(|err| {
-                tracing::error!(error = %err, "put_events txn abort error");
+            tx.rollback().await.map_err(|err| {
+                tracing::error!(error = %err, "failed to rollback transaction");
                 Status::internal("internal server error")
             })?;
             false
         }
         Err(err) => {
-            tracing::error!(error = %err, "put_events db error");
+            tracing::error!(error = %err, "failed to store event");
             return Err(Status::internal("internal server error"));
         }
     };
@@ -564,11 +563,11 @@ pub fn event_is_authorised(identity: &str, content: Option<&Content>) -> bool {
     }
 }
 
-/// Keep only the blobs that are not already present
+/// Keep only the blobs that are not already present.
 async fn remove_present_blobs(
     ctx: &PublicContext,
     blobs: HashSet<Blob>,
-) -> Result<Vec<Blob>, Status> {
+) -> Result<Vec<Blob>, ()> {
     let digests: Vec<_> = blobs
         .iter()
         .filter_map(|blob| blob.digest.as_ref())
@@ -577,9 +576,9 @@ async fn remove_present_blobs(
     let already_present =
         ContentRepository::Query::find_digests_in_db(&ctx.db, &digests)
             .await
-            .map_err(|e| {
-                tracing::error!(error = %e, "put_events blob db error");
-                Status::internal("internal server error")
+            .map_err(|err| {
+                tracing::error!(error = %err, "failed to find digest of blob");
+                ()
             })?;
 
     let missing_blobs = blobs
