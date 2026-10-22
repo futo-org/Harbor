@@ -200,13 +200,11 @@ impl<'c> DbTx<'c> {
 
     /// Commits this transaction and start another.
     pub(crate) async fn commit_and_chain(&mut self) -> Result<(), DbErr> {
-        let res = self
-            .0
+        self.0
             .get_mut()
             .execute("COMMIT AND CHAIN")
             .await
-            .map_err(into_seaorm_error);
-        dbg!(&res);
+            .map_err(into_seaorm_error)?;
         Ok(())
     }
 
