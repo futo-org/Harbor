@@ -388,11 +388,12 @@ async fn process_event(
             false
         }
         Err(err) => {
-            tracing::error!(error = %err, "failed to store event");
+            // NOTE: don't log the error as that's already done in add_event.
+            // The returned status is safe to return to the user.
             if let Err(err) = tx.rollback().await {
                 tracing::warn!(error = %err, "failed to rollback transaction");
             }
-            return Err(Status::internal("internal server error"));
+            return Err(err);
         }
     };
 
