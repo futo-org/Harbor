@@ -66,13 +66,15 @@ impl Query {
             )
             .expr_as(
                 Expr::col(
-                    interaction_tally::Column::PositiveCount.as_column_ref(),
+                    interaction_tally::Column::ReactionPositiveCount
+                        .as_column_ref(),
                 ),
                 "positive_count",
             )
             .expr_as(
                 Expr::col(
-                    interaction_tally::Column::NegativeCount.as_column_ref(),
+                    interaction_tally::Column::ReactionNegativeCount
+                        .as_column_ref(),
                 ),
                 "negative_count",
             )

@@ -511,8 +511,8 @@ COMMENT ON TABLE public.gravity IS 'Table to hold the dynamic gravity value.';
 
 CREATE TABLE public.interaction_tally (
     event_id bigint NOT NULL,
-    positive_count bigint NOT NULL,
-    negative_count bigint NOT NULL,
+    reaction_positive_count bigint NOT NULL,
+    reaction_negative_count bigint NOT NULL,
     decayed_count numeric(20,11) NOT NULL
 );
 

@@ -400,8 +400,8 @@ impl Mutation {
             .into_table(interaction_tally::Entity)
             .columns([
                 interaction_tally::Column::EventId,
-                interaction_tally::Column::PositiveCount,
-                interaction_tally::Column::NegativeCount,
+                interaction_tally::Column::ReactionPositiveCount,
+                interaction_tally::Column::ReactionNegativeCount,
                 interaction_tally::Column::DecayedCount,
             ])
             .select_from({
@@ -642,16 +642,18 @@ impl Mutation {
         let mut query = UpdateStatement::new();
         query.table(interaction_tally::Entity).values([
             (
-                interaction_tally::Column::PositiveCount,
+                interaction_tally::Column::ReactionPositiveCount,
                 Expr::col(
-                    interaction_tally::Column::PositiveCount.as_column_ref(),
+                    interaction_tally::Column::ReactionPositiveCount
+                        .as_column_ref(),
                 )
                 .add(Expr::Constant(positive.into())),
             ),
             (
-                interaction_tally::Column::NegativeCount,
+                interaction_tally::Column::ReactionNegativeCount,
                 Expr::col(
-                    interaction_tally::Column::NegativeCount.as_column_ref(),
+                    interaction_tally::Column::ReactionNegativeCount
+                        .as_column_ref(),
                 )
                 .add(Expr::Constant(negative.into())),
             ),
@@ -662,7 +664,7 @@ impl Mutation {
                 interaction_tally::Column::DecayedCount,
                 reaction_count_decay(
                     Expr::col(
-                        interaction_tally::Column::PositiveCount
+                        interaction_tally::Column::ReactionPositiveCount
                             .as_column_ref(),
                     )
                     .add(Expr::Constant(positive.into())),
@@ -920,9 +922,9 @@ impl Mutation {
                     .table(interaction_tally::Entity)
                     .values([
                         (
-                            interaction_tally::Column::PositiveCount,
+                            interaction_tally::Column::ReactionPositiveCount,
                             Expr::col(
-                                interaction_tally::Column::PositiveCount
+                                interaction_tally::Column::ReactionPositiveCount
                                     .as_column_ref(),
                             )
                             .sub(
@@ -934,9 +936,9 @@ impl Mutation {
                             ),
                         ),
                         (
-                            interaction_tally::Column::NegativeCount,
+                            interaction_tally::Column::ReactionNegativeCount,
                             Expr::col(
-                                interaction_tally::Column::NegativeCount
+                                interaction_tally::Column::ReactionNegativeCount
                                     .as_column_ref(),
                             )
                             .sub(
@@ -953,7 +955,7 @@ impl Mutation {
                                 Expr::Column("positive".into()),
                                 reaction_count_decay(
                                     Expr::col(
-                                        interaction_tally::Column::PositiveCount
+                                        interaction_tally::Column::ReactionPositiveCount
                                             .as_column_ref(),
                                     )
                                     .sub(Expr::Constant(1.into())),

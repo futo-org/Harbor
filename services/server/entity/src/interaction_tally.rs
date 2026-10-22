@@ -21,10 +21,10 @@ pub struct Model {
     pub event_id: i64,
     /// Total amount of positive reactions (as determined by
     /// `reaction.positive`).
-    pub positive_count: i64,
+    pub reaction_positive_count: i64,
     /// Total amount of positive reactions (as determined by
     /// `NOT reaction.positive`).
-    pub negative_count: i64,
+    pub reaction_negative_count: i64,
     /// Decayed count calculated by `reaction_count_decay`.
     ///
     /// NOTE: actual type `NUMERIC(20, 11)`.

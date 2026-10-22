@@ -215,7 +215,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                         interaction_tally::Column::DecayedCount,
                         Func::cust("reaction_count_decay")
                         .args([
-                            Expr::col(interaction_tally::Column::PositiveCount.as_column_ref()),
+                            Expr::col(interaction_tally::Column::ReactionPositiveCount.as_column_ref()),
                             Expr::col(event::Column::CreatedAt.as_column_ref()),
                         ]),
                     )

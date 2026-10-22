@@ -98,7 +98,7 @@ impl MigrationTrait for Migration {
                 interaction_tally::Column::DecayedCount,
                 Func::cust("reaction_count_decay").args([
                     Expr::col(
-                        interaction_tally::Column::PositiveCount
+                        interaction_tally::Column::ReactionPositiveCount
                             .as_column_ref(),
                     ),
                     Expr::col(event::Column::CreatedAt.as_column_ref()),
