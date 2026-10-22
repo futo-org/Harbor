@@ -1,22 +1,22 @@
 import type {
-  IKeyRepository,
-  KeyPairStatus,
+  ILoginRepository,
   KeyType,
-  PersistedKey,
-  PrivateKey,
+  LoginDetails,
+  LoginOverview,
+  LoginStatus,
 } from '@polycentric/js-core';
 import {
   bytesToHex,
   hexToBytes,
-  KeyRepositoryError,
+  LoginRepositoryError,
   v2 as Proto,
 } from '@polycentric/js-core';
 import { IndexedDBDatabase } from './database';
 
 /**
- * Stored representation of a key pair in IndexedDB.
+ * Stored representation of a login in IndexedDB.
  */
-interface KeyEntry {
+interface LoginEntry {
   identity: string;
   keyType: number;
   publicKeyHex: string;
@@ -27,28 +27,28 @@ interface KeyEntry {
 }
 
 /**
- * IndexedDBKeyRepository provides IndexedDB-based storage for key pairs.
+ * IndexedDBLoginRepository provides IndexedDB-based storage for logins.
  *
- * Inputs are trusted; validation is the responsibility of the key store.
+ * Inputs are trusted; validation is the responsibility of the login store.
  */
-export class IndexedDBKeyRepository implements IKeyRepository {
+export class IndexedDBLoginRepository implements ILoginRepository {
   private readonly database: IndexedDBDatabase;
 
-  private static readonly STORE_NAME = 'keys';
-  private static readonly STATUS_INDEX = 'idx_keys_status';
+  private static readonly STORE_NAME = 'logins';
+  private static readonly STATUS_INDEX = 'idx_logins_status';
 
   constructor(database: IndexedDBDatabase) {
     this.database = database;
   }
 
-  async putKeyPair(
+  async putLogin(
     identity: string,
     keyType: KeyType,
     publicKey: Uint8Array,
     privateKey: Uint8Array,
-    status: KeyPairStatus,
+    status: LoginStatus,
   ): Promise<void> {
-    const entry: KeyEntry = {
+    const entry: LoginEntry = {
       identity,
       keyType,
       publicKeyHex: bytesToHex(publicKey),
@@ -62,25 +62,25 @@ export class IndexedDBKeyRepository implements IKeyRepository {
       await IndexedDBDatabase.requestAsPromise(store.add(entry));
       store.transaction.commit();
     } catch (error) {
-      throw toKeyRepositoryError('put key pair', error);
+      throw toLoginRepositoryError('put login', error);
     }
   }
 
-  async changeKeyStatus(
+  async changeLoginStatus(
     identity: string,
     keyType: KeyType,
     publicKey: Uint8Array,
-    newStatus: KeyPairStatus,
+    newStatus: LoginStatus,
   ): Promise<void> {
     try {
       const store = this.store('readwrite');
 
       const entry = await IndexedDBDatabase.requestAsPromise<
-        KeyEntry | undefined
+        LoginEntry | undefined
       >(store.get(entryKey(identity, keyType, publicKey)));
 
       if (!entry || entry.status === 'pendingDeletion') {
-        throw new KeyRepositoryError('not found', 'key pair not found');
+        throw new LoginRepositoryError('not found', 'login not found');
       }
 
       await IndexedDBDatabase.requestAsPromise(
@@ -89,11 +89,11 @@ export class IndexedDBKeyRepository implements IKeyRepository {
 
       store.transaction.commit();
     } catch (error) {
-      throw toKeyRepositoryError('change key status', error);
+      throw toLoginRepositoryError('change login status', error);
     }
   }
 
-  async listKeys(identity?: string): Promise<PersistedKey[]> {
+  async listLogins(identity?: string): Promise<LoginOverview[]> {
     try {
       const store = this.store('readonly');
 
@@ -102,7 +102,7 @@ export class IndexedDBKeyRepository implements IKeyRepository {
         query = IDBKeyRange.bound([identity], [identity, []]);
       }
 
-      const entries = await IndexedDBDatabase.requestAsPromise<KeyEntry[]>(
+      const entries = await IndexedDBDatabase.requestAsPromise<LoginEntry[]>(
         store.getAll(query),
       );
 
@@ -114,23 +114,23 @@ export class IndexedDBKeyRepository implements IKeyRepository {
             key: decodeHex(entry.publicKeyHex),
           }),
           identity: entry.identity,
-          status: entry.status as KeyPairStatus,
+          status: entry.status as LoginStatus,
         }));
     } catch (error) {
-      throw toKeyRepositoryError('list keys', error);
+      throw toLoginRepositoryError('list logins', error);
     }
   }
 
-  async getPrivateKey(
+  async getLoginDetails(
     identity: string,
     keyType: KeyType,
     publicKey: Uint8Array,
-  ): Promise<PrivateKey | null> {
+  ): Promise<LoginDetails | null> {
     try {
       const store = this.store('readonly');
 
       const entry = await IndexedDBDatabase.requestAsPromise<
-        KeyEntry | undefined
+        LoginEntry | undefined
       >(store.get(entryKey(identity, keyType, publicKey)));
 
       if (!entry || entry.status === 'pendingDeletion') {
@@ -138,22 +138,30 @@ export class IndexedDBKeyRepository implements IKeyRepository {
       }
 
       if (entry.privateKeyLocation !== 'inline') {
-        throw new KeyRepositoryError(
+        throw new LoginRepositoryError(
           'unsupported key location',
           `unsupported private key location: ${entry.privateKeyLocation}`,
         );
       }
 
       return {
-        keyType: entry.keyType,
-        key: decodeHex(entry.privateKeyHex ?? ''),
+        identity: entry.identity,
+        publicKey: Proto.PublicKey.create({
+          keyType: entry.keyType,
+          key: decodeHex(entry.publicKeyHex),
+        }),
+        status: entry.status as LoginStatus,
+        privateKey: Proto.PrivateKey.create({
+          keyType: entry.keyType,
+          key: decodeHex(entry.privateKeyHex ?? ''),
+        }),
       };
     } catch (error) {
-      throw toKeyRepositoryError('get private key', error);
+      throw toLoginRepositoryError('get login details', error);
     }
   }
 
-  async deleteKeyPair(
+  async deleteLogin(
     identity: string,
     keyType: KeyType,
     publicKey: Uint8Array,
@@ -167,7 +175,7 @@ export class IndexedDBKeyRepository implements IKeyRepository {
 
       store.transaction.commit();
     } catch (error) {
-      throw toKeyRepositoryError('delete key pair', error);
+      throw toLoginRepositoryError('delete login', error);
     }
   }
 
@@ -177,7 +185,7 @@ export class IndexedDBKeyRepository implements IKeyRepository {
 
       const keys = await IndexedDBDatabase.requestAsPromise(
         store
-          .index(IndexedDBKeyRepository.STATUS_INDEX)
+          .index(IndexedDBLoginRepository.STATUS_INDEX)
           .getAllKeys('pendingDeletion'),
       );
 
@@ -190,14 +198,14 @@ export class IndexedDBKeyRepository implements IKeyRepository {
 
       store.transaction.commit();
     } catch (error) {
-      throw toKeyRepositoryError('sweep keys', error);
+      throw toLoginRepositoryError('sweep logins', error);
     }
   }
 
   private store(mode: IDBTransactionMode): IDBObjectStore {
     return this.database
-      .createTransaction(IndexedDBKeyRepository.STORE_NAME, mode)
-      .objectStore(IndexedDBKeyRepository.STORE_NAME);
+      .createTransaction(IndexedDBLoginRepository.STORE_NAME, mode)
+      .objectStore(IndexedDBLoginRepository.STORE_NAME);
   }
 }
 
@@ -212,24 +220,24 @@ function entryKey(
 function decodeHex(hex: string): Uint8Array {
   const bytes = hexToBytes(hex);
   if (!bytes) {
-    throw new KeyRepositoryError('db', 'stored key has invalid hex');
+    throw new LoginRepositoryError('db', 'stored key has invalid hex');
   }
   return bytes;
 }
 
-function toKeyRepositoryError(
+function toLoginRepositoryError(
   message: string,
   error: unknown,
-): KeyRepositoryError {
-  if (error instanceof KeyRepositoryError) {
+): LoginRepositoryError {
+  if (error instanceof LoginRepositoryError) {
     return error;
   }
   if (error instanceof DOMException && error.name === 'ConstraintError') {
-    return new KeyRepositoryError('already exists', `${message}: ${error}`, {
+    return new LoginRepositoryError('already exists', `${message}: ${error}`, {
       cause: error,
     });
   }
-  return new KeyRepositoryError('db', `${message}: ${error}`, {
+  return new LoginRepositoryError('db', `${message}: ${error}`, {
     cause: error,
   });
 }

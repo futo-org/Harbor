@@ -41,20 +41,20 @@ export { PairingSessionManager } from './client-internal/pairing-session-manager
 export type { PairingSession } from './client-internal/pairing-session-manager';
 export type {
   PolycentricClientConfig,
+  KeyPair,
   IdentityState,
   PublishArgs,
   IdentityUpdate,
 } from './polycentric-client';
 
 export type {
-  PrivateKey,
-  KeyPair,
-  KeyPairStatus,
-  KeyRepositoryErrorCode,
-  PersistedKey,
+  LoginOverview,
+  LoginDetails,
+  LoginStatus,
+  LoginRepositoryErrorCode,
   PrivateKeyLocation,
-} from './platform-interfaces/key-repository';
-export { KeyRepositoryError } from './platform-interfaces/key-repository';
+} from './platform-interfaces/login-repository';
+export { LoginRepositoryError } from './platform-interfaces/login-repository';
 
 export * from './errors';
 export * as Errors from './errors';

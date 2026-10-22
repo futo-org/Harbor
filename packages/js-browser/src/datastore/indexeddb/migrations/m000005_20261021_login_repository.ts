@@ -12,12 +12,12 @@ interface LegacyKey {
 }
 
 /**
- * Replaces the `keys` store with the new key repository schema.
+ * Replaces the `keys` store with the new `logins` store.
  *
  * The old store is kept as `legacyKeys`.
- * We migrate the first keypair if it has an active identity.
+ * We migrate the first keypair as a login if it has an active identity.
  */
-export const m000005_20261021_key_repository: IndexedDBMigration = {
+export const m000005_20261021_login_repository: IndexedDBMigration = {
   version: 5,
   async apply(transaction) {
     const db = transaction.db;
@@ -27,12 +27,12 @@ export const m000005_20261021_key_repository: IndexedDBMigration = {
     legacyKeys.name = 'legacyKeys';
 
     // Create new store
-    const keys = db.createObjectStore('keys', {
+    const logins = db.createObjectStore('logins', {
       keyPath: ['identity', 'keyType', 'publicKeyHex'],
     });
 
     // Create status index for efficient sweeping
-    keys.createIndex('idx_keys_status', 'status');
+    logins.createIndex('idx_logins_status', 'status');
 
     // Migrate existing key pair
     const [legacy] = await requestAsPromise<LegacyKey[]>(
@@ -56,7 +56,7 @@ export const m000005_20261021_key_repository: IndexedDBMigration = {
     const status = await lookupStatus(transaction, identity, legacy);
 
     await requestAsPromise(
-      keys.add({
+      logins.add({
         identity,
         keyType: legacy.key_type,
         publicKeyHex: bytesToHex(legacy.public_key),

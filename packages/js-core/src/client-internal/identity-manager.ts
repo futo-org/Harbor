@@ -2,7 +2,6 @@ import { ed25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { COLLECTION, KEY_TYPE, SyncStrategy } from '../constants';
 import { ServerAlreadyAddedError } from '../errors';
-import type { PrivateKey } from '../platform-interfaces/key-repository';
 import type { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { bytesEqual } from '../utils/bytes';
@@ -549,7 +548,7 @@ export class IdentityManager {
    * a new identity event with it.
    * Returns the private key so it can be saved.
    */
-  async rotateRecoveryKey(): Promise<PrivateKey> {
+  async rotateRecoveryKey(): Promise<Proto.PrivateKey> {
     const state = this.resolveIdentity();
     if (!state) throw new Error('No active identity');
 
@@ -573,7 +572,10 @@ export class IdentityManager {
    * recovery public key stored on `identityKey`, defaulting to the active
    * identity.
    */
-  checkRecoveryKey(privateKey: PrivateKey, identityKey?: string): boolean {
+  checkRecoveryKey(
+    privateKey: Proto.PrivateKey,
+    identityKey?: string,
+  ): boolean {
     if (privateKey.keyType !== KEY_TYPE.ED25519) return false;
 
     const recoveryKey = this.resolveIdentity(identityKey)?.recoveryKey;

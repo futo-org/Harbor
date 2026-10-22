@@ -1,6 +1,6 @@
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { KEY_TYPE } from '../constants';
-import type { KeyPair } from '../platform-interfaces/key-repository';
+import type { KeyPair } from '../polycentric-client';
 import { base64UrlEncode } from '../utils/base64';
 import { bytesToHex } from '../utils/hex';
 

@@ -1,11 +1,11 @@
+import type { KeyPair } from '../polycentric-client';
 import type {
-  IKeyRepository,
-  KeyPair,
-  KeyPairStatus,
-  PersistedKey,
-  PrivateKey,
-} from '../platform-interfaces/key-repository';
-import { KeyRepositoryError } from '../platform-interfaces/key-repository';
+  ILoginRepository,
+  LoginDetails,
+  LoginOverview,
+  LoginStatus,
+} from '../platform-interfaces/login-repository';
+import { LoginRepositoryError } from '../platform-interfaces/login-repository';
 import { KeyType, type PublicKey } from '../proto/v2';
 
 const ED25519_PUBLIC_KEY_LENGTH = 32;
@@ -16,7 +16,7 @@ const IDENTITY_PATTERN = /^[0-9a-f]{64}$/;
 
 function assertIdentity(identity: string): void {
   if (!IDENTITY_PATTERN.test(identity)) {
-    throw new KeyRepositoryError(
+    throw new LoginRepositoryError(
       'invalid identity key',
       'identity must be a 32 byte lowercase hex string',
     );
@@ -25,7 +25,7 @@ function assertIdentity(identity: string): void {
 
 function assertSupportedKeyType(keyType: KeyType): void {
   if (keyType !== KeyType.ED25519) {
-    throw new KeyRepositoryError(
+    throw new LoginRepositoryError(
       'unsupported key type',
       `unsupported key type: ${keyType}`,
     );
@@ -35,7 +35,7 @@ function assertSupportedKeyType(keyType: KeyType): void {
 function assertPublicKey(publicKey: PublicKey): void {
   assertSupportedKeyType(publicKey.keyType);
   if (publicKey.key.length !== ED25519_PUBLIC_KEY_LENGTH) {
-    throw new KeyRepositoryError(
+    throw new LoginRepositoryError(
       'invalid key pair',
       `public key must be ${ED25519_PUBLIC_KEY_LENGTH} bytes`,
     );
@@ -48,19 +48,19 @@ function assertKeyPair(keyPair: KeyPair): void {
     keyPair.publicKey.keyType !== keyPair.keyType ||
     keyPair.privateKey.keyType !== keyPair.keyType
   ) {
-    throw new KeyRepositoryError(
+    throw new LoginRepositoryError(
       'invalid key pair',
       'key types within the key pair do not match',
     );
   }
   if (keyPair.publicKey.key.length !== ED25519_PUBLIC_KEY_LENGTH) {
-    throw new KeyRepositoryError(
+    throw new LoginRepositoryError(
       'invalid key pair',
       `public key must be ${ED25519_PUBLIC_KEY_LENGTH} bytes`,
     );
   }
   if (keyPair.privateKey.key.length !== ED25519_PRIVATE_KEY_LENGTH) {
-    throw new KeyRepositoryError(
+    throw new LoginRepositoryError(
       'invalid key pair',
       `private key must be ${ED25519_PRIVATE_KEY_LENGTH} bytes`,
     );
@@ -68,25 +68,26 @@ function assertKeyPair(keyPair: KeyPair): void {
 }
 
 /**
- * KeyStore wraps a platform's key repository with shared input validation.
- * All functions throw `KeyRepositoryError` on failure.
+ * LoginStore wraps a platform's login repository with shared input validation.
+ * A "login" consists of a key pair and its associated identity.
+ * All functions throw `LoginRepositoryError` on failure.
  */
-export class KeyStore {
-  constructor(private readonly repository: IKeyRepository) {}
+export class LoginStore {
+  constructor(private readonly repository: ILoginRepository) {}
 
   /**
-   * Insert a new key pair.
-   * Fails if this identity already has a key pair with the same public key.
+   * Insert a new login.
+   * Fails if this identity already has a login with the same public key.
    */
-  async putKeyPair(
+  async putLogin(
     identity: string,
     keyPair: KeyPair,
-    status: KeyPairStatus,
+    status: LoginStatus,
   ): Promise<void> {
     assertIdentity(identity);
     assertKeyPair(keyPair);
 
-    await this.repository.putKeyPair(
+    await this.repository.putLogin(
       identity,
       keyPair.keyType,
       keyPair.publicKey.key,
@@ -96,18 +97,17 @@ export class KeyStore {
   }
 
   /**
-   * Update the status field of the key pair.
-   * Fails if the status is set to `'pendingDeletion'`.
+   * Update the status field of the login.
    */
-  async changeKeyStatus(
+  async changeLoginStatus(
     identity: string,
     publicKey: PublicKey,
-    newStatus: KeyPairStatus,
+    newStatus: LoginStatus,
   ): Promise<void> {
     assertIdentity(identity);
     assertPublicKey(publicKey);
 
-    await this.repository.changeKeyStatus(
+    await this.repository.changeLoginStatus(
       identity,
       publicKey.keyType,
       publicKey.key,
@@ -116,27 +116,28 @@ export class KeyStore {
   }
 
   /**
-   * List the key pairs, optionally filtered by the associated identity.
+   * List the logins, optionally filtered by the associated identity.
    */
-  async listKeys(identity?: string): Promise<PersistedKey[]> {
+  async listLogins(identity?: string): Promise<LoginOverview[]> {
     if (identity !== undefined) {
       assertIdentity(identity);
     }
 
-    return this.repository.listKeys(identity);
+    return this.repository.listLogins(identity);
   }
 
   /**
-   * Get the private key associated with a public key.
+   * Retrieve a login along with its private key.
+   * Returns `null` if the login does not exist.
    */
-  async getPrivateKey(
+  async getLoginDetails(
     identity: string,
     publicKey: PublicKey,
-  ): Promise<PrivateKey | null> {
+  ): Promise<LoginDetails | null> {
     assertIdentity(identity);
     assertPublicKey(publicKey);
 
-    return this.repository.getPrivateKey(
+    return this.repository.getLoginDetails(
       identity,
       publicKey.keyType,
       publicKey.key,
@@ -144,14 +145,14 @@ export class KeyStore {
   }
 
   /**
-   * Delete a key pair from the local repository.
+   * Delete a login from the local repository.
    * This may not be atomic if the private key is not stored inline.
    */
-  async deleteKeyPair(identity: string, publicKey: PublicKey): Promise<void> {
+  async deleteLogin(identity: string, publicKey: PublicKey): Promise<void> {
     assertIdentity(identity);
     assertPublicKey(publicKey);
 
-    await this.repository.deleteKeyPair(
+    await this.repository.deleteLogin(
       identity,
       publicKey.keyType,
       publicKey.key,

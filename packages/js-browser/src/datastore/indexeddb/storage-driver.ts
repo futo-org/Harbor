@@ -1,6 +1,6 @@
 import type { IStorageDriver } from '@polycentric/js-core';
 import { IndexedDBDatabase } from './database';
-import { IndexedDBKeyRepository } from './key-repository';
+import { IndexedDBLoginRepository } from './login-repository';
 import { IndexedDBEventRepository } from './event.repository';
 import { IndexedDBContentRepository } from './content.repository';
 import { activeIdentityKey } from './active-identity';
@@ -24,8 +24,8 @@ export class IndexedDBStorageDriver implements IStorageDriver {
   createContentRepository() {
     return new IndexedDBContentRepository(this.database);
   }
-  createKeyRepository() {
-    return new IndexedDBKeyRepository(this.database);
+  createLoginRepository() {
+    return new IndexedDBLoginRepository(this.database);
   }
 
   async saveActiveIdentityKey(

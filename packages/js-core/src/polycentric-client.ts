@@ -5,7 +5,7 @@ import {
   HydrationStatus,
   IdentityManager,
   InitializationStep,
-  KeyPairManager,
+  LoginManager,
   PairingSessionManager,
 } from './client-internal';
 import {
@@ -20,7 +20,6 @@ import type {
   IFileStoreDriver,
   IStorageDriver,
 } from './platform-interfaces';
-import type { KeyPair } from './platform-interfaces/key-repository';
 import * as Proto from './proto/v2';
 import { StorageHandle } from './data-store/storage-handle';
 import { FileStore } from './file-store/file-store';
@@ -51,6 +50,12 @@ export type {
   PublishArgs,
   IdentityUpdate,
 } from './client-internal/identity-manager';
+
+export interface KeyPair {
+  keyType: Proto.KeyType;
+  privateKey: Proto.PrivateKey;
+  publicKey: Proto.PublicKey;
+}
 
 /**
  * PolycentricClientConfig defines the dependencies and configuration for a PolycentricClient.
@@ -86,7 +91,7 @@ export interface PolycentricClientConfig {
 export class PolycentricClient {
   public readonly events = new EventService();
 
-  public readonly keyPairManager = new KeyPairManager(this);
+  public readonly loginManager = new LoginManager(this);
   public readonly contentManager = new ContentManager(this);
   public readonly identityManager = new IdentityManager(this);
   public readonly pairingSessionManager = new PairingSessionManager(this);
@@ -162,7 +167,7 @@ export class PolycentricClient {
       this.storageHandle = new StorageHandle({
         eventRepository: this.storageDriver.createEventRepository(),
         contentRepository: this.storageDriver.createContentRepository(),
-        keyRepository: this.storageDriver.createKeyRepository(),
+        loginRepository: this.storageDriver.createLoginRepository(),
       });
 
       this.setStep(InitializationStep.LOADING_PROCESS_ID);
@@ -179,7 +184,7 @@ export class PolycentricClient {
       // SDK should always make a new keypair if we can't find any
       if (!restoredIdentity) {
         this.setStep(InitializationStep.CREATING_EPHEMERAL_IDENTITY);
-        await this.keyPairManager.createKeyPair({
+        await this.loginManager.createKeyPair({
           keyType: KEY_TYPE.ED25519,
           setAsCurrent: true,
         });
@@ -288,7 +293,7 @@ export class PolycentricClient {
    * Looks at existing keys and will pick the first one
    */
   private async restoreKeyPair(): Promise<boolean> {
-    const identities = await this.keyPairManager.getKeys();
+    const identities = await this.loginManager.getKeys();
     const identity = identities[0];
 
     if (!identity) {

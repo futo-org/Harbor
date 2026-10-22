@@ -2,7 +2,6 @@ import {
   bytesToHex,
   hexToBytes,
   type PolycentricClient,
-  type PrivateKey,
   v2,
   KeyType,
   IdentityManager,
@@ -37,7 +36,7 @@ export function decodeIdentityBackup(
  */
 export function assembleIdentityBackup(
   client: PolycentricClient,
-  recoveryPrivateKey: PrivateKey,
+  recoveryPrivateKey: v2.PrivateKey,
 ): v2.IdentityBackup {
   const identityKey = client.activeIdentityKey;
   if (!identityKey) throw new Error('No active identity to back up');
