@@ -158,13 +158,6 @@ class MemoryKeyRepository implements IKeyRepository {
     privateKey: Uint8Array,
     status: KeyPairStatus,
   ): Promise<void> {
-    if (status === 'pendingDeletion') {
-      throw new KeyRepositoryError(
-        'invalid status',
-        'put key pair: pendingDeletion',
-      );
-    }
-
     const key = keyPairString(identity, keyType, publicKey);
 
     if (this.map.has(key)) {
@@ -186,16 +179,9 @@ class MemoryKeyRepository implements IKeyRepository {
     publicKey: Uint8Array,
     newStatus: KeyPairStatus,
   ): Promise<void> {
-    if (newStatus === 'pendingDeletion') {
-      throw new KeyRepositoryError(
-        'invalid status',
-        'change key status: pendingDeletion',
-      );
-    }
-
     const entry = this.map.get(keyPairString(identity, keyType, publicKey));
 
-    if (!entry) {
+    if (!entry || entry.status === 'pendingDeletion') {
       throw new KeyRepositoryError('not found', 'key pair not found');
     }
     entry.status = newStatus;
@@ -203,6 +189,7 @@ class MemoryKeyRepository implements IKeyRepository {
 
   async listKeys(identity?: string): Promise<PersistedKey[]> {
     const isMatchingEntry = (entry: StoredKeyPair) => {
+      if (entry.status === 'pendingDeletion') return false;
       if (!identity) return true;
       return entry.identity === identity;
     };
@@ -226,7 +213,7 @@ class MemoryKeyRepository implements IKeyRepository {
   ): Promise<PrivateKey | null> {
     const entry = this.map.get(keyPairString(identity, keyType, publicKey));
 
-    if (!entry) {
+    if (!entry || entry.status === 'pendingDeletion') {
       return null;
     }
 
@@ -241,8 +228,14 @@ class MemoryKeyRepository implements IKeyRepository {
     this.map.delete(keyPairString(identity, keyType, publicKey));
   }
 
-  /** Private keys are always inline; nothing to sweep. */
-  async sweep(): Promise<void> {}
+  /** Delete key pairs that are pending deletion. */
+  async sweep(): Promise<void> {
+    for (const [key, entry] of this.map) {
+      if (entry.status === 'pendingDeletion') {
+        this.map.delete(key);
+      }
+    }
+  }
 }
 
 /**

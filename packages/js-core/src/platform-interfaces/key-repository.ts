@@ -86,7 +86,6 @@ export interface IKeyRepository {
   /**
    * Insert a new key pair.
    * Fails if this identity already has a key pair with the same public key.
-   * Fails if the status is `'pendingDeletion'`.
    */
   putKeyPair(
     identity: string,
@@ -98,7 +97,6 @@ export interface IKeyRepository {
 
   /**
    * Update the status field of the key pair.
-   * Fails if the status is set to `'pendingDeletion'`.
    */
   changeKeyStatus(
     identity: string,
