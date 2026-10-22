@@ -10,7 +10,9 @@ metadata:
     {{- include "harbor-server.labels" $root | nindent 4 }}
     app.kubernetes.io/component: {{ $w.name }}
 spec:
+  {{- if not (dig "autoscaling" "enabled" false $w) }}
   replicas: {{ ternary $w.replicas 1 (hasKey $w "replicas") }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "harbor-server.selectorLabels" $root | nindent 6 }}
