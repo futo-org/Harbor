@@ -1,0 +1,36 @@
+{{- define "harbor-server.hpa" -}}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "harbor-server.labels" .root | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .name }}
+  minReplicas: {{ .a.minReplicas | default 1 }}
+  maxReplicas: {{ .a.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .a.targetCPUUtilizationPercentage | default 75 }}
+  {{- with .a.behavior }}
+  behavior:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- if .Values.autoscaling.enabled }}
+---
+{{ include "harbor-server.hpa" (dict "root" . "name" (include "harbor-server.fullname" .) "a" .Values.autoscaling) }}
+{{- end }}
+{{- range $w := .Values.workers }}
+{{- if and (ternary $w.enabled true (hasKey $w "enabled")) (dig "autoscaling" "enabled" false $w) (not (dig "autoscaling" "external" false $w)) }}
+---
+{{ include "harbor-server.hpa" (dict "root" $ "name" (printf "%s-worker-%s" (include "harbor-server.fullname" $) $w.name) "a" $w.autoscaling) }}
+{{- end }}
+{{- end }}
