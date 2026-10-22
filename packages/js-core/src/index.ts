@@ -25,15 +25,13 @@ export { PublicKey, KeyType } from './proto/polycentric/v2/keypair';
 export type * from './platform-interfaces';
 export { bytesToHex, hexToBytes, toDigestKey } from './utils/hex';
 export {
-  segmentsFromPath,
-  isValidPathSegment,
   FileStoreError,
   MAX_SEGMENT_BYTES,
   MAX_PATH_BYTES,
 } from './platform-interfaces/file-store-driver';
 
-export { StorageHandle } from './datastore';
-export type { Repositories } from './datastore';
+export { StorageHandle } from './data-store';
+export type { Repositories } from './data-store';
 
 export { PolycentricClient } from './polycentric-client';
 export { FileStore } from './file-store';

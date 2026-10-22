@@ -25,6 +25,7 @@ services:
     environment: &server-env
       - RUST_LOG=${RUST_LOG:-debug}
       - HARBOR_DATABASE_URL=${HARBOR_DATABASE_URL:-postgres://postgres:testing@postgres:5432}
+      - HARBOR_DATABASE_URL_RO=${HARBOR_DATABASE_URL_RO:-postgres://postgres:testing@postgres:5432?options=-c%20default_transaction_read_only=on}
       - HARBOR_CONTENT_BLOB_OS_BUCKET=${HARBOR_CONTENT_BLOB_OS_BUCKET:-polycentric-blobs}
       - HARBOR_CONTENT_BLOB_OS_ENDPOINT=${HARBOR_CONTENT_BLOB_OS_ENDPOINT:-http://rustfs:9000}
       - HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE=${HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE:-true}

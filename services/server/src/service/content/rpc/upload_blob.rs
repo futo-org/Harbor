@@ -16,25 +16,28 @@ pub async fn handle(
 ) -> Result<UploadBlobResponse, Status> {
     let (blob, digest, body) = parse_upload_blob_request(req)?;
 
-    let txn = ctx.db.begin().await.map_err(|e| {
-        tracing::error!(error = %e, "upload_blob txn begin error");
+    let mut tx = ctx.db.begin().await.map_err(|err| {
+        tracing::error!(error = %err, "failed to begin transaction");
         Status::internal("internal server error")
     })?;
-    ContentRepository::Mutation::save_blob(&txn, &blob)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = %e, "upload_blob save_blob error");
-            Status::internal("internal server error")
-        })?;
-    txn.commit().await.map_err(|e| {
-        tracing::error!(error = %e, "upload_blob txn commit error");
+    if let Err(err) =
+        ContentRepository::Mutation::save_blob(&mut tx, &blob).await
+    {
+        tracing::error!(error = %err, "failed to store blob");
+        if let Err(err) = tx.rollback().await {
+            tracing::warn!(error = %err, "failed to rollback transaction");
+        }
+        return Err(Status::internal("internal server error"));
+    }
+    tx.commit().await.map_err(|err| {
+        tracing::error!(error = %err, "failed to commit transaction");
         Status::internal("internal server error")
     })?;
     // Release db connection early.
     drop(ctx.db);
 
-    filestore.write_blob(&digest, body).await.map_err(|e| {
-        tracing::error!(error = %e, "upload_blob filestore error");
+    filestore.write_blob(&digest, body).await.map_err(|err| {
+        tracing::error!(error = %err, "failed to upload blob to file store");
         Status::internal("internal server error")
     })?;
 

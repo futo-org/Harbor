@@ -53,6 +53,11 @@ ingress:
 
 resources: {}
 
+# `external: true` leaves replicas to an autoscaler managed elsewhere (e.g. a
+# KEDA ScaledObject); replicaCount is then ignored.
+autoscaling:
+  external: false
+
 # gRPC service — probe the TCP socket.
 livenessProbe:
   tcpSocket:

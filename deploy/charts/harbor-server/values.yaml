@@ -45,11 +45,15 @@ migrations:
 
 # Background workers: one Deployment per entry, named after the worker it
 # runs (`server workers <name>`); `all` runs every worker in one process.
+# Workers take the same `autoscaling` block. Set `autoscaling.external: true`
+# to skip the HPA when something else (e.g. KEDA) scales it.
 workers:
   - name: all
     enabled: false
     replicas: 1
     resources: {}
+    autoscaling:
+      enabled: false
 
 service:
   type: ClusterIP
@@ -67,6 +71,14 @@ ingress:
   tls: []
 
 resources: {}
+
+# Replaces replicaCount when enabled. Needs resources.requests.cpu.
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 75
+  behavior: {}
 
 livenessProbe:
   httpGet:

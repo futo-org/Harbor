@@ -39,7 +39,7 @@ impl ContentService for ContentServiceImpl {
         &self,
         request: Request<UploadBlobRequest>,
     ) -> Result<Response<UploadBlobResponse>, Status> {
-        let ctx = self.ctx.public_ro(&request).await?;
+        let ctx = self.ctx.public_rw(&request).await?;
         Ok(Response::new(
             upload_blob::handle(ctx, &self.filestore, request.into_inner())
                 .await?,

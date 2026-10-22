@@ -22,8 +22,8 @@ import type {
 } from './platform-interfaces';
 import type { KeyPair } from './platform-interfaces/key-repository';
 import * as Proto from './proto/v2';
-import { StorageHandle } from './datastore/storage-handle';
-import { FileStore } from './file-store';
+import { StorageHandle } from './data-store/storage-handle';
+import { FileStore } from './file-store/file-store';
 import { bytesToHex, toDigestKey } from './utils/hex';
 import { bytesEqual } from './utils/bytes';
 import { CryptoManager } from './crypto/crypto-manager';

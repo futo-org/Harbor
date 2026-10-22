@@ -5,19 +5,17 @@ import type {
   IFileStoreDriver,
   IKeyRepository,
   IStorageDriver,
-} from './platform-interfaces';
-import {
-  FileStoreError,
-  segmentsFromPath,
-} from './platform-interfaces/file-store-driver';
+} from '../platform-interfaces';
+import { FileStoreError } from '../platform-interfaces/file-store-driver';
+import { segmentsFromPath } from '../utils/path';
 import type {
   KeyPairStatus,
   PersistedKey,
   PrivateKey,
-} from './platform-interfaces/key-repository';
-import { KeyRepositoryError } from './platform-interfaces/key-repository';
-import * as Proto from './proto/v2';
-import { bytesToHex, toDigestKey } from './utils/hex';
+} from '../platform-interfaces/key-repository';
+import { KeyRepositoryError } from '../platform-interfaces/key-repository';
+import * as Proto from '../proto/v2';
+import { bytesToHex, toDigestKey } from '../utils/hex';
 
 /** Canonical string identity of an EventKey, used as the store's map key. */
 function eventKeyString(key: Proto.EventKey): string {

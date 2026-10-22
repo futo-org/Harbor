@@ -891,26 +891,31 @@ jobs:
           path: services/verifier-bot/junit.xml
           retention-days: 7
 
-  # Drives the web image this run built, started as a job service.
+  # Drives the web image this run built, started as a job service, against
+  # this run's server image, which e2e-web.sh starts with Compose.
   web-e2e:
     name: Test web e2e
-    needs: [changes, web-image]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.web_e2e && needs.web-image.result == 'success' }}
+    needs: [changes, web-image, service-images]
+    if: >-
+      ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.web_e2e && needs.web-image.result == 'success' &&
+      needs.service-images.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust-dind:${{ needs.changes.outputs.images_tag }}
     services:
       web:
         image: ${{ needs.changes.outputs.registry }}/web:${{ github.sha }}
         env:
           EXPO_PUBLIC_APP_VARIANT: staging
-          EXPO_PUBLIC_HARBOR_SEED_SERVERS: https://srv.staging.harbor.social,https://srv.staging.polycentric.io
+          EXPO_PUBLIC_HARBOR_SEED_SERVERS: http://server:3000
     env:
       MAESTRO_WEB_URL: http://web:8080
       MAESTRO_BROWSER: /usr/local/bin/e2e-chromium
       MAESTRO_OUTPUT: reports
       # run.mjs seeds the identities the flows search for on the app's server.
-      E2E_SERVER_URL: https://srv.staging.harbor.social
+      E2E_SERVER_URL: http://server:3000
+      HARBOR_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
     steps:
       - name: Install Chromium
         run: |
@@ -924,7 +929,7 @@ jobs:
         with:
           install-args: --filter harbor-e2e...
       - name: Web e2e
-        run: pnpm --filter harbor-e2e test:web
+        run: .forgejo/scripts/e2e-web.sh
       - uses: forgejo/upload-artifact@v4
         if: always()
         with:

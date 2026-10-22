@@ -26,8 +26,10 @@ import FollowButton from '../follow/FollowButton';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
 import ProfileShareSheet from './ProfileShareSheet';
+import { ProfileVerifiedPlatforms } from './ProfileVerifiedPlatforms';
 
 const BANNER_HEIGHT = 150;
+const HEADER_ROW_ICON_SIZE = 13;
 
 export interface ProfileHeaderProps {
   bannerColors: [string, string];
@@ -183,10 +185,13 @@ function ProfileHeaderInner({
             pressed && { opacity: 0.5 },
           ]}
         >
-          <Icon name="key" size={13} color="neutral_500" />
+          <Icon name="key" size={HEADER_ROW_ICON_SIZE} color="neutral_500" />
           <IdentityKeyText value={displayKey} />
         </Pressable>
         {alias ? <AliasLabel alias={alias} /> : null}
+        {identityKey ? (
+          <ProfileVerifiedPlatforms identityKey={identityKey} />
+        ) : null}
         {profile.description ? (
           <View style={Atoms.mt_sm}>
             <Text variant="body" fontSize="sm" color="neutral_1000">
@@ -313,7 +318,7 @@ function AliasLabel({ alias }: { alias: string }) {
           accessibilityLabel={alias}
           style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}
         >
-          <Icon name="at" size={13} color="neutral_500" />
+          <Icon name="at" size={HEADER_ROW_ICON_SIZE} color="neutral_500" />
           <Text
             variant="secondary"
             color="neutral_500"

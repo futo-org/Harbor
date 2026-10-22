@@ -3,6 +3,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
 use polycentric_common::jwt::ServerJwtClaims;
 use polycentric_common::models::protos_v2::content::ContentBody;
+use polycentric_common::models::protos_v2::content_service_client::ContentServiceClient;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
@@ -19,6 +20,7 @@ use std::time::SystemTime;
 use tokio::sync::{Mutex, MutexGuard};
 
 mod banning;
+mod blobs;
 mod event_sync;
 mod feeds;
 mod graph;
@@ -122,6 +124,13 @@ pub async fn identity_service()
 pub async fn verifications_service()
 -> VerificationsServiceClient<tonic::transport::Channel> {
     VerificationsServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn content_service() -> ContentServiceClient<tonic::transport::Channel>
+{
+    ContentServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -935,7 +944,7 @@ pub fn make_identity_bundle(
     created_at: u64,
 ) -> EventBundle {
     let content = Content {
-        content_body: Some(content::ContentBody::Identity(identity_content)),
+        content_body: Some(ContentBody::Identity(identity_content)),
     };
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
@@ -966,7 +975,7 @@ pub fn make_profile_update_bundle(
     created_at: u64,
 ) -> EventBundle {
     let content = Content {
-        content_body: Some(content::ContentBody::ProfileUpdate(update)),
+        content_body: Some(ContentBody::ProfileUpdate(update)),
     };
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
@@ -1013,7 +1022,7 @@ pub fn make_post_bundle(
         })
         .collect();
     let content = Content {
-        content_body: Some(content::ContentBody::Post(Post {
+        content_body: Some(ContentBody::Post(Post {
             text: text.to_string(),
             reply: None,
             images: vec![],
@@ -1075,15 +1084,13 @@ pub fn make_verification_claim_bundle(
     fields.insert("handle".to_string(), handle.as_bytes().to_vec());
 
     let content = Content {
-        content_body: Some(content::ContentBody::VerificationClaim(
-            VerificationClaim {
-                schema: Some(SerializedVerificationSchema {
-                    schema_bytes,
-                    digest: Some(schema_digest),
-                }),
-                fields,
-            },
-        )),
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(SerializedVerificationSchema {
+                schema_bytes,
+                digest: Some(schema_digest),
+            }),
+            fields,
+        })),
     };
     let (content_bytes, digest) = content_with_digest(content);
     let event = make_event(
@@ -1233,7 +1240,7 @@ fn assert_is_labels_bundle(
     let content = Content::decode(sc.content_bytes.as_slice())
         .expect("valid content protobuf");
     match &content.content_body {
-        Some(content::ContentBody::Labels(labels)) => {
+        Some(ContentBody::Labels(labels)) => {
             let ek = labels.event_key.as_ref().expect("Labels has event_key");
             assert_eq!(ek.collection, expected_target.collection);
             assert_eq!(ek.identity, expected_target.identity);
