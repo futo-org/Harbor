@@ -111,11 +111,7 @@ function ServerBanRow({
         },
       ]}
     >
-      <Text
-        variant="secondary"
-        style={{ fontFamily: 'monospace', flex: 1 }}
-        numberOfLines={1}
-      >
+      <Text variant="secondary" monospace style={{ flex: 1 }} numberOfLines={1}>
         {server}
       </Text>
       {isUpdating ? (

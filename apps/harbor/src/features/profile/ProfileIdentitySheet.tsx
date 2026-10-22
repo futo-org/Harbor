@@ -241,9 +241,10 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
       <Text
         variant="secondary"
+        monospace
         style={[
           Atoms.flex_1,
-          { fontFamily: 'monospace', minWidth: 0 },
+          { minWidth: 0 },
           isWeb && ({ wordBreak: 'break-all' } as unknown as TextStyle),
         ]}
         selectable

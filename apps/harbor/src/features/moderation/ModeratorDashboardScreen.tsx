@@ -49,7 +49,7 @@ export default function ModeratorDashboardScreen() {
               <Text
                 variant="secondary"
                 color="neutral_500"
-                style={{ fontFamily: 'monospace' }}
+                monospace
                 numberOfLines={1}
               >
                 {server}

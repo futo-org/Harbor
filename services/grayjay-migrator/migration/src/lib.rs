@@ -5,6 +5,7 @@ mod m20260901_000002_create_migrated_event_table;
 mod m20260901_000003_add_moderation_to_migrated_event;
 mod m20260901_000004_add_content_digest_to_migrated_event;
 mod m20260901_000005_create_tool_tables;
+mod m20261021_000001_legacy_cache_watermark;
 
 pub struct Migrator;
 
@@ -17,6 +18,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260901_000003_add_moderation_to_migrated_event::Migration),
             Box::new(m20260901_000004_add_content_digest_to_migrated_event::Migration),
             Box::new(m20260901_000005_create_tool_tables::Migration),
+            Box::new(m20261021_000001_legacy_cache_watermark::Migration),
         ]
     }
 }
