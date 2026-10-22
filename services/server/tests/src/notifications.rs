@@ -1,8 +1,5 @@
 //! Mention notifications end to end: a post mentioning identities notifies
-//! them, except the reply target, which gets its Reply only. Alias mentions
-//! resolve through `<domain>/.well-known/polycentric.json`, which this test
-//! serves from a local mock server, so the workers must be started with
-//! `HARBOR_ALIAS_TEST_ORIGIN=http://localhost:3999`.
+//! them, except the reply target, which gets its Reply only.
 //! Needs the `workers` process running.
 
 use crate::*;
@@ -11,32 +8,8 @@ use std::time::{Duration, Instant};
 
 const NOTIFICATION_TIMEOUT: Duration = Duration::from_secs(60);
 
-/// Where the workers fetch the alias document from. One test
-/// owns this port; a second alias test would have to share its server.
-const ALIAS_MOCK_PORT: u16 = 3999;
-
 #[tokio::test]
-async fn mentions_notify_identities_and_aliases_and_skip_the_reply_target() {
-    let mut alias_mentioned = TestClient::new().await;
-    alias_mentioned.submit_events().await;
-    let alias_local = random_string().to_lowercase();
-    let mut alias_server =
-        mockito::Server::new_with_opts_async(mockito::ServerOpts {
-            host: "0.0.0.0",
-            port: ALIAS_MOCK_PORT,
-            ..Default::default()
-        })
-        .await;
-    let alias_document = alias_server
-        .mock("GET", "/.well-known/polycentric.json")
-        .expect(1)
-        .with_body(format!(
-            r#"{{"names":{{"{alias_local}":"{}"}}}}"#,
-            alias_mentioned.identity()
-        ))
-        .create_async()
-        .await;
-
+async fn mentions_notify_identities_and_skip_the_reply_target() {
     let mut parent_author = TestClient::new().await;
     parent_author.post_text("parent", current_timestamp());
     let parent_key = parent_author.get_last_event_key();
@@ -47,16 +20,11 @@ async fn mentions_notify_identities_and_aliases_and_skip_the_reply_target() {
     let mut bare_mentioned = TestClient::new().await;
     bare_mentioned.submit_events().await;
 
-    // Mixed case: alias lookup is case-insensitive. The unlisted alias at the
-    // same domain shares the one fetch and resolves to nobody.
-    let unlisted_alias_local = random_string().to_lowercase();
     let mut author = TestClient::new().await;
     author.reply(
         parent_key,
         &format!(
-            "hi @{}@EXAMPLE.COM @{}@example.com @{} @{{{},Someone}} @{{{}}}",
-            alias_local.to_uppercase(),
-            unlisted_alias_local,
+            "hi @{} @{{{},someone@example.com}} @{{{}}}",
             bare_mentioned.identity(),
             curly_mentioned.identity(),
             parent_author.identity(),
@@ -66,12 +34,6 @@ async fn mentions_notify_identities_and_aliases_and_skip_the_reply_target() {
     author.submit_events().await;
 
     let author_identity = author.identity().to_owned();
-    assert_eq!(
-        wait_for_notifications(alias_mentioned.identity(), 1).await,
-        vec![(NotificationKind::Mention, author_identity.clone())],
-        "alias mention gets one Mention"
-    );
-    alias_document.assert_async().await;
     assert_eq!(
         wait_for_notifications(bare_mentioned.identity(), 1).await,
         vec![(NotificationKind::Mention, author_identity.clone())],
@@ -84,36 +46,9 @@ async fn mentions_notify_identities_and_aliases_and_skip_the_reply_target() {
     );
     assert_eq!(
         wait_for_notifications(parent_author.identity(), 1).await,
-        vec![(NotificationKind::Reply, author_identity.clone())],
+        vec![(NotificationKind::Reply, author_identity)],
         "reply parent that is also mentioned gets one Reply, no Mention"
     );
-
-    // Both outcomes are now cached: mentioning the same aliases again
-    // notifies from the cache without another fetch (the mock still expects
-    // exactly one hit).
-    let mut second_author = TestClient::new().await;
-    second_author.post_text(
-        &format!("again @{alias_local}@example.com @{unlisted_alias_local}@example.com"),
-        current_timestamp() + 2,
-    );
-    second_author.submit_events().await;
-
-    let mut mention_authors: Vec<(NotificationKind, String)> =
-        wait_for_notifications(alias_mentioned.identity(), 2).await;
-    mention_authors.sort();
-    let mut expected_mention_authors = vec![
-        (NotificationKind::Mention, author_identity),
-        (
-            NotificationKind::Mention,
-            second_author.identity().to_owned(),
-        ),
-    ];
-    expected_mention_authors.sort();
-    assert_eq!(
-        mention_authors, expected_mention_authors,
-        "second alias mention is served from the cache"
-    );
-    alias_document.assert_async().await;
 }
 
 /// `(kind, author identity)` of each notification addressed to `identity`,

@@ -6,27 +6,19 @@
 //! - `@{<64 hex>,Name}` / `@{<64 hex>}` — identity mention, rendered as
 //!   `@Name` (or `@<64 hex>` without one).
 //! - `@<64 hex>` — identity mention.
-//! - anything else containing a dot (`@user@domain.com`) — alias mention.
-//! - otherwise plain text.
+//! - otherwise plain text. That includes `@user@domain.com`, which the client
+//!   still links as an alias mention in older posts but which never notifies.
 
 use std::sync::LazyLock;
 
 use regex::Regex;
 
-/// Who a mention refers to.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Mention {
-    /// A polycentric identity (64 hex chars).
-    Identity(String),
-    /// A domain alias such as `user@domain.com`, as written.
-    Alias(String),
-}
-
-/// A mention found in text: its byte range and how the client renders it.
+/// A mention found in text: its byte range, the mentioned identity (64 hex
+/// chars) and how the client renders it.
 struct FoundMention {
     start: usize,
     end: usize,
-    mention: Mention,
+    identity: String,
     rendered: String,
 }
 
@@ -63,7 +55,7 @@ fn scan_mentions(text: &str) -> Vec<FoundMention> {
                 raw_mention = raw_mention.trim_end_matches(TRAILING_PUNCT);
             }
 
-            let (mention, rendered) = if is_curly {
+            let (identity, rendered) = if is_curly {
                 let curly_body = &raw_mention[2..raw_mention.len() - 1];
                 let (identity, name) = match curly_body.split_once(',') {
                     Some((identity, name)) => (identity, name),
@@ -76,32 +68,32 @@ fn scan_mentions(text: &str) -> Vec<FoundMention> {
                     true => format!("@{identity}"),
                     false => format!("@{name}"),
                 };
-                (Mention::Identity(identity.to_string()), rendered)
+                (identity.to_string(), rendered)
             } else {
                 let body = &raw_mention[1..];
-                let mention = if is_hex64(body) {
-                    Mention::Identity(body.to_string())
-                } else if body.contains('.') {
-                    Mention::Alias(body.to_string())
-                } else {
+                if !is_hex64(body) {
                     return None;
-                };
-                (mention, raw_mention.to_string())
+                }
+                (body.to_string(), raw_mention.to_string())
             };
 
             Some(FoundMention {
                 start: m.start(),
                 end: m.start() + raw_mention.len(),
-                mention,
+                identity,
                 rendered,
             })
         })
         .collect()
 }
 
-/// Every mention in `text`, in order of appearance, duplicates included.
-pub fn extract_mentions(text: &str) -> Vec<Mention> {
-    scan_mentions(text).into_iter().map(|f| f.mention).collect()
+/// Every identity mentioned in `text`, in order of appearance, duplicates
+/// included.
+pub fn extract_mentioned_identities(text: &str) -> Vec<String> {
+    scan_mentions(text)
+        .into_iter()
+        .map(|f| f.identity)
+        .collect()
 }
 
 /// `text` as the client renders it: `@{<64 hex>,Name}` becomes `@Name` and
@@ -125,14 +117,15 @@ mod tests {
     use serde::Deserialize;
 
     /// Shared with the client's `parseTextLinks.test.ts`, which runs the same
-    /// file — so both parsers agree on every case.
+    /// file — so both parsers agree on every case. Alias mentions there are
+    /// client-only links (older posts) that never notify, so they're skipped.
     const FIXTURES: &str = include_str!("mentions.fixtures.json");
 
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum Expected {
         Identity { identity: String },
-        Alias { alias: String },
+        Alias {},
     }
 
     #[derive(Deserialize)]
@@ -148,15 +141,20 @@ mod tests {
         let fixtures: Vec<Fixture> = serde_json::from_str(FIXTURES).unwrap();
         assert!(!fixtures.is_empty());
         for f in fixtures {
-            let expected: Vec<Mention> = f
+            let expected: Vec<String> = f
                 .mentions
                 .into_iter()
-                .map(|m| match m {
-                    Expected::Identity { identity } => Mention::Identity(identity),
-                    Expected::Alias { alias } => Mention::Alias(alias),
+                .filter_map(|m| match m {
+                    Expected::Identity { identity } => Some(identity),
+                    Expected::Alias {} => None,
                 })
                 .collect();
-            assert_eq!(extract_mentions(&f.text), expected, "{}", f.name);
+            assert_eq!(
+                extract_mentioned_identities(&f.text),
+                expected,
+                "{}",
+                f.name
+            );
             assert_eq!(mentions_to_plain_text(&f.text), f.plain, "{}", f.name);
         }
     }
