@@ -280,7 +280,7 @@ async fn process_event(
     // by a key whose revocation bound still vouches for this
     // signature.
     if key.collection != collections::IDENTITY {
-        authorize_event_signer(
+        if let Err(err) = authorize_event_signer(
             &tx,
             &ctx.proof_cache,
             &key.identity,
@@ -291,7 +291,13 @@ async fn process_event(
             key.collection,
             &signed_event.signature,
         )
-        .await?;
+        .await
+        {
+            if let Err(err) = tx.rollback().await {
+                tracing::warn!(error = %err, "failed to rollback transaction");
+            }
+            return Err(err);
+        }
     }
 
     let active_model = event::ActiveModel {
@@ -383,6 +389,9 @@ async fn process_event(
         }
         Err(err) => {
             tracing::error!(error = %err, "failed to store event");
+            if let Err(err) = tx.rollback().await {
+                tracing::warn!(error = %err, "failed to rollback transaction");
+            }
             return Err(Status::internal("internal server error"));
         }
     };
