@@ -170,9 +170,9 @@ describe('insertMention', () => {
       const { store, onChangeText } = setup('some @an other', 8);
       insert(store, { alias });
 
-      expect(onChangeText).toHaveBeenCalledWith(`some @${alias} other`);
       // Store stays consistent eagerly: text and caret after the mention.
       const caret = `some @${alias} `.length;
+      expect(onChangeText).toHaveBeenCalledWith(`some @${alias} other`, caret);
       expect(store.getState().text).toBe(`some @${alias} other`);
       expect(store.getState().selection).toEqual({ start: caret, end: caret });
     },
@@ -181,7 +181,7 @@ describe('insertMention', () => {
   it('adds a space before a following newline', () => {
     const { store, onChangeText } = setup('@an\nrest', 3);
     insert(store, { alias: 'ann.example.com' });
-    expect(onChangeText).toHaveBeenCalledWith('@ann.example.com \nrest');
+    expect(onChangeText).toHaveBeenCalledWith('@ann.example.com \nrest', 17);
   });
 
   it('leaves the store closed after every insert', () => {
@@ -214,10 +214,13 @@ describe('insertMention', () => {
   it('falls back to the display name, then the identity, without an alias', () => {
     const named = setup('@', 1);
     insert(named.store, { alias: null, name: 'Ann Smith' });
-    expect(named.onChangeText).toHaveBeenCalledWith('@Ann Smith ');
+    expect(named.onChangeText).toHaveBeenCalledWith('@Ann Smith ', 11);
     const unnamed = setup('@', 1);
     insert(unnamed.store, { alias: null, name: null });
-    expect(unnamed.onChangeText).toHaveBeenCalledWith(`@${IDENTITY} `);
+    expect(unnamed.onChangeText).toHaveBeenCalledWith(
+      `@${IDENTITY} `,
+      IDENTITY.length + 2,
+    );
   });
 
   it('does nothing when no mention context is open at the caret', () => {
