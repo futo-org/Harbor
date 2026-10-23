@@ -4,7 +4,7 @@ use crate::data::{Cursor, CursorFilter};
 use crate::service::events::TargetEventKey;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use ::entity::{
-    content, content_label, content_post_attributed_url,
+    application, content, content_label, content_post_attributed_url,
     content_reaction as Contentreaction, event, follow, quote, reaction,
     reaction_tally, reply, repost,
 };
@@ -20,6 +20,12 @@ use sea_query::query::{CommonTableExpression, WithClause};
 use sea_query::{Func, PgFunc, SelectStatement, UnionType};
 use serde::{Deserialize, Serialize};
 use tonic::Status;
+
+/// Application identifiers hidden from the global Explore feed.
+///
+/// TODO: temporary until there's a better way to keep Grayjay out of Explore.
+const EXPLORE_HIDDEN_APPLICATIONS: &[&str] =
+    &["com.futo.platformplayer", "com.futo.platformplayer.d"];
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
@@ -343,6 +349,16 @@ impl Query {
                     Expr::col(event::Column::ContentType.as_column_ref())
                         .eq(Expr::Constant(content_types::POST.into())),
                 );
+
+            let application = application_join();
+            query.left_join(application.to_tbl.clone(), application);
+            let identifier =
+                Expr::col(application::Column::Identifier.as_column_ref());
+            // Temporary until we figure out a better way...
+            query.and_where(
+                identifier.clone().is_null().or(identifier
+                    .is_not_in(EXPLORE_HIDDEN_APPLICATIONS.iter().copied())),
+            );
         }
 
         let relation = content_join();
@@ -965,6 +981,14 @@ pub(crate) fn attributed_url_join() -> RelationDef {
     content::Entity::has_many(content_post_attributed_url::Entity)
         .from(content::Column::Id)
         .to(content_post_attributed_url::Column::ContentId)
+        .into()
+}
+
+/// Relation joining an event to the application that created it.
+pub(crate) fn application_join() -> RelationDef {
+    event::Entity::belongs_to(application::Entity)
+        .from(event::Column::ApplicationId)
+        .to(application::Column::Id)
         .into()
 }
 
