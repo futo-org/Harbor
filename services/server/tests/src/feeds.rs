@@ -991,11 +991,13 @@ async fn get_post() {
     test_get_post(
         target_key,
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(0),
             upvote_count: Some(0),
             downvote_count: Some(0),
             emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1039,6 +1041,61 @@ async fn get_post_deleted() {
 }
 
 #[tokio::test]
+async fn get_post_with_replies() {
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let replied_to_post = client.get_last_event_key();
+    client.reply(
+        replied_to_post.clone(),
+        "Text that replies",
+        current_timestamp(),
+    );
+    let post_with_reply = client.get_last_event_key();
+    client.submit_events().await;
+
+    // The original post that was replied to.
+    test_get_post(
+        replied_to_post.clone(),
+        Some(EventMetadata {
+            reply_count: Some(1),
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+        ],
+    )
+    .await;
+
+    // The post that replies to the other one.
+    test_get_post(
+        post_with_reply,
+        Some(EventMetadata {
+            reply_count: Some(0),
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+            // TODO: this hint is not provided, do we want it? For quotes for
+            // example we do get the quoted post event.
+            //ExpectHint::Post(replied_to_post.clone()),
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn get_post_with_quotes() {
     let mut client = TestClient::new().await;
     client.post_text("Text", current_timestamp());
@@ -1051,11 +1108,13 @@ async fn get_post_with_quotes() {
     test_get_post(
         quoted_post.clone(),
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(0),
             upvote_count: Some(0),
             downvote_count: Some(0),
             emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(1),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1068,11 +1127,13 @@ async fn get_post_with_quotes() {
     test_get_post(
         post_with_quote,
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(0),
             upvote_count: Some(0),
             downvote_count: Some(0),
             emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1094,11 +1155,13 @@ async fn get_post_with_reposts() {
     test_get_post(
         post.clone(),
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(0),
             upvote_count: Some(0),
             downvote_count: Some(0),
             emoji_reactions: Vec::new(),
+            repost_count: Some(1),
+            quote_count: Some(0),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1124,11 +1187,13 @@ async fn get_post_with_labels() {
     test_get_post(
         post.clone(),
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(0),
             upvote_count: Some(0),
             downvote_count: Some(0),
             emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1158,7 +1223,7 @@ async fn get_post_with_reactions() {
     test_get_post(
         post,
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(2),
             upvote_count: Some(2),
             downvote_count: Some(0),
@@ -1167,6 +1232,8 @@ async fn get_post_with_reactions() {
                 positive: true,
                 count: 2,
             }],
+            repost_count: Some(0),
+            quote_count: Some(0),
         }),
         vec![
             ExpectHint::moderator_identity(),

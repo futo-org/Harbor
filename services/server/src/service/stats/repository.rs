@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use entity::{
-    attributed_to_reaction_summary, interaction_tally, reaction, reply,
-};
+use entity::{attributed_to_reaction_summary, interaction_tally, reaction};
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{
     Asterisk, ColumnRef, Expr, ExprTrait, Func, OnConflict, Order,
@@ -15,88 +13,45 @@ use crate::data::EventId;
 pub struct Query;
 
 impl Query {
-    /// For each event in `events`, estimate the number of replies it has.
-    /// Results are returned as a map from each event's key to its reply count.
-    /// Events without any replies may be excluded from the output map.
-    pub async fn count_replies<C: ConnectionTrait>(
+    /// For each events in `events`, return the number of interactions it has as
+    /// tallied by the [`interaction_tally`] table.
+    pub async fn interactions<C: ConnectionTrait>(
         db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
-    ) -> Result<HashMap<EventId, i64>, DbErr> {
+    ) -> Result<HashMap<EventId, InteractionTally>, DbErr> {
         if event_ids.len() == 0 {
             return Ok(HashMap::new());
         }
 
         let mut query = SelectStatement::new();
         query
-            .from(reply::Entity)
-            .expr_as(Expr::col(reply::Column::Post.as_column_ref()), "post")
-            .expr_as(Expr::from(Func::count(Expr::col(Asterisk))), "count")
-            .cond_where(
-                Expr::col(reply::Column::Post.as_column_ref()).is_in(event_ids),
-            )
-            .group_by_col(reply::Column::Post.as_column_ref());
-
-        let rows = db.query_all(&query).await?;
-        let map = rows
-            .into_iter()
-            .map(|row| -> Result<(EventId, i64), DbErr> {
-                Ok((row.try_get_by(0)?, row.try_get_by(1)?))
-            })
-            .collect::<Result<HashMap<_, _>, _>>()?;
-        Ok(map)
-    }
-
-    /// For each event in `events`, get our estimates for the reaction summary counts.
-    /// Results are returned as a map from each event's key to its reaction summary.
-    /// Events with no reactions may be excluded from the output map.
-    pub async fn summarize_reactions<C: ConnectionTrait>(
-        db: &C,
-        event_ids: impl ExactSizeIterator<Item = EventId>,
-    ) -> Result<HashMap<EventId, ReactionSummary>, DbErr> {
-        if event_ids.len() == 0 {
-            return Ok(HashMap::new());
-        }
-
-        let mut query = SelectStatement::new();
-        query
-            .from(interaction_tally::Entity)
-            .expr_as(
-                Expr::col(interaction_tally::Column::EventId.as_column_ref()),
-                "event_id",
-            )
-            .expr_as(
-                Expr::col(
-                    interaction_tally::Column::ReactionPositiveCount
-                        .as_column_ref(),
-                ),
-                "positive_count",
-            )
-            .expr_as(
-                Expr::col(
-                    interaction_tally::Column::ReactionNegativeCount
-                        .as_column_ref(),
-                ),
-                "negative_count",
-            )
+            .columns([
+                interaction_tally::Column::EventId,
+                interaction_tally::Column::ReactionPositiveCount,
+                interaction_tally::Column::ReactionNegativeCount,
+                interaction_tally::Column::ReplyCount,
+                interaction_tally::Column::RepostCount,
+                interaction_tally::Column::QuoteCount,
+            ])
             .cond_where(
                 Expr::col(interaction_tally::Column::EventId.as_column_ref())
                     .is_in(event_ids),
-            );
+            )
+            .from(interaction_tally::Entity);
 
         let rows = db.query_all(&query).await?;
         let map = rows
             .into_iter()
-            .map(|row| -> Result<(EventId, ReactionSummary), DbErr> {
+            .map(|row| -> Result<(EventId, InteractionTally), DbErr> {
                 let event_id = row.try_get_by(0)?;
-                let positive_count = row.try_get_by(1)?;
-                let negative_count = row.try_get_by(2)?;
-                Ok((
-                    event_id,
-                    ReactionSummary {
-                        upvote_count: positive_count,
-                        downvote_count: negative_count,
-                    },
-                ))
+                let tally = InteractionTally {
+                    reaction_positive: row.try_get_by(1)?,
+                    reaction_negative: row.try_get_by(2)?,
+                    replies: row.try_get_by(3)?,
+                    reposts: row.try_get_by(4)?,
+                    quotes: row.try_get_by(5)?,
+                };
+                Ok((event_id, tally))
             })
             .collect::<Result<HashMap<_, _>, _>>()?;
         Ok(map)
@@ -268,9 +223,12 @@ impl Mutation {
     }
 }
 
-pub struct ReactionSummary {
-    pub upvote_count: i64,
-    pub downvote_count: i64,
+pub struct InteractionTally {
+    pub reaction_positive: i64,
+    pub reaction_negative: i64,
+    pub replies: i64,
+    pub reposts: i64,
+    pub quotes: i64,
 }
 
 pub struct ReactionTally {
