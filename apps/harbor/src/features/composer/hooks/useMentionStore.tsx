@@ -101,12 +101,7 @@ export function createMentionStore(): StoreApi<MentionStore> {
         (after.startsWith(' ') ? after.slice(1) : after);
       const newCaret = ctx.start + mention.length + 1;
 
-      // The draft store must hold the new text (and on iOS the controlled
-      // `value` would otherwise revert the field), and passing the caret
-      // pushes the edit into the input too - Android is uncontrolled, and iOS
-      // doesn't re-measure (auto-grow) on a `value`-prop-only update. The
-      // caret goes explicitly after the mention's trailing space. `text` is
-      // set eagerly so the store is consistent before the prop mirror runs.
+      // Updates the draft and shows it in the input, caret after the space
       onChangeText(newText, newCaret);
       // After the text change, which shifts ranges by the old text's offsets
       useComposerStore.getState().addMentionRange({
@@ -114,6 +109,7 @@ export function createMentionStore(): StoreApi<MentionStore> {
         end: ctx.start + mention.length,
         identity,
       });
+      // Set eagerly so the store is consistent before the prop mirror runs
       set({
         text: newText,
         mentionRanges: useComposerStore.getState().mentionRanges,
