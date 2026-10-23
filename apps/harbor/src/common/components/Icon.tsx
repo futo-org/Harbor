@@ -1,9 +1,8 @@
 import { type PaletteColorToken, useTheme } from '@/src/common/theme';
-import {
-  Ionicons,
-  MaterialCommunityIcons,
-  MaterialIcons,
-} from '@expo/vector-icons';
+// Per-set imports: the package index bundles every icon set and its fonts.
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { ComponentProps, ComponentType, ReactNode } from 'react';
 import { HarborSvg, type HarborSvgName } from './HarborSvg';
 

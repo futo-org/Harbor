@@ -6,11 +6,13 @@ Harbor (v2) network.
 The legacy DB is remote (high round-trip latency, near its connection limit), so
 the tool works in two steps: **`sync-legacy`** copies the rows it needs into
 local cache tables (`legacy_events_cache`, `legacy_opinions_cache`) in the
-migrator's own database - one big transfer - and the migration then reads and
-re-signs entirely from that local cache (fast, and safe to re-run):
+migrator's own database - a full copy the first time, then only the rows above
+the last run's watermark - and the migration then reads and re-signs entirely
+from that local cache (fast, and safe to re-run):
 
 ```sh
-# 1. one-time copy from the remote legacy DB into local cache tables
+# 1. copy from the remote legacy DB into local cache tables (incremental;
+#    `sync-legacy --full` rebuilds the cache from scratch)
 cargo run -p grayjay-migrator --bin grayjay-migrate -- sync-legacy
 # 2. (optional) warm post link previews - resumable, run/repeat any time:
 #    YouTube post links via the Data API (quota-based)…
@@ -35,7 +37,12 @@ migrate step does not (it only reads the local cache). Opinions are copied
 pre-deduplicated (latest per target) from the server's
 `lww_element_latest_reference_*` tables, and only the mapped event types
 (`POST`, `FOLLOW`, `USERNAME`, `DESCRIPTION`) are copied - so the cache is a
-fraction of the full legacy database.
+fraction of the full legacy database. Each run records the legacy `events.id`
+high-water mark in `legacy_sync_state`; the next run streams only rows above it
+(the `lww_element_latest_reference_*` rows carry the same id as `event_id`,
+bumped whenever a newer opinion replaces one) and upserts them, re-reading a
+small overlap below the mark to cover transactions that were still in flight.
+Moderation changes on already-cached events are only picked up by `--full`.
 
 Two binaries share one crate:
 

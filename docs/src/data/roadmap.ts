@@ -76,14 +76,16 @@ export const roadmap: (RoadmapItem | RoadmapPhase | RoadmapGap)[] = [
     description: 'Shirts and more, for anyone who wants to show their support.',
   },
   {
-    title: 'Continuous syncing',
-    description:
-      'Events from one device show up on your other devices without a reload.',
-  },
-  {
     title: 'Grayjay migration',
     description:
       'Grayjay comments and ratings move to Harbor, and Grayjay users keep their keys.',
+  },
+  {
+    date: '2026-10-16',
+    version: 'v2.20.0',
+    title: 'Continuous syncing',
+    description:
+      'Events from one device show up on your other devices without a reload.',
   },
   {
     date: '2026-10-09',

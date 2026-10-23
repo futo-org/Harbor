@@ -17,12 +17,8 @@ pub async fn handle(
     require_moderator(&ctx).await?;
     let moderator_identity = &ctx.auth;
 
-    let txn = ctx.db.begin().await.map_err(|e| {
-        tracing::error!(error = %e, "set_ban_status txn begin error");
-        Status::internal("internal server error")
-    })?;
     repository::Mutation::set_banned(
-        &txn,
+        &ctx.db,
         &req.target_identity,
         req.banned,
         moderator_identity,
@@ -30,10 +26,6 @@ pub async fn handle(
     .await
     .map_err(|e| {
         tracing::error!(error = %e, "set_ban_status db error");
-        Status::internal("internal server error")
-    })?;
-    txn.commit().await.map_err(|e| {
-        tracing::error!(error = %e, "set_ban_status txn commit error");
         Status::internal("internal server error")
     })?;
 

@@ -1,60 +1,109 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import * as crypto from 'node:crypto';
 import {
-  toDigestKey,
+  FileStoreError,
+  isValidPathSegment,
+  segmentsFromPath,
+  type FileStoreEntry,
+  type FileStoreErrorCode,
   type IFileStoreDriver,
-  type v2,
 } from '@polycentric/js-core';
 
 /**
- * Filesystem-backed IFileStoreDriver. Blob bytes are written to one
- * file per digest under `directory`, named `{type}_{hex(value)}` to
- * match the CDN URL convention.
+ * Node.js filesystem-backed IFileStoreDriver.
  */
 export class NodeFileStoreDriver implements IFileStoreDriver {
   private constructor(private readonly directory: string) {}
 
   static async create(directory: string): Promise<NodeFileStoreDriver> {
-    await fs.mkdir(directory, { recursive: true });
+    try {
+      await fs.mkdir(directory, { recursive: true });
+    } catch (err) {
+      throw toFileStoreError(err, directory);
+    }
+
     return new NodeFileStoreDriver(directory);
   }
 
-  private pathFor(digest: v2.ContentDigest): string {
-    return path.join(this.directory, toDigestKey(digest));
+  private pathFor(p: string, allowEmpty = false): string {
+    return path.join(this.directory, ...segmentsFromPath(p, allowEmpty));
   }
 
-  async has(digest: v2.ContentDigest): Promise<boolean> {
+  async has(p: string): Promise<boolean> {
     try {
-      await fs.access(this.pathFor(digest));
-      return true;
-    } catch {
-      return false;
+      const stats = await fs.stat(this.pathFor(p));
+      return stats.isFile();
+    } catch (err) {
+      if (getErrno(err) === 'ENOENT') return false;
+      throw toFileStoreError(err, p);
     }
   }
 
-  async get(digest: v2.ContentDigest): Promise<Uint8Array | null> {
+  async get(p: string): Promise<Uint8Array | null> {
     try {
-      const buf = await fs.readFile(this.pathFor(digest));
+      const buf = await fs.readFile(this.pathFor(p));
       return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
-      throw err;
+      if (getErrno(err) === 'ENOENT') return null;
+      throw toFileStoreError(err, p);
     }
   }
 
-  async put(digest: v2.ContentDigest, bytes: Uint8Array): Promise<void> {
-    const final = this.pathFor(digest);
-    const tmp = `${final}.tmp.${crypto.randomBytes(8).toString('hex')}`;
-    await fs.writeFile(tmp, bytes);
-    await fs.rename(tmp, final);
+  async put(p: string, bytes: Uint8Array): Promise<void> {
+    try {
+      const final = this.pathFor(p);
+      await fs.mkdir(path.dirname(final), { recursive: true });
+      await fs.writeFile(final, bytes);
+    } catch (err) {
+      throw toFileStoreError(err, p);
+    }
   }
 
-  async delete(digest: v2.ContentDigest): Promise<void> {
+  async delete(p: string): Promise<boolean> {
     try {
-      await fs.unlink(this.pathFor(digest));
+      await fs.unlink(this.pathFor(p));
+      return true;
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+      if (getErrno(err) === 'ENOENT') return false;
+      throw toFileStoreError(err, p);
+    }
+  }
+
+  async list(p: string): Promise<FileStoreEntry[] | null> {
+    try {
+      const dirents = await fs.readdir(this.pathFor(p, true), {
+        withFileTypes: true,
+      });
+
+      const entries: FileStoreEntry[] = [];
+      for (const dirent of dirents) {
+        if (!isValidPathSegment(dirent.name)) continue;
+        if (dirent.isFile()) {
+          entries.push({ kind: 'file', name: dirent.name });
+        } else if (dirent.isDirectory()) {
+          entries.push({ kind: 'dir', name: dirent.name });
+        }
+      }
+
+      return entries;
+    } catch (err) {
+      if (getErrno(err) === 'ENOENT') return null;
+      throw toFileStoreError(err, p);
+    }
+  }
+
+  async deleteSubpath(p: string): Promise<void> {
+    try {
+      const target = this.pathFor(p);
+      const stats = await fs.lstat(target);
+      if (!stats.isDirectory()) {
+        throw new FileStoreError('path conflict', `not a directory: ${p}`);
+      }
+
+      await fs.rm(target, { recursive: true, force: true });
+    } catch (err) {
+      if (getErrno(err) === 'ENOENT') return;
+      throw toFileStoreError(err, p);
     }
   }
 }
@@ -63,4 +112,49 @@ export async function createNodeFileStoreDriver(
   directory: string,
 ): Promise<NodeFileStoreDriver> {
   return NodeFileStoreDriver.create(directory);
+}
+
+const ERRNO_CODES = new Map<string, FileStoreErrorCode>([
+  ['ENOTDIR', 'path conflict'],
+  ['EISDIR', 'path conflict'],
+  ['EEXIST', 'path conflict'],
+  ['ENOTEMPTY', 'path conflict'],
+  ['EACCES', 'permission'],
+  ['EPERM', 'permission'],
+  ['EROFS', 'permission'],
+  ['EBUSY', 'busy'],
+  ['EMFILE', 'busy'],
+  ['ENFILE', 'busy'],
+  ['ERR_FS_FILE_TOO_LARGE', 'too big'],
+  ['EFBIG', 'too big'],
+  ['ENOSPC', 'out of space'],
+  ['EDQUOT', 'out of space'],
+  ['ENAMETOOLONG', 'invalid path'],
+  ['ERR_INVALID_ARG_VALUE', 'invalid path'],
+]);
+
+function getErrno(err: unknown): string | undefined {
+  return (err as NodeJS.ErrnoException | undefined)?.code;
+}
+
+function toFileStoreError(err: unknown, p: string): FileStoreError {
+  if (err instanceof FileStoreError) return err;
+
+  const errno = getErrno(err);
+  const errnoCode = errno ? ERRNO_CODES.get(errno) : undefined;
+
+  let code: FileStoreErrorCode;
+  if (errnoCode !== undefined) {
+    code = errnoCode;
+  } else if (err instanceof RangeError) {
+    code = 'too big';
+  } else {
+    code = 'io';
+  }
+
+  return new FileStoreError(
+    code,
+    `file store error (${code}) at ${p}: ${err}`,
+    { cause: err },
+  );
 }

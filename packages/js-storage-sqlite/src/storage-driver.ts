@@ -1,21 +1,9 @@
 import { sql } from 'drizzle-orm';
-import type { IEventAckRepository, IStorageDriver } from '@polycentric/js-core';
+import type { IStorageDriver } from '@polycentric/js-core';
 import type { SqliteDb } from './database.js';
 import { ContentRepository } from './repositories/content.repository.js';
 import { EventRepository } from './repositories/event.repository.js';
 import { KeysRepository } from './repositories/keys.repository.js';
-
-// TODO EventAcks aren't currently used
-class EventAckRepository implements IEventAckRepository {
-  async storeEventAck(): Promise<void> {}
-  async getEventAcks(): Promise<string[]> {
-    return [];
-  }
-  async hasEventAck(): Promise<boolean> {
-    return false;
-  }
-  async removeEventAcks(): Promise<void> {}
-}
 
 export class DrizzleStorageDriver implements IStorageDriver {
   constructor(private readonly db: SqliteDb) {}
@@ -30,10 +18,6 @@ export class DrizzleStorageDriver implements IStorageDriver {
 
   createKeysRepository() {
     return new KeysRepository(this.db);
-  }
-
-  createEventAckRepository() {
-    return new EventAckRepository();
   }
 
   async saveActiveIdentityKey(
