@@ -1,11 +1,9 @@
 import { ed25519 } from '@noble/curves/ed25519.js';
-import { sha256 } from '@noble/hashes/sha2.js';
 import { COLLECTION, KEY_TYPE, SyncStrategy } from '../constants';
 import { ServerAlreadyAddedError } from '../errors';
 import type { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { bytesEqual } from '../utils/bytes';
-import { bytesToHex } from '../utils/hex';
 
 /**
  * Resolved identity state from the latest Identity document.
@@ -33,11 +31,10 @@ export interface IdentityState {
 }
 
 /**
- * Arguments for publishing an Identity document.
- * Omit the identity key to have it derived as the genesis event.
+ * Arguments for publishing an update to an existing identity.
  */
 export interface PublishArgs {
-  identityKey?: string;
+  identityKey: string;
   rotationKeys: Proto.PublicKey[];
   signingKeys: Proto.PublicKey[];
   servers?: string[] | null;
@@ -97,10 +94,8 @@ export class IdentityManager {
   }
 
   /**
-   * Publishes a new Identity document with the specified identity information.
-   *
-   * The identity key is the hex-encoded sha256 of the initial Identity content.
-   * For a new identity, omit the identity key to let it be derived.
+   * Creates, persists, and pushes a new identity event with the information
+   * provided.
    */
   async publish(args: PublishArgs): Promise<IdentityUpdate> {
     const {
@@ -131,20 +126,7 @@ export class IdentityManager {
       contentBody: { oneofKind: 'identity', identity },
     });
 
-    const isBootstrap = !identityKey;
-
-    if (isBootstrap) {
-      if (
-        rotationKeys.length !== 1 ||
-        signingKeys.length !== 0 ||
-        revocationBounds.length !== 0 ||
-        !IdentityManager.keysEqual(rotationKeys[0], signer)
-      ) {
-        throw new Error(
-          'Initial identity must have exactly one rotation key (the current key), no signing keys and no revocation bounds',
-        );
-      }
-    } else if (!isLogin) {
+    if (!isLogin) {
       const oldHead = this.resolveIdentity(identityKey);
       if (!oldHead) throw new Error('No existing identity chain to extend');
 
@@ -156,50 +138,26 @@ export class IdentityManager {
         throw new Error('Identity rotation is not authorized for this key');
     }
 
-    const resolvedIdentityKey: string = isBootstrap
-      ? bytesToHex(sha256(Proto.Identity.toBinary(identity)), 32)
-      : identityKey;
-
     const digest = this.client.contentManager.buildDigest(content);
     await this.client.storage.content.save(digest, content);
 
-    let event: Proto.Event;
-    if (isBootstrap) {
-      // The bootstrap identity event
-      // sequence = 1, identitySequence = 1, vectorClock = [1] for the sole signer.
-      event = Proto.Event.create({
-        key: Proto.EventKey.create({
-          collection: COLLECTION.IDENTITY,
-          identity: resolvedIdentityKey,
-          signedBy: signer,
-          sequence: 1n,
-        }),
-        identitySequence: 1n,
-        vectorClock: Proto.VectorClock.create({ sequence: [1n] }),
-        previousSignature: new Uint8Array(0),
-        contentDigest: digest,
-        createdAt: BigInt(Date.now()),
-        application: this.client.application,
-      });
-    } else {
-      event = await this.client.buildEvent(
-        content,
-        COLLECTION.IDENTITY,
-        identityKey,
-      );
-    }
+    const event = await this.client.buildEvent(
+      content,
+      COLLECTION.IDENTITY,
+      identityKey,
+    );
 
     const signedEvent = await this.client.signEvent(event);
     await this.client.commitEvent(signedEvent, content);
 
     // At this point, we have saved the identity event authorizing us locally
     // and are fully committed to the switch.
-    await this.client.adoptIdentity(resolvedIdentityKey);
+    await this.client.adoptIdentity(identityKey);
 
     // Push errors are currently swallowed
     await this.client.sync(SyncStrategy.PARTIAL_PUSH);
 
-    return { identityKey: resolvedIdentityKey, signedEvent };
+    return { identityKey, signedEvent };
   }
 
   isRotationKeyForIdentity(

@@ -1,12 +1,23 @@
+import { sha256 } from '@noble/hashes/sha2.js';
 import { COLLECTION, SyncStrategy } from '../constants';
+import type { LoginId } from '../platform-interfaces/login-repository';
 import type { KeyPair, PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { KeyType, PrivateKey, PublicKey } from '../proto/v2';
+import { bytesToHex } from '../utils/hex';
 import {
   IdentityManager,
   type IdentityState,
   type PublishArgs,
 } from './identity-manager';
+
+export type SignupInfo = {
+  login: LoginId;
+  keyPair: KeyPair;
+  genesisEvent: Proto.SignedEvent;
+  identityContent: Proto.Content;
+  serializedContent: Proto.SerializedContent;
+};
 
 export class LoginManager {
   constructor(private readonly client: PolycentricClient) {}
@@ -281,6 +292,74 @@ export class LoginManager {
     return (
       state.rotationKeys.some((k) => IdentityManager.keysEqual(k, myKey)) ||
       state.signingKeys.some((k) => IdentityManager.keysEqual(k, myKey))
+    );
+  }
+
+  /**
+   * Generate a key pair and persist it as a pending signup.
+   */
+  async beginSignup(): Promise<SignupInfo> {
+    const keyPair = await this.generateKeyPair();
+
+    const identity = Proto.Identity.create({
+      rotationKeys: [keyPair.publicKey],
+      signingKeys: [],
+      revocationBounds: [],
+      servers: { urls: [...this.client.servers] },
+    });
+    const content = Proto.Content.create({
+      contentBody: { oneofKind: 'identity', identity },
+    });
+
+    const identityKey = bytesToHex(
+      sha256(Proto.Identity.toBinary(identity)),
+      32,
+    );
+
+    // The bootstrap identity event
+    // sequence = 1, identitySequence = 1, vectorClock = [1] for the sole signer.
+    const event = Proto.Event.create({
+      key: Proto.EventKey.create({
+        collection: COLLECTION.IDENTITY,
+        identity: identityKey,
+        signedBy: keyPair.publicKey,
+        sequence: 1n,
+      }),
+      identitySequence: 1n,
+      vectorClock: Proto.VectorClock.create({ sequence: [1n] }),
+      previousSignature: new Uint8Array(0),
+      contentDigest: this.client.contentManager.buildDigest(content),
+      createdAt: BigInt(Date.now()),
+      application: this.client.application,
+    });
+
+    const genesisEvent = await this.client.signEvent(event, keyPair);
+
+    await this.client.storage.logins.putLogin(
+      identityKey,
+      keyPair,
+      'pendingSignup',
+    );
+
+    return {
+      login: { identity: identityKey, publicKey: keyPair.publicKey },
+      keyPair,
+      genesisEvent,
+      identityContent: content,
+      serializedContent: Proto.SerializedContent.create({
+        contentBytes: Proto.Content.toBinary(content),
+      }),
+    };
+  }
+
+  /**
+   * Update the login's status to be an active rotation key.
+   */
+  async finishSignup(loginId: LoginId): Promise<void> {
+    await this.client.storage.logins.changeLoginStatus(
+      loginId.identity,
+      loginId.publicKey,
+      'liveRotationKey',
     );
   }
 }

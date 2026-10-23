@@ -408,23 +408,29 @@ export class PolycentricClient {
   }
 
   /**
-   * Sign an event with the current key pair.
+   * Sign an event, using the client's current key pair or a provided one.
    */
-  async signEvent(event: Proto.Event): Promise<Proto.SignedEvent> {
+  async signEvent(
+    event: Proto.Event,
+    keyPair?: KeyPair,
+  ): Promise<Proto.SignedEvent> {
     const eventBytes = Proto.Event.toBinary(event);
 
     const signedEventBytes = await this.core.signEvent(
       eventBytes.buffer as ArrayBuffer,
       {
         sign: async (bytes: ArrayBuffer): Promise<ArrayBuffer> => {
-          if (!this.currentKeyPair) {
+          keyPair = keyPair ?? this.currentKeyPair ?? undefined;
+          if (!keyPair) {
             throw new Error('No keypair');
           }
+
           const signature = await this.crypto.sign(
-            this.currentKeyPair.privateKey.key,
+            keyPair.privateKey.key,
             new Uint8Array(bytes),
-            this.currentKeyPair.keyType,
+            keyPair.keyType,
           );
+
           return signature.buffer.slice(
             signature.byteOffset,
             signature.byteOffset + signature.byteLength,
@@ -432,6 +438,7 @@ export class PolycentricClient {
         },
       },
     );
+
     return Proto.SignedEvent.fromBinary(new Uint8Array(signedEventBytes));
   }
 
