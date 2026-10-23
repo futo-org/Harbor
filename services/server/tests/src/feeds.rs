@@ -1290,6 +1290,70 @@ async fn explore_feed_excludes_reposts() {
 }
 
 #[tokio::test]
+async fn explore_feed_excludes_grayjay() {
+    let mut feeds = connect_feeds().await;
+
+    let mut client = TestClient::new().await;
+    client.post_text("Post 1", current_timestamp());
+    let post_key = client.get_last_event_key();
+
+    let mut grayjay_keys = Vec::new();
+    for app_id in ["com.futo.platformplayer", "com.futo.platformplayer.d"] {
+        let content = Content {
+            content_body: Some(ContentBody::Post(Post {
+                text: format!("Post from {app_id}"),
+                reply: None,
+                images: Vec::new(),
+                quote: None,
+                links: Vec::new(),
+                labels: Vec::new(),
+                attributed_to: Vec::new(),
+            })),
+        };
+        let (content_bytes, digest) = content_with_digest(content);
+        let mut event = client.make_event(
+            COLLECTION_FEED,
+            Vec::new(),
+            Vec::new(),
+            digest,
+            current_timestamp(),
+        );
+        event.application = Some(Application {
+            name: "Grayjay".to_owned(),
+            id: app_id.to_owned(),
+            version: "v1".to_owned(),
+            url: "https://grayjay.app".to_owned(),
+        });
+        grayjay_keys.push(event.key.clone().unwrap());
+        client.push_event_bundle2(event, content_bytes);
+    }
+    client.submit_events().await;
+
+    let request = GetExploreFeedRequest {
+        identity: None,
+        page_params: None,
+        omit_labels: Vec::new(),
+        sort_by: Some(SortPostsBy::Latest.into()),
+    };
+    let result = feeds.get_explore_feed(request).await.unwrap().into_inner();
+
+    let keys: Vec<EventKey> = result
+        .event_bundles
+        .iter()
+        .map(|event| {
+            Event::decode(&*event.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap()
+                .key
+                .unwrap()
+        })
+        .collect();
+    assert!(keys.contains(&post_key), "post missing: {keys:#?}");
+    for grayjay_key in &grayjay_keys {
+        assert!(!keys.contains(grayjay_key), "grayjay post shown: {keys:#?}");
+    }
+}
+
+#[tokio::test]
 async fn following_feed_empty() {
     let mut client = TestClient::new().await;
     client.submit_events().await;
