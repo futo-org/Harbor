@@ -7,10 +7,10 @@ use regex::Regex;
 
 use crate::models::{
     application, attributed_to, attributed_to_reaction, blob, block, content, content_body,
-    content_digest, delete, event, event_key, field_def, follow, image, image_set, labels, link,
-    post, post_reply, profile_update, public_key, reaction, report, repost,
-    serialized_verification_schema, to, verification_claim, verification_schema,
-    verification_target, verification_verify,
+    content_digest, delete, event, event_key, event_proof_target, field_def, follow, identity,
+    image, image_set, labels, link, post, post_reply, profile_update, public_key, reaction, report,
+    repost, revocation_bound, serialized_verification_schema, server_list, to, verification_claim,
+    verification_schema, verification_target, verification_verify,
 };
 
 /// Validate a value.
@@ -65,6 +65,10 @@ pub enum ValidationError {
     Reaction(reaction::ValidationError),
     AttributedToReaction(attributed_to_reaction::ValidationError),
     ProfileUpdate(profile_update::ValidationError),
+    Identity(identity::ValidationError),
+    RevocationBound(revocation_bound::ValidationError),
+    EventProofTarget(event_proof_target::ValidationError),
+    ServerList(server_list::ValidationError),
     Repost(repost::ValidationError),
     Report(report::ValidationError),
     Labels(labels::ValidationError),
@@ -202,6 +206,30 @@ impl From<profile_update::ValidationError> for ValidationError {
     }
 }
 
+impl From<identity::ValidationError> for ValidationError {
+    fn from(err: identity::ValidationError) -> ValidationError {
+        ValidationError::Identity(err)
+    }
+}
+
+impl From<revocation_bound::ValidationError> for ValidationError {
+    fn from(err: revocation_bound::ValidationError) -> ValidationError {
+        ValidationError::RevocationBound(err)
+    }
+}
+
+impl From<event_proof_target::ValidationError> for ValidationError {
+    fn from(err: event_proof_target::ValidationError) -> ValidationError {
+        ValidationError::EventProofTarget(err)
+    }
+}
+
+impl From<server_list::ValidationError> for ValidationError {
+    fn from(err: server_list::ValidationError) -> ValidationError {
+        ValidationError::ServerList(err)
+    }
+}
+
 impl From<repost::ValidationError> for ValidationError {
     fn from(err: repost::ValidationError) -> ValidationError {
         ValidationError::Repost(err)
@@ -280,6 +308,10 @@ impl fmt::Display for ValidationError {
             ValidationError::Reaction(err) => write!(f, "reaction {err}"),
             ValidationError::AttributedToReaction(err) => write!(f, "attributed to reaction {err}"),
             ValidationError::ProfileUpdate(err) => write!(f, "profile update {err}"),
+            ValidationError::Identity(err) => write!(f, "identity {err}"),
+            ValidationError::RevocationBound(err) => write!(f, "revoceration bound {err}"),
+            ValidationError::EventProofTarget(err) => write!(f, "event proof target {err}"),
+            ValidationError::ServerList(err) => write!(f, "server list {err}"),
             ValidationError::Repost(err) => write!(f, "repost {err}"),
             ValidationError::Report(err) => write!(f, "report {err}"),
             ValidationError::Labels(err) => write!(f, "labels {err}"),
