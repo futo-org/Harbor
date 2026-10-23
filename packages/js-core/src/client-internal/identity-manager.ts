@@ -152,7 +152,10 @@ export class IdentityManager {
 
     // At this point, we have saved the identity event authorizing us locally
     // and are fully committed to the switch.
-    await this.client.adoptIdentity(identityKey);
+    await this.client.loginAs({
+      identity: identityKey,
+      publicKey: signer,
+    });
 
     // Push errors are currently swallowed
     await this.client.sync(SyncStrategy.PARTIAL_PUSH);

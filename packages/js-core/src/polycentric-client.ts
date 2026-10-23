@@ -8,12 +8,7 @@ import {
   LoginManager,
   PairingSessionManager,
 } from './client-internal';
-import {
-  COLLECTION,
-  KEY_TYPE,
-  SyncStrategy,
-  type Collection,
-} from './constants';
+import { COLLECTION, SyncStrategy, type Collection } from './constants';
 import { sha256 } from '@noble/hashes/sha2.js';
 import type {
   ICryptoManager,
@@ -38,6 +33,7 @@ import {
   QueryStatus,
   type QueryOpts,
 } from '@polycentric/rs-core-wasm/generated';
+import type { LoginId } from './platform-interfaces/login-repository';
 
 type CoreType = PolycentricCoreLike;
 
@@ -179,16 +175,7 @@ export class PolycentricClient {
 
       this.setHydrationStatus(HydrationStatus.COMPLETED);
 
-      const restoredIdentity = await this.restoreKeyPair();
-
-      // SDK should always make a new keypair if we can't find any
-      if (!restoredIdentity) {
-        this.setStep(InitializationStep.CREATING_EPHEMERAL_IDENTITY);
-        await this.loginManager.createKeyPair({
-          keyType: KEY_TYPE.ED25519,
-          setAsCurrent: true,
-        });
-      }
+      await this.loginManager.restore();
 
       // Push the JS-side server list into the rust core so that
       // observables that fan out to every configured server (e.g.
@@ -287,21 +274,6 @@ export class PolycentricClient {
         );
       }
     }
-  }
-
-  /**
-   * Looks at existing keys and will pick the first one
-   */
-  private async restoreKeyPair(): Promise<boolean> {
-    const identities = await this.loginManager.getKeys();
-    const identity = identities[0];
-
-    if (!identity) {
-      return false;
-    }
-
-    await this.setCurrentKeyPair(identity);
-    return true;
   }
 
   /**
@@ -1164,18 +1136,6 @@ export class PolycentricClient {
     );
   }
 
-  public async setCurrentKeyPair(keyPair: KeyPair): Promise<void> {
-    this.currentKeyPair = keyPair;
-    // Restore saved identity key for this key pair
-    this.activeIdentityKey = await this.storageDriver.loadActiveIdentityKey(
-      keyPair.publicKey.key,
-    );
-    this.core.setActiveIdentity(this.activeIdentityKey ?? undefined);
-    if (this.storageHandle) {
-      this.refreshServers();
-    }
-  }
-
   /**
    * Derive `servers` from the active identity's latest Identity document.
    * Identities that have never configured a server list keep the current
@@ -1192,41 +1152,41 @@ export class PolycentricClient {
   }
 
   /**
-   * Update our state to match this identity.
+   * Set our state to match this login and persist it as the active login.
    */
-  public async adoptIdentity(identityKey: string | null): Promise<void> {
-    const changedIdentity = identityKey !== this.activeIdentityKey;
-
-    if (changedIdentity && this.currentKeyPair) {
-      await this.storageDriver.saveActiveIdentityKey(
-        this.currentKeyPair.publicKey.key,
-        identityKey,
-      );
-    }
-
-    if (changedIdentity) {
-      this.activeIdentityKey = identityKey;
-      this.core.setActiveIdentity(identityKey ?? undefined);
-
-      // Tokens minted for the previous identity must not be reused.
+  public async loginAs(
+    login: LoginId | null,
+    persist: boolean = true,
+  ): Promise<void> {
+    if (!login) {
+      if (persist) await this.storageDriver.setActiveLogin(null);
       this.core.clearAuthTokens();
+      this.core.setActiveIdentity(undefined);
+      this.activeIdentityKey = null;
+      this.currentKeyPair = null;
+      return;
     }
 
-    // Use the latest server list from the latest identity state
+    const loginDetails = await this.storage.logins.getLoginDetails(
+      login.identity,
+      login.publicKey,
+    );
+    if (!loginDetails) throw new Error('Login not found.');
+
+    if (persist) await this.storageDriver.setActiveLogin(login);
+
+    this.core.clearAuthTokens();
+    this.core.setActiveIdentity(loginDetails.identity);
+
+    this.activeIdentityKey = loginDetails.identity;
+    this.currentKeyPair = {
+      keyType: loginDetails.publicKey.keyType,
+      privateKey: loginDetails.privateKey,
+      publicKey: loginDetails.publicKey,
+    };
+
     this.refreshServers();
-
-    if (changedIdentity) {
-      // This is really an 'identityChanged' event underneath
-      this.events.emitKeyPairChanged(this.currentKeyPair);
-    }
-  }
-
-  /**
-   * Look up the v2 identity key bound to the given key pair locally.
-   * Returns null if this device has never associated an identity with the pair.
-   */
-  public getIdentityKeyFor(keyPair: KeyPair): Promise<string | null> {
-    return this.storageDriver.loadActiveIdentityKey(keyPair.publicKey.key);
+    this.events.emitKeyPairChanged(this.currentKeyPair);
   }
 
   private setState(state: ClientState) {

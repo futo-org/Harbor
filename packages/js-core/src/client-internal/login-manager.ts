@@ -43,6 +43,18 @@ export class LoginManager {
   }
 
   /**
+   * Try restoring the active login from storage.
+   * Returns whether a login was successfully restored.
+   */
+  async restore(): Promise<boolean> {
+    const login = await this.client.storageDriver.getActiveLogin();
+    if (!login) return false;
+
+    await this.client.loginAs(login, false);
+    return true;
+  }
+
+  /**
    * Attempt to claim an identity:
    * - Fetch the identity's chain
    * - Check that we are authorized
