@@ -121,7 +121,7 @@ class PairingSessionManager(
         val digest = digestFrom(digestBytes, assertIssuer = true)
         val identityState =
             client
-                .listValidEvents(digest.issuer_identity, Collections.IDENTITY)
+                .resolveIdentityChain(digest.issuer_identity)
                 .lastOrNull()
                 ?: throw PolycentricException("No local identity chain for ${digest.issuer_identity}")
 
