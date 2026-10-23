@@ -1,4 +1,3 @@
-use entity::interaction_tally;
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
