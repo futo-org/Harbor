@@ -40,19 +40,19 @@ CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char
 
 
 --
--- Name: reaction_count_decay(bigint, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+-- Name: decay_interaction_count(bigint, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone) RETURNS numeric
+CREATE FUNCTION public.decay_interaction_count(total_count bigint, created_at timestamp with time zone) RETURNS numeric
     LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
     AS $$
 BEGIN
   RETURN CASE
-    WHEN post_created_at < (SELECT expires_at FROM gravity) THEN 0
+    WHEN created_at < (SELECT expires_at FROM gravity) THEN 0
     ELSE (
-      (reaction_count + 1)::NUMERIC / power(
+      (total_count + 1)::NUMERIC / power(
         GREATEST(
-          EXTRACT(epoch FROM ((SELECT calculated_at FROM gravity) - post_created_at))::NUMERIC / 3600::NUMERIC,
+          EXTRACT(epoch FROM ((SELECT calculated_at FROM gravity) - created_at))::NUMERIC / 3600::NUMERIC,
           0::NUMERIC
         ) + 2::NUMERIC,
         (SELECT value FROM gravity)

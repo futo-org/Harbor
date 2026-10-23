@@ -33,8 +33,8 @@ const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
 /// Type used when ordering events by the create at column.
 pub type EventCreatedAt = DateTimeWithTimeZone;
 
-/// Number of positive reactions decayed over time (see the
-/// `reaction_count_decay` SQL function).
+/// Number of interactions decayed over time (see the `reaction_count_decay` SQL
+/// function).
 ///
 /// NOTE: This is actually a `NUMERIC(20,11)`, but we don't have a big number
 /// type and since we're not doing any arithmetic on it it doesn't really
