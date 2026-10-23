@@ -4042,6 +4042,984 @@ const FfiConverterTypeProfileUpdateValidationError = (() => {
 })();
 
 
+// Enum: EventProofTargetValidationError
+export enum EventProofTargetValidationError_Tags {
+    Signature = "Signature",
+    Root = "Root"
+}
+export const EventProofTargetValidationError = (() => {
+
+    type Signature__interface = {
+        tag: EventProofTargetValidationError_Tags.Signature;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class Signature_ extends UniffiEnum implements Signature__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "EventProofTargetValidationError";
+        readonly tag = EventProofTargetValidationError_Tags.Signature;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("EventProofTargetValidationError", "Signature");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): Signature_ {
+            return new Signature_(v0);
+        }
+
+        static instanceOf(obj: any): obj is Signature_ {
+            return obj.tag === EventProofTargetValidationError_Tags.Signature;
+        }
+
+    }
+
+    type Root__interface = {
+        tag: EventProofTargetValidationError_Tags.Root;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class Root_ extends UniffiEnum implements Root__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "EventProofTargetValidationError";
+        readonly tag = EventProofTargetValidationError_Tags.Root;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("EventProofTargetValidationError", "Root");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): Root_ {
+            return new Root_(v0);
+        }
+
+        static instanceOf(obj: any): obj is Root_ {
+            return obj.tag === EventProofTargetValidationError_Tags.Root;
+        }
+
+    }
+
+    function instanceOf(obj: any): obj is EventProofTargetValidationError {
+        return obj[uniffiTypeNameSymbol] === "EventProofTargetValidationError";
+    }
+
+    return Object.freeze({
+        instanceOf,
+  Signature: Signature_, 
+  Root: Root_
+    });
+
+})();
+export type EventProofTargetValidationError = InstanceType<
+    typeof EventProofTargetValidationError['Signature' | 'Root']
+>;
+
+// FfiConverter for enum EventProofTargetValidationError
+const FfiConverterTypeEventProofTargetValidationError = (() => {
+    type TypeName = EventProofTargetValidationError;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
+                case 1: return new EventProofTargetValidationError.Signature(FfiConverterTypeSliceError.readFromCursor(c));
+                case 2: return new EventProofTargetValidationError.Root(FfiConverterTypeSliceError.readFromCursor(c));
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            switch (value.tag) {
+                case EventProofTargetValidationError_Tags.Signature: {
+                    c.writeI32(1);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case EventProofTargetValidationError_Tags.Root: {
+                    c.writeI32(2);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                default:
+                    // Throwing from here means that EventProofTargetValidationError_Tags hasn't matched an ordinal.
+                    throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        allocationSize(value: TypeName): number {
+            switch (value.tag) {
+                case EventProofTargetValidationError_Tags.Signature: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
+                case EventProofTargetValidationError_Tags.Root: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+    }
+    return new FFIConverter();
+})();
+
+
+// Enum: RevocationBoundValidationError
+export enum RevocationBoundValidationError_Tags {
+    RevokedKey = "RevokedKey",
+    RevokedKeyMissing = "RevokedKeyMissing",
+    Targets = "Targets",
+    TargetsItem = "TargetsItem"
+}
+export const RevocationBoundValidationError = (() => {
+
+    type RevokedKey__interface = {
+        tag: RevocationBoundValidationError_Tags.RevokedKey;
+        inner: 
+Readonly<
+[PublicKeyValidationError
+]>
+    };
+    class RevokedKey_ extends UniffiEnum implements RevokedKey__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "RevocationBoundValidationError";
+        readonly tag = RevocationBoundValidationError_Tags.RevokedKey;
+        readonly inner: 
+Readonly<
+[PublicKeyValidationError
+]>;
+        constructor(v0: PublicKeyValidationError) {
+            super("RevocationBoundValidationError", "RevokedKey");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: PublicKeyValidationError): RevokedKey_ {
+            return new RevokedKey_(v0);
+        }
+
+        static instanceOf(obj: any): obj is RevokedKey_ {
+            return obj.tag === RevocationBoundValidationError_Tags.RevokedKey;
+        }
+
+    }
+
+    type RevokedKeyMissing__interface = {
+        tag: RevocationBoundValidationError_Tags.RevokedKeyMissing
+    };
+    class RevokedKeyMissing_ extends UniffiEnum implements RevokedKeyMissing__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "RevocationBoundValidationError";
+        readonly tag = RevocationBoundValidationError_Tags.RevokedKeyMissing;
+        constructor() {
+            super("RevocationBoundValidationError", "RevokedKeyMissing");
+        }
+
+        static new(): RevokedKeyMissing_ {
+            return new RevokedKeyMissing_();
+        }
+
+        static instanceOf(obj: any): obj is RevokedKeyMissing_ {
+            return obj.tag === RevocationBoundValidationError_Tags.RevokedKeyMissing;
+        }
+
+    }
+
+    type Targets__interface = {
+        tag: RevocationBoundValidationError_Tags.Targets;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class Targets_ extends UniffiEnum implements Targets__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "RevocationBoundValidationError";
+        readonly tag = RevocationBoundValidationError_Tags.Targets;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("RevocationBoundValidationError", "Targets");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): Targets_ {
+            return new Targets_(v0);
+        }
+
+        static instanceOf(obj: any): obj is Targets_ {
+            return obj.tag === RevocationBoundValidationError_Tags.Targets;
+        }
+
+    }
+
+    type TargetsItem__interface = {
+        tag: RevocationBoundValidationError_Tags.TargetsItem;
+        inner: 
+Readonly<{index: number; error: EventProofTargetValidationError}>
+    };
+    class TargetsItem_ extends UniffiEnum implements TargetsItem__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "RevocationBoundValidationError";
+        readonly tag = RevocationBoundValidationError_Tags.TargetsItem;
+        readonly inner: 
+Readonly<{index: number; error: EventProofTargetValidationError}>;
+        constructor(
+inner: {index: number; error: EventProofTargetValidationError }) {
+            super("RevocationBoundValidationError", "TargetsItem");
+
+            this.inner = Object.freeze(inner);
+        }
+        static new(
+inner: {index: number; error: EventProofTargetValidationError }): TargetsItem_ {
+            return new TargetsItem_(inner);
+        }
+
+        static instanceOf(obj: any): obj is TargetsItem_ {
+            return obj.tag === RevocationBoundValidationError_Tags.TargetsItem;
+        }
+
+    }
+
+    function instanceOf(obj: any): obj is RevocationBoundValidationError {
+        return obj[uniffiTypeNameSymbol] === "RevocationBoundValidationError";
+    }
+
+    return Object.freeze({
+        instanceOf,
+  RevokedKey: RevokedKey_, 
+  RevokedKeyMissing: RevokedKeyMissing_, 
+  Targets: Targets_, 
+  TargetsItem: TargetsItem_
+    });
+
+})();
+export type RevocationBoundValidationError = InstanceType<
+    typeof RevocationBoundValidationError['RevokedKey' | 'RevokedKeyMissing' | 'Targets' | 'TargetsItem']
+>;
+
+// FfiConverter for enum RevocationBoundValidationError
+const FfiConverterTypeRevocationBoundValidationError = (() => {
+    type TypeName = RevocationBoundValidationError;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
+                case 1: return new RevocationBoundValidationError.RevokedKey(FfiConverterTypePublicKeyValidationError.readFromCursor(c));
+                case 2: return new RevocationBoundValidationError.RevokedKeyMissing();
+                case 3: return new RevocationBoundValidationError.Targets(FfiConverterTypeSliceError.readFromCursor(c));
+                case 4: return new RevocationBoundValidationError.TargetsItem({index: FfiConverterUInt32.readFromCursor(c), error: FfiConverterTypeEventProofTargetValidationError.readFromCursor(c) });
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            switch (value.tag) {
+                case RevocationBoundValidationError_Tags.RevokedKey: {
+                    c.writeI32(1);
+                    const inner = value.inner;
+                    FfiConverterTypePublicKeyValidationError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case RevocationBoundValidationError_Tags.RevokedKeyMissing: {
+                    c.writeI32(2);
+                    return;
+                }
+                case RevocationBoundValidationError_Tags.Targets: {
+                    c.writeI32(3);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case RevocationBoundValidationError_Tags.TargetsItem: {
+                    c.writeI32(4);
+                    const inner = value.inner;
+                    FfiConverterUInt32.writeIntoCursor(inner.index, c);
+                    FfiConverterTypeEventProofTargetValidationError.writeIntoCursor(inner.error, c);
+                    return;
+                }
+                default:
+                    // Throwing from here means that RevocationBoundValidationError_Tags hasn't matched an ordinal.
+                    throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        allocationSize(value: TypeName): number {
+            switch (value.tag) {
+                case RevocationBoundValidationError_Tags.RevokedKey: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypePublicKeyValidationError.allocationSize(inner[0]);
+                    return size;
+                }
+                case RevocationBoundValidationError_Tags.RevokedKeyMissing: {
+                    return 4;
+                }
+                case RevocationBoundValidationError_Tags.Targets: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
+                case RevocationBoundValidationError_Tags.TargetsItem: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterUInt32.allocationSize(inner.index);
+                    size += FfiConverterTypeEventProofTargetValidationError.allocationSize(inner.error);
+                    return size;
+                }
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+    }
+    return new FFIConverter();
+})();
+
+
+// Enum: ServerListValidationError
+export enum ServerListValidationError_Tags {
+    Urls = "Urls",
+    UrlsItem = "UrlsItem"
+}
+export const ServerListValidationError = (() => {
+
+    type Urls__interface = {
+        tag: ServerListValidationError_Tags.Urls;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class Urls_ extends UniffiEnum implements Urls__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "ServerListValidationError";
+        readonly tag = ServerListValidationError_Tags.Urls;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("ServerListValidationError", "Urls");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): Urls_ {
+            return new Urls_(v0);
+        }
+
+        static instanceOf(obj: any): obj is Urls_ {
+            return obj.tag === ServerListValidationError_Tags.Urls;
+        }
+
+    }
+
+    type UrlsItem__interface = {
+        tag: ServerListValidationError_Tags.UrlsItem;
+        inner: 
+Readonly<{index: number; error: StringError}>
+    };
+    class UrlsItem_ extends UniffiEnum implements UrlsItem__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "ServerListValidationError";
+        readonly tag = ServerListValidationError_Tags.UrlsItem;
+        readonly inner: 
+Readonly<{index: number; error: StringError}>;
+        constructor(
+inner: {index: number; error: StringError }) {
+            super("ServerListValidationError", "UrlsItem");
+
+            this.inner = Object.freeze(inner);
+        }
+        static new(
+inner: {index: number; error: StringError }): UrlsItem_ {
+            return new UrlsItem_(inner);
+        }
+
+        static instanceOf(obj: any): obj is UrlsItem_ {
+            return obj.tag === ServerListValidationError_Tags.UrlsItem;
+        }
+
+    }
+
+    function instanceOf(obj: any): obj is ServerListValidationError {
+        return obj[uniffiTypeNameSymbol] === "ServerListValidationError";
+    }
+
+    return Object.freeze({
+        instanceOf,
+  Urls: Urls_, 
+  UrlsItem: UrlsItem_
+    });
+
+})();
+export type ServerListValidationError = InstanceType<
+    typeof ServerListValidationError['Urls' | 'UrlsItem']
+>;
+
+// FfiConverter for enum ServerListValidationError
+const FfiConverterTypeServerListValidationError = (() => {
+    type TypeName = ServerListValidationError;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
+                case 1: return new ServerListValidationError.Urls(FfiConverterTypeSliceError.readFromCursor(c));
+                case 2: return new ServerListValidationError.UrlsItem({index: FfiConverterUInt32.readFromCursor(c), error: FfiConverterTypeStringError.readFromCursor(c) });
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            switch (value.tag) {
+                case ServerListValidationError_Tags.Urls: {
+                    c.writeI32(1);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case ServerListValidationError_Tags.UrlsItem: {
+                    c.writeI32(2);
+                    const inner = value.inner;
+                    FfiConverterUInt32.writeIntoCursor(inner.index, c);
+                    FfiConverterTypeStringError.writeIntoCursor(inner.error, c);
+                    return;
+                }
+                default:
+                    // Throwing from here means that ServerListValidationError_Tags hasn't matched an ordinal.
+                    throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        allocationSize(value: TypeName): number {
+            switch (value.tag) {
+                case ServerListValidationError_Tags.Urls: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
+                case ServerListValidationError_Tags.UrlsItem: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterUInt32.allocationSize(inner.index);
+                    size += FfiConverterTypeStringError.allocationSize(inner.error);
+                    return size;
+                }
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+    }
+    return new FFIConverter();
+})();
+
+
+// Enum: IdentityValidationError
+export enum IdentityValidationError_Tags {
+    RotationKeys = "RotationKeys",
+    RotationKeysItem = "RotationKeysItem",
+    SigningKeys = "SigningKeys",
+    SigningKeysItem = "SigningKeysItem",
+    RevocationBounds = "RevocationBounds",
+    RevocationBoundsItem = "RevocationBoundsItem",
+    Servers = "Servers",
+    RecoveryKey = "RecoveryKey",
+    RecoverySignature = "RecoverySignature"
+}
+export const IdentityValidationError = (() => {
+
+    type RotationKeys__interface = {
+        tag: IdentityValidationError_Tags.RotationKeys;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class RotationKeys_ extends UniffiEnum implements RotationKeys__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IdentityValidationError";
+        readonly tag = IdentityValidationError_Tags.RotationKeys;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("IdentityValidationError", "RotationKeys");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): RotationKeys_ {
+            return new RotationKeys_(v0);
+        }
+
+        static instanceOf(obj: any): obj is RotationKeys_ {
+            return obj.tag === IdentityValidationError_Tags.RotationKeys;
+        }
+
+    }
+
+    type RotationKeysItem__interface = {
+        tag: IdentityValidationError_Tags.RotationKeysItem;
+        inner: 
+Readonly<{index: number; error: PublicKeyValidationError}>
+    };
+    class RotationKeysItem_ extends UniffiEnum implements RotationKeysItem__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IdentityValidationError";
+        readonly tag = IdentityValidationError_Tags.RotationKeysItem;
+        readonly inner: 
+Readonly<{index: number; error: PublicKeyValidationError}>;
+        constructor(
+inner: {index: number; error: PublicKeyValidationError }) {
+            super("IdentityValidationError", "RotationKeysItem");
+
+            this.inner = Object.freeze(inner);
+        }
+        static new(
+inner: {index: number; error: PublicKeyValidationError }): RotationKeysItem_ {
+            return new RotationKeysItem_(inner);
+        }
+
+        static instanceOf(obj: any): obj is RotationKeysItem_ {
+            return obj.tag === IdentityValidationError_Tags.RotationKeysItem;
+        }
+
+    }
+
+    type SigningKeys__interface = {
+        tag: IdentityValidationError_Tags.SigningKeys;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class SigningKeys_ extends UniffiEnum implements SigningKeys__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IdentityValidationError";
+        readonly tag = IdentityValidationError_Tags.SigningKeys;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("IdentityValidationError", "SigningKeys");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): SigningKeys_ {
+            return new SigningKeys_(v0);
+        }
+
+        static instanceOf(obj: any): obj is SigningKeys_ {
+            return obj.tag === IdentityValidationError_Tags.SigningKeys;
+        }
+
+    }
+
+    type SigningKeysItem__interface = {
+        tag: IdentityValidationError_Tags.SigningKeysItem;
+        inner: 
+Readonly<{index: number; error: PublicKeyValidationError}>
+    };
+    class SigningKeysItem_ extends UniffiEnum implements SigningKeysItem__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IdentityValidationError";
+        readonly tag = IdentityValidationError_Tags.SigningKeysItem;
+        readonly inner: 
+Readonly<{index: number; error: PublicKeyValidationError}>;
+        constructor(
+inner: {index: number; error: PublicKeyValidationError }) {
+            super("IdentityValidationError", "SigningKeysItem");
+
+            this.inner = Object.freeze(inner);
+        }
+        static new(
+inner: {index: number; error: PublicKeyValidationError }): SigningKeysItem_ {
+            return new SigningKeysItem_(inner);
+        }
+
+        static instanceOf(obj: any): obj is SigningKeysItem_ {
+            return obj.tag === IdentityValidationError_Tags.SigningKeysItem;
+        }
+
+    }
+
+    type RevocationBounds__interface = {
+        tag: IdentityValidationError_Tags.RevocationBounds;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class RevocationBounds_ extends UniffiEnum implements RevocationBounds__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IdentityValidationError";
+        readonly tag = IdentityValidationError_Tags.RevocationBounds;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("IdentityValidationError", "RevocationBounds");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): RevocationBounds_ {
+            return new RevocationBounds_(v0);
+        }
+
+        static instanceOf(obj: any): obj is RevocationBounds_ {
+            return obj.tag === IdentityValidationError_Tags.RevocationBounds;
+        }
+
+    }
+
+    type RevocationBoundsItem__interface = {
+        tag: IdentityValidationError_Tags.RevocationBoundsItem;
+        inner: 
+Readonly<{index: number; error: RevocationBoundValidationError}>
+    };
+    class RevocationBoundsItem_ extends UniffiEnum implements RevocationBoundsItem__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IdentityValidationError";
+        readonly tag = IdentityValidationError_Tags.RevocationBoundsItem;
+        readonly inner: 
+Readonly<{index: number; error: RevocationBoundValidationError}>;
+        constructor(
+inner: {index: number; error: RevocationBoundValidationError }) {
+            super("IdentityValidationError", "RevocationBoundsItem");
+
+            this.inner = Object.freeze(inner);
+        }
+        static new(
+inner: {index: number; error: RevocationBoundValidationError }): RevocationBoundsItem_ {
+            return new RevocationBoundsItem_(inner);
+        }
+
+        static instanceOf(obj: any): obj is RevocationBoundsItem_ {
+            return obj.tag === IdentityValidationError_Tags.RevocationBoundsItem;
+        }
+
+    }
+
+    type Servers__interface = {
+        tag: IdentityValidationError_Tags.Servers;
+        inner: 
+Readonly<
+[ServerListValidationError
+]>
+    };
+    class Servers_ extends UniffiEnum implements Servers__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IdentityValidationError";
+        readonly tag = IdentityValidationError_Tags.Servers;
+        readonly inner: 
+Readonly<
+[ServerListValidationError
+]>;
+        constructor(v0: ServerListValidationError) {
+            super("IdentityValidationError", "Servers");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: ServerListValidationError): Servers_ {
+            return new Servers_(v0);
+        }
+
+        static instanceOf(obj: any): obj is Servers_ {
+            return obj.tag === IdentityValidationError_Tags.Servers;
+        }
+
+    }
+
+    type RecoveryKey__interface = {
+        tag: IdentityValidationError_Tags.RecoveryKey;
+        inner: 
+Readonly<
+[PublicKeyValidationError
+]>
+    };
+    class RecoveryKey_ extends UniffiEnum implements RecoveryKey__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IdentityValidationError";
+        readonly tag = IdentityValidationError_Tags.RecoveryKey;
+        readonly inner: 
+Readonly<
+[PublicKeyValidationError
+]>;
+        constructor(v0: PublicKeyValidationError) {
+            super("IdentityValidationError", "RecoveryKey");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: PublicKeyValidationError): RecoveryKey_ {
+            return new RecoveryKey_(v0);
+        }
+
+        static instanceOf(obj: any): obj is RecoveryKey_ {
+            return obj.tag === IdentityValidationError_Tags.RecoveryKey;
+        }
+
+    }
+
+    type RecoverySignature__interface = {
+        tag: IdentityValidationError_Tags.RecoverySignature;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class RecoverySignature_ extends UniffiEnum implements RecoverySignature__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "IdentityValidationError";
+        readonly tag = IdentityValidationError_Tags.RecoverySignature;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("IdentityValidationError", "RecoverySignature");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): RecoverySignature_ {
+            return new RecoverySignature_(v0);
+        }
+
+        static instanceOf(obj: any): obj is RecoverySignature_ {
+            return obj.tag === IdentityValidationError_Tags.RecoverySignature;
+        }
+
+    }
+
+    function instanceOf(obj: any): obj is IdentityValidationError {
+        return obj[uniffiTypeNameSymbol] === "IdentityValidationError";
+    }
+
+    return Object.freeze({
+        instanceOf,
+  RotationKeys: RotationKeys_, 
+  RotationKeysItem: RotationKeysItem_, 
+  SigningKeys: SigningKeys_, 
+  SigningKeysItem: SigningKeysItem_, 
+  RevocationBounds: RevocationBounds_, 
+  RevocationBoundsItem: RevocationBoundsItem_, 
+  Servers: Servers_, 
+  RecoveryKey: RecoveryKey_, 
+  RecoverySignature: RecoverySignature_
+    });
+
+})();
+export type IdentityValidationError = InstanceType<
+    typeof IdentityValidationError['RotationKeys' | 'RotationKeysItem' | 'SigningKeys' | 'SigningKeysItem' | 'RevocationBounds' | 'RevocationBoundsItem' | 'Servers' | 'RecoveryKey' | 'RecoverySignature']
+>;
+
+// FfiConverter for enum IdentityValidationError
+const FfiConverterTypeIdentityValidationError = (() => {
+    type TypeName = IdentityValidationError;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
+                case 1: return new IdentityValidationError.RotationKeys(FfiConverterTypeSliceError.readFromCursor(c));
+                case 2: return new IdentityValidationError.RotationKeysItem({index: FfiConverterUInt32.readFromCursor(c), error: FfiConverterTypePublicKeyValidationError.readFromCursor(c) });
+                case 3: return new IdentityValidationError.SigningKeys(FfiConverterTypeSliceError.readFromCursor(c));
+                case 4: return new IdentityValidationError.SigningKeysItem({index: FfiConverterUInt32.readFromCursor(c), error: FfiConverterTypePublicKeyValidationError.readFromCursor(c) });
+                case 5: return new IdentityValidationError.RevocationBounds(FfiConverterTypeSliceError.readFromCursor(c));
+                case 6: return new IdentityValidationError.RevocationBoundsItem({index: FfiConverterUInt32.readFromCursor(c), error: FfiConverterTypeRevocationBoundValidationError.readFromCursor(c) });
+                case 7: return new IdentityValidationError.Servers(FfiConverterTypeServerListValidationError.readFromCursor(c));
+                case 8: return new IdentityValidationError.RecoveryKey(FfiConverterTypePublicKeyValidationError.readFromCursor(c));
+                case 9: return new IdentityValidationError.RecoverySignature(FfiConverterTypeSliceError.readFromCursor(c));
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            switch (value.tag) {
+                case IdentityValidationError_Tags.RotationKeys: {
+                    c.writeI32(1);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case IdentityValidationError_Tags.RotationKeysItem: {
+                    c.writeI32(2);
+                    const inner = value.inner;
+                    FfiConverterUInt32.writeIntoCursor(inner.index, c);
+                    FfiConverterTypePublicKeyValidationError.writeIntoCursor(inner.error, c);
+                    return;
+                }
+                case IdentityValidationError_Tags.SigningKeys: {
+                    c.writeI32(3);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case IdentityValidationError_Tags.SigningKeysItem: {
+                    c.writeI32(4);
+                    const inner = value.inner;
+                    FfiConverterUInt32.writeIntoCursor(inner.index, c);
+                    FfiConverterTypePublicKeyValidationError.writeIntoCursor(inner.error, c);
+                    return;
+                }
+                case IdentityValidationError_Tags.RevocationBounds: {
+                    c.writeI32(5);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case IdentityValidationError_Tags.RevocationBoundsItem: {
+                    c.writeI32(6);
+                    const inner = value.inner;
+                    FfiConverterUInt32.writeIntoCursor(inner.index, c);
+                    FfiConverterTypeRevocationBoundValidationError.writeIntoCursor(inner.error, c);
+                    return;
+                }
+                case IdentityValidationError_Tags.Servers: {
+                    c.writeI32(7);
+                    const inner = value.inner;
+                    FfiConverterTypeServerListValidationError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case IdentityValidationError_Tags.RecoveryKey: {
+                    c.writeI32(8);
+                    const inner = value.inner;
+                    FfiConverterTypePublicKeyValidationError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case IdentityValidationError_Tags.RecoverySignature: {
+                    c.writeI32(9);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                default:
+                    // Throwing from here means that IdentityValidationError_Tags hasn't matched an ordinal.
+                    throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        allocationSize(value: TypeName): number {
+            switch (value.tag) {
+                case IdentityValidationError_Tags.RotationKeys: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
+                case IdentityValidationError_Tags.RotationKeysItem: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterUInt32.allocationSize(inner.index);
+                    size += FfiConverterTypePublicKeyValidationError.allocationSize(inner.error);
+                    return size;
+                }
+                case IdentityValidationError_Tags.SigningKeys: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
+                case IdentityValidationError_Tags.SigningKeysItem: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterUInt32.allocationSize(inner.index);
+                    size += FfiConverterTypePublicKeyValidationError.allocationSize(inner.error);
+                    return size;
+                }
+                case IdentityValidationError_Tags.RevocationBounds: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
+                case IdentityValidationError_Tags.RevocationBoundsItem: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterUInt32.allocationSize(inner.index);
+                    size += FfiConverterTypeRevocationBoundValidationError.allocationSize(inner.error);
+                    return size;
+                }
+                case IdentityValidationError_Tags.Servers: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeServerListValidationError.allocationSize(inner[0]);
+                    return size;
+                }
+                case IdentityValidationError_Tags.RecoveryKey: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypePublicKeyValidationError.allocationSize(inner[0]);
+                    return size;
+                }
+                case IdentityValidationError_Tags.RecoverySignature: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+    }
+    return new FFIConverter();
+})();
+
+
 // Enum: RepostValidationError
 export enum RepostValidationError_Tags {
     Post = "Post",
@@ -6481,6 +7459,7 @@ export enum ContentBodyValidationError_Tags {
     Reaction = "Reaction",
     AttributedToReaction = "AttributedToReaction",
     ProfileUpdate = "ProfileUpdate",
+    Identity = "Identity",
     Repost = "Repost",
     Report = "Report",
     Labels = "Labels",
@@ -6721,6 +7700,39 @@ Readonly<
 
     }
 
+    type Identity__interface = {
+        tag: ContentBodyValidationError_Tags.Identity;
+        inner: 
+Readonly<
+[IdentityValidationError
+]>
+    };
+    class Identity_ extends UniffiEnum implements Identity__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "ContentBodyValidationError";
+        readonly tag = ContentBodyValidationError_Tags.Identity;
+        readonly inner: 
+Readonly<
+[IdentityValidationError
+]>;
+        constructor(v0: IdentityValidationError) {
+            super("ContentBodyValidationError", "Identity");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: IdentityValidationError): Identity_ {
+            return new Identity_(v0);
+        }
+
+        static instanceOf(obj: any): obj is Identity_ {
+            return obj.tag === ContentBodyValidationError_Tags.Identity;
+        }
+
+    }
+
     type Repost__interface = {
         tag: ContentBodyValidationError_Tags.Repost;
         inner: 
@@ -6932,6 +7944,7 @@ Readonly<
   Reaction: Reaction_, 
   AttributedToReaction: AttributedToReaction_, 
   ProfileUpdate: ProfileUpdate_, 
+  Identity: Identity_, 
   Repost: Repost_, 
   Report: Report_, 
   Labels: Labels_, 
@@ -6942,7 +7955,7 @@ Readonly<
 
 })();
 export type ContentBodyValidationError = InstanceType<
-    typeof ContentBodyValidationError['Post' | 'Delete' | 'Follow' | 'Block' | 'Reaction' | 'AttributedToReaction' | 'ProfileUpdate' | 'Repost' | 'Report' | 'Labels' | 'VerificationClaim' | 'VerificationVerify' | 'VerificationTarget']
+    typeof ContentBodyValidationError['Post' | 'Delete' | 'Follow' | 'Block' | 'Reaction' | 'AttributedToReaction' | 'ProfileUpdate' | 'Identity' | 'Repost' | 'Report' | 'Labels' | 'VerificationClaim' | 'VerificationVerify' | 'VerificationTarget']
 >;
 
 // FfiConverter for enum ContentBodyValidationError
@@ -6958,12 +7971,13 @@ const FfiConverterTypeContentBodyValidationError = (() => {
                 case 5: return new ContentBodyValidationError.Reaction(FfiConverterTypeReactionValidationError.readFromCursor(c));
                 case 6: return new ContentBodyValidationError.AttributedToReaction(FfiConverterTypeAttributedToReactionValidationError.readFromCursor(c));
                 case 7: return new ContentBodyValidationError.ProfileUpdate(FfiConverterTypeProfileUpdateValidationError.readFromCursor(c));
-                case 8: return new ContentBodyValidationError.Repost(FfiConverterTypeRepostValidationError.readFromCursor(c));
-                case 9: return new ContentBodyValidationError.Report(FfiConverterTypeReportValidationError.readFromCursor(c));
-                case 10: return new ContentBodyValidationError.Labels(FfiConverterTypeLabelsValidationError.readFromCursor(c));
-                case 11: return new ContentBodyValidationError.VerificationClaim(FfiConverterTypeVerificationClaimValidationError.readFromCursor(c));
-                case 12: return new ContentBodyValidationError.VerificationVerify(FfiConverterTypeVerificationVerifyValidationError.readFromCursor(c));
-                case 13: return new ContentBodyValidationError.VerificationTarget(FfiConverterTypeVerificationTargetValidationError.readFromCursor(c));
+                case 8: return new ContentBodyValidationError.Identity(FfiConverterTypeIdentityValidationError.readFromCursor(c));
+                case 9: return new ContentBodyValidationError.Repost(FfiConverterTypeRepostValidationError.readFromCursor(c));
+                case 10: return new ContentBodyValidationError.Report(FfiConverterTypeReportValidationError.readFromCursor(c));
+                case 11: return new ContentBodyValidationError.Labels(FfiConverterTypeLabelsValidationError.readFromCursor(c));
+                case 12: return new ContentBodyValidationError.VerificationClaim(FfiConverterTypeVerificationClaimValidationError.readFromCursor(c));
+                case 13: return new ContentBodyValidationError.VerificationVerify(FfiConverterTypeVerificationVerifyValidationError.readFromCursor(c));
+                case 14: return new ContentBodyValidationError.VerificationTarget(FfiConverterTypeVerificationTargetValidationError.readFromCursor(c));
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
@@ -7011,38 +8025,44 @@ const FfiConverterTypeContentBodyValidationError = (() => {
                     FfiConverterTypeProfileUpdateValidationError.writeIntoCursor(inner[0], c);
                     return;
                 }
-                case ContentBodyValidationError_Tags.Repost: {
+                case ContentBodyValidationError_Tags.Identity: {
                     c.writeI32(8);
+                    const inner = value.inner;
+                    FfiConverterTypeIdentityValidationError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case ContentBodyValidationError_Tags.Repost: {
+                    c.writeI32(9);
                     const inner = value.inner;
                     FfiConverterTypeRepostValidationError.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case ContentBodyValidationError_Tags.Report: {
-                    c.writeI32(9);
+                    c.writeI32(10);
                     const inner = value.inner;
                     FfiConverterTypeReportValidationError.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case ContentBodyValidationError_Tags.Labels: {
-                    c.writeI32(10);
+                    c.writeI32(11);
                     const inner = value.inner;
                     FfiConverterTypeLabelsValidationError.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case ContentBodyValidationError_Tags.VerificationClaim: {
-                    c.writeI32(11);
+                    c.writeI32(12);
                     const inner = value.inner;
                     FfiConverterTypeVerificationClaimValidationError.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case ContentBodyValidationError_Tags.VerificationVerify: {
-                    c.writeI32(12);
+                    c.writeI32(13);
                     const inner = value.inner;
                     FfiConverterTypeVerificationVerifyValidationError.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case ContentBodyValidationError_Tags.VerificationTarget: {
-                    c.writeI32(13);
+                    c.writeI32(14);
                     const inner = value.inner;
                     FfiConverterTypeVerificationTargetValidationError.writeIntoCursor(inner[0], c);
                     return;
@@ -7094,6 +8114,12 @@ const FfiConverterTypeContentBodyValidationError = (() => {
                     const inner = value.inner;
                     let size = 4;
                     size += FfiConverterTypeProfileUpdateValidationError.allocationSize(inner[0]);
+                    return size;
+                }
+                case ContentBodyValidationError_Tags.Identity: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeIdentityValidationError.allocationSize(inner[0]);
                     return size;
                 }
                 case ContentBodyValidationError_Tags.Repost: {
@@ -7556,9 +8582,11 @@ export default Object.freeze({
     FfiConverterTypeContentValidationError,
     FfiConverterTypeDeleteValidationError,
     FfiConverterTypeEventKeyValidationError,
+    FfiConverterTypeEventProofTargetValidationError,
     FfiConverterTypeEventValidationError,
     FfiConverterTypeFieldDefValidationError,
     FfiConverterTypeFollowValidationError,
+    FfiConverterTypeIdentityValidationError,
     FfiConverterTypeImageSetValidationError,
     FfiConverterTypeImageValidationError,
     FfiConverterTypeIntError,
@@ -7571,7 +8599,9 @@ export default Object.freeze({
     FfiConverterTypeReactionValidationError,
     FfiConverterTypeReportValidationError,
     FfiConverterTypeRepostValidationError,
+    FfiConverterTypeRevocationBoundValidationError,
     FfiConverterTypeSerializedVerificationSchemaValidationError,
+    FfiConverterTypeServerListValidationError,
     FfiConverterTypeSliceError,
     FfiConverterTypeStringError,
     FfiConverterTypeToValidationError,
