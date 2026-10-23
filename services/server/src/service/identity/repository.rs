@@ -432,7 +432,8 @@ async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
           reply_count = reply_count - grouped_updates.reply_count_diff,
           repost_count = repost_count - grouped_updates.repost_count_diff,
           quote_count = quote_count - grouped_updates.quote_count_diff,
-          decayed_count = reaction_count_decay(reaction_positive_count - grouped_updates.positive_count_diff, events.created_at)
+          decayed_count = reaction_count_decay(reaction_positive_count - grouped_updates.positive_count_diff, events.created_at),
+          updated_at = CURRENT_TIMESTAMP
         FROM grouped_updates
         INNER JOIN events ON grouped_updates.post = events.id
         WHERE interaction_tally.event_id = grouped_updates.post",
