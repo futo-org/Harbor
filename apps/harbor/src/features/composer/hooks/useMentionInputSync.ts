@@ -16,7 +16,7 @@ export function useMentionInputSync({
   inputRef,
 }: {
   text: string;
-  onChangeText: (next: string) => void;
+  onChangeText: (next: string, caret?: number) => void;
   inputRef: React.RefObject<TextInput | null>;
 }) {
   const store = useMentionStoreApi();

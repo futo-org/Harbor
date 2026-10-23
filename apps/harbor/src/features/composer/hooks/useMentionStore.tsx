@@ -4,7 +4,6 @@ import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { TOKEN_PRECEDER } from '@/src/common/util/parseTextLinks';
 import type { ProfileHookResult } from '@/src/features/profile/hooks/useProfile';
-import { isWeb } from '@/src/common/util/platform';
 import { useComposerStore } from '@/src/features/composer/hooks/useComposerStore';
 import type { MentionRange } from '@/src/features/composer/utils/applyTextChange';
 
@@ -39,7 +38,7 @@ export type MentionStore = {
   isFocused: boolean;
   inputRef: TextInput | null;
   /** ComposerFields' text sync (updates the draft store + native field ref). */
-  onChangeText: ((next: string) => void) | null;
+  onChangeText: ((next: string, caret?: number) => void) | null;
   inputLayout: LayoutRectangle;
   inputPageY: number;
 
@@ -83,7 +82,7 @@ export function createMentionStore(): StoreApi<MentionStore> {
       }),
 
     insertMention: (identity, profile) => {
-      const { text, mentionRanges, selection, inputRef, onChangeText } = get();
+      const { text, mentionRanges, selection, onChangeText } = get();
       const caret = selection.end;
       const ctx = findMentionContext(text, caret, mentionRanges);
       if (!ctx || !onChangeText) return;
@@ -103,12 +102,12 @@ export function createMentionStore(): StoreApi<MentionStore> {
       const newCaret = ctx.start + mention.length + 1;
 
       // The draft store must hold the new text (and on iOS the controlled
-      // `value` would otherwise revert the field), while setNativeProps pushes
-      // the edit into the native input — Android is uncontrolled, and iOS
+      // `value` would otherwise revert the field), and passing the caret
+      // pushes the edit into the input too - Android is uncontrolled, and iOS
       // doesn't re-measure (auto-grow) on a `value`-prop-only update. The
       // caret goes explicitly after the mention's trailing space. `text` is
       // set eagerly so the store is consistent before the prop mirror runs.
-      onChangeText(newText);
+      onChangeText(newText, newCaret);
       // After the text change, which shifts ranges by the old text's offsets
       useComposerStore.getState().addMentionRange({
         start: ctx.start,
@@ -120,35 +119,8 @@ export function createMentionStore(): StoreApi<MentionStore> {
         mentionRanges: useComposerStore.getState().mentionRanges,
         selection: { start: newCaret, end: newCaret },
       });
-
-      pushTextToInput(inputRef, newText, newCaret);
     },
   }));
-}
-
-/**
- * Push text + caret into the input. Web has no `setNativeProps`: set the DOM
- * value through the native setter (so React's value tracker notices) and
- * dispatch `input`, which runs the same onChangeText path as typing — that's
- * what re-runs TextArea's auto-grow.
- */
-export function pushTextToInput(
-  inputRef: TextInput | null,
-  text: string,
-  caret: number,
-) {
-  if (!inputRef) return;
-  if (!isWeb) {
-    inputRef.setNativeProps({ text, selection: { start: caret, end: caret } });
-    return;
-  }
-  const node = inputRef as unknown as HTMLTextAreaElement;
-  Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    'value',
-  )?.set?.call(node, text);
-  node.dispatchEvent(new Event('input', { bubbles: true }));
-  node.setSelectionRange(caret, caret);
 }
 
 /**
