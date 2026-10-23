@@ -66,7 +66,7 @@ pub enum ValidationError {
     AttributedToReaction(attributed_to_reaction::ValidationError),
     ProfileUpdate(profile_update::ValidationError),
     Identity(identity::ValidationError),
-    RecovationBound(revocation_bound::ValidationError),
+    RevocationBound(revocation_bound::ValidationError),
     EventProofTarget(event_proof_target::ValidationError),
     ServerList(server_list::ValidationError),
     Repost(repost::ValidationError),
@@ -214,7 +214,7 @@ impl From<identity::ValidationError> for ValidationError {
 
 impl From<revocation_bound::ValidationError> for ValidationError {
     fn from(err: revocation_bound::ValidationError) -> ValidationError {
-        ValidationError::RecovationBound(err)
+        ValidationError::RevocationBound(err)
     }
 }
 
@@ -309,7 +309,7 @@ impl fmt::Display for ValidationError {
             ValidationError::AttributedToReaction(err) => write!(f, "attributed to reaction {err}"),
             ValidationError::ProfileUpdate(err) => write!(f, "profile update {err}"),
             ValidationError::Identity(err) => write!(f, "identity {err}"),
-            ValidationError::RecovationBound(err) => write!(f, "recoveration bound {err}"),
+            ValidationError::RevocationBound(err) => write!(f, "revoceration bound {err}"),
             ValidationError::EventProofTarget(err) => write!(f, "event proof target {err}"),
             ValidationError::ServerList(err) => write!(f, "server list {err}"),
             ValidationError::Repost(err) => write!(f, "repost {err}"),
