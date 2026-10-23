@@ -1087,9 +1087,6 @@ async fn get_post_with_replies() {
         vec![
             ExpectHint::moderator_identity(),
             ExpectHint::Identity(client.identity().to_owned()),
-            // TODO: this hint is not provided, do we want it? For quotes for
-            // example we do get the quoted post event.
-            //ExpectHint::Post(replied_to_post.clone()),
         ],
     )
     .await;
