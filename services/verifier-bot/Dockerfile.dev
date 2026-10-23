@@ -28,6 +28,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 RUN rustup target add wasm32-unknown-unknown
+# wasm-bindgen-cli must match the `wasm-bindgen` pin in packages/rs-core/Cargo.toml.
+RUN cargo install wasm-bindgen-cli@0.2.125
 
 # Cargo workspace: every workspace member must be present for the workspace to
 # resolve, even though only rs-core (+ rs-common) is compiled to wasm here.
