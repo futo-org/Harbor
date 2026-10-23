@@ -309,7 +309,7 @@ importers:
         version: 3.14.21(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@types/react-native-web':
         specifier: ^0.19.2
-        version: 0.19.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)
+        version: 0.19.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)
       expo:
         specifier: ^57.0.14
         version: 57.0.15(e37bc3990f2438cc330b129173915d6b)
@@ -5635,8 +5635,8 @@ packages:
     peerDependencies:
       '@types/react': ^19.2.0
 
-  '@types/react-native-web@0.19.2':
-    resolution: {integrity: sha512-TAgyUi1XcYYUM5j3IwBDufPUD0NaOJiz8ftld6oJPtuIT5lc+uRZZmTcTdflpsVzCtiZ6AjSyLFZ/xD0OtCfJA==}
+  '@types/react-native-web@0.19.3':
+    resolution: {integrity: sha512-QoFf3fadLPZdBAXmufD8RElBmGI+aCIczs/79gT4ZzURP0O2kHMsJPTPVOU+f1wMzQDWeXFc7QXou9vyKKy4OQ==}
 
   '@types/react-reconciler@0.33.1':
     resolution: {integrity: sha512-0kF59ji2mKuHUd5wytHSpmORybMYVerJvq0K10pz9ZFoOlJ3e+w1LBjLshWpCrokeyQOioRodNbO4PH4ddvRfg==}
@@ -19324,7 +19324,7 @@ snapshots:
       '@types/react': 19.2.17
     optional: true
 
-  '@types/react-native-web@0.19.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)':
+  '@types/react-native-web@0.19.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)':
     dependencies:
       '@types/react': 19.2.17
       react-native: 0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1)
