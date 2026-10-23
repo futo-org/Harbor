@@ -43,7 +43,7 @@ const ATTACHMENT_GAP = Spacing.sm;
 const NEW_LINE_HEADROOM = typography.lineHeight.lg;
 
 // The native command behind TextInput's `clear` and `setSelection`, which
-// don't take text. react-native-web has no `codegenNativeCommands`.
+// don't take text
 const TextInputCommands = isWeb
   ? null
   : codegenNativeCommands<{
@@ -65,7 +65,6 @@ type ComposerFieldsProps = {
   error: string | null;
   currentIdentityKey: string | null;
   placeholder: string;
-  text: string;
   setText: (text: string) => { text: string; caret: number };
   attachments: Attachment[];
   submitting: boolean;
@@ -95,7 +94,6 @@ export function ComposerFields({
   error,
   currentIdentityKey,
   placeholder,
-  text,
   setText,
   attachments,
   submitting,
@@ -109,6 +107,12 @@ export function ComposerFields({
 }: ComposerFieldsProps) {
   const { theme } = useTheme();
   const styles = useStyles();
+
+  // From the store, not a prop: the host renders this through a portal that
+  // passes new props a commit late, and a render in between (like the one
+  // `mentionRanges` triggers) would write the stale text into the input
+  const text = useComposerStore((s) => s.text);
+  const mentionRanges = useComposerStore((s) => s.mentionRanges);
 
   const inputRef = useRef<RNTextInput>(null);
 
@@ -157,8 +161,6 @@ export function ComposerFields({
   // Feeds the host's mention store (query derivation + the overlay's anchor);
   // the autocomplete itself renders in MentionSearchOverlay, in the host.
   const mentionInput = useMentionInputSync({ text, onChangeText, inputRef });
-
-  const mentionRanges = useComposerStore((s) => s.mentionRanges);
 
   // Android only: the field's measured text height, null until first reported.
   const [textContentHeight, setTextContentHeight] = useState<number | null>(
