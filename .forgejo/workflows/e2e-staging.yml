@@ -131,7 +131,7 @@ jobs:
           ZULIP_BOT_API_KEY: ${{ secrets.ZULIP_BOT_API_KEY }}
         run: |
           pnpm --filter harbor-e2e test:web || {
-            node .forgejo/scripts/post-e2e-staging-failure.mjs 'Web e2e flows failed'
+            node .forgejo/scripts/post-e2e-staging-failure.mjs
             exit 1
           }
       - uses: forgejo/upload-artifact@v4
