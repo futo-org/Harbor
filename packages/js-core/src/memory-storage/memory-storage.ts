@@ -10,6 +10,7 @@ import { FileStoreError } from '../platform-interfaces/file-store-driver';
 import { segmentsFromPath } from '../utils/path';
 import type {
   LoginDetails,
+  LoginId,
   LoginOverview,
   LoginStatus,
 } from '../platform-interfaces/login-repository';
@@ -146,6 +147,17 @@ function loginString(
   return `${identity}|${keyType}|${bytesToHex(publicKey)}`;
 }
 
+/** Copy a login ID to avoid aliasing. */
+function copyLoginId(login: LoginId): LoginId {
+  return {
+    identity: login.identity,
+    publicKey: Proto.PublicKey.create({
+      keyType: login.publicKey.keyType,
+      key: login.publicKey.key.slice(),
+    }),
+  };
+}
+
 class MemoryLoginRepository implements ILoginRepository {
   private readonly map = new Map<string, StoredLogin>();
 
@@ -256,7 +268,7 @@ export class MemoryStorageDriver implements IStorageDriver {
   private readonly events = new MemoryEventRepository();
   private readonly contents = new MemoryContentRepository();
   private readonly logins = new MemoryLoginRepository();
-  private readonly activeIdentityKeys = new Map<string, string>();
+  private activeLogin: LoginId | null = null;
 
   createEventRepository() {
     return this.events;
@@ -268,20 +280,12 @@ export class MemoryStorageDriver implements IStorageDriver {
     return this.logins;
   }
 
-  async saveActiveIdentityKey(
-    publicKey: Uint8Array,
-    identityKey: string | null,
-  ): Promise<void> {
-    const key = bytesToHex(publicKey);
-    if (identityKey) {
-      this.activeIdentityKeys.set(key, identityKey);
-    } else {
-      this.activeIdentityKeys.delete(key);
-    }
+  async setActiveLogin(login: LoginId | null): Promise<void> {
+    this.activeLogin = login ? copyLoginId(login) : null;
   }
 
-  async loadActiveIdentityKey(publicKey: Uint8Array): Promise<string | null> {
-    return this.activeIdentityKeys.get(bytesToHex(publicKey)) ?? null;
+  async getActiveLogin(): Promise<LoginId | null> {
+    return this.activeLogin ? copyLoginId(this.activeLogin) : null;
   }
 }
 
