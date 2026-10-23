@@ -1,4 +1,3 @@
-use entity::reaction_tally;
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -22,7 +21,7 @@ impl MigrationTrait for Migration {
         manager
             .drop_index({
                 let mut i = Index::drop();
-                i.if_exists().name(NAME).table(reaction_tally::Entity);
+                i.if_exists().name(NAME).table("reaction_tally");
                 i
             })
             .await
