@@ -326,10 +326,8 @@ export function ComposerFields({
 }
 
 /**
- * Push text + caret into the input. Web has no `setNativeProps`: set the DOM
- * value through the native setter (so React's value tracker notices) and
- * dispatch `input`, which runs the same onChangeText path as typing - that's
- * what re-runs TextArea's auto-grow.
+ * Push text + caret into the input ahead of the render that brings the same
+ * text, which would otherwise not leave the caret there.
  */
 function pushTextToInput(
   input: RNTextInput | null,
@@ -353,11 +351,8 @@ function pushTextToInput(
     return;
   }
   const node = input as unknown as HTMLTextAreaElement;
-  Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    'value',
-  )?.set?.call(node, text);
-  node.dispatchEvent(new Event('input', { bubbles: true }));
+  // React then finds `value` already in the DOM and leaves the caret alone
+  node.value = text;
   node.setSelectionRange(caret, caret);
 }
 
