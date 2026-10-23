@@ -172,7 +172,7 @@ function bootstrapClient(): Promise<Bootstrap> {
     });
 
     const store = createPolycentricStore(client);
-    await store.getState().refreshIdentities();
+    await store.getState().refreshLogins();
 
     if (client.activeIdentityKey) {
       // Refresh from current local state
@@ -239,7 +239,7 @@ export function PolycentricProvider({
     const refresh = async ({ client, store }: Bootstrap) => {
       setCurrentIdentity(client.identityManager.resolveIdentity());
       await Promise.all([
-        store.getState().refreshIdentities(),
+        store.getState().refreshLogins(),
         useFollows.getState().refresh(client),
         useReposts.getState().refresh(client),
         useReactions.getState().refresh(client),
@@ -325,15 +325,6 @@ export function PolycentricProvider({
     };
   }, []);
 
-  const switchIdentity = useCallback(
-    async (publicKey: types.PublicKey) => {
-      if (!client) return;
-      await client.keyPairManager.switchKeyPair(publicKey);
-      await client.sync().catch(() => {});
-    },
-    [client],
-  );
-
   const refreshCurrentIdentity = useCallback(async () => {
     if (!client) return;
     setCurrentIdentity(client.identityManager.resolveIdentity());
@@ -348,7 +339,6 @@ export function PolycentricProvider({
       isReady: !isLoading && !error,
       error,
       currentIdentity,
-      switchIdentity,
       refreshCurrentIdentity,
     };
   }, [
@@ -357,7 +347,6 @@ export function PolycentricProvider({
     isLoading,
     error,
     currentIdentity,
-    switchIdentity,
     refreshCurrentIdentity,
   ]);
 
@@ -378,11 +367,11 @@ export function PolycentricProvider({
 
 export function useIdentities() {
   const { store } = usePolycentricContext();
-  return useStore(store, (s) => s.identities);
+  return useStore(store, (s) => s.logins);
 }
 
 export function useCurrentIdentity() {
-  const { client, currentIdentity, switchIdentity } = usePolycentricContext();
+  const { client, currentIdentity } = usePolycentricContext();
 
   const activeIdentityKey = currentIdentity?.identityKey ?? null;
 
@@ -400,7 +389,6 @@ export function useCurrentIdentity() {
     hasIdentity: !!activeIdentityKey,
     client,
     isCurrentIdentity,
-    switchIdentity,
   };
 }
 

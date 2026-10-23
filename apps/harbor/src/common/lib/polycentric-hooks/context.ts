@@ -1,7 +1,6 @@
 import type {
   IdentityState,
   PolycentricClient,
-  types,
 } from '@polycentric/react-native';
 import { createContext, useContext } from 'react';
 import type { PolycentricStoreApi } from './store';
@@ -13,7 +12,6 @@ export interface PolycentricContextValue {
   isReady: boolean;
   error: Error | null;
   currentIdentity: IdentityState | null;
-  switchIdentity: (publicKey: types.PublicKey) => Promise<void>;
   refreshCurrentIdentity: () => Promise<void>;
 }
 

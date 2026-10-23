@@ -176,10 +176,10 @@ export function usePairIdentityClaimer(
 
           const identityKey = session.digest.issuerIdentity;
           const claimServers = serversForClaim(session, info, client.servers);
-          await client.identityManager.claim(identityKey, claimServers);
-          if (canceled) return;
+          throw new Error('TODO: implement');
+          // if (canceled) return;
 
-          setState({ stage: 'done' });
+          // setState({ stage: 'done' });
         } catch (err) {
           if (!canceled) {
             onError(err, 'Failed to claim identity');

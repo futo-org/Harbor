@@ -1,16 +1,20 @@
 import { createStore, useStore as useZustandStore } from 'zustand';
-import type { KeyPair, PolycentricClient } from '@polycentric/react-native';
+import type {
+  KeyPair,
+  LoginOverview,
+  PolycentricClient,
+} from '@polycentric/react-native';
 
 export interface PolycentricStore {
-  identities: KeyPair[];
-  refreshIdentities: () => Promise<void>;
+  logins: LoginOverview[];
+  refreshLogins: () => Promise<void>;
 }
 
 export function createPolycentricStore(client: PolycentricClient) {
   return createStore<PolycentricStore>()((set, get) => ({
-    identities: [],
-    async refreshIdentities() {
-      set({ identities: await client.keyPairManager.getKeys() });
+    logins: [],
+    async refreshLogins() {
+      set({ logins: await client.storage.logins.listLogins() });
     },
   }));
 }
