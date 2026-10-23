@@ -6,7 +6,7 @@ use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use ::entity::{
     application, content, content_label, content_post_attributed_url,
     content_reaction as Contentreaction, event, follow, interaction_tally,
-    quote, reaction, reaction_tally, reply, repost,
+    quote, reaction, reply, repost,
 };
 use polycentric_common::models::protos_v2::SortPostsBy;
 use polycentric_common::models::{collections, content_types};
