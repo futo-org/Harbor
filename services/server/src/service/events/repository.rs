@@ -9,13 +9,14 @@ use polycentric_common::models::protos_v2::{
 };
 use polycentric_common::models::{collections, content_types};
 use sea_orm::sea_query::{
-    CommonTableExpression, DeleteStatement, Expr, Func, InsertStatement,
+    CommonTableExpression, DeleteStatement, Expr, InsertStatement,
     IntoCondition, IntoTableRef, OnConflict, SelectExpr, SelectStatement,
     SubQueryStatement, UnionType, UpdateStatement, WithClause,
 };
 use sea_orm::*;
 use tonic::Status;
 
+use crate::db::fns::{decay_interaction_count, decay_interaction_count1};
 use crate::service::content::content_repository::Mutation as ContentRepository;
 use crate::service::content::repository::Mutation as ContentChildRepository;
 use crate::service::content::repository::{EventKeyParts, split_event_key};
@@ -416,8 +417,8 @@ impl Mutation {
                     .expr(Expr::Constant(0.into())) // Reply.
                     .expr(Expr::Constant(0.into())) // Repost.
                     .expr(Expr::Constant(0.into())) // Quote.
-                    .expr(reaction_count_decay(
-                        Expr::Constant(0.into()), // Interaction count.
+                    .expr(decay_interaction_count1(
+                        Expr::Constant(0.into()), // Total interaction count.
                         Expr::col((
                             event_table.clone(),
                             event::Column::CreatedAt,
@@ -487,6 +488,37 @@ impl Mutation {
                     Expr::col(interaction_tally::Column::QuoteCount)
                         .add(Expr::Constant(1.into())),
                 )
+                .value(
+                    interaction_tally::Column::DecayedCount,
+                    decay_interaction_count(
+                        Expr::col(
+                            interaction_tally::Column::ReactionPositiveCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::ReplyCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::RepostCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::QuoteCount
+                                .as_column_ref(),
+                        )
+                        .add(Expr::Constant(1.into())),
+                        Expr::col(event::Column::CreatedAt.as_column_ref()),
+                    ),
+                )
+                // This should be an inner join, but SeaORM doesn't support this,
+                // see <https://github.com/SeaQL/sea-query/issues/608>.
+                .from(event::Entity)
+                .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
+                    Expr::col(
+                        interaction_tally::Column::EventId.as_column_ref(),
+                    ),
+                ))
                 .cond_where(Expr::col(interaction_tally::Column::EventId).eq(
                     {
                         let mut q = SelectStatement::new();
@@ -559,6 +591,37 @@ impl Mutation {
                     Expr::col(interaction_tally::Column::ReplyCount)
                         .add(Expr::Constant(1.into())),
                 )
+                .value(
+                    interaction_tally::Column::DecayedCount,
+                    decay_interaction_count(
+                        Expr::col(
+                            interaction_tally::Column::ReactionPositiveCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::ReplyCount
+                                .as_column_ref(),
+                        )
+                        .add(Expr::Constant(1.into())),
+                        Expr::col(
+                            interaction_tally::Column::RepostCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::QuoteCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(event::Column::CreatedAt.as_column_ref()),
+                    ),
+                )
+                // This should be an inner join, but SeaORM doesn't support this,
+                // see <https://github.com/SeaQL/sea-query/issues/608>.
+                .from(event::Entity)
+                .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
+                    Expr::col(
+                        interaction_tally::Column::EventId.as_column_ref(),
+                    ),
+                ))
                 .cond_where(Expr::col(interaction_tally::Column::EventId).eq(
                     {
                         let mut q = SelectStatement::new();
@@ -714,12 +777,21 @@ impl Mutation {
         if reaction.positive {
             query.value(
                 interaction_tally::Column::DecayedCount,
-                reaction_count_decay(
+                decay_interaction_count(
                     Expr::col(
                         interaction_tally::Column::ReactionPositiveCount
                             .as_column_ref(),
                     )
                     .add(Expr::Constant(positive.into())),
+                    Expr::col(
+                        interaction_tally::Column::ReplyCount.as_column_ref(),
+                    ),
+                    Expr::col(
+                        interaction_tally::Column::RepostCount.as_column_ref(),
+                    ),
+                    Expr::col(
+                        interaction_tally::Column::QuoteCount.as_column_ref(),
+                    ),
                     Expr::col(event::Column::CreatedAt.as_column_ref()),
                 ),
             );
@@ -855,6 +927,32 @@ impl Mutation {
                 Expr::col(interaction_tally::Column::RepostCount)
                     .add(Expr::Constant(1.into())),
             )
+            .value(
+                interaction_tally::Column::DecayedCount,
+                decay_interaction_count(
+                    Expr::col(
+                        interaction_tally::Column::ReactionPositiveCount
+                            .as_column_ref(),
+                    ),
+                    Expr::col(
+                        interaction_tally::Column::ReplyCount.as_column_ref(),
+                    ),
+                    Expr::col(
+                        interaction_tally::Column::RepostCount.as_column_ref(),
+                    )
+                    .add(Expr::Constant(1.into())),
+                    Expr::col(
+                        interaction_tally::Column::QuoteCount.as_column_ref(),
+                    ),
+                    Expr::col(event::Column::CreatedAt.as_column_ref()),
+                ),
+            )
+            // This should be an inner join, but SeaORM doesn't support this,
+            // see <https://github.com/SeaQL/sea-query/issues/608>.
+            .from(event::Entity)
+            .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
+                Expr::col(interaction_tally::Column::EventId.as_column_ref()),
+            ))
             .cond_where(Expr::col(interaction_tally::Column::EventId).eq({
                 let mut q = SelectStatement::new();
                 q.column(repost::Column::Post).from(INSERTED_REPOST);
@@ -1138,7 +1236,49 @@ impl Mutation {
                                 QUOTE_COUNT_DIFF,
                             ))),
                         ),
+                        (
+                            interaction_tally::Column::DecayedCount,
+                            decay_interaction_count(
+                                Expr::col(
+                                    interaction_tally::Column::ReactionPositiveCount
+                                        .as_column_ref(),
+                                ),
+                                Expr::col(
+                                    interaction_tally::Column::ReplyCount
+                                        .as_column_ref(),
+                                )
+                                .sub(Expr::col((
+                                    GROUPED_INTERACTION_UPDATES,
+                                    REPLY_COUNT_DIFF,
+                                ))),
+                                Expr::col(
+                                    interaction_tally::Column::RepostCount
+                                        .as_column_ref(),
+                                )
+                                .sub(Expr::col((
+                                    GROUPED_INTERACTION_UPDATES,
+                                    REPOST_COUNT_DIFF,
+                                ))),
+                                Expr::col(
+                                    interaction_tally::Column::QuoteCount
+                                        .as_column_ref(),
+                                )
+                                .sub(Expr::col((
+                                    GROUPED_INTERACTION_UPDATES,
+                                    QUOTE_COUNT_DIFF,
+                                ))),
+                                Expr::col(event::Column::CreatedAt.as_column_ref()),
+                            ),
+                        ),
                     ])
+                    // This should be an inner join, but SeaORM doesn't support this,
+                    // see <https://github.com/SeaQL/sea-query/issues/608>.
+                    .from(event::Entity)
+                    .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
+                        Expr::col(
+                            interaction_tally::Column::EventId.as_column_ref(),
+                        ),
+                    ))
                     .from(GROUPED_INTERACTION_UPDATES)
                     .and_where(
                         Expr::col(
@@ -1230,12 +1370,15 @@ impl Mutation {
                             interaction_tally::Column::DecayedCount,
                             Expr::case(
                                 Expr::col(reaction::Column::Positive),
-                                reaction_count_decay(
+                                decay_interaction_count(
                                     Expr::col(
                                         interaction_tally::Column::ReactionPositiveCount
                                             .as_column_ref(),
                                     )
                                     .sub(Expr::Constant(1.into())),
+                                    Expr::col(interaction_tally::Column::ReplyCount.as_column_ref()),
+                                    Expr::col(interaction_tally::Column::RepostCount.as_column_ref()),
+                                    Expr::col(interaction_tally::Column::QuoteCount.as_column_ref()),
                                     Expr::col(
                                         event::Column::CreatedAt
                                             .as_column_ref(),
@@ -1353,12 +1496,6 @@ fn select_not_deleted_event_id(key: EventKeyParts) -> SelectStatement {
         q
     }));
     query
-}
-
-fn reaction_count_decay(positive_count: Expr, created_at: Expr) -> Expr {
-    Func::cust("reaction_count_decay")
-        .args([positive_count, created_at])
-        .into()
 }
 
 /* TODO: move to integration tests.

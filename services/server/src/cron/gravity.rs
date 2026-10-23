@@ -13,6 +13,7 @@ use sea_orm::{ColumnTrait, ConnectionTrait, DatabaseConnection, ExprTrait};
 use crate::config;
 use crate::cron::{AdvisoryLock, Cron};
 use crate::db::DbConn;
+use crate::db::fns::decay_interaction_count;
 
 const BATCH_SIZE: u64 = 1000;
 
@@ -48,7 +49,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             // we're using dynamic gravity calculate the gravity value.
             //
             // NOTE: we do this is in a separate transaction because the
-            // gravity table is used by `reaction_count_decay` and when we
+            // gravity table is used by `decay_interaction_count` and when we
             // update it, while also updating all the decayed counts it
             // means we lock out creation of reaction events. This caused
             // #292.
@@ -213,12 +214,16 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     .table(interaction_tally::Entity)
                     .value(
                         interaction_tally::Column::DecayedCount,
-                        Func::cust("reaction_count_decay")
-                        .args([
+                        decay_interaction_count(
                             Expr::col(interaction_tally::Column::ReactionPositiveCount.as_column_ref()),
+                            Expr::col(interaction_tally::Column::ReplyCount.as_column_ref()),
+                            Expr::col(interaction_tally::Column::RepostCount.as_column_ref()),
+                            Expr::col(interaction_tally::Column::QuoteCount.as_column_ref()),
                             Expr::col(event::Column::CreatedAt.as_column_ref()),
-                        ]),
+                        ),
                     )
+                    // This should be an inner join, but SeaORM doesn't support
+                    // this, see <https://github.com/SeaQL/sea-query/issues/608>.
                     .from(event::Entity)
                     .and_where(
                         Expr::col(event::Column::Id.as_column_ref())

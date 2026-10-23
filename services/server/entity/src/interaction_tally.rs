@@ -31,7 +31,7 @@ pub struct Model {
     pub repost_count: i64,
     /// Total amount of quotes.
     pub quote_count: i64,
-    /// Decayed count calculated by `reaction_count_decay`.
+    /// Decayed count calculated by `decay_interaction_count`.
     ///
     /// NOTE: actual type `NUMERIC(20, 11)`.
     pub decayed_count: String,

@@ -1724,7 +1724,7 @@ async fn recommended_feed_includes_posts_quoted_by_followee() {
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[reply1_key, post1_key]).await;
+    recommended_feed(follower, &[post1_key, reply1_key]).await;
 }
 
 #[tokio::test]
@@ -1762,7 +1762,7 @@ async fn recommended_feed_includes_posts_replies_by_followee() {
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[reply1_key, post1_key]).await;
+    recommended_feed(follower, &[post1_key, reply1_key]).await;
 }
 
 #[tokio::test]
