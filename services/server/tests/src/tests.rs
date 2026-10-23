@@ -497,7 +497,7 @@ impl TestClient {
         created_at: u64,
     ) -> Vec<u8> {
         let collection = match &body {
-            ContentBody::Post(_) => COLLECTION_FEED,
+            ContentBody::Post(_) | ContentBody::Repost(_) => COLLECTION_FEED,
             ContentBody::Delete(delete) => {
                 delete.event_key.as_ref().map_or(0, |k| k.collection)
             }
@@ -509,7 +509,6 @@ impl TestClient {
             }
             ContentBody::ProfileUpdate(_) => COLLECTION_PROFILE_UPDATE,
             ContentBody::Identity(_) => COLLECTION_IDENTITY,
-            ContentBody::Repost(_) => COLLECTION_FEED,
             ContentBody::Report(_) => COLLECTION_REPORTS,
             ContentBody::Labels(_) => COLLECTION_LABELS,
             ContentBody::VerificationClaim(_)
