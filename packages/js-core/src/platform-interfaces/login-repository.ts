@@ -1,11 +1,23 @@
 import type { KeyType, PrivateKey, PublicKey } from '../proto/v2';
 
-export type LoginOverview = {
+/**
+ * Uniquely identifies a login.
+ */
+export type LoginId = {
   identity: string;
   publicKey: PublicKey;
+};
+
+/**
+ * The information we get back when we list out logins.
+ */
+export type LoginOverview = LoginId & {
   status: LoginStatus;
 };
 
+/**
+ * The full information we have for a login, including the private key.
+ */
 export type LoginDetails = LoginOverview & {
   privateKey: PrivateKey;
 };

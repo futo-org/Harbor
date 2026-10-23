@@ -48,6 +48,7 @@ export type {
 } from './polycentric-client';
 
 export type {
+  LoginId,
   LoginOverview,
   LoginDetails,
   LoginStatus,

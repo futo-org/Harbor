@@ -1,4 +1,4 @@
-import type { ActiveLogin, IStorageDriver } from '@polycentric/js-core';
+import type { IStorageDriver, LoginId } from '@polycentric/js-core';
 import { DatabaseError, v2 as Proto } from '@polycentric/js-core';
 import { IndexedDBDatabase } from './database';
 import { IndexedDBLoginRepository } from './login-repository';
@@ -8,7 +8,7 @@ import { IndexedDBContentRepository } from './content.repository';
 /**
  * Stored representation of the active login in the `loginState` store.
  */
-type ActiveLoginEntry = ActiveLogin & { name: 'activeLogin' };
+type ActiveLoginEntry = LoginId & { name: 'activeLogin' };
 
 export class IndexedDBStorageDriver implements IStorageDriver {
   private readonly database: IndexedDBDatabase;
@@ -36,7 +36,7 @@ export class IndexedDBStorageDriver implements IStorageDriver {
     return new IndexedDBLoginRepository(this.database);
   }
 
-  async setActiveLogin(login: ActiveLogin | null): Promise<void> {
+  async setActiveLogin(login: LoginId | null): Promise<void> {
     try {
       const store = this.loginStateStore('readwrite');
 
@@ -59,7 +59,7 @@ export class IndexedDBStorageDriver implements IStorageDriver {
     }
   }
 
-  async getActiveLogin(): Promise<ActiveLogin | null> {
+  async getActiveLogin(): Promise<LoginId | null> {
     try {
       const store = this.loginStateStore('readonly');
 
