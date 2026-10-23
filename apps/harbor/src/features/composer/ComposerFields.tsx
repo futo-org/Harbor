@@ -40,15 +40,17 @@ const NEW_LINE_HEADROOM = typography.lineHeight.lg;
 
 // The native command behind TextInput's `clear` and `setSelection`, which
 // don't take text
-const AndroidTextInputCommands = codegenNativeCommands<{
-  setTextAndSelection: (
-    input: RNTextInput,
-    mostRecentEventCount: number,
-    text: string,
-    start: number,
-    end: number,
-  ) => void;
-}>({ supportedCommands: ['setTextAndSelection'] });
+const AndroidTextInputCommands = isAndroid
+  ? codegenNativeCommands<{
+      setTextAndSelection: (
+        input: RNTextInput,
+        mostRecentEventCount: number,
+        text: string,
+        start: number,
+        end: number,
+      ) => void;
+    }>({ supportedCommands: ['setTextAndSelection'] })
+  : null;
 
 type Attachment = ReturnType<typeof useComposer>['attachments'][number];
 
@@ -327,7 +329,7 @@ function pushTextToInput(
   nativeEventCount: number,
 ) {
   if (!input) return;
-  if (isAndroid) {
+  if (AndroidTextInputCommands) {
     // `setNativeProps` ignores `selection` here, and its text update keeps
     // the caret's distance to the text end instead
     AndroidTextInputCommands.setTextAndSelection(
