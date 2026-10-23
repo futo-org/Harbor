@@ -1,4 +1,8 @@
-import type { PolycentricClient, v2Types } from '@polycentric/js-core';
+import {
+  type PolycentricClient,
+  SyncStrategy,
+  type v2Types,
+} from '@polycentric/js-core';
 
 export interface CreatePolycentricClientConfig {
   databaseName?: string;
@@ -60,34 +64,26 @@ export function createBatchingLogSink(maxQueue = 1000): {
 }
 
 /**
- * Publishes a new Identity document authorized by the client's current
- * keypair, and registers `server` so the new identity is synced there.
- *
- * The keypair itself is auto-created by `PolycentricClient.initialize()`
- * on every device — this helper is specifically the identity-creation
- * step of onboarding (the "I am starting a new identity" path).
- *
- * For the "join an existing identity" path, use
- * `client.identityManager.claim(identityKey)` instead.
+ * Creates and publishes a new identity and sets it as active.
  */
 export async function createIdentity(
   client: PolycentricClient,
   server: string,
 ) {
-  if (!client.currentKeyPair) {
-    throw new Error(
-      'createIdentity: client has no current keypair. PolycentricClient.initialize() should have created one.',
-    );
-  }
-
-  const currentKey = client.currentKeyPair.publicKey;
-
   if (!client.servers.includes(server)) {
     client.servers.push(server);
   }
-  await client.identityManager.publish({
-    rotationKeys: [currentKey],
-    signingKeys: [],
-    servers: client.servers,
-  });
+
+  const { login, genesisEvent, identityContent } =
+    await client.loginManager.beginSignup();
+
+  const digest = client.contentManager.buildDigest(identityContent);
+  await client.storage.content.save(digest, identityContent);
+  await client.commitEvent(genesisEvent, identityContent);
+
+  await client.loginManager.finishSignup(login);
+  await client.loginAs(login);
+
+  // Push errors are currently swallowed
+  await client.sync(SyncStrategy.PARTIAL_PUSH);
 }
