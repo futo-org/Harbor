@@ -1,6 +1,5 @@
 import {
   IdentityTag,
-  LinkButton,
   ListItem,
   ListItemGroup,
   ProfileAvatar,
@@ -8,16 +7,12 @@ import {
   Text,
 } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
+import { AppFooter } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { SegmentedButton } from '@/src/common/components/SegmentedButton';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import {
-  REPORT_BUG_URL,
-  Routes,
-  SOURCE_CODE_URL,
-  TAB_BAR_HEIGHT,
-} from '@/src/common/constants';
+import { REPORT_BUG_URL, Routes, TAB_BAR_HEIGHT } from '@/src/common/constants';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, THEME_PREFERENCE_OPTIONS, useTheme } from '@/src/common/theme';
@@ -199,7 +194,7 @@ export default function SettingsTabScreen() {
                 </ListItemWrapper>
               </ListItemGroup>
 
-              <SourceCodeItem />
+              <AppFooter showThemeSwitcher={false} style={Atoms.pt_xl} />
             </View>
           </ScrollView>
         </View>
@@ -313,15 +308,5 @@ function CheckForUpdatesRow() {
         {checking ? <ActivityIndicator size="small" /> : null}
       </View>
     </ListItem>
-  );
-}
-
-function SourceCodeItem() {
-  return (
-    <View
-      style={[Atoms.pt_3xl, Atoms.px_md, Atoms.flex_row, Atoms.items_center]}
-    >
-      <LinkButton title="Source code" href={SOURCE_CODE_URL} underlineOnHover />
-    </View>
   );
 }
