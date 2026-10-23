@@ -97,17 +97,15 @@ impl MigrationTrait for Migration {
             .value(
                 interaction_tally::Column::DecayedCount,
                 Func::cust("reaction_count_decay").args([
-                    Expr::col(
-                        interaction_tally::Column::ReactionPositiveCount
-                            .as_column_ref(),
-                    ),
+                    Expr::col("positive_count"),
                     Expr::col(event::Column::CreatedAt.as_column_ref()),
                 ]),
             )
             .from(event::Entity)
-            .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
-                Expr::col(interaction_tally::Column::EventId.as_column_ref()),
-            ));
+            .and_where(
+                Expr::col(event::Column::Id.as_column_ref())
+                    .eq(Expr::col(interaction_tally::Column::EventId)),
+            );
         tx.execute(&query).await?;
 
         // Delete the default value for the decayed count, it should always be
