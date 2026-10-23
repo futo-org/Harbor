@@ -13,7 +13,7 @@ import {
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   codegenNativeCommands,
@@ -110,24 +110,7 @@ export function ComposerFields({
   const { theme } = useTheme();
   const styles = useStyles();
 
-  // On native the field is CONTROLLED through its children, which also color
-  // the mentions. On web it is uncontrolled: seeded once at mount (a
-  // `defaultValue` that keeps updating is forwarded as `value`) and synced to
-  // the store via `onChangeText`.
   const inputRef = useRef<RNTextInput>(null);
-  const [initialText] = useState(text);
-  // Last text the field is known to contain (the seed, then user input).
-  const fieldTextRef = useRef(text);
-
-  useEffect(() => {
-    if (text === fieldTextRef.current) return;
-    // The draft changed outside the input. Only the reset to empty (on
-    // close/post) does this today; if the composer ever gains non-empty
-    // programmatic edits (e.g. draft prefill), remount the field with a new
-    // `key` instead of passing text back in.
-    fieldTextRef.current = text;
-    if (text === '') inputRef.current?.clear();
-  }, [text]);
 
   // Native: the input's latest change count. A text update from JS must
   // carry it, or the input drops it as stale.
@@ -136,7 +119,6 @@ export function ComposerFields({
   const onChangeText = useCallback(
     (next: string, caret?: number) => {
       const applied = setText(next);
-      fieldTextRef.current = applied.text;
       // The edit reached into a mention, which went whole: show that.
       const caretToShow = applied.text !== next ? applied.caret : caret;
       if (caretToShow !== undefined) {
@@ -243,7 +225,7 @@ export function ComposerFields({
               lineHeight="lg"
               placeholder={placeholder}
               autoFocus={autoFocus}
-              defaultValue={isWeb ? initialText : undefined}
+              value={isWeb ? text : undefined}
               onChange={
                 isWeb
                   ? undefined
@@ -292,7 +274,7 @@ export function ComposerFields({
               }
               onKeyPress={isWeb ? onKeyPress : undefined}
             >
-              {/* None on web, not even `false`: the input is uncontrolled */}
+              {/* None on web: a textarea takes its text from `value` */}
               {isWeb ? undefined : (
                 <MentionHighlights text={text} mentionRanges={mentionRanges} />
               )}
