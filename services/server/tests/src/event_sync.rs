@@ -2697,7 +2697,679 @@ async fn validation_invalid_content_content_body_profile_update_alias_too_long()
     );
 }
 
-// TODO: tests for identity events.
+#[tokio::test]
+async fn validation_content_content_body_identity_collection_invalid() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '1'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_rotation_keys_too_many() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: {
+            let mut k = Vec::new();
+            k.resize(1001, public_key_of(&client.key));
+            k
+        },
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity rotation keys is too long (1001), maximum is 1000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_rotation_keys_key_invalid() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![PublicKey {
+            key_type: 999,
+            key: Vec::new(),
+        }],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity rotation keys 0-th key type is invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_signing_keys_too_many() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: {
+            let mut k = Vec::new();
+            k.resize(1001, public_key_of(&client.key));
+            k
+        },
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity signing keys is too long (1001), maximum is 1000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_signing_keys_invalid() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![PublicKey {
+            key_type: 999,
+            key: Vec::new(),
+        }],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity signing keys 0-th key type is invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_revocation_bounds_too_many() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: {
+            let mut k = Vec::new();
+            k.resize(
+                1001,
+                RevocationBound {
+                    revoked_key: Some(public_key_of(&client.key)),
+                    targets: Vec::new(),
+                },
+            );
+            k
+        },
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity revocation bounds is too long (1001), maximum is 1000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_revocation_bounds_revoked_key_missing()
+ {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![RevocationBound {
+            revoked_key: None,
+            targets: Vec::new(),
+        }],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity revocation bounds 0-th revoked key is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_revocation_bounds_revoked_key_invalid()
+ {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![RevocationBound {
+            revoked_key: Some(PublicKey {
+                key_type: 999,
+                key: Vec::new(),
+            }),
+            targets: Vec::new(),
+        }],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity revocation bounds 0-th revoked key key type is invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_revocation_bounds_revoked_targets_too_many()
+ {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![RevocationBound {
+            revoked_key: Some(public_key_of(&client.key)),
+            targets: {
+                let mut k = Vec::new();
+                k.resize(
+                    201,
+                    EventProofTarget {
+                        collection: 1,
+                        signature: vec![1; 64],
+                        root: vec![1; 32],
+                        leaf_count: 0,
+                    },
+                );
+                k
+            },
+        }],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity revocation bounds 0-th targets is too long (201), maximum is 200",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_revocation_bounds_revoked_targets_signature_invalid()
+ {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![RevocationBound {
+            revoked_key: Some(public_key_of(&client.key)),
+            targets: vec![EventProofTarget {
+                collection: 1,
+                signature: Vec::new(),
+                root: vec![1; 32],
+                leaf_count: 0,
+            }],
+        }],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity revocation bounds 0-th targets 0-th signature is too short (0), minimum is 64",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_revocation_bounds_revoked_targets_root_invalid()
+ {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![RevocationBound {
+            revoked_key: Some(public_key_of(&client.key)),
+            targets: vec![EventProofTarget {
+                collection: 1,
+                signature: vec![1; 64],
+                root: Vec::new(),
+                leaf_count: 0,
+            }],
+        }],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity revocation bounds 0-th targets 0-th root is too short (0), minimum is 32",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_servers_too_many() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: Some(ServerList {
+            urls: {
+                let mut u = Vec::new();
+                u.resize(101, "https://harbor.social/".to_owned());
+                u
+            },
+        }),
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity servers urls is too long (101), maximum is 100",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_servers_url_empty() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: Some(ServerList {
+            urls: vec![String::new()],
+        }),
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity servers urls 0-th can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_servers_url_too_long() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: Some(ServerList {
+            urls: vec![format!("https://{}.com", "a".repeat(1001))],
+        }),
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity servers urls 0-th is too long (1013), maximum is 1000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_recovery_key_invalid() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: Some(PublicKey {
+            key_type: 999,
+            key: Vec::new(),
+        }),
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity recovery key key type is invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_identity_recovery_signature_invalid() {
+    let mut client = TestClient::new().await;
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: Some(Vec::new()),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        Vec::new(),
+        Vec::new(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body identity recovery signature is too short (0), minimum is 64",
+            ),
+        }],
+    );
+}
 
 #[tokio::test]
 async fn validation_invalid_content_content_body_repost_collection() {
