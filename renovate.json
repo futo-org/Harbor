@@ -22,6 +22,11 @@
       "enabled": false
     },
     {
+      "description": "OkHttp 5.4 and greater need the Android `compileSdk` to be set higher than our kt-core consumers (Grayjay) support.",
+      "matchPackageNames": ["com.squareup.okhttp3:*"],
+      "allowedVersions": "<5.4.0"
+    },
+    {
       "description": "The Babel major is dictated by the Expo SDK: babel-preset-expo and the React Native preset are Babel 7 and refuse to load under core 8.",
       "extends": ["monorepo:babel"],
       "matchUpdateTypes": ["major"],
