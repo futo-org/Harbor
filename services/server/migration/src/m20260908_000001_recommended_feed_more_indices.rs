@@ -19,7 +19,7 @@ impl MigrationTrait for Migration {
             .await?;
         manager.get_connection().execute_unprepared(&format!(
             "CREATE INDEX {REACTION_TALLY_INDEX} ON {0} USING btree ({1} DESC, {2} DESC) WHERE {1} > 0",
-            interaction_tally::Entity.quoted(),
+            "reaction_tally",
             interaction_tally::Column::DecayedCount.quoted(),
             interaction_tally::Column::EventId.quoted(),
         ))
@@ -39,7 +39,7 @@ impl MigrationTrait for Migration {
 
         manager.get_connection().execute_unprepared(&format!(
             "CREATE INDEX {REACTION_TALLY_INDEX} ON {0} ({1}) INCLUDE (event_id) WHERE {1} > 0",
-            interaction_tally::Entity.quoted(),
+            "reaction_tally",
             interaction_tally::Column::DecayedCount.quoted(),
         ))
         .await?;

@@ -22,7 +22,7 @@ impl MigrationTrait for Migration {
         manager
             .drop_index({
                 let mut i = Index::drop();
-                i.if_exists().name(NAME).table(interaction_tally::Entity);
+                i.if_exists().name(NAME).table("reaction_tally");
                 i
             })
             .await
