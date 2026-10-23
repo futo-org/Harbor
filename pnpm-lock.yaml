@@ -883,7 +883,7 @@ importers:
     dependencies:
       browserless:
         specifier: ^14.0.0
-        version: 14.0.17(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
+        version: 14.0.27(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
       html-get:
         specifier: ^2.24.6
         version: 2.26.10(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
@@ -1920,26 +1920,26 @@ packages:
     resolution: {integrity: sha512-0GEz8qJWokkUVYQYRukmkSHIFNoBH8QTreeHrAFbvz1XFYc3Y+puhMs8PQ5x8GNugiC2l5jvDBXKLbBIByeSBw==}
     hasBin: true
 
-  '@browserless/devices@14.0.0':
-    resolution: {integrity: sha512-bwLqbwzMT7Mc7TcC17MCpQbQU+fWIwztCCJDr0sPOPxfNsEN0qi/UemPH/mQVNYi1skK5t39/5jUi7L73tdZLw==}
+  '@browserless/devices@14.0.22':
+    resolution: {integrity: sha512-uchE2mIpokV+hj1nCi5S/kJS8Cp0sw1nvtFUIUuIegkKpPnnz1m522ru/xWspQlBpP9oq0JST+VEzE07eVCAaA==}
     engines: {node: '>= 24'}
 
-  '@browserless/errors@14.0.0':
-    resolution: {integrity: sha512-1w4e5j7Zb8gxeiPfaQYVJaNAkgf98rLlvFwCRnb9XHJOSAm95+w/0q61GELK4zh+6vddqtsFmpmL7yeiDra30Q==}
+  '@browserless/errors@14.0.22':
+    resolution: {integrity: sha512-mmMAa1Sfy/2CXQIqKERhgF5zX9R3FQB5Nl5PSOjf1A9/3N6UWbGftfuUomSB3cLpim32oaCcbwQV6ZtqOg8Uhw==}
     engines: {node: '>= 24'}
 
-  '@browserless/goto@14.0.15':
-    resolution: {integrity: sha512-rZMnnMnQNCcMf5im+cP/FaGi27mwz90C1y9VBKVnT8bD+oscLb/oEk8Qcpt9jhs/IAKQ351SqrqNt8psBwLvkQ==}
+  '@browserless/goto@14.0.27':
+    resolution: {integrity: sha512-B5OYH2wxytLuRzQZga8UYU+yTgblVgaPv/KgIkBn4AuFsiZt53h/kqmQVbF4k+Zc/wSVBun5V7BsrGJgI2um6g==}
     engines: {node: '>= 24'}
     peerDependencies:
       puppeteer: '25'
 
-  '@browserless/pdf@14.0.17':
-    resolution: {integrity: sha512-B5sBP0ONovSlYO3h1fFPvCStLJJQwMUKlpSDOOjElTBlDr3VreVT7X0EgTb64Xr1Ur4wS32qZW3zm0/gA5vANg==}
+  '@browserless/pdf@14.0.27':
+    resolution: {integrity: sha512-UdRI3kaSeOm4pxiXQA/PsBfee0h2wmOi/xJQdq07lHyI1XgPZsf4Jfp0LsWbceN2ByYpDelgSagoAQ5OkAYa6w==}
     engines: {node: '>= 24'}
 
-  '@browserless/screenshot@14.0.17':
-    resolution: {integrity: sha512-RsQetVKDnT/2CGXwj1YdHJ3CVeUHcnm6I3aKTpunjajPqAL3JvaZrDmgJWxrcq28w5bDQVLhYPopWGd2ZiMUFw==}
+  '@browserless/screenshot@14.0.27':
+    resolution: {integrity: sha512-fBBpGFCN2B2BJCbNruHQOq9jlj7kYHZ7qFR0jEcOT2d6UsfRwNgFozkgnrh+wDDXqs/3qsN4XVRL5Ey+5DeipA==}
     engines: {node: '>= 24'}
 
   '@bsky.app/react-native-uitextview@2.7.1':
@@ -2623,8 +2623,8 @@ packages:
     resolution: {integrity: sha512-xx0W3eav2uW1NRIpuHJWNwLTC15xPNjU4Uxi9NSnd3swYC96BE3vFiT93SD8s24kmAAWNwgZwfZ2fghGZ01Lcw==}
     engines: {node: '>=20.0'}
 
-  '@duckduckgo/autoconsent@16.46.0':
-    resolution: {integrity: sha512-0EALmjvRgS9iSHjReD4/iCpl8Nk+eGhoG7h9y87U0tvlKSYCB3WGNpuCZ4OtmA7vDuP98tTh07/qAj11b+pubw==}
+  '@duckduckgo/autoconsent@16.55.0':
+    resolution: {integrity: sha512-tJU0jUKtw3x4vQjo9PrD1COx0PSPgvYbQKANbw+4LpK3usO7naQuK2gf1QY9qEKganIpW2SF2k23GdvgGtxfSw==}
 
   '@egjs/hammerjs@2.0.17':
     resolution: {integrity: sha512-XQsZgjm2EcVUiZQf11UBJQfmZeEmOW8DpI1gsFeln6w0ae0ii4dMQEQ0kjl6DspdWX1aGY1/loyXnP0JS06e/A==}
@@ -3185,19 +3185,19 @@ packages:
     resolution: {integrity: sha512-v0BLa0eqg7ubvVWeNSHVBs8fWH/GJicERZoJaxJ3FE/lj67VSqzoMg9pzfZVOfLMX10y0pGwQAuxoRVVH2patg==}
     engines: {node: '>=6'}
 
-  '@ghostery/adblocker-content@2.18.2':
-    resolution: {integrity: sha512-TOe/b4KOBFEc9OjLG+wvgamGcSTIPSDBAL5YSa8lzjBsoSl8IDnfOjeJDldlLacsC/JEUMLkZIDDNknEolJVqg==}
+  '@ghostery/adblocker-content@2.20.1':
+    resolution: {integrity: sha512-1vBDzEzoi4ZE9xjL3akAn0PiIA2KIeQ1K0JCpRIjPPWy8GoqN1saV2Md2jRSZPuXv9iENMKRPn1TetEE0MbUXw==}
 
-  '@ghostery/adblocker-extended-selectors@2.18.2':
-    resolution: {integrity: sha512-doKNShBk3+czQL08UkrysHkCPeG/kNPlXvz3DH7SXxD9Y78ovWkEAhjeR+upoan3fomJJuK3dD+IrlofnjckYw==}
+  '@ghostery/adblocker-extended-selectors@2.20.1':
+    resolution: {integrity: sha512-PCnELdIoylSQ8hsRXQUkiSnch6WwHTNYxu8iAthmbOD+44WoXnmjR+Zfgdut3Lh3xUZmvv1uojslNIhYrJX9rA==}
 
-  '@ghostery/adblocker-puppeteer@2.18.2':
-    resolution: {integrity: sha512-40rz+YOsBXstIZBa/ElZTmyhYCUGPdI9q9tdaOzPz7YkaZA9u9omC9UXkLhFtEQTNgagRBs2nPJkF4Xm2HyS+A==}
+  '@ghostery/adblocker-puppeteer@2.20.1':
+    resolution: {integrity: sha512-jRHmj42cc1ir+Yf+gA3q6GgZuqsoWj8ZPbEEAgbLjFLZzs8O/30H+XyLSmucvt87QpAp+Yi29qVW/zXXH5EQRg==}
     peerDependencies:
       puppeteer: '>5'
 
-  '@ghostery/adblocker@2.18.2':
-    resolution: {integrity: sha512-x6zEkf1dHSN0t4ExLmuN6nIgH0oAi6laoKe5yGsiIB4jkEvutea1PJgxgRUIjWfNbDRmkf4GjUtuqQFZgvQG1w==}
+  '@ghostery/adblocker@2.20.1':
+    resolution: {integrity: sha512-1ghCrMnWRf/CWQ5PMw7ZxL4W0U390gmko8kPXhwm7zi+4GDOR49JlHVvmCke90E2hCpBIoNdS5jtNlIKalp2Ww==}
 
   '@ghostery/url-parser@1.3.1':
     resolution: {integrity: sha512-QKqGi+7aDQ4RcyHyCwgEk6B9vWnsBP4Q7htaN0zPJV3ATqTKEQDtSTb9c/AN586oJUDs24YXKcwFYwNweY/YjQ==}
@@ -6218,8 +6218,8 @@ packages:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
     engines: {node: '>=8'}
 
-  browserless@14.0.17:
-    resolution: {integrity: sha512-bmq4MOpokkt/jkjSivpMn6+JLxJvU9K/twrhKTOzrw2OEnC2R4CN9EuBXbaettK799QewILlNyYKaVmCdEbyGQ==}
+  browserless@14.0.27:
+    resolution: {integrity: sha512-KbnL1UFo0yniNL1vv4AvAu03VGFtmMo3vJlc2b9re8Z/32zzUbJ8vRhvo8hWulOt7YRJFz45YQYKArhVG0Vcfg==}
     engines: {node: '>= 24'}
 
   browserslist@4.29.3:
@@ -14083,7 +14083,7 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
-  '@browserless/devices@14.0.0(supports-color@8.1.1)':
+  '@browserless/devices@14.0.22(supports-color@8.1.1)':
     dependencies:
       didyoumean3: 1.2.5
       memoize-one: 6.0.0
@@ -14091,7 +14091,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@browserless/errors@14.0.0(debug@4.4.3(supports-color@8.1.1))':
+  '@browserless/errors@14.0.22(debug@4.4.3(supports-color@8.1.1))':
     dependencies:
       debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
       ensure-error: 3.0.1
@@ -14100,11 +14100,11 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@browserless/goto@14.0.15(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)':
+  '@browserless/goto@14.0.27(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)':
     dependencies:
-      '@browserless/devices': 14.0.0(supports-color@8.1.1)
-      '@duckduckgo/autoconsent': 16.46.0
-      '@ghostery/adblocker-puppeteer': 2.18.2(puppeteer@25.14.0)
+      '@browserless/devices': 14.0.22(supports-color@8.1.1)
+      '@duckduckgo/autoconsent': 16.55.0
+      '@ghostery/adblocker-puppeteer': 2.20.1(puppeteer@25.14.0)
       '@kikobeats/got': 11.8.9
       debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
       is-url-http: 2.3.13
@@ -14117,10 +14117,10 @@ snapshots:
       - debug
       - supports-color
 
-  '@browserless/pdf@14.0.17(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)':
+  '@browserless/pdf@14.0.27(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)':
     dependencies:
-      '@browserless/goto': 14.0.15(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
-      '@browserless/screenshot': 14.0.17(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
+      '@browserless/goto': 14.0.27(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
+      '@browserless/screenshot': 14.0.27(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
       '@kikobeats/time-span': 1.0.13
       debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
       p-reflect: 2.1.0
@@ -14131,10 +14131,10 @@ snapshots:
       - puppeteer
       - supports-color
 
-  '@browserless/screenshot@14.0.17(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)':
+  '@browserless/screenshot@14.0.27(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)':
     dependencies:
-      '@browserless/errors': 14.0.0(debug@4.4.3(supports-color@8.1.1))
-      '@browserless/goto': 14.0.15(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
+      '@browserless/errors': 14.0.22(debug@4.4.3(supports-color@8.1.1))
+      '@browserless/goto': 14.0.27(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
       '@kikobeats/content-type': 1.0.4
       '@kikobeats/got': 11.8.9
       '@kikobeats/time-span': 1.0.13
@@ -15679,7 +15679,7 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@duckduckgo/autoconsent@16.46.0':
+  '@duckduckgo/autoconsent@16.55.0':
     dependencies:
       tldts-experimental: 7.4.10
 
@@ -16311,6 +16311,14 @@ snapshots:
       react-native: 0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1)
       stacktrace-parser: 0.1.11
 
+  '@expo/log-box@57.0.3(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)':
+    dependencies:
+      anser: 1.4.10
+      expo: 57.0.15(@babel/core@7.29.7(supports-color@8.1.1))(@expo/metro-runtime@57.0.12)(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.4(encoding@0.1.13)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native-webview@13.16.1(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3))(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)(typescript@5.9.3)
+      react: 19.2.3
+      react-native: 0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1)
+      stacktrace-parser: 0.1.11
+
   '@expo/metro-config@57.0.9(expo@57.0.15)(supports-color@8.1.1)(typescript@5.9.3)':
     dependencies:
       '@babel/code-frame': 7.29.7
@@ -16404,7 +16412,7 @@ snapshots:
 
   '@expo/metro-runtime@57.0.12(@expo/log-box@57.0.3)(expo@57.0.15)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)':
     dependencies:
-      '@expo/log-box': 57.0.3(@expo/dom-webview@57.0.1)(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
+      '@expo/log-box': 57.0.3(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/jest-preset@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1))(@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
       anser: 1.4.10
       expo: 57.0.15(a0833f0c1e33db3e9b1a6d12fac04286)
       pretty-format: 29.7.0
@@ -16606,23 +16614,23 @@ snapshots:
     dependencies:
       '@fortawesome/fontawesome-common-types': 7.3.1
 
-  '@ghostery/adblocker-content@2.18.2':
+  '@ghostery/adblocker-content@2.20.1':
     dependencies:
-      '@ghostery/adblocker-extended-selectors': 2.18.2
+      '@ghostery/adblocker-extended-selectors': 2.20.1
 
-  '@ghostery/adblocker-extended-selectors@2.18.2': {}
+  '@ghostery/adblocker-extended-selectors@2.20.1': {}
 
-  '@ghostery/adblocker-puppeteer@2.18.2(puppeteer@25.14.0)':
+  '@ghostery/adblocker-puppeteer@2.20.1(puppeteer@25.14.0)':
     dependencies:
-      '@ghostery/adblocker': 2.18.2
-      '@ghostery/adblocker-content': 2.18.2
+      '@ghostery/adblocker': 2.20.1
+      '@ghostery/adblocker-content': 2.20.1
       puppeteer: 25.14.0
       tldts-experimental: 7.4.10
 
-  '@ghostery/adblocker@2.18.2':
+  '@ghostery/adblocker@2.20.1':
     dependencies:
-      '@ghostery/adblocker-content': 2.18.2
-      '@ghostery/adblocker-extended-selectors': 2.18.2
+      '@ghostery/adblocker-content': 2.20.1
+      '@ghostery/adblocker-extended-selectors': 2.20.1
       '@ghostery/url-parser': 1.3.1
       '@remusao/guess-url-type': 2.1.0
       '@remusao/small': 2.1.0
@@ -18313,7 +18321,9 @@ snapshots:
       metro-runtime: 0.84.6
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
     optional: true
 
   '@react-native/metro-config@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1)':
@@ -18324,7 +18334,9 @@ snapshots:
       metro-runtime: 0.84.6
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.74.89': {}
 
@@ -20076,12 +20088,12 @@ snapshots:
     dependencies:
       fill-range: 7.1.1
 
-  browserless@14.0.17(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1):
+  browserless@14.0.27(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1):
     dependencies:
-      '@browserless/errors': 14.0.0(debug@4.4.3(supports-color@8.1.1))
-      '@browserless/goto': 14.0.15(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
-      '@browserless/pdf': 14.0.17(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
-      '@browserless/screenshot': 14.0.17(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
+      '@browserless/errors': 14.0.22(debug@4.4.3(supports-color@8.1.1))
+      '@browserless/goto': 14.0.27(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
+      '@browserless/pdf': 14.0.27(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
+      '@browserless/screenshot': 14.0.27(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.14.0)(supports-color@8.1.1)
       debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
       kill-process-group: 1.0.16
       p-reflect: 2.1.0
