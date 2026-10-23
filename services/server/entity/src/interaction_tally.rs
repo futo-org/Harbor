@@ -35,6 +35,8 @@ pub struct Model {
     ///
     /// NOTE: actual type `NUMERIC(20, 11)`.
     pub decayed_count: String,
+    /// Time at which the tally was last updated.
+    pub updated_at: DateTimeWithTimeZone,
 
     #[sea_orm(belongs_to, from = "event_id", to = "id")]
     pub parent: HasOne<super::event::Entity>,

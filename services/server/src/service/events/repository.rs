@@ -487,6 +487,10 @@ impl Mutation {
                     Expr::col(interaction_tally::Column::QuoteCount)
                         .add(Expr::Constant(1.into())),
                 )
+                .value(
+                    interaction_tally::Column::UpdatedAt,
+                    Expr::current_timestamp(),
+                )
                 .cond_where(Expr::col(interaction_tally::Column::EventId).eq(
                     {
                         let mut q = SelectStatement::new();
@@ -558,6 +562,10 @@ impl Mutation {
                     interaction_tally::Column::ReplyCount,
                     Expr::col(interaction_tally::Column::ReplyCount)
                         .add(Expr::Constant(1.into())),
+                )
+                .value(
+                    interaction_tally::Column::UpdatedAt,
+                    Expr::current_timestamp(),
                 )
                 .cond_where(Expr::col(interaction_tally::Column::EventId).eq(
                     {
@@ -709,6 +717,10 @@ impl Mutation {
                 )
                 .add(Expr::Constant(negative.into())),
             ),
+            (
+                interaction_tally::Column::UpdatedAt,
+                Expr::current_timestamp(),
+            ),
         ]);
 
         if reaction.positive {
@@ -854,6 +866,10 @@ impl Mutation {
                 interaction_tally::Column::RepostCount,
                 Expr::col(interaction_tally::Column::RepostCount)
                     .add(Expr::Constant(1.into())),
+            )
+            .value(
+                interaction_tally::Column::UpdatedAt,
+                Expr::current_timestamp(),
             )
             .cond_where(Expr::col(interaction_tally::Column::EventId).eq({
                 let mut q = SelectStatement::new();
@@ -1138,6 +1154,10 @@ impl Mutation {
                                 QUOTE_COUNT_DIFF,
                             ))),
                         ),
+                        (
+                            interaction_tally::Column::UpdatedAt,
+                            Expr::current_timestamp(),
+                        ),
                     ])
                     .from(GROUPED_INTERACTION_UPDATES)
                     .and_where(
@@ -1249,6 +1269,7 @@ impl Mutation {
                             ))
                             .into(),
                         ),
+                        (interaction_tally::Column::UpdatedAt, Expr::current_timestamp())
                     ])
                     .from(DELETED_REACTION)
                     // This should be an inner join, but SeaORM doesn't support this,

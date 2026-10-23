@@ -24,7 +24,8 @@ quote_count AS (
 UPDATE interaction_tally SET
   reply_count = COALESCE((SELECT count FROM reply_count WHERE post = interaction_tally.event_id), 0),
   repost_count = COALESCE((SELECT count FROM repost_count WHERE post = interaction_tally.event_id), 0),
-  quote_count = COALESCE((SELECT count FROM quote_count WHERE post = interaction_tally.event_id), 0)
+  quote_count = COALESCE((SELECT count FROM quote_count WHERE post = interaction_tally.event_id), 0),
+  updated_at = CURRENT_TIMESTAMP
 ";
 
 #[async_trait::async_trait]
@@ -36,6 +37,7 @@ impl MigrationTrait for Migration {
             "ALTER TABLE IF EXISTS interaction_tally ADD COLUMN IF NOT EXISTS reply_count BIGINT",
             "ALTER TABLE IF EXISTS interaction_tally ADD COLUMN IF NOT EXISTS repost_count BIGINT",
             "ALTER TABLE IF EXISTS interaction_tally ADD COLUMN IF NOT EXISTS quote_count BIGINT",
+            "ALTER TABLE IF EXISTS interaction_tally ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP",
             FILL_QUERY,
             "ALTER TABLE IF EXISTS interaction_tally ALTER COLUMN reply_count SET NOT NULL",
             "ALTER TABLE IF EXISTS interaction_tally ALTER COLUMN repost_count SET NOT NULL",
@@ -55,6 +57,7 @@ impl MigrationTrait for Migration {
             "ALTER TABLE IF EXISTS interaction_tally DROP COLUMN IF EXISTS reply_count",
             "ALTER TABLE IF EXISTS interaction_tally DROP COLUMN IF EXISTS repost_count",
             "ALTER TABLE IF EXISTS interaction_tally DROP COLUMN IF EXISTS quote_count",
+            "ALTER TABLE IF EXISTS interaction_tally DROP COLUMN IF EXISTS updated_at",
         ];
         for query in queries {
             tx.execute_unprepared(query).await?;
