@@ -4,14 +4,15 @@ import { sha256 } from '@noble/hashes/sha2.js';
 
 import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
 import { PolycentricClient } from './polycentric-client';
-import { StorageHandle } from './datastore/storage-handle';
+import { StorageHandle } from './data-store/storage-handle';
 import { COLLECTION, SyncStrategy } from './constants';
 import { bytesToHex, toDigestKey } from './utils/hex';
 import * as Proto from './proto/v2';
+import { FileStore } from './file-store/file-store';
+import { MemoryFileStoreDriver } from './memory-storage/memory-storage';
 import type {
   IContentRepository,
   IEventRepository,
-  IFileStoreDriver,
 } from './platform-interfaces';
 
 // ---------------------------------------------------------------------------
@@ -354,36 +355,16 @@ class FakeContentRepository implements IContentRepository {
 }
 
 /**
- * In-memory mock of `IFileStoreDriver` backed by a `Map` keyed by digest.
- * Blob bodies the client already has are pre-seeded.
- * `put` is a spy so tests can assert which blobs got fetched and stored during
- * a pull.
+ * In-memory file store driver pre-seeded with the blob bodies the client
+ * already has.
  */
-class FakeFileStore implements IFileStoreDriver {
-  readonly map = new Map<string, Uint8Array>();
-  readonly put = vi.fn(
-    async (digest: Proto.ContentDigest, bytes: Uint8Array) => {
-      this.map.set(toDigestKey(digest), bytes);
-    },
-  );
-
-  constructor(
-    entries: { digest: Proto.ContentDigest; bytes: Uint8Array }[] = [],
-  ) {
-    for (const e of entries) this.map.set(toDigestKey(e.digest), e.bytes);
-  }
-
-  async has(digest: Proto.ContentDigest): Promise<boolean> {
-    return this.map.has(toDigestKey(digest));
-  }
-
-  async get(digest: Proto.ContentDigest): Promise<Uint8Array | null> {
-    return this.map.get(toDigestKey(digest)) ?? null;
-  }
-
-  async delete(digest: Proto.ContentDigest): Promise<void> {
-    this.map.delete(toDigestKey(digest));
-  }
+async function makeFileStoreDriver(
+  entries: { digest: Proto.ContentDigest; bytes: Uint8Array }[] = [],
+): Promise<MemoryFileStoreDriver> {
+  const driver = new MemoryFileStoreDriver();
+  const fileStore = new FileStore(driver);
+  for (const e of entries) await fileStore.put(e.digest, e.bytes);
+  return driver;
 }
 
 /**
@@ -487,7 +468,7 @@ interface MakeClientArgs {
   signer?: Signer;
   events?: Proto.SignedEvent[];
   contents?: { digest: Proto.ContentDigest; content: Proto.Content }[];
-  fileStore?: FakeFileStore;
+  fileStoreDriver?: MemoryFileStoreDriver;
 }
 
 /**
@@ -516,7 +497,6 @@ function makeClient(args: MakeClientArgs = {}) {
     ...seededIdentities.flatMap((i) => i.identityContents),
     ...(args.contents ?? []),
   ]);
-  const fileStore = args.fileStore ?? new FakeFileStore();
 
   const cryptoManager = {
     sign: async (priv: Uint8Array, msg: Uint8Array) => ed25519.sign(msg, priv),
@@ -533,7 +513,7 @@ function makeClient(args: MakeClientArgs = {}) {
   const client = new PolycentricClient({
     core,
     storageDriver,
-    filestoreDriver: fileStore,
+    filestoreDriver: args.fileStoreDriver ?? new MemoryFileStoreDriver(),
     cryptoManager,
   });
 
@@ -541,7 +521,6 @@ function makeClient(args: MakeClientArgs = {}) {
     eventRepository,
     contentRepository,
     keysRepository: {} as any,
-    eventAckRepository: {} as any,
   });
   client.servers = args.servers ?? ['http://server-1'];
   client.activeIdentityKey = args.identity ? args.identity.key : null;
@@ -555,6 +534,11 @@ function makeClient(args: MakeClientArgs = {}) {
       publicKey: args.signer.publicKey,
     };
   }
+
+  // Spy after construction so seeded blobs aren't counted.
+  // Tests assert which blobs got fetched and stored during a pull.
+  vi.spyOn(client.fileStore, 'put');
+  const fileStore = client.fileStore;
 
   return { client, core, eventRepository, contentRepository, fileStore };
 }
@@ -1078,14 +1062,14 @@ describe('PolycentricClient sync', () => {
       });
 
       // The present blob is already in the local filestore.
-      const fileStore = new FakeFileStore([
+      const fileStoreDriver = await makeFileStoreDriver([
         { digest: presentBlob.digest!, bytes: presentBytes },
       ]);
-      const { client } = makeClient({
+      const { client, fileStore } = makeClient({
         core,
         identity: identityA,
         signer: signerA,
-        fileStore,
+        fileStoreDriver,
       });
       const fetchSpy = vi
         .spyOn(client, 'fetchBlobBytes')
@@ -1179,7 +1163,7 @@ describe('PolycentricClient sync', () => {
             ? putEventsResponse({ requestedBlobs: [blob1] })
             : putEventsResponse({ requestedBlobs: [blob2] }),
       });
-      const fileStore = new FakeFileStore([
+      const fileStoreDriver = await makeFileStoreDriver([
         { digest: blob1.digest!, bytes: blob1Bytes },
         { digest: blob2.digest!, bytes: blob2Bytes },
       ]);
@@ -1188,7 +1172,7 @@ describe('PolycentricClient sync', () => {
         servers,
         identity: identityA,
         signer: signerA,
-        fileStore,
+        fileStoreDriver,
       });
       const uploadSpy = vi
         .spyOn(client, 'uploadBlob')
@@ -1223,7 +1207,7 @@ describe('PolycentricClient sync', () => {
         core,
         identity: identityA,
         signer: signerA,
-        fileStore: new FakeFileStore(), // empty
+        fileStoreDriver: new MemoryFileStoreDriver(), // empty
       });
       const uploadSpy = vi
         .spyOn(client, 'uploadBlob')
@@ -1395,7 +1379,7 @@ describe('PolycentricClient sync', () => {
         pushResponse: async () =>
           putEventsResponse({ errors: [pushError], requestedBlobs: [blob] }),
       });
-      const fileStore = new FakeFileStore([
+      const fileStoreDriver = await makeFileStoreDriver([
         { digest: blob.digest!, bytes: blobBytes },
       ]);
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -1403,7 +1387,7 @@ describe('PolycentricClient sync', () => {
         core,
         identity: identityA,
         signer: signerA,
-        fileStore,
+        fileStoreDriver,
       });
       const uploadSpy = vi
         .spyOn(client, 'uploadBlob')

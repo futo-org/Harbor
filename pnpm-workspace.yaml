@@ -44,6 +44,7 @@ allowBuilds:
   re2: false
 
 overrides:
+  dompurify@<3.4.17: ">=3.4.17"
   proxy-addr@<2.0.8: ">=2.0.8"
   serialize-javascript@<7.0.5: ">=7.0.5"
   shell-quote@<1.11.0: ">=1.11.0"

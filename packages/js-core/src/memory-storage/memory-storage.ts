@@ -1,14 +1,16 @@
 import type {
   IContentRepository,
-  IEventAckRepository,
   IEventRepository,
+  FileStoreEntry,
   IFileStoreDriver,
   IKeysRepository,
   IStorageDriver,
-} from './platform-interfaces';
-import type { PrivateKey } from './polycentric-client';
-import * as Proto from './proto/v2';
-import { bytesToHex, toDigestKey } from './utils/hex';
+} from '../platform-interfaces';
+import { FileStoreError } from '../platform-interfaces/file-store-driver';
+import { segmentsFromPath } from '../utils/path';
+import type { PrivateKey } from '../polycentric-client';
+import * as Proto from '../proto/v2';
+import { bytesToHex, toDigestKey } from '../utils/hex';
 
 /** Canonical string identity of an EventKey, used as the store's map key. */
 function eventKeyString(key: Proto.EventKey): string {
@@ -150,87 +152,6 @@ class MemoryKeysRepository implements IKeysRepository {
   }
 }
 
-class MemoryEventAckRepository implements IEventAckRepository {
-  private readonly map = new Map<string, Set<string>>();
-
-  private static key(
-    systemKeyType: bigint,
-    systemKey: Uint8Array,
-    process: Uint8Array,
-    sequence: bigint,
-  ): string {
-    return `${systemKeyType}|${bytesToHex(systemKey)}|${bytesToHex(process)}|${sequence}`;
-  }
-
-  async storeEventAck(
-    systemKeyType: bigint,
-    systemKey: Uint8Array,
-    process: Uint8Array,
-    sequence: bigint,
-    serverUrl: string,
-  ): Promise<void> {
-    const key = MemoryEventAckRepository.key(
-      systemKeyType,
-      systemKey,
-      process,
-      sequence,
-    );
-    const acks = this.map.get(key) ?? new Set<string>();
-    acks.add(serverUrl);
-    this.map.set(key, acks);
-  }
-
-  async getEventAcks(
-    systemKeyType: bigint,
-    systemKey: Uint8Array,
-    process: Uint8Array,
-    sequence: bigint,
-  ): Promise<string[]> {
-    return [
-      ...(this.map.get(
-        MemoryEventAckRepository.key(
-          systemKeyType,
-          systemKey,
-          process,
-          sequence,
-        ),
-      ) ?? []),
-    ];
-  }
-
-  async hasEventAck(
-    systemKeyType: bigint,
-    systemKey: Uint8Array,
-    process: Uint8Array,
-    sequence: bigint,
-    serverUrl: string,
-  ): Promise<boolean> {
-    return (
-      this.map
-        .get(
-          MemoryEventAckRepository.key(
-            systemKeyType,
-            systemKey,
-            process,
-            sequence,
-          ),
-        )
-        ?.has(serverUrl) ?? false
-    );
-  }
-
-  async removeEventAcks(
-    systemKeyType: bigint,
-    systemKey: Uint8Array,
-    process: Uint8Array,
-    sequence: bigint,
-  ): Promise<void> {
-    this.map.delete(
-      MemoryEventAckRepository.key(systemKeyType, systemKey, process, sequence),
-    );
-  }
-}
-
 /**
  * Storage driver that keeps everything in process memory. Nothing survives
  * a reload — for contexts where durable storage is unavailable (e.g.
@@ -240,7 +161,6 @@ export class MemoryStorageDriver implements IStorageDriver {
   private readonly events = new MemoryEventRepository();
   private readonly contents = new MemoryContentRepository();
   private readonly keys = new MemoryKeysRepository();
-  private readonly eventAcks = new MemoryEventAckRepository();
   private readonly activeIdentityKeys = new Map<string, string>();
 
   createEventRepository() {
@@ -251,9 +171,6 @@ export class MemoryStorageDriver implements IStorageDriver {
   }
   createKeysRepository() {
     return this.keys;
-  }
-  createEventAckRepository() {
-    return this.eventAcks;
   }
 
   async saveActiveIdentityKey(
@@ -273,23 +190,130 @@ export class MemoryStorageDriver implements IStorageDriver {
   }
 }
 
-/** In-memory counterpart of the blob file store. */
+type MemoryDirectory = Map<string, Uint8Array | MemoryDirectory>;
+type MemoryLocation = { dir: MemoryDirectory; name: string };
+
+/** In-memory counterpart of the file store driver. */
 export class MemoryFileStoreDriver implements IFileStoreDriver {
-  private readonly map = new Map<string, Uint8Array>();
+  private readonly root: MemoryDirectory = new Map();
 
-  async has(digest: Proto.ContentDigest): Promise<boolean> {
-    return this.map.has(toDigestKey(digest));
+  /**
+   * Walk to the directory containing `path`.
+   * Creates missing directories when `create` is true.
+   * Throws a `'path conflict'` error if a parent is a file.
+   */
+  private parentOf(path: string, create: true): MemoryLocation;
+  private parentOf(path: string, create: false): MemoryLocation | null;
+  private parentOf(path: string, create: boolean): MemoryLocation | null {
+    const segments = segmentsFromPath(path);
+
+    const name = segments.pop();
+    if (!name) throw new FileStoreError('invalid path', 'path has no segments');
+
+    const dir = this.dirAt(path, segments, create);
+    if (!dir) return null;
+
+    return { dir, name };
   }
 
-  async get(digest: Proto.ContentDigest): Promise<Uint8Array | null> {
-    return this.map.get(toDigestKey(digest)) ?? null;
+  /**
+   * Walk to the directory at `segments`.
+   * Creates missing directories when `create` is true.
+   * Returns `null` if a directory is missing and `create` is false.
+   * Throws a `'path conflict'` error if it or a parent is a file.
+   */
+  private dirAt(
+    path: string,
+    segments: string[],
+    create: boolean,
+  ): MemoryDirectory | null {
+    let dir = this.root;
+    for (const segment of segments) {
+      let next = dir.get(segment);
+
+      // Create the directory if needed.
+      if (!next) {
+        if (!create) return null;
+
+        next = new Map();
+        dir.set(segment, next);
+      }
+
+      // Detect path conflicts.
+      if (next instanceof Uint8Array) {
+        throw new FileStoreError('path conflict', `not a directory: ${path}`);
+      }
+
+      dir = next;
+    }
+
+    return dir;
   }
 
-  async put(digest: Proto.ContentDigest, bytes: Uint8Array): Promise<void> {
-    this.map.set(toDigestKey(digest), bytes);
+  /**
+   * Get the file contents at `path` along with its location.
+   * Returns `null` if the file is not present.
+   * Throws a `'path conflict'` error if it is a directory.
+   */
+  private fileAt(path: string): (MemoryLocation & { file: Uint8Array }) | null {
+    const parent = this.parentOf(path, false);
+    if (!parent) return null;
+
+    const entry = parent.dir.get(parent.name);
+    if (entry === undefined) return null;
+    if (entry instanceof Map) {
+      throw new FileStoreError('path conflict', `Is a directory: ${path}`);
+    }
+
+    return { ...parent, file: entry };
   }
 
-  async delete(digest: Proto.ContentDigest): Promise<void> {
-    this.map.delete(toDigestKey(digest));
+  async has(path: string): Promise<boolean> {
+    return this.fileAt(path) !== null;
+  }
+
+  async get(path: string): Promise<Uint8Array | null> {
+    return this.fileAt(path)?.file.slice() ?? null;
+  }
+
+  async put(path: string, bytes: Uint8Array): Promise<void> {
+    const { dir, name } = this.parentOf(path, true);
+
+    if (dir.get(name) instanceof Map) {
+      throw new FileStoreError('path conflict', `is a directory: ${path}`);
+    }
+
+    dir.set(name, bytes.slice());
+  }
+
+  async delete(path: string): Promise<boolean> {
+    const found = this.fileAt(path);
+    if (!found) return false;
+    return found.dir.delete(found.name);
+  }
+
+  async list(path: string): Promise<FileStoreEntry[] | null> {
+    const dir = this.dirAt(path, segmentsFromPath(path, true), false);
+    if (!dir) return null;
+
+    const entries: FileStoreEntry[] = [];
+
+    for (const [name, entry] of dir) {
+      entries.push({ kind: entry instanceof Map ? 'dir' : 'file', name });
+    }
+
+    return entries;
+  }
+
+  async deleteSubpath(path: string): Promise<void> {
+    const parent = this.parentOf(path, false);
+    if (!parent) return;
+
+    const entry = parent.dir.get(parent.name);
+    if (entry instanceof Uint8Array) {
+      throw new FileStoreError('path conflict', `not a directory: ${path}`);
+    }
+
+    parent.dir.delete(parent.name);
   }
 }

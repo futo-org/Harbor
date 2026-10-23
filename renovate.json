@@ -32,6 +32,11 @@
       "enabled": false
     },
     {
+      "description": "@types/react-native-web 0.19.3 stopped augmenting react-native's types (it targets React Native 0.87), which the app relies on. Hold until the Expo SDK moves to 0.87.",
+      "matchPackageNames": ["@types/react-native-web"],
+      "enabled": false
+    },
+    {
       "groupName": "rn-primitives",
       "description": "Group @rn-primitives updates into one MR.",
       "matchPackageNames": ["/^@rn-primitives//"]
