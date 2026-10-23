@@ -31,11 +31,20 @@ const LINKS: { text: string; href: ExternalPathString }[] = [
   { text: 'FUTO © 2026.', href: FUTO_URL },
 ];
 
+type AppFooterProps = ComponentProps<typeof View> & {
+  /** Off where the screen already has a theme control, such as settings. */
+  showThemeSwitcher?: boolean;
+};
+
 /**
  * Theme toggle and external links row, shown at the bottom of the right
- * sidebar and on the onboarding welcome screen.
+ * sidebar, on the onboarding welcome screen and at the end of settings.
  */
-export function AppFooter({ style, ...props }: ComponentProps<typeof View>) {
+export function AppFooter({
+  showThemeSwitcher = true,
+  style,
+  ...props
+}: AppFooterProps) {
   return (
     <View
       style={[
@@ -50,7 +59,7 @@ export function AppFooter({ style, ...props }: ComponentProps<typeof View>) {
       ]}
       {...props}
     >
-      <ThemeSwitcher />
+      {showThemeSwitcher && <ThemeSwitcher />}
       {LINKS.map(({ text, href }) => (
         <FooterLink key={href} href={href} text={text} />
       ))}
