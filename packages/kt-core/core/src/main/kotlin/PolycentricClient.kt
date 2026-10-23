@@ -410,6 +410,15 @@ class PolycentricClient(
         return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
     }
 
+    /**
+     * Identity chain for [identity] from oldest to newest with
+     * the last bundle as the chain head.
+     */
+    fun resolveIdentityChain(identity: String): List<EventBundle> {
+        val bytes = coreCall { core.resolveIdentityChain(identity) }
+        return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
+    }
+
     // ── Sync (js-core: sync / pull / push) ─────────────────────────────
 
     /**
