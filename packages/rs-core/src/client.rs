@@ -499,6 +499,9 @@ impl PolycentricClient {
 
     /// Valid bundles for `(identity, collection)`, excluding any tombstoned
     /// by a `Delete` event in the same collection.
+    ///
+    /// Bundles are ordered by signer key, then by sequence. Note that with more
+    /// than one signer, the last bundle is not necessarily the newest.
     pub fn list_valid_events(
         &self,
         identity: &str,

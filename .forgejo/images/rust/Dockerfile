@@ -16,7 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Rust deps
 RUN rustup component add clippy rustfmt && rustup target add wasm32-unknown-unknown
-RUN cargo install just && rm -rf /usr/local/cargo/registry
+# wasm-bindgen-cli must match the `wasm-bindgen` pin in packages/rs-core/Cargo.toml.
+RUN cargo install just wasm-bindgen-cli@0.2.125 && rm -rf /usr/local/cargo/registry
 
 # sccache
 RUN curl -L "https://github.com/mozilla/sccache/releases/download/v0.10.0/sccache-v0.10.0-x86_64-unknown-linux-musl.tar.gz" \

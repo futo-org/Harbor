@@ -492,7 +492,10 @@ fn validate_content(
         }
         ContentBody::Identity(_) => {
             check_collection(collection, collections::IDENTITY);
-            // TODO: validate.
+
+            // TODO: validation that needs previous events:
+            // * recovery signature must be a signature from the
+            //   currently-active backup key.
         }
         ContentBody::Repost(_) => {
             check_collection(collection, collections::FEED);

@@ -511,6 +511,10 @@ impl Mutation {
                         Expr::col(event::Column::CreatedAt.as_column_ref()),
                     ),
                 )
+                .value(
+                    interaction_tally::Column::UpdatedAt,
+                    Expr::current_timestamp(),
+                )
                 // This should be an inner join, but SeaORM doesn't support this,
                 // see <https://github.com/SeaQL/sea-query/issues/608>.
                 .from(event::Entity)
@@ -613,6 +617,10 @@ impl Mutation {
                         ),
                         Expr::col(event::Column::CreatedAt.as_column_ref()),
                     ),
+                )
+                .value(
+                    interaction_tally::Column::UpdatedAt,
+                    Expr::current_timestamp(),
                 )
                 // This should be an inner join, but SeaORM doesn't support this,
                 // see <https://github.com/SeaQL/sea-query/issues/608>.
@@ -771,6 +779,10 @@ impl Mutation {
                         .as_column_ref(),
                 )
                 .add(Expr::Constant(negative.into())),
+            ),
+            (
+                interaction_tally::Column::UpdatedAt,
+                Expr::current_timestamp(),
             ),
         ]);
 
@@ -946,6 +958,10 @@ impl Mutation {
                     ),
                     Expr::col(event::Column::CreatedAt.as_column_ref()),
                 ),
+            )
+            .value(
+                interaction_tally::Column::UpdatedAt,
+                Expr::current_timestamp(),
             )
             // This should be an inner join, but SeaORM doesn't support this,
             // see <https://github.com/SeaQL/sea-query/issues/608>.
@@ -1270,6 +1286,10 @@ impl Mutation {
                                 Expr::col(event::Column::CreatedAt.as_column_ref()),
                             ),
                         ),
+                        (
+                            interaction_tally::Column::UpdatedAt,
+                            Expr::current_timestamp(),
+                        ),
                     ])
                     // This should be an inner join, but SeaORM doesn't support this,
                     // see <https://github.com/SeaQL/sea-query/issues/608>.
@@ -1392,6 +1412,7 @@ impl Mutation {
                             ))
                             .into(),
                         ),
+                        (interaction_tally::Column::UpdatedAt, Expr::current_timestamp())
                     ])
                     .from(DELETED_REACTION)
                     // This should be an inner join, but SeaORM doesn't support this,

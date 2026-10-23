@@ -516,7 +516,8 @@ CREATE TABLE public.interaction_tally (
     decayed_count numeric(20,11) NOT NULL,
     reply_count bigint NOT NULL,
     repost_count bigint NOT NULL,
-    quote_count bigint NOT NULL
+    quote_count bigint NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 

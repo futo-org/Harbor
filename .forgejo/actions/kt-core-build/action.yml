@@ -7,6 +7,9 @@ inputs:
   save-cache:
     description: Save Gradle wrapper and dependency cache. Disable for check-only jobs.
     default: 'true'
+  upload-artifact:
+    description: Upload the build directory as the kt-core-build artifact the release job downloads.
+    default: 'true'
 runs:
   using: composite
   steps:

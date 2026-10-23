@@ -222,6 +222,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                             Expr::col(event::Column::CreatedAt.as_column_ref()),
                         ),
                     )
+                    .value(interaction_tally::Column::UpdatedAt, Expr::current_timestamp())
                     // This should be an inner join, but SeaORM doesn't support
                     // this, see <https://github.com/SeaQL/sea-query/issues/608>.
                     .from(event::Entity)
@@ -282,6 +283,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     interaction_tally::Column::DecayedCount,
                     Expr::Constant(0.into()),
                 )
+                .value(interaction_tally::Column::UpdatedAt, Expr::current_timestamp())
                 .from(event::Entity)
                 .and_where(
                     Expr::col(event::Column::Id.as_column_ref())
