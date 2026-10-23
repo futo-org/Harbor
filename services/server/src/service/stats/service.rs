@@ -7,13 +7,12 @@ use sea_orm::{ConnectionTrait, DbErr};
 
 use crate::data::EventId;
 use crate::service::stats::repository::{
-    Query, ReactionSummary, ReactionTally,
+    InteractionTally, Query, ReactionTally,
 };
 
 #[derive(Default)]
 pub struct EventStats {
-    reply_counts: HashMap<EventId, i64>,
-    reaction_summaries: HashMap<EventId, ReactionSummary>,
+    interactions: HashMap<EventId, InteractionTally>,
     reaction_tallies: HashMap<EventId, Vec<ReactionTally>>,
 }
 
@@ -22,14 +21,10 @@ pub async fn gather_stats_for<C: ConnectionTrait>(
     db: &C,
     event_ids: impl ExactSizeIterator<Item = EventId> + Clone,
 ) -> Result<EventStats, DbErr> {
-    let reply_counts = Query::count_replies(db, event_ids.clone()).await?;
-    let reaction_summaries =
-        Query::summarize_reactions(db, event_ids.clone()).await?;
+    let interactions = Query::interactions(db, event_ids.clone()).await?;
     let reaction_tallies = Query::tally_reactions(db, event_ids).await?;
-
     Ok(EventStats {
-        reply_counts,
-        reaction_summaries,
+        interactions,
         reaction_tallies,
     })
 }
@@ -40,18 +35,27 @@ pub fn include_stats(
     event_id: EventId,
     stats: &EventStats,
 ) {
-    if let Some(reply_count) = stats.reply_counts.get(&event_id) {
-        meta.get_or_insert_default().reply_count =
-            Some(truncate_count(*reply_count));
-    }
+    if let Some(interactions) = stats.interactions.get(&event_id) {
+        let InteractionTally {
+            reaction_positive,
+            reaction_negative,
+            replies,
+            reposts,
+            quotes,
+        } = interactions;
 
-    if let Some(summary) = stats.reaction_summaries.get(&event_id) {
-        let meta = meta.get_or_insert_default();
-        meta.reaction_count = Some(truncate_count(
-            summary.upvote_count + summary.downvote_count,
-        ));
-        meta.upvote_count = Some(truncate_count(summary.upvote_count));
-        meta.downvote_count = Some(truncate_count(summary.downvote_count));
+        meta.get_or_insert_default().reply_count =
+            Some(truncate_count(*replies));
+        meta.get_or_insert_default().reaction_count =
+            Some(truncate_count(*reaction_positive + *reaction_negative));
+        meta.get_or_insert_default().upvote_count =
+            Some(truncate_count(*reaction_positive));
+        meta.get_or_insert_default().downvote_count =
+            Some(truncate_count(*reaction_negative));
+        meta.get_or_insert_default().repost_count =
+            Some(truncate_count(*reposts));
+        meta.get_or_insert_default().quote_count =
+            Some(truncate_count(*quotes));
     }
 
     if let Some(tallies) = stats.reaction_tallies.get(&event_id) {
