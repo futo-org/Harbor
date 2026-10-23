@@ -16,6 +16,12 @@
       "enabled": false
     },
     {
+      "description": "TypeScript 7 ships no JavaScript API, which ts-loader needs, and Docusaurus's base tsconfig still sets baseUrl, which 7 rejects. Stay on 6 until both support 7.",
+      "matchPackageNames": ["typescript"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
       "description": "Expo major versions track the Expo SDK; SDK upgrades go through `npx expo install --fix`, not Renovate.",
       "extends": ["monorepo:expo"],
       "matchUpdateTypes": ["major"],
