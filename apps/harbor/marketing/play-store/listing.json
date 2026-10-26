@@ -1,0 +1,157 @@
+{
+  "packageName": "org.futo.polycentric.store",
+  "language": "en-US",
+  "title": "Harbor",
+  "shortDescription": "Share to the world, not platforms. You hold the keys to your posts and audience.",
+  "fullDescription": "Share to the world, not platforms.\n\nHarbor is an open-source, distributed social network. You hold the keys, and your posts go to every server you choose. No company owns the network, and no single server owns you.\n\n<b>Sovereign identity</b>\nYour identity is made of cryptographic keypairs that you create for free and keep yourself. It is not an account that a company can suspend. Nobody else can post as you, and nobody can take your name, your history, or your followers. Add a second device by scanning a QR code, and keep a backup so you can recover without asking anyone’s permission.\n\n<b>No silos</b>\nYou post to the world, not to a server. Every post goes to all the servers you use. If one shuts down or bans you, your audience can still reach you through the rest. Pick your servers in Settings and change them whenever you like.\n\n<b>Moderation you choose</b>\nNo single company decides what you see. Each server sets its own policy, and you pick the servers whose moderation you trust. Content labels let you hide, warn, or show posts in each category, and you can report any post or block any user.\n\n<b>Recommendations that answer to you</b>\nYour feed is ranked for you, not for advertisers. The For You feed is computed by the servers you use, and each suggestion is attributed to the server that made it, so no single server controls what you see. Switch to Following for the people you follow, newest first or ranked.\n\n<b>Everything you expect from a social app</b>\n• Posts up to 2000 characters with up to four photos and link previews\n• Replies, quotes, reposts, and emoji reactions\n• Follow people across any server\n• Search for posts and people across your servers\n• Push notifications for follows, replies, reactions, and verifications\n• Readable usernames backed by a domain you control, like you@yourdomain.com\n• Verifications: prove you own your GitHub, YouTube, X, Discord, Twitch, or website, and let people you trust vouch for claims about you\n• Light and dark themes\n\n<b>Built in the open</b>\nHarbor is the flagship app for the Polycentric Protocol. The protocol, the app, and the server are open source, and anyone can run a server or build a client that interoperates with the rest of the network. Browse Explore and Search without creating an identity.\n\nDocs and source: https://join.harbor.social",
+  "releaseNotes": "Harbor is now on Google Play. Share to the world, not platforms. You hold the keys, and your posts go to every server you choose.",
+  "defaultLanguage": "en-US",
+  "contactEmail": "support@harbor.social",
+  "contactWebsite": "https://join.harbor.social",
+  "contactPhone": "",
+  "dataSafetyCsv": "play-store/data-safety.csv",
+  "appContent": {
+    "category": "Social",
+    "tags": [
+      "Social network",
+      "Open source"
+    ],
+    "privacyPolicyUrl": "https://join.harbor.social/docs/privacy-policy",
+    "ads": "No, the app does not contain ads",
+    "appAccess": {
+      "restricted": true,
+      "instructions": "No sign-in credentials exist. Explore and Search work without an identity. To post, follow or react: open the app, tap \"Create identity\" on the welcome screen, enter any display name, and optionally pick an avatar. The identity is created locally in seconds; there is no email, phone or password, and nothing to verify. To review a second device, use Settings, Pair Identity on the first device and scan the QR code on the second."
+    },
+    "contentRating": {
+      "category": "Social networking, forums, blogs, UGC sharing",
+      "userInteraction": "Users can interact and share user-generated content; content is moderated and users can report and block",
+      "violence": "No",
+      "sexuality": "No",
+      "language": "No",
+      "controlledSubstances": "No",
+      "gambling": "No",
+      "fear": "No",
+      "otherSensitive": "No"
+    },
+    "targetAudience": {
+      "ageGroups": [
+        "18 and over"
+      ],
+      "appealsToChildren": "No, the app is not designed for or likely to appeal to children"
+    },
+    "newsApp": "No",
+    "covidContactTracing": "No",
+    "governmentApp": "No",
+    "financialFeatures": "None",
+    "healthApp": "None"
+  },
+  "images": {
+    "phoneScreenshots": "screenshots/android-phone",
+    "tenInchScreenshots": "screenshots/android-tablet-10",
+    "featureGraphic": "screenshots/android-feature-graphic.png",
+    "icon": "icons/play-store-icon-512.png"
+  },
+  "limits": {
+    "title": 30,
+    "shortDescription": 80,
+    "fullDescription": 4000,
+    "releaseNotes": 500
+  },
+  "urls": {
+    "marketing": "https://join.harbor.social",
+    "support": "https://join.harbor.social/docs/support",
+    "privacyPolicy": "https://join.harbor.social/docs/privacy-policy",
+    "contentPolicy": "https://join.harbor.social/docs/content-policy",
+    "storeContentPolicy": "https://join.harbor.social/docs/content-policy-app-stores"
+  },
+  "dataCollection": {
+    "encryptedInTransit": true,
+    "userRequestDelete": true,
+    "accountCreation": {
+      "methods": [
+        "PSL_ACM_OTHER"
+      ],
+      "description": "An identity is a cryptographic key pair created on the device when the user taps \"Create identity\". No username, password, email or phone number is involved.",
+      "deletionUrl": "https://join.harbor.social/docs/privacy-policy"
+    },
+    "dataDeletionUrl": "https://join.harbor.social/docs/privacy-policy",
+    "outsideAppAccounts": false,
+    "independentSecurityReview": false,
+    "types": [
+      {
+        "what": "Display name, public on the profile",
+        "google": "PSL_NAME",
+        "apple": {
+          "category": "Contact Info",
+          "type": "Name"
+        },
+        "required": true,
+        "purposes": [
+          "APP_FUNCTIONALITY",
+          "ACCOUNT_MANAGEMENT"
+        ]
+      },
+      {
+        "what": "Identity key and alias",
+        "google": "PSL_USER_ACCOUNT",
+        "apple": {
+          "category": "Identifiers",
+          "type": "User ID"
+        },
+        "required": true,
+        "purposes": [
+          "APP_FUNCTIONALITY",
+          "ACCOUNT_MANAGEMENT"
+        ]
+      },
+      {
+        "what": "Avatar and post images",
+        "google": "PSL_PHOTOS",
+        "apple": {
+          "category": "User Content",
+          "type": "Photos or Videos"
+        },
+        "required": false,
+        "purposes": [
+          "APP_FUNCTIONALITY"
+        ]
+      },
+      {
+        "what": "Posts, replies and bio",
+        "google": "PSL_USER_GENERATED_CONTENT",
+        "apple": {
+          "category": "User Content",
+          "type": "Other User Content"
+        },
+        "required": false,
+        "purposes": [
+          "APP_FUNCTIONALITY"
+        ]
+      },
+      {
+        "what": "Follows, reactions and reposts, all public",
+        "google": "PSL_OTHER_APP_ACTIVITY",
+        "apple": {
+          "category": "User Content",
+          "type": "Other User Content"
+        },
+        "required": false,
+        "purposes": [
+          "APP_FUNCTIONALITY"
+        ]
+      },
+      {
+        "what": "Push notification token",
+        "google": "PSL_DEVICE_ID",
+        "apple": {
+          "category": "Identifiers",
+          "type": "Device ID"
+        },
+        "required": false,
+        "purposes": [
+          "APP_FUNCTIONALITY"
+        ]
+      }
+    ]
+  }
+}
