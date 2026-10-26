@@ -2,6 +2,7 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
 use polycentric_common::jwt::ServerJwtClaims;
+use polycentric_common::merkle;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::content_service_client::ContentServiceClient;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
@@ -530,11 +531,25 @@ impl TestClient {
     }
 
     fn previous_signature(&self) -> Vec<u8> {
-        vec![1; 64] // TODO: set previous signature properly.
+        self.pending
+            .last()
+            .and_then(|bundle| bundle.signed_event.as_ref())
+            .map(|event| event.signature.clone())
+            .unwrap_or_else(Vec::new)
     }
 
     fn previous_root(&self) -> Vec<u8> {
-        vec![1; 32] // TODO: set previous root properly.
+        let canonical = self
+            .pending
+            .iter()
+            .filter_map(|bundle| match bundle.signed_event.as_ref() {
+                Some(event) => Some(event.signature.clone()),
+                None => None,
+            })
+            .collect::<Vec<_>>();
+        merkle::merkle_tree_hash(&canonical)
+            .map(|h| h.to_vec())
+            .unwrap_or_else(Vec::new)
     }
 
     fn push_event_bundle2(
