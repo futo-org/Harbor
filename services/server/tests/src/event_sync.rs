@@ -2349,6 +2349,21 @@ async fn validation_content_content_body_reaction_long_emoji_ok() {
 }
 
 #[tokio::test]
+async fn validation_content_content_body_reaction_on_not_post() {
+    // Reacting on an event that is post is allowed, but doesn't really do
+    // anything.
+    //
+    // The result is a bit difficult to test without access to the database, but
+    // it shouldn't create a row in the `reaction` table as that's for posts
+    // only.
+
+    let mut client = TestClient::new().await;
+    let identity_event_key = client.get_last_event_key();
+    client.thumbs_up(identity_event_key, current_timestamp());
+    client.submit_events().await; // Shouldn't panic.
+}
+
+#[tokio::test]
 async fn validation_invalid_content_content_body_reaction_emoji_too_long() {
     let mut client = TestClient::new().await;
     client.post_text("Test", current_timestamp());

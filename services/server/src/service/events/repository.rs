@@ -2,12 +2,12 @@ use ::entity::{
     application, block, content, content_delete, event, follow,
     interaction_tally, profile, quote, reaction, reply, repost,
 };
-use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
     Application, Block, Content, ContentDigest, Delete, EventKey, Follow, Post,
     ProfileUpdate, Reaction, Repost,
 };
+use polycentric_common::models::{collections, content_types};
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, InsertStatement,
     IntoCondition, IntoTableRef, OnConflict, SelectExpr, SelectStatement,
@@ -709,16 +709,17 @@ impl Mutation {
                 reaction::Column::Positive,
             ])
             .select_from({
+                let event_table_id =
+                    Expr::col((event_table.clone(), event_id.clone()));
                 post_event_id
-                    .clear_selects() // Need to rename.
-                    .from(event_table.clone())
+                    .clear_selects()
                     .expr(SelectExpr {
-                        expr: Expr::col((event_table.clone(), event_id)),
+                        expr: event_table_id.clone(),
                         alias: Some("event_id".into()),
                         window: None,
                     })
                     .expr(SelectExpr {
-                        expr: Expr::col((event_table, identity)),
+                        expr: Expr::col((event_table.clone(), identity)),
                         alias: Some("identity".into()),
                         window: None,
                     })
@@ -736,7 +737,13 @@ impl Mutation {
                         expr: Expr::from(reaction.positive),
                         alias: Some("positive".into()),
                         window: None,
-                    });
+                    })
+                    .from(event_table.clone())
+                    // Ensure the event the reaction is on is a post.
+                    .cond_where(
+                        Expr::col(event::Column::ContentType.as_column_ref())
+                            .eq(Expr::Constant(content_types::POST.into())),
+                    );
                 post_event_id
             })
             .map_err(|err| {
