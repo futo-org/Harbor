@@ -2364,6 +2364,43 @@ async fn validation_content_content_body_reaction_on_not_post() {
 }
 
 #[tokio::test]
+async fn validation_content_content_body_multiple_reactions_on_same_post() {
+    // Per user (identity) we should only consider a single reaction per post.
+
+    let mut client = TestClient::new().await;
+    client.post_text("Text post", current_timestamp());
+    let post = client.get_last_event_key();
+    client.thumbs_up(post.clone(), current_timestamp());
+    client.thumbs_down(post.clone(), current_timestamp());
+    client.submit_events().await; // Shouldn't panic.
+
+    test_get_post(
+        post,
+        Some(EventMetadata {
+            reply_count: Some(0),
+            reaction_count: Some(1),
+            upvote_count: Some(0),
+            downvote_count: Some(1),
+            emoji_reactions: vec![
+                ReactionTally {
+                    emoji: "👎".to_owned(),
+                    positive: false,
+                    count: 1,
+                },
+                // NOTE: no thumbs up, that was overwritten.
+            ],
+            repost_count: Some(0),
+            quote_count: Some(0),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn validation_invalid_content_content_body_reaction_emoji_too_long() {
     let mut client = TestClient::new().await;
     client.post_text("Test", current_timestamp());

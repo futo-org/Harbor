@@ -466,9 +466,6 @@ fn validate_content(
         }
         ContentBody::Reaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-
-            // TODO: needs db for validation of:
-            // * at most 1 reaction per post per user.
         }
         ContentBody::AttributedToReaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
