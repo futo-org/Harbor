@@ -3434,36 +3434,16 @@ async fn validation_content_content_body_repost_post_missing() {
 }
 
 #[tokio::test]
-#[ignore = "TODO: implement this validation"]
 async fn validation_content_content_body_repost_post_not_a_post() {
+    // This should be fine, the repost will not be considered.
+    //
+    // No row should be added to the `repost` table, but we can't check that in
+    // this test.
+
     let mut client = TestClient::new().await;
     let event_key = client.get_last_event_key(); // Identity event.
-    let content = Content {
-        content_body: Some(ContentBody::Repost(Repost {
-            post: Some(event_key),
-        })),
-    };
-    let (content_bytes, digest) = content_with_digest(content);
-    let event = client.make_event(
-        COLLECTION_FEED,
-        Vec::new(),
-        Vec::new(),
-        digest,
-        current_timestamp(),
-    );
-    client.push_event_bundle2(event, content_bytes);
-
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[],
-        &[ExpectError {
-            bundle_index: 1,
-            kind: ExpectErrorKind::MsgContains(
-                "content content body repost post is not a post",
-            ),
-        }],
-    );
+    client.repost_key(event_key, current_timestamp());
+    client.submit_events().await;
 }
 
 #[tokio::test]

@@ -496,10 +496,6 @@ fn validate_content(
         }
         ContentBody::Repost(_) => {
             check_collection(collection, collections::FEED);
-
-            // TODO: needs db for validation of:
-            // * at most 1 reaction per post per user.
-            // * in db only reposting of posts
         }
         ContentBody::Report(_) => {
             check_collection(collection, collections::REPORTS);
