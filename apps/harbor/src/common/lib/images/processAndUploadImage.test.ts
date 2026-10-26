@@ -1,5 +1,5 @@
 import { processAndUploadImage } from './processAndUploadImage';
-import { ImageUploadError } from './ImageUploadError';
+import { ImageImportError } from './ImageImportError';
 
 // --- Mocks ----------------------------------------------------------------
 
@@ -14,7 +14,15 @@ jest.mock('@polycentric/react-native', () => ({
   v2: {
     Image: { create: (x: unknown) => ({ ...(x as object) }) },
     ImageSet: { create: (x: unknown) => ({ ...(x as object) }) },
+    Blob: { create: (x: unknown) => ({ ...(x as object) }) },
+    ContentDigest: { create: (x: unknown) => ({ ...(x as object) }) },
+    ContentDigestType: { SHA256: 1 },
   },
+}));
+
+// ESM-only; jest-expo doesn't transform it. The digest content is irrelevant.
+jest.mock('@noble/hashes/sha2.js', () => ({
+  sha256: () => new Uint8Array(32),
 }));
 
 // `new File(uri).arrayBuffer()` -> deterministic bytes derived from the uri so
@@ -100,9 +108,7 @@ function mockSource(srcWidth: number, srcHeight: number) {
 
 function makeClient() {
   return {
-    commitBlob: jest.fn(async (_bytes: Uint8Array, mime: string) => ({
-      mime,
-    })),
+    fileStore: { put: jest.fn(async () => undefined) },
     uploadBlob: jest.fn(async () => undefined),
     // biome-ignore lint/suspicious/noExplicitAny: test mock cast
   } as any;
@@ -126,11 +132,11 @@ describe('processAndUploadImage', () => {
     });
 
     expect(result.images).toHaveLength(2);
-    expect(client.commitBlob).toHaveBeenCalledTimes(2);
+    expect(client.fileStore.put).toHaveBeenCalledTimes(2);
     expect(client.uploadBlob).toHaveBeenCalledTimes(2);
-    // Every committed blob is JPEG.
-    for (const call of client.commitBlob.mock.calls) {
-      expect(call[1]).toBe('image/jpeg');
+    // Every uploaded blob is JPEG.
+    for (const call of client.uploadBlob.mock.calls) {
+      expect(call[0].mimeType).toBe('image/jpeg');
     }
   });
 
@@ -265,7 +271,7 @@ describe('processAndUploadImage', () => {
       processAndUploadImage(client, 'file://in.jpg', { sizes: [512, 4096] }),
     ).rejects.toThrow('at most 2048px');
     expect(mockLoadAsync).not.toHaveBeenCalled();
-    expect(client.commitBlob).not.toHaveBeenCalled();
+    expect(client.fileStore.put).not.toHaveBeenCalled();
   });
 
   it('tags decode failures with the decode stage and keeps the cause', async () => {
@@ -296,6 +302,20 @@ describe('processAndUploadImage', () => {
     );
   });
 
+  it('tags local commit failures with the persist stage', async () => {
+    mockSource(1000, 1000);
+    const client = makeClient();
+    const cause = new Error('disk full');
+    client.fileStore.put.mockRejectedValueOnce(cause);
+
+    await expectStageFailure(
+      processAndUploadImage(client, 'file://in.jpg', { sizes: [512] }),
+      'persist',
+      cause,
+    );
+    expect(client.uploadBlob).not.toHaveBeenCalled();
+  });
+
   it('tags upload failures with the upload stage', async () => {
     mockSource(1000, 1000);
     const client = makeClient();
@@ -311,11 +331,11 @@ describe('processAndUploadImage', () => {
 
   async function expectStageFailure(
     failure: Promise<unknown>,
-    stage: ImageUploadError['stage'],
+    stage: ImageImportError['stage'],
     cause: unknown,
   ) {
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    await expect(failure).rejects.toBeInstanceOf(ImageUploadError);
+    await expect(failure).rejects.toBeInstanceOf(ImageImportError);
     await expect(failure).rejects.toHaveProperty('stage', stage);
     await expect(failure).rejects.toHaveProperty('cause', cause);
   }

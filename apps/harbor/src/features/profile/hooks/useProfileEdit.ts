@@ -5,7 +5,7 @@ import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { publishProfileUpdate } from '../lib/publishProfileUpdate';
 import { profileQueryKey } from './useProfile';
-import { formatImageUploadErrorOrFallback } from '@/src/common/lib/images/ImageUploadError';
+import { formatImageImportErrorOrFallback } from '@/src/common/lib/images/ImageImportError';
 
 interface ProfileRef {
   description: string | null;
@@ -97,7 +97,7 @@ export function useProfileEdit(
     } catch (err) {
       console.error('Failed to save profile:', err);
       toast.error(
-        formatImageUploadErrorOrFallback(err, 'Failed to save profile'),
+        formatImageImportErrorOrFallback(err, 'Failed to save profile'),
       );
       return false;
     } finally {
