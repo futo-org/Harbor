@@ -9,7 +9,7 @@ import {
   DEFAULT_SERVER,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
-import { publishProfileUpdate } from '@/src/features/profile/lib/publishProfileUpdate';
+import { updateProfile } from '@/src/features/profile/lib/updateProfile';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { profileQueryKey } from '@/src/features/profile/hooks/useProfile';
 
@@ -100,13 +100,14 @@ export function useSignup() {
       }
 
       await createIdentity(client, DEFAULT_SERVER);
-      await publishProfileUpdate(client, {
+      await updateProfile(client, {
         name: data.displayName,
         description: data.about,
         avatarUri: data.avatarUri,
       });
       await refreshCurrentIdentity();
       invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
+      await client.sync();
       reset();
       // Back to the screen the signup prompt was opened from, if any.
       router.dismissTo(links.landing);

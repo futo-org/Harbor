@@ -8,7 +8,7 @@ import {
   type PolycentricClient,
 } from '@polycentric/react-native';
 
-type PublishProfileUpdateInput = {
+type UpdateProfileInput = {
   name: string;
   description: string;
   /** New avatar to upload; when absent, `avatar` is republished as-is. */
@@ -20,17 +20,9 @@ type PublishProfileUpdateInput = {
   alias?: string | null;
 };
 
-export async function publishProfileUpdate(
+export async function updateProfile(
   client: PolycentricClient,
-  {
-    name,
-    description,
-    avatarUri,
-    avatar,
-    banner,
-    alias,
-  }: PublishProfileUpdateInput,
-  syncAfter: boolean = true,
+  { name, description, avatarUri, avatar, banner, alias }: UpdateProfileInput,
 ): Promise<void> {
   let avatarMeta: v2.ImageSet | undefined;
   let newAvatarVariants: ImageVariant[] = [];
@@ -68,8 +60,4 @@ export async function publishProfileUpdate(
 
   await client.contentManager.save(content);
   await client.commitEvent(signedEvent, content);
-
-  if (syncAfter) {
-    await client.sync();
-  }
 }
