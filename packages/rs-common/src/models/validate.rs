@@ -9,8 +9,8 @@ use crate::models::{
     application, attributed_to, attributed_to_reaction, blob, block, content, content_body,
     content_digest, delete, event, event_key, event_proof_target, field_def, follow, identity,
     image, image_set, labels, link, post, post_reply, profile_update, public_key, reaction, report,
-    repost, revocation_bound, serialized_verification_schema, server_list, to, verification_claim,
-    verification_schema, verification_target, verification_verify,
+    repost, revocation_bound, serialized_verification_schema, server_list, to, vector_clock,
+    verification_claim, verification_schema, verification_target, verification_verify,
 };
 
 /// Validate a value.
@@ -46,6 +46,7 @@ pub trait Validate {
 pub enum ValidationError {
     Event(event::ValidationError),
     EventKey(event_key::ValidationError),
+    VectorClock(vector_clock::ValidationError),
     PublicKey(public_key::ValidationError),
     ContentDigest(content_digest::ValidationError),
     Application(application::ValidationError),
@@ -89,6 +90,12 @@ impl From<event::ValidationError> for ValidationError {
 impl From<event_key::ValidationError> for ValidationError {
     fn from(err: event_key::ValidationError) -> ValidationError {
         ValidationError::EventKey(err)
+    }
+}
+
+impl From<vector_clock::ValidationError> for ValidationError {
+    fn from(err: vector_clock::ValidationError) -> ValidationError {
+        ValidationError::VectorClock(err)
     }
 }
 
@@ -289,6 +296,7 @@ impl fmt::Display for ValidationError {
         match self {
             ValidationError::Event(err) => write!(f, "event {err}"),
             ValidationError::EventKey(err) => write!(f, "event key {err}"),
+            ValidationError::VectorClock(err) => write!(f, "vector clock {err}"),
             ValidationError::PublicKey(err) => write!(f, "public key {err}"),
             ValidationError::ContentDigest(err) => write!(f, "content digest {err}"),
             ValidationError::Application(err) => write!(f, "application {err}"),
@@ -584,6 +592,40 @@ where
             // the longest emoji is 35 bytes (rendered as a single symbol), so
             // allow at least that emoji.
             max_len: Some(40),
+            ..Default::default()
+        },
+    );
+}
+
+/// Validate an ed25519 signature.
+pub(crate) fn ed25519_signature<E, F>(signature: &[u8], errors: &mut Vec<E>, map_err: F)
+where
+    F: Fn(SliceError) -> E,
+{
+    slice(
+        signature,
+        errors,
+        map_err,
+        SliceConfig {
+            min_len: Some(64),
+            max_len: Some(64),
+            ..Default::default()
+        },
+    );
+}
+
+/// Validate a SHA256 hash
+pub(crate) fn sha256_hash<E, F>(hash: &[u8], errors: &mut Vec<E>, map_err: F)
+where
+    F: Fn(SliceError) -> E,
+{
+    slice(
+        hash,
+        errors,
+        map_err,
+        SliceConfig {
+            min_len: Some(32),
+            max_len: Some(32),
             ..Default::default()
         },
     );

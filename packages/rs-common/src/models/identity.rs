@@ -131,16 +131,9 @@ impl Validate for Identity {
             recovery_key.validate_check(errors, |err| map_err(ValidationError::RecoveryKey(err)));
         }
         if let Some(recovery_signature) = recovery_signature {
-            validate::slice(
-                recovery_signature,
-                errors,
-                |err| map_err(ValidationError::RecoverySignature(err)),
-                SliceConfig {
-                    min_len: Some(64),
-                    max_len: Some(64),
-                    ..Default::default()
-                },
-            );
+            validate::ed25519_signature(recovery_signature, errors, |err| {
+                map_err(ValidationError::RecoverySignature(err))
+            });
         }
     }
 }

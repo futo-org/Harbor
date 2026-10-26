@@ -162,14 +162,6 @@ async fn process_event(
             tracing::debug!(error = %err, "failed to decode event");
             Status::invalid_argument("signed event bytes invalid")
         })?;
-    // TODO: validate:
-    // * event.key.collection -> match ContentBody variant
-    // * event.key.sequence
-    // * event.key.identity?
-    // * event.identity_sequence
-    // * event.vector_clock
-    // * event.previous_signature
-    // * event.previous_root
     event.validate_check(warnings, |err| map_warning(err.into()));
 
     let key = event.key.ok_or_else(|| {

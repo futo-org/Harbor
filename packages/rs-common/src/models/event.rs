@@ -4,8 +4,8 @@ use prost::Message;
 
 use crate::error::Error;
 use crate::models::protos_v2::{ContentDigest, Event, EventKey, VectorClock};
-use crate::models::validate::Validate;
-use crate::models::{Serializable, application, content_digest, event_key};
+use crate::models::validate::{self, Validate};
+use crate::models::{Serializable, application, content_digest, event_key, vector_clock};
 use crate::platform::error::PlatformError;
 
 impl Event {
@@ -81,12 +81,12 @@ impl Validate for Event {
     {
         let Event {
             key,
-            identity_sequence: _,  // No validation.
-            vector_clock: _,       // TODO.
-            previous_signature: _, // Can't validate.
+            identity_sequence: _, // No validation.
+            vector_clock,
+            previous_signature,
             content_digest,
-            created_at: _,    // No validation.
-            previous_root: _, // Can't validate.
+            created_at: _, // No validation.
+            previous_root,
             application,
         } = self;
         if let Some(key) = key.as_ref() {
@@ -94,12 +94,23 @@ impl Validate for Event {
         } else {
             errors.push(map_err(ValidationError::KeyMissing));
         }
+        if let Some(vector_clock) = vector_clock.as_ref() {
+            vector_clock.validate_check(errors, |err| map_err(ValidationError::VectorClock(err)));
+        } else {
+            errors.push(map_err(ValidationError::VectorClockMissing));
+        }
+        validate::ed25519_signature(previous_signature, errors, |err| {
+            map_err(ValidationError::PreviousSignature(err))
+        });
         if let Some(content_digest) = content_digest.as_ref() {
             content_digest
                 .validate_check(errors, |err| map_err(ValidationError::ContentDigest(err)));
         } else {
             errors.push(map_err(ValidationError::ContentDigestMissing));
         }
+        validate::sha256_hash(previous_root, errors, |err| {
+            map_err(ValidationError::PreviousRoot(err))
+        });
         if let Some(application) = application.as_ref() {
             application.validate_check(errors, |err| map_err(ValidationError::Application(err)));
         }
@@ -112,8 +123,12 @@ impl Validate for Event {
 pub enum ValidationError {
     Key(event_key::ValidationError),
     KeyMissing,
+    VectorClock(vector_clock::ValidationError),
+    VectorClockMissing,
+    PreviousSignature(validate::SliceError),
     ContentDigest(content_digest::ValidationError),
     ContentDigestMissing,
+    PreviousRoot(validate::SliceError),
     Application(application::ValidationError),
 }
 
@@ -122,8 +137,12 @@ impl fmt::Display for ValidationError {
         match self {
             ValidationError::Key(err) => write!(f, "key {err}"),
             ValidationError::KeyMissing => write!(f, "key is missing"),
+            ValidationError::VectorClock(err) => write!(f, "vector clock {err}"),
+            ValidationError::VectorClockMissing => write!(f, "vector clock is missing"),
+            ValidationError::PreviousSignature(err) => write!(f, "previous signature {err}"),
             ValidationError::ContentDigest(err) => write!(f, "content digest {err}"),
             ValidationError::ContentDigestMissing => write!(f, "content digest is missing"),
+            ValidationError::PreviousRoot(err) => write!(f, "previous root {err}"),
             ValidationError::Application(err) => write!(f, "application {err}"),
         }
     }
