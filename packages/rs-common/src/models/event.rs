@@ -99,18 +99,22 @@ impl Validate for Event {
         } else {
             errors.push(map_err(ValidationError::VectorClockMissing));
         }
-        validate::ed25519_signature(previous_signature, errors, |err| {
-            map_err(ValidationError::PreviousSignature(err))
-        });
+        if !previous_signature.is_empty() {
+            validate::ed25519_signature(previous_signature, errors, |err| {
+                map_err(ValidationError::PreviousSignature(err))
+            });
+        }
         if let Some(content_digest) = content_digest.as_ref() {
             content_digest
                 .validate_check(errors, |err| map_err(ValidationError::ContentDigest(err)));
         } else {
             errors.push(map_err(ValidationError::ContentDigestMissing));
         }
-        validate::sha256_hash(previous_root, errors, |err| {
-            map_err(ValidationError::PreviousRoot(err))
-        });
+        if !previous_root.is_empty() {
+            validate::sha256_hash(previous_root, errors, |err| {
+                map_err(ValidationError::PreviousRoot(err))
+            });
+        }
         if let Some(application) = application.as_ref() {
             application.validate_check(errors, |err| map_err(ValidationError::Application(err)));
         }
