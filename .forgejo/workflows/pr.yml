@@ -329,6 +329,8 @@ jobs:
           install-args: --filter polycentric-app...
       - name: Biome
         run: pnpm exec biome check apps/harbor --diagnostic-level=error
+      - name: Store listing exports
+        run: node apps/harbor/marketing/source/export.mjs --check
 
   # Unit tests ---------------------------------------------------------------
 
