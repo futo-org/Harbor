@@ -30,7 +30,11 @@ export type ProcessAndUploadOptions = ImageEncodingOptions;
 
 /** The raw bytes and metadata of an encoded image variant. */
 export type ImageVariant = {
-  meta: v2.Image & { blob: v2.Blob };
+  meta: v2.Image;
+  /** Same as `meta.blob`, but non-optional. */
+  blob: v2.Blob;
+  /** Same as `blob.digest`, but non-optional. */
+  digest: v2.ContentDigest;
   bytes: Uint8Array;
 };
 
@@ -78,13 +82,20 @@ export async function encodeImageVariants(
           mode,
         );
 
+        const digest = v2.ContentDigest.create({
+          type: v2.ContentDigestType.SHA256,
+          value: sha256(bytes),
+        });
+
         const blob = v2.Blob.create({
-          digest: { type: v2.ContentDigestType.SHA256, value: sha256(bytes) },
+          digest,
           mimeType: 'image/jpeg',
           size: BigInt(bytes.length),
         });
 
-        return { meta: { ...v2.Image.create({ width, height }), blob }, bytes };
+        const meta = v2.Image.create({ blob, width, height });
+
+        return { meta, blob, digest, bytes };
       }),
     ),
   );
@@ -103,18 +114,15 @@ export async function processAndUploadImage(
 ): Promise<v2.ImageSet> {
   const variants = await encodeImageVariants(uri, options);
 
-  // TODO: We shouldn't recompute the hash in `commitBlob()`.
   await runStage('persist', () =>
     Promise.all(
-      variants.map(({ meta, bytes }) =>
-        client.commitBlob(bytes, meta.blob.mimeType),
-      ),
+      variants.map(({ digest, bytes }) => client.fileStore.put(digest, bytes)),
     ),
   );
 
   await runStage('upload', () =>
     Promise.all(
-      variants.map(({ meta, bytes }) => client.uploadBlob(meta.blob, bytes)),
+      variants.map(({ blob, bytes }) => client.uploadBlob(blob, bytes)),
     ),
   );
 
