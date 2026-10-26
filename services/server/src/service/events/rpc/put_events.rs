@@ -483,9 +483,6 @@ fn validate_content(
         }
         ContentBody::AttributedToReaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-
-            // TODO: needs db for validation of:
-            // * at most 1 reaction per URL (attributed item) per user.
         }
         ContentBody::ProfileUpdate(_) => {
             check_collection(collection, collections::PROFILE);
