@@ -24,6 +24,7 @@ export async function updateProfile(
   client: PolycentricClient,
   { name, description, avatarUri, avatar, banner, alias }: UpdateProfileInput,
 ): Promise<void> {
+  // Build profile update event
   let avatarMeta: v2.ImageSet | undefined;
   let newAvatarVariants: ImageVariant[] = [];
 
@@ -52,6 +53,7 @@ export async function updateProfile(
   const event = await client.buildEvent(content, COLLECTION.PROFILE);
   const signedEvent = await client.signEvent(event);
 
+  // Persist profile update locally
   await Promise.all(
     newAvatarVariants.map(({ digest, bytes }) =>
       client.fileStore.put(digest, bytes),
