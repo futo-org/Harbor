@@ -798,8 +798,8 @@ async fn validation_missing_event_key() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -836,8 +836,8 @@ async fn validation_invalid_event_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_FEED,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -877,8 +877,8 @@ async fn validation_invalid_event_identity() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -915,8 +915,8 @@ async fn validation_missing_event_signed_by() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -955,8 +955,8 @@ async fn validation_invalid_event_signed_by_key_type() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1007,8 +1007,8 @@ async fn validation_invalid_event_signed_by_key() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1054,8 +1054,8 @@ async fn validation_missing_event_content_digest() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1094,8 +1094,8 @@ async fn validation_invalid_event_content_digest_type() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1139,8 +1139,8 @@ async fn validation_invalid_event_content_digest_value() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1183,8 +1183,8 @@ async fn validation_invalid_event_application_name_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1228,8 +1228,8 @@ async fn validation_invalid_event_application_name_too_long() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1273,8 +1273,8 @@ async fn validation_invalid_event_application_id_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1318,8 +1318,8 @@ async fn validation_invalid_event_application_id_too_long() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1363,8 +1363,8 @@ async fn validation_invalid_event_application_version_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1408,8 +1408,8 @@ async fn validation_invalid_event_application_version_too_long() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1453,8 +1453,8 @@ async fn validation_invalid_event_application_url_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1506,8 +1506,8 @@ async fn validation_invalid_event_application_url_too_long() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1559,8 +1559,8 @@ async fn validation_invalid_event_application_url_not_an_url() {
     let (content_bytes, digest) = content_with_digest(content);
     let mut event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1615,8 +1615,8 @@ async fn validation_missing_content_content_body() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1646,8 +1646,8 @@ async fn validation_missing_content_content_body_delete_event_key() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_FEED,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -1682,8 +1682,8 @@ async fn validation_invalid_content_content_body_delete_event_key_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_FEED,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -1720,8 +1720,8 @@ async fn validation_invalid_content_content_body_delete_event_key_identity() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_FEED,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -1751,8 +1751,8 @@ async fn validation_invalid_content_content_body_follow_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_FEED,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -1782,8 +1782,8 @@ async fn validation_invalid_content_content_body_follow_identity() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_SOCIAL_GRAPH,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1813,8 +1813,8 @@ async fn validation_invalid_content_content_body_follow_identity_self() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_SOCIAL_GRAPH,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1844,8 +1844,8 @@ async fn validation_invalid_content_content_body_block_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_FEED,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -1875,8 +1875,8 @@ async fn validation_invalid_content_content_body_block_identity() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_SOCIAL_GRAPH,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1906,8 +1906,8 @@ async fn validation_invalid_content_content_body_block_identity_self() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_SOCIAL_GRAPH,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1941,8 +1941,8 @@ async fn validation_invalid_content_content_body_reaction_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -1974,8 +1974,8 @@ async fn validation_invalid_content_content_body_reaction_no_event_key() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2009,8 +2009,8 @@ async fn validation_content_content_body_reaction_empty_emoji() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2034,8 +2034,8 @@ async fn validation_content_content_body_reaction_flags_ok() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2061,8 +2061,8 @@ async fn validation_content_content_body_reaction_long_emoji_ok() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2086,8 +2086,8 @@ async fn validation_invalid_content_content_body_reaction_emoji_too_long() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2130,8 +2130,8 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_collecti
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2166,8 +2166,8 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_no_attri
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2202,8 +2202,8 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_no_attri
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2245,8 +2245,8 @@ async fn validation_content_content_body_attributed_to_reaction_empty_emoji() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2279,8 +2279,8 @@ async fn validation_content_content_body_attributed_to_reaction_emoji_flags_ok()
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2315,8 +2315,8 @@ async fn validation_content_content_body_attributed_to_reaction_emoji_long_ok()
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2351,8 +2351,8 @@ async fn validation_invalid_content_content_body_attributed_to_reaction_emoji_to
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2386,8 +2386,8 @@ async fn validation_invalid_content_content_body_profile_update_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2421,8 +2421,8 @@ async fn validation_content_content_body_profile_update_name_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_PROFILE_UPDATE,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2447,8 +2447,8 @@ async fn validation_invalid_content_content_body_profile_update_name_too_long()
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_PROFILE_UPDATE,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2493,8 +2493,8 @@ async fn validation_invalid_content_content_body_profile_update_avatar_too_large
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_PROFILE_UPDATE,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2547,8 +2547,8 @@ async fn validation_invalid_content_content_body_profile_update_banner_too_large
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_PROFILE_UPDATE,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2590,8 +2590,8 @@ async fn validation_content_content_body_profile_update_description_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_PROFILE_UPDATE,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2616,8 +2616,8 @@ async fn validation_invalid_content_content_body_profile_update_description_too_
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_PROFILE_UPDATE,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2651,8 +2651,8 @@ async fn validation_content_content_body_profile_update_alias_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_PROFILE_UPDATE,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2677,8 +2677,8 @@ async fn validation_invalid_content_content_body_profile_update_alias_too_long()
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_PROFILE_UPDATE,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2714,8 +2714,8 @@ async fn validation_content_content_body_identity_collection_invalid() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2755,8 +2755,8 @@ async fn validation_content_content_body_identity_rotation_keys_too_many() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2795,8 +2795,8 @@ async fn validation_content_content_body_identity_rotation_keys_key_invalid() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2836,8 +2836,8 @@ async fn validation_content_content_body_identity_signing_keys_too_many() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2876,8 +2876,8 @@ async fn validation_content_content_body_identity_signing_keys_invalid() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2923,8 +2923,8 @@ async fn validation_content_content_body_identity_revocation_bounds_too_many() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -2964,8 +2964,8 @@ async fn validation_content_content_body_identity_revocation_bounds_revoked_key_
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3008,8 +3008,8 @@ async fn validation_content_content_body_identity_revocation_bounds_revoked_key_
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3061,8 +3061,8 @@ async fn validation_content_content_body_identity_revocation_bounds_revoked_targ
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3107,8 +3107,8 @@ async fn validation_content_content_body_identity_revocation_bounds_revoked_targ
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3153,8 +3153,8 @@ async fn validation_content_content_body_identity_revocation_bounds_revoked_targ
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3196,8 +3196,8 @@ async fn validation_content_content_body_identity_servers_too_many() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3235,8 +3235,8 @@ async fn validation_content_content_body_identity_servers_url_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3274,8 +3274,8 @@ async fn validation_content_content_body_identity_servers_url_too_long() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3314,8 +3314,8 @@ async fn validation_content_content_body_identity_recovery_key_invalid() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3351,8 +3351,8 @@ async fn validation_content_content_body_identity_recovery_signature_invalid() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_IDENTITY,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3384,8 +3384,8 @@ async fn validation_invalid_content_content_body_repost_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3413,8 +3413,8 @@ async fn validation_content_content_body_repost_post_missing() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_FEED,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -3446,8 +3446,8 @@ async fn validation_content_content_body_repost_post_not_a_post() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_FEED,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -3481,8 +3481,8 @@ async fn validation_invalid_content_content_body_report_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3514,8 +3514,8 @@ async fn validation_content_content_body_report_event_key_missing() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_REPORTS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3549,8 +3549,8 @@ async fn validation_content_content_body_report_invalid_category() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_REPORTS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3584,8 +3584,8 @@ async fn validation_content_content_body_report_additional_info_too_long() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_REPORTS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3618,8 +3618,8 @@ async fn validation_invalid_content_content_body_labels_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3650,8 +3650,8 @@ async fn validation_content_content_body_labels_event_key_missing() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_LABELS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -3684,8 +3684,8 @@ async fn validation_content_content_body_labels_event_key_not_a_post() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_LABELS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -3718,8 +3718,8 @@ async fn validation_content_content_body_labels_labels_values_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_LABELS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -3756,8 +3756,8 @@ async fn validation_content_content_body_labels_labels_values_too_long() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_LABELS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -3790,8 +3790,8 @@ async fn validation_content_content_body_labels_labels_values_value_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_LABELS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -3814,8 +3814,8 @@ async fn validation_content_content_body_labels_labels_values_value_too_long() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_LABELS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         current_timestamp(),
     );
@@ -3871,8 +3871,8 @@ async fn validation_content_content_body_verification_claim_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3915,8 +3915,8 @@ async fn validation_content_content_body_verification_claim_schema_too_large() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -3959,8 +3959,8 @@ async fn validation_content_content_body_verification_claim_schema_invalid() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4016,8 +4016,8 @@ async fn validation_content_content_body_verification_claim_digest_invalid() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4073,8 +4073,8 @@ async fn validation_content_content_body_verification_claim_digest_mismatch() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4126,8 +4126,8 @@ async fn validation_content_content_body_verification_claim_digest_missing() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4184,8 +4184,8 @@ async fn validation_content_content_body_verification_claim_schema_name_too_long
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4242,8 +4242,8 @@ async fn validation_content_content_body_verification_claim_schema_description_t
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4303,8 +4303,8 @@ async fn validation_content_content_body_verification_claim_schema_too_many_fiel
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4361,8 +4361,8 @@ async fn validation_content_content_body_verification_claim_schema_fields_key_em
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4419,8 +4419,8 @@ async fn validation_content_content_body_verification_claim_schema_fields_key_to
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4477,8 +4477,8 @@ async fn validation_content_content_body_verification_claim_schema_fields_kind_v
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4535,8 +4535,8 @@ async fn validation_content_content_body_verification_claim_schema_fields_kind_u
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4593,8 +4593,8 @@ async fn validation_content_content_body_verification_claim_schema_fields_format
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4651,8 +4651,8 @@ async fn validation_content_content_body_verification_claim_schema_fields_descri
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4709,8 +4709,8 @@ async fn validation_content_content_body_verification_claim_schema_fields_regex_
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4778,8 +4778,8 @@ async fn validation_content_content_body_verification_claim_schema_fields_duplic
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4813,8 +4813,8 @@ async fn validation_content_content_body_verification_claim_schema_missing() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4874,8 +4874,8 @@ async fn validation_content_content_body_verification_claim_fields_key_empty() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4936,8 +4936,8 @@ async fn validation_content_content_body_verification_claim_fields_key_too_long(
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -4998,8 +4998,8 @@ async fn validation_content_content_body_verification_claim_fields_value_too_lon
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5058,8 +5058,8 @@ async fn validation_content_content_body_verification_claim_fields_too_many() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5120,8 +5120,8 @@ async fn validation_content_content_body_verification_claim_fields_key_unknown()
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5182,8 +5182,8 @@ async fn validation_content_content_body_verification_claim_fields_value_not_val
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5244,8 +5244,8 @@ async fn validation_content_content_body_verification_claim_fields_value_string_
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5306,8 +5306,8 @@ async fn validation_content_content_body_verification_claim_fields_value_invalid
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5368,8 +5368,8 @@ async fn validation_content_content_body_verification_claim_fields_value_invalid
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5430,8 +5430,8 @@ async fn validation_content_content_body_verification_claim_fields_value_bytes_t
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5488,8 +5488,8 @@ async fn validation_content_content_body_verification_claim_fields_missing_requi
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5523,8 +5523,8 @@ async fn validation_content_content_body_verification_verify_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5560,8 +5560,8 @@ async fn validation_content_content_body_verification_verify_claim_event_key_inv
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5595,8 +5595,8 @@ async fn validation_content_content_body_verification_verify_claim_event_key_wro
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5629,8 +5629,8 @@ async fn validation_content_content_body_verification_verify_claim_event_key_mis
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5665,8 +5665,8 @@ async fn validation_content_content_body_verification_target_collection() {
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_INTERACTIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5703,8 +5703,8 @@ async fn validation_content_content_body_verification_target_claim_event_key_inv
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5739,8 +5739,8 @@ async fn validation_content_content_body_verification_target_claim_event_key_wro
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5774,8 +5774,8 @@ async fn validation_content_content_body_verification_target_claim_event_key_mis
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5811,8 +5811,8 @@ async fn validation_content_content_body_verification_target_identities_empty()
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5853,8 +5853,8 @@ async fn validation_content_content_body_verification_target_identities_too_long
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );
@@ -5890,8 +5890,8 @@ async fn validation_content_content_body_verification_target_identities_invalid(
     let (content_bytes, digest) = content_with_digest(content);
     let event = client.make_event(
         COLLECTION_VERIFICATIONS,
-        Vec::new(),
-        Vec::new(),
+        client.previous_signature(),
+        client.previous_root(),
         digest,
         0,
     );

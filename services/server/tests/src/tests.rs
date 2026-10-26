@@ -521,12 +521,20 @@ impl TestClient {
         let (content_bytes, digest) = content_with_digest(content);
         let event = self.make_event(
             collection,
-            Vec::new(),
-            Vec::new(),
+            self.previous_signature(),
+            self.previous_root(),
             digest,
             created_at,
         );
         self.push_event_bundle2(event, content_bytes)
+    }
+
+    fn previous_signature(&self) -> Vec<u8> {
+        vec![1; 64] // TODO: set previous signature properly.
+    }
+
+    fn previous_root(&self) -> Vec<u8> {
+        vec![1; 32] // TODO: set previous root properly.
     }
 
     fn push_event_bundle2(
@@ -931,6 +939,16 @@ fn bundle(signed_event: SignedEvent, content_bytes: Vec<u8>) -> EventBundle {
     }
 }
 
+/// Fake previous signature that passed validation (but is not valid).
+fn fake_previous_signature() -> Vec<u8> {
+    vec![1; 64]
+}
+
+/// Fake previous root that passed validation (but is not valid).
+fn fake_previous_root() -> Vec<u8> {
+    vec![1; 32]
+}
+
 /// Build a signed identity-collection bundle.
 #[allow(clippy::too_many_arguments)]
 pub fn make_identity_bundle(
@@ -955,8 +973,8 @@ pub fn make_identity_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
-        vec![],
+        fake_previous_signature(),
+        fake_previous_root(),
         digest,
         created_at,
     );
@@ -986,8 +1004,8 @@ pub fn make_profile_update_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
-        vec![],
+        fake_previous_signature(),
+        fake_previous_root(),
         digest,
         created_at,
     );
@@ -1041,7 +1059,7 @@ pub fn make_post_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
+        fake_previous_signature(),
         previous_root,
         digest,
         created_at,
@@ -1101,8 +1119,8 @@ pub fn make_verification_claim_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
-        vec![],
+        fake_previous_signature(),
+        fake_previous_root(),
         digest,
         created_at,
     );
