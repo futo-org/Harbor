@@ -30,6 +30,7 @@ export async function publishProfileUpdate(
     banner,
     alias,
   }: PublishProfileUpdateInput,
+  syncAfter: boolean = true,
 ): Promise<void> {
   let avatarMeta: v2.ImageSet | undefined;
   let newAvatarVariants: ImageVariant[] = [];
@@ -67,5 +68,8 @@ export async function publishProfileUpdate(
 
   await client.contentManager.save(content);
   await client.commitEvent(signedEvent, content);
-  await client.sync();
+
+  if (syncAfter) {
+    await client.sync();
+  }
 }
