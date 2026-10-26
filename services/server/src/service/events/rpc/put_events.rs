@@ -25,7 +25,7 @@ use crate::service::identity::repository::Query as IdentityRepository;
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
-    Application, Content, Delete, Event, EventBundle, EventKey, PublicKey,
+    Application, Content, Event, EventBundle, EventKey, PublicKey,
     PutEventError, PutEventsRequest, PutEventsResponse,
 };
 
@@ -540,51 +540,6 @@ fn validate_content(
 
             // TODO: limit the target identities in some way?
         }
-    }
-}
-
-/// Check if the `identity` is authorised to perform its mutation.
-///
-/// This will return false if, for example, an event tries to delete a post
-/// that the identity of the deletion event didn't create.
-///
-/// `content` must be contained in the event itself.
-pub fn event_is_authorised(identity: &str, content: Option<&Content>) -> bool {
-    let Some(Content {
-        content_body: Some(content),
-    }) = content
-    else {
-        // Couldn't extract (valid) content, so don't consider the event as
-        // authorised.
-        return false;
-    };
-
-    match content {
-        // Only events items related to the identity themselves.
-        ContentBody::Post(_)
-        | ContentBody::Follow(_)
-        | ContentBody::Block(_)
-        | ContentBody::Reaction(_)
-        | ContentBody::AttributedToReaction(_)
-        | ContentBody::ProfileUpdate(_)
-        | ContentBody::Identity(_)
-        | ContentBody::Repost(_)
-        // Can report other identity's events.
-        | ContentBody::Report(_)
-        // Anyone can add any label.
-        | ContentBody::Labels(_)
-        // Anyone can make a claim.
-        | ContentBody::VerificationClaim(_) => true,
-        // Can only delete your own events.
-        ContentBody::Delete(Delete { event_key }) => {
-            let Some(event_key) = event_key else { return false; };
-            // Make sure the identity of the deletion event is the same
-            // as the identity of the to-be-deleted event.
-            event_key.identity == identity
-        },
-        // TODO: these will need verification.
-        ContentBody::VerificationVerify(_)
-        | ContentBody::VerificationTarget(_) => false,
     }
 }
 
