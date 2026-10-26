@@ -105,9 +105,9 @@ export function useSignup() {
         description: data.about,
         avatarUri: data.avatarUri,
       });
+      await client.sync();
       await refreshCurrentIdentity();
       invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
-      await client.sync();
       reset();
       // Back to the screen the signup prompt was opened from, if any.
       router.dismissTo(links.landing);

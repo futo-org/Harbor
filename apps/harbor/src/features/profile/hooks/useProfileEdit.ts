@@ -91,8 +91,8 @@ export function useProfileEdit(
         banner: profile.banner,
         alias: aliasDraft,
       });
-      invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       await client.sync();
+      invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       setEditing(false);
       return true;
     } catch (err) {
