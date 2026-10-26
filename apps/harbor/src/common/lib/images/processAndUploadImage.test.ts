@@ -1,5 +1,5 @@
 import { processAndUploadImage } from './processAndUploadImage';
-import { ImageUploadError } from './ImageUploadError';
+import { ImageImportError } from './ImageImportError';
 
 // --- Mocks ----------------------------------------------------------------
 
@@ -14,7 +14,14 @@ jest.mock('@polycentric/react-native', () => ({
   v2: {
     Image: { create: (x: unknown) => ({ ...(x as object) }) },
     ImageSet: { create: (x: unknown) => ({ ...(x as object) }) },
+    Blob: { create: (x: unknown) => ({ ...(x as object) }) },
+    ContentDigestType: { SHA256: 1 },
   },
+}));
+
+// ESM-only; jest-expo doesn't transform it. The digest content is irrelevant.
+jest.mock('@noble/hashes/sha2.js', () => ({
+  sha256: () => new Uint8Array(32),
 }));
 
 // `new File(uri).arrayBuffer()` -> deterministic bytes derived from the uri so
@@ -296,6 +303,20 @@ describe('processAndUploadImage', () => {
     );
   });
 
+  it('tags local commit failures with the persist stage', async () => {
+    mockSource(1000, 1000);
+    const client = makeClient();
+    const cause = new Error('disk full');
+    client.commitBlob.mockRejectedValueOnce(cause);
+
+    await expectStageFailure(
+      processAndUploadImage(client, 'file://in.jpg', { sizes: [512] }),
+      'persist',
+      cause,
+    );
+    expect(client.uploadBlob).not.toHaveBeenCalled();
+  });
+
   it('tags upload failures with the upload stage', async () => {
     mockSource(1000, 1000);
     const client = makeClient();
@@ -311,11 +332,11 @@ describe('processAndUploadImage', () => {
 
   async function expectStageFailure(
     failure: Promise<unknown>,
-    stage: ImageUploadError['stage'],
+    stage: ImageImportError['stage'],
     cause: unknown,
   ) {
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    await expect(failure).rejects.toBeInstanceOf(ImageUploadError);
+    await expect(failure).rejects.toBeInstanceOf(ImageImportError);
     await expect(failure).rejects.toHaveProperty('stage', stage);
     await expect(failure).rejects.toHaveProperty('cause', cause);
   }
