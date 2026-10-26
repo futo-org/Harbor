@@ -1030,10 +1030,6 @@ async fn validation_invalid_event_signed_by_key() {
 }
 
 // TODO: invalid (duplicate) signed_event.key.sequence.
-// TODO: invalid signed_event.identity_sequence
-// TODO: invalid signed_event.vector_clock
-// TODO: invalid signed_event.previous_signature
-// TODO: invalid signed_event.content_digest
 
 #[tokio::test]
 async fn validation_missing_event_content_digest() {
@@ -1162,7 +1158,161 @@ async fn validation_invalid_event_content_digest_value() {
 
 // NOTE: no validation for signed_event.created_at.
 
-// TODO: invalid signed_event.previous_root
+#[tokio::test]
+async fn validation_event_vector_clock_sequence_too_long() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        client.previous_signature(),
+        client.previous_root(),
+        digest,
+        0,
+    );
+    event.vector_clock.as_mut().unwrap().sequence = vec![1; 1001];
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event vector clock sequence is too long (1001), maximum is 1000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_event_vector_clock_missing() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let mut event = client.make_event(
+        COLLECTION_IDENTITY,
+        client.previous_signature(),
+        client.previous_root(),
+        digest,
+        0,
+    );
+    event.vector_clock = None;
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains("event vector clock is missing"),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_event_previous_signature_invalid() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        vec![1; 1],
+        client.previous_root(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event previous signature is too short (1), minimum is 64",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_event_previous_root_invalid() {
+    let mut client = TestClient::new().await;
+    client.pending.clear(); // Remove valid identity event.
+
+    let identity = Identity {
+        rotation_keys: vec![public_key_of(&client.key)],
+        signing_keys: vec![],
+        revocation_bounds: vec![],
+        servers: None,
+        recovery_key: None,
+        recovery_signature: None,
+    };
+    let content = Content {
+        content_body: Some(ContentBody::Identity(identity)),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        client.previous_signature(),
+        vec![1; 1],
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event previous root is too short (1), minimum is 32",
+            ),
+        }],
+    );
+}
 
 #[tokio::test]
 async fn validation_invalid_event_application_name_empty() {
