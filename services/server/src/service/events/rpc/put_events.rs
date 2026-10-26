@@ -499,35 +499,18 @@ fn validate_content(
         }
         ContentBody::Report(_) => {
             check_collection(collection, collections::REPORTS);
-
-            // TODO: needs db for validation of:
-            // * limit the amount of reports per post?
-            // * limit to posts and reposts only?
         }
         ContentBody::Labels(_) => {
             check_collection(collection, collections::LABELS);
-
-            // TODO: needs db for validation of:
-            // * limit the amount of labels per key per user in total (accross
-            //   multiple requests)
-            // * limit to posts only?
         }
         ContentBody::VerificationClaim(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-
-            // TODO: don't allow spamming of the same claim if it's denied?
         }
         ContentBody::VerificationVerify(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-
-            // TODO: needs db for validation of:
-            // * event key is known.
-            // * event key is a valid claim.
         }
         ContentBody::VerificationTarget(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-
-            // TODO: limit the target identities in some way?
         }
     }
 }
