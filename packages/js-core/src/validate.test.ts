@@ -58,6 +58,7 @@ describe('rs-core validation', () => {
 
     expect(errors).toEqual([
       new EventValidationError.KeyMissing(),
+      new EventValidationError.VectorClockMissing(),
       new EventValidationError.ContentDigestMissing(),
     ]);
   });
