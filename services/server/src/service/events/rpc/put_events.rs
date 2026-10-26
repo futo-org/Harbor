@@ -435,11 +435,6 @@ fn validate_content(
         ContentBody::Post(post) => {
             check_collection(collection, collections::FEED);
             post.validate_check(warnings, |err| map_warning(err.into()));
-
-            // TODO: needs db for validation of:
-            // * reply.root & reply.parent events exists.
-            // * reply.root & reply.parent in same thread?
-            // * quote event exists.
         }
         ContentBody::Delete(delete) => {
             if let Some(delete_key) = delete.event_key.as_ref() {

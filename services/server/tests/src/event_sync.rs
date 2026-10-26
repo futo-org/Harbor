@@ -1,5 +1,6 @@
 //! Tests for the event sync service.
 
+use crate::feeds::test_get_post;
 use crate::*;
 
 #[tokio::test]
@@ -1830,6 +1831,88 @@ async fn validation_missing_content_content_body() {
 }
 
 // TODO: tests for post content.
+
+#[tokio::test]
+async fn validation_content_content_body_post_quote_invalid() {
+    // Create a post that is quoted, but never submitted to the server.
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let quoted_post = client.get_last_event_key();
+    client.pending.clear();
+
+    // Submitting a post with a quote that is unknown to the server is allowed,
+    // the quote is ignored.
+    let mut client = TestClient::new().await;
+    client.quote(quoted_post, "Post with quote", current_timestamp());
+    let post_with_quote = client.get_last_event_key();
+    client.submit_events().await;
+
+    test_get_post(
+        post_with_quote,
+        Some(EventMetadata {
+            reply_count: Some(0),
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+            // NOTE: no quoted post.
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_reply_invalid() {
+    // Create a post that is quoted, but never submitted to the server.
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let post = client.get_last_event_key();
+    client.pending.clear();
+
+    // Submitting a post with a reply that is unknown to the server is allowed,
+    // the reply is ignored.
+    let mut client = TestClient::new().await;
+    let post = Post {
+        text: "Post with reply root".to_owned(),
+        reply: Some(PostReply {
+            root: Some(post.clone()),
+            parent: Some(post),
+        }),
+        images: Vec::new(),
+        quote: None,
+        links: Vec::new(),
+        labels: Vec::new(),
+        attributed_to: Vec::new(),
+    };
+    client.post(post, current_timestamp());
+    let post_with_reply = client.get_last_event_key();
+    client.submit_events().await;
+
+    test_get_post(
+        post_with_reply,
+        Some(EventMetadata {
+            reply_count: Some(0),
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+            // NOTE: no replied-to post.
+        ],
+    )
+    .await;
+}
 
 #[tokio::test]
 async fn validation_missing_content_content_body_delete_event_key() {
