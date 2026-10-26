@@ -34,21 +34,12 @@ export interface IdentityState {
  * Arguments for publishing an update to an existing identity.
  */
 export interface PublishArgs {
-  identityKey: string;
   rotationKeys: Proto.PublicKey[];
   signingKeys: Proto.PublicKey[];
   servers?: string[] | null;
   revocationBounds?: Proto.RevocationBound[];
   recoveryKey?: Proto.PublicKey | null;
   recoverySignature?: Uint8Array | null;
-
-  /**
-   * Publishing a login event like a signing key republish or identity recovery
-   * allows special behavior.
-   * However, other identity events must be published by a rotation key.
-   * Setting this to true disables rotation authorization checking.
-   */
-  isLogin?: boolean;
 }
 
 /** Information about a published identity event. */
@@ -94,25 +85,18 @@ export class IdentityManager {
   }
 
   /**
-   * Creates, persists, and pushes a new identity event with the information
-   * provided.
+   * Derive an identity document content from the provided args.
+   * Does not do any validation or authorization checks.
    */
-  async publish(args: PublishArgs): Promise<IdentityUpdate> {
+  draftIdentityContent(args: PublishArgs): Proto.Content {
     const {
-      identityKey,
       rotationKeys,
       signingKeys,
       servers = null,
       revocationBounds = [],
       recoveryKey = null,
       recoverySignature = null,
-      isLogin = false,
     } = args;
-
-    const signer = this.client.currentKeyPair?.publicKey;
-    if (!signer) {
-      throw new Error('No active key pair');
-    }
 
     const identity = Proto.Identity.create({
       rotationKeys,
@@ -126,18 +110,34 @@ export class IdentityManager {
       contentBody: { oneofKind: 'identity', identity },
     });
 
-    if (!isLogin) {
-      const oldHead = this.resolveIdentity(identityKey);
-      if (!oldHead) throw new Error('No existing identity chain to extend');
+    return content;
+  }
 
-      const isAuthorized = oldHead.rotationKeys.some((key) =>
-        IdentityManager.keysEqual(key, signer),
-      );
-
-      if (!isAuthorized)
-        throw new Error('Identity rotation is not authorized for this key');
+  /**
+   * Publish an update to the current identity state.
+   */
+  async publishUpdate(args: PublishArgs): Promise<IdentityUpdate> {
+    // Require an active login
+    const identityKey = this.client.activeIdentityKey;
+    const keyPair = this.client.currentKeyPair;
+    if (!identityKey || !keyPair) {
+      throw new Error('Must be logged in to publish identity updates.');
     }
 
+    // Check authorization
+    const oldHead = this.resolveIdentity(identityKey);
+    if (!oldHead) throw new Error('No existing identity chain to extend');
+
+    const isAuthorized = oldHead.rotationKeys.some((key) =>
+      IdentityManager.keysEqual(key, keyPair.publicKey),
+    );
+
+    if (!isAuthorized) {
+      throw new Error('This keypair is not authorized for identity rotation');
+    }
+
+    // Create event/content
+    const content = this.draftIdentityContent(args);
     const digest = this.client.contentManager.buildDigest(content);
     await this.client.storage.content.save(digest, content);
 
@@ -147,16 +147,11 @@ export class IdentityManager {
       identityKey,
     );
 
-    const signedEvent = await this.client.signEvent(event);
+    // Persist locally
+    const signedEvent = await this.client.signEvent(event, keyPair);
     await this.client.commitEvent(signedEvent, content);
 
-    // At this point, we have saved the identity event authorizing us locally
-    // and are fully committed to the switch.
-    await this.client.loginAs({
-      identity: identityKey,
-      publicKey: signer,
-    });
-
+    // Push to servers
     // Push errors are currently swallowed
     await this.client.sync(SyncStrategy.PARTIAL_PUSH);
 
@@ -182,7 +177,7 @@ export class IdentityManager {
     if (!state) throw new Error('No active identity');
 
     const signingKeys = [...state.signingKeys, publicKey];
-    const { signedEvent } = await this.publish({ ...state, signingKeys });
+    const { signedEvent } = await this.publishUpdate({ ...state, signingKeys });
     return signedEvent;
   }
 
@@ -198,7 +193,7 @@ export class IdentityManager {
     const signingKeys = state.signingKeys.filter(
       (k) => !bytesEqual(k.key, publicKey.key),
     );
-    const { signedEvent } = await this.publish({ ...state, signingKeys });
+    const { signedEvent } = await this.publishUpdate({ ...state, signingKeys });
     return signedEvent;
   }
 
@@ -217,7 +212,10 @@ export class IdentityManager {
     }
 
     const rotationKeys = [...state.rotationKeys, publicKey];
-    const { signedEvent } = await this.publish({ ...state, rotationKeys });
+    const { signedEvent } = await this.publishUpdate({
+      ...state,
+      rotationKeys,
+    });
     return signedEvent;
   }
 
@@ -233,7 +231,10 @@ export class IdentityManager {
     const rotationKeys = state.rotationKeys.filter(
       (k) => !IdentityManager.keysEqual(k, publicKey),
     );
-    const { signedEvent } = await this.publish({ ...state, rotationKeys });
+    const { signedEvent } = await this.publishUpdate({
+      ...state,
+      rotationKeys,
+    });
     return signedEvent;
   }
 
@@ -254,7 +255,7 @@ export class IdentityManager {
 
     await this.client.core.getServerInfo(url);
 
-    const { signedEvent } = await this.publish({
+    const { signedEvent } = await this.publishUpdate({
       ...state,
       servers: [...servers, url],
     });
@@ -275,7 +276,7 @@ export class IdentityManager {
       throw new Error('Server not found');
     }
 
-    const { signedEvent } = await this.publish({ ...state, servers });
+    const { signedEvent } = await this.publishUpdate({ ...state, servers });
     return signedEvent;
   }
 
@@ -295,7 +296,7 @@ export class IdentityManager {
       await this.client.crypto.generateKeyPair(keyType);
 
     // Try persisting a identity new event locally and publishing it to servers
-    await this.publish({
+    await this.publishUpdate({
       ...state,
       recoveryKey: { keyType, key: publicKey },
     });

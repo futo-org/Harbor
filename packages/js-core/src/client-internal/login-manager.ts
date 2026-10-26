@@ -1,7 +1,11 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { COLLECTION, SyncStrategy } from '../constants';
 import type { LoginId } from '../platform-interfaces/login-repository';
-import type { KeyPair, PolycentricClient } from '../polycentric-client';
+import type {
+  IdentityUpdate,
+  KeyPair,
+  PolycentricClient,
+} from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { KeyType, PrivateKey, PublicKey } from '../proto/v2';
 import { bytesToHex } from '../utils/hex';
@@ -55,6 +59,44 @@ export class LoginManager {
   }
 
   /**
+   * Publish a new login event.
+   * No authorization checks are done.
+   */
+  async publishLogin(
+    identityKey: string,
+    keyPair: KeyPair,
+    args: PublishArgs,
+  ): Promise<IdentityUpdate> {
+    // Create event/content
+    const content = this.client.identityManager.draftIdentityContent(args);
+    const digest = this.client.contentManager.buildDigest(content);
+    await this.client.storage.content.save(digest, content);
+
+    const event = await this.client.buildEvent(
+      content,
+      COLLECTION.IDENTITY,
+      identityKey,
+    );
+
+    // Persist locally
+    const signedEvent = await this.client.signEvent(event, keyPair);
+    await this.client.commitEvent(signedEvent, content);
+
+    // At this point, we have saved the identity event authorizing us locally
+    // and are fully committed to the switch.
+    await this.client.loginAs({
+      identity: identityKey,
+      publicKey: keyPair.publicKey,
+    });
+
+    // Push to servers
+    // Push errors are currently swallowed
+    await this.client.sync(SyncStrategy.PARTIAL_PUSH);
+
+    return { identityKey, signedEvent };
+  }
+
+  /**
    * Attempt to claim an identity:
    * - Fetch the identity's chain
    * - Check that we are authorized
@@ -68,7 +110,6 @@ export class LoginManager {
     keyPair: KeyPair,
     servers?: string[],
   ): Promise<IdentityState> {
-    this.assertCurrentKeyPair(keyPair);
     const publicKey = keyPair.publicKey;
 
     // Hydrate all known identity events for `identityKey` to rs-core
@@ -92,7 +133,7 @@ export class LoginManager {
     // proving this key acknowledged its membership.
     // This call will commit another identity event and switch our active
     // identity to `identityKey`.
-    await this.client.identityManager.publish({ ...state, isLogin: true });
+    await this.publishLogin(identityKey, keyPair, { ...state });
 
     // Sync in this identity's other events in the background.
     this.client
@@ -199,9 +240,7 @@ export class LoginManager {
     keyPair: KeyPair,
     backup: Proto.IdentityBackup,
   ): Promise<void> {
-    this.assertCurrentKeyPair(keyPair);
     const publicKey = keyPair.publicKey;
-
     const identityKey = backup.identityKey;
     const recoveryKey = backup.recoveryKey;
     if (!recoveryKey) throw new Error('Backup has no recovery key');
@@ -251,7 +290,6 @@ export class LoginManager {
 
     const publishArgs: PublishArgs = {
       ...state,
-      isLogin: true,
       rotationKeys,
       recoverySignature,
     };
@@ -264,7 +302,7 @@ export class LoginManager {
     await this.client.saveBundles(identityChain);
 
     // This call will attempt the identity switch and bail if it fails.
-    await this.client.identityManager.publish(publishArgs);
+    await this.publishLogin(identityKey, keyPair, publishArgs);
 
     // Best effort sync.
     // We have already published the new identity event, so we won't bail out
@@ -273,23 +311,6 @@ export class LoginManager {
       await this.client.sync(SyncStrategy.PARTIAL_PULL);
     } catch (err: unknown) {
       console.warn('Pull failed after identity recovery:', err);
-    }
-  }
-
-  /**
-   * `publish()` still signs with the client's current key pair, so login
-   * flows can only act on that key pair for now.
-   *
-   * TODO: Remove this once we have alternatives to `publish()` for creating
-   * identity events.
-   */
-  private assertCurrentKeyPair(keyPair: KeyPair): void {
-    const current = this.client.currentKeyPair;
-    if (
-      !current ||
-      !IdentityManager.keysEqual(current.publicKey, keyPair.publicKey)
-    ) {
-      throw new Error('Key pair must match the current key pair');
     }
   }
 
