@@ -71,6 +71,9 @@ mod m20261008_000001_analyze_all_tables;
 mod m20261009_000001_notification_read_marker_table;
 mod m20261015_000001_gravity_expire_time;
 mod m20261019_000001_events_content_type;
+mod m20261022_000001_rename_reaction_tally_to_interaction_tally;
+mod m20261022_000002_more_counters_forinteraction_tally;
+mod m20261023_000001_decay_interaction_count;
 
 mod old_entity;
 
@@ -151,6 +154,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20261009_000001_notification_read_marker_table::Migration),
             Box::new(m20261015_000001_gravity_expire_time::Migration),
             Box::new(m20261019_000001_events_content_type::Migration),
+            Box::new(m20261022_000001_rename_reaction_tally_to_interaction_tally::Migration),
+            Box::new(m20261022_000002_more_counters_forinteraction_tally::Migration),
+            Box::new(m20261023_000001_decay_interaction_count::Migration),
         ]
     }
 }

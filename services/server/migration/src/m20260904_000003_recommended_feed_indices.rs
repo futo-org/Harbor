@@ -1,4 +1,4 @@
-use ::entity::{follow, quote, reaction, reaction_tally, reply, repost};
+use ::entity::{follow, interaction_tally, quote, reaction, reply, repost};
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -89,8 +89,8 @@ impl MigrationTrait for Migration {
             .await?;
         manager.get_connection().execute_unprepared(&format!(
             "CREATE INDEX {REACTION_TALLY_INDEX} ON {0} ({1}) INCLUDE (event_id) WHERE {1} > 0",
-            reaction_tally::Entity.quoted(),
-            reaction_tally::Column::DecayedCount.quoted(),
+            "reaction_tally",
+            interaction_tally::Column::DecayedCount.quoted(),
         ))
         .await?;
 
@@ -148,8 +148,8 @@ impl MigrationTrait for Migration {
             .await?;
         manager.get_connection().execute_unprepared(&format!(
             "CREATE INDEX {REACTION_TALLY_INDEX} ON {0} ({1}) WHERE {1} > 0",
-            reaction_tally::Entity.quoted(),
-            reaction_tally::Column::DecayedCount.quoted(),
+            "reaction_tally",
+            interaction_tally::Column::DecayedCount.quoted(),
         ))
         .await?;
 

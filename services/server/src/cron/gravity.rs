@@ -3,7 +3,7 @@
 use std::ops::ControlFlow;
 use std::time::Instant;
 
-use entity::{event, gravity, reaction, reaction_tally};
+use entity::{event, gravity, interaction_tally, reaction};
 use sea_orm::sea_query::{
     Asterisk, CommonTableExpression, Expr, Func, Order, SelectStatement,
     UpdateStatement, WithClause,
@@ -13,6 +13,7 @@ use sea_orm::{ColumnTrait, ConnectionTrait, DatabaseConnection, ExprTrait};
 use crate::config;
 use crate::cron::{AdvisoryLock, Cron};
 use crate::db::DbConn;
+use crate::db::fns::decay_interaction_count;
 
 const BATCH_SIZE: u64 = 1000;
 
@@ -48,7 +49,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             // we're using dynamic gravity calculate the gravity value.
             //
             // NOTE: we do this is in a separate transaction because the
-            // gravity table is used by `reaction_count_decay` and when we
+            // gravity table is used by `decay_interaction_count` and when we
             // update it, while also updating all the decayed counts it
             // means we lock out creation of reaction events. This caused
             // #292.
@@ -198,33 +199,38 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 // because Postgres doesn't support a limit on UPDATE).
                 let mut event_ids = SelectStatement::new();
                 event_ids
-                    .column(reaction_tally::Column::EventId)
-                    .from(reaction_tally::Entity)
-                    .and_where(Expr::col(reaction_tally::Column::EventId.as_column_ref()).lt(e_id))
+                    .column(interaction_tally::Column::EventId)
+                    .from(interaction_tally::Entity)
+                    .and_where(Expr::col(interaction_tally::Column::EventId.as_column_ref()).lt(e_id))
                     // If the decayed count was previously already zero there is
                     // no point in calculating it again as it can only go lower.
-                    .and_where(Expr::col(reaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
-                    .order_by(reaction_tally::Column::EventId, Order::Desc)
+                    .and_where(Expr::col(interaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
+                    .order_by(interaction_tally::Column::EventId, Order::Desc)
                     .limit(BATCH_SIZE);
 
                 // Update all calculated decayed counts.
                 let mut update_tallies = UpdateStatement::new();
                 update_tallies
-                    .table(reaction_tally::Entity)
+                    .table(interaction_tally::Entity)
                     .value(
-                        reaction_tally::Column::DecayedCount,
-                        Func::cust("reaction_count_decay")
-                        .args([
-                            Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
+                        interaction_tally::Column::DecayedCount,
+                        decay_interaction_count(
+                            Expr::col(interaction_tally::Column::ReactionPositiveCount.as_column_ref()),
+                            Expr::col(interaction_tally::Column::ReplyCount.as_column_ref()),
+                            Expr::col(interaction_tally::Column::RepostCount.as_column_ref()),
+                            Expr::col(interaction_tally::Column::QuoteCount.as_column_ref()),
                             Expr::col(event::Column::CreatedAt.as_column_ref()),
-                        ]),
+                        ),
                     )
+                    .value(interaction_tally::Column::UpdatedAt, Expr::current_timestamp())
+                    // This should be an inner join, but SeaORM doesn't support
+                    // this, see <https://github.com/SeaQL/sea-query/issues/608>.
                     .from(event::Entity)
                     .and_where(
                         Expr::col(event::Column::Id.as_column_ref())
-                            .eq(Expr::col(reaction_tally::Column::EventId.as_column_ref())),
+                            .eq(Expr::col(interaction_tally::Column::EventId.as_column_ref())),
                     )
-                    .and_where(Expr::col(reaction_tally::Column::EventId.as_column_ref()).in_subquery(event_ids))
+                    .and_where(Expr::col(interaction_tally::Column::EventId.as_column_ref()).in_subquery(event_ids))
                     // Ignore events that will be expired below.
                     .and_where(
                         Expr::col(event::Column::CreatedAt.as_column_ref()).gt(
@@ -232,7 +238,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                                 Expr::cust(format!("INTERVAL '{} seconds'", expire.as_secs())))
                             )
                     )
-                    .returning_col(reaction_tally::Column::EventId);
+                    .returning_col(interaction_tally::Column::EventId);
 
                 let mut cte = CommonTableExpression::new();
                 const UPDATE_TALLY: &str = "update_tally";
@@ -241,7 +247,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
 
                 let mut query = SelectStatement::new();
                 query
-                    .expr(Expr::col(reaction_tally::Column::EventId).min())
+                    .expr(Expr::col(interaction_tally::Column::EventId).min())
                     .from(UPDATE_TALLY);
                 let query = query.with(with);
 
@@ -272,17 +278,18 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             let start_expire = Instant::now();
             let mut expire_tallies = UpdateStatement::new();
             expire_tallies
-                .table(reaction_tally::Entity)
+                .table(interaction_tally::Entity)
                 .value(
-                    reaction_tally::Column::DecayedCount,
+                    interaction_tally::Column::DecayedCount,
                     Expr::Constant(0.into()),
                 )
+                .value(interaction_tally::Column::UpdatedAt, Expr::current_timestamp())
                 .from(event::Entity)
                 .and_where(
                     Expr::col(event::Column::Id.as_column_ref())
-                        .eq(Expr::col(reaction_tally::Column::EventId.as_column_ref())),
+                        .eq(Expr::col(interaction_tally::Column::EventId.as_column_ref())),
                 )
-                .and_where(Expr::col(reaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
+                .and_where(Expr::col(interaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
                 .and_where(
                     Expr::col(event::Column::CreatedAt.as_column_ref()).lt(
                         Expr::from(gravity_timestamp_query).sub(
@@ -306,7 +313,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             tracing::debug!(elapsed = ?start_expire.elapsed(), expire = ?expire, "expired decayed reaction counts");
 
             let start_vacuum = Instant::now();
-            if let Err(err) = conn.execute_unprepared("VACUUM ANALYZE reaction_tally").await {
+            if let Err(err) = conn.execute_unprepared("VACUUM ANALYZE interaction_tally").await {
                 tracing::warn!(error = %err, "failed to vacuum reaction tallies");
             }
             tracing::debug!(elapsed = ?start_vacuum.elapsed(), "vacuumed reaction tallies");

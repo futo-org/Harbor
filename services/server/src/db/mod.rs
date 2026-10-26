@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 use tonic::Status;
 
 pub mod client;
+pub(crate) mod fns;
 
 /// Database connection.
 ///

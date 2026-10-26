@@ -3,8 +3,8 @@ use std::fmt;
 use crate::models::protos_v2::content::ContentBody;
 use crate::models::validate::Validate;
 use crate::models::{
-    attributed_to_reaction, block, delete, follow, labels, post, profile_update, reaction, report,
-    repost, verification_claim, verification_target, verification_verify,
+    attributed_to_reaction, block, delete, follow, identity, labels, post, profile_update,
+    reaction, report, repost, verification_claim, verification_target, verification_verify,
 };
 
 impl Validate for ContentBody {
@@ -36,8 +36,8 @@ impl Validate for ContentBody {
             ContentBody::ProfileUpdate(update) => {
                 update.validate_check(errors, |err| map_err(ValidationError::ProfileUpdate(err)))
             }
-            ContentBody::Identity(_) => {
-                // TODO: identity.
+            ContentBody::Identity(identity) => {
+                identity.validate_check(errors, |err| map_err(ValidationError::Identity(err)))
             }
             ContentBody::Repost(repost) => {
                 repost.validate_check(errors, |err| map_err(ValidationError::Repost(err)))
@@ -72,6 +72,7 @@ pub enum ValidationError {
     Reaction(reaction::ValidationError),
     AttributedToReaction(attributed_to_reaction::ValidationError),
     ProfileUpdate(profile_update::ValidationError),
+    Identity(identity::ValidationError),
     Repost(repost::ValidationError),
     Report(report::ValidationError),
     Labels(labels::ValidationError),
@@ -90,6 +91,7 @@ impl fmt::Display for ValidationError {
             ValidationError::Reaction(err) => write!(f, "reaction {err}"),
             ValidationError::AttributedToReaction(err) => write!(f, "attributed to reaction {err}"),
             ValidationError::ProfileUpdate(err) => write!(f, "profile update {err}"),
+            ValidationError::Identity(err) => write!(f, "identity {err}"),
             ValidationError::Repost(err) => write!(f, "repost {err}"),
             ValidationError::Report(err) => write!(f, "report {err}"),
             ValidationError::Labels(err) => write!(f, "labels {err}"),

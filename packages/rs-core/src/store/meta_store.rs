@@ -37,6 +37,14 @@ impl MetaStore {
             stored.downvote_count = Some(downvote_count);
         }
 
+        if let Some(repost_count) = meta.repost_count {
+            stored.repost_count = Some(repost_count);
+        }
+
+        if let Some(quote_count) = meta.quote_count {
+            stored.quote_count = Some(quote_count);
+        }
+
         // Reactions tallies are a repeated field, so there is no way to
         // distinguish between "empty" and "not present."
         // We will use presence of tallies or a total reaction count as a heuristic.
