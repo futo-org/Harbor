@@ -10,7 +10,7 @@ use entity::event;
 use polycentric_common::models::protos_v2::Blob;
 use polycentric_common::models::validate::{Validate, ValidationError};
 use polycentric_common::models::{
-    block, collections, delete, event_key, follow,
+    block, collections, content_types, delete, event_key, follow,
 };
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
@@ -232,7 +232,7 @@ async fn process_event(
     // Kafka partition/message key: the serialized protobuf event key.
     // Encoded here while `key` is whole — its fields are moved out below.
     let event_key_bytes = key.encode_to_vec();
-
+    let mut content_type = None;
     let decoded_content = if let (Some(serialized_content), Some(digest)) = (
         event_bundle.serialized_content.as_ref(),
         event.content_digest.as_ref(),
@@ -254,6 +254,10 @@ async fn process_event(
             // We got validation warnings, so we won't store the content.
             None
         } else {
+            content_type = content
+                .content_body
+                .as_ref()
+                .map(|c| content_types::of(c) as i16);
             Some((content_bytes, content, digest))
         }
     } else {
@@ -334,7 +338,7 @@ async fn process_event(
         .unwrap_or(Utc::now())
         .fixed_offset()),
         synced_at: Set(Utc::now().fixed_offset()),
-        content_type: NotSet, // Set by `add_event`.
+        content_type: Set(content_type),
     };
 
     let stored = match EventsRepository::Mutation::add_event(
