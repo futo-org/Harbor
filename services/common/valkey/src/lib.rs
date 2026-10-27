@@ -36,7 +36,24 @@ impl Clients {
             .redis_settings()
             .clone()
             .set_protocol(ProtocolVersion::RESP3);
-        let client = Client::open(info.set_redis_settings(settings))?;
+        let tcp_settings = info
+            .tcp_settings()
+            .clone()
+            // The client should not write partial requests, so coalescing
+            // packets doesn't make sense here.
+            .set_nodelay(true)
+            // Linger causes blocking, and we're using non-blocking I/O.
+            .set_linger_time(Duration::ZERO)
+            // Keep the connection alive.
+            .set_keepalive(
+                redis::io::tcp::socket2::TcpKeepalive::new()
+                    .with_time(Duration::from_secs(30))
+                    .with_interval(Duration::from_secs(2)),
+            );
+        let client = Client::open(
+            info.set_redis_settings(settings)
+                .set_tcp_settings(tcp_settings),
+        )?;
 
         let (pushes, push_rx) = mpsc::unbounded_channel::<PushInfo>();
         let publisher = client.get_connection_manager_lazy(config())?;
