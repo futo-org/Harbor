@@ -9,6 +9,7 @@ import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native';
 import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import {
   alterPostReplyCount,
+  alterPostQuoteCount,
   feedQueryKeys,
   threadQueryKey,
 } from '@/src/features/feed/hooks/feedCache';
@@ -58,23 +59,29 @@ export default function usePostActions(post: PostData): PostActions {
     await client.sync(SyncStrategy.PARTIAL_PUSH);
   };
 
-  const invalidateFeeds = (identity: string, deletionParent?: string) => {
+  const invalidateFeeds = (identity: string, replyParent?: string, quoted?: string) => {
     invalidateQuery(client, feedQueryKeys.following(identity));
     invalidateQuery(client, feedQueryKeys.identity(identity));
     invalidateQuery(client, feedQueryKeys.explore(identity));
 
-    if (deletionParent) {
+    if (replyParent) {
       alterPostReplyCount(
         feedQueryKeys.following(identity),
-        deletionParent,
+        replyParent,
         -1,
       );
-      alterPostReplyCount(feedQueryKeys.identity(identity), deletionParent, -1);
-      alterPostReplyCount(feedQueryKeys.explore(identity), deletionParent, -1);
+      alterPostReplyCount(feedQueryKeys.identity(identity), replyParent, -1);
+      alterPostReplyCount(feedQueryKeys.explore(identity), replyParent, -1);
+    }
+
+    if (quoted) {
+      alterPostQuoteCount(feedQueryKeys.following(identity), quoted, -1);
+      alterPostQuoteCount(feedQueryKeys.identity(identity), quoted, -1);
+      alterPostQuoteCount(feedQueryKeys.explore(identity), quoted, -1);
     }
   };
 
-  const invalidateThreads = (reply: PostData['reply'], deletion?: boolean) => {
+  const invalidateReplyThreads = (reply: PostData['reply'], deletion?: boolean) => {
     if (!reply) return;
 
     const parents = [reply.parentId, reply.rootId].filter(
@@ -91,6 +98,17 @@ export default function usePostActions(post: PostData): PostActions {
     }
   };
 
+  const invalidateQuoteThreads = (quoteId: PostData['quoteId'], deletion?: boolean) => {
+    if (!quoteId) return;
+
+    const key = threadQueryKey(quoteId);
+    invalidateQuery(client, key);
+
+    if (deletion) {
+      alterPostQuoteCount(key, quoteId, -1);
+    }
+  };
+
   return {
     reportAsync: async () => {
       // TODO: discuss if we should record report events or
@@ -98,8 +116,9 @@ export default function usePostActions(post: PostData): PostActions {
     },
     deleteAsync: async () => {
       await deleteEventAtKey(post.id);
-      invalidateFeeds(post.identity, post.reply?.parentId);
-      invalidateThreads(post.reply, true);
+      invalidateFeeds(post.identity, post.reply?.parentId, post.quoteId);
+      invalidateReplyThreads(post.reply, true);
+      invalidateQuoteThreads(post.quoteId, true);
 
       // We want to change the active page if we are currently viewing the post
       // that just got deleted:

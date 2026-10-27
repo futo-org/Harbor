@@ -81,6 +81,12 @@ export type PostData = {
   /** Our estimation for how many negative reactions this post has. */
   downvoteCount?: number;
 
+  /** Our estimation for how many reposts this post has. */
+  repostCount?: number;
+
+  /** Our estimation for how many quoutes this post has. */
+  quoteCount?: number;
+
   /** Our estimation of the per-emoji reaction breakdown, most popular first. */
   reactionTallies?: v2.ReactionTally[];
 
@@ -218,6 +224,8 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
       totalReactionCount: bundle.meta?.reactionCount,
       upvoteCount: bundle.meta?.upvoteCount,
       downvoteCount: bundle.meta?.downvoteCount,
+      repostCount: bundle.meta?.repostCount,
+      quoteCount: bundle.meta?.quoteCount,
       reactionTallies: bundle.meta?.emojiReactions,
       signedEvent,
     };
