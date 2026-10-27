@@ -20,7 +20,7 @@
     "ads": "No, the app does not contain ads",
     "appAccess": {
       "restricted": true,
-      "instructions": "No sign-in credentials exist. Explore and Search work without an identity. To post, follow or react: open the app, tap \"Create identity\" on the welcome screen, enter any display name, and optionally pick an avatar. The identity is created locally in seconds; there is no email, phone or password, and nothing to verify. To review a second device, use Settings, Pair Identity on the first device and scan the QR code on the second."
+      "instructions": "There is no sign-in. Explore and Search work without an identity. To post, follow or react, tap \"Create identity\" on the welcome screen and enter a display name. No email, phone or password is needed."
     },
     "contentRating": {
       "category": "Social networking, forums, blogs, UGC sharing",
@@ -61,7 +61,6 @@
     "marketing": "https://join.harbor.social",
     "support": "https://join.harbor.social/docs/support",
     "privacyPolicy": "https://join.harbor.social/docs/privacy-policy",
-    "contentPolicy": "https://join.harbor.social/docs/content-policy",
     "storeContentPolicy": "https://join.harbor.social/docs/content-policy-app-stores"
   },
   "dataCollection": {
