@@ -6,12 +6,13 @@ use crate::query::{QueryObserver, QueryResultFfi, QueryStatus};
 use crate::sync;
 use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
-    AcknowledgeNotificationsRequest, ContentDigest, Event, GetAttributedToReactionCountsRequest,
-    GetServerInfoRequest, Identity, ListEventsResponse, PublicKey, PutEventsRequest,
-    SetBanStatusRequest, SignedEvent, SignedMessage, UploadBlobRequest, UrlInfoRequest,
-    content_service_client::ContentServiceClient,
+    AcknowledgeNotificationsRequest, ContentDigest, DeleteContentRequest, Event,
+    GetAttributedToReactionCountsRequest, GetServerInfoRequest, Identity, ListEventsResponse,
+    PublicKey, PutEventsRequest, ResolveReportRequest, SetBanStatusRequest, SignedEvent,
+    SignedMessage, UploadBlobRequest, UrlInfoRequest, content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     identity_service_client::IdentityServiceClient,
+    moderation_service_client::ModerationServiceClient,
     notification_service_client::NotificationServiceClient,
     server_service_client::ServerServiceClient,
 };
@@ -122,6 +123,7 @@ pub enum Query {
     IsModerator(crate::query::moderation::IsModeratorArgs),
     IsBanned(crate::query::moderation::IsBannedArgs),
     ListBans(crate::query::moderation::ListBansArgs),
+    ListReports(crate::query::moderation::ListReportsArgs),
     GetReactions(crate::query::reactions::GetReactionsArgs),
 }
 
@@ -577,6 +579,9 @@ impl PolycentricCore {
             Query::ListBans(args) => {
                 crate::query::moderation::list_bans(&self.query_client, query_key, args, opts)
             }
+            Query::ListReports(args) => {
+                crate::query::moderation::list_reports(&self.query_client, query_key, args, opts)
+            }
             Query::GetReactions(args) => {
                 crate::query::reactions::get_reactions(&self.query_client, query_key, args, opts)
             }
@@ -756,6 +761,42 @@ impl PolycentricCore {
             .set_ban_status(tonic::Request::new(request))
             .await
             .map_err(|e| CoreError::Network(format!("set_ban_status: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// `ModerationService.ResolveReport` on one server. `request_bytes` is a
+    /// serialized `ResolveReportRequest`; returns the serialized response.
+    pub async fn resolve_report(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let request = ResolveReportRequest::decode(request_bytes.as_slice()).map_err(|e| {
+            CoreError::Decode(format!("Failed to decode ResolveReportRequest: {e}"))
+        })?;
+        let mut client = ModerationServiceClient::new(channel(&server_url).await?);
+        let response = client
+            .resolve_report(tonic::Request::new(request))
+            .await
+            .map_err(|e| CoreError::Network(format!("resolve_report: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// `ModerationService.DeleteContent` on one server. `request_bytes` is a
+    /// serialized `DeleteContentRequest`; returns the serialized response.
+    pub async fn delete_content(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let request = DeleteContentRequest::decode(request_bytes.as_slice()).map_err(|e| {
+            CoreError::Decode(format!("Failed to decode DeleteContentRequest: {e}"))
+        })?;
+        let mut client = ModerationServiceClient::new(channel(&server_url).await?);
+        let response = client
+            .delete_content(tonic::Request::new(request))
+            .await
+            .map_err(|e| CoreError::Network(format!("delete_content: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
     }
 

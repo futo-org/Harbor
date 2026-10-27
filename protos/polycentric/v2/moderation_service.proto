@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package polycentric.v2;
+
+import "polycentric/v2/common.proto";
+import "polycentric/v2/content.proto";
+import "polycentric/v2/event_key.proto";
+
+/**
+ * Reports start open. Deleting the post or banning its author resolves
+ * them; a moderator can also resolve, dismiss or reopen one.
+ */
+enum ReportStatus {
+  REPORT_STATUS_UNSPECIFIED = 0;
+  REPORT_STATUS_OPEN = 1;
+  REPORT_STATUS_RESOLVED = 2;
+  REPORT_STATUS_DISMISSED = 3;
+}
+
+/**
+ * The reports against one event with the same category and text, grouped
+ * as one entry with every identity that filed one of them.
+ */
+message ReportSummary {
+  // Server-local id, used in `ResolveReport`.
+  int64 report_id = 1;
+  EventKey target = 2;
+  ReportCategory category = 3;
+  string additional_info = 4;
+  // How many identities filed this report.
+  uint32 report_count = 5;
+  // Some of the identities that filed it.
+  repeated string reporters = 6;
+  // Unix milliseconds of the most recent filing.
+  int64 latest_reported_at = 7;
+  ReportStatus status = 8;
+  // Moderator who resolved or dismissed it; empty while open.
+  string resolved_by = 9;
+  // Unix milliseconds; 0 while open.
+  int64 resolved_at = 10;
+}
+
+/**
+ * ListReports: reports filed on this server, oldest first.
+ */
+message ListReportsRequest {
+  // Forward paging only: `forward_token` is a previous response's
+  // `page_info.end_cursor`.
+  optional PageParams page_params = 1;
+  // Only reports in this status; unspecified returns every status.
+  ReportStatus status = 2;
+}
+
+message ListReportsResponse {
+  repeated ReportSummary reports = 1;
+  optional PageInfo page_info = 2;
+}
+
+/**
+ * ResolveReport: set a report's status. `REPORT_STATUS_OPEN` reopens it.
+ */
+message ResolveReportRequest {
+  int64 report_id = 1;
+  ReportStatus status = 2;
+}
+
+message ResolveReportResponse {}
+
+/**
+ * DeleteContent: erase one event from this server and resolve the reports
+ * on it. Other servers keep their copies.
+ */
+message DeleteContentRequest {
+  EventKey target = 1;
+}
+
+message DeleteContentResponse {}
+
+/**
+ * Moderator tooling. The caller is authenticated by its bearer JWT (see
+ * `auth_middleware`) and must be a moderator on this server.
+ */
+service ModerationService {
+  rpc ListReports(ListReportsRequest) returns (ListReportsResponse);
+  rpc ResolveReport(ResolveReportRequest) returns (ResolveReportResponse);
+  rpc DeleteContent(DeleteContentRequest) returns (DeleteContentResponse);
+}

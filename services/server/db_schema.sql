@@ -655,6 +655,18 @@ CREATE TABLE public.reply (
 
 
 --
+-- Name: report_resolution; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.report_resolution (
+    content_id bigint NOT NULL,
+    status smallint NOT NULL,
+    resolved_by character varying NOT NULL,
+    resolved_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
 -- Name: repost; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -990,6 +1002,14 @@ ALTER TABLE ONLY public.reaction
 
 ALTER TABLE ONLY public.reply
     ADD CONSTRAINT reply_pkey PRIMARY KEY (event_id);
+
+
+--
+-- Name: report_resolution report_resolution_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.report_resolution
+    ADD CONSTRAINT report_resolution_pkey PRIMARY KEY (content_id);
 
 
 --
@@ -1349,6 +1369,14 @@ ALTER TABLE ONLY public.content_report
 
 ALTER TABLE ONLY public.content_repost
     ADD CONSTRAINT "fk-content_repost-content_id" FOREIGN KEY (content_id) REFERENCES public.content(id);
+
+
+--
+-- Name: report_resolution fk-report_resolution-content_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.report_resolution
+    ADD CONSTRAINT "fk-report_resolution-content_id" FOREIGN KEY (content_id) REFERENCES public.content(id) ON DELETE CASCADE;
 
 
 --
