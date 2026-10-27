@@ -68,6 +68,8 @@ pub fn build_grpc_router(
         service::profile::rpc::build_profile_service(ctx.clone());
     let reflection_service = build_reflection_service()?;
     let notifications_service = build_notifications_service(ctx.clone());
+    let moderation_service =
+        service::moderation::rpc::build_moderation_service(ctx.clone());
     let grpc_web = GrpcWebLayer::new();
 
     let routes = Routes::default()
@@ -83,6 +85,7 @@ pub fn build_grpc_router(
         .add_service(grpc_web.layer(verifications_service))
         .add_service(grpc_web.layer(graph_service))
         .add_service(grpc_web.layer(profile_service))
+        .add_service(grpc_web.layer(moderation_service))
         .prepare();
 
     let cors = CorsLayer::new()

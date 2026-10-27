@@ -4,6 +4,7 @@ use sea_orm::*;
 
 use crate::data::EventWithContentRow;
 use crate::db::DbTx;
+use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::content_join;
 use crate::service::identity::chain;
 use crate::service::proto::{ContentDigest, Identity, PublicKey};
@@ -283,6 +284,37 @@ impl Mutation {
                  FROM events
                  WHERE events.public_key = $1",
                 [public_key.to_vec().into()],
+            ))
+            .await?;
+        if res.rows_affected() == 0 {
+            return Ok(ErasedBatch::default());
+        }
+        erase_collected(db).await
+    }
+
+    /// Erases the one event at `key` the same way as a batch.
+    pub async fn erase_event(
+        db: &mut DbTx<'_>,
+        key: &TargetEventKey,
+    ) -> Result<ErasedBatch, DbErr> {
+        let res = db
+            .execute_raw(Statement::from_sql_and_values(
+                DbBackend::Postgres,
+                "CREATE TEMP TABLE erase_events ON COMMIT DROP AS
+                 SELECT id
+                 FROM events
+                 WHERE events.collection = $1
+                   AND events.identity = $2
+                   AND events.public_key_type = $3
+                   AND events.public_key = $4
+                   AND events.sequence = $5",
+                [
+                    key.collection.into(),
+                    key.identity.clone().into(),
+                    key.public_key_type.into(),
+                    key.public_key.clone().into(),
+                    key.sequence.into(),
+                ],
             ))
             .await?;
         if res.rows_affected() == 0 {

@@ -18,6 +18,8 @@ import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, THEME_PREFERENCE_OPTIONS, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
+import useModerationStatus from '@/src/features/moderation/hooks/useModerationStatus';
+import { serverHost } from '@/src/features/moderation/serverHost';
 import { Username } from '@/src/features/profile/Username';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
@@ -90,6 +92,7 @@ export default function SettingsTabScreen() {
 
   const { identityKey } = useCurrentIdentity();
   const { canRotate } = useCurrentAuthorization();
+  const { moderatedServers } = useModerationStatus();
 
   return (
     <Screen>
@@ -156,6 +159,34 @@ export default function SettingsTabScreen() {
                   </Text>
                 </ListItemWrapper>
               </ListItemGroup>
+
+              {moderatedServers.length > 0 ? (
+                <ListItemGroup label="Moderation">
+                  <ListItemWrapper
+                    onPress={() =>
+                      router.navigate(Routes.tabs.moderation.reports)
+                    }
+                  >
+                    <Text variant="body">Reports</Text>
+                  </ListItemWrapper>
+                  {moderatedServers.map((server) => (
+                    <ListItemWrapper
+                      key={server}
+                      onPress={() =>
+                        router.navigate(
+                          `${Routes.tabs.moderation.banList}?server=${encodeURIComponent(server)}`,
+                        )
+                      }
+                    >
+                      <Text variant="body">
+                        {moderatedServers.length > 1
+                          ? `Ban list · ${serverHost(server)}`
+                          : 'Ban list'}
+                      </Text>
+                    </ListItemWrapper>
+                  ))}
+                </ListItemGroup>
+              ) : null}
 
               <ListItemGroup label="Content Moderation">
                 <ListItemWrapper

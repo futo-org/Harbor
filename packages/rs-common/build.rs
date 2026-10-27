@@ -53,6 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../protos/polycentric/v2/verifications_service.proto",
         "../../protos/polycentric/v2/graph_service.proto",
         "../../protos/polycentric/v2/profile_service.proto",
+        "../../protos/polycentric/v2/moderation_service.proto",
     ];
 
     let out_dir_path = PathBuf::from(&out_dir);
