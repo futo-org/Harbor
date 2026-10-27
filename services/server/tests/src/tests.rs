@@ -8,6 +8,7 @@ use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncS
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::identity_service_client::IdentityServiceClient;
+use polycentric_common::models::protos_v2::pairing_service_client::PairingServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
@@ -132,6 +133,13 @@ pub async fn verifications_service()
 pub async fn content_service() -> ContentServiceClient<tonic::transport::Channel>
 {
     ContentServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn pairing_service() -> PairingServiceClient<tonic::transport::Channel>
+{
+    PairingServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -490,6 +498,10 @@ impl TestClient {
         let signed_event = event.signed_event.as_ref().unwrap();
         let event = Event::decode(&*signed_event.event_bytes).unwrap();
         event.key.unwrap()
+    }
+
+    pub fn get_last_event_bundle(&self) -> EventBundle {
+        self.pending.last().expect("no pending events").clone()
     }
 
     fn push_event_bundle(

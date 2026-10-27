@@ -1,21 +1,14 @@
 //! `PairingService` tests.
-//!
-//! CI points the server's read-only pool (`HARBOR_DATABASE_URL_RO`) at a
-//! read-only session, so these also catch a pairing handler that writes
-//! through the read-only pool instead of the read-write one.
 
 use crate::*;
-use polycentric_common::models::protos_v2::pairing_service_client::PairingServiceClient;
 
-async fn pairing_service() -> PairingServiceClient<tonic::transport::Channel> {
-    PairingServiceClient::connect(grpc_addr())
-        .await
-        .expect("failed to connect to gRPC server")
-}
-
-/// Signs the first issuer state of a new session for `issuer`.
+/// Signs the first issuer state of a new session for `issuer`, reporting
+/// `identity_state` as the issuer's most recent identity event.
 /// Returns the signed state and the session's `digest_sha256`.
-fn new_session(issuer: &TestClient) -> (SignedIssuerState, Vec<u8>) {
+fn new_session(
+    issuer: &TestClient,
+    identity_state: EventBundle,
+) -> (SignedIssuerState, Vec<u8>) {
     let digest = PairingSessionDigest {
         issuer_identity: issuer.identity().to_owned(),
         issuer_signer: Some(issuer.public_key()),
@@ -27,7 +20,7 @@ fn new_session(issuer: &TestClient) -> (SignedIssuerState, Vec<u8>) {
     let digest_sha256 = sha256(&session_digest);
     let state_bytes = IssuerPairingState {
         session_digest,
-        identity_state: None,
+        identity_state: Some(identity_state),
         sequence: 1,
     }
     .encode_to_vec();
@@ -42,9 +35,10 @@ fn new_session(issuer: &TestClient) -> (SignedIssuerState, Vec<u8>) {
 #[tokio::test]
 async fn claimer_joins_pairing_session() {
     let mut issuer = TestClient::new().await;
+    let identity_state = issuer.get_last_event_bundle();
     issuer.submit_events().await;
 
-    let (issuer_state, digest_sha256) = new_session(&issuer);
+    let (issuer_state, digest_sha256) = new_session(&issuer, identity_state);
     let mut pairing = pairing_service().await;
 
     let put = pairing
@@ -114,4 +108,5 @@ async fn join_unknown_pairing_session_is_not_found() {
         .await
         .expect_err("joined a session that does not exist");
     assert_eq!(err.code(), tonic::Code::NotFound);
+    assert_eq!(err.message(), "session not found");
 }
