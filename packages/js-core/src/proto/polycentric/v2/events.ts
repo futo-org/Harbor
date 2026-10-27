@@ -226,6 +226,18 @@ export interface EventMetadata {
      * @generated from protobuf field: repeated polycentric.v2.ReactionTally emoji_reactions = 5
      */
     emojiReactions: ReactionTally[];
+    /**
+     * This server's estimate for the total number of reposts a post has.
+     *
+     * @generated from protobuf field: optional int32 repost_count = 6
+     */
+    repostCount?: number;
+    /**
+     * This server's estimate for the total number of quotes a post has.
+     *
+     * @generated from protobuf field: optional int32 quote_count = 7
+     */
+    quoteCount?: number;
 }
 /**
  * Conveys the number of times a specific reaction was given.
@@ -908,7 +920,9 @@ class EventMetadata$Type extends MessageType<EventMetadata> {
             { no: 2, name: "reaction_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
             { no: 3, name: "upvote_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
             { no: 4, name: "downvote_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
-            { no: 5, name: "emoji_reactions", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ReactionTally }
+            { no: 5, name: "emoji_reactions", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ReactionTally },
+            { no: 6, name: "repost_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ },
+            { no: 7, name: "quote_count", kind: "scalar", opt: true, T: 5 /*ScalarType.INT32*/ }
         ]);
     }
     create(value?: PartialMessage<EventMetadata>): EventMetadata {
@@ -938,6 +952,12 @@ class EventMetadata$Type extends MessageType<EventMetadata> {
                 case /* repeated polycentric.v2.ReactionTally emoji_reactions */ 5:
                     message.emojiReactions.push(ReactionTally.internalBinaryRead(reader, reader.uint32(), options));
                     break;
+                case /* optional int32 repost_count */ 6:
+                    message.repostCount = reader.int32();
+                    break;
+                case /* optional int32 quote_count */ 7:
+                    message.quoteCount = reader.int32();
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -965,6 +985,12 @@ class EventMetadata$Type extends MessageType<EventMetadata> {
         /* repeated polycentric.v2.ReactionTally emoji_reactions = 5; */
         for (let i = 0; i < message.emojiReactions.length; i++)
             ReactionTally.internalBinaryWrite(message.emojiReactions[i], writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+        /* optional int32 repost_count = 6; */
+        if (message.repostCount !== undefined)
+            writer.tag(6, WireType.Varint).int32(message.repostCount);
+        /* optional int32 quote_count = 7; */
+        if (message.quoteCount !== undefined)
+            writer.tag(7, WireType.Varint).int32(message.quoteCount);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

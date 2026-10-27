@@ -23,6 +23,21 @@ Report any post from its "…" menu, with a category such as spam, hate,
 violence, child safety, or copyright. Reports go to the moderation service
 trusted by your servers.
 
+## Moderators
+
+Moderators of a server get a Moderation section in Settings:
+
+- **Reports** lists the reports on every server they moderate, oldest
+  first, with the post inline and the server it was filed on, under Open,
+  Resolved, Dismissed and All tabs. An open report is handled by **Delete
+  post**, which removes that post from that server, or **Ban user**, which
+  removes everything the author published there. Either resolves the
+  report on that server; the same post reported on another server is
+  handled there. **Dismiss** records that no action was needed and **Mark
+  as resolved** covers action taken elsewhere. Resolved and dismissed
+  reports can be reopened.
+- **Ban list** per server.
+
 ## Your servers, your rules
 
 Each server sets its own policy for what it hosts and recommends, and you

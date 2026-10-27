@@ -908,7 +908,12 @@ impl Mutation {
                         expr: Expr::col(event::Column::Id.as_column_ref()),
                         alias: Some(repost::Column::Post.into()),
                         window: None,
-                    });
+                    })
+                    // Ensure the event the repost is of is a post.
+                    .and_where(
+                        Expr::col(event::Column::ContentType.as_column_ref())
+                            .eq(Expr::Constant(content_types::POST.into())),
+                    );
                 post_event_id
             })
             .map_err(|err| {
@@ -1356,7 +1361,7 @@ impl Mutation {
                             )
                             .sub(
                                 Expr::case(
-                                    Expr::col(reaction::Column::Positive),
+                                    Expr::col((DELETED_REACTION, reaction::Column::Positive)),
                                     Expr::Constant(1.into()),
                                 )
                                 .finally(Expr::Constant(0.into())),
@@ -1370,7 +1375,7 @@ impl Mutation {
                             )
                             .sub(
                                 Expr::case(
-                                    Expr::col(reaction::Column::Positive),
+                                    Expr::col((DELETED_REACTION, reaction::Column::Positive)),
                                     Expr::Constant(0.into()),
                                 )
                                 .finally(Expr::Constant(1.into())),
@@ -1379,7 +1384,7 @@ impl Mutation {
                         (
                             interaction_tally::Column::DecayedCount,
                             Expr::case(
-                                Expr::col(reaction::Column::Positive),
+                                Expr::col((DELETED_REACTION, reaction::Column::Positive)),
                                 decay_interaction_count(
                                     Expr::col(
                                         interaction_tally::Column::ReactionPositiveCount
@@ -1415,8 +1420,9 @@ impl Mutation {
                     ))
                     .and_where(
                         Expr::col(interaction_tally::Column::EventId.as_column_ref())
-                            .eq(Expr::col(reaction::Column::OnPost.as_column_ref())),
+                            .eq(Expr::col((DELETED_REACTION, reaction::Column::OnPost))),
                     );
+
                 Ok(Some(query.into()))
             }
             // Nothing to delete.

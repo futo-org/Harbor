@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import { useComposer } from './useComposer';
 import { useComposerStore } from './useComposerStore';
-import { ImageUploadError } from '@/src/common/lib/images/ImageUploadError';
+import { ImageImportError } from '@/src/common/lib/images/ImageImportError';
 
 // --- Mocks ----------------------------------------------------------------
 
@@ -206,7 +206,7 @@ describe('useComposer attachments', () => {
   it('removes the attachment and describes the stage when processing fails', async () => {
     libraryReturns([{ uri: 'file://a.jpg', width: 100, height: 80 }]);
     mockProcess.mockRejectedValueOnce(
-      new ImageUploadError('decode', new Error('cannot decode')),
+      new ImageImportError('decode', new Error('cannot decode')),
     );
 
     const { result } = await renderComposer();
@@ -224,7 +224,7 @@ describe('useComposer attachments', () => {
   it('keeps the attachment flagged for retry when only the upload fails', async () => {
     libraryReturns([{ uri: 'file://a.jpg', width: 100, height: 80 }]);
     mockProcess.mockRejectedValueOnce(
-      new ImageUploadError('upload', new Error('network')),
+      new ImageImportError('upload', new Error('network')),
     );
 
     const { result } = await renderComposer();

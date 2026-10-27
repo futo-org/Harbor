@@ -115,6 +115,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_clear_auth_tokens(uniffiSelf: bigint, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_copy_contents(uniffiSelf: bigint, contents: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_copy_events(uniffiSelf: bigint, signedEvents: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+    ubrn_uniffi_polycentric_core_fn_method_polycentriccore_delete_content(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_fetch_query(uniffiSelf: bigint, queryKey: Uint8Array, query: Uint8Array, opts: Uint8Array, uniffi_out_err: UniffiRustCallStatus): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_reaction_counts(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence(uniffiSelf: bigint, identity: Uint8Array, signer: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
@@ -140,6 +141,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_register_push_notifications(uniffiSelf: bigint, serverUrl: Uint8Array, signedMessageBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity(uniffiSelf: bigint, identity: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_identity_chain(uniffiSelf: bigint, identity: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
+    ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_report(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_active_identity(uniffiSelf: bigint, identity: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_auth_token_provider(uniffiSelf: bigint, provider: bigint, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
@@ -183,6 +185,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_clear_auth_tokens(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_contents(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_events(): number;
+    ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_delete_content(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_reaction_counts(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence(): number;
@@ -208,6 +211,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_register_push_notifications(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity_chain(): number;
+    ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_report(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_active_identity(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status(): number;

@@ -94,6 +94,7 @@ pub mod profile;
 pub mod quote;
 pub mod reaction;
 pub mod reply;
+pub mod report_resolution;
 pub mod repost;
 pub mod url_info_cache;
 pub mod verification_schema;

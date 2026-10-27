@@ -14,9 +14,11 @@ import {
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import {
   alterPostReplyCount,
+  alterPostQuoteCount,
   feedQueryKeys,
   injectPostIntoFeedCache,
   injectReplyIntoThreadCache,
+  addQuoteIntoThreadCache,
   threadQueryKey,
 } from '@/src/features/feed/hooks/feedCache';
 import {
@@ -37,9 +39,9 @@ import { useComposerStore } from './useComposerStore';
 import { rewriteIdentityMentions } from '../utils/rewriteIdentityMentions';
 import { useLinkPreview } from './useLinkPreview';
 import {
-  ImageUploadError,
-  formatImageUploadErrorOrFallback,
-} from '@/src/common/lib/images/ImageUploadError';
+  ImageImportError,
+  formatImageImportErrorOrFallback,
+} from '@/src/common/lib/images/ImageImportError';
 import {
   decodePostBundle,
   getKeyFingerprint,
@@ -167,18 +169,18 @@ export function useComposer({
         (err) => {
           // Drop the failed promise so the post path can retry from scratch.
           uploadCache.delete(id);
-          if (err instanceof ImageUploadError && err.stage === 'upload') {
+          if (err instanceof ImageImportError && err.stage === 'upload') {
             // A failed upload may be transient: keep the attachment, flag the
             // thumbnail, and let `handlePost` retry it. Rarely reached: the
             // client's `uploadBlob` swallows server errors and the blob is
-            // re-sent on the next sync, so this only fires when the local
-            // blob commit itself fails.
+            // re-sent on the next sync.
             setAttachmentStatus(id, 'error');
           } else {
-            // The image itself can't be processed: drop it and say why.
+            // The image can't be processed or saved locally: drop it and say
+            // why.
             removeAttachment(id);
             setError(
-              formatImageUploadErrorOrFallback(
+              formatImageImportErrorOrFallback(
                 err,
                 "Couldn't attach this image.",
               ),
@@ -350,7 +352,12 @@ export function useComposer({
       const identity = currentIdentityKey ?? '';
 
       // Optimistically add the new event to feeds and threads
-      injectLocally(identity, newBundle, replyTo ?? undefined);
+      injectLocally(
+        identity,
+        newBundle,
+        replyTo ?? undefined,
+        quote ?? undefined,
+      );
 
       // `commitEvent` persists the event locally
       await client.commitEvent(signedEvent, content);
@@ -372,7 +379,7 @@ export function useComposer({
     } catch (err) {
       console.error(err);
       setError(
-        formatImageUploadErrorOrFallback(
+        formatImageImportErrorOrFallback(
           err,
           "Couldn't publish the post. Try again.",
         ),
@@ -469,6 +476,7 @@ function injectLocally(
   identity: string,
   bundle: v2.EventBundle,
   replyTo: PostData | undefined,
+  quoted: PostData | undefined,
 ): void {
   if (replyTo) {
     injectReplyIntoThreadCache(bundle);
@@ -476,6 +484,14 @@ function injectLocally(
     alterPostReplyCount(feedQueryKeys.following(identity), replyTo.id, 1);
     alterPostReplyCount(feedQueryKeys.identity(identity), replyTo.id, 1);
     alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
+  }
+
+  if (quoted) {
+    addQuoteIntoThreadCache(bundle);
+    alterPostQuoteCount(threadQueryKey(quoted.id), quoted.id, 1);
+    alterPostQuoteCount(feedQueryKeys.following(identity), quoted.id, 1);
+    alterPostQuoteCount(feedQueryKeys.identity(identity), quoted.id, 1);
+    alterPostQuoteCount(feedQueryKeys.explore(identity), quoted.id, 1);
   }
 
   injectPostIntoFeedCache(feedQueryKeys.following(identity), bundle);

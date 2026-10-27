@@ -1,0 +1,130 @@
+{
+  "appId": "6504881935",
+  "bundleId": "org.futo.polycentric",
+  "locale": "en-US",
+  "name": "Harbor: Share to the world",
+  "subtitle": "You hold the keys",
+  "promotionalText": "You hold the keys, and your posts go to every server you choose. An open-source social network built on the Polycentric Protocol.",
+  "description": "Share to the world, not platforms.\n\nHarbor is an open-source, distributed social network. You hold the keys, and your posts go to every server you choose. No company owns the network, and no single server owns you.\n\nSOVEREIGN IDENTITY\nYour identity is made of cryptographic keypairs that you create for free and keep yourself. It is not an account that a company can suspend. Nobody else can post as you, and nobody can take your name, your history, or your followers. Add a second device by scanning a QR code, and keep a backup so you can recover without asking anyone’s permission.\n\nNO SILOS\nYou post to the world, not to a server. Every post goes to all the servers you use. If one shuts down or bans you, your audience can still reach you through the rest. Pick your servers in Settings and change them whenever you like.\n\nMODERATION YOU CHOOSE\nNo single company decides what you see. Each server sets its own policy, and you pick the servers whose moderation you trust. Content labels let you hide, warn, or show posts in each category, and you can report any post or block any user.\n\nRECOMMENDATIONS THAT ANSWER TO YOU\nYour feed is ranked for you, not for advertisers. The For You feed is computed by the servers you use, and each suggestion is attributed to the server that made it, so no single server controls what you see. Switch to Following for the people you follow, newest first or ranked.\n\nEVERYTHING YOU EXPECT FROM A SOCIAL APP\n• Posts up to 2000 characters with up to four photos and link previews\n• Replies, quotes, reposts, and emoji reactions\n• Follow people across any server\n• Search for posts and people across your servers\n• Push notifications for follows, replies, reactions, and verifications\n• Readable usernames backed by a domain you control, like you@yourdomain.com\n• Verifications: prove you own your GitHub, YouTube, X, Discord, Twitch, or website, and let people you trust vouch for claims about you\n• Light and dark themes\n\nBUILT IN THE OPEN\nHarbor is the flagship app for the Polycentric Protocol. The protocol, the app, and the server are open source, and anyone can run a server or build a client that interoperates with the rest of the network. Browse Explore and Search without creating an identity.\n\nDocs and source: https://join.harbor.social",
+  "keywords": [
+    "social",
+    "decentralized",
+    "distributed",
+    "open source",
+    "fediverse",
+    "mastodon",
+    "nostr",
+    "bluesky",
+    "privacy",
+    "network"
+  ],
+  "whatsNew": "Harbor is now on the App Store. Share to the world, not platforms. You hold the keys, and your posts go to every server you choose.",
+  "copyright": "2026 FUTO Holdings Inc.",
+  "primaryCategory": "SOCIAL_NETWORKING",
+  "secondaryCategory": "NEWS",
+  "contentRightsDeclaration": "USES_THIRD_PARTY_CONTENT",
+  "releaseType": "MANUAL",
+  "ageRating": {
+    "advertising": false,
+    "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+    "contests": "NONE",
+    "gambling": false,
+    "gamblingSimulated": "NONE",
+    "gunsOrOtherWeapons": "NONE",
+    "healthOrWellnessTopics": false,
+    "lootBox": false,
+    "medicalOrTreatmentInformation": "NONE",
+    "messagingAndChat": false,
+    "parentalControls": false,
+    "profanityOrCrudeHumor": "INFREQUENT_OR_MILD",
+    "ageAssurance": false,
+    "sexualContentGraphicAndNudity": "NONE",
+    "sexualContentOrNudity": "INFREQUENT_OR_MILD",
+    "socialMedia": true,
+    "socialMediaAgeRestricted": false,
+    "horrorOrFearThemes": "NONE",
+    "matureOrSuggestiveThemes": "INFREQUENT_OR_MILD",
+    "unrestrictedWebAccess": false,
+    "userGeneratedContent": true,
+    "violenceCartoonOrFantasy": "NONE",
+    "violenceRealistic": "NONE",
+    "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+    "ageRatingOverrideV2": "NONE",
+    "koreaAgeRatingOverride": "NONE"
+  },
+  "price": {
+    "baseTerritory": "USA",
+    "customerPrice": "0.0"
+  },
+  "availability": {
+    "allTerritories": true,
+    "availableInNewTerritories": true
+  },
+  "reviewNotes": "There is no sign-in. Explore and Search work without an identity. To post, follow or react, tap \"Create identity\" on the welcome screen and enter a display name. No email, phone or password is needed.\n\nUsers can report any post from its \"...\" menu and block any user from their profile. Content policy: https://join.harbor.social/docs/content-policy-app-stores\n\nThe app does not use non-exempt encryption.",
+  "screenshots": {
+    "APP_IPHONE_67": "screenshots/iphone-6.9",
+    "APP_IPAD_PRO_3GEN_129": "screenshots/ipad-13"
+  },
+  "icon": "icons/app-store-icon-1024.png",
+  "creativeAssets": {
+    "PRODUCT_PAGE_HEADER_ASSET": "screenshots/app-store-header.png",
+    "APP_STORE_SEARCH_RESULTS_ASSET": "screenshots/app-store-search.png"
+  },
+  "limits": {
+    "name": 30,
+    "subtitle": 30,
+    "promotionalText": 170,
+    "description": 4000,
+    "keywords": 100,
+    "whatsNew": 4000,
+    "reviewNotes": 4000
+  },
+  "urls": {
+    "marketing": "https://join.harbor.social",
+    "support": "https://join.harbor.social/docs/support",
+    "privacyPolicy": "https://join.harbor.social/docs/privacy-policy",
+    "storeContentPolicy": "https://join.harbor.social/docs/content-policy-app-stores"
+  },
+  "appPrivacy": [
+    {
+      "category": "Contact Info",
+      "type": "Name",
+      "what": "Display name, public on the profile",
+      "purposes": [
+        "App Functionality"
+      ]
+    },
+    {
+      "category": "Identifiers",
+      "type": "User ID",
+      "what": "Identity key and alias",
+      "purposes": [
+        "App Functionality"
+      ]
+    },
+    {
+      "category": "User Content",
+      "type": "Photos or Videos",
+      "what": "Avatar and post images",
+      "purposes": [
+        "App Functionality"
+      ]
+    },
+    {
+      "category": "User Content",
+      "type": "Other User Content",
+      "what": "Posts, replies and bio; Follows, reactions and reposts, all public",
+      "purposes": [
+        "App Functionality"
+      ]
+    },
+    {
+      "category": "Identifiers",
+      "type": "Device ID",
+      "what": "Push notification token",
+      "purposes": [
+        "App Functionality"
+      ]
+    }
+  ]
+}

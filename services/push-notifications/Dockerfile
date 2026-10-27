@@ -1,4 +1,4 @@
-FROM rust:1.99-slim-bookworm@sha256:a24e292b4af7bdee351a31d3a6379972a5652f0ea22a1b6d6883324ac4f5097c AS chef
+FROM rust:1.99-slim-bookworm@sha256:86234e857a413004348b471d11a4ebe1aa92d2eae2b6b143cac68fd1ac3c48be AS chef
 WORKDIR /app
 COPY services/common/build-deps.sh build-deps.sh
 RUN sh build-deps.sh
@@ -32,7 +32,7 @@ RUN cargo build --release \
 
 # CI builds the binaries outside Docker (.forgejo/actions/rust-binaries) and
 # swaps them in for the builder stage, so bookworm here matches its ci/rust.
-FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+FROM debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8
 WORKDIR /app
 COPY services/common/runtime-deps.sh runtime-deps.sh
 RUN sh runtime-deps.sh
