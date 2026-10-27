@@ -1297,6 +1297,13 @@ CREATE INDEX reaction_on_post_idx ON public.reaction USING btree (on_post);
 
 
 --
+-- Name: reaction_post_identity_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX reaction_post_identity_unique ON public.reaction USING btree (on_post, identity);
+
+
+--
 -- Name: reply_identity_post; Type: INDEX; Schema: public; Owner: -
 --
 

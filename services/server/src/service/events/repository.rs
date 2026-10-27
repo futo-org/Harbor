@@ -10,8 +10,8 @@ use polycentric_common::models::protos_v2::{
 use polycentric_common::models::{collections, content_types};
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, InsertStatement,
-    IntoCondition, IntoTableRef, OnConflict, SelectExpr, SelectStatement,
-    SubQueryStatement, UnionType, UpdateStatement, WithClause,
+    IntoCondition, IntoTableRef, OnConflict, ReturningClause, SelectExpr,
+    SelectStatement, SubQueryStatement, UnionType, UpdateStatement, WithClause,
 };
 use sea_orm::*;
 use tonic::Status;
@@ -709,16 +709,17 @@ impl Mutation {
                 reaction::Column::Positive,
             ])
             .select_from({
+                let event_table_id =
+                    Expr::col((event_table.clone(), event_id.clone()));
                 post_event_id
-                    .clear_selects() // Need to rename.
-                    .from(event_table.clone())
+                    .clear_selects()
                     .expr(SelectExpr {
-                        expr: Expr::col((event_table.clone(), event_id)),
+                        expr: event_table_id.clone(),
                         alias: Some("event_id".into()),
                         window: None,
                     })
                     .expr(SelectExpr {
-                        expr: Expr::col((event_table, identity)),
+                        expr: Expr::col((event_table.clone(), identity)),
                         alias: Some("identity".into()),
                         window: None,
                     })
@@ -736,81 +737,119 @@ impl Mutation {
                         expr: Expr::from(reaction.positive),
                         alias: Some("positive".into()),
                         window: None,
-                    });
+                    })
+                    .from(event_table.clone())
+                    // Ensure the event the reaction is on is a post.
+                    .cond_where(
+                        Expr::col(event::Column::ContentType.as_column_ref())
+                            .eq(Expr::Constant(content_types::POST.into())),
+                    );
                 post_event_id
             })
             .map_err(|err| {
                 DbErr::Custom(format!("incorrect amount of values: {err}"))
             })?
-            .returning_all();
+            // If the user already reacted to the post overwrite it with the new
+            // reaction.
+            .on_conflict({
+                let mut c = OnConflict::columns([
+                    reaction::Column::OnPost,
+                    reaction::Column::Identity,
+                ]);
+                c.update_columns([
+                    reaction::Column::EventId,
+                    reaction::Column::Emoji,
+                    reaction::Column::Positive,
+                ]);
+                c
+            })
+            .returning(ReturningClause::Exprs(vec![
+                Expr::cust("WITH (NEW AS NEW, OLD AS OLD) NEW.on_post"),
+                // Map old positive -> new positive transition to a tuple of
+                // positive and negative count changes.
+                Expr::cust(
+                    "
+                    CASE (OLD.positive, NEW.positive)
+                      WHEN (NULL::BOOLEAN, true) THEN ARRAY[1, 0]
+                      WHEN (NULL::BOOLEAN, false) THEN ARRAY[0, 1]
+                      WHEN (true, true) THEN ARRAY[0, 0]
+                      WHEN (true, false) THEN ARRAY[-1, 1]
+                      WHEN (false, true) THEN ARRAY[1, -1]
+                      WHEN (false, false) THEN ARRAY[0, 0]
+                      ELSE ARRAY[0, 0]
+                    END AS count_diffs",
+                ),
+            ]));
 
         let mut cte = CommonTableExpression::new();
         const INSERTED_REACTION: &str = "inserted_reaction";
         cte.table_name(INSERTED_REACTION).query(insert_reaction);
         with.cte(cte);
 
-        let positive = if reaction.positive { 1 } else { 0 };
-        let negative = if reaction.positive { 0 } else { 1 };
-
         let mut query = UpdateStatement::new();
-        query.table(interaction_tally::Entity).values([
-            (
-                interaction_tally::Column::ReactionPositiveCount,
-                Expr::col(
-                    interaction_tally::Column::ReactionPositiveCount
-                        .as_column_ref(),
-                )
-                .add(Expr::Constant(positive.into())),
-            ),
-            (
-                interaction_tally::Column::ReactionNegativeCount,
-                Expr::col(
-                    interaction_tally::Column::ReactionNegativeCount
-                        .as_column_ref(),
-                )
-                .add(Expr::Constant(negative.into())),
-            ),
-            (
-                interaction_tally::Column::UpdatedAt,
-                Expr::current_timestamp(),
-            ),
-        ]);
-
-        if reaction.positive {
-            query.value(
-                interaction_tally::Column::DecayedCount,
-                decay_interaction_count(
+        query
+            .table(interaction_tally::Entity)
+            .values([
+                (
+                    interaction_tally::Column::ReactionPositiveCount,
                     Expr::col(
                         interaction_tally::Column::ReactionPositiveCount
                             .as_column_ref(),
                     )
-                    .add(Expr::Constant(positive.into())),
-                    Expr::col(
-                        interaction_tally::Column::ReplyCount.as_column_ref(),
-                    ),
-                    Expr::col(
-                        interaction_tally::Column::RepostCount.as_column_ref(),
-                    ),
-                    Expr::col(
-                        interaction_tally::Column::QuoteCount.as_column_ref(),
-                    ),
-                    Expr::col(event::Column::CreatedAt.as_column_ref()),
+                    .add(Expr::cust("inserted_reaction.count_diffs[1]")),
                 ),
-            );
-        }
-
-        query
+                (
+                    interaction_tally::Column::ReactionNegativeCount,
+                    Expr::col(
+                        interaction_tally::Column::ReactionNegativeCount
+                            .as_column_ref(),
+                    )
+                    .add(Expr::cust("inserted_reaction.count_diffs[2]")),
+                ),
+                (
+                    interaction_tally::Column::UpdatedAt,
+                    Expr::current_timestamp(),
+                ),
+                (
+                    interaction_tally::Column::DecayedCount,
+                    decay_interaction_count(
+                        Expr::col(
+                            interaction_tally::Column::ReactionPositiveCount
+                                .as_column_ref(),
+                        )
+                        .add(Expr::cust("inserted_reaction.count_diffs[1]")),
+                        Expr::col(
+                            interaction_tally::Column::ReplyCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::RepostCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::QuoteCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(event::Column::CreatedAt.as_column_ref()),
+                    ),
+                ),
+            ])
             .from(INSERTED_REACTION)
             // This should be an inner join, but SeaORM doesn't support this,
             // see <https://github.com/SeaQL/sea-query/issues/608>.
             .from(event::Entity)
             .and_where(
-                Expr::col(event::Column::Id.as_column_ref())
-                    .eq(Expr::Column((INSERTED_REACTION, "on_post").into())),
+                Expr::col(event::Column::Id.as_column_ref()).eq(Expr::col((
+                    INSERTED_REACTION,
+                    reaction::Column::OnPost,
+                ))),
             )
             .and_where(
-                Expr::Column(("interaction_tally", "event_id").into())
-                    .eq(Expr::Column((INSERTED_REACTION, "on_post").into())),
+                Expr::col(interaction_tally::Column::EventId.as_column_ref())
+                    .eq(Expr::col((
+                        INSERTED_REACTION,
+                        reaction::Column::OnPost,
+                    ))),
             );
 
         Ok(query)
