@@ -1377,8 +1377,8 @@ async fn explore_feed_excludes_grayjay() {
         let (content_bytes, digest) = content_with_digest(content);
         let mut event = client.make_event(
             COLLECTION_FEED,
-            Vec::new(),
-            Vec::new(),
+            client.previous_signature(),
+            client.previous_root(),
             digest,
             current_timestamp(),
         );

@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::models::protos_v2::EventProofTarget;
-use crate::models::validate::{self, SliceConfig, SliceError, Validate};
+use crate::models::validate::{self, SliceError, Validate};
 
 impl Validate for EventProofTarget {
     type Error = ValidationError;
@@ -16,26 +16,10 @@ impl Validate for EventProofTarget {
             root,
             leaf_count: _,
         } = self;
-        validate::slice(
-            signature,
-            errors,
-            |err| map_err(ValidationError::Signature(err)),
-            SliceConfig {
-                min_len: Some(64),
-                max_len: Some(64),
-                ..Default::default()
-            },
-        );
-        validate::slice(
-            root,
-            errors,
-            |err| map_err(ValidationError::Root(err)),
-            SliceConfig {
-                min_len: Some(32),
-                max_len: Some(32),
-                ..Default::default()
-            },
-        );
+        validate::ed25519_signature(signature, errors, |err| {
+            map_err(ValidationError::Signature(err))
+        });
+        validate::sha256_hash(root, errors, |err| map_err(ValidationError::Root(err)));
     }
 }
 

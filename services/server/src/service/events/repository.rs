@@ -20,7 +20,6 @@ use crate::db::fns::{decay_interaction_count, decay_interaction_count1};
 use crate::service::content::content_repository::Mutation as ContentRepository;
 use crate::service::content::repository::Mutation as ContentChildRepository;
 use crate::service::content::repository::{EventKeyParts, split_event_key};
-use crate::service::events::rpc::put_events::event_is_authorised;
 
 const COLLECTION_FEED: i16 = collections::FEED as i16;
 const COLLECTION_PROFILE: i16 = collections::PROFILE as i16;
@@ -257,7 +256,7 @@ impl Mutation {
     /// already stored.
     pub async fn add_event<C: ConnectionTrait>(
         db: &C,
-        mut event: event::ActiveModel,
+        event: event::ActiveModel,
         decoded_content: Option<(&[u8], Content, &ContentDigest)>,
     ) -> Result<bool, Status> {
         // We're going to build one big query using Common Table Expressions
@@ -268,13 +267,6 @@ impl Mutation {
         // so various sub-queries add to this.
         let mut with = WithClause::new();
         with.recursive(false);
-
-        let identity = event.identity.try_as_ref().map_or("", |s| &**s);
-        let content = decoded_content.as_ref().map(|(_, c, _)| c);
-        let is_authorised = event_is_authorised(identity, content);
-        event.content_type = Set(content
-            .and_then(|content| content.content_body.as_ref())
-            .map(|body| content_types::of(body) as i16));
 
         // Store the event itself into the `events` table.
         const INSERTED_EVENT: &str = "inserted_event";
@@ -296,25 +288,23 @@ impl Mutation {
 
             if let Some(content_body) = content.content_body {
                 // Update cache tables.
-                if is_authorised {
-                    let event_id_identity = (
-                        INSERTED_EVENT.into(),
-                        event::Column::Id.into(),
-                        event::Column::Identity.into(),
-                    );
-                    let maybe_query = Mutation::update_cache_query(
-                        &mut with,
-                        &content_body,
-                        event_id_identity,
-                    ).map_err(|err| {
-                        tracing::error!(error = %err, "failed to create query to update cache tables");
-                        Status::internal("internal server error")
-                    })?;
-                    if let Some(query) = maybe_query {
-                        let mut cte = CommonTableExpression::new();
-                        cte.table_name("inserted_cache").query(query);
-                        with.cte(cte);
-                    }
+                let event_id_identity = (
+                    INSERTED_EVENT.into(),
+                    event::Column::Id.into(),
+                    event::Column::Identity.into(),
+                );
+                let maybe_query = Mutation::update_cache_query(
+                    &mut with,
+                    &content_body,
+                    event_id_identity,
+                ).map_err(|err| {
+                    tracing::error!(error = %err, "failed to create query to update cache tables");
+                    Status::internal("internal server error")
+                })?;
+                if let Some(query) = maybe_query {
+                    let mut cte = CommonTableExpression::new();
+                    cte.table_name("inserted_cache").query(query);
+                    with.cte(cte);
                 }
 
                 // Store the decoded body of the content.
