@@ -67,6 +67,8 @@ const useReposts = create<RepostsState>((set, get) => ({
     const reposts = get().reposts;
     if (reposts.has(post.id)) return;
 
+    // TODO: update reports count / overlay.
+
     const targetKey = v2.EventKey.fromBinary(hexToBytes(post.id));
     const repostContent = v2.Content.create({
       contentBody: {
@@ -101,6 +103,8 @@ const useReposts = create<RepostsState>((set, get) => ({
   async removeRepost(client, targetId) {
     const self = client.activeIdentityKey;
     if (!self) return;
+
+    // TODO: update reports count / overlay.
 
     const reposts = get().reposts;
     const bundles = client.listValidEvents(self, COLLECTION.FEED);
