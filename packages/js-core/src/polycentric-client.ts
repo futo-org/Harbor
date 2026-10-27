@@ -41,12 +41,6 @@ type CoreType = PolycentricCoreLike;
 const streamId = (key: Proto.EventKey): string =>
   `${key.collection}:${key.signedBy?.keyType}:${bytesToHex(key.signedBy?.key ?? new Uint8Array())}`;
 
-export type {
-  IdentityState,
-  PublishArgs,
-  IdentityUpdate,
-} from './client-internal/identity-manager';
-
 export interface KeyPair {
   keyType: Proto.KeyType;
   privateKey: Proto.PrivateKey;

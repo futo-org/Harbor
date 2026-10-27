@@ -5,17 +5,14 @@ import type {
   LoginId,
   LoginStatus,
 } from '../platform-interfaces/login-repository';
-import type {
-  IdentityUpdate,
-  KeyPair,
-  PolycentricClient,
-} from '../polycentric-client';
+import type { KeyPair, PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { KeyType, PrivateKey, PublicKey } from '../proto/v2';
 import { bytesToHex } from '../utils/hex';
 import {
   IdentityManager,
   type IdentityState,
+  type IdentityUpdate,
   type PublishArgs,
 } from './identity-manager';
 
