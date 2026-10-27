@@ -349,11 +349,15 @@ export class ReactionOverlay {
 export type PostOverlay = {
   replyCount: CounterOverlay | undefined;
   reaction: ReactionOverlay | undefined;
+  repostCount: CounterOverlay | undefined;
+  quoteCount: CounterOverlay | undefined;
 };
 
 export const EMPTY_POST_OVERLAY: PostOverlay = Object.freeze({
   replyCount: undefined,
   reaction: undefined,
+  repostCount: undefined,
+  quoteCount: undefined,
 } as PostOverlay);
 
 /**
