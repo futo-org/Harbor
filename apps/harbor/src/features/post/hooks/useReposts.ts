@@ -10,7 +10,10 @@ import {
   type PolycentricClient,
 } from '@polycentric/react-native';
 import { create } from 'zustand';
-import { feedQueryKeys, alterPostRepostCount } from '../../feed/hooks/feedCache';
+import {
+  feedQueryKeys,
+  alterPostRepostCount,
+} from '../../feed/hooks/feedCache';
 
 type RepostsState = {
   reposts: Map<string, string>;

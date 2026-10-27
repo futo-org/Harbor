@@ -18,7 +18,13 @@ export function patchPostOverlay(
     ...patch,
   };
 
-  if (overlay.replyCount || overlay.reaction || overlay.quoteCount || overlay.repostCount) return overlay;
+  if (
+    overlay.replyCount ||
+    overlay.reaction ||
+    overlay.quoteCount ||
+    overlay.repostCount
+  )
+    return overlay;
   return undefined;
 }
 
@@ -31,7 +37,12 @@ export function updatePostOverlay(
   const reaction = orig?.reaction?.remoteUpdate(latest);
   const repostCount = orig?.repostCount?.remoteUpdate(latest.repostCount);
   const quoteCount = orig?.quoteCount?.remoteUpdate(latest.quoteCount);
-  return patchPostOverlay(orig, { replyCount, reaction, repostCount, quoteCount });
+  return patchPostOverlay(orig, {
+    replyCount,
+    reaction,
+    repostCount,
+    quoteCount,
+  });
 }
 
 /**

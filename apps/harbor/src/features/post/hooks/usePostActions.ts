@@ -59,17 +59,17 @@ export default function usePostActions(post: PostData): PostActions {
     await client.sync(SyncStrategy.PARTIAL_PUSH);
   };
 
-  const invalidateFeeds = (identity: string, replyParent?: string, quoted?: string) => {
+  const invalidateFeeds = (
+    identity: string,
+    replyParent?: string,
+    quoted?: string,
+  ) => {
     invalidateQuery(client, feedQueryKeys.following(identity));
     invalidateQuery(client, feedQueryKeys.identity(identity));
     invalidateQuery(client, feedQueryKeys.explore(identity));
 
     if (replyParent) {
-      alterPostReplyCount(
-        feedQueryKeys.following(identity),
-        replyParent,
-        -1,
-      );
+      alterPostReplyCount(feedQueryKeys.following(identity), replyParent, -1);
       alterPostReplyCount(feedQueryKeys.identity(identity), replyParent, -1);
       alterPostReplyCount(feedQueryKeys.explore(identity), replyParent, -1);
     }
@@ -81,7 +81,10 @@ export default function usePostActions(post: PostData): PostActions {
     }
   };
 
-  const invalidateReplyThreads = (reply: PostData['reply'], deletion?: boolean) => {
+  const invalidateReplyThreads = (
+    reply: PostData['reply'],
+    deletion?: boolean,
+  ) => {
     if (!reply) return;
 
     const parents = [reply.parentId, reply.rootId].filter(
@@ -98,7 +101,10 @@ export default function usePostActions(post: PostData): PostActions {
     }
   };
 
-  const invalidateQuoteThreads = (quoteId: PostData['quoteId'], deletion?: boolean) => {
+  const invalidateQuoteThreads = (
+    quoteId: PostData['quoteId'],
+    deletion?: boolean,
+  ) => {
     if (!quoteId) return;
 
     const key = threadQueryKey(quoteId);

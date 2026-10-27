@@ -352,7 +352,12 @@ export function useComposer({
       const identity = currentIdentityKey ?? '';
 
       // Optimistically add the new event to feeds and threads
-      injectLocally(identity, newBundle, replyTo ?? undefined, quote ?? undefined);
+      injectLocally(
+        identity,
+        newBundle,
+        replyTo ?? undefined,
+        quote ?? undefined,
+      );
 
       // `commitEvent` persists the event locally
       await client.commitEvent(signedEvent, content);
