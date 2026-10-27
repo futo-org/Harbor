@@ -12,12 +12,13 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 import { PageInfo } from "./common";
+import { PageParams } from "./common";
 import { ReportCategory } from "./content";
 import { EventKey } from "./event_key";
 /**
  * *
- * One distinct report: every reporter who filed the same category and
- * text against the same event shares it.
+ * The reports against one event with the same category and text, grouped
+ * as one entry with every identity that filed one of them.
  *
  * @generated from protobuf message polycentric.v2.ReportSummary
  */
@@ -83,21 +84,16 @@ export interface ReportSummary {
  */
 export interface ListReportsRequest {
     /**
-     * Max entries to return; the server clamps to its own bounds.
+     * Forward paging only: `forward_token` is a previous response's
+     * `page_info.end_cursor`.
      *
-     * @generated from protobuf field: optional uint32 limit = 1
+     * @generated from protobuf field: optional polycentric.v2.PageParams page_params = 1
      */
-    limit?: number;
-    /**
-     * Opaque cursor from a previous response's `page_info.end_cursor`.
-     *
-     * @generated from protobuf field: optional string after = 2
-     */
-    after?: string;
+    pageParams?: PageParams;
     /**
      * Only reports in this status; unspecified returns every status.
      *
-     * @generated from protobuf field: polycentric.v2.ReportStatus status = 3
+     * @generated from protobuf field: polycentric.v2.ReportStatus status = 2
      */
     status: ReportStatus;
 }
@@ -110,7 +106,7 @@ export interface ListReportsResponse {
      */
     reports: ReportSummary[];
     /**
-     * @generated from protobuf field: polycentric.v2.PageInfo page_info = 2
+     * @generated from protobuf field: optional polycentric.v2.PageInfo page_info = 2
      */
     pageInfo?: PageInfo;
 }
@@ -300,9 +296,8 @@ export const ReportSummary = new ReportSummary$Type();
 class ListReportsRequest$Type extends MessageType<ListReportsRequest> {
     constructor() {
         super("polycentric.v2.ListReportsRequest", [
-            { no: 1, name: "limit", kind: "scalar", opt: true, T: 13 /*ScalarType.UINT32*/ },
-            { no: 2, name: "after", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "status", kind: "enum", T: () => ["polycentric.v2.ReportStatus", ReportStatus, "REPORT_STATUS_"] }
+            { no: 1, name: "page_params", kind: "message", T: () => PageParams },
+            { no: 2, name: "status", kind: "enum", T: () => ["polycentric.v2.ReportStatus", ReportStatus, "REPORT_STATUS_"] }
         ]);
     }
     create(value?: PartialMessage<ListReportsRequest>): ListReportsRequest {
@@ -317,13 +312,10 @@ class ListReportsRequest$Type extends MessageType<ListReportsRequest> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* optional uint32 limit */ 1:
-                    message.limit = reader.uint32();
+                case /* optional polycentric.v2.PageParams page_params */ 1:
+                    message.pageParams = PageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
                     break;
-                case /* optional string after */ 2:
-                    message.after = reader.string();
-                    break;
-                case /* polycentric.v2.ReportStatus status */ 3:
+                case /* polycentric.v2.ReportStatus status */ 2:
                     message.status = reader.int32();
                     break;
                 default:
@@ -338,15 +330,12 @@ class ListReportsRequest$Type extends MessageType<ListReportsRequest> {
         return message;
     }
     internalBinaryWrite(message: ListReportsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* optional uint32 limit = 1; */
-        if (message.limit !== undefined)
-            writer.tag(1, WireType.Varint).uint32(message.limit);
-        /* optional string after = 2; */
-        if (message.after !== undefined)
-            writer.tag(2, WireType.LengthDelimited).string(message.after);
-        /* polycentric.v2.ReportStatus status = 3; */
+        /* optional polycentric.v2.PageParams page_params = 1; */
+        if (message.pageParams)
+            PageParams.internalBinaryWrite(message.pageParams, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* polycentric.v2.ReportStatus status = 2; */
         if (message.status !== 0)
-            writer.tag(3, WireType.Varint).int32(message.status);
+            writer.tag(2, WireType.Varint).int32(message.status);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -380,7 +369,7 @@ class ListReportsResponse$Type extends MessageType<ListReportsResponse> {
                 case /* repeated polycentric.v2.ReportSummary reports */ 1:
                     message.reports.push(ReportSummary.internalBinaryRead(reader, reader.uint32(), options));
                     break;
-                case /* polycentric.v2.PageInfo page_info */ 2:
+                case /* optional polycentric.v2.PageInfo page_info */ 2:
                     message.pageInfo = PageInfo.internalBinaryRead(reader, reader.uint32(), options, message.pageInfo);
                     break;
                 default:
@@ -398,7 +387,7 @@ class ListReportsResponse$Type extends MessageType<ListReportsResponse> {
         /* repeated polycentric.v2.ReportSummary reports = 1; */
         for (let i = 0; i < message.reports.length; i++)
             ReportSummary.internalBinaryWrite(message.reports[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* polycentric.v2.PageInfo page_info = 2; */
+        /* optional polycentric.v2.PageInfo page_info = 2; */
         if (message.pageInfo)
             PageInfo.internalBinaryWrite(message.pageInfo, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;

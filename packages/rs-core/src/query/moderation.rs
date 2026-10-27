@@ -25,7 +25,7 @@ use std::sync::{Arc, Mutex};
 use base64::prelude::*;
 use polycentric_common::models::protos_v2::{
     IsBannedRequest, IsModeratorRequest, ListBansRequest, ListBansResponse, ListReportsRequest,
-    identity_service_client::IdentityServiceClient,
+    PageParams, identity_service_client::IdentityServiceClient,
     moderation_service_client::ModerationServiceClient,
 };
 use prost::Message;
@@ -50,8 +50,8 @@ pub struct ListBansArgs {
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListReportsArgs {
-    pub limit: Option<u32>,
-    pub after: Option<String>,
+    pub limit: Option<i32>,
+    pub forward_token: Option<String>,
     /// `ReportStatus` value; unspecified lists every status.
     pub status: i32,
 }
@@ -203,16 +203,19 @@ pub fn list_reports(
 ) -> Arc<dyn QueryObservable> {
     let ListReportsArgs {
         limit,
-        after,
+        forward_token,
         status,
     } = args;
     let query_fn = move |server_url: String| {
-        let after = after.clone();
+        let forward_token = forward_token.clone();
         async move {
             let response = ModerationServiceClient::new(channel(&server_url).await?)
                 .list_reports(ListReportsRequest {
-                    limit,
-                    after,
+                    page_params: Some(PageParams {
+                        limit,
+                        backward_token: None,
+                        forward_token,
+                    }),
                     status,
                 })
                 .await

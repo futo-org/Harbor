@@ -18,8 +18,8 @@ enum ReportStatus {
 }
 
 /**
- * One distinct report: every reporter who filed the same category and
- * text against the same event shares it.
+ * The reports against one event with the same category and text, grouped
+ * as one entry with every identity that filed one of them.
  */
 message ReportSummary {
   // Server-local id, used in `ResolveReport`.
@@ -44,17 +44,16 @@ message ReportSummary {
  * ListReports: reports filed on this server, oldest first.
  */
 message ListReportsRequest {
-  // Max entries to return; the server clamps to its own bounds.
-  optional uint32 limit = 1;
-  // Opaque cursor from a previous response's `page_info.end_cursor`.
-  optional string after = 2;
+  // Forward paging only: `forward_token` is a previous response's
+  // `page_info.end_cursor`.
+  optional PageParams page_params = 1;
   // Only reports in this status; unspecified returns every status.
-  ReportStatus status = 3;
+  ReportStatus status = 2;
 }
 
 message ListReportsResponse {
   repeated ReportSummary reports = 1;
-  PageInfo page_info = 2;
+  optional PageInfo page_info = 2;
 }
 
 /**

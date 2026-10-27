@@ -18,8 +18,9 @@ pub async fn handle(
 ) -> Result<ListReportsResponse, Status> {
     require_moderator(&ctx).await?;
 
-    let limit = page_limit(req.limit);
-    let after = decode_cursor(req.after.as_deref())?;
+    let page = req.page_params.clone().unwrap_or_default();
+    let limit = page_limit(page.limit);
+    let after = decode_cursor(page.forward_token.as_deref())?;
     let status = match req.status() {
         ReportStatus::Unspecified => None,
         status => Some(status as i16),
@@ -36,10 +37,15 @@ pub async fn handle(
     let has_next_page = rows.len() > limit as usize;
     rows.truncate(limit as usize);
 
-    let cursors: Vec<i64> = rows.iter().map(|r| r.latest_event_id).collect();
+    let page_info = page_info(
+        rows.first().map(|r| r.latest_event_id),
+        rows.last().map(|r| r.latest_event_id),
+        after.is_some(),
+        has_next_page,
+    );
     Ok(ListReportsResponse {
         reports: rows.into_iter().map(summary).collect(),
-        page_info: Some(page_info(&cursors, after.is_some(), has_next_page)),
+        page_info: Some(page_info),
     })
 }
 

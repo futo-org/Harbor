@@ -2,10 +2,10 @@ use tonic::Status;
 
 use crate::service::proto::{EventKey, PageInfo, PublicKey};
 
-pub const DEFAULT_LIMIT: u32 = 10;
-pub const MAX_LIMIT: u32 = 100;
+pub const DEFAULT_LIMIT: i32 = 10;
+pub const MAX_LIMIT: i32 = 100;
 
-pub fn page_limit(limit: Option<u32>) -> u64 {
+pub fn page_limit(limit: Option<i32>) -> u64 {
     limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as u64
 }
 
@@ -21,13 +21,14 @@ pub fn decode_cursor(after: Option<&str>) -> Result<Option<i64>, Status> {
 }
 
 pub fn page_info(
-    cursors: &[i64],
+    first: Option<i64>,
+    last: Option<i64>,
     has_previous_page: bool,
     has_next_page: bool,
 ) -> PageInfo {
     PageInfo {
-        start_cursor: cursors.first().map(i64::to_string).unwrap_or_default(),
-        end_cursor: cursors.last().map(i64::to_string).unwrap_or_default(),
+        start_cursor: first.map(|c| c.to_string()).unwrap_or_default(),
+        end_cursor: last.map(|c| c.to_string()).unwrap_or_default(),
         has_previous_page,
         has_next_page,
     }

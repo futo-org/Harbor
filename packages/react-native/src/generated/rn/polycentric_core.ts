@@ -1467,7 +1467,7 @@ const FfiConverterTypeListNotificationsArgs = (() => {
 
 export type ListReportsArgs = {
     limit?: number,
-    after?: string,
+    forwardToken?: string,
     /**
      * `ReportStatus` value; unspecified lists every status.
      */
@@ -1495,19 +1495,19 @@ const FfiConverterTypeListReportsArgs = (() => {
     class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
         readFromCursor(c: Cursor): TypeName {
             return {
-                limit: FfiConverterOptionalUInt32.readFromCursor(c), 
-                after: FfiConverterOptionalString.readFromCursor(c), 
+                limit: FfiConverterOptionalInt32.readFromCursor(c), 
+                forwardToken: FfiConverterOptionalString.readFromCursor(c), 
                 status: FfiConverterInt32.readFromCursor(c)
             };
         }
         writeIntoCursor(value: TypeName, c: Cursor): void {
-            FfiConverterOptionalUInt32.writeIntoCursor(value.limit, c);
-            FfiConverterOptionalString.writeIntoCursor(value.after, c);
+            FfiConverterOptionalInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.forwardToken, c);
             FfiConverterInt32.writeIntoCursor(value.status, c);
         }
         allocationSize(value: TypeName): number {
-            return FfiConverterOptionalUInt32.allocationSize(value.limit) +
-             FfiConverterOptionalString.allocationSize(value.after) +
+            return FfiConverterOptionalInt32.allocationSize(value.limit) +
+             FfiConverterOptionalString.allocationSize(value.forwardToken) +
              FfiConverterInt32.allocationSize(value.status);
             
         }
@@ -5330,10 +5330,8 @@ export interface PolycentricCoreLike {
  */
     copyEvents(signedEvents: Array<ArrayBuffer>) /*throws*/: void;
 /**
- * Erase one event from a server. `request_bytes` is a serialized
- * `DeleteContentRequest`. Returns serialized `DeleteContentResponse`
- * proto bytes. Requires the caller (bearer JWT) to be a moderator on
- * the server.
+ * `ModerationService.DeleteContent` on one server. `request_bytes` is a
+ * serialized `DeleteContentRequest`; returns the serialized response.
  */
     deleteContent(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
 /**
@@ -5466,10 +5464,8 @@ export interface PolycentricCoreLike {
  */
     resolveIdentityChain(identity: string) /*throws*/: ArrayBuffer;
 /**
- * Resolve, dismiss or reopen a report on a server. `request_bytes` is
- * a serialized `ResolveReportRequest`. Returns serialized
- * `ResolveReportResponse` proto bytes. Requires the caller (bearer
- * JWT) to be a moderator on the server.
+ * `ModerationService.ResolveReport` on one server. `request_bytes` is a
+ * serialized `ResolveReportRequest`; returns the serialized response.
  */
     resolveReport(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
 /**
@@ -5736,10 +5732,8 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
- * Erase one event from a server. `request_bytes` is a serialized
- * `DeleteContentRequest`. Returns serialized `DeleteContentResponse`
- * proto bytes. Requires the caller (bearer JWT) to be a moderator on
- * the server.
+ * `ModerationService.DeleteContent` on one server. `request_bytes` is a
+ * serialized `DeleteContentRequest`; returns the serialized response.
  */
     async deleteContent(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -6522,10 +6516,8 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
- * Resolve, dismiss or reopen a report on a server. `request_bytes` is
- * a serialized `ResolveReportRequest`. Returns serialized
- * `ResolveReportResponse` proto bytes. Requires the caller (bearer
- * JWT) to be a moderator on the server.
+ * `ModerationService.ResolveReport` on one server. `request_bytes` is a
+ * serialized `ResolveReportRequest`; returns the serialized response.
  */
     async resolveReport(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
@@ -7052,7 +7044,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_events() !== 43572) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_copy_events");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_delete_content() !== 10969) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_delete_content() !== 35895) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_delete_content");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query() !== 52560) {
@@ -7130,7 +7122,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity_chain() !== 11511) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity_chain");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_report() !== 28304) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_report() !== 11619) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_resolve_report");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_active_identity() !== 55936) {

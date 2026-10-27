@@ -71,7 +71,7 @@ mod tests {
     use sea_orm::{DbBackend, MockDatabase, MockExecResult, Value};
     use tonic::Code;
 
-    use crate::service::proto::{ReportCategory, ReportStatus};
+    use crate::service::proto::{PageParams, ReportCategory, ReportStatus};
     use crate::service::verifications::rpc::common::tests::ctx;
 
     use super::*;
@@ -156,8 +156,11 @@ mod tests {
         let response = list_reports::handle(
             ctx,
             ListReportsRequest {
-                limit: Some(2),
-                after: None,
+                page_params: Some(PageParams {
+                    limit: Some(2),
+                    backward_token: None,
+                    forward_token: None,
+                }),
                 status: ReportStatus::Open as i32,
             },
         )
@@ -193,8 +196,11 @@ mod tests {
         let err = list_reports::handle(
             ctx,
             ListReportsRequest {
-                limit: None,
-                after: Some("not-a-number".into()),
+                page_params: Some(PageParams {
+                    limit: None,
+                    backward_token: None,
+                    forward_token: Some("not-a-number".into()),
+                }),
                 status: 0,
             },
         )
