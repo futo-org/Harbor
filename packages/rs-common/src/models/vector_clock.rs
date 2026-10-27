@@ -1,5 +1,8 @@
+use std::fmt;
+
 use crate::error::CoreError;
 use crate::models::protos_v2::{Identity, PublicKey, VectorClock};
+use crate::models::validate::{self, SliceConfig, Validate};
 
 impl VectorClock {
     /// Returns a signers position in the vector clock
@@ -56,6 +59,41 @@ impl VectorClock {
     /// Two VCs are concurrent if neither happens-before the other.
     pub fn concurrent_with(&self, other: &VectorClock) -> bool {
         !self.happens_before(other) && !other.happens_before(self)
+    }
+}
+
+impl Validate for VectorClock {
+    type Error = ValidationError;
+
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
+        let VectorClock { sequence } = self;
+        validate::slice(
+            sequence,
+            errors,
+            |err| map_err(ValidationError::Sequence(err)),
+            SliceConfig {
+                max_len: Some(1000),
+                ..Default::default()
+            },
+        );
+    }
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "VectorClockValidationError"))]
+pub enum ValidationError {
+    Sequence(validate::SliceError),
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValidationError::Sequence(err) => write!(f, "sequence {err}"),
+        }
     }
 }
 
