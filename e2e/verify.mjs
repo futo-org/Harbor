@@ -4,23 +4,29 @@
 import { createServer } from 'node:http';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/js-core';
 import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
-import { SEEDED_USERS, keysFor } from './seed.mjs';
+import { SEEDED_USERS, signupInfoFor } from './seed.mjs';
 
-// identityManager.claim without its identity republish, which would add an
+// loginManager.claim without its identity republish, which would add an
 // identity event every run.
 async function actAs(client, name) {
-  const { keyType, privateKey, publicKey, identityKey } = await keysFor(
-    client,
-    name,
+  const info = await signupInfoFor(client, name);
+  const { identity: identityKey, publicKey } = info.login;
+  const stored = await client.storage.logins.getLoginDetails(
+    identityKey,
+    publicKey,
   );
-  await client.storage.keys.storeKeys({ privateKey, publicKey });
-  await client.setCurrentKeyPair({ keyType, privateKey, publicKey });
+  if (!stored)
+    await client.storage.logins.putLogin(
+      identityKey,
+      info.keyPair,
+      'liveRotationKey',
+    );
   // Hydrates the identity's events into rs-core, which buildEvent needs.
   await client.listEvents({
     identity: identityKey,
     collection: COLLECTION.IDENTITY,
   });
-  await client.adoptIdentity(identityKey);
+  await client.loginAs(info.login, false);
   await client.sync(SyncStrategy.PARTIAL_PULL);
   return identityKey;
 }

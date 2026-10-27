@@ -354,13 +354,41 @@ export class LoginManager {
    */
   async beginSignup(): Promise<SignupInfo> {
     const keyPair = await this.generateKeyPair();
+    const info = await this.deriveSignupInfo(keyPair);
 
+    await this.client.storage.logins.putLogin(
+      info.login.identity,
+      keyPair,
+      'pendingSignup',
+    );
+
+    return info;
+  }
+
+  /**
+   * Update the login's status to be an active rotation key.
+   */
+  async finishSignup(loginId: LoginId): Promise<void> {
+    await this.client.storage.logins.changeLoginStatus(
+      loginId.identity,
+      loginId.publicKey,
+      'liveRotationKey',
+    );
+  }
+
+  /**
+   * Derive the identity key, genesis identity event, etc. from a key pair.
+   * This method just returns the derived information without writing anything.
+   * `beginSignup()` should be preferred where possible.
+   */
+  async deriveSignupInfo(keyPair: KeyPair): Promise<SignupInfo> {
     const identity = Proto.Identity.create({
       rotationKeys: [keyPair.publicKey],
       signingKeys: [],
       revocationBounds: [],
       servers: { urls: [...this.client.servers] },
     });
+
     const content = Proto.Content.create({
       contentBody: { oneofKind: 'identity', identity },
     });
@@ -389,12 +417,6 @@ export class LoginManager {
 
     const genesisEvent = await this.client.signEvent(event, keyPair);
 
-    await this.client.storage.logins.putLogin(
-      identityKey,
-      keyPair,
-      'pendingSignup',
-    );
-
     return {
       login: { identity: identityKey, publicKey: keyPair.publicKey },
       keyPair,
@@ -404,17 +426,6 @@ export class LoginManager {
         contentBytes: Proto.Content.toBinary(content),
       }),
     };
-  }
-
-  /**
-   * Update the login's status to be an active rotation key.
-   */
-  async finishSignup(loginId: LoginId): Promise<void> {
-    await this.client.storage.logins.changeLoginStatus(
-      loginId.identity,
-      loginId.publicKey,
-      'liveRotationKey',
-    );
   }
 
   /**

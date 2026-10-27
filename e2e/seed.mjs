@@ -7,7 +7,7 @@
 // These are throwaway test users, so the keys being public is fine.
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
-import { COLLECTION, KEY_TYPE, bytesToHex, v2 } from '@polycentric/js-core';
+import { COLLECTION, KEY_TYPE, v2 } from '@polycentric/js-core';
 import { createPolycentricNodeClient } from '@polycentric/js-node';
 
 // Passed to the flows as -e variables. Avoid English stop words in names: the
@@ -26,32 +26,32 @@ const STATE_DIR = new URL('.seed/', import.meta.url).pathname;
 const sha256 = (data) =>
   new Uint8Array(createHash('sha256').update(data).digest());
 
-// The key pair and identity key of a seeded user.
-export async function keysFor(client, name) {
+// The signup info (login, key pair, genesis event) of a seeded user. The
+// identity key only depends on the key pair and the client's servers, so it
+// is the same whether or not the identity exists yet.
+export async function signupInfoFor(client, name) {
   const keyType = KEY_TYPE.ED25519;
-  const privateKey = { keyType, key: sha256(`harbor-e2e:${name}`) };
+  const privateKey = v2.PrivateKey.create({
+    keyType,
+    key: sha256(`harbor-e2e:${name}`),
+  });
   const publicKey = v2.PublicKey.create({
     keyType,
     key: await client.crypto.derivePublicKey(privateKey.key, keyType),
   });
-  // The same document identityManager.publish bootstraps from, so its hash
-  // is the identity key whether or not the identity exists yet.
-  const identity = v2.Identity.create({
-    rotationKeys: [publicKey],
-    servers: { urls: [SERVER_URL] },
+  return client.loginManager.deriveSignupInfo({
+    keyType,
+    privateKey,
+    publicKey,
   });
-  const identityKey = bytesToHex(sha256(v2.Identity.toBinary(identity)));
-  return { keyType, privateKey, publicKey, identityKey };
 }
 
 async function ensureUser(client, name) {
-  const { keyType, privateKey, publicKey, identityKey } = await keysFor(
-    client,
-    name,
-  );
+  const info = await signupInfoFor(client, name);
+  const { identity: identityKey, publicKey } = info.login;
 
   // Ask the server rather than local state: a fresh checkout has none, and
-  // adopting the identity via identityManager.claim would publish a login
+  // adopting the identity via loginManager.claim would publish a login
   // event on every run.
   const profiles = await client.listEvents({
     identity: identityKey,
@@ -62,13 +62,23 @@ async function ensureUser(client, name) {
     return;
   }
 
-  await client.storage.keys.storeKeys({ privateKey, publicKey });
-  await client.setCurrentKeyPair({ keyType, privateKey, publicKey });
-  await client.identityManager.publish({
-    rotationKeys: [publicKey],
-    signingKeys: [],
-    servers: [SERVER_URL],
-  });
+  // The login is stored before anything else is persisted. A run that failed
+  // partway through will already have it.
+  const stored = await client.storage.logins.getLoginDetails(
+    identityKey,
+    publicKey,
+  );
+  if (!stored) {
+    await client.storage.logins.putLogin(
+      identityKey,
+      info.keyPair,
+      'pendingSignup',
+    );
+  }
+  await client.contentManager.save(info.identityContent);
+  await client.commitEvent(info.genesisEvent, info.identityContent);
+  await client.loginManager.finishSignup(info.login);
+  await client.loginAs(info.login);
   const content = client.contentManager.build({
     oneofKind: 'profileUpdate',
     profileUpdate: { name, description: 'Seeded for e2e tests' },
