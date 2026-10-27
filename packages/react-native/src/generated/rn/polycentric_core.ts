@@ -1465,6 +1465,56 @@ const FfiConverterTypeListNotificationsArgs = (() => {
     return new FFIConverter();
 })();
 
+export type ListReportsArgs = {
+    limit?: number,
+    after?: string,
+    /**
+     * `ReportStatus` value; unspecified lists every status.
+     */
+    status: number
+}
+
+/**
+ * Generated factory for {@link ListReportsArgs} record objects.
+ */
+export const ListReportsArgs = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<ListReportsArgs, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<ListReportsArgs>,
+    });
+})();
+
+const FfiConverterTypeListReportsArgs = (() => {
+    type TypeName = ListReportsArgs;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        readFromCursor(c: Cursor): TypeName {
+            return {
+                limit: FfiConverterOptionalUInt32.readFromCursor(c), 
+                after: FfiConverterOptionalString.readFromCursor(c), 
+                status: FfiConverterInt32.readFromCursor(c)
+            };
+        }
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterOptionalUInt32.writeIntoCursor(value.limit, c);
+            FfiConverterOptionalString.writeIntoCursor(value.after, c);
+            FfiConverterInt32.writeIntoCursor(value.status, c);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterOptionalUInt32.allocationSize(value.limit) +
+             FfiConverterOptionalString.allocationSize(value.after) +
+             FfiConverterInt32.allocationSize(value.status);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
 export type ListTargetedVerificationClaimsArgs = {
     targetIdentity: string
 }
@@ -2652,6 +2702,7 @@ export enum Query_Tags {
     IsModerator = "IsModerator",
     IsBanned = "IsBanned",
     ListBans = "ListBans",
+    ListReports = "ListReports",
     GetReactions = "GetReactions"
 }
 /**
@@ -3520,6 +3571,39 @@ Readonly<
 
     }
 
+    type ListReports__interface = {
+        tag: Query_Tags.ListReports;
+        inner: 
+Readonly<
+[ListReportsArgs
+]>
+    };
+    class ListReports_ extends UniffiEnum implements ListReports__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "Query";
+        readonly tag = Query_Tags.ListReports;
+        readonly inner: 
+Readonly<
+[ListReportsArgs
+]>;
+        constructor(v0: ListReportsArgs) {
+            super("Query", "ListReports");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: ListReportsArgs): ListReports_ {
+            return new ListReports_(v0);
+        }
+
+        static instanceOf(obj: any): obj is ListReports_ {
+            return obj.tag === Query_Tags.ListReports;
+        }
+
+    }
+
     type GetReactions__interface = {
         tag: Query_Tags.GetReactions;
         inner: 
@@ -3585,6 +3669,7 @@ Readonly<
   IsModerator: IsModerator_, 
   IsBanned: IsBanned_, 
   ListBans: ListBans_, 
+  ListReports: ListReports_, 
   GetReactions: GetReactions_
     });
 
@@ -3596,7 +3681,7 @@ Readonly<
  * match arm in `fetch_query` — no new FFI method required.
  */
 export type Query = InstanceType<
-    typeof Query['GetProfile' | 'GetEvent' | 'GetPost' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetRecommendedFeed' | 'GetExploreFeed' | 'GetAttributionFeed' | 'ListNotifications' | 'SubscribeUnreadNotificationCount' | 'SubscribeHeads' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ResolveVerifiedClaims' | 'ListFollowing' | 'ListFollowers' | 'SuggestFollow' | 'SearchPosts' | 'SearchUsers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'GetReactions']
+    typeof Query['GetProfile' | 'GetEvent' | 'GetPost' | 'GetPostThread' | 'GetIdentityFeed' | 'GetFollowingFeed' | 'GetRecommendedFeed' | 'GetExploreFeed' | 'GetAttributionFeed' | 'ListNotifications' | 'SubscribeUnreadNotificationCount' | 'SubscribeHeads' | 'ListEvents' | 'ListVerificationClaims' | 'ListVerificationTargets' | 'ListVerificationVerifies' | 'ListTargetedVerificationClaims' | 'ResolveVerifiedClaims' | 'ListFollowing' | 'ListFollowers' | 'SuggestFollow' | 'SearchPosts' | 'SearchUsers' | 'IsModerator' | 'IsBanned' | 'ListBans' | 'ListReports' | 'GetReactions']
 >;
 
 // FfiConverter for enum Query
@@ -3631,7 +3716,8 @@ const FfiConverterTypeQuery = (() => {
                 case 24: return new Query.IsModerator(FfiConverterTypeIsModeratorArgs.readFromCursor(c));
                 case 25: return new Query.IsBanned(FfiConverterTypeIsBannedArgs.readFromCursor(c));
                 case 26: return new Query.ListBans(FfiConverterTypeListBansArgs.readFromCursor(c));
-                case 27: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.readFromCursor(c));
+                case 27: return new Query.ListReports(FfiConverterTypeListReportsArgs.readFromCursor(c));
+                case 28: return new Query.GetReactions(FfiConverterTypeGetReactionsArgs.readFromCursor(c));
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
@@ -3793,8 +3879,14 @@ const FfiConverterTypeQuery = (() => {
                     FfiConverterTypeListBansArgs.writeIntoCursor(inner[0], c);
                     return;
                 }
-                case Query_Tags.GetReactions: {
+                case Query_Tags.ListReports: {
                     c.writeI32(27);
+                    const inner = value.inner;
+                    FfiConverterTypeListReportsArgs.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case Query_Tags.GetReactions: {
+                    c.writeI32(28);
                     const inner = value.inner;
                     FfiConverterTypeGetReactionsArgs.writeIntoCursor(inner[0], c);
                     return;
@@ -3960,6 +4052,12 @@ const FfiConverterTypeQuery = (() => {
                     const inner = value.inner;
                     let size = 4;
                     size += FfiConverterTypeListBansArgs.allocationSize(inner[0]);
+                    return size;
+                }
+                case Query_Tags.ListReports: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeListReportsArgs.allocationSize(inner[0]);
                     return size;
                 }
                 case Query_Tags.GetReactions: {
@@ -5232,6 +5330,13 @@ export interface PolycentricCoreLike {
  */
     copyEvents(signedEvents: Array<ArrayBuffer>) /*throws*/: void;
 /**
+ * Erase one event from a server. `request_bytes` is a serialized
+ * `DeleteContentRequest`. Returns serialized `DeleteContentResponse`
+ * proto bytes. Requires the caller (bearer JWT) to be a moderator on
+ * the server.
+ */
+    deleteContent(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
+/**
  * Unified entry point for every observable RPC.
  * `query` selects which RPC to run and supplies its parameters.
  * `query_key` is the cache key shared across subscribers.
@@ -5360,6 +5465,13 @@ export interface PolycentricCoreLike {
  * `ListEventsResponse`.
  */
     resolveIdentityChain(identity: string) /*throws*/: ArrayBuffer;
+/**
+ * Resolve, dismiss or reopen a report on a server. `request_bytes` is
+ * a serialized `ResolveReportRequest`. Returns serialized
+ * `ResolveReportResponse` proto bytes. Requires the caller (bearer
+ * JWT) to be a moderator on the server.
+ */
+    resolveReport(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer>;
 /**
  * Set the user's identity for user-specific state (i.e. the set of identities
  * a user blocks).
@@ -5621,6 +5733,53 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             },
             /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     );
+    }
+    
+/**
+ * Erase one event from a server. `request_bytes` is a serialized
+ * `DeleteContentRequest`. Returns serialized `DeleteContentResponse`
+ * proto bytes. Requires the caller (bearer JWT) to be a moderator on
+ * the server.
+ */
+    async deleteContent(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+        return await uniffiRustCallAsync(
+            /*rustCaller:*/ uniffiCaller,
+            /*rustFutureFunc:*/ () => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_delete_content(
+                    uniffiTypePolycentricCoreObjectFactory.clonePointer(this),FfiConverterString.lower(serverUrl, nativeModule().rustbuffer_alloc),FfiConverterArrayBuffer.lower(requestBytes, nativeModule().rustbuffer_alloc)
+                );
+            },
+            /*pollFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+            /*cancelFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+            /*completeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+            /*freeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+            // Async returns always go through the JS-side converter: the
+            // FFI symbol returns the future handle (u64), and the user-level
+            // RustBuffer comes back via the shared `rust_future_complete_*`
+            // export. The bytes the runtime hands back must be deserialized
+            // here using the per-callable return-type converter.
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+            /*asyncOpts:*/ asyncOpts_,
+            /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
+        );
+    } catch (__error: any) {
+        if (uniffiIsDebug && __error instanceof Error) {
+            __error.stack = __stack;
+        }
+        throw __error;
+    }
     }
     
 /**
@@ -6363,6 +6522,53 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
+ * Resolve, dismiss or reopen a report on a server. `request_bytes` is
+ * a serialized `ResolveReportRequest`. Returns serialized
+ * `ResolveReportResponse` proto bytes. Requires the caller (bearer
+ * JWT) to be a moderator on the server.
+ */
+    async resolveReport(serverUrl: string, requestBytes: ArrayBuffer, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer> /*throws*/ {
+    const __stack = uniffiIsDebug ? new Error().stack : undefined;
+    try {
+        return await uniffiRustCallAsync(
+            /*rustCaller:*/ uniffiCaller,
+            /*rustFutureFunc:*/ () => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_resolve_report(
+                    uniffiTypePolycentricCoreObjectFactory.clonePointer(this),FfiConverterString.lower(serverUrl, nativeModule().rustbuffer_alloc),FfiConverterArrayBuffer.lower(requestBytes, nativeModule().rustbuffer_alloc)
+                );
+            },
+            /*pollFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_poll_rust_buffer,
+            /*cancelFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_cancel_rust_buffer,
+            /*completeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_complete_rust_buffer,
+            /*freeFunc:*/ nativeModule().ubrn_ffi_polycentric_core_rust_future_free_rust_buffer,
+            // Async returns always go through the JS-side converter: the
+            // FFI symbol returns the future handle (u64), and the user-level
+            // RustBuffer comes back via the shared `rust_future_complete_*`
+            // export. The bytes the runtime hands back must be deserialized
+            // here using the per-callable return-type converter.
+            // Borrowed view over foreign memory: the call site owns the free,
+            // as on the sync paths. Unconditional — a no-op where buffers are
+            // already JS-owned.
+            /*liftFunc:*/ (__rb) => {
+                try {
+                    return FfiConverterArrayBuffer.lift(__rb);
+                } finally {
+                    nativeModule().rustbuffer_free(__rb);
+                }
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+            /*asyncOpts:*/ asyncOpts_,
+            /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError)
+        );
+    } catch (__error: any) {
+        if (uniffiIsDebug && __error instanceof Error) {
+            __error.stack = __stack;
+        }
+        throw __error;
+    }
+    }
+    
+/**
  * Set the user's identity for user-specific state (i.e. the set of identities
  * a user blocks).
  */
@@ -6846,6 +7052,9 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_copy_events() !== 43572) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_copy_events");
     }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_delete_content() !== 10969) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_delete_content");
+    }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query() !== 52560) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query");
     }
@@ -6920,6 +7129,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity_chain() !== 11511) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_resolve_identity_chain");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_resolve_report() !== 28304) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_resolve_report");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_active_identity() !== 55936) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_active_identity");
@@ -7002,6 +7214,7 @@ export default Object.freeze({
     FfiConverterTypeListFollowersArgs,
     FfiConverterTypeListFollowingArgs,
     FfiConverterTypeListNotificationsArgs,
+    FfiConverterTypeListReportsArgs,
     FfiConverterTypeListTargetedVerificationClaimsArgs,
     FfiConverterTypeListVerificationClaimsArgs,
     FfiConverterTypeListVerificationTargetsArgs,

@@ -1,5 +1,5 @@
-//! Observable query wrappers over the moderation read-endpoints of
-//! `IdentityService`: `IsModerator`, `IsBanned`, and `ListBans`. All are
+//! Observable query wrappers over the moderation read-endpoints:
+//! `IsModerator`, `IsBanned`, `ListBans` and `ListReports`. All are
 //! network-only (nothing is cached in the local event store) and
 //! authenticated by the bearer JWT the transport attaches.
 //!
@@ -14,13 +14,19 @@
 //! aggregate — callers pin a single server via `QueryOpts::servers` (and
 //! scope the `QueryKey` by that server) and it passes the server's
 //! `ListBansResponse` straight through.
+//!
+//! `list_reports` fans out but keeps each server's response apart, as a
+//! `{server_url: base64(ListReportsResponse)}` map, since reports are
+//! acted on against the server they came from.
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
+use base64::prelude::*;
 use polycentric_common::models::protos_v2::{
-    IsBannedRequest, IsModeratorRequest, ListBansRequest, ListBansResponse,
+    IsBannedRequest, IsModeratorRequest, ListBansRequest, ListBansResponse, ListReportsRequest,
     identity_service_client::IdentityServiceClient,
+    moderation_service_client::ModerationServiceClient,
 };
 use prost::Message;
 
@@ -40,6 +46,33 @@ pub struct ListBansArgs {
     pub limit: Option<u32>,
     pub after: Option<String>,
     pub query: Option<String>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct ListReportsArgs {
+    pub limit: Option<u32>,
+    pub after: Option<String>,
+    /// `ReportStatus` value; unspecified lists every status.
+    pub status: i32,
+}
+
+fn tag_response(server_url: String, response: Vec<u8>) -> Result<Vec<u8>, String> {
+    let entry = BTreeMap::from([(server_url, BASE64_STANDARD.encode(response))]);
+    serde_json::to_vec(&entry).map_err(|e| format!("tag response: {e}"))
+}
+
+fn merge_bytes_by_server(
+    values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
+    _client: &Arc<Mutex<PolycentricClient>>,
+) -> Vec<u8> {
+    let mut by_server: BTreeMap<String, String> = BTreeMap::new();
+    for v in values {
+        if let Ok(entry) = serde_json::from_slice::<BTreeMap<String, String>>(v) {
+            by_server.extend(entry);
+        }
+    }
+    serde_json::to_vec(&by_server).unwrap_or_default()
 }
 
 /// Union every server's one-entry `{server_url: bool}` JSON object into a
@@ -162,12 +195,58 @@ pub fn list_bans(
     Arc::new(query_client.fetch(query_key, query_fn, merge_list_bans, opts))
 }
 
+pub fn list_reports(
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: Option<QueryKey>,
+    args: ListReportsArgs,
+    opts: Option<QueryOpts>,
+) -> Arc<dyn QueryObservable> {
+    let ListReportsArgs {
+        limit,
+        after,
+        status,
+    } = args;
+    let query_fn = move |server_url: String| {
+        let after = after.clone();
+        async move {
+            let response = ModerationServiceClient::new(channel(&server_url).await?)
+                .list_reports(ListReportsRequest {
+                    limit,
+                    after,
+                    status,
+                })
+                .await
+                .map_err(|e| format!("list_reports [{server_url}]: {e}"))?
+                .into_inner();
+            tag_response(server_url, response.encode_to_vec())
+        }
+    };
+    Arc::new(query_client.fetch(query_key, query_fn, merge_bytes_by_server, opts))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn client() -> Arc<Mutex<PolycentricClient>> {
         Arc::new(Mutex::new(PolycentricClient::new()))
+    }
+
+    #[test]
+    fn merge_bytes_by_server_keeps_each_servers_response() {
+        let a = tag_response("https://a".into(), vec![1, 2]).unwrap();
+        let b = tag_response("https://b".into(), vec![3]).unwrap();
+        let merged = merge_bytes_by_server(&[a, vec![0xff], b], None, &client());
+        let decoded: BTreeMap<String, String> = serde_json::from_slice(&merged).unwrap();
+        assert_eq!(decoded.len(), 2);
+        assert_eq!(
+            BASE64_STANDARD.decode(&decoded["https://a"]).unwrap(),
+            vec![1, 2]
+        );
+        assert_eq!(
+            BASE64_STANDARD.decode(&decoded["https://b"]).unwrap(),
+            vec![3]
+        );
     }
 
     fn status_entry(server: &str, value: bool) -> Vec<u8> {

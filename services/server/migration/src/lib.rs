@@ -74,6 +74,7 @@ mod m20261019_000001_events_content_type;
 mod m20261022_000001_rename_reaction_tally_to_interaction_tally;
 mod m20261022_000002_more_counters_forinteraction_tally;
 mod m20261023_000001_decay_interaction_count;
+mod m20261027_000001_report_resolution;
 
 mod old_entity;
 
@@ -157,6 +158,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20261022_000001_rename_reaction_tally_to_interaction_tally::Migration),
             Box::new(m20261022_000002_more_counters_forinteraction_tally::Migration),
             Box::new(m20261023_000001_decay_interaction_count::Migration),
+            Box::new(m20261027_000001_report_resolution::Migration),
         ]
     }
 }
