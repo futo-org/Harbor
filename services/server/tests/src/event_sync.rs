@@ -719,6 +719,17 @@ async fn events_submitted_twice_are_ignored() {
 }
 
 #[tokio::test]
+async fn delete_reaction() {
+    let mut client = TestClient::new().await;
+    client.post_text("hello", current_timestamp());
+    let post = client.get_last_event_key();
+    client.thumbs_up(post, current_timestamp());
+    let reaction = client.get_last_event_key();
+    client.delete_key(reaction, current_timestamp());
+    client.submit_events().await;
+}
+
+#[tokio::test]
 async fn validation_missing_signed_event() {
     let mut client = TestClient::new().await;
     client.pending.last_mut().unwrap().signed_event = None;
