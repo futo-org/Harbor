@@ -2,6 +2,7 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
 use polycentric_common::jwt::ServerJwtClaims;
+use polycentric_common::merkle;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::content_service_client::ContentServiceClient;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
@@ -510,7 +511,7 @@ impl TestClient {
         created_at: u64,
     ) -> Vec<u8> {
         let collection = match &body {
-            ContentBody::Post(_) => COLLECTION_FEED,
+            ContentBody::Post(_) | ContentBody::Repost(_) => COLLECTION_FEED,
             ContentBody::Delete(delete) => {
                 delete.event_key.as_ref().map_or(0, |k| k.collection)
             }
@@ -522,7 +523,6 @@ impl TestClient {
             }
             ContentBody::ProfileUpdate(_) => COLLECTION_PROFILE_UPDATE,
             ContentBody::Identity(_) => COLLECTION_IDENTITY,
-            ContentBody::Repost(_) => COLLECTION_FEED,
             ContentBody::Report(_) => COLLECTION_REPORTS,
             ContentBody::Labels(_) => COLLECTION_LABELS,
             ContentBody::VerificationClaim(_)
@@ -535,12 +535,34 @@ impl TestClient {
         let (content_bytes, digest) = content_with_digest(content);
         let event = self.make_event(
             collection,
-            Vec::new(),
-            Vec::new(),
+            self.previous_signature(),
+            self.previous_root(),
             digest,
             created_at,
         );
         self.push_event_bundle2(event, content_bytes)
+    }
+
+    fn previous_signature(&self) -> Vec<u8> {
+        self.pending
+            .last()
+            .and_then(|bundle| bundle.signed_event.as_ref())
+            .map(|event| event.signature.clone())
+            .unwrap_or_else(Vec::new)
+    }
+
+    fn previous_root(&self) -> Vec<u8> {
+        let canonical = self
+            .pending
+            .iter()
+            .filter_map(|bundle| match bundle.signed_event.as_ref() {
+                Some(event) => Some(event.signature.clone()),
+                None => None,
+            })
+            .collect::<Vec<_>>();
+        merkle::merkle_tree_hash(&canonical)
+            .map(|h| h.to_vec())
+            .unwrap_or_else(Vec::new)
     }
 
     fn push_event_bundle2(
@@ -945,6 +967,16 @@ fn bundle(signed_event: SignedEvent, content_bytes: Vec<u8>) -> EventBundle {
     }
 }
 
+/// Fake previous signature that passed validation (but is not valid).
+fn fake_previous_signature() -> Vec<u8> {
+    vec![1; 64]
+}
+
+/// Fake previous root that passed validation (but is not valid).
+fn fake_previous_root() -> Vec<u8> {
+    vec![1; 32]
+}
+
 /// Build a signed identity-collection bundle.
 #[allow(clippy::too_many_arguments)]
 pub fn make_identity_bundle(
@@ -969,8 +1001,8 @@ pub fn make_identity_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
-        vec![],
+        fake_previous_signature(),
+        fake_previous_root(),
         digest,
         created_at,
     );
@@ -1000,8 +1032,8 @@ pub fn make_profile_update_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
-        vec![],
+        fake_previous_signature(),
+        fake_previous_root(),
         digest,
         created_at,
     );
@@ -1055,7 +1087,7 @@ pub fn make_post_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
+        fake_previous_signature(),
         previous_root,
         digest,
         created_at,
@@ -1115,8 +1147,8 @@ pub fn make_verification_claim_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
-        vec![],
+        fake_previous_signature(),
+        fake_previous_root(),
         digest,
         created_at,
     );

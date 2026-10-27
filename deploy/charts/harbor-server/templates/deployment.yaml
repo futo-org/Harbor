@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "harbor-server.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "harbor-server.selectorLabels" . | nindent 6 }}
@@ -42,10 +44,13 @@ spec:
             - name: metrics
               containerPort: 9464
               protocol: TCP
-          {{- with .Values.env }}
           env:
+            # Served on /version; CI polls it to tell when a deploy has rolled out.
+            - name: HARBOR_COMMIT
+              value: {{ .Chart.AppVersion | quote }}
+            {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- end }}
           {{- with .Values.envFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}

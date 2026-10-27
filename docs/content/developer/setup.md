@@ -39,10 +39,13 @@ apt-get install \
   libsasl2-dev
 ```
 
-The web build compiles `rs-core` to WebAssembly, so add the WASM target:
+The web build compiles `rs-core` to WebAssembly, so add the WASM target and
+the `wasm-bindgen` CLI. The CLI only accepts modules built against its own
+version, so install the one `packages/rs-core/Cargo.toml` pins:
 
 ```sh
 rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli@0.2.125
 ```
 
 Building or running the mobile app additionally needs the Android SDK/NDK, or

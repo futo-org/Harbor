@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 use tonic::Status;
 
 pub mod client;
+pub(crate) mod fns;
 
 /// Database connection.
 ///
@@ -73,6 +74,36 @@ impl DbConn {
             DbInner::Mock(_) => {
                 panic!("mocked database transaction not implemented")
             }
+        }
+    }
+
+    /// Return the connection to the pool.
+    ///
+    /// # Notes
+    ///
+    /// This happens asynchronously when the connection is dropped, this methods
+    /// allows it to be done inline.
+    pub(crate) async fn return_to_pool(self) {
+        match self.0 {
+            DbInner::Sqlx(conn) => conn.into_inner().return_to_pool().await,
+            #[cfg(test)]
+            DbInner::Mock(_) => {}
+        }
+    }
+
+    /// Close the connection.
+    ///
+    /// # Notes
+    ///
+    /// This not required to be called, by default the connection is returned to
+    /// the pool.
+    pub(crate) async fn close(self) -> Result<(), DbErr> {
+        match self.0 {
+            DbInner::Sqlx(conn) => {
+                conn.into_inner().close().await.map_err(into_seaorm_error)
+            }
+            #[cfg(test)]
+            DbInner::Mock(_) => Ok(()),
         }
     }
 }
@@ -172,6 +203,7 @@ impl ConnectionTrait for DbConn {
 /// Database transaction.
 // NOTE: we should only use the connection for one request, so this mutex should
 // never be contented, but its required for the ConnectionTrait implementation.
+#[must_use]
 pub(crate) struct DbTx<'c>(Mutex<sqlx::Transaction<'c, sqlx::Postgres>>);
 
 impl<'c> DbTx<'c> {
@@ -182,6 +214,16 @@ impl<'c> DbTx<'c> {
             .commit()
             .await
             .map_err(into_seaorm_error)
+    }
+
+    /// Commits this transaction and start another.
+    pub(crate) async fn commit_and_chain(&mut self) -> Result<(), DbErr> {
+        self.0
+            .get_mut()
+            .execute("COMMIT AND CHAIN")
+            .await
+            .map_err(into_seaorm_error)?;
+        Ok(())
     }
 
     /// Abort this transaction.

@@ -10,7 +10,7 @@ use entity::event;
 use polycentric_common::models::protos_v2::Blob;
 use polycentric_common::models::validate::{Validate, ValidationError};
 use polycentric_common::models::{
-    block, collections, delete, event_key, follow,
+    block, collections, content_types, delete, event_key, follow,
 };
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
@@ -25,7 +25,7 @@ use crate::service::identity::repository::Query as IdentityRepository;
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
-    Application, Content, Delete, Event, EventBundle, EventKey, PublicKey,
+    Application, Content, Event, EventBundle, EventKey, PublicKey,
     PutEventError, PutEventsRequest, PutEventsResponse,
 };
 
@@ -78,6 +78,13 @@ pub async fn handle(
             // not as an event specific errors as it's unlikely to be related to
             // the event.
             Err(status) if status.code() == Code::Internal => {
+                // Close the connection to be prevent it from being reused.
+                // We've seen some unusual errors potentially (but not known for
+                // sure) caused by incomplete transactions.
+                // See #1982 for more information
+                if let Err(err) = ctx.db.close().await {
+                    tracing::error!(error = %err, "failed to close connection");
+                }
                 return Err(status);
             }
             Err(status) => {
@@ -106,11 +113,10 @@ pub async fn handle(
 
     let missing_blobs = remove_present_blobs(&ctx, all_blobs)
         .await
-        .unwrap_or_else(|e| {
+        .unwrap_or_else(|()| {
             // A failure occurred while checking what blobs the server already has.
             // Assume the server is not in a condition to accept new blobs and silently
             // return no missing blobs to the client.
-            tracing::warn!(error = %e, "put_events blob processing");
             vec![]
         });
 
@@ -152,18 +158,10 @@ async fn process_event(
         .ok_or_else(|| Status::invalid_argument("signed event missing"))?;
 
     let event =
-        Event::decode(signed_event.event_bytes.as_slice()).map_err(|e| {
-            tracing::debug!(error = %e, "put_events decode error");
+        Event::decode(signed_event.event_bytes.as_slice()).map_err(|err| {
+            tracing::debug!(error = %err, "failed to decode event");
             Status::invalid_argument("signed event bytes invalid")
         })?;
-    // TODO: validate:
-    // * event.key.collection -> match ContentBody variant
-    // * event.key.sequence
-    // * event.key.identity?
-    // * event.identity_sequence
-    // * event.vector_clock
-    // * event.previous_signature
-    // * event.previous_root
     event.validate_check(warnings, |err| map_warning(err.into()));
 
     let key = event.key.ok_or_else(|| {
@@ -184,8 +182,8 @@ async fn process_event(
                 &key.identity,
             )
             .await
-            .map_err(|e| {
-                tracing::error!(error = %e, "put_events ban check db error");
+            .map_err(|err| {
+                tracing::error!(error = %err, "failed to check if identity is banned");
                 Status::internal("internal server error")
             })?;
             banned_cache.insert(Box::from(&*key.identity), is_banned);
@@ -209,7 +207,7 @@ async fn process_event(
                 let app_id = EventsRepository::Mutation::application_id(&ctx.db, app)
                     .await
                     .map_err(|e| {
-                        tracing::error!(error = %e, "put_events application db error");
+                        tracing::error!(error = %e, "failed to get/store application info");
                         Status::internal("internal server error")
                     })?;
 
@@ -226,7 +224,7 @@ async fn process_event(
     // Kafka partition/message key: the serialized protobuf event key.
     // Encoded here while `key` is whole — its fields are moved out below.
     let event_key_bytes = key.encode_to_vec();
-
+    let mut content_type = None;
     let decoded_content = if let (Some(serialized_content), Some(digest)) = (
         event_bundle.serialized_content.as_ref(),
         event.content_digest.as_ref(),
@@ -237,7 +235,7 @@ async fn process_event(
 
         let content_bytes = serialized_content.content_bytes.as_slice();
         let content = Content::decode(content_bytes).map_err(|e| {
-            tracing::debug!(error = %e, "put_events content decode error");
+            tracing::debug!(error = %e, "failed to decode event content");
             Status::invalid_argument("invalid content_bytes")
         })?;
         validate_content(&content, &key, warnings, map_warning);
@@ -248,6 +246,10 @@ async fn process_event(
             // We got validation warnings, so we won't store the content.
             None
         } else {
+            content_type = content
+                .content_body
+                .as_ref()
+                .map(|c| content_types::of(c) as i16);
             Some((content_bytes, content, digest))
         }
     } else {
@@ -269,8 +271,8 @@ async fn process_event(
 
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
-    let txn = ctx.db.begin().await.map_err(|e| {
-        tracing::error!(error = %e, "put_events txn begin error");
+    let tx = ctx.db.begin().await.map_err(|e| {
+        tracing::error!(error = %e, "failed to begin transaction");
         Status::internal("internal server error")
     })?;
 
@@ -281,8 +283,9 @@ async fn process_event(
     // by a key whose revocation bound still vouches for this
     // signature.
     if key.collection != collections::IDENTITY {
-        authorize_event_signer(
-            &txn,
+        #[allow(clippy::collapsible_if)] // Easier to understand this way.
+        if let Err(err) = authorize_event_signer(
+            &tx,
             &ctx.proof_cache,
             &key.identity,
             &PublicKey {
@@ -292,7 +295,13 @@ async fn process_event(
             key.collection,
             &signed_event.signature,
         )
-        .await?;
+        .await
+        {
+            if let Err(err) = tx.rollback().await {
+                tracing::warn!(error = %err, "failed to rollback transaction");
+            }
+            return Err(err);
+        }
     }
 
     let active_model = event::ActiveModel {
@@ -321,19 +330,19 @@ async fn process_event(
         .unwrap_or(Utc::now())
         .fixed_offset()),
         synced_at: Set(Utc::now().fixed_offset()),
-        content_type: NotSet, // Set by `add_event`.
+        content_type: Set(content_type),
     };
 
     let stored = match EventsRepository::Mutation::add_event(
-        &txn,
+        &tx,
         active_model,
         decoded_content,
     )
     .await
     {
         Ok(true) => {
-            txn.commit().await.map_err(|err| {
-                tracing::error!(error = %err, "put_events txn commit error");
+            tx.commit().await.map_err(|err| {
+                tracing::error!(error = %err, "failed to commit transaction");
                 Status::internal("internal server error")
             })?;
 
@@ -368,7 +377,7 @@ async fn process_event(
                     )
                     .await
                 {
-                    tracing::warn!(error = %e, "put_events kafka publish error");
+                    tracing::warn!(error = %e, "failed to publish message to kafka");
                 }
             });
             true
@@ -376,15 +385,19 @@ async fn process_event(
         Ok(false) => {
             // Duplicate event — already stored, treat as success, but revert
             // the content changes.
-            txn.rollback().await.map_err(|err| {
-                tracing::error!(error = %err, "put_events txn abort error");
+            tx.rollback().await.map_err(|err| {
+                tracing::error!(error = %err, "failed to rollback transaction");
                 Status::internal("internal server error")
             })?;
             false
         }
         Err(err) => {
-            tracing::error!(error = %err, "put_events db error");
-            return Err(Status::internal("internal server error"));
+            // NOTE: don't log the error as that's already done in add_event.
+            // The returned status is safe to return to the user.
+            if let Err(err) = tx.rollback().await {
+                tracing::warn!(error = %err, "failed to rollback transaction");
+            }
+            return Err(err);
         }
     };
 
@@ -422,11 +435,6 @@ fn validate_content(
         ContentBody::Post(post) => {
             check_collection(collection, collections::FEED);
             post.validate_check(warnings, |err| map_warning(err.into()));
-
-            // TODO: needs db for validation of:
-            // * reply.root & reply.parent events exists.
-            // * reply.root & reply.parent in same thread?
-            // * quote event exists.
         }
         ContentBody::Delete(delete) => {
             if let Some(delete_key) = delete.event_key.as_ref() {
@@ -458,117 +466,46 @@ fn validate_content(
         }
         ContentBody::Reaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-
-            // TODO: needs db for validation of:
-            // * at most 1 reaction per post per user.
-            // * in db only allow reactions to posts -- don't think we need to
-            //   return a warning for this.
         }
         ContentBody::AttributedToReaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-
-            // TODO: needs db for validation of:
-            // * at most 1 reaction per URL (attributed item) per user.
         }
         ContentBody::ProfileUpdate(_) => {
             check_collection(collection, collections::PROFILE);
         }
         ContentBody::Identity(_) => {
             check_collection(collection, collections::IDENTITY);
-            // TODO: validate.
+
+            // TODO: validation that needs previous events:
+            // * recovery signature must be a signature from the
+            //   currently-active backup key.
         }
         ContentBody::Repost(_) => {
             check_collection(collection, collections::FEED);
-
-            // TODO: needs db for validation of:
-            // * at most 1 reaction per post per user.
-            // * in db only reposting of posts
         }
         ContentBody::Report(_) => {
             check_collection(collection, collections::REPORTS);
-
-            // TODO: needs db for validation of:
-            // * limit the amount of reports per post?
-            // * limit to posts and reposts only?
         }
         ContentBody::Labels(_) => {
             check_collection(collection, collections::LABELS);
-
-            // TODO: needs db for validation of:
-            // * limit the amount of labels per key per user in total (accross
-            //   multiple requests)
-            // * limit to posts only?
         }
         ContentBody::VerificationClaim(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-
-            // TODO: don't allow spamming of the same claim if it's denied?
         }
         ContentBody::VerificationVerify(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-
-            // TODO: needs db for validation of:
-            // * event key is known.
-            // * event key is a valid claim.
         }
         ContentBody::VerificationTarget(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-
-            // TODO: limit the target identities in some way?
         }
     }
 }
 
-/// Check if the `identity` is authorised to perform its mutation.
-///
-/// This will return false if, for example, an event tries to delete a post
-/// that the identity of the deletion event didn't create.
-///
-/// `content` must be contained in the event itself.
-pub fn event_is_authorised(identity: &str, content: Option<&Content>) -> bool {
-    let Some(Content {
-        content_body: Some(content),
-    }) = content
-    else {
-        // Couldn't extract (valid) content, so don't consider the event as
-        // authorised.
-        return false;
-    };
-
-    match content {
-        // Only events items related to the identity themselves.
-        ContentBody::Post(_)
-        | ContentBody::Follow(_)
-        | ContentBody::Block(_)
-        | ContentBody::Reaction(_)
-        | ContentBody::AttributedToReaction(_)
-        | ContentBody::ProfileUpdate(_)
-        | ContentBody::Identity(_)
-        | ContentBody::Repost(_)
-        // Can report other identity's events.
-        | ContentBody::Report(_)
-        // Anyone can add any label.
-        | ContentBody::Labels(_)
-        // Anyone can make a claim.
-        | ContentBody::VerificationClaim(_) => true,
-        // Can only delete your own events.
-        ContentBody::Delete(Delete { event_key }) => {
-            let Some(event_key) = event_key else { return false; };
-            // Make sure the identity of the deletion event is the same
-            // as the identity of the to-be-deleted event.
-            event_key.identity == identity
-        },
-        // TODO: these will need verification.
-        ContentBody::VerificationVerify(_)
-        | ContentBody::VerificationTarget(_) => false,
-    }
-}
-
-/// Keep only the blobs that are not already present
+/// Keep only the blobs that are not already present.
 async fn remove_present_blobs(
     ctx: &PublicContext,
     blobs: HashSet<Blob>,
-) -> Result<Vec<Blob>, Status> {
+) -> Result<Vec<Blob>, ()> {
     let digests: Vec<_> = blobs
         .iter()
         .filter_map(|blob| blob.digest.as_ref())
@@ -577,9 +514,8 @@ async fn remove_present_blobs(
     let already_present =
         ContentRepository::Query::find_digests_in_db(&ctx.db, &digests)
             .await
-            .map_err(|e| {
-                tracing::error!(error = %e, "put_events blob db error");
-                Status::internal("internal server error")
+            .map_err(|err| {
+                tracing::error!(error = %err, "failed to find digest of blob");
             })?;
 
     let missing_blobs = blobs
@@ -591,62 +527,4 @@ async fn remove_present_blobs(
         .collect();
 
     Ok(missing_blobs)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::service::proto::{Block, EventKey};
-
-    fn delete_content(target_identity: &str) -> Content {
-        Content {
-            content_body: Some(ContentBody::Delete(Delete {
-                event_key: Some(EventKey {
-                    collection: collections::SOCIAL_GRAPH,
-                    identity: target_identity.to_string(),
-                    signed_by: Some(PublicKey {
-                        key_type: 1,
-                        key: vec![0xaa],
-                    }),
-                    sequence: 1,
-                }),
-            })),
-        }
-    }
-
-    #[test]
-    fn a_delete_of_your_own_event_is_authorised() {
-        assert!(event_is_authorised("alice", Some(&delete_content("alice"))));
-    }
-
-    #[test]
-    fn a_delete_of_another_identitys_event_is_not_authorised() {
-        assert!(!event_is_authorised(
-            "mallory",
-            Some(&delete_content("alice"))
-        ));
-    }
-
-    #[test]
-    fn a_delete_without_an_event_key_is_not_authorised() {
-        let content = Content {
-            content_body: Some(ContentBody::Delete(Delete { event_key: None })),
-        };
-        assert!(!event_is_authorised("alice", Some(&content)));
-    }
-
-    #[test]
-    fn an_event_without_content_is_not_authorised() {
-        assert!(!event_is_authorised("alice", None));
-    }
-
-    #[test]
-    fn a_block_of_another_identity_is_authorised() {
-        let content = Content {
-            content_body: Some(ContentBody::Block(Block {
-                identity: "bob".to_string(),
-            })),
-        };
-        assert!(event_is_authorised("alice", Some(&content)));
-    }
 }

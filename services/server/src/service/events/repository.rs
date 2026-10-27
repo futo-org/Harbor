@@ -1,6 +1,6 @@
 use ::entity::{
-    application, block, content, content_delete, event, follow, profile, quote,
-    reaction, reaction_tally, reply, repost,
+    application, block, content, content_delete, event, follow,
+    interaction_tally, profile, quote, reaction, reply, repost,
 };
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
@@ -9,17 +9,17 @@ use polycentric_common::models::protos_v2::{
 };
 use polycentric_common::models::{collections, content_types};
 use sea_orm::sea_query::{
-    CommonTableExpression, DeleteStatement, Expr, Func, InsertStatement,
-    IntoCondition, IntoTableRef, OnConflict, SelectExpr, SelectStatement,
-    SubQueryStatement, UnionType, UpdateStatement, WithClause,
+    CommonTableExpression, DeleteStatement, Expr, InsertStatement,
+    IntoCondition, IntoTableRef, OnConflict, ReturningClause, SelectExpr,
+    SelectStatement, SubQueryStatement, UnionType, UpdateStatement, WithClause,
 };
 use sea_orm::*;
 use tonic::Status;
 
+use crate::db::fns::{decay_interaction_count, decay_interaction_count1};
 use crate::service::content::content_repository::Mutation as ContentRepository;
 use crate::service::content::repository::Mutation as ContentChildRepository;
 use crate::service::content::repository::{EventKeyParts, split_event_key};
-use crate::service::events::rpc::put_events::event_is_authorised;
 
 const COLLECTION_FEED: i16 = collections::FEED as i16;
 const COLLECTION_PROFILE: i16 = collections::PROFILE as i16;
@@ -256,7 +256,7 @@ impl Mutation {
     /// already stored.
     pub async fn add_event<C: ConnectionTrait>(
         db: &C,
-        mut event: event::ActiveModel,
+        event: event::ActiveModel,
         decoded_content: Option<(&[u8], Content, &ContentDigest)>,
     ) -> Result<bool, Status> {
         // We're going to build one big query using Common Table Expressions
@@ -267,13 +267,6 @@ impl Mutation {
         // so various sub-queries add to this.
         let mut with = WithClause::new();
         with.recursive(false);
-
-        let identity = event.identity.try_as_ref().map_or("", |s| &**s);
-        let content = decoded_content.as_ref().map(|(_, c, _)| c);
-        let is_authorised = event_is_authorised(identity, content);
-        event.content_type = Set(content
-            .and_then(|content| content.content_body.as_ref())
-            .map(|body| content_types::of(body) as i16));
 
         // Store the event itself into the `events` table.
         const INSERTED_EVENT: &str = "inserted_event";
@@ -295,25 +288,23 @@ impl Mutation {
 
             if let Some(content_body) = content.content_body {
                 // Update cache tables.
-                if is_authorised {
-                    let event_id_identity = (
-                        INSERTED_EVENT.into(),
-                        event::Column::Id.into(),
-                        event::Column::Identity.into(),
-                    );
-                    let maybe_query = Mutation::update_cache_query(
-                        &mut with,
-                        &content_body,
-                        event_id_identity,
-                    ).map_err(|err| {
-                        tracing::error!(error = %err, "failed to create query to update cache tables");
-                        Status::internal("internal server error")
-                    })?;
-                    if let Some(query) = maybe_query {
-                        let mut cte = CommonTableExpression::new();
-                        cte.table_name("inserted_cache").query(query);
-                        with.cte(cte);
-                    }
+                let event_id_identity = (
+                    INSERTED_EVENT.into(),
+                    event::Column::Id.into(),
+                    event::Column::Identity.into(),
+                );
+                let maybe_query = Mutation::update_cache_query(
+                    &mut with,
+                    &content_body,
+                    event_id_identity,
+                ).map_err(|err| {
+                    tracing::error!(error = %err, "failed to create query to update cache tables");
+                    Status::internal("internal server error")
+                })?;
+                if let Some(query) = maybe_query {
+                    let mut cte = CommonTableExpression::new();
+                    cte.table_name("inserted_cache").query(query);
+                    with.cte(cte);
                 }
 
                 // Store the decoded body of the content.
@@ -338,11 +329,11 @@ impl Mutation {
 
         // Dummy query to which we attached everything.
         let mut query = SelectStatement::new();
-        query.expr(Expr::Constant(true.into()));
+        query.column(event::Column::Id).from(INSERTED_EVENT);
         let query = query.with(with);
 
-        match db.execute(&query).await {
-            Ok(_) => Ok(true),
+        match db.query_one(&query).await {
+            Ok(res) => Ok(res.is_some()),
             Err(ref err) if is_unique_violation(err) => Ok(false),
             Err(err) => {
                 tracing::error!(error = %err, "failed to store event");
@@ -382,7 +373,7 @@ impl Mutation {
                     .map(|q| Some(q.into()))
             }
             ContentBody::Repost(repost) => {
-                Mutation::repost_query(repost, event_id_identity)
+                Mutation::repost_query(with, repost, event_id_identity)
                     .map(|q| Some(q.into()))
             }
             ContentBody::Delete(delete) => Mutation::delete_query(with, delete),
@@ -397,21 +388,27 @@ impl Mutation {
     ) -> Result<InsertStatement, DbErr> {
         let mut query = InsertStatement::new();
         query
-            .into_table(reaction_tally::Entity)
+            .into_table(interaction_tally::Entity)
             .columns([
-                reaction_tally::Column::EventId,
-                reaction_tally::Column::PositiveCount,
-                reaction_tally::Column::NegativeCount,
-                reaction_tally::Column::DecayedCount,
+                interaction_tally::Column::EventId,
+                interaction_tally::Column::ReactionPositiveCount,
+                interaction_tally::Column::ReactionNegativeCount,
+                interaction_tally::Column::ReplyCount,
+                interaction_tally::Column::RepostCount,
+                interaction_tally::Column::QuoteCount,
+                interaction_tally::Column::DecayedCount,
             ])
             .select_from({
                 let mut q = SelectStatement::new();
                 q.from(event_table.clone())
                     .expr(Expr::col((event_table.clone(), event_id.clone())))
-                    .expr(Expr::Constant(0.into()))
-                    .expr(Expr::Constant(0.into()))
-                    .expr(reaction_count_decay(
-                        Expr::Constant(0.into()), // Reaction count.
+                    .expr(Expr::Constant(0.into())) // Reaction positive.
+                    .expr(Expr::Constant(0.into())) // Reaction negative.
+                    .expr(Expr::Constant(0.into())) // Reply.
+                    .expr(Expr::Constant(0.into())) // Repost.
+                    .expr(Expr::Constant(0.into())) // Quote.
+                    .expr(decay_interaction_count1(
+                        Expr::Constant(0.into()), // Total interaction count.
                         Expr::col((
                             event_table.clone(),
                             event::Column::CreatedAt,
@@ -465,10 +462,68 @@ impl Mutation {
                 })
                 .map_err(|err| {
                     DbErr::Custom(format!("incorrect amount of values: {err}"))
-                })?;
+                })?
+                .returning_col(quote::Column::Post);
 
             let mut cte = CommonTableExpression::new();
-            cte.table_name("inserted_quote").query(insert_quote);
+            const INSERTED_QUOTE: &str = "inserted_quote";
+            cte.table_name(INSERTED_QUOTE).query(insert_quote);
+            with.cte(cte);
+
+            let mut update_interaction_tally = UpdateStatement::new();
+            update_interaction_tally
+                .table(interaction_tally::Entity)
+                .value(
+                    interaction_tally::Column::QuoteCount,
+                    Expr::col(interaction_tally::Column::QuoteCount)
+                        .add(Expr::Constant(1.into())),
+                )
+                .value(
+                    interaction_tally::Column::DecayedCount,
+                    decay_interaction_count(
+                        Expr::col(
+                            interaction_tally::Column::ReactionPositiveCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::ReplyCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::RepostCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::QuoteCount
+                                .as_column_ref(),
+                        )
+                        .add(Expr::Constant(1.into())),
+                        Expr::col(event::Column::CreatedAt.as_column_ref()),
+                    ),
+                )
+                .value(
+                    interaction_tally::Column::UpdatedAt,
+                    Expr::current_timestamp(),
+                )
+                // This should be an inner join, but SeaORM doesn't support this,
+                // see <https://github.com/SeaQL/sea-query/issues/608>.
+                .from(event::Entity)
+                .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
+                    Expr::col(
+                        interaction_tally::Column::EventId.as_column_ref(),
+                    ),
+                ))
+                .cond_where(Expr::col(interaction_tally::Column::EventId).eq(
+                    {
+                        let mut q = SelectStatement::new();
+                        q.column(quote::Column::Post).from(INSERTED_QUOTE);
+                        Expr::from(q)
+                    },
+                ));
+
+            let mut cte = CommonTableExpression::new();
+            cte.table_name("update_interaction_tally_quote")
+                .query(update_interaction_tally);
             with.cte(cte);
         }
 
@@ -514,10 +569,68 @@ impl Mutation {
                 })
                 .map_err(|err| {
                     DbErr::Custom(format!("incorrect amount of values: {err}"))
-                })?;
+                })?
+                .returning_col(reply::Column::Post);
 
             let mut cte = CommonTableExpression::new();
-            cte.table_name("inserted_reply").query(insert_reply);
+            const INSERTED_REPLY: &str = "inserted_reply";
+            cte.table_name(INSERTED_REPLY).query(insert_reply);
+            with.cte(cte);
+
+            let mut update_interaction_tally = UpdateStatement::new();
+            update_interaction_tally
+                .table(interaction_tally::Entity)
+                .value(
+                    interaction_tally::Column::ReplyCount,
+                    Expr::col(interaction_tally::Column::ReplyCount)
+                        .add(Expr::Constant(1.into())),
+                )
+                .value(
+                    interaction_tally::Column::DecayedCount,
+                    decay_interaction_count(
+                        Expr::col(
+                            interaction_tally::Column::ReactionPositiveCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::ReplyCount
+                                .as_column_ref(),
+                        )
+                        .add(Expr::Constant(1.into())),
+                        Expr::col(
+                            interaction_tally::Column::RepostCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::QuoteCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(event::Column::CreatedAt.as_column_ref()),
+                    ),
+                )
+                .value(
+                    interaction_tally::Column::UpdatedAt,
+                    Expr::current_timestamp(),
+                )
+                // This should be an inner join, but SeaORM doesn't support this,
+                // see <https://github.com/SeaQL/sea-query/issues/608>.
+                .from(event::Entity)
+                .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
+                    Expr::col(
+                        interaction_tally::Column::EventId.as_column_ref(),
+                    ),
+                ))
+                .cond_where(Expr::col(interaction_tally::Column::EventId).eq(
+                    {
+                        let mut q = SelectStatement::new();
+                        q.column(reply::Column::Post).from(INSERTED_REPLY);
+                        Expr::from(q)
+                    },
+                ));
+
+            let mut cte = CommonTableExpression::new();
+            cte.table_name("update_interaction_tally_reply")
+                .query(update_interaction_tally);
             with.cte(cte);
         }
 
@@ -596,16 +709,17 @@ impl Mutation {
                 reaction::Column::Positive,
             ])
             .select_from({
+                let event_table_id =
+                    Expr::col((event_table.clone(), event_id.clone()));
                 post_event_id
-                    .clear_selects() // Need to rename.
-                    .from(event_table.clone())
+                    .clear_selects()
                     .expr(SelectExpr {
-                        expr: Expr::col((event_table.clone(), event_id)),
+                        expr: event_table_id.clone(),
                         alias: Some("event_id".into()),
                         window: None,
                     })
                     .expr(SelectExpr {
-                        expr: Expr::col((event_table, identity)),
+                        expr: Expr::col((event_table.clone(), identity)),
                         alias: Some("identity".into()),
                         window: None,
                     })
@@ -623,65 +737,119 @@ impl Mutation {
                         expr: Expr::from(reaction.positive),
                         alias: Some("positive".into()),
                         window: None,
-                    });
+                    })
+                    .from(event_table.clone())
+                    // Ensure the event the reaction is on is a post.
+                    .cond_where(
+                        Expr::col(event::Column::ContentType.as_column_ref())
+                            .eq(Expr::Constant(content_types::POST.into())),
+                    );
                 post_event_id
             })
             .map_err(|err| {
                 DbErr::Custom(format!("incorrect amount of values: {err}"))
             })?
-            .returning_all();
+            // If the user already reacted to the post overwrite it with the new
+            // reaction.
+            .on_conflict({
+                let mut c = OnConflict::columns([
+                    reaction::Column::OnPost,
+                    reaction::Column::Identity,
+                ]);
+                c.update_columns([
+                    reaction::Column::EventId,
+                    reaction::Column::Emoji,
+                    reaction::Column::Positive,
+                ]);
+                c
+            })
+            .returning(ReturningClause::Exprs(vec![
+                Expr::cust("WITH (NEW AS NEW, OLD AS OLD) NEW.on_post"),
+                // Map old positive -> new positive transition to a tuple of
+                // positive and negative count changes.
+                Expr::cust(
+                    "
+                    CASE (OLD.positive, NEW.positive)
+                      WHEN (NULL::BOOLEAN, true) THEN ARRAY[1, 0]
+                      WHEN (NULL::BOOLEAN, false) THEN ARRAY[0, 1]
+                      WHEN (true, true) THEN ARRAY[0, 0]
+                      WHEN (true, false) THEN ARRAY[-1, 1]
+                      WHEN (false, true) THEN ARRAY[1, -1]
+                      WHEN (false, false) THEN ARRAY[0, 0]
+                      ELSE ARRAY[0, 0]
+                    END AS count_diffs",
+                ),
+            ]));
 
         let mut cte = CommonTableExpression::new();
         const INSERTED_REACTION: &str = "inserted_reaction";
         cte.table_name(INSERTED_REACTION).query(insert_reaction);
         with.cte(cte);
 
-        let positive = if reaction.positive { 1 } else { 0 };
-        let negative = if reaction.positive { 0 } else { 1 };
-
         let mut query = UpdateStatement::new();
-        query.table(reaction_tally::Entity).values([
-            (
-                reaction_tally::Column::PositiveCount,
-                Expr::col(
-                    reaction_tally::Column::PositiveCount.as_column_ref(),
-                )
-                .add(Expr::Constant(positive.into())),
-            ),
-            (
-                reaction_tally::Column::NegativeCount,
-                Expr::col(
-                    reaction_tally::Column::NegativeCount.as_column_ref(),
-                )
-                .add(Expr::Constant(negative.into())),
-            ),
-        ]);
-
-        if reaction.positive {
-            query.value(
-                reaction_tally::Column::DecayedCount,
-                reaction_count_decay(
-                    Expr::col(
-                        reaction_tally::Column::PositiveCount.as_column_ref(),
-                    )
-                    .add(Expr::Constant(positive.into())),
-                    Expr::col(event::Column::CreatedAt.as_column_ref()),
-                ),
-            );
-        }
-
         query
+            .table(interaction_tally::Entity)
+            .values([
+                (
+                    interaction_tally::Column::ReactionPositiveCount,
+                    Expr::col(
+                        interaction_tally::Column::ReactionPositiveCount
+                            .as_column_ref(),
+                    )
+                    .add(Expr::cust("inserted_reaction.count_diffs[1]")),
+                ),
+                (
+                    interaction_tally::Column::ReactionNegativeCount,
+                    Expr::col(
+                        interaction_tally::Column::ReactionNegativeCount
+                            .as_column_ref(),
+                    )
+                    .add(Expr::cust("inserted_reaction.count_diffs[2]")),
+                ),
+                (
+                    interaction_tally::Column::UpdatedAt,
+                    Expr::current_timestamp(),
+                ),
+                (
+                    interaction_tally::Column::DecayedCount,
+                    decay_interaction_count(
+                        Expr::col(
+                            interaction_tally::Column::ReactionPositiveCount
+                                .as_column_ref(),
+                        )
+                        .add(Expr::cust("inserted_reaction.count_diffs[1]")),
+                        Expr::col(
+                            interaction_tally::Column::ReplyCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::RepostCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::QuoteCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(event::Column::CreatedAt.as_column_ref()),
+                    ),
+                ),
+            ])
             .from(INSERTED_REACTION)
             // This should be an inner join, but SeaORM doesn't support this,
             // see <https://github.com/SeaQL/sea-query/issues/608>.
             .from(event::Entity)
             .and_where(
-                Expr::col(event::Column::Id.as_column_ref())
-                    .eq(Expr::Column((INSERTED_REACTION, "on_post").into())),
+                Expr::col(event::Column::Id.as_column_ref()).eq(Expr::col((
+                    INSERTED_REACTION,
+                    reaction::Column::OnPost,
+                ))),
             )
             .and_where(
-                Expr::Column(("reaction_tally", "event_id").into())
-                    .eq(Expr::Column((INSERTED_REACTION, "on_post").into())),
+                Expr::col(interaction_tally::Column::EventId.as_column_ref())
+                    .eq(Expr::col((
+                        INSERTED_REACTION,
+                        reaction::Column::OnPost,
+                    ))),
             );
 
         Ok(query)
@@ -745,15 +913,16 @@ impl Mutation {
     }
 
     fn repost_query(
+        with: &mut WithClause,
         repost: &Repost,
         (event_table, event_id, identity): (DynIden, DynIden, DynIden),
-    ) -> Result<InsertStatement, DbErr> {
+    ) -> Result<UpdateStatement, DbErr> {
         let key = split_event_key(repost.post.clone(), "repost")
             .map_err(|err| DbErr::Custom(err.message().into()))?;
         let mut post_event_id = select_not_deleted_event_id(key);
 
-        let mut query = InsertStatement::new();
-        query
+        let mut insert_repost = InsertStatement::new();
+        insert_repost
             .into_table(repost::Entity)
             .columns([
                 repost::Column::EventId,
@@ -778,14 +947,69 @@ impl Mutation {
                         expr: Expr::col(event::Column::Id.as_column_ref()),
                         alias: Some(repost::Column::Post.into()),
                         window: None,
-                    });
+                    })
+                    // Ensure the event the repost is of is a post.
+                    .and_where(
+                        Expr::col(event::Column::ContentType.as_column_ref())
+                            .eq(Expr::Constant(content_types::POST.into())),
+                    );
                 post_event_id
             })
             .map_err(|err| {
                 DbErr::Custom(format!("incorrect amount of values: {err}"))
-            })?;
+            })?
+            .returning_col(repost::Column::Post);
 
-        Ok(query)
+        let mut cte = CommonTableExpression::new();
+        const INSERTED_REPOST: &str = "inserted_repost";
+        cte.table_name(INSERTED_REPOST).query(insert_repost);
+        with.cte(cte);
+
+        let mut update_interaction_tally = UpdateStatement::new();
+        update_interaction_tally
+            .table(interaction_tally::Entity)
+            .value(
+                interaction_tally::Column::RepostCount,
+                Expr::col(interaction_tally::Column::RepostCount)
+                    .add(Expr::Constant(1.into())),
+            )
+            .value(
+                interaction_tally::Column::DecayedCount,
+                decay_interaction_count(
+                    Expr::col(
+                        interaction_tally::Column::ReactionPositiveCount
+                            .as_column_ref(),
+                    ),
+                    Expr::col(
+                        interaction_tally::Column::ReplyCount.as_column_ref(),
+                    ),
+                    Expr::col(
+                        interaction_tally::Column::RepostCount.as_column_ref(),
+                    )
+                    .add(Expr::Constant(1.into())),
+                    Expr::col(
+                        interaction_tally::Column::QuoteCount.as_column_ref(),
+                    ),
+                    Expr::col(event::Column::CreatedAt.as_column_ref()),
+                ),
+            )
+            .value(
+                interaction_tally::Column::UpdatedAt,
+                Expr::current_timestamp(),
+            )
+            // This should be an inner join, but SeaORM doesn't support this,
+            // see <https://github.com/SeaQL/sea-query/issues/608>.
+            .from(event::Entity)
+            .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
+                Expr::col(interaction_tally::Column::EventId.as_column_ref()),
+            ))
+            .cond_where(Expr::col(interaction_tally::Column::EventId).eq({
+                let mut q = SelectStatement::new();
+                q.column(repost::Column::Post).from(INSERTED_REPOST);
+                Expr::from(q)
+            }));
+
+        Ok(update_interaction_tally)
     }
 
     fn delete_query(
@@ -798,85 +1022,330 @@ impl Mutation {
         let event_id = select_event_id(key);
 
         match collection {
-            // Deletion of a post.
+            // Deletion of a post or repost.
             COLLECTION_FEED => {
                 let mut cte = CommonTableExpression::new();
-                cte.table_name("event_id").query(event_id);
+                const DELETED_EVENT: &str = "to_be_deleted_event";
+                cte.table_name(DELETED_EVENT).query(event_id);
                 with.cte(cte);
 
+                // Since we don't know at this point if the event that is being
+                // deleted is a post or repost we attempt delete data for both
+                // types.
+
                 // Delete the tally for the post.
-                let mut delete_reaction_tally = DeleteStatement::new();
-                delete_reaction_tally
-                    .from_table(reaction_tally::Entity)
+                let mut delete_interaction_tally = DeleteStatement::new();
+                delete_interaction_tally
+                    .from_table(interaction_tally::Entity)
                     .cond_where(
-                        Expr::col(reaction_tally::Column::EventId).in_subquery(
-                            {
+                        Expr::col(interaction_tally::Column::EventId)
+                            .in_subquery({
                                 let mut q = SelectStatement::new();
-                                q.column("id").from("event_id");
+                                q.column("id").from(DELETED_EVENT);
                                 q
-                            },
-                        ),
+                            }),
                     );
                 let mut cte = CommonTableExpression::new();
-                cte.table_name("deleted_reaction_tally")
-                    .query(delete_reaction_tally);
+                cte.table_name("deleted_interaction_tally")
+                    .query(delete_interaction_tally);
                 with.cte(cte);
 
                 // Delete quotes from the posts itself and quoting the deleted
                 // post.
                 let mut delete_quotes = DeleteStatement::new();
-                delete_quotes.from_table(quote::Entity).cond_where(
-                    Condition::any()
-                        // The now deleted post qouting another post.
-                        .add(Expr::col(quote::Column::EventId).in_subquery({
-                            let mut q = SelectStatement::new();
-                            q.column("id").from("event_id");
-                            q
-                        }))
-                        // The now deleted post being qouted.
-                        .add(Expr::col(quote::Column::Post).in_subquery({
-                            let mut q = SelectStatement::new();
-                            q.column("id").from("event_id");
-                            q
-                        })),
-                );
+                delete_quotes
+                    .from_table(quote::Entity)
+                    .cond_where(
+                        Condition::any()
+                            // The now deleted post qouting another post.
+                            .add(Expr::col(quote::Column::EventId).in_subquery(
+                                {
+                                    let mut q = SelectStatement::new();
+                                    q.column("id").from(DELETED_EVENT);
+                                    q
+                                },
+                            ))
+                            // The now deleted post being qouted.
+                            .add(Expr::col(quote::Column::Post).in_subquery({
+                                let mut q = SelectStatement::new();
+                                q.column("id").from(DELETED_EVENT);
+                                q
+                            })),
+                    )
+                    .returning_col(quote::Column::Post);
                 let mut cte = CommonTableExpression::new();
-                cte.table_name("deleted_quotes").query(delete_quotes);
+                const DELETED_QUOTES: &str = "deleted_quotes";
+                cte.table_name(DELETED_QUOTES).query(delete_quotes);
                 with.cte(cte);
 
                 // Delete replies from the posts itself and replying to the
                 // deleted post.
                 let mut delete_replies = DeleteStatement::new();
-                delete_replies.from_table(reply::Entity).cond_where(
-                    Condition::any()
-                        // The now deleted post replying to another post.
-                        .add(Expr::col(reply::Column::EventId).in_subquery({
-                            let mut q = SelectStatement::new();
-                            q.column("id").from("event_id");
-                            q
-                        }))
-                        // The now deleted post being replied to.
-                        .add(Expr::col(reply::Column::Post).in_subquery({
-                            let mut q = SelectStatement::new();
-                            q.column("id").from("event_id");
-                            q
-                        })),
-                );
+                delete_replies
+                    .from_table(reply::Entity)
+                    .cond_where(
+                        Condition::any()
+                            // The now deleted post replying to another post.
+                            .add(Expr::col(reply::Column::EventId).in_subquery(
+                                {
+                                    let mut q = SelectStatement::new();
+                                    q.column("id").from(DELETED_EVENT);
+                                    q
+                                },
+                            ))
+                            // The now deleted post being replied to.
+                            .add(Expr::col(reply::Column::Post).in_subquery({
+                                let mut q = SelectStatement::new();
+                                q.column("id").from(DELETED_EVENT);
+                                q
+                            })),
+                    )
+                    .returning_col(reply::Column::Post);
                 let mut cte = CommonTableExpression::new();
-                cte.table_name("deleted_replies").query(delete_replies);
+                const DELETED_REPLIES: &str = "deleted_replies";
+                cte.table_name(DELETED_REPLIES).query(delete_replies);
                 with.cte(cte);
 
                 // Delete all reactions to the post.
-                let mut query = DeleteStatement::new();
-                query.from_table(reaction::Entity).cond_where(
-                    Expr::col(reaction::Column::OnPost).in_subquery({
-                        let mut q = SelectStatement::new();
-                        q.column("id").from("event_id");
-                        q
-                    }),
-                );
+                let mut delete_reaction_to_post = DeleteStatement::new();
+                delete_reaction_to_post
+                    .from_table(reaction::Entity)
+                    .cond_where(
+                        Expr::col(reaction::Column::OnPost).in_subquery({
+                            let mut q = SelectStatement::new();
+                            q.column("id").from(DELETED_EVENT);
+                            q
+                        }),
+                    );
 
-                Ok(Some(query.into()))
+                // Delete the repost.
+                let mut delete_repost = DeleteStatement::new();
+                delete_repost
+                    .from_table(repost::Entity)
+                    .cond_where(
+                        Condition::any()
+                            // The now deleted repost replying to another post.
+                            .add(Expr::col(reply::Column::EventId).in_subquery(
+                                {
+                                    let mut q = SelectStatement::new();
+                                    q.column("id").from(DELETED_EVENT);
+                                    q
+                                },
+                            ))
+                            // The now deleted post being replied to.
+                            .add(Expr::col(reply::Column::Post).in_subquery({
+                                let mut q = SelectStatement::new();
+                                q.column("id").from(DELETED_EVENT);
+                                q
+                            })),
+                    )
+                    .returning_col(repost::Column::Post);
+                let mut cte = CommonTableExpression::new();
+                const DELETED_REPOSTS: &str = "deleted_reposts";
+                cte.table_name(DELETED_REPOSTS).query(delete_repost);
+                with.cte(cte);
+
+                let mut grouped_interaction_updates = SelectStatement::new();
+                const POST: &str = "post";
+                const REPLY_COUNT_DIFF: &str = "reply_count_diff";
+                const REPOST_COUNT_DIFF: &str = "repost_count_diff";
+                const QUOTE_COUNT_DIFF: &str = "quote_count_diff";
+                grouped_interaction_updates
+                    .expr(Expr::col(POST))
+                    .expr_as(
+                        Expr::col(REPLY_COUNT_DIFF).sum(),
+                        REPLY_COUNT_DIFF,
+                    )
+                    .expr_as(
+                        Expr::col(REPOST_COUNT_DIFF).sum(),
+                        REPOST_COUNT_DIFF,
+                    )
+                    .expr_as(
+                        Expr::col(QUOTE_COUNT_DIFF).sum(),
+                        QUOTE_COUNT_DIFF,
+                    )
+                    .from_subquery(
+                        {
+                            let mut deleted_replies = SelectStatement::new();
+                            deleted_replies
+                                .expr_as(
+                                    Expr::col((
+                                        DELETED_REPLIES,
+                                        reply::Column::Post,
+                                    )),
+                                    POST,
+                                )
+                                .expr_as(
+                                    Expr::Constant(1.into()),
+                                    REPLY_COUNT_DIFF,
+                                )
+                                .expr_as(
+                                    Expr::Constant(0.into()),
+                                    REPOST_COUNT_DIFF,
+                                )
+                                .expr_as(
+                                    Expr::Constant(0.into()),
+                                    QUOTE_COUNT_DIFF,
+                                )
+                                .from(DELETED_REPLIES);
+                            let mut deleted_reposts = SelectStatement::new();
+                            deleted_reposts
+                                .expr_as(
+                                    Expr::col((
+                                        DELETED_REPOSTS,
+                                        repost::Column::Post,
+                                    )),
+                                    POST,
+                                )
+                                .expr_as(
+                                    Expr::Constant(0.into()),
+                                    REPLY_COUNT_DIFF,
+                                )
+                                .expr_as(
+                                    Expr::Constant(1.into()),
+                                    REPOST_COUNT_DIFF,
+                                )
+                                .expr_as(
+                                    Expr::Constant(0.into()),
+                                    QUOTE_COUNT_DIFF,
+                                )
+                                .from(DELETED_REPOSTS);
+                            let mut deleted_quotes = SelectStatement::new();
+                            deleted_quotes
+                                .expr_as(
+                                    Expr::col((
+                                        DELETED_QUOTES,
+                                        repost::Column::Post,
+                                    )),
+                                    POST,
+                                )
+                                .expr_as(
+                                    Expr::Constant(0.into()),
+                                    REPLY_COUNT_DIFF,
+                                )
+                                .expr_as(
+                                    Expr::Constant(0.into()),
+                                    REPOST_COUNT_DIFF,
+                                )
+                                .expr_as(
+                                    Expr::Constant(1.into()),
+                                    QUOTE_COUNT_DIFF,
+                                )
+                                .from(DELETED_QUOTES);
+
+                            deleted_replies
+                                .union(UnionType::All, deleted_reposts)
+                                .union(UnionType::All, deleted_quotes);
+                            deleted_replies
+                        },
+                        "updates",
+                    )
+                    .group_by_col(POST);
+                let mut cte = CommonTableExpression::new();
+                const GROUPED_INTERACTION_UPDATES: &str =
+                    "grouped_interaction_updates";
+                cte.table_name(GROUPED_INTERACTION_UPDATES)
+                    .query(grouped_interaction_updates);
+                with.cte(cte);
+
+                // Update the interaction tally for other posts.
+                let mut update_interaction_tallies = UpdateStatement::new();
+                update_interaction_tallies
+                    .table(interaction_tally::Entity)
+                    .values([
+                        (
+                            interaction_tally::Column::ReplyCount,
+                            Expr::col(
+                                interaction_tally::Column::ReplyCount
+                                    .as_column_ref(),
+                            )
+                            .sub(Expr::col((
+                                GROUPED_INTERACTION_UPDATES,
+                                REPLY_COUNT_DIFF,
+                            ))),
+                        ),
+                        (
+                            interaction_tally::Column::RepostCount,
+                            Expr::col(
+                                interaction_tally::Column::RepostCount
+                                    .as_column_ref(),
+                            )
+                            .sub(Expr::col((
+                                GROUPED_INTERACTION_UPDATES,
+                                REPOST_COUNT_DIFF,
+                            ))),
+                        ),
+                        (
+                            interaction_tally::Column::QuoteCount,
+                            Expr::col(
+                                interaction_tally::Column::QuoteCount
+                                    .as_column_ref(),
+                            )
+                            .sub(Expr::col((
+                                GROUPED_INTERACTION_UPDATES,
+                                QUOTE_COUNT_DIFF,
+                            ))),
+                        ),
+                        (
+                            interaction_tally::Column::DecayedCount,
+                            decay_interaction_count(
+                                Expr::col(
+                                    interaction_tally::Column::ReactionPositiveCount
+                                        .as_column_ref(),
+                                ),
+                                Expr::col(
+                                    interaction_tally::Column::ReplyCount
+                                        .as_column_ref(),
+                                )
+                                .sub(Expr::col((
+                                    GROUPED_INTERACTION_UPDATES,
+                                    REPLY_COUNT_DIFF,
+                                ))),
+                                Expr::col(
+                                    interaction_tally::Column::RepostCount
+                                        .as_column_ref(),
+                                )
+                                .sub(Expr::col((
+                                    GROUPED_INTERACTION_UPDATES,
+                                    REPOST_COUNT_DIFF,
+                                ))),
+                                Expr::col(
+                                    interaction_tally::Column::QuoteCount
+                                        .as_column_ref(),
+                                )
+                                .sub(Expr::col((
+                                    GROUPED_INTERACTION_UPDATES,
+                                    QUOTE_COUNT_DIFF,
+                                ))),
+                                Expr::col(event::Column::CreatedAt.as_column_ref()),
+                            ),
+                        ),
+                        (
+                            interaction_tally::Column::UpdatedAt,
+                            Expr::current_timestamp(),
+                        ),
+                    ])
+                    // This should be an inner join, but SeaORM doesn't support this,
+                    // see <https://github.com/SeaQL/sea-query/issues/608>.
+                    .from(event::Entity)
+                    .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
+                        Expr::col(
+                            interaction_tally::Column::EventId.as_column_ref(),
+                        ),
+                    ))
+                    .from(GROUPED_INTERACTION_UPDATES)
+                    .and_where(
+                        Expr::col(
+                            interaction_tally::Column::EventId.as_column_ref(),
+                        )
+                        .eq(Expr::col((GROUPED_INTERACTION_UPDATES, POST))),
+                    );
+                let mut cte = CommonTableExpression::new();
+                cte.table_name("update_interaction_tallies")
+                    .query(update_interaction_tallies);
+                with.cte(cte);
+
+                Ok(None)
             }
             COLLECTION_PROFILE => {
                 let mut delete_profile = DeleteStatement::new();
@@ -908,55 +1377,62 @@ impl Mutation {
             COLLECTION_INTERACTIONS => {
                 let mut delete_reaction = DeleteStatement::new();
                 delete_reaction
-                    .from_table("reaction")
-                    .cond_where(Expr::col("event_id").in_subquery(event_id))
+                    .from_table(reaction::Entity)
+                    .cond_where(
+                        Expr::col(reaction::Column::EventId)
+                            .in_subquery(event_id),
+                    )
                     .returning_all();
                 let mut cte = CommonTableExpression::new();
-                cte.table_name("deleted_reaction").query(delete_reaction);
+                const DELETED_REACTION: &str = "deleted_reaction";
+                cte.table_name(DELETED_REACTION).query(delete_reaction);
                 with.cte(cte);
 
                 let mut query = UpdateStatement::new();
                 query
-                    .table(reaction_tally::Entity)
+                    .table(interaction_tally::Entity)
                     .values([
                         (
-                            reaction_tally::Column::PositiveCount,
+                            interaction_tally::Column::ReactionPositiveCount,
                             Expr::col(
-                                reaction_tally::Column::PositiveCount
+                                interaction_tally::Column::ReactionPositiveCount
                                     .as_column_ref(),
                             )
                             .sub(
                                 Expr::case(
-                                    Expr::Column("positive".into()),
+                                    Expr::col((DELETED_REACTION, reaction::Column::Positive)),
                                     Expr::Constant(1.into()),
                                 )
                                 .finally(Expr::Constant(0.into())),
                             ),
                         ),
                         (
-                            reaction_tally::Column::NegativeCount,
+                            interaction_tally::Column::ReactionNegativeCount,
                             Expr::col(
-                                reaction_tally::Column::NegativeCount
+                                interaction_tally::Column::ReactionNegativeCount
                                     .as_column_ref(),
                             )
                             .sub(
                                 Expr::case(
-                                    Expr::Column("positive".into()),
+                                    Expr::col((DELETED_REACTION, reaction::Column::Positive)),
                                     Expr::Constant(0.into()),
                                 )
                                 .finally(Expr::Constant(1.into())),
                             ),
                         ),
                         (
-                            reaction_tally::Column::DecayedCount,
+                            interaction_tally::Column::DecayedCount,
                             Expr::case(
-                                Expr::Column("positive".into()),
-                                reaction_count_decay(
+                                Expr::col((DELETED_REACTION, reaction::Column::Positive)),
+                                decay_interaction_count(
                                     Expr::col(
-                                        reaction_tally::Column::PositiveCount
+                                        interaction_tally::Column::ReactionPositiveCount
                                             .as_column_ref(),
                                     )
                                     .sub(Expr::Constant(1.into())),
+                                    Expr::col(interaction_tally::Column::ReplyCount.as_column_ref()),
+                                    Expr::col(interaction_tally::Column::RepostCount.as_column_ref()),
+                                    Expr::col(interaction_tally::Column::QuoteCount.as_column_ref()),
                                     Expr::col(
                                         event::Column::CreatedAt
                                             .as_column_ref(),
@@ -965,29 +1441,27 @@ impl Mutation {
                             )
                             // No change.
                             .finally(Expr::col(
-                                reaction_tally::Column::DecayedCount
+                                interaction_tally::Column::DecayedCount
                                     .as_column_ref(),
                             ))
                             .into(),
                         ),
+                        (interaction_tally::Column::UpdatedAt, Expr::current_timestamp())
                     ])
-                    .from("deleted_reaction")
+                    .from(DELETED_REACTION)
                     // This should be an inner join, but SeaORM doesn't support this,
                     // see <https://github.com/SeaQL/sea-query/issues/608>.
                     .from(event::Entity)
                     .and_where(Expr::col(event::Column::Id.as_column_ref()).eq(
                         Expr::col(
-                            reaction_tally::Column::EventId.as_column_ref(),
+                            interaction_tally::Column::EventId.as_column_ref(),
                         ),
                     ))
                     .and_where(
-                        Expr::col(
-                            reaction_tally::Column::EventId.as_column_ref(),
-                        )
-                        .eq(Expr::Column(
-                            ("deleted_reaction", "on_post").into(),
-                        )),
+                        Expr::col(interaction_tally::Column::EventId.as_column_ref())
+                            .eq(Expr::col((DELETED_REACTION, reaction::Column::OnPost))),
                     );
+
                 Ok(Some(query.into()))
             }
             // Nothing to delete.
@@ -1078,12 +1552,6 @@ fn select_not_deleted_event_id(key: EventKeyParts) -> SelectStatement {
         q
     }));
     query
-}
-
-fn reaction_count_decay(positive_count: Expr, created_at: Expr) -> Expr {
-    Func::cust("reaction_count_decay")
-        .args([positive_count, created_at])
-        .into()
 }
 
 /* TODO: move to integration tests.

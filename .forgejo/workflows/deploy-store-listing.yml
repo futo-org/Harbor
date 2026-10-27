@@ -1,0 +1,79 @@
+name: Deploy store listing
+
+# Pushes apps/harbor/marketing (text and screenshots, rendered locally and
+# committed) to App Store Connect and Google Play. Binaries are the release
+# workflow's job; this only touches the listings.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate against the stores without writing anything
+        type: boolean
+        default: false
+      version:
+        description: App Store version to create when none is editable (for example 1.4.0)
+        default: ''
+  push:
+    branches: [develop]
+    paths:
+      - apps/harbor/marketing/**
+      - .forgejo/scripts/publish-app-store-listing.mjs
+      - .forgejo/scripts/publish-play-listing.mjs
+      - .forgejo/workflows/deploy-store-listing.yml
+
+concurrency:
+  group: deploy-store-listing
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check exports
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 5
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Listing files match source/listing.mjs
+        run: node apps/harbor/marketing/source/export.mjs --check
+
+  app-store:
+    name: App Store Connect
+    needs: check
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 30
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+      ASC_REVIEW_FIRST_NAME: ${{ secrets.ASC_REVIEW_FIRST_NAME }}
+      ASC_REVIEW_LAST_NAME: ${{ secrets.ASC_REVIEW_LAST_NAME }}
+      ASC_REVIEW_EMAIL: ${{ secrets.ASC_REVIEW_EMAIL }}
+      ASC_REVIEW_PHONE: ${{ secrets.ASC_REVIEW_PHONE }}
+      ASC_VERSION: ${{ inputs.version }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Push listing
+        run: |
+          FLAGS=""
+          if [ "$DRY_RUN" = true ]; then FLAGS="--dry-run"; fi
+          node .forgejo/scripts/publish-app-store-listing.mjs $FLAGS
+
+  play:
+    name: Google Play
+    needs: check
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 30
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    env:
+      PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Push listing
+        run: |
+          FLAGS=""
+          if [ "$DRY_RUN" = true ]; then FLAGS="--dry-run"; fi
+          node .forgejo/scripts/publish-play-listing.mjs $FLAGS

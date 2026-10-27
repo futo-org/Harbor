@@ -192,6 +192,8 @@ fn merge_bundle_meta(left: EventMetadata, right: EventMetadata) -> EventMetadata
     let upvote_count = cmp::max(left.upvote_count, right.upvote_count);
     let downvote_count = cmp::max(left.downvote_count, right.downvote_count);
     let emoji_reactions = merge_reactions(left.emoji_reactions, right.emoji_reactions);
+    let repost_count = cmp::max(left.repost_count, right.repost_count);
+    let quote_count = cmp::max(left.quote_count, right.quote_count);
 
     EventMetadata {
         reply_count,
@@ -199,6 +201,8 @@ fn merge_bundle_meta(left: EventMetadata, right: EventMetadata) -> EventMetadata
         upvote_count,
         downvote_count,
         emoji_reactions,
+        repost_count,
+        quote_count,
     }
 }
 

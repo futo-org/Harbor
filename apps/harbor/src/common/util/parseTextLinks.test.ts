@@ -49,6 +49,27 @@ describe('parseTextLinks', () => {
     it('does not linkify a domain with no TLD', () => {
       expect(linkValues('localhost and foo are not links')).toEqual([]);
     });
+
+    it.each([
+      'america.jpeg',
+      'app.config',
+      'see notes.common',
+      'foo.com-bar',
+      'version.co2',
+    ])(
+      'does not linkify a label that only starts with a known TLD: %s',
+      (input) => {
+        expect(linkValues(input)).toEqual([]);
+      },
+    );
+
+    it('does not linkify a domain glued to a preceding word character', () => {
+      expect(linkValues('foo_bar.com')).toEqual([]);
+    });
+
+    it('does not linkify a bare "www." with only punctuation after it', () => {
+      expect(linkValues('www..')).toEqual([]);
+    });
   });
 
   describe('http(s) URLs', () => {
@@ -120,6 +141,13 @@ describe('parseTextLinks', () => {
         'example.co.uk/about',
       ]);
     });
+
+    it.each(['example.com:8080/x', 'example.com?q=1', 'example.com#frag'])(
+      'keeps a port, query, or fragment on a bare domain: %s',
+      (input) => {
+        expect(linkValues(input)).toEqual([input]);
+      },
+    );
   });
 
   describe('trailing punctuation', () => {
@@ -129,8 +157,56 @@ describe('parseTextLinks', () => {
       ['exclamation', 'wow https://example.com!', 'https://example.com', '!'],
       ['question', 'is it example.com?', 'example.com', '?'],
       ['close paren', '(https://example.com)', 'https://example.com', ')'],
+      [
+        'close angle bracket',
+        '<https://example.com>',
+        'https://example.com',
+        '>',
+      ],
+      [
+        "possessive 's",
+        "https://google.com's policy",
+        'https://google.com',
+        "'s",
+      ],
+      ["uppercase possessive 'S", "GOOGLE.COM'S", 'GOOGLE.COM', "'S"],
+      [
+        "uppercase possessive 'S after a URL",
+        "HTTPS://GOOGLE.COM'S",
+        'HTTPS://GOOGLE.COM',
+        "'S",
+      ],
+      [
+        'curly possessive ’s',
+        'https://google.com’s policy',
+        'https://google.com',
+        '’s',
+      ],
+      [
+        'uppercase curly possessive ’S',
+        'HTTPS://GOOGLE.COM’S',
+        'HTTPS://GOOGLE.COM',
+        '’S',
+      ],
+      [
+        'curly double quote',
+        '“https://example.com”',
+        'https://example.com',
+        '”',
+      ],
+      [
+        'curly single quote',
+        '‘https://example.com’',
+        'https://example.com',
+        '’',
+      ],
     ])('excludes a trailing %s from the link', (_label, input, value) => {
       expect(linkValues(input)).toEqual([value]);
+    });
+
+    it('keeps a close paren that balances one in the URL', () => {
+      const url = 'https://en.wikipedia.org/wiki/Foo_(bar)';
+      expect(linkValues(`see ${url}.`)).toEqual([url]);
     });
 
     it('leaves trailing punctuation in the text stream', () => {
@@ -157,6 +233,13 @@ describe('parseTextLinks', () => {
     it('does not linkify the domain inside an email', () => {
       expect(parse('a@b.com')).toEqual([{ type: 'text', value: 'a@b.com' }]);
     });
+
+    it.each(['john.co@gmail.com', 'me.dev@example.com'])(
+      'does not linkify a local part that ends in a known TLD: %s',
+      (input) => {
+        expect(linkValues(input)).toEqual([]);
+      },
+    );
   });
 
   // Cases shared with the server's `mentions.rs` (see the note at the top of

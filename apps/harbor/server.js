@@ -102,6 +102,19 @@ function serveAppLinkFile(req, res, next) {
   res.end(JSON.stringify(appLinkFile));
 }
 
+function serveVersion(req, res, next) {
+  if (req.url.split('?')[0] !== '/version') return next();
+
+  if (!process.env.HARBOR_COMMIT) {
+    res.statusCode = 404;
+    res.end('Not Found');
+    return;
+  }
+
+  res.setHeader('Content-Type', 'text/plain');
+  res.end(process.env.HARBOR_COMMIT);
+}
+
 function serveStatic(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 
@@ -134,14 +147,16 @@ function serveStatic(req, res, next) {
 }
 
 createServer((req, res) => {
-  serveAppLinkFile(req, res, () => {
-    serveStatic(req, res, () => {
-      handler(req, res, (err) => {
-        if (err) {
-          console.error(err);
-          res.statusCode = 500;
-          res.end('Internal Server Error');
-        }
+  serveVersion(req, res, () => {
+    serveAppLinkFile(req, res, () => {
+      serveStatic(req, res, () => {
+        handler(req, res, (err) => {
+          if (err) {
+            console.error(err);
+            res.statusCode = 500;
+            res.end('Internal Server Error');
+          }
+        });
       });
     });
   });

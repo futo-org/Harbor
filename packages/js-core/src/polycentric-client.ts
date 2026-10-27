@@ -21,7 +21,8 @@ import type {
   IStorageDriver,
 } from './platform-interfaces';
 import * as Proto from './proto/v2';
-import { StorageHandle } from './datastore/storage-handle';
+import { StorageHandle } from './data-store/storage-handle';
+import { FileStore } from './file-store/file-store';
 import { bytesToHex, toDigestKey } from './utils/hex';
 import { bytesEqual } from './utils/bytes';
 import { CryptoManager } from './crypto/crypto-manager';
@@ -117,14 +118,14 @@ export class PolycentricClient {
 
   public storageHandle: StorageHandle | undefined;
   public readonly storageDriver: IStorageDriver;
-  public readonly filestoreDriver: IFileStoreDriver;
+  public readonly fileStore: FileStore;
   public readonly persistentStorage: boolean;
   public readonly application: Proto.Application | undefined;
 
   constructor(config: PolycentricClientConfig) {
     this.core = config.core;
     this.storageDriver = config.storageDriver;
-    this.filestoreDriver = config.filestoreDriver;
+    this.fileStore = new FileStore(config.filestoreDriver);
     this.persistentStorage = config.persistentStorage ?? true;
     this.application = config.application;
     if (config.seedServers && config.seedServers.length > 0) {
@@ -173,7 +174,6 @@ export class PolycentricClient {
         eventRepository: this.storageDriver.createEventRepository(),
         contentRepository: this.storageDriver.createContentRepository(),
         keysRepository: this.storageDriver.createKeysRepository(),
-        eventAckRepository: this.storageDriver.createEventAckRepository(),
       });
 
       this.setStep(InitializationStep.LOADING_PROCESS_ID);
@@ -268,6 +268,26 @@ export class PolycentricClient {
       Proto.SetBanStatusRequest.create({ targetIdentity, banned }),
     );
     await this.core.setBanStatus(server, body.buffer as ArrayBuffer);
+  }
+
+  /** Resolve, dismiss or reopen a report (`ModerationService.ResolveReport`). */
+  async resolveReport(
+    server: string,
+    reportId: bigint,
+    status: Proto.ReportStatus,
+  ): Promise<void> {
+    const body = Proto.ResolveReportRequest.toBinary(
+      Proto.ResolveReportRequest.create({ reportId, status }),
+    );
+    await this.core.resolveReport(server, body.buffer as ArrayBuffer);
+  }
+
+  /** Erase an event from one server (`ModerationService.DeleteContent`). */
+  async deleteContent(server: string, target: Proto.EventKey): Promise<void> {
+    const body = Proto.DeleteContentRequest.toBinary(
+      Proto.DeleteContentRequest.create({ target }),
+    );
+    await this.core.deleteContent(server, body.buffer as ArrayBuffer);
   }
 
   /**
@@ -749,7 +769,7 @@ export class PolycentricClient {
       type: Proto.ContentDigestType.SHA256,
       value: sha256(bytes),
     };
-    await this.filestoreDriver.put(digest, bytes);
+    await this.fileStore.put(digest, bytes);
     return Proto.Blob.create({
       digest,
       mimeType,
@@ -1059,7 +1079,7 @@ export class PolycentricClient {
         blobs.map(async (blob) => {
           if (!blob.digest) return;
 
-          const blobData = await this.filestoreDriver.get(blob.digest);
+          const blobData = await this.fileStore.get(blob.digest);
           if (!blobData) return;
 
           await this.uploadBlob(blob, blobData, [server]);

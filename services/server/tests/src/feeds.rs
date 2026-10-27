@@ -991,11 +991,13 @@ async fn get_post() {
     test_get_post(
         target_key,
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(0),
             upvote_count: Some(0),
             downvote_count: Some(0),
             emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1039,6 +1041,58 @@ async fn get_post_deleted() {
 }
 
 #[tokio::test]
+async fn get_post_with_replies() {
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let replied_to_post = client.get_last_event_key();
+    client.reply(
+        replied_to_post.clone(),
+        "Text that replies",
+        current_timestamp(),
+    );
+    let post_with_reply = client.get_last_event_key();
+    client.submit_events().await;
+
+    // The original post that was replied to.
+    test_get_post(
+        replied_to_post.clone(),
+        Some(EventMetadata {
+            reply_count: Some(1),
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+        ],
+    )
+    .await;
+
+    // The post that replies to the other one.
+    test_get_post(
+        post_with_reply,
+        Some(EventMetadata {
+            reply_count: Some(0),
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn get_post_with_quotes() {
     let mut client = TestClient::new().await;
     client.post_text("Text", current_timestamp());
@@ -1051,11 +1105,13 @@ async fn get_post_with_quotes() {
     test_get_post(
         quoted_post.clone(),
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(0),
             upvote_count: Some(0),
             downvote_count: Some(0),
             emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(1),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1068,11 +1124,13 @@ async fn get_post_with_quotes() {
     test_get_post(
         post_with_quote,
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(0),
             upvote_count: Some(0),
             downvote_count: Some(0),
             emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1094,11 +1152,13 @@ async fn get_post_with_reposts() {
     test_get_post(
         post.clone(),
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(0),
             upvote_count: Some(0),
             downvote_count: Some(0),
             emoji_reactions: Vec::new(),
+            repost_count: Some(1),
+            quote_count: Some(0),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1124,11 +1184,13 @@ async fn get_post_with_labels() {
     test_get_post(
         post.clone(),
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(0),
             upvote_count: Some(0),
             downvote_count: Some(0),
             emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1158,7 +1220,7 @@ async fn get_post_with_reactions() {
     test_get_post(
         post,
         Some(EventMetadata {
-            reply_count: None,
+            reply_count: Some(0),
             reaction_count: Some(2),
             upvote_count: Some(2),
             downvote_count: Some(0),
@@ -1167,6 +1229,8 @@ async fn get_post_with_reactions() {
                 positive: true,
                 count: 2,
             }],
+            repost_count: Some(0),
+            quote_count: Some(0),
         }),
         vec![
             ExpectHint::moderator_identity(),
@@ -1183,7 +1247,7 @@ async fn get_post_with_reactions() {
 /// Run a `get_post` query using `target` to derive the filter.
 /// Expect an event bundle with metadata matching `metadata` if present
 /// or no candidates to be returned if `None`.
-async fn test_get_post(
+pub async fn test_get_post(
     target: EventKey,
     metadata: Option<EventMetadata>,
     hints: Vec<ExpectHint>,
@@ -1287,6 +1351,70 @@ async fn explore_feed_excludes_reposts() {
     // Both are the newest Feed events, but only the post should be shown.
     assert!(keys.contains(&post_key), "post missing: {keys:#?}");
     assert!(!keys.contains(&repost_key), "repost shown: {keys:#?}");
+}
+
+#[tokio::test]
+async fn explore_feed_excludes_grayjay() {
+    let mut feeds = connect_feeds().await;
+
+    let mut client = TestClient::new().await;
+    client.post_text("Post 1", current_timestamp());
+    let post_key = client.get_last_event_key();
+
+    let mut grayjay_keys = Vec::new();
+    for app_id in ["com.futo.platformplayer", "com.futo.platformplayer.d"] {
+        let content = Content {
+            content_body: Some(ContentBody::Post(Post {
+                text: format!("Post from {app_id}"),
+                reply: None,
+                images: Vec::new(),
+                quote: None,
+                links: Vec::new(),
+                labels: Vec::new(),
+                attributed_to: Vec::new(),
+            })),
+        };
+        let (content_bytes, digest) = content_with_digest(content);
+        let mut event = client.make_event(
+            COLLECTION_FEED,
+            client.previous_signature(),
+            client.previous_root(),
+            digest,
+            current_timestamp(),
+        );
+        event.application = Some(Application {
+            name: "Grayjay".to_owned(),
+            id: app_id.to_owned(),
+            version: "v1".to_owned(),
+            url: "https://grayjay.app".to_owned(),
+        });
+        grayjay_keys.push(event.key.clone().unwrap());
+        client.push_event_bundle2(event, content_bytes);
+    }
+    client.submit_events().await;
+
+    let request = GetExploreFeedRequest {
+        identity: None,
+        page_params: None,
+        omit_labels: Vec::new(),
+        sort_by: Some(SortPostsBy::Latest.into()),
+    };
+    let result = feeds.get_explore_feed(request).await.unwrap().into_inner();
+
+    let keys: Vec<EventKey> = result
+        .event_bundles
+        .iter()
+        .map(|event| {
+            Event::decode(&*event.signed_event.as_ref().unwrap().event_bytes)
+                .unwrap()
+                .key
+                .unwrap()
+        })
+        .collect();
+    assert!(keys.contains(&post_key), "post missing: {keys:#?}");
+    for grayjay_key in &grayjay_keys {
+        assert!(!keys.contains(grayjay_key), "grayjay post shown: {keys:#?}");
+    }
 }
 
 #[tokio::test]
@@ -1657,7 +1785,7 @@ async fn recommended_feed_includes_posts_quoted_by_followee() {
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[reply1_key, post1_key]).await;
+    recommended_feed(follower, &[post1_key, reply1_key]).await;
 }
 
 #[tokio::test]
@@ -1695,7 +1823,7 @@ async fn recommended_feed_includes_posts_replies_by_followee() {
     client.submit_events().await;
     let follower = client.identity();
 
-    recommended_feed(follower, &[reply1_key, post1_key]).await;
+    recommended_feed(follower, &[post1_key, reply1_key]).await;
 }
 
 #[tokio::test]

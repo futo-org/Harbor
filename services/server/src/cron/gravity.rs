@@ -3,18 +3,17 @@
 use std::ops::ControlFlow;
 use std::time::Instant;
 
-use entity::{event, gravity, reaction, reaction_tally};
+use entity::{event, gravity, interaction_tally, reaction};
 use sea_orm::sea_query::{
     Asterisk, CommonTableExpression, Expr, Func, Order, SelectStatement,
     UpdateStatement, WithClause,
 };
-use sea_orm::{
-    ColumnTrait, ConnectionTrait, DatabaseConnection, ExprTrait,
-    TransactionTrait,
-};
+use sea_orm::{ColumnTrait, ConnectionTrait, DatabaseConnection, ExprTrait};
 
 use crate::config;
 use crate::cron::{AdvisoryLock, Cron};
+use crate::db::DbConn;
+use crate::db::fns::decay_interaction_count;
 
 const BATCH_SIZE: u64 = 1000;
 
@@ -30,12 +29,27 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
         let db = db.clone();
         async move {
             let start = Instant::now();
+            let mut conn = match DbConn::from_pool(&db).await {
+                Ok(conn) => conn,
+                Err(err) => {
+                    tracing::warn!(error = %err, "failed acquire database connection");
+                    return ControlFlow::Continue(());
+                },
+            };
+            drop(db); // Don't use the pool any more.
+            let mut tx = match conn.begin().await {
+                Ok(tx) => tx,
+                Err(err) => {
+                    tracing::warn!(error = %err, "failed to start transaction");
+                    return ControlFlow::Continue(());
+                },
+            };
 
             // First we need to update the gravity calculate timestamp, and if
             // we're using dynamic gravity calculate the gravity value.
             //
             // NOTE: we do this is in a separate transaction because the
-            // gravity table is used by `reaction_count_decay` and when we
+            // gravity table is used by `decay_interaction_count` and when we
             // update it, while also updating all the decayed counts it
             // means we lock out creation of reaction events. This caused
             // #292.
@@ -49,12 +63,20 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             // Luckily this job should run pretty often so it's a time
             // window of a couple of minutes were this could be the case.
 
-            let tx = match AdvisoryLock::Gravity.try_lock(&db).await {
-                Ok(Some(tx)) => tx,
+            match AdvisoryLock::Gravity.try_lock(&mut tx).await {
+                Ok(true) => {},
                 // Another instance is doing the work.
-                Ok(None) => return ControlFlow::Continue(()),
+                Ok(false) => {
+                    if let Err(err) = tx.rollback().await {
+                        tracing::warn!(error = %err, "failed to abort transaction");
+                    }
+                    return ControlFlow::Continue(());
+                },
                 Err(err) => {
                     tracing::warn!(error = %err, "failed acquire gravity lock");
+                    if let Err(err) = tx.rollback().await {
+                        tracing::warn!(error = %err, "failed to abort transaction");
+                    }
                     return ControlFlow::Continue(());
                 }
             };
@@ -135,6 +157,9 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 Ok(_) => { /* Update decayed reaction counts below. */ }
                 Err(err) => {
                     tracing::warn!(error = %err, "failed to update gravity value & timestamp");
+                    if let Err(err) = tx.rollback().await {
+                        tracing::warn!(error = %err, "failed to abort transaction");
+                    }
                     return ControlFlow::Continue(());
                 },
             }
@@ -147,7 +172,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             // NOTE: the updating the of the gravity value should ensure we're
             // the only cron job updating the decayed reaction counts.
             let start = Instant::now();
-            let tx = match db.begin().await {
+            let mut tx = match conn.begin().await {
                 Ok(tx) => tx,
                 Err(err) => {
                     tracing::warn!(error = %err, "failed to start transaction to update decayed reaction counts");
@@ -174,33 +199,38 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                 // because Postgres doesn't support a limit on UPDATE).
                 let mut event_ids = SelectStatement::new();
                 event_ids
-                    .column(reaction_tally::Column::EventId)
-                    .from(reaction_tally::Entity)
-                    .and_where(Expr::col(reaction_tally::Column::EventId.as_column_ref()).lt(e_id))
+                    .column(interaction_tally::Column::EventId)
+                    .from(interaction_tally::Entity)
+                    .and_where(Expr::col(interaction_tally::Column::EventId.as_column_ref()).lt(e_id))
                     // If the decayed count was previously already zero there is
                     // no point in calculating it again as it can only go lower.
-                    .and_where(Expr::col(reaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
-                    .order_by(reaction_tally::Column::EventId, Order::Desc)
+                    .and_where(Expr::col(interaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
+                    .order_by(interaction_tally::Column::EventId, Order::Desc)
                     .limit(BATCH_SIZE);
 
                 // Update all calculated decayed counts.
                 let mut update_tallies = UpdateStatement::new();
                 update_tallies
-                    .table(reaction_tally::Entity)
+                    .table(interaction_tally::Entity)
                     .value(
-                        reaction_tally::Column::DecayedCount,
-                        Func::cust("reaction_count_decay")
-                        .args([
-                            Expr::col(reaction_tally::Column::PositiveCount.as_column_ref()),
+                        interaction_tally::Column::DecayedCount,
+                        decay_interaction_count(
+                            Expr::col(interaction_tally::Column::ReactionPositiveCount.as_column_ref()),
+                            Expr::col(interaction_tally::Column::ReplyCount.as_column_ref()),
+                            Expr::col(interaction_tally::Column::RepostCount.as_column_ref()),
+                            Expr::col(interaction_tally::Column::QuoteCount.as_column_ref()),
                             Expr::col(event::Column::CreatedAt.as_column_ref()),
-                        ]),
+                        ),
                     )
+                    .value(interaction_tally::Column::UpdatedAt, Expr::current_timestamp())
+                    // This should be an inner join, but SeaORM doesn't support
+                    // this, see <https://github.com/SeaQL/sea-query/issues/608>.
                     .from(event::Entity)
                     .and_where(
                         Expr::col(event::Column::Id.as_column_ref())
-                            .eq(Expr::col(reaction_tally::Column::EventId.as_column_ref())),
+                            .eq(Expr::col(interaction_tally::Column::EventId.as_column_ref())),
                     )
-                    .and_where(Expr::col(reaction_tally::Column::EventId.as_column_ref()).in_subquery(event_ids))
+                    .and_where(Expr::col(interaction_tally::Column::EventId.as_column_ref()).in_subquery(event_ids))
                     // Ignore events that will be expired below.
                     .and_where(
                         Expr::col(event::Column::CreatedAt.as_column_ref()).gt(
@@ -208,7 +238,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                                 Expr::cust(format!("INTERVAL '{} seconds'", expire.as_secs())))
                             )
                     )
-                    .returning_col(reaction_tally::Column::EventId);
+                    .returning_col(interaction_tally::Column::EventId);
 
                 let mut cte = CommonTableExpression::new();
                 const UPDATE_TALLY: &str = "update_tally";
@@ -217,7 +247,7 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
 
                 let mut query = SelectStatement::new();
                 query
-                    .expr(Expr::col(reaction_tally::Column::EventId).min())
+                    .expr(Expr::col(interaction_tally::Column::EventId).min())
                     .from(UPDATE_TALLY);
                 let query = query.with(with);
 
@@ -226,13 +256,19 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
                     Ok(None) => event_id = None, // No more batches.
                     Err(err) => {
                         tracing::warn!(error = %err, "failed to update decayed reaction counts");
+                        if let Err(err) = tx.rollback().await {
+                            tracing::warn!(error = %err, "failed to abort transaction");
+                        }
                         return ControlFlow::Continue(());
                     }
                 }
 
                 // Commit this batch and start another transaction.
-                if let Err(err) = tx.execute_unprepared("COMMIT AND CHAIN").await {
+                if let Err(err) = tx.commit_and_chain().await {
                     tracing::warn!(error = %err, "failed to commit decayed reaction counts changes");
+                    if let Err(err) = tx.rollback().await {
+                        tracing::warn!(error = %err, "failed to abort transaction");
+                    }
                     return ControlFlow::Continue(());
                 }
                 tracing::debug!(elapsed = ?start.elapsed(), batch_size = BATCH_SIZE, "updated batch of decayed reaction counts");
@@ -242,17 +278,18 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             let start_expire = Instant::now();
             let mut expire_tallies = UpdateStatement::new();
             expire_tallies
-                .table(reaction_tally::Entity)
+                .table(interaction_tally::Entity)
                 .value(
-                    reaction_tally::Column::DecayedCount,
+                    interaction_tally::Column::DecayedCount,
                     Expr::Constant(0.into()),
                 )
+                .value(interaction_tally::Column::UpdatedAt, Expr::current_timestamp())
                 .from(event::Entity)
                 .and_where(
                     Expr::col(event::Column::Id.as_column_ref())
-                        .eq(Expr::col(reaction_tally::Column::EventId.as_column_ref())),
+                        .eq(Expr::col(interaction_tally::Column::EventId.as_column_ref())),
                 )
-                .and_where(Expr::col(reaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
+                .and_where(Expr::col(interaction_tally::Column::DecayedCount.as_column_ref()).gt(Expr::Constant(0.into())))
                 .and_where(
                     Expr::col(event::Column::CreatedAt.as_column_ref()).lt(
                         Expr::from(gravity_timestamp_query).sub(
@@ -262,6 +299,9 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
 
             if let Err(err) =  tx.execute(&expire_tallies).await {
                 tracing::warn!(error = %err, "failed to expire decayed reaction counts");
+                if let Err(err) = tx.rollback().await {
+                    tracing::warn!(error = %err, "failed to abort transaction");
+                }
                 return ControlFlow::Continue(());
             }
 
@@ -273,11 +313,12 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             tracing::debug!(elapsed = ?start_expire.elapsed(), expire = ?expire, "expired decayed reaction counts");
 
             let start_vacuum = Instant::now();
-            if let Err(err) = db.execute_unprepared("VACUUM ANALYZE reaction_tally").await {
+            if let Err(err) = conn.execute_unprepared("VACUUM ANALYZE interaction_tally").await {
                 tracing::warn!(error = %err, "failed to vacuum reaction tallies");
             }
             tracing::debug!(elapsed = ?start_vacuum.elapsed(), "vacuumed reaction tallies");
 
+            conn.return_to_pool().await;
             tracing::info!(elapsed = ?start.elapsed(), "updated all decayed reaction counts");
             ControlFlow::Continue(())
         }

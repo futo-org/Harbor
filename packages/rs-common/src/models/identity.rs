@@ -4,15 +4,17 @@
 
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 use prost::Message;
 use sha2::{Digest, Sha256};
 
-use crate::models::protos_v2::{RevocationBound, ServerList};
-use crate::models::{
-    collections,
-    protos_v2::{Content, Event, EventProofTarget, Identity, PublicKey, content::ContentBody},
+use crate::models::protos_v2::content::ContentBody;
+use crate::models::protos_v2::{
+    Content, Event, EventProofTarget, Identity, PublicKey, RevocationBound, ServerList,
 };
+use crate::models::validate::{self, SliceConfig, SliceError, Validate};
+use crate::models::{collections, public_key, revocation_bound, server_list};
 
 impl Identity {
     /// Derive an identity key hex string from this identity content.
@@ -71,6 +73,114 @@ impl Identity {
             .targets
             .iter()
             .find(|t| t.collection == collection)
+    }
+}
+
+impl Validate for Identity {
+    type Error = ValidationError;
+
+    fn validate_check<E, F>(&self, errors: &mut Vec<E>, map_err: F)
+    where
+        F: Fn(Self::Error) -> E,
+    {
+        let Identity {
+            rotation_keys,
+            signing_keys,
+            revocation_bounds,
+            servers,
+            recovery_key,
+            recovery_signature,
+        } = self;
+        validate::slice2(
+            rotation_keys,
+            errors,
+            |err| map_err(ValidationError::RotationKeys(err)),
+            |index, error| map_err(ValidationError::RotationKeysItem { index, error }),
+            SliceConfig {
+                max_len: Some(1000),
+                ..Default::default()
+            },
+            |rotation_key, errors, map_err| rotation_key.validate_check(errors, map_err),
+        );
+        validate::slice2(
+            signing_keys,
+            errors,
+            |err| map_err(ValidationError::SigningKeys(err)),
+            |index, error| map_err(ValidationError::SigningKeysItem { index, error }),
+            SliceConfig {
+                max_len: Some(1000),
+                ..Default::default()
+            },
+            |signing_key, errors, map_err| signing_key.validate_check(errors, map_err),
+        );
+        validate::slice2(
+            revocation_bounds,
+            errors,
+            |err| map_err(ValidationError::RevocationBounds(err)),
+            |index, error| map_err(ValidationError::RevocationBoundsItem { index, error }),
+            SliceConfig {
+                max_len: Some(1000),
+                ..Default::default()
+            },
+            |revocation_bound, errors, map_err| revocation_bound.validate_check(errors, map_err),
+        );
+        if let Some(servers) = servers {
+            servers.validate_check(errors, |err| map_err(ValidationError::Servers(err)));
+        }
+        if let Some(recovery_key) = recovery_key {
+            recovery_key.validate_check(errors, |err| map_err(ValidationError::RecoveryKey(err)));
+        }
+        if let Some(recovery_signature) = recovery_signature {
+            validate::ed25519_signature(recovery_signature, errors, |err| {
+                map_err(ValidationError::RecoverySignature(err))
+            });
+        }
+    }
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[cfg_attr(feature = "uniffi", uniffi(name = "IdentityValidationError"))]
+pub enum ValidationError {
+    RotationKeys(SliceError),
+    RotationKeysItem {
+        index: u32,
+        error: public_key::ValidationError,
+    },
+    SigningKeys(SliceError),
+    SigningKeysItem {
+        index: u32,
+        error: public_key::ValidationError,
+    },
+    RevocationBounds(SliceError),
+    RevocationBoundsItem {
+        index: u32,
+        error: revocation_bound::ValidationError,
+    },
+    Servers(server_list::ValidationError),
+    RecoveryKey(public_key::ValidationError),
+    RecoverySignature(SliceError),
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValidationError::RotationKeys(err) => write!(f, "rotation keys {err}"),
+            ValidationError::RotationKeysItem { index, error } => {
+                write!(f, "rotation keys {index}-th {error}")
+            }
+            ValidationError::SigningKeys(err) => write!(f, "signing keys {err}"),
+            ValidationError::SigningKeysItem { index, error } => {
+                write!(f, "signing keys {index}-th {error}")
+            }
+            ValidationError::RevocationBounds(err) => write!(f, "revocation bounds {err}"),
+            ValidationError::RevocationBoundsItem { index, error } => {
+                write!(f, "revocation bounds {index}-th {error}")
+            }
+            ValidationError::Servers(err) => write!(f, "servers {err}"),
+            ValidationError::RecoveryKey(err) => write!(f, "recovery key {err}"),
+            ValidationError::RecoverySignature(err) => write!(f, "recovery signature {err}"),
+        }
     }
 }
 

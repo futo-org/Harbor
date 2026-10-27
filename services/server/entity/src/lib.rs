@@ -45,7 +45,9 @@
 //! We also have cache tables that contain various pre-computed values to make
 //! it easier and cheapier to query for them. These include the following tables:
 //!  * [`follow`] contains a list of which identities are following which.
-//!  * [`reaction`] and [`reaction_tally`] contains the reaction made on posts.
+//!  * [`reaction`] contains the reaction made on posts.
+//!  * [`interaction_tally`] contains counters for interactions on posts, such
+//!    as reactions, reposts and quotes.
 //!  * [`repost`] contains the reposts of posts made.
 //!  * [`quote`] contains the posts that are quoted by another post.
 //!  * [`reply`] contains the posts that are replied by another post.
@@ -82,6 +84,7 @@ pub mod default_follow_suggestion;
 pub mod event;
 pub mod follow;
 pub mod gravity;
+pub mod interaction_tally;
 pub mod moderator;
 pub mod notification;
 pub mod notification_read_marker;
@@ -90,8 +93,8 @@ pub mod pairing_session_claimer;
 pub mod profile;
 pub mod quote;
 pub mod reaction;
-pub mod reaction_tally;
 pub mod reply;
+pub mod report_resolution;
 pub mod repost;
 pub mod url_info_cache;
 pub mod verification_schema;

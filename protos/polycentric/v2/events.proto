@@ -95,9 +95,12 @@ message EventMetadata {
   optional int32 upvote_count = 3;
   // This server's estimate for the total number of negative reactions a post has.
   optional int32 downvote_count = 4;
-
   // This server's estimate for the count for each reaction type a post has.
   repeated ReactionTally emoji_reactions = 5;
+  // This server's estimate for the total number of reposts a post has.
+  optional int32 repost_count = 6;
+  // This server's estimate for the total number of quotes a post has.
+  optional int32 quote_count = 7;
 }
 
 // Conveys the number of times a specific reaction was given.

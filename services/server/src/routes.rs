@@ -40,11 +40,19 @@ pub fn build_routes(
     Router::new()
         .route("/", get(|| async { "Hello, World!" }))
         .route("/status", get(|| async { "OK." }))
+        .route("/version", get(get_version))
         .route("/docs", get(reflection_ui))
         .route("/blob/{digest_id}", get(get_blob))
         .route("/image_proxy", get(image_proxy))
         .with_state(state)
         .layer(cors)
+}
+
+async fn get_version() -> Result<String, StatusCode> {
+    crate::config::get()
+        .commit
+        .clone()
+        .ok_or(StatusCode::NOT_FOUND)
 }
 
 /// Serve a blob body by its content digest. `digest_id` is encoded as

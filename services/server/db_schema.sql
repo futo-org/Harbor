@@ -40,19 +40,19 @@ CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char
 
 
 --
--- Name: reaction_count_decay(bigint, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+-- Name: decay_interaction_count(bigint, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.reaction_count_decay(reaction_count bigint, post_created_at timestamp with time zone) RETURNS numeric
+CREATE FUNCTION public.decay_interaction_count(total_count bigint, created_at timestamp with time zone) RETURNS numeric
     LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
     AS $$
 BEGIN
   RETURN CASE
-    WHEN post_created_at < (SELECT expires_at FROM gravity) THEN 0
+    WHEN created_at < (SELECT expires_at FROM gravity) THEN 0
     ELSE (
-      (reaction_count + 1)::NUMERIC / power(
+      (total_count + 1)::NUMERIC / power(
         GREATEST(
-          EXTRACT(epoch FROM ((SELECT calculated_at FROM gravity) - post_created_at))::NUMERIC / 3600::NUMERIC,
+          EXTRACT(epoch FROM ((SELECT calculated_at FROM gravity) - created_at))::NUMERIC / 3600::NUMERIC,
           0::NUMERIC
         ) + 2::NUMERIC,
         (SELECT value FROM gravity)
@@ -506,6 +506,22 @@ COMMENT ON TABLE public.gravity IS 'Table to hold the dynamic gravity value.';
 
 
 --
+-- Name: interaction_tally; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.interaction_tally (
+    event_id bigint NOT NULL,
+    reaction_positive_count bigint NOT NULL,
+    reaction_negative_count bigint NOT NULL,
+    decayed_count numeric(20,11) NOT NULL,
+    reply_count bigint NOT NULL,
+    repost_count bigint NOT NULL,
+    quote_count bigint NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
 -- Name: moderator; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -628,18 +644,6 @@ CREATE TABLE public.reaction (
 
 
 --
--- Name: reaction_tally; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.reaction_tally (
-    event_id bigint NOT NULL,
-    positive_count bigint NOT NULL,
-    negative_count bigint NOT NULL,
-    decayed_count numeric(20,11) NOT NULL
-);
-
-
---
 -- Name: reply; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -647,6 +651,18 @@ CREATE TABLE public.reply (
     event_id bigint NOT NULL,
     identity text NOT NULL,
     post bigint NOT NULL
+);
+
+
+--
+-- Name: report_resolution; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.report_resolution (
+    content_id bigint NOT NULL,
+    status smallint NOT NULL,
+    resolved_by character varying NOT NULL,
+    resolved_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -893,6 +909,14 @@ ALTER TABLE ONLY public.follow
 
 
 --
+-- Name: interaction_tally interaction_tally_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interaction_tally
+    ADD CONSTRAINT interaction_tally_pkey PRIMARY KEY (event_id);
+
+
+--
 -- Name: moderator moderator_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -973,19 +997,19 @@ ALTER TABLE ONLY public.reaction
 
 
 --
--- Name: reaction_tally reaction_tally_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.reaction_tally
-    ADD CONSTRAINT reaction_tally_pkey PRIMARY KEY (event_id);
-
-
---
 -- Name: reply reply_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.reply
     ADD CONSTRAINT reply_pkey PRIMARY KEY (event_id);
+
+
+--
+-- Name: report_resolution report_resolution_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.report_resolution
+    ADD CONSTRAINT report_resolution_pkey PRIMARY KEY (content_id);
 
 
 --
@@ -1196,6 +1220,20 @@ CREATE INDEX idx_url_info_cache_updated_at ON public.url_info_cache USING btree 
 
 
 --
+-- Name: interaction_tally_decayed_count; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX interaction_tally_decayed_count ON public.interaction_tally USING btree (decayed_count DESC, event_id DESC) WHERE (decayed_count > (0)::numeric);
+
+
+--
+-- Name: interaction_tally_decayed_count_update; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX interaction_tally_decayed_count_update ON public.interaction_tally USING btree (event_id DESC) WHERE (decayed_count > (0)::numeric);
+
+
+--
 -- Name: notification_to_identity_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1259,17 +1297,10 @@ CREATE INDEX reaction_on_post_idx ON public.reaction USING btree (on_post);
 
 
 --
--- Name: reaction_tally_decayed_count; Type: INDEX; Schema: public; Owner: -
+-- Name: reaction_post_identity_unique; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX reaction_tally_decayed_count ON public.reaction_tally USING btree (decayed_count DESC, event_id DESC) WHERE (decayed_count > (0)::numeric);
-
-
---
--- Name: reaction_tally_decayed_count_update; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX reaction_tally_decayed_count_update ON public.reaction_tally USING btree (event_id DESC) WHERE (decayed_count > (0)::numeric);
+CREATE UNIQUE INDEX reaction_post_identity_unique ON public.reaction USING btree (on_post, identity);
 
 
 --
@@ -1338,6 +1369,14 @@ ALTER TABLE ONLY public.content_report
 
 ALTER TABLE ONLY public.content_repost
     ADD CONSTRAINT "fk-content_repost-content_id" FOREIGN KEY (content_id) REFERENCES public.content(id);
+
+
+--
+-- Name: report_resolution fk-report_resolution-content_id; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.report_resolution
+    ADD CONSTRAINT "fk-report_resolution-content_id" FOREIGN KEY (content_id) REFERENCES public.content(id) ON DELETE CASCADE;
 
 
 --

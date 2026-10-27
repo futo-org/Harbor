@@ -103,8 +103,8 @@ export const Routes = {
       reportBug: '/settings/report-bug',
     },
     moderation: {
-      dashboard: '/moderation/dashboard',
       banList: '/moderation/ban-list',
+      reports: '/moderation/reports',
     },
   },
   onboarding: {

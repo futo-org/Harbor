@@ -4,7 +4,7 @@ use crate::service::proto::{SortPostsBy, SortUsersBy};
 use crate::service::search::rpc::search_posts::SortedPostsBy;
 use crate::service::search::rpc::search_users::SortedUsersBy;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
-use entity::{content, event, profile, reaction_tally};
+use entity::{content, event, interaction_tally, profile};
 use sea_orm::sea_query::{Expr, Func, Order, Value};
 use sea_orm::{
     ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iterable,
@@ -223,12 +223,12 @@ impl Query {
             query = query
                 .join(
                     JoinType::InnerJoin,
-                    reaction_tally::Relation::Event.def().rev(),
+                    interaction_tally::Relation::Event.def().rev(),
                 )
                 .expr_as(
                     Func::cast_as(
                         Expr::col(
-                            reaction_tally::Column::DecayedCount
+                            interaction_tally::Column::DecayedCount
                                 .as_column_ref(),
                         ),
                         "TEXT",
@@ -256,7 +256,7 @@ impl Query {
                             sorted_by: SortedPostsBy::DecayedReactionCount(count),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(reaction_tally.decayed_count, events.id) < (($1)::NUMERIC, $2)",
+                            "(interaction_tally.decayed_count, events.id) < (($1)::NUMERIC, $2)",
                             [Value::from(count), Value::from(event_id)],
                         )),
                         Marker {
@@ -283,7 +283,7 @@ impl Query {
                             sorted_by: SortedPostsBy::DecayedReactionCount(count),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(reaction_tally.decayed_count, events.id) > (($1)::NUMERIC, $2)",
+                            "(interaction_tally.decayed_count, events.id) > (($1)::NUMERIC, $2)",
                             [Value::from(count), Value::from(event_id)],
                         )),
                         Marker {
@@ -319,7 +319,7 @@ fn sort_users_by_column(sort_by: SortUsersBy) -> (Expr, Order) {
 fn sort_posts_by_column(sort_by: SortPostsBy) -> Expr {
     match sort_by {
         SortPostsBy::Default | SortPostsBy::Top => {
-            Expr::col(reaction_tally::Column::DecayedCount.as_column_ref())
+            Expr::col(interaction_tally::Column::DecayedCount.as_column_ref())
         }
         SortPostsBy::Latest => {
             Expr::col(event::Column::CreatedAt.as_column_ref())
