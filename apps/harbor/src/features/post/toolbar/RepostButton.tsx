@@ -21,6 +21,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
   const hasReposted = useReposts((s) => s.hasReposted(post.id));
   const addRepost = useReposts((s) => s.addRepost);
   const removeRepost = useReposts((s) => s.removeRepost);
+  const count = (post.repostCount ?? 0) + (post.quoteCount ?? 0);
 
   const onRepostPress = async () => {
     if (hasReposted) {
@@ -44,6 +45,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
       active={hasReposted}
       color={'positive_500'}
       accessibilityLabel="Repost or quote"
+      count={count}
     />
   );
 
