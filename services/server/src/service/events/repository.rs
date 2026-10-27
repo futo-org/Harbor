@@ -2,12 +2,12 @@ use ::entity::{
     application, block, content, content_delete, event, follow,
     interaction_tally, profile, quote, reaction, reply, repost,
 };
-use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::{
     Application, Block, Content, ContentDigest, Delete, EventKey, Follow, Post,
     ProfileUpdate, Reaction, Repost,
 };
+use polycentric_common::models::{collections, content_types};
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, InsertStatement,
     IntoCondition, IntoTableRef, OnConflict, SelectExpr, SelectStatement,
