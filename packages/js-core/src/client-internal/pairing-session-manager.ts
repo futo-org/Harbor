@@ -132,12 +132,15 @@ export class PairingSessionManager {
     return this.decodeSession(info.server, stateBytes);
   }
 
-  /** Register our key as a claimer on a session. */
-  async joinPairingSession(info: Proto.PairingInfo): Promise<void> {
+  /** Register `publicKey` as a claimer on a session. */
+  async joinPairingSession(
+    info: Proto.PairingInfo,
+    publicKey: Proto.PublicKey,
+  ): Promise<void> {
     await this.client.core.joinPairingSession(
       info.server,
       toCoreBytes(info.digestSha256),
-      toCoreKey(this.requireKeyPair().publicKey),
+      toCoreKey(publicKey),
     );
   }
 
@@ -153,15 +156,18 @@ export class PairingSessionManager {
   }
 
   /**
-   * Claimer-side poll: check if the issuer has included our key in its latest
-   * identity state.
+   * Claimer-side poll: check if the issuer has included `publicKey` in its
+   * latest identity state.
    * We should still verify the full identity chain before fully committing.
    */
-  async pollForAuthorization(info: Proto.PairingInfo): Promise<boolean> {
+  async pollForAuthorization(
+    info: Proto.PairingInfo,
+    publicKey: Proto.PublicKey,
+  ): Promise<boolean> {
     return await this.client.core.pollForAuthorization(
       info.server,
       toCoreBytes(info.digestSha256),
-      toCoreKey(this.requireKeyPair().publicKey),
+      toCoreKey(publicKey),
     );
   }
 

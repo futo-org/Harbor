@@ -1,7 +1,11 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
 import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
-import type { PairingSession, v2 } from '@polycentric/react-native';
+import type {
+  PairingSession,
+  PendingLogin,
+  v2,
+} from '@polycentric/react-native';
 import { useCallback, useEffect, useState } from 'react';
 
 export type PairIdentityClaimerHookResult = {
@@ -24,12 +28,12 @@ type ConfirmingState = {
   session: PairingSession | undefined;
 };
 
-type JoiningState = {
-  info: v2.PairingInfo;
-  session: PairingSession | undefined;
-};
+type JoiningState = ConfirmingState;
 
-type PollingState = { info: v2.PairingInfo; session: PairingSession };
+type PollingState = JoiningState & {
+  session: PairingSession;
+  pendingLogin: PendingLogin;
+};
 type ClaimingState = PollingState;
 
 type ClaimerState =
@@ -110,7 +114,8 @@ export function usePairIdentityClaimer(
       };
     };
 
-    const whenJoining = ({ info, session }: JoiningState): StageResult => {
+    const whenJoining = (state: JoiningState): StageResult => {
+      const { info, session } = state;
       let canceled = false;
 
       const join = async () => {
@@ -120,10 +125,24 @@ export function usePairIdentityClaimer(
             (await client.pairingSessionManager.getPairingSession(info));
           if (canceled) return;
 
-          await client.pairingSessionManager.joinPairingSession(info);
+          const pendingLogin = await client.loginManager.beginLogin(
+            resolved.digest.issuerIdentity,
+            'pair',
+          );
           if (canceled) return;
 
-          setState({ stage: 'polling', info, session: resolved });
+          await client.pairingSessionManager.joinPairingSession(
+            info,
+            pendingLogin.publicKey,
+          );
+          if (canceled) return;
+
+          setState({
+            ...state,
+            stage: 'polling',
+            session: resolved,
+            pendingLogin,
+          });
         } catch (err) {
           if (canceled) return;
           onError(err, 'Failed to join pairing session.');
@@ -136,18 +155,22 @@ export function usePairIdentityClaimer(
       };
     };
 
-    const whenPolling = ({ info, session }: PollingState): StageResult => {
+    const whenPolling = (state: PollingState): StageResult => {
+      const { info, pendingLogin } = state;
       let canceled = false;
 
       // Poll until we get a different marker and then try claiming
       const pollForRemoteChange = async () => {
         try {
           const isAuthorized =
-            await client.pairingSessionManager.pollForAuthorization(info);
+            await client.pairingSessionManager.pollForAuthorization(
+              info,
+              pendingLogin.publicKey,
+            );
 
           if (canceled || !isAuthorized) return;
 
-          setState({ stage: 'claiming', info, session });
+          setState({ ...state, stage: 'claiming' });
         } catch (e) {
           // polling failed, will retry on next interval
           console.warn(`pairing session polling error: ${e}`);
@@ -165,7 +188,8 @@ export function usePairIdentityClaimer(
       };
     };
 
-    const whenClaiming = ({ info, session }: ClaimingState): StageResult => {
+    const whenClaiming = (state: ClaimingState): StageResult => {
+      const { info, session, pendingLogin } = state;
       let canceled = false;
 
       void (async () => {
@@ -174,12 +198,11 @@ export function usePairIdentityClaimer(
           if (await redirectIfLoggedIn(client)) return;
           if (canceled) return;
 
-          const identityKey = session.digest.issuerIdentity;
           const claimServers = serversForClaim(session, info, client.servers);
-          throw new Error('TODO: implement');
-          // if (canceled) return;
+          await client.loginManager.claim(pendingLogin, claimServers);
+          if (canceled) return;
 
-          // setState({ stage: 'done' });
+          setState({ stage: 'done' });
         } catch (err) {
           if (!canceled) {
             onError(err, 'Failed to claim identity');
@@ -214,7 +237,7 @@ export function usePairIdentityClaimer(
   const join = useCallback(() => {
     setState((prev) => {
       if (prev.stage === 'confirming') {
-        return { stage: 'joining', info: prev.info, session: prev.session };
+        return { ...prev, stage: 'joining' };
       } else {
         return prev;
       }

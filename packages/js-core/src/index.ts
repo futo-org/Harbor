@@ -40,6 +40,10 @@ export { IdentityManager } from './client-internal/identity-manager';
 export { PairingSessionManager } from './client-internal/pairing-session-manager';
 export type { PairingSession } from './client-internal/pairing-session-manager';
 export type {
+  PendingLogin,
+  SignupInfo,
+} from './client-internal/login-manager';
+export type {
   PolycentricClientConfig,
   KeyPair,
   IdentityState,

@@ -48,6 +48,12 @@ export interface IdentityUpdate {
   signedEvent: Proto.SignedEvent;
 }
 
+/** New, unpublished identity content. */
+export interface IdentityDraft {
+  identity: Proto.Identity;
+  content: Proto.Content;
+}
+
 /**
  * IdentityManager owns identity lifecycle operations — publishing, key
  * rotation — and the authorization checks that go with them.
@@ -88,7 +94,7 @@ export class IdentityManager {
    * Derive an identity document content from the provided args.
    * Does not do any validation or authorization checks.
    */
-  draftIdentityContent(args: PublishArgs): Proto.Content {
+  draftIdentityContent(args: PublishArgs): IdentityDraft {
     const {
       rotationKeys,
       signingKeys,
@@ -106,11 +112,12 @@ export class IdentityManager {
       recoveryKey: recoveryKey ?? undefined,
       recoverySignature: recoverySignature ?? undefined,
     });
+
     const content = Proto.Content.create({
       contentBody: { oneofKind: 'identity', identity },
     });
 
-    return content;
+    return { identity, content };
   }
 
   /**
@@ -137,7 +144,7 @@ export class IdentityManager {
     }
 
     // Create event/content
-    const content = this.draftIdentityContent(args);
+    const { content } = this.draftIdentityContent(args);
     const digest = this.client.contentManager.buildDigest(content);
     await this.client.storage.content.save(digest, content);
 

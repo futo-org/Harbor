@@ -69,8 +69,9 @@ export class LoginManager {
   }
 
   /**
-   * Publish a new login event.
-   * No authorization checks are done.
+   * Publish a new login event and mark the login as live.
+   * This method does not check that we are properly authorized to log in as
+   * this identity.
    */
   async publishLogin(
     identityKey: string,
@@ -78,7 +79,14 @@ export class LoginManager {
     args: PublishArgs,
   ): Promise<IdentityUpdate> {
     // Create event/content
-    const content = this.client.identityManager.draftIdentityContent(args);
+    const { identity, content } =
+      this.client.identityManager.draftIdentityContent(args);
+
+    const publicKey = keyPair.publicKey;
+
+    const power = this.checkAuthorization(identity, publicKey);
+    if (!power) throw new Error('Key is not authorized by the identity');
+
     const digest = this.client.contentManager.buildDigest(content);
     await this.client.storage.content.save(digest, content);
 
@@ -94,10 +102,9 @@ export class LoginManager {
 
     // At this point, we have saved the identity event authorizing us locally
     // and are fully committed to the switch.
-    await this.client.loginAs({
-      identity: identityKey,
-      publicKey: keyPair.publicKey,
-    });
+    const loginId = { identity: identityKey, publicKey };
+    await this.finishLogin(loginId, power);
+    await this.client.loginAs(loginId);
 
     // Push to servers
     // Push errors are currently swallowed
@@ -116,11 +123,10 @@ export class LoginManager {
    * Returns the adopted identity state. Throws on any failure.
    */
   async claim(
-    identityKey: string,
-    keyPair: KeyPair,
+    pendingLogin: PendingLogin,
     servers?: string[],
   ): Promise<IdentityState> {
-    const publicKey = keyPair.publicKey;
+    const { identity: identityKey, keyPair, publicKey } = pendingLogin;
 
     // Hydrate all known identity events for `identityKey` to rs-core
     await this.client.listEvents({
@@ -131,7 +137,7 @@ export class LoginManager {
 
     // Check that we are authorized
     const state = this.client.identityManager.resolveIdentity(identityKey);
-    if (!state || !this.checkAuthorized(state, publicKey)) {
+    if (!state || !this.checkAuthorization(state, publicKey)) {
       throw new Error('Unable to verify authorization');
     }
 
@@ -325,17 +331,25 @@ export class LoginManager {
   }
 
   /**
-   * Helper method for `claim()`.
-   * Returns whether `state` contains `myKey` as either a rotation or signing key.
+   * Returns whether `key` is authorized for rotation, signing, or nothing
+   * in the given identity state.
    */
-  private checkAuthorized(
-    state: IdentityState,
-    myKey: Proto.PublicKey,
-  ): boolean {
-    return (
-      state.rotationKeys.some((k) => IdentityManager.keysEqual(k, myKey)) ||
-      state.signingKeys.some((k) => IdentityManager.keysEqual(k, myKey))
-    );
+  private checkAuthorization(
+    identity: {
+      rotationKeys: Proto.PublicKey[];
+      signingKeys: Proto.PublicKey[];
+    },
+    key: Proto.PublicKey,
+  ): 'rotation' | 'signing' | null {
+    if (identity.rotationKeys.some((k) => IdentityManager.keysEqual(k, key))) {
+      return 'rotation';
+    }
+
+    if (identity.signingKeys.some((k) => IdentityManager.keysEqual(k, key))) {
+      return 'signing';
+    }
+
+    return null;
   }
 
   /**
