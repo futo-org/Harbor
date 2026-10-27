@@ -171,7 +171,7 @@ impl Mutation {
                         attributed_to_reaction_summary::Entity,
                         count_col,
                     ))
-                    .add(1),
+                    .add(Expr::Constant(1.into())),
                 )
                 .to_owned(),
         )
