@@ -67,7 +67,7 @@
     "jest": "catalog:",
     "react": "19.2.3",
     "react-native": "0.86.0",
-    "react-native-builder-bob": "^0.43.0",
+    "react-native-builder-bob": "^0.44.0",
     "typescript": "catalog:"
   },
   "peerDependencies": {
