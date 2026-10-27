@@ -13,6 +13,7 @@ use crate::data::EventWithContentRow;
 use crate::db::DbConn;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::RequestContext;
+use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::{self as FeedsRepository};
 use crate::service::identity::chain;
 use crate::service::identity::repository::{
@@ -92,6 +93,29 @@ pub async fn erase_identity(
         }
     }
     Ok(total)
+}
+
+/// Erases one event and the content only it used. Blobs are left, as with
+/// bans.
+pub async fn erase_event(
+    db: &mut DbConn,
+    proof_cache: Option<&ProofCache>,
+    key: &TargetEventKey,
+) -> Result<Erased, DbErr> {
+    let mut run = async || {
+        let mut tx = db.begin().await?;
+        let batch = IdentityMutation::erase_event(&mut tx, key).await?;
+        tx.commit().await?;
+        Ok(batch)
+    };
+    let batch = retry_deadlocks_inline!(run);
+
+    if let Some(cache) = proof_cache {
+        cache
+            .invalidate_canonical(&key.identity, key.collection as i32)
+            .await;
+    }
+    Ok(batch.erased)
 }
 
 /// Erases every event `public_key` signed and the rows derived from
