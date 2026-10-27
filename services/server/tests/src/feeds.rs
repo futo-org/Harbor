@@ -1247,7 +1247,7 @@ async fn get_post_with_reactions() {
 /// Run a `get_post` query using `target` to derive the filter.
 /// Expect an event bundle with metadata matching `metadata` if present
 /// or no candidates to be returned if `None`.
-async fn test_get_post(
+pub async fn test_get_post(
     target: EventKey,
     metadata: Option<EventMetadata>,
     hints: Vec<ExpectHint>,
