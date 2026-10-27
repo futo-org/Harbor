@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { usePolycentricContext } from '../../../common/lib/polycentric-hooks/PolycentricProvider';
-import { useStore } from '../../../common/lib/polycentric-hooks/store';
 import usePost from './usePost';
 
 const REPLIES_FEED_PREFIX = 'replies:';

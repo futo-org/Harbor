@@ -432,10 +432,6 @@ export function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
-export function pubkeyStr(key: v2.PublicKey): string {
-  return Array.from(key.key ?? new Uint8Array()).join(',');
-}
-
 export function publicKeyToString(key: v2.PublicKey): string {
   const keyType = key.keyType ?? 0;
   const keyBytes = key.key ?? new Uint8Array();

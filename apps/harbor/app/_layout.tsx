@@ -118,7 +118,6 @@ function RootStack() {
               contentStyle: { backgroundColor: 'transparent' },
             }}
           />
-          <Stack.Screen name="identity/switch" />
           <Stack.Screen name="verifications/index" />
         </Stack.Protected>
 
