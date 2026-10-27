@@ -918,7 +918,12 @@ impl Mutation {
                         expr: Expr::col(event::Column::Id.as_column_ref()),
                         alias: Some(repost::Column::Post.into()),
                         window: None,
-                    });
+                    })
+                    // Ensure the event the repost is of is a post.
+                    .and_where(
+                        Expr::col(event::Column::ContentType.as_column_ref())
+                            .eq(Expr::Constant(content_types::POST.into())),
+                    );
                 post_event_id
             })
             .map_err(|err| {
