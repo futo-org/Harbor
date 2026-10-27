@@ -10,7 +10,7 @@ import {
   type PolycentricClient,
 } from '@polycentric/react-native';
 import { create } from 'zustand';
-import { feedQueryKeys } from '../../feed/hooks/feedCache';
+import { feedQueryKeys, alterPostRepostCount } from '../../feed/hooks/feedCache';
 
 type RepostsState = {
   reposts: Map<string, string>;
@@ -67,8 +67,6 @@ const useReposts = create<RepostsState>((set, get) => ({
     const reposts = get().reposts;
     if (reposts.has(post.id)) return;
 
-    // TODO: update reports count / overlay.
-
     const targetKey = v2.EventKey.fromBinary(hexToBytes(post.id));
     const repostContent = v2.Content.create({
       contentBody: {
@@ -86,6 +84,9 @@ const useReposts = create<RepostsState>((set, get) => ({
     const repostIdHex = eventKeyId(event.key);
 
     set({ reposts: new Map(reposts).set(post.id, repostIdHex) });
+    alterPostRepostCount(feedQueryKeys.following(post.identity), post.id, 1);
+    alterPostRepostCount(feedQueryKeys.identity(post.identity), post.id, 1);
+    alterPostRepostCount(feedQueryKeys.explore(post.identity), post.id, 1);
 
     try {
       await client.commitEvent(signedEvent, repostContent);
@@ -103,8 +104,6 @@ const useReposts = create<RepostsState>((set, get) => ({
   async removeRepost(client, targetId) {
     const self = client.activeIdentityKey;
     if (!self) return;
-
-    // TODO: update reports count / overlay.
 
     const reposts = get().reposts;
     const bundles = client.listValidEvents(self, COLLECTION.FEED);
@@ -124,6 +123,12 @@ const useReposts = create<RepostsState>((set, get) => ({
     const next = new Map(reposts);
     next.delete(targetId);
     set({ reposts: next });
+    for (const { event, targetIdHex } of targets) {
+      const identity = event.key?.identity ?? '';
+      alterPostRepostCount(feedQueryKeys.following(identity), targetIdHex, -1);
+      alterPostRepostCount(feedQueryKeys.identity(identity), targetIdHex, -1);
+      alterPostRepostCount(feedQueryKeys.explore(identity), targetIdHex, -1);
+    }
 
     try {
       for (const { event } of targets) {
