@@ -1,6 +1,10 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { COLLECTION, SyncStrategy } from '../constants';
-import type { LoginId } from '../platform-interfaces/login-repository';
+import type {
+  LoginDetails,
+  LoginId,
+  LoginStatus,
+} from '../platform-interfaces/login-repository';
 import type {
   IdentityUpdate,
   KeyPair,
@@ -15,12 +19,18 @@ import {
   type PublishArgs,
 } from './identity-manager';
 
+/** Genesis info for a new identity still being created. */
 export type SignupInfo = {
   login: LoginId;
   keyPair: KeyPair;
   genesisEvent: Proto.SignedEvent;
   identityContent: Proto.Content;
   serializedContent: Proto.SerializedContent;
+};
+
+/** Info for an ongoing login session. */
+export type PendingLogin = LoginDetails & {
+  keyPair: KeyPair;
 };
 
 export class LoginManager {
@@ -393,6 +403,44 @@ export class LoginManager {
       loginId.identity,
       loginId.publicKey,
       'liveRotationKey',
+    );
+  }
+
+  /**
+   * Generate a new key pair and register it as a pending login.
+   */
+  async beginLogin(
+    identityKey: string,
+    kind: 'pair' | 'recovery',
+  ): Promise<PendingLogin> {
+    const keyPair = await this.generateKeyPair();
+    const status: LoginStatus =
+      kind === 'pair' ? 'pendingPair' : 'pendingRecovery';
+
+    await this.client.storage.logins.putLogin(identityKey, keyPair, status);
+
+    return {
+      identity: identityKey,
+      publicKey: keyPair.publicKey,
+      privateKey: keyPair.privateKey,
+      status,
+      keyPair,
+    };
+  }
+
+  /**
+   * Mark the login's key pair as live (authorized).
+   */
+  async finishLogin(
+    loginId: LoginId,
+    power: 'signing' | 'rotation',
+  ): Promise<void> {
+    const status = power === 'signing' ? 'liveSigningKey' : 'liveRotationKey';
+
+    await this.client.storage.logins.changeLoginStatus(
+      loginId.identity,
+      loginId.publicKey,
+      status,
     );
   }
 }
