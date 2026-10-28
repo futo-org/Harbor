@@ -18,7 +18,6 @@ import polycentric.v2.Content
 import polycentric.v2.Event
 import polycentric.v2.EventBundle
 import polycentric.v2.EventKey
-import polycentric.v2.PutEventError
 import polycentric.v2.SerializedContent
 import polycentric.v2.SignedEvent
 import polycentric.v2.UploadBlobRequest
@@ -338,7 +337,7 @@ class PolycentricClientSyncTest {
             val core =
                 FakeCore {
                     pullError = "pull down"
-                    pushResponse = { _, _, _ -> putEventsResponse() }
+                    pushResponse = { _, _, _ -> pushResult() }
                 }
             val f =
                 makeClient {
@@ -658,9 +657,9 @@ class PolycentricClientSyncTest {
                     pullBundles = { emptyList() }
                     pushResponse = { _, server, _ ->
                         if (server == "http://server-1") {
-                            putEventsResponse(requestedBlobs = listOf(blob1))
+                            pushResult(requestedBlobs = listOf(blob1))
                         } else {
-                            putEventsResponse(requestedBlobs = listOf(blob2))
+                            pushResult(requestedBlobs = listOf(blob2))
                         }
                     }
                 }
@@ -701,7 +700,7 @@ class PolycentricClientSyncTest {
             val core =
                 FakeCore {
                     pullBundles = { emptyList() }
-                    pushResponse = { _, _, _ -> putEventsResponse(requestedBlobs = listOf(blob)) }
+                    pushResponse = { _, _, _ -> pushResult(requestedBlobs = listOf(blob)) }
                 }
             val f =
                 makeClient {
@@ -897,7 +896,10 @@ class PolycentricClientSyncTest {
                 FakeCore {
                     pullBundles = { emptyList() }
                     pushResponse = { _, _, _ ->
-                        putEventsResponse(errors = listOf(PutEventError()), requestedBlobs = listOf(blob))
+                        pushResult(
+                            eventIssues = listOf(eventIssues(1uL, errors = listOf("rejected"))),
+                            requestedBlobs = listOf(blob),
+                        )
                     }
                 }
             val fileStore = FakeFileStore(listOf(requireNotNull(blob.digest) to blobBytes))

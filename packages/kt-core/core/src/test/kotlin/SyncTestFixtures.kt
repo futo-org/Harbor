@@ -4,6 +4,8 @@ import okio.ByteString
 import okio.ByteString.Companion.toByteString
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.signers.Ed25519Signer
+import org.futo.polycentric.ffi.EventPushIssues
+import org.futo.polycentric.ffi.PushResult
 import polycentric.v2.Blob
 import polycentric.v2.Content
 import polycentric.v2.ContentDigest
@@ -16,11 +18,12 @@ import polycentric.v2.Image
 import polycentric.v2.ImageSet
 import polycentric.v2.Post
 import polycentric.v2.PublicKey
-import polycentric.v2.PutEventError
 import polycentric.v2.PutEventsResponse
 import polycentric.v2.SerializedContent
 import polycentric.v2.SignedEvent
 import java.security.MessageDigest
+import org.futo.polycentric.ffi.EventKey as FfiEventKey
+import org.futo.polycentric.ffi.PublicKey as FfiPublicKey
 
 // Deterministic data helpers — 1:1 port of the fixtures at the top of
 // js-core `polycentric-client.sync.test.ts`. Signatures are produced by
@@ -192,10 +195,32 @@ fun makeBundle(
         event_proofs = emptyList(),
     )
 
-fun putEventsResponse(
+fun pushResult(
     requestedBlobs: List<Blob> = emptyList(),
-    errors: List<PutEventError> = emptyList(),
-): ByteArray = PutEventsResponse.ADAPTER.encode(PutEventsResponse(errors = errors, requested_blobs = requestedBlobs))
+    eventIssues: List<EventPushIssues> = emptyList(),
+): PushResult =
+    PushResult(
+        response = PutEventsResponse.ADAPTER.encode(PutEventsResponse(requested_blobs = requestedBlobs)),
+        eventIssues = eventIssues,
+    )
+
+/** The core's report of server errors/warnings for one pushed event. */
+fun eventIssues(
+    sequence: ULong,
+    errors: List<String> = emptyList(),
+    warnings: List<String> = emptyList(),
+): EventPushIssues =
+    EventPushIssues(
+        key =
+            FfiEventKey(
+                collection = 0,
+                identity = "identity",
+                signedBy = FfiPublicKey(keyType = 1, key = byteArrayOf(1)),
+                sequence = sequence,
+            ),
+        errors = errors,
+        warnings = warnings,
+    )
 
 fun ed25519Sign(
     message: ByteArray,

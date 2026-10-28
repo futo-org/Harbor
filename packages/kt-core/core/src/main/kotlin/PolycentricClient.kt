@@ -458,14 +458,14 @@ class PolycentricClient(
                     servers.map { server ->
                         async {
                             try {
-                                val responseBytes =
+                                val result =
                                     coreCall {
                                         core.pushLocalEvents(identity, server, partialPush)
                                     } ?: return@async null
-                                val response = PutEventsResponse.ADAPTER.decode(responseBytes)
-                                for (pushError in response.errors) {
-                                    log.warning("Error from event push: $pushError")
+                                for (issues in result.eventIssues) {
+                                    log.warning("Issues from event push: $issues")
                                 }
+                                val response = PutEventsResponse.ADAPTER.decode(result.response)
                                 for (blob in response.requested_blobs) {
                                     val digest = blob.digest ?: continue
                                     val body = filestore.get(digest) ?: continue

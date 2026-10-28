@@ -6,6 +6,7 @@ import org.futo.polycentric.ffi.ContentEntry
 import org.futo.polycentric.ffi.CoreException
 import org.futo.polycentric.ffi.ListEventsArgs
 import org.futo.polycentric.ffi.PolycentricCoreInterface
+import org.futo.polycentric.ffi.PushResult
 import org.futo.polycentric.ffi.Query
 import org.futo.polycentric.ffi.QueryObservable
 import org.futo.polycentric.ffi.QueryOpts
@@ -237,8 +238,8 @@ class FakeCoreOptions {
     /** Non-null makes `awaitQuery` throw, modelling a failed pull. */
     var pullError: String? = null
 
-    /** Per-server push response (serialized `PutEventsResponse`) or null. May throw. */
-    var pushResponse: ((identity: String, server: String, partial: Boolean) -> ByteArray?)? = null
+    /** Per-server push result, or null when there was nothing to push. May throw. */
+    var pushResponse: ((identity: String, server: String, partial: Boolean) -> PushResult?)? = null
 
     /** Serialized identity doc returned by `resolveIdentity`. */
     var resolveIdentityResponse: ByteArray? = null
@@ -351,7 +352,7 @@ class FakeCore(
         identity: String,
         server: String,
         partial: Boolean,
-    ): ByteArray? {
+    ): PushResult? {
         pushCalls.add(Triple(identity, server, partial))
         return options.pushResponse?.invoke(identity, server, partial)
     }
@@ -417,12 +418,22 @@ class FakeCore(
         opts: QueryOpts?,
     ): QueryObservable = error("not used by sync tests")
 
+    override suspend fun acknowledgeNotifications(
+        serverUrl: String,
+        requestBytes: ByteArray,
+    ) = error("not used by sync tests")
+
     override fun assembleRecoveryPayload(
         identity: String,
         publicKey: ByteArray,
     ): ByteArray = error("not used by sync tests")
 
     override fun blockedIdentities(): List<String> = error("not used by sync tests")
+
+    override suspend fun deleteContent(
+        serverUrl: String,
+        requestBytes: ByteArray,
+    ): ByteArray = error("not used by sync tests")
 
     override suspend fun getAttributedToReactionCounts(
         serverUrl: String,
@@ -442,6 +453,8 @@ class FakeCore(
         requestBytes: ByteArray,
     ): ByteArray = error("not used by sync tests")
 
+    override fun localHeads(identity: String): ByteArray = error("not used by sync tests")
+
     override fun processImageToJpeg(
         image: ByteArray,
         width: UInt,
@@ -460,6 +473,11 @@ class FakeCore(
     ) = error("not used by sync tests")
 
     override fun resolveIdentityChain(identity: String): ByteArray = error("not used by sync tests")
+
+    override suspend fun resolveReport(
+        serverUrl: String,
+        requestBytes: ByteArray,
+    ): ByteArray = error("not used by sync tests")
 
     override fun setActiveIdentity(identity: String?) = error("not used by sync tests")
 

@@ -7,6 +7,7 @@ import {
   InitializationStep,
   KeyPairManager,
   PairingSessionManager,
+  type ServerPushResult,
 } from './client-internal';
 import {
   COLLECTION,
@@ -28,7 +29,13 @@ import { bytesEqual } from './utils/bytes';
 import { CryptoManager } from './crypto/crypto-manager';
 import { createServerJwt, DEFAULT_EXPIRY_SECONDS } from './crypto/server-jwt';
 
-import type { PolycentricCoreLike, EventKey } from '@polycentric/rs-core-wasm';
+import type {
+  PolycentricCoreLike,
+  EventKey,
+  EventPushIssues,
+  PushResult,
+} from '@polycentric/rs-core-wasm';
+
 // `./generated` is the pure-JS bindings subpath; it exposes the Query
 // class and QueryStatus enum without dragging in the wasm asset. The
 // uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
@@ -1026,11 +1033,11 @@ export class PolycentricClient {
     }
   }
 
-  /** Used for syncing */
+  /** Used for syncing. Returns null for strategies that don't push. */
   private getPushFn(
     strategy: SyncStrategy,
     identity: string,
-  ): (server: string) => Promise<ArrayBuffer | undefined> {
+  ): ((server: string) => Promise<PushResult | undefined>) | null {
     switch (strategy) {
       case SyncStrategy.FULL:
       case SyncStrategy.FULL_PUSH:
@@ -1040,13 +1047,15 @@ export class PolycentricClient {
         return (server) => this.core.pushLocalEvents(identity, server, true);
       case SyncStrategy.FULL_PULL:
       case SyncStrategy.PARTIAL_PULL:
-        return async () => undefined;
+        return null;
     }
   }
 
   /**
    * Sync events for the active identity between this client and
-   * the remote servers. Throws only if the pull fails.
+   * the remote servers. Throws only if the pull fails. Per-server push
+   * outcomes, including events the servers responded with errors/warnings
+   * for, are emitted as `pushResults` on {@link events}.
    * @returns The number of new events pulled
    */
   async sync(strategy?: SyncStrategy): Promise<number> {
@@ -1062,40 +1071,55 @@ export class PolycentricClient {
     const pullTask = pullFn();
 
     // Push new events and blobs to servers
-    const pushTasks = this.servers.map(async (server): Promise<void> => {
-      const responseBytes = await pushFn(server);
-      if (!responseBytes) return; // Nothing was done
+    const servers = this.servers;
+    const pushTasks = (pushFn ? servers : []).map(
+      async (server): Promise<EventPushIssues[]> => {
+        const result = await pushFn?.(server);
+        if (!result) return [];
 
-      const response = Proto.PutEventsResponse.fromBinary(
-        new Uint8Array(responseBytes),
-      );
-      const blobs = response.requestedBlobs;
+        for (const issues of result.eventIssues) {
+          if (issues.errors.length > 0) {
+            console.error('Error from event push:', issues);
+          } else {
+            console.warn('Warning from event push:', issues);
+          }
+        }
 
-      for (const error of response.errors) {
-        console.error('Error from event push:', error);
-      }
+        const response = Proto.PutEventsResponse.fromBinary(
+          new Uint8Array(result.response),
+        );
 
-      await Promise.allSettled(
-        blobs.map(async (blob) => {
-          if (!blob.digest) return;
+        await Promise.allSettled(
+          response.requestedBlobs.map(async (blob) => {
+            if (!blob.digest) return;
 
-          const blobData = await this.fileStore.get(blob.digest);
-          if (!blobData) return;
+            const blobData = await this.fileStore.get(blob.digest);
+            if (!blobData) return;
 
-          await this.uploadBlob(blob, blobData, [server]);
-        }),
-      );
-    });
+            await this.uploadBlob(blob, blobData, [server]);
+          }),
+        );
+
+        return result.eventIssues;
+      },
+    );
 
     const [pullResult, ...pushResults] = await Promise.allSettled([
       pullTask,
       ...pushTasks,
     ]);
 
-    for (const result of pushResults) {
-      if (result.status === 'rejected') {
-        console.error('Sync failed for a server:', result.reason);
-      }
+    if (pushFn) {
+      this.events.emitPushResults(
+        pushResults.map((result, i): ServerPushResult => {
+          const server = servers[i];
+          if (result.status === 'fulfilled') {
+            return { server, eventIssues: result.value };
+          }
+          console.error('Sync failed for a server:', result.reason);
+          return { server, eventIssues: [], error: result.reason };
+        }),
+      );
     }
 
     if (pullResult.status === 'fulfilled') {

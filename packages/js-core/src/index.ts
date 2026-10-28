@@ -64,6 +64,8 @@ export {
   InitializationStep,
   HydrationStatus,
 } from './client-internal/event-service';
+export type { ServerPushResult } from './client-internal/event-service';
+export type { EventPushIssues } from '@polycentric/rs-core-wasm';
 
 export {
   resolveAlias,

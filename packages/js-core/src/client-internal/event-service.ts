@@ -2,11 +2,21 @@ import EventEmitter from 'eventemitter3';
 import type { KeyPair } from '../polycentric-client';
 import type { SignedEvent } from '../proto/polycentric/v2/events';
 import type { Content } from '../proto/polycentric/v2/content';
+import type { EventPushIssues } from '@polycentric/rs-core-wasm';
 
 export type ContentCreatedPayload = {
   signedEvent: SignedEvent;
   /** Present when the commit included content. */
   content?: Content;
+};
+
+/** The outcome of pushing the active identity's events to one server. */
+export type ServerPushResult = {
+  server: string;
+  /** Events the server issued errors or warnings for. */
+  eventIssues: EventPushIssues[];
+  /** Set when the push failed outright, e.g. the server was unreachable. */
+  error?: unknown;
 };
 
 export enum ClientState {
@@ -39,6 +49,7 @@ interface EventMap {
   identityChanged: KeyPair | null;
   contentCreated: ContentCreatedPayload;
   pulled: string; // Identity key of the sync/pull
+  pushResults: ServerPushResult[]; // One per server pushed to by a sync
   stateChanged: ClientState;
   hydrationStatus: HydrationStatus;
   progress: InitializationStep;
@@ -97,6 +108,17 @@ export class EventService {
   }
   offPulled(listener: (identityKey: string) => void) {
     this.off('pulled', listener);
+  }
+
+  // Push events
+  emitPushResults(results: ServerPushResult[]) {
+    this.emit('pushResults', results);
+  }
+  onPushResults(listener: (results: ServerPushResult[]) => void) {
+    this.on('pushResults', listener);
+  }
+  offPushResults(listener: (results: ServerPushResult[]) => void) {
+    this.off('pushResults', listener);
   }
 
   // State events

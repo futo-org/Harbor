@@ -83,6 +83,17 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for CoreError {
     }
 }
 
+/// The outcome of pushing events to a server, including any warnings or errors that returned from
+/// the server's validation.
+#[derive(uniffi::Record)]
+pub struct PushResult {
+    /// Serialized `PutEventsResponse` from the server. Its `requested_blobs`
+    /// should be uploaded by the caller.
+    pub response: Vec<u8>,
+    /// One entry per event with errors or warnings, copied and mapped from `response`.
+    pub event_issues: Vec<sync::EventPushIssues>,
+}
+
 #[derive(uniffi::Record)]
 pub struct ContentEntry {
     pub digest_bytes: Vec<u8>,
@@ -667,14 +678,14 @@ impl PolycentricCore {
     /// Push events belonging to `identity` to remote `server`.
     /// Pushes all relevant local events if `partial` is false.
     /// Otherwise, only push events that we believe the server to be missing.
-    /// The server's response is returned (if there is one), so that the caller
-    /// can handle error and/or push blobs.
+    /// Returns `None` if there was nothing to push. Otherwise returns the
+    /// server's response along with its errors and warnings for each event.
     pub async fn push_local_events(
         &self,
         identity: String,
         server: String,
         partial: bool,
-    ) -> Result<Option<Vec<u8>>, CoreError> {
+    ) -> Result<Option<PushResult>, CoreError> {
         let bundles = if partial {
             let heads = sync::request_heads(&identity, &server).await?;
             let client = self.client.lock_recover();
@@ -685,9 +696,12 @@ impl PolycentricCore {
         };
 
         if !bundles.is_empty() {
+            let keys: Vec<_> = bundles.iter().map(sync::bundle_key).collect();
             let response = sync::push_bundles(&server, bundles).await?;
-            let encoded = PutEventsResponse::encode_to_vec(&response);
-            Ok(Some(encoded))
+            Ok(Some(PushResult {
+                event_issues: sync::map_event_push_issues(&keys, &response),
+                response: response.encode_to_vec(),
+            }))
         } else {
             Ok(None)
         }

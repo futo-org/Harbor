@@ -2,14 +2,32 @@ use polycentric_common::models::{
     collections,
     protos_v2::{PutEventsRequest, PutEventsResponse},
 };
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap, btree_map::Entry};
 
 use polycentric_common::models::protos_v2::{
     EventBundle, EventKey, ListHeadsRequest, PublicKey,
     event_sync_service_client::EventSyncServiceClient,
 };
 
-use crate::{api::CoreError, client::PolycentricClient, query::channel};
+use crate::{
+    api::CoreError,
+    client::PolycentricClient,
+    query::{
+        channel,
+        event::{key::EventKey as FfiEventKey, merge::decode_event},
+    },
+};
+
+/// The server's complaints about a single pushed event.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct EventPushIssues {
+    pub key: FfiEventKey,
+    /// If `errors` is not empty, the server did not store the event for the reasons listed.
+    pub errors: Vec<String>,
+    /// If `warnings` is not empty, the server stored the event but dropped some of its content, for
+    /// the reasons listed.
+    pub warnings: Vec<String>,
+}
 
 /// Wrapper for executing a list_heads RPC
 pub async fn request_heads(identity: &str, server: &str) -> Result<Vec<EventKey>, CoreError> {
@@ -118,4 +136,116 @@ pub async fn push_bundles(
         .into_inner();
 
     Ok(response)
+}
+
+/// Decode the key of the event in `bundle`.
+pub fn bundle_key(bundle: &EventBundle) -> Option<FfiEventKey> {
+    FfiEventKey::from_proto(decode_event(bundle)?.key?)
+}
+
+/// Explicitly map all errors and warnings received from the server to the event they reference by
+/// returning a list of [`EventPushIssues`]. Returns the events that received issues in the order
+/// they were pushed.
+pub fn map_event_push_issues(
+    keys: &[Option<FfiEventKey>],
+    response: &PutEventsResponse,
+) -> Vec<EventPushIssues> {
+    // Using a BTreeMap, the bundle index keys will sort all issues into push order
+    let mut by_index: BTreeMap<u32, EventPushIssues> = BTreeMap::new();
+
+    let errors = response.errors.iter().map(|e| (e, true));
+    let warnings = response.warnings.iter().map(|w| (w, false));
+    for (issue, is_error) in errors.chain(warnings) {
+        let index = issue.event_bundle_index;
+        let entry = match by_index.entry(index) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => {
+                let Some(key) = keys.get(index as usize).cloned().flatten() else {
+                    crate::logging::log_warn(|| {
+                        format!(
+                            "push issue for unknown event bundle {index}: {}",
+                            issue.message
+                        )
+                    });
+                    continue;
+                };
+                entry.insert(EventPushIssues {
+                    key,
+                    errors: vec![],
+                    warnings: vec![],
+                })
+            }
+        };
+        if is_error {
+            entry.errors.push(issue.message.clone());
+        } else {
+            entry.warnings.push(issue.message.clone());
+        }
+    }
+
+    by_index.into_values().collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::query::event::key::PublicKey as FfiPublicKey;
+    use polycentric_common::models::protos_v2::PutEventError;
+
+    fn key(sequence: u64) -> FfiEventKey {
+        FfiEventKey {
+            collection: collections::IDENTITY,
+            identity: "identity".to_string(),
+            signed_by: FfiPublicKey {
+                key_type: 1,
+                key: vec![1, 2, 3],
+            },
+            sequence,
+        }
+    }
+
+    fn issue(event_bundle_index: u32, message: &str) -> PutEventError {
+        PutEventError {
+            event_bundle_index,
+            message: message.to_string(),
+        }
+    }
+
+    #[test]
+    fn groups_issues_by_event_in_push_order() {
+        let keys = vec![Some(key(1)), Some(key(2)), Some(key(3))];
+        let response = PutEventsResponse {
+            errors: vec![issue(2, "bad signature"), issue(0, "too long")],
+            warnings: vec![issue(0, "app name dropped"), issue(2, "unknown field")],
+            requested_blobs: vec![],
+        };
+
+        assert_eq!(
+            map_event_push_issues(&keys, &response),
+            vec![
+                EventPushIssues {
+                    key: key(1),
+                    errors: vec!["too long".to_string()],
+                    warnings: vec!["app name dropped".to_string()],
+                },
+                EventPushIssues {
+                    key: key(3),
+                    errors: vec!["bad signature".to_string()],
+                    warnings: vec!["unknown field".to_string()],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn drops_issues_for_unknown_bundles() {
+        let keys = vec![Some(key(1)), None];
+        let response = PutEventsResponse {
+            errors: vec![issue(1, "undecodable"), issue(7, "out of range")],
+            warnings: vec![],
+            requested_blobs: vec![],
+        };
+
+        assert!(map_event_push_issues(&keys, &response).is_empty());
+    }
 }
