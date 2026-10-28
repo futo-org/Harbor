@@ -47,16 +47,7 @@ impl Validate for Link {
                 },
             );
         }
-        validate::string(
-            url,
-            errors,
-            |err| map_err(ValidationError::Url(err)),
-            StringConfig {
-                min_len: Some(1),
-                max_len: Some(200),
-                ..Default::default()
-            },
-        );
+        validate::url(url, errors, |err| map_err(ValidationError::Url(err)));
     }
 }
 
