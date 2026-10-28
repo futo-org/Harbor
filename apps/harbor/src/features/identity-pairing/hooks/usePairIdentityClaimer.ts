@@ -12,6 +12,7 @@ export type PairIdentityClaimerHookResult = {
   stage: ClaimerStage;
   error: string | null;
   issuerIdentity: string | undefined;
+  myPublicKey: v2.PublicKey | undefined;
   approved: boolean;
   join: () => void;
 };
@@ -28,18 +29,23 @@ type ConfirmingState = {
   session: PairingSession | undefined;
 };
 
-type JoiningState = ConfirmingState;
-
-type PollingState = JoiningState & {
+type GeneratingState = {
+  info: v2.PairingInfo;
   session: PairingSession;
+};
+
+type JoiningState = GeneratingState & {
   pendingLogin: PendingLogin;
 };
+
+type PollingState = JoiningState;
 type ClaimingState = PollingState;
 
 type ClaimerState =
   | { stage: 'unstarted' }
   | ({ stage: 'error' } & ErrorState)
   | ({ stage: 'confirming' } & ConfirmingState)
+  | ({ stage: 'generating' } & GeneratingState)
   | ({ stage: 'joining' } & JoiningState)
   | ({ stage: 'polling' } & PollingState)
   | ({ stage: 'claiming' } & ClaimingState)
@@ -114,35 +120,44 @@ export function usePairIdentityClaimer(
       };
     };
 
-    const whenJoining = (state: JoiningState): StageResult => {
-      const { info, session } = state;
+    const whenGenerating = (state: GeneratingState): StageResult => {
+      const { session } = state;
       let canceled = false;
 
-      const join = async () => {
+      const generate = async () => {
         try {
-          const resolved =
-            session ??
-            (await client.pairingSessionManager.getPairingSession(info));
-          if (canceled) return;
-
           const pendingLogin = await client.loginManager.beginLogin(
-            resolved.digest.issuerIdentity,
+            session.digest.issuerIdentity,
             'pair',
           );
           if (canceled) return;
 
+          setState({ ...state, stage: 'joining', pendingLogin });
+        } catch (err) {
+          if (canceled) return;
+          onError(err, 'Failed to create login key.');
+        }
+      };
+
+      generate();
+      return () => {
+        canceled = true;
+      };
+    };
+
+    const whenJoining = (state: JoiningState): StageResult => {
+      const { info, pendingLogin } = state;
+      let canceled = false;
+
+      const join = async () => {
+        try {
           await client.pairingSessionManager.joinPairingSession(
             info,
             pendingLogin.publicKey,
           );
           if (canceled) return;
 
-          setState({
-            ...state,
-            stage: 'polling',
-            session: resolved,
-            pendingLogin,
-          });
+          setState({ ...state, stage: 'polling' });
         } catch (err) {
           if (canceled) return;
           onError(err, 'Failed to join pairing session.');
@@ -205,7 +220,7 @@ export function usePairIdentityClaimer(
           setState({ stage: 'done' });
         } catch (err) {
           if (!canceled) {
-            onError(err, 'Failed to claim identity');
+            onError(err, 'Failed to claim identity.');
           }
         }
       })();
@@ -223,6 +238,8 @@ export function usePairIdentityClaimer(
         return whenError();
       case 'confirming':
         return whenConfirming(state);
+      case 'generating':
+        return whenGenerating(state);
       case 'joining':
         return whenJoining(state);
       case 'polling':
@@ -236,8 +253,8 @@ export function usePairIdentityClaimer(
 
   const join = useCallback(() => {
     setState((prev) => {
-      if (prev.stage === 'confirming') {
-        return { ...prev, stage: 'joining' };
+      if (prev.stage === 'confirming' && prev.session) {
+        return { ...prev, stage: 'generating', session: prev.session };
       } else {
         return prev;
       }
@@ -249,12 +266,18 @@ export function usePairIdentityClaimer(
     issuerIdentity = state.session?.digest.issuerIdentity;
   }
 
+  let myPublicKey: v2.PublicKey | undefined;
+  if ('pendingLogin' in state) {
+    myPublicKey = state.pendingLogin.publicKey;
+  }
+
   // Derive return value
   return {
     error: state.stage === 'error' ? state.message : null,
     approved: state.stage === 'done',
     stage: state.stage,
     issuerIdentity,
+    myPublicKey,
     join,
   };
 }
