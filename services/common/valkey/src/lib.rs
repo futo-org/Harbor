@@ -63,7 +63,7 @@ impl Clients {
                 .set_automatic_resubscription(),
         )?;
         let (messages, _) = broadcast::channel(MESSAGE_BUFFER);
-        let (resubscribed, _) = broadcast::channel(16);
+        let (resubscribed, _) = broadcast::channel(1);
         tokio::spawn(receive(
             push_rx,
             subscriber.clone(),
