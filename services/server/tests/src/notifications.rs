@@ -2,9 +2,9 @@
 //! them, except the reply target, which gets its Reply only.
 //! Needs the `workers` process running.
 
-use crate::*;
-use polycentric_common::models::protos_v2::notification_service_client::NotificationServiceClient;
 use std::time::{Duration, Instant};
+
+use crate::*;
 
 const NOTIFICATION_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -33,19 +33,21 @@ async fn mentions_notify_identities_and_skip_the_reply_target() {
     );
     author.submit_events().await;
 
+    let mut client = notification_service().await;
     let author_identity = author.identity().to_owned();
     assert_eq!(
-        wait_for_notifications(bare_mentioned.identity(), 1).await,
+        wait_for_notifications(&mut client, bare_mentioned.identity(), 1).await,
         vec![(NotificationKind::Mention, author_identity.clone())],
         "bare identity mention gets one Mention"
     );
     assert_eq!(
-        wait_for_notifications(curly_mentioned.identity(), 1).await,
+        wait_for_notifications(&mut client, curly_mentioned.identity(), 1)
+            .await,
         vec![(NotificationKind::Mention, author_identity.clone())],
         "curly identity mention gets one Mention"
     );
     assert_eq!(
-        wait_for_notifications(parent_author.identity(), 1).await,
+        wait_for_notifications(&mut client, parent_author.identity(), 1).await,
         vec![(NotificationKind::Reply, author_identity)],
         "reply parent that is also mentioned gets one Reply, no Mention"
     );
@@ -54,12 +56,10 @@ async fn mentions_notify_identities_and_skip_the_reply_target() {
 /// `(kind, author identity)` of each notification addressed to `identity`,
 /// polled until at least `expected_count` arrive or the timeout passes.
 async fn wait_for_notifications(
+    client: &mut NotificationServiceClient<tonic::transport::Channel>,
     identity: &str,
     expected_count: usize,
 ) -> Vec<(NotificationKind, String)> {
-    let mut client = NotificationServiceClient::connect(grpc_addr())
-        .await
-        .expect("failed to connect to gRPC server");
     let deadline = Instant::now() + NOTIFICATION_TIMEOUT;
     loop {
         let notifications = client
@@ -100,15 +100,13 @@ async fn unread_count_stream_follows_new_notifications_and_acknowledge() {
     recipient.submit_events().await;
     let auth_token = recipient.create_auth_token();
 
-    let mut subscriber = NotificationServiceClient::connect(grpc_addr())
-        .await
-        .expect("failed to connect to gRPC server");
+    let mut notifications = notification_service().await;
     let mut request =
         tonic::Request::new(SubscribeUnreadNotificationCountRequest {});
     request
         .metadata_mut()
         .insert("authorization", auth_token.clone().try_into().unwrap());
-    let response = subscriber
+    let response = notifications
         .subscribe_unread_notification_count(request)
         .await
         .expect("subscribe failed");
@@ -137,16 +135,13 @@ async fn unread_count_stream_follows_new_notifications_and_acknowledge() {
         "the follow is pushed to the open stream"
     );
 
-    let mut acknowledger = NotificationServiceClient::connect(grpc_addr())
-        .await
-        .expect("failed to connect to gRPC server");
     let mut request = tonic::Request::new(AcknowledgeNotificationsRequest {
         last_seen: Some(follow_key),
     });
     request
         .metadata_mut()
         .insert("authorization", auth_token.try_into().unwrap());
-    acknowledger
+    notifications
         .acknowledge_notifications(request)
         .await
         .expect("acknowledge failed");
@@ -160,9 +155,7 @@ async fn unread_count_stream_follows_new_notifications_and_acknowledge() {
 
 #[tokio::test]
 async fn unread_count_stream_rejects_unauthenticated() {
-    let mut client = NotificationServiceClient::connect(grpc_addr())
-        .await
-        .expect("failed to connect to gRPC server");
+    let mut client = notification_service().await;
     let result = client
         .subscribe_unread_notification_count(
             SubscribeUnreadNotificationCountRequest {},
