@@ -66,7 +66,7 @@ pub async fn handle(
                         "processed event with warning(s)",
                     );
                 } else {
-                    tracing::debug!(key = ?key, "processed event");
+                    tracing::info!(key = ?key, "processed event");
                 }
                 if is_new {
                     stored.entry(key.identity.clone()).or_default().push(key);
