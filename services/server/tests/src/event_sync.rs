@@ -2594,7 +2594,7 @@ async fn validation_content_content_body_post_links_url_too_long() {
                 title: "Harbor".to_owned(),
                 description: None,
                 image: None,
-                url: "a".repeat(1000),
+                url: "a".repeat(1001),
             }],
             labels: Vec::new(),
             attributed_to: Vec::new(),
@@ -2609,7 +2609,7 @@ async fn validation_content_content_body_post_links_url_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post links 0-th url doesn't match the regex '^https?:\\/\\/'",
+                "content content body post links 0-th url is too long (1001), maximum is 1000",
             ),
         }],
     );

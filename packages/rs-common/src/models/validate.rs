@@ -642,7 +642,8 @@ where
         StringConfig {
             min_len: Some(1),
             max_len: Some(1000),
-            regex: Some(url_regex()),
+            // NOTE: we don't require the URL to be a HTTP(S) URL, e.g. Grayjay
+            // uses `grayjay://` as scheme.
             ..Default::default()
         },
     );
