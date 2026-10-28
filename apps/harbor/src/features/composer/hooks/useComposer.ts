@@ -482,7 +482,11 @@ function injectLocally(
     injectReplyIntoThreadCache(bundle);
     alterPostReplyCount(threadQueryKey(replyTo.id), replyTo.id, 1);
     alterPostReplyCount(feedQueryKeys.following(identity), replyTo.id, 1);
-    alterPostReplyCount(feedQueryKeys.identity(identity), replyTo.id, 1);
+    alterPostReplyCount(
+      feedQueryKeys.identity(replyTo.identity),
+      replyTo.id,
+      1,
+    );
     alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
   }
 
@@ -490,7 +494,7 @@ function injectLocally(
     addQuoteIntoThreadCache(bundle);
     alterPostQuoteCount(threadQueryKey(quoted.id), quoted.id, 1);
     alterPostQuoteCount(feedQueryKeys.following(identity), quoted.id, 1);
-    alterPostQuoteCount(feedQueryKeys.identity(identity), quoted.id, 1);
+    alterPostQuoteCount(feedQueryKeys.identity(quoted.identity), quoted.id, 1);
     alterPostQuoteCount(feedQueryKeys.explore(identity), quoted.id, 1);
   }
 
