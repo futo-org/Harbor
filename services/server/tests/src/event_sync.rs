@@ -1841,42 +1841,13 @@ async fn validation_missing_content_content_body() {
     );
 }
 
-// TODO: tests for post content.
-
-#[tokio::test]
-async fn validation_content_content_body_post_quote_invalid() {
-    // Create a post that is quoted, but never submitted to the server.
-    let mut client = TestClient::new().await;
-    client.post_text("Text", current_timestamp());
-    let quoted_post = client.get_last_event_key();
-    client.pending.clear();
-
-    // Submitting a post with a quote that is unknown to the server is allowed,
-    // the quote is ignored.
-    let mut client = TestClient::new().await;
-    client.quote(quoted_post, "Post with quote", current_timestamp());
-    let post_with_quote = client.get_last_event_key();
-    client.submit_events().await;
-
-    test_get_post(
-        post_with_quote,
-        Some(EventMetadata {
-            reply_count: Some(0),
-            reaction_count: Some(0),
-            upvote_count: Some(0),
-            downvote_count: Some(0),
-            emoji_reactions: Vec::new(),
-            repost_count: Some(0),
-            quote_count: Some(0),
-        }),
-        vec![
-            ExpectHint::moderator_identity(),
-            ExpectHint::Identity(client.identity().to_owned()),
-            // NOTE: no quoted post.
-        ],
-    )
-    .await;
-}
+// TODO: add tests for post content:
+// text max 2000
+// reply:
+// root invalid key
+// root missing
+// parent invalid key
+// parent missing
 
 #[tokio::test]
 async fn validation_content_content_body_post_reply_invalid() {
@@ -1924,6 +1895,68 @@ async fn validation_content_content_body_post_reply_invalid() {
     )
     .await;
 }
+
+// TODO: test:
+// image set max 4
+// image set image max 10
+// image set image blob digest invalid
+// image set image blob digest missing
+// image set image blob mime type max 50
+// image set image blob size max 100 * 1024 * 1024 // 100 MB.
+// image set image blob missing
+// quote event key invalid.
+
+#[tokio::test]
+async fn validation_content_content_body_post_quote_invalid() {
+    // Create a post that is quoted, but never submitted to the server.
+    let mut client = TestClient::new().await;
+    client.post_text("Text", current_timestamp());
+    let quoted_post = client.get_last_event_key();
+    client.pending.clear();
+
+    // Submitting a post with a quote that is unknown to the server is allowed,
+    // the quote is ignored.
+    let mut client = TestClient::new().await;
+    client.quote(quoted_post, "Post with quote", current_timestamp());
+    let post_with_quote = client.get_last_event_key();
+    client.submit_events().await;
+
+    test_get_post(
+        post_with_quote,
+        Some(EventMetadata {
+            reply_count: Some(0),
+            reaction_count: Some(0),
+            upvote_count: Some(0),
+            downvote_count: Some(0),
+            emoji_reactions: Vec::new(),
+            repost_count: Some(0),
+            quote_count: Some(0),
+        }),
+        vec![
+            ExpectHint::moderator_identity(),
+            ExpectHint::Identity(client.identity().to_owned()),
+            // NOTE: no quoted post.
+        ],
+    )
+    .await;
+}
+
+// TODO: test:
+// links max 10
+// links title max 100
+// links description max 200
+// links images max 200
+// links url empty
+// links url max 200 -> 1000?
+// labels max 10
+// labels value max 200
+// attributed to max 10
+// attributed to to link title max 100
+// attributed to to link description max 200
+// attributed to to link images max 200
+// attributed to to link url empty
+// attributed to to link url max 200 -> 1000?
+// attributed to to missing
 
 #[tokio::test]
 async fn validation_missing_content_content_body_delete_event_key() {
