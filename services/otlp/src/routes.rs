@@ -10,15 +10,19 @@ use axum::routing::{get, post};
 use axum::{Router, middleware};
 use opentelemetry::KeyValue;
 use opentelemetry::metrics::{Counter, Histogram};
+use opentelemetry_proto::tonic::collector::logs::v1::ExportLogsServiceRequest;
+use opentelemetry_proto::tonic::collector::trace::v1::ExportTraceServiceRequest;
+use prost::Message;
+use serde::de::DeserializeOwned;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use crate::auth::{AuthenticatedIdentity, auth_middleware};
 use crate::config::Config;
 use crate::forward::{forward, stamp};
 use crate::identity::PolycentricIdentities;
-use crate::spans::spans_to_logs;
 
 pub const LOGS_PATH: &str = "/insert/opentelemetry/v1/logs";
+pub const TRACES_PATH: &str = "/insert/opentelemetry/v1/traces";
 
 /// Resource attributes VictoriaLogs indexes as stream fields. Everything
 /// else on the resource, the per-user identity above all, stays a plain
@@ -92,31 +96,60 @@ async fn post_logs(
     headers: HeaderMap,
     body: Bytes,
 ) -> StatusCode {
-    match parse(&headers, &body, "resourceLogs", &identity) {
-        Ok(payload) => forward_logs(&state, &payload).await,
-        Err(status) => status,
-    }
+    let Some(base) = state.config.victoria_logs_url.as_deref() else {
+        return StatusCode::SERVICE_UNAVAILABLE;
+    };
+    let mut request: ExportLogsServiceRequest = match parse(&headers, &body) {
+        Ok(request) => request,
+        Err(status) => return status,
+    };
+    stamp(
+        request
+            .resource_logs
+            .iter_mut()
+            .map(|entry| &mut entry.resource),
+        &identity,
+    );
+    forward(
+        &state.http,
+        &format!("{base}{LOGS_PATH}"),
+        request.encode_to_vec(),
+        &[("VL-Stream-Fields", LOG_STREAM_FIELDS)],
+    )
+    .await
 }
 
-/// Spans are stored as log records: VictoriaLogs is the only store.
 async fn post_traces(
     State(state): State<AppState>,
     Extension(identity): Extension<AuthenticatedIdentity>,
     headers: HeaderMap,
     body: Bytes,
 ) -> StatusCode {
-    match parse(&headers, &body, "resourceSpans", &identity) {
-        Ok(payload) => forward_logs(&state, &spans_to_logs(&payload)).await,
-        Err(status) => status,
-    }
+    let Some(base) = state.config.victoria_traces_url.as_deref() else {
+        return StatusCode::SERVICE_UNAVAILABLE;
+    };
+    let mut request: ExportTraceServiceRequest = match parse(&headers, &body) {
+        Ok(request) => request,
+        Err(status) => return status,
+    };
+    stamp(
+        request
+            .resource_spans
+            .iter_mut()
+            .map(|entry| &mut entry.resource),
+        &identity,
+    );
+    forward(
+        &state.http,
+        &format!("{base}{TRACES_PATH}"),
+        request.encode_to_vec(),
+        &[],
+    )
+    .await
 }
 
-fn parse(
-    headers: &HeaderMap,
-    body: &Bytes,
-    resource_key: &str,
-    identity: &AuthenticatedIdentity,
-) -> Result<serde_json::Value, StatusCode> {
+/// Clients send OTLP/JSON; anything that is not that is rejected here.
+fn parse<T: DeserializeOwned>(headers: &HeaderMap, body: &Bytes) -> Result<T, StatusCode> {
     let is_json = headers
         .get(header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
@@ -124,21 +157,5 @@ fn parse(
     if !is_json {
         return Err(StatusCode::UNSUPPORTED_MEDIA_TYPE);
     }
-    let mut payload: serde_json::Value =
-        serde_json::from_slice(body).map_err(|_| StatusCode::BAD_REQUEST)?;
-    stamp(&mut payload, resource_key, identity);
-    Ok(payload)
-}
-
-async fn forward_logs(state: &AppState, payload: &serde_json::Value) -> StatusCode {
-    let Some(base) = state.config.victoria_logs_url.as_deref() else {
-        return StatusCode::SERVICE_UNAVAILABLE;
-    };
-    forward(
-        &state.http,
-        &format!("{base}{LOGS_PATH}"),
-        payload,
-        &[("VL-Stream-Fields", LOG_STREAM_FIELDS)],
-    )
-    .await
+    serde_json::from_slice(body).map_err(|_| StatusCode::BAD_REQUEST)
 }

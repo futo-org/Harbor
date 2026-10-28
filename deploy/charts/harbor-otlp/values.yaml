@@ -23,8 +23,8 @@ podSecurityContext: {}
 
 securityContext: {}
 
-# HARBOR_ALLOW_HOSTS, HARBOR_QUERY_SERVERS, HARBOR_VICTORIA_LOGS_URL — put
-# secrets in a Secret referenced via envFrom.
+# HARBOR_ALLOW_HOSTS, HARBOR_QUERY_SERVERS, HARBOR_VICTORIA_LOGS_URL,
+# HARBOR_VICTORIA_TRACES_URL — put secrets in a Secret referenced via envFrom.
 env: []
 envFrom: []
 
