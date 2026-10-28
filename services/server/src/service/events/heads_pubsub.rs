@@ -26,11 +26,7 @@ const REFRESH_CONCURRENCY: usize = 16;
 static PUBSUB: OnceLock<HeadsPubSub> = OnceLock::new();
 
 /// Starts the pub/sub. Called once at server startup.
-pub fn init(
-    valkey: &'static Clients,
-    server_name: &str,
-    db: DatabaseConnection,
-) {
+pub fn init(valkey: Clients, server_name: &str, db: DatabaseConnection) {
     let pubsub = PUBSUB.get_or_init(|| HeadsPubSub {
         channel_prefix: format!("heads:{server_name}:"),
         db,
@@ -52,7 +48,7 @@ pub struct HeadsPubSub {
     /// `heads:{server name}:`, so deployments can share a Valkey.
     channel_prefix: String,
     db: DatabaseConnection,
-    valkey: &'static Clients,
+    valkey: Clients,
     watches: RwLock<HashMap<Arc<str>, watch::Sender<Heads>>>,
     subscribe_locks: [Mutex<()>; SUBSCRIBE_LOCKS],
     hasher: RandomState,
