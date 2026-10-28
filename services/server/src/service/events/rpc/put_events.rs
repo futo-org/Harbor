@@ -433,9 +433,8 @@ fn validate_content(
 
     let collection = key.collection;
     match content_body {
-        ContentBody::Post(post) => {
+        ContentBody::Post(_) => {
             check_collection(collection, collections::FEED);
-            post.validate_check(warnings, |err| map_warning(err.into()));
         }
         ContentBody::Delete(delete) => {
             if let Some(delete_key) = delete.event_key.as_ref() {
