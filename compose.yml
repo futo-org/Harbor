@@ -185,7 +185,7 @@ services:
   victorialogs:
     profiles:
       - otlp
-    image: victoriametrics/victoria-logs:latest
+    image: victoriametrics/victoria-logs:v1.53.0@sha256:251121fa882af99b95ba0c230a4a2f412ea602d2698c64a96c58dc9842bb755d
     command: ['-storageDataPath=/data']
     volumes:
       - victorialogs-data:/data
@@ -195,7 +195,7 @@ services:
   victoriatraces:
     profiles:
       - otlp
-    image: victoriametrics/victoria-traces:latest
+    image: victoriametrics/victoria-traces:v0.12.1@sha256:609abddf298c9642496045296f30a3968b5a4b79b678373e2e7ef29c844f5578
     command: ['-storageDataPath=/data']
     volumes:
       - victoriatraces-data:/data

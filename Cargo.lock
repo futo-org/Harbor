@@ -3283,8 +3283,8 @@ dependencies = [
  "reqwest",
  "serde_json",
  "tokio",
+ "tokio-stream",
  "tonic",
- "tower",
  "tower-http 0.7.1",
  "tracing",
 ]
