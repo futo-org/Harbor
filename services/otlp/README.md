@@ -33,7 +33,7 @@ All service variables are read and validated once at startup by
 | `HARBOR_QUERY_SERVERS` | _(required)_ | Comma-separated gRPC server URLs to fetch identity documents from. |
 | `HARBOR_VICTORIA_LOGS_URL` | _(unset)_ | VictoriaLogs base URL, e.g. `http://victorialogs:9428`. |
 | `HARBOR_VICTORIA_TRACES_URL` | _(unset)_ | VictoriaTraces base URL, e.g. `http://victoriatraces:10428`. |
-| `HARBOR_OTLP_MAX_BODY_BYTES` | `4194304` | Largest accepted request body. |
+| `HARBOR_OTLP_MAX_BODY_BYTES` | `4194304` (4 MiB) | Largest accepted request body. |
 
 Additionally various shared variables are read, see the table in
 [`services/server/README.md`](../server/README.md#common-environment-variables).

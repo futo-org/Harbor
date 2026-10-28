@@ -9,21 +9,13 @@ pub const ATTR_IDENTITY: &str = "harbor.auth.identity";
 pub const ATTR_SIGNING_KEY: &str = "harbor.auth.signing_key";
 
 /// Replaces any client-supplied auth attributes on every resource in the
-/// payload with the identity otlp verified, so downstream can trust them.
+/// payload with the identity we verified, so downstream can trust them.
 pub fn stamp(payload: &mut Value, resource_key: &str, identity: &AuthenticatedIdentity) {
     let Some(resources) = payload.get_mut(resource_key).and_then(Value::as_array_mut) else {
         return;
     };
     for entry in resources {
-        let Some(object) = entry.as_object_mut() else {
-            continue;
-        };
-        let resource = object.entry("resource").or_insert_with(|| json!({}));
-        let Some(resource) = resource.as_object_mut() else {
-            continue;
-        };
-        let attributes = resource.entry("attributes").or_insert_with(|| json!([]));
-        let Some(attributes) = attributes.as_array_mut() else {
+        let Some(attributes) = resource_attributes(entry) else {
             continue;
         };
         attributes.retain(|attribute| {
@@ -38,6 +30,20 @@ pub fn stamp(payload: &mut Value, resource_key: &str, identity: &AuthenticatedId
             json!({ "key": ATTR_SIGNING_KEY, "value": { "stringValue": identity.signing_key } }),
         );
     }
+}
+
+/// The resource attribute list of one `resourceLogs`/`resourceSpans` entry,
+/// created when absent (the identity has to go somewhere). `None` when the
+/// entry is not shaped like OTLP at all.
+fn resource_attributes(entry: &mut Value) -> Option<&mut Vec<Value>> {
+    entry
+        .as_object_mut()?
+        .entry("resource")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()?
+        .entry("attributes")
+        .or_insert_with(|| json!([]))
+        .as_array_mut()
 }
 
 /// POSTs `payload` as JSON to `url`, mapping upstream failures to 502.

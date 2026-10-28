@@ -26,6 +26,9 @@ pub struct Config {
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
 pub fn init() -> Result<&'static Config, String> {
+    if let Some(config) = CONFIG.get() {
+        return Ok(config);
+    }
     let config = Config {
         addr: env::var("HARBOR_OTLP_ADDR")
             .unwrap_or_else(|_| "0.0.0.0:3003".to_string())

@@ -14,9 +14,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = routes::AppState {
         config,
         http: reqwest::Client::new(),
-        identities: Arc::new(identity::PolycentricIdentities::new(
-            config.query_servers.clone(),
-        )),
+        identities: Arc::new(
+            identity::PolycentricIdentities::connect(config.query_servers.clone()).await?,
+        ),
     };
 
     let listener = tokio::net::TcpListener::bind(config.addr).await?;

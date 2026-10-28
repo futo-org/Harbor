@@ -6,55 +6,58 @@ use std::time::{Duration, Instant};
 
 use polycentric_common::models::collections;
 use polycentric_common::models::protos_v2::{
-    Content, Event, EventBundle, Identity, ListEventsFilters, ListEventsRequest, PublicKey,
+    Content, EventBundle, Identity, ListEventsFilters, ListEventsRequest, PublicKey,
     content::ContentBody, event_sync_service_client::EventSyncServiceClient,
 };
 use polycentric_core::query::channel;
+use polycentric_core::query::transport::GrpcChannel;
 use prost::Message;
 use tracing::warn;
 
 const CACHE_TTL: Duration = Duration::from_secs(5 * 60);
 
-/// Whether `signer` may act for `identity`.
-#[tonic::async_trait]
-pub trait Identities: Send + Sync {
-    async fn authorizes(&self, identity: &str, signer: &PublicKey) -> Result<bool, String>;
-}
+type Client = EventSyncServiceClient<GrpcChannel>;
 
 pub struct PolycentricIdentities {
-    servers: Vec<String>,
+    clients: Vec<(String, Client)>,
     cache: Mutex<HashMap<String, (Instant, Identity)>>,
 }
 
 impl PolycentricIdentities {
-    pub fn new(servers: Vec<String>) -> Self {
-        Self {
-            servers,
-            cache: Mutex::new(HashMap::new()),
+    /// Channels connect lazily, so this only fails on a malformed URL.
+    pub async fn connect(servers: Vec<String>) -> Result<Self, String> {
+        let mut clients = Vec::with_capacity(servers.len());
+        for server in servers {
+            let client = EventSyncServiceClient::new(channel(&server).await?);
+            clients.push((server, client));
         }
+        Ok(Self {
+            clients,
+            cache: Mutex::new(HashMap::new()),
+        })
+    }
+
+    /// Whether `signer` may act for `identity`.
+    pub async fn authorizes(&self, identity: &str, signer: &PublicKey) -> Result<bool, String> {
+        Ok(self
+            .identity(identity)
+            .await?
+            .is_some_and(|document| document.authorizes_signer(signer)))
     }
 
     async fn identity(&self, identity: &str) -> Result<Option<Identity>, String> {
-        if let Some((fetched, document)) = self
-            .cache
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .get(identity)
-            && fetched.elapsed() < CACHE_TTL
-        {
-            return Ok(Some(document.clone()));
+        if let Some(document) = self.cached(identity) {
+            return Ok(Some(document));
         }
 
         let mut last_error = None;
-        for server in &self.servers {
-            match latest_content(server, collections::IDENTITY, identity).await {
+        for (server, client) in &self.clients {
+            match latest_content(client.clone(), collections::IDENTITY, identity).await {
                 Ok(Some(Content {
                     content_body: Some(ContentBody::Identity(document)),
                 })) => {
-                    self.cache
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .insert(identity.to_string(), (Instant::now(), document.clone()));
+                    let entry = (Instant::now(), document.clone());
+                    self.lock().insert(identity.to_string(), entry);
                     return Ok(Some(document));
                 }
                 Ok(_) => continue,
@@ -69,25 +72,24 @@ impl PolycentricIdentities {
             None => Ok(None),
         }
     }
-}
 
-#[tonic::async_trait]
-impl Identities for PolycentricIdentities {
-    async fn authorizes(&self, identity: &str, signer: &PublicKey) -> Result<bool, String> {
-        Ok(self
-            .identity(identity)
-            .await?
-            .is_some_and(|document| document.authorizes_signer(signer)))
+    fn cached(&self, identity: &str) -> Option<Identity> {
+        let cache = self.lock();
+        let (fetched, document) = cache.get(identity)?;
+        (fetched.elapsed() < CACHE_TTL).then(|| document.clone())
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, HashMap<String, (Instant, Identity)>> {
+        self.cache.lock().unwrap_or_else(|e| e.into_inner())
     }
 }
 
-/// The content of the highest-sequence event in `collection` for `identity`.
+/// The content of the latest event in `collection` for `identity`.
 async fn latest_content(
-    server: &str,
+    mut client: Client,
     collection: i32,
     identity: &str,
 ) -> Result<Option<Content>, String> {
-    let mut client = EventSyncServiceClient::new(channel(server).await?);
     let response = client
         .list_events(ListEventsRequest {
             filters: Some(ListEventsFilters {
@@ -100,46 +102,24 @@ async fn latest_content(
         .await
         .map_err(|e| format!("list_events: {e}"))?
         .into_inner();
-    Ok(best_content(response.event_bundles))
+    Ok(first_content(response.event_bundles))
 }
 
-/// The content of the highest-sequence decodable bundle.
-pub fn best_content(bundles: Vec<EventBundle>) -> Option<Content> {
-    let mut best: Option<(u64, Content)> = None;
-    for bundle in bundles {
-        let Some(signed) = bundle.signed_event.as_ref() else {
-            continue;
-        };
-        let Ok(event) = Event::decode(signed.event_bytes.as_slice()) else {
-            continue;
-        };
-        let sequence = event.key.as_ref().map_or(0, |k| k.sequence);
-        let Some(serialized) = bundle.serialized_content.as_ref() else {
-            continue;
-        };
-        let Ok(content) = Content::decode(serialized.content_bytes.as_slice()) else {
-            continue;
-        };
-        if best.as_ref().is_none_or(|(seq, _)| sequence >= *seq) {
-            best = Some((sequence, content));
-        }
-    }
-    best.map(|(_, content)| content)
+/// `ListEvents` returns bundles newest first, so the first one that decodes
+/// is the current document.
+pub fn first_content(bundles: Vec<EventBundle>) -> Option<Content> {
+    bundles.into_iter().find_map(|bundle| {
+        let serialized = bundle.serialized_content?;
+        Content::decode(serialized.content_bytes.as_slice()).ok()
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use polycentric_common::models::protos_v2::{EventKey, SerializedContent, SignedEvent};
+    use polycentric_common::models::protos_v2::SerializedContent;
 
-    fn bundle(sequence: u64, marker: u8) -> EventBundle {
-        let event = Event {
-            key: Some(EventKey {
-                sequence,
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
+    fn bundle(marker: u8) -> EventBundle {
         let content = Content {
             content_body: Some(ContentBody::Identity(Identity {
                 signing_keys: vec![PublicKey {
@@ -150,10 +130,6 @@ mod tests {
             })),
         };
         EventBundle {
-            signed_event: Some(SignedEvent {
-                event_bytes: event.encode_to_vec(),
-                ..Default::default()
-            }),
             serialized_content: Some(SerializedContent {
                 content_bytes: content.encode_to_vec(),
             }),
@@ -169,23 +145,27 @@ mod tests {
     }
 
     #[test]
-    fn picks_the_highest_sequence() {
-        let best = best_content(vec![bundle(3, 3), bundle(7, 7), bundle(5, 5)]);
-        assert_eq!(marker_of(best), Some(7));
+    fn takes_the_first_bundle() {
+        assert_eq!(
+            marker_of(first_content(vec![bundle(7), bundle(3)])),
+            Some(7)
+        );
     }
 
     #[test]
     fn skips_bundles_that_do_not_decode() {
-        let mut broken = bundle(9, 9);
+        let mut broken = bundle(9);
         broken.serialized_content.as_mut().unwrap().content_bytes = vec![0xff, 0xff];
-        let mut eventless = bundle(8, 8);
-        eventless.signed_event = None;
-        let best = best_content(vec![broken, eventless, bundle(2, 2)]);
-        assert_eq!(marker_of(best), Some(2));
+        let mut empty = bundle(8);
+        empty.serialized_content = None;
+        assert_eq!(
+            marker_of(first_content(vec![broken, empty, bundle(2)])),
+            Some(2)
+        );
     }
 
     #[test]
     fn no_bundles_means_no_content() {
-        assert!(best_content(vec![]).is_none());
+        assert!(first_content(vec![]).is_none());
     }
 }

@@ -1,162 +1,269 @@
-//! End to end: a real listener, a real HTTP client and a mock Victoria.
+//! The otlp service end to end: real JWTs, identity documents fetched from a
+//! polycentric server over gRPC, and payloads forwarded to a Victoria
+//! stand-in.
 
-use std::sync::Arc;
+mod support;
 
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use ed25519_dalek::{Signer, SigningKey};
-use otlp_service::config::Config;
-use otlp_service::identity::Identities;
-use otlp_service::routes::{AppState, LOGS_PATH, TRACES_PATH, build_routes};
-use polycentric_common::models::protos_v2::PublicKey;
-use serde_json::json;
+use ed25519_dalek::SigningKey;
+use otlp_service::forward::{ATTR_IDENTITY, ATTR_SIGNING_KEY};
+use otlp_service::routes::{LOGS_PATH, TRACES_PATH};
+use serde_json::{Value, json};
+use support::{Otlp, PolycentricStandIn, device_key, identity_for, mint, now};
 
-const ISS: &str = "identity-e2e";
+const JSON: &str = "application/json";
 
-struct OnlyKnownDevice;
-
-#[tonic::async_trait]
-impl Identities for OnlyKnownDevice {
-    async fn authorizes(&self, identity: &str, signer: &PublicKey) -> Result<bool, String> {
-        Ok(identity == ISS && signer.key == device_key().verifying_key().to_bytes())
-    }
+fn spans() -> String {
+    json!({ "resourceSpans": [{
+        "resource": { "attributes": [
+            { "key": "service.name", "value": { "stringValue": "harbor" } },
+            { "key": ATTR_IDENTITY, "value": { "stringValue": "spoofed" } }
+        ]},
+        "scopeSpans": []
+    }]})
+    .to_string()
 }
 
-fn device_key() -> SigningKey {
-    SigningKey::from_bytes(&[42u8; 32])
+fn logs() -> String {
+    json!({ "resourceLogs": [{ "scopeLogs": [] }] }).to_string()
 }
 
-fn now() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
+fn stamped(resource_key: &str, head: Vec<Value>) -> Value {
+    let (identity, _) = identity_for(&device_key());
+    let mut attributes = head;
+    attributes.push(json!({ "key": ATTR_IDENTITY, "value": { "stringValue": identity } }));
+    attributes.push(json!({ "key": ATTR_SIGNING_KEY, "value": {
+        "stringValue": hex::encode(device_key().verifying_key().to_bytes())
+    } }));
+    json!({ resource_key: [{ "resource": { "attributes": attributes } }] })
 }
 
-fn mint(key: &SigningKey, aud: &str) -> String {
-    let kid = hex::encode(key.verifying_key().to_bytes());
-    let header = format!(r#"{{"alg":"EdDSA","typ":"JWT","kid":"{kid}"}}"#);
-    let claims = format!(
-        r#"{{"iss":"{ISS}","aud":"{aud}","iat":0,"exp":{}}}"#,
-        now() + 60
-    );
-    let signing_input = format!(
-        "{}.{}",
-        URL_SAFE_NO_PAD.encode(header),
-        URL_SAFE_NO_PAD.encode(claims)
-    );
-    let signature = key.sign(signing_input.as_bytes());
-    format!(
-        "{signing_input}.{}",
-        URL_SAFE_NO_PAD.encode(signature.to_bytes())
-    )
-}
-
-/// Serves the app on a random port and returns its public URL.
-async fn serve(victoria: &str) -> String {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let url = format!("http://{}", listener.local_addr().unwrap());
-    let config: &'static Config = Box::leak(Box::new(Config {
-        addr: listener.local_addr().unwrap(),
-        allow_hosts: vec![url.clone()],
-        query_servers: vec![],
-        victoria_logs_url: Some(victoria.to_string()),
-        victoria_traces_url: Some(victoria.to_string()),
-        max_body_bytes: 1024 * 1024,
-    }));
-    let state = AppState {
-        config,
-        http: reqwest::Client::new(),
-        identities: Arc::new(OnlyKnownDevice),
-    };
-    tokio::spawn(async move {
-        axum::serve(listener, build_routes(state)).await.unwrap();
-    });
-    url
+async fn otlp_with_victoria() -> (Otlp, mockito::ServerGuard) {
+    let victoria = mockito::Server::new_async().await;
+    let (polycentric, _server) = PolycentricStandIn::default()
+        .with(&device_key())
+        .serve()
+        .await;
+    let otlp = Otlp::serve(&polycentric, Some(&victoria.url())).await;
+    (otlp, victoria)
 }
 
 #[tokio::test]
-async fn authenticated_logs_and_traces_reach_victoria_stamped() {
-    let mut victoria = mockito::Server::new_async().await;
-    let logs = victoria
+async fn a_paired_device_gets_its_traces_to_victoria_stamped() {
+    let (otlp, mut victoria) = otlp_with_victoria().await;
+    let mock = victoria
+        .mock("POST", TRACES_PATH)
+        .match_header("content-type", JSON)
+        .match_body(mockito::Matcher::PartialJson(stamped(
+            "resourceSpans",
+            vec![json!({ "key": "service.name", "value": { "stringValue": "harbor" } })],
+        )))
+        .create_async()
+        .await;
+
+    let token = otlp.token(&device_key());
+    let response = otlp.post("/v1/traces", Some(&token), JSON, spans()).await;
+
+    assert_eq!(response.status(), 200);
+    mock.assert_async().await;
+}
+
+#[tokio::test]
+async fn logs_reach_victoria_logs() {
+    let (otlp, mut victoria) = otlp_with_victoria().await;
+    let mock = victoria
         .mock("POST", LOGS_PATH)
-        .match_body(mockito::Matcher::PartialJson(json!({ "resourceLogs": [{
-            "resource": { "attributes": [
-                { "key": "harbor.auth.identity", "value": { "stringValue": ISS } }
-            ]}
-        }]})))
-        .with_status(200)
-        .create_async()
-        .await;
-    let traces = victoria
-        .mock("POST", TRACES_PATH)
-        .match_body(mockito::Matcher::PartialJson(json!({ "resourceSpans": [{
-            "resource": { "attributes": [
-                { "key": "harbor.auth.identity", "value": { "stringValue": ISS } },
-                { "key": "harbor.auth.signing_key", "value": {
-                    "stringValue": hex::encode(device_key().verifying_key().to_bytes())
-                } }
-            ]}
-        }]})))
-        .with_status(200)
+        .match_body(mockito::Matcher::PartialJson(stamped(
+            "resourceLogs",
+            vec![],
+        )))
         .create_async()
         .await;
 
-    let base = serve(&victoria.url()).await;
-    let client = reqwest::Client::new();
-    let token = mint(&device_key(), &base);
+    let token = otlp.token(&device_key());
+    let response = otlp.post("/v1/logs", Some(&token), JSON, logs()).await;
 
-    for (path, body) in [
-        ("/v1/logs", json!({ "resourceLogs": [{ "scopeLogs": [] }] })),
-        (
-            "/v1/traces",
-            json!({ "resourceSpans": [{ "scopeSpans": [] }] }),
-        ),
-    ] {
-        let response = client
-            .post(format!("{base}{path}"))
-            .bearer_auth(&token)
-            .header("content-type", "application/json")
-            .body(body.to_string())
-            .send()
-            .await
-            .unwrap();
-        assert_eq!(response.status(), 200, "{path}");
-    }
-    logs.assert_async().await;
-    traces.assert_async().await;
+    assert_eq!(response.status(), 200);
+    mock.assert_async().await;
 }
 
 #[tokio::test]
-async fn an_unpaired_device_is_turned_away_before_victoria() {
-    let mut victoria = mockito::Server::new_async().await;
-    let traces = victoria
+async fn requests_without_a_token_are_unauthorized() {
+    let (otlp, _victoria) = otlp_with_victoria().await;
+    let response = otlp.post("/v1/traces", None, JSON, spans()).await;
+    assert_eq!(response.status(), 401);
+}
+
+#[tokio::test]
+async fn tampered_expired_and_misaddressed_tokens_are_unauthorized() {
+    let (otlp, _victoria) = otlp_with_victoria().await;
+    let (iss, _) = identity_for(&device_key());
+    let expired = mint(&device_key(), &iss, &otlp.url, now() - 1);
+    let elsewhere = mint(&device_key(), &iss, "https://other.service", now() + 60);
+    let tampered = format!("{}x", otlp.token(&device_key()));
+
+    for token in [expired, elsewhere, tampered, "garbage".to_string()] {
+        let response = otlp.post("/v1/traces", Some(&token), JSON, spans()).await;
+        assert_eq!(response.status(), 401, "{token}");
+    }
+}
+
+#[tokio::test]
+async fn an_unpaired_device_is_forbidden_before_victoria_sees_anything() {
+    let (otlp, mut victoria) = otlp_with_victoria().await;
+    let untouched = victoria
         .mock("POST", TRACES_PATH)
-        .with_status(200)
         .expect(0)
         .create_async()
         .await;
-
-    let base = serve(&victoria.url()).await;
+    let (iss, _) = identity_for(&device_key());
     let stranger = SigningKey::from_bytes(&[1u8; 32]);
-    let response = reqwest::Client::new()
-        .post(format!("{base}/v1/traces"))
-        .bearer_auth(mint(&stranger, &base))
-        .header("content-type", "application/json")
-        .body(json!({ "resourceSpans": [] }).to_string())
-        .send()
-        .await
-        .unwrap();
+
+    let response = otlp
+        .post(
+            "/v1/traces",
+            Some(&mint(&stranger, &iss, &otlp.url, now() + 60)),
+            JSON,
+            spans(),
+        )
+        .await;
 
     assert_eq!(response.status(), 403);
-    traces.assert_async().await;
+    untouched.assert_async().await;
 }
 
 #[tokio::test]
-async fn preflight_allows_the_browser_client() {
-    let base = serve("http://unused").await;
-    let response = reqwest::Client::new()
-        .request(reqwest::Method::OPTIONS, format!("{base}/v1/traces"))
+async fn an_identity_the_server_does_not_know_is_forbidden() {
+    let (otlp, _victoria) = otlp_with_victoria().await;
+    let unknown = SigningKey::from_bytes(&[2u8; 32]);
+    let response = otlp
+        .post("/v1/traces", Some(&otlp.token(&unknown)), JSON, spans())
+        .await;
+    assert_eq!(response.status(), 403);
+}
+
+#[tokio::test]
+async fn an_unreachable_polycentric_server_is_unavailable() {
+    let victoria = mockito::Server::new_async().await;
+    let otlp = Otlp::serve("http://127.0.0.1:1", Some(&victoria.url())).await;
+    let response = otlp
+        .post(
+            "/v1/traces",
+            Some(&otlp.token(&device_key())),
+            JSON,
+            spans(),
+        )
+        .await;
+    assert_eq!(response.status(), 503);
+}
+
+#[tokio::test]
+async fn identity_documents_are_cached() {
+    let mut victoria = mockito::Server::new_async().await;
+    let (polycentric, outage) = PolycentricStandIn::default()
+        .with(&device_key())
+        .serve()
+        .await;
+    let otlp = Otlp::serve(&polycentric, Some(&victoria.url())).await;
+    let token = otlp.token(&device_key());
+    let forwarded = victoria
+        .mock("POST", TRACES_PATH)
+        .expect(2)
+        .create_async()
+        .await;
+
+    let first = otlp.post("/v1/traces", Some(&token), JSON, spans()).await;
+    assert_eq!(first.status(), 200);
+
+    // With the server failing, only the cached document can answer this one.
+    outage.begin();
+    let second = otlp.post("/v1/traces", Some(&token), JSON, spans()).await;
+    assert_eq!(second.status(), 200);
+    forwarded.assert_async().await;
+
+    // A device the cache has never seen still needs the server.
+    let newcomer = SigningKey::from_bytes(&[3u8; 32]);
+    let response = otlp
+        .post("/v1/traces", Some(&otlp.token(&newcomer)), JSON, spans())
+        .await;
+    assert_eq!(response.status(), 503);
+}
+
+#[tokio::test]
+async fn a_signal_without_an_upstream_is_unavailable() {
+    let (polycentric, _server) = PolycentricStandIn::default()
+        .with(&device_key())
+        .serve()
+        .await;
+    let otlp = Otlp::serve(&polycentric, None).await;
+    let token = otlp.token(&device_key());
+    for (path, body) in [("/v1/traces", spans()), ("/v1/logs", logs())] {
+        let response = otlp.post(path, Some(&token), JSON, body).await;
+        assert_eq!(response.status(), 503, "{path}");
+    }
+}
+
+#[tokio::test]
+async fn a_failing_victoria_is_a_bad_gateway() {
+    let (otlp, mut victoria) = otlp_with_victoria().await;
+    victoria
+        .mock("POST", TRACES_PATH)
+        .with_status(500)
+        .create_async()
+        .await;
+    let response = otlp
+        .post(
+            "/v1/traces",
+            Some(&otlp.token(&device_key())),
+            JSON,
+            spans(),
+        )
+        .await;
+    assert_eq!(response.status(), 502);
+}
+
+#[tokio::test]
+async fn only_json_bodies_are_accepted() {
+    let (otlp, _victoria) = otlp_with_victoria().await;
+    let token = otlp.token(&device_key());
+
+    let protobuf = otlp
+        .post(
+            "/v1/traces",
+            Some(&token),
+            "application/x-protobuf",
+            "x".into(),
+        )
+        .await;
+    assert_eq!(protobuf.status(), 415);
+
+    let malformed = otlp
+        .post("/v1/traces", Some(&token), JSON, "{".into())
+        .await;
+    assert_eq!(malformed.status(), 400);
+
+    let big = format!(
+        r#"{{"resourceSpans":[],"pad":"{}"}}"#,
+        "x".repeat(16 * 1024)
+    );
+    let too_big = otlp.post("/v1/traces", Some(&token), JSON, big).await;
+    assert_eq!(too_big.status(), 413);
+}
+
+#[tokio::test]
+async fn status_and_preflight_need_no_token() {
+    let (otlp, _victoria) = otlp_with_victoria().await;
+
+    let status = otlp
+        .client
+        .get(format!("{}/status", otlp.url))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(status.status(), 200);
+
+    let preflight = otlp
+        .client
+        .request(reqwest::Method::OPTIONS, format!("{}/v1/traces", otlp.url))
         .header("origin", "https://harbor.social")
         .header("access-control-request-method", "POST")
         .header(
@@ -166,9 +273,8 @@ async fn preflight_allows_the_browser_client() {
         .send()
         .await
         .unwrap();
-
-    assert!(response.status().is_success());
-    let allowed = response
+    assert!(preflight.status().is_success());
+    let allowed = preflight
         .headers()
         .get("access-control-allow-headers")
         .and_then(|v| v.to_str().ok())
