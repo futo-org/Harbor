@@ -62,11 +62,12 @@ pub async fn handle(
                 if warnings.len() != start_warnings {
                     tracing::warn!(
                         key = ?key,
+                        is_new,
                         warnings = ?&warnings[start_warnings..],
                         "processed event with warning(s)",
                     );
                 } else {
-                    tracing::info!(key = ?key, "processed event");
+                    tracing::info!(?key, is_new, "processed event");
                 }
                 if is_new {
                     stored.entry(key.identity.clone()).or_default().push(key);
