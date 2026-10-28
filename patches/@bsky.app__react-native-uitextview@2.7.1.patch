@@ -1,0 +1,11 @@
+diff --git a/ios/RNUITextViewManager.mm b/ios/RNUITextViewManager.mm
+index e2e062d4f7be71217ffe479182cff4e71d0cbaac..de049abe1cfb04a5b0ad00e0a1a1f5e7c1e1e1e1 100644
+--- a/ios/RNUITextViewManager.mm
++++ b/ios/RNUITextViewManager.mm
+@@ -1,6 +1,5 @@
+ #import <React/RCTViewManager.h>
+ #import <React/RCTUIManager.h>
+-#import "RCTBridge.h"
+ 
+ @interface RNUITextViewManager : RCTViewManager
+ @end

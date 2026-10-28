@@ -6,7 +6,7 @@ import useUnreadNotificationCount, {
 } from '@/src/features/notifications/hooks/useUnreadNotificationCount';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Stack } from 'expo-router';
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { NativeTabs } from 'expo-router/native-tabs';
 
 export default function TabsLayout() {
   const { theme } = useTheme();
