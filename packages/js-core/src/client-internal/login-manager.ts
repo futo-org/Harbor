@@ -91,6 +91,7 @@ export class LoginManager {
       content,
       COLLECTION.IDENTITY,
       identityKey,
+      publicKey,
     );
 
     // Persist locally

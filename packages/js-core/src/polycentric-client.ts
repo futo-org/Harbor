@@ -332,32 +332,33 @@ export class PolycentricClient {
     content: Proto.Content,
     collection: Collection | number = COLLECTION.FEED,
     identityKey?: string,
+    publicKey?: Proto.PublicKey,
   ): Promise<Proto.Event> {
-    if (!this.currentKeyPair) {
-      throw new Error('No keypair set');
-    }
-
     const identity = identityKey ?? this.activeIdentityKey;
     if (!identity) {
       throw new Error('No active identity');
     }
 
+    const signer = publicKey ?? this.currentKeyPair?.publicKey;
+    if (!signer) {
+      throw new Error('No keypair');
+    }
+
     const sequence = this.core.nextSequence(identity, collection);
 
     // identity_sequence must reference an identity event signed by the
-    // current keypair.
+    // signing key.
     const identitySequence =
       collection === COLLECTION.IDENTITY
         ? sequence
         : this.core.getIdentitySequence(
             identity,
-            Proto.PublicKey.toBinary(this.currentKeyPair.publicKey)
-              .buffer as ArrayBuffer,
+            Proto.PublicKey.toBinary(signer).buffer as ArrayBuffer,
           );
 
     if (!identitySequence) {
       throw new Error(
-        'Cannot build event: current keypair has no identity event for the active identity (broken pairing?)',
+        'Cannot build event: signing key has no identity event for the identity (broken pairing?)',
       );
     }
 
@@ -372,7 +373,7 @@ export class PolycentricClient {
       key: Proto.EventKey.create({
         collection,
         identity,
-        signedBy: this.currentKeyPair.publicKey,
+        signedBy: signer,
         sequence,
       }),
       identitySequence,

@@ -152,6 +152,7 @@ export class IdentityManager {
       content,
       COLLECTION.IDENTITY,
       identityKey,
+      keyPair.publicKey,
     );
 
     // Persist locally
