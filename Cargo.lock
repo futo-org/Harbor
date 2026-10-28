@@ -2581,7 +2581,6 @@ dependencies = [
  "ed25519-dalek",
  "getrandom 0.4.3",
  "hex",
- "mockito",
  "polycentric-common",
  "prost",
  "rand 0.10.3",

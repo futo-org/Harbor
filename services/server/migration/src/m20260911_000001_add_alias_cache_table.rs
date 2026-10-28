@@ -1,6 +1,6 @@
 //! Per-alias cache for mention notifications' `.well-known` lookups.
 
-use ::entity::alias_cache;
+use crate::old_entity::alias_cache;
 use sea_orm::Schema;
 use sea_orm_migration::prelude::*;
 

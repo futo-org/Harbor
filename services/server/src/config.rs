@@ -52,11 +52,6 @@ pub struct Config {
     /// How much time events should be considered before their decayed reaction
     /// count is set to zero.
     pub feeds_gravity_expire: Duration,
-    /// Test hook (`HARBOR_ALIAS_TEST_ORIGIN`): fetch every mention
-    /// alias domain's `/.well-known/polycentric.json` from this origin
-    /// instead of `https://<domain>`, and allow plain HTTP. `None` in
-    /// production.
-    pub alias_test_origin: Option<String>,
     /// The commit this server was built from (`HARBOR_COMMIT`), set by the
     /// chart. Served on `/version`. `None` outside the cluster.
     pub commit: Option<String>,
@@ -131,10 +126,6 @@ pub fn init() -> &'static Config {
                     .and_then(|s| s.trim().parse().ok())
                     .unwrap_or(7 * 24), // 1 week.
             ),
-            alias_test_origin: std::env::var("HARBOR_ALIAS_TEST_ORIGIN")
-                .ok()
-                .map(|s| s.trim().trim_end_matches('/').to_string())
-                .filter(|s| !s.is_empty()),
             commit: std::env::var("HARBOR_COMMIT")
                 .ok()
                 .map(|s| s.trim().to_string())
