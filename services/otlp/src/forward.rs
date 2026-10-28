@@ -1,76 +1,71 @@
-//! Stamps the verified identity onto OTLP/JSON payloads and forwards them.
+//! Stamps the verified identity onto OTLP payloads and forwards them as
+//! protobuf, the only encoding VictoriaLogs accepts.
 
 use axum::http::StatusCode;
-use serde_json::{Value, json};
+use opentelemetry_proto::tonic::common::v1::{AnyValue, KeyValue, any_value::Value};
+use opentelemetry_proto::tonic::resource::v1::Resource;
 
 use crate::auth::AuthenticatedIdentity;
 
 pub const ATTR_IDENTITY: &str = "harbor.auth.identity";
 pub const ATTR_SIGNING_KEY: &str = "harbor.auth.signing_key";
 
-/// Replaces any client-supplied auth attributes on every resource in the
-/// payload with the identity we verified, so downstream can trust them.
-pub fn stamp(payload: &mut Value, resource_key: &str, identity: &AuthenticatedIdentity) {
-    let Some(resources) = payload.get_mut(resource_key).and_then(Value::as_array_mut) else {
-        return;
-    };
-    for entry in resources {
-        let Some(attributes) = resource_attributes(entry) else {
-            continue;
-        };
+/// Replaces any client-supplied auth attributes on every resource with the
+/// identity we verified, so downstream can trust them. A missing resource
+/// is created: the identity has to go somewhere.
+pub fn stamp<'a>(
+    resources: impl IntoIterator<Item = &'a mut Option<Resource>>,
+    identity: &AuthenticatedIdentity,
+) {
+    for resource in resources {
+        let attributes = &mut resource.get_or_insert_default().attributes;
         attributes.retain(|attribute| {
-            !matches!(
-                attribute.get("key").and_then(Value::as_str),
-                Some(ATTR_IDENTITY | ATTR_SIGNING_KEY)
-            )
+            !matches!(attribute.key.as_str(), ATTR_IDENTITY | ATTR_SIGNING_KEY)
         });
-        attributes
-            .push(json!({ "key": ATTR_IDENTITY, "value": { "stringValue": identity.identity } }));
-        attributes.push(
-            json!({ "key": ATTR_SIGNING_KEY, "value": { "stringValue": identity.signing_key } }),
-        );
+        attributes.push(string_attribute(ATTR_IDENTITY, &identity.identity));
+        attributes.push(string_attribute(ATTR_SIGNING_KEY, &identity.signing_key));
     }
 }
 
-/// The resource attribute list of one `resourceLogs`/`resourceSpans` entry,
-/// created when absent (the identity has to go somewhere). `None` when the
-/// entry is not shaped like OTLP at all.
-fn resource_attributes(entry: &mut Value) -> Option<&mut Vec<Value>> {
-    entry
-        .as_object_mut()?
-        .entry("resource")
-        .or_insert_with(|| json!({}))
-        .as_object_mut()?
-        .entry("attributes")
-        .or_insert_with(|| json!([]))
-        .as_array_mut()
+pub fn string_value<'a>(attributes: &'a [KeyValue], key: &str) -> Option<&'a str> {
+    let attribute = attributes.iter().find(|attribute| attribute.key == key)?;
+    match attribute.value.as_ref()?.value.as_ref()? {
+        Value::StringValue(s) => Some(s.as_str()),
+        _ => None,
+    }
 }
 
-/// POSTs `payload` as JSON to `url` with `headers`, mapping upstream
-/// failures to 502.
+pub fn string_attribute(key: &str, value: &str) -> KeyValue {
+    KeyValue {
+        key: key.to_string(),
+        value: Some(AnyValue {
+            value: Some(Value::StringValue(value.to_string())),
+        }),
+        ..Default::default()
+    }
+}
+
+/// POSTs protobuf `body` to `url` with `headers`, mapping upstream failures
+/// to 502.
 pub async fn forward(
     client: &reqwest::Client,
     url: &str,
-    payload: &Value,
+    body: Vec<u8>,
     headers: &[(&str, &str)],
 ) -> StatusCode {
-    let body = match serde_json::to_vec(payload) {
-        Ok(body) => body,
-        Err(e) => {
-            tracing::error!(error = %e, "serialize payload");
-            return StatusCode::INTERNAL_SERVER_ERROR;
-        }
-    };
     let mut request = client
         .post(url)
-        .header(http::header::CONTENT_TYPE, "application/json");
+        .header(http::header::CONTENT_TYPE, "application/x-protobuf");
     for (name, value) in headers {
         request = request.header(*name, *value);
     }
     match request.body(body).send().await {
         Ok(response) if response.status().is_success() => StatusCode::OK,
         Ok(response) => {
-            tracing::warn!(url, status = %response.status(), "upstream rejected payload");
+            let status = response.status();
+            let reason = response.text().await.unwrap_or_default();
+            let reason = reason.trim().chars().take(512).collect::<String>();
+            tracing::warn!(url, %status, reason, "upstream rejected payload");
             StatusCode::BAD_GATEWAY
         }
         Err(e) => {
@@ -91,28 +86,33 @@ mod tests {
         }
     }
 
-    fn attributes(payload: &Value, resource_key: &str, index: usize) -> Vec<(String, String)> {
-        payload[resource_key][index]["resource"]["attributes"]
-            .as_array()
-            .unwrap()
+    fn resource(pairs: &[(&str, &str)]) -> Option<Resource> {
+        Some(Resource {
+            attributes: pairs
+                .iter()
+                .map(|(key, value)| string_attribute(key, value))
+                .collect(),
+            ..Default::default()
+        })
+    }
+
+    fn pairs(resource: &Option<Resource>) -> Vec<(String, String)> {
+        let attributes = &resource.as_ref().unwrap().attributes;
+        attributes
             .iter()
-            .map(|a| {
-                (
-                    a["key"].as_str().unwrap().to_string(),
-                    a["value"]["stringValue"].as_str().unwrap().to_string(),
-                )
+            .map(|attribute| {
+                let value = string_value(attributes, &attribute.key).unwrap();
+                (attribute.key.clone(), value.to_string())
             })
             .collect()
     }
 
     #[test]
     fn appends_identity_to_existing_attributes() {
-        let mut payload = json!({ "resourceSpans": [{ "resource": { "attributes": [
-            { "key": "service.name", "value": { "stringValue": "harbor" } }
-        ]}}]});
-        stamp(&mut payload, "resourceSpans", &identity());
+        let mut entry = resource(&[("service.name", "harbor")]);
+        stamp([&mut entry], &identity());
         assert_eq!(
-            attributes(&payload, "resourceSpans", 0),
+            pairs(&entry),
             vec![
                 ("service.name".into(), "harbor".into()),
                 (ATTR_IDENTITY.into(), "id1".into()),
@@ -123,14 +123,14 @@ mod tests {
 
     #[test]
     fn replaces_client_supplied_auth_attributes() {
-        let mut payload = json!({ "resourceLogs": [{ "resource": { "attributes": [
-            { "key": ATTR_SIGNING_KEY, "value": { "stringValue": "spoofed" } },
-            { "key": ATTR_IDENTITY, "value": { "stringValue": "spoofed" } },
-            { "key": "os.name", "value": { "stringValue": "ios" } }
-        ]}}]});
-        stamp(&mut payload, "resourceLogs", &identity());
+        let mut entry = resource(&[
+            (ATTR_SIGNING_KEY, "spoofed"),
+            (ATTR_IDENTITY, "spoofed"),
+            ("os.name", "ios"),
+        ]);
+        stamp([&mut entry], &identity());
         assert_eq!(
-            attributes(&payload, "resourceLogs", 0),
+            pairs(&entry),
             vec![
                 ("os.name".into(), "ios".into()),
                 (ATTR_IDENTITY.into(), "id1".into()),
@@ -141,11 +141,12 @@ mod tests {
 
     #[test]
     fn creates_the_resource_when_missing() {
-        let mut payload = json!({ "resourceSpans": [{ "scopeSpans": [] }, { "resource": {} }] });
-        stamp(&mut payload, "resourceSpans", &identity());
-        for index in 0..2 {
+        let mut first = None;
+        let mut second = Some(Resource::default());
+        stamp([&mut first, &mut second], &identity());
+        for entry in [&first, &second] {
             assert_eq!(
-                attributes(&payload, "resourceSpans", index),
+                pairs(entry),
                 vec![
                     (ATTR_IDENTITY.into(), "id1".into()),
                     (ATTR_SIGNING_KEY.into(), "aa".into()),
@@ -154,22 +155,14 @@ mod tests {
         }
     }
 
-    #[test]
-    fn leaves_other_shapes_alone() {
-        let original = json!({ "resourceLogs": "nope", "other": [1, 2] });
-        let mut payload = original.clone();
-        stamp(&mut payload, "resourceLogs", &identity());
-        stamp(&mut payload, "resourceSpans", &identity());
-        assert_eq!(payload, original);
-    }
-
     #[tokio::test]
-    async fn forwards_json_and_maps_upstream_status() {
+    async fn forwards_protobuf_and_maps_upstream_status() {
         let mut upstream = mockito::Server::new_async().await;
         let ok = upstream
             .mock("POST", "/ok")
-            .match_header("content-type", "application/json")
-            .match_body(r#"{"a":1}"#)
+            .match_header("content-type", "application/x-protobuf")
+            .match_header("x-extra", "1")
+            .match_body(vec![1u8, 2, 3])
             .with_status(204)
             .create_async()
             .await;
@@ -179,14 +172,19 @@ mod tests {
             .create_async()
             .await;
         let client = reqwest::Client::new();
-        let payload = json!({ "a": 1 });
 
         assert_eq!(
-            forward(&client, &format!("{}/ok", upstream.url()), &payload, &[]).await,
+            forward(
+                &client,
+                &format!("{}/ok", upstream.url()),
+                vec![1, 2, 3],
+                &[("x-extra", "1")]
+            )
+            .await,
             StatusCode::OK
         );
         assert_eq!(
-            forward(&client, &format!("{}/fail", upstream.url()), &payload, &[]).await,
+            forward(&client, &format!("{}/fail", upstream.url()), vec![], &[]).await,
             StatusCode::BAD_GATEWAY
         );
         ok.assert_async().await;
@@ -197,7 +195,7 @@ mod tests {
     async fn unreachable_upstream_is_a_bad_gateway() {
         let client = reqwest::Client::new();
         assert_eq!(
-            forward(&client, "http://127.0.0.1:1/v1/traces", &json!({}), &[]).await,
+            forward(&client, "http://127.0.0.1:1/v1/logs", vec![], &[]).await,
             StatusCode::BAD_GATEWAY
         );
     }

@@ -188,6 +188,7 @@ pub struct Otlp {
 }
 
 impl Otlp {
+    /// One Victoria stand-in for both signals.
     pub async fn serve(polycentric_url: &str, victoria_url: Option<&str>) -> Self {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
@@ -196,6 +197,7 @@ impl Otlp {
             allow_hosts: vec![url.clone()],
             query_servers: vec![polycentric_url.to_string()],
             victoria_logs_url: victoria_url.map(str::to_string),
+            victoria_traces_url: victoria_url.map(str::to_string),
             max_body_bytes: 8 * 1024,
         }));
         let identities = PolycentricIdentities::connect(config.query_servers.clone())
