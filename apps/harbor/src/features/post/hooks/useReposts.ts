@@ -131,7 +131,6 @@ const useReposts = create<RepostsState>((set, get) => ({
     set({ reposts: next });
     // The server counts every repost event, so drop one per tombstoned event
     const repostCountChange = -targets.length;
-    const author = v2.EventKey.fromBinary(hexToBytes(targetId)).identity;
     alterPostRepostCount(threadQueryKey(targetId), targetId, repostCountChange);
     alterPostRepostCount(
       feedQueryKeys.following(self),
@@ -139,7 +138,9 @@ const useReposts = create<RepostsState>((set, get) => ({
       repostCountChange,
     );
     alterPostRepostCount(
-      feedQueryKeys.identity(author),
+      feedQueryKeys.identity(
+        v2.EventKey.fromBinary(hexToBytes(targetId)).identity,
+      ),
       targetId,
       repostCountChange,
     );

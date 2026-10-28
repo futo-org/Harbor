@@ -69,12 +69,11 @@ export default function usePostActions(post: PostData): PostActions {
     invalidateQuery(client, feedQueryKeys.explore(identity));
 
     if (replyParent) {
-      const parentAuthor = v2.EventKey.fromBinary(
-        hexToBytes(replyParent),
-      ).identity;
       alterPostReplyCount(feedQueryKeys.following(identity), replyParent, -1);
       alterPostReplyCount(
-        feedQueryKeys.identity(parentAuthor),
+        feedQueryKeys.identity(
+          v2.EventKey.fromBinary(hexToBytes(replyParent)).identity,
+        ),
         replyParent,
         -1,
       );
@@ -82,9 +81,14 @@ export default function usePostActions(post: PostData): PostActions {
     }
 
     if (quoted) {
-      const quotedAuthor = v2.EventKey.fromBinary(hexToBytes(quoted)).identity;
       alterPostQuoteCount(feedQueryKeys.following(identity), quoted, -1);
-      alterPostQuoteCount(feedQueryKeys.identity(quotedAuthor), quoted, -1);
+      alterPostQuoteCount(
+        feedQueryKeys.identity(
+          v2.EventKey.fromBinary(hexToBytes(quoted)).identity,
+        ),
+        quoted,
+        -1,
+      );
       alterPostQuoteCount(feedQueryKeys.explore(identity), quoted, -1);
     }
   };
