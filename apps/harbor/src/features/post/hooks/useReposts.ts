@@ -13,6 +13,7 @@ import { create } from 'zustand';
 import {
   feedQueryKeys,
   alterPostRepostCount,
+  threadQueryKey,
 } from '../../feed/hooks/feedCache';
 
 type RepostsState = {
@@ -87,9 +88,11 @@ const useReposts = create<RepostsState>((set, get) => ({
     const repostIdHex = eventKeyId(event.key);
 
     set({ reposts: new Map(reposts).set(post.id, repostIdHex) });
-    alterPostRepostCount(feedQueryKeys.following(post.identity), post.id, 1);
+    const self = client.activeIdentityKey ?? '';
+    alterPostRepostCount(threadQueryKey(post.id), post.id, 1);
+    alterPostRepostCount(feedQueryKeys.following(self), post.id, 1);
     alterPostRepostCount(feedQueryKeys.identity(post.identity), post.id, 1);
-    alterPostRepostCount(feedQueryKeys.explore(post.identity), post.id, 1);
+    alterPostRepostCount(feedQueryKeys.explore(self), post.id, 1);
 
     try {
       await client.commitEvent(signedEvent, repostContent);
@@ -126,12 +129,26 @@ const useReposts = create<RepostsState>((set, get) => ({
     const next = new Map(reposts);
     next.delete(targetId);
     set({ reposts: next });
-    for (const { event, targetIdHex } of targets) {
-      const identity = event.key?.identity ?? '';
-      alterPostRepostCount(feedQueryKeys.following(identity), targetIdHex, -1);
-      alterPostRepostCount(feedQueryKeys.identity(identity), targetIdHex, -1);
-      alterPostRepostCount(feedQueryKeys.explore(identity), targetIdHex, -1);
-    }
+    // The server counts every repost event, so drop one per tombstoned event
+    const repostCountChange = -targets.length;
+    alterPostRepostCount(threadQueryKey(targetId), targetId, repostCountChange);
+    alterPostRepostCount(
+      feedQueryKeys.following(self),
+      targetId,
+      repostCountChange,
+    );
+    alterPostRepostCount(
+      feedQueryKeys.identity(
+        v2.EventKey.fromBinary(hexToBytes(targetId)).identity,
+      ),
+      targetId,
+      repostCountChange,
+    );
+    alterPostRepostCount(
+      feedQueryKeys.explore(self),
+      targetId,
+      repostCountChange,
+    );
 
     try {
       for (const { event } of targets) {
