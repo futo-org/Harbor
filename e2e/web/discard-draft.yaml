@@ -88,9 +88,11 @@ name: Closing the composer over a draft asks to discard it
 - inputText: Posted without asking
 - tapOn:
     id: ${output.composer.submit}
+# Wait for the composer itself: the Post button turns into a spinner while
+# posting, and a composer left open blocks the next flow's navigation.
 - extendedWaitUntil:
     notVisible:
-      id: ${output.composer.submit}
+      css: 'textarea[placeholder="${output.composer.input}"]'
     timeout: 30000
 - evalBrowserScript:
     script: return window.confirmMessage
