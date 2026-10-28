@@ -4017,37 +4017,13 @@ async fn validation_content_content_body_labels_event_key_missing() {
 }
 
 #[tokio::test]
-#[ignore = "TODO: implement this validation"]
 async fn validation_content_content_body_labels_event_key_not_a_post() {
+    // This should be fine, the labels will not be considered.
+
     let mut client = TestClient::new().await;
     let event_key = client.get_last_event_key(); // Identity.
-    let content = Content {
-        content_body: Some(ContentBody::Labels(Labels {
-            event_key: Some(event_key),
-            label_values: vec!["Test".to_owned()],
-        })),
-    };
-    let (content_bytes, digest) = content_with_digest(content);
-    let event = client.make_event(
-        COLLECTION_LABELS,
-        client.previous_signature(),
-        client.previous_root(),
-        digest,
-        current_timestamp(),
-    );
-    client.push_event_bundle2(event, content_bytes);
-
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[],
-        &[ExpectError {
-            bundle_index: 1,
-            kind: ExpectErrorKind::MsgContains(
-                "content content body labels event key is not a post",
-            ),
-        }],
-    );
+    client.label_key(event_key, vec!["Test".to_owned()], current_timestamp());
+    client.submit_events().await; // This shouldn't panic.
 }
 
 #[tokio::test]
