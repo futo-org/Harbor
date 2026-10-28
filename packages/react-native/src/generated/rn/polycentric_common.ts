@@ -8292,12 +8292,108 @@ const FfiConverterTypeContentValidationError = (() => {
 })();
 
 
+// Enum: VectorClockValidationError
+export enum VectorClockValidationError_Tags {
+    Sequence = "Sequence"
+}
+export const VectorClockValidationError = (() => {
+
+    type Sequence__interface = {
+        tag: VectorClockValidationError_Tags.Sequence;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class Sequence_ extends UniffiEnum implements Sequence__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "VectorClockValidationError";
+        readonly tag = VectorClockValidationError_Tags.Sequence;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("VectorClockValidationError", "Sequence");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): Sequence_ {
+            return new Sequence_(v0);
+        }
+
+        static instanceOf(obj: any): obj is Sequence_ {
+            return obj.tag === VectorClockValidationError_Tags.Sequence;
+        }
+
+    }
+
+    function instanceOf(obj: any): obj is VectorClockValidationError {
+        return obj[uniffiTypeNameSymbol] === "VectorClockValidationError";
+    }
+
+    return Object.freeze({
+        instanceOf,
+  Sequence: Sequence_
+    });
+
+})();
+export type VectorClockValidationError = InstanceType<
+    typeof VectorClockValidationError['Sequence']
+>;
+
+// FfiConverter for enum VectorClockValidationError
+const FfiConverterTypeVectorClockValidationError = (() => {
+    type TypeName = VectorClockValidationError;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        readFromCursor(c: Cursor): TypeName {
+            switch (c.readI32()) {
+                case 1: return new VectorClockValidationError.Sequence(FfiConverterTypeSliceError.readFromCursor(c));
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            switch (value.tag) {
+                case VectorClockValidationError_Tags.Sequence: {
+                    c.writeI32(1);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                default:
+                    // Throwing from here means that VectorClockValidationError_Tags hasn't matched an ordinal.
+                    throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+        allocationSize(value: TypeName): number {
+            switch (value.tag) {
+                case VectorClockValidationError_Tags.Sequence: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
+                default: throw new UniffiInternalError.UnexpectedEnumCase();
+            }
+        }
+    }
+    return new FFIConverter();
+})();
+
+
 // Enum: EventValidationError
 export enum EventValidationError_Tags {
     Key = "Key",
     KeyMissing = "KeyMissing",
+    VectorClock = "VectorClock",
+    VectorClockMissing = "VectorClockMissing",
+    PreviousSignature = "PreviousSignature",
     ContentDigest = "ContentDigest",
     ContentDigestMissing = "ContentDigestMissing",
+    PreviousRoot = "PreviousRoot",
     Application = "Application"
 }
 export const EventValidationError = (() => {
@@ -8359,6 +8455,96 @@ Readonly<
 
     }
 
+    type VectorClock__interface = {
+        tag: EventValidationError_Tags.VectorClock;
+        inner: 
+Readonly<
+[VectorClockValidationError
+]>
+    };
+    class VectorClock_ extends UniffiEnum implements VectorClock__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "EventValidationError";
+        readonly tag = EventValidationError_Tags.VectorClock;
+        readonly inner: 
+Readonly<
+[VectorClockValidationError
+]>;
+        constructor(v0: VectorClockValidationError) {
+            super("EventValidationError", "VectorClock");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: VectorClockValidationError): VectorClock_ {
+            return new VectorClock_(v0);
+        }
+
+        static instanceOf(obj: any): obj is VectorClock_ {
+            return obj.tag === EventValidationError_Tags.VectorClock;
+        }
+
+    }
+
+    type VectorClockMissing__interface = {
+        tag: EventValidationError_Tags.VectorClockMissing
+    };
+    class VectorClockMissing_ extends UniffiEnum implements VectorClockMissing__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "EventValidationError";
+        readonly tag = EventValidationError_Tags.VectorClockMissing;
+        constructor() {
+            super("EventValidationError", "VectorClockMissing");
+        }
+
+        static new(): VectorClockMissing_ {
+            return new VectorClockMissing_();
+        }
+
+        static instanceOf(obj: any): obj is VectorClockMissing_ {
+            return obj.tag === EventValidationError_Tags.VectorClockMissing;
+        }
+
+    }
+
+    type PreviousSignature__interface = {
+        tag: EventValidationError_Tags.PreviousSignature;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class PreviousSignature_ extends UniffiEnum implements PreviousSignature__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "EventValidationError";
+        readonly tag = EventValidationError_Tags.PreviousSignature;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("EventValidationError", "PreviousSignature");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): PreviousSignature_ {
+            return new PreviousSignature_(v0);
+        }
+
+        static instanceOf(obj: any): obj is PreviousSignature_ {
+            return obj.tag === EventValidationError_Tags.PreviousSignature;
+        }
+
+    }
+
     type ContentDigest__interface = {
         tag: EventValidationError_Tags.ContentDigest;
         inner: 
@@ -8416,6 +8602,39 @@ Readonly<
 
     }
 
+    type PreviousRoot__interface = {
+        tag: EventValidationError_Tags.PreviousRoot;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class PreviousRoot_ extends UniffiEnum implements PreviousRoot__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "EventValidationError";
+        readonly tag = EventValidationError_Tags.PreviousRoot;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("EventValidationError", "PreviousRoot");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): PreviousRoot_ {
+            return new PreviousRoot_(v0);
+        }
+
+        static instanceOf(obj: any): obj is PreviousRoot_ {
+            return obj.tag === EventValidationError_Tags.PreviousRoot;
+        }
+
+    }
+
     type Application__interface = {
         tag: EventValidationError_Tags.Application;
         inner: 
@@ -8457,14 +8676,18 @@ Readonly<
         instanceOf,
   Key: Key_, 
   KeyMissing: KeyMissing_, 
+  VectorClock: VectorClock_, 
+  VectorClockMissing: VectorClockMissing_, 
+  PreviousSignature: PreviousSignature_, 
   ContentDigest: ContentDigest_, 
   ContentDigestMissing: ContentDigestMissing_, 
+  PreviousRoot: PreviousRoot_, 
   Application: Application_
     });
 
 })();
 export type EventValidationError = InstanceType<
-    typeof EventValidationError['Key' | 'KeyMissing' | 'ContentDigest' | 'ContentDigestMissing' | 'Application']
+    typeof EventValidationError['Key' | 'KeyMissing' | 'VectorClock' | 'VectorClockMissing' | 'PreviousSignature' | 'ContentDigest' | 'ContentDigestMissing' | 'PreviousRoot' | 'Application']
 >;
 
 // FfiConverter for enum EventValidationError
@@ -8475,9 +8698,13 @@ const FfiConverterTypeEventValidationError = (() => {
             switch (c.readI32()) {
                 case 1: return new EventValidationError.Key(FfiConverterTypeEventKeyValidationError.readFromCursor(c));
                 case 2: return new EventValidationError.KeyMissing();
-                case 3: return new EventValidationError.ContentDigest(FfiConverterTypeContentDigestValidationError.readFromCursor(c));
-                case 4: return new EventValidationError.ContentDigestMissing();
-                case 5: return new EventValidationError.Application(FfiConverterTypeApplicationValidationError.readFromCursor(c));
+                case 3: return new EventValidationError.VectorClock(FfiConverterTypeVectorClockValidationError.readFromCursor(c));
+                case 4: return new EventValidationError.VectorClockMissing();
+                case 5: return new EventValidationError.PreviousSignature(FfiConverterTypeSliceError.readFromCursor(c));
+                case 6: return new EventValidationError.ContentDigest(FfiConverterTypeContentDigestValidationError.readFromCursor(c));
+                case 7: return new EventValidationError.ContentDigestMissing();
+                case 8: return new EventValidationError.PreviousRoot(FfiConverterTypeSliceError.readFromCursor(c));
+                case 9: return new EventValidationError.Application(FfiConverterTypeApplicationValidationError.readFromCursor(c));
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
@@ -8493,18 +8720,40 @@ const FfiConverterTypeEventValidationError = (() => {
                     c.writeI32(2);
                     return;
                 }
-                case EventValidationError_Tags.ContentDigest: {
+                case EventValidationError_Tags.VectorClock: {
                     c.writeI32(3);
+                    const inner = value.inner;
+                    FfiConverterTypeVectorClockValidationError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case EventValidationError_Tags.VectorClockMissing: {
+                    c.writeI32(4);
+                    return;
+                }
+                case EventValidationError_Tags.PreviousSignature: {
+                    c.writeI32(5);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case EventValidationError_Tags.ContentDigest: {
+                    c.writeI32(6);
                     const inner = value.inner;
                     FfiConverterTypeContentDigestValidationError.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case EventValidationError_Tags.ContentDigestMissing: {
-                    c.writeI32(4);
+                    c.writeI32(7);
+                    return;
+                }
+                case EventValidationError_Tags.PreviousRoot: {
+                    c.writeI32(8);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
                     return;
                 }
                 case EventValidationError_Tags.Application: {
-                    c.writeI32(5);
+                    c.writeI32(9);
                     const inner = value.inner;
                     FfiConverterTypeApplicationValidationError.writeIntoCursor(inner[0], c);
                     return;
@@ -8525,6 +8774,21 @@ const FfiConverterTypeEventValidationError = (() => {
                 case EventValidationError_Tags.KeyMissing: {
                     return 4;
                 }
+                case EventValidationError_Tags.VectorClock: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeVectorClockValidationError.allocationSize(inner[0]);
+                    return size;
+                }
+                case EventValidationError_Tags.VectorClockMissing: {
+                    return 4;
+                }
+                case EventValidationError_Tags.PreviousSignature: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
                 case EventValidationError_Tags.ContentDigest: {
                     const inner = value.inner;
                     let size = 4;
@@ -8533,6 +8797,12 @@ const FfiConverterTypeEventValidationError = (() => {
                 }
                 case EventValidationError_Tags.ContentDigestMissing: {
                     return 4;
+                }
+                case EventValidationError_Tags.PreviousRoot: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
                 }
                 case EventValidationError_Tags.Application: {
                     const inner = value.inner;
@@ -8605,6 +8875,7 @@ export default Object.freeze({
     FfiConverterTypeSliceError,
     FfiConverterTypeStringError,
     FfiConverterTypeToValidationError,
+    FfiConverterTypeVectorClockValidationError,
     FfiConverterTypeVerificationClaimValidationError,
     FfiConverterTypeVerificationSchemaFieldValidationError,
     FfiConverterTypeVerificationSchemaValidationError,
