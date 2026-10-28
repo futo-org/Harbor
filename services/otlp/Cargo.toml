@@ -17,8 +17,10 @@ axum = { version = "0.8.8", default-features = false, features = ["http1", "http
 hex.workspace = true
 http = { version = "1", default-features = false, features = ["std"] }
 opentelemetry.workspace = true
+opentelemetry-proto = { version = "0.33", default-features = false, features = ["gen-tonic-messages", "logs", "trace", "with-serde"] }
 prost.workspace = true
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+serde = { version = "1", default-features = false }
 serde_json = { version = "1", default-features = false, features = ["std"] }
 tokio = { workspace = true, features = ["full"] }
 tonic = { workspace = true, features = ["router", "transport"] }
