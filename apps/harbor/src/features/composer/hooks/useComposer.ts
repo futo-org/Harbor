@@ -18,7 +18,6 @@ import {
   feedQueryKeys,
   injectPostIntoFeedCache,
   injectReplyIntoThreadCache,
-  addQuoteIntoThreadCache,
   threadQueryKey,
 } from '@/src/features/feed/hooks/feedCache';
 import {
@@ -491,7 +490,6 @@ function injectLocally(
   }
 
   if (quoted) {
-    addQuoteIntoThreadCache(bundle);
     alterPostQuoteCount(threadQueryKey(quoted.id), quoted.id, 1);
     alterPostQuoteCount(feedQueryKeys.following(identity), quoted.id, 1);
     alterPostQuoteCount(feedQueryKeys.identity(quoted.identity), quoted.id, 1);
