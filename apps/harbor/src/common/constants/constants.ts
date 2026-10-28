@@ -24,8 +24,6 @@ export const CONTENT_POLICY_URL =
   Constants.expoConfig?.extra?.distribution === 'store'
     ? 'https://join.harbor.social/docs/content-policy-app-stores/'
     : 'https://join.harbor.social/docs/content-policy/';
-export const REPORT_BUG_URL = 'https://chat.futo.org/login/';
-
 /**
  * Public web base URL for this app, used to build shareable links (e.g. to a
  * verification claim). Override with EXPO_PUBLIC_HARBOR_APP_URL; trailing

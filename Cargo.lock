@@ -3266,6 +3266,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "otlp-service"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "base64 0.23.1",
+ "common-dotenv",
+ "common-telemetry",
+ "ed25519-dalek",
+ "hex",
+ "http",
+ "mockito",
+ "opentelemetry",
+ "polycentric-common",
+ "polycentric-core",
+ "prost",
+ "reqwest",
+ "serde_json",
+ "tokio",
+ "tonic",
+ "tower",
+ "tower-http 0.7.1",
+ "tracing",
+]
+
+[[package]]
 name = "ouroboros"
 version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -101,6 +101,7 @@ const pushNotifications = touches(
   'services/common/',
   CHARTS,
 );
+const otlp = touches(CARGO, 'services/otlp/', 'services/common/', CHARTS);
 const grayjayMigrator = touches(
   CARGO,
   'services/grayjay-migrator/',
@@ -223,6 +224,13 @@ const rustServices = [
     dockerfile: 'services/push-notifications',
     packages: 'push-notifications-service push-notifications-migration',
     changed: pushNotifications,
+  },
+  {
+    image: 'otlp-service',
+    label: 'otlp',
+    dockerfile: 'services/otlp',
+    packages: 'otlp-service',
+    changed: otlp,
   },
   {
     image: 'grayjay-migrator',
