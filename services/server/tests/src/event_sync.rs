@@ -870,7 +870,6 @@ async fn validation_invalid_event_collection() {
 }
 
 #[tokio::test]
-#[ignore = "TODO: validate this"]
 async fn validation_invalid_event_identity() {
     let mut client = TestClient::new().await;
     client.pending.clear(); // Remove valid identity event.
@@ -900,11 +899,21 @@ async fn validation_invalid_event_identity() {
     let result = client.try_submit_events().await;
     expect_errors(
         result,
-        &[ExpectError {
-            bundle_index: 0,
-            kind: ExpectErrorKind::MsgContains("event key identity invalid"),
-        }],
         &[],
+        &[
+            ExpectError {
+                bundle_index: 0,
+                kind: ExpectErrorKind::MsgContains(
+                    "event key identity is too short (7), minimum is 64",
+                ),
+            },
+            ExpectError {
+                bundle_index: 0,
+                kind: ExpectErrorKind::MsgContains(
+                    "event key identity is not a valid identity",
+                ),
+            },
+        ],
     );
 }
 
