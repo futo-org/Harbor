@@ -2,15 +2,14 @@
 //! process, reconnecting and resubscribing on their own.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use redis::aio::{ConnectionManager, ConnectionManagerConfig};
+use redis::aio::{AsyncPushSender, ConnectionManager, ConnectionManagerConfig};
 use redis::{
     AsyncTypedCommands, Client, IntoConnectionInfo, Msg, ProtocolVersion, PushInfo, PushKind,
     RedisResult, ToSingleRedisArg,
 };
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{Notify, broadcast};
 
 pub use redis::Msg as Message;
 
@@ -56,21 +55,21 @@ impl Clients {
                 .set_tcp_settings(tcp_settings),
         )?;
 
-        let (pushes, push_rx) = mpsc::unbounded_channel::<PushInfo>();
+        let messages = broadcast::channel(MESSAGE_BUFFER).0;
+        let resubscribed = broadcast::channel(1).0;
+        let disconnect_notify = Arc::new(Notify::new());
         let publisher = client.get_connection_manager_with_config(config()).await?;
+        let relay = pusher_relay(messages.clone(), disconnect_notify.clone());
         let subscriber = client
             .get_connection_manager_with_config(
                 config()
-                    .set_push_sender(pushes)
+                    .set_push_sender(relay)
                     .set_automatic_resubscription(),
             )
             .await?;
-        let messages = broadcast::channel(MESSAGE_BUFFER).0;
-        let resubscribed = broadcast::channel(1).0;
-        tokio::spawn(receive(
-            push_rx,
+        tokio::spawn(announce_reconnect(
+            disconnect_notify.clone(),
             subscriber.clone(),
-            messages.clone(),
             resubscribed.clone(),
         ));
         Ok(Self {
@@ -119,43 +118,49 @@ fn config() -> ConnectionManagerConfig {
         .set_response_timeout(Some(Duration::from_secs(2)))
 }
 
-async fn receive(
-    mut pushes: mpsc::UnboundedReceiver<PushInfo>,
-    subscriber: ConnectionManager,
+/// Returns a redis pusher that broadcasts messages.
+fn pusher_relay(
     messages: broadcast::Sender<Msg>,
-    resubscribed: broadcast::Sender<()>,
-) {
-    let reconnecting = Arc::new(AtomicBool::new(false));
-    while let Some(push) = pushes.recv().await {
+    announce_disconnected: Arc<Notify>,
+) -> impl AsyncPushSender {
+    move |push: PushInfo| -> Result<(), ()> {
         if push.kind == PushKind::Disconnection {
-            tracing::warn!("valkey subscriber disconnected");
-            if !reconnecting.swap(true, Ordering::AcqRel) {
-                tokio::spawn(announce_reconnect(
-                    subscriber.clone(),
-                    resubscribed.clone(),
-                    reconnecting.clone(),
-                ));
-            }
+            tracing::warn!("Valkey subscriber disconnected");
+            // Start the task to announce when we're reconnected.
+            announce_disconnected.notify_waiters();
         } else if let Some(message) = Msg::from_push_info(push) {
-            let _ = messages.send(message);
+            // From tokio::sync::broadcast::error::SendError docs:
+            // > A send operation can only fail if there are no active
+            // > receivers, implying that the message could never be received.
+            // We don't care if there a no receivers.
+            _ = messages.send(message);
+        } else {
+            // We don't care about other push kinds.
         }
+        Ok(())
     }
 }
 
-// The manager reconnects and resubscribes by itself but doesn't say when, so
-// poll until a command gets through.
+/// The manager reconnects and resubscribes by itself but doesn't say when, so
+/// this function waits until the client `disconnect`s and then ping the client
+/// until it's connected again, which it broadcasts on `resubscribed`.
 async fn announce_reconnect(
+    disconnect: Arc<Notify>,
     mut subscriber: ConnectionManager,
     resubscribed: broadcast::Sender<()>,
-    reconnecting: Arc<AtomicBool>,
 ) {
     loop {
-        tokio::time::sleep(RECONNECT_POLL).await;
-        if subscriber.ping().await.is_ok() {
-            break;
+        // Wait until we're notified of a disconnect.
+        disconnect.notified().await;
+
+        loop {
+            tokio::time::sleep(RECONNECT_POLL).await;
+            if subscriber.ping().await.is_ok() {
+                break;
+            }
         }
+
+        tracing::info!("valkey subscriber reconnected");
+        let _ = resubscribed.send(());
     }
-    reconnecting.store(false, Ordering::Release);
-    tracing::info!("valkey subscriber reconnected");
-    let _ = resubscribed.send(());
 }
