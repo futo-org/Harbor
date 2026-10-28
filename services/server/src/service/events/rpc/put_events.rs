@@ -60,13 +60,14 @@ pub async fn handle(
         {
             Ok((key, is_new)) => {
                 if warnings.len() != start_warnings {
-                    tracing::debug!(
+                    tracing::warn!(
                         key = ?key,
+                        is_new,
                         warnings = ?&warnings[start_warnings..],
                         "processed event with warning(s)",
                     );
                 } else {
-                    tracing::debug!(key = ?key, "processed event");
+                    tracing::info!(?key, is_new, "processed event");
                 }
                 if is_new {
                     stored.entry(key.identity.clone()).or_default().push(key);
@@ -88,10 +89,10 @@ pub async fn handle(
                 return Err(status);
             }
             Err(status) => {
-                tracing::debug!(
-                    "put_events[{idx}] skipped: {} {}",
-                    status.code(),
-                    status.message()
+                tracing::warn!(
+                    code = %status.code(),
+                    message = %status.message(),
+                    "failed to process event",
                 );
                 errors.push(PutEventError {
                     event_bundle_index: idx as u32,
@@ -475,10 +476,6 @@ fn validate_content(
         }
         ContentBody::Identity(_) => {
             check_collection(collection, collections::IDENTITY);
-
-            // TODO: validation that needs previous events:
-            // * recovery signature must be a signature from the
-            //   currently-active backup key.
         }
         ContentBody::Repost(_) => {
             check_collection(collection, collections::FEED);

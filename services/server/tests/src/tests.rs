@@ -738,6 +738,10 @@ pub struct ExpectEvent<'a> {
 
 #[derive(Debug)]
 pub enum ExpectEventKind<'a> {
+    Post {
+        text: &'a str,
+        // TODO: add other fields as needed.
+    },
     Repost {
         post: EventKey,
     },
@@ -765,6 +769,9 @@ pub fn expect_events(got: &[EventBundle], expected: &[ExpectEvent<'_>]) {
         let content = content.content_body.as_ref().unwrap();
 
         match (content, &expected.kind) {
+            (ContentBody::Post(post), ExpectEventKind::Post { text }) => {
+                assert_eq!(post.text, *text);
+            }
             (ContentBody::Repost(repost), ExpectEventKind::Repost { post }) => {
                 let got = repost.post.as_ref().expect("repost is missing key");
                 assert_eq!(got, post);
