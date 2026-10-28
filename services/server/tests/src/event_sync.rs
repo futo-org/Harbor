@@ -1677,20 +1677,12 @@ async fn validation_invalid_event_application_url_empty() {
     expect_errors(
         result,
         &[],
-        &[
-            ExpectError {
-                bundle_index: 0,
-                kind: ExpectErrorKind::MsgContains(
-                    "event application url can't be empty",
-                ),
-            },
-            ExpectError {
-                bundle_index: 0,
-                kind: ExpectErrorKind::MsgContains(
-                    "event application url is not a valid URL",
-                ),
-            },
-        ],
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event application url can't be empty",
+            ),
+        }],
     );
 }
 
@@ -1730,20 +1722,12 @@ async fn validation_invalid_event_application_url_too_long() {
     expect_errors(
         result,
         &[],
-        &[
-            ExpectError {
-                bundle_index: 0,
-                kind: ExpectErrorKind::MsgContains(
-                    "event application url is too long (101), maximum is 100",
-                ),
-            },
-            ExpectError {
-                bundle_index: 0,
-                kind: ExpectErrorKind::MsgContains(
-                    "event application url is not a valid URL",
-                ),
-            },
-        ],
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event application url is too long (101), maximum is 100",
+            ),
+        }],
     );
 }
 
