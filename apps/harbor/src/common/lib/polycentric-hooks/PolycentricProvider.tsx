@@ -7,7 +7,6 @@ import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import {
   type PolycentricClient,
   createPolycentricClient,
-  type types,
   type IdentityState,
   v2,
 } from '@polycentric/react-native';
@@ -29,11 +28,6 @@ import {
   usePolycentricContext,
   type PolycentricContextValue,
 } from './context';
-import {
-  createPolycentricStore,
-  useStore,
-  type PolycentricStoreApi,
-} from './store';
 import useReactions from '@/src/features/reaction/useReactions';
 
 export {
@@ -154,7 +148,7 @@ function DefaultErrorComponent({ error }: { error: Error }) {
   );
 }
 
-type Bootstrap = { client: PolycentricClient; store: PolycentricStoreApi };
+type Bootstrap = { client: PolycentricClient };
 
 const BOOTSTRAP_KEY = '__polycentricBootstrap';
 type BootstrapGlobal = typeof globalThis & {
@@ -171,9 +165,6 @@ function bootstrapClient(): Promise<Bootstrap> {
       application: HARBOR_APPLICATION,
     });
 
-    const store = createPolycentricStore(client);
-    await store.getState().refreshLogins();
-
     if (client.activeIdentityKey) {
       // Refresh from current local state
       useFollows.getState().refresh(client);
@@ -182,7 +173,7 @@ function bootstrapClient(): Promise<Bootstrap> {
       useBlocks.getState().refresh(client);
     }
 
-    return { client, store };
+    return { client };
   })().catch((err) => {
     delete global[BOOTSTRAP_KEY];
     throw err;
@@ -196,7 +187,6 @@ export function PolycentricProvider({
   onInitialized,
 }: PolycentricProviderProps) {
   const [client, setClient] = useState<PolycentricClient | null>(null);
-  const [store, setStore] = useState<PolycentricStoreApi | null>(null);
   const [currentIdentity, setCurrentIdentity] = useState<IdentityState | null>(
     null,
   );
@@ -236,10 +226,9 @@ export function PolycentricProvider({
     let cancelled = false;
     let ready: Bootstrap | null = null;
 
-    const refresh = async ({ client, store }: Bootstrap) => {
+    const refresh = async ({ client }: Bootstrap) => {
       setCurrentIdentity(client.identityManager.resolveIdentity());
       await Promise.all([
-        store.getState().refreshLogins(),
         useFollows.getState().refresh(client),
         useReposts.getState().refresh(client),
         useReactions.getState().refresh(client),
@@ -294,9 +283,8 @@ export function PolycentricProvider({
         if (cancelled) return;
         ready = result;
 
-        const { client: c, store: s } = result;
+        const { client: c } = result;
         setClient(c);
-        setStore(s);
         setCurrentIdentity(c.identityManager.resolveIdentity());
         setIsLoading(false);
 
@@ -331,24 +319,16 @@ export function PolycentricProvider({
   }, [client]);
 
   const value = useMemo<PolycentricContextValue | null>(() => {
-    if (!client || !store) return null;
+    if (!client) return null;
     return {
       client,
-      store,
       isLoading,
       isReady: !isLoading && !error,
       error,
       currentIdentity,
       refreshCurrentIdentity,
     };
-  }, [
-    client,
-    store,
-    isLoading,
-    error,
-    currentIdentity,
-    refreshCurrentIdentity,
-  ]);
+  }, [client, isLoading, error, currentIdentity, refreshCurrentIdentity]);
 
   if (error) {
     return <DefaultErrorComponent error={error} />;
@@ -365,30 +345,16 @@ export function PolycentricProvider({
   );
 }
 
-export function useIdentities() {
-  const { store } = usePolycentricContext();
-  return useStore(store, (s) => s.logins);
-}
-
 export function useCurrentIdentity() {
   const { client, currentIdentity } = usePolycentricContext();
 
   const activeIdentityKey = currentIdentity?.identityKey ?? null;
-
-  const isCurrentIdentity = useCallback(
-    (identityKey: string | null | undefined) => {
-      if (!activeIdentityKey || !identityKey) return false;
-      return activeIdentityKey === identityKey;
-    },
-    [activeIdentityKey],
-  );
 
   return {
     identity: currentIdentity,
     identityKey: activeIdentityKey,
     hasIdentity: !!activeIdentityKey,
     client,
-    isCurrentIdentity,
   };
 }
 

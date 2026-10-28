@@ -10,7 +10,11 @@ import {
   type PolycentricClient,
 } from '@polycentric/react-native';
 import { create } from 'zustand';
-import { feedQueryKeys } from '../../feed/hooks/feedCache';
+import {
+  feedQueryKeys,
+  alterPostRepostCount,
+  threadQueryKey,
+} from '../../feed/hooks/feedCache';
 
 type RepostsState = {
   reposts: Map<string, string>;
@@ -84,6 +88,11 @@ const useReposts = create<RepostsState>((set, get) => ({
     const repostIdHex = eventKeyId(event.key);
 
     set({ reposts: new Map(reposts).set(post.id, repostIdHex) });
+    const self = client.activeIdentityKey ?? '';
+    alterPostRepostCount(threadQueryKey(post.id), post.id, 1);
+    alterPostRepostCount(feedQueryKeys.following(self), post.id, 1);
+    alterPostRepostCount(feedQueryKeys.identity(post.identity), post.id, 1);
+    alterPostRepostCount(feedQueryKeys.explore(self), post.id, 1);
 
     try {
       await client.commitEvent(signedEvent, repostContent);
@@ -120,6 +129,26 @@ const useReposts = create<RepostsState>((set, get) => ({
     const next = new Map(reposts);
     next.delete(targetId);
     set({ reposts: next });
+    // The server counts every repost event, so drop one per tombstoned event
+    const repostCountChange = -targets.length;
+    alterPostRepostCount(threadQueryKey(targetId), targetId, repostCountChange);
+    alterPostRepostCount(
+      feedQueryKeys.following(self),
+      targetId,
+      repostCountChange,
+    );
+    alterPostRepostCount(
+      feedQueryKeys.identity(
+        v2.EventKey.fromBinary(hexToBytes(targetId)).identity,
+      ),
+      targetId,
+      repostCountChange,
+    );
+    alterPostRepostCount(
+      feedQueryKeys.explore(self),
+      targetId,
+      repostCountChange,
+    );
 
     try {
       for (const { event } of targets) {

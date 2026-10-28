@@ -10,8 +10,8 @@ use polycentric_common::models::protos_v2::{
 use polycentric_common::models::{collections, content_types};
 use sea_orm::sea_query::{
     CommonTableExpression, DeleteStatement, Expr, InsertStatement,
-    IntoCondition, IntoTableRef, OnConflict, SelectExpr, SelectStatement,
-    SubQueryStatement, UnionType, UpdateStatement, WithClause,
+    IntoCondition, IntoTableRef, OnConflict, ReturningClause, SelectExpr,
+    SelectStatement, SubQueryStatement, UnionType, UpdateStatement, WithClause,
 };
 use sea_orm::*;
 use tonic::Status;
@@ -20,7 +20,6 @@ use crate::db::fns::{decay_interaction_count, decay_interaction_count1};
 use crate::service::content::content_repository::Mutation as ContentRepository;
 use crate::service::content::repository::Mutation as ContentChildRepository;
 use crate::service::content::repository::{EventKeyParts, split_event_key};
-use crate::service::events::rpc::put_events::event_is_authorised;
 
 const COLLECTION_FEED: i16 = collections::FEED as i16;
 const COLLECTION_PROFILE: i16 = collections::PROFILE as i16;
@@ -257,7 +256,7 @@ impl Mutation {
     /// already stored.
     pub async fn add_event<C: ConnectionTrait>(
         db: &C,
-        mut event: event::ActiveModel,
+        event: event::ActiveModel,
         decoded_content: Option<(&[u8], Content, &ContentDigest)>,
     ) -> Result<bool, Status> {
         // We're going to build one big query using Common Table Expressions
@@ -268,13 +267,6 @@ impl Mutation {
         // so various sub-queries add to this.
         let mut with = WithClause::new();
         with.recursive(false);
-
-        let identity = event.identity.try_as_ref().map_or("", |s| &**s);
-        let content = decoded_content.as_ref().map(|(_, c, _)| c);
-        let is_authorised = event_is_authorised(identity, content);
-        event.content_type = Set(content
-            .and_then(|content| content.content_body.as_ref())
-            .map(|body| content_types::of(body) as i16));
 
         // Store the event itself into the `events` table.
         const INSERTED_EVENT: &str = "inserted_event";
@@ -296,25 +288,23 @@ impl Mutation {
 
             if let Some(content_body) = content.content_body {
                 // Update cache tables.
-                if is_authorised {
-                    let event_id_identity = (
-                        INSERTED_EVENT.into(),
-                        event::Column::Id.into(),
-                        event::Column::Identity.into(),
-                    );
-                    let maybe_query = Mutation::update_cache_query(
-                        &mut with,
-                        &content_body,
-                        event_id_identity,
-                    ).map_err(|err| {
-                        tracing::error!(error = %err, "failed to create query to update cache tables");
-                        Status::internal("internal server error")
-                    })?;
-                    if let Some(query) = maybe_query {
-                        let mut cte = CommonTableExpression::new();
-                        cte.table_name("inserted_cache").query(query);
-                        with.cte(cte);
-                    }
+                let event_id_identity = (
+                    INSERTED_EVENT.into(),
+                    event::Column::Id.into(),
+                    event::Column::Identity.into(),
+                );
+                let maybe_query = Mutation::update_cache_query(
+                    &mut with,
+                    &content_body,
+                    event_id_identity,
+                ).map_err(|err| {
+                    tracing::error!(error = %err, "failed to create query to update cache tables");
+                    Status::internal("internal server error")
+                })?;
+                if let Some(query) = maybe_query {
+                    let mut cte = CommonTableExpression::new();
+                    cte.table_name("inserted_cache").query(query);
+                    with.cte(cte);
                 }
 
                 // Store the decoded body of the content.
@@ -719,16 +709,17 @@ impl Mutation {
                 reaction::Column::Positive,
             ])
             .select_from({
+                let event_table_id =
+                    Expr::col((event_table.clone(), event_id.clone()));
                 post_event_id
-                    .clear_selects() // Need to rename.
-                    .from(event_table.clone())
+                    .clear_selects()
                     .expr(SelectExpr {
-                        expr: Expr::col((event_table.clone(), event_id)),
+                        expr: event_table_id.clone(),
                         alias: Some("event_id".into()),
                         window: None,
                     })
                     .expr(SelectExpr {
-                        expr: Expr::col((event_table, identity)),
+                        expr: Expr::col((event_table.clone(), identity)),
                         alias: Some("identity".into()),
                         window: None,
                     })
@@ -746,81 +737,119 @@ impl Mutation {
                         expr: Expr::from(reaction.positive),
                         alias: Some("positive".into()),
                         window: None,
-                    });
+                    })
+                    .from(event_table.clone())
+                    // Ensure the event the reaction is on is a post.
+                    .cond_where(
+                        Expr::col(event::Column::ContentType.as_column_ref())
+                            .eq(Expr::Constant(content_types::POST.into())),
+                    );
                 post_event_id
             })
             .map_err(|err| {
                 DbErr::Custom(format!("incorrect amount of values: {err}"))
             })?
-            .returning_all();
+            // If the user already reacted to the post overwrite it with the new
+            // reaction.
+            .on_conflict({
+                let mut c = OnConflict::columns([
+                    reaction::Column::OnPost,
+                    reaction::Column::Identity,
+                ]);
+                c.update_columns([
+                    reaction::Column::EventId,
+                    reaction::Column::Emoji,
+                    reaction::Column::Positive,
+                ]);
+                c
+            })
+            .returning(ReturningClause::Exprs(vec![
+                Expr::cust("WITH (NEW AS NEW, OLD AS OLD) NEW.on_post"),
+                // Map old positive -> new positive transition to a tuple of
+                // positive and negative count changes.
+                Expr::cust(
+                    "
+                    CASE (OLD.positive, NEW.positive)
+                      WHEN (NULL::BOOLEAN, true) THEN ARRAY[1, 0]
+                      WHEN (NULL::BOOLEAN, false) THEN ARRAY[0, 1]
+                      WHEN (true, true) THEN ARRAY[0, 0]
+                      WHEN (true, false) THEN ARRAY[-1, 1]
+                      WHEN (false, true) THEN ARRAY[1, -1]
+                      WHEN (false, false) THEN ARRAY[0, 0]
+                      ELSE ARRAY[0, 0]
+                    END AS count_diffs",
+                ),
+            ]));
 
         let mut cte = CommonTableExpression::new();
         const INSERTED_REACTION: &str = "inserted_reaction";
         cte.table_name(INSERTED_REACTION).query(insert_reaction);
         with.cte(cte);
 
-        let positive = if reaction.positive { 1 } else { 0 };
-        let negative = if reaction.positive { 0 } else { 1 };
-
         let mut query = UpdateStatement::new();
-        query.table(interaction_tally::Entity).values([
-            (
-                interaction_tally::Column::ReactionPositiveCount,
-                Expr::col(
-                    interaction_tally::Column::ReactionPositiveCount
-                        .as_column_ref(),
-                )
-                .add(Expr::Constant(positive.into())),
-            ),
-            (
-                interaction_tally::Column::ReactionNegativeCount,
-                Expr::col(
-                    interaction_tally::Column::ReactionNegativeCount
-                        .as_column_ref(),
-                )
-                .add(Expr::Constant(negative.into())),
-            ),
-            (
-                interaction_tally::Column::UpdatedAt,
-                Expr::current_timestamp(),
-            ),
-        ]);
-
-        if reaction.positive {
-            query.value(
-                interaction_tally::Column::DecayedCount,
-                decay_interaction_count(
+        query
+            .table(interaction_tally::Entity)
+            .values([
+                (
+                    interaction_tally::Column::ReactionPositiveCount,
                     Expr::col(
                         interaction_tally::Column::ReactionPositiveCount
                             .as_column_ref(),
                     )
-                    .add(Expr::Constant(positive.into())),
-                    Expr::col(
-                        interaction_tally::Column::ReplyCount.as_column_ref(),
-                    ),
-                    Expr::col(
-                        interaction_tally::Column::RepostCount.as_column_ref(),
-                    ),
-                    Expr::col(
-                        interaction_tally::Column::QuoteCount.as_column_ref(),
-                    ),
-                    Expr::col(event::Column::CreatedAt.as_column_ref()),
+                    .add(Expr::cust("inserted_reaction.count_diffs[1]")),
                 ),
-            );
-        }
-
-        query
+                (
+                    interaction_tally::Column::ReactionNegativeCount,
+                    Expr::col(
+                        interaction_tally::Column::ReactionNegativeCount
+                            .as_column_ref(),
+                    )
+                    .add(Expr::cust("inserted_reaction.count_diffs[2]")),
+                ),
+                (
+                    interaction_tally::Column::UpdatedAt,
+                    Expr::current_timestamp(),
+                ),
+                (
+                    interaction_tally::Column::DecayedCount,
+                    decay_interaction_count(
+                        Expr::col(
+                            interaction_tally::Column::ReactionPositiveCount
+                                .as_column_ref(),
+                        )
+                        .add(Expr::cust("inserted_reaction.count_diffs[1]")),
+                        Expr::col(
+                            interaction_tally::Column::ReplyCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::RepostCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(
+                            interaction_tally::Column::QuoteCount
+                                .as_column_ref(),
+                        ),
+                        Expr::col(event::Column::CreatedAt.as_column_ref()),
+                    ),
+                ),
+            ])
             .from(INSERTED_REACTION)
             // This should be an inner join, but SeaORM doesn't support this,
             // see <https://github.com/SeaQL/sea-query/issues/608>.
             .from(event::Entity)
             .and_where(
-                Expr::col(event::Column::Id.as_column_ref())
-                    .eq(Expr::Column((INSERTED_REACTION, "on_post").into())),
+                Expr::col(event::Column::Id.as_column_ref()).eq(Expr::col((
+                    INSERTED_REACTION,
+                    reaction::Column::OnPost,
+                ))),
             )
             .and_where(
-                Expr::Column(("interaction_tally", "event_id").into())
-                    .eq(Expr::Column((INSERTED_REACTION, "on_post").into())),
+                Expr::col(interaction_tally::Column::EventId.as_column_ref())
+                    .eq(Expr::col((
+                        INSERTED_REACTION,
+                        reaction::Column::OnPost,
+                    ))),
             );
 
         Ok(query)
@@ -918,7 +947,12 @@ impl Mutation {
                         expr: Expr::col(event::Column::Id.as_column_ref()),
                         alias: Some(repost::Column::Post.into()),
                         window: None,
-                    });
+                    })
+                    // Ensure the event the repost is of is a post.
+                    .and_where(
+                        Expr::col(event::Column::ContentType.as_column_ref())
+                            .eq(Expr::Constant(content_types::POST.into())),
+                    );
                 post_event_id
             })
             .map_err(|err| {
@@ -1366,7 +1400,7 @@ impl Mutation {
                             )
                             .sub(
                                 Expr::case(
-                                    Expr::col(reaction::Column::Positive),
+                                    Expr::col((DELETED_REACTION, reaction::Column::Positive)),
                                     Expr::Constant(1.into()),
                                 )
                                 .finally(Expr::Constant(0.into())),
@@ -1380,7 +1414,7 @@ impl Mutation {
                             )
                             .sub(
                                 Expr::case(
-                                    Expr::col(reaction::Column::Positive),
+                                    Expr::col((DELETED_REACTION, reaction::Column::Positive)),
                                     Expr::Constant(0.into()),
                                 )
                                 .finally(Expr::Constant(1.into())),
@@ -1389,7 +1423,7 @@ impl Mutation {
                         (
                             interaction_tally::Column::DecayedCount,
                             Expr::case(
-                                Expr::col(reaction::Column::Positive),
+                                Expr::col((DELETED_REACTION, reaction::Column::Positive)),
                                 decay_interaction_count(
                                     Expr::col(
                                         interaction_tally::Column::ReactionPositiveCount
@@ -1425,8 +1459,9 @@ impl Mutation {
                     ))
                     .and_where(
                         Expr::col(interaction_tally::Column::EventId.as_column_ref())
-                            .eq(Expr::col(reaction::Column::OnPost.as_column_ref())),
+                            .eq(Expr::col((DELETED_REACTION, reaction::Column::OnPost))),
                     );
+
                 Ok(Some(query.into()))
             }
             // Nothing to delete.
@@ -1518,130 +1553,3 @@ fn select_not_deleted_event_id(key: EventKeyParts) -> SelectStatement {
     }));
     query
 }
-
-/* TODO: move to integration tests.
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use entity::block;
-    use chrono::DateTime;
-    use polycentric_common::models::protos_v2::{EventKey, PublicKey};
-    use sea_orm::prelude::DateTimeWithTimeZone;
-    use sea_orm::{
-        DatabaseConnection, DbBackend, MockDatabase, MockExecResult,
-    };
-
-    /// The SQL every statement the connection ran, in order.
-    fn statements(db: DatabaseConnection) -> Vec<String> {
-        db.into_transaction_log()
-            .iter()
-            .flat_map(|txn| txn.statements())
-            .map(|stmt| stmt.sql.clone())
-            .collect()
-    }
-
-    fn now() -> DateTimeWithTimeZone {
-        DateTime::from_timestamp(0, 0).unwrap().fixed_offset()
-    }
-
-    fn event_row(identity: &str) -> event::Model {
-        event::Model {
-            id: 1,
-            collection: COLLECTION_SOCIAL,
-            identity: identity.to_string(),
-            public_key_type: 1,
-            public_key: vec![0xaa],
-            sequence: 1,
-            content_digest_type: Some(1),
-            content_digest_bytes: Some(vec![1]),
-            signature: vec![],
-            previous_signature: vec![],
-            previous_root: vec![],
-            application_id: None,
-            event_bytes: vec![1],
-            created_at: now(),
-            synced_at: now(),
-        }
-    }
-
-    fn block_content(blocked: &str) -> Content {
-        Content {
-            content_body: Some(ContentBody::Block(Block {
-                identity: blocked.to_string(),
-            })),
-        }
-    }
-
-    fn delete_content(target_identity: &str) -> Content {
-        Content {
-            content_body: Some(ContentBody::Delete(Delete {
-                event_key: Some(EventKey {
-                    collection: collections::SOCIAL_GRAPH,
-                    identity: target_identity.to_string(),
-                    signed_by: Some(PublicKey {
-                        key_type: 1,
-                        key: vec![0xaa],
-                    }),
-                    sequence: 1,
-                }),
-            })),
-        }
-    }
-
-    #[tokio::test]
-    async fn a_block_event_is_cached_in_the_block_table() {
-        let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![block::Model {
-                event_id: 1,
-                blocker: "alice".to_string(),
-                blocked: "bob".to_string(),
-            }]])
-            .into_connection();
-
-        Mutation::update_cache(
-            &db,
-            &event_row("alice"),
-            Some(&block_content("bob")),
-        )
-        .await
-        .unwrap();
-
-        let statements = statements(db);
-        assert_eq!(statements.len(), 1);
-        assert!(statements[0].contains("INSERT INTO \"block\""));
-    }
-
-    #[tokio::test]
-    async fn deleting_a_graph_event_clears_both_graph_caches() {
-        let db = MockDatabase::new(DbBackend::Postgres)
-            .append_exec_results([MockExecResult::default()])
-            .into_connection();
-
-        Mutation::update_cache(
-            &db,
-            &event_row("alice"),
-            Some(&delete_content("alice")),
-        )
-        .await
-        .unwrap();
-
-        // One statement, with the two cache deletes as identically-shaped
-        // CTEs hanging off a single `event_id` lookup.
-        let statements = statements(db);
-        assert_eq!(statements.len(), 1);
-        assert!(statements[0].contains("WITH \"event_id\" AS (SELECT \"id\""));
-        for (cte, table) in
-            [("deleted_follows", "follow"), ("deleted_blocks", "block")]
-        {
-            assert!(
-                statements[0].contains(&format!(
-                    "\"{cte}\" AS (DELETE FROM \"{table}\" \
-                     WHERE \"event_id\" IN (SELECT \"id\" FROM \"event_id\"))"
-                )),
-                "missing {cte} CTE in: {}",
-                statements[0]
-            );
-        }
-    }
-}
-*/

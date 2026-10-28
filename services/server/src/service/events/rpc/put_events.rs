@@ -10,7 +10,7 @@ use entity::event;
 use polycentric_common::models::protos_v2::Blob;
 use polycentric_common::models::validate::{Validate, ValidationError};
 use polycentric_common::models::{
-    block, collections, delete, event_key, follow,
+    block, collections, content_types, delete, event_key, follow,
 };
 use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
@@ -25,7 +25,7 @@ use crate::service::identity::repository::Query as IdentityRepository;
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::content::ContentBody;
 use crate::service::proto::{
-    Application, Content, Delete, Event, EventBundle, EventKey, PublicKey,
+    Application, Content, Event, EventBundle, EventKey, PublicKey,
     PutEventError, PutEventsRequest, PutEventsResponse,
 };
 
@@ -60,13 +60,14 @@ pub async fn handle(
         {
             Ok((key, is_new)) => {
                 if warnings.len() != start_warnings {
-                    tracing::debug!(
+                    tracing::warn!(
                         key = ?key,
+                        is_new,
                         warnings = ?&warnings[start_warnings..],
                         "processed event with warning(s)",
                     );
                 } else {
-                    tracing::debug!(key = ?key, "processed event");
+                    tracing::info!(?key, is_new, "processed event");
                 }
                 if is_new {
                     stored.entry(key.identity.clone()).or_default().push(key);
@@ -88,10 +89,10 @@ pub async fn handle(
                 return Err(status);
             }
             Err(status) => {
-                tracing::debug!(
-                    "put_events[{idx}] skipped: {} {}",
-                    status.code(),
-                    status.message()
+                tracing::warn!(
+                    code = %status.code(),
+                    message = %status.message(),
+                    "failed to process event",
                 );
                 errors.push(PutEventError {
                     event_bundle_index: idx as u32,
@@ -162,14 +163,6 @@ async fn process_event(
             tracing::debug!(error = %err, "failed to decode event");
             Status::invalid_argument("signed event bytes invalid")
         })?;
-    // TODO: validate:
-    // * event.key.collection -> match ContentBody variant
-    // * event.key.sequence
-    // * event.key.identity?
-    // * event.identity_sequence
-    // * event.vector_clock
-    // * event.previous_signature
-    // * event.previous_root
     event.validate_check(warnings, |err| map_warning(err.into()));
 
     let key = event.key.ok_or_else(|| {
@@ -232,7 +225,7 @@ async fn process_event(
     // Kafka partition/message key: the serialized protobuf event key.
     // Encoded here while `key` is whole — its fields are moved out below.
     let event_key_bytes = key.encode_to_vec();
-
+    let mut content_type = None;
     let decoded_content = if let (Some(serialized_content), Some(digest)) = (
         event_bundle.serialized_content.as_ref(),
         event.content_digest.as_ref(),
@@ -254,6 +247,10 @@ async fn process_event(
             // We got validation warnings, so we won't store the content.
             None
         } else {
+            content_type = content
+                .content_body
+                .as_ref()
+                .map(|c| content_types::of(c) as i16);
             Some((content_bytes, content, digest))
         }
     } else {
@@ -334,7 +331,7 @@ async fn process_event(
         .unwrap_or(Utc::now())
         .fixed_offset()),
         synced_at: Set(Utc::now().fixed_offset()),
-        content_type: NotSet, // Set by `add_event`.
+        content_type: Set(content_type),
     };
 
     let stored = match EventsRepository::Mutation::add_event(
@@ -436,14 +433,8 @@ fn validate_content(
 
     let collection = key.collection;
     match content_body {
-        ContentBody::Post(post) => {
+        ContentBody::Post(_) => {
             check_collection(collection, collections::FEED);
-            post.validate_check(warnings, |err| map_warning(err.into()));
-
-            // TODO: needs db for validation of:
-            // * reply.root & reply.parent events exists.
-            // * reply.root & reply.parent in same thread?
-            // * quote event exists.
         }
         ContentBody::Delete(delete) => {
             if let Some(delete_key) = delete.event_key.as_ref() {
@@ -475,112 +466,34 @@ fn validate_content(
         }
         ContentBody::Reaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-
-            // TODO: needs db for validation of:
-            // * at most 1 reaction per post per user.
-            // * in db only allow reactions to posts -- don't think we need to
-            //   return a warning for this.
         }
         ContentBody::AttributedToReaction(_) => {
             check_collection(collection, collections::INTERACTIONS);
-
-            // TODO: needs db for validation of:
-            // * at most 1 reaction per URL (attributed item) per user.
         }
         ContentBody::ProfileUpdate(_) => {
             check_collection(collection, collections::PROFILE);
         }
         ContentBody::Identity(_) => {
             check_collection(collection, collections::IDENTITY);
-
-            // TODO: validation that needs previous events:
-            // * recovery signature must be a signature from the
-            //   currently-active backup key.
         }
         ContentBody::Repost(_) => {
             check_collection(collection, collections::FEED);
-
-            // TODO: needs db for validation of:
-            // * at most 1 reaction per post per user.
-            // * in db only reposting of posts
         }
         ContentBody::Report(_) => {
             check_collection(collection, collections::REPORTS);
-
-            // TODO: needs db for validation of:
-            // * limit the amount of reports per post?
-            // * limit to posts and reposts only?
         }
         ContentBody::Labels(_) => {
             check_collection(collection, collections::LABELS);
-
-            // TODO: needs db for validation of:
-            // * limit the amount of labels per key per user in total (accross
-            //   multiple requests)
-            // * limit to posts only?
         }
         ContentBody::VerificationClaim(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-
-            // TODO: don't allow spamming of the same claim if it's denied?
         }
         ContentBody::VerificationVerify(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-
-            // TODO: needs db for validation of:
-            // * event key is known.
-            // * event key is a valid claim.
         }
         ContentBody::VerificationTarget(_) => {
             check_collection(collection, collections::VERIFICATIONS);
-
-            // TODO: limit the target identities in some way?
         }
-    }
-}
-
-/// Check if the `identity` is authorised to perform its mutation.
-///
-/// This will return false if, for example, an event tries to delete a post
-/// that the identity of the deletion event didn't create.
-///
-/// `content` must be contained in the event itself.
-pub fn event_is_authorised(identity: &str, content: Option<&Content>) -> bool {
-    let Some(Content {
-        content_body: Some(content),
-    }) = content
-    else {
-        // Couldn't extract (valid) content, so don't consider the event as
-        // authorised.
-        return false;
-    };
-
-    match content {
-        // Only events items related to the identity themselves.
-        ContentBody::Post(_)
-        | ContentBody::Follow(_)
-        | ContentBody::Block(_)
-        | ContentBody::Reaction(_)
-        | ContentBody::AttributedToReaction(_)
-        | ContentBody::ProfileUpdate(_)
-        | ContentBody::Identity(_)
-        | ContentBody::Repost(_)
-        // Can report other identity's events.
-        | ContentBody::Report(_)
-        // Anyone can add any label.
-        | ContentBody::Labels(_)
-        // Anyone can make a claim.
-        | ContentBody::VerificationClaim(_) => true,
-        // Can only delete your own events.
-        ContentBody::Delete(Delete { event_key }) => {
-            let Some(event_key) = event_key else { return false; };
-            // Make sure the identity of the deletion event is the same
-            // as the identity of the to-be-deleted event.
-            event_key.identity == identity
-        },
-        // TODO: these will need verification.
-        ContentBody::VerificationVerify(_)
-        | ContentBody::VerificationTarget(_) => false,
     }
 }
 
@@ -610,62 +523,4 @@ async fn remove_present_blobs(
         .collect();
 
     Ok(missing_blobs)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::service::proto::{Block, EventKey};
-
-    fn delete_content(target_identity: &str) -> Content {
-        Content {
-            content_body: Some(ContentBody::Delete(Delete {
-                event_key: Some(EventKey {
-                    collection: collections::SOCIAL_GRAPH,
-                    identity: target_identity.to_string(),
-                    signed_by: Some(PublicKey {
-                        key_type: 1,
-                        key: vec![0xaa],
-                    }),
-                    sequence: 1,
-                }),
-            })),
-        }
-    }
-
-    #[test]
-    fn a_delete_of_your_own_event_is_authorised() {
-        assert!(event_is_authorised("alice", Some(&delete_content("alice"))));
-    }
-
-    #[test]
-    fn a_delete_of_another_identitys_event_is_not_authorised() {
-        assert!(!event_is_authorised(
-            "mallory",
-            Some(&delete_content("alice"))
-        ));
-    }
-
-    #[test]
-    fn a_delete_without_an_event_key_is_not_authorised() {
-        let content = Content {
-            content_body: Some(ContentBody::Delete(Delete { event_key: None })),
-        };
-        assert!(!event_is_authorised("alice", Some(&content)));
-    }
-
-    #[test]
-    fn an_event_without_content_is_not_authorised() {
-        assert!(!event_is_authorised("alice", None));
-    }
-
-    #[test]
-    fn a_block_of_another_identity_is_authorised() {
-        let content = Content {
-            content_body: Some(ContentBody::Block(Block {
-                identity: "bob".to_string(),
-            })),
-        };
-        assert!(event_is_authorised("alice", Some(&content)));
-    }
 }

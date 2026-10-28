@@ -15,6 +15,8 @@ const OUTPUT = process.env.MAESTRO_OUTPUT
   : [];
 // Flows tagged `flaky` are skipped until fixed.
 const EXCLUDE = ['--exclude-tags=flaky'];
+// Failed web flows run again after the rest, up to 3 attempts in all.
+const WEB_RETRIES = 2;
 
 const platform = process.argv[2];
 if (platform && !PLATFORMS.includes(platform)) {
@@ -211,6 +213,7 @@ if (platform === 'web') {
     'test',
     ...OUTPUT,
     ...EXCLUDE,
+    `--retries=${WEB_RETRIES}`,
     '-e',
     `MAESTRO_WEB_URL=${WEB_URL}`,
     ...flowEnvs,

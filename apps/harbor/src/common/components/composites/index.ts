@@ -8,5 +8,4 @@ export * from './Fab';
 export * from './FormField';
 export * from '../layout/ScreenHeader';
 export * from './SocialButton';
-export * from './IdentityBadge';
 export * from './ListItemGroup';

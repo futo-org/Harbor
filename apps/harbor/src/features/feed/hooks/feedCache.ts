@@ -164,6 +164,18 @@ type FeedDataStoreState = {
   alterReplyCount: (queryKey: string, postId: string, amount: number) => void;
 
   /**
+   * Alter or create a local overlay for a post to increase or decrease
+   * the post's repost count by `amount`.
+   */
+  alterRepostCount: (queryKey: string, postId: string, amount: number) => void;
+
+  /**
+   * Alter or create a local overlay for a post to increase or decrease
+   * the post's quote count by `amount`.
+   */
+  alterQuoteCount: (queryKey: string, postId: string, amount: number) => void;
+
+  /**
    * Merge existing overlay with updated client reaction state for a post.
    */
   injectReaction: (
@@ -598,6 +610,32 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
       );
     },
 
+    alterRepostCount: (queryKey, postId, amount) => {
+      set((state) =>
+        modifyPostOverlay(state, queryKey, postId, (oldPost) => {
+          const base =
+            oldPost.overlay?.repostCount ??
+            new CounterOverlay(oldPost.originalPost.repostCount ?? 0, 0);
+          const capped = Math.max(amount, -base.get());
+          const repostCount = base.localUpdate(capped, true);
+          return patchPostOverlay(oldPost.overlay, { repostCount });
+        }),
+      );
+    },
+
+    alterQuoteCount: (queryKey, postId, amount) => {
+      set((state) =>
+        modifyPostOverlay(state, queryKey, postId, (oldPost) => {
+          const base =
+            oldPost.overlay?.quoteCount ??
+            new CounterOverlay(oldPost.originalPost.quoteCount ?? 0, 0);
+          const capped = Math.max(amount, -base.get());
+          const quoteCount = base.localUpdate(capped, true);
+          return patchPostOverlay(oldPost.overlay, { quoteCount });
+        }),
+      );
+    },
+
     injectReaction: (queryKey, postId, prev, next, overlayTallies) => {
       set((state) =>
         modifyPostOverlay(state, queryKey, postId, (oldPost) => {
@@ -715,8 +753,8 @@ export function injectReplyIntoThreadCache(
   limit = 0,
 ): void {
   const post = decodePostBundle(newBundle);
-  const parentId = post?.reply?.parentId;
   if (!post) return;
+  const parentId = post?.reply?.parentId;
   if (!parentId) return;
 
   const key = threadQueryKey(parentId, limit).join('\0');
@@ -734,6 +772,34 @@ export function alterPostReplyCount(
 ): void {
   for (const key of cachedKeysUnder(queryKey)) {
     useFeedDataStore.getState().alterReplyCount(key, parentPostId, amount);
+  }
+}
+
+/**
+ * Locally change the repost count of the post corresponding to `parentPostId`
+ * by `amount` until the server catches up.
+ */
+export function alterPostRepostCount(
+  queryKey: string[],
+  parentPostId: string,
+  amount: number,
+): void {
+  for (const key of cachedKeysUnder(queryKey)) {
+    useFeedDataStore.getState().alterRepostCount(key, parentPostId, amount);
+  }
+}
+
+/**
+ * Locally change the quote count of the post corresponding to `parentPostId`
+ * by `amount` until the server catches up.
+ */
+export function alterPostQuoteCount(
+  queryKey: string[],
+  parentPostId: string,
+  amount: number,
+): void {
+  for (const key of cachedKeysUnder(queryKey)) {
+    useFeedDataStore.getState().alterQuoteCount(key, parentPostId, amount);
   }
 }
 

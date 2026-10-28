@@ -245,6 +245,26 @@ export class PolycentricClient {
     await this.core.setBanStatus(server, body.buffer as ArrayBuffer);
   }
 
+  /** Resolve, dismiss or reopen a report (`ModerationService.ResolveReport`). */
+  async resolveReport(
+    server: string,
+    reportId: bigint,
+    status: Proto.ReportStatus,
+  ): Promise<void> {
+    const body = Proto.ResolveReportRequest.toBinary(
+      Proto.ResolveReportRequest.create({ reportId, status }),
+    );
+    await this.core.resolveReport(server, body.buffer as ArrayBuffer);
+  }
+
+  /** Erase an event from one server (`ModerationService.DeleteContent`). */
+  async deleteContent(server: string, target: Proto.EventKey): Promise<void> {
+    const body = Proto.DeleteContentRequest.toBinary(
+      Proto.DeleteContentRequest.create({ target }),
+    );
+    await this.core.deleteContent(server, body.buffer as ArrayBuffer);
+  }
+
   /**
    * Mark every notification of the active identity as read on each
    * configured server (`NotificationService.AcknowledgeNotifications`), up to

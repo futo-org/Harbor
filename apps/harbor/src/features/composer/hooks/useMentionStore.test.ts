@@ -120,16 +120,20 @@ describe('insertMention', () => {
     profile: Partial<ProfileHookResult>,
   ) => store.getState().insertMention(IDENTITY, profile as ProfileHookResult);
 
-  it('replaces @query with an alias mention and reuses the following space', () => {
-    const { store, onChangeText } = setup('some @an other', 8);
-    insert(store, { alias: 'ann.example.com' });
+  // Aliases with and without an account name behave identically.
+  it.each(['ann.example.com', 'ann@example.com'])(
+    'replaces @query with the alias %s and reuses the following space',
+    (alias) => {
+      const { store, onChangeText } = setup('some @an other', 8);
+      insert(store, { alias });
 
-    expect(onChangeText).toHaveBeenCalledWith('some @ann.example.com other');
-    // Store stays consistent eagerly: text and caret after the mention.
-    const caret = 'some @ann.example.com '.length;
-    expect(store.getState().text).toBe('some @ann.example.com other');
-    expect(store.getState().selection).toEqual({ start: caret, end: caret });
-  });
+      expect(onChangeText).toHaveBeenCalledWith(`some @${alias} other`);
+      // Store stays consistent eagerly: text and caret after the mention.
+      const caret = `some @${alias} `.length;
+      expect(store.getState().text).toBe(`some @${alias} other`);
+      expect(store.getState().selection).toEqual({ start: caret, end: caret });
+    },
+  );
 
   it('adds a space before a following newline', () => {
     const { store, onChangeText } = setup('@an\nrest', 3);
@@ -142,6 +146,9 @@ describe('insertMention', () => {
       ['@an', 2, 'ann.example.com'],
       ['@an rest', 2, 'ann.example.com'],
       ['@an\nrest', 2, 'ann.example.com'],
+      ['@an', 2, 'ann@example.com'],
+      ['@an rest', 2, 'ann@example.com'],
+      ['@an\nrest', 2, 'ann@example.com'],
       ['@', 1, null],
     ] as const) {
       const { store } = setup(text, caret);
@@ -167,15 +174,26 @@ describe('insertMention', () => {
   describe('display name memory', () => {
     beforeEach(() => useComposerStore.getState().reset());
 
-    it('remembers the display name of an inserted mention', () => {
+    it.each(['ann.example.com', 'ann@example.com'])(
+      'remembers an inserted alias %s under itself, named by it',
+      (alias) => {
+        const { store } = setup('@', 1);
+        insert(store, { alias, name: 'Ann' });
+        expect(useComposerStore.getState().mentions).toEqual({
+          [alias]: { identity: IDENTITY, renderAs: alias },
+        });
+      },
+    );
+
+    it('remembers the display name of an inserted identity mention', () => {
       const { store } = setup('@', 1);
-      insert(store, { alias: 'ann.example.com', name: 'Ann' });
+      insert(store, { alias: null, name: 'Ann' });
       expect(useComposerStore.getState().mentions).toEqual({
-        [IDENTITY]: 'Ann',
+        [IDENTITY]: { identity: IDENTITY, renderAs: 'Ann' },
       });
     });
 
-    it('remembers nothing without a display name or a failed insert', () => {
+    it('remembers nothing without an alias or display name, or on a failed insert', () => {
       const { store } = setup('@', 1);
       insert(store, { alias: null, name: null });
       const closed = setup('plain text', 5);

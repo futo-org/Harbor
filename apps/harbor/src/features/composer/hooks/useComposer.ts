@@ -14,6 +14,7 @@ import {
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import {
   alterPostReplyCount,
+  alterPostQuoteCount,
   feedQueryKeys,
   injectPostIntoFeedCache,
   injectReplyIntoThreadCache,
@@ -34,7 +35,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
 import { isWeb } from '@/src/common/util/platform';
 import { useComposerStore } from './useComposerStore';
-import { rewriteIdentityMentions } from '../utils/rewriteIdentityMentions';
+import { rewriteMentions } from '../utils/rewriteMentions';
 import { useLinkPreview } from './useLinkPreview';
 import {
   ImageImportError,
@@ -309,7 +310,7 @@ export function useComposer({
       const link = await resolveLinkForPost();
 
       const post: v2.Post = {
-        text: rewriteIdentityMentions(
+        text: rewriteMentions(
           text.trim(),
           useComposerStore.getState().mentions,
         ),
@@ -350,7 +351,12 @@ export function useComposer({
       const identity = currentIdentityKey ?? '';
 
       // Optimistically add the new event to feeds and threads
-      injectLocally(identity, newBundle, replyTo ?? undefined);
+      injectLocally(
+        identity,
+        newBundle,
+        replyTo ?? undefined,
+        quote ?? undefined,
+      );
 
       // `commitEvent` persists the event locally
       await client.commitEvent(signedEvent, content);
@@ -469,13 +475,25 @@ function injectLocally(
   identity: string,
   bundle: v2.EventBundle,
   replyTo: PostData | undefined,
+  quoted: PostData | undefined,
 ): void {
   if (replyTo) {
     injectReplyIntoThreadCache(bundle);
     alterPostReplyCount(threadQueryKey(replyTo.id), replyTo.id, 1);
     alterPostReplyCount(feedQueryKeys.following(identity), replyTo.id, 1);
-    alterPostReplyCount(feedQueryKeys.identity(identity), replyTo.id, 1);
+    alterPostReplyCount(
+      feedQueryKeys.identity(replyTo.identity),
+      replyTo.id,
+      1,
+    );
     alterPostReplyCount(feedQueryKeys.explore(identity), replyTo.id, 1);
+  }
+
+  if (quoted) {
+    alterPostQuoteCount(threadQueryKey(quoted.id), quoted.id, 1);
+    alterPostQuoteCount(feedQueryKeys.following(identity), quoted.id, 1);
+    alterPostQuoteCount(feedQueryKeys.identity(quoted.identity), quoted.id, 1);
+    alterPostQuoteCount(feedQueryKeys.explore(identity), quoted.id, 1);
   }
 
   injectPostIntoFeedCache(feedQueryKeys.following(identity), bundle);

@@ -2,12 +2,14 @@ use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
 use polycentric_common::jwt::ServerJwtClaims;
+use polycentric_common::merkle;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::content_service_client::ContentServiceClient;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::identity_service_client::IdentityServiceClient;
+use polycentric_common::models::protos_v2::pairing_service_client::PairingServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
@@ -26,6 +28,7 @@ mod feeds;
 mod graph;
 mod heads;
 mod notifications;
+mod pairing;
 mod search;
 mod verifications;
 
@@ -131,6 +134,13 @@ pub async fn verifications_service()
 pub async fn content_service() -> ContentServiceClient<tonic::transport::Channel>
 {
     ContentServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn pairing_service() -> PairingServiceClient<tonic::transport::Channel>
+{
+    PairingServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -491,6 +501,10 @@ impl TestClient {
         event.key.unwrap()
     }
 
+    pub fn get_last_event_bundle(&self) -> EventBundle {
+        self.pending.last().expect("no pending events").clone()
+    }
+
     fn push_event_bundle(
         &mut self,
         body: ContentBody,
@@ -521,12 +535,34 @@ impl TestClient {
         let (content_bytes, digest) = content_with_digest(content);
         let event = self.make_event(
             collection,
-            Vec::new(),
-            Vec::new(),
+            self.previous_signature(),
+            self.previous_root(),
             digest,
             created_at,
         );
         self.push_event_bundle2(event, content_bytes)
+    }
+
+    fn previous_signature(&self) -> Vec<u8> {
+        self.pending
+            .last()
+            .and_then(|bundle| bundle.signed_event.as_ref())
+            .map(|event| event.signature.clone())
+            .unwrap_or_else(Vec::new)
+    }
+
+    fn previous_root(&self) -> Vec<u8> {
+        let canonical = self
+            .pending
+            .iter()
+            .filter_map(|bundle| match bundle.signed_event.as_ref() {
+                Some(event) => Some(event.signature.clone()),
+                None => None,
+            })
+            .collect::<Vec<_>>();
+        merkle::merkle_tree_hash(&canonical)
+            .map(|h| h.to_vec())
+            .unwrap_or_else(Vec::new)
     }
 
     fn push_event_bundle2(
@@ -702,6 +738,10 @@ pub struct ExpectEvent<'a> {
 
 #[derive(Debug)]
 pub enum ExpectEventKind<'a> {
+    Post {
+        text: &'a str,
+        // TODO: add other fields as needed.
+    },
     Repost {
         post: EventKey,
     },
@@ -729,6 +769,9 @@ pub fn expect_events(got: &[EventBundle], expected: &[ExpectEvent<'_>]) {
         let content = content.content_body.as_ref().unwrap();
 
         match (content, &expected.kind) {
+            (ContentBody::Post(post), ExpectEventKind::Post { text }) => {
+                assert_eq!(post.text, *text);
+            }
             (ContentBody::Repost(repost), ExpectEventKind::Repost { post }) => {
                 let got = repost.post.as_ref().expect("repost is missing key");
                 assert_eq!(got, post);
@@ -931,6 +974,16 @@ fn bundle(signed_event: SignedEvent, content_bytes: Vec<u8>) -> EventBundle {
     }
 }
 
+/// Fake previous signature that passed validation (but is not valid).
+fn fake_previous_signature() -> Vec<u8> {
+    vec![1; 64]
+}
+
+/// Fake previous root that passed validation (but is not valid).
+fn fake_previous_root() -> Vec<u8> {
+    vec![1; 32]
+}
+
 /// Build a signed identity-collection bundle.
 #[allow(clippy::too_many_arguments)]
 pub fn make_identity_bundle(
@@ -955,8 +1008,8 @@ pub fn make_identity_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
-        vec![],
+        fake_previous_signature(),
+        fake_previous_root(),
         digest,
         created_at,
     );
@@ -986,8 +1039,8 @@ pub fn make_profile_update_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
-        vec![],
+        fake_previous_signature(),
+        fake_previous_root(),
         digest,
         created_at,
     );
@@ -1041,7 +1094,7 @@ pub fn make_post_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
+        fake_previous_signature(),
         previous_root,
         digest,
         created_at,
@@ -1101,8 +1154,8 @@ pub fn make_verification_claim_bundle(
         VectorClock {
             sequence: vector_clock,
         },
-        vec![],
-        vec![],
+        fake_previous_signature(),
+        fake_previous_root(),
         digest,
         created_at,
     );

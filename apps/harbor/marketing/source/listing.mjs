@@ -56,7 +56,6 @@ export const urls = {
   marketing: 'https://join.harbor.social',
   support: 'https://join.harbor.social/docs/support',
   privacyPolicy: 'https://join.harbor.social/docs/privacy-policy',
-  contentPolicy: 'https://join.harbor.social/docs/content-policy',
   storeContentPolicy:
     'https://join.harbor.social/docs/content-policy-app-stores',
 };
@@ -64,9 +63,8 @@ export const urls = {
 export const releaseNotes = `${tagline} You hold the keys, and your posts go to every server you choose.`;
 
 export const signInInstructions = [
-  'No sign-in credentials exist. Explore and Search work without an identity.',
-  'To post, follow or react: open the app, tap "Create identity" on the welcome screen, enter any display name, and optionally pick an avatar. The identity is created locally in seconds; there is no email, phone or password, and nothing to verify.',
-  'To review a second device, use Settings, Pair Identity on the first device and scan the QR code on the second.',
+  'There is no sign-in. Explore and Search work without an identity.',
+  'To post, follow or react, tap "Create identity" on the welcome screen and enter a display name. No email, phone or password is needed.',
 ].join(' ');
 
 export const appStore = {
@@ -128,9 +126,8 @@ export const appStore = {
   availability: { allTerritories: true, availableInNewTerritories: true },
   reviewNotes: [
     signInInstructions,
-    `Harbor is a client for an open network. Content comes from the servers listed in Settings, Configure servers. The defaults are run by FUTO and moderated under ${urls.contentPolicy}.`,
-    `User-generated content: every post has a "..." menu with Report (spam, hate, violence, child safety, copyright), every profile can be blocked (Settings, Blocked users), and labelled content is hidden by default on store builds. Details: ${urls.storeContentPolicy}`,
-    'The app does not use non-exempt encryption (ITSAppUsesNonExemptEncryption is false).',
+    `Users can report any post from its "..." menu and block any user from their profile. Content policy: ${urls.storeContentPolicy}`,
+    'The app does not use non-exempt encryption.',
   ].join('\n\n'),
   screenshots: {
     APP_IPHONE_67: 'screenshots/iphone-6.9',

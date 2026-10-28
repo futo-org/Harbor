@@ -58,8 +58,8 @@ pub async fn handle(
                     }
                 }
                 Ok(_) => {}
-                Err(status) => {
-                    tracing::warn!(error = %status, "unread count refresh failed")
+                Err(err) => {
+                    tracing::warn!(error = %err.message(), "unread count refresh failed")
                 }
             }
         }

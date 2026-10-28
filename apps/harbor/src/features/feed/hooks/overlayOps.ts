@@ -18,8 +18,13 @@ export function patchPostOverlay(
     ...patch,
   };
 
-  if (overlay.replyCount) return overlay;
-  if (overlay.reaction) return overlay;
+  if (
+    overlay.replyCount ||
+    overlay.reaction ||
+    overlay.quoteCount ||
+    overlay.repostCount
+  )
+    return overlay;
   return undefined;
 }
 
@@ -30,7 +35,14 @@ export function updatePostOverlay(
 ): PostOverlay | undefined {
   const replyCount = orig?.replyCount?.remoteUpdate(latest.replyCount);
   const reaction = orig?.reaction?.remoteUpdate(latest);
-  return patchPostOverlay(orig, { replyCount, reaction });
+  const repostCount = orig?.repostCount?.remoteUpdate(latest.repostCount);
+  const quoteCount = orig?.quoteCount?.remoteUpdate(latest.quoteCount);
+  return patchPostOverlay(orig, {
+    replyCount,
+    reaction,
+    repostCount,
+    quoteCount,
+  });
 }
 
 /**
@@ -63,6 +75,16 @@ export function applyPostOverlay(post: PostData, overlay?: PostOverlay) {
 
     applyTallyOverlay(post, reaction.previous, reaction.previousTally);
     applyTallyOverlay(post, reaction.next, reaction.nextTally);
+  }
+
+  const repostCount = overlay?.repostCount?.get();
+  if (repostCount !== undefined) {
+    post.repostCount = repostCount;
+  }
+
+  const quoteCount = overlay?.quoteCount?.get();
+  if (quoteCount !== undefined) {
+    post.quoteCount = quoteCount;
   }
 }
 
@@ -151,6 +173,8 @@ export function labelsetChanged(
  */
 export function postChanged(orig: PostData, updated: PostData): boolean {
   if (orig.replyCount !== updated.replyCount) return true;
+  if (orig.repostCount !== updated.repostCount) return true;
+  if (orig.quoteCount !== updated.quoteCount) return true;
   if (orig.totalReactionCount !== updated.totalReactionCount) return true;
   if (orig.upvoteCount !== updated.upvoteCount) return true;
   if (orig.downvoteCount !== updated.downvoteCount) return true;

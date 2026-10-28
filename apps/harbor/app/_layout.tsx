@@ -1,6 +1,8 @@
 import { Toaster } from '@/src/common/components/toast';
 import { hideBootSkeleton } from '@/src/common/components/layout/BootSkeleton';
 import { AppUpdater } from '@/src/features/core/apk-update';
+import { installErrorReporter } from '@/src/features/telemetry/lib/error-reporter';
+import { installConsoleCapture } from '@/src/features/telemetry/lib/console';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
 import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
@@ -11,6 +13,7 @@ import {
 import { renderScreenWithSplashHide } from '@/src/common/lib/renderScreenWithSplashHide';
 import { APP_NAME } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
+import { TelemetryIdentitySync } from '@/src/features/telemetry/TelemetryIdentitySync';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
@@ -31,6 +34,9 @@ import Head from 'expo-router/head';
 // the providers below have anything to show; the root stack hides it once a
 // screen is drawn.
 void SplashScreen.preventAutoHideAsync();
+
+installConsoleCapture();
+installErrorReporter();
 // iOS removes the splash without a fade by default; Android always fades.
 SplashScreen.setOptions({ fade: true });
 
@@ -118,7 +124,6 @@ function RootStack() {
               contentStyle: { backgroundColor: 'transparent' },
             }}
           />
-          <Stack.Screen name="identity/switch" />
           <Stack.Screen name="verifications/index" />
         </Stack.Protected>
 
@@ -172,6 +177,7 @@ export default function RootLayout() {
                 onInitialized={isWeb ? hideBootSkeleton : undefined}
               >
                 <ModerationStatusPrefetch />
+                <TelemetryIdentitySync />
                 <TrueSheetProvider>
                   <RootStack />
                   <PortalHost />

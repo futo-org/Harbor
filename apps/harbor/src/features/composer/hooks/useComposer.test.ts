@@ -401,12 +401,23 @@ describe('useComposer handlePost', () => {
     expect(useComposerStore.getState().text).toBe('');
   });
 
-  it('rewrites remembered identity mentions to the curly form', async () => {
+  it('rewrites remembered identity and alias mentions to the curly form', async () => {
     const id = 'a'.repeat(64);
+    const aliasId = 'b'.repeat(64);
+    const accountAliasId = 'c'.repeat(64);
     const { result } = await renderComposer();
     act(() => {
-      result.current.setText(`hi @${id} `);
-      useComposerStore.getState().rememberMention(id, 'Jane');
+      result.current.setText(`hi @${id} @ann.example.com @bob@example.com `);
+      const { rememberMention } = useComposerStore.getState();
+      rememberMention(id, { identity: id, renderAs: 'Jane' });
+      rememberMention('ann.example.com', {
+        identity: aliasId,
+        renderAs: 'ann.example.com',
+      });
+      rememberMention('bob@example.com', {
+        identity: accountAliasId,
+        renderAs: 'bob@example.com',
+      });
     });
 
     await act(async () => {
@@ -415,7 +426,9 @@ describe('useComposer handlePost', () => {
 
     expect(mockClient.contentManager.build).toHaveBeenCalledWith(
       expect.objectContaining({
-        post: expect.objectContaining({ text: `hi @{${id},Jane}` }),
+        post: expect.objectContaining({
+          text: `hi @{${id},Jane} @{${aliasId},ann.example.com} @{${accountAliasId},bob@example.com}`,
+        }),
       }),
     );
     // Memory is cleared with the rest of the composer.
