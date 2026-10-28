@@ -55,7 +55,12 @@ export default function RecoverIdentityScreen() {
       // Bail if the user was logged in elsewhere in the meantime
       if (await redirectIfLoggedIn(client)) return;
 
-      throw new Error('TODO: implement');
+      const pendingLogin = await client.loginManager.beginLogin(
+        backup.identityKey,
+        'recovery',
+      );
+
+      await client.loginManager.recoverIdentity(pendingLogin.keyPair, backup);
     } catch (err: unknown) {
       console.warn('Recovery failed:', err);
 
@@ -67,8 +72,8 @@ export default function RecoverIdentityScreen() {
       return;
     }
 
-    // await refreshCurrentIdentity();
-    // router.replace(to('/login/recover/success'));
+    await refreshCurrentIdentity();
+    router.replace(to('/login/recover/success'));
   };
 
   let buttonTitle: string;
