@@ -1,12 +1,13 @@
 //! The otlp service end to end: real JWTs, identity documents fetched from a
-//! polycentric server over gRPC, and payloads forwarded to a Victoria
+//! polycentric server over gRPC, and payloads forwarded to a VictoriaLogs
 //! stand-in.
 
 mod support;
 
 use ed25519_dalek::SigningKey;
 use otlp_service::forward::{ATTR_IDENTITY, ATTR_SIGNING_KEY};
-use otlp_service::routes::{LOGS_PATH, TRACES_PATH};
+use otlp_service::routes::LOGS_PATH;
+use otlp_service::spans::ATTR_SPAN_NAME;
 use serde_json::{Value, json};
 use support::{Otlp, PolycentricStandIn, device_key, identity_for, mint, now};
 
@@ -18,7 +19,19 @@ fn spans() -> String {
             { "key": "service.name", "value": { "stringValue": "harbor" } },
             { "key": ATTR_IDENTITY, "value": { "stringValue": "spoofed" } }
         ]},
-        "scopeSpans": []
+        "scopeSpans": [{ "spans": [{
+            "traceId": "0af7651916cd43dd8448eb211c80319c",
+            "spanId": "b7ad6b7169203331",
+            "name": "app.feedback",
+            "endTimeUnixNano": "1700000000000000000",
+            "attributes": [
+                { "key": "harbor.feedback.message", "value": { "stringValue": "love it" } }
+            ],
+            "events": [{ "name": "log", "timeUnixNano": "1699999999000000000", "attributes": [
+                { "key": "log.severity", "value": { "stringValue": "warn" } },
+                { "key": "log.message", "value": { "stringValue": "slow feed" } }
+            ]}]
+        }]}]
     }]})
     .to_string()
 }
@@ -48,15 +61,39 @@ async fn otlp_with_victoria() -> (Otlp, mockito::ServerGuard) {
 }
 
 #[tokio::test]
-async fn a_paired_device_gets_its_traces_to_victoria_stamped() {
+async fn a_paired_device_gets_its_spans_to_victoria_logs_as_records() {
     let (otlp, mut victoria) = otlp_with_victoria().await;
+    let mut expected = stamped(
+        "resourceLogs",
+        vec![json!({ "key": "service.name", "value": { "stringValue": "harbor" } })],
+    );
+    expected["resourceLogs"][0]["scopeLogs"] = json!([{ "logRecords": [
+        {
+            "timeUnixNano": "1700000000000000000",
+            "severityText": "INFO",
+            "body": { "stringValue": "app.feedback" },
+            "traceId": "0af7651916cd43dd8448eb211c80319c",
+            "spanId": "b7ad6b7169203331",
+            "attributes": [
+                { "key": "harbor.feedback.message", "value": { "stringValue": "love it" } },
+                { "key": ATTR_SPAN_NAME, "value": { "stringValue": "app.feedback" } }
+            ]
+        },
+        {
+            "timeUnixNano": "1699999999000000000",
+            "severityText": "WARN",
+            "body": { "stringValue": "slow feed" },
+            "traceId": "0af7651916cd43dd8448eb211c80319c"
+        }
+    ]}]);
     let mock = victoria
-        .mock("POST", TRACES_PATH)
+        .mock("POST", LOGS_PATH)
         .match_header("content-type", JSON)
-        .match_body(mockito::Matcher::PartialJson(stamped(
-            "resourceSpans",
-            vec![json!({ "key": "service.name", "value": { "stringValue": "harbor" } })],
-        )))
+        .match_header(
+            "VL-Stream-Fields",
+            "service.name,service.version,deployment.environment.name,os.name",
+        )
+        .match_body(mockito::Matcher::PartialJson(expected))
         .create_async()
         .await;
 
@@ -72,6 +109,10 @@ async fn logs_reach_victoria_logs() {
     let (otlp, mut victoria) = otlp_with_victoria().await;
     let mock = victoria
         .mock("POST", LOGS_PATH)
+        .match_header(
+            "VL-Stream-Fields",
+            "service.name,service.version,deployment.environment.name,os.name",
+        )
         .match_body(mockito::Matcher::PartialJson(stamped(
             "resourceLogs",
             vec![],
@@ -111,7 +152,7 @@ async fn tampered_expired_and_misaddressed_tokens_are_unauthorized() {
 async fn an_unpaired_device_is_forbidden_before_victoria_sees_anything() {
     let (otlp, mut victoria) = otlp_with_victoria().await;
     let untouched = victoria
-        .mock("POST", TRACES_PATH)
+        .mock("POST", LOGS_PATH)
         .expect(0)
         .create_async()
         .await;
@@ -166,7 +207,7 @@ async fn identity_documents_are_cached() {
     let otlp = Otlp::serve(&polycentric, Some(&victoria.url())).await;
     let token = otlp.token(&device_key());
     let forwarded = victoria
-        .mock("POST", TRACES_PATH)
+        .mock("POST", LOGS_PATH)
         .expect(2)
         .create_async()
         .await;
@@ -206,7 +247,7 @@ async fn a_signal_without_an_upstream_is_unavailable() {
 async fn a_failing_victoria_is_a_bad_gateway() {
     let (otlp, mut victoria) = otlp_with_victoria().await;
     victoria
-        .mock("POST", TRACES_PATH)
+        .mock("POST", LOGS_PATH)
         .with_status(500)
         .create_async()
         .await;

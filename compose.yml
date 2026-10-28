@@ -173,13 +173,10 @@ services:
       - HARBOR_ALLOW_HOSTS=${HARBOR_OTLP_ALLOW_HOSTS:-http://localhost:3003}
       - HARBOR_QUERY_SERVERS=${HARBOR_QUERY_SERVERS:-http://server:3000}
       - HARBOR_VICTORIA_LOGS_URL=${HARBOR_VICTORIA_LOGS_URL:-http://victorialogs:9428}
-      - HARBOR_VICTORIA_TRACES_URL=${HARBOR_VICTORIA_TRACES_URL:-http://victoriatraces:10428}
     depends_on:
       server:
         condition: service_started
       victorialogs:
-        condition: service_started
-      victoriatraces:
         condition: service_started
 
   victorialogs:
@@ -191,16 +188,6 @@ services:
       - victorialogs-data:/data
     ports:
       - ${HARBOR_VICTORIA_LOGS_PORT:-9428}:9428
-
-  victoriatraces:
-    profiles:
-      - otlp
-    image: victoriametrics/victoria-traces:v0.12.1@sha256:609abddf298c9642496045296f30a3968b5a4b79b678373e2e7ef29c844f5578
-    command: ['-storageDataPath=/data']
-    volumes:
-      - victoriatraces-data:/data
-    ports:
-      - ${HARBOR_VICTORIA_TRACES_PORT:-10428}:10428
 
   rustfs:
     image: rustfs/rustfs:latest@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2
@@ -327,4 +314,3 @@ volumes:
   rustfs-data:
   kafka-data:
   victorialogs-data:
-  victoriatraces-data:
