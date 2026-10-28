@@ -1,3 +1,15 @@
+use common_kafka::build_producer;
+use sea_orm::DatabaseConnection;
+
+use crate::db::client::build_db_clients;
+use crate::grpc::server::build_grpc_router;
+use crate::routes::build_routes;
+use crate::service::content::content_filestore::{
+    ContentFilestore, ContentFilestoreConfig,
+};
+use crate::service::context::ServiceContext;
+use crate::service::server::rpc::ServerConfig;
+
 mod admin;
 mod config;
 mod cron;
@@ -8,19 +20,6 @@ mod routes;
 mod service;
 mod util;
 mod workers;
-
-use std::sync::OnceLock;
-
-use crate::db::client::build_db_clients;
-use crate::grpc::server::build_grpc_router;
-use crate::routes::build_routes;
-use crate::service::content::content_filestore::{
-    ContentFilestore, ContentFilestoreConfig,
-};
-use crate::service::context::ServiceContext;
-use crate::service::server::rpc::ServerConfig;
-use common_kafka::build_producer;
-use sea_orm::DatabaseConnection;
 
 /// Connect to the database, retrying with backoff.
 async fn connect_db_with_retry(
@@ -85,29 +84,41 @@ async fn main() {
     }
 }
 
-static VALKEY: OnceLock<common_valkey::Clients> = OnceLock::new();
+/// Create Valkey clients when `HARBOR_VALKEY_URL` is set.
+async fn valkey_client() -> Result<Option<common_valkey::Clients>, String> {
+    let Some(url) = config::get().valkey_url.as_deref() else {
+        return Ok(None);
+    };
 
-/// Valkey clients when `HARBOR_VALKEY_URL` is set.
-fn connect_valkey() -> Option<&'static common_valkey::Clients> {
-    let url = config::get().valkey_url.as_deref()?;
-    Some(VALKEY.get_or_init(|| {
-        common_valkey::Clients::connect(url).expect("invalid HARBOR_VALKEY_URL")
-    }))
+    let client = common_valkey::Clients::connect(url)
+        .await
+        .map_err(|err| format!("failed to connect to Valkey: {err}"))?;
+
+    Ok(Some(client))
 }
 
 /// Run the API server: gRPC + HTTP merged onto a single port.
 async fn run_server() {
     common_telemetry::init_metrics("server");
     let (db, ro_db) = connect_db_with_retry(true).await;
-    let valkey = connect_valkey();
-    service::notifications::changes::init(valkey, &config::get().server_name);
-    if let Some(valkey) = valkey {
-        service::events::heads_pubsub::init(
-            valkey,
-            &config::get().server_name,
-            db.clone(),
-        );
-    }
+    match valkey_client().await {
+        Ok(Some(valkey)) => {
+            service::notifications::changes::init(
+                valkey.clone(),
+                &config::get().server_name,
+            );
+            service::events::heads_pubsub::init(
+                valkey,
+                &config::get().server_name,
+                db.clone(),
+            );
+        }
+        Ok(None) => {}
+        Err(error) => {
+            tracing::error!(error, "failed to connect to Valkey");
+            return;
+        }
+    };
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");
@@ -150,10 +161,19 @@ async fn run_workers(only: Vec<String>) {
     common_telemetry::init_metrics("server-workers");
     // Workers write rebuildable caches; skip the WAL flush wait per commit.
     let (db, ro_db) = connect_db_with_retry(false).await;
-    service::notifications::changes::init(
-        connect_valkey(),
-        &config::get().server_name,
-    );
+    match valkey_client().await {
+        Ok(Some(valkey)) => {
+            service::notifications::changes::init(
+                valkey,
+                &config::get().server_name,
+            );
+        }
+        Ok(None) => {}
+        Err(error) => {
+            tracing::error!(error, "failed to connect to Valkey");
+            return;
+        }
+    };
     let kafka_producer = build_producer()
         .await
         .expect("failed to build Kafka producer");

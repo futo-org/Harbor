@@ -19,7 +19,7 @@ static CHANGES: OnceLock<broadcast::Sender<Change>> = OnceLock::new();
 static FEED: OnceLock<Feed> = OnceLock::new();
 
 struct Feed {
-    valkey: &'static Clients,
+    valkey: Clients,
     channel: String,
 }
 
@@ -29,8 +29,7 @@ fn sender() -> &'static broadcast::Sender<Change> {
 
 /// Called once at startup. Without `valkey`, `notify` only reaches this
 /// process.
-pub fn init(valkey: Option<&'static Clients>, server_name: &str) {
-    let Some(valkey) = valkey else { return };
+pub fn init(valkey: Clients, server_name: &str) {
     let feed = FEED.get_or_init(|| Feed {
         valkey,
         channel: channel_name(server_name),
@@ -40,9 +39,9 @@ pub fn init(valkey: Option<&'static Clients>, server_name: &str) {
 }
 
 impl Feed {
-    async fn receive(&'static self) {
-        while let Err(e) = self.valkey.subscribe(&self.channel).await {
-            tracing::warn!(error = %e, "notification feed subscribe error");
+    async fn receive(&self) {
+        while let Err(err) = self.valkey.subscribe(&self.channel).await {
+            tracing::warn!(error = %err, "notification feed subscribe error");
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
         let _ = sender().send(Change::All);
@@ -75,7 +74,7 @@ impl Feed {
         }
     }
 
-    async fn announce_resubscribes(&'static self) {
+    async fn announce_resubscribes(&self) {
         let mut resubscribed = self.valkey.resubscribed();
         loop {
             match resubscribed.recv().await {

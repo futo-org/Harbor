@@ -19,6 +19,7 @@ const MESSAGE_BUFFER: usize = 4096;
 /// How often a disconnected subscriber is pinged to see if it is back.
 const RECONNECT_POLL: Duration = Duration::from_millis(250);
 
+#[derive(Clone)]
 pub struct Clients {
     publisher: ConnectionManager,
     subscriber: ConnectionManager,
@@ -29,7 +30,7 @@ pub struct Clients {
 impl Clients {
     /// `url` is `redis://` or `rediss://`. Connects on first use and
     /// retries with backoff, so a server that is down at startup is not fatal.
-    pub fn connect(url: &str) -> RedisResult<Self> {
+    pub async fn connect(url: &str) -> RedisResult<Self> {
         let info = url.into_connection_info()?;
         // Pub/sub pushes need RESP3; URLs default to RESP2.
         let settings = info
@@ -56,14 +57,16 @@ impl Clients {
         )?;
 
         let (pushes, push_rx) = mpsc::unbounded_channel::<PushInfo>();
-        let publisher = client.get_connection_manager_lazy(config())?;
-        let subscriber = client.get_connection_manager_lazy(
-            config()
-                .set_push_sender(pushes)
-                .set_automatic_resubscription(),
-        )?;
-        let (messages, _) = broadcast::channel(MESSAGE_BUFFER);
-        let (resubscribed, _) = broadcast::channel(1);
+        let publisher = client.get_connection_manager_with_config(config()).await?;
+        let subscriber = client
+            .get_connection_manager_with_config(
+                config()
+                    .set_push_sender(pushes)
+                    .set_automatic_resubscription(),
+            )
+            .await?;
+        let messages = broadcast::channel(MESSAGE_BUFFER).0;
+        let resubscribed = broadcast::channel(1).0;
         tokio::spawn(receive(
             push_rx,
             subscriber.clone(),
