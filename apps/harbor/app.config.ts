@@ -117,6 +117,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         origin: 'https://harbor.social',
         // Keeps the dist/client + dist/server layout that server.js serves
         apiRoutes: true,
+        // On by default for web since SDK 58. Each route renders its own
+        // sidebars (`Screen`), so the first visit to a route blanks the whole
+        // page while its chunk loads, not just the content column
+        asyncRoutes: { web: false },
       },
     ],
     [
