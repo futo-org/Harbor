@@ -55,7 +55,6 @@ export const Routes = {
       search: '/explore/search',
     },
     claims: '/claims',
-    identitySwitch: '/identity/switch',
     profile: (identityId: string) => `/${identityId}` as const,
     profileVerificationClaims: (identityId: string) =>
       `/${identityId}/verifications/claims` as const,
@@ -100,8 +99,6 @@ export const Routes = {
       feedback: '/settings/feedback',
       logs: '/settings/logs',
       clientInformation: '/settings/client-information',
-      switchIdentity: '/settings/switch-identity',
-      removeIdentities: '/settings/remove-identities',
       reportBug: '/settings/report-bug',
     },
     moderation: {
