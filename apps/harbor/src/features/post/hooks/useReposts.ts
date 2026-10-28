@@ -13,6 +13,7 @@ import { create } from 'zustand';
 import {
   feedQueryKeys,
   alterPostRepostCount,
+  threadQueryKey,
 } from '../../feed/hooks/feedCache';
 
 type RepostsState = {
@@ -87,6 +88,7 @@ const useReposts = create<RepostsState>((set, get) => ({
     const repostIdHex = eventKeyId(event.key);
 
     set({ reposts: new Map(reposts).set(post.id, repostIdHex) });
+    alterPostRepostCount(threadQueryKey(post.id), post.id, 1);
     alterPostRepostCount(feedQueryKeys.following(post.identity), post.id, 1);
     alterPostRepostCount(feedQueryKeys.identity(post.identity), post.id, 1);
     alterPostRepostCount(feedQueryKeys.explore(post.identity), post.id, 1);
@@ -128,6 +130,7 @@ const useReposts = create<RepostsState>((set, get) => ({
     set({ reposts: next });
     for (const { event, targetIdHex } of targets) {
       const identity = event.key?.identity ?? '';
+      alterPostRepostCount(threadQueryKey(targetIdHex), targetIdHex, -1);
       alterPostRepostCount(feedQueryKeys.following(identity), targetIdHex, -1);
       alterPostRepostCount(feedQueryKeys.identity(identity), targetIdHex, -1);
       alterPostRepostCount(feedQueryKeys.explore(identity), targetIdHex, -1);
