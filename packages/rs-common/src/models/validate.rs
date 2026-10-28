@@ -356,8 +356,7 @@ where
     {
         let err = StringError::TooLong { length, max };
         errors.push(map_err(err));
-    }
-    if let Some(regex) = regex
+    } else if let Some(regex) = regex
         && !regex.is_match(input)
     {
         let err = StringError::FailsRegex {
