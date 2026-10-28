@@ -6,7 +6,7 @@ use crate::*;
 use polycentric_common::models::protos_v2::notification_service_client::NotificationServiceClient;
 use std::time::{Duration, Instant};
 
-const NOTIFICATION_TIMEOUT: Duration = Duration::from_secs(60);
+const NOTIFICATION_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[tokio::test]
 async fn mentions_notify_identities_and_skip_the_reply_target() {
