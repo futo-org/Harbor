@@ -60,7 +60,7 @@ pub async fn handle(
         {
             Ok((key, is_new)) => {
                 if warnings.len() != start_warnings {
-                    tracing::debug!(
+                    tracing::warn!(
                         key = ?key,
                         warnings = ?&warnings[start_warnings..],
                         "processed event with warning(s)",
@@ -88,10 +88,10 @@ pub async fn handle(
                 return Err(status);
             }
             Err(status) => {
-                tracing::debug!(
-                    "put_events[{idx}] skipped: {} {}",
-                    status.code(),
-                    status.message()
+                tracing::warn!(
+                    code = %status.code(),
+                    message = %status.message(),
+                    "failed to process event",
                 );
                 errors.push(PutEventError {
                     event_bundle_index: idx as u32,
