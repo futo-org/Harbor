@@ -10,12 +10,7 @@ export { usePolycentric, usePolycentricContext } from './context';
 export { useIsStoragePersistent, useUsername } from './PolycentricProvider';
 
 // Action hooks
-export { useCurrentIdentity, useIdentities } from './PolycentricProvider';
-export { useIdentityKeyFor } from './useIdentityKeyFor';
-
-// Store
-export { useStore } from './store';
-export type { PolycentricStore, PolycentricStoreApi } from './store';
+export { useCurrentIdentity } from './PolycentricProvider';
 
 // Profile screen hooks
 export {
@@ -31,7 +26,6 @@ export {
   decodeFeedItems,
   extractFeedToken,
   shouldExtend,
-  pubkeyStr,
   identiconUrl,
   pickImageVariant,
   timeAgo,
