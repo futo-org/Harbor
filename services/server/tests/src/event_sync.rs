@@ -2,6 +2,7 @@
 
 use crate::feeds::test_get_post;
 use crate::*;
+use polycentric_common::models::protos_v2::attributed_to::To;
 
 #[tokio::test]
 async fn put_then_list_round_trip() {
@@ -1841,13 +1842,215 @@ async fn validation_missing_content_content_body() {
     );
 }
 
-// TODO: add tests for post content:
-// text max 2000
-// reply:
-// root invalid key
-// root missing
-// parent invalid key
-// parent missing
+#[tokio::test]
+async fn validation_content_content_body_post_event_key_collection_invalid() {
+    let mut client = TestClient::new().await;
+    let content = Content {
+        content_body: Some(ContentBody::Post(Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_IDENTITY,
+        client.previous_signature(),
+        client.previous_root(),
+        digest,
+        current_timestamp(),
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "event key collection invalid, expected '2'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_text_too_long() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "a".repeat(2001),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post text is too long (2001), maximum is 2000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_reply_root_invalid() {
+    let mut client = TestClient::new().await;
+    client.post_text("Reply to me", current_timestamp());
+    let post_key = client.get_last_event_key();
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: Some(PostReply {
+                root: Some({
+                    let mut key = post_key.clone();
+                    key.signed_by = None;
+                    key
+                }),
+                parent: Some(post_key),
+            }),
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post reply root signed by is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_reply_root_missing() {
+    let mut client = TestClient::new().await;
+    client.post_text("Reply to me", current_timestamp());
+    let post_key = client.get_last_event_key();
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: Some(PostReply {
+                root: None,
+                parent: Some(post_key),
+            }),
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post reply root is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_reply_parent_invalid() {
+    let mut client = TestClient::new().await;
+    client.post_text("Reply to me", current_timestamp());
+    let post_key = client.get_last_event_key();
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: Some(PostReply {
+                root: Some(post_key.clone()),
+                parent: Some({
+                    let mut key = post_key;
+                    key.signed_by = None;
+                    key
+                }),
+            }),
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post reply parent signed by is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_reply_parent_missing() {
+    let mut client = TestClient::new().await;
+    client.post_text("Reply to me", current_timestamp());
+    let post_key = client.get_last_event_key();
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: Some(PostReply {
+                root: Some(post_key),
+                parent: None,
+            }),
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 2,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post reply parent is missing",
+            ),
+        }],
+    );
+}
 
 #[tokio::test]
 async fn validation_content_content_body_post_reply_invalid() {
@@ -1896,15 +2099,291 @@ async fn validation_content_content_body_post_reply_invalid() {
     .await;
 }
 
-// TODO: test:
-// image set max 4
-// image set image max 10
-// image set image blob digest invalid
-// image set image blob digest missing
-// image set image blob mime type max 50
-// image set image blob size max 100 * 1024 * 1024 // 100 MB.
-// image set image blob missing
-// quote event key invalid.
+#[tokio::test]
+async fn validation_content_content_body_post_imageset_too_many() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: {
+                let mut i = Vec::new();
+                i.resize(5, ImageSet { images: Vec::new() });
+                i
+            },
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post image set is too long (5), maximum is 4",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_imageset_images_too_many() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: vec![ImageSet {
+                images: {
+                    let mut i = Vec::new();
+                    i.resize(
+                        11,
+                        Image {
+                            blob: Some(Blob {
+                                digest: Some(ContentDigest {
+                                    r#type: ContentDigestType::Sha256 as i32,
+                                    value: sha256(&[]),
+                                }),
+                                mime_type: "image/png".to_owned(),
+                                size: 1,
+                            }),
+                            width: 1,
+                            height: 1,
+                        },
+                    );
+                    i
+                },
+            }],
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post image set 0-th images is too long (11), maximum is 10",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_imageset_images_blob_digest_invalid()
+ {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: vec![ImageSet {
+                images: vec![Image {
+                    blob: Some(Blob {
+                        digest: Some(ContentDigest {
+                            r#type: ContentDigestType::Unspecified as i32,
+                            value: sha256(&[]),
+                        }),
+                        mime_type: "image/png".to_owned(),
+                        size: 1,
+                    }),
+                    width: 1,
+                    height: 1,
+                }],
+            }],
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post image set 0-th images 0-th blob digest type is invalid",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_imageset_images_blob_digest_missing()
+ {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: vec![ImageSet {
+                images: vec![Image {
+                    blob: Some(Blob {
+                        digest: None,
+                        mime_type: "image/png".to_owned(),
+                        size: 1,
+                    }),
+                    width: 1,
+                    height: 1,
+                }],
+            }],
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post image set 0-th images 0-th blob digest is missing",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_imageset_images_blob_mime_type_too_long()
+ {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: vec![ImageSet {
+                images: vec![Image {
+                    blob: Some(Blob {
+                        digest: Some(ContentDigest {
+                            r#type: ContentDigestType::Sha256 as i32,
+                            value: sha256(&[]),
+                        }),
+                        mime_type: "a".repeat(51),
+                        size: 1,
+                    }),
+                    width: 1,
+                    height: 1,
+                }],
+            }],
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post image set 0-th images 0-th blob mime type is too long (51), maximum is 50",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_imageset_images_blob_size_too_large()
+ {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: vec![ImageSet {
+                images: vec![Image {
+                    blob: Some(Blob {
+                        digest: Some(ContentDigest {
+                            r#type: ContentDigestType::Sha256 as i32,
+                            value: sha256(&[]),
+                        }),
+                        mime_type: "image/png".to_owned(),
+                        size: (100 * 1024 * 1024) + 1,
+                    }),
+                    width: 1,
+                    height: 1,
+                }],
+            }],
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post image set 0-th images 0-th blob size is too large (104857601), maximum is 104857600",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_imageset_images_blob_missing() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: vec![ImageSet {
+                images: vec![Image {
+                    blob: None,
+                    width: 1,
+                    height: 1,
+                }],
+            }],
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post image set 0-th images 0-th blob is missing",
+            ),
+        }],
+    );
+}
 
 #[tokio::test]
 async fn validation_content_content_body_post_quote_invalid() {
@@ -1941,22 +2420,534 @@ async fn validation_content_content_body_post_quote_invalid() {
     .await;
 }
 
-// TODO: test:
-// links max 10
-// links title max 100
-// links description max 200
-// links images max 200
-// links url empty
-// links url max 200 -> 1000?
-// labels max 10
-// labels value max 200
-// attributed to max 10
-// attributed to to link title max 100
-// attributed to to link description max 200
-// attributed to to link images max 200
-// attributed to to link url empty
-// attributed to to link url max 200 -> 1000?
-// attributed to to missing
+#[tokio::test]
+async fn validation_content_content_body_post_links_too_many() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: {
+                let mut l = Vec::new();
+                l.resize(
+                    11,
+                    Link {
+                        title: "Harbor".to_owned(),
+                        description: None,
+                        image: None,
+                        url: "https://harbor.social".to_owned(),
+                    },
+                );
+                l
+            },
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post links is too long (11), maximum is 10",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_links_title_too_long() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: vec![Link {
+                title: "t".repeat(101),
+                description: None,
+                image: None,
+                url: "https://harbor.social".to_owned(),
+            }],
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post links 0-th title is too long (101), maximum is 100",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_links_description_too_long() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: vec![Link {
+                title: "Harbor".to_owned(),
+                description: Some("a".repeat(201)),
+                image: None,
+                url: "https://harbor.social".to_owned(),
+            }],
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post links 0-th description is too long (201), maximum is 200",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_links_image_too_long() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: vec![Link {
+                title: "Harbor".to_owned(),
+                description: None,
+                image: Some("a".repeat(201)),
+                url: "https://harbor.social".to_owned(),
+            }],
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post links 0-th image is too long (201), maximum is 200",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_links_url_empty() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: vec![Link {
+                title: "Harbor".to_owned(),
+                description: None,
+                image: None,
+                url: "".to_owned(),
+            }],
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post links 0-th url can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_links_url_too_long() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: vec![Link {
+                title: "Harbor".to_owned(),
+                description: None,
+                image: None,
+                url: "a".repeat(1000),
+            }],
+            labels: Vec::new(),
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post links 0-th url doesn't match the regex '^https?:\\/\\/'",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_labels_too_many() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: {
+                let mut l = Vec::new();
+                l.resize(11, "label".to_owned());
+                l
+            },
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post labels is too long (11), maximum is 10",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_labels_value_too_long() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: vec!["a".repeat(201)],
+            attributed_to: Vec::new(),
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post labels 0-th is too long (201), maximum is 200",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_attribute_to_too_long() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: {
+                let mut a = Vec::new();
+                a.resize(
+                    11,
+                    AttributedTo {
+                        to: Some(To::Link(Link {
+                            title: "Harbor".to_owned(),
+                            description: None,
+                            image: None,
+                            url: "https://harbor.social".to_owned(),
+                        })),
+                    },
+                );
+                a
+            },
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post attributed to is too long (11), maximum is 10",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_attribute_to_to_link_title_too_long()
+ {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: vec![AttributedTo {
+                to: Some(To::Link(Link {
+                    title: "a".repeat(101),
+                    description: None,
+                    image: None,
+                    url: "https://harbor.social".to_owned(),
+                })),
+            }],
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post attributed to 0-th to link title is too long (101), maximum is 100",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_attribute_to_to_link_description_too_long()
+ {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: vec![AttributedTo {
+                to: Some(To::Link(Link {
+                    title: "Harbor".to_owned(),
+                    description: Some("a".repeat(201)),
+                    image: None,
+                    url: "https://harbor.social".to_owned(),
+                })),
+            }],
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post attributed to 0-th to link description is too long (201), maximum is 200",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_attribute_to_to_link_image_too_long()
+ {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: vec![AttributedTo {
+                to: Some(To::Link(Link {
+                    title: "Harbor".to_owned(),
+                    description: None,
+                    image: Some("a".repeat(201)),
+                    url: "https://harbor.social".to_owned(),
+                })),
+            }],
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post attributed to 0-th to link image is too long (201), maximum is 200",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_attribute_to_to_link_url_empty() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: vec![AttributedTo {
+                to: Some(To::Link(Link {
+                    title: "Harbor".to_owned(),
+                    description: None,
+                    image: None,
+                    url: "".to_owned(),
+                })),
+            }],
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post attributed to 0-th to link url can't be empty",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_attribute_to_to_link_url_too_long()
+ {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: vec![AttributedTo {
+                to: Some(To::Link(Link {
+                    title: "Harbor".to_owned(),
+                    description: None,
+                    image: None,
+                    url: "a".repeat(1001),
+                })),
+            }],
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post attributed to 0-th to link url is too long (1001), maximum is 1000",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_post_attribute_to_to_missing() {
+    let mut client = TestClient::new().await;
+    client.post(
+        Post {
+            text: "Hello, World!".to_owned(),
+            reply: None,
+            images: Vec::new(),
+            quote: None,
+            links: Vec::new(),
+            labels: Vec::new(),
+            attributed_to: vec![AttributedTo { to: None }],
+        },
+        current_timestamp(),
+    );
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body post attributed to 0-th to is missing",
+            ),
+        }],
+    );
+}
 
 #[tokio::test]
 async fn validation_missing_content_content_body_delete_event_key() {
