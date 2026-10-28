@@ -84,7 +84,7 @@ export type PostData = {
   /** Our estimation for how many reposts this post has. */
   repostCount?: number;
 
-  /** Our estimation for how many quoutes this post has. */
+  /** Our estimation for how many quotes this post has. */
   quoteCount?: number;
 
   /** Our estimation of the per-emoji reaction breakdown, most popular first. */
