@@ -3,14 +3,14 @@
 //! Consumes the `events` topic and turns relevant events (replies, follows,
 //! reposts, reactions, mentions) into rows in the `notification` table.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use chrono::Utc;
 use common_kafka::{BorrowedMessage, FutureRecord, Message};
 use entity::notification;
-use polycentric_common::mentions::{Mention, extract_mentions};
+use polycentric_common::mentions::extract_mentioned_identities;
 use polycentric_common::models::protos_v2::{
     Content, Event, EventBundle, EventKey, Notification, NotificationKind,
     content::ContentBody,
@@ -24,7 +24,7 @@ use crate::service::context::{ServiceContext, WorkerContext};
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
 use crate::service::graph::repository::Query as GraphRepository;
-use crate::service::notifications::{cached_alias_resolver, changes};
+use crate::service::notifications::changes;
 use crate::service::proofs::service::attach_proofs;
 use crate::service::verifications::repository::Query as VerificationsRepository;
 use crate::workers::{MessageHandler, Outcome, WorkerError, run_consumer};
@@ -227,25 +227,13 @@ impl MessageHandler for NotificationWorker {
             }
         };
 
-        // A post also notifies the identities it mentions. Alias mentions
-        // resolve through their domain's `.well-known/polycentric.json`; a
-        // failed lookup drops that mention rather than retrying, so a dead
-        // domain can't stall the partition.
+        // A post also notifies the identities it mentions.
         let mention_notifications = match &content.content_body {
-            Some(ContentBody::Post(post)) => {
-                let identity_by_alias_map =
-                    cached_alias_resolver::resolve_aliases(
-                        &ctx.db,
-                        &extract_mentioned_aliases(&post.text),
-                    )
-                    .await;
-                build_mention_notifications(
-                    author,
-                    &post.text,
-                    &identity_by_alias_map,
-                    &event_notifications,
-                )
-            }
+            Some(ContentBody::Post(post)) => build_mention_notifications(
+                author,
+                &post.text,
+                &event_notifications,
+            ),
             _ => Vec::new(),
         };
 
@@ -517,30 +505,14 @@ fn build_notifications(
     notifications
 }
 
-/// The distinct aliases mentioned in `text`, lowercased for lookup.
-fn extract_mentioned_aliases(text: &str) -> Vec<String> {
-    let mut seen_aliases = HashSet::new();
-    extract_mentions(text)
-        .into_iter()
-        .filter_map(|m| match m {
-            Mention::Alias(alias) => seen_aliases
-                .insert(alias.to_lowercase())
-                .then(|| alias.to_lowercase()),
-            Mention::Identity(_) => None,
-        })
-        .collect()
-}
-
 /// A Mention notification for each identity `text` mentions, in order of
-/// first mention, capped at `MAX_MENTION_NOTIFICATIONS_PER_POST`. Alias
-/// mentions resolve through `identity_by_alias_map` (lowercased alias ->
-/// identity); unresolved ones are dropped. `author` and the recipients of
-/// `event_notifications` (the post's reply/quote notifications) are skipped,
-/// so replying to someone you also mention notifies them once, as a reply.
+/// first mention, capped at `MAX_MENTION_NOTIFICATIONS_PER_POST`. `author`
+/// and the recipients of `event_notifications` (the post's reply/quote
+/// notifications) are skipped, so replying to someone you also mention
+/// notifies them once, as a reply.
 fn build_mention_notifications(
     author: &str,
     text: &str,
-    identity_by_alias_map: &HashMap<String, String>,
     event_notifications: &[PendingNotification],
 ) -> Vec<PendingNotification> {
     let mut already_notified_identities: HashSet<&str> = event_notifications
@@ -548,15 +520,10 @@ fn build_mention_notifications(
         .map(|n| n.to_identity.as_str())
         .chain([author])
         .collect();
-    let mentions = extract_mentions(text);
-    mentions
+    let mentioned_identities = extract_mentioned_identities(text);
+    mentioned_identities
         .iter()
-        .filter_map(|m| match m {
-            Mention::Identity(identity) => Some(identity.as_str()),
-            Mention::Alias(alias) => identity_by_alias_map
-                .get(&alias.to_lowercase())
-                .map(String::as_str),
-        })
+        .map(String::as_str)
         .filter(|identity| already_notified_identities.insert(identity))
         .take(MAX_MENTION_NOTIFICATIONS_PER_POST)
         .map(|identity| PendingNotification {
@@ -930,26 +897,16 @@ mod tests {
     #[test]
     fn mentions_notify_each_identity_once() {
         let bob = identity('b');
+        let carol = identity('c');
         let text = format!(
-            "hi @{{{bob},Bob}} and @{bob} and @carol@x.com, @Carol@X.com \
-             @nobody@x.com and me @{}",
+            "hi @{{{bob},Bob}} and @{bob} and @{{{carol},carol@x.com}}, \
+             @carol@x.com and me @{}",
             identity('a')
         );
-        let identity_by_alias_map =
-            HashMap::from([("carol@x.com".to_string(), "carol".to_string())]);
 
-        assert_eq!(
-            extract_mentioned_aliases(&text),
-            ["carol@x.com", "nobody@x.com"]
-        );
-
-        let notifications = build_mention_notifications(
-            &identity('a'),
-            &text,
-            &identity_by_alias_map,
-            &[],
-        );
-        assert_eq!(recipients(&notifications), [bob.as_str(), "carol"]);
+        let notifications =
+            build_mention_notifications(&identity('a'), &text, &[]);
+        assert_eq!(recipients(&notifications), [bob.as_str(), carol.as_str()]);
         for n in &notifications {
             assert_eq!(n.kind, NotificationKind::Mention);
             assert_eq!(n.target, None);
@@ -966,38 +923,31 @@ mod tests {
         }];
         let text = format!("@{bob} @{}", identity('c'));
 
-        let notifications = build_mention_notifications(
-            "alice",
-            &text,
-            &HashMap::new(),
-            &event_notifications,
-        );
+        let notifications =
+            build_mention_notifications("alice", &text, &event_notifications);
         assert_eq!(recipients(&notifications), [identity('c').as_str()]);
     }
 
     #[test]
     fn mention_notifications_are_capped() {
         let text: String = (0..12).map(|i| format!("@{i:064x} ")).collect();
-        let notifications =
-            build_mention_notifications("me", &text, &HashMap::new(), &[]);
+        let notifications = build_mention_notifications("me", &text, &[]);
         assert_eq!(notifications.len(), MAX_MENTION_NOTIFICATIONS_PER_POST);
     }
 
     #[test]
     fn a_reply_mentioning_its_parent_author_and_a_third_identity() {
-        let parent = event_key("bob");
+        let bob = identity('b');
+        let carol = identity('c');
+        let parent = event_key(&bob);
         let post = Post {
             reply: Some(PostReply {
                 root: None,
                 parent: Some(parent.clone()),
             }),
-            text: "@bob@x.com @carol@x.com".to_string(),
+            text: format!("@{{{bob},bob@x.com}} @{{{carol},carol@x.com}}"),
             ..Default::default()
         };
-        let identity_by_alias_map = HashMap::from([
-            ("bob@x.com".to_string(), "bob".to_string()),
-            ("carol@x.com".to_string(), "carol".to_string()),
-        ]);
 
         let mut notifications = build_notifications(
             "alice",
@@ -1006,11 +956,10 @@ mod tests {
         notifications.extend(build_mention_notifications(
             "alice",
             &post.text,
-            &identity_by_alias_map,
             &notifications,
         ));
 
-        assert_eq!(recipients(&notifications), ["bob", "carol"]);
+        assert_eq!(recipients(&notifications), [bob.as_str(), carol.as_str()]);
         assert_eq!(notifications[0].kind, NotificationKind::Reply);
         assert_eq!(notifications[0].target, Some(parent));
         assert_eq!(notifications[1].kind, NotificationKind::Mention);

@@ -22,7 +22,7 @@ import {
 } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { useSharedValue, type SharedValue } from 'react-native-reanimated';
+import { type SharedValue, useSharedValue } from 'react-native-reanimated';
 import useBlocks from '../block/hooks/useBlocks';
 import { ProfileCompactHeader } from './ProfileCompactHeader';
 import { ProfileHeader } from './ProfileHeader';
@@ -125,13 +125,19 @@ function IdentityProfile({
   // navigating would remount the profile as `AliasProfile`, a visible flash.
   useEffect(() => {
     if (!verifiedAlias) return;
-    replacePath(
-      tab === 'verification-claims'
-        ? Routes.tabs.profileVerificationClaims(verifiedAlias)
-        : tab === 'verification-verifies'
-          ? Routes.tabs.profileVerificationVerifies(verifiedAlias)
-          : Routes.tabs.profile(verifiedAlias),
+    // After a tap, expo-router pushes the `/<identity>` URL from a promise
+    // queue that runs after this effect; a cached alias replaced right away
+    // would be overwritten. A macrotask lands after it.
+    const timer = setTimeout(() =>
+      replacePath(
+        tab === 'verification-claims'
+          ? Routes.tabs.profileVerificationClaims(verifiedAlias)
+          : tab === 'verification-verifies'
+            ? Routes.tabs.profileVerificationVerifies(verifiedAlias)
+            : Routes.tabs.profile(verifiedAlias),
+      ),
     );
+    return () => clearTimeout(timer);
   }, [verifiedAlias, tab]);
 
   return (
