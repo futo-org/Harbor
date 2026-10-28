@@ -101,6 +101,7 @@ const pushNotifications = touches(
   'services/common/',
   CHARTS,
 );
+const otlp = touches(CARGO, 'services/otlp/', 'services/common/', CHARTS);
 const grayjayMigrator = touches(
   CARGO,
   'services/grayjay-migrator/',
@@ -168,7 +169,7 @@ const flags = {
     scan: pr,
     rs_core_lint: rsCore,
     rust_services_lint:
-      server || moderation || pushNotifications || grayjayMigrator,
+      server || moderation || pushNotifications || otlp || grayjayMigrator,
     services_db_schema: server || moderation || pushNotifications,
     js_sdk_lint: jsSdk,
     js_services_lint: scraper || verifierBot,
@@ -177,7 +178,8 @@ const flags = {
     app_lint: app,
     rs_core: rsCore,
     js_sdk: jsSdk || rsCore,
-    rust_services: server || moderation || pushNotifications || grayjayMigrator,
+    rust_services:
+      server || moderation || pushNotifications || otlp || grayjayMigrator,
     scraper,
     app,
     app_typecheck: app || jsSdk || rnSdk || rsCore,
@@ -223,6 +225,13 @@ const rustServices = [
     dockerfile: 'services/push-notifications',
     packages: 'push-notifications-service push-notifications-migration',
     changed: pushNotifications,
+  },
+  {
+    image: 'otlp-service',
+    label: 'otlp',
+    dockerfile: 'services/otlp',
+    packages: 'otlp-service',
+    changed: otlp,
   },
   {
     image: 'grayjay-migrator',

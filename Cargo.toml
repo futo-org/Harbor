@@ -16,6 +16,7 @@ members = [
     "services/push-notifications",
     "services/push-notifications/entity",
     "services/push-notifications/migration",
+    "services/otlp",
     "services/common/dotenv",
     "services/common/kafka",
     "services/common/object-store",

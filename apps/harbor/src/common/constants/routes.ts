@@ -97,6 +97,8 @@ export const Routes = {
       blockedTopics: '/settings/blocked-topics',
       blockedUsers: '/settings/blocked-users',
       legalNotices: '/settings/legal-notices',
+      feedback: '/settings/feedback',
+      logs: '/settings/logs',
       clientInformation: '/settings/client-information',
       switchIdentity: '/settings/switch-identity',
       removeIdentities: '/settings/remove-identities',
