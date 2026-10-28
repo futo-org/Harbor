@@ -173,6 +173,8 @@ export function labelsetChanged(
  */
 export function postChanged(orig: PostData, updated: PostData): boolean {
   if (orig.replyCount !== updated.replyCount) return true;
+  if (orig.repostCount !== updated.repostCount) return true;
+  if (orig.quoteCount !== updated.quoteCount) return true;
   if (orig.totalReactionCount !== updated.totalReactionCount) return true;
   if (orig.upvoteCount !== updated.upvoteCount) return true;
   if (orig.downvoteCount !== updated.downvoteCount) return true;

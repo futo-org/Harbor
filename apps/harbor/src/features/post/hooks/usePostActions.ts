@@ -70,13 +70,25 @@ export default function usePostActions(post: PostData): PostActions {
 
     if (replyParent) {
       alterPostReplyCount(feedQueryKeys.following(identity), replyParent, -1);
-      alterPostReplyCount(feedQueryKeys.identity(identity), replyParent, -1);
+      alterPostReplyCount(
+        feedQueryKeys.identity(
+          v2.EventKey.fromBinary(hexToBytes(replyParent)).identity,
+        ),
+        replyParent,
+        -1,
+      );
       alterPostReplyCount(feedQueryKeys.explore(identity), replyParent, -1);
     }
 
     if (quoted) {
       alterPostQuoteCount(feedQueryKeys.following(identity), quoted, -1);
-      alterPostQuoteCount(feedQueryKeys.identity(identity), quoted, -1);
+      alterPostQuoteCount(
+        feedQueryKeys.identity(
+          v2.EventKey.fromBinary(hexToBytes(quoted)).identity,
+        ),
+        quoted,
+        -1,
+      );
       alterPostQuoteCount(feedQueryKeys.explore(identity), quoted, -1);
     }
   };
