@@ -614,7 +614,7 @@ where
     );
 }
 
-/// Validate a SHA256 hash
+/// Validate a SHA256 hash.
 pub(crate) fn sha256_hash<E, F>(hash: &[u8], errors: &mut Vec<E>, map_err: F)
 where
     F: Fn(SliceError) -> E,
@@ -626,6 +626,24 @@ where
         SliceConfig {
             min_len: Some(32),
             max_len: Some(32),
+            ..Default::default()
+        },
+    );
+}
+
+/// Validate an URL.
+pub(crate) fn url<E, F>(url: &str, errors: &mut Vec<E>, map_err: F)
+where
+    F: Fn(StringError) -> E,
+{
+    string(
+        url,
+        errors,
+        map_err,
+        StringConfig {
+            min_len: Some(1),
+            max_len: Some(1000),
+            regex: Some(url_regex()),
             ..Default::default()
         },
     );

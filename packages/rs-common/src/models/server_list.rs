@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::models::protos_v2::ServerList;
-use crate::models::validate::{self, SliceConfig, SliceError, StringConfig, StringError, Validate};
+use crate::models::validate::{self, SliceConfig, SliceError, StringError, Validate};
 
 impl Validate for ServerList {
     type Error = ValidationError;
@@ -20,18 +20,7 @@ impl Validate for ServerList {
                 max_len: Some(100),
                 ..Default::default()
             },
-            |url, errors, map_err| {
-                validate::string(
-                    url,
-                    errors,
-                    map_err,
-                    StringConfig {
-                        min_len: Some(1),
-                        max_len: Some(1000),
-                        ..Default::default()
-                    },
-                )
-            },
+            |url, errors, map_err| validate::url(url, errors, map_err),
         );
     }
 }
