@@ -46,8 +46,14 @@ fn resource_attributes(entry: &mut Value) -> Option<&mut Vec<Value>> {
         .as_array_mut()
 }
 
-/// POSTs `payload` as JSON to `url`, mapping upstream failures to 502.
-pub async fn forward(client: &reqwest::Client, url: &str, payload: &Value) -> StatusCode {
+/// POSTs `payload` as JSON to `url` with `headers`, mapping upstream
+/// failures to 502.
+pub async fn forward(
+    client: &reqwest::Client,
+    url: &str,
+    payload: &Value,
+    headers: &[(&str, &str)],
+) -> StatusCode {
     let body = match serde_json::to_vec(payload) {
         Ok(body) => body,
         Err(e) => {
@@ -55,13 +61,13 @@ pub async fn forward(client: &reqwest::Client, url: &str, payload: &Value) -> St
             return StatusCode::INTERNAL_SERVER_ERROR;
         }
     };
-    match client
+    let mut request = client
         .post(url)
-        .header(http::header::CONTENT_TYPE, "application/json")
-        .body(body)
-        .send()
-        .await
-    {
+        .header(http::header::CONTENT_TYPE, "application/json");
+    for (name, value) in headers {
+        request = request.header(*name, *value);
+    }
+    match request.body(body).send().await {
         Ok(response) if response.status().is_success() => StatusCode::OK,
         Ok(response) => {
             tracing::warn!(url, status = %response.status(), "upstream rejected payload");
@@ -176,11 +182,11 @@ mod tests {
         let payload = json!({ "a": 1 });
 
         assert_eq!(
-            forward(&client, &format!("{}/ok", upstream.url()), &payload).await,
+            forward(&client, &format!("{}/ok", upstream.url()), &payload, &[]).await,
             StatusCode::OK
         );
         assert_eq!(
-            forward(&client, &format!("{}/fail", upstream.url()), &payload).await,
+            forward(&client, &format!("{}/fail", upstream.url()), &payload, &[]).await,
             StatusCode::BAD_GATEWAY
         );
         ok.assert_async().await;
@@ -191,7 +197,7 @@ mod tests {
     async fn unreachable_upstream_is_a_bad_gateway() {
         let client = reqwest::Client::new();
         assert_eq!(
-            forward(&client, "http://127.0.0.1:1/v1/traces", &json!({})).await,
+            forward(&client, "http://127.0.0.1:1/v1/traces", &json!({}), &[]).await,
             StatusCode::BAD_GATEWAY
         );
     }

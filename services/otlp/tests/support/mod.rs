@@ -196,7 +196,6 @@ impl Otlp {
             allow_hosts: vec![url.clone()],
             query_servers: vec![polycentric_url.to_string()],
             victoria_logs_url: victoria_url.map(str::to_string),
-            victoria_traces_url: victoria_url.map(str::to_string),
             max_body_bytes: 8 * 1024,
         }));
         let identities = PolycentricIdentities::connect(config.query_servers.clone())
