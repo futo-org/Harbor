@@ -154,10 +154,10 @@ jobs:
         with:
           cache: services-lint
       - name: Format
-        run: cargo fmt --check -p server -p moderation-service -p push-notifications-service -p grayjay-migrator
+        run: cargo fmt --check -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator
       - name: Clippy
         if: ${{ !cancelled() }}
-        run: cargo clippy -p server -p moderation-service -p push-notifications-service -p grayjay-migrator -- -D warnings
+        run: cargo clippy -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator -- -D warnings
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -378,7 +378,7 @@ jobs:
         with:
           cache: services-tests
       - name: Tests
-        run: cargo nextest run -P ci -p server -p moderation-service -p push-notifications-service -p grayjay-migrator
+        run: cargo nextest run -P ci -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true

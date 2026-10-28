@@ -12,7 +12,7 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { SegmentedButton } from '@/src/common/components/SegmentedButton';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import { REPORT_BUG_URL, Routes, TAB_BAR_HEIGHT } from '@/src/common/constants';
+import { Routes, TAB_BAR_HEIGHT } from '@/src/common/constants';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, THEME_PREFERENCE_OPTIONS, useTheme } from '@/src/common/theme';
@@ -20,12 +20,16 @@ import { isWeb } from '@/src/common/util/platform';
 import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
 import useModerationStatus from '@/src/features/moderation/hooks/useModerationStatus';
 import { serverHost } from '@/src/features/moderation/serverHost';
+import {
+  ErrorReportsSettingRow,
+  IncludeIdentitySettingRow,
+} from '@/src/features/telemetry/TelemetrySettingRows';
 import { Username } from '@/src/features/profile/Username';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Linking, Switch, View } from 'react-native';
+import { ActivityIndicator, Switch, View } from 'react-native';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 
 function AppearanceSettingRow() {
@@ -207,10 +211,17 @@ export default function SettingsTabScreen() {
 
               <ListItemGroup label="Troubleshooting">
                 <ListItemWrapper
-                  onPress={() => Linking.openURL(REPORT_BUG_URL)}
+                  onPress={() => router.navigate(Routes.tabs.settings.feedback)}
                 >
-                  <Text variant="body">Report a bug</Text>
+                  <Text variant="body">Send feedback</Text>
                 </ListItemWrapper>
+                <ListItemWrapper
+                  onPress={() => router.navigate(Routes.tabs.settings.logs)}
+                >
+                  <Text variant="body">View logs</Text>
+                </ListItemWrapper>
+                <ErrorReportsSettingRow />
+                <IncludeIdentitySettingRow />
               </ListItemGroup>
 
               <ListItemGroup label="About">

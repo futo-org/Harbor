@@ -1,0 +1,69 @@
+replicaCount: 2
+
+image:
+  # Built by the otlp-image CI job.
+  repository: registry.futo.org/harbor/otlp-service
+  # Defaults to the chart's appVersion (the commit SHA set by charts-publish).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Scraped by VictoriaMetrics.
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9464"
+  prometheus.io/path: /metrics
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+# HARBOR_ALLOW_HOSTS, HARBOR_QUERY_SERVERS, HARBOR_VICTORIA_LOGS_URL,
+# HARBOR_VICTORIA_TRACES_URL — put secrets in a Secret referenced via envFrom.
+env: []
+envFrom: []
+
+# HTTP bind (HARBOR_OTLP_ADDR defaults to 0.0.0.0:3003).
+containerPort: 3003
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: otlp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+# `external: true` leaves replicas to an autoscaler managed elsewhere (e.g. a
+# KEDA ScaledObject); replicaCount is then ignored.
+autoscaling:
+  external: false
+
+livenessProbe:
+  httpGet:
+    path: /status
+    port: http
+readinessProbe:
+  httpGet:
+    path: /status
+    port: http
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
