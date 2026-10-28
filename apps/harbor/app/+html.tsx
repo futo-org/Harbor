@@ -5,6 +5,7 @@ import {
 } from '@/src/common/components/layout/BootSkeleton';
 import { TWEMOJI_WEB_FONT_FILE } from '@/src/common/assets/twemojiFont';
 import { APP_NAME } from '@/src/common/constants';
+import { useServerDocumentContext } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
 const ROOT_STYLE =
@@ -27,8 +28,11 @@ const FONT_STYLE = `
 const ICON_SUFFIX = process.env.APP_VARIANT === 'dev' ? '-dev' : '';
 
 export default function Root({ children }: PropsWithChildren) {
+  const { htmlAttributes, bodyAttributes, headNodes, bodyNodes } =
+    useServerDocumentContext();
+
   return (
-    <html lang="en">
+    <html lang="en" {...htmlAttributes}>
       <head>
         <meta charSet="utf-8" />
         <meta
@@ -85,10 +89,12 @@ export default function Root({ children }: PropsWithChildren) {
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static stylesheet, no user input
           dangerouslySetInnerHTML={{ __html: BOOT_SKELETON_STYLE }}
         />
+        {headNodes}
       </head>
-      <body>
+      <body {...bodyAttributes}>
         {children}
         <BootSkeleton />
+        {bodyNodes}
       </body>
     </html>
   );

@@ -7,7 +7,7 @@ const sheetScreenOptions = {
 } as const;
 
 export const unstable_settings = {
-  initialRouteName: 'index',
+  anchor: 'index',
 };
 
 export default function SettingsLayout() {

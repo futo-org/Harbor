@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
-    "@types/react": "~19.2.10",
+    "@types/react": "~19.3.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "sharp": "0.35.5",

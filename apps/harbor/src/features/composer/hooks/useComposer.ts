@@ -29,11 +29,9 @@ import {
   Query,
 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from 'expo-router';
-import { usePreventRemove } from 'expo-router/react-navigation';
+import { usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
-import { isWeb } from '@/src/common/util/platform';
 import { useComposerStore } from './useComposerStore';
 import { spliceMentions } from '../utils/spliceMentions';
 import { useLinkPreview } from './useLinkPreview';
@@ -443,29 +441,18 @@ function useDiscardDraftConfirmation(
   hasUnpostedDraft: boolean,
   isReply: boolean,
 ) {
-  const navigation = useNavigation();
-
   // Every way of closing removes this route (Cancel/X, Escape, backdrop,
-  // swipe back, hardware back), so guard the removal itself. Browser back
-  // isn't caught until expo-router 58.
-  usePreventRemove(hasUnpostedDraft, ({ data }) => {
+  // swipe back, hardware back, browser back, reload, closing the tab), so
+  // guard the removal itself.
+  usePreventRemove(hasUnpostedDraft, ({ repeat }) => {
     void confirm({
       title: isReply ? 'Discard reply?' : 'Discard post?',
       message: "Your changes won't be saved.",
       confirmText: 'Discard',
       destructive: true,
-      onConfirm: () => navigation.dispatch(data.action),
+      onConfirm: repeat,
     });
   });
-
-  // Reloading or closing the browser tab bypasses navigation entirely.
-  // Remove on expo-router 58, whose usePreventRemove handles this itself.
-  useEffect(() => {
-    if (!isWeb || !hasUnpostedDraft) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [hasUnpostedDraft]);
 }
 
 /**

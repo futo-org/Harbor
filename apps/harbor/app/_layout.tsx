@@ -54,7 +54,7 @@ const imageViewerScreenOptions = {
 // mounts the tabs underneath — giving the modal something to sit on
 // and a sensible target for the close button's `router.back()`.
 export const unstable_settings = {
-  initialRouteName: '(tabs)',
+  anchor: '(tabs)',
 };
 
 function RootStack() {

@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, InteractionManager, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import {
   List,
   type ListProps,
@@ -60,10 +60,8 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
   const hasItems = feed.items.length > 0;
   useEffect(() => {
     if (expanded || !hasItems) return;
-    const task = InteractionManager.runAfterInteractions(() =>
-      setExpanded(true),
-    );
-    return () => task.cancel();
+    const handle = requestIdleCallback(() => setExpanded(true));
+    return () => cancelIdleCallback(handle);
   }, [expanded, hasItems]);
 
   const items = useMemo(

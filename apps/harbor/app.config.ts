@@ -67,7 +67,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'default',
   scheme: SCHEME,
   web: {
-    output: 'server',
+    // Prerendered at export, as in SDK 57: server.js patches the exported
+    // HTML at startup, which per-request SSR (`server`) wouldn't produce.
+    output: 'static',
   },
   userInterfaceStyle: 'automatic',
   ios: {
@@ -113,6 +115,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-router',
       {
         origin: 'https://harbor.social',
+        // Keeps the dist/client + dist/server layout that server.js serves
+        apiRoutes: true,
       },
     ],
     [

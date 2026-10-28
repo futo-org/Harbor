@@ -9,7 +9,7 @@ import {
 import { isWeb } from '@/src/common/util/platform';
 import { TrueSheet, type SheetDetent } from '@lodev09/react-native-true-sheet';
 import { Portal } from '@rn-primitives/portal';
-import { router, useNavigation } from 'expo-router';
+import { router, useNavigation, usePreventRemove } from 'expo-router';
 import {
   createContext,
   useCallback,
@@ -76,6 +76,9 @@ export type SheetProps =
 export function Sheet(props: SheetProps) {
   const portalId = useId();
   const navigation = useSheetNavigation();
+  const routeRemoval = useDismissBeforeRouteRemoval(
+    !isWeb && props.open === undefined,
+  );
   // Web hides instantly, but Native should stay mounted so that the dismiss
   // animation can play before teardown
   if (isWeb && props.open === false) return null;
@@ -84,7 +87,11 @@ export function Sheet(props: SheetProps) {
       {isWeb ? (
         <WebModal {...props} />
       ) : (
-        <NativeSheet {...props} navigation={navigation} />
+        <NativeSheet
+          {...props}
+          navigation={navigation}
+          routeRemoval={routeRemoval}
+        />
       )}
     </Portal>
   );
@@ -265,10 +272,10 @@ Sheet.Footer = SheetFooter;
 const useSheetNavigation = () => useNavigation();
 type Navigation = ReturnType<typeof useSheetNavigation>;
 
-type WithNavigation<T> = T & {
+type NativeInternalProps = SheetProps & {
   navigation: Navigation;
+  routeRemoval: ReturnType<typeof useDismissBeforeRouteRemoval>;
 };
-type NativeInternalProps = WithNavigation<SheetProps>;
 
 function NativeSheet({
   open,
@@ -279,31 +286,13 @@ function NativeSheet({
   dimmed = true,
   scrollable = true,
   navigation,
+  routeRemoval: { sheetRef, animatedDismissRef, allowRemoval },
   ...props
 }: NativeInternalProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const sheetRef = useRef<TrueSheet>(null);
-  /** Once the sheet's dismiss animation has run (or is running) we
-   * shouldn't loop it again on the follow-up navigation dispatch. */
-  const animatedDismissRef = useRef(false);
 
   const isInline = open !== undefined;
-
-  // Route mode: when the screen is being removed, play TrueSheet's
-  // dismiss animation first, then let the navigation action through.
-  useEffect(() => {
-    if (isInline) return;
-    return navigation.addListener('beforeRemove', (e) => {
-      if (animatedDismissRef.current) return;
-      e.preventDefault();
-      animatedDismissRef.current = true;
-      void sheetRef.current
-        ?.dismiss()
-        .catch(() => {})
-        .finally(() => navigation.dispatch(e.data.action));
-    });
-  }, [navigation, isInline]);
 
   const [mounted, setMounted] = useState(!!open);
   const openRef = useRef(open);
@@ -341,7 +330,7 @@ function NativeSheet({
       .finally(() => {
         if (!openRef.current) setMounted(false);
       });
-  }, [isInline, open, mounted]);
+  }, [isInline, open, mounted, sheetRef]);
 
   const surface = theme.palette.neutral_0;
   const sizesToContent = detents.includes('auto');
@@ -371,6 +360,7 @@ function NativeSheet({
         }
         if (animatedDismissRef.current) return;
         animatedDismissRef.current = true;
+        allowRemoval();
         if (navigation.canGoBack()) navigation.goBack();
       }}
       header={props.header}
@@ -391,6 +381,41 @@ function NativeSheet({
       </View>
     </TrueSheet>
   );
+}
+
+// Route mode: when the screen is being removed, play TrueSheet's dismiss
+// animation first, then let the navigation action through. Runs in `Sheet`,
+// since the portal renders `NativeSheet` outside the screen's navigator.
+function useDismissBeforeRouteRemoval(isRouteSheet: boolean) {
+  const sheetRef = useRef<TrueSheet>(null);
+  /** Once the sheet's dismiss animation has run (or is running) we
+   * shouldn't loop it again on the follow-up navigation dispatch. */
+  const animatedDismissRef = useRef(false);
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  const disablePrevention = usePreventRemove(
+    isRouteSheet && !isDismissed,
+    ({ repeat }) => {
+      if (animatedDismissRef.current) return;
+      animatedDismissRef.current = true;
+      void sheetRef.current
+        ?.dismiss()
+        .catch(() => {})
+        .finally(() => {
+          setIsDismissed(true);
+          repeat();
+        });
+    },
+  );
+
+  // For a sheet that already animated away by itself (swiped down), so the
+  // navigation that follows isn't blocked.
+  const allowRemoval = () => {
+    setIsDismissed(true);
+    disablePrevention();
+  };
+
+  return { sheetRef, animatedDismissRef, allowRemoval };
 }
 
 function WebModal({
