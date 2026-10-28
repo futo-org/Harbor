@@ -13,12 +13,9 @@ pub struct Config {
     /// gRPC server URLs to fetch identity documents from
     /// (`HARBOR_QUERY_SERVERS`, comma delimited).
     pub query_servers: Vec<String>,
-    /// VictoriaLogs base URL (`HARBOR_VICTORIA_LOGS_URL`). Unset disables
-    /// `/v1/logs`.
+    /// VictoriaLogs base URL (`HARBOR_VICTORIA_LOGS_URL`), where both logs
+    /// and spans go. Unset disables ingest.
     pub victoria_logs_url: Option<String>,
-    /// VictoriaTraces base URL (`HARBOR_VICTORIA_TRACES_URL`). Unset disables
-    /// `/v1/traces`.
-    pub victoria_traces_url: Option<String>,
     /// Largest accepted request body in bytes (`HARBOR_OTLP_MAX_BODY_BYTES`).
     pub max_body_bytes: usize,
 }
@@ -37,7 +34,6 @@ pub fn init() -> Result<&'static Config, String> {
         allow_hosts: required_list("HARBOR_ALLOW_HOSTS")?,
         query_servers: required_list("HARBOR_QUERY_SERVERS")?,
         victoria_logs_url: optional_url("HARBOR_VICTORIA_LOGS_URL"),
-        victoria_traces_url: optional_url("HARBOR_VICTORIA_TRACES_URL"),
         max_body_bytes: env::var("HARBOR_OTLP_MAX_BODY_BYTES")
             .ok()
             .and_then(|s| s.trim().parse().ok())
