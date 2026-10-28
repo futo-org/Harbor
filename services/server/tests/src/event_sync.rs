@@ -1051,11 +1051,12 @@ async fn validation_invalid_event_signed_by_key() {
 }
 
 #[tokio::test]
-#[ignore = "TODO: validate this"]
 async fn validation_event_key_sequence_duplicate() {
     let mut client = TestClient::new().await;
 
-    client.post_text("Hello World!", current_timestamp());
+    const ORIGINAL_TEXT: &str = "Hello World!";
+    client.post_text(ORIGINAL_TEXT, current_timestamp());
+    let post_key = client.get_last_event_key();
 
     // Break the sequence on purpose.
     client.collection_sequences[COLLECTION_FEED as usize].0 -= 1;
@@ -1083,16 +1084,32 @@ async fn validation_event_key_sequence_duplicate() {
         .sequence;
     assert_eq!(post_event_sequence1, post_event_sequence2);
 
-    let result = client.try_submit_events().await;
-    expect_errors(
-        result,
-        &[ExpectError {
-            bundle_index: 0,
-            kind: ExpectErrorKind::MsgContains(
-                "TODO: expect some kind of error",
-            ),
+    client.submit_events().await;
+
+    let identity = client.identity().to_owned();
+    let response = client
+        .event_sync_client()
+        .list_events(ListEventsRequest {
+            filters: Some(ListEventsFilters {
+                identity,
+                collection: Some(COLLECTION_FEED),
+                ..Default::default()
+            }),
+            size: None,
+        })
+        .await
+        .unwrap()
+        .into_inner();
+
+    // The second event with the same sequence is ignored.
+    expect_events(
+        &response.event_bundles,
+        &[ExpectEvent {
+            key: post_key,
+            kind: ExpectEventKind::Post {
+                text: ORIGINAL_TEXT,
+            },
         }],
-        &[],
     );
 }
 
