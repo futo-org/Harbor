@@ -38,6 +38,7 @@ export function createThemedStyles<K extends string>(
 ) {
   const stylesByTheme = new Map<Theme, Record<K, FlattenedStyle>>();
 
+  // biome-ignore lint/correctness/noComponentHookFactories: called once at module level
   return function useThemedStyles() {
     const { theme } = useTheme();
     let styles = stylesByTheme.get(theme);
