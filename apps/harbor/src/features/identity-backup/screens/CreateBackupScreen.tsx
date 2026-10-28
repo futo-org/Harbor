@@ -16,12 +16,12 @@ import {
   type PolycentricClient,
 } from '@polycentric/react-native';
 import { router } from 'expo-router';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type NewBackupState =
-  | { stage: 'warning' }
+  | { stage: 'warning'; allowContinue: boolean }
   | { stage: 'creating' }
   | {
       stage: 'ready';
@@ -64,8 +64,21 @@ export default function CreateBackupScreen() {
       };
     }
 
-    return { stage: 'warning' };
+    return { stage: 'warning', allowContinue: false };
   });
+
+  // Allow continuing from the warning screen after 1 second.
+  useEffect(() => {
+    if (state.stage !== 'warning') return;
+
+    const timeout = setTimeout(() => {
+      setState((prev) =>
+        prev.stage === 'warning' ? { ...prev, allowContinue: true } : prev,
+      );
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [state.stage]);
 
   const client = usePolycentric();
   const [hadExisting] = useState(
@@ -139,9 +152,16 @@ export default function CreateBackupScreen() {
     }
   })();
 
-  const continueDisabled =
-    state.stage === 'creating' ||
-    (state.stage === 'ready' && !state.saveAttempted);
+  let continueDisabled: boolean;
+  if (state.stage === 'warning') {
+    continueDisabled = !state.allowContinue;
+  } else if (state.stage === 'creating') {
+    continueDisabled = true;
+  } else if (state.stage === 'ready') {
+    continueDisabled = !state.saveAttempted;
+  } else {
+    continueDisabled = false;
+  }
 
   const continueHint =
     state.stage === 'ready' ? (
