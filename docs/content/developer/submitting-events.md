@@ -8,8 +8,7 @@ sidebar_position: 5
 
 Events are submitted as a bundle of the `SignedEvent` and `SerializedContent`.
 We use `SerializedContent` so that the checksum of the content can be verified.
-On submission the `EventMetadata` in `meta` and `EventProof` in `event_proofs`
-are not used.
+`EventBundle` is defined as:
 
 ```protobuf
 message EventBundle {
@@ -20,9 +19,15 @@ message EventBundle {
 }
 ```
 
+On submission the `EventMetadata` in `meta` and `EventProof` in `event_proofs`
+are not used, these are only useful when the `EventBundle`s are returned by a
+server.
+
+## Signed Event
+
 Let's start with the `SignedEvent`. Internally it contains an `Event` and a
-signature to verify that the event authentic. Note that the content is not
-contained in this event as that part of `SerializedContent` in the
+signature to verify that the event is authentic. Note that the content is not
+contained in this event, that is a part of `SerializedContent` in the
 `EventBundle`.
 
 First, let's start with the type definition of `Event` and we'll go over each
@@ -70,15 +75,32 @@ the [public key](/docs/protocol/data-model#publickey). Finally the `sequence`
 contains the number of event in the collection, it must be unique within
 collection for a given identity.
 
-Coming back to the fields on `Event`.
+Coming back to the fields of `Event`.
 
-TODO: descibe `identity_sequence`, `vector_clock`, `previous_signature`.
+The `identity_sequence` is a reference to the sequence, of the `Identity`
+collection, that holds the identity document. This should be the
+`EventKey.sequence` of the `Identity` event that holds the key that signed this
+event.
 
-The `content_digest` is the (e.g. SHA256) hash of the content. `created_at` is
-the timestamp at which the event is created in milliseconds since the Unix
-epoch.
+The `vector_clock` is used in determining the ordering of events if they would
+conflict, see the [Wikipedia
+article](https://en.wikipedia.org/wiki/Vector_clock) for more information on
+vector clock.
 
-TODO: descibe `previous_root`.
+The `previous_signature` is the signature of the previous event signed by the
+same key. This helps in creating immutable collections, which can be fully
+verified.
+
+The `content_digest` is the (e.g. SHA256) hash of the content.
+
+`created_at` is the timestamp at which the event is created in milliseconds
+since the Unix epoch.
+
+`previous_root` is [RFC 6962](https://www.rfc-editor.org/info/rfc6962/) Merkle
+root over this signer's prior signatures in this collection (`leaf_count =
+key.sequence - 1`). Lets later events attest to the writer's history, consumed
+by [`EventProof`](/docs/protocol/data-model#eventproof) for membership
+verification.
 
 The `application` field is described in [Declaring Your
 Application](/docs/developer/declaring-your-application).
@@ -95,15 +117,32 @@ message SignedEvent {
 }
 ```
 
-The content of an event is defined by the `Content` type, as described in more
-detail in the [Content section](#content) below. The `Content` is encoded using
-Protobuf and placed inside `SerializedContent.content_bytes`.
+Now we've created the event, let's make it useful with some content.
+
+## Serialized Content
+
+The
+[`SerializedContent`](http://localhost:3001/docs/protocol/data-model#content-1)
+type is defined as the following:
+
+```protobuf
+message SerializedContent {
+  bytes content_bytes = 1;
+}
+```
+
+The content of an event is defined by the
+[`Content`](/docs/protocol/data-model#content-1) type, which is described in
+more detail in the [Content Types section](#content-types) below. The content is
+then encoded using Protobuf and placed inside `SerializedContent.content_bytes`.
 
 Together the `SignedEvent` and `SerializedContent` can create an `EventBundle`
 (as the `EventProof` and `EventMetadata` are not used on submission).
 
+## Submitting
+
 Now that we got an `EventBundle` we can put one or more into a
-`PutEventsRequest` and submit it to to `EventSyncService.PutEvents`. Assuming no
+`PutEventsRequest` and submit it to `EventSyncService.PutEvents`. Assuming no
 error is returned the event is now succesfully submitted!
 
 ```protobuf
@@ -118,6 +157,7 @@ message PutEventsRequest {
 message PutEventsResponse {
   repeated PutEventError errors = 1;
   repeated Blob requested_blobs = 2;
+  repeated PutEventError warnings = 3;
 }
 ```
 
@@ -134,37 +174,44 @@ these are invalid or missing the event bundle is rejected.
 Let's walk through the validation on a per-field basis (keep the type definition
 of `Event` handy!). Starting with the `EventKey`.
 
-The `EventKey.collection` must match `ContentBody` type, see the [Content
-section](#content) below for more information. `EventKey.identity` must be a
-hex-encoded SHA256 hash of the identity, if it's not a valid hash or it doesn't
-match the identity the submitter of the event it's rejected. In
-`EventKey.signed_by` currently only ED25519 keys are supported. The tuple
+The `EventKey.collection` must match `ContentBody` type, see the [Content Types
+section](#content-types) below for more information. `EventKey.identity` must be
+a hex-encoded SHA256 hash of the identity, if it's not a valid hash or it
+doesn't match the identity the submitter of the event it's rejected. In
+`EventKey.signed_by` currently only valid ED25519 keys are supported. The tuple
 (`EventKey.collection`, `EventKey.sequence`) must be unique, in other words the
 sequence number must be increased for each event in the same collection.
 
-Getting back to `Event` type, TODO: `identity_sequence`, `vector_clock`,
-`previous_signature`. The `content_digest` must match the content. `created_at`
-has no validation beyond that should probably send the current timestamp, but
-older timestamps are accepted to allow servers to catch up. TODO:
-`previous_root`.
+Getting back to `Event` type. As discussed previously the `identity_sequence`
+must be the same as the `sequence` of the `EventKey` that points to the
+`Identity` event that holds the key that signed this event. The `vector_clock`
+is not strictly validated, but should be useable by the client to order events.
+`previous_signature` must be a valid ed25519 signature. The `content_digest`
+must match the content. `created_at` has no validation beyond that should
+probably send the current timestamp, but older timestamps are accepted to allow
+servers to catch up. `previous_root` must be a valid SHA256 hash.
 
 Finally there is the `Application` type. As described in [Declaring Your
 Application](/docs/developer/declaring-your-application), the `Application.id`
 must be a valid reserved DNS identifier. The `Application.url` field must be a
-valid URL and start with `http://` or `https://`. Other than that the fields are
-all limited to 100 bytes in length.
+valid URL and start with `http://` or `https://`. Other than that `name` and
+`version` are limited to 50 bytes in length, `id` and `url` to 100.
 
 ### Error Handling
 
 The `PutEvents` RPC method on the `EventSyncService` returns a
 `PutEventsResponse`, which has the `errors` field containing all errors on a
-per-event basis. Note that any events which don't have an error are succesfully
-submitted, the method doesn't return on the first error.
+per-event basis. It also contains `warnings`, which follow the same format.
 
-The error type return is `PutEventError`. The `event_bundle_index` field is the
-index into `PutEventsRequest.event_bundles` to which the error applies. The
-`message` field holds a human readable error message on why the event wasn't
-accepted.
+Note that any events which don't have an error or warning are succesfully
+submitted. The method doesn't stop on the first error, it always processes all
+events, unless it encounters a fatal error (usually unrelated to the submitted
+event itself), in which case it returns a gRPC error status (not a response).
+
+Both the errors and warnings use the `PutEventError` type. The
+`event_bundle_index` field is the index into `PutEventsRequest.event_bundles` to
+which the error applies. The `message` field holds a human readable error
+message on why the event wasn't accepted.
 
 ```protobuf
 message PutEventError {
@@ -173,10 +220,18 @@ message PutEventError {
 }
 ```
 
-Events that are already know to the server, e.g. onces are submitted again, are
+If an error is returned for an event it means that the event is **not** stored.
+The error should be fixed and retried.
+
+If one or more warnings are returned for an event the event itself **is**
+stored, but its content is **not**. For example if the content is too large, the
+event is accepted to not break the chain of events. However, the content itself
+is not stored.
+
+Events that are already known to the server, e.g. ones are submitted again, are
 ignored, no error is returned for them.
 
-## Content
+## Content Types
 
 The content of an event is described by the `Content` type, which is basically
 an enum for all currently supported events.
