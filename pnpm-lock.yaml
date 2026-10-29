@@ -454,11 +454,11 @@ importers:
         specifier: ^2.3.3
         version: 2.4.0(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       react-native-vision-camera:
-        specifier: ^5.0.0
-        version: 5.1.0(a51f6844b3d11c56b49806b72dc84c60)
+        specifier: ^5.2.3
+        version: 5.2.3(a51f6844b3d11c56b49806b72dc84c60)
       react-native-vision-camera-barcode-scanner:
-        specifier: ^5.0.0
-        version: 5.1.0(3be4931435253f477592659167f841e8)
+        specifier: ^5.2.3
+        version: 5.2.3(e33a85bbba4ee400235de7d7e2193dd1)
       react-native-web:
         specifier: ~0.21.4
         version: 0.21.4(encoding@0.1.13)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -11605,22 +11605,28 @@ packages:
       react: '*'
       react-native: '*'
 
-  react-native-vision-camera-barcode-scanner@5.1.0:
-    resolution: {integrity: sha512-OMKkpIFEa6/ZiM/eEI6EE67m9tyxfbWYoI1w4fQ71u0CnTfnbDwZr96gfStp6rqbC+P2oZ+9+Duvwv46Meqx/Q==}
+  react-native-vision-camera-barcode-scanner@5.2.3:
+    resolution: {integrity: sha512-p8SyswRlr9Ty5gFcQ1qM8gmU8hKbHyRLyu9TKFMD7oUXsZDF93NKGvcr4Qdr16Z+AIj3HYA/fW1NgoeY+L353g==}
     peerDependencies:
       react: '*'
       react-native: '*'
       react-native-nitro-image: '*'
       react-native-nitro-modules: '*'
       react-native-vision-camera: '*'
+    peerDependenciesMeta:
+      react-native-nitro-modules:
+        optional: true
 
-  react-native-vision-camera@5.1.0:
-    resolution: {integrity: sha512-1rsZ4caFLmOhQ9wediPuqd+WEdRzLZ2/tMfo4Itdeuyx4V/sPkerIgYT2DYYvyXbB8swvFgEW7ihIdnUkarqeA==}
+  react-native-vision-camera@5.2.3:
+    resolution: {integrity: sha512-OHjgM8BPzxppTqbF1FEltj+fxvisj4xdghM7ypoT1p6cOe28HByhOJP1c7LkBiUiZuotbsdbQwGdJ8nU7ZvPzA==}
     peerDependencies:
       react: '*'
       react-native: '*'
       react-native-nitro-image: '*'
       react-native-nitro-modules: '*'
+    peerDependenciesMeta:
+      react-native-nitro-modules:
+        optional: true
 
   react-native-web@0.21.4:
     resolution: {integrity: sha512-77B6KlalB4osNIck91TNFixPkYPsTbuNEvw8P7IV+4v4/5wZSBRKZnw0Zhx6YjuauDTz71gc8IW+fVhcBMjr5A==}
@@ -26691,19 +26697,21 @@ snapshots:
       react: 19.3.0
       react-native: 0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
 
-  react-native-vision-camera-barcode-scanner@5.1.0(3be4931435253f477592659167f841e8):
+  react-native-vision-camera-barcode-scanner@5.2.3(e33a85bbba4ee400235de7d7e2193dd1):
     dependencies:
       react: 19.3.0
       react-native: 0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
       react-native-nitro-image: 0.15.1(react-native-nitro-modules@0.37.1(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+      react-native-vision-camera: 5.2.3(a51f6844b3d11c56b49806b72dc84c60)
+    optionalDependencies:
       react-native-nitro-modules: 0.37.1(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
-      react-native-vision-camera: 5.1.0(a51f6844b3d11c56b49806b72dc84c60)
 
-  react-native-vision-camera@5.1.0(a51f6844b3d11c56b49806b72dc84c60):
+  react-native-vision-camera@5.2.3(a51f6844b3d11c56b49806b72dc84c60):
     dependencies:
       react: 19.3.0
       react-native: 0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
       react-native-nitro-image: 0.15.1(react-native-nitro-modules@0.37.1(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+    optionalDependencies:
       react-native-nitro-modules: 0.37.1(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
 
   react-native-web@0.21.4(encoding@0.1.13)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
