@@ -215,6 +215,8 @@ impl Otlp {
                 stream: "harbor".to_string(),
                 topic: "feedback".to_string(),
             }),
+            app_url: None,
+            grafana: None,
         }));
         let identities = PolycentricIdentities::connect(config.query_servers.clone())
             .await

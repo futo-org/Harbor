@@ -23,6 +23,12 @@ pub struct Config {
     pub max_body_bytes: usize,
     /// Where user feedback is relayed to; unset when the bot is not configured.
     pub zulip: Option<Zulip>,
+    /// Harbor web base URL (`HARBOR_OTLP_APP_URL`), for the profile link in
+    /// relayed feedback.
+    pub app_url: Option<String>,
+    /// Grafana in front of the Victoria stack, for the trace link in relayed
+    /// feedback.
+    pub grafana: Option<Grafana>,
 }
 
 /// A Zulip bot posting to one channel topic (`HARBOR_OTLP_ZULIP_*`).
@@ -33,6 +39,15 @@ pub struct Zulip {
     pub api_key: String,
     pub stream: String,
     pub topic: String,
+}
+
+/// Grafana base URL (`HARBOR_OTLP_GRAFANA_URL`) and the uid or name of its
+/// Jaeger-type datasource for VictoriaTraces
+/// (`HARBOR_OTLP_GRAFANA_TRACES_DATASOURCE`).
+#[derive(Clone)]
+pub struct Grafana {
+    pub url: String,
+    pub traces_datasource: String,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -55,6 +70,12 @@ pub fn init() -> Result<&'static Config, String> {
             .and_then(|s| s.trim().parse().ok())
             .unwrap_or(4 * 1024 * 1024),
         zulip: zulip()?,
+        app_url: optional_url("HARBOR_OTLP_APP_URL"),
+        grafana: optional_url("HARBOR_OTLP_GRAFANA_URL").map(|url| Grafana {
+            url,
+            traces_datasource: optional("HARBOR_OTLP_GRAFANA_TRACES_DATASOURCE")
+                .unwrap_or_else(|| "VictoriaTraces".to_string()),
+        }),
     };
     Ok(CONFIG.get_or_init(|| config))
 }
