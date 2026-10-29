@@ -1,5 +1,4 @@
 import { SeverityNumber } from '@opentelemetry/api';
-import { useTelemetrySettings } from './useTelemetrySettings';
 import { setTelemetryIdentity } from '../lib/identity';
 import {
   emitLog,
@@ -16,7 +15,6 @@ jest.mock('@opentelemetry/exporter-trace-otlp-http', () => ({
 
 beforeEach(() => {
   useLogStore.getState().clear();
-  useTelemetrySettings.getState().setIncludeIdentity(false);
   setTelemetryIdentity({
     identityKey: 'id1',
     signingKey: 'sk1',
@@ -41,11 +39,7 @@ test('emitted records land in the store as OTLP JSON', () => {
   expect(BigInt(entry?.record.observedTimeUnixNano ?? '0')).toBeGreaterThan(0n);
 });
 
-test('puts identity on the resource once the user opts in', () => {
-  expect(getLoggerResource().attributes).not.toHaveProperty(
-    'harbor.identity.key',
-  );
-  useTelemetrySettings.getState().setIncludeIdentity(true);
+test('puts the identity on the resource', () => {
   expect(getLoggerResource().attributes).toMatchObject({
     'harbor.identity.key': 'id1',
     'harbor.session.signing_key': 'sk1',

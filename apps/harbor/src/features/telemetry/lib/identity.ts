@@ -1,5 +1,4 @@
 import type { Attributes } from '@opentelemetry/api';
-import { useTelemetrySettings } from '../hooks/useTelemetrySettings';
 
 export interface TelemetryIdentity {
   /** Public identity key. */
@@ -44,17 +43,11 @@ export function getTelemetryIdentity(): TelemetryIdentity {
   return current;
 }
 
-/** Fires when the identity or the include-identity setting changes. */
+/** Fires when the identity changes. */
 export function onTelemetryIdentityChange(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
-
-useTelemetrySettings.subscribe((state, previous) => {
-  if (state.includeIdentity !== previous.includeIdentity) {
-    for (const listener of listeners) listener();
-  }
-});
 
 export function identityAttributes(
   identity: Partial<TelemetryIdentity> = current,
@@ -70,10 +63,4 @@ export function identityAttributes(
       attributes['harbor.session.can_rotate'] = identity.canRotate;
   }
   return attributes;
-}
-
-/** Identity for the telemetry resource, honouring the user's setting. */
-export function optInIdentityAttributes(): Attributes {
-  if (!useTelemetrySettings.getState().includeIdentity) return {};
-  return identityAttributes();
 }

@@ -30,7 +30,6 @@ import type { LogEntry } from '../hooks/useLogStore';
 import {
   identityAttributes,
   onTelemetryIdentityChange,
-  optInIdentityAttributes,
   telemetryAuthToken,
 } from './identity';
 import { type Diagnostics, collectDiagnostics } from './diagnostics';
@@ -101,7 +100,7 @@ function getProvider(): TracerProvider | null {
       },
     }),
     collectDiagnostics(),
-    optInIdentityAttributes(),
+    identityAttributes(),
   );
   return provider;
 }
