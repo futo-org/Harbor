@@ -20,7 +20,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: ListVerificationVerifiesRequest,
 ) -> Result<ListVerificationVerifiesResponse, Status> {
     let params = Params {
@@ -30,7 +30,7 @@ pub async fn handle(
         )?,
     };
     let view = pipeline::create_pipeline(
-        &ctx,
+        &mut ctx,
         &params,
         fetch,
         event_list::hydrate,
@@ -45,7 +45,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     Ok(Repository::list_verify_events_for_claims(

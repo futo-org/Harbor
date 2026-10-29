@@ -32,7 +32,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     identity: String,
     page_params: Option<&PageParams>,
     direction: Direction,
@@ -48,7 +48,7 @@ pub async fn handle(
     };
 
     pipeline::create_pipeline(
-        &ctx,
+        &mut ctx,
         &params,
         fetch,
         hydrate,
@@ -87,7 +87,7 @@ async fn list_page<C: ConnectionTrait>(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<Fetched<EventWithContentRow, EventCreatedAt>, Status> {
     let mut rows = list_page(
@@ -109,7 +109,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _params: &Params,
     fetched: &Fetched<EventWithContentRow, EventCreatedAt>,
 ) -> Result<HydrationState, Status> {
@@ -137,7 +137,7 @@ async fn hydrate(
 }
 
 async fn view(
-    _ctx: &PublicContext,
+    _ctx: &mut PublicContext,
     _params: &Params,
     filtered: Filtered<EventWithContentRow, EventCreatedAt>,
     hydration: HydrationState,

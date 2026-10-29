@@ -18,7 +18,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: ListVerificationClaimsRequest,
 ) -> Result<ListVerificationClaimsResponse, Status> {
     // TODO: use AuthContext here.
@@ -32,7 +32,7 @@ pub async fn handle(
         identity: req.claimed_by_identity,
     };
     let view = pipeline::create_pipeline(
-        &ctx,
+        &mut ctx,
         &params,
         fetch,
         claim_bundles::hydrate,
@@ -47,7 +47,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
     let claims =

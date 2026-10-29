@@ -21,7 +21,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: GetFollowingFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
     // TODO: move this to use AuthContext.
@@ -40,9 +40,10 @@ pub async fn handle(
         identity: req.follower_identity,
     };
 
-    let result =
-        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
-            .await?;
+    let result = pipeline::create_pipeline(
+        &mut ctx, &params, fetch, hydrate, filter, view,
+    )
+    .await?;
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
@@ -51,7 +52,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched<SortedBy>, Status> {
     let mut rows = FeedsRepository::recommended_feed(
@@ -90,7 +91,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     fetched: &feeds_pipeline::Fetched<SortedBy>,
 ) -> Result<HydrationState, Status> {
@@ -98,7 +99,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &PublicContext,
+    _: &mut PublicContext,
     params: &Params,
     fetched: feeds_pipeline::Fetched<SortedBy>,
     hydration: &HydrationState,
@@ -107,7 +108,7 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     filtered: GetFeedResponseFilter<SortedBy>,
     hydration: HydrationState,
