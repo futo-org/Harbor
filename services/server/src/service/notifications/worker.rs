@@ -17,7 +17,7 @@ use polycentric_common::models::protos_v2::{
 };
 use prost::Message as _;
 use rdkafka::message::{Header, OwnedHeaders};
-use sea_orm::{ActiveModelTrait, NotSet, Set};
+use sea_orm::{EntityTrait, NotSet, Set};
 
 use crate::data::row_into_bundle;
 use crate::service::context::{ServiceContext, WorkerContext};
@@ -333,12 +333,10 @@ impl MessageHandler for NotificationWorker {
                 updated_at: Set(now),
             };
 
-            if let Err(e) = row.insert(&ctx.db).await {
-                tracing::warn!(
-                    worker = Self::NAME,
-                    error = %e,
-                    "failed to insert notification"
-                );
+            if let Err(error) =
+                notification::Entity::insert(row).exec(&ctx.db).await
+            {
+                tracing::warn!(worker = Self::NAME, %error, "failed to insert notification");
                 return Outcome::Retry;
             }
         }
