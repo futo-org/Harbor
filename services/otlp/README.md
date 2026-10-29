@@ -1,12 +1,9 @@
 # OTLP Service
 
 Receives OpenTelemetry logs and traces from Harbor clients over OTLP/HTTP
-(JSON) and forwards them to [VictoriaLogs](https://docs.victoriametrics.com/victorialogs/data-ingestion/opentelemetry/).
-Spans are stored as log records too: one per span (body: the status
-message, else the span name; severity `ERROR` for an error status) and one
-per span event (body: `log.message` or `exception.message`, else the event
-name; severity from `log.severity`), each carrying the trace and span ids
-and the extra attributes `span.name` and `event.name`.
+(JSON) and forwards them, re-encoded as OTLP protobuf since that is the only
+encoding they accept, to [VictoriaLogs](https://docs.victoriametrics.com/victorialogs/data-ingestion/opentelemetry/)
+and [VictoriaTraces](https://docs.victoriametrics.com/victoriatraces/data-ingestion/opentelemetry/).
 
 Every request must carry the same bearer JWT clients mint for the server
 (`createServerJwt` in js-core, with this service's public URL as the
@@ -19,11 +16,17 @@ anything the client put there, so downstream queries can trust those fields.
 | Route | Forwards to |
 |---|---|
 | `POST /v1/logs` | `$HARBOR_VICTORIA_LOGS_URL/insert/opentelemetry/v1/logs` |
-| `POST /v1/traces` | the same, converted to log records |
+| `POST /v1/traces` | `$HARBOR_VICTORIA_TRACES_URL/insert/opentelemetry/v1/traces` |
 | `GET /status` | — |
 
-Only `application/json` bodies are accepted. With the upstream URL unset
-ingest answers `503`. Payloads are forwarded with `VL-Stream-Fields` naming
+Only `application/json` bodies are accepted. A signal whose upstream URL is
+unset answers `503`. `app.feedback` and `app.error` spans are also mirrored
+into VictoriaLogs as one record each (body: the feedback message or the
+error's status message; the span's attributes plus `span.name`; the trace
+id), so they can be listed and counted with LogsQL. Every `app.feedback`
+span is also posted to Zulip when the bot below is configured, each as a new
+topic in the channel named after the feedback and its trace id. Both
+happen alongside the trace; a failure is logged, never returned. Logs are forwarded with `VL-Stream-Fields` naming
 `service.name`, `service.version`, `deployment.environment.name` and
 `os.name`, so VictoriaLogs keeps one stream per app build and platform
 rather than one per user.
@@ -43,7 +46,15 @@ All service variables are read and validated once at startup by
 | `HARBOR_ALLOW_HOSTS` | _(required)_ | Comma-separated JWT audiences: the URLs clients address this service by. |
 | `HARBOR_QUERY_SERVERS` | _(required)_ | Comma-separated gRPC server URLs to fetch identity documents from. |
 | `HARBOR_VICTORIA_LOGS_URL` | _(unset)_ | VictoriaLogs base URL, e.g. `http://victorialogs:9428`. |
+| `HARBOR_VICTORIA_TRACES_URL` | _(unset)_ | VictoriaTraces base URL, e.g. `http://victoriatraces:10428`. |
 | `HARBOR_OTLP_MAX_BODY_BYTES` | `4194304` (4 MiB) | Largest accepted request body. |
+| `HARBOR_OTLP_ZULIP_BOT_EMAIL` | _(unset)_ | Zulip bot that relays feedback; with `HARBOR_OTLP_ZULIP_BOT_API_KEY`, enables the relay. |
+| `HARBOR_OTLP_ZULIP_BOT_API_KEY` | _(unset)_ | The bot's API key. |
+| `HARBOR_OTLP_ZULIP_URL` | `https://zulip.futo.org` | Zulip server. |
+| `HARBOR_OTLP_ZULIP_STREAM` | `harbor-feedback` | Channel feedback is posted to. |
+| `HARBOR_OTLP_APP_URL` | _(unset)_ | Harbor web base URL; when set, relayed feedback links the identity to its profile. |
+| `HARBOR_OTLP_GRAFANA_URL` | _(unset)_ | Grafana in front of the Victoria stack; when set, relayed feedback links the trace to Explore. |
+| `HARBOR_OTLP_GRAFANA_TRACES_DATASOURCE` | `VictoriaTraces` | Uid or name of Grafana's Jaeger-type datasource for VictoriaTraces. |
 
 Additionally various shared variables are read, see the table in
 [`services/server/README.md`](../server/README.md#common-environment-variables).

@@ -1,7 +1,7 @@
 ---
 title: End-to-End Testing
 sidebar_label: End-to-End Testing
-sidebar_position: 4
+sidebar_position: 8
 ---
 
 # End-to-End Testing

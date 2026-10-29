@@ -1,7 +1,7 @@
 ---
 title: Live Sync
 sidebar_label: Live Sync
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # Live Sync

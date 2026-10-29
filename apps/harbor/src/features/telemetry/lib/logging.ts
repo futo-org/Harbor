@@ -18,7 +18,7 @@ import {
   type LogRecordJson,
   useLogStore,
 } from '../hooks/useLogStore';
-import { onTelemetryIdentityChange, optInIdentityAttributes } from './identity';
+import { identityAttributes, onTelemetryIdentityChange } from './identity';
 import { createResource } from './tracing';
 
 export const LOGGER_NAME = 'harbor';
@@ -132,7 +132,7 @@ export function createLoggerProvider(resource: Resource): LoggerProvider {
 let provider: LoggerProvider | null = null;
 
 export function getLoggerResource(): Resource {
-  return createResource(collectDiagnostics(), optInIdentityAttributes());
+  return createResource(collectDiagnostics(), identityAttributes());
 }
 
 export function getLogger(): Logger {

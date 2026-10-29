@@ -1,17 +1,25 @@
 //! The otlp service end to end: real JWTs, identity documents fetched from a
-//! polycentric server over gRPC, and payloads forwarded to a VictoriaLogs
+//! polycentric server over gRPC, and payloads forwarded to a Victoria
 //! stand-in.
 
 mod support;
 
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
 use ed25519_dalek::SigningKey;
-use otlp_service::forward::{ATTR_IDENTITY, ATTR_SIGNING_KEY};
-use otlp_service::routes::LOGS_PATH;
-use otlp_service::spans::ATTR_SPAN_NAME;
-use serde_json::{Value, json};
+use opentelemetry_proto::tonic::collector::logs::v1::ExportLogsServiceRequest;
+use opentelemetry_proto::tonic::collector::trace::v1::ExportTraceServiceRequest;
+use opentelemetry_proto::tonic::common::v1::KeyValue;
+use otlp_service::forward::{ATTR_IDENTITY, ATTR_SIGNING_KEY, string_value};
+use otlp_service::records::ATTR_SPAN_NAME;
+use otlp_service::routes::{LOGS_PATH, TRACES_PATH};
+use prost::Message;
+use serde_json::json;
 use support::{Otlp, PolycentricStandIn, device_key, identity_for, mint, now};
 
 const JSON: &str = "application/json";
+const STREAM_FIELDS: &str = "service.name,service.version,deployment.environment.name,os.name";
 
 fn spans() -> String {
     json!({ "resourceSpans": [{
@@ -40,14 +48,53 @@ fn logs() -> String {
     json!({ "resourceLogs": [{ "scopeLogs": [] }] }).to_string()
 }
 
-fn stamped(resource_key: &str, head: Vec<Value>) -> Value {
+/// What the stamp puts on every resource.
+fn stamped_identity() -> Vec<(String, String)> {
     let (identity, _) = identity_for(&device_key());
-    let mut attributes = head;
-    attributes.push(json!({ "key": ATTR_IDENTITY, "value": { "stringValue": identity } }));
-    attributes.push(json!({ "key": ATTR_SIGNING_KEY, "value": {
-        "stringValue": hex::encode(device_key().verifying_key().to_bytes())
-    } }));
-    json!({ resource_key: [{ "resource": { "attributes": attributes } }] })
+    vec![
+        (ATTR_IDENTITY.to_string(), identity),
+        (
+            ATTR_SIGNING_KEY.to_string(),
+            hex::encode(device_key().verifying_key().to_bytes()),
+        ),
+    ]
+}
+
+fn pairs(attributes: &[KeyValue]) -> Vec<(String, String)> {
+    attributes
+        .iter()
+        .map(|attribute| {
+            (
+                attribute.key.clone(),
+                string_value(attributes, &attribute.key)
+                    .unwrap_or_default()
+                    .to_string(),
+            )
+        })
+        .collect()
+}
+
+type Captured<T> = Arc<Mutex<Option<T>>>;
+
+/// A Victoria mock on `path` that accepts protobuf and keeps the decoded
+/// request for the test.
+async fn capturing_mock<T: Message + Default + Send + 'static>(
+    victoria: &mut mockito::ServerGuard,
+    path: &str,
+) -> (mockito::Mock, Captured<T>) {
+    let captured: Captured<T> = Arc::default();
+    let slot = captured.clone();
+    let mock = victoria
+        .mock("POST", path)
+        .match_header("content-type", "application/x-protobuf")
+        .match_request(move |request| {
+            let body = request.body().unwrap();
+            *slot.lock().unwrap() = Some(T::decode(body.as_slice()).unwrap());
+            true
+        })
+        .create_async()
+        .await;
+    (mock, captured)
 }
 
 async fn otlp_with_victoria() -> (Otlp, mockito::ServerGuard) {
@@ -61,70 +108,59 @@ async fn otlp_with_victoria() -> (Otlp, mockito::ServerGuard) {
 }
 
 #[tokio::test]
-async fn a_paired_device_gets_its_spans_to_victoria_logs_as_records() {
+async fn a_paired_device_gets_its_traces_to_victoria_stamped() {
     let (otlp, mut victoria) = otlp_with_victoria().await;
-    let mut expected = stamped(
-        "resourceLogs",
-        vec![json!({ "key": "service.name", "value": { "stringValue": "harbor" } })],
-    );
-    expected["resourceLogs"][0]["scopeLogs"] = json!([{ "logRecords": [
-        {
-            "timeUnixNano": "1700000000000000000",
-            "severityText": "INFO",
-            "body": { "stringValue": "app.feedback" },
-            "traceId": "0af7651916cd43dd8448eb211c80319c",
-            "spanId": "b7ad6b7169203331",
-            "attributes": [
-                { "key": "harbor.feedback.message", "value": { "stringValue": "love it" } },
-                { "key": ATTR_SPAN_NAME, "value": { "stringValue": "app.feedback" } }
-            ]
-        },
-        {
-            "timeUnixNano": "1699999999000000000",
-            "severityText": "WARN",
-            "body": { "stringValue": "slow feed" },
-            "traceId": "0af7651916cd43dd8448eb211c80319c"
-        }
-    ]}]);
-    let mock = victoria
-        .mock("POST", LOGS_PATH)
-        .match_header("content-type", JSON)
-        .match_header(
-            "VL-Stream-Fields",
-            "service.name,service.version,deployment.environment.name,os.name",
-        )
-        .match_body(mockito::Matcher::PartialJson(expected))
-        .create_async()
-        .await;
+    let (mock, captured) =
+        capturing_mock::<ExportTraceServiceRequest>(&mut victoria, TRACES_PATH).await;
 
     let token = otlp.token(&device_key());
     let response = otlp.post("/v1/traces", Some(&token), JSON, spans()).await;
 
     assert_eq!(response.status(), 200);
     mock.assert_async().await;
+    let traces = captured.lock().unwrap().take().unwrap();
+    let resource = &traces.resource_spans[0];
+    let mut expected = vec![("service.name".to_string(), "harbor".to_string())];
+    expected.extend(stamped_identity());
+    assert_eq!(
+        pairs(&resource.resource.as_ref().unwrap().attributes),
+        expected
+    );
+
+    let span = &resource.scope_spans[0].spans[0];
+    assert_eq!(span.name, "app.feedback");
+    assert_eq!(
+        hex::encode(&span.trace_id),
+        "0af7651916cd43dd8448eb211c80319c"
+    );
+    assert_eq!(hex::encode(&span.span_id), "b7ad6b7169203331");
+    assert_eq!(span.end_time_unix_nano, 1_700_000_000_000_000_000);
+    assert_eq!(
+        string_value(&span.attributes, "harbor.feedback.message"),
+        Some("love it")
+    );
+    assert_eq!(span.events[0].name, "log");
+    assert_eq!(
+        string_value(&span.events[0].attributes, "log.message"),
+        Some("slow feed")
+    );
 }
 
 #[tokio::test]
-async fn logs_reach_victoria_logs() {
+async fn logs_reach_victoria_logs_with_stream_fields() {
     let (otlp, mut victoria) = otlp_with_victoria().await;
-    let mock = victoria
-        .mock("POST", LOGS_PATH)
-        .match_header(
-            "VL-Stream-Fields",
-            "service.name,service.version,deployment.environment.name,os.name",
-        )
-        .match_body(mockito::Matcher::PartialJson(stamped(
-            "resourceLogs",
-            vec![],
-        )))
-        .create_async()
-        .await;
+    let (mock, captured) =
+        capturing_mock::<ExportLogsServiceRequest>(&mut victoria, LOGS_PATH).await;
+    let mock = mock.match_header("VL-Stream-Fields", STREAM_FIELDS);
 
     let token = otlp.token(&device_key());
     let response = otlp.post("/v1/logs", Some(&token), JSON, logs()).await;
 
     assert_eq!(response.status(), 200);
     mock.assert_async().await;
+    let logs = captured.lock().unwrap().take().unwrap();
+    let resource = logs.resource_logs[0].resource.as_ref().unwrap();
+    assert_eq!(pairs(&resource.attributes), stamped_identity());
 }
 
 #[tokio::test]
@@ -152,7 +188,7 @@ async fn tampered_expired_and_misaddressed_tokens_are_unauthorized() {
 async fn an_unpaired_device_is_forbidden_before_victoria_sees_anything() {
     let (otlp, mut victoria) = otlp_with_victoria().await;
     let untouched = victoria
-        .mock("POST", LOGS_PATH)
+        .mock("POST", TRACES_PATH)
         .expect(0)
         .create_async()
         .await;
@@ -207,7 +243,7 @@ async fn identity_documents_are_cached() {
     let otlp = Otlp::serve(&polycentric, Some(&victoria.url())).await;
     let token = otlp.token(&device_key());
     let forwarded = victoria
-        .mock("POST", LOGS_PATH)
+        .mock("POST", TRACES_PATH)
         .expect(2)
         .create_async()
         .await;
@@ -247,7 +283,7 @@ async fn a_signal_without_an_upstream_is_unavailable() {
 async fn a_failing_victoria_is_a_bad_gateway() {
     let (otlp, mut victoria) = otlp_with_victoria().await;
     victoria
-        .mock("POST", LOGS_PATH)
+        .mock("POST", TRACES_PATH)
         .with_status(500)
         .create_async()
         .await;
@@ -322,4 +358,86 @@ async fn status_and_preflight_need_no_token() {
         .unwrap_or("")
         .to_ascii_lowercase();
     assert!(allowed.contains("authorization"), "{allowed}");
+}
+
+#[tokio::test]
+async fn feedback_is_relayed_to_zulip() {
+    let mut victoria = mockito::Server::new_async().await;
+    let stored = victoria.mock("POST", TRACES_PATH).create_async().await;
+    let mut zulip = mockito::Server::new_async().await;
+    let (polycentric, _server) = PolycentricStandIn::default()
+        .with(&device_key())
+        .serve()
+        .await;
+    let otlp = Otlp::serve_relaying(&polycentric, Some(&victoria.url()), Some(&zulip.url())).await;
+    let (identity, _) = identity_for(&device_key());
+    let relayed = zulip
+        .mock("POST", "/api/v1/messages")
+        .match_header("authorization", "Basic Ym90QGV4YW1wbGUuY29tOnNlY3JldA==")
+        .match_body(mockito::Matcher::AllOf(vec![
+            mockito::Matcher::Regex(
+                "^type=stream&to=harbor-feedback&topic=love\\+it\\+%C2%B7\\+0af76519&content="
+                    .to_string(),
+            ),
+            mockito::Matcher::Regex(format!("New\\+feedback.*%60{identity}%60")),
+            mockito::Matcher::Regex("love\\+it".to_string()),
+            mockito::Matcher::Regex("Logs\\+attached%3A\\+1".to_string()),
+            mockito::Matcher::Regex("0af7651916cd43dd8448eb211c80319c".to_string()),
+        ]))
+        .create_async()
+        .await;
+
+    let token = otlp.token(&device_key());
+    let response = otlp.post("/v1/traces", Some(&token), JSON, spans()).await;
+    assert_eq!(response.status(), 200);
+
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while !relayed.matched_async().await && Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    relayed.assert_async().await;
+    stored.assert_async().await;
+}
+
+#[tokio::test]
+async fn feedback_is_mirrored_to_victoria_logs_as_a_record() {
+    let (otlp, mut victoria) = otlp_with_victoria().await;
+    let stored = victoria.mock("POST", TRACES_PATH).create_async().await;
+    let (mirror, captured) =
+        capturing_mock::<ExportLogsServiceRequest>(&mut victoria, LOGS_PATH).await;
+    let mirror = mirror.match_header("VL-Stream-Fields", STREAM_FIELDS);
+
+    let token = otlp.token(&device_key());
+    let response = otlp.post("/v1/traces", Some(&token), JSON, spans()).await;
+
+    assert_eq!(response.status(), 200);
+    stored.assert_async().await;
+    mirror.assert_async().await;
+    let logs = captured.lock().unwrap().take().unwrap();
+    let resource = &logs.resource_logs[0];
+    let mut expected = vec![("service.name".to_string(), "harbor".to_string())];
+    expected.extend(stamped_identity());
+    assert_eq!(
+        pairs(&resource.resource.as_ref().unwrap().attributes),
+        expected
+    );
+    let records = &resource.scope_logs[0].log_records;
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].severity_text, "INFO");
+    assert_eq!(
+        records[0].body.as_ref().and_then(|b| b.value.as_ref()),
+        Some(
+            &opentelemetry_proto::tonic::common::v1::any_value::Value::StringValue(
+                "love it".to_string()
+            )
+        )
+    );
+    assert_eq!(
+        string_value(&records[0].attributes, ATTR_SPAN_NAME),
+        Some("app.feedback")
+    );
+    assert_eq!(
+        hex::encode(&records[0].trace_id),
+        "0af7651916cd43dd8448eb211c80319c"
+    );
 }
