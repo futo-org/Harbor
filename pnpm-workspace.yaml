@@ -28,17 +28,9 @@ linkWorkspacePackages: true
 minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
-  - react-native-screens
+  - "react-native-screens@4.30.1"
   - maestro-runner
   - "@devicelab/*"
-  # Expo 58.0.20 set, until it clears the 1-day bar (2026-10-28 ~16:12 UTC)
-  - "expo@58.0.20"
-  - "expo-dev-client@58.0.16"
-  - "expo-router@58.0.27"
-  - "expo-modules-core@58.0.27"
-  - "@expo/cli@58.1.16"
-  - "babel-preset-expo@58.0.21"
-  - "expo-dev-launcher@58.0.16"
 
 allowBuilds:
   '@browserless/goto': false
