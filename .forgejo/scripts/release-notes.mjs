@@ -5,13 +5,19 @@
 //
 //   node release-notes.mjs [output-file]
 //
-// Env: GITHUB_REF_NAME (the tag), OPEN_ROUTER_API_TOKEN (required),
-// OPEN_ROUTER_MODEL (optional override).
+// The same notes for a release tag and for the staging and production app
+// builds between releases: everything since the last `v*` tag, so a build's
+// notes grow through the cycle and restart at each release.
+//
+// Env: GITHUB_SHA, GITHUB_REF_NAME, OPEN_ROUTER_API_TOKEN (required),
+// OPEN_ROUTER_MODEL (optional override). The version comes from the tag,
+// else from apps/harbor/eas-build.json when present.
 
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
-const tag = process.env.GITHUB_REF_NAME;
+const head = process.env.GITHUB_SHA || 'HEAD';
+const tag = process.env.GITHUB_REF_NAME?.match(/^v(\d.*)$/)?.[1];
 const openRouterToken = process.env.OPEN_ROUTER_API_TOKEN;
 const model = process.env.OPEN_ROUTER_MODEL || 'anthropic/claude-sonnet-5.5';
 
@@ -30,7 +36,7 @@ try {
     '--abbrev=0',
     '--match',
     'v[0-9]*',
-    `${tag}^`,
+    `${head}^`,
   ).trim();
 } catch {
   // First release.
@@ -41,7 +47,7 @@ const RECORD = '\x1e';
 const log = git(
   'log',
   `--format=%H${FIELD}%s${FIELD}%b${RECORD}`,
-  previous ? `${previous}..${tag}` : tag,
+  previous ? `${previous}..${head}` : head,
 );
 
 const commits = [];
@@ -54,9 +60,21 @@ for (const record of log.split(RECORD)) {
   commits.push(`- ${subject}${category ? ` [${category}]` : ''}`);
 }
 
-const version = tag.replace(/^v/, '');
+function buildVersion() {
+  const file = 'apps/harbor/eas-build.json';
+  if (!existsSync(file)) return null;
+  const output = JSON.parse(readFileSync(file, 'utf8'));
+  const build = Array.isArray(output) ? output[0] : output;
+  if (!build?.appVersion) return null;
+  return build.appBuildVersion
+    ? `${build.appVersion} (${build.appBuildVersion})`
+    : build.appVersion;
+}
+
+const version = tag ?? buildVersion() ?? head.slice(0, 8);
 const date = new Date().toISOString().slice(0, 10);
 const header = `## ${version} (${date})\n\n`;
+console.error(`notes for ${version} since ${previous || 'the first commit'}`);
 
 async function writeNotes(body) {
   const notes = `${header}${body.trim()}\n`;
@@ -81,7 +99,7 @@ Rules:
 - If nothing in the list is user-facing, output exactly: "This release contains behind-the-scenes improvements and maintenance."
 - Output only the markdown notes. No title line, no version number, no preamble or sign-off.`;
 
-const userPrompt = `Commits in Harbor release ${version}${previous ? ` (since ${previous})` : ''}:\n\n${commits.join('\n')}`;
+const userPrompt = `Commits in Harbor ${version}${previous ? ` (since ${previous})` : ''}:\n\n${commits.join('\n')}`;
 
 const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
   method: 'POST',
