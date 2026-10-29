@@ -20,6 +20,8 @@ use crate::auth::{AuthenticatedIdentity, auth_middleware};
 use crate::config::Config;
 use crate::forward::{forward, stamp};
 use crate::identity::PolycentricIdentities;
+use crate::records::app_log_records;
+use crate::zulip;
 
 pub const LOGS_PATH: &str = "/insert/opentelemetry/v1/logs";
 pub const TRACES_PATH: &str = "/insert/opentelemetry/v1/traces";
@@ -139,13 +141,54 @@ async fn post_traces(
             .map(|entry| &mut entry.resource),
         &identity,
     );
-    forward(
+    relay_feedback(&state, &request);
+    let status = forward(
         &state.http,
         &format!("{base}{TRACES_PATH}"),
         request.encode_to_vec(),
         &[],
     )
-    .await
+    .await;
+    mirror_app_records(&state, &request).await;
+    status
+}
+
+/// Feedback and error reports also go to VictoriaLogs, where they can be
+/// listed and counted. A failure here is logged, not returned.
+async fn mirror_app_records(state: &AppState, request: &ExportTraceServiceRequest) {
+    let (Some(base), Some(records)) = (
+        state.config.victoria_logs_url.as_deref(),
+        app_log_records(request),
+    ) else {
+        return;
+    };
+    let status = forward(
+        &state.http,
+        &format!("{base}{LOGS_PATH}"),
+        records.encode_to_vec(),
+        &[("VL-Stream-Fields", LOG_STREAM_FIELDS)],
+    )
+    .await;
+    if !status.is_success() {
+        tracing::error!(%status, "app records not mirrored to logs");
+    }
+}
+
+/// Posts each feedback span to Zulip in the background; the client's
+/// response does not wait for it.
+fn relay_feedback(state: &AppState, request: &ExportTraceServiceRequest) {
+    let Some(config) = state.config.zulip.as_ref() else {
+        return;
+    };
+    for content in zulip::feedback_messages(request) {
+        let client = state.http.clone();
+        let config = config.clone();
+        tokio::spawn(async move {
+            if let Err(e) = zulip::post(&client, &config, &content).await {
+                tracing::error!(error = %e, "feedback not relayed to zulip");
+            }
+        });
+    }
 }
 
 /// Clients send OTLP/JSON; anything that is not that is rejected here.
