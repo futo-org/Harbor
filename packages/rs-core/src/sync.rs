@@ -24,8 +24,8 @@ pub struct EventPushIssues {
     pub key: FfiEventKey,
     /// If `errors` is not empty, the server did not store the event for the reasons listed.
     pub errors: Vec<String>,
-    /// If `warnings` is not empty, the server stored the event but dropped some of its content, for
-    /// the reasons listed.
+    /// If `warnings` is not empty, the server stored the event but dropped the content, for the
+    /// reasons listed.
     pub warnings: Vec<String>,
 }
 
