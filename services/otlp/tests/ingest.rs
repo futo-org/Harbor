@@ -375,7 +375,10 @@ async fn feedback_is_relayed_to_zulip() {
         .mock("POST", "/api/v1/messages")
         .match_header("authorization", "Basic Ym90QGV4YW1wbGUuY29tOnNlY3JldA==")
         .match_body(mockito::Matcher::AllOf(vec![
-            mockito::Matcher::Regex("^type=stream&to=harbor&topic=feedback&content=".to_string()),
+            mockito::Matcher::Regex(
+                "^type=stream&to=harbor-feedback&topic=love\\+it\\+%C2%B7\\+0af76519&content="
+                    .to_string(),
+            ),
             mockito::Matcher::Regex(format!("New\\+feedback.*%60{identity}%60")),
             mockito::Matcher::Regex("love\\+it".to_string()),
             mockito::Matcher::Regex("Logs\\+attached%3A\\+1".to_string()),

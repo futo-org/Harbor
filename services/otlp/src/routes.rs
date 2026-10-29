@@ -180,11 +180,11 @@ fn relay_feedback(state: &AppState, request: &ExportTraceServiceRequest) {
     let Some(config) = state.config.zulip.as_ref() else {
         return;
     };
-    for content in zulip::feedback_messages(request, state.config) {
+    for message in zulip::feedback_messages(request, state.config) {
         let client = state.http.clone();
         let config = config.clone();
         tokio::spawn(async move {
-            if let Err(e) = zulip::post(&client, &config, &content).await {
+            if let Err(e) = zulip::post(&client, &config, &message).await {
                 tracing::error!(error = %e, "feedback not relayed to zulip");
             }
         });
