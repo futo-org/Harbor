@@ -1,12 +1,12 @@
 import type { EventKey, ServerPushResult } from '@polycentric/react-native';
 
 jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../packages/js-core/src/proto/v2'),
+  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
 }));
 
-import { useSyncIssuesStore } from './useSyncIssuesStore';
+import { useEventPushIssuesStore } from './useEventPushIssuesStore';
 
-const get = () => useSyncIssuesStore.getState();
+const get = () => useEventPushIssuesStore.getState();
 
 const SERVER_A = 'https://a.example';
 const SERVER_B = 'https://b.example';
@@ -38,7 +38,7 @@ beforeEach(() => {
   get().clearAll();
 });
 
-describe('useSyncIssuesStore', () => {
+describe('useEventPushIssuesStore', () => {
   describe('record', () => {
     it('adds new issues and returns them', () => {
       const added = get().record(

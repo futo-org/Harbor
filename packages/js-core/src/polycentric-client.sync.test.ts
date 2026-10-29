@@ -220,7 +220,7 @@ function pushResult(opts: {
 }
 
 /** The core's report of server errors/warnings for one pushed event. */
-function eventIssues(
+function buildEventIssues(
   sequence: number,
   opts: { errors?: string[]; warnings?: string[] },
 ): EventPushIssues {
@@ -1397,7 +1397,7 @@ describe('PolycentricClient sync', () => {
         pullBundles: () => [],
         pushResponse: async () =>
           pushResult({
-            eventIssues: [eventIssues(1, { errors: ['rejected'] })],
+            eventIssues: [buildEventIssues(1, { errors: ['rejected'] })],
             requestedBlobs: [blob],
           }),
       });
@@ -1460,8 +1460,8 @@ describe('PolycentricClient sync', () => {
 
   describe('push results', () => {
     it("emits each server's event issues once all pushes settle", async () => {
-      const rejected = eventIssues(1, { errors: ['bad signature'] });
-      const trimmed = eventIssues(2, { warnings: ['app name dropped'] });
+      const rejected = buildEventIssues(1, { errors: ['bad signature'] });
+      const trimmed = buildEventIssues(2, { warnings: ['app name dropped'] });
       const core = makeCoreMock({
         pullBundles: () => [],
         pushResponse: async (_identity, server) =>

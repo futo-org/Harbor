@@ -4,7 +4,7 @@ import useBlocks from '@/src/features/block/hooks/useBlocks';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { useSyncIssuesStore } from '@/src/features/sync-issues/useSyncIssuesStore';
+import { useEventPushIssuesStore } from '@/src/features/core/event-push-issues/useEventPushIssuesStore';
 import {
   type PolycentricClient,
   createPolycentricClient,
@@ -242,7 +242,7 @@ export function PolycentricProvider({
       if (cancelled || !ready) return;
 
       // Push issues belong to the previous identity's events
-      useSyncIssuesStore.getState().clearAll();
+      useEventPushIssuesStore.getState().clearAll();
 
       try {
         await refresh(ready);
@@ -284,7 +284,7 @@ export function PolycentricProvider({
 
     const handlePushResults = (results: ServerPushResult[]) => {
       if (cancelled) return;
-      useSyncIssuesStore.getState().record(results);
+      useEventPushIssuesStore.getState().record(results);
     };
 
     (async () => {
