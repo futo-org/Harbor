@@ -20,10 +20,7 @@ import { isWeb } from '@/src/common/util/platform';
 import { canSelfUpdate, checkForUpdate } from '@/src/features/core/apk-update';
 import useModerationStatus from '@/src/features/moderation/hooks/useModerationStatus';
 import { serverHost } from '@/src/features/moderation/serverHost';
-import {
-  ErrorReportsSettingRow,
-  IncludeIdentitySettingRow,
-} from '@/src/features/telemetry/TelemetrySettingRows';
+import { ErrorReportsSettingRow } from '@/src/features/telemetry/TelemetrySettingRows';
 import { Username } from '@/src/features/profile/Username';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
@@ -221,7 +218,6 @@ export default function SettingsTabScreen() {
                   <Text variant="body">View logs</Text>
                 </ListItemWrapper>
                 <ErrorReportsSettingRow />
-                <IncludeIdentitySettingRow />
               </ListItemGroup>
 
               <ListItemGroup label="About">

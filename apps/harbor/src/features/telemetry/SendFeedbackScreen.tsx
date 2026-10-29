@@ -20,7 +20,6 @@ import {
   buildFeedback,
   sendFeedback,
 } from './lib/feedback';
-import { useTelemetrySettings } from './hooks/useTelemetrySettings';
 import { getTelemetryIdentity } from './lib/identity';
 
 export default function SendFeedbackScreen() {
@@ -33,9 +32,6 @@ export default function SendFeedbackScreen() {
 
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
-  const [includeIdentity, setIncludeIdentity] = useState(
-    () => useTelemetrySettings.getState().includeIdentity,
-  );
   const [includeLogs, setIncludeLogs] = useState(true);
   const [sending, setSending] = useState(false);
 
@@ -50,7 +46,6 @@ export default function SendFeedbackScreen() {
         email,
         identityKey,
         signingKey: getTelemetryIdentity().signingKey,
-        includeIdentity,
         includeLogs,
       });
       if (await sendFeedback(feedback)) {
@@ -116,14 +111,6 @@ export default function SendFeedbackScreen() {
             />
 
             <ToggleRow
-              label="Include my identity"
-              description="Attach your public identity key and this device's public signing key so we can look at your account."
-              value={includeIdentity}
-              onValueChange={setIncludeIdentity}
-              disabled={!identityKey}
-              testID="feedback-include-identity"
-            />
-            <ToggleRow
               label="Include logs"
               description="Attach recent logs from this device. Review them under Settings → View logs."
               value={includeLogs}
@@ -132,7 +119,7 @@ export default function SendFeedbackScreen() {
             />
 
             <Text variant="small" color="neutral_500" fontWeight="regular">
-              App version and device details are always attached.
+              App version, device details and your identity are always attached.
             </Text>
           </ScrollView>
         </View>
@@ -146,14 +133,12 @@ function ToggleRow({
   description,
   value,
   onValueChange,
-  disabled,
   testID,
 }: {
   label: string;
   description: string;
   value: boolean;
   onValueChange: (next: boolean) => void;
-  disabled?: boolean;
   testID?: string;
 }) {
   return (
@@ -163,7 +148,6 @@ function ToggleRow({
         Atoms.align_center,
         Atoms.justify_between,
         Atoms.gap_md,
-        disabled && { opacity: 0.5 },
       ]}
     >
       <View style={[Atoms.flex_1, Atoms.gap_xs]}>
@@ -172,12 +156,7 @@ function ToggleRow({
           {description}
         </Text>
       </View>
-      <Switch
-        value={value && !disabled}
-        onValueChange={onValueChange}
-        disabled={disabled}
-        testID={testID}
-      />
+      <Switch value={value} onValueChange={onValueChange} testID={testID} />
     </View>
   );
 }

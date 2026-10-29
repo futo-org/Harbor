@@ -15,7 +15,6 @@ export interface FeedbackInput {
   email: string;
   identityKey: string | null;
   signingKey?: string | null;
-  includeIdentity: boolean;
   includeLogs: boolean;
   logs?: LogEntry[];
 }
@@ -26,7 +25,7 @@ export function buildFeedback(input: FeedbackInput): Feedback {
     message: input.message.trim().slice(0, MAX_FEEDBACK_LENGTH),
   };
   if (email) feedback.email = email;
-  if (input.includeIdentity && input.identityKey) {
+  if (input.identityKey) {
     feedback.identityKey = input.identityKey;
     if (input.signingKey) feedback.signingKey = input.signingKey;
   }

@@ -52,17 +52,3 @@ export function ErrorReportsSettingRow() {
     />
   );
 }
-
-export function IncludeIdentitySettingRow() {
-  const enabled = useTelemetrySettings((state) => state.includeIdentity);
-  const setEnabled = useTelemetrySettings((state) => state.setIncludeIdentity);
-
-  return (
-    <SwitchRow
-      label="Include my identity in error reports"
-      value={enabled}
-      onValueChange={setEnabled}
-      testID="include-identity-toggle"
-    />
-  );
-}
