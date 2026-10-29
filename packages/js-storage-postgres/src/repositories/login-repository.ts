@@ -148,6 +148,13 @@ export class LoginRepository implements ILoginRepository {
         );
       }
 
+      if (row.private_key === null) {
+        throw new LoginRepositoryError(
+          'private key storage',
+          'inline private key is missing',
+        );
+      }
+
       return {
         identity: row.identity,
         publicKey: Proto.PublicKey.create({
@@ -157,7 +164,7 @@ export class LoginRepository implements ILoginRepository {
         status: row.status as LoginStatus,
         privateKey: Proto.PrivateKey.create({
           keyType: row.key_type,
-          key: row.private_key ?? new Uint8Array(),
+          key: row.private_key,
         }),
       };
     } catch (error) {

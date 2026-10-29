@@ -144,6 +144,13 @@ export class IndexedDBLoginRepository implements ILoginRepository {
         );
       }
 
+      if (entry.privateKeyHex === undefined) {
+        throw new LoginRepositoryError(
+          'private key storage',
+          'inline private key is missing',
+        );
+      }
+
       return {
         identity: entry.identity,
         publicKey: Proto.PublicKey.create({
@@ -153,7 +160,7 @@ export class IndexedDBLoginRepository implements ILoginRepository {
         status: entry.status as LoginStatus,
         privateKey: Proto.PrivateKey.create({
           keyType: entry.keyType,
-          key: decodeHex(entry.privateKeyHex ?? ''),
+          key: decodeHex(entry.privateKeyHex),
         }),
       };
     } catch (error) {
