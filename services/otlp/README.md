@@ -52,6 +52,9 @@ All service variables are read and validated once at startup by
 | `HARBOR_OTLP_ZULIP_URL` | `https://zulip.futo.org` | Zulip server. |
 | `HARBOR_OTLP_ZULIP_STREAM` | `harbor` | Channel feedback is posted to. |
 | `HARBOR_OTLP_ZULIP_TOPIC` | `feedback` | Topic within the channel. |
+| `HARBOR_OTLP_APP_URL` | _(unset)_ | Harbor web base URL; when set, relayed feedback links the identity to its profile. |
+| `HARBOR_OTLP_GRAFANA_URL` | _(unset)_ | Grafana in front of the Victoria stack; when set, relayed feedback links the trace to Explore. |
+| `HARBOR_OTLP_GRAFANA_TRACES_DATASOURCE` | `VictoriaTraces` | Uid or name of Grafana's Jaeger-type datasource for VictoriaTraces. |
 
 Additionally various shared variables are read, see the table in
 [`services/server/README.md`](../server/README.md#common-environment-variables).

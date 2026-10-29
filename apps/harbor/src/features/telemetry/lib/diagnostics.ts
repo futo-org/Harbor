@@ -1,3 +1,4 @@
+import { APP_VARIANT } from '@/src/common/util/application';
 import { isWeb } from '@/src/common/util/platform';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
@@ -26,7 +27,7 @@ export function collectDiagnostics(): Diagnostics {
     app: Application.applicationId ?? Constants.expoConfig?.slug ?? 'harbor',
     version: appVersion(),
     build: isWeb ? null : Application.nativeBuildVersion,
-    variant: Constants.expoConfig?.extra?.variant ?? null,
+    variant: APP_VARIANT,
     platform: Platform.OS,
     osVersion: isWeb
       ? typeof navigator === 'undefined'

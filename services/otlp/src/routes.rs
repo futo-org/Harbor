@@ -180,7 +180,7 @@ fn relay_feedback(state: &AppState, request: &ExportTraceServiceRequest) {
     let Some(config) = state.config.zulip.as_ref() else {
         return;
     };
-    for content in zulip::feedback_messages(request) {
+    for content in zulip::feedback_messages(request, state.config) {
         let client = state.http.clone();
         let config = config.clone();
         tokio::spawn(async move {
