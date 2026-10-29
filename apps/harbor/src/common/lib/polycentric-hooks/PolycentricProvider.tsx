@@ -4,10 +4,12 @@ import useBlocks from '@/src/features/block/hooks/useBlocks';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { useSyncIssuesStore } from '@/src/features/sync-issues/useSyncIssuesStore';
 import {
   type PolycentricClient,
   createPolycentricClient,
   type IdentityState,
+  type ServerPushResult,
   v2,
 } from '@polycentric/react-native';
 import { HARBOR_APPLICATION } from '@/src/common/util/application';
@@ -239,6 +241,9 @@ export function PolycentricProvider({
     const handleKeyPairChanged = async () => {
       if (cancelled || !ready) return;
 
+      // Push issues belong to the previous identity's events
+      useSyncIssuesStore.getState().clearAll();
+
       try {
         await refresh(ready);
       } catch (err) {
@@ -277,6 +282,11 @@ export function PolycentricProvider({
       }
     };
 
+    const handlePushResults = (results: ServerPushResult[]) => {
+      if (cancelled) return;
+      useSyncIssuesStore.getState().record(results);
+    };
+
     (async () => {
       try {
         const result = await bootstrapClient();
@@ -291,6 +301,7 @@ export function PolycentricProvider({
         c.events.onKeyPairChanged(handleKeyPairChanged);
         c.events.onContentCreated(handleContentCreated);
         c.events.onPulled(handlePulled);
+        c.events.onPushResults(handlePushResults);
 
         // Do an initial sync now that we have registered the listener
         void c.sync().catch((syncError) => {
@@ -310,6 +321,7 @@ export function PolycentricProvider({
       ready?.client.events.offKeyPairChanged(handleKeyPairChanged);
       ready?.client.events.offContentCreated(handleContentCreated);
       ready?.client.events.offPulled(handlePulled);
+      ready?.client.events.offPushResults(handlePushResults);
     };
   }, []);
 
