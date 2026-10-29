@@ -494,6 +494,63 @@ const FfiConverterTypeEventKey = (() => {
     return new FFIConverter();
 })();
 
+/**
+ * The server's complaints about a single pushed event.
+ */
+export type EventPushIssues = {
+    key: EventKey,
+    /**
+     * If `errors` is not empty, the server did not store the event for the reasons listed.
+     */
+    errors: Array<string>,
+    /**
+     * If `warnings` is not empty, the server stored the event but dropped the content, for the
+     * reasons listed.
+     */
+    warnings: Array<string>
+}
+
+/**
+ * Generated factory for {@link EventPushIssues} record objects.
+ */
+export const EventPushIssues = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<EventPushIssues, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<EventPushIssues>,
+    });
+})();
+
+const FfiConverterTypeEventPushIssues = (() => {
+    type TypeName = EventPushIssues;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        readFromCursor(c: Cursor): TypeName {
+            return {
+                key: FfiConverterTypeEventKey.readFromCursor(c), 
+                errors: FfiConverterSequenceString.readFromCursor(c), 
+                warnings: FfiConverterSequenceString.readFromCursor(c)
+            };
+        }
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterTypeEventKey.writeIntoCursor(value.key, c);
+            FfiConverterSequenceString.writeIntoCursor(value.errors, c);
+            FfiConverterSequenceString.writeIntoCursor(value.warnings, c);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterTypeEventKey.allocationSize(value.key) +
+             FfiConverterSequenceString.allocationSize(value.errors) +
+             FfiConverterSequenceString.allocationSize(value.warnings);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
 export type GetAttributionFeedArgs = {
     /**
      * Serialized `AttributedTo` proto to match posts against. Passed as
@@ -1715,6 +1772,60 @@ const FfiConverterTypeProcessedImage = (() => {
             return FfiConverterArrayBuffer.allocationSize(value.bytes) +
              FfiConverterUInt32.allocationSize(value.width) +
              FfiConverterUInt32.allocationSize(value.height);
+            
+        }
+    };
+    return new FFIConverter();
+})();
+
+/**
+ * The outcome of pushing events to a server, including any warnings or errors that returned from
+ * the server's validation.
+ */
+export type PushResult = {
+    /**
+     * Serialized `PutEventsResponse` from the server. Its `requested_blobs`
+     * should be uploaded by the caller.
+     */
+    response: ArrayBuffer,
+    /**
+     * One entry per event with errors or warnings, copied and mapped from `response`.
+     */
+    eventIssues: Array<EventPushIssues>
+}
+
+/**
+ * Generated factory for {@link PushResult} record objects.
+ */
+export const PushResult = (() => {
+    const defaults = () => ({
+    });
+    const create = (() => {
+        return uniffiCreateRecord<PushResult, ReturnType<typeof defaults>>(defaults);
+    })();
+    return Object.freeze({
+        create,
+        new: create,
+        defaults: () => Object.freeze(defaults()) as Partial<PushResult>,
+    });
+})();
+
+const FfiConverterTypePushResult = (() => {
+    type TypeName = PushResult;
+    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+        readFromCursor(c: Cursor): TypeName {
+            return {
+                response: FfiConverterArrayBuffer.readFromCursor(c), 
+                eventIssues: FfiConverterSequenceTypeEventPushIssues.readFromCursor(c)
+            };
+        }
+        writeIntoCursor(value: TypeName, c: Cursor): void {
+            FfiConverterArrayBuffer.writeIntoCursor(value.response, c);
+            FfiConverterSequenceTypeEventPushIssues.writeIntoCursor(value.eventIssues, c);
+        }
+        allocationSize(value: TypeName): number {
+            return FfiConverterArrayBuffer.allocationSize(value.response) +
+             FfiConverterSequenceTypeEventPushIssues.allocationSize(value.eventIssues);
             
         }
     };
@@ -5430,10 +5541,10 @@ export interface PolycentricCoreLike {
  * Push events belonging to `identity` to remote `server`.
  * Pushes all relevant local events if `partial` is false.
  * Otherwise, only push events that we believe the server to be missing.
- * The server's response is returned (if there is one), so that the caller
- * can handle error and/or push blobs.
+ * Returns `None` if there was nothing to push. Otherwise returns the
+ * server's response along with its errors and warnings for each event.
  */
-    pushLocalEvents(identity: string, server: string, partial: boolean, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<ArrayBuffer | undefined>;
+    pushLocalEvents(identity: string, server: string, partial: boolean, asyncOpts_?: { signal: AbortSignal }) /*throws*/: Promise<PushResult | undefined>;
 /**
  * Push event bundles to a server.
  * Returns the response from the server with any errors and missing blobs.
@@ -6303,10 +6414,10 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
  * Push events belonging to `identity` to remote `server`.
  * Pushes all relevant local events if `partial` is false.
  * Otherwise, only push events that we believe the server to be missing.
- * The server's response is returned (if there is one), so that the caller
- * can handle error and/or push blobs.
+ * Returns `None` if there was nothing to push. Otherwise returns the
+ * server's response along with its errors and warnings for each event.
  */
-    async pushLocalEvents(identity: string, server: string, partial: boolean, asyncOpts_?: { signal: AbortSignal }): Promise<ArrayBuffer | undefined> /*throws*/ {
+    async pushLocalEvents(identity: string, server: string, partial: boolean, asyncOpts_?: { signal: AbortSignal }): Promise<PushResult | undefined> /*throws*/ {
     const __stack = uniffiIsDebug ? new Error().stack : undefined;
     try {
         return await uniffiRustCallAsync(
@@ -6330,7 +6441,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
             // already JS-owned.
             /*liftFunc:*/ (__rb) => {
                 try {
-                    return FfiConverterOptionalBytes.lift(__rb);
+                    return FfiConverterOptionalTypePushResult.lift(__rb);
                 } finally {
                     nativeModule().rustbuffer_free(__rb);
                 }
@@ -6863,14 +6974,14 @@ const uniffiTypePolycentricCoreObjectFactory: UniffiObjectFactory<PolycentricCor
 }})();
 const FfiConverterTypePolycentricCore = new FfiConverterObject(uniffiTypePolycentricCoreObjectFactory);
 
+// FfiConverter for Array<string>
+const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
+
 // FfiConverter for number | undefined
 const FfiConverterOptionalInt32 = new FfiConverterOptional(FfiConverterInt32);
 
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
-
-// FfiConverter for Array<string>
-const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
 
 // FfiConverter for FeedSort | undefined
 const FfiConverterOptionalTypeFeedSort = new FfiConverterOptional(FfiConverterTypeFeedSort);
@@ -6892,6 +7003,9 @@ const FfiConverterSequenceTypeEventKey = new FfiConverterArray(FfiConverterTypeE
 
 // FfiConverter for Array<EventKey> | undefined
 const FfiConverterOptionalSequenceTypeEventKey = new FfiConverterOptional(FfiConverterSequenceTypeEventKey);
+
+// FfiConverter for Array<EventPushIssues>
+const FfiConverterSequenceTypeEventPushIssues = new FfiConverterArray(FfiConverterTypeEventPushIssues);
 
 // FfiConverter for FetchMode | undefined
 const FfiConverterOptionalTypeFetchMode = new FfiConverterOptional(FfiConverterTypeFetchMode);
@@ -6934,6 +7048,9 @@ const FfiConverterOptionalUInt64 = new FfiConverterOptional(FfiConverterUInt64);
 
 // FfiConverter for Array<PublicKey>
 const FfiConverterSequenceTypePublicKey = new FfiConverterArray(FfiConverterTypePublicKey);
+
+// FfiConverter for PushResult | undefined
+const FfiConverterOptionalTypePushResult = new FfiConverterOptional(FfiConverterTypePushResult);
 
 // FfiConverter for Array<LabelSet>
 const FfiConverterSequenceTypeLabelSet = new FfiConverterArray(FfiConverterTypeLabelSet);
@@ -7104,7 +7221,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg() !== 45203) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events() !== 13223) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events() !== 10041) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_put_events() !== 16446) {
@@ -7187,6 +7304,7 @@ export default Object.freeze({
     FfiConverterTypeCoreError,
     FfiConverterTypeEmitMode,
     FfiConverterTypeEventKey,
+    FfiConverterTypeEventPushIssues,
     FfiConverterTypeFeedSort,
     FfiConverterTypeFetchMode,
     FfiConverterTypeGetAttributionFeedArgs,
@@ -7218,6 +7336,7 @@ export default Object.freeze({
     FfiConverterTypePostLabel,
     FfiConverterTypeProcessedImage,
     FfiConverterTypePublicKey,
+    FfiConverterTypePushResult,
     FfiConverterTypeQuery,
     FfiConverterTypeQueryObservable,
     FfiConverterTypeQueryObserver,
