@@ -3,6 +3,7 @@ import { ed25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 
 import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
+import type { EventKey } from '@polycentric/rs-core-wasm';
 import { PolycentricClient } from './polycentric-client';
 import { StorageHandle } from './data-store/storage-handle';
 import { COLLECTION, SyncStrategy } from './constants';
@@ -498,29 +499,16 @@ function makeClient(args: MakeClientArgs = {}) {
     ...(args.contents ?? []),
   ]);
 
-  const cryptoManager = {
-    sign: async (priv: Uint8Array, msg: Uint8Array) => ed25519.sign(msg, priv),
-    verify: async (pub: Uint8Array, msg: Uint8Array, sig: Uint8Array) =>
-      ed25519.verify(sig, msg, pub),
-    toHex: (b: Uint8Array) => bytesToHex(b),
-  } as any;
-
-  const storageDriver = {
-    saveActiveIdentityKey: vi.fn(async () => {}),
-    loadActiveIdentityKey: vi.fn(async () => null),
-  } as any;
-
   const client = new PolycentricClient({
     core,
-    storageDriver,
+    storageDriver: {} as any,
     filestoreDriver: args.fileStoreDriver ?? new MemoryFileStoreDriver(),
-    cryptoManager,
   });
 
   (client as any).storageHandle = new StorageHandle({
     eventRepository,
     contentRepository,
-    keyRepository: {} as any,
+    loginRepository: {} as any,
   });
   client.servers = args.servers ?? ['http://server-1'];
   client.activeIdentityKey = args.identity ? args.identity.key : null;
@@ -607,10 +595,10 @@ describe('PolycentricClient sync', () => {
 
       await (client as any).pull(true);
 
-      const heads = pullQueryArgs(core).heads;
+      const heads: EventKey[] = pullQueryArgs(core).heads;
       // The FEED stream head (seq 3) plus the seeded IDENTITY stream head (seq 1).
       expect(heads).toHaveLength(2);
-      const byStream = new Map(
+      const byStream = new Map<string, EventKey>(
         heads.map((h) => [
           `${h.collection}|${bytesToHex(new Uint8Array(h.signedBy.key))}`,
           h,
@@ -618,9 +606,9 @@ describe('PolycentricClient sync', () => {
       );
       const sA = bytesToHex(signerA.publicKey.key);
       const feedHead = byStream.get(`${COLLECTION.FEED}|${sA}`);
-      expect(feedHead.identity).toBe(identityA.key);
-      expect(feedHead.sequence).toBe(3n);
-      expect(byStream.get(`${COLLECTION.IDENTITY}|${sA}`).sequence).toBe(1n);
+      expect(feedHead?.identity).toBe(identityA.key);
+      expect(feedHead?.sequence).toBe(3n);
+      expect(byStream.get(`${COLLECTION.IDENTITY}|${sA}`)?.sequence).toBe(1n);
     });
 
     it('full push calls pushLocalEvents once with partial=false and pulls nothing', async () => {
@@ -756,7 +744,7 @@ describe('PolycentricClient sync', () => {
         'http://server-1',
         true,
       );
-      const heads = pullQueryArgs(core).heads;
+      const heads: EventKey[] = pullQueryArgs(core).heads;
       // The FEED stream head (seq 5) plus the seeded IDENTITY stream head (seq 1).
       expect(heads).toHaveLength(2);
       const sA = bytesToHex(signerA.publicKey.key);
@@ -765,7 +753,7 @@ describe('PolycentricClient sync', () => {
           h.collection === COLLECTION.FEED &&
           bytesToHex(new Uint8Array(h.signedBy.key)) === sA,
       );
-      expect(feedHead.sequence).toBe(5n);
+      expect(feedHead?.sequence).toBe(5n);
     });
 
     it('a push failure is swallowed but the pull result is still returned', async () => {
@@ -914,12 +902,12 @@ describe('PolycentricClient sync', () => {
 
       await (client as any).pull(true);
 
-      const heads = pullQueryArgs(core).heads;
+      const heads: EventKey[] = pullQueryArgs(core).heads;
       // 4 non-empty streams -> 4 heads: the 3 content streams plus the seeded
       // IDENTITY stream (GRAPH/signerB is empty and contributes none).
       expect(heads).toHaveLength(4);
 
-      const byStream = new Map(
+      const byStream = new Map<string, bigint>(
         heads.map((h) => [
           `${h.collection}|${bytesToHex(new Uint8Array(h.signedBy.key))}`,
           h.sequence,
@@ -1743,7 +1731,10 @@ function makeLiveCore(
 const keyOf = (event: Proto.SignedEvent): Proto.EventKey =>
   Proto.Event.fromBinary(event.eventBytes).key!;
 
-const queriesOf = (core: any, type: unknown): any[] =>
+const queriesOf = (
+  core: any,
+  type: typeof Query.ListEvents | typeof Query.SubscribeHeads,
+): any[] =>
   core.fetchQuery.mock.calls.filter(([, query]: any) => query instanceof type);
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
