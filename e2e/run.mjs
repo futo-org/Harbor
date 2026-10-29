@@ -191,6 +191,9 @@ function iosArgs(device) {
 
   return [
     '--platform=ios',
+    // The default devicelab driver only matches whole labels, and RN merges a
+    // pressable row's texts into one ("Skill" becomes "<icon>, Skill, ...").
+    '--driver=wda',
     `--device=${device.id}`,
     ...(teamId ? [`--team-id=${teamId}`] : []),
     ...(app ? [`--app-file=${app}`] : []),
