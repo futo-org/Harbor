@@ -1,4 +1,9 @@
-//! Shared structured-logging and metrics setup for the Rust services.
+//! Shared structured-logging, tracing and metrics setup for the Rust
+//! services.
+
+#[cfg(feature = "testing")]
+pub mod testing;
+pub mod trace;
 
 use std::env;
 use std::io::IsTerminal;
@@ -8,11 +13,14 @@ use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::metrics::SdkMeterProvider;
 use prometheus::Encoder;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
-/// Initialize logging: `RUST_LOG` filters (default `info`), JSON to stdout
-/// in deployments, human-readable text on a terminal.
+/// Initialize logging and tracing: `RUST_LOG` filters (default `info`),
+/// JSON to stdout in deployments, human-readable text on a terminal.
 /// `HARBOR_LOG_FORMAT=json|text` overrides the format. `log` macros are
-/// bridged into `tracing`.
+/// bridged into `tracing`. Spans are exported when `HARBOR_TRACES_URL` is
+/// set, see [`trace`].
 pub fn init() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let json = match env::var("HARBOR_LOG_FORMAT")
@@ -24,11 +32,17 @@ pub fn init() {
         _ => !std::io::stdout().is_terminal(),
     };
 
-    let builder = tracing_subscriber::fmt().with_env_filter(filter);
+    let traces = trace::Config::from_env().and_then(|config| {
+        trace::layer(config)
+            .inspect_err(|e| eprintln!("failed to build OTLP span exporter: {e}"))
+            .ok()
+    });
+    let registry = tracing_subscriber::registry().with(filter).with(traces);
+    let fmt = tracing_subscriber::fmt::layer();
     if json {
-        builder.json().flatten_event(true).init();
+        registry.with(fmt.json().flatten_event(true)).init();
     } else {
-        builder.init();
+        registry.with(fmt).init();
     }
 }
 

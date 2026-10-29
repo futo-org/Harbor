@@ -16,6 +16,7 @@ use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
 use tonic::{Code, Status};
+use tracing::Instrument;
 
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::context::PublicContext;
@@ -356,18 +357,25 @@ async fn process_event(
 
             let producer = ctx.kafka_producer.clone();
             let topic = common_kafka::prefixed("events");
+            let headers = common_kafka::with_trace_context(
+                OwnedHeaders::new().insert(Header {
+                    key: "SOURCE_SERVER",
+                    value: Some(crate::config::get().server_name.as_str()),
+                }),
+            );
+            let span = tracing::info_span!(
+                "kafka.publish",
+                otel.kind = "producer",
+                messaging.system = "kafka",
+                messaging.destination.name = %topic,
+            );
             tokio::spawn(async move {
                 if let Err((e, _)) = producer
                     .send(
                         FutureRecord::to(&topic)
                             .key(&event_key_bytes)
                             .payload(&event_bundle_bytes)
-                            .headers(OwnedHeaders::new().insert(Header {
-                                key: "SOURCE_SERVER",
-                                value: Some(
-                                    crate::config::get().server_name.as_str(),
-                                ),
-                            })),
+                            .headers(headers),
                         // Setting this to a non-zero value allows the send
                         // operation to be retried.
                         //
@@ -380,7 +388,7 @@ async fn process_event(
                 {
                     tracing::warn!(error = %e, "failed to publish message to kafka");
                 }
-            });
+            }.instrument(span));
             true
         }
         Ok(false) => {

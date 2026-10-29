@@ -13,10 +13,12 @@ name = "integration"
 path = "src/tests.rs"
 
 [dev-dependencies]
+axum = { version = "0.8.8", default-features = false, features = ["http1", "tokio"] }
 base64.workspace = true
 ed25519-dalek.workspace = true
 getrandom.workspace = true
 hex.workspace = true
+opentelemetry-proto = { version = "0.33", default-features = false, features = ["gen-tonic-messages", "trace"] }
 polycentric-common = { workspace = true, features = ["transport"] }
 prost = { version = "0.14", default-features = false }
 rand = { version = "0.10", default-features = false, features = ["std", "std_rng", "thread_rng"] }

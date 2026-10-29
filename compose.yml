@@ -8,7 +8,7 @@ services:
     ports:
       - 5432:5432
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d postgres || exit 1']
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres || exit 1" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -43,6 +43,8 @@ services:
       - HARBOR_SCRAPER_URL=${HARBOR_SCRAPER_URL:-http://scraper:8855}
       # Accepted JWT audiences (emulator needs 10.0.2.2). Defaults to SERVER_NAME.
       - HARBOR_ALLOW_HOSTS=${HARBOR_ALLOW_HOSTS:-http://localhost:3000}
+      # OTLP/HTTP collector for traces; unset disables export.
+      - HARBOR_TRACES_URL=${HARBOR_TRACES_URL:-}
     # On both the shared app network and the isolated scraper link, so it can
     # talk to postgres/kafka/etc. AND to the scraper.
     networks:
@@ -71,7 +73,7 @@ services:
     build:
       context: .
       dockerfile: services/server/Dockerfile
-    command: ['/app/server', 'workers']
+    command: [ "/app/server", "workers" ]
     environment: *server-env
     networks:
       - default
@@ -186,7 +188,7 @@ services:
     profiles:
       - otlp
     image: victoriametrics/victoria-logs:v1.53.0@sha256:251121fa882af99b95ba0c230a4a2f412ea602d2698c64a96c58dc9842bb755d
-    command: ['-storageDataPath=/data']
+    command: [ "-storageDataPath=/data" ]
     volumes:
       - victorialogs-data:/data
     ports:
@@ -196,7 +198,7 @@ services:
     profiles:
       - otlp
     image: victoriametrics/victoria-traces:v0.12.1@sha256:609abddf298c9642496045296f30a3968b5a4b79b678373e2e7ef29c844f5578
-    command: ['-storageDataPath=/data']
+    command: [ "-storageDataPath=/data" ]
     volumes:
       - victoriatraces-data:/data
     ports:
@@ -214,7 +216,7 @@ services:
       # re-enables them so that default credentials continue to work for all dependent services.
       - RUSTFS_ALLOW_INSECURE_DEFAULT_CREDENTIALS=true
     healthcheck:
-      test: ['CMD', 'curl', '-sf', 'http://localhost:9000/health']
+      test: [ "CMD", "curl", "-sf", "http://localhost:9000/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -257,11 +259,11 @@ services:
 
   valkey:
     image: valkey/valkey:9@sha256:418652cfb58ef879d4978c33553735d7147016032d5aefaa14c828e611eb9dfd
-    command: ['valkey-server', '--save', '', '--appendonly', 'no']
+    command: [ "valkey-server", "--save", "", "--appendonly", "no" ]
     ports:
       - 6379:6379
     healthcheck:
-      test: ['CMD', 'valkey-cli', 'ping']
+      test: [ "CMD", "valkey-cli", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 5

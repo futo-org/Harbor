@@ -148,6 +148,14 @@ if [ "$CI_MODE" = true ]; then
   echo "==> Joining job container to the stack network ($NETWORK)…"
   docker network connect "$NETWORK" "$(self_container)"
 
+  # The server exports traces to the test crate's OTLP receiver (traces.rs),
+  # reached at this job container's address on the stack network.
+  JOB_IP=$(docker inspect -f '{{(index .NetworkSettings.Networks "'${NETWORK}'").IPAddress}}' "$(self_container)" 2>/dev/null || true)
+  if [ -n "$JOB_IP" ]; then
+    export HARBOR_TRACES_URL="http://${JOB_IP}:4318"
+    echo "    traces receiver: ${HARBOR_TRACES_URL}"
+  fi
+
   if [ -n "${HARBOR_SERVER_IMAGE:-}" ]; then
     echo "==> Pulling server and server-worker images…"
     docker pull -q "$HARBOR_SERVER_IMAGE"
@@ -225,6 +233,8 @@ else
   export HARBOR_VALKEY_URL="${HARBOR_VALKEY_URL:-redis://localhost:6379}"
   # The test crate reads this to know where to reach the server.
   export HARBOR_TEST_SERVER="${HARBOR_TEST_SERVER:-http://localhost:3000}"
+  # Traces go to the test crate's OTLP receiver (traces.rs).
+  export HARBOR_TRACES_URL="${HARBOR_TRACES_URL:-http://localhost:4318}"
 
   cargo run -p server &
   SERVER_PID=$!

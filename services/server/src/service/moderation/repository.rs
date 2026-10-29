@@ -41,6 +41,7 @@ pub struct Query;
 impl Query {
     /// Oldest first. `after` is the previous page's last `latest_event_id`;
     /// `status` keeps one `ReportStatus`, open being no resolution row.
+    #[tracing::instrument(skip_all)]
     pub async fn list_reports<C: ConnectionTrait>(
         db: &C,
         limit: u64,
@@ -196,6 +197,7 @@ fn list_reports_query(
 pub struct Mutation;
 
 impl Mutation {
+    #[tracing::instrument(skip_all)]
     pub async fn resolve_report<C: ConnectionTrait>(
         db: &C,
         content_id: i64,
@@ -215,6 +217,7 @@ impl Mutation {
     }
 
     /// After the event at `key` was deleted.
+    #[tracing::instrument(skip_all)]
     pub async fn resolve_reports_on_target<C: ConnectionTrait>(
         db: &C,
         key: &TargetEventKey,
@@ -240,6 +243,7 @@ impl Mutation {
     }
 
     /// After `author` was banned.
+    #[tracing::instrument(skip_all)]
     pub async fn resolve_reports_by_author<C: ConnectionTrait>(
         db: &C,
         author: &str,

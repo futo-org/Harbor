@@ -16,6 +16,7 @@ pub struct Query;
 
 impl Query {
     /// Look up a blob row by its body digest. `None` if not tracked.
+    #[tracing::instrument(skip_all)]
     pub async fn find_blob_by_digest<C: ConnectionTrait>(
         db: &C,
         digest_type: i16,
@@ -30,6 +31,7 @@ impl Query {
 
     /// Search the database for blobs matching the provided digests
     /// and return a set of the digests that were found.
+    #[tracing::instrument(skip_all)]
     pub async fn find_digests_in_db<C: ConnectionTrait>(
         db: &C,
         digests: &Vec<&ContentDigest>,
@@ -67,6 +69,7 @@ impl Query {
 pub struct Mutation;
 
 impl Mutation {
+    #[tracing::instrument(skip_all)]
     async fn add_content<C: ConnectionTrait>(
         db: &C,
         serialized_bytes: &[u8],
@@ -106,6 +109,7 @@ impl Mutation {
         query
     }
 
+    #[tracing::instrument(skip_all)]
     pub async fn save_blob(
         db: &mut DbTx<'_>,
         blob: &Blob,

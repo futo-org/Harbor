@@ -1,4 +1,5 @@
 ---
+
 title: Running Your Own Server
 sidebar_label: Host a Server
 sidebar_position: 1
@@ -77,32 +78,32 @@ loads a `.env` file from the working directory if one is present.
 
 ### Server
 
-| Variable                     | Default                    | Description                                                                              |
-| ---------------------------- | -------------------------- | ---------------------------------------------------------------------------------------- |
-| `HARBOR_SERVER_NAME`         | `http://localhost:3000`    | Canonical URL of this server. Stamped as the source on the events it produces.           |
-| `HARBOR_ALLOW_HOSTS`         | `HARBOR_SERVER_NAME`       | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens. |
-| `HARBOR_CDN_URL`             | `http://localhost:3000`    | Public base URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`.   |
-| `HARBOR_SCRAPER_URL`         | `http://localhost:8855`    | Base URL of the internal scraper service (link-preview metadata and image proxy).        |
-| `HARBOR_MODERATION_IDENTITY` | _(unset)_                  | Hex identity of the trusted moderation service — see [Content moderation](#content-moderation--removal). |
+| Variable                     | Default                 | Description                                                                                              |
+| ---------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| `HARBOR_SERVER_NAME`         | `http://localhost:3000` | Canonical URL of this server. Stamped as the source on the events it produces.                           |
+| `HARBOR_ALLOW_HOSTS`         | `HARBOR_SERVER_NAME`    | Hosts clients may address this server as, comma-delimited — the audiences accepted on auth tokens.       |
+| `HARBOR_CDN_URL`             | `http://localhost:3000` | Public base URL clients use to fetch blob bodies. Reported by `ServerService.GetInfo`.                   |
+| `HARBOR_SCRAPER_URL`         | `http://localhost:8855` | Base URL of the internal scraper service (link-preview metadata and image proxy).                        |
+| `HARBOR_MODERATION_IDENTITY` | _(unset)_               | Hex identity of the trusted moderation service — see [Content moderation](#content-moderation--removal). |
 
 ### Database
 
-| Variable       | Default                                          | Description                  |
-| -------------- | ------------------------------------------------ | ---------------------------- |
-| `HARBOR_DATABASE_URL` | `postgres://postgres:testing@localhost:5432`     | PostgreSQL connection string |
+| Variable              | Default                                      | Description                  |
+| --------------------- | -------------------------------------------- | ---------------------------- |
+| `HARBOR_DATABASE_URL` | `postgres://postgres:testing@localhost:5432` | PostgreSQL connection string |
 
 ### Object storage (blobs)
 
 Blob bodies are written to an S3-compatible bucket.
 
-| Variable                                 | Default     | Description                                                              |
-| ---------------------------------------- | ----------- | ------------------------------------------------------------------------ |
-| `HARBOR_CONTENT_BLOB_OS_BUCKET`          | _(required)_ | Bucket name.                                                            |
-| `HARBOR_CONTENT_BLOB_OS_REGION`          | `us-east-1` | Region.                                                                  |
-| `HARBOR_CONTENT_BLOB_OS_ENDPOINT`        | _(unset)_   | Custom endpoint URL. Required for non-AWS stores such as RustFS.         |
-| `HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE`| `false`     | Set to `true` for path-style addressing (required by RustFS and similar).|
-| `HARBOR_CONTENT_BLOB_OS_ACCESS_KEY`      | _(unset)_   | Access key.                                                              |
-| `HARBOR_CONTENT_BLOB_OS_SECRET_KEY`      | _(unset)_   | Secret key.                                                              |
+| Variable                                  | Default      | Description                                                               |
+| ----------------------------------------- | ------------ | ------------------------------------------------------------------------- |
+| `HARBOR_CONTENT_BLOB_OS_BUCKET`           | _(required)_ | Bucket name.                                                              |
+| `HARBOR_CONTENT_BLOB_OS_REGION`           | `us-east-1`  | Region.                                                                   |
+| `HARBOR_CONTENT_BLOB_OS_ENDPOINT`         | _(unset)_    | Custom endpoint URL. Required for non-AWS stores such as RustFS.          |
+| `HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE` | `false`      | Set to `true` for path-style addressing (required by RustFS and similar). |
+| `HARBOR_CONTENT_BLOB_OS_ACCESS_KEY`       | _(unset)_    | Access key.                                                               |
+| `HARBOR_CONTENT_BLOB_OS_SECRET_KEY`       | _(unset)_    | Secret key.                                                               |
 
 When the access and secret keys are unset, the AWS SDK's default credential chain is
 used (shared config files, environment, container/EC2 instance metadata). This lets
@@ -112,19 +113,19 @@ you run against AWS S3 without putting credentials in the environment directly.
 
 The server produces events to Kafka, and its background workers consume them.
 
-| Variable                                   | Default          | Description                                     |
-| ------------------------------------------ | ---------------- | ------------------------------------------------ |
-| `HARBOR_KAFKA_BROKERS`                | `localhost:9092` | Bootstrap servers.                               |
-| `HARBOR_KAFKA_CLUSTER_ID`             | _(unset)_        | Prefix for topics and group ids (`{id}.{name}`). |
-| `HARBOR_KAFKA_SECURITY_PROTOCOL`      | `PLAINTEXT`      | Kafka `security.protocol`.                       |
-| `HARBOR_KAFKA_SASL_MECHANISM`         | _(unset)_        | SASL mechanism, e.g. `SCRAM-SHA-256`.            |
-| `HARBOR_KAFKA_SASL_USERNAME`          | _(unset)_        | SASL username.                                   |
-| `HARBOR_KAFKA_SASL_PASSWORD`          | _(unset)_        | SASL password.                                   |
-| `HARBOR_KAFKA_SSL_CA`                 | _(unset)_        | CA certificate, inline PEM.                      |
-| `HARBOR_KAFKA_SSL_CERTIFICATE`        | _(unset)_        | Client certificate, inline PEM.                  |
-| `HARBOR_KAFKA_SSL_KEY`                | _(unset)_        | Client key, inline PEM.                          |
-| `HARBOR_KAFKA_BROKER_ADDRESS_FAMILY`  | `any`            | Kafka `broker.address.family`.                   |
-| `HARBOR_KAFKA_AUTO_OFFSET_RESET`      | `latest`         | Consumer `auto.offset.reset` (workers only).     |
+| Variable                             | Default          | Description                                      |
+| ------------------------------------ | ---------------- | ------------------------------------------------ |
+| `HARBOR_KAFKA_BROKERS`               | `localhost:9092` | Bootstrap servers.                               |
+| `HARBOR_KAFKA_CLUSTER_ID`            | _(unset)_        | Prefix for topics and group ids (`{id}.{name}`). |
+| `HARBOR_KAFKA_SECURITY_PROTOCOL`     | `PLAINTEXT`      | Kafka `security.protocol`.                       |
+| `HARBOR_KAFKA_SASL_MECHANISM`        | _(unset)_        | SASL mechanism, e.g. `SCRAM-SHA-256`.            |
+| `HARBOR_KAFKA_SASL_USERNAME`         | _(unset)_        | SASL username.                                   |
+| `HARBOR_KAFKA_SASL_PASSWORD`         | _(unset)_        | SASL password.                                   |
+| `HARBOR_KAFKA_SSL_CA`                | _(unset)_        | CA certificate, inline PEM.                      |
+| `HARBOR_KAFKA_SSL_CERTIFICATE`       | _(unset)_        | Client certificate, inline PEM.                  |
+| `HARBOR_KAFKA_SSL_KEY`               | _(unset)_        | Client key, inline PEM.                          |
+| `HARBOR_KAFKA_BROKER_ADDRESS_FAMILY` | `any`            | Kafka `broker.address.family`.                   |
+| `HARBOR_KAFKA_AUTO_OFFSET_RESET`     | `latest`         | Consumer `auto.offset.reset` (workers only).     |
 
 ### Valkey (live sync)
 
@@ -134,17 +135,19 @@ away. Needs Valkey (or Redis) 7 or newer. It stores nothing, so it needs no
 persistence. See [Live Sync](../developer/live-sync.md) for the design and
 scaling notes.
 
-| Variable            | Default   | Description                                                                                       |
-| ------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| Variable            | Default   | Description                                                                                                        |
+| ------------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
 | `HARBOR_VALKEY_URL` | _(unset)_ | `redis://host:6379`, `rediss://` for TLS, or `redis-cluster://host:6379` for a cluster. Unset turns live sync off. |
 
 ### Logging and metrics
 
-| Variable              | Default   | Description                                                          |
-| --------------------- | --------- | --------------------------------------------------------------------- |
-| `RUST_LOG`            | `info`    | Log filter, e.g. `info` or `debug`.                                  |
-| `HARBOR_LOG_FORMAT`   | _(auto)_  | `json` or `text`; defaults to text on a terminal, JSON otherwise.    |
-| `HARBOR_METRICS_PORT` | `9464`    | Port serving Prometheus `GET /metrics`.                              |
+| Variable              | Default         | Description                                                              |
+| --------------------- | --------------- | ------------------------------------------------------------------------ |
+| `RUST_LOG`            | `info`          | Log filter, e.g. `info` or `debug`.                                      |
+| `HARBOR_LOG_FORMAT`   | _(auto)_        | `json` or `text`; defaults to text on a terminal, JSON otherwise.        |
+| `HARBOR_METRICS_PORT` | `9464`          | Port serving Prometheus `GET /metrics`.                                  |
+| `HARBOR_TRACES_URL`   | _(unset)_       | OTLP/HTTP collector base URL to export traces to; unset disables export. |
+| `HARBOR_SERVICE_NAME` | _(binary name)_ | Service name on exported spans.                                          |
 
 The companion services (moderation, push notifications, scraper) are configured the
 same way; their variables are listed in each service's README under
@@ -175,11 +178,11 @@ docker compose exec -T server /app/migration status
 
 Most traffic is gRPC, but a few plain-HTTP routes are served directly:
 
-| Route                | Purpose                                                              |
-| -------------------- | -------------------------------------------------------------------- |
-| `GET /status`        | Health check. Returns `OK.`                                          |
+| Route                | Purpose                                                                         |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `GET /status`        | Health check. Returns `OK.`                                                     |
 | `GET /blob/{digest}` | Download a blob body by content digest (`{type}_{hex}`, e.g. `1_<sha256 hex>`). |
-| `GET /docs`          | Live API browser generated from gRPC reflection.                     |
+| `GET /docs`          | Live API browser generated from gRPC reflection.                                |
 
 See [Protocol → gRPC](../protocol/grpc.mdx) for the gRPC services.
 
@@ -191,7 +194,7 @@ servers.
 
 The server stores blob bodies (images and other media) in the object store, and
 never truly deletes them. A [`Delete`](../protocol/data-model.md#delete) event
-acts as a *tombstone*: clients stop showing the content, but the blob bytes
+acts as a _tombstone_: clients stop showing the content, but the blob bytes
 remain in the object store.
 
 Removing blob bodies can be done by a separate moderation service. FUTO runs
@@ -204,6 +207,7 @@ deletes objects, the moderation service's `HARBOR_CONTENT_BLOB_OS_*` credentials
 delete permission on the bucket, while the server's own credentials do not.
 
 ### Moderation labels
+
 Beyond blob deletion and `Report` events, the moderation service can also
 **label** content by publishing a `Labels` event (collection 7, defined in
 [protocol → Labels](../protocol/data-model.md#labels)). A label is a string
@@ -211,6 +215,7 @@ identifying the kind of violation detected — the vocabulary used by FUTO's
 service is `hate`, `self-harm`, `sexually-suggestive`, `sexually-explicit`, and `violence`.
 
 #### Trusting a moderation service
+
 Set the **single** moderation service the server trusts via an environment
 variable `HARBOR_MODERATION_IDENTITY`. It should be equal to the hex identity
 string of the trusted moderation service. This identity is always consider a
@@ -282,12 +287,12 @@ ON CONFLICT (identity) DO NOTHING;
 Report categories must correspond to a label value to produce a label event.
 This correspondence is as follows:
 
-| Report category | Label |
-|---|---|
-| `REPORT_CATEGORY_HATE` | `hate` |
-| `REPORT_CATEGORY_SELF_HARM` | `self-harm` |
+| Report category                     | Label               |
+| ----------------------------------- | ------------------- |
+| `REPORT_CATEGORY_HATE`              | `hate`              |
+| `REPORT_CATEGORY_SELF_HARM`         | `self-harm`         |
 | `REPORT_CATEGORY_SEXUALLY_EXPLICIT` | `sexually-explicit` |
-| `REPORT_CATEGORY_VIOLENCE` | `violence` |
+| `REPORT_CATEGORY_VIOLENCE`          | `violence`          |
 
 All other reports will not produce a label. The `sexually-suggestive` label
 is also deliberately not reportable, as the confusion between suggestive/explicit
@@ -295,6 +300,7 @@ would be a burden on moderator time. Only automated scoring makes the distinctio
 between explicit/suggestive.
 
 #### Changing the trusted service
+
 Any identity can sign label events for any content, even if the server only
 trusts one identity. The server stores all such label events. Thus, setting a
 new `HARBOR_MODERATION_IDENTITY` will instantly update the moderation

@@ -30,6 +30,7 @@ mod heads;
 mod notifications;
 mod pairing;
 mod search;
+mod traces;
 mod verifications;
 
 /// gRPC server address. Override with `HARBOR_TEST_SERVER` env var.

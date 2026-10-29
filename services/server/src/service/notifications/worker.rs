@@ -18,6 +18,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message as _;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::{ActiveModelTrait, NotSet, Set};
+use tracing::Instrument;
 
 use crate::data::row_into_bundle;
 use crate::service::context::{ServiceContext, WorkerContext};
@@ -161,13 +162,21 @@ impl NotificationWorker {
         let record = FutureRecord::to(&topic)
             .key(to_identity.as_bytes())
             .payload(&payload)
-            .headers(OwnedHeaders::new().insert(Header {
-                key: "SOURCE_SERVER",
-                value: Some(crate::config::get().server_name.as_str()),
-            }));
+            .headers(common_kafka::with_trace_context(
+                OwnedHeaders::new().insert(Header {
+                    key: "SOURCE_SERVER",
+                    value: Some(crate::config::get().server_name.as_str()),
+                }),
+            ));
 
         ctx.kafka_producer
             .send(record, Duration::from_secs(0))
+            .instrument(tracing::info_span!(
+                "kafka.publish",
+                otel.kind = "producer",
+                messaging.system = "kafka",
+                messaging.destination.name = %topic,
+            ))
             .await
             .map(|_| ())
             .map_err(|(e, _)| e.into())

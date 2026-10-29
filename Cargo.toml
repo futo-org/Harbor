@@ -56,10 +56,12 @@ hex = { version = "0.4", default-features = false }
 # Misc shared
 thiserror = { version = "2.0", default-features = false }
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
-tracing = { version = "0.1", default-features = false, features = ["std"] }
+tracing = { version = "0.1", default-features = false, features = ["std", "attributes"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "json"] }
-opentelemetry = { version = "0.33", default-features = false, features = ["metrics"] }
-opentelemetry_sdk = { version = "0.33", default-features = false, features = ["metrics"] }
+opentelemetry = { version = "0.33", default-features = false, features = ["metrics", "trace"] }
+opentelemetry_sdk = { version = "0.33", default-features = false, features = ["metrics", "trace"] }
+opentelemetry-otlp = { version = "0.33", default-features = false, features = ["http-proto", "reqwest-blocking-client", "trace"] }
+tracing-opentelemetry = { version = "0.34", default-features = false }
 opentelemetry-prometheus = { version = "0.33", default-features = false }
 prometheus = { version = "0.14", default-features = false }
 time = { version = "0.3.55", default-features = false }

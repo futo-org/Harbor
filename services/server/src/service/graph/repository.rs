@@ -87,6 +87,7 @@ impl Query {
     ///
     /// TODO: We can either cache these OR keep a follower table that we update on ingest.
     /// This current query is inefficient.
+    #[tracing::instrument(skip_all)]
     pub async fn list_followed_identities<A>(
         ctx: &RequestContext<A>,
         caller: &str,
@@ -97,6 +98,7 @@ impl Query {
     /// Identities `caller` has blocked, read from the `block` cache table.
     /// No tombstone filtering is required here: the cache only holds rows
     /// for blocks that have not been deleted.
+    #[tracing::instrument(skip_all)]
     async fn list_blocked_identities<C: ConnectionTrait>(
         db: &C,
         caller: &str,
@@ -114,6 +116,7 @@ impl Query {
 
     /// [`Query::list_blocked_identities`] as a deduplicated set, for
     /// filtering the identities a response may carry.
+    #[tracing::instrument(skip_all)]
     async fn blocked_set<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -127,6 +130,7 @@ impl Query {
     /// [`Query::blocked_set`] for the caller of a request. Empty when the
     /// request arrived unauthenticated, as there is then no caller whose
     /// blocks could apply.
+    #[tracing::instrument(skip_all)]
     pub async fn blocked_set_for_caller<A>(
         ctx: &RequestContext<A>,
     ) -> Result<HashSet<String>, Status>
@@ -145,6 +149,7 @@ impl Query {
     /// on the blocked cache is `(blocker, blocked)`. Eventually, we should
     /// add index such that we can efficiently query only the blocked identity
     /// and get all blockers.
+    #[tracing::instrument(skip_all)]
     pub async fn identities_blocking<'a, I, C: ConnectionTrait>(
         db: &C,
         potential_blockers: I,
@@ -175,6 +180,7 @@ impl Query {
             .map_err(map_db_err)
     }
 
+    #[tracing::instrument(skip_all)]
     pub async fn blocks_identity<C: ConnectionTrait>(
         db: &C,
         blocker: &str,
@@ -194,6 +200,7 @@ impl Query {
     ///
     /// TODO: same inefficiency as `list_followed_identities` — a
     /// maintained counter would avoid scanning the graph rows.
+    #[tracing::instrument(skip_all)]
     pub async fn count_following<A>(
         ctx: &RequestContext<A>,
         identity: &str,
@@ -203,6 +210,7 @@ impl Query {
 
     /// Count of distinct identities following `identity`
     /// (tombstone-aware).
+    #[tracing::instrument(skip_all)]
     pub async fn count_followers<A>(
         ctx: &RequestContext<A>,
         identity: &str,
@@ -236,6 +244,7 @@ impl Query {
 
     /// Follow events authored by `identity` — who they follow. Newest
     /// first, keyset-paginated, tombstones NOT yet filtered.
+    #[tracing::instrument(skip_all)]
     pub async fn list_following_events<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -249,6 +258,7 @@ impl Query {
 
     /// Follow events targeting `identity` — who follows them. Newest
     /// first, keyset-paginated, tombstones NOT yet filtered.
+    #[tracing::instrument(skip_all)]
     pub async fn list_followers_events<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -262,6 +272,7 @@ impl Query {
 
     /// `identity` is `None` for an anonymous caller, who follows nobody and
     /// so only gets the default suggestions.
+    #[tracing::instrument(skip_all)]
     pub async fn suggest_follow<C: ConnectionTrait>(
         db: &C,
         identity: Option<&str>,
@@ -368,6 +379,7 @@ impl Query {
 
     /// The latest identity event of each row in `suggestions` (columns
     /// (followee, followers)), most followers first, keyset-paginated.
+    #[tracing::instrument(skip_all)]
     async fn page_suggestions<C: ConnectionTrait>(
         db: &C,
         suggestions: SelectStatement,
@@ -498,6 +510,7 @@ impl Query {
     }
 
     /// `follows` is (followee, follower).
+    #[tracing::instrument(skip_all)]
     pub async fn follow_events<C: ConnectionTrait>(
         db: &C,
         // NOTE: we should use an iterator here, but that triggers a "known
@@ -537,6 +550,7 @@ impl Query {
 
 /// Obtains the targets of graph events authored by `caller`. The `extract`
 /// function filters for specific types of graph events.
+#[tracing::instrument(skip_all)]
 async fn list_graph_targets<A>(
     ctx: &RequestContext<A>,
     caller: &str,
@@ -599,6 +613,7 @@ fn follow_join() -> RelationDef {
 
 /// Apply the (created_at, id) keyset cursor and fetch, newest first.
 /// Mirrors the feeds repository's pagination.
+#[tracing::instrument(skip_all)]
 async fn page_follow_events<C: ConnectionTrait>(
     db: &C,
     query: SelectTwo<event::Entity, content::Entity>,
