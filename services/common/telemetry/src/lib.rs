@@ -12,15 +12,18 @@ use opentelemetry::KeyValue;
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::metrics::SdkMeterProvider;
 use prometheus::Encoder;
-use tracing_subscriber::EnvFilter;
+use tracing::Subscriber;
+use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, Layer, Registry};
 
-/// Initialize logging and tracing: `RUST_LOG` filters (default `info`),
-/// JSON to stdout in deployments, human-readable text on a terminal.
-/// `HARBOR_LOG_FORMAT=json|text` overrides the format. `log` macros are
-/// bridged into `tracing`. Spans are exported when `HARBOR_TRACES_URL` is
-/// set, see [`trace`].
+/// Initialize logging and tracing: `RUST_LOG` filters the logs (default
+/// `info`), JSON to stdout in deployments, human-readable text on a
+/// terminal. `HARBOR_LOG_FORMAT=json|text` overrides the format. `log`
+/// macros are bridged into `tracing`. Spans at `info` and above are
+/// exported when `HARBOR_TRACES_URL` is set, whatever `RUST_LOG` says, see
+/// [`trace`].
 pub fn init() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let json = match env::var("HARBOR_LOG_FORMAT")
@@ -37,12 +40,22 @@ pub fn init() {
             .inspect_err(|e| eprintln!("failed to build OTLP span exporter: {e}"))
             .ok()
     });
-    let registry = tracing_subscriber::registry().with(filter).with(traces);
+    subscriber(filter, json, traces).init();
+}
+
+/// Logs filtered by `filter`; spans at `info` and above go to `traces`.
+fn subscriber(
+    filter: EnvFilter,
+    json: bool,
+    traces: Option<trace::Layer<Registry>>,
+) -> Box<dyn Subscriber + Send + Sync> {
+    let registry = tracing_subscriber::registry()
+        .with(traces.map(|layer| layer.with_filter(LevelFilter::INFO)));
     let fmt = tracing_subscriber::fmt::layer();
     if json {
-        registry.with(fmt.json().flatten_event(true)).init();
+        Box::new(registry.with(fmt.json().flatten_event(true).with_filter(filter)))
     } else {
-        registry.with(fmt).init();
+        Box::new(registry.with(fmt.with_filter(filter)))
     }
 }
 

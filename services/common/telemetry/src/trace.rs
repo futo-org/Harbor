@@ -17,6 +17,8 @@ use tracing_subscriber::registry::LookupSpan;
 
 static PROVIDER: OnceLock<SdkTracerProvider> = OnceLock::new();
 
+pub type Layer<S> = OpenTelemetryLayer<S, Tracer>;
+
 pub struct Config {
     /// Base URL of the OTLP/HTTP collector; spans go to `/v1/traces` under it.
     pub url: String,
@@ -41,7 +43,7 @@ impl Config {
 
 /// A `tracing` layer exporting spans in batches, with the W3C propagator
 /// installed. The exporter runs until [`shutdown`].
-pub fn layer<S>(config: Config) -> Result<OpenTelemetryLayer<S, Tracer>, ExporterBuildError>
+pub fn layer<S>(config: Config) -> Result<Layer<S>, ExporterBuildError>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {
@@ -118,10 +120,10 @@ mod tests {
     use opentelemetry_proto::tonic::collector::trace::v1::ExportTraceServiceRequest;
     use opentelemetry_proto::tonic::common::v1::any_value::Value;
     use prost::Message;
-    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::EnvFilter;
 
     #[test]
-    fn exports_spans_to_the_configured_url() {
+    fn exports_info_spans_whatever_the_log_filter_says() {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let (sender, receiver) = std::sync::mpsc::channel();
         let listener =
@@ -148,7 +150,8 @@ mod tests {
             service_name: "telemetry-test".to_owned(),
         })
         .unwrap();
-        tracing::subscriber::with_default(tracing_subscriber::registry().with(layer), || {
+        let subscriber = crate::subscriber(EnvFilter::new("warn"), false, Some(layer));
+        tracing::subscriber::with_default(subscriber, || {
             tracing::info_span!("probe").in_scope(|| {});
         });
         shutdown();
