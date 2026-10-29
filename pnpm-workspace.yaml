@@ -57,3 +57,4 @@ overrides:
 patchedDependencies:
   '@bsky.app/react-native-uitextview@2.7.1': patches/@bsky.app__react-native-uitextview@2.7.1.patch
   "@rn-primitives/hooks@1.5.2": patches/@rn-primitives__hooks@1.5.2.patch
+  react-native-safe-area-context@5.10.1: patches/react-native-safe-area-context@5.10.1.patch
