@@ -3539,6 +3539,7 @@ dependencies = [
  "ed25519-dalek",
  "futures",
  "futures-timer",
+ "getrandom 0.4.3",
  "hex",
  "image",
  "js-sys",

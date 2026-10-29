@@ -8,6 +8,7 @@ use tonic::metadata::AsciiMetadataValue;
 use tonic::{Request, Status};
 
 use crate::lock::RwLockRecover;
+use crate::query::trace;
 use crate::time::now_secs;
 
 /// Stop reusing a cached token this many seconds before it expires.
@@ -54,9 +55,10 @@ pub fn clear_auth_tokens() {
     TOKENS.write_recover().clear();
 }
 
-/// Adds `authorization: Bearer <token>` to each outgoing request. The bearer
-/// is looked up in the token cache at call time, so a token refreshed after
-/// the interceptor was built still works for later requests.
+/// Adds `authorization: Bearer <token>` and `traceparent` to each outgoing
+/// request. The bearer is looked up in the token cache at call time, so a
+/// token refreshed after the interceptor was built still works for later
+/// requests.
 #[derive(Clone)]
 pub struct AuthInterceptor {
     server_url: String,
@@ -68,6 +70,9 @@ impl tonic::service::Interceptor for AuthInterceptor {
             request
                 .metadata_mut()
                 .insert("authorization", cached.bearer.clone());
+        }
+        if let Some(traceparent) = trace::traceparent() {
+            request.metadata_mut().insert("traceparent", traceparent);
         }
         Ok(request)
     }

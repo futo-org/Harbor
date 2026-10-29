@@ -95,6 +95,7 @@ pub fn build_grpc_router(
             HeaderName::from_static("x-grpc-web"),
             HeaderName::from_static("grpc-timeout"),
             HeaderName::from_static("authorization"),
+            HeaderName::from_static("traceparent"),
         ])
         .expose_headers([
             HeaderName::from_static("grpc-status"),
