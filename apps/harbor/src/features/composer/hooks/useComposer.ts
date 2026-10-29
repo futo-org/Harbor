@@ -444,13 +444,19 @@ function useDiscardDraftConfirmation(
   // Every way of closing removes this route (Cancel/X, Escape, backdrop,
   // swipe back, hardware back, browser back, reload, closing the tab), so
   // guard the removal itself.
-  usePreventRemove(hasUnpostedDraft, ({ repeat }) => {
+  const [isDiscarded, setIsDiscarded] = useState(false);
+  usePreventRemove(hasUnpostedDraft && !isDiscarded, ({ repeat }) => {
     void confirm({
       title: isReply ? 'Discard reply?' : 'Discard post?',
       message: "Your changes won't be saved.",
       confirmText: 'Discard',
       destructive: true,
-      onConfirm: repeat,
+      onConfirm: () => {
+        // The draft is still there while the screen is removed; clear
+        // `preventRemove` along with `repeat`, as expo-router expects
+        setIsDiscarded(true);
+        repeat();
+      },
     });
   });
 }
