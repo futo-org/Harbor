@@ -18,6 +18,7 @@ pub mod profile;
 pub mod query_observable;
 pub mod reactions;
 pub mod search;
+pub mod trace;
 pub mod transport;
 pub(crate) mod validation;
 pub mod verifications;

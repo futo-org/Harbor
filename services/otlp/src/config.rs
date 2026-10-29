@@ -21,6 +21,33 @@ pub struct Config {
     pub victoria_traces_url: Option<String>,
     /// Largest accepted request body in bytes (`HARBOR_OTLP_MAX_BODY_BYTES`).
     pub max_body_bytes: usize,
+    /// Where user feedback is relayed to; unset when the bot is not configured.
+    pub zulip: Option<Zulip>,
+    /// Harbor web base URL (`HARBOR_OTLP_APP_URL`), for the profile link in
+    /// relayed feedback.
+    pub app_url: Option<String>,
+    /// Grafana in front of the Victoria stack, for the trace link in relayed
+    /// feedback.
+    pub grafana: Option<Grafana>,
+}
+
+/// A Zulip bot posting to one channel (`HARBOR_OTLP_ZULIP_*`); each feedback
+/// opens its own topic there.
+#[derive(Clone)]
+pub struct Zulip {
+    pub url: String,
+    pub bot_email: String,
+    pub api_key: String,
+    pub stream: String,
+}
+
+/// Grafana base URL (`HARBOR_OTLP_GRAFANA_URL`) and the uid or name of its
+/// Jaeger-type datasource for VictoriaTraces
+/// (`HARBOR_OTLP_GRAFANA_TRACES_DATASOURCE`).
+#[derive(Clone)]
+pub struct Grafana {
+    pub url: String,
+    pub traces_datasource: String,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -42,8 +69,42 @@ pub fn init() -> Result<&'static Config, String> {
             .ok()
             .and_then(|s| s.trim().parse().ok())
             .unwrap_or(4 * 1024 * 1024),
+        zulip: zulip()?,
+        app_url: optional_url("HARBOR_OTLP_APP_URL"),
+        grafana: optional_url("HARBOR_OTLP_GRAFANA_URL").map(|url| Grafana {
+            url,
+            traces_datasource: optional("HARBOR_OTLP_GRAFANA_TRACES_DATASOURCE")
+                .unwrap_or_else(|| "VictoriaTraces".to_string()),
+        }),
     };
     Ok(CONFIG.get_or_init(|| config))
+}
+
+/// The bot email and API key enable the relay; the rest has defaults.
+fn zulip() -> Result<Option<Zulip>, String> {
+    let bot_email = optional("HARBOR_OTLP_ZULIP_BOT_EMAIL");
+    let api_key = optional("HARBOR_OTLP_ZULIP_BOT_API_KEY");
+    match (bot_email, api_key) {
+        (None, None) => Ok(None),
+        (Some(bot_email), Some(api_key)) => Ok(Some(Zulip {
+            url: optional_url("HARBOR_OTLP_ZULIP_URL")
+                .unwrap_or_else(|| "https://zulip.futo.org".to_string()),
+            bot_email,
+            api_key,
+            stream: optional("HARBOR_OTLP_ZULIP_STREAM")
+                .unwrap_or_else(|| "harbor-feedback".to_string()),
+        })),
+        _ => Err(
+            "HARBOR_OTLP_ZULIP_BOT_EMAIL and HARBOR_OTLP_ZULIP_BOT_API_KEY go together".to_string(),
+        ),
+    }
+}
+
+fn optional(name: &str) -> Option<String> {
+    env::var(name)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
 }
 
 fn required_list(name: &str) -> Result<Vec<String>, String> {

@@ -37,6 +37,9 @@ uniffi.workspace = true
 hex.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync"], optional = true }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+getrandom.workspace = true
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tonic-web-wasm-client = "0.9"
 console_error_panic_hook = "0.1"

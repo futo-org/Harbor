@@ -10,6 +10,6 @@ dev:
 
 # Run the integration tests
 test:
-	cargo test
+	cargo test --test integration --quiet --
 
 .PHONY: dev test

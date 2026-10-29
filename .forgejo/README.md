@@ -112,15 +112,16 @@ runner to start job containers with seccomp and AppArmor unconfined
 
 ## Release notes
 
-`release-notes.mjs` builds them the way GitLab's changelog API did: every
-commit since the previous `v*` tag with a `Changelog: <category>` line, grouped
-under `feature`, `fix`, `enhancement`, `security`, `deprecated`,
-`breaking-change`, `documentation` or `other`, each entry linking its commit
-and pull request, outside contributors credited. The line comes from the PR
-description: the pull request template starts with it, and
-`default_merge_message/SQUASH_TEMPLATE.md` carries the description into the
-squash commit (Forgejo's default keeps only the title). A PR without a
-category is left out of the notes.
+`release-notes.mjs` has Claude (via OpenRouter) write user-facing notes from
+the subjects of the commits since the last `v*` tag, dropping purely
+technical changes. A `Changelog: <category>` line in the squash commit (from
+the PR template, carried over by `default_merge_message/SQUASH_TEMPLATE.md`)
+is passed along as a hint. The same notes serve a release (the Forgejo
+release and the Mattermost announcement) and every staging and production
+app build between releases (`apk-deploy` jobs, into the `latest.json` the
+app shows in its update sheet), so a build's notes grow through the cycle
+and restart at each release. If they cannot be written, the build still
+publishes with the commit title.
 
 ## Forgejo notes
 

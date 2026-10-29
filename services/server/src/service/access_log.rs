@@ -1,6 +1,7 @@
 //! Per-request access log, emitted as structured events on the `access`
 //! target. `identity` comes from the auth middleware (response extensions),
-//! so authenticated traffic can be attributed to users.
+//! so authenticated traffic can be attributed to users. `trace_id` comes from
+//! the client's `traceparent` header.
 
 use std::sync::LazyLock;
 use std::time::Instant;
@@ -11,6 +12,7 @@ use axum::middleware::Next;
 use axum::response::Response;
 use opentelemetry::KeyValue;
 use opentelemetry::metrics::{Counter, Histogram};
+use tracing::Instrument;
 
 use crate::service::auth::AuthenticatedIdentity;
 
@@ -35,6 +37,29 @@ fn route_of(path: &str) -> String {
     path.to_string()
 }
 
+/// Trace id of a well formed W3C `traceparent`.
+pub fn trace_id_of(traceparent: &str) -> Option<&str> {
+    let mut parts = traceparent.trim().split('-');
+    let version = parts.next()?;
+    let trace_id = parts.next()?;
+    let span_id = parts.next()?;
+    let flags = parts.next()?;
+    let hex = |s: &str, len: usize| {
+        s.len() == len
+            && s.bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+    };
+    let valid = parts.next().is_none()
+        && hex(version, 2)
+        && version != "ff"
+        && hex(trace_id, 32)
+        && trace_id.bytes().any(|b| b != b'0')
+        && hex(span_id, 16)
+        && span_id.bytes().any(|b| b != b'0')
+        && hex(flags, 2);
+    valid.then_some(trace_id)
+}
+
 pub async fn access_log_middleware(
     headers: HeaderMap,
     request: Request,
@@ -57,9 +82,20 @@ pub async fn access_log_middleware(
     // First hop in x-forwarded-for is the client, set by the gateway.
     let client_ip = header("x-forwarded-for")
         .map(|v| v.split(',').next().unwrap_or_default().trim().to_owned());
+    let trace_id = header("traceparent")
+        .as_deref()
+        .and_then(trace_id_of)
+        .map(str::to_owned);
 
     let start = Instant::now();
-    let response = next.run(request).await;
+    let response = match &trace_id {
+        Some(trace_id) => {
+            next.run(request)
+                .instrument(tracing::info_span!("request", trace_id))
+                .await
+        }
+        None => next.run(request).await,
+    };
 
     let identity = response
         .extensions()
@@ -91,7 +127,46 @@ pub async fn access_log_middleware(
         identity,
         client_ip,
         user_agent,
+        trace_id,
         "request"
     );
     response
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reads_the_trace_id_of_a_traceparent() {
+        assert_eq!(
+            trace_id_of(
+                "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+            ),
+            Some("0af7651916cd43dd8448eb211c80319c")
+        );
+        assert_eq!(
+            trace_id_of(
+                " 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00 "
+            ),
+            Some("0af7651916cd43dd8448eb211c80319c")
+        );
+    }
+
+    #[test]
+    fn ignores_malformed_traceparents() {
+        for bad in [
+            "",
+            "garbage",
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331",
+            "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01-extra",
+            "ff-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+            "00-00000000000000000000000000000000-b7ad6b7169203331-01",
+            "00-0af7651916cd43dd8448eb211c80319c-0000000000000000-01",
+            "00-0AF7651916CD43DD8448EB211C80319C-b7ad6b7169203331-01",
+            "00-0af7651916cd43dd8448eb211c8031-b7ad6b7169203331-01",
+        ] {
+            assert_eq!(trace_id_of(bad), None, "{bad}");
+        }
+    }
 }

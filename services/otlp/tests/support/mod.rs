@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
-use otlp_service::config::Config;
+use otlp_service::config::{Config, Zulip};
 use otlp_service::identity::PolycentricIdentities;
 use otlp_service::routes::{AppState, build_routes};
 use polycentric_common::models::collections;
@@ -190,6 +190,15 @@ pub struct Otlp {
 impl Otlp {
     /// One Victoria stand-in for both signals.
     pub async fn serve(polycentric_url: &str, victoria_url: Option<&str>) -> Self {
+        Self::serve_relaying(polycentric_url, victoria_url, None).await
+    }
+
+    /// With feedback relayed to a Zulip stand-in at `zulip_url`.
+    pub async fn serve_relaying(
+        polycentric_url: &str,
+        victoria_url: Option<&str>,
+        zulip_url: Option<&str>,
+    ) -> Self {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         let config: &'static Config = Box::leak(Box::new(Config {
@@ -199,6 +208,14 @@ impl Otlp {
             victoria_logs_url: victoria_url.map(str::to_string),
             victoria_traces_url: victoria_url.map(str::to_string),
             max_body_bytes: 8 * 1024,
+            zulip: zulip_url.map(|url| Zulip {
+                url: url.to_string(),
+                bot_email: "bot@example.com".to_string(),
+                api_key: "secret".to_string(),
+                stream: "harbor-feedback".to_string(),
+            }),
+            app_url: None,
+            grafana: None,
         }));
         let identities = PolycentricIdentities::connect(config.query_servers.clone())
             .await

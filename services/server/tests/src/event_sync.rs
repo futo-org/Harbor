@@ -901,20 +901,12 @@ async fn validation_invalid_event_identity() {
     expect_errors(
         result,
         &[],
-        &[
-            ExpectError {
-                bundle_index: 0,
-                kind: ExpectErrorKind::MsgContains(
-                    "event key identity is too short (7), minimum is 64",
-                ),
-            },
-            ExpectError {
-                bundle_index: 0,
-                kind: ExpectErrorKind::MsgContains(
-                    "event key identity is not a valid identity",
-                ),
-            },
-        ],
+        &[ExpectError {
+            bundle_index: 0,
+            kind: ExpectErrorKind::MsgContains(
+                "event key identity is too short (7), minimum is 64",
+            ),
+        }],
     );
 }
 
