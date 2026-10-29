@@ -28,7 +28,6 @@ linkWorkspacePackages: true
 minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
-  - "react-native-screens@4.30.1"
   - maestro-runner
   - "@devicelab/*"
 
