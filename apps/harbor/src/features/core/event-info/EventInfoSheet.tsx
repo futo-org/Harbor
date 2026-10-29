@@ -1,4 +1,4 @@
-import { Text } from '@/src/common/components';
+import { Text } from '@/src/common/components/primitives';
 import Icon from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
 import { toast } from '@/src/common/components/toast';

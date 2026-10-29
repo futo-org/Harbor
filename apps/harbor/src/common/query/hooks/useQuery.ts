@@ -7,7 +7,7 @@ import {
   type PolycentricClient,
 } from '@polycentric/react-native';
 import { create } from 'zustand';
-import { toast } from '../../components/toast';
+import { toast } from '../../components/toast/useToast';
 import { usePolycentric } from '../../lib/polycentric-hooks/context';
 
 /**

@@ -20,6 +20,7 @@
     "test:ci": "jest --reporters=default --reporters=jest-junit",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
+    "lint:cycles": "biome lint --only=suspicious/noImportCycles --error-on-warnings .",
     "prebuild": "APP_VARIANT=dev expo prebuild --clean",
     "typecheck": "tsc && tsc -p tsconfig.test.json",
     "generate:emoji-tags": "node scripts/generate-emoji-tags.mts && biome format --write src/features/reaction/emojiTags.json",

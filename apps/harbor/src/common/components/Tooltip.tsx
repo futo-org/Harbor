@@ -9,7 +9,7 @@ import {
 import { Portal } from '@rn-primitives/portal';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { Text } from './primitives';
+import { Text } from './primitives/Text';
 
 const MAX_BUBBLE_WIDTH = 260;
 const EDGE_MARGIN = 8;
