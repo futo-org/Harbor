@@ -42,8 +42,9 @@ name: I can quote a post
       id: ${output.composer.submit}
     timeout: 30000
 # The quote heads the profile; its thread shows the quoted post with it.
+- runFlow: ../steps/mark-sidebar.yaml
 - tapOn:
-    id: ${output.nav.profile}
+    css: '#sidebar [aria-label="${output.nav.profile}"]'
 - extendedWaitUntil:
     visible: ${output.quoteText}
     timeout: 30000
