@@ -31,14 +31,14 @@ pub struct Config {
     pub grafana: Option<Grafana>,
 }
 
-/// A Zulip bot posting to one channel topic (`HARBOR_OTLP_ZULIP_*`).
+/// A Zulip bot posting to one channel (`HARBOR_OTLP_ZULIP_*`); each feedback
+/// opens its own topic there.
 #[derive(Clone)]
 pub struct Zulip {
     pub url: String,
     pub bot_email: String,
     pub api_key: String,
     pub stream: String,
-    pub topic: String,
 }
 
 /// Grafana base URL (`HARBOR_OTLP_GRAFANA_URL`) and the uid or name of its
@@ -91,8 +91,8 @@ fn zulip() -> Result<Option<Zulip>, String> {
                 .unwrap_or_else(|| "https://zulip.futo.org".to_string()),
             bot_email,
             api_key,
-            stream: optional("HARBOR_OTLP_ZULIP_STREAM").unwrap_or_else(|| "harbor".to_string()),
-            topic: optional("HARBOR_OTLP_ZULIP_TOPIC").unwrap_or_else(|| "feedback".to_string()),
+            stream: optional("HARBOR_OTLP_ZULIP_STREAM")
+                .unwrap_or_else(|| "harbor-feedback".to_string()),
         })),
         _ => Err(
             "HARBOR_OTLP_ZULIP_BOT_EMAIL and HARBOR_OTLP_ZULIP_BOT_API_KEY go together".to_string(),

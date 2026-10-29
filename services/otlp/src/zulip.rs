@@ -1,4 +1,4 @@
-//! Relays user feedback spans to a Zulip topic.
+//! Relays user feedback spans to Zulip, one topic per feedback.
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
@@ -11,8 +11,21 @@ use crate::forward::{ATTR_IDENTITY, string_value};
 
 pub const FEEDBACK_SPAN: &str = "app.feedback";
 
+/// Zulip caps topic names at this many characters.
+const MAX_TOPIC_CHARS: usize = 60;
+/// Characters of the feedback kept in the topic before it is cut with an
+/// ellipsis, leaving room for the trace id suffix within the cap.
+const TOPIC_EXCERPT_CHARS: usize = 46;
+
+/// A message opening its own topic in the channel.
+#[derive(Debug, PartialEq)]
+pub struct Message {
+    pub topic: String,
+    pub content: String,
+}
+
 /// One message per `app.feedback` span in the request.
-pub fn feedback_messages(request: &ExportTraceServiceRequest, config: &Config) -> Vec<String> {
+pub fn feedback_messages(request: &ExportTraceServiceRequest, config: &Config) -> Vec<Message> {
     let mut messages = Vec::new();
     for entry in &request.resource_spans {
         let resource = entry
@@ -23,12 +36,40 @@ pub fn feedback_messages(request: &ExportTraceServiceRequest, config: &Config) -
         for scope in &entry.scope_spans {
             for span in &scope.spans {
                 if span.name == FEEDBACK_SPAN {
-                    messages.push(feedback_message(resource, span, config));
+                    messages.push(Message {
+                        topic: feedback_topic(span),
+                        content: feedback_message(resource, span, config),
+                    });
                 }
             }
         }
     }
     messages
+}
+
+/// The start of the feedback followed by the first eight hex digits of the
+/// trace id, so each feedback lands in a topic of its own that reads as the
+/// feedback in the channel list.
+fn feedback_topic(span: &Span) -> String {
+    let message = string_value(&span.attributes, "harbor.feedback.message").unwrap_or("");
+    let words: Vec<&str> = message
+        .split(|c: char| c.is_whitespace() || c.is_control())
+        .filter(|word| !word.is_empty())
+        .collect();
+    let joined = words.join(" ");
+    let mut excerpt: String = joined.chars().take(TOPIC_EXCERPT_CHARS).collect();
+    if excerpt.chars().count() < joined.chars().count() {
+        excerpt = format!("{}…", excerpt.trim_end());
+    }
+    if excerpt.is_empty() {
+        excerpt = "Feedback".to_string();
+    }
+    let topic = match span.trace_id.get(..4) {
+        Some(prefix) => format!("{excerpt} · {}", hex::encode(prefix)),
+        None => excerpt,
+    };
+    debug_assert!(topic.chars().count() <= MAX_TOPIC_CHARS);
+    topic
 }
 
 fn feedback_message(resource: &[KeyValue], span: &Span, config: &Config) -> String {
@@ -121,14 +162,19 @@ fn trace_url(grafana: &Grafana, trace_id: &str) -> String {
     format!("{}/explore?{query}", grafana.url)
 }
 
-/// Posts `content` to the configured channel topic.
-pub async fn post(client: &reqwest::Client, zulip: &Zulip, content: &str) -> Result<(), String> {
+/// Posts the message to its topic in the configured channel; Zulip creates
+/// the topic when it is new.
+pub async fn post(
+    client: &reqwest::Client,
+    zulip: &Zulip,
+    message: &Message,
+) -> Result<(), String> {
     let credentials = STANDARD.encode(format!("{}:{}", zulip.bot_email, zulip.api_key));
     let body = form_urlencoded::Serializer::new(String::new())
         .append_pair("type", "stream")
         .append_pair("to", &zulip.stream)
-        .append_pair("topic", &zulip.topic)
-        .append_pair("content", content)
+        .append_pair("topic", &message.topic)
+        .append_pair("content", &message.content)
         .finish();
     let response = client
         .post(format!("{}/api/v1/messages", zulip.url))
@@ -223,12 +269,55 @@ mod tests {
         );
 
         assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].topic, "love it really · abababab");
         assert_eq!(
-            messages[0],
+            messages[0].content,
             format!(
                 "**New feedback** from `abc123` · 2.21.1+45 · production · ios\n```quote\nlove it\nreally\n```\nEmail: me@example.com · Logs attached: 2 · Trace: `{}`",
                 "ab".repeat(16)
             )
+        );
+    }
+
+    fn feedback(message: &str, trace_id: Vec<u8>) -> Span {
+        Span {
+            name: FEEDBACK_SPAN.to_string(),
+            trace_id,
+            attributes: vec![string_attribute("harbor.feedback.message", message)],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn topics_are_the_feedback_cut_to_fit_zulip() {
+        let long =
+            "The feed keeps jumping back to the top whenever a new post arrives, very annoying";
+        let topics: Vec<String> = feedback_messages(
+            &request(vec![
+                feedback(long, vec![0x0a, 0xf7, 0x65, 0x19, 0x16, 0xcd]),
+                feedback("  tabs\tand\n\nnewlines \u{7}here ", vec![0x01; 16]),
+                feedback("", vec![0x02; 16]),
+                feedback("no trace", vec![]),
+            ]),
+            &config(None, None),
+        )
+        .into_iter()
+        .map(|message| message.topic)
+        .collect();
+
+        assert_eq!(
+            topics,
+            vec![
+                "The feed keeps jumping back to the top wheneve… · 0af76519",
+                "tabs and newlines here · 01010101",
+                "Feedback · 02020202",
+                "no trace",
+            ]
+        );
+        assert!(
+            topics
+                .iter()
+                .all(|topic| topic.chars().count() <= MAX_TOPIC_CHARS)
         );
     }
 
@@ -254,7 +343,7 @@ mod tests {
         );
         let panes: String = form_urlencoded::byte_serialize(panes.as_bytes()).collect();
         assert_eq!(
-            messages[0],
+            messages[0].content,
             format!(
                 "**New feedback** from [`abc123`](https://harbor.example/abc123) · 2.21.1+45 · production · ios\n```quote\nhi\n```\nLogs attached: 0 · Trace: [`{trace_id}`](https://grafana.example/explore?schemaVersion=1&panes={panes})"
             )
@@ -285,10 +374,12 @@ mod tests {
         );
         assert_eq!(
             messages,
-            vec![
-                "**New feedback** from `unknown`\n```quote\nhi\n```\nLogs attached: 0 · Trace: ``"
-                    .to_string()
-            ]
+            vec![Message {
+                topic: "hi".to_string(),
+                content:
+                    "**New feedback** from `unknown`\n```quote\nhi\n```\nLogs attached: 0 · Trace: ``"
+                        .to_string(),
+            }]
         );
     }
 
@@ -299,19 +390,24 @@ mod tests {
             .mock("POST", "/api/v1/messages")
             .match_header("authorization", "Basic Ym90QGV4YW1wbGUuY29tOnNlY3JldA==")
             .match_header("content-type", "application/x-www-form-urlencoded")
-            .match_body("type=stream&to=harbor&topic=feedback&content=hello+%26+bye")
+            .match_body(
+                "type=stream&to=harbor-feedback&topic=hello+%C2%B7+1234&content=hello+%26+bye",
+            )
             .create_async()
             .await;
         let zulip = Zulip {
             url: zulip_server.url(),
             bot_email: "bot@example.com".to_string(),
             api_key: "secret".to_string(),
-            stream: "harbor".to_string(),
-            topic: "feedback".to_string(),
+            stream: "harbor-feedback".to_string(),
         };
         let client = reqwest::Client::new();
+        let message = Message {
+            topic: "hello · 1234".to_string(),
+            content: "hello & bye".to_string(),
+        };
 
-        assert_eq!(post(&client, &zulip, "hello & bye").await, Ok(()));
+        assert_eq!(post(&client, &zulip, &message).await, Ok(()));
         mock.assert_async().await;
 
         let failing = zulip_server
@@ -321,7 +417,7 @@ mod tests {
             .create_async()
             .await;
         assert_eq!(
-            post(&client, &zulip, "x").await,
+            post(&client, &zulip, &message).await,
             Err("zulip answered 401 Unauthorized: bad key".to_string())
         );
         failing.assert_async().await;
