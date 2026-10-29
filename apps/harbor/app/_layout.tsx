@@ -11,7 +11,7 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { renderScreenWithSplashHide } from '@/src/common/lib/renderScreenWithSplashHide';
-import { APP_NAME } from '@/src/common/constants';
+import { APP_NAME, Routes } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
 import { TelemetryIdentitySync } from '@/src/features/telemetry/TelemetryIdentitySync';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
@@ -101,7 +101,13 @@ function RootStack() {
         {/* Account-only on every platform. Routes are auto-registered from
             the filesystem; the explicit declarations here exist to place
             them inside the guard. */}
-        <Stack.Protected guard={accountGuard}>
+        <Stack.Protected
+          guard={accountGuard}
+          // Without it, web falls back to the `(tabs)` anchor as the literal
+          // URL `/(tabs)`, which matches `[identityId]`. Native falls back to
+          // `index`, which is right: logged out, the tabs are guarded too.
+          redirectTo={isWeb ? Routes.tabs.explore.index : undefined}
+        >
           <Stack.Screen
             name="feed"
             options={

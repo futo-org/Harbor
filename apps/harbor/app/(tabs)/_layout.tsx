@@ -1,4 +1,4 @@
-import { openCompose } from '@/src/common/constants';
+import { Routes, openCompose } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { useTheme } from '@/src/common/theme';
 import useUnreadNotificationCount, {
@@ -23,8 +23,8 @@ export default function TabsLayout() {
   if (isWeb) {
     // Web has no visible tab bar (the sidebar in Layout.tsx is the nav);
     // a navigator is used instead of a plain <Slot/> so the account-only
-    // routes can be route-guarded. Guarded routes are removed from
-    // navigation while logged out; explore/search stay public.
+    // routes can be route-guarded. Guarded routes redirect to explore while
+    // logged out; explore/search stay public.
     return (
       <Stack
         screenOptions={{
@@ -32,7 +32,12 @@ export default function TabsLayout() {
           animation: 'none',
         }}
       >
-        <Stack.Protected guard={accountGuard}>
+        <Stack.Protected
+          guard={accountGuard}
+          // Without it, expo-router falls back to the unguarded route with the
+          // shortest name: the empty `search` placeholder
+          redirectTo={Routes.tabs.explore.index}
+        >
           <Stack.Screen name="feed" />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="verifications" />
