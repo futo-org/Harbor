@@ -20,7 +20,12 @@ anything the client put there, so downstream queries can trust those fields.
 | `GET /status` | — |
 
 Only `application/json` bodies are accepted. A signal whose upstream URL is
-unset answers `503`. Logs are forwarded with `VL-Stream-Fields` naming
+unset answers `503`. `app.feedback` and `app.error` spans are also mirrored
+into VictoriaLogs as one record each (body: the feedback message or the
+error's status message; the span's attributes plus `span.name`; the trace
+id), so they can be listed and counted with LogsQL. Every `app.feedback`
+span is also posted to a Zulip topic when the bot below is configured. Both
+happen alongside the trace; a failure is logged, never returned. Logs are forwarded with `VL-Stream-Fields` naming
 `service.name`, `service.version`, `deployment.environment.name` and
 `os.name`, so VictoriaLogs keeps one stream per app build and platform
 rather than one per user.
@@ -42,6 +47,11 @@ All service variables are read and validated once at startup by
 | `HARBOR_VICTORIA_LOGS_URL` | _(unset)_ | VictoriaLogs base URL, e.g. `http://victorialogs:9428`. |
 | `HARBOR_VICTORIA_TRACES_URL` | _(unset)_ | VictoriaTraces base URL, e.g. `http://victoriatraces:10428`. |
 | `HARBOR_OTLP_MAX_BODY_BYTES` | `4194304` (4 MiB) | Largest accepted request body. |
+| `HARBOR_OTLP_ZULIP_BOT_EMAIL` | _(unset)_ | Zulip bot that relays feedback; with `HARBOR_OTLP_ZULIP_BOT_API_KEY`, enables the relay. |
+| `HARBOR_OTLP_ZULIP_BOT_API_KEY` | _(unset)_ | The bot's API key. |
+| `HARBOR_OTLP_ZULIP_URL` | `https://zulip.futo.org` | Zulip server. |
+| `HARBOR_OTLP_ZULIP_STREAM` | `harbor` | Channel feedback is posted to. |
+| `HARBOR_OTLP_ZULIP_TOPIC` | `feedback` | Topic within the channel. |
 
 Additionally various shared variables are read, see the table in
 [`services/server/README.md`](../server/README.md#common-environment-variables).
