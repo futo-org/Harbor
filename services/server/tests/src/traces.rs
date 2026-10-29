@@ -128,7 +128,7 @@ async fn a_request_trace_is_exported_with_its_children() {
     let mut client = TestClient::new().await;
     client.submit_events().await;
     client.post_text("traced", current_timestamp());
-    let bundle = client.get_last_event_bundle();
+    let event_bundles = client.take_pending_events();
 
     let mut ids = [0u8; 24];
     getrandom::fill(&mut ids).unwrap();
@@ -138,9 +138,7 @@ async fn a_request_trace_is_exported_with_its_children() {
         hex::encode(trace_id),
         hex::encode(client_span_id)
     );
-    let mut request = tonic::Request::new(PutEventsRequest {
-        event_bundles: vec![bundle],
-    });
+    let mut request = tonic::Request::new(PutEventsRequest { event_bundles });
     request
         .metadata_mut()
         .insert("traceparent", traceparent.parse().unwrap());

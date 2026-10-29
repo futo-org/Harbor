@@ -24,6 +24,9 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
 export COMPOSE_PROJECT_NAME=harbor
+# The suite's load overflows the server's default 2048-span export queue,
+# which drops spans silently (traces.rs).
+export OTEL_BSP_MAX_QUEUE_SIZE=65536
 
 # ---------------------------------------------------------------------------
 # Test moderator identity (deterministic, derived from the same seed as

@@ -45,6 +45,7 @@ services:
       - HARBOR_ALLOW_HOSTS=${HARBOR_ALLOW_HOSTS:-http://localhost:3000}
       # OTLP/HTTP collector for traces; unset disables export.
       - HARBOR_TRACES_URL=${HARBOR_TRACES_URL:-}
+      - OTEL_BSP_MAX_QUEUE_SIZE=${OTEL_BSP_MAX_QUEUE_SIZE:-}
     # On both the shared app network and the isolated scraper link, so it can
     # talk to postgres/kafka/etc. AND to the scraper.
     networks:

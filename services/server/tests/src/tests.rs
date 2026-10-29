@@ -506,6 +506,11 @@ impl TestClient {
         self.pending.last().expect("no pending events").clone()
     }
 
+    /// Take the pending events to submit them by hand.
+    pub fn take_pending_events(&mut self) -> Vec<EventBundle> {
+        take(&mut self.pending)
+    }
+
     fn push_event_bundle(
         &mut self,
         body: ContentBody,
