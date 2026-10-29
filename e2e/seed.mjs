@@ -78,7 +78,9 @@ async function ensureUser(client, name) {
   await client.contentManager.save(info.identityContent);
   await client.commitEvent(info.genesisEvent, info.identityContent);
   await client.loginManager.finishSignup(info.login);
-  await client.loginAs(info.login);
+  // Avoid persisting the login since we currently disallow changing the
+  // persisted login once it has been set.
+  await client.loginAs(info.login, false);
   const content = client.contentManager.build({
     oneofKind: 'profileUpdate',
     profileUpdate: { name, description: 'Seeded for e2e tests' },
