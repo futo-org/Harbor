@@ -65,7 +65,7 @@ export class IndexedDBStorageDriver implements IStorageDriver {
 
       store.transaction.commit();
     } catch (error) {
-      throw new DatabaseError('Failed to set active login', error);
+      throw new DatabaseError(`set active login: ${error}`, error);
     }
   }
 
@@ -89,7 +89,7 @@ export class IndexedDBStorageDriver implements IStorageDriver {
         }),
       };
     } catch (error) {
-      throw new DatabaseError('Failed to get active login', error);
+      throw new DatabaseError(`get active login: ${error}`, error);
     }
   }
 
