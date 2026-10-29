@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { DrizzleQueryError, sql } from 'drizzle-orm';
 import type {
   ILoginRepository,
   KeyType,
@@ -200,6 +200,12 @@ function toLoginRepositoryError(
 ): LoginRepositoryError {
   if (error instanceof LoginRepositoryError) {
     return error;
+  }
+
+  // A query error contains query data, which may include private information.
+  // We should use the inner error instead.
+  if (error instanceof DrizzleQueryError) {
+    error = error.cause;
   }
   return new LoginRepositoryError('db', `${message}: ${error}`, {
     cause: error,
