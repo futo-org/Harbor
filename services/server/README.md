@@ -115,6 +115,8 @@ The shared `services/common` crates read their own variables.
 | `RUST_LOG` | `info` | Log filter. |
 | `HARBOR_LOG_FORMAT` | _(auto)_ | `json` or `text`; defaults to text on a terminal, JSON otherwise. |
 | `HARBOR_METRICS_PORT` | `9464` | Port serving Prometheus `GET /metrics`. |
+| `HARBOR_TRACES_URL` | _(unset)_ | OTLP/HTTP collector base URL to export traces to; unset disables export. |
+| `HARBOR_SERVICE_NAME` | _(binary name)_ | Service name on exported spans. |
 
 ## Running Integration Tests
 

@@ -11,6 +11,7 @@ use common_kafka::{
     BorrowedMessage, Consumer, Message, Offset, build_consumer,
 };
 use tokio::task::JoinSet;
+use tracing::Instrument;
 
 use crate::service::context::ServiceContext;
 use crate::service::notifications::worker::NotificationWorker;
@@ -149,7 +150,21 @@ pub async fn run_consumer(
 
         let coord = (message.partition(), message.offset());
 
-        match handler.handle(&message).await {
+        let span = tracing::info_span!(
+            "kafka.process",
+            otel.kind = "consumer",
+            messaging.system = "kafka",
+            messaging.destination.name = message.topic(),
+            messaging.consumer.group.name = group_id,
+            messaging.kafka.offset = coord.1,
+            messaging.destination.partition.id = coord.0,
+        );
+        common_telemetry::trace::set_parent(
+            &span,
+            common_kafka::trace_context(&message),
+        );
+
+        match handler.handle(&message).instrument(span).await {
             Outcome::Commit => {
                 attempts.remove(&coord);
                 count_message(group_id, "committed");

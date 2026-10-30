@@ -32,6 +32,7 @@ mod heads;
 mod notifications;
 mod pairing;
 mod search;
+mod traces;
 mod verifications;
 
 /// gRPC server address. Override with `HARBOR_TEST_SERVER` env var.
@@ -512,6 +513,11 @@ impl TestClient {
 
     pub fn get_last_event_bundle(&self) -> EventBundle {
         self.pending.last().expect("no pending events").clone()
+    }
+
+    /// Take the pending events to submit them by hand.
+    pub fn take_pending_events(&mut self) -> Vec<EventBundle> {
+        take(&mut self.pending)
     }
 
     fn push_event_bundle(
