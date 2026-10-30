@@ -357,18 +357,21 @@ async fn process_event(
 
             let producer = ctx.kafka_producer.clone();
             let topic = common_kafka::prefixed("events");
-            let headers = common_kafka::with_trace_context(
-                OwnedHeaders::new().insert(Header {
-                    key: "SOURCE_SERVER",
-                    value: Some(crate::config::get().server_name.as_str()),
-                }),
-            );
             let span = tracing::info_span!(
                 "kafka.publish",
                 otel.kind = "producer",
                 messaging.system = "kafka",
                 messaging.destination.name = %topic,
             );
+            // Inside the span, so the consumer's span hangs off it.
+            let headers = span.in_scope(|| {
+                common_kafka::with_trace_context(OwnedHeaders::new().insert(
+                    Header {
+                        key: "SOURCE_SERVER",
+                        value: Some(crate::config::get().server_name.as_str()),
+                    },
+                ))
+            });
             tokio::spawn(async move {
                 if let Err((e, _)) = producer
                     .send(

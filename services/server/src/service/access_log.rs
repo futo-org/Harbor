@@ -1,5 +1,6 @@
 //! Server span and access log for every request. The span is named after
-//! the gRPC method or HTTP route, is a child of the client's `traceparent`,
+//! the gRPC method or HTTP route, is a child of the client's `traceparent`
+//! (whose sampled flag is ignored, see `common_telemetry::trace::layer`),
 //! and its trace id is on every log line emitted while handling the
 //! request. `identity` comes from the auth middleware (response
 //! extensions), so authenticated traffic can be attributed to users.
@@ -223,6 +224,22 @@ mod tests {
             Some("0af7651916cd43dd8448eb211c80319c")
         );
         assert_eq!(span.status, Status::Unset);
+    }
+
+    #[tokio::test]
+    async fn the_clients_sampled_flag_cannot_switch_tracing_off() {
+        let (subscriber, exporter) = common_telemetry::testing::subscriber();
+        let _guard = tracing::subscriber::set_default(subscriber);
+
+        let unsampled = TRACEPARENT.replace("-01", "-00");
+        call("/polycentric.v2.EventsService/PutEvents", Some(&unsampled)).await;
+
+        let spans = exporter.get_finished_spans().unwrap();
+        let span = spans
+            .iter()
+            .find(|s| s.name == "polycentric.v2.EventsService/PutEvents")
+            .expect("server span");
+        assert!(span.span_context.is_sampled());
     }
 
     #[test]

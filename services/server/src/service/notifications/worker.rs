@@ -159,24 +159,29 @@ impl NotificationWorker {
         .encode_to_vec();
 
         let topic = common_kafka::prefixed(NOTIFICATIONS_TOPIC);
+        let span = tracing::info_span!(
+            "kafka.publish",
+            otel.kind = "producer",
+            messaging.system = "kafka",
+            messaging.destination.name = %topic,
+        );
+        // Inside the span, so the consumer's span hangs off it.
+        let headers = span.in_scope(|| {
+            common_kafka::with_trace_context(OwnedHeaders::new().insert(
+                Header {
+                    key: "SOURCE_SERVER",
+                    value: Some(crate::config::get().server_name.as_str()),
+                },
+            ))
+        });
         let record = FutureRecord::to(&topic)
             .key(to_identity.as_bytes())
             .payload(&payload)
-            .headers(common_kafka::with_trace_context(
-                OwnedHeaders::new().insert(Header {
-                    key: "SOURCE_SERVER",
-                    value: Some(crate::config::get().server_name.as_str()),
-                }),
-            ));
+            .headers(headers);
 
         ctx.kafka_producer
             .send(record, Duration::from_secs(0))
-            .instrument(tracing::info_span!(
-                "kafka.publish",
-                otel.kind = "producer",
-                messaging.system = "kafka",
-                messaging.destination.name = %topic,
-            ))
+            .instrument(span)
             .await
             .map(|_| ())
             .map_err(|(e, _)| e.into())

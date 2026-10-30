@@ -12,15 +12,23 @@ path = "src/lib.rs"
 name = "integration"
 path = "src/tests.rs"
 
-[dev-dependencies]
+# OTLP receiver the server exports to while the suite runs (traces.rs).
+[[bin]]
+name = "traces-receiver"
+path = "src/traces_receiver.rs"
+
+[dependencies]
 axum = { version = "0.8.8", default-features = false, features = ["http1", "tokio"] }
+opentelemetry-proto = { version = "0.33", default-features = false, features = ["gen-tonic-messages", "trace"] }
+prost = { version = "0.14", default-features = false }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net"] }
+
+[dev-dependencies]
 base64.workspace = true
 ed25519-dalek.workspace = true
 getrandom.workspace = true
 hex.workspace = true
-opentelemetry-proto = { version = "0.33", default-features = false, features = ["gen-tonic-messages", "trace"] }
 polycentric-common = { workspace = true, features = ["transport"] }
-prost = { version = "0.14", default-features = false }
 rand = { version = "0.10", default-features = false, features = ["std", "std_rng", "thread_rng"] }
 reqwest = { version = "0.13", default-features = false }
 serde_json = { version = "1", default-features = false, features = ["std"] }

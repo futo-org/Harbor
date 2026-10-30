@@ -10,7 +10,7 @@ use opentelemetry_http::{HeaderExtractor, HeaderInjector};
 use opentelemetry_otlp::{ExporterBuildError, WithExportConfig};
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
-use opentelemetry_sdk::trace::{SdkTracerProvider, Tracer};
+use opentelemetry_sdk::trace::{Sampler, SdkTracerProvider, Tracer};
 use tracing::Subscriber;
 use tracing_opentelemetry::{OpenTelemetryLayer, OpenTelemetrySpanExt};
 use tracing_subscriber::registry::LookupSpan;
@@ -54,6 +54,10 @@ where
         .build()?;
     let provider = SdkTracerProvider::builder()
         .with_batch_exporter(exporter)
+        // Not the parent-based default: a request's `traceparent` comes from
+        // an untrusted client, which must not be able to switch tracing off
+        // with its sampled flag.
+        .with_sampler(Sampler::AlwaysOn)
         .with_resource(
             Resource::builder()
                 .with_service_name(config.service_name)

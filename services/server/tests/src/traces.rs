@@ -1,91 +1,54 @@
 //! A request's `traceparent` becomes the parent of the server's span, which
 //! is exported over OTLP together with its children. The server must be
-//! started with `HARBOR_TRACES_URL` pointing at this test's receiver, see
-//! `.forgejo/scripts/integration-server.sh`.
+//! started with `HARBOR_TRACES_URL` pointing at the suite's receiver
+//! (traces_receiver.rs), see `.forgejo/scripts/integration-server.sh`.
 
 use crate::*;
-use axum::Router;
-use axum::body::Bytes;
-use axum::routing::post;
-use opentelemetry_proto::tonic::collector::trace::v1::{
-    ExportTraceServiceRequest, ExportTraceServiceResponse,
-};
+use opentelemetry_proto::tonic::collector::trace::v1::ExportTraceServiceRequest;
 use opentelemetry_proto::tonic::common::v1::any_value::Value;
 use opentelemetry_proto::tonic::trace::v1::Span;
 use opentelemetry_proto::tonic::trace::v1::span::SpanKind;
 use prost::Message;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 const TRACE_TIMEOUT: Duration = Duration::from_secs(30);
 const SERVER_SPAN: &str = "polycentric.v2.EventSyncService/PutEvents";
 
-/// Port the OTLP/HTTP receiver listens on. Override with
-/// `HARBOR_TEST_TRACES_PORT`.
-fn traces_port() -> u16 {
-    std::env::var("HARBOR_TEST_TRACES_PORT")
-        .ok()
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(4318)
+/// Where the receiver answers. Override with `HARBOR_TEST_TRACES_URL`.
+fn traces_url() -> String {
+    std::env::var("HARBOR_TEST_TRACES_URL")
+        .unwrap_or_else(|_| "http://localhost:4318".to_string())
 }
 
-/// Spans received so far, each with its resource's `service.name`.
-#[derive(Clone, Default)]
-struct Received(Arc<Mutex<Vec<(Option<String>, Span)>>>);
-
-impl Received {
-    fn in_trace(&self, trace_id: &[u8]) -> Vec<(Option<String>, Span)> {
-        self.0
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|(_, span)| span.trace_id == trace_id)
-            .cloned()
-            .collect()
-    }
-}
-
-async fn serve_receiver(received: Received) {
-    let app = Router::new().route(
-        "/v1/traces",
-        post(move |body: Bytes| {
-            let received = received.clone();
-            async move {
-                let request = ExportTraceServiceRequest::decode(body)
-                    .expect("invalid OTLP trace request");
-                let mut spans = received.0.lock().unwrap();
-                for resource in request.resource_spans {
-                    let service = resource
-                        .resource
-                        .as_ref()
-                        .and_then(|r| {
-                            r.attributes
-                                .iter()
-                                .find(|a| a.key == "service.name")
-                        })
-                        .and_then(|a| a.value.as_ref()?.value.as_ref())
-                        .and_then(|v| match v {
-                            Value::StringValue(s) => Some(s.clone()),
-                            _ => None,
-                        });
-                    for scope in resource.scope_spans {
-                        for span in scope.spans {
-                            spans.push((service.clone(), span));
-                        }
-                    }
-                }
-                (
-                    [("content-type", "application/x-protobuf")],
-                    ExportTraceServiceResponse::default().encode_to_vec(),
-                )
-            }
-        }),
-    );
-    let listener = tokio::net::TcpListener::bind(("0.0.0.0", traces_port()))
+/// Every span the receiver has, each with its resource's `service.name`.
+async fn received() -> Vec<(Option<String>, Span)> {
+    let body = reqwest::get(format!("{}/v1/traces", traces_url()))
         .await
-        .expect("failed to bind the traces receiver");
-    axum::serve(listener, app).await.unwrap();
+        .expect("traces receiver unreachable")
+        .bytes()
+        .await
+        .unwrap();
+    let request = ExportTraceServiceRequest::decode(body)
+        .expect("invalid OTLP trace request");
+    let mut spans = Vec::new();
+    for resource in request.resource_spans {
+        let service = resource
+            .resource
+            .as_ref()
+            .and_then(|r| r.attributes.iter().find(|a| a.key == "service.name"))
+            .and_then(|a| a.value.as_ref()?.value.as_ref())
+            .and_then(|v| match v {
+                Value::StringValue(s) => Some(s.clone()),
+                _ => None,
+            });
+        for scope in resource.scope_spans {
+            for span in scope.spans {
+                spans.push((service.clone(), span));
+            }
+        }
+    }
+    spans
 }
 
 fn attribute<'a>(span: &'a Span, key: &str) -> Option<&'a Value> {
@@ -122,9 +85,6 @@ fn descends_from(
 
 #[tokio::test]
 async fn a_request_trace_is_exported_with_its_children() {
-    let received = Received::default();
-    tokio::spawn(serve_receiver(received.clone()));
-
     let mut client = TestClient::new().await;
     client.submit_events().await;
     client.post_text("traced", current_timestamp());
@@ -132,10 +92,10 @@ async fn a_request_trace_is_exported_with_its_children() {
 
     let mut ids = [0u8; 24];
     getrandom::fill(&mut ids).unwrap();
-    let (trace_id, client_span_id) = ids.split_at(16);
+    let (client_trace_id, client_span_id) = ids.split_at(16);
     let traceparent = format!(
         "00-{}-{}-01",
-        hex::encode(trace_id),
+        hex::encode(client_trace_id),
         hex::encode(client_span_id)
     );
     let mut request = tonic::Request::new(PutEventsRequest { event_bundles });
@@ -153,7 +113,11 @@ async fn a_request_trace_is_exported_with_its_children() {
     let wanted = [SERVER_SPAN, "add_event", "kafka.publish"];
     let deadline = Instant::now() + TRACE_TIMEOUT;
     let spans = loop {
-        let spans = received.in_trace(trace_id);
+        let spans: Vec<(Option<String>, Span)> = received()
+            .await
+            .into_iter()
+            .filter(|(_, s)| s.trace_id == client_trace_id)
+            .collect();
         let has = |name: &str| spans.iter().any(|(_, s)| s.name == name);
         if wanted.iter().all(|name| has(name)) || Instant::now() > deadline {
             break spans;
@@ -175,7 +139,7 @@ async fn a_request_trace_is_exported_with_its_children() {
     );
     assert_eq!(
         attribute(server, "trace_id"),
-        Some(&Value::StringValue(hex::encode(trace_id)))
+        Some(&Value::StringValue(hex::encode(client_trace_id)))
     );
 
     for name in ["add_event", "kafka.publish"] {

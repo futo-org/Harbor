@@ -7,9 +7,9 @@ use rdkafka::message::{BorrowedMessage, Header, Headers, Message, OwnedHeaders};
 
 /// Add the current span's trace context to `headers`.
 pub fn with_trace_context(headers: OwnedHeaders) -> OwnedHeaders {
-    let mut injector = HeadersInjector(Some(headers));
+    let mut injector = HeadersInjector(headers);
     common_telemetry::trace::inject(&mut injector);
-    injector.0.unwrap()
+    injector.0
 }
 
 /// The trace context in a message's headers.
@@ -17,15 +17,16 @@ pub fn trace_context(message: &BorrowedMessage<'_>) -> Context {
     common_telemetry::trace::extract(&MessageExtractor(message))
 }
 
-struct HeadersInjector(Option<OwnedHeaders>);
+struct HeadersInjector(OwnedHeaders);
 
 impl Injector for HeadersInjector {
     fn set(&mut self, key: &str, value: String) {
-        let headers = self.0.take().unwrap();
-        self.0 = Some(headers.insert(Header {
+        // `insert` consumes the headers.
+        let headers = std::mem::replace(&mut self.0, OwnedHeaders::new());
+        self.0 = headers.insert(Header {
             key,
             value: Some(&value),
-        }));
+        });
     }
 }
 
