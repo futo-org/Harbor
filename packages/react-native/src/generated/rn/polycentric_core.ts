@@ -504,8 +504,8 @@ export type EventPushIssues = {
      */
     errors: Array<string>,
     /**
-     * If `warnings` is not empty, the server stored the event but dropped the content, for the
-     * reasons listed.
+     * If `warnings` is not empty, the server may have stored the event (if there were no errors),
+     * but dropped the content for the reasons listed.
      */
     warnings: Array<string>
 }
