@@ -10,29 +10,37 @@ const get = () => useEventPushIssuesStore.getState();
 
 const SERVER_A = 'https://a.example';
 const SERVER_B = 'https://b.example';
+const IDENTITY = 'identity';
+const OTHER_IDENTITY = 'other identity';
 
-const key = (sequence: number): EventKey => ({
+const key = (sequence: number, identity = IDENTITY): EventKey => ({
   collection: 2,
-  identity: 'identity',
+  identity,
   signedBy: { keyType: 1, key: new Uint8Array([1, 2, 3]).buffer },
   sequence: BigInt(sequence),
 });
 
 const issues = (
   sequence: number,
-  { errors = [], warnings = [] }: { errors?: string[]; warnings?: string[] },
-) => ({ key: key(sequence), errors, warnings });
+  {
+    errors = [],
+    warnings = [],
+    identity = IDENTITY,
+  }: { errors?: string[]; warnings?: string[]; identity?: string },
+) => ({ key: key(sequence, identity), errors, warnings });
 
 const result = (
   server: string,
   eventIssues: ServerPushResult['eventIssues'] = [],
   error?: unknown,
+  identity = IDENTITY,
 ): ServerPushResult =>
   error === undefined
-    ? { server, eventIssues }
-    : { server, eventIssues, error };
+    ? { identity, server, eventIssues }
+    : { identity, server, eventIssues, error };
 
-const issueList = () => Object.values(get().issues);
+const issueList = (identity = IDENTITY) =>
+  Object.values(get().issues[identity] ?? {});
 
 beforeEach(() => {
   get().clearAll();
@@ -57,7 +65,7 @@ describe('useEventPushIssuesStore', () => {
       expect(issueList()).toEqual(added);
     });
 
-    it('merges repeat issues without returning them as new', () => {
+    it('updates repeat issues without returning them as new', () => {
       get().record(
         [result(SERVER_A, [issues(1, { errors: ['too long'] })])],
         100,
@@ -79,6 +87,17 @@ describe('useEventPushIssuesStore', () => {
           firstSeen: 100,
           lastSeen: 200,
         }),
+      ]);
+    });
+
+    it('drops errors once the event is stored with only warnings', () => {
+      get().record([result(SERVER_A, [issues(1, { errors: ['too long'] })])]);
+      get().record([
+        result(SERVER_A, [issues(1, { warnings: ['field dropped'] })]),
+      ]);
+
+      expect(issueList()).toEqual([
+        expect.objectContaining({ errors: [], warnings: ['field dropped'] }),
       ]);
     });
 
@@ -111,70 +130,94 @@ describe('useEventPushIssuesStore', () => {
 
       expect(issueList()).toHaveLength(2);
     });
+
+    it("keeps each identity's issues separate", () => {
+      get().record([result(SERVER_A, [issues(1, { errors: ['too long'] })])]);
+      get().record([
+        result(
+          SERVER_A,
+          [
+            issues(1, {
+              warnings: ['field dropped'],
+              identity: OTHER_IDENTITY,
+            }),
+          ],
+          undefined,
+          OTHER_IDENTITY,
+        ),
+      ]);
+
+      expect(issueList()).toEqual([
+        expect.objectContaining({ errors: ['too long'] }),
+      ]);
+      expect(issueList(OTHER_IDENTITY)).toEqual([
+        expect.objectContaining({ warnings: ['field dropped'] }),
+      ]);
+    });
+
+    it("leaves other identities' state untouched", () => {
+      get().record([result(SERVER_A, [issues(1, { errors: ['too long'] })])]);
+      const before = get().issues[IDENTITY];
+      get().record([
+        result(
+          SERVER_A,
+          [issues(1, { errors: ['too long'], identity: OTHER_IDENTITY })],
+          undefined,
+          OTHER_IDENTITY,
+        ),
+      ]);
+
+      expect(get().issues[IDENTITY]).toBe(before);
+    });
   });
 
-  describe('server failures', () => {
-    it('replaces a server failure each sync', () => {
-      get().record([result(SERVER_A, [], new Error('unreachable'))], 100);
-      get().record([result(SERVER_A, [], new Error('timed out'))], 200);
+  it('ignores whether a push failed', () => {
+    get().record([result(SERVER_A, [issues(1, { errors: ['too long'] })])]);
+    get().record([result(SERVER_A, [], new Error('unreachable'))]);
 
-      expect(get().serverFailures).toEqual({
-        [SERVER_A]: { message: 'timed out', at: 200 },
-      });
-    });
-
-    it('clears a server failure after a push without one', () => {
-      get().record([
-        result(SERVER_A, [], new Error('unreachable')),
-        result(SERVER_B, [], 'offline'),
-      ]);
-      get().record([result(SERVER_A)]);
-
-      expect(get().serverFailures).toEqual({
-        [SERVER_B]: { message: 'offline', at: expect.any(Number) },
-      });
-    });
-
-    it('leaves event issues alone when a push fails', () => {
-      get().record([result(SERVER_A, [issues(1, { errors: ['too long'] })])]);
-      get().record([result(SERVER_A, [], new Error('unreachable'))]);
-
-      expect(issueList()).toHaveLength(1);
-    });
+    expect(issueList()).toHaveLength(1);
   });
 
   describe('removing issues', () => {
     beforeEach(() => {
       get().record([
-        result(SERVER_A, [issues(1, { errors: ['too long'] })], 'offline'),
+        result(SERVER_A, [issues(1, { errors: ['too long'] })]),
         result(SERVER_B, [issues(1, { warnings: ['field dropped'] })]),
+      ]);
+      get().record([
+        result(
+          SERVER_A,
+          [issues(1, { errors: ['too long'], identity: OTHER_IDENTITY })],
+          undefined,
+          OTHER_IDENTITY,
+        ),
       ]);
     });
 
     it('dismisses one issue', () => {
       const [first] = issueList();
-      get().dismiss(first.id);
+      get().dismiss(IDENTITY, first.id);
 
       expect(issueList().map((issue) => issue.server)).toEqual([SERVER_B]);
+      expect(issueList(OTHER_IDENTITY)).toHaveLength(1);
     });
 
-    it("clears a server's issues and failure", () => {
-      get().clearServer(SERVER_A);
+    it("clears a server's issues for one identity", () => {
+      get().clearServer(IDENTITY, SERVER_A);
 
       expect(issueList().map((issue) => issue.server)).toEqual([SERVER_B]);
-      expect(get().serverFailures).toEqual({});
+      expect(issueList(OTHER_IDENTITY)).toHaveLength(1);
     });
 
     it('clears everything', () => {
       get().clearAll();
 
       expect(get().issues).toEqual({});
-      expect(get().serverFailures).toEqual({});
     });
 
     it('re-adds a dismissed issue as new when it is reported again', () => {
       const [first] = issueList();
-      get().dismiss(first.id);
+      get().dismiss(IDENTITY, first.id);
       const added = get().record([
         result(SERVER_A, [issues(1, { errors: ['too long'] })]),
       ]);

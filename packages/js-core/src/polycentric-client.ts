@@ -1087,10 +1087,10 @@ export class PolycentricClient {
         pushResults.map((result, i): ServerPushResult => {
           const server = servers[i];
           if (result.status === 'fulfilled') {
-            return { server, eventIssues: result.value };
+            return { identity, server, eventIssues: result.value };
           }
           console.error('Sync failed for a server:', result.reason);
-          return { server, eventIssues: [], error: result.reason };
+          return { identity, server, eventIssues: [], error: result.reason };
         }),
       );
     }

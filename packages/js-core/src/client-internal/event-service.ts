@@ -10,8 +10,10 @@ export type ContentCreatedPayload = {
   content?: Content;
 };
 
-/** The outcome of pushing the active identity's events to one server. */
+/** The outcome of pushing an identity's events to one server. */
 export type ServerPushResult = {
+  // May no longer be the active identity by the time the push finishes
+  identity: string;
   server: string;
   /** Events the server issued errors or warnings for. */
   eventIssues: EventPushIssues[];

@@ -1475,8 +1475,12 @@ describe('PolycentricClient sync', () => {
 
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenCalledWith([
-        { server: 'http://server-1', eventIssues: [rejected, trimmed] },
-        { server: 'http://server-2', eventIssues: [] },
+        {
+          identity: identityA.key,
+          server: 'http://server-1',
+          eventIssues: [rejected, trimmed],
+        },
+        { identity: identityA.key, server: 'http://server-2', eventIssues: [] },
       ]);
     });
 
@@ -1493,7 +1497,7 @@ describe('PolycentricClient sync', () => {
       await client.sync(SyncStrategy.PARTIAL_PUSH);
 
       expect(listener).toHaveBeenCalledWith([
-        { server: 'http://server-1', eventIssues: [] },
+        { identity: identityA.key, server: 'http://server-1', eventIssues: [] },
       ]);
     });
 
@@ -1517,7 +1521,39 @@ describe('PolycentricClient sync', () => {
       await client.sync(SyncStrategy.PARTIAL_PUSH);
 
       expect(listener).toHaveBeenCalledWith([
-        { server: 'http://server-1', eventIssues: [], error: failure },
+        {
+          identity: identityA.key,
+          server: 'http://server-1',
+          eventIssues: [],
+          error: failure,
+        },
+      ]);
+    });
+
+    it('reports the identity pushed for after the active identity changes', async () => {
+      let switchIdentity = () => {};
+      const core = makeCoreMock({
+        pullBundles: () => [],
+        pushResponse: async () => {
+          switchIdentity();
+          return pushResult({});
+        },
+      });
+      const { client } = makeClient({
+        core,
+        identity: identityA,
+        signer: signerA,
+      });
+      switchIdentity = () => {
+        client.activeIdentityKey = 'other identity';
+      };
+      const listener = vi.fn();
+      client.events.onPushResults(listener);
+
+      await client.sync(SyncStrategy.PARTIAL_PUSH);
+
+      expect(listener).toHaveBeenCalledWith([
+        expect.objectContaining({ identity: identityA.key }),
       ]);
     });
 

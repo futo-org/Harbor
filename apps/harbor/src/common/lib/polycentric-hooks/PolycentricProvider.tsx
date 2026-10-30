@@ -5,6 +5,7 @@ import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { useEventPushIssuesStore } from '@/src/features/core/event-push-issues/useEventPushIssuesStore';
+import { useServerFailuresStore } from '@/src/features/core/server-failures/useServerFailuresStore';
 import {
   type PolycentricClient,
   createPolycentricClient,
@@ -241,13 +242,28 @@ export function PolycentricProvider({
     const handleKeyPairChanged = async () => {
       if (cancelled || !ready) return;
 
-      // Push issues belong to the previous identity's events
-      useEventPushIssuesStore.getState().clearAll();
-
       try {
         await refresh(ready);
       } catch (err) {
         console.error('Refresh after login failed:', err);
+      }
+    };
+
+    /** Collect any servers that were removed, and drop data associated with those */
+    const clearRemovedServers = ({ client }: Bootstrap, identity: string) => {
+      const servers = client.identityManager.resolveIdentity(identity)?.servers;
+      if (!servers) return;
+
+      const issues = useEventPushIssuesStore.getState();
+      const failures = useServerFailuresStore.getState();
+      const recorded = new Set([
+        ...Object.values(issues.issues[identity] ?? {}).map((i) => i.server),
+        ...Object.keys(failures.failures[identity] ?? {}),
+      ]);
+      for (const server of recorded) {
+        if (servers.includes(server)) continue;
+        issues.clearServer(identity, server);
+        failures.clearServer(identity, server);
       }
     };
 
@@ -266,6 +282,7 @@ export function PolycentricProvider({
       if (event.key?.identity !== ready.client.activeIdentityKey) return;
 
       setCurrentIdentity(ready.client.identityManager.resolveIdentity());
+      clearRemovedServers(ready, event.key.identity);
     };
 
     // Refresh stores when we pull from remote servers
@@ -274,6 +291,8 @@ export function PolycentricProvider({
 
       const { client } = ready;
       if (identityKey !== client.activeIdentityKey) return;
+
+      clearRemovedServers(ready, identityKey);
 
       try {
         await refresh(ready);
@@ -285,6 +304,7 @@ export function PolycentricProvider({
     const handlePushResults = (results: ServerPushResult[]) => {
       if (cancelled) return;
       useEventPushIssuesStore.getState().record(results);
+      useServerFailuresStore.getState().record(results);
     };
 
     (async () => {
