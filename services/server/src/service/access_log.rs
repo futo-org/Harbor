@@ -134,7 +134,6 @@ pub async fn access_log_middleware(
         .map(str::to_owned);
     let status = response.status().as_u16();
 
-    span.record("harbor.identity", identity.as_deref());
     span.record("http.response.status_code", status);
     span.record("rpc.grpc.status_code", grpc_status.as_deref());
     if status >= 500 || grpc_status.as_deref().is_some_and(is_server_error) {
