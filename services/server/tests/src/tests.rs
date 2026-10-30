@@ -6,6 +6,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
 use polycentric_common::jwt::ServerJwtClaims;
 use polycentric_common::merkle;
+use polycentric_common::models::protos_v2::attributed_to::To;
 use polycentric_common::models::protos_v2::content::ContentBody;
 use polycentric_common::models::protos_v2::content_service_client::ContentServiceClient;
 use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncServiceClient;
@@ -31,6 +32,7 @@ mod graph;
 mod heads;
 mod notifications;
 mod pairing;
+mod reactions;
 mod search;
 mod traces;
 mod verifications;
@@ -429,6 +431,53 @@ impl TestClient {
         self.react(
             Reaction {
                 event_key: Some(on),
+                emoji: Some("👎".to_owned()),
+                positive: false,
+            },
+            created_at,
+        )
+    }
+
+    pub fn attributed_to_react(
+        &mut self,
+        reaction: AttributedToReaction,
+        created_at: u64,
+    ) -> Vec<u8> {
+        self.push_event_bundle(
+            ContentBody::AttributedToReaction(reaction),
+            created_at,
+        )
+    }
+
+    pub fn thumbs_up_to(&mut self, url: &str, created_at: u64) -> Vec<u8> {
+        self.attributed_to_react(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(To::Link(Link {
+                        title: format!("{url} title"),
+                        description: None,
+                        image: None,
+                        url: url.to_owned(),
+                    })),
+                }),
+                emoji: Some("👍".to_owned()),
+                positive: true,
+            },
+            created_at,
+        )
+    }
+
+    pub fn thumbs_down_to(&mut self, url: &str, created_at: u64) -> Vec<u8> {
+        self.attributed_to_react(
+            AttributedToReaction {
+                attributed_to: Some(AttributedTo {
+                    to: Some(To::Link(Link {
+                        title: format!("{url} title"),
+                        description: None,
+                        image: None,
+                        url: url.to_owned(),
+                    })),
+                }),
                 emoji: Some("👎".to_owned()),
                 positive: false,
             },
