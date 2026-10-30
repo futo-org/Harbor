@@ -2,12 +2,13 @@ import type { TextInput, TextInputSelectionChangeEvent } from 'react-native';
 import { useEffect } from 'react';
 import { isWeb } from '@/src/common/util/platform';
 import { useMentionStoreApi } from '@/src/features/composer/hooks/useMentionStore';
+import { useComposerStore } from '@/src/features/composer/hooks/useComposerStore';
 
 /**
  * Wires the composer input into its host's mention store: mirrors the draft
- * text, registers the native ref + text sync, measures the input's page
- * position while the route is focused, and hands back the TextArea event
- * handlers that keep selection/focus/layout live.
+ * text and its mention ranges, registers the native ref + text sync, measures
+ * the input's page position while the route is focused, and hands back the
+ * TextArea event handlers that keep selection/focus/layout live.
  */
 export function useMentionInputSync({
   text,
@@ -15,10 +16,12 @@ export function useMentionInputSync({
   inputRef,
 }: {
   text: string;
-  onChangeText: (next: string) => void;
+  onChangeText: (next: string, caret?: number) => void;
   inputRef: React.RefObject<TextInput | null>;
 }) {
   const store = useMentionStoreApi();
+  // Updated together with `text` by the draft store's `setText`
+  const mentionRanges = useComposerStore((s) => s.mentionRanges);
 
   useEffect(() => {
     // Web: `text` comes from the DOM `input` event and React flushes this
@@ -35,11 +38,12 @@ export function useMentionInputSync({
       node
         ? {
             text,
+            mentionRanges,
             selection: { start: node.selectionStart, end: node.selectionEnd },
           }
-        : { text },
+        : { text, mentionRanges },
     );
-  }, [store, text, inputRef]);
+  }, [store, text, mentionRanges, inputRef]);
 
   useEffect(() => {
     store.setState({ onChangeText });
