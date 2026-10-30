@@ -113,5 +113,5 @@ async fn attributed_to_reaction_wrong_usage() {
 }
 
 fn work_around_eventual_consistency() {
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    std::thread::sleep(std::time::Duration::from_millis(500));
 }
