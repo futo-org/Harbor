@@ -23,7 +23,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: ListTargetedVerificationClaimsRequest,
 ) -> Result<ListTargetedVerificationClaimsResponse, Status> {
     // TODO: use AuthContext here.
@@ -35,7 +35,7 @@ pub async fn handle(
         target_identity: req.target_identity,
     };
     let view = pipeline::create_pipeline(
-        &ctx,
+        &mut ctx,
         &params,
         fetch,
         claim_bundles::hydrate,
@@ -52,7 +52,7 @@ pub async fn handle(
 /// Fetches claims that are targeted at an identity and returns relevant
 /// VerificationClaim, VerificationTarget and VerificationVerify events
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
     let targets =

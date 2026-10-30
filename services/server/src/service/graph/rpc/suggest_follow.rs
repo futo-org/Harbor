@@ -20,7 +20,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: SuggestFollowRequest,
 ) -> Result<SuggestFollowResponse, Status> {
     let pagination =
@@ -28,7 +28,7 @@ pub async fn handle(
     let params = Params { pagination };
 
     pipeline::create_pipeline(
-        &ctx,
+        &mut ctx,
         &params,
         fetch,
         hydrate,
@@ -39,7 +39,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<Fetched<FollowSuggestionEvent, FollowSuggestionsSortedBy>, Status> {
     let mut rows = Query::suggest_follow(
@@ -67,7 +67,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     fetched: &Fetched<FollowSuggestionEvent, FollowSuggestionsSortedBy>,
 ) -> Result<HydrationState, Status> {
@@ -97,7 +97,7 @@ async fn hydrate(
 }
 
 async fn view(
-    _: &PublicContext,
+    _: &mut PublicContext,
     _: &Params,
     filtered: Filtered<FollowSuggestionEvent, FollowSuggestionsSortedBy>,
     hydration: HydrationState,

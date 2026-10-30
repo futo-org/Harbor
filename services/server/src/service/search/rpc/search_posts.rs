@@ -24,7 +24,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: SearchPostsRequest,
 ) -> Result<SearchPostsResponse, Status> {
     let sort_by = req.sort_by();
@@ -36,7 +36,8 @@ pub async fn handle(
         omit_labels: req.omit_labels,
     };
     let result =
-        create_pipeline(&ctx, &params, fetch, hydrate, filter, view).await?;
+        create_pipeline(&mut ctx, &params, fetch, hydrate, filter, view)
+            .await?;
     Ok(SearchPostsResponse {
         results: result.results,
         event_hints: result.event_hints,
@@ -45,7 +46,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<Fetched<SearchRow, SortedPostsBy>, Status> {
     let mut rows = Query::search_posts(
@@ -99,7 +100,7 @@ impl SortedPostsBy {
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _params: &Params,
     fetched: &Fetched<SearchRow, SortedPostsBy>,
 ) -> Result<HydrationState, Status> {
@@ -107,7 +108,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &PublicContext,
+    _: &mut PublicContext,
     params: &Params,
     fetched: Fetched<SearchRow, SortedPostsBy>,
     hydration: &HydrationState,
@@ -116,7 +117,7 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     filtered: SearchResponseFilter<SortedPostsBy>,
     hydration: HydrationState,

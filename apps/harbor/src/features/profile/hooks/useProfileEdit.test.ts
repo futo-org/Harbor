@@ -4,20 +4,21 @@ jest.mock('@polycentric/react-native', () => ({
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   invalidateQuery: jest.fn(),
 }));
+const mockClient = { sync: jest.fn().mockResolvedValue(0) };
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
-  usePolycentric: () => ({}),
+  usePolycentric: () => mockClient,
 }));
-jest.mock('../lib/publishProfileUpdate', () => ({
-  publishProfileUpdate: jest.fn().mockResolvedValue(undefined),
+jest.mock('../lib/updateProfile', () => ({
+  updateProfile: jest.fn().mockResolvedValue(undefined),
 }));
 
 import { act, renderHook } from '@testing-library/react-native';
 import { resolveAlias } from '@polycentric/react-native';
 import { useProfileEdit } from './useProfileEdit';
-import { publishProfileUpdate } from '../lib/publishProfileUpdate';
+import { updateProfile } from '../lib/updateProfile';
 
 const mockResolve = resolveAlias as jest.Mock;
-const mockPublish = publishProfileUpdate as jest.Mock;
+const mockUpdate = updateProfile as jest.Mock;
 
 const IDENTITY =
   '0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722';
@@ -73,7 +74,8 @@ describe('useProfileEdit alias', () => {
 
     expect(ok).toBe(true);
     expect(mockResolve).not.toHaveBeenCalled();
-    expect(mockPublish).toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalled();
+    expect(mockClient.sync).toHaveBeenCalled();
     expect(result.current.aliasError).toBeNull();
   });
 
@@ -88,10 +90,11 @@ describe('useProfileEdit alias', () => {
 
     expect(ok).toBe(true);
     expect(mockResolve).toHaveBeenCalledWith('new@domain.com');
-    expect(mockPublish).toHaveBeenCalledWith(
+    expect(mockUpdate).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ alias: 'new@domain.com' }),
     );
+    expect(mockClient.sync).toHaveBeenCalled();
     expect(result.current.aliasError).toBeNull();
   });
 
@@ -105,7 +108,8 @@ describe('useProfileEdit alias', () => {
     });
 
     expect(ok).toBe(false);
-    expect(mockPublish).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockClient.sync).not.toHaveBeenCalled();
     expect(result.current.aliasError).not.toBeNull();
   });
 
@@ -119,7 +123,8 @@ describe('useProfileEdit alias', () => {
     });
 
     expect(ok).toBe(false);
-    expect(mockPublish).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockClient.sync).not.toHaveBeenCalled();
   });
 
   it('commits a cleared alias without verifying', async () => {
@@ -132,6 +137,7 @@ describe('useProfileEdit alias', () => {
 
     expect(ok).toBe(true);
     expect(mockResolve).not.toHaveBeenCalled();
-    expect(mockPublish).toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalled();
+    expect(mockClient.sync).toHaveBeenCalled();
   });
 });

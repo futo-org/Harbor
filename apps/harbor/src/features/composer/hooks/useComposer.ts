@@ -35,7 +35,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
 import { isWeb } from '@/src/common/util/platform';
 import { useComposerStore } from './useComposerStore';
-import { rewriteMentions } from '../utils/rewriteMentions';
+import { spliceMentions } from '../utils/spliceMentions';
 import { useLinkPreview } from './useLinkPreview';
 import {
   ImageImportError,
@@ -260,8 +260,8 @@ export function useComposer({
   // Editing the draft (text or images) clears any prior post error.
   const handleTextChange = useCallback(
     (next: string) => {
-      setText(next);
       setError(null);
+      return setText(next);
     },
     [setText, setError],
   );
@@ -310,10 +310,11 @@ export function useComposer({
       const link = await resolveLinkForPost();
 
       const post: v2.Post = {
-        text: rewriteMentions(
-          text.trim(),
-          useComposerStore.getState().mentions,
-        ),
+        // Trimmed after splicing: ranges are offsets into the untrimmed text.
+        text: spliceMentions(
+          text,
+          useComposerStore.getState().mentionRanges,
+        ).trim(),
         images: imageSets,
         links: link ? [link] : [],
         // Tag posts authored in Harbor with the client label (Post.labels).

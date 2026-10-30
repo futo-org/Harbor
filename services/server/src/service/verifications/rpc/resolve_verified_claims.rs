@@ -26,7 +26,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: ResolveVerifiedClaimsRequest,
 ) -> Result<ResolveVerifiedClaimsResponse, Status> {
     if req.verified_by_identities.is_empty() {
@@ -60,7 +60,7 @@ pub async fn handle(
         verified_by: req.verified_by_identities.into_iter().collect(),
     };
     let view = pipeline::create_pipeline(
-        &ctx,
+        &mut ctx,
         &params,
         fetch,
         claim_bundles::hydrate,
@@ -75,7 +75,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<FetchedClaims, Status> {
     let claims = Repository::list_claim_events_by_fields(
@@ -94,7 +94,7 @@ async fn fetch(
 /// revoked (tombstoned) verify would still confer verified status on its claim
 /// even though it is stripped from the returned bundle.
 async fn filter(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
     fetched: FetchedClaims,
     hydration: &HydrationState,

@@ -45,7 +45,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: ListEventsRequest,
 ) -> Result<ListEventsResponse, Status> {
     let size = req.size.unwrap_or(200).min(200) as u64;
@@ -64,9 +64,10 @@ pub async fn handle(
         return Err(Status::invalid_argument("Identity is required"));
     }
 
-    let result =
-        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
-            .await?;
+    let result = pipeline::create_pipeline(
+        &mut ctx, &params, fetch, hydrate, filter, view,
+    )
+    .await?;
 
     Ok(ListEventsResponse {
         event_bundles: result.event_bundles,
@@ -75,7 +76,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     EventsRepository::list_events(
@@ -94,7 +95,7 @@ async fn fetch(
 
 #[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _params: &Params,
     rows: &Vec<EventWithContentRow>,
 ) -> Result<HydrationState, Status> {
@@ -127,8 +128,8 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &PublicContext,
-    _params: &Params,
+    _: &mut PublicContext,
+    _: &Params,
     rows: Vec<EventWithContentRow>,
     _hydration: &HydrationState,
 ) -> Result<Filtered, Status> {
@@ -136,8 +137,8 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &PublicContext,
-    _params: &Params,
+    ctx: &mut PublicContext,
+    _: &Params,
     filtered: Filtered,
     hydration: HydrationState,
 ) -> Result<View, Status> {
