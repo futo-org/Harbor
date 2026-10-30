@@ -48,6 +48,7 @@ export default function OnboardingLayout() {
         Atoms.flex_1,
         Atoms.flex_row,
         { backgroundColor: theme.palette.neutral_0 },
+        { paddingLeft: insets.left, paddingRight: insets.right },
       ]}
     >
       <KeyboardAvoidingView
