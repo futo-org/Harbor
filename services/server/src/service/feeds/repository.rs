@@ -507,9 +507,6 @@ impl Query {
         limit: u64,
         cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        if url.is_empty() {
-            return Ok(Vec::new());
-        }
         Self::do_list_feed_events(db, limit, None, Some(url), cursor_filter)
             .await
     }
@@ -525,7 +522,10 @@ impl Query {
         let mut query = event::Entity::find()
             .select_also(content::Entity)
             .join(JoinType::LeftJoin, content_join())
-            .filter(event::Column::Collection.eq(FEED_COLLECTION));
+            .filter(
+                Expr::col(event::Column::Collection.as_column_ref())
+                    .eq(Expr::Constant(FEED_COLLECTION.into())),
+            );
 
         if let Some(identities) = only_identities {
             if identities.is_empty() {
@@ -556,7 +556,6 @@ impl Query {
                     }
                     Cursor::End => return Ok(vec![]),
                 }
-
                 sea_cursor.first(limit);
             }
             CursorFilter::Backward(cur) => {

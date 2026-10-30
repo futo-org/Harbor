@@ -25,18 +25,14 @@ pub async fn handle(
     mut ctx: PublicContext,
     req: GetAttributionFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
-    // Only link attribution is queryable today; extract its URL.
     let url = match req.attributed_to.and_then(|a| a.to) {
-        Some(To::Link(link)) => link.url,
-        None => {
-            return Err(Status::invalid_argument("attributed_to is required"));
+        Some(To::Link(link)) if !link.url.is_empty() => link.url,
+        _ => {
+            return Err(Status::invalid_argument(
+                "attributed_to link url is required",
+            ));
         }
     };
-    if url.is_empty() {
-        return Err(Status::invalid_argument(
-            "attributed_to link url is required",
-        ));
-    }
 
     let common = feeds_pipeline::Params::from_req_params(
         &req.page_params,
