@@ -20,8 +20,7 @@ export async function redirectIfLoggedIn(
   }
 
   // Don't redirect if even local storage doesn't have identity information
-  if (!client.currentKeyPair) return false;
-  if (!(await client.getIdentityKeyFor(client.currentKeyPair))) return false;
+  if (!(await client.storageDriver.getActiveLogin())) return false;
 
   // Local storage has identity information but our polycentric client does not.
   // On web, another tab could have updated the local storage beyond what we

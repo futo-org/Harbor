@@ -7,6 +7,7 @@ use sea_orm::{ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter};
 /// Canonically-ordered signatures in `(identity, collection)`. Delegates
 /// to [`polycentric_common::merkle::canonical_signatures`] so client and
 /// server agree on the ordering.
+#[tracing::instrument(skip_all)]
 pub async fn canonical_signatures<C: ConnectionTrait>(
     db: &C,
     identity: &str,

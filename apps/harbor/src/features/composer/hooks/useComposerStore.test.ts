@@ -34,6 +34,27 @@ describe('useComposerStore', () => {
       get().setText('hello world');
       expect(get().text).toBe('hello world');
     });
+
+    it('keeps mention ranges in sync and returns the text to show', () => {
+      get().setText('hi @Ann x');
+      get().addMentionRange({ start: 3, end: 7, identity: 'a'.repeat(64) });
+
+      expect(get().setText('oh hi @Ann x')).toEqual({
+        text: 'oh hi @Ann x',
+        caret: 3,
+      });
+      expect(get().mentionRanges).toEqual([
+        { start: 6, end: 10, identity: 'a'.repeat(64) },
+      ]);
+
+      // A backspace inside the mention deletes all of it.
+      expect(get().setText('oh hi @An x')).toEqual({
+        text: 'oh hi  x',
+        caret: 6,
+      });
+      expect(get().text).toBe('oh hi  x');
+      expect(get().mentionRanges).toEqual([]);
+    });
   });
 
   describe('addAttachments', () => {
@@ -118,8 +139,9 @@ describe('useComposerStore', () => {
   });
 
   describe('reset', () => {
-    it('clears text, attachments, submitting, and error', () => {
-      get().setText('draft');
+    it('clears text, mention ranges, attachments, submitting, and error', () => {
+      get().setText('@Ann');
+      get().addMentionRange({ start: 0, end: 4, identity: 'a'.repeat(64) });
       get().addAttachments([attachment('a')]);
       get().setSubmitting(true);
       get().setError('boom');
@@ -128,6 +150,7 @@ describe('useComposerStore', () => {
 
       expect(get()).toMatchObject({
         text: '',
+        mentionRanges: [],
         attachments: [],
         submitting: false,
         error: null,

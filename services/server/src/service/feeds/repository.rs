@@ -114,6 +114,7 @@ const NOT_OWN_POSTS: bool = false;
 
 impl Query {
     /// Returns posts for the global Explore feed.
+    #[tracing::instrument(skip_all)]
     pub async fn explore_feed<C: ConnectionTrait>(
         db: &C,
         sort_by: SortPostsBy,
@@ -133,6 +134,7 @@ impl Query {
     }
 
     /// Returns posts for the Following feed.
+    #[tracing::instrument(skip_all)]
     pub async fn following_feed<C: ConnectionTrait>(
         db: &C,
         for_identity: &str,
@@ -153,6 +155,7 @@ impl Query {
     }
 
     /// Returns posts for the Recommended / For You feed.
+    #[tracing::instrument(skip_all)]
     pub async fn recommended_feed<C: ConnectionTrait>(
         db: &C,
         for_identity: &str,
@@ -180,6 +183,7 @@ impl Query {
     /// If `posts_created_only` is true only posts created by an identity
     /// `for_identity` is following will be shown. If it's false any interaction
     /// (reaction, repost, etc.) by a followee will include the post.
+    #[tracing::instrument(skip_all)]
     async fn explore_posts<C: ConnectionTrait>(
         db: &C,
         for_identity: Option<&str>,
@@ -475,6 +479,7 @@ impl Query {
 
     /// List events restricted to events authored by any of `identities`.
     /// Short-circuits with an empty Vec when the identity list is empty.
+    #[tracing::instrument(skip_all)]
     pub async fn list_feed_events_by_identities<C: ConnectionTrait>(
         db: &C,
         identities: Vec<String>,
@@ -495,19 +500,18 @@ impl Query {
     /// `Post.attributed_to[].link`). "Attributed to a URL" means an exact URL
     /// match, ignoring the other Link metadata.
     /// Short-circuits with an empty Vec when `url` is empty.
+    #[tracing::instrument(skip_all)]
     pub async fn list_feed_events_by_attributed_url<C: ConnectionTrait>(
         db: &C,
         url: String,
         limit: u64,
         cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        if url.is_empty() {
-            return Ok(Vec::new());
-        }
         Self::do_list_feed_events(db, limit, None, Some(url), cursor_filter)
             .await
     }
 
+    #[tracing::instrument(skip_all)]
     async fn do_list_feed_events<C: ConnectionTrait>(
         db: &C,
         limit: u64,
@@ -518,7 +522,10 @@ impl Query {
         let mut query = event::Entity::find()
             .select_also(content::Entity)
             .join(JoinType::LeftJoin, content_join())
-            .filter(event::Column::Collection.eq(FEED_COLLECTION));
+            .filter(
+                Expr::col(event::Column::Collection.as_column_ref())
+                    .eq(Expr::Constant(FEED_COLLECTION.into())),
+            );
 
         if let Some(identities) = only_identities {
             if identities.is_empty() {
@@ -549,7 +556,6 @@ impl Query {
                     }
                     Cursor::End => return Ok(vec![]),
                 }
-
                 sea_cursor.first(limit);
             }
             CursorFilter::Backward(cur) => {
@@ -570,6 +576,7 @@ impl Query {
     /// Bulk-fetch events (with joined content) by their EventKey
     /// tuples. Keys missing a `signed_by` are skipped. Used to hydrate
     /// referenced posts (quote / repost targets) as `event_hints`.
+    #[tracing::instrument(skip_all)]
     pub async fn list_events_by_keys<C: ConnectionTrait>(
         db: &C,
         keys: &[crate::service::proto::EventKey],
@@ -609,6 +616,7 @@ impl Query {
     /// the trusted moderator are returned, using a join through
     /// `content_label` → `content` → `events` to check the label
     /// author's identity. Returns empty when no moderator is configured.
+    #[tracing::instrument(skip_all)]
     pub async fn list_labels_for_event_keys<C: ConnectionTrait>(
         db: &C,
         keys: &[TargetEventKey],
@@ -719,6 +727,7 @@ impl Query {
     }
 
     /// Look up a single event (with joined content) by its EventKey tuple.
+    #[tracing::instrument(skip_all)]
     pub async fn find_event_by_key<C: ConnectionTrait>(
         db: &C,
         collection: i16,
@@ -743,6 +752,7 @@ impl Query {
     /// identity for each of `identities`. Used as `event_hints` on
     /// feed/thread responses so clients can populate author profiles
     /// without a follow-up round-trip.
+    #[tracing::instrument(skip_all)]
     pub async fn list_latest_profiles_for_identities<C: ConnectionTrait>(
         db: &C,
         identities: Vec<String>,
@@ -773,6 +783,7 @@ impl Query {
 
     /// Bulk-fetch event rows by primary key, joining content. Order of the
     /// returned Vec is unspecified — caller reorders against the input list.
+    #[tracing::instrument(skip_all)]
     pub async fn list_events_by_ids<C: ConnectionTrait>(
         db: &C,
         ids: Vec<i64>,
@@ -789,6 +800,7 @@ impl Query {
     }
 
     /// Return ids (and height) of ancestors
+    #[tracing::instrument(skip_all)]
     pub async fn list_ancestor_refs<C: ConnectionTrait>(
         db: &C,
         subject_event_id: i64,
@@ -841,6 +853,7 @@ impl Query {
     /// Return every descendant of the subject as `(event_id, parent_event_id,
     /// depth)`, ordered (depth ASC, created_at DESC) so per-parent groupings
     /// come newest-first. Caller applies branching/sort/flatten.
+    #[tracing::instrument(skip_all)]
     pub async fn list_descendant_refs<C: ConnectionTrait>(
         db: &C,
         subject_event_id: i64,
@@ -898,6 +911,7 @@ impl Query {
 
     /// List feed events at a given sequence by a given identity.
     /// This is useful when we don't know the full signing key.
+    #[tracing::instrument(skip_all)]
     pub(super) async fn list_events_at_sequence<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -922,6 +936,7 @@ impl Query {
     /// outdated reactions from a user that have been superseded without also
     /// getting the newest one.
     /// Optionally, filter events to only include reactions with `emoji`.
+    #[tracing::instrument(skip_all)]
     pub async fn get_reactions<C: ConnectionTrait>(
         db: &C,
         target: &TargetEventKey,

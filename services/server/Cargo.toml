@@ -50,8 +50,10 @@ tracing.workspace = true
 tower-http = { version = "0.7", default-features = false, features = ["cors"] }
 tower-layer = { version = "0.3", default-features = false }
 http = { version = "1", default-features = false, features = ["std"] }
+http-body-util = { version = "0.1", default-features = false }
 
 [dev-dependencies]
+common-telemetry = { path = "../common/telemetry", features = ["testing"] }
 ed25519-dalek.workspace = true
 mockito = { version = "1", default-features = false }
 sea-orm = { workspace = true, features = ["mock"] }

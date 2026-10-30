@@ -5602,6 +5602,10 @@ export interface PolycentricCoreLike {
  */
     setServers(servers: Array<string>): void;
 /**
+ * Set the `traceparent` sent with gRPC requests, or `None` for one per request.
+ */
+    setTraceparent(traceparent: string | undefined) /*throws*/: void;
+/**
  * Sign event bytes via a foreign callback. Validates the inner
  * `Event`, calls the callback to produce signature bytes, assembles
  * a `SignedEvent`, and re-verifies before returning the canonical
@@ -6761,6 +6765,20 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
+ * Set the `traceparent` sent with gRPC requests, or `None` for one per request.
+ */
+    setTraceparent(traceparent: string | undefined): void /*throws*/ {uniffiCaller.rustCallWithError(
+            /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
+            /*caller:*/ (callStatus) => { nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_traceparent(
+                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
+        FfiConverterOptionalString.lower(traceparent, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+    }
+    
+/**
  * Sign event bytes via a foreign callback. Validates the inner
  * `Event`, calls the callback to produce signature bytes, assembles
  * a `SignedEvent`, and re-verifies before returning the canonical
@@ -7253,6 +7271,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers() !== 60336) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_servers");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_traceparent() !== 55585) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_traceparent");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event() !== 43916) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_sign_event");

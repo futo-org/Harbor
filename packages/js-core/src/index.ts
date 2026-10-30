@@ -30,23 +30,62 @@ export {
   MAX_PATH_BYTES,
 } from './platform-interfaces/file-store-driver';
 
-export { StorageHandle } from './data-store';
+export {
+  StorageHandle,
+  ContentStore,
+  EventStore,
+  LoginStore,
+} from './data-store';
 export type { Repositories } from './data-store';
 
 export { PolycentricClient } from './polycentric-client';
+export type { PolycentricClientConfig, KeyPair } from './polycentric-client';
 export { FileStore } from './file-store';
 export { MemoryStorageDriver, MemoryFileStoreDriver } from './memory-storage';
+
 export { IdentityManager } from './client-internal/identity-manager';
-export { PairingSessionManager } from './client-internal/pairing-session-manager';
-export type { PairingSession } from './client-internal/pairing-session-manager';
 export type {
-  PolycentricClientConfig,
-  KeyPair,
-  PrivateKey,
   IdentityState,
   PublishArgs,
   IdentityUpdate,
-} from './polycentric-client';
+  IdentityDraft,
+} from './client-internal/identity-manager';
+
+export { LoginManager } from './client-internal/login-manager';
+export type {
+  PendingLogin,
+  SignupInfo,
+} from './client-internal/login-manager';
+
+export { ContentManager } from './client-internal/content-manager';
+
+export {
+  EventService,
+  ClientState,
+  InitializationStep,
+  HydrationStatus,
+} from './client-internal/event-service';
+export type {
+  ContentCreatedPayload,
+  ServerPushResult,
+} from './client-internal/event-service';
+export type { EventPushIssues } from '@polycentric/rs-core-wasm';
+
+export {
+  PairingSessionManager,
+  PAIRING_SESSION_TTL_MILLIS,
+} from './client-internal/pairing-session-manager';
+export type { PairingSession } from './client-internal/pairing-session-manager';
+
+export type {
+  LoginId,
+  LoginOverview,
+  LoginDetails,
+  LoginStatus,
+  LoginRepositoryErrorCode,
+  PrivateKeyLocation,
+} from './platform-interfaces/login-repository';
+export { LoginRepositoryError } from './platform-interfaces/login-repository';
 
 export * from './errors';
 export * as Errors from './errors';
@@ -58,14 +97,7 @@ export {
   HydrationStrategy,
   SyncStrategy,
 } from './constants';
-
-export {
-  ClientState,
-  InitializationStep,
-  HydrationStatus,
-} from './client-internal/event-service';
-export type { ServerPushResult } from './client-internal/event-service';
-export type { EventPushIssues } from '@polycentric/rs-core-wasm';
+export type { Collection } from './constants';
 
 export {
   resolveAlias,
@@ -73,4 +105,8 @@ export {
   isIdentityKey,
 } from './http/alias-resolver';
 export { CryptoManager } from './crypto/crypto-manager';
-export { createServerJwt, type ServerJwtClaims } from './crypto/server-jwt';
+export {
+  createServerJwt,
+  DEFAULT_EXPIRY_SECONDS,
+  type ServerJwtClaims,
+} from './crypto/server-jwt';

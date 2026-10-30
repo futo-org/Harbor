@@ -146,8 +146,42 @@
   {
     "name": "curly glued to a word",
     "text": "a@{0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722}",
-    "mentions": [],
-    "plain": "a@{0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722}"
+    "mentions": [
+      {
+        "identity": "0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722"
+      }
+    ],
+    "plain": "a@0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722"
+  },
+  {
+    "name": "curly glued to an @",
+    "text": "@@{0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722,Jane}",
+    "mentions": [
+      {
+        "identity": "0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722"
+      }
+    ],
+    "plain": "@@Jane"
+  },
+  {
+    "name": "curly glued to an @ run",
+    "text": "@x@{0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722,Jane}",
+    "mentions": [
+      {
+        "identity": "0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722"
+      }
+    ],
+    "plain": "@x@Jane"
+  },
+  {
+    "name": "curly with an alias as display name glued to an @",
+    "text": "@@{0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722,user@domain.com}",
+    "mentions": [
+      {
+        "identity": "0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722"
+      }
+    ],
+    "plain": "@@user@domain.com"
   },
   {
     "name": "identity",

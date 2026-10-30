@@ -16,6 +16,7 @@ use prost::Message;
 use rdkafka::message::{Header, OwnedHeaders};
 use sea_orm::ActiveValue::{NotSet, Set};
 use tonic::{Code, Status};
+use tracing::Instrument;
 
 use crate::service::content::content_repository as ContentRepository;
 use crate::service::context::PublicContext;
@@ -31,6 +32,16 @@ use crate::service::proto::{
 
 /// Ingest a batch of signed events. Each event is processed in
 /// isolation with failures reported back in `PutEventsResponse.errors`
+#[tracing::instrument(
+    name = "put_events",
+    skip_all,
+    fields(
+        events = req.event_bundles.len(),
+        inserted = tracing::field::Empty,
+        errors = tracing::field::Empty,
+        warnings = tracing::field::Empty,
+    )
+)]
 pub async fn handle(
     mut ctx: PublicContext,
     req: PutEventsRequest,
@@ -102,6 +113,11 @@ pub async fn handle(
         }
     }
 
+    tracing::Span::current()
+        .record("inserted", stored.values().map(Vec::len).sum::<usize>())
+        .record("errors", errors.len())
+        .record("warnings", warnings.len());
+
     if let Some(pubsub) = heads_pubsub::get()
         && !stored.is_empty()
     {
@@ -130,6 +146,15 @@ pub async fn handle(
 
 /// Validate and persist an event, adding its blobs to `all_blobs`.
 /// Returns its key and whether it was newly stored.
+#[tracing::instrument(
+    skip_all,
+    fields(
+        event.identity = tracing::field::Empty,
+        event.collection = tracing::field::Empty,
+        event.sequence = tracing::field::Empty,
+        event.content_type = tracing::field::Empty,
+    )
+)]
 async fn process_event(
     ctx: &mut PublicContext,
     event_bundle: EventBundle,
@@ -171,6 +196,10 @@ async fn process_event(
         warnings.truncate(start_warning_len);
         Status::invalid_argument("event key is missing")
     })?;
+    tracing::Span::current()
+        .record("event.identity", &key.identity)
+        .record("event.collection", key.collection)
+        .record("event.sequence", key.sequence);
 
     // Early banned check based on the cache.
     let is_banned = banned_cache.get(&*key.identity).copied();
@@ -251,6 +280,7 @@ async fn process_event(
                 .content_body
                 .as_ref()
                 .map(|c| content_types::of(c) as i16);
+            tracing::Span::current().record("event.content_type", content_type);
             Some((content_bytes, content, digest))
         }
     } else {
@@ -356,18 +386,28 @@ async fn process_event(
 
             let producer = ctx.kafka_producer.clone();
             let topic = common_kafka::prefixed("events");
+            let span = tracing::info_span!(
+                "kafka.publish",
+                otel.kind = "producer",
+                messaging.system = "kafka",
+                messaging.destination.name = %topic,
+            );
+            // Inside the span, so the consumer's span hangs off it.
+            let headers = span.in_scope(|| {
+                common_kafka::with_trace_context(OwnedHeaders::new().insert(
+                    Header {
+                        key: "SOURCE_SERVER",
+                        value: Some(crate::config::get().server_name.as_str()),
+                    },
+                ))
+            });
             tokio::spawn(async move {
                 if let Err((e, _)) = producer
                     .send(
                         FutureRecord::to(&topic)
                             .key(&event_key_bytes)
                             .payload(&event_bundle_bytes)
-                            .headers(OwnedHeaders::new().insert(Header {
-                                key: "SOURCE_SERVER",
-                                value: Some(
-                                    crate::config::get().server_name.as_str(),
-                                ),
-                            })),
+                            .headers(headers),
                         // Setting this to a non-zero value allows the send
                         // operation to be retried.
                         //
@@ -380,7 +420,7 @@ async fn process_event(
                 {
                     tracing::warn!(error = %e, "failed to publish message to kafka");
                 }
-            });
+            }.instrument(span));
             true
         }
         Ok(false) => {

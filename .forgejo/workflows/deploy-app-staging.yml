@@ -10,7 +10,7 @@ on:
         type: boolean
         default: false
   push:
-    branches: [develop]
+    branches: [ develop ]
     paths:
       - pnpm-lock.yaml
       - apps/**
@@ -28,8 +28,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  CARGO_INCREMENTAL: '0'
-  CARGO_PROFILE_DEV_DEBUG: '0'
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
   SCCACHE_R2_BUCKET: ${{ vars.SCCACHE_R2_BUCKET }}
   SCCACHE_R2_ENDPOINT: ${{ secrets.SCCACHE_R2_ENDPOINT }}
   SCCACHE_R2_ACCESS_KEY_ID: ${{ secrets.SCCACHE_R2_ACCESS_KEY_ID }}
@@ -60,6 +60,8 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
     steps:
+      - name: Install git
+        run: apk add --no-cache git
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/ci-images
         if: needs.changes.outputs.images_missing == 'true'
@@ -74,7 +76,7 @@ jobs:
   # them for these sources.
   wasm:
     name: Build wasm
-    needs: [changes, setup-images]
+    needs: [ changes, setup-images ]
     if: ${{ !cancelled() && needs.changes.outputs.have_wasm != 'true' && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
@@ -92,7 +94,7 @@ jobs:
 
   android:
     name: Build Android
-    needs: [changes, setup-images]
+    needs: [ changes, setup-images ]
     if: ${{ !cancelled() && needs.changes.outputs.have_android != 'true' && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
@@ -122,7 +124,7 @@ jobs:
 
   sdks:
     name: Build SDKs
-    needs: [changes, wasm, android, ios]
+    needs: [ changes, wasm, android, ios ]
     if: >-
       ${{ !cancelled() && needs.changes.result == 'success' &&
       (needs.wasm.result == 'success' || needs.changes.outputs.have_wasm == 'true') &&
@@ -139,7 +141,7 @@ jobs:
           wasm-artifact: ${{ needs.wasm.result == 'success' }}
           android-artifact: ${{ needs.android.result == 'success' }}
           ios-artifact: ${{ needs.ios.result == 'success' }}
-          rn-sdk: 'true'
+          rn-sdk: "true"
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
@@ -187,7 +189,7 @@ jobs:
         with:
           platform: android
           profile: staging-apk
-          wait: 'true'
+          wait: "true"
       - uses: forgejo/upload-artifact@v4
         with:
           name: app-android-apk-staging
@@ -245,10 +247,19 @@ jobs:
       STATIC_PUBLIC_BASE_URL: ${{ vars.STATIC_PUBLIC_BASE_URL }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: forgejo/download-artifact@v4
         with:
           name: app-android-apk-staging
           path: apps/harbor
+      # Notes since the last release; the publish step falls back to the
+      # commit title if they could not be written.
+      - name: Release notes
+        continue-on-error: true
+        env:
+          OPEN_ROUTER_API_TOKEN: ${{ secrets.OPEN_ROUTER_API_TOKEN }}
+        run: node .forgejo/scripts/release-notes.mjs release_notes.md
       - name: Publish the APK
         run: |
           export CI_COMMIT_SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-8)

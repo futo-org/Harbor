@@ -21,14 +21,15 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: SearchUsersRequest,
 ) -> Result<SearchUsersResponse, Status> {
     let sort_by = req.sort_by();
     let common = rpc::Params::from_req_params(req.query, &req.page_params)?;
     let params = Params { common, sort_by };
     let result =
-        create_pipeline(&ctx, &params, fetch, hydrate, filter, view).await?;
+        create_pipeline(&mut ctx, &params, fetch, hydrate, filter, view)
+            .await?;
     Ok(SearchUsersResponse {
         results: result.results,
         event_hints: result.event_hints,
@@ -37,7 +38,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<Fetched<SearchRow, SortedUsersBy>, Status> {
     let mut rows = Query::search_users(
@@ -86,7 +87,7 @@ impl SortedUsersBy {
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _params: &Params,
     fetched: &Fetched<SearchRow, SortedUsersBy>,
 ) -> Result<HydrationState, Status> {
@@ -94,8 +95,8 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &PublicContext,
-    _params: &Params,
+    _: &mut PublicContext,
+    _: &Params,
     fetched: Fetched<SearchRow, SortedUsersBy>,
     hydration: &HydrationState,
 ) -> Result<SearchResponseFilter<SortedUsersBy>, Status> {
@@ -104,7 +105,7 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     filtered: SearchResponseFilter<SortedUsersBy>,
     hydration: HydrationState,

@@ -31,12 +31,23 @@ enum DbInner {
 
 impl DbConn {
     /// Acquire a database connection from the `pool`.
+    #[tracing::instrument(
+        name = "db.from_pool",
+        skip_all,
+        fields(
+            db.pool.size = tracing::field::Empty,
+            db.pool.idle = tracing::field::Empty,
+        )
+    )]
     pub(crate) async fn from_pool(
         pool: &sea_orm::DatabaseConnection,
     ) -> Result<DbConn, Status> {
         match &pool.inner {
             sea_orm::DatabaseConnectionType::SqlxPostgresPoolConnection(_) => {
                 let pool = pool.get_postgres_connection_pool();
+                tracing::Span::current()
+                    .record("db.pool.size", pool.size())
+                    .record("db.pool.idle", pool.num_idle());
                 let conn = pool.acquire().await.map_err(|err| {
                     tracing::error!(
                         error = %err,
@@ -62,6 +73,7 @@ impl DbConn {
     }
 
     /// Begin a transaction.
+    #[tracing::instrument(name = "db.begin", skip_all)]
     pub(crate) async fn begin<'c>(&'c mut self) -> Result<DbTx<'c>, DbErr> {
         match &mut self.0 {
             DbInner::Sqlx(conn) => {
@@ -208,6 +220,7 @@ pub(crate) struct DbTx<'c>(Mutex<sqlx::Transaction<'c, sqlx::Postgres>>);
 
 impl<'c> DbTx<'c> {
     /// Commits this transaction.
+    #[tracing::instrument(name = "db.commit", skip_all)]
     pub(crate) async fn commit(self) -> Result<(), DbErr> {
         self.0
             .into_inner()
@@ -217,6 +230,7 @@ impl<'c> DbTx<'c> {
     }
 
     /// Commits this transaction and start another.
+    #[tracing::instrument(name = "db.commit_and_chain", skip_all)]
     pub(crate) async fn commit_and_chain(&mut self) -> Result<(), DbErr> {
         self.0
             .get_mut()
@@ -227,6 +241,7 @@ impl<'c> DbTx<'c> {
     }
 
     /// Abort this transaction.
+    #[tracing::instrument(name = "db.rollback", skip_all)]
     pub(crate) async fn rollback(self) -> Result<(), DbErr> {
         self.0
             .into_inner()

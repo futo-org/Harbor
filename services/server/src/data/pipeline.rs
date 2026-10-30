@@ -1,5 +1,7 @@
 //! Generic query pipeline: `fetch → hydrate → filter → view`.
 
+use tracing::{Instrument, info_span};
+
 use crate::data::{Cursor, CursorFilter, Marker, PageInfo};
 
 pub async fn create_pipeline<
@@ -15,7 +17,7 @@ pub async fn create_pipeline<
     FilterFn,
     ViewFn,
 >(
-    ctx: &Context,
+    ctx: &mut Context,
     params: &Params,
     fetch_fn: FetchFn,
     hydrate_fn: HydrateFn,
@@ -23,26 +25,34 @@ pub async fn create_pipeline<
     view_fn: ViewFn,
 ) -> Result<View, Error>
 where
-    FetchFn: AsyncFnOnce(&Context, &Params) -> Result<Fetched, Error>,
+    FetchFn: AsyncFnOnce(&mut Context, &Params) -> Result<Fetched, Error>,
     HydrateFn:
-        AsyncFnOnce(&Context, &Params, &Fetched) -> Result<Hydrated, Error>,
+        AsyncFnOnce(&mut Context, &Params, &Fetched) -> Result<Hydrated, Error>,
     FilterFn: AsyncFnOnce(
-        &Context,
+        &mut Context,
         &Params,
         Fetched,
         &Hydrated,
     ) -> Result<Filtered, Error>,
     ViewFn: AsyncFnOnce(
-        &Context,
+        &mut Context,
         &Params,
         Filtered,
         Hydrated,
     ) -> Result<View, Error>,
 {
-    let fetched = fetch_fn(ctx, params).await?;
-    let hydrated = hydrate_fn(ctx, params, &fetched).await?;
-    let filtered = filter_fn(ctx, params, fetched, &hydrated).await?;
-    view_fn(ctx, params, filtered, hydrated).await
+    let fetched = fetch_fn(ctx, params)
+        .instrument(info_span!("pipeline.fetch"))
+        .await?;
+    let hydrated = hydrate_fn(ctx, params, &fetched)
+        .instrument(info_span!("pipeline.hydrate"))
+        .await?;
+    let filtered = filter_fn(ctx, params, fetched, &hydrated)
+        .instrument(info_span!("pipeline.filter"))
+        .await?;
+    view_fn(ctx, params, filtered, hydrated)
+        .instrument(info_span!("pipeline.view"))
+        .await
 }
 
 /// Remove any extra rows (for checking next page existence) and extracts page
@@ -153,37 +163,39 @@ mod tests {
 
     #[tokio::test]
     async fn happy_path_runs_all_stages_and_threads_state() {
-        let trace = Trace::default();
+        let mut trace = Trace::default();
         let params = Params { seed: 7 };
 
         let result = create_pipeline(
-            &trace,
+            &mut trace,
             &params,
             // fetch: produce rows derived from params.seed
-            async |ctx: &Trace, p: &Params| -> Result<Vec<u32>, &'static str> {
+            async |ctx: &mut Trace,
+                   p: &Params|
+                   -> Result<Vec<u32>, &'static str> {
                 ctx.fetch_ran.set(true);
                 Ok(vec![p.seed, p.seed + 1, p.seed + 2])
             },
             // hydrate: sum the rows
-            async |ctx: &Trace,
-                   _p: &Params,
+            async |ctx: &mut Trace,
+                   _: &Params,
                    rows: &Vec<u32>|
                    -> Result<u32, &'static str> {
                 ctx.hydrate_ran.set(true);
                 Ok(rows.iter().copied().sum())
             },
             // filter: keep evens
-            async |ctx: &Trace,
-                   _p: &Params,
+            async |ctx: &mut Trace,
+                   _: &Params,
                    rows: Vec<u32>,
-                   _h: &u32|
+                   _: &u32|
                    -> Result<Vec<u32>, &'static str> {
                 ctx.filter_ran.set(true);
                 Ok(rows.into_iter().filter(|n| n % 2 == 0).collect())
             },
             // view: package into a struct
-            async |ctx: &Trace,
-                   _p: &Params,
+            async |ctx: &mut Trace,
+                   _: &Params,
                    filtered: Vec<u32>,
                    hydrated: u32|
                    -> Result<(Vec<u32>, u32), &'static str> {
@@ -204,37 +216,37 @@ mod tests {
 
     #[tokio::test]
     async fn fetch_failure_short_circuits_remaining_stages() {
-        let trace = Trace::default();
+        let mut trace = Trace::default();
         let params = Params::default();
 
         let result: Result<(), &'static str> = create_pipeline(
-            &trace,
+            &mut trace,
             &params,
-            async |ctx: &Trace,
-                   _p: &Params|
+            async |ctx: &mut Trace,
+                   _: &Params|
                    -> Result<Vec<u32>, &'static str> {
                 ctx.fetch_ran.set(true);
                 Err("fetch boom")
             },
-            async |ctx: &Trace,
-                   _p: &Params,
-                   _rows: &Vec<u32>|
+            async |ctx: &mut Trace,
+                   _: &Params,
+                   _: &Vec<u32>|
                    -> Result<u32, &'static str> {
                 ctx.hydrate_ran.set(true);
                 Ok(0)
             },
-            async |ctx: &Trace,
-                   _p: &Params,
-                   _rows: Vec<u32>,
-                   _h: &u32|
+            async |ctx: &mut Trace,
+                   _: &Params,
+                   _: Vec<u32>,
+                   _: &u32|
                    -> Result<Vec<u32>, &'static str> {
                 ctx.filter_ran.set(true);
                 Ok(vec![])
             },
-            async |ctx: &Trace,
-                   _p: &Params,
-                   _f: Vec<u32>,
-                   _h: u32|
+            async |ctx: &mut Trace,
+                   _: &Params,
+                   _: Vec<u32>,
+                   _: u32|
                    -> Result<(), &'static str> {
                 ctx.view_ran.set(true);
                 Ok(())
@@ -251,26 +263,26 @@ mod tests {
 
     #[tokio::test]
     async fn hydrate_failure_short_circuits_filter_and_view() {
-        let trace = Trace::default();
+        let mut trace = Trace::default();
         let params = Params::default();
 
         let result: Result<(), &'static str> = create_pipeline(
-            &trace,
+            &mut trace,
             &params,
-            async |ctx: &Trace,
+            async |ctx: &mut Trace,
                    _p: &Params|
                    -> Result<Vec<u32>, &'static str> {
                 ctx.fetch_ran.set(true);
                 Ok(vec![1, 2, 3])
             },
-            async |ctx: &Trace,
+            async |ctx: &mut Trace,
                    _p: &Params,
                    _rows: &Vec<u32>|
                    -> Result<u32, &'static str> {
                 ctx.hydrate_ran.set(true);
                 Err("hydrate boom")
             },
-            async |ctx: &Trace,
+            async |ctx: &mut Trace,
                    _p: &Params,
                    _rows: Vec<u32>,
                    _h: &u32|
@@ -278,7 +290,7 @@ mod tests {
                 ctx.filter_ran.set(true);
                 Ok(vec![])
             },
-            async |ctx: &Trace,
+            async |ctx: &mut Trace,
                    _p: &Params,
                    _f: Vec<u32>,
                    _h: u32|
@@ -298,37 +310,37 @@ mod tests {
 
     #[tokio::test]
     async fn filter_failure_short_circuits_view() {
-        let trace = Trace::default();
+        let mut trace = Trace::default();
         let params = Params::default();
 
         let result: Result<(), &'static str> = create_pipeline(
-            &trace,
+            &mut trace,
             &params,
-            async |ctx: &Trace,
-                   _p: &Params|
+            async |ctx: &mut Trace,
+                   _: &Params|
                    -> Result<Vec<u32>, &'static str> {
                 ctx.fetch_ran.set(true);
                 Ok(vec![1])
             },
-            async |ctx: &Trace,
-                   _p: &Params,
-                   _rows: &Vec<u32>|
+            async |ctx: &mut Trace,
+                   _: &Params,
+                   _: &Vec<u32>|
                    -> Result<u32, &'static str> {
                 ctx.hydrate_ran.set(true);
                 Ok(42)
             },
-            async |ctx: &Trace,
-                   _p: &Params,
-                   _rows: Vec<u32>,
-                   _h: &u32|
+            async |ctx: &mut Trace,
+                   _: &Params,
+                   _: Vec<u32>,
+                   _: &u32|
                    -> Result<Vec<u32>, &'static str> {
                 ctx.filter_ran.set(true);
                 Err("filter boom")
             },
-            async |ctx: &Trace,
-                   _p: &Params,
-                   _f: Vec<u32>,
-                   _h: u32|
+            async |ctx: &mut Trace,
+                   _: &Params,
+                   _: Vec<u32>,
+                   _: u32|
                    -> Result<(), &'static str> {
                 ctx.view_ran.set(true);
                 Ok(())
@@ -345,28 +357,28 @@ mod tests {
 
     #[tokio::test]
     async fn view_failure_propagates() {
-        let trace = Trace::default();
+        let mut trace = Trace::default();
         let params = Params::default();
 
         let result: Result<(), &'static str> = create_pipeline(
-            &trace,
+            &mut trace,
             &params,
-            async |_c: &Trace, _p: &Params| -> Result<Vec<u32>, &'static str> {
-                Ok(vec![])
-            },
-            async |_c: &Trace,
-                   _p: &Params,
-                   _rows: &Vec<u32>|
-                   -> Result<u32, &'static str> { Ok(0) },
-            async |_c: &Trace,
-                   _p: &Params,
-                   _rows: Vec<u32>,
-                   _h: &u32|
+            async |_c: &mut Trace,
+                   _p: &Params|
                    -> Result<Vec<u32>, &'static str> { Ok(vec![]) },
-            async |ctx: &Trace,
-                   _p: &Params,
-                   _f: Vec<u32>,
-                   _h: u32|
+            async |_: &mut Trace,
+                   _: &Params,
+                   _: &Vec<u32>|
+                   -> Result<u32, &'static str> { Ok(0) },
+            async |_: &mut Trace,
+                   _: &Params,
+                   _: Vec<u32>,
+                   _: &u32|
+                   -> Result<Vec<u32>, &'static str> { Ok(vec![]) },
+            async |ctx: &mut Trace,
+                   _: &Params,
+                   _: Vec<u32>,
+                   _: u32|
                    -> Result<(), &'static str> {
                 ctx.view_ran.set(true);
                 Err("view boom")

@@ -13,3 +13,10 @@ pub fn client() -> &'static reqwest::Client {
             .expect("failed to build HTTP client")
     })
 }
+
+/// Headers carrying the current span's trace context.
+pub fn trace_headers() -> reqwest::header::HeaderMap {
+    let mut headers = reqwest::header::HeaderMap::new();
+    common_telemetry::trace::inject_headers(&mut headers);
+    headers
+}

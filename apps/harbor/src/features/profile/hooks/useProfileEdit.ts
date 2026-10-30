@@ -3,7 +3,7 @@ import { toast } from '@/src/common/components/toast/useToast';
 import { resolveAlias, type v2 } from '@polycentric/react-native';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { publishProfileUpdate } from '../lib/publishProfileUpdate';
+import { updateProfile } from '../lib/updateProfile';
 import { profileQueryKey } from './useProfile';
 import { formatImageImportErrorOrFallback } from '@/src/common/lib/images/ImageImportError';
 
@@ -83,7 +83,7 @@ export function useProfileEdit(
         }
       }
 
-      await publishProfileUpdate(client, {
+      await updateProfile(client, {
         name: nameDraft,
         description: descriptionDraft,
         avatarUri,
@@ -91,6 +91,7 @@ export function useProfileEdit(
         banner: profile.banner,
         alias: aliasDraft,
       });
+      await client.sync();
       invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       setEditing(false);
       return true;

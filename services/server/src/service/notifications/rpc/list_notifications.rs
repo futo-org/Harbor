@@ -51,7 +51,7 @@ struct Hydrated {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: ListNotificationsRequest,
 ) -> Result<ListNotificationsResponse, Status> {
     if req.identity.is_empty() {
@@ -78,11 +78,12 @@ pub async fn handle(
         omit_labels: req.omit_labels,
     };
 
-    pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view).await
+    pipeline::create_pipeline(&mut ctx, &params, fetch, hydrate, filter, view)
+        .await
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<Fetched, Status> {
     let raw = NotificationRepository::list_for_identity(
@@ -106,8 +107,8 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
-    _params: &Params,
+    ctx: &mut PublicContext,
+    _: &Params,
     fetched: &Fetched,
 ) -> Result<Hydrated, Status> {
     let rows = &fetched.rows;
@@ -189,7 +190,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &PublicContext,
+    _: &mut PublicContext,
     params: &Params,
     fetched: Fetched,
     hydrated: &Hydrated,
@@ -225,7 +226,7 @@ async fn filter(
 }
 
 async fn view(
-    _: &PublicContext,
+    _: &mut PublicContext,
     _: &Params,
     fetched: Fetched,
     hydrated: Hydrated,
@@ -434,7 +435,7 @@ mod tests {
     #[tokio::test]
     async fn notifications_from_blocked_identities_are_dropped() {
         let service = service().await;
-        let ctx = service.test_public("recipient").await;
+        let mut ctx = service.test_public("recipient").await;
         let fetched = Fetched {
             rows: vec![
                 notification_row(1, "bob"),
@@ -446,7 +447,7 @@ mod tests {
         };
 
         let result =
-            filter(&ctx, &params(), fetched, &hydrated_blocking(&["bob"]))
+            filter(&mut ctx, &params(), fetched, &hydrated_blocking(&["bob"]))
                 .await
                 .unwrap();
 
@@ -461,7 +462,7 @@ mod tests {
     #[tokio::test]
     async fn a_page_of_only_blocked_notifications_comes_back_empty() {
         let service = service().await;
-        let ctx = service.test_public("recipient").await;
+        let mut ctx = service.test_public("recipient").await;
         let fetched = Fetched {
             rows: vec![notification_row(1, "bob")],
             has_next_page: true,
@@ -469,7 +470,7 @@ mod tests {
         };
 
         let result =
-            filter(&ctx, &params(), fetched, &hydrated_blocking(&["bob"]))
+            filter(&mut ctx, &params(), fetched, &hydrated_blocking(&["bob"]))
                 .await
                 .unwrap();
 
@@ -480,15 +481,17 @@ mod tests {
     #[tokio::test]
     async fn an_anonymous_caller_sees_every_notification() {
         let service = service().await;
-        let ctx = service.public_rw(&tonic::Request::new(())).await.unwrap();
+        let mut ctx =
+            service.public_rw(&tonic::Request::new(())).await.unwrap();
         let fetched = Fetched {
             rows: vec![notification_row(1, "bob")],
             has_next_page: false,
             has_previous_page: false,
         };
 
-        let result =
-            filter(&ctx, &params(), fetched, &hydrated()).await.unwrap();
+        let result = filter(&mut ctx, &params(), fetched, &hydrated())
+            .await
+            .unwrap();
 
         assert_eq!(result.rows.len(), 1);
     }
@@ -496,7 +499,7 @@ mod tests {
     #[tokio::test]
     async fn notifications_with_an_omitted_trigger_label_are_dropped() {
         let service = service().await;
-        let ctx = service.test_public("recipient").await;
+        let mut ctx = service.test_public("recipient").await;
         let labeled = notification_row(1, "bob");
         let clean = notification_row(2, "alice");
         let hydrated =
@@ -508,7 +511,7 @@ mod tests {
         };
 
         let result =
-            filter(&ctx, &params_omitting(&["spam"]), fetched, &hydrated)
+            filter(&mut ctx, &params_omitting(&["spam"]), fetched, &hydrated)
                 .await
                 .unwrap();
 
@@ -523,7 +526,7 @@ mod tests {
     #[tokio::test]
     async fn a_label_outside_the_omit_set_keeps_the_notification() {
         let service = service().await;
-        let ctx = service.test_public("recipient").await;
+        let mut ctx = service.test_public("recipient").await;
         let labeled = notification_row(1, "bob");
         let hydrated =
             hydrated_with_labels(vec![label_event(&labeled, &["spam"])]);
@@ -534,7 +537,7 @@ mod tests {
         };
 
         let result =
-            filter(&ctx, &params_omitting(&["hate"]), fetched, &hydrated)
+            filter(&mut ctx, &params_omitting(&["hate"]), fetched, &hydrated)
                 .await
                 .unwrap();
 
@@ -544,7 +547,7 @@ mod tests {
     #[tokio::test]
     async fn labels_are_ignored_without_an_omit_set() {
         let service = service().await;
-        let ctx = service.test_public("recipient").await;
+        let mut ctx = service.test_public("recipient").await;
         let labeled = notification_row(1, "bob");
         let hydrated =
             hydrated_with_labels(vec![label_event(&labeled, &["spam"])]);
@@ -554,7 +557,9 @@ mod tests {
             has_previous_page: false,
         };
 
-        let result = filter(&ctx, &params(), fetched, &hydrated).await.unwrap();
+        let result = filter(&mut ctx, &params(), fetched, &hydrated)
+            .await
+            .unwrap();
 
         assert_eq!(result.rows.len(), 1);
     }

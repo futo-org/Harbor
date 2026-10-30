@@ -55,7 +55,12 @@ export default function RecoverIdentityScreen() {
       // Bail if the user was logged in elsewhere in the meantime
       if (await redirectIfLoggedIn(client)) return;
 
-      await client.identityManager.recoverIdentity(backup);
+      const pendingLogin = await client.loginManager.beginLogin(
+        backup.identityKey,
+        'recovery',
+      );
+
+      await client.loginManager.recoverIdentity(pendingLogin.keyPair, backup);
     } catch (err: unknown) {
       console.warn('Recovery failed:', err);
 

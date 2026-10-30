@@ -22,21 +22,17 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: GetAttributionFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
-    // Only link attribution is queryable today; extract its URL.
     let url = match req.attributed_to.and_then(|a| a.to) {
-        Some(To::Link(link)) => link.url,
-        None => {
-            return Err(Status::invalid_argument("attributed_to is required"));
+        Some(To::Link(link)) if !link.url.is_empty() => link.url,
+        _ => {
+            return Err(Status::invalid_argument(
+                "attributed_to link url is required",
+            ));
         }
     };
-    if url.is_empty() {
-        return Err(Status::invalid_argument(
-            "attributed_to link url is required",
-        ));
-    }
 
     let common = feeds_pipeline::Params::from_req_params(
         &req.page_params,
@@ -44,9 +40,10 @@ pub async fn handle(
     )?;
     let params = Params { common, url };
 
-    let result =
-        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
-            .await?;
+    let result = pipeline::create_pipeline(
+        &mut ctx, &params, fetch, hydrate, filter, view,
+    )
+    .await?;
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
@@ -55,7 +52,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = FeedsRepository::list_feed_events_by_attributed_url(
@@ -70,7 +67,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _params: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
@@ -78,7 +75,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _ctx: &PublicContext,
+    _: &mut PublicContext,
     params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -87,8 +84,8 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &PublicContext,
-    _params: &Params,
+    ctx: &mut PublicContext,
+    _: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {

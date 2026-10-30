@@ -4,5 +4,10 @@ version = "0.0.1"
 edition = "2024"
 
 [dependencies]
+common-telemetry = { path = "../telemetry" }
+opentelemetry.workspace = true
 rdkafka = { workspace = true, default-features = false, features = ["tokio", "sasl"] }
 tracing.workspace = true
+
+[dev-dependencies]
+common-telemetry = { path = "../telemetry", features = ["testing"] }

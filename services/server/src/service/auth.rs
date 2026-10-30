@@ -52,6 +52,7 @@ pub async fn auth_middleware(
     if let Some(token) = token {
         match verify_auth_token(&state.ctx, token, &state.allow_hosts).await {
             Ok(identity) => {
+                tracing::Span::current().record("harbor.identity", &identity);
                 let identity = AuthenticatedIdentity(identity);
                 authenticated = Some(identity.clone());
                 request.extensions_mut().insert(identity);
@@ -96,6 +97,7 @@ fn grpc_error_response(status: Status, request: &Request) -> Response {
 }
 
 /// Verify `token` and return the identity it authenticates.
+#[tracing::instrument(name = "auth.verify_token", skip_all)]
 pub async fn verify_auth_token(
     ctx: &ServiceContext,
     token: &str,

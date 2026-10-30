@@ -1,20 +1,12 @@
 import { type IContentRepository, v2 as Proto } from '@polycentric/js-core';
 
 import { DatabaseError } from '@polycentric/js-core';
-import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
+import { IndexedDBDatabase } from './database';
 
 export class IndexedDBContentRepository implements IContentRepository {
   private readonly database: IndexedDBDatabase;
 
   private static readonly STORE_NAME = 'content';
-
-  static createNeededStores(layout: IndexedDBDatabaseLayout) {
-    layout.stores.push({
-      name: IndexedDBContentRepository.STORE_NAME,
-      options: { keyPath: 'digestHex' },
-      indexes: [],
-    });
-  }
 
   constructor(database: IndexedDBDatabase) {
     this.database = database;

@@ -146,6 +146,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_auth_token_provider(uniffiSelf: bigint, provider: bigint, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_ban_status(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_servers(uniffiSelf: bigint, servers: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
+    ubrn_uniffi_polycentric_core_fn_method_polycentriccore_set_traceparent(uniffiSelf: bigint, traceparent: Uint8Array, uniffi_out_err: UniffiRustCallStatus): void;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_sign_event(uniffiSelf: bigint, eventBytes: Uint8Array, callback: bigint): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_upload_blob(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_url_info(uniffiSelf: bigint, serverUrl: Uint8Array, url: Uint8Array): bigint;
@@ -216,6 +217,7 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_auth_token_provider(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_ban_status(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers(): number;
+    ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_traceparent(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_upload_blob(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_url_info(): number;

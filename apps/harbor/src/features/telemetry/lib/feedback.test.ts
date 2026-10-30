@@ -37,8 +37,7 @@ test('builds feedback honouring the toggles', () => {
     buildFeedback({
       message: '  hello  ',
       email: '  ',
-      identityKey: 'key1',
-      includeIdentity: false,
+      identityKey: null,
       includeLogs: false,
     }),
   ).toEqual({ message: 'hello' });
@@ -48,7 +47,6 @@ test('builds feedback honouring the toggles', () => {
       email: ' me@example.com ',
       identityKey: 'key1',
       signingKey: 'sk1',
-      includeIdentity: true,
       includeLogs: true,
     }),
   ).toEqual({
@@ -60,6 +58,38 @@ test('builds feedback honouring the toggles', () => {
       expect.objectContaining({ at: 1, level: 'info', message: 'started' }),
     ],
   });
+});
+
+test('without logs the trace is one span carrying only the feedback', async () => {
+  const exporter = new InMemorySpanExporter();
+  const provider = createTracerProvider(exporter, diagnostics);
+  emitLog('error', 'should not be attached');
+
+  recordFeedbackSpan(
+    provider.getTracer('test'),
+    buildFeedback({
+      message: 'the feed is slow',
+      email: '',
+      identityKey: 'key1',
+      signingKey: 'sk1',
+      includeLogs: false,
+    }),
+  );
+  await provider.forceFlush();
+
+  const spans = exporter.getFinishedSpans();
+  expect(spans).toHaveLength(1);
+  const [span] = spans;
+  expect(span?.name).toBe('app.feedback');
+  expect(span?.parentSpanContext).toBeUndefined();
+  expect(span?.attributes).toEqual({
+    'harbor.feedback.message': 'the feed is slow',
+    'harbor.identity.key': 'key1',
+    'harbor.session.signing_key': 'sk1',
+    'harbor.feedback.log_count': 0,
+  });
+  expect(span?.events).toEqual([]);
+  expect(span?.links).toEqual([]);
 });
 
 test('records feedback as a span with attributes and log events', async () => {

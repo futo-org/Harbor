@@ -14,11 +14,15 @@ polycentric-core = { path = "../../packages/rs-core" }
 
 # 3rd Party
 axum = { version = "0.8.8", default-features = false, features = ["http1", "http2", "tokio"] }
+base64.workspace = true
+form_urlencoded = { version = "1", default-features = false, features = ["alloc"] }
 hex.workspace = true
 http = { version = "1", default-features = false, features = ["std"] }
 opentelemetry.workspace = true
+opentelemetry-proto = { version = "0.33", default-features = false, features = ["gen-tonic-messages", "logs", "trace", "with-serde"] }
 prost.workspace = true
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+serde = { version = "1", default-features = false }
 serde_json = { version = "1", default-features = false, features = ["std"] }
 tokio = { workspace = true, features = ["full"] }
 tonic = { workspace = true, features = ["router", "transport"] }
@@ -26,7 +30,6 @@ tower-http = { version = "0.7", default-features = false, features = ["cors"] }
 tracing.workspace = true
 
 [dev-dependencies]
-base64.workspace = true
 ed25519-dalek.workspace = true
 mockito = { version = "1", default-features = false }
 tokio-stream = { version = "0.1", default-features = false, features = ["net"] }
