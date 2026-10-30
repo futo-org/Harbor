@@ -8,10 +8,12 @@
 use std::sync::LazyLock;
 use std::time::Instant;
 
+use axum::body::Body;
 use axum::extract::Request;
 use axum::http::HeaderMap;
 use axum::middleware::Next;
 use axum::response::Response;
+use http_body_util::BodyExt;
 use opentelemetry::KeyValue;
 use opentelemetry::metrics::{Counter, Histogram};
 use tracing::Instrument;
@@ -106,6 +108,16 @@ pub async fn access_log_middleware(
     let trace_id = common_telemetry::trace::trace_id(&span).or(parent_trace_id);
     span.record("trace_id", trace_id.as_deref());
 
+    // The body span lives as long as the body is being read: how long the
+    // server waited on the client for it.
+    let body_span = tracing::info_span!(parent: &span, "request.body");
+    let request = request.map(|body| {
+        Body::new(body.map_frame(move |frame| {
+            let _reading = &body_span;
+            frame
+        }))
+    });
+
     let start = Instant::now();
     let response = next.run(request).instrument(span.clone()).await;
 
@@ -156,7 +168,7 @@ pub async fn access_log_middleware(
 #[cfg(test)]
 mod tests {
     use axum::Router;
-    use axum::body::{Body, to_bytes};
+    use axum::body::{Body, Bytes, to_bytes};
     use axum::routing::post;
     use opentelemetry::trace::{SpanKind, Status};
     use tower::ServiceExt;
@@ -240,6 +252,36 @@ mod tests {
             .find(|s| s.name == "polycentric.v2.EventsService/PutEvents")
             .expect("server span");
         assert!(span.span_context.is_sampled());
+    }
+
+    #[tokio::test]
+    async fn the_body_span_ends_when_the_body_has_arrived() {
+        use tokio_stream::StreamExt;
+
+        let (subscriber, exporter) = common_telemetry::testing::subscriber();
+        let _guard = tracing::subscriber::set_default(subscriber);
+
+        let delay = std::time::Duration::from_millis(50);
+        let chunk = Ok::<_, axum::Error>(Bytes::from_static(b"hi"));
+        let body = Body::from_stream(tokio_stream::iter([chunk]).then(
+            move |chunk| async move {
+                tokio::time::sleep(delay).await;
+                chunk
+            },
+        ));
+        let app = Router::new()
+            .route("/upload", post(|_: Bytes| async {}))
+            .layer(axum::middleware::from_fn(access_log_middleware));
+        let request = Request::post("/upload").body(body).unwrap();
+        app.oneshot(request).await.unwrap();
+
+        let spans = exporter.get_finished_spans().unwrap();
+        let find = |name| spans.iter().find(|s| s.name == name).unwrap();
+        let (server, body) = (find("POST /upload"), find("request.body"));
+        assert_eq!(body.parent_span_id, server.span_context.span_id());
+        assert!(
+            body.end_time.duration_since(body.start_time).unwrap() >= delay
+        );
     }
 
     #[test]
