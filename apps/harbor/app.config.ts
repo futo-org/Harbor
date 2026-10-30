@@ -76,7 +76,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // An Icon Composer bundle: Xcode renders the Liquid Glass icon and the flat
     // ones for older iOS from it
     icon: `./src/common/assets/images/app-icons/ios-icon${ICON_SUFFIX}.icon`,
-    requireFullScreen: true,
     supportsTablet: true,
     bundleIdentifier: ID,
     ...(APP_LINK_HOST && { associatedDomains: [`applinks:${APP_LINK_HOST}`] }),
