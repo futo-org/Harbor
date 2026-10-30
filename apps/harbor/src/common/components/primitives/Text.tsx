@@ -1,14 +1,14 @@
 import { twemojiFontFamily } from '@/src/common/assets/twemojiFontFamily';
 import { UITextView } from '@bsky.app/react-native-uitextview';
 import { Children, type ReactNode } from 'react';
-import { type TextProps as RNTextProps, StyleSheet } from 'react-native';
+import { StyleSheet, type TextProps as RNTextProps } from 'react-native';
 import {
-  useTheme,
-  typography,
-  type FontWeightToken,
-  type PaletteColorToken,
   type FontSizeToken,
+  type FontWeightToken,
   type LineHeightToken,
+  type PaletteColorToken,
+  typography,
+  useTheme,
 } from '@/src/common/theme';
 import { splitEmoji } from '@/src/common/util/emoji';
 import { isWeb } from '@/src/common/util/platform';
@@ -19,20 +19,8 @@ export const WEB_FONT_STACK =
 
 export const WEB_MONOSPACE_FONT_STACK = 'NotoSansMono, monospace';
 
-// Native font APIs can't select a variable font's weights, so each face is
-// its own family (see `src/common/assets`). Keyed by every weight the theme
-// can produce, so adding a token without a face fails to compile.
-type FontWeightValue = (typeof typography.fontWeight)[FontWeightToken];
-export const NATIVE_FONTS: Record<FontWeightValue, string> = {
-  '400': 'NotoSans-Regular',
-  '600': 'NotoSans-SemiBold',
-  '700': 'NotoSans-Bold',
-};
-export const NATIVE_MONOSPACE_FONTS: Record<FontWeightValue, string> = {
-  '400': 'NotoSansMono-Regular',
-  '600': 'NotoSansMono-SemiBold',
-  '700': 'NotoSansMono-Bold',
-};
+export const NATIVE_FONT_FAMILY = 'Noto Sans';
+export const NATIVE_MONOSPACE_FONT_FAMILY = 'Noto Sans Mono';
 
 // Native text has no font fallback list, so emoji runs get the Twemoji
 // family themselves.
@@ -106,7 +94,9 @@ export function Text({
     ? monospace
       ? WEB_MONOSPACE_FONT_STACK
       : WEB_FONT_STACK
-    : (monospace ? NATIVE_MONOSPACE_FONTS : NATIVE_FONTS)[resolvedFontWeight];
+    : monospace
+      ? NATIVE_MONOSPACE_FONT_FAMILY
+      : NATIVE_FONT_FAMILY;
 
   return (
     <UITextView
@@ -119,7 +109,13 @@ export function Text({
           color: color ? theme.palette[color] : theme.palette.neutral_900,
           fontSize: resolvedFontSize,
           lineHeight: resolvedLineHeight,
-          ...(isWeb ? { fontWeight: resolvedFontWeight } : {}),
+          // Native sets the weight on the variable font's axis instead:
+          // `fontWeight` would fake bold on Android, and iOS can't pick
+          // NotoSansMono's weights by `fontWeight` (its file doesn't name
+          // them). The string form, as the iOS UITextView only passes strings.
+          ...(isWeb
+            ? { fontWeight: resolvedFontWeight }
+            : { fontVariationSettings: `'wght' ${resolvedFontWeight}` }),
         },
         style,
       ]}

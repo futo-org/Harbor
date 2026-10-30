@@ -1,25 +1,25 @@
 import {
+  Platform,
+  StyleSheet,
   TextInput as RNTextInput,
   type TextInputProps as RNTextInputProps,
   type TextStyle,
-  StyleSheet,
-  Platform,
 } from 'react-native';
 import { forwardRef, useState } from 'react';
 import {
-  useTheme,
-  withHexOpacity,
-  typography,
   BorderRadius,
-  type PaletteColorToken,
   type BorderRadiusToken,
   type FontSizeToken,
   type LineHeightToken,
+  type PaletteColorToken,
+  typography,
+  useTheme,
+  withHexOpacity,
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
 import {
-  NATIVE_FONTS,
-  NATIVE_MONOSPACE_FONTS,
+  NATIVE_FONT_FAMILY,
+  NATIVE_MONOSPACE_FONT_FAMILY,
   WEB_FONT_STACK,
   WEB_MONOSPACE_FONT_STACK,
 } from './Text';
@@ -70,7 +70,9 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
           ? WEB_MONOSPACE_FONT_STACK
           : // As in `Text`, so typed emoji are Twemoji too.
             WEB_FONT_STACK
-        : (monospace ? NATIVE_MONOSPACE_FONTS : NATIVE_FONTS)['400'];
+        : monospace
+          ? NATIVE_MONOSPACE_FONT_FAMILY
+          : NATIVE_FONT_FAMILY;
 
     const baseStyle: TextStyle = {
       paddingVertical: 12,

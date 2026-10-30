@@ -1,5 +1,5 @@
 diff --git a/ios/RNUITextViewManager.mm b/ios/RNUITextViewManager.mm
-index e2e062d4f7be71217ffe479182cff4e71d0cbaac..de049abe1cfb04a5b0ad00e0a1a1f5e7c1e1e1e1 100644
+index e2e062d4f7be71217ffe479182cff4e71d0cbaac..de049ab19049544c9f86d814a10506364228f30f 100644
 --- a/ios/RNUITextViewManager.mm
 +++ b/ios/RNUITextViewManager.mm
 @@ -1,6 +1,5 @@
@@ -9,3 +9,53 @@ index e2e062d4f7be71217ffe479182cff4e71d0cbaac..de049abe1cfb04a5b0ad00e0a1a1f5e7
  
  @interface RNUITextViewManager : RCTViewManager
  @end
+diff --git a/ios/RNUITextViewShadowNode.cpp b/ios/RNUITextViewShadowNode.cpp
+index 88843d86d592006a2bf562d952796a0fbcdbf777..486f9832cbbe1da4f2658e621ed374d200634589 100644
+--- a/ios/RNUITextViewShadowNode.cpp
++++ b/ios/RNUITextViewShadowNode.cpp
+@@ -138,6 +138,9 @@ AttributedString RNUITextViewShadowNode::getAttributedString(
+         textAttributes.letterSpacing = props.letterSpacing;
+         textAttributes.textDecorationColor = props.textDecorationColor;
+         textAttributes.fontFamily = props.fontFamily;
++        if (!props.fontVariationSettings.empty()) {
++          textAttributes.fontVariationSettings = props.fontVariationSettings;
++        }
+         
+         if (props.fontStyle == RNUITextViewChildFontStyle::Italic) {
+           textAttributes.fontStyle = FontStyle::Italic;
+diff --git a/lib/commonjs/RNUITextViewChildNativeComponent.ts b/lib/commonjs/RNUITextViewChildNativeComponent.ts
+index 0a4d0dbbfe948409b6777ca324d94549dc0dc6e4..902e06cbc92497deaf1688b3eabef4c16a39a97c 100644
+--- a/lib/commonjs/RNUITextViewChildNativeComponent.ts
++++ b/lib/commonjs/RNUITextViewChildNativeComponent.ts
+@@ -33,6 +33,7 @@ interface NativeProps extends ViewProps {
+   fontStyle?: CodegenTypes.WithDefault<FontStyle, 'normal'>
+   fontWeight?: CodegenTypes.WithDefault<NativeFontWeight, 'normal'>
+   fontFamily?: string
++  fontVariationSettings?: string
+   letterSpacing?: CodegenTypes.Float
+   lineHeight?: CodegenTypes.Float
+   textDecorationLine?: CodegenTypes.WithDefault<TextDecorationLine, 'none'>
+diff --git a/lib/module/RNUITextViewChildNativeComponent.ts b/lib/module/RNUITextViewChildNativeComponent.ts
+index 0a4d0dbbfe948409b6777ca324d94549dc0dc6e4..902e06cbc92497deaf1688b3eabef4c16a39a97c 100644
+--- a/lib/module/RNUITextViewChildNativeComponent.ts
++++ b/lib/module/RNUITextViewChildNativeComponent.ts
+@@ -33,6 +33,7 @@ interface NativeProps extends ViewProps {
+   fontStyle?: CodegenTypes.WithDefault<FontStyle, 'normal'>
+   fontWeight?: CodegenTypes.WithDefault<NativeFontWeight, 'normal'>
+   fontFamily?: string
++  fontVariationSettings?: string
+   letterSpacing?: CodegenTypes.Float
+   lineHeight?: CodegenTypes.Float
+   textDecorationLine?: CodegenTypes.WithDefault<TextDecorationLine, 'none'>
+diff --git a/src/RNUITextViewChildNativeComponent.ts b/src/RNUITextViewChildNativeComponent.ts
+index 0a4d0dbbfe948409b6777ca324d94549dc0dc6e4..902e06cbc92497deaf1688b3eabef4c16a39a97c 100644
+--- a/src/RNUITextViewChildNativeComponent.ts
++++ b/src/RNUITextViewChildNativeComponent.ts
+@@ -33,6 +33,7 @@ interface NativeProps extends ViewProps {
+   fontStyle?: CodegenTypes.WithDefault<FontStyle, 'normal'>
+   fontWeight?: CodegenTypes.WithDefault<NativeFontWeight, 'normal'>
+   fontFamily?: string
++  fontVariationSettings?: string
+   letterSpacing?: CodegenTypes.Float
+   lineHeight?: CodegenTypes.Float
+   textDecorationLine?: CodegenTypes.WithDefault<TextDecorationLine, 'none'>

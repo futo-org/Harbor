@@ -211,7 +211,7 @@ overrides:
   websocket-driver@<0.7.5: '>=0.7.5'
 
 patchedDependencies:
-  '@bsky.app/react-native-uitextview@2.7.1': 3018f282816ac3aa23987aae0ec8d9d485a9ee960e89daaa17be5ac0cfa44ffb
+  '@bsky.app/react-native-uitextview@2.7.1': f7073463bab346b6a530440aba698a79c2c50f1c1d19116b8ba66815e8394d1a
   '@rn-primitives/hooks@1.5.2': d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78
   react-native-safe-area-context@5.10.1: 086263d8fa3b01fc14378c0bece3a7cdfbd5f937e9337b0c18863d96294ea038
 
@@ -242,7 +242,7 @@ importers:
     dependencies:
       '@bsky.app/react-native-uitextview':
         specifier: ^2.7.1
-        version: 2.7.1(patch_hash=3018f282816ac3aa23987aae0ec8d9d485a9ee960e89daaa17be5ac0cfa44ffb)(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
+        version: 2.7.1(patch_hash=f7073463bab346b6a530440aba698a79c2c50f1c1d19116b8ba66815e8394d1a)(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       '@codeherence/react-native-header':
         specifier: ^1.0.1
         version: 1.0.1(e468d64e438e3f105aa853718964c0ad)
@@ -14552,7 +14552,7 @@ snapshots:
       - puppeteer
       - supports-color
 
-  '@bsky.app/react-native-uitextview@2.7.1(patch_hash=3018f282816ac3aa23987aae0ec8d9d485a9ee960e89daaa17be5ac0cfa44ffb)(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
+  '@bsky.app/react-native-uitextview@2.7.1(patch_hash=f7073463bab346b6a530440aba698a79c2c50f1c1d19116b8ba66815e8394d1a)(react-native@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)':
     dependencies:
       react: 19.3.0
       react-native: 0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1)
