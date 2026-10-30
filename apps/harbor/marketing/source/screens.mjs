@@ -64,23 +64,13 @@ function fontFace(family, file, weight = 400) {
 export const fontsCss = [
   fontFace(
     'Noto Sans',
-    path.join(assetsDir, 'fonts', 'NotoSans-Regular.ttf'),
-    400,
-  ),
-  fontFace(
-    'Noto Sans',
-    path.join(assetsDir, 'fonts', 'NotoSans-SemiBold.ttf'),
-    600,
-  ),
-  fontFace(
-    'Noto Sans',
-    path.join(assetsDir, 'fonts', 'NotoSans-Bold.ttf'),
-    700,
+    path.join(appDir, 'public', 'fonts', 'NotoSans.ttf'),
+    '100 900',
   ),
   fontFace(
     'Noto Sans Mono',
-    path.join(assetsDir, 'fonts', 'NotoSansMono-Regular.ttf'),
-    400,
+    path.join(appDir, 'public', 'fonts', 'NotoSansMono.ttf'),
+    '100 900',
   ),
   fontFace('Twemoji', path.join(assetsDir, 'fonts', 'Twemoji.ttf')),
   fontFace('Ionicons', path.join(vendor, 'Fonts', 'Ionicons.ttf')),
