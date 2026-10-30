@@ -31,12 +31,23 @@ enum DbInner {
 
 impl DbConn {
     /// Acquire a database connection from the `pool`.
+    #[tracing::instrument(
+        name = "db.from_pool",
+        skip_all,
+        fields(
+            db.pool.size = tracing::field::Empty,
+            db.pool.idle = tracing::field::Empty,
+        )
+    )]
     pub(crate) async fn from_pool(
         pool: &sea_orm::DatabaseConnection,
     ) -> Result<DbConn, Status> {
         match &pool.inner {
             sea_orm::DatabaseConnectionType::SqlxPostgresPoolConnection(_) => {
                 let pool = pool.get_postgres_connection_pool();
+                tracing::Span::current()
+                    .record("db.pool.size", pool.size())
+                    .record("db.pool.idle", pool.num_idle());
                 let conn = pool.acquire().await.map_err(|err| {
                     tracing::error!(
                         error = %err,
@@ -62,6 +73,7 @@ impl DbConn {
     }
 
     /// Begin a transaction.
+    #[tracing::instrument(name = "db.begin", skip_all)]
     pub(crate) async fn begin<'c>(&'c mut self) -> Result<DbTx<'c>, DbErr> {
         match &mut self.0 {
             DbInner::Sqlx(conn) => {
