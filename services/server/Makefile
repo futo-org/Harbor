@@ -12,11 +12,15 @@ dev:
 
 # Start the dependencies, but not the server itself.
 start_dependencies:
-	cd ../../ && docker compose up -d postgres kafka
+	cd ../../ && \
+	docker compose up -d postgres kafka valkey rustfs && \
+	docker compose run --rm --no-deps -T rustfs-init
 
-# Run the backend.
+# Run the server & worker.
 run:
-	cargo run --bin server
+	cargo run --bin server serve & \
+	HARBOR_METRICS_PORT=9465 cargo run --bin server workers & \
+	wait
 
 # Run all tests.
 test:

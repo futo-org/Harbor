@@ -82,7 +82,7 @@ pub struct HydrateConfig {
 }
 
 pub async fn hydrate<Row, A>(
-    ctx: &RequestContext<A>,
+    ctx: &mut RequestContext<A>,
     rows: &[Row],
     config: &HydrateConfig,
 ) -> Result<HydrationState, Status>
@@ -189,7 +189,7 @@ where
 /// * Latest profile event (display name / avatar / banner) for every identity
 ///   referenced.
 pub async fn post_hydrate<Row, A>(
-    ctx: &RequestContext<A>,
+    ctx: &mut RequestContext<A>,
     rows: &[Row],
 ) -> Result<HydrationState, Status>
 where

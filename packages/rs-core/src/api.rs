@@ -216,6 +216,11 @@ impl PolycentricCore {
         crate::query::auth::clear_auth_tokens();
     }
 
+    /// Set the `traceparent` sent with gRPC requests, or `None` for one per request.
+    pub fn set_traceparent(&self, traceparent: Option<String>) -> Result<(), CoreError> {
+        crate::query::trace::set_traceparent(traceparent).map_err(CoreError::InvalidInput)
+    }
+
     /// Return a snapshot of the currently configured servers.
     pub fn get_servers(&self) -> Vec<String> {
         self.client.lock_recover().servers()

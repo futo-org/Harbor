@@ -7,7 +7,7 @@ use crate::service::context::RequestContext;
 
 /// Filter out deleted events.
 pub async fn deleted<Params, Row, SortedBy, A>(
-    _: &RequestContext<A>,
+    _: &mut RequestContext<A>,
     _: &Params,
     fetched: Fetched<Row, SortedBy>,
     hydration: &HydrationState,
@@ -27,7 +27,7 @@ where
 
 /// Filter out deleted events or events by blocked identities.
 pub async fn deleted_or_blocked<Params, Row, SortedBy, A>(
-    _: &RequestContext<A>,
+    _: &mut RequestContext<A>,
     _: &Params,
     fetched: Fetched<Row, SortedBy>,
     hydration: &HydrationState,

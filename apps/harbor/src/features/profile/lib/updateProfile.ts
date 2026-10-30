@@ -1,11 +1,14 @@
-import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
+import {
+  encodeImageVariants,
+  type ImageVariant,
+} from '@/src/common/lib/images/processAndUploadImage';
 import {
   COLLECTION,
+  v2,
   type PolycentricClient,
-  type v2,
 } from '@polycentric/react-native';
 
-type PublishProfileUpdateInput = {
+type UpdateProfileInput = {
   name: string;
   description: string;
   /** New avatar to upload; when absent, `avatar` is republished as-is. */
@@ -17,38 +20,46 @@ type PublishProfileUpdateInput = {
   alias?: string | null;
 };
 
-// When the user picked a new avatar, resize + upload every
-// variant and capture the returned ImageSet. Default sizes and
-// `fill` mode give us the square variants avatars want.
-export async function publishProfileUpdate(
+export async function updateProfile(
   client: PolycentricClient,
-  {
-    name,
-    description,
-    avatarUri,
-    avatar,
-    banner,
-    alias,
-  }: PublishProfileUpdateInput,
+  { name, description, avatarUri, avatar, banner, alias }: UpdateProfileInput,
 ): Promise<void> {
-  const nextAvatar = avatarUri
-    ? await processAndUploadImage(client, avatarUri)
-    : (avatar ?? undefined);
+  // Build profile update event
+  let avatarMeta: v2.ImageSet | undefined;
+  let newAvatarVariants: ImageVariant[] = [];
+
+  if (avatarUri) {
+    newAvatarVariants = await encodeImageVariants(avatarUri);
+    avatarMeta = v2.ImageSet.create({
+      images: newAvatarVariants.map(({ meta }) => meta),
+    });
+  } else {
+    avatarMeta = avatar ?? undefined;
+  }
+
   const trimmedAlias = alias?.trim();
+
   const content = client.contentManager.build({
     oneofKind: 'profileUpdate',
     profileUpdate: {
       name,
       description: description ? description : undefined,
-      avatar: nextAvatar,
+      avatar: avatarMeta,
       banner: banner ?? undefined,
       alias: trimmedAlias ? trimmedAlias : undefined,
     },
   });
 
-  await client.contentManager.save(content);
   const event = await client.buildEvent(content, COLLECTION.PROFILE);
   const signedEvent = await client.signEvent(event);
+
+  // Persist profile update locally
+  await Promise.all(
+    newAvatarVariants.map(({ digest, bytes }) =>
+      client.fileStore.put(digest, bytes),
+    ),
+  );
+
+  await client.contentManager.save(content);
   await client.commitEvent(signedEvent, content);
-  await client.sync();
 }

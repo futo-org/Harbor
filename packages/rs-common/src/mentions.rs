@@ -4,7 +4,8 @@
 //! A standalone `@` (not glued to a preceding word character, so an email's
 //! `@` never starts one) begins a mention:
 //! - `@{<64 hex>,Name}` / `@{<64 hex>}` — identity mention, rendered as
-//!   `@Name` (or `@<64 hex>` without one).
+//!   `@Name` (or `@<64 hex>` without one). The only form that may be glued to
+//!   what precedes it (`hi@{…}`, `@@{…}`): only clients write it.
 //! - `@<64 hex>` — identity mention.
 //! - otherwise plain text. That includes `@user@domain.com`, which the client
 //!   still links as an alias mention in older posts but which never notifies.
@@ -22,8 +23,10 @@ struct FoundMention {
     rendered: String,
 }
 
-/// Curly mentions first so one is taken whole; then any other `@` run.
-static MENTION_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"@\{[^}]+\}|@\S+").unwrap());
+/// Curly mentions first so one is taken whole; then any other `@` run, which
+/// stops before an `@{` so a curly mention glued to it is still found.
+static MENTION_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"@\{[^}]+\}|@(?:[^\s@]|@[^\s{])+").unwrap());
 
 /// Punctuation that commonly trails a mention in prose but isn't part of it.
 const TRAILING_PUNCT: &[char] = &['.', ',', '!', '?', ';', ':', '\'', '"', ')', ']', '}'];
@@ -33,7 +36,7 @@ fn is_hex64(s: &str) -> bool {
 }
 
 /// A char that glues an `@` to the preceding word, disqualifying it as a
-/// mention (the client's `TOKEN_PRECEDER`).
+/// mention other than a curly one (the client's `TOKEN_PRECEDER`).
 fn is_mention_preceder(c: char) -> bool {
     c.is_alphanumeric() || c == '_' || c == '@'
 }
@@ -42,15 +45,16 @@ fn scan_mentions(text: &str) -> Vec<FoundMention> {
     MENTION_REGEX
         .find_iter(text)
         .filter_map(|m| {
-            if text[..m.start()]
-                .chars()
-                .next_back()
-                .is_some_and(is_mention_preceder)
+            let mut raw_mention = m.as_str();
+            let is_curly = raw_mention.starts_with("@{") && raw_mention.ends_with('}');
+            if !is_curly
+                && text[..m.start()]
+                    .chars()
+                    .next_back()
+                    .is_some_and(is_mention_preceder)
             {
                 return None;
             }
-            let mut raw_mention = m.as_str();
-            let is_curly = raw_mention.starts_with("@{") && raw_mention.ends_with('}');
             if !is_curly {
                 raw_mention = raw_mention.trim_end_matches(TRAILING_PUNCT);
             }

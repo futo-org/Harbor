@@ -29,8 +29,9 @@ const DOMAIN = `(?<![\\p{L}\\p{N}_.-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+${T
 const HEX64 = /^[0-9a-fA-F]{64}$/;
 
 // Matches, in order: curly mentions (`@{identity,displayName}` — braces so the
-// display name may contain spaces), any other standalone `@…` run (classified
-// as identity/alias or rejected in code below), hashtags (word chars only, so
+// display name may contain spaces), any other `@…` run (classified as
+// identity/alias or rejected in code below; it stops before an `@{`, so a curly
+// mention glued to it is still found), hashtags (word chars only, so
 // `#foo.bar` matches just `#foo`), http(s) URLs, `www.` domains, and bare
 // domains that end in a known TLD (optionally followed by a path/query). The
 // `@` alternatives come first so a mention is taken whole instead of the bare
@@ -38,7 +39,7 @@ const HEX64 = /^[0-9a-fA-F]{64}$/;
 const LINK_REGEX = new RegExp(
   [
     '@\\{[^}]+\\}',
-    '@[^\\s]+',
+    '@(?:[^\\s@]|@[^\\s{])+',
     '#[\\p{L}\\p{N}_]+',
     'https?:\\/\\/[^\\s]+',
     'www\\.(?=[\\p{L}\\p{N}])[^\\s]+',
@@ -53,7 +54,8 @@ const TRAILING_PUNCT = /(?:['’]s)?[.,!?;:'’")\]}>”]*$/i;
 
 // A char that glues an `@`/`#` to the preceding word — an email's local part
 // (`a@b.com`, in any script), `foo#bar`, another `@` — disqualifying it as a
-// mention or hashtag.
+// mention or hashtag. Curly mentions are exempt: only clients write them, so
+// one is never prose.
 export const TOKEN_PRECEDER = /[\p{L}\p{N}_@]/u;
 
 // A hashtag needs at least one non-digit, so prose like "we're #1" (and HTML
@@ -71,7 +73,8 @@ const HAS_SCHEME = /^https?:\/\//i;
  * A standalone `@` (not preceded by a word character, so an email's `@` never
  * starts one) begins a mention:
  * - `@{identity,displayName}` / `@{identity}` — identity mention rendered as
- *   `@displayName`; identity must be 64 hex chars. The default form.
+ *   `@displayName`; identity must be 64 hex chars. The default form, and the
+ *   only one that may be glued to what precedes it (`hi@{…}`, `@@{…}`).
  * - `@<64-hex>` — identity mention.
  * - anything else containing a dot (`@user@domain.com`, `@domain.com`) — alias
  *   mention, from posts made before aliases were posted in the curly form.
@@ -93,17 +96,22 @@ export function parseTextLinks(text: string): TextSegment[] {
     const start = match.index;
     let raw = match[0];
     const isToken = raw[0] === '@' || raw[0] === '#';
+    const isCurlyMention =
+      raw[0] === '@' && raw[1] === '{' && raw.endsWith('}');
 
-    // Mentions and hashtags must be standalone: skip an email's `@`
+    // Other mentions and hashtags must be standalone: skip an email's `@`
     // (`a@b.com`, which also keeps its domain part from being linkified — the
     // skip consumes the run) and `foo#bar`.
-    if (isToken && start > 0 && TOKEN_PRECEDER.test(text[start - 1])) {
+    if (
+      isToken &&
+      !isCurlyMention &&
+      start > 0 &&
+      TOKEN_PRECEDER.test(text[start - 1])
+    ) {
       continue;
     }
 
     // A curly mention ends at its `}`; don't strip that as punctuation.
-    const isCurlyMention =
-      raw[0] === '@' && raw[1] === '{' && raw.endsWith('}');
 
     if (!isCurlyMention) {
       let trail = raw.match(TRAILING_PUNCT)?.[0] ?? '';

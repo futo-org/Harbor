@@ -154,6 +154,11 @@ export class PolycentricClient {
     });
   }
 
+  /** Set the `traceparent` sent with gRPC requests, or `undefined` for one per request. */
+  public setTraceparent(traceparent: string | undefined): void {
+    this.core.setTraceparent(traceparent);
+  }
+
   public static async create(
     config: PolycentricClientConfig,
   ): Promise<PolycentricClient> {

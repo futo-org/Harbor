@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  codegenNativeCommands,
   type LayoutChangeEvent,
   Pressable,
   ScrollView,
@@ -37,6 +38,20 @@ const ATTACHMENT_GAP = Spacing.sm;
 // Spare height below the text on Android, enough for one more line.
 const NEW_LINE_HEADROOM = typography.lineHeight.lg;
 
+// The native command behind TextInput's `clear` and `setSelection`, which
+// don't take text
+const AndroidTextInputCommands = isAndroid
+  ? codegenNativeCommands<{
+      setTextAndSelection: (
+        input: RNTextInput,
+        mostRecentEventCount: number,
+        text: string,
+        start: number,
+        end: number,
+      ) => void;
+    }>({ supportedCommands: ['setTextAndSelection'] })
+  : null;
+
 type Attachment = ReturnType<typeof useComposer>['attachments'][number];
 
 type ComposerFieldsProps = {
@@ -47,7 +62,7 @@ type ComposerFieldsProps = {
   currentIdentityKey: string | null;
   placeholder: string;
   text: string;
-  setText: (text: string) => void;
+  setText: (text: string) => { text: string; caret: number };
   attachments: Attachment[];
   submitting: boolean;
   canPost: boolean;
@@ -114,10 +129,24 @@ export function ComposerFields({
     if (text === '') inputRef.current?.clear();
   }, [text]);
 
+  // Android: the input's latest change count. A text update from JS must
+  // carry it, or the input drops it as stale.
+  const nativeEventCountRef = useRef(0);
+
   const onChangeText = useCallback(
-    (next: string) => {
-      fieldTextRef.current = next;
-      setText(next);
+    (next: string, caret?: number) => {
+      const applied = setText(next);
+      fieldTextRef.current = applied.text;
+      // The edit reached into a mention, which went whole: show that.
+      const caretToShow = applied.text !== next ? applied.caret : caret;
+      if (caretToShow !== undefined) {
+        pushTextToInput(
+          inputRef.current,
+          applied.text,
+          caretToShow,
+          nativeEventCountRef.current,
+        );
+      }
     },
     [setText],
   );
@@ -213,6 +242,13 @@ export function ComposerFields({
             autoFocus={autoFocus}
             value={isIOS ? text : undefined}
             defaultValue={isIOS ? undefined : initialText}
+            onChange={
+              isAndroid
+                ? (e) => {
+                    nativeEventCountRef.current = e.nativeEvent.eventCount;
+                  }
+                : undefined
+            }
             onChangeText={onChangeText}
             disabled={submitting}
             maxLength={MAX_POST_LENGTH}
@@ -278,6 +314,44 @@ export function ComposerFields({
       </View>
     </ScrollView>
   );
+}
+
+/**
+ * Push text + caret into the input. Web has no `setNativeProps`: set the DOM
+ * value through the native setter (so React's value tracker notices) and
+ * dispatch `input`, which runs the same onChangeText path as typing - that's
+ * what re-runs TextArea's auto-grow.
+ */
+function pushTextToInput(
+  input: RNTextInput | null,
+  text: string,
+  caret: number,
+  nativeEventCount: number,
+) {
+  if (!input) return;
+  if (AndroidTextInputCommands) {
+    // `setNativeProps` ignores `selection` here, and its text update keeps
+    // the caret's distance to the text end instead
+    AndroidTextInputCommands.setTextAndSelection(
+      input,
+      nativeEventCount,
+      text,
+      caret,
+      caret,
+    );
+    return;
+  }
+  if (!isWeb) {
+    input.setNativeProps({ text, selection: { start: caret, end: caret } });
+    return;
+  }
+  const node = input as unknown as HTMLTextAreaElement;
+  Object.getOwnPropertyDescriptor(
+    HTMLTextAreaElement.prototype,
+    'value',
+  )?.set?.call(node, text);
+  node.dispatchEvent(new Event('input', { bubbles: true }));
+  node.setSelectionRange(caret, caret);
 }
 
 /**

@@ -34,7 +34,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: GetPostThreadRequest,
 ) -> Result<GetPostThreadResponse, Status> {
     let descendants_limit = if req.limit <= 0 {
@@ -55,9 +55,10 @@ pub async fn handle(
         omit_labels: req.omit_labels,
     };
 
-    let result =
-        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
-            .await?;
+    let result = pipeline::create_pipeline(
+        &mut ctx, &params, fetch, hydrate, filter, view,
+    )
+    .await?;
     Ok(GetPostThreadResponse {
         thread: result.event_bundles,
         event_hints: result.event_hints,
@@ -65,7 +66,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let subject_row = FeedsRepository::find_event_by_key(
@@ -162,7 +163,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
@@ -170,7 +171,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &PublicContext,
+    _: &mut PublicContext,
     params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -179,7 +180,7 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
@@ -340,9 +341,9 @@ mod tests {
             ]])
             .into_connection();
         let ctx = ctx(db).await;
-        let ctx = ctx.test_public("caller").await;
+        let mut ctx = ctx.test_public("caller").await;
 
-        let fetched = fetch(&ctx, &params()).await.unwrap();
+        let fetched = fetch(&mut ctx, &params()).await.unwrap();
         let fetched_identities: Vec<&str> = fetched
             .rows
             .iter()

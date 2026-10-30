@@ -19,7 +19,7 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: GetExploreFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
     let sort_by = req.sort_by();
@@ -34,9 +34,10 @@ pub async fn handle(
         feeds_pipeline::Params::from_req_params(&page_params, omit_labels)?;
     let params = Params { common, sort_by };
 
-    let result =
-        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
-            .await?;
+    let result = pipeline::create_pipeline(
+        &mut ctx, &params, fetch, hydrate, filter, view,
+    )
+    .await?;
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
@@ -45,7 +46,7 @@ pub async fn handle(
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched<SortedBy>, Status> {
     let mut rows = FeedsRepository::explore_feed(
@@ -83,7 +84,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     fetched: &feeds_pipeline::Fetched<SortedBy>,
 ) -> Result<HydrationState, Status> {
@@ -91,7 +92,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &PublicContext,
+    _: &mut PublicContext,
     params: &Params,
     fetched: feeds_pipeline::Fetched<SortedBy>,
     hydration: &HydrationState,
@@ -100,7 +101,7 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     filtered: GetFeedResponseFilter<SortedBy>,
     hydration: HydrationState,
