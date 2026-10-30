@@ -40,8 +40,6 @@ interface EventPushIssuesStore {
 const issueId = (server: string, key: EventKey) =>
   `${server} ${ffiEventKeyId(key)}`;
 
-const uniqueMessages = (messages: string[]) => [...new Set(messages)];
-
 /**
  * Validation warnings/errors returned by servers during the client's push. They're kept until the
  * user dismisses or clears them.
@@ -55,15 +53,15 @@ export const useEventPushIssuesStore = create<EventPushIssuesStore>(
   (set, get) => ({
     issues: {},
     record: (results, now = Date.now()) => {
-      // Copy only touched identities so others' selectors stay stable
       const issues = { ...get().issues };
-      const touched = new Set<string>();
+      const affected_identities = new Set<string>();
       const added: EventPushIssue[] = [];
 
       for (const { identity, server, eventIssues } of results) {
         if (eventIssues.length === 0) continue;
-        if (!touched.has(identity)) {
-          touched.add(identity);
+        if (!affected_identities.has(identity)) {
+          affected_identities.add(identity);
+          // Create a new copy of the issue map before editing it
           issues[identity] = { ...issues[identity] };
         }
         const identityIssues = issues[identity];
@@ -72,11 +70,10 @@ export const useEventPushIssuesStore = create<EventPushIssuesStore>(
           const id = issueId(server, key);
           const existing = identityIssues[id];
           if (existing) {
-            // Replace, so an error followed by a warning shows only the warning
             identityIssues[id] = {
               ...existing,
-              errors: uniqueMessages(errors),
-              warnings: uniqueMessages(warnings),
+              errors: [...new Set(errors)],
+              warnings: [...new Set(warnings)],
               lastSeen: now,
             };
           } else {
@@ -84,8 +81,8 @@ export const useEventPushIssuesStore = create<EventPushIssuesStore>(
               id,
               server,
               key,
-              errors: uniqueMessages(errors),
-              warnings: uniqueMessages(warnings),
+              errors: [...new Set(errors)],
+              warnings: [...new Set(warnings)],
               firstSeen: now,
               lastSeen: now,
             };
@@ -95,7 +92,7 @@ export const useEventPushIssuesStore = create<EventPushIssuesStore>(
         }
       }
 
-      if (touched.size > 0) set({ issues });
+      if (affected_identities.size > 0) set({ issues });
       return added;
     },
     dismiss: (identity, id) =>
