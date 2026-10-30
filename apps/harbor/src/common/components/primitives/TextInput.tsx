@@ -82,6 +82,9 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       lineHeight: typography.lineHeight[lineHeight],
       color: disabled ? theme.palette.neutral_500 : theme.palette.neutral_900,
       opacity: disabled ? 0.5 : 1,
+      // Android pads the placeholder by the font's bounding box, which for the
+      // variable NotoSans overflows the input and top-aligns the placeholder.
+      ...(Platform.OS === 'android' ? { includeFontPadding: false } : null),
       ...(Platform.OS === 'web'
         ? ({
             outlineStyle: 'none',
