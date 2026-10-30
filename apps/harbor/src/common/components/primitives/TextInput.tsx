@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { forwardRef, useState } from 'react';
 import {
+  Atoms,
   BorderRadius,
   type BorderRadiusToken,
   type FontSizeToken,
@@ -87,11 +88,7 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
       // variable NotoSans overflows the input and top-aligns the placeholder.
       ...(Platform.OS === 'android' ? { includeFontPadding: false } : null),
       ...(Platform.OS === 'web'
-        ? ({
-            outlineStyle: 'none',
-            outlineWidth: 0,
-            resize: 'none',
-          } as unknown as TextStyle)
+        ? { ...Atoms.outline_none, resize: 'none' }
         : null),
     };
 

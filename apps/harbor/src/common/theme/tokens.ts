@@ -661,8 +661,8 @@ const atomStyles = {
   /**
    * Outline
    */
-  // `outlineStyle: 'none'` is web-only and not in RN's ViewStyle union, so cast
-  // (as TextInput does). On web this fully removes the focus ring that
+  // `outlineStyle: 'none'` is web-only and not in RN's ViewStyle union, so
+  // cast. On web this fully removes the focus ring that
   // `outlineWidth: 0` alone leaves behind; on native both props are ignored.
   outline_none: {
     outlineStyle: 'none',

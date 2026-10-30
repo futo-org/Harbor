@@ -19,6 +19,14 @@ declare module 'react-native' {
 
   interface TextStyle {
     caretColor?: ColorValue;
+    resize?: 'none' | 'both' | 'horizontal' | 'vertical';
+    whiteSpace?:
+      | 'normal'
+      | 'nowrap'
+      | 'pre'
+      | 'pre-wrap'
+      | 'pre-line'
+      | 'break-spaces';
     wordBreak?: 'normal' | 'break-all' | 'keep-all' | 'break-word';
   }
 }

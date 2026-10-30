@@ -65,7 +65,7 @@ export const TextArea = forwardRef<TextInputInstance, TextAreaProps>(
           Platform.OS === 'web'
             ? // Suppress the corner resize grip and the vertical
               // scrollbar — we drive height via scrollHeight.
-              ({ resize: 'none', overflow: 'hidden' } as object)
+              { resize: 'none', overflow: 'hidden' }
             : {},
           style,
         ]}
