@@ -176,6 +176,7 @@ const flags = {
     charts_lint: charts,
     docs_lint: docs,
     app_lint: app,
+    generated_code: jsSdk || touches('protos/', /^buf\.gen\.yaml$/),
     rs_core: rsCore,
     js_sdk: jsSdk || rsCore,
     rust_services:
