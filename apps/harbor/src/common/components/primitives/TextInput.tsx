@@ -2,6 +2,7 @@ import {
   Platform,
   StyleSheet,
   TextInput as RNTextInput,
+  type TextInputInstance,
   type TextInputProps as RNTextInputProps,
   type TextStyle,
 } from 'react-native';
@@ -36,7 +37,7 @@ export interface TextInputProps
   error?: boolean;
 }
 
-export const TextInput = forwardRef<RNTextInput, TextInputProps>(
+export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
   (
     {
       numberOfLines,

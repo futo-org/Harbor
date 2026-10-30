@@ -21,7 +21,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  type TextInput as RNTextInput,
+  type TextInputInstance,
   type TextInputKeyPressEvent,
   View,
 } from 'react-native';
@@ -48,7 +48,7 @@ const TextInputCommands = isWeb
   ? null
   : codegenNativeCommands<{
       setTextAndSelection: (
-        input: RNTextInput,
+        input: TextInputInstance,
         mostRecentEventCount: number,
         text: string,
         start: number,
@@ -114,7 +114,7 @@ export function ComposerFields({
   const text = useComposerStore((s) => s.text);
   const mentionRanges = useComposerStore((s) => s.mentionRanges);
 
-  const inputRef = useRef<RNTextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   // Native: the input's latest change count. A text update from JS must
   // carry it, or the input drops it as stale.
@@ -332,7 +332,7 @@ export function ComposerFields({
  * text, which would otherwise not leave the caret there.
  */
 function pushTextToInput(
-  input: RNTextInput | null,
+  input: TextInputInstance | null,
   text: string,
   caret: number,
   nativeEventCount: number,

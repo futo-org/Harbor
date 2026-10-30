@@ -1,5 +1,5 @@
 import { useEffect, type RefObject } from 'react';
-import type { ScrollView } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 
 /**
  * Fallback conversion for when the wheel events don't support pixel deltas.
@@ -39,7 +39,7 @@ function readDelta(event: WheelEvent, pageWidth: number): number | undefined {
  * scroll up or down.
  */
 export function useHorizontalWheelScroll(
-  ref: RefObject<ScrollView | null>,
+  ref: RefObject<ScrollViewInstance | null>,
 ): void {
   useEffect(() => {
     // `getScrollableNode()` returns `any` to remain compatible with native platforms.

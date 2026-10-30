@@ -5,7 +5,7 @@ import {
   useLayoutEffect,
   useRef,
 } from 'react';
-import { Platform, type TextInput as RNTextInput } from 'react-native';
+import { Platform, type TextInputInstance } from 'react-native';
 import { TextInput, type TextInputProps } from './primitives/TextInput';
 
 export interface TextAreaProps extends Omit<TextInputProps, 'multiline'> {
@@ -16,13 +16,13 @@ export interface TextAreaProps extends Omit<TextInputProps, 'multiline'> {
 /**
  * Multiline text input that auto-grows and auto-shrinks with content.
  */
-export const TextArea = forwardRef<RNTextInput, TextAreaProps>(
+export const TextArea = forwardRef<TextInputInstance, TextAreaProps>(
   (
     { minHeight = 20, style, value, scrollEnabled, onChangeText, ...props },
     ref,
   ) => {
-    const innerRef = useRef<RNTextInput>(null);
-    useImperativeHandle(ref, () => innerRef.current as RNTextInput);
+    const innerRef = useRef<TextInputInstance>(null);
+    useImperativeHandle(ref, () => innerRef.current as TextInputInstance);
 
     const autoGrow = useCallback(() => {
       if (Platform.OS !== 'web') return;

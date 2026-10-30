@@ -203,7 +203,7 @@ const atomStyles = {
    */
   overflow_auto: {
     overflow: 'auto',
-  },
+  } as unknown as ViewStyle,
   overflow_hidden: {
     overflow: 'hidden',
   },

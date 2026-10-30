@@ -25,6 +25,7 @@ import {
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type ScrollViewInstance,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -112,7 +113,7 @@ export const HorizontalScrollGroup = forwardRef(function HorizontalScrollGroup(
   ref: React.Ref<HorizontalScrollGroupRef>,
 ) {
   const { theme } = useTheme();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const metrics = useRef<Metrics>({ offset: 0, viewport: 0, content: 0 });
   const [edges, setEdges] = useState({
     canScrollLeft: false,
@@ -201,9 +202,8 @@ export const HorizontalScrollGroup = forwardRef(function HorizontalScrollGroup(
     <View
       {...props}
       style={[Atoms.relative, Atoms.overflow_hidden, style]}
-      // Handle hover and coalesce `null` to `undefined` to make the type system happy.
-      onPointerEnter={onHoverIn ?? undefined}
-      onPointerLeave={onHoverOut ?? undefined}
+      onPointerEnter={onHoverIn}
+      onPointerLeave={onHoverOut}
     >
       <ScrollView
         ref={scrollRef}

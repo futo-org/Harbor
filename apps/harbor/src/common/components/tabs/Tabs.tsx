@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   type ComponentProps,
+  type ComponentPropsWithoutRef,
   type ReactElement,
   type ReactNode,
 } from 'react';
@@ -66,7 +67,7 @@ type TabsProps = {
    * between tabs following it, rather than each tab drawing its own underline.
    */
   progress?: SharedValue<number>;
-} & ComponentProps<typeof View>;
+} & ComponentPropsWithoutRef<typeof View>;
 
 // A bar of tabs with a pill underline marking the active one. Compose with
 // `Tabs.Tab`:

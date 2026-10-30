@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import type { LayoutRectangle, TextInput } from 'react-native';
+import type { LayoutRectangle, TextInputInstance } from 'react-native';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { TOKEN_PRECEDER } from '@/src/common/util/parseTextLinks';
@@ -36,7 +36,7 @@ export type MentionStore = {
   mentionRanges: MentionRange[];
   selection: { start: number; end: number };
   isFocused: boolean;
-  inputRef: TextInput | null;
+  inputRef: TextInputInstance | null;
   /** ComposerFields' text sync (updates the draft store + native field ref). */
   onChangeText: ((next: string, caret?: number) => void) | null;
   inputLayout: LayoutRectangle;

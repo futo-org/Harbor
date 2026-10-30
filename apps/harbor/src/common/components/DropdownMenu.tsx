@@ -1,6 +1,6 @@
 import * as DropdownMenuPrimitive from '@rn-primitives/dropdown-menu';
 import type { ReactNode, RefAttributes } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Atoms, useTheme } from '../theme';
@@ -17,15 +17,18 @@ function DropdownMenuContent({
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Overlay style={StyleSheet.absoluteFill}>
         <DropdownMenuPrimitive.Content
-          style={StyleSheet.flatten([
-            { borderWidth: 1, borderColor: theme.palette.neutral_50 },
-            Atoms.rounded_lg,
-            { minWidth: 225 },
-            Atoms.outline_none,
-            { backgroundColor: theme.palette.neutral_25 },
-            Atoms.overflow_hidden,
-            typeof style === 'function' ? undefined : style,
-          ])}
+          // Typed as nullable, but flattening these objects never returns null
+          style={
+            StyleSheet.flatten([
+              { borderWidth: 1, borderColor: theme.palette.neutral_50 },
+              Atoms.rounded_lg,
+              { minWidth: 225 },
+              Atoms.outline_none,
+              { backgroundColor: theme.palette.neutral_25 },
+              Atoms.overflow_hidden,
+              typeof style === 'function' ? undefined : style,
+            ]) as ViewStyle
+          }
           // Keeps the menu out of the status bar and other screen cutouts
           insets={insets}
           {...props}

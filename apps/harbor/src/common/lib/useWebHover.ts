@@ -1,6 +1,5 @@
 import { hasPointerHover } from '@/src/common/util/platform';
 import { useCallback, useState } from 'react';
-import type { PressableProps } from 'react-native';
 
 /**
  * Pointer hover for RN Web when the device reports fine-pointer + hover-capable
@@ -10,20 +9,17 @@ import type { PressableProps } from 'react-native';
  */
 export function useWebHover(): {
   hovered: boolean;
-  onHoverIn: PressableProps['onHoverIn'];
-  onHoverOut: PressableProps['onHoverOut'];
+  // Take no event, so they also fit View's pointer handlers
+  onHoverIn: (() => void) | undefined;
+  onHoverOut: (() => void) | undefined;
 } {
   const [hovered, setHovered] = useState(false);
 
-  const onHoverIn = useCallback<
-    NonNullable<PressableProps['onHoverIn']>
-  >(() => {
+  const onHoverIn = useCallback(() => {
     setHovered(true);
   }, []);
 
-  const onHoverOut = useCallback<
-    NonNullable<PressableProps['onHoverOut']>
-  >(() => {
+  const onHoverOut = useCallback(() => {
     setHovered(false);
   }, []);
 
