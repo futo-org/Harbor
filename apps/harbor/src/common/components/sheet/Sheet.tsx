@@ -336,14 +336,19 @@ function NativeSheet({
   }, [isInline, open, mounted, sheetRef]);
 
   const [detentIndex, setDetentIndex] = useState(0);
+  const [sheetWidth, setSheetWidth] = useState(0);
+  const { width: windowWidth } = useWindowDimensions();
 
   const surface = theme.palette.neutral_0;
   const sizesToContent = detents.includes('auto');
   const detent = detents[detentIndex];
+  // The sheet is horizontally centered: a few points off the screen edges in
+  // compact width, a narrower page in regular width (iPhone Duo unfolded).
+  const sheetMargin = (windowWidth - sheetWidth) / 2;
   const sideInsets = typeof detent === 'number' &&
     detent >= SIDE_INSETS_MIN_DETENT && {
-      paddingLeft: insets.left,
-      paddingRight: insets.right,
+      paddingLeft: Math.max(0, insets.left - sheetMargin),
+      paddingRight: Math.max(0, insets.right - sheetMargin),
     };
 
   if (isInline && !mounted) return null;
@@ -382,6 +387,7 @@ function NativeSheet({
       footerOptions={{ keyboardOffset: -insets.bottom }}
     >
       <View
+        onLayout={(event) => setSheetWidth(event.nativeEvent.layout.width)}
         style={[
           Atoms.w_full,
           !sizesToContent && Atoms.flex_1,
