@@ -507,9 +507,6 @@ impl Query {
         limit: u64,
         cursor_filter: &CursorFilter<EventCreatedAt>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
-        if url.is_empty() {
-            return Ok(Vec::new());
-        }
         Self::do_list_feed_events(db, limit, None, Some(url), cursor_filter)
             .await
     }
@@ -556,7 +553,6 @@ impl Query {
                     }
                     Cursor::End => return Ok(vec![]),
                 }
-
                 sea_cursor.first(limit);
             }
             CursorFilter::Backward(cur) => {
