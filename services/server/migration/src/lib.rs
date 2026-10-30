@@ -77,6 +77,7 @@ mod m20261023_000001_decay_interaction_count;
 mod m20261026_000001_one_reaction_per_post_per_identity;
 mod m20261027_000001_report_resolution;
 mod m20261028_000001_drop_alias_cache_table;
+mod m20261030_000001_list_events_index;
 
 mod old_entity;
 
@@ -163,6 +164,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20261026_000001_one_reaction_per_post_per_identity::Migration),
             Box::new(m20261027_000001_report_resolution::Migration),
             Box::new(m20261028_000001_drop_alias_cache_table::Migration),
+            Box::new(m20261030_000001_list_events_index::Migration),
         ]
     }
 }

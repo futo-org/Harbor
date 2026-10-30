@@ -108,6 +108,7 @@ impl ObjectStore {
 
     /// Upload `body` under the digest's key. Re-uploading the same
     /// body overwrites the existing object.
+    #[tracing::instrument(name = "object_store.write_blob", skip_all)]
     pub async fn write_blob(&self, digest: &ContentDigest, body: Vec<u8>) -> io::Result<()> {
         let key = blob_key(digest);
         self.client
@@ -122,6 +123,7 @@ impl ObjectStore {
     }
 
     /// Delete a blob by its digest. Deleting an absent blob is a no-op.
+    #[tracing::instrument(name = "object_store.delete_blob", skip_all)]
     pub async fn delete_blob(&self, digest: &ContentDigest) -> io::Result<()> {
         let key = blob_key(digest);
         self.client
@@ -136,6 +138,7 @@ impl ObjectStore {
 
     /// Read a blob body by its digest. Returns `NotFound` when the
     /// object does not exist in the bucket.
+    #[tracing::instrument(name = "object_store.read_blob", skip_all)]
     pub async fn read_blob(&self, digest: &ContentDigest) -> io::Result<Vec<u8>> {
         let key = blob_key(digest);
         let resp = self

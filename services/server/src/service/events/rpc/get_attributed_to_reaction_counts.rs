@@ -3,7 +3,7 @@ use crate::service::proto::{
     GetAttributedToReactionCountsRequest,
     GetAttributedToReactionCountsResponse, attributed_to::To,
 };
-use crate::service::stats::repository::Mutation;
+use crate::service::stats::repository::Query;
 use tonic::Status;
 
 /// Return the maintained upvote/downvote counts for an out-of-network target
@@ -14,7 +14,7 @@ pub async fn handle(
     req: GetAttributedToReactionCountsRequest,
 ) -> Result<GetAttributedToReactionCountsResponse, Status> {
     let url = match req.attributed_to.and_then(|a| a.to) {
-        Some(To::Link(link)) => link.url,
+        Some(To::Link(link)) if !link.url.is_empty() => link.url,
         _ => {
             return Err(Status::invalid_argument(
                 "attributed_to link url is required",
@@ -23,7 +23,7 @@ pub async fn handle(
     };
 
     let (upvote_count, downvote_count) =
-        Mutation::get_attributed_reaction_summary(&ctx.db, &url)
+        Query::get_attributed_reaction_summary(&ctx.db, &url)
             .await
             .map_err(|_| Status::internal("internal server error"))?;
 

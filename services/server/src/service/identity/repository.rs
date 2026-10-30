@@ -29,6 +29,7 @@ pub struct Query;
 
 impl Query {
     /// Authorized keys for `identity`'s validated chain head.
+    #[tracing::instrument(skip_all)]
     pub async fn authorized_keys<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -58,6 +59,7 @@ impl Query {
     /// Fetch an identity's IDENTITY-collection events and return its
     /// validated chain head, or `None` when no valid genesis exists. The
     /// chain walk itself is the pure `chain::validated_chain_head`.
+    #[tracing::instrument(skip_all)]
     pub async fn latest_valid_identity_content<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -71,6 +73,7 @@ impl Query {
     }
 
     /// True when `public_key` is a rotation key on the latest identity state.
+    #[tracing::instrument(skip_all)]
     pub async fn is_rotation_key<C: ConnectionTrait>(
         db: &C,
         identity_key: &str,
@@ -83,6 +86,7 @@ impl Query {
     }
 
     /// True when `identity` has a row in the `moderator` table.
+    #[tracing::instrument(skip_all)]
     pub async fn is_moderator<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -91,6 +95,7 @@ impl Query {
     }
 
     /// Number of events `identity` has.
+    #[tracing::instrument(skip_all)]
     pub async fn count_events<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -103,6 +108,7 @@ impl Query {
 
     /// Identities with at least one event signed by `public_key`, with how
     /// many each has. One scan of `events`.
+    #[tracing::instrument(skip_all)]
     pub async fn identities_signed_by<C: ConnectionTrait>(
         db: &C,
         public_key: &[u8],
@@ -119,6 +125,7 @@ impl Query {
     }
 
     /// Number of content rows no event references.
+    #[tracing::instrument(skip_all)]
     pub async fn count_orphan_content<C: ConnectionTrait>(
         db: &C,
     ) -> Result<i64, DbErr> {
@@ -135,6 +142,7 @@ impl Query {
     }
 
     /// True when `identity` has a row in the `ban` table.
+    #[tracing::instrument(skip_all)]
     pub async fn is_banned<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -147,6 +155,7 @@ impl Query {
     /// even when timestamps collide. `after` continues after a previous
     /// page's last row; `query` keeps only identities that begin with it
     /// (case-insensitive prefix). Returns up to `limit` rows.
+    #[tracing::instrument(skip_all)]
     pub async fn list_bans<C: ConnectionTrait>(
         db: &C,
         limit: u64,
@@ -185,6 +194,7 @@ impl Query {
     /// Every IDENTITY-collection event (full chain) for each of
     /// `identities`. Sent as hints on feed/thread/list responses so
     /// clients can validate post authors without re-fetching the chain.
+    #[tracing::instrument(skip_all)]
     pub async fn list_identity_events_for_identities<C: ConnectionTrait>(
         db: &C,
         identities: Vec<String>,
@@ -209,6 +219,7 @@ impl Mutation {
     /// Sets whether `identity` is banned: inserts or deletes its `ban`
     /// row. When banning, records `banned_by` as the issuing moderator.
     /// Idempotent in both directions.
+    #[tracing::instrument(skip_all)]
     pub async fn set_banned<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -247,6 +258,7 @@ impl Mutation {
     ///
     /// Works through temp tables so nothing scales with the event count on
     /// the client, hence the transaction. Returns `None` once no events match.
+    #[tracing::instrument(skip_all)]
     pub async fn erase_events_batch(
         db: &mut DbTx<'_>,
         identity: &str,
@@ -272,6 +284,7 @@ impl Mutation {
 
     /// Erases every event `public_key` signed, in one pass. The operator
     /// command's path for a key with many identities.
+    #[tracing::instrument(skip_all)]
     pub async fn erase_events_signed_by(
         db: &mut DbTx<'_>,
         public_key: &[u8],
@@ -293,6 +306,7 @@ impl Mutation {
     }
 
     /// Erases the one event at `key` the same way as a batch.
+    #[tracing::instrument(skip_all)]
     pub async fn erase_event(
         db: &mut DbTx<'_>,
         key: &TargetEventKey,
@@ -326,6 +340,7 @@ impl Mutation {
     /// Deletes what is keyed by the identity rather than by event: the
     /// notifications and per-event counts. Run once after the batches.
     /// Counts on other events that include their interactions are left as-is.
+    #[tracing::instrument(skip_all)]
     pub async fn erase_derived<C: ConnectionTrait>(
         db: &C,
         identities: &[String],
@@ -344,6 +359,7 @@ impl Mutation {
 
 /// Deletes the events listed in the `erase_events` temp table, the cache
 /// rows and tallies derived from them, and the content only they used.
+#[tracing::instrument(skip_all)]
 async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
     db.execute_unprepared(
         "CREATE TEMP TABLE erase_content ON COMMIT DROP AS
@@ -509,6 +525,7 @@ async fn erase_collected(db: &mut DbTx<'_>) -> Result<ErasedBatch, DbErr> {
 impl Mutation {
     /// Deletes content no event references. Returns the count and the blobs
     /// left for the caller to remove.
+    #[tracing::instrument(skip_all)]
     pub async fn prune_orphan_content(
         db: &mut DbTx<'_>,
     ) -> Result<(u64, Vec<ContentDigest>), DbErr> {
@@ -582,6 +599,7 @@ pub struct ErasedBatch {
 /// Deletes the content rows listed in the `erase_content` temp table and
 /// their child rows. Returns the count and the blobs no content references
 /// any more.
+#[tracing::instrument(skip_all)]
 async fn delete_content_rows(
     db: &mut DbTx<'_>,
 ) -> Result<(u64, Vec<ContentDigest>), DbErr> {

@@ -76,6 +76,8 @@ export const roadmap: (RoadmapItem | RoadmapPhase | RoadmapGap)[] = [
     description: 'Shirts and more, for anyone who wants to show their support.',
   },
   {
+    date: '2026-10-29',
+    commit: '2980c044beb01b283e2ef39879652dabe15006c9',
     title: 'Grayjay migration',
     description:
       'Grayjay comments and ratings move to Harbor, and Grayjay users keep their keys.',

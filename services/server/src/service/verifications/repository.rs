@@ -99,6 +99,7 @@ pub struct Query;
 
 impl Query {
     /// VerificationClaim events published by an identity.
+    #[tracing::instrument(skip_all)]
     pub async fn list_claim_events_for_identity<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -128,6 +129,7 @@ impl Query {
     /// actually verified — a set the attacker cannot inflate — closes that.
     /// (A claim admitted via a since-revoked verify is dropped later, when
     /// tombstones are validated.)
+    #[tracing::instrument(skip_all)]
     pub async fn list_claim_events_by_fields<C: ConnectionTrait>(
         db: &C,
         schema_digest: Option<(i32, Vec<u8>)>,
@@ -173,6 +175,7 @@ impl Query {
 
     /// VerificationTarget events published by the claims' owners that
     /// reference any of `claim_keys`.
+    #[tracing::instrument(skip_all)]
     pub async fn list_target_events_for_claims<C: ConnectionTrait>(
         db: &C,
         claim_keys: &[TargetEventKey],
@@ -222,6 +225,7 @@ impl Query {
 
     /// VerificationVerify events verifying any of `claim_keys`, from any
     /// identity.
+    #[tracing::instrument(skip_all)]
     pub async fn list_verify_events_for_claims<C: ConnectionTrait>(
         db: &C,
         claim_keys: &[TargetEventKey],
@@ -263,6 +267,7 @@ impl Query {
     /// Verification requests naming `target_identity`, restricted to
     /// targets published by the referenced claim's own owner. Newest first,
     /// tombstones NOT yet filtered.
+    #[tracing::instrument(skip_all)]
     pub async fn list_targets_for_identity<C: ConnectionTrait>(
         db: &C,
         target_identity: &str,
@@ -304,6 +309,7 @@ impl Query {
     /// True when the claim's own owner has published a VerificationTarget
     /// naming `target_identity` for `claim_key` — i.e. that identity was
     /// requested to verify the claim.
+    #[tracing::instrument(skip_all)]
     pub async fn was_verification_requested<C: ConnectionTrait>(
         db: &C,
         claim_key: &TargetEventKey,
@@ -335,6 +341,7 @@ impl Query {
 
     /// VerificationClaim events matching the given keys exactly. Newest
     /// first by sequence, tombstones NOT yet filtered.
+    #[tracing::instrument(skip_all)]
     pub async fn list_claim_events_by_keys<C: ConnectionTrait>(
         db: &C,
         keys: &[TargetEventKey],

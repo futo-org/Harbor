@@ -1145,6 +1145,13 @@ CREATE INDEX events_identity_heads_idx ON public.events USING btree (identity, p
 
 
 --
+-- Name: events_identity_sequence; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX events_identity_sequence ON public.events USING btree (identity, sequence DESC);
+
+
+--
 -- Name: follow_follower_followee_idx; Type: INDEX; Schema: public; Owner: -
 --
 

@@ -73,7 +73,6 @@ export function ComposeSheet({
       error={composer.error}
       currentIdentityKey={composer.currentIdentityKey}
       placeholder={composer.placeholder}
-      text={composer.text}
       setText={composer.setText}
       attachments={composer.attachments}
       submitting={composer.submitting}

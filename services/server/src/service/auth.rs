@@ -96,6 +96,7 @@ fn grpc_error_response(status: Status, request: &Request) -> Response {
 }
 
 /// Verify `token` and return the identity it authenticates.
+#[tracing::instrument(name = "auth.verify_token", skip_all)]
 pub async fn verify_auth_token(
     ctx: &ServiceContext,
     token: &str,

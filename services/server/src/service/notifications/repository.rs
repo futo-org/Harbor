@@ -10,6 +10,7 @@ pub struct Mutation;
 impl Query {
     /// Notifications addressed to `identity` newer than its read marker,
     /// counted up to `cap`.
+    #[tracing::instrument(skip_all)]
     pub async fn unread_count<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -42,6 +43,7 @@ impl Query {
 
     /// Id of the notification to `identity` that `trigger` produced, if this
     /// server has it. The newest one, since redelivery can duplicate rows.
+    #[tracing::instrument(skip_all)]
     pub async fn id_of_trigger<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -78,6 +80,7 @@ impl Query {
     }
 
     /// Id of the newest notification addressed to `identity`.
+    #[tracing::instrument(skip_all)]
     pub async fn newest_id<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -93,6 +96,7 @@ impl Query {
     }
 
     /// Notifications addressed to `to_identity`, newest first.
+    #[tracing::instrument(skip_all)]
     pub async fn list_for_identity<C: ConnectionTrait>(
         db: &C,
         to_identity: &str,
@@ -114,6 +118,7 @@ impl Query {
 
 impl Mutation {
     /// Moves `identity`'s read marker up to `up_to_id`, never backwards.
+    #[tracing::instrument(skip_all)]
     pub async fn mark_read<C: ConnectionTrait>(
         db: &C,
         identity: &str,

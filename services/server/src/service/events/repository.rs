@@ -30,6 +30,7 @@ pub struct Query;
 
 impl Query {
     #[allow(clippy::too_many_arguments)]
+    #[tracing::instrument(skip_all)]
     pub async fn list_events<C: ConnectionTrait>(
         db: &C,
         mut limit: Option<u64>,
@@ -111,6 +112,7 @@ impl Query {
     }
 
     /// Find the latest sequence numbers for an identity
+    #[tracing::instrument(skip_all)]
     pub async fn list_heads<C: ConnectionTrait>(
         db: &C,
         identity: &str,
@@ -143,6 +145,7 @@ pub struct Mutation;
 
 impl Mutation {
     /// Find or create the `application` for `app`, returning its id.
+    #[tracing::instrument(skip_all)]
     pub async fn application_id<C: ConnectionTrait>(
         db: &C,
         app: &Application,
@@ -254,6 +257,7 @@ impl Mutation {
     ///
     /// Returns `true` if the event was stored or `false` if the event is
     /// already stored.
+    #[tracing::instrument(skip_all)]
     pub async fn add_event<C: ConnectionTrait>(
         db: &C,
         event: event::ActiveModel,

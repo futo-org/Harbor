@@ -208,6 +208,11 @@ async fn lookup(
 
 /// Call the scraper's `/scrape` endpoint and map its JSON onto a
 /// `UrlInfoResponse`, returned alongside the raw response body.
+#[tracing::instrument(
+    name = "scraper.scrape",
+    skip_all,
+    fields(otel.kind = "client", http.request.method = "GET")
+)]
 async fn fetch_metadata(
     scrape_url: &str,
     target_url: &str,
@@ -215,6 +220,7 @@ async fn fetch_metadata(
     let resp = http_client::client()
         .get(scrape_url)
         .query(&[("url", target_url)])
+        .headers(http_client::trace_headers())
         .send()
         .await
         .map_err(|e| {

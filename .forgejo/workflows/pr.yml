@@ -334,6 +334,26 @@ jobs:
       - name: Store listing exports
         run: node apps/harbor/marketing/source/export.mjs --check
 
+  # The uniffi bindings are checked in the android job, which generates them.
+  generated-code:
+    name: Check generated code
+    needs: changes
+    if: fromJSON(needs.changes.outputs.plan).flags.generated_code
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 15
+    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/setup-pnpm
+        with:
+          install-args: --filter polycentric
+      - name: js-core protos
+        run: |
+          pnpm -C packages/js-core generate
+          stale=$(git status --porcelain)
+          [ -z "$stale" ] ||
+            { echo "$stale"; echo "::error::Generated protos are stale; run 'pnpm -C packages/js-core generate' and commit the result"; exit 1; }
+
   # Unit tests ---------------------------------------------------------------
 
   rust-packages:
@@ -517,6 +537,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/android-build
+      # The android build regenerates the uniffi bindings
+      - name: Check generated bindings up-to-date
+        run: |
+          stale=$(git status --porcelain -- packages/react-native)
+          [ -z "$stale" ] ||
+            { echo "$stale"; echo "::error::Generated bindings are stale; run 'pnpm -C packages/react-native ubrn:ios' (or ubrn:android) and commit the result"; exit 1; }
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -1004,6 +1030,7 @@ jobs:
       - charts-lint
       - docs-lint
       - app-lint
+      - generated-code
       - rust-packages
       - rust-services
       - js-packages
