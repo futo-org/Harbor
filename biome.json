@@ -16,6 +16,7 @@
       "!**/justfile",
       "!**/README.md",
       "!legacy",
+      "!deploy/charts/*/templates",
       "!turbo.jsonc",
       "!apps/harbor/build",
       "!apps/harbor/android",

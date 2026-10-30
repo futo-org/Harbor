@@ -48,10 +48,14 @@ spec:
             - name: metrics
               containerPort: 9464
               protocol: TCP
-          {{- with $root.Values.env }}
           env:
+            # Service name on exported spans; distinguishes the workers
+            # from the API, which runs the same binary.
+            - name: HARBOR_SERVICE_NAME
+              value: {{ include "harbor-server.fullname" $root }}-worker-{{ $w.name }}
+            {{- with $root.Values.env }}
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- end }}
           {{- with $root.Values.envFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}

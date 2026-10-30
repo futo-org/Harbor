@@ -48,6 +48,10 @@ spec:
             # Served on /version; CI polls it to tell when a deploy has rolled out.
             - name: HARBOR_COMMIT
               value: {{ .Chart.AppVersion | quote }}
+            # Service name on exported spans; distinguishes the API from
+            # the workers, which run the same binary.
+            - name: HARBOR_SERVICE_NAME
+              value: {{ include "harbor-server.fullname" . }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
