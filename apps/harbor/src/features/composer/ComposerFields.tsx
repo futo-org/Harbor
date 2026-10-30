@@ -7,17 +7,20 @@ import {
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import {
   Atoms,
+  createThemedStyles,
   Spacing,
   typography,
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  codegenNativeCommands,
   type LayoutChangeEvent,
   Pressable,
   ScrollView,
+  StyleSheet,
   type TextInput as RNTextInput,
   type TextInputKeyPressEvent,
   View,
@@ -28,14 +31,30 @@ import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
 import type { v2 } from '@polycentric/react-native';
 import { singleImageAspectRatio } from './utils/attachmentLayout';
 import { MAX_POST_LENGTH, type useComposer } from './hooks/useComposer';
-import { isAndroid, isIOS, isWeb } from '@/src/common/util/platform';
+import { isAndroid, isWeb } from '@/src/common/util/platform';
 
 import { useMentionInputSync } from '@/src/features/composer/hooks/useMentionInputSync';
+import { useComposerStore } from '@/src/features/composer/hooks/useComposerStore';
+import { MentionHighlights } from '@/src/features/composer/components/MentionHighlights';
 import { useTutorialHintsStore } from '@/src/common/lib/useTutorialHintsStore';
 
 const ATTACHMENT_GAP = Spacing.sm;
 // Spare height below the text on Android, enough for one more line.
 const NEW_LINE_HEADROOM = typography.lineHeight.lg;
+
+// The native command behind TextInput's `clear` and `setSelection`, which
+// don't take text
+const TextInputCommands = isWeb
+  ? null
+  : codegenNativeCommands<{
+      setTextAndSelection: (
+        input: RNTextInput,
+        mostRecentEventCount: number,
+        text: string,
+        start: number,
+        end: number,
+      ) => void;
+    }>({ supportedCommands: ['setTextAndSelection'] });
 
 type Attachment = ReturnType<typeof useComposer>['attachments'][number];
 
@@ -46,8 +65,7 @@ type ComposerFieldsProps = {
   error: string | null;
   currentIdentityKey: string | null;
   placeholder: string;
-  text: string;
-  setText: (text: string) => void;
+  setText: (text: string) => { text: string; caret: number };
   attachments: Attachment[];
   submitting: boolean;
   canPost: boolean;
@@ -76,7 +94,6 @@ export function ComposerFields({
   error,
   currentIdentityKey,
   placeholder,
-  text,
   setText,
   attachments,
   submitting,
@@ -89,35 +106,33 @@ export function ComposerFields({
   autoFocus = true,
 }: ComposerFieldsProps) {
   const { theme } = useTheme();
+  const styles = useStyles();
 
-  // On Android the field is deliberately UNCONTROLLED: round-tripping every
-  // keystroke through a `value` prop makes Fabric re-apply the text natively,
-  // clobbering the cursor position whenever it isn't at the very end
-  // (upstream: https://github.com/facebook/react-native/issues/34276).
-  // It is seeded once at mount (a `defaultValue` that keeps updating is
-  // forwarded to the native `text` prop each render, same as `value`) and the
-  // store is synced via `onChangeText`. iOS must stay CONTROLLED instead:
-  // uncontrolled multiline inputs there never re-measure, so the field stops
-  // auto-growing (https://github.com/facebook/react-native/issues/54570).
+  // From the store, not a prop: the host renders this through a portal that
+  // passes new props a commit late, and a render in between (like the one
+  // `mentionRanges` triggers) would write the stale text into the input
+  const text = useComposerStore((s) => s.text);
+  const mentionRanges = useComposerStore((s) => s.mentionRanges);
+
   const inputRef = useRef<RNTextInput>(null);
-  const [initialText] = useState(text);
-  // Last text the field is known to contain (the seed, then user input).
-  const fieldTextRef = useRef(text);
 
-  useEffect(() => {
-    if (text === fieldTextRef.current) return;
-    // The draft changed outside the input. Only the reset to empty (on
-    // close/post) does this today; if the composer ever gains non-empty
-    // programmatic edits (e.g. draft prefill), remount the field with a new
-    // `key` instead of passing text back in.
-    fieldTextRef.current = text;
-    if (text === '') inputRef.current?.clear();
-  }, [text]);
+  // Native: the input's latest change count. A text update from JS must
+  // carry it, or the input drops it as stale.
+  const nativeEventCountRef = useRef(0);
 
   const onChangeText = useCallback(
-    (next: string) => {
-      fieldTextRef.current = next;
-      setText(next);
+    (next: string, caret?: number) => {
+      const applied = setText(next);
+      // The edit reached into a mention, which went whole: show that.
+      const caretToShow = applied.text !== next ? applied.caret : caret;
+      if (caretToShow !== undefined) {
+        pushTextToInput(
+          inputRef.current,
+          applied.text,
+          caretToShow,
+          nativeEventCountRef.current,
+        );
+      }
     },
     [setText],
   );
@@ -201,56 +216,88 @@ export function ComposerFields({
           </View>
         ) : null}
         <View style={[Atoms.flex_1, Atoms.gap_sm]}>
-          <TextArea
-            // `autoFocus` only fires on mount, so re-key when it flips
-            // (false → true after the sheet presents) to actually focus.
-            key={autoFocus ? 'autofocus' : 'no-autofocus'}
-            ref={inputRef}
-            variant="plain"
-            fontSize="lg"
-            lineHeight="lg"
-            placeholder={placeholder}
-            autoFocus={autoFocus}
-            value={isIOS ? text : undefined}
-            defaultValue={isIOS ? undefined : initialText}
-            onChangeText={onChangeText}
-            disabled={submitting}
-            maxLength={MAX_POST_LENGTH}
-            numberOfLines={isWeb ? 1 : undefined}
-            scrollEnabled={false}
-            style={[
-              Atoms.px_0,
-              Atoms.py_0,
-              Atoms.pt_sm,
-              // Android auto-grows the input one frame too late, causing the text to temporarily scroll, which looks
-              // like a blip/flash (https://github.com/react/react-native/issues/46813,
-              // https://github.com/react/react-native/issues/33165). If we add an extra space for the new line to go
-              // to, no scroll happens, and the auto-grow has time to catch-up. Negative margin pulls whatever goes
-              // below the input up by the same amount to compensate.
-              hasNewLineHeadroom && {
-                height: textContentHeight + NEW_LINE_HEADROOM,
-                marginBottom: -NEW_LINE_HEADROOM,
-              },
-            ]}
-            onLayout={(e) => {
-              const { layout } = e.nativeEvent;
-              mentionInput.setInputLayout(
-                hasNewLineHeadroom
-                  ? //  Mention box also need compensation for the new line headroom.
-                    { ...layout, height: layout.height - NEW_LINE_HEADROOM }
-                  : layout,
-              );
-            }}
-            onSelectionChange={mentionInput.onSelectionChange}
-            onFocus={mentionInput.onFocus}
-            onBlur={mentionInput.onBlur}
-            onContentSizeChange={
-              isAndroid
-                ? (e) => setTextContentHeight(e.nativeEvent.contentSize.height)
-                : undefined
-            }
-            onKeyPress={isWeb ? onKeyPress : undefined}
-          />
+          <View>
+            <TextArea
+              // `autoFocus` only fires on mount, so re-key when it flips
+              // (false → true after the sheet presents) to actually focus.
+              key={autoFocus ? 'autofocus' : 'no-autofocus'}
+              ref={inputRef}
+              variant="plain"
+              fontSize="lg"
+              lineHeight="lg"
+              placeholder={placeholder}
+              autoFocus={autoFocus}
+              value={isWeb ? text : undefined}
+              onChange={
+                isWeb
+                  ? undefined
+                  : (e) => {
+                      nativeEventCountRef.current = e.nativeEvent.eventCount;
+                    }
+              }
+              onChangeText={onChangeText}
+              disabled={submitting}
+              maxLength={MAX_POST_LENGTH}
+              numberOfLines={isWeb ? 1 : undefined}
+              scrollEnabled={false}
+              style={[
+                Atoms.px_0,
+                Atoms.py_0,
+                Atoms.pt_sm,
+                // Android auto-grows the input one frame too late, causing the text to temporarily scroll, which looks
+                // like a blip/flash (https://github.com/react/react-native/issues/46813,
+                // https://github.com/react/react-native/issues/33165). If we add an extra space for the new line to go
+                // to, no scroll happens, and the auto-grow has time to catch-up. Negative margin pulls whatever goes
+                // below the input up by the same amount to compensate.
+                hasNewLineHeadroom && {
+                  height: textContentHeight + NEW_LINE_HEADROOM,
+                  marginBottom: -NEW_LINE_HEADROOM,
+                },
+                // The mirror below draws the text, so mentions can be colored
+                isWeb && styles.webTextareaUnderMirror,
+              ]}
+              onLayout={(e) => {
+                const { layout } = e.nativeEvent;
+                mentionInput.setInputLayout(
+                  hasNewLineHeadroom
+                    ? //  Mention box also need compensation for the new line headroom.
+                      { ...layout, height: layout.height - NEW_LINE_HEADROOM }
+                    : layout,
+                );
+              }}
+              onSelectionChange={mentionInput.onSelectionChange}
+              onFocus={mentionInput.onFocus}
+              onBlur={mentionInput.onBlur}
+              onContentSizeChange={
+                isAndroid
+                  ? (e) =>
+                      setTextContentHeight(e.nativeEvent.contentSize.height)
+                  : undefined
+              }
+              onKeyPress={isWeb ? onKeyPress : undefined}
+            >
+              {/* None on web: a textarea takes its text from `value` */}
+              {isWeb ? undefined : (
+                <MentionHighlights text={text} mentionRanges={mentionRanges} />
+              )}
+            </TextArea>
+            {/* A textarea can't color its text: this mirror draws it on top,
+              laid out like the textarea, which keeps the caret and selection */}
+            {isWeb && (
+              <Text
+                aria-hidden
+                fontSize="lg"
+                lineHeight="lg"
+                color={submitting ? 'neutral_500' : undefined}
+                style={[
+                  styles.webMirror,
+                  submitting && styles.webMirrorDisabled,
+                ]}
+              >
+                <MentionHighlights text={text} mentionRanges={mentionRanges} />
+              </Text>
+            )}
+          </View>
 
           {attachments.length > 0 && (
             <AttachmentGrid
@@ -278,6 +325,37 @@ export function ComposerFields({
       </View>
     </ScrollView>
   );
+}
+
+/**
+ * Push text + caret into the input ahead of the render that brings the same
+ * text, which would otherwise not leave the caret there.
+ */
+function pushTextToInput(
+  input: RNTextInput | null,
+  text: string,
+  caret: number,
+  nativeEventCount: number,
+) {
+  if (!input) return;
+  if (TextInputCommands) {
+    // The children's text update keeps the caret's distance to the text end,
+    // not its position, and on iOS measures the input against the old text.
+    // This command runs first: it sets the caret, makes the input re-measure,
+    // and that update then brings the same text and leaves the caret here.
+    TextInputCommands.setTextAndSelection(
+      input,
+      nativeEventCount,
+      text,
+      caret,
+      caret,
+    );
+    return;
+  }
+  const node = input as unknown as HTMLTextAreaElement;
+  // React then finds `value` already in the DOM and leaves the caret alone
+  node.value = text;
+  node.setSelectionRange(caret, caret);
 }
 
 /**
@@ -481,3 +559,20 @@ function AttachmentThumb({
     </View>
   );
 }
+
+const useStyles = createThemedStyles((theme, define) =>
+  define({
+    webTextareaUnderMirror: {
+      color: 'transparent',
+      caretColor: theme.palette.neutral_900,
+    },
+    webMirror: [
+      StyleSheet.absoluteFill,
+      Atoms.pt_sm,
+      // Clicks and selection go through to the textarea under it
+      { pointerEvents: 'none' },
+    ],
+    // As the disabled input
+    webMirrorDisabled: { opacity: 0.5 },
+  }),
+);

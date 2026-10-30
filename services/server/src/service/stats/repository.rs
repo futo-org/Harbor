@@ -15,6 +15,7 @@ pub struct Query;
 impl Query {
     /// For each events in `events`, return the number of interactions it has as
     /// tallied by the [`interaction_tally`] table.
+    #[tracing::instrument(skip_all)]
     pub async fn interactions<C: ConnectionTrait>(
         db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
@@ -61,6 +62,7 @@ impl Query {
     /// the events specified by `event_keys`.
     /// Up to `limit` rows will be returned for each event key ordered by most
     /// popular to least.
+    #[tracing::instrument(skip_all)]
     pub async fn tally_reactions<C: ConnectionTrait>(
         db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
@@ -135,6 +137,28 @@ impl Query {
         }
         Ok(map)
     }
+
+    /// Read the maintained `(upvote, downvote)` counts for a URL; `(0, 0)` if
+    /// no reactions have been recorded for it yet.
+    #[tracing::instrument(skip_all)]
+    pub async fn get_attributed_reaction_summary<C: ConnectionTrait>(
+        db: &C,
+        url: &str,
+    ) -> Result<(i64, i64), DbErr> {
+        let mut query = SelectStatement::new();
+        query
+            .column(attributed_to_reaction_summary::Column::UpvoteCount)
+            .column(attributed_to_reaction_summary::Column::DownvoteCount)
+            .from(attributed_to_reaction_summary::Entity)
+            .cond_where(
+                Expr::col(attributed_to_reaction_summary::Column::Url).eq(url),
+            )
+            .limit(1);
+        db.query_one(&query).await.and_then(|row| match row {
+            Some(row) => Ok((row.try_get_by(0)?, row.try_get_by(1)?)),
+            None => Ok((0, 0)),
+        })
+    }
 }
 
 pub struct Mutation;
@@ -143,6 +167,7 @@ impl Mutation {
     /// Increment the upvote/downvote count for an out-of-network (URL)
     /// reaction, creating the summary row with a count of 1 if none exists yet.
     /// Mirrors `count_reaction_for` but keyed by URL.
+    #[tracing::instrument(skip_all)]
     pub async fn count_attributed_reaction_for<C: ConnectionTrait>(
         db: &C,
         url: String,
@@ -183,6 +208,7 @@ impl Mutation {
 
     /// Decrement the upvote/downvote count for an out-of-network (URL)
     /// reaction, only when that count is greater than zero.
+    #[tracing::instrument(skip_all)]
     pub async fn remove_attributed_reaction_for<C: ConnectionTrait>(
         db: &C,
         url: String,
@@ -205,21 +231,6 @@ impl Mutation {
             .await?;
 
         Ok(())
-    }
-
-    /// Read the maintained `(upvote, downvote)` counts for a URL; `(0, 0)` if
-    /// no reactions have been recorded for it yet.
-    pub async fn get_attributed_reaction_summary<C: ConnectionTrait>(
-        db: &C,
-        url: &str,
-    ) -> Result<(i64, i64), DbErr> {
-        let row =
-            attributed_to_reaction_summary::Entity::find_by_id(url.to_owned())
-                .one(db)
-                .await?;
-        Ok(row
-            .map(|r| (r.upvote_count, r.downvote_count))
-            .unwrap_or((0, 0)))
     }
 }
 

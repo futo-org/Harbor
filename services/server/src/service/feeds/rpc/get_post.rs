@@ -11,7 +11,7 @@ use crate::service::feeds::util::map_db_err;
 use crate::service::proto::{GetPostRequest, GetPostResponse};
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: GetPostRequest,
 ) -> Result<GetPostResponse, Status> {
     let params = Params {
@@ -20,9 +20,10 @@ pub async fn handle(
         omit_labels: req.omit_labels,
     };
 
-    let result =
-        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
-            .await?;
+    let result = pipeline::create_pipeline(
+        &mut ctx, &params, fetch, hydrate, filter, view,
+    )
+    .await?;
 
     Ok(GetPostResponse {
         candidates: result.event_bundles,
@@ -37,7 +38,7 @@ struct Params {
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = Query::list_events_at_sequence(
@@ -60,7 +61,7 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
@@ -68,7 +69,7 @@ async fn hydrate(
 }
 
 async fn filter(
-    _: &PublicContext,
+    _: &mut PublicContext,
     params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -77,7 +78,7 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,

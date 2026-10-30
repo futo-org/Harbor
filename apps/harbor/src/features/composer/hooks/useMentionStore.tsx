@@ -2,13 +2,10 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { LayoutRectangle, TextInput } from 'react-native';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import {
-  parseTextLinks,
-  TOKEN_PRECEDER,
-} from '@/src/common/util/parseTextLinks';
+import { TOKEN_PRECEDER } from '@/src/common/util/parseTextLinks';
 import type { ProfileHookResult } from '@/src/features/profile/hooks/useProfile';
-import { isWeb } from '@/src/common/util/platform';
 import { useComposerStore } from '@/src/features/composer/hooks/useComposerStore';
+import type { MentionRange } from '@/src/features/composer/utils/applyTextChange';
 
 // A word char: unicode letter, number, or underscore.
 const WORD = '[\\p{L}\\p{N}_]';
@@ -36,11 +33,12 @@ const NAME_QUERY = new RegExp(`^${WORD}*(?: ${WORD}*)?$`, 'u');
  */
 export type MentionStore = {
   text: string;
+  mentionRanges: MentionRange[];
   selection: { start: number; end: number };
   isFocused: boolean;
   inputRef: TextInput | null;
   /** ComposerFields' text sync (updates the draft store + native field ref). */
-  onChangeText: ((next: string) => void) | null;
+  onChangeText: ((next: string, caret?: number) => void) | null;
   inputLayout: LayoutRectangle;
   inputPageY: number;
 
@@ -56,8 +54,9 @@ export type MentionStore = {
   measureInput: () => void;
 
   /**
-   * Replace the `@` + query with `@alias` (or `@identity` without one), which
-   * `rewriteMentions` turns into a curly mention on post.
+   * Replace the `@` + query with `@alias` (or the display name, or the
+   * identity), recorded as a mention range that `spliceMentions` turns into
+   * a curly mention on post.
    */
   insertMention: (identity: string, profile: ProfileHookResult) => void;
 };
@@ -65,6 +64,7 @@ export type MentionStore = {
 export function createMentionStore(): StoreApi<MentionStore> {
   return createStore<MentionStore>((set, get) => ({
     text: '',
+    mentionRanges: [],
     selection: { start: 0, end: 0 },
     isFocused: false,
     inputRef: null,
@@ -82,21 +82,12 @@ export function createMentionStore(): StoreApi<MentionStore> {
       }),
 
     insertMention: (identity, profile) => {
-      const { text, selection, inputRef, onChangeText } = get();
+      const { text, mentionRanges, selection, onChangeText } = get();
       const caret = selection.end;
-      const ctx = findMentionContext(text, caret);
+      const ctx = findMentionContext(text, caret, mentionRanges);
       if (!ctx || !onChangeText) return;
 
-      // todo: when rich text is supported, we can drop the in-memory replacer logic and just do smth like
-      //  const mention = renderAs ? `@{${identity},${renderAs}}` : `@{${identity}}`;
-      const insertedText = profile.alias ?? identity;
-      const renderAs = profile.alias ?? profile.name;
-      if (renderAs) {
-        useComposerStore
-          .getState()
-          .rememberMention(insertedText, { identity, renderAs });
-      }
-      const mention = `@${insertedText}`;
+      const mention = `@${profile.alias ?? profile.name ?? identity}`;
 
       // Replace the `@` + query, with one space after the mention: reuse the
       // one already there (mid-text insert) instead of doubling it. The space
@@ -110,46 +101,22 @@ export function createMentionStore(): StoreApi<MentionStore> {
         (after.startsWith(' ') ? after.slice(1) : after);
       const newCaret = ctx.start + mention.length + 1;
 
-      // The draft store must hold the new text (and on iOS the controlled
-      // `value` would otherwise revert the field), while setNativeProps pushes
-      // the edit into the native input — Android is uncontrolled, and iOS
-      // doesn't re-measure (auto-grow) on a `value`-prop-only update. The
-      // caret goes explicitly after the mention's trailing space. `text` is
-      // set eagerly so the store is consistent before the prop mirror runs.
-      onChangeText(newText);
+      // Updates the draft and shows it in the input, caret after the space
+      onChangeText(newText, newCaret);
+      // After the text change, which shifts ranges by the old text's offsets
+      useComposerStore.getState().addMentionRange({
+        start: ctx.start,
+        end: ctx.start + mention.length,
+        identity,
+      });
+      // Set eagerly so the store is consistent before the prop mirror runs
       set({
         text: newText,
+        mentionRanges: useComposerStore.getState().mentionRanges,
         selection: { start: newCaret, end: newCaret },
       });
-
-      pushTextToInput(inputRef, newText, newCaret);
     },
   }));
-}
-
-/**
- * Push text + caret into the input. Web has no `setNativeProps`: set the DOM
- * value through the native setter (so React's value tracker notices) and
- * dispatch `input`, which runs the same onChangeText path as typing — that's
- * what re-runs TextArea's auto-grow.
- */
-function pushTextToInput(
-  inputRef: TextInput | null,
-  text: string,
-  caret: number,
-) {
-  if (!inputRef) return;
-  if (!isWeb) {
-    inputRef.setNativeProps({ text, selection: { start: caret, end: caret } });
-    return;
-  }
-  const node = inputRef as unknown as HTMLTextAreaElement;
-  Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    'value',
-  )?.set?.call(node, text);
-  node.dispatchEvent(new Event('input', { bubbles: true }));
-  node.setSelectionRange(caret, caret);
 }
 
 /**
@@ -163,11 +130,14 @@ function pushTextToInput(
  * - everything between it and the caret is an alias-like or name-like query
  *   (`ALIAS_QUERY` / `NAME_QUERY`), not starting with a space ("email me @
  *   home" stays closed), and
- * - that `@` doesn't begin an already-recognized identity mention (an alias
- *   is always also a valid alias-like query, so only the identity form —
- *   which the trailing space wouldn't close — needs this).
+ * - that `@` doesn't begin an inserted mention (a one-word name followed by
+ *   the trailing space is still a valid name-like query).
  */
-export function findMentionContext(text: string, caret: number) {
+export function findMentionContext(
+  text: string,
+  caret: number,
+  mentionRanges: MentionRange[],
+) {
   if (caret < text.length && text[caret] !== ' ' && text[caret] !== '\n') {
     return null;
   }
@@ -182,11 +152,7 @@ export function findMentionContext(text: string, caret: number) {
   const shape = /[.@]/.test(query) ? ALIAS_QUERY : NAME_QUERY;
   if (!shape.test(query) || query.startsWith(' ')) return null;
 
-  if (
-    parseTextLinks(text).some((s) => s.start === at && s.type === 'identity')
-  ) {
-    return null;
-  }
+  if (mentionRanges.some((r) => r.start === at)) return null;
 
   return { start: at, query };
 }
@@ -194,7 +160,11 @@ export function findMentionContext(text: string, caret: number) {
 /** The active mention-search query derived from the live input state. */
 export function selectMentionQuery(state: MentionStore): string | null {
   return state.isFocused && state.selection.start === state.selection.end
-    ? (findMentionContext(state.text, state.selection.start)?.query ?? null)
+    ? (findMentionContext(
+        state.text,
+        state.selection.start,
+        state.mentionRanges,
+      )?.query ?? null)
     : null;
 }
 

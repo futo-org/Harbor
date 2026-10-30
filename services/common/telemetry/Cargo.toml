@@ -7,9 +7,21 @@ edition = "2024"
 axum = "0.8"
 opentelemetry.workspace = true
 opentelemetry_sdk.workspace = true
+opentelemetry-otlp.workspace = true
+opentelemetry-http = { version = "0.33", default-features = false }
+http = { version = "1", default-features = false, features = ["std"] }
 opentelemetry-prometheus.workspace = true
 prometheus.workspace = true
 sqlx = { version = "0.9", default-features = false }
 tokio = { workspace = true, features = ["rt", "net"] }
 tracing.workspace = true
-tracing-subscriber = { workspace = true, features = ["fmt", "ansi"] }
+tracing-opentelemetry.workspace = true
+tracing-subscriber = { workspace = true, features = ["fmt", "ansi", "registry"] }
+
+[dev-dependencies]
+opentelemetry-proto = { version = "0.33", default-features = false, features = ["gen-tonic-messages", "trace"] }
+prost.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "net", "sync"] }
+
+[features]
+testing = ["opentelemetry_sdk/testing"]

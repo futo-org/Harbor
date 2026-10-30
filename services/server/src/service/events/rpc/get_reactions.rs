@@ -20,7 +20,7 @@ struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: GetReactionsRequest,
 ) -> Result<GetReactionsResponse, Status> {
     // TODO: support pagination
@@ -30,11 +30,12 @@ pub async fn handle(
         limit: page_limit(&req.page_params),
     };
 
-    pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view).await
+    pipeline::create_pipeline(&mut ctx, &params, fetch, hydrate, filter, view)
+        .await
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     FeedsRepository::get_reactions(
@@ -49,7 +50,7 @@ async fn fetch(
 
 #[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
 async fn hydrate(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     rows: &Vec<EventWithContentRow>,
 ) -> Result<HydrationState, Status> {
@@ -78,7 +79,7 @@ async fn hydrate(
 
 /// Remove any deleted or superseded reaction events.
 async fn filter(
-    _: &PublicContext,
+    _: &mut PublicContext,
     _: &Params,
     rows: Vec<EventWithContentRow>,
     hydration: &HydrationState,
@@ -97,7 +98,7 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     _: &Params,
     rows: Vec<EventWithContentRow>,
     hydration: HydrationState,

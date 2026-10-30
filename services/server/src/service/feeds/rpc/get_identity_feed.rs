@@ -22,14 +22,14 @@ pub struct Params {
 }
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: GetIdentityFeedRequest,
 ) -> Result<GetFeedResponse, Status> {
     if req.identity.is_empty() {
         return Err(Status::invalid_argument("identity is required"));
     }
 
-    if caller_blocks_subject(&ctx, &req.identity).await? {
+    if caller_blocks_subject(&mut ctx, &req.identity).await? {
         return blocked_identity_response();
     }
 
@@ -42,9 +42,10 @@ pub async fn handle(
         identity: req.identity,
     };
 
-    let result =
-        pipeline::create_pipeline(&ctx, &params, fetch, hydrate, filter, view)
-            .await?;
+    let result = pipeline::create_pipeline(
+        &mut ctx, &params, fetch, hydrate, filter, view,
+    )
+    .await?;
     Ok(GetFeedResponse {
         event_bundles: result.event_bundles,
         event_hints: result.event_hints,
@@ -55,7 +56,7 @@ pub async fn handle(
 /// Whether the caller blocks the identity whose feed was requested. A caller
 /// never blocks their own feed.
 async fn caller_blocks_subject(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     subject: &str,
 ) -> Result<bool, Status> {
     let Some(caller) = ctx.identity().filter(|caller| *caller != subject)
@@ -82,7 +83,7 @@ fn blocked_identity_response() -> Result<GetFeedResponse, Status> {
 }
 
 async fn fetch(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = FeedsRepository::list_feed_events_by_identities(
@@ -97,15 +98,15 @@ async fn fetch(
 }
 
 async fn hydrate(
-    ctx: &PublicContext,
-    _params: &Params,
+    ctx: &mut PublicContext,
+    _: &Params,
     fetched: &feeds_pipeline::Fetched,
 ) -> Result<HydrationState, Status> {
     post_hydrate(ctx, &fetched.rows).await
 }
 
 async fn filter(
-    _: &PublicContext,
+    _: &mut PublicContext,
     _params: &Params,
     fetched: feeds_pipeline::Fetched,
     hydration: &HydrationState,
@@ -115,8 +116,8 @@ async fn filter(
 }
 
 async fn view(
-    ctx: &PublicContext,
-    _params: &Params,
+    ctx: &mut PublicContext,
+    _: &Params,
     filtered: GetFeedResponseFilter,
     hydration: HydrationState,
 ) -> Result<GetFeedResponseView, Status> {
