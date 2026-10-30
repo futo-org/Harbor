@@ -42,7 +42,7 @@ pub(crate) mod claim_bundles {
     /// Complete a handler's `fetch` stage: the targets and verifies
     /// referencing `claims`.
     pub(crate) async fn fetch_verification_state<A>(
-        ctx: &RequestContext<A>,
+        ctx: &mut RequestContext<A>,
         claims: Vec<EventWithContentRow>,
     ) -> Result<FetchedClaims, Status> {
         let claim_keys: Vec<TargetEventKey> =
@@ -66,7 +66,7 @@ pub(crate) mod claim_bundles {
     /// Validated tombstones for every fetched event (in one lookup), plus
     /// identity-chain and profile events for every referenced identity.
     pub(crate) async fn hydrate<P, A>(
-        ctx: &RequestContext<A>,
+        ctx: &mut RequestContext<A>,
         _: &P,
         fetched: &FetchedClaims,
     ) -> Result<HydrationState, Status> {
@@ -112,7 +112,7 @@ pub(crate) mod claim_bundles {
 
     /// Drop tombstoned claims, targets, and verifies.
     pub(crate) async fn filter<P, A>(
-        _: &RequestContext<A>,
+        _: &mut RequestContext<A>,
         _: &P,
         fetched: FetchedClaims,
         hydration: &HydrationState,
@@ -144,7 +144,7 @@ pub(crate) mod claim_bundles {
     /// Group targets and verifies under their claim, attach proofs, and
     /// ship the hydrated identity/profile events as hints.
     pub(crate) async fn view<P, A>(
-        ctx: &RequestContext<A>,
+        ctx: &mut RequestContext<A>,
         _: &P,
         filtered: FetchedClaims,
         hydration: HydrationState,
@@ -217,7 +217,7 @@ pub(crate) mod event_list {
     /// and profile events for every referenced identity.
     #[allow(clippy::ptr_arg)] // signature must match pipeline's HRTB (&Fetched = &Vec<…>)
     pub(crate) async fn hydrate<P, A>(
-        ctx: &RequestContext<A>,
+        ctx: &mut RequestContext<A>,
         _: &P,
         rows: &Vec<EventWithContentRow>,
     ) -> Result<HydrationState, Status> {
@@ -240,7 +240,7 @@ pub(crate) mod event_list {
 
     /// Drop tombstoned rows.
     pub(crate) async fn filter<P, A>(
-        _: &RequestContext<A>,
+        _: &mut RequestContext<A>,
         _: &P,
         rows: Vec<EventWithContentRow>,
         hydration: &HydrationState,
@@ -262,7 +262,7 @@ pub(crate) mod event_list {
     /// Bundle the rows, attach proofs, and ship the hydrated
     /// identity/profile events as hints.
     pub(crate) async fn view<P, A>(
-        ctx: &RequestContext<A>,
+        ctx: &mut RequestContext<A>,
         _: &P,
         rows: Vec<EventWithContentRow>,
         hydration: HydrationState,
