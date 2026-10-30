@@ -220,6 +220,7 @@ pub(crate) struct DbTx<'c>(Mutex<sqlx::Transaction<'c, sqlx::Postgres>>);
 
 impl<'c> DbTx<'c> {
     /// Commits this transaction.
+    #[tracing::instrument(name = "db.commit", skip_all)]
     pub(crate) async fn commit(self) -> Result<(), DbErr> {
         self.0
             .into_inner()
@@ -229,6 +230,7 @@ impl<'c> DbTx<'c> {
     }
 
     /// Commits this transaction and start another.
+    #[tracing::instrument(name = "db.commit_and_chain", skip_all)]
     pub(crate) async fn commit_and_chain(&mut self) -> Result<(), DbErr> {
         self.0
             .get_mut()
@@ -239,6 +241,7 @@ impl<'c> DbTx<'c> {
     }
 
     /// Abort this transaction.
+    #[tracing::instrument(name = "db.rollback", skip_all)]
     pub(crate) async fn rollback(self) -> Result<(), DbErr> {
         self.0
             .into_inner()

@@ -32,6 +32,15 @@ use crate::service::proto::{
 
 /// Ingest a batch of signed events. Each event is processed in
 /// isolation with failures reported back in `PutEventsResponse.errors`
+#[tracing::instrument(
+    name = "put_events",
+    skip_all,
+    fields(
+        events = req.event_bundles.len(),
+        inserted = tracing::field::Empty,
+        errors = tracing::field::Empty,
+    )
+)]
 pub async fn handle(
     mut ctx: PublicContext,
     req: PutEventsRequest,
@@ -102,6 +111,10 @@ pub async fn handle(
             }
         }
     }
+
+    tracing::Span::current()
+        .record("inserted", stored.values().map(Vec::len).sum::<usize>())
+        .record("errors", errors.len());
 
     if let Some(pubsub) = heads_pubsub::get()
         && !stored.is_empty()
