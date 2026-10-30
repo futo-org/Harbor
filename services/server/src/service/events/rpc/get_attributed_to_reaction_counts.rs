@@ -3,7 +3,7 @@ use crate::service::proto::{
     GetAttributedToReactionCountsRequest,
     GetAttributedToReactionCountsResponse, attributed_to::To,
 };
-use crate::service::stats::repository::Mutation;
+use crate::service::stats::repository::Query;
 use tonic::Status;
 
 /// Return the maintained upvote/downvote counts for an out-of-network target
@@ -23,7 +23,7 @@ pub async fn handle(
     };
 
     let (upvote_count, downvote_count) =
-        Mutation::get_attributed_reaction_summary(&ctx.db, &url)
+        Query::get_attributed_reaction_summary(&ctx.db, &url)
             .await
             .map_err(|_| Status::internal("internal server error"))?;
 

@@ -135,6 +135,22 @@ impl Query {
         }
         Ok(map)
     }
+
+    /// Read the maintained `(upvote, downvote)` counts for a URL; `(0, 0)` if
+    /// no reactions have been recorded for it yet.
+    pub async fn get_attributed_reaction_summary<C: ConnectionTrait>(
+        db: &C,
+        url: &str,
+    ) -> Result<(i64, i64), DbErr> {
+        let row =
+            attributed_to_reaction_summary::Entity::find_by_id(url.to_owned())
+                .one(db)
+                .await?;
+        let counts = row
+            .map(|r| (r.upvote_count, r.downvote_count))
+            .unwrap_or((0, 0));
+        Ok(counts)
+    }
 }
 
 pub struct Mutation;
@@ -205,21 +221,6 @@ impl Mutation {
             .await?;
 
         Ok(())
-    }
-
-    /// Read the maintained `(upvote, downvote)` counts for a URL; `(0, 0)` if
-    /// no reactions have been recorded for it yet.
-    pub async fn get_attributed_reaction_summary<C: ConnectionTrait>(
-        db: &C,
-        url: &str,
-    ) -> Result<(i64, i64), DbErr> {
-        let row =
-            attributed_to_reaction_summary::Entity::find_by_id(url.to_owned())
-                .one(db)
-                .await?;
-        Ok(row
-            .map(|r| (r.upvote_count, r.downvote_count))
-            .unwrap_or((0, 0)))
     }
 }
 
