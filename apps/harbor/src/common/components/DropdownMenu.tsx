@@ -1,6 +1,7 @@
 import * as DropdownMenuPrimitive from '@rn-primitives/dropdown-menu';
 import type { ReactNode, RefAttributes } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Atoms, useTheme } from '../theme';
 
@@ -10,6 +11,7 @@ function DropdownMenuContent({
 }: DropdownMenuPrimitive.ContentProps &
   RefAttributes<DropdownMenuPrimitive.ContentRef>) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <DropdownMenuPrimitive.Portal>
@@ -24,6 +26,8 @@ function DropdownMenuContent({
             Atoms.overflow_hidden,
             typeof style === 'function' ? undefined : style,
           ])}
+          // Keeps the menu out of the status bar and other screen cutouts
+          insets={insets}
           {...props}
         />
       </DropdownMenuPrimitive.Overlay>

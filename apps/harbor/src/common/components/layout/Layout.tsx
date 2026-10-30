@@ -54,7 +54,7 @@ function Main({ children, style }: MainProps) {
   // Native always gets the phone layout: a single column capped at the
   // feed width and centered, regardless of device size.
   const innerWidth = !isWeb
-    ? Math.min(deviceWidth, 700)
+    ? '100%'
     : deviceWidth <= Breakpoints.sm
       ? '100%'
       : deviceWidth <= Breakpoints.md
@@ -83,6 +83,7 @@ function Main({ children, style }: MainProps) {
           Atoms.flex_row,
           Atoms.justify_between,
           { width: innerWidth },
+          !isWeb && { maxWidth: Breakpoints.sm },
         ]}
       >
         {children}
@@ -177,6 +178,7 @@ function Screen({
         isWeb ? { minHeight: '100%' } : Atoms.flex_1,
         { backgroundColor: theme.palette.neutral_0 },
         !drawUnderStatusBar && { paddingTop: insets.top },
+        { paddingLeft: insets.left, paddingRight: insets.right },
         !isWeb && {
           borderBottomWidth: 1,
           borderBottomColor: theme.palette.neutral_25,

@@ -42,6 +42,7 @@ export function Toaster() {
             { zIndex: ZIndex.toast },
             // Safe-area inset is dynamic, so it stays out of the Atoms list.
             { paddingTop: insets.top + Spacing.sm },
+            { left: insets.left, right: insets.right },
           ]}
         >
           {toasts.map((toast) => (
