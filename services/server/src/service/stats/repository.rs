@@ -142,14 +142,19 @@ impl Query {
         db: &C,
         url: &str,
     ) -> Result<(i64, i64), DbErr> {
-        let row =
-            attributed_to_reaction_summary::Entity::find_by_id(url.to_owned())
-                .one(db)
-                .await?;
-        let counts = row
-            .map(|r| (r.upvote_count, r.downvote_count))
-            .unwrap_or((0, 0));
-        Ok(counts)
+        let mut query = SelectStatement::new();
+        query
+            .column(attributed_to_reaction_summary::Column::UpvoteCount)
+            .column(attributed_to_reaction_summary::Column::DownvoteCount)
+            .from(attributed_to_reaction_summary::Entity)
+            .cond_where(
+                Expr::col(attributed_to_reaction_summary::Column::Url).eq(url),
+            )
+            .limit(1);
+        db.query_one(&query).await.and_then(|row| match row {
+            Some(row) => Ok((row.try_get_by(0)?, row.try_get_by(1)?)),
+            None => Ok((0, 0)),
+        })
     }
 }
 
