@@ -7,7 +7,6 @@ import {
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import {
   publicKeyToString,
-  usePolycentric,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
@@ -29,7 +28,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { extractPairingInfo } from '@/src/features/identity-pairing/pairingCode';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
-import { FetchMode } from '@polycentric/react-native';
+import { FetchMode, type v2 } from '@polycentric/react-native';
 import Animated from 'react-native-reanimated';
 
 export default function PairIdentityClaimerScreen() {
@@ -51,7 +50,7 @@ export default function PairIdentityClaimerScreen() {
     router.setParams({ [PAIRING_CODE_PARAM]: scanned });
   }, []);
 
-  const { error, approved, stage, issuerIdentity, join } =
+  const { error, approved, stage, issuerIdentity, myPublicKey, join } =
     usePairIdentityClaimer(pairingInfo);
 
   useEffect(() => {
@@ -111,7 +110,7 @@ export default function PairIdentityClaimerScreen() {
           <ApprovalLoadingBody />
         ) : (
           <>
-            <PairingEmojiCard />
+            <PairingEmojiCard publicKey={myPublicKey} />
             <Text variant="secondary" style={{ textAlign: 'center' }}>
               Check your other device
             </Text>
@@ -136,13 +135,14 @@ export default function PairIdentityClaimerScreen() {
   );
 }
 
-function PairingEmojiCard() {
+function PairingEmojiCard({
+  publicKey,
+}: {
+  publicKey: v2.PublicKey | undefined;
+}) {
   const { theme } = useTheme();
-  const client = usePolycentric();
 
-  const pubKeyStr = client.currentKeyPair
-    ? publicKeyToString(client.currentKeyPair.publicKey)
-    : '';
+  const pubKeyStr = publicKey ? publicKeyToString(publicKey) : undefined;
 
   return (
     <View
@@ -162,7 +162,7 @@ function PairingEmojiCard() {
         Your matching code
       </Text>
 
-      {pubKeyStr ? <EmojiFingerprint publicKey={pubKeyStr} /> : null}
+      <EmojiFingerprint publicKey={pubKeyStr} />
 
       <Text
         variant="small"
@@ -201,11 +201,13 @@ function ConfirmationBody({
   const showSkeleton = !issuer || profile.isLoading;
 
   // Disable the pair button at first
-  const [allowPair, setAllowPair] = useState(false);
+  const [blockPair, setBlockPair] = useState(true);
   useEffect(() => {
-    const timeout = setTimeout(() => setAllowPair(true), 1000);
+    const timeout = setTimeout(() => setBlockPair(false), 1000);
     return () => clearTimeout(timeout);
   }, []);
+
+  const allowPair = !blockPair && !!issuer;
 
   const onCancel = () => {
     if (router.canGoBack()) {

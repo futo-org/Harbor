@@ -1,14 +1,14 @@
 import { EventStore } from './event-store';
 import { ContentStore } from './content.store';
-import { KeysStore } from './keys-store';
+import { LoginStore } from './login-store';
 import type { IEventRepository } from '../platform-interfaces/event.repository';
 import type { IContentRepository } from '../platform-interfaces/content.repository';
-import type { IKeysRepository } from '../platform-interfaces/keys-repository';
+import type { ILoginRepository } from '../platform-interfaces/login-repository';
 
 export interface Repositories {
   eventRepository: IEventRepository;
   contentRepository: IContentRepository;
-  keysRepository: IKeysRepository;
+  loginRepository: ILoginRepository;
 }
 
 /**
@@ -18,7 +18,7 @@ export interface Repositories {
  * access to both the raw repositories and the business logic stores.
  *
  * Application code should always use the primary events,
- * content, and keys properties, not the raw repositories.
+ * content, and logins properties, not the raw repositories.
  *
  * Usage:
  * ```typescript
@@ -31,12 +31,12 @@ export class StorageHandle {
   public readonly _repositories: Repositories;
   public readonly events: EventStore;
   public readonly content: ContentStore;
-  public readonly keys: KeysStore;
+  public readonly logins: LoginStore;
 
   constructor(repositories: Repositories) {
     this._repositories = repositories;
     this.events = new EventStore(this._repositories.eventRepository);
     this.content = new ContentStore(this._repositories.contentRepository);
-    this.keys = new KeysStore(this._repositories.keysRepository);
+    this.logins = new LoginStore(this._repositories.loginRepository);
   }
 }
