@@ -4764,6 +4764,7 @@ dependencies = [
  "entity",
  "hex",
  "http",
+ "http-body-util",
  "log",
  "mockito",
  "opentelemetry",
