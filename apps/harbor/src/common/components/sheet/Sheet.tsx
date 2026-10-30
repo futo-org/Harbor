@@ -37,6 +37,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FADE_IN_MS = 150;
 const FADE_OUT_MS = 120;
+// Native sheets at this detent or taller get the left/right safe-area insets
+// (iPhone Duo); shorter ones stay clear of the cutouts.
+const SIDE_INSETS_MIN_DETENT = 0.9;
 
 /** Exported for viewport-aware content sizing. */
 export const SHEET_OVERLAY_PADDING = 16;
@@ -332,8 +335,16 @@ function NativeSheet({
       });
   }, [isInline, open, mounted, sheetRef]);
 
+  const [detentIndex, setDetentIndex] = useState(0);
+
   const surface = theme.palette.neutral_0;
   const sizesToContent = detents.includes('auto');
+  const detent = detents[detentIndex];
+  const sideInsets = typeof detent === 'number' &&
+    detent >= SIDE_INSETS_MIN_DETENT && {
+      paddingLeft: insets.left,
+      paddingRight: insets.right,
+    };
 
   if (isInline && !mounted) return null;
 
@@ -346,6 +357,8 @@ function NativeSheet({
       initialDetentIndex={0}
       dismissible={dismissible}
       scrollable={scrollable}
+      onWillPresent={(event) => setDetentIndex(event.nativeEvent.index)}
+      onDetentChange={(event) => setDetentIndex(event.nativeEvent.index)}
       onDidPresent={() => {
         presentedRef.current = true;
         props.onPresented?.();
@@ -363,8 +376,8 @@ function NativeSheet({
         allowRemoval();
         if (navigation.canGoBack()) navigation.goBack();
       }}
-      header={props.header}
-      footer={props.footer}
+      header={props.header && <View style={sideInsets}>{props.header}</View>}
+      footer={props.footer && <View style={sideInsets}>{props.footer}</View>}
       // Prevents the inset from applying when the keyboard is up (footer rises with it)
       footerOptions={{ keyboardOffset: -insets.bottom }}
     >
@@ -373,6 +386,7 @@ function NativeSheet({
           Atoms.w_full,
           !sizesToContent && Atoms.flex_1,
           { backgroundColor: surface },
+          sideInsets,
         ]}
       >
         <SheetSizesToContentContext.Provider value={sizesToContent}>
