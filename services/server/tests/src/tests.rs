@@ -1,3 +1,6 @@
+use std::mem::take;
+use std::time::SystemTime;
+
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use ed25519_dalek::{Signer, SigningKey};
@@ -10,6 +13,7 @@ use polycentric_common::models::protos_v2::event_sync_service_client::EventSyncS
 use polycentric_common::models::protos_v2::feeds_service_client::FeedsServiceClient;
 use polycentric_common::models::protos_v2::graph_service_client::GraphServiceClient;
 use polycentric_common::models::protos_v2::identity_service_client::IdentityServiceClient;
+use polycentric_common::models::protos_v2::notification_service_client::NotificationServiceClient;
 use polycentric_common::models::protos_v2::pairing_service_client::PairingServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
@@ -18,8 +22,6 @@ use prost::Message;
 use rand::distr::{Alphabetic, SampleString};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::mem::take;
-use std::time::SystemTime;
 use tokio::sync::{Mutex, MutexGuard};
 
 mod banning;
@@ -32,6 +34,7 @@ mod notifications;
 mod pairing;
 mod reactions;
 mod search;
+mod traces;
 mod verifications;
 
 /// gRPC server address. Override with `HARBOR_TEST_SERVER` env var.
@@ -143,6 +146,13 @@ pub async fn content_service() -> ContentServiceClient<tonic::transport::Channel
 pub async fn pairing_service() -> PairingServiceClient<tonic::transport::Channel>
 {
     PairingServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn notification_service()
+-> NotificationServiceClient<tonic::transport::Channel> {
+    NotificationServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -552,6 +562,11 @@ impl TestClient {
 
     pub fn get_last_event_bundle(&self) -> EventBundle {
         self.pending.last().expect("no pending events").clone()
+    }
+
+    /// Take the pending events to submit them by hand.
+    pub fn take_pending_events(&mut self) -> Vec<EventBundle> {
+        take(&mut self.pending)
     }
 
     fn push_event_bundle(

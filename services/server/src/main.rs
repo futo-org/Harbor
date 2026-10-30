@@ -147,11 +147,28 @@ async fn run_server() {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!(addr = "0.0.0.0:3000", "server listening");
-    if let Err(err) = axum::serve(listener, app).await {
+    if let Err(err) = axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+    {
         tracing::error!(error = %err, "error serving");
     }
 
     cron.wait().await;
+    common_telemetry::trace::shutdown();
+}
+
+/// Resolves on SIGTERM or Ctrl-C so in-flight requests and spans drain.
+async fn shutdown_signal() {
+    let mut sigterm = tokio::signal::unix::signal(
+        tokio::signal::unix::SignalKind::terminate(),
+    )
+    .expect("failed to listen for SIGTERM");
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {}
+        _ = sigterm.recv() => {}
+    }
+    tracing::info!("shutting down");
 }
 
 /// Run background workers concurrently in one process — all of them, or
@@ -180,4 +197,5 @@ async fn run_workers(only: Vec<String>) {
     let ctx = ServiceContext::new(db, ro_db, kafka_producer);
 
     workers::run_all_workers(ctx, only).await;
+    common_telemetry::trace::shutdown();
 }

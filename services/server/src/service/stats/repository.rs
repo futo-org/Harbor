@@ -15,6 +15,7 @@ pub struct Query;
 impl Query {
     /// For each events in `events`, return the number of interactions it has as
     /// tallied by the [`interaction_tally`] table.
+    #[tracing::instrument(skip_all)]
     pub async fn interactions<C: ConnectionTrait>(
         db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
@@ -61,6 +62,7 @@ impl Query {
     /// the events specified by `event_keys`.
     /// Up to `limit` rows will be returned for each event key ordered by most
     /// popular to least.
+    #[tracing::instrument(skip_all)]
     pub async fn tally_reactions<C: ConnectionTrait>(
         db: &C,
         event_ids: impl ExactSizeIterator<Item = EventId>,
@@ -138,6 +140,7 @@ impl Query {
 
     /// Read the maintained `(upvote, downvote)` counts for a URL; `(0, 0)` if
     /// no reactions have been recorded for it yet.
+    #[tracing::instrument(skip_all)]
     pub async fn get_attributed_reaction_summary<C: ConnectionTrait>(
         db: &C,
         url: &str,
@@ -164,6 +167,7 @@ impl Mutation {
     /// Increment the upvote/downvote count for an out-of-network (URL)
     /// reaction, creating the summary row with a count of 1 if none exists yet.
     /// Mirrors `count_reaction_for` but keyed by URL.
+    #[tracing::instrument(skip_all)]
     pub async fn count_attributed_reaction_for<C: ConnectionTrait>(
         db: &C,
         url: String,
@@ -204,6 +208,7 @@ impl Mutation {
 
     /// Decrement the upvote/downvote count for an out-of-network (URL)
     /// reaction, only when that count is greater than zero.
+    #[tracing::instrument(skip_all)]
     pub async fn remove_attributed_reaction_for<C: ConnectionTrait>(
         db: &C,
         url: String,

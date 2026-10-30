@@ -8,6 +8,7 @@ use axum::{
 use sea_orm::DatabaseConnection;
 use std::collections::HashMap;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use tracing::Instrument;
 
 use crate::grpc::reflection_ui::reflection_ui;
 use crate::service::content::content_filestore::ContentFilestore;
@@ -108,7 +109,13 @@ async fn image_proxy(
     let resp = http_client::client()
         .get(scraper::image_url())
         .query(&[("url", url.as_str())])
+        .headers(http_client::trace_headers())
         .send()
+        .instrument(tracing::info_span!(
+            "scraper.image",
+            otel.kind = "client",
+            http.request.method = "GET",
+        ))
         .await
         .map_err(|_| StatusCode::BAD_GATEWAY)?;
 

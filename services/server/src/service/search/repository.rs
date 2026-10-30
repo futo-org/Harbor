@@ -81,6 +81,7 @@ const REACTION_COUNT_COLUMN: &str = "reaction_count";
 pub struct Query;
 
 impl Query {
+    #[tracing::instrument(skip_all)]
     pub(super) async fn search_users<C: ConnectionTrait>(
         db: &C,
         search_query: &str,
@@ -188,6 +189,7 @@ impl Query {
         Ok(rows)
     }
 
+    #[tracing::instrument(skip_all)]
     pub(super) async fn search_posts<C: ConnectionTrait>(
         db: &C,
         search_query: &str,
