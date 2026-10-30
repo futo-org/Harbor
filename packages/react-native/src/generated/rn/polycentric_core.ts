@@ -5491,9 +5491,7 @@ export interface PolycentricCoreLike {
  */
     setServers(servers: Array<string>): void;
 /**
- * While a user action is open, the W3C `traceparent` every outgoing
- * gRPC request is made a child of; `None` once it ends. Outside an
- * action each request is a trace of its own.
+ * Set the `traceparent` sent with gRPC requests, or `None` for one per request.
  */
     setTraceparent(traceparent: string | undefined) /*throws*/: void;
 /**
@@ -6656,9 +6654,7 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
- * While a user action is open, the W3C `traceparent` every outgoing
- * gRPC request is made a child of; `None` once it ends. Outside an
- * action each request is a trace of its own.
+ * Set the `traceparent` sent with gRPC requests, or `None` for one per request.
  */
     setTraceparent(traceparent: string | undefined): void /*throws*/ {uniffiCaller.rustCallWithError(
             /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
@@ -7159,7 +7155,7 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_servers() !== 60336) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_servers");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_traceparent() !== 63674) {
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_set_traceparent() !== 55585) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_set_traceparent");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_sign_event() !== 43916) {
