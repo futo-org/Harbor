@@ -50,7 +50,7 @@ uniffi-runtime-wasm = "0.31.0-6"
 # The ubrn wasm player stages this cdylib with the `wasm-bindgen` CLI, which
 # only accepts modules built against its own version. Pinned so the CLI in
 # .forgejo/images/rust/Dockerfile and on dev machines matches.
-wasm-bindgen = "=0.2.125"
+wasm-bindgen = "=0.2.130"
 
 [dev-dependencies]
 uniffi = { workspace = true, features = ["build"] }
