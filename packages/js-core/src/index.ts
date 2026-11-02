@@ -83,6 +83,14 @@ export type {
 } from './platform-interfaces/login-repository';
 export { LoginRepositoryError } from './platform-interfaces/login-repository';
 
+export type {
+  EventKey,
+  EventRow,
+  ContentStatus,
+  EventRepositoryErrorCode,
+} from './platform-interfaces/event-repository';
+export { EventRepositoryError } from './platform-interfaces/event-repository';
+
 export * from './errors';
 export * as Errors from './errors';
 export * from './utils';

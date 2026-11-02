@@ -2,8 +2,7 @@ import type { IStorageDriver, LoginId } from '@polycentric/js-core';
 import { DatabaseError, v2 as Proto } from '@polycentric/js-core';
 import { IndexedDBDatabase } from './database';
 import { IndexedDBLoginRepository } from './login-repository';
-import { IndexedDBEventRepository } from './event.repository';
-import { IndexedDBContentRepository } from './content.repository';
+import { IndexedDBEventRepository } from './event-repository';
 
 /**
  * Stored representation of the active login in the `loginState` store.
@@ -29,9 +28,7 @@ export class IndexedDBStorageDriver implements IStorageDriver {
   createEventRepository() {
     return new IndexedDBEventRepository(this.database);
   }
-  createContentRepository() {
-    return new IndexedDBContentRepository(this.database);
-  }
+
   createLoginRepository() {
     return new IndexedDBLoginRepository(this.database);
   }
