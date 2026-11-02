@@ -2508,7 +2508,7 @@ async fn validation_content_content_body_post_links_description_too_long() {
             quote: None,
             links: vec![Link {
                 title: "Harbor".to_owned(),
-                description: Some("a".repeat(201)),
+                description: Some("a".repeat(2001)),
                 image: None,
                 url: "https://harbor.social".to_owned(),
             }],
@@ -2525,7 +2525,7 @@ async fn validation_content_content_body_post_links_description_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post links 0-th description is too long (201), maximum is 200",
+                "content content body post links 0-th description is too long (2001), maximum is 2000",
             ),
         }],
     );
@@ -2790,7 +2790,7 @@ async fn validation_content_content_body_post_attribute_to_to_link_description_t
             attributed_to: vec![AttributedTo {
                 to: Some(To::Link(Link {
                     title: "Harbor".to_owned(),
-                    description: Some("a".repeat(201)),
+                    description: Some("a".repeat(2001)),
                     image: None,
                     url: "https://harbor.social".to_owned(),
                 })),
@@ -2806,7 +2806,7 @@ async fn validation_content_content_body_post_attribute_to_to_link_description_t
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post attributed to 0-th to link description is too long (201), maximum is 200",
+                "content content body post attributed to 0-th to link description is too long (2001), maximum is 2000",
             ),
         }],
     );
