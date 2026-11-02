@@ -1,4 +1,5 @@
 import {
+  type EventKey,
   type LabelSet,
   type PostLabel,
   type QueryStatus,
@@ -188,6 +189,21 @@ export function eventKeyId(eventKey: v2.EventKey): string {
   return bytesToHex(v2.EventKey.toBinary(eventKey));
 }
 
+/** The {@link eventKeyId} of an rs-core `EventKey` record. */
+export function ffiEventKeyId(eventKey: EventKey): string {
+  return eventKeyId(
+    v2.EventKey.create({
+      collection: eventKey.collection,
+      identity: eventKey.identity,
+      signedBy: v2.PublicKey.create({
+        keyType: eventKey.signedBy.keyType,
+        key: new Uint8Array(eventKey.signedBy.key),
+      }),
+      sequence: eventKey.sequence,
+    }),
+  );
+}
+
 /** Decode a v2 EventBundle into PostData, or null if not a post. */
 export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
   const decoded = decodeBundle(bundle, 'post');
@@ -242,16 +258,7 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
 export function labelMapFromSets(sets: LabelSet[]): Map<string, PostLabel[]> {
   const labelMap = new Map<string, PostLabel[]>();
   for (const set of sets) {
-    const target = v2.EventKey.create({
-      collection: set.target.collection,
-      identity: set.target.identity,
-      signedBy: v2.PublicKey.create({
-        keyType: set.target.signedBy.keyType,
-        key: new Uint8Array(set.target.signedBy.key),
-      }),
-      sequence: set.target.sequence,
-    });
-    labelMap.set(eventKeyId(target), set.labels);
+    labelMap.set(ffiEventKeyId(set.target), set.labels);
   }
   return labelMap;
 }
