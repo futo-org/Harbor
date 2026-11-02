@@ -2473,7 +2473,7 @@ async fn validation_content_content_body_post_links_title_too_long() {
             images: Vec::new(),
             quote: None,
             links: vec![Link {
-                title: "t".repeat(101),
+                title: "t".repeat(1001),
                 description: None,
                 image: None,
                 url: "https://harbor.social".to_owned(),
@@ -2491,7 +2491,7 @@ async fn validation_content_content_body_post_links_title_too_long() {
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post links 0-th title is too long (101), maximum is 100",
+                "content content body post links 0-th title is too long (1001), maximum is 1000",
             ),
         }],
     );
@@ -2752,7 +2752,7 @@ async fn validation_content_content_body_post_attribute_to_to_link_title_too_lon
             labels: Vec::new(),
             attributed_to: vec![AttributedTo {
                 to: Some(To::Link(Link {
-                    title: "a".repeat(101),
+                    title: "a".repeat(1001),
                     description: None,
                     image: None,
                     url: "https://harbor.social".to_owned(),
@@ -2769,7 +2769,7 @@ async fn validation_content_content_body_post_attribute_to_to_link_title_too_lon
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body post attributed to 0-th to link title is too long (101), maximum is 100",
+                "content content body post attributed to 0-th to link title is too long (1001), maximum is 1000",
             ),
         }],
     );
