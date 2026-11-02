@@ -900,7 +900,7 @@ importers:
         version: 14.0.31(@types/node@24.19.2)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
       html-get:
         specifier: ^2.24.6
-        version: 2.26.10(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
+        version: 2.27.17(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       metascraper:
         specifier: ^5.50.6
         version: 5.58.5(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
@@ -6344,10 +6344,6 @@ packages:
     resolution: {integrity: sha512-zkDT5WAF4hSSoUgyfg5tFIxz8XQK+25W/TLVojJTMKBaxevLBBtLxgqguAuVQB8PVW79FVjHcU+GJ9tVbDZ9mQ==}
     engines: {node: '>=14.16'}
 
-  cacheable-request@7.0.4:
-    resolution: {integrity: sha512-v+p6ongsrp0yTGbJXjgxPow2+DL93DASP4kXCDKb8/bwRtt9OEF3whggkkDkGNzgcWy2XaF4a8nZglC7uElscg==}
-    engines: {node: '>=8'}
-
   call-bind-apply-helpers@1.0.2:
     resolution: {integrity: sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==}
     engines: {node: '>= 0.4'}
@@ -6537,9 +6533,6 @@ packages:
     resolution: {integrity: sha512-beMpP7BOtTipFuW8hrJvREQ2DrRu3BE7by0ZpibtfBA+qfHYvMGTc2Yb1JMYPKg/JUw0CHYvpg796aNTSW9z7Q==}
     engines: {node: '>=6'}
 
-  clone-response@1.0.3:
-    resolution: {integrity: sha512-ROoL94jJH2dUVML2Y/5PEDNaSHgeOdSDicUyS7izcF63G6sTc/FTjLub4b8Il9S8S0beOfYt0TaA5qvFK+w0wA==}
-
   clone-response@2.0.0:
     resolution: {integrity: sha512-2jbaEcptYA32VbtJw/ucElFsFNVPmF+fkXWsH+GgjWX7fZWGosmqXxzAf+5nIeqAzg2HKpHu0zFXGhaRWkQdNw==}
     engines: {node: '>=14.16'}
@@ -6682,6 +6675,10 @@ packages:
   content-type@2.1.0:
     resolution: {integrity: sha512-mj7UPXE0jaqaOsukNZRUEfEi2AcL7C/vwmwcHV0O97eO1E1pxBZuyjlZrx5seTaNBg1U6+o35wpa35Qfcc+7ag==}
     engines: {node: '>=18'}
+
+  content-type@3.1.1:
+    resolution: {integrity: sha512-GW4qUsfFo59d0HbUibDlWv5wPz+vAAcaTWbKIuKCf0JkC7wWkSyf8f13IpXn5JkeMlB2P8iTSSIjwXljorg2vA==}
+    engines: {node: '>=22'}
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
@@ -7460,9 +7457,6 @@ packages:
   encoding@0.1.13:
     resolution: {integrity: sha512-ETBauow1T35Y/WZMkio9jiM0Z5xjHHmJ4XmjZOq1l/dXz3lr2sRn87nJy20RupqSh1F2m3HHPSp8ShIPQJrJ3A==}
 
-  end-of-stream@1.4.5:
-    resolution: {integrity: sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==}
-
   enhanced-resolve@5.26.0:
     resolution: {integrity: sha512-9vhedylFonb2YGogzUKX6+Ja72gOJbN1QHAqdrvqLwhdl/QWbKopzoUC9EbQNVsAns/bx/4uyqalrQAoy1IByw==}
     engines: {node: '>=10.13.0'}
@@ -8192,10 +8186,6 @@ packages:
     resolution: {integrity: sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==}
     engines: {node: '>= 0.4'}
 
-  get-stream@5.2.0:
-    resolution: {integrity: sha512-nBF+F1rAZVCu/p7rjzgA+Yb4lfYXrpl7a6VmJrU8wF9I1CKvP/QwPNZHnOlwbTkY6dvtFIzFMSyQXbLoTQPRpA==}
-    engines: {node: '>=8'}
-
   get-stream@6.0.1:
     resolution: {integrity: sha512-ts6Wi+2j3jQjqi70w5AlN8DFnkSwC+MqmxEzdEALB2qXZYV3X/b1CTfgPLGJNMeAWxdPfU8FO1ms3NUfaHCPYg==}
     engines: {node: '>=10'}
@@ -8252,10 +8242,6 @@ packages:
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
-
-  got@11.8.6:
-    resolution: {integrity: sha512-6tfZ91bOr7bOXnK7PRDCGBLa1H4U080YHNaAQ2KsMGlLEzRbk44nsZF2E1IeRc3vtJHPVbKCYgdFbaGO2ljd8g==}
-    engines: {node: '>=10.19.0'}
 
   got@12.6.1:
     resolution: {integrity: sha512-mThBblvlAF1d4O5oqyvN+ZxLAYwIJK7bpMxgYqPD9okW0C3qm5FFn7k811QrcuEBwaogR3ngOFoCfs6mRv7teQ==}
@@ -8407,9 +8393,9 @@ packages:
   html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
 
-  html-get@2.26.10:
-    resolution: {integrity: sha512-jcIvEiWNxx1WaoCiIhfhdut8LBV9uWSrbbJcCb2KOmKbqAT6YO9O6EDZyo3fMEcn8HMLFy6VXQIDxO8gD4pdaw==}
-    engines: {node: '>= 10'}
+  html-get@2.27.17:
+    resolution: {integrity: sha512-CYp/pdWZbfSvJG1uvjYLLutmCledFDDE3we5RJdCbo2pdt40mkq8KgwoUhgKWXhz/7t6wZEgVZeUbPzGGaFGZA==}
+    engines: {node: '>= 22'}
     hasBin: true
 
   html-minifier-terser@6.1.0:
@@ -8727,8 +8713,8 @@ packages:
     resolution: {integrity: sha512-iwGqO3J21aaSkC7jWnHP/difazwS7SFeIqxv6wEtLU8Y5KlzFTjyqcSIT0d8s4+dDhKytsk9PJZ2BkS5eZwQRQ==}
     engines: {node: '>=10'}
 
-  is-local-address@2.3.6:
-    resolution: {integrity: sha512-5Nvrd/meRZpmeVGesP/w0oxRDc2Xra2w9sg0tcN8w1MVd/k75CkUhj7tABOl1NvmPuctf+w0ZbrhEtEfaztilw==}
+  is-local-address@2.4.4:
+    resolution: {integrity: sha512-MpMTaQKPmh77833r2fHnm+Jq19V2UqnQ4C5jExmJEDHHfW+anqT9o8wanwKzjuVeM5YaAUrG+t4c/j+tJ8DrLg==}
     engines: {node: '>= 10'}
 
   is-network-error@1.3.2:
@@ -9910,10 +9896,6 @@ packages:
     resolution: {integrity: sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==}
     engines: {node: '>=6'}
 
-  mimic-response@1.0.1:
-    resolution: {integrity: sha512-j5EctnkH7amfV/q5Hgmoal1g2QHFJRraOtmx0JpIqkxhBhI/lJSl1nMpQ45hVarwNETOoWEimndZ4QK0RHxuxQ==}
-    engines: {node: '>=4'}
-
   mimic-response@3.1.0:
     resolution: {integrity: sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==}
     engines: {node: '>=10'}
@@ -10999,9 +10981,6 @@ packages:
 
   psl@1.15.0:
     resolution: {integrity: sha512-JZd3gMVBAVQkSs6HdNZo9Sdo0LNcQeMNP3CozBJb3JYC/QUYZTnKxP+f8oWRX4rHP5EurWxqAHTSwUCjlNKa1w==}
-
-  pump@3.0.4:
-    resolution: {integrity: sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==}
 
   punycode2@1.0.1:
     resolution: {integrity: sha512-+TXpd9YRW4YUZZPoRHJ3DILtWwootGc2DsgvfHmklQ8It1skINAuqSdqizt5nlTaBmwrYACHkHApCXjc9gHk2Q==}
@@ -12425,6 +12404,15 @@ packages:
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
+
+  unpdf@1.9.1:
+    resolution: {integrity: sha512-nO1npM2kNyd4hj1fKzUVU6bvnWjDSxI97eycM/DgzI83dYyW+pNRI9NeMQVEfef8fI3Q06i9lkMeE1HxrQqKoA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@napi-rs/canvas': ^0.1.69 || ^1.0.0
+    peerDependenciesMeta:
+      '@napi-rs/canvas':
+        optional: true
 
   unpipe@1.0.0:
     resolution: {integrity: sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==}
@@ -20302,16 +20290,6 @@ snapshots:
       normalize-url: 8.1.1
       responselike: 3.0.0
 
-  cacheable-request@7.0.4:
-    dependencies:
-      clone-response: 1.0.3
-      get-stream: 5.2.0
-      http-cache-semantics: 4.3.0
-      keyv: 4.5.4
-      lowercase-keys: 2.0.0
-      normalize-url: 6.1.0
-      responselike: 2.0.1
-
   call-bind-apply-helpers@1.0.2:
     dependencies:
       es-errors: 1.3.0
@@ -20535,10 +20513,6 @@ snapshots:
     dependencies:
       is-regexp: 2.1.0
 
-  clone-response@1.0.3:
-    dependencies:
-      mimic-response: 1.0.1
-
   clone-response@2.0.0:
     dependencies:
       mimic-response: 4.0.0
@@ -20660,6 +20634,8 @@ snapshots:
   content-type@1.0.5: {}
 
   content-type@2.1.0: {}
+
+  content-type@3.1.1: {}
 
   convert-source-map@2.0.0: {}
 
@@ -21390,10 +21366,6 @@ snapshots:
     dependencies:
       iconv-lite: 0.6.3
     optional: true
-
-  end-of-stream@1.4.5:
-    dependencies:
-      once: 1.4.0
 
   enhanced-resolve@5.26.0:
     dependencies:
@@ -22431,10 +22403,6 @@ snapshots:
       dunder-proto: 1.0.1
       es-object-atoms: 1.1.2
 
-  get-stream@5.2.0:
-    dependencies:
-      pump: 3.0.4
-
   get-stream@6.0.1: {}
 
   getenv@2.0.0: {}
@@ -22502,20 +22470,6 @@ snapshots:
       unicorn-magic: 0.4.1
 
   gopd@1.2.0: {}
-
-  got@11.8.6:
-    dependencies:
-      '@sindresorhus/is': 4.6.0
-      '@szmarczak/http-timer': 4.0.6
-      '@types/cacheable-request': 6.0.3
-      '@types/responselike': 1.0.3
-      cacheable-lookup: 5.0.4
-      cacheable-request: 7.0.4
-      decompress-response: 6.0.0
-      http2-wrapper: 1.0.3
-      lowercase-keys: 2.0.0
-      p-cancelable: 2.1.1
-      responselike: 2.0.1
 
   got@12.6.1:
     dependencies:
@@ -22748,20 +22702,20 @@ snapshots:
 
   html-escaper@2.0.2: {}
 
-  html-get@2.26.10(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1)):
+  html-get@2.27.17(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1)):
     dependencies:
+      '@kikobeats/got': 11.8.9
       '@kikobeats/time-span': 1.0.13
-      '@metascraper/helpers': 5.55.2(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
+      '@metascraper/helpers': 5.58.4(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       cheerio: 1.2.0
-      content-type: 1.0.5
+      content-type: 3.1.1
       css-url-regex: 4.0.0
       debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
       execall: 2.0.0
-      got: 11.8.6
       html-encode: 2.1.15
       html-urls: 2.5.5(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       is-html-content: 1.0.0
-      is-local-address: 2.3.6
+      is-local-address: 2.4.4
       lodash: 4.18.1
       mri: 1.2.0
       null-prototype-object: 1.2.7
@@ -22769,7 +22723,9 @@ snapshots:
       p-retry: 4.6.2
       tinyspawn: 1.5.9
       top-sites: 1.1.228
+      unpdf: 1.9.1
     transitivePeerDependencies:
+      - '@napi-rs/canvas'
       - '@noble/hashes'
       - canvas
       - debug
@@ -23070,7 +23026,7 @@ snapshots:
       global-dirs: 3.0.1
       is-path-inside: 3.0.3
 
-  is-local-address@2.3.6: {}
+  is-local-address@2.4.4: {}
 
   is-network-error@1.3.2: {}
 
@@ -24962,8 +24918,6 @@ snapshots:
 
   mimic-fn@2.1.0: {}
 
-  mimic-response@1.0.1: {}
-
   mimic-response@3.1.0: {}
 
   mimic-response@4.0.0: {}
@@ -25345,7 +25299,7 @@ snapshots:
 
   parse5@8.0.1:
     dependencies:
-      entities: 8.0.0
+      entities: 8.1.0
 
   parseurl@1.3.3: {}
 
@@ -26005,11 +25959,6 @@ snapshots:
   psl@1.15.0:
     dependencies:
       punycode: 2.3.1
-
-  pump@3.0.4:
-    dependencies:
-      end-of-stream: 1.4.5
-      once: 1.4.0
 
   punycode2@1.0.1: {}
 
@@ -27680,6 +27629,8 @@ snapshots:
   universalify@0.2.0: {}
 
   universalify@2.0.1: {}
+
+  unpdf@1.9.1: {}
 
   unpipe@1.0.0: {}
 
