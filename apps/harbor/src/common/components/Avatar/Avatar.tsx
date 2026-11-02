@@ -100,24 +100,23 @@ export function Avatar({
       borderRadius: radius,
       backgroundColor: theme.palette.background_primary,
     },
-    {
-      borderWidth: 1,
-      borderColor: withHexOpacity(theme.palette.neutral_500, '80'),
-    },
     containerProps?.style,
   ];
 
   const image = (
-    <Image
-      cachePolicy="memory-disk"
-      // Fades in rather than popping when it lands a frame after the row.
-      transition={150}
-      {...restImageProps}
-      source={source}
-      recyclingKey={recyclingKey ?? sourceUri(source)}
-      contentFit="cover"
-      style={[styles.image, imageStyle]}
-    />
+    <>
+      <Image
+        cachePolicy="memory-disk"
+        // Fades in rather than popping when it lands a frame after the row.
+        transition={150}
+        {...restImageProps}
+        source={source}
+        recyclingKey={recyclingKey ?? sourceUri(source)}
+        contentFit="cover"
+        style={[styles.image, imageStyle]}
+      />
+      <SafetyRing borderRadius={radius} />
+    </>
   );
 
   if (!onPress) {
@@ -146,6 +145,23 @@ export function Avatar({
       {image}
       <HoverOverlay visible={hovered} borderRadius={radius} />
     </Pressable>
+  );
+}
+
+function SafetyRing({ borderRadius }: { borderRadius: number }) {
+  const { theme } = useTheme();
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          borderRadius,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: withHexOpacity(theme.palette.neutral_500, '40'),
+        },
+      ]}
+    />
   );
 }
 
