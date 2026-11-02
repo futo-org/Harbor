@@ -24,8 +24,11 @@ use tonic::Status;
 /// Application identifiers hidden from the global Explore feed.
 ///
 /// TODO: temporary until there's a better way to keep Grayjay out of Explore.
-const EXPLORE_HIDDEN_APPLICATIONS: &[&str] =
-    &["com.futo.platformplayer", "com.futo.platformplayer.d"];
+const EXPLORE_HIDDEN_APPLICATIONS: &[&str] = &[
+    "com.futo.platformplayer",
+    "com.futo.platformplayer.d",
+    "com.futo.platformplayer.playstore",
+];
 
 const FEED_COLLECTION: i16 = collections::FEED as i16;
 const PROFILE_COLLECTION: i16 = collections::PROFILE as i16;
