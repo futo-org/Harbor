@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use entity::{attributed_to_reaction_summary, interaction_tally, reaction};
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{
-    Asterisk, ColumnRef, Expr, ExprTrait, Func, OnConflict, Order,
-    SelectStatement,
+    Asterisk, BinOper, ColumnRef, Expr, ExprTrait, Func, OnConflict, Order,
+    SelectStatement, Value, ValueType,
 };
 use sea_orm::{ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter};
 
@@ -87,10 +87,17 @@ impl Query {
                 "positive",
             )
             .expr_as(Expr::from(Func::count(Expr::col(Asterisk))), "count")
-            .cond_where(
-                Expr::col(reaction::Column::OnPost.as_column_ref())
-                    .is_in(event_ids),
-            )
+            .cond_where(Expr::Binary(
+                Box::new(Expr::col(reaction::Column::OnPost.as_column_ref())),
+                BinOper::Custom("= ANY"),
+                Box::new(Expr::cust_with_expr(
+                    "($1)",
+                    Expr::Value(Value::Array(
+                        EventId::array_type(),
+                        Some(Box::new(event_ids.map(Into::into).collect())),
+                    )),
+                )),
+            ))
             .and_where(
                 Expr::col(reaction::Column::Emoji.as_column_ref())
                     .is_not_null(),
