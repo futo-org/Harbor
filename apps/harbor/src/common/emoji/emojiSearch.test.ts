@@ -36,7 +36,6 @@ describe('searchEmojis', () => {
         expect.objectContaining({
           emoji: '👍',
           name: 'thumbs up',
-          category: 'People & Body',
         }),
       ]);
     });

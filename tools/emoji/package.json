@@ -1,0 +1,20 @@
+{
+  "name": "@polycentric/emoji",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "download": "node download.ts",
+    "generate:data": "node generate-data.ts && biome format --write ../../apps/harbor/src/common/emoji/emojis.json",
+    "generate:sprites": "node generate-sprites.ts && biome format --write ../../apps/harbor/src/common/emoji/sheet.ts",
+    "generate:font": "uv run generate-font.py && biome format --write ../../apps/harbor/src/common/assets/twemojiFont.ts",
+    "generate:fingerprint-emojis": "node generate-fingerprint-emojis.ts && biome format --write ../../apps/harbor/src/common/emoji/fingerprintEmojis.json"
+  },
+  "dependencies": {
+    "emojibase-data": "^18.0.0",
+    "sharp": "0.35.5"
+  },
+  "devDependencies": {
+    "@polycentric/tsconfig": "workspace:*",
+    "@types/node": "catalog:"
+  }
+}

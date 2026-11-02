@@ -3,7 +3,7 @@ import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { Emoji, EmojiLikeButton } from './Emoji';
-import { INLINE_EMOJIS } from './emojiData';
+import { INLINE_EMOJIS } from '@/src/common/emoji/emojiData';
 
 /** The size (width/height) of an inline emoji picker button */
 const INLINE_SIZE = 36;

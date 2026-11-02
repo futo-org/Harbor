@@ -1,4 +1,4 @@
-import { splitEmoji, twemojiCode } from './emoji';
+import { splitEmoji } from './emoji';
 
 describe('splitEmoji', () => {
   it('returns plain text untouched', () => {
@@ -51,16 +51,5 @@ describe('splitEmoji', () => {
   it('renders text-presentation symbols as emoji when asked with U+FE0F', () => {
     expect(splitEmoji('a ➡️ b')).toEqual(['a ', '➡️', ' b']);
     expect(splitEmoji('©️')).toEqual(['', '©️', '']);
-  });
-});
-
-describe('twemojiCode', () => {
-  it('matches Twemoji file names', () => {
-    expect(twemojiCode('😀')).toBe('1f600');
-    expect(twemojiCode('❤️')).toBe('2764');
-    expect(twemojiCode('👍🏽')).toBe('1f44d-1f3fd');
-    expect(twemojiCode('🇬🇧')).toBe('1f1ec-1f1e7');
-    expect(twemojiCode('1️⃣')).toBe('31-20e3');
-    expect(twemojiCode('🏳️‍🌈')).toBe('1f3f3-fe0f-200d-1f308');
   });
 });

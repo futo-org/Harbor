@@ -15,8 +15,12 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { categories, getCategory, type EmojiEntry } from './emojiData';
-import { searchEmojis } from './emojiSearch';
+import {
+  categories,
+  getCategory,
+  type EmojiEntry,
+} from '@/src/common/emoji/emojiData';
+import { searchEmojis } from '@/src/common/emoji/emojiSearch';
 import { Emoji, EMOJI_IMAGE_SCALE, EmojiLikeButton } from './Emoji';
 import useReactions from './useReactions';
 import { ALL_CATEGORIES, useEmojiPickerStore } from './useEmojiPickerStore';

@@ -140,16 +140,3 @@ export function splitEmoji(text: string): string[] {
   parts.push(text.slice(textStart));
   return parts;
 }
-
-/**
- * Twemoji's file name for a sequence: code points in hex joined by "-", with
- * U+FE0F dropped unless the sequence has a ZWJ (matching twemoji.js).
- */
-export function twemojiCode(sequence: string): string {
-  const cps = [...sequence].map((ch) => ch.codePointAt(0) as number);
-  const keepVs16 = cps.includes(ZWJ);
-  return cps
-    .filter((cp) => keepVs16 || cp !== VS16)
-    .map((cp) => cp.toString(16))
-    .join('-');
-}

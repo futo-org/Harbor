@@ -21,9 +21,7 @@
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "prebuild": "APP_VARIANT=dev expo prebuild --clean",
-    "typecheck": "tsc && tsc -p tsconfig.test.json",
-    "generate:emoji-tags": "node scripts/generate-emoji-tags.mts && biome format --write src/features/reaction/emojiTags.json",
-    "generate:twemoji-font": "uv run scripts/generate-twemoji-font.py"
+    "typecheck": "tsc && tsc -p tsconfig.test.json"
   },
   "dependencies": {
     "@bsky.app/react-native-uitextview": "^2.7.1",
@@ -112,7 +110,6 @@
     "@types/node": "catalog:",
     "@types/react": "~19.2.17",
     "@types/react-test-renderer": "^19.1.0",
-    "emojibase-data": "^18.0.0",
     "jest": "catalog:",
     "jest-expo": "~57.0.4",
     "jest-junit": "catalog:",
