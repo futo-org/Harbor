@@ -575,11 +575,11 @@
           "emoji": "🫡",
           "name": "saluting face",
           "tags": [
-            "OK",
             "face",
             "good",
             "luck",
             "ma’am",
+            "ok",
             "respect",
             "salute",
             "saluting",
@@ -2117,14 +2117,7 @@
         {
           "emoji": "❣",
           "name": "heart exclamation",
-          "tags": [
-            "bang",
-            "exclamation",
-            "heart",
-            "heavy",
-            "mark",
-            "punctuation"
-          ]
+          "tags": ["exclamation", "heart", "heavy", "mark", "punctuation"]
         },
         {
           "emoji": "💔",
@@ -2299,7 +2292,6 @@
           "name": "hundred points",
           "tags": [
             "100",
-            "TRUE",
             "a+",
             "agree",
             "clearly",
@@ -2312,6 +2304,7 @@
             "perfect",
             "point",
             "score",
+            "true",
             "truth",
             "yup"
           ]
@@ -2480,7 +2473,7 @@
         {
           "emoji": "🖖",
           "name": "vulcan salute",
-          "tags": ["Vulcan", "finger", "hand", "hands", "salute"]
+          "tags": ["finger", "hand", "hands", "salute", "vulcan"]
         },
         {
           "emoji": "🫱",
@@ -2588,7 +2581,6 @@
           "emoji": "👌",
           "name": "OK hand",
           "tags": [
-            "OK",
             "awesome",
             "bet",
             "dope",
@@ -2598,6 +2590,7 @@
             "gotcha",
             "hand",
             "legit",
+            "ok",
             "okay",
             "pinch",
             "rad",
@@ -2670,10 +2663,10 @@
           "emoji": "🤟",
           "name": "love-you gesture",
           "tags": [
-            "ILY",
             "fingers",
             "gesture",
             "hand",
+            "ily",
             "love",
             "love-you",
             "three",
@@ -2688,7 +2681,7 @@
         {
           "emoji": "🤙",
           "name": "call me hand",
-          "tags": ["Shaka", "call", "hand", "hang", "loose", "me"]
+          "tags": ["call", "hand", "hang", "loose", "me", "shaka"]
         },
         {
           "emoji": "👈",
@@ -3114,12 +3107,12 @@
           "emoji": "👧",
           "name": "girl",
           "tags": [
-            "Virgo",
             "bright-eyed",
             "child",
             "daughter",
             "granddaughter",
             "kid",
+            "virgo",
             "young",
             "younger",
             "zodiac"
@@ -3356,10 +3349,10 @@
           "emoji": "🙅",
           "name": "person gesturing NO",
           "tags": [
-            "NO",
             "forbidden",
             "gesture",
             "hand",
+            "no",
             "not",
             "person",
             "prohibit"
@@ -3369,11 +3362,11 @@
           "emoji": "🙅‍♂️",
           "name": "man gesturing NO",
           "tags": [
-            "NO",
             "forbidden",
             "gesture",
             "hand",
             "man",
+            "no",
             "not",
             "prohibit"
           ]
@@ -3382,10 +3375,10 @@
           "emoji": "🙅‍♀️",
           "name": "woman gesturing NO",
           "tags": [
-            "NO",
             "forbidden",
             "gesture",
             "hand",
+            "no",
             "not",
             "prohibit",
             "woman"
@@ -3395,11 +3388,11 @@
           "emoji": "🙆",
           "name": "person gesturing OK",
           "tags": [
-            "OK",
             "exercise",
             "gesture",
             "gesturing",
             "hand",
+            "ok",
             "omg",
             "person"
           ]
@@ -3408,12 +3401,12 @@
           "emoji": "🙆‍♂️",
           "name": "man gesturing OK",
           "tags": [
-            "OK",
             "exercise",
             "gesture",
             "gesturing",
             "hand",
             "man",
+            "ok",
             "omg"
           ]
         },
@@ -3421,11 +3414,11 @@
           "emoji": "🙆‍♀️",
           "name": "woman gesturing OK",
           "tags": [
-            "OK",
             "exercise",
             "gesture",
             "gesturing",
             "hand",
+            "ok",
             "omg",
             "woman"
           ]
@@ -4246,8 +4239,8 @@
           "emoji": "👲",
           "name": "person with skullcap",
           "tags": [
-            "Chinese",
             "cap",
+            "chinese",
             "gua",
             "guapi",
             "hat",
@@ -4398,8 +4391,8 @@
           "emoji": "🎅",
           "name": "Santa Claus",
           "tags": [
-            "Christmas",
             "celebration",
+            "christmas",
             "claus",
             "fairy",
             "fantasy",
@@ -4415,15 +4408,15 @@
           "emoji": "🤶",
           "name": "Mrs. Claus",
           "tags": [
-            "Christmas",
-            "Mrs",
             "celebration",
+            "christmas",
             "claus",
             "fairy",
             "fantasy",
             "holiday",
             "merry",
             "mother",
+            "mrs",
             "santa",
             "tale",
             "xmas"
@@ -4433,14 +4426,14 @@
           "emoji": "🧑‍🎄",
           "name": "Mx Claus",
           "tags": [
-            "Christmas",
-            "Mx",
             "celebration",
+            "christmas",
             "claus",
             "fairy",
             "fantasy",
             "holiday",
             "merry",
+            "mx",
             "santa",
             "tale",
             "xmas"
@@ -4568,15 +4561,15 @@
           "emoji": "🧚‍♂️",
           "name": "man fairy",
           "tags": [
-            "Oberon",
-            "Puck",
             "fairy",
             "fairytale",
             "fantasy",
             "man",
             "myth",
+            "oberon",
             "person",
             "pixie",
+            "puck",
             "tale",
             "wings"
           ]
@@ -4585,7 +4578,6 @@
           "emoji": "🧚‍♀️",
           "name": "woman fairy",
           "tags": [
-            "Titania",
             "fairy",
             "fairytale",
             "fantasy",
@@ -4593,6 +4585,7 @@
             "person",
             "pixie",
             "tale",
+            "titania",
             "wings",
             "woman"
           ]
@@ -4601,8 +4594,8 @@
           "emoji": "🧛",
           "name": "vampire",
           "tags": [
-            "Dracula",
             "blood",
+            "dracula",
             "fangs",
             "halloween",
             "scary",
@@ -4658,16 +4651,16 @@
           "emoji": "🧜‍♂️",
           "name": "merman",
           "tags": [
-            "Neptune",
-            "Poseidon",
-            "Triton",
             "creature",
             "fairytale",
             "folklore",
+            "neptune",
             "ocean",
+            "poseidon",
             "sea",
             "siren",
-            "trident"
+            "trident",
+            "triton"
           ]
         },
         {
@@ -6786,10 +6779,10 @@
           "emoji": "🦁",
           "name": "lion",
           "tags": [
-            "Leo",
             "alpha",
             "animal",
             "face",
+            "leo",
             "mane",
             "order",
             "rawr",
@@ -6866,7 +6859,7 @@
         {
           "emoji": "🐂",
           "name": "ox",
-          "tags": ["Taurus", "animal", "animals", "bull", "farm", "zodiac"]
+          "tags": ["animal", "animals", "bull", "farm", "taurus", "zodiac"]
         },
         {
           "emoji": "🐃",
@@ -6897,7 +6890,7 @@
         {
           "emoji": "🐏",
           "name": "ram",
-          "tags": ["Aries", "animal", "horns", "male", "sheep", "zodiac", "zoo"]
+          "tags": ["animal", "aries", "horns", "male", "sheep", "zodiac", "zoo"]
         },
         {
           "emoji": "🐑",
@@ -6916,7 +6909,7 @@
         {
           "emoji": "🐐",
           "name": "goat",
-          "tags": ["Capricorn", "animal", "farm", "milk", "zodiac"]
+          "tags": ["animal", "capricorn", "farm", "milk", "zodiac"]
         },
         {
           "emoji": "🐪",
@@ -7208,7 +7201,7 @@
         {
           "emoji": "🐍",
           "name": "snake",
-          "tags": ["Ophiuchus", "animal", "bearer", "serpent", "zodiac"]
+          "tags": ["animal", "bearer", "ophiuchus", "serpent", "zodiac"]
         },
         {
           "emoji": "🐲",
@@ -7228,7 +7221,7 @@
         {
           "emoji": "🦖",
           "name": "T-Rex",
-          "tags": ["Rex", "T", "Tyrannosaurus", "dinosaur"]
+          "tags": ["dinosaur", "rex", "t", "t-rex", "tyrannosaurus"]
         },
         {
           "emoji": "🐳",
@@ -7253,7 +7246,7 @@
         {
           "emoji": "🐟",
           "name": "fish",
-          "tags": ["Pisces", "animal", "dinner", "fishes", "fishing", "zodiac"]
+          "tags": ["animal", "dinner", "fishes", "fishing", "pisces", "zodiac"]
         },
         {
           "emoji": "🐠",
@@ -7297,7 +7290,7 @@
             "tentacles"
           ]
         },
-        { "emoji": "🦀", "name": "crab", "tags": ["Cancer", "zodiac"] },
+        { "emoji": "🦀", "name": "crab", "tags": ["cancer", "zodiac"] },
         {
           "emoji": "🦞",
           "name": "lobster",
@@ -7365,7 +7358,7 @@
         {
           "emoji": "🦗",
           "name": "cricket",
-          "tags": ["Orthoptera", "animal", "bug", "grasshopper", "insect"]
+          "tags": ["animal", "bug", "grasshopper", "insect", "orthoptera"]
         },
         {
           "emoji": "🪳",
@@ -7377,7 +7370,7 @@
         {
           "emoji": "🦂",
           "name": "scorpion",
-          "tags": ["Scorpio", "Scorpius", "zodiac"]
+          "tags": ["scorpio", "scorpius", "zodiac"]
         },
         {
           "emoji": "🦟",
@@ -7437,11 +7430,11 @@
           "emoji": "🪷",
           "name": "lotus",
           "tags": [
-            "Buddhism",
-            "Hinduism",
             "beauty",
+            "buddhism",
             "calm",
             "flower",
+            "hinduism",
             "peace",
             "purity",
             "serenity"
@@ -7617,7 +7610,7 @@
         {
           "emoji": "🍇",
           "name": "grapes",
-          "tags": ["Dionysus", "fruit", "grape"]
+          "tags": ["dionysus", "fruit", "grape"]
         },
         { "emoji": "🍈", "name": "melon", "tags": ["cantaloupe", "fruit"] },
         { "emoji": "🍉", "name": "watermelon", "tags": ["fruit"] },
@@ -8027,7 +8020,7 @@
         {
           "emoji": "🍙",
           "name": "rice ball",
-          "tags": ["Japanese", "ball", "food", "rice"]
+          "tags": ["ball", "food", "japanese", "rice"]
         },
         {
           "emoji": "🍚",
@@ -8087,7 +8080,7 @@
         {
           "emoji": "🍡",
           "name": "dango",
-          "tags": ["Japanese", "dessert", "skewer", "stick", "sweet"]
+          "tags": ["dessert", "japanese", "skewer", "stick", "sweet"]
         },
         {
           "emoji": "🥟",
@@ -8519,7 +8512,7 @@
           "emoji": "🏺",
           "name": "amphora",
           "tags": [
-            "Aquarius",
+            "aquarius",
             "cooking",
             "drink",
             "jug",
@@ -8537,10 +8530,10 @@
           "emoji": "🌍",
           "name": "globe showing Europe-Africa",
           "tags": [
-            "Africa",
-            "Europe",
-            "Europe-Africa",
+            "africa",
             "earth",
+            "europe",
+            "europe-africa",
             "globe",
             "showing",
             "world"
@@ -8549,15 +8542,15 @@
         {
           "emoji": "🌎",
           "name": "globe showing Americas",
-          "tags": ["Americas", "earth", "globe", "showing", "world"]
+          "tags": ["americas", "earth", "globe", "showing", "world"]
         },
         {
           "emoji": "🌏",
           "name": "globe showing Asia-Australia",
           "tags": [
-            "Asia",
-            "Asia-Australia",
-            "Australia",
+            "asia",
+            "asia-australia",
+            "australia",
             "earth",
             "globe",
             "showing",
@@ -8578,7 +8571,7 @@
           ]
         },
         { "emoji": "🗺", "name": "world map", "tags": ["map", "world"] },
-        { "emoji": "🗾", "name": "map of Japan", "tags": ["Japan", "map"] },
+        { "emoji": "🗾", "name": "map of Japan", "tags": ["japan", "map"] },
         {
           "emoji": "🧭",
           "name": "compass",
@@ -8684,12 +8677,12 @@
         {
           "emoji": "🏣",
           "name": "Japanese post office",
-          "tags": ["Japanese", "building", "office", "post"]
+          "tags": ["building", "japanese", "office", "post"]
         },
         {
           "emoji": "🏤",
           "name": "post office",
-          "tags": ["European", "building", "office", "post"]
+          "tags": ["building", "european", "office", "post"]
         },
         {
           "emoji": "🏥",
@@ -8718,44 +8711,35 @@
         {
           "emoji": "🏯",
           "name": "Japanese castle",
-          "tags": ["Japanese", "building", "castle"]
+          "tags": ["building", "castle", "japanese"]
         },
-        { "emoji": "🏰", "name": "castle", "tags": ["European", "building"] },
+        { "emoji": "🏰", "name": "castle", "tags": ["building", "european"] },
         {
           "emoji": "💒",
           "name": "wedding",
           "tags": ["chapel", "hitched", "nuptials", "romance"]
         },
-        { "emoji": "🗼", "name": "Tokyo tower", "tags": ["Tokyo", "tower"] },
+        { "emoji": "🗼", "name": "Tokyo tower", "tags": ["tokyo", "tower"] },
         {
           "emoji": "🗽",
           "name": "Statue of Liberty",
-          "tags": [
-            "Liberty",
-            "Statue",
-            "liberty",
-            "new",
-            "ny",
-            "nyc",
-            "statue",
-            "york"
-          ]
+          "tags": ["liberty", "new", "ny", "nyc", "statue", "york"]
         },
         {
           "emoji": "⛪",
           "name": "church",
-          "tags": ["Christian", "bless", "chapel", "cross", "religion"]
+          "tags": ["bless", "chapel", "christian", "cross", "religion"]
         },
         {
           "emoji": "🕌",
           "name": "mosque",
-          "tags": ["Muslim", "islam", "masjid", "religion"]
+          "tags": ["islam", "masjid", "muslim", "religion"]
         },
         { "emoji": "🛕", "name": "hindu temple", "tags": ["hindu", "temple"] },
         {
           "emoji": "🕍",
           "name": "synagogue",
-          "tags": ["Jew", "Jewish", "judaism", "religion", "temple"]
+          "tags": ["jew", "jewish", "judaism", "religion", "temple"]
         },
         {
           "emoji": "⛩",
@@ -8765,7 +8749,7 @@
         {
           "emoji": "🕋",
           "name": "kaaba",
-          "tags": ["Muslim", "hajj", "islam", "religion", "umrah"]
+          "tags": ["hajj", "islam", "muslim", "religion", "umrah"]
         },
         { "emoji": "⛲", "name": "fountain", "tags": ["fountain"] },
         { "emoji": "⛺", "name": "tent", "tags": ["camping"] },
@@ -9284,7 +9268,7 @@
         {
           "emoji": "🛸",
           "name": "flying saucer",
-          "tags": ["UFO", "aliens", "extra", "flying", "saucer", "terrestrial"]
+          "tags": ["aliens", "extra", "flying", "saucer", "terrestrial", "ufo"]
         },
         {
           "emoji": "🛎",
@@ -9738,7 +9722,7 @@
         {
           "emoji": "🎄",
           "name": "Christmas tree",
-          "tags": ["Christmas", "celebration", "tree"]
+          "tags": ["celebration", "christmas", "tree"]
         },
         {
           "emoji": "🎆",
@@ -9805,16 +9789,16 @@
         {
           "emoji": "🎋",
           "name": "tanabata tree",
-          "tags": ["Japanese", "banner", "celebration", "tanabata", "tree"]
+          "tags": ["banner", "celebration", "japanese", "tanabata", "tree"]
         },
         {
           "emoji": "🎍",
           "name": "pine decoration",
           "tags": [
-            "Japanese",
             "bamboo",
             "celebration",
             "decoration",
+            "japanese",
             "pine",
             "plant"
           ]
@@ -9822,7 +9806,7 @@
         {
           "emoji": "🎎",
           "name": "Japanese dolls",
-          "tags": ["Japanese", "celebration", "doll", "dolls", "festival"]
+          "tags": ["celebration", "doll", "dolls", "festival", "japanese"]
         },
         {
           "emoji": "🎏",
@@ -10210,7 +10194,7 @@
         {
           "emoji": "🎴",
           "name": "flower playing cards",
-          "tags": ["Japanese", "card", "cards", "flower", "game", "playing"]
+          "tags": ["card", "cards", "flower", "game", "japanese", "playing"]
         },
         {
           "emoji": "🎭",
@@ -10609,7 +10593,7 @@
         {
           "emoji": "🪮",
           "name": "hair pick",
-          "tags": ["Afro", "comb", "groom", "hair", "pick"]
+          "tags": ["afro", "comb", "groom", "hair", "pick"]
         },
         {
           "emoji": "👑",
@@ -10963,12 +10947,12 @@
         {
           "emoji": "💿",
           "name": "optical disk",
-          "tags": ["CD", "blu-ray", "computer", "disk", "dvd", "optical"]
+          "tags": ["blu-ray", "cd", "computer", "disk", "dvd", "optical"]
         },
         {
           "emoji": "📀",
           "name": "dvd",
-          "tags": ["Blu-ray", "DVD", "cd", "computer", "disk", "optical"]
+          "tags": ["blu-ray", "cd", "computer", "disk", "optical"]
         },
         {
           "emoji": "🧮",
@@ -11623,11 +11607,11 @@
           "emoji": "🏹",
           "name": "bow and arrow",
           "tags": [
-            "Sagittarius",
             "archer",
             "archery",
             "arrow",
             "bow",
+            "sagittarius",
             "tool",
             "weapon",
             "zodiac"
@@ -11668,9 +11652,9 @@
           "emoji": "⚖",
           "name": "balance scale",
           "tags": [
-            "Libra",
             "balance",
             "justice",
+            "libra",
             "scale",
             "scales",
             "tool",
@@ -12010,13 +11994,13 @@
           "emoji": "🪬",
           "name": "hamsa",
           "tags": [
-            "Fatima",
-            "Mary",
-            "Miriam",
             "amulet",
+            "fatima",
             "fortune",
             "guide",
             "hand",
+            "mary",
+            "miriam",
             "palm",
             "protect",
             "protection"
@@ -12044,10 +12028,10 @@
           "emoji": "🪪",
           "name": "identification card",
           "tags": [
-            "ID",
             "card",
             "credentials",
             "document",
+            "id",
             "identification",
             "license",
             "security"
@@ -12062,7 +12046,7 @@
           "emoji": "🏧",
           "name": "ATM sign",
           "tags": [
-            "ATM",
+            "atm",
             "automated",
             "bank",
             "cash",
@@ -12090,26 +12074,26 @@
           "emoji": "🚹",
           "name": "men’s room",
           "tags": [
-            "WC",
             "bathroom",
             "lavatory",
             "man",
             "men’s",
             "restroom",
             "room",
-            "toilet"
+            "toilet",
+            "wc"
           ]
         },
         {
           "emoji": "🚺",
           "name": "women’s room",
           "tags": [
-            "WC",
             "bathroom",
             "lavatory",
             "restroom",
             "room",
             "toilet",
+            "wc",
             "woman",
             "women’s"
           ]
@@ -12117,7 +12101,7 @@
         {
           "emoji": "🚻",
           "name": "restroom",
-          "tags": ["WC", "bathroom", "lavatory", "toilet"]
+          "tags": ["bathroom", "lavatory", "toilet", "wc"]
         },
         {
           "emoji": "🚼",
@@ -12128,13 +12112,13 @@
           "emoji": "🚾",
           "name": "water closet",
           "tags": [
-            "WC",
             "bathroom",
             "closet",
             "lavatory",
             "restroom",
             "toilet",
-            "water"
+            "water",
+            "wc"
           ]
         },
         {
@@ -12390,22 +12374,22 @@
             "vu"
           ]
         },
-        { "emoji": "🔙", "name": "BACK arrow", "tags": ["BACK", "arrow"] },
-        { "emoji": "🔚", "name": "END arrow", "tags": ["END", "arrow"] },
+        { "emoji": "🔙", "name": "BACK arrow", "tags": ["arrow", "back"] },
+        { "emoji": "🔚", "name": "END arrow", "tags": ["arrow", "end"] },
         {
           "emoji": "🔛",
           "name": "ON! arrow",
-          "tags": ["ON!", "arrow", "mark"]
+          "tags": ["arrow", "mark", "on!"]
         },
         {
           "emoji": "🔜",
           "name": "SOON arrow",
-          "tags": ["SOON", "arrow", "brb", "omw"]
+          "tags": ["arrow", "brb", "omw", "soon"]
         },
         {
           "emoji": "🔝",
           "name": "TOP arrow",
-          "tags": ["TOP", "arrow", "homie", "up"]
+          "tags": ["arrow", "homie", "top", "up"]
         },
         {
           "emoji": "🛐",
@@ -12417,16 +12401,16 @@
           "name": "atom symbol",
           "tags": ["atheist", "atom", "symbol"]
         },
-        { "emoji": "🕉", "name": "om", "tags": ["Hindu", "religion"] },
+        { "emoji": "🕉", "name": "om", "tags": ["hindu", "religion"] },
         {
           "emoji": "✡",
           "name": "star of David",
-          "tags": ["David", "Jew", "Jewish", "judaism", "religion", "star"]
+          "tags": ["david", "jew", "jewish", "judaism", "religion", "star"]
         },
         {
           "emoji": "☸",
           "name": "wheel of dharma",
-          "tags": ["Buddhist", "dharma", "religion", "wheel"]
+          "tags": ["buddhist", "dharma", "religion", "wheel"]
         },
         {
           "emoji": "☯",
@@ -12446,17 +12430,17 @@
         {
           "emoji": "✝",
           "name": "latin cross",
-          "tags": ["Christian", "christ", "cross", "latin", "religion"]
+          "tags": ["christ", "christian", "cross", "latin", "religion"]
         },
         {
           "emoji": "☦",
           "name": "orthodox cross",
-          "tags": ["Christian", "cross", "orthodox", "religion"]
+          "tags": ["christian", "cross", "orthodox", "religion"]
         },
         {
           "emoji": "☪",
           "name": "star and crescent",
-          "tags": ["Muslim", "crescent", "islam", "ramadan", "religion", "star"]
+          "tags": ["crescent", "islam", "muslim", "ramadan", "religion", "star"]
         },
         {
           "emoji": "☮",
@@ -12491,76 +12475,86 @@
           "emoji": "🪯",
           "name": "khanda",
           "tags": [
-            "Deg",
-            "Fateh",
-            "Khalsa",
-            "Khanda",
-            "Sikh",
-            "Sikhism",
-            "Tegh",
-            "religion"
+            "deg",
+            "fateh",
+            "khalsa",
+            "religion",
+            "sikh",
+            "sikhism",
+            "tegh"
           ]
         },
         {
           "emoji": "♈",
           "name": "Aries",
-          "tags": ["horoscope", "ram", "zodiac"]
+          "tags": ["aries", "horoscope", "ram", "zodiac"]
         },
         {
           "emoji": "♉",
           "name": "Taurus",
-          "tags": ["bull", "horoscope", "ox", "zodiac"]
+          "tags": ["bull", "horoscope", "ox", "taurus", "zodiac"]
         },
         {
           "emoji": "♊",
           "name": "Gemini",
-          "tags": ["horoscope", "twins", "zodiac"]
+          "tags": ["gemini", "horoscope", "twins", "zodiac"]
         },
         {
           "emoji": "♋",
           "name": "Cancer",
-          "tags": ["crab", "horoscope", "zodiac"]
+          "tags": ["cancer", "crab", "horoscope", "zodiac"]
         },
         {
           "emoji": "♌",
           "name": "Leo",
-          "tags": ["horoscope", "lion", "zodiac"]
+          "tags": ["horoscope", "leo", "lion", "zodiac"]
         },
-        { "emoji": "♍", "name": "Virgo", "tags": ["horoscope", "zodiac"] },
+        {
+          "emoji": "♍",
+          "name": "Virgo",
+          "tags": ["horoscope", "virgo", "zodiac"]
+        },
         {
           "emoji": "♎",
           "name": "Libra",
-          "tags": ["balance", "horoscope", "justice", "scales", "zodiac"]
+          "tags": [
+            "balance",
+            "horoscope",
+            "justice",
+            "libra",
+            "scales",
+            "zodiac"
+          ]
         },
         {
           "emoji": "♏",
           "name": "Scorpio",
-          "tags": ["Scorpius", "horoscope", "scorpion", "zodiac"]
+          "tags": ["horoscope", "scorpio", "scorpion", "scorpius", "zodiac"]
         },
         {
           "emoji": "♐",
           "name": "Sagittarius",
-          "tags": ["archer", "horoscope", "zodiac"]
+          "tags": ["archer", "horoscope", "sagittarius", "zodiac"]
         },
         {
           "emoji": "♑",
           "name": "Capricorn",
-          "tags": ["goat", "horoscope", "zodiac"]
+          "tags": ["capricorn", "goat", "horoscope", "zodiac"]
         },
         {
           "emoji": "♒",
           "name": "Aquarius",
-          "tags": ["bearer", "horoscope", "water", "zodiac"]
+          "tags": ["aquarius", "bearer", "horoscope", "water", "zodiac"]
         },
         {
           "emoji": "♓",
           "name": "Pisces",
-          "tags": ["fish", "horoscope", "zodiac"]
+          "tags": ["fish", "horoscope", "pisces", "zodiac"]
         },
         {
           "emoji": "⛎",
           "name": "Ophiuchus",
-          "tags": ["bearer", "serpent", "snake", "zodiac"]
+          "tags": ["bearer", "ophiuchus", "serpent", "snake", "zodiac"]
         },
         {
           "emoji": "🔀",
@@ -12815,7 +12809,6 @@
           "name": "white exclamation mark",
           "tags": [
             "!",
-            "bang",
             "exclamation",
             "mark",
             "outlined",
@@ -12826,7 +12819,7 @@
         {
           "emoji": "❗",
           "name": "red exclamation mark",
-          "tags": ["!", "bang", "exclamation", "mark", "punctuation", "red"]
+          "tags": ["!", "exclamation", "mark", "punctuation", "red"]
         },
         {
           "emoji": "〰",
@@ -12875,10 +12868,10 @@
           "emoji": "🔰",
           "name": "Japanese symbol for beginner",
           "tags": [
-            "Japanese",
             "beginner",
             "chevron",
             "green",
+            "japanese",
             "leaf",
             "symbol",
             "tool",
@@ -12988,12 +12981,12 @@
           "tags": ["*", "eight-pointed", "star"]
         },
         { "emoji": "❇", "name": "sparkle", "tags": ["*"] },
-        { "emoji": "©", "name": "copyright", "tags": ["C"] },
-        { "emoji": "®", "name": "registered", "tags": ["R"] },
+        { "emoji": "©", "name": "copyright", "tags": ["c"] },
+        { "emoji": "®", "name": "registered", "tags": ["r"] },
         {
           "emoji": "™",
           "name": "trade mark",
-          "tags": ["TM", "mark", "trade", "trademark"]
+          "tags": ["mark", "tm", "trade", "trademark"]
         },
         {
           "emoji": "🫟",
@@ -13025,7 +13018,7 @@
         {
           "emoji": "🔠",
           "name": "input latin uppercase",
-          "tags": ["ABCD", "input", "latin", "letters", "uppercase"]
+          "tags": ["abcd", "input", "latin", "letters", "uppercase"]
         },
         {
           "emoji": "🔡",
@@ -13055,143 +13048,143 @@
         {
           "emoji": "🆎",
           "name": "AB button (blood type)",
-          "tags": ["AB", "blood", "button", "type"]
+          "tags": ["ab", "blood", "button", "type"]
         },
         {
           "emoji": "🅱",
           "name": "B button (blood type)",
-          "tags": ["B", "blood", "button", "type"]
+          "tags": ["b", "blood", "button", "type"]
         },
-        { "emoji": "🆑", "name": "CL button", "tags": ["CL", "button"] },
-        { "emoji": "🆒", "name": "COOL button", "tags": ["COOL", "button"] },
-        { "emoji": "🆓", "name": "FREE button", "tags": ["FREE", "button"] },
-        { "emoji": "ℹ", "name": "information", "tags": ["I"] },
+        { "emoji": "🆑", "name": "CL button", "tags": ["button", "cl"] },
+        { "emoji": "🆒", "name": "COOL button", "tags": ["button", "cool"] },
+        { "emoji": "🆓", "name": "FREE button", "tags": ["button", "free"] },
+        { "emoji": "ℹ", "name": "information", "tags": ["i"] },
         {
           "emoji": "🆔",
           "name": "ID button",
-          "tags": ["ID", "button", "identity"]
+          "tags": ["button", "id", "identity"]
         },
         {
           "emoji": "Ⓜ",
           "name": "circled M",
-          "tags": ["M", "circle", "circled"]
+          "tags": ["circle", "circled", "m"]
         },
-        { "emoji": "🆕", "name": "NEW button", "tags": ["NEW", "button"] },
-        { "emoji": "🆖", "name": "NG button", "tags": ["NG", "button"] },
+        { "emoji": "🆕", "name": "NEW button", "tags": ["button", "new"] },
+        { "emoji": "🆖", "name": "NG button", "tags": ["button", "ng"] },
         {
           "emoji": "🅾",
           "name": "O button (blood type)",
-          "tags": ["O", "blood", "button", "type"]
+          "tags": ["blood", "button", "o", "type"]
         },
         {
           "emoji": "🆗",
           "name": "OK button",
-          "tags": ["OK", "button", "okay"]
+          "tags": ["button", "ok", "okay"]
         },
         {
           "emoji": "🅿",
           "name": "P button",
-          "tags": ["P", "button", "parking"]
+          "tags": ["button", "p", "parking"]
         },
         {
           "emoji": "🆘",
           "name": "SOS button",
-          "tags": ["SOS", "button", "help"]
+          "tags": ["button", "help", "sos"]
         },
         {
           "emoji": "🆙",
           "name": "UP! button",
-          "tags": ["UP", "UP!", "button", "mark"]
+          "tags": ["button", "mark", "up", "up!"]
         },
         {
           "emoji": "🆚",
           "name": "VS button",
-          "tags": ["VS", "button", "versus"]
+          "tags": ["button", "versus", "vs"]
         },
         {
           "emoji": "🈁",
           "name": "Japanese “here” button",
-          "tags": ["Japanese", "button", "here", "katakana"]
+          "tags": ["button", "here", "japanese", "katakana"]
         },
         {
           "emoji": "🈂",
           "name": "Japanese “service charge” button",
-          "tags": ["Japanese", "button", "charge", "katakana", "service"]
+          "tags": ["button", "charge", "japanese", "katakana", "service"]
         },
         {
           "emoji": "🈷",
           "name": "Japanese “monthly amount” button",
-          "tags": ["Japanese", "amount", "button", "ideograph", "monthly"]
+          "tags": ["amount", "button", "ideograph", "japanese", "monthly"]
         },
         {
           "emoji": "🈶",
           "name": "Japanese “not free of charge” button",
-          "tags": ["Japanese", "button", "charge", "free", "ideograph", "not"]
+          "tags": ["button", "charge", "free", "ideograph", "japanese", "not"]
         },
         {
           "emoji": "🈯",
           "name": "Japanese “reserved” button",
-          "tags": ["Japanese", "button", "ideograph", "reserved"]
+          "tags": ["button", "ideograph", "japanese", "reserved"]
         },
         {
           "emoji": "🉐",
           "name": "Japanese “bargain” button",
-          "tags": ["Japanese", "bargain", "button", "ideograph"]
+          "tags": ["bargain", "button", "ideograph", "japanese"]
         },
         {
           "emoji": "🈹",
           "name": "Japanese “discount” button",
-          "tags": ["Japanese", "button", "discount", "ideograph"]
+          "tags": ["button", "discount", "ideograph", "japanese"]
         },
         {
           "emoji": "🈚",
           "name": "Japanese “free of charge” button",
-          "tags": ["Japanese", "button", "charge", "free", "ideograph"]
+          "tags": ["button", "charge", "free", "ideograph", "japanese"]
         },
         {
           "emoji": "🈲",
           "name": "Japanese “prohibited” button",
-          "tags": ["Japanese", "button", "ideograph", "prohibited"]
+          "tags": ["button", "ideograph", "japanese", "prohibited"]
         },
         {
           "emoji": "🉑",
           "name": "Japanese “acceptable” button",
-          "tags": ["Japanese", "acceptable", "button", "ideograph"]
+          "tags": ["acceptable", "button", "ideograph", "japanese"]
         },
         {
           "emoji": "🈸",
           "name": "Japanese “application” button",
-          "tags": ["Japanese", "application", "button", "ideograph"]
+          "tags": ["application", "button", "ideograph", "japanese"]
         },
         {
           "emoji": "🈴",
           "name": "Japanese “passing grade” button",
-          "tags": ["Japanese", "button", "grade", "ideograph", "passing"]
+          "tags": ["button", "grade", "ideograph", "japanese", "passing"]
         },
         {
           "emoji": "🈳",
           "name": "Japanese “vacancy” button",
-          "tags": ["Japanese", "button", "ideograph", "vacancy"]
+          "tags": ["button", "ideograph", "japanese", "vacancy"]
         },
         {
           "emoji": "㊗",
           "name": "Japanese “congratulations” button",
-          "tags": ["Japanese", "button", "congratulations", "ideograph"]
+          "tags": ["button", "congratulations", "ideograph", "japanese"]
         },
         {
           "emoji": "㊙",
           "name": "Japanese “secret” button",
-          "tags": ["Japanese", "button", "ideograph", "secret"]
+          "tags": ["button", "ideograph", "japanese", "secret"]
         },
         {
           "emoji": "🈺",
           "name": "Japanese “open for business” button",
-          "tags": ["Japanese", "business", "button", "ideograph", "open"]
+          "tags": ["business", "button", "ideograph", "japanese", "open"]
         },
         {
           "emoji": "🈵",
           "name": "Japanese “no vacancy” button",
-          "tags": ["Japanese", "button", "ideograph", "no", "vacancy"]
+          "tags": ["button", "ideograph", "japanese", "no", "vacancy"]
         },
         {
           "emoji": "🔴",
@@ -13372,7 +13365,7 @@
         {
           "emoji": "🎌",
           "name": "crossed flags",
-          "tags": ["Japanese", "celebration", "cross", "crossed", "flags"]
+          "tags": ["celebration", "cross", "crossed", "flags", "japanese"]
         },
         {
           "emoji": "🏴",
@@ -13413,7 +13406,7 @@
         {
           "emoji": "🏴‍☠️",
           "name": "pirate flag",
-          "tags": ["Jolly", "Roger", "flag", "pirate", "plunder", "treasure"]
+          "tags": ["flag", "jolly", "pirate", "plunder", "roger", "treasure"]
         },
         {
           "emoji": "🇦🇨",

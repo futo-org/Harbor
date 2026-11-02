@@ -10,7 +10,7 @@
     "generate:fingerprint-emojis": "node generate-fingerprint-emojis.ts && biome format --write ../../apps/harbor/src/common/emoji/fingerprintEmojis.json"
   },
   "dependencies": {
-    "emojibase-data": "^18.0.0",
+    "emojibase-data": "17.0.0",
     "sharp": "0.35.5"
   },
   "devDependencies": {
