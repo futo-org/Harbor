@@ -34,10 +34,10 @@ impl Query {
                 interaction_tally::Column::RepostCount,
                 interaction_tally::Column::QuoteCount,
             ])
-            .cond_where(
-                Expr::col(interaction_tally::Column::EventId.as_column_ref())
-                    .is_in(event_ids),
-            )
+            .cond_where(in_array(
+                Expr::col(interaction_tally::Column::EventId.as_column_ref()),
+                event_ids,
+            ))
             .from(interaction_tally::Entity);
 
         let rows = db.query_all(&query).await?;
