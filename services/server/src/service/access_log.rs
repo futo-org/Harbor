@@ -5,7 +5,7 @@
 //! request. `identity` comes from the auth middleware (response
 //! extensions), so authenticated traffic can be attributed to users.
 
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock, OnceLock};
 use std::time::Instant;
 
 use axum::body::Body;
@@ -66,6 +66,8 @@ pub async fn access_log_middleware(
         return next.run(request).await;
     }
 
+    let start = Instant::now();
+
     let method = request.method().clone();
     let header = |name: &str| {
         headers
@@ -110,15 +112,25 @@ pub async fn access_log_middleware(
 
     // The body span lives as long as the body is being read: how long the
     // server waited on the client for it.
-    let body_span = tracing::info_span!(parent: &span, "request.body");
+    let body_read = Arc::new(OnceLock::new()); // Arc is needed to make it 'static.
     let request = request.map(|body| {
+        let mut body_span =
+            Some(tracing::info_span!(parent: &span, "request.body"));
+        let body_read = body_read.clone();
         Body::new(body.map_frame(move |frame| {
-            let _reading = &body_span;
+            if let Some(body) = frame.data_ref()
+                && body.is_empty()
+            {
+                // Drop the span once the entire request body (all data frames)
+                // is read.
+                drop(body_span.take());
+
+                _ = body_read.set(Instant::now());
+            }
             frame
         }))
     });
 
-    let start = Instant::now();
     let response = next.run(request).instrument(span.clone()).await;
 
     let identity = response
@@ -147,6 +159,10 @@ pub async fn access_log_middleware(
     ];
     HTTP_REQUESTS.add(1, &attrs);
     let elapsed = start.elapsed();
+    let method_elapsed = body_read
+        .get()
+        .map(|start| start.elapsed())
+        .unwrap_or(elapsed);
     HTTP_DURATION.record(elapsed.as_secs_f64(), &attrs);
 
     tracing::info!(
@@ -155,7 +171,11 @@ pub async fn access_log_middleware(
         path,
         status,
         grpc_status,
+        // Entire request duration, including reading the request body.
         latency_ms = elapsed.as_millis() as u64,
+        // Only the gRPC method duration. Not 100% accurate as it starts when
+        // the last bytes of the body is read, not when the request is decoded.
+        method_latency_ms = method_elapsed.as_millis() as u64,
         identity,
         client_ip,
         user_agent,
