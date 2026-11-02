@@ -1,5 +1,5 @@
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import { useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, createThemedStyles, withHexOpacity } from '@/src/common/theme';
 import { Image, type ImageProps } from 'expo-image';
 import {
   Pressable,
@@ -84,22 +84,16 @@ export function Avatar({
   onPress,
   ...imageProps
 }: AvatarProps) {
-  const { theme } = useTheme();
+  const styles = useStyles();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
   const { style: imageStyle, ...restImageProps } = imageProps;
   const label = imageProps.accessibilityLabel ?? imageProps.alt;
 
   const size = resolveAvatarSize(sizeProp);
 
-  const radius = size / 2;
   const circleStyle = [
-    styles.clip,
-    {
-      width: size,
-      height: size,
-      borderRadius: radius,
-      backgroundColor: theme.palette.background_primary,
-    },
+    styles.circle,
+    { width: size, height: size },
     containerProps?.style,
   ];
 
@@ -115,7 +109,7 @@ export function Avatar({
         contentFit="cover"
         style={[styles.image, imageStyle]}
       />
-      <SafetyRing borderRadius={radius} />
+      <View pointerEvents="none" style={styles.safetyRing} />
     </>
   );
 
@@ -140,67 +134,35 @@ export function Avatar({
       onPress={onPress}
       onHoverIn={onHoverIn}
       onHoverOut={onHoverOut}
-      style={({ pressed }) => [circleStyle, pressed && { opacity: 0.5 }]}
+      style={({ pressed }) => [circleStyle, pressed && styles.pressed]}
     >
       {image}
-      <HoverOverlay visible={hovered} borderRadius={radius} />
+      {hovered && <View pointerEvents="none" style={styles.hoverOverlay} />}
     </Pressable>
   );
 }
 
-function SafetyRing({ borderRadius }: { borderRadius: number }) {
-  const { theme } = useTheme();
-  return (
-    <View
-      pointerEvents="none"
-      style={[
-        StyleSheet.absoluteFill,
-        {
-          borderRadius,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '40'),
-        },
-      ]}
-    />
-  );
-}
-
-function HoverOverlay({
-  visible,
-  borderRadius,
-}: {
-  visible: boolean;
-  borderRadius: number;
-}) {
-  const { theme } = useTheme();
-  if (!visible) return null;
-  return (
-    <View
-      pointerEvents="none"
-      style={[
-        styles.overlayFill,
-        {
-          borderRadius,
-          backgroundColor: withHexOpacity(theme.palette.black, '28'),
-        },
-      ]}
-    />
-  );
-}
-
-const styles = StyleSheet.create({
-  clip: {
-    overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  overlayFill: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-});
+const useStyles = createThemedStyles((theme, define) =>
+  define({
+    circle: [
+      Atoms.overflow_hidden,
+      Atoms.rounded_full,
+      { backgroundColor: theme.palette.background_primary },
+    ],
+    image: [Atoms.w_full, Atoms.h_full],
+    pressed: { opacity: 0.5 },
+    safetyRing: [
+      StyleSheet.absoluteFill,
+      Atoms.rounded_full,
+      {
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: withHexOpacity(theme.palette.neutral_500, '40'),
+      },
+    ],
+    hoverOverlay: [
+      StyleSheet.absoluteFill,
+      Atoms.rounded_full,
+      { backgroundColor: withHexOpacity(theme.palette.black, '28') },
+    ],
+  }),
+);
