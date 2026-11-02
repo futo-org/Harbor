@@ -1,22 +1,23 @@
 import { useEffect, useReducer } from 'react';
 import { AppState } from 'react-native';
 
-export function TimeAgo({ since }: { since: number }) {
+export function TimeAgo({ since }: { since: number | bigint }) {
   const [, forceRender] = useReducer((count: number) => count + 1, 0);
-  const [label] = formatTimeAgo(since);
+  const sinceMs = Number(since);
+  const [label] = formatTimeAgo(sinceMs);
 
   useEffect(() => {
     let handle: ReturnType<typeof setTimeout> | undefined;
 
     const scheduleNextUpdate = () => {
-      const [, nextUpdateIn] = formatTimeAgo(since);
+      const [, msUntilChange] = formatTimeAgo(sinceMs);
 
-      if (nextUpdateIn === null) return;
+      if (msUntilChange === null) return;
 
       handle = setTimeout(() => {
         forceRender();
         scheduleNextUpdate();
-      }, nextUpdateIn);
+      }, msUntilChange);
     };
 
     scheduleNextUpdate();
@@ -36,7 +37,7 @@ export function TimeAgo({ since }: { since: number }) {
       clearTimeout(handle);
       appStateSubscription.remove();
     };
-  }, [since]);
+  }, [sinceMs]);
 
   return label;
 }

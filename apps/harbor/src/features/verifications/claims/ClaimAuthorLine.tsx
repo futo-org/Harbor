@@ -50,7 +50,7 @@ export function ClaimAuthorLine({
         ·
       </Text>
       <Text variant="secondary" color="neutral_500" style={Atoms.flex_shrink_0}>
-        <TimeAgo since={Number(createdAt)} />
+        <TimeAgo since={createdAt} />
       </Text>
     </View>
   );

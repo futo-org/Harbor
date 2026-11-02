@@ -33,7 +33,7 @@ export function ReportHeader({
             ? '1 report'
             : `${report.reportCount} reports`}
           {' · '}
-          <TimeAgo since={Number(report.latestReportedAt)} />
+          <TimeAgo since={report.latestReportedAt} />
         </Text>
       </View>
       {report.additionalInfo ? (
@@ -91,7 +91,7 @@ export function ReportHeader({
           />
           <Text variant="small" color="neutral_500">
             {' · '}
-            <TimeAgo since={Number(report.resolvedAt)} />
+            <TimeAgo since={report.resolvedAt} />
           </Text>
         </View>
       ) : null}
