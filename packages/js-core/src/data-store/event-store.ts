@@ -1,66 +1,44 @@
-import type { IEventRepository } from '../platform-interfaces';
-import type * as Proto from '../proto/v2';
-import { DatabaseError } from '../errors';
+import type {
+  EventKey,
+  EventRow,
+  IEventRepository,
+} from '../platform-interfaces/event-repository';
 
 /**
- * EventStore provides operations for persisting events.
+ * EventStore wraps a platform's event repository with shared input validation.
+ * All functions throw `EventRepositoryError` on failure.
  *
- * EventStore wraps an IEventRepository and provides business logic validation.
- * EventStore does not provide operations for querying events.
- * To query events, use QueryManager.
+ * TODO: add actual validation.
+ * Maybe also incude some derived data that would be done by most callers anyway.
  */
 export class EventStore {
-  constructor(private repository: IEventRepository) {}
+  constructor(private readonly repository: IEventRepository) {}
 
-  async save(
-    signedEvents: Proto.SignedEvent | Proto.SignedEvent[],
+  async insert(row: EventRow): Promise<void> {
+    await this.repository.insert(row);
+  }
+
+  async addContent(
+    owner: string,
+    eventKey: EventKey,
+    serializedContent: Uint8Array,
   ): Promise<void> {
-    // If multiple events then loop back
-    if (Array.isArray(signedEvents)) {
-      for (const signedEvent of signedEvents) {
-        await this.save(signedEvent);
-      }
-    } else {
-      const signedEvent = signedEvents;
-
-      if (!signedEvent.signature || signedEvent.signature.length === 0) {
-        throw new DatabaseError('SignedEvent must have a valid signature');
-      }
-
-      if (!signedEvent.eventBytes || signedEvent.eventBytes.length === 0) {
-        throw new DatabaseError('SignedEvent must have valid event data');
-      }
-
-      await this.repository.save(signedEvent);
-    }
+    await this.repository.addContent(owner, eventKey, serializedContent);
   }
 
-  async getAll(): Promise<Proto.SignedEvent[]> {
-    return this.repository.getAll();
+  async deleteContent(owner: string, eventKey: EventKey): Promise<void> {
+    await this.repository.deleteContent(owner, eventKey);
   }
 
-  async getBatch(
-    batchSize: number,
-    offset?: number,
-  ): Promise<{
-    events: Proto.SignedEvent[];
-    offset: number;
-  }> {
-    return this.repository.getBatch(batchSize, offset);
+  async get(owner: string, eventKey: EventKey): Promise<EventRow | null> {
+    return this.repository.get(owner, eventKey);
   }
 
-  async getByEventKey(key: Proto.EventKey): Promise<Proto.SignedEvent | null> {
-    return this.repository.getByEventKey(key);
+  async getAll(owner: string): Promise<EventRow[]> {
+    return this.repository.getAll(owner);
   }
 
-  async getByIdentity(
-    identity: string,
-    options?: {
-      signer?: Proto.PublicKey;
-      collection?: number;
-      headsOnly?: boolean;
-    },
-  ): Promise<Proto.SignedEvent[]> {
-    return this.repository.getByIdentity(identity, options);
+  async getHeads(owner: string): Promise<EventKey[]> {
+    return this.repository.getHeads(owner);
   }
 }
