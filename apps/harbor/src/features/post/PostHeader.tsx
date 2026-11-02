@@ -1,12 +1,12 @@
 import { Text } from '@/src/common/components/primitives';
+import { TimeAgo } from '@/src/common/components/TimeAgo';
 import { Routes } from '@/src/common/constants';
-import { timeAgo } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 
 const LEFT_COL_FLEX_BASIS = 40;
@@ -63,8 +63,6 @@ function RepostHeader({
 
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
-  const time = useMemo(() => timeAgo(Number(repostedAt)), [repostedAt]);
-
   return (
     <Pressable
       onPress={handlePress}
@@ -94,7 +92,13 @@ function RepostHeader({
           fontWeight="bold"
           style={[Atoms.flex_shrink_0, hovered && Atoms.text_underline]}
         >
-          {time ? ` reposted · ${time}` : ' reposted'}
+          {' reposted'}
+          {repostedAt ? (
+            <>
+              {' · '}
+              <TimeAgo since={repostedAt} />
+            </>
+          ) : null}
         </Text>
       </View>
     </Pressable>
