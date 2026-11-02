@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use entity::{attributed_to_reaction_summary, interaction_tally, reaction};
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{
-    Asterisk, BinOper, ColumnRef, Expr, ExprTrait, Func, OnConflict, Order,
-    SelectStatement, Value, ValueType,
+    Asterisk, BinOper, Expr, ExprTrait, Func, OnConflict, SelectStatement,
+    Value, ValueType,
 };
 use sea_orm::{ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter};
 
@@ -106,21 +106,6 @@ impl Query {
                 reaction::Column::OnPost.as_column_ref(),
                 reaction::Column::Emoji.as_column_ref(),
                 reaction::Column::Positive.as_column_ref(),
-            ])
-            .order_by_columns([
-                (
-                    ColumnRef::from(reaction::Column::OnPost.as_column_ref()),
-                    Order::Desc,
-                ),
-                (ColumnRef::from("count"), Order::Desc),
-                (
-                    ColumnRef::from(reaction::Column::Emoji.as_column_ref()),
-                    Order::Desc,
-                ),
-                (
-                    ColumnRef::from(reaction::Column::Positive.as_column_ref()),
-                    Order::Desc,
-                ),
             ]);
 
         let rows = db.query_all(&query).await?;
