@@ -155,7 +155,7 @@ const useStyles = createThemedStyles((theme, define) =>
       StyleSheet.absoluteFill,
       Atoms.rounded_full,
       {
-        borderWidth: StyleSheet.hairlineWidth,
+        borderWidth: 1,
         borderColor: withHexOpacity(theme.palette.neutral_500, '40'),
       },
     ],
