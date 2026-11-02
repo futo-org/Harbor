@@ -1,4 +1,5 @@
 ---
+
 title: Content Policy
 sidebar_label: Content Policy
 sidebar_position: 10
@@ -6,7 +7,7 @@ sidebar_position: 10
 
 # Content Policy
 
-Last updated October 19th, 2026
+Last updated November 2nd, 2026
 
 This policy covers the servers run by FUTO Holdings Inc. ("FUTO", "we", "us"),
 which are marked as operated by FUTO on the [Servers](./servers.md) page. It
@@ -50,6 +51,9 @@ We remove content from our servers only in a narrow set of cases:
 - **Credible threats of violence** against a person or group, and incitement to
   imminent violence.
 - **Non-consensual intimate imagery.**
+- **Pornography.** Sexually explicit images and video are not hosted on our
+  servers. Other servers may choose to host it, see
+  [Every server sets its own policy](#every-server-sets-its-own-policy).
 - **Copyright infringement**, on receipt of a valid takedown notice under the
   DMCA.
 - **Abuse of the service itself**: spam, malware, automated flooding, and
