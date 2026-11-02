@@ -3803,7 +3803,7 @@ async fn validation_invalid_content_content_body_profile_update_name_too_long()
     let mut client = TestClient::new().await;
     let content = Content {
         content_body: Some(ContentBody::ProfileUpdate(ProfileUpdate {
-            name: Some("n".repeat(51)),
+            name: Some("n".repeat(101)),
             avatar: None,
             banner: None,
             description: None,
@@ -3827,7 +3827,7 @@ async fn validation_invalid_content_content_body_profile_update_name_too_long()
         &[ExpectError {
             bundle_index: 1,
             kind: ExpectErrorKind::MsgContains(
-                "content content body profile update name is too long (51), maximum is 50",
+                "content content body profile update name is too long (101), maximum is 100",
             ),
         }],
     );
