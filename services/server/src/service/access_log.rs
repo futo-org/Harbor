@@ -146,7 +146,8 @@ pub async fn access_log_middleware(
         KeyValue::new("status", status as i64),
     ];
     HTTP_REQUESTS.add(1, &attrs);
-    HTTP_DURATION.record(start.elapsed().as_secs_f64(), &attrs);
+    let elapsed = start.elapsed();
+    HTTP_DURATION.record(elapsed.as_secs_f64(), &attrs);
 
     tracing::info!(
         target: "access",
@@ -154,7 +155,7 @@ pub async fn access_log_middleware(
         path,
         status,
         grpc_status,
-        latency_ms = start.elapsed().as_millis() as u64,
+        latency_ms = elapsed.as_millis() as u64,
         identity,
         client_ip,
         user_agent,
