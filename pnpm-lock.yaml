@@ -994,7 +994,7 @@ importers:
         version: 6.0.2
       twitter-api-v2:
         specifier: ^1.29.0
-        version: 1.29.1
+        version: 1.31.0
     devDependencies:
       '@polycentric/tsconfig':
         specifier: workspace:*
@@ -12265,8 +12265,8 @@ packages:
     resolution: {integrity: sha512-3GJYwig8ygEI89oaOZdduJX8/aw6O9eRPYHoIt6T3FZl9hkKjiyIspufJoVgqXihPoJu8M5CSV0DlZvzfohBCw==}
     hasBin: true
 
-  twitter-api-v2@1.29.1:
-    resolution: {integrity: sha512-l5U8aP6woe+gv0RViz/YA0YEG/NRtqkO1iXWqxNfrn3MSc2V85u6w44oNDBWhy8zVV9r36SJv/uXNmnfni8Uxw==}
+  twitter-api-v2@1.31.0:
+    resolution: {integrity: sha512-slrAXaibHjTQTXxm50+bGdT6YfHYrpwIslmXXr4kOtEGtTN3OTbODj0/O5ZVckILiTioZtbIHdqjsYFjj0vcRg==}
 
   type-detect@4.0.8:
     resolution: {integrity: sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g==}
@@ -27524,7 +27524,7 @@ snapshots:
       '@turbo/windows-64': 2.11.10
       '@turbo/windows-arm64': 2.11.10
 
-  twitter-api-v2@1.29.1: {}
+  twitter-api-v2@1.31.0: {}
 
   type-detect@4.0.8: {}
 
