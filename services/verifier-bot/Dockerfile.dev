@@ -8,7 +8,7 @@
 # under plain node (rs-core-wasm ships a compiled .js via its node export).
 
 # Stage 1: Build — Rust + Node toolchain, compile rs-core to wasm, build JS SDKs
-FROM rust:slim-bookworm@sha256:86234e857a413004348b471d11a4ebe1aa92d2eae2b6b143cac68fd1ac3c48be AS build
+FROM rust:slim-bookworm@sha256:24707e70a4f1e23d9a7b25202ec43126d28a52294b96aad5c670df1fd1f1d400 AS build
 WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="/pnpm:$PATH"
