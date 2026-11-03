@@ -91,12 +91,13 @@ export class LoginManager {
     const digest = this.client.contentManager.buildDigest(content);
     await this.client.storage.content.save(digest, content);
 
-    const event = await this.client.buildEvent(
-      content,
-      COLLECTION.IDENTITY,
+    const event = await this.client.buildEvent({
       identityKey,
-      publicKey,
-    );
+      collection: COLLECTION.IDENTITY,
+      signer: publicKey,
+      contentBytes: Proto.Content.toBinary(content),
+      content,
+    });
 
     // Persist locally
     const signedEvent = await this.client.signEvent(event, keyPair);

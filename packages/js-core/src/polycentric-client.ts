@@ -49,6 +49,14 @@ export type LocalBundle = {
   contentBytes?: Uint8Array;
 };
 
+export type BuildEventArgs = {
+  identityKey: string;
+  collection: Collection | number;
+  signer: Proto.PublicKey;
+  contentBytes: Uint8Array;
+  content: Proto.Content;
+};
+
 /**
  * PolycentricClientConfig defines the dependencies and configuration for a PolycentricClient.
  */
@@ -327,23 +335,13 @@ export class PolycentricClient {
    * Helper function build an Event from a Content.
    * Uses the current keypair and current identity.
    */
-  async buildEvent(
-    content: Proto.Content,
-    collection: Collection | number = COLLECTION.FEED,
-    identityKey?: string,
-    publicKey?: Proto.PublicKey,
-  ): Promise<Proto.Event> {
-    const identity = identityKey ?? this.activeIdentityKey;
-    if (!identity) {
-      throw new Error('No active identity');
-    }
-
-    const signer = publicKey ?? this.currentKeyPair?.publicKey;
-    if (!signer) {
-      throw new Error('No keypair');
-    }
-
-    const sequence = this.core.nextSequence(identity, collection);
+  async buildEvent({
+    identityKey,
+    collection,
+    signer,
+    content,
+  }: BuildEventArgs): Promise<Proto.Event> {
+    const sequence = this.core.nextSequence(identityKey, collection);
 
     // identity_sequence must reference an identity event signed by the
     // signing key.
@@ -351,7 +349,7 @@ export class PolycentricClient {
       collection === COLLECTION.IDENTITY
         ? sequence
         : this.core.getIdentitySequence(
-            identity,
+            identityKey,
             Proto.PublicKey.toBinary(signer).buffer as ArrayBuffer,
           );
 
@@ -362,22 +360,23 @@ export class PolycentricClient {
     }
 
     const previousSignature = new Uint8Array(
-      this.core.previousSignature(identity, collection),
+      this.core.previousSignature(identityKey, collection),
     );
     const previousRoot = new Uint8Array(
-      this.core.previousRoot(identity, collection),
+      this.core.previousRoot(identityKey, collection),
     );
 
     const event = Proto.Event.create({
       key: Proto.EventKey.create({
         collection,
-        identity,
+        identity: identityKey,
         signedBy: signer,
         sequence,
       }),
       identitySequence,
       previousSignature,
       previousRoot,
+      // TODO: this should use the serialized content bytes
       contentDigest: this.contentManager.buildDigest(content),
       createdAt: BigInt(Date.now()),
       application: this.application,
