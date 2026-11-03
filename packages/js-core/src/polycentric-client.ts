@@ -57,9 +57,28 @@ export type BuildEventArgs = {
   content: Proto.Content;
 };
 
+export type BuiltEvent = {
+  event: Proto.Event;
+  eventKey: Proto.EventKey;
+};
+
 export type CommitEventArgs = {
   owner: string;
   signedEvent: Proto.SignedEvent;
+  content: Proto.Content;
+  contentBytes: Uint8Array;
+};
+
+export type CreateEventArgs = {
+  collection: Collection | number;
+  content: Proto.Content;
+};
+
+export type CreatedEvent = {
+  signedEvent: Proto.SignedEvent;
+  event: Proto.Event;
+  eventKey: Proto.EventKey;
+  eventBytes: Uint8Array;
   content: Proto.Content;
   contentBytes: Uint8Array;
 };
@@ -347,7 +366,7 @@ export class PolycentricClient {
     collection,
     signer,
     content,
-  }: BuildEventArgs): Promise<Proto.Event> {
+  }: BuildEventArgs): Promise<BuiltEvent> {
     const sequence = this.core.nextSequence(identityKey, collection);
 
     // identity_sequence must reference an identity event signed by the
@@ -373,13 +392,15 @@ export class PolycentricClient {
       this.core.previousRoot(identityKey, collection),
     );
 
+    const eventKey = Proto.EventKey.create({
+      collection,
+      identity: identityKey,
+      signedBy: signer,
+      sequence,
+    });
+
     const event = Proto.Event.create({
-      key: Proto.EventKey.create({
-        collection,
-        identity: identityKey,
-        signedBy: signer,
-        sequence,
-      }),
+      key: eventKey,
       identitySequence,
       previousSignature,
       previousRoot,
@@ -396,15 +417,15 @@ export class PolycentricClient {
         : undefined;
     event.vectorClock = this.buildVectorClock(event, identityContentForVC);
 
-    return event;
+    return { event, eventKey };
   }
 
   /**
-   * Sign an event, using the client's current key pair or a provided one.
+   * Sign an event using the provided key pair.
    */
   async signEvent(
     event: Proto.Event,
-    keyPair?: KeyPair,
+    keyPair: KeyPair,
   ): Promise<Proto.SignedEvent> {
     const eventBytes = Proto.Event.toBinary(event);
 
@@ -412,11 +433,6 @@ export class PolycentricClient {
       eventBytes.buffer as ArrayBuffer,
       {
         sign: async (bytes: ArrayBuffer): Promise<ArrayBuffer> => {
-          keyPair = keyPair ?? this.currentKeyPair ?? undefined;
-          if (!keyPair) {
-            throw new Error('No keypair');
-          }
-
           const signature = await this.crypto.sign(
             keyPair.privateKey.key,
             new Uint8Array(bytes),
@@ -452,6 +468,58 @@ export class PolycentricClient {
 
     // Notify listeners
     this.events.emitContentCreated({ signedEvent, content });
+  }
+
+  /**
+   * Create a new event under the current login.
+   * This should be used for most user content where the API fits.
+   * Handles signing, persisting locally, and mirroring to rs-core.
+   * Does not sync to remote servers.
+   * Throws on failure.
+   */
+  async createEvent({
+    collection,
+    content,
+  }: CreateEventArgs): Promise<CreatedEvent> {
+    // Snapshot the current login at the start
+    const identityKey = this.activeIdentityKey;
+    const keyPair = this.currentKeyPair;
+    if (!identityKey || !keyPair) {
+      throw new Error('Must be logged in to create events.');
+    }
+
+    // Derive event and content
+    const contentBytes = Proto.Content.toBinary(content);
+
+    const { event, eventKey } = await this.buildEvent({
+      identityKey,
+      collection,
+      signer: keyPair.publicKey,
+      contentBytes,
+      content,
+    });
+
+    // Sign event
+    const signedEvent = await this.signEvent(event, keyPair);
+
+    // Persist event and content locally
+    // This event can be considered reliable after this succeeds
+    await this.commitEvent({
+      owner: identityKey,
+      signedEvent,
+      content,
+      contentBytes,
+    });
+
+    // Expose all derived objects to caller
+    return {
+      signedEvent,
+      event,
+      eventKey,
+      eventBytes: signedEvent.eventBytes,
+      content,
+      contentBytes,
+    };
   }
 
   /**

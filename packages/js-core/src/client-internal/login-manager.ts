@@ -88,7 +88,7 @@ export class LoginManager {
     const power = this.checkAuthorization(identity, publicKey);
     if (!power) throw new Error('Key is not authorized by the identity');
 
-    const event = await this.client.buildEvent({
+    const { event } = await this.client.buildEvent({
       identityKey,
       collection: COLLECTION.IDENTITY,
       signer: publicKey,
