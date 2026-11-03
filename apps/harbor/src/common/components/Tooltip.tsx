@@ -4,12 +4,13 @@ import {
   Pressable,
   type StyleProp,
   View,
+  type ViewInstance,
   type ViewStyle,
 } from 'react-native';
 import { Portal } from '@rn-primitives/portal';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { Text } from './primitives';
+import { Text } from './primitives/Text';
 
 const MAX_BUBBLE_WIDTH = 260;
 const EDGE_MARGIN = 8;
@@ -41,7 +42,7 @@ export function Tooltip({
 }) {
   const { theme } = useTheme();
   const portalName = `tooltip-${useId()}`;
-  const triggerRef = useRef<View>(null);
+  const triggerRef = useRef<ViewInstance>(null);
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, h: 0 });
 

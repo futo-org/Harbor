@@ -31,7 +31,11 @@ export default function OnboardingWelcomeScreen() {
           Atoms.items_center,
           // Keeps the logo above the splash image, which renders after it.
           { zIndex: ZIndex.raised },
-          { paddingTop: insets.top + Spacing['2xl'] },
+          {
+            paddingTop: insets.top + Spacing['2xl'],
+            paddingLeft: insets.left + Spacing['2xl'],
+            paddingRight: insets.right + Spacing['2xl'],
+          },
         ]}
       >
         <Image
@@ -72,6 +76,8 @@ export default function OnboardingWelcomeScreen() {
           {
             backgroundColor: theme.palette.neutral_0,
             paddingBottom: insets.bottom + Spacing.lg,
+            paddingLeft: insets.left + Spacing.lg,
+            paddingRight: insets.right + Spacing.lg,
           },
         ]}
       >

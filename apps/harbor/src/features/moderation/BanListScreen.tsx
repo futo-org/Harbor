@@ -7,7 +7,7 @@ import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, type TextStyle, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import useBanList from './hooks/useBanList';
 
 // Delay before a keystroke triggers a new query, so typing doesn't fire
@@ -169,7 +169,7 @@ function BanListRow({
           { flex: 1 },
           // An unbroken 64-char hash never wraps on web without an
           // explicit break rule; native Text breaks mid-word on its own.
-          isWeb && ({ wordBreak: 'break-all' } as unknown as TextStyle),
+          isWeb && { wordBreak: 'break-all' },
         ]}
       >
         {identity}

@@ -1,11 +1,11 @@
 declare module '*.png' {
-  import type { ImageSourcePropType } from 'react-native';
-  const value: ImageSourcePropType;
+  import type { ImageURISource } from 'react-native';
+  const value: number | ImageURISource;
   export default value;
 }
 
 declare module '*.svg' {
-  import type { ImageSourcePropType } from 'react-native';
-  const value: ImageSourcePropType;
+  import type { ImageURISource } from 'react-native';
+  const value: number | ImageURISource;
   export default value;
 }

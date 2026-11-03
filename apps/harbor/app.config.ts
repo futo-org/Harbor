@@ -67,14 +67,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'default',
   scheme: SCHEME,
   web: {
-    output: 'server',
+    // Prerendered at export, as in SDK 57: server.js patches the exported
+    // HTML at startup, which per-request SSR (`server`) wouldn't produce.
+    output: 'static',
   },
   userInterfaceStyle: 'automatic',
   ios: {
     // An Icon Composer bundle: Xcode renders the Liquid Glass icon and the flat
     // ones for older iOS from it
     icon: `./src/common/assets/images/app-icons/ios-icon${ICON_SUFFIX}.icon`,
-    requireFullScreen: true,
     supportsTablet: true,
     bundleIdentifier: ID,
     ...(APP_LINK_HOST && { associatedDomains: [`applinks:${APP_LINK_HOST}`] }),
@@ -113,6 +114,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-router',
       {
         origin: 'https://harbor.social',
+        // Keeps the dist/client + dist/server layout that server.js serves
+        apiRoutes: true,
+        // On by default for web since SDK 58. Each route renders its own
+        // sidebars (`Screen`), so the first visit to a route blanks the whole
+        // page while its chunk loads, not just the content column
+        asyncRoutes: { web: false },
       },
     ],
     [
@@ -134,17 +141,32 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-font',
       {
-        // Native families are the file names on Android and the PostScript
-        // (NotoSans) or family (Twemoji) names on iOS.
-        fonts: ['Regular', 'SemiBold', 'Bold'].flatMap((face) => [
-          `./src/common/assets/fonts/NotoSans-${face}.ttf`,
-          `./src/common/assets/fonts/NotoSansMono-${face}.ttf`,
-        ]),
-        ios: { fonts: ['./src/common/assets/fonts/Twemoji.ttf'] },
-        // The bitmap build is for Android 7-9 (see `twemojiFontFamily`).
+        // On iOS, `Text` refers to each font by the family name in its file
+        // ("Noto Sans", "Twemoji").
+        ios: {
+          fonts: [
+            './public/fonts/NotoSans.ttf',
+            './public/fonts/NotoSansMono.ttf',
+            './src/common/assets/fonts/Twemoji.ttf',
+          ],
+        },
         android: {
           fonts: [
+            // A font file on Android is otherwise named after its file, so the
+            // variable fonts are registered under their iOS family names, letting
+            // `Text` use the same names on both platforms.
+            {
+              fontFamily: 'Noto Sans',
+              path: './public/fonts/NotoSans.ttf',
+              fontDefinitions: [{ weight: 400 }],
+            },
+            {
+              fontFamily: 'Noto Sans Mono',
+              path: './public/fonts/NotoSansMono.ttf',
+              fontDefinitions: [{ weight: 400 }],
+            },
             './src/common/assets/fonts/Twemoji.ttf',
+            // The bitmap build is for Android 7-9 (see `twemojiFontFamily`).
             './src/common/assets/fonts/TwemojiCbdt.ttf',
           ],
         },
@@ -187,6 +209,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     './plugins/withDisableForceDark',
     './plugins/withDisableEmojiCompat',
+    './plugins/withMinimalWindowControls',
   ],
   experiments: {
     typedRoutes: true,

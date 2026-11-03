@@ -1,4 +1,7 @@
-import type { TextInput, TextInputSelectionChangeEvent } from 'react-native';
+import type {
+  TextInputInstance,
+  TextInputSelectionChangeEvent,
+} from 'react-native';
 import { useEffect } from 'react';
 import { isWeb } from '@/src/common/util/platform';
 import { useMentionStoreApi } from '@/src/features/composer/hooks/useMentionStore';
@@ -17,7 +20,7 @@ export function useMentionInputSync({
 }: {
   text: string;
   onChangeText: (next: string, caret?: number) => void;
-  inputRef: React.RefObject<TextInput | null>;
+  inputRef: React.RefObject<TextInputInstance | null>;
 }) {
   const store = useMentionStoreApi();
   // Updated together with `text` by the draft store's `setText`

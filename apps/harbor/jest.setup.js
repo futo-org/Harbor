@@ -64,3 +64,8 @@ jest.mock('@expo/ui/community/pager-view', () => {
     }),
   };
 });
+
+// expo-notifications subscribes a default handler on import, and jest-expo's
+// native mock returns subscriptions without `remove()`, so replacing that
+// handler at module load throws.
+jest.mock('expo-notifications', () => ({ setNotificationHandler: () => {} }));

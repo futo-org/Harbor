@@ -16,10 +16,6 @@ jest.mock('@/src/common/lib/images/processAndUploadImage', () => ({
 }));
 
 jest.mock('expo-router', () => ({
-  useNavigation: () => ({ dispatch: jest.fn() }),
-}));
-
-jest.mock('expo-router/react-navigation', () => ({
   usePreventRemove: jest.fn(),
 }));
 

@@ -22,8 +22,9 @@ name: I can repost a post
       text: ${output.post.undoRepost}
     timeout: 5000
 # Reposts are hidden from Explore, but still show in the reposter's profile.
+- runFlow: ../steps/mark-sidebar.yaml
 - tapOn:
-    id: ${output.nav.profile}
+    css: '#sidebar [aria-label="${output.nav.profile}"]'
 - extendedWaitUntil:
     visible: ${output.identityName} ${output.post.reposted} · now
     timeout: 30000
