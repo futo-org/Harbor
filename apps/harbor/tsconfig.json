@@ -2,12 +2,8 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    // RN 0.87+ strict types clash with @types/react-native-web; legacy types
-    // until we migrate. This replaces the base config's list, so restate
-    // `react-native`.
-    "customConditions": ["react-native", "react-native-legacy-deep-imports"],
     "jsx": "react-jsx",
-    "types": ["node", "react-native-web"],
+    "types": ["node"],
     "paths": { "@/*": ["./*"] }
   },
   "include": [

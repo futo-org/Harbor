@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Keyboard,
   Pressable,
-  type TextInput as RNTextInput,
+  type TextInputInstance,
   View,
 } from 'react-native';
 import { SearchField } from './SearchField';
@@ -77,7 +77,7 @@ export default function SearchScreen() {
 
   const [query, setQuery] = useState(paramQuery);
   const [submitted, setSubmitted] = useState(!!paramQuery);
-  const inputRef = useRef<RNTextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const pendingRefocus = useRef(false);
   const debouncedQuery = useDebouncedValue(query.trim());
 

@@ -43,7 +43,9 @@ export function createThemedStyles<K extends string>(
     const { theme } = useTheme();
     let styles = stylesByTheme.get(theme);
     if (!styles) {
-      styles = createFlattenedStyleSheet(buildStyles(theme, defineStyleSheet));
+      styles = createFlattenedStyleSheet<K>(
+        buildStyles(theme, defineStyleSheet),
+      );
       stylesByTheme.set(theme, styles);
     }
     return styles;

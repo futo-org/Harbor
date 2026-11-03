@@ -1,6 +1,6 @@
-import type { AlertButton, AlertStatic } from 'react-native';
+import type { AlertButton, Alert as RNAlert } from 'react-native';
 
-class AlertWeb implements Pick<AlertStatic, 'alert'> {
+class AlertWeb implements Pick<typeof RNAlert, 'alert'> {
   public alert(title: string, message?: string, buttons?: AlertButton[]): void {
     if (buttons === undefined || buttons.length === 0) {
       window.alert([title, message].filter(Boolean).join('\n'));

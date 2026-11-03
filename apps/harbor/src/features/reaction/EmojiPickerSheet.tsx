@@ -9,7 +9,7 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
-  type TextInput as RNTextInput,
+  type TextInputInstance,
   useWindowDimensions,
   View,
   StyleSheet,
@@ -190,7 +190,7 @@ export function EmojiPickerSheet() {
 
 /** Search input with a clear button, writing to the picker store. */
 function EmojiSearchField() {
-  const inputRef = useRef<RNTextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const rawQuery = useEmojiPickerStore((state) => state.rawQuery);
   const setRawQuery = useEmojiPickerStore((state) => state.setRawQuery);
   const clearQuery = useEmojiPickerStore((state) => state.clearQuery);

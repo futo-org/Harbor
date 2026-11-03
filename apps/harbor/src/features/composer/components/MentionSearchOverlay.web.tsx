@@ -6,7 +6,12 @@ import {
   useState,
   type RefObject,
 } from 'react';
-import { ScrollView, useWindowDimensions, View } from 'react-native';
+import {
+  ScrollView,
+  useWindowDimensions,
+  View,
+  type ViewInstance,
+} from 'react-native';
 import { Portal } from '@rn-primitives/portal';
 import { Kbd, Text } from '@/src/common/components/primitives';
 import { Atoms, useTheme, ZIndex } from '@/src/common/theme';
@@ -133,7 +138,7 @@ function MentionRow({
 
   return (
     <View
-      ref={ref as RefObject<View | null>}
+      ref={ref as RefObject<ViewInstance | null>}
       onPointerEnter={onHover}
       style={selected && { backgroundColor: theme.palette.neutral_25 }}
     >

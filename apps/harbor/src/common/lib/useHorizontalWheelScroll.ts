@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { ScrollView } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 
 /**
  * Forces vertical scrolling to scroll horizontally.
@@ -8,5 +8,5 @@ import type { ScrollView } from 'react-native';
  * and this already provides reliable horizontal scrolling.
  */
 export function useHorizontalWheelScroll(
-  _ref: RefObject<ScrollView | null>,
+  _ref: RefObject<ScrollViewInstance | null>,
 ): void {}

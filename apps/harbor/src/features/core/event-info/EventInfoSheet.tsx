@@ -776,10 +776,7 @@ function RawBlock({
         <Text
           variant="small"
           selectable
-          style={[
-            MONO,
-            isWeb && ({ whiteSpace: 'pre-wrap' } as unknown as TextStyle),
-          ]}
+          style={[MONO, isWeb && { whiteSpace: 'pre-wrap' }]}
         >
           {json}
         </Text>
@@ -836,7 +833,7 @@ function Row({
   const valueStyle: StyleProp<TextStyle> = [
     MONO,
     { minWidth: 0 },
-    isWeb && ({ wordBreak: 'break-all' } as unknown as TextStyle),
+    isWeb && { wordBreak: 'break-all' },
   ];
   return (
     <View style={Atoms.gap_xs}>
