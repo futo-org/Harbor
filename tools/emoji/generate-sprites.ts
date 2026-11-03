@@ -1,11 +1,17 @@
-// Builds the Android picker's sprite pages from the Twemoji 72px PNGs, for
+// Builds the Android picker's sprite pages from the Twemoji SVGs, for
 // the emoji-sprite module, which decodes a page only once one of its emoji is
 // shown, and writes their layout to the app's
 // `src/common/emoji/spritePages.ts`.
 // Elsewhere emoji are drawn with the Twemoji font (generate-font.py). See
 // README.md.
 
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import versions from './versions.json' with { type: 'json' };
@@ -16,9 +22,15 @@ const twemoji = fileURLToPath(
   new URL(`downloads/twemoji/${versions.twemoji}/`, import.meta.url),
 );
 const emojiDir = `${app}src/common/emoji/`;
-const pngs = `${twemoji}assets/72x72/`;
+const svgs = `${twemoji}assets/svg/`;
 
 const CELL = 72;
+// Most of Twemoji's own PNGs were exported from Illustrator, whose
+// antialiasing is bolder than librsvg's. Raising each shape's alpha to this
+// power makes its partly covered edge pixels more opaque; tuned against
+// Twemoji's 72px PNGs. It only touches the ~1px edge band, so it likely
+// carries over to other sizes (untested; at 16px thin details are mostly edge).
+const EDGE_ALPHA_EXPONENT = 0.55;
 // Android sprite pages: up to 16x17 cells of 72px, about 5.6 MB per decoded
 // page; 17 rows fit the 264- and 270-emoji categories without a near-empty
 // overflow page.
@@ -35,8 +47,8 @@ for (const { emoji, category } of listUnicodeEmojis(versions.unicode.picker)) {
     .join('-');
   // Twemoji drops U+FE0F from file names, except in ZWJ sequences other than
   // 👁️‍🗨️ (1f441-200d-1f5e8).
-  const file = [`${code}.png`, `${code.replaceAll('-fe0f', '')}.png`].find(
-    (name) => existsSync(`${pngs}${name}`),
+  const file = [`${code}.svg`, `${code.replaceAll('-fe0f', '')}.svg`].find(
+    (name) => existsSync(`${svgs}${name}`),
   );
   if (file) {
     sheetEmojis.push(emoji);
@@ -85,26 +97,59 @@ export const SPRITE_EMOJIS = [${sheetEmojis.map((emoji) => `'${escapeEmoji(emoji
 rmSync(pagesDir, { recursive: true, force: true });
 mkdirSync(pagesDir, { recursive: true });
 for (let page = 0; page < pageStarts.length; page++) {
-  const pageFiles = sheetFiles.slice(pageStarts[page], pageStarts[page + 1]);
+  const pageCells = await Promise.all(
+    sheetFiles.slice(pageStarts[page], pageStarts[page + 1]).map(renderCell),
+  );
   const pagePng = await sharp({
     create: {
       width: CELL * PAGE_COLUMNS,
-      height: CELL * Math.ceil(pageFiles.length / PAGE_COLUMNS),
+      height: CELL * Math.ceil(pageCells.length / PAGE_COLUMNS),
       channels: 4,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     },
   })
     .composite(
-      pageFiles.map((file, i) => ({
-        input: `${pngs}${file}`,
+      pageCells.map((cell, i) => ({
+        input: cell,
         left: (i % PAGE_COLUMNS) * CELL,
         top: Math.floor(i / PAGE_COLUMNS) * CELL,
       })),
     )
-    .png({ compressionLevel: 9, palette: false })
+    // One 256-color palette per page, about a third of the size of truecolor.
+    // Dithering would add noise to the flat colors.
+    .png({ compressionLevel: 9, palette: true, dither: 0 })
     .toBuffer();
   writeFileSync(`${pagesDir}page-${page}.png`, pagePng);
 }
 console.log(
   `${sheetEmojis.length} emoji -> ${pageStarts.length} Android sprite pages in modules/emoji-sprite`,
 );
+
+async function renderCell(file: string) {
+  const svg = readFileSync(`${svgs}${file}`, 'utf8')
+    .replace(
+      /(<svg[^>]*>)/,
+      // sRGB: in the default linearRGB the round trip shifts flat colors.
+      `$1<defs><filter id="aa" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" x="-100" y="-100" width="300" height="300"><feComponentTransfer><feFuncA type="gamma" exponent="${EDGE_ALPHA_EXPONENT}"/></feComponentTransfer></filter></defs>`,
+    )
+    // Shapes with their own opacity are skipped: the curve would change their
+    // interior too.
+    .replace(
+      /<(path|circle|ellipse|rect|polygon|polyline)\b(?![^>]*opacity)/g,
+      '<$1 filter="url(#aa)"',
+    );
+  const [, , width, height] = (svg.match(/viewBox="([^"]*)"/)?.[1] ?? '')
+    .split(' ')
+    .map(Number);
+  // librsvg draws a viewBox unit as one pixel at 72 dpi. 🍉 is the one
+  // non-square SVG; `contain` centers it like Twemoji's PNG.
+  return sharp(Buffer.from(svg), {
+    density: (72 * CELL) / Math.max(width, height),
+  })
+    .resize(CELL, CELL, {
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toBuffer();
+}

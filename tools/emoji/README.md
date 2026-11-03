@@ -45,7 +45,8 @@ pnpm download
 ## Running
 
 From this folder. The data and the sprites both follow the picker's emoji list,
-so a change to it needs both; the font only follows the Twemoji SVGs.
+so a change to it needs both. The sprites and the font are both rendered from
+the Twemoji SVGs, so a change to those needs both.
 
 ```bash
 pnpm generate:data

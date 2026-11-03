@@ -22,7 +22,6 @@ execFileSync(
     twemojiDir,
     '--strip-components=1',
     `${archiveRoot}/package.json`,
-    `${archiveRoot}/assets/72x72`,
     `${archiveRoot}/assets/svg`,
   ],
   {
