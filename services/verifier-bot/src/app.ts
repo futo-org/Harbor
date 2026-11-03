@@ -163,10 +163,7 @@ async function ensureProfile(client: PolycentricClient): Promise<void> {
         },
       },
     });
-    await client.contentManager.save(content);
-    const event = await client.buildEvent(content, COLLECTION.PROFILE);
-    const signedEvent = await client.signEvent(event);
-    await client.commitEvent(signedEvent, content);
+    await client.createEvent({ collection: COLLECTION.PROFILE, content });
     await client.sync(SyncStrategy.PARTIAL_PUSH);
     console.log('Published bot profile');
   } catch (e) {

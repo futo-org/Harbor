@@ -137,10 +137,14 @@ route('POST', /^\/identity$/, async (_req, res) => {
     res.end();
     return;
   }
-  const { login, genesisEvent, identityContent } =
+  const { login, genesisEvent, identityContent, serializedContent } =
     await client.loginManager.beginSignup();
-  await client.contentManager.save(identityContent);
-  await client.commitEvent(genesisEvent, identityContent);
+  await client.commitEvent({
+    owner: login.identity,
+    signedEvent: genesisEvent,
+    content: identityContent,
+    contentBytes: serializedContent.contentBytes,
+  });
   await client.loginManager.finishSignup(login);
   await client.loginAs(login);
   await client.sync(SyncStrategy.PARTIAL_PUSH);
@@ -186,10 +190,7 @@ route('POST', /^\/post$/, async (req, res) => {
     oneofKind: 'post',
     post: v2.Post.create({ text, images: imageSets }),
   });
-  await client.contentManager.save(content);
-  const event = await client.buildEvent(content);
-  const signedEvent = await client.signEvent(event);
-  await client.commitEvent(signedEvent, content);
+  await client.createEvent({ collection: COLLECTION.FEED, content });
   await client.sync();
   res.statusCode = 303;
   res.setHeader('Location', '/');

@@ -103,9 +103,6 @@ export default function useVerifyPlatformClaim() {
           url,
         );
         const ref = await createClaim.submit({ schema, values });
-        if (!ref) {
-          throw new Error('Failed to create the claim');
-        }
 
         // Verify needs the claim published; roll it back on failure so
         // retries don't pile up claims.

@@ -55,19 +55,14 @@ const useBlocks = create<BlocksState>((set, get) => {
         },
       });
 
-      await client.contentManager.save(content);
-      const event = await client.buildEvent(content, COLLECTION.GRAPH);
-      const signedEvent = await client.signEvent(event);
-
-      setBlocks(new Map(blocks).set(identity, true));
-
       try {
-        await client.commitEvent(signedEvent, content);
+        await client.createEvent({ collection: COLLECTION.GRAPH, content });
       } catch (err) {
         console.error(err);
-        setBlocks(blocks);
         return;
       }
+
+      setBlocks(new Map(blocks).set(identity, true));
 
       // A failed push does not reject; the next sync pushes the event again.
       await client.sync().catch((err) => console.error(err));
@@ -102,13 +97,10 @@ const useBlocks = create<BlocksState>((set, get) => {
               delete: { eventKey: event.key },
             },
           });
-          await client.contentManager.save(deleteContent);
-          const deleteEvent = await client.buildEvent(
-            deleteContent,
-            COLLECTION.GRAPH,
-          );
-          const signedDelete = await client.signEvent(deleteEvent);
-          await client.commitEvent(signedDelete, deleteContent);
+          await client.createEvent({
+            collection: COLLECTION.GRAPH,
+            content: deleteContent,
+          });
         }
       } catch (err) {
         console.error(err);

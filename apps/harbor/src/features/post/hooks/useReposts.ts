@@ -64,8 +64,8 @@ const useReposts = create<RepostsState>((set, get) => ({
     return get().reposts.has(targetId);
   },
   /**
-   * Build the Repost event for `post.id`, optimistically record the mapping,
-   * then commit & sync. Reverts the mapping on error.
+   * Create the Repost event for `post.id`, optimistically record the mapping,
+   * then sync. Reverts the mapping on error.
    */
   async addRepost(client, post) {
     const reposts = get().reposts;
@@ -79,13 +79,12 @@ const useReposts = create<RepostsState>((set, get) => ({
       },
     });
 
-    await client.contentManager.save(repostContent);
-    const repostEvent = await client.buildEvent(repostContent, COLLECTION.FEED);
-    const signedEvent = await client.signEvent(repostEvent);
+    const { eventKey } = await client.createEvent({
+      collection: COLLECTION.FEED,
+      content: repostContent,
+    });
 
-    const event = v2.Event.fromBinary(signedEvent.eventBytes);
-    if (!event.key) return;
-    const repostIdHex = eventKeyId(event.key);
+    const repostIdHex = eventKeyId(eventKey);
 
     set({ reposts: new Map(reposts).set(post.id, repostIdHex) });
     const self = client.activeIdentityKey ?? '';
@@ -95,7 +94,6 @@ const useReposts = create<RepostsState>((set, get) => ({
     alterPostRepostCount(feedQueryKeys.explore(self), post.id, 1);
 
     try {
-      await client.commitEvent(signedEvent, repostContent);
       await client.sync();
       invalidateFeeds(client, client.activeIdentityKey ?? post.identity);
     } catch (err) {
@@ -159,13 +157,10 @@ const useReposts = create<RepostsState>((set, get) => ({
             delete: { eventKey: event.key },
           },
         });
-        await client.contentManager.save(deleteContent);
-        const deleteEvent = await client.buildEvent(
-          deleteContent,
-          COLLECTION.FEED,
-        );
-        const signedDelete = await client.signEvent(deleteEvent);
-        await client.commitEvent(signedDelete, deleteContent);
+        await client.createEvent({
+          collection: COLLECTION.FEED,
+          content: deleteContent,
+        });
       }
     } catch (err) {
       console.error(err);

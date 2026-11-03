@@ -78,6 +78,7 @@ export type CreatedEvent = {
   signedEvent: Proto.SignedEvent;
   event: Proto.Event;
   eventKey: Proto.EventKey;
+  signer: Proto.PublicKey;
   eventBytes: Uint8Array;
   content: Proto.Content;
   contentBytes: Uint8Array;
@@ -516,6 +517,7 @@ export class PolycentricClient {
       signedEvent,
       event,
       eventKey,
+      signer: keyPair.publicKey,
       eventBytes: signedEvent.eventBytes,
       content,
       contentBytes,
