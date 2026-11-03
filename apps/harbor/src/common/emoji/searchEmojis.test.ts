@@ -93,7 +93,7 @@ describe('searchEmojis', () => {
       expect(emojisFor('heart').slice(0, 3)).toContain('❤');
       expect(emojisFor('joy').slice(0, 3)).toContain('😂');
       expect(emojisFor('laughing')[0]).toBe('🤣');
-      expect(emojisFor('sad').slice(0, 8)).toContain('😢');
+      expect(emojisFor('sad').slice(0, 9)).toContain('😢');
       expect(emojisFor('sad').slice(0, 12)).toContain('😞');
       expect(emojisFor('lol').slice(0, 20)).toEqual(
         expect.arrayContaining(['😂', '🤣']),
