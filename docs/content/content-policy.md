@@ -1,4 +1,5 @@
 ---
+
 title: Content Policy
 sidebar_label: Content Policy
 sidebar_position: 10
@@ -6,7 +7,7 @@ sidebar_position: 10
 
 # Content Policy
 
-Last updated October 19th, 2026
+Last updated November 2nd, 2026
 
 This policy covers the servers run by FUTO Holdings Inc. ("FUTO", "we", "us"),
 which are marked as operated by FUTO on the [Servers](./servers.md) page. It
@@ -50,6 +51,9 @@ We remove content from our servers only in a narrow set of cases:
 - **Credible threats of violence** against a person or group, and incitement to
   imminent violence.
 - **Non-consensual intimate imagery.**
+- **Pornography.** Sexually explicit images and video are not hosted on our
+  servers. Other servers may choose to host it, see
+  [Every server sets its own policy](#every-server-sets-its-own-policy).
 - **Copyright infringement**, on receipt of a valid takedown notice under the
   DMCA.
 - **Abuse of the service itself**: spam, malware, automated flooding, and
@@ -65,12 +69,14 @@ that identity can still publish to servers run by others.
 
 FUTO runs a moderation service that labels posts rather than removing them.
 The labels are **Hate**, **Self-Harm**, **Sexually Suggestive**, **Sexually
-Explicit**, and **Violence**. By default, a labelled post is covered with a
-warning that names the labels and who applied them, and you tap to reveal it.
+Explicit**, and **Violence**.
 
 In Settings, Content Moderation, you choose per label whether to **Hide**
-matching posts, **Warn**, or **Show** them. These preferences apply on your
-device. They never stop you from posting, and they are never applied to your
+matching posts, **Warn** (the post is covered with a warning that names the
+labels and who applied them, and you tap to reveal it), or **Show** them.
+Everything is shown by default. These preferences apply on your device.
+Installs from Google Play or the App Store start with stricter defaults, see
+the [App Store Content Policy](./content-policy-app-stores.md). They never stop you from posting, and they are never applied to your
 account by us. See [Content Moderation](./features/moderation.md).
 
 You can also block any user. Their posts and interactions stop appearing for

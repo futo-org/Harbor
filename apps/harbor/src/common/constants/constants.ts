@@ -1,5 +1,5 @@
+import { IS_STORE_BUILD } from '@/src/common/util/application';
 import { publicEnv } from '@/src/common/util/env';
-import Constants from 'expo-constants';
 
 export const APP_NAME = 'Harbor';
 
@@ -16,14 +16,12 @@ export const ROADMAP_URL = 'https://join.harbor.social/docs/roadmap/';
 export const PRIVACY_POLICY_URL =
   'https://join.harbor.social/docs/privacy-policy/';
 /**
- * Content policy for the FUTO servers. Builds installed from Google Play or
- * the App Store are bound by the stricter app store policy instead (see
- * `APP_DISTRIBUTION` in app.config.ts).
+ * Content policy for the FUTO servers. Store builds are bound by the stricter
+ * app store policy instead.
  */
-export const CONTENT_POLICY_URL =
-  Constants.expoConfig?.extra?.distribution === 'store'
-    ? 'https://join.harbor.social/docs/content-policy-app-stores/'
-    : 'https://join.harbor.social/docs/content-policy/';
+export const CONTENT_POLICY_URL = IS_STORE_BUILD
+  ? 'https://join.harbor.social/docs/content-policy-app-stores/'
+  : 'https://join.harbor.social/docs/content-policy/';
 /**
  * Public web base URL for this app, used to build shareable links (e.g. to a
  * verification claim). Override with EXPO_PUBLIC_HARBOR_APP_URL; trailing

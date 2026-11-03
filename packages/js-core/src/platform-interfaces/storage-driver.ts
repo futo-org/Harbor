@@ -1,15 +1,11 @@
 import type { IEventRepository } from './event.repository';
 import type { IContentRepository } from './content.repository';
-import type { IKeysRepository } from './keys-repository';
+import type { ILoginRepository, LoginId } from './login-repository';
 
 export interface IStorageDriver {
   createEventRepository: () => IEventRepository;
   createContentRepository: () => IContentRepository;
-  createKeysRepository: () => IKeysRepository;
-  /** Persist which v2 identity is active for this signing public key (Ed25519: 32 bytes). */
-  saveActiveIdentityKey: (
-    publicKey: Uint8Array,
-    identityKey: string | null,
-  ) => Promise<void>;
-  loadActiveIdentityKey: (publicKey: Uint8Array) => Promise<string | null>;
+  createLoginRepository: () => ILoginRepository;
+  setActiveLogin: (login: LoginId | null) => Promise<void>;
+  getActiveLogin: () => Promise<LoginId | null>;
 }

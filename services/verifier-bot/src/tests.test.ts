@@ -16,6 +16,7 @@ import {
 } from '@polycentric/js-core';
 import { createPolycentricNodeClient } from '@polycentric/js-node';
 import { parseClaimId, SCHEMA_NAME } from './claims.js';
+import { createIdentity } from './identity.js';
 import type { ClaimField } from './models.js';
 import { platforms } from './platforms/platforms.js';
 import { Result } from './result.js';
@@ -200,12 +201,7 @@ async function makeClient(): Promise<PolycentricClient> {
     blobDirectory: join(dir, 'blobs'),
     seedServers: [TEST_SERVER],
   });
-  if (!client.activeIdentityKey && client.currentKeyPair) {
-    await client.identityManager.publish({
-      rotationKeys: [client.currentKeyPair.publicKey],
-      signingKeys: [],
-    });
-  }
+  if (!client.activeIdentityKey) await createIdentity(client);
   return client;
 }
 

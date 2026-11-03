@@ -11,6 +11,7 @@ import {
   runHealthCheck,
   startHealthCheckLoop,
 } from './health.js';
+import { createIdentity } from './identity.js';
 import {
   httpDuration,
   httpRequests,
@@ -116,7 +117,7 @@ async function loadClient(): Promise<PolycentricClient> {
   mkdirSync('./state/blobs', { recursive: true });
 
   // Reusing the same storage keeps a stable bot identity across restarts:
-  // the key pair (and its published Identity) are restored on boot. Set
+  // the active login is restored on boot. Set
   // HARBOR_VERIFIER_BOT_DATABASE_URL (postgres://, optionally
   // ?schema=<name>) to use postgres instead of the local sqlite file.
   const client = await createPolycentricNodeClient({
@@ -126,16 +127,10 @@ async function loadClient(): Promise<PolycentricClient> {
     seedServers: servers,
   });
 
-  // First run: no identity yet — publish one for the bot's current key pair.
+  // First run: no identity yet — create and sync one.
   if (!client.activeIdentityKey) {
-    if (!client.currentKeyPair) {
-      throw new Error('Client has no key pair after initialization.');
-    }
-    console.log('Publishing new bot identity');
-    await client.identityManager.publish({
-      rotationKeys: [client.currentKeyPair.publicKey],
-      signingKeys: [],
-    });
+    console.log('Creating new bot identity');
+    await createIdentity(client);
   }
 
   try {

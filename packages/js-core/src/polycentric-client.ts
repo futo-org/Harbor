@@ -5,15 +5,11 @@ import {
   HydrationStatus,
   IdentityManager,
   InitializationStep,
-  KeyPairManager,
+  LoginManager,
   PairingSessionManager,
+  type ServerPushResult,
 } from './client-internal';
-import {
-  COLLECTION,
-  KEY_TYPE,
-  SyncStrategy,
-  type Collection,
-} from './constants';
+import { COLLECTION, SyncStrategy, type Collection } from './constants';
 import { sha256 } from '@noble/hashes/sha2.js';
 import type {
   ICryptoManager,
@@ -28,7 +24,13 @@ import { bytesEqual } from './utils/bytes';
 import { CryptoManager } from './crypto/crypto-manager';
 import { createServerJwt, DEFAULT_EXPIRY_SECONDS } from './crypto/server-jwt';
 
-import type { PolycentricCoreLike, EventKey } from '@polycentric/rs-core-wasm';
+import type {
+  PolycentricCoreLike,
+  EventKey,
+  EventPushIssues,
+  PushResult,
+} from '@polycentric/rs-core-wasm';
+
 // `./generated` is the pure-JS bindings subpath; it exposes the Query
 // class and QueryStatus enum without dragging in the wasm asset. The
 // uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
@@ -38,6 +40,7 @@ import {
   QueryStatus,
   type QueryOpts,
 } from '@polycentric/rs-core-wasm/generated';
+import type { LoginId } from './platform-interfaces/login-repository';
 
 type CoreType = PolycentricCoreLike;
 
@@ -45,21 +48,9 @@ type CoreType = PolycentricCoreLike;
 const streamId = (key: Proto.EventKey): string =>
   `${key.collection}:${key.signedBy?.keyType}:${bytesToHex(key.signedBy?.key ?? new Uint8Array())}`;
 
-export type {
-  IdentityState,
-  PublishArgs,
-  IdentityUpdate,
-} from './client-internal/identity-manager';
-
-/** Private key — same shape as PublicKey, holds the secret key bytes. */
-export interface PrivateKey {
-  keyType: Proto.KeyType;
-  key: Uint8Array;
-}
-
 export interface KeyPair {
   keyType: Proto.KeyType;
-  privateKey: PrivateKey;
+  privateKey: Proto.PrivateKey;
   publicKey: Proto.PublicKey;
 }
 
@@ -97,7 +88,7 @@ export interface PolycentricClientConfig {
 export class PolycentricClient {
   public readonly events = new EventService();
 
-  public readonly keyPairManager = new KeyPairManager(this);
+  public readonly loginManager = new LoginManager(this);
   public readonly contentManager = new ContentManager(this);
   public readonly identityManager = new IdentityManager(this);
   public readonly pairingSessionManager = new PairingSessionManager(this);
@@ -178,7 +169,7 @@ export class PolycentricClient {
       this.storageHandle = new StorageHandle({
         eventRepository: this.storageDriver.createEventRepository(),
         contentRepository: this.storageDriver.createContentRepository(),
-        keysRepository: this.storageDriver.createKeysRepository(),
+        loginRepository: this.storageDriver.createLoginRepository(),
       });
 
       this.setStep(InitializationStep.LOADING_PROCESS_ID);
@@ -190,16 +181,7 @@ export class PolycentricClient {
 
       this.setHydrationStatus(HydrationStatus.COMPLETED);
 
-      const restoredIdentity = await this.restoreKeyPair();
-
-      // SDK should always make a new keypair if we can't find any
-      if (!restoredIdentity) {
-        this.setStep(InitializationStep.CREATING_EPHEMERAL_IDENTITY);
-        await this.keyPairManager.createKeyPair({
-          keyType: KEY_TYPE.ED25519,
-          setAsCurrent: true,
-        });
-      }
+      await this.loginManager.restore();
 
       // Push the JS-side server list into the rust core so that
       // observables that fan out to every configured server (e.g.
@@ -321,21 +303,6 @@ export class PolycentricClient {
   }
 
   /**
-   * Looks at existing keys and will pick the first one
-   */
-  private async restoreKeyPair(): Promise<boolean> {
-    const identities = await this.keyPairManager.getKeys();
-    const identity = identities[0];
-
-    if (!identity) {
-      return false;
-    }
-
-    await this.setCurrentKeyPair(identity);
-    return true;
-  }
-
-  /**
    * Hydrate the Rust core's in-memory stores from persistent storage.
    * The Rust stores are ephemeral (reset on every load) so anything the
    * core needs (events for clocks/sequences, content for identity lookups)
@@ -377,32 +344,33 @@ export class PolycentricClient {
     content: Proto.Content,
     collection: Collection | number = COLLECTION.FEED,
     identityKey?: string,
+    publicKey?: Proto.PublicKey,
   ): Promise<Proto.Event> {
-    if (!this.currentKeyPair) {
-      throw new Error('No keypair set');
-    }
-
     const identity = identityKey ?? this.activeIdentityKey;
     if (!identity) {
       throw new Error('No active identity');
     }
 
+    const signer = publicKey ?? this.currentKeyPair?.publicKey;
+    if (!signer) {
+      throw new Error('No keypair');
+    }
+
     const sequence = this.core.nextSequence(identity, collection);
 
     // identity_sequence must reference an identity event signed by the
-    // current keypair.
+    // signing key.
     const identitySequence =
       collection === COLLECTION.IDENTITY
         ? sequence
         : this.core.getIdentitySequence(
             identity,
-            Proto.PublicKey.toBinary(this.currentKeyPair.publicKey)
-              .buffer as ArrayBuffer,
+            Proto.PublicKey.toBinary(signer).buffer as ArrayBuffer,
           );
 
     if (!identitySequence) {
       throw new Error(
-        'Cannot build event: current keypair has no identity event for the active identity (broken pairing?)',
+        'Cannot build event: signing key has no identity event for the identity (broken pairing?)',
       );
     }
 
@@ -417,7 +385,7 @@ export class PolycentricClient {
       key: Proto.EventKey.create({
         collection,
         identity,
-        signedBy: this.currentKeyPair.publicKey,
+        signedBy: signer,
         sequence,
       }),
       identitySequence,
@@ -439,23 +407,29 @@ export class PolycentricClient {
   }
 
   /**
-   * Sign an event with the current key pair.
+   * Sign an event, using the client's current key pair or a provided one.
    */
-  async signEvent(event: Proto.Event): Promise<Proto.SignedEvent> {
+  async signEvent(
+    event: Proto.Event,
+    keyPair?: KeyPair,
+  ): Promise<Proto.SignedEvent> {
     const eventBytes = Proto.Event.toBinary(event);
 
     const signedEventBytes = await this.core.signEvent(
       eventBytes.buffer as ArrayBuffer,
       {
         sign: async (bytes: ArrayBuffer): Promise<ArrayBuffer> => {
-          if (!this.currentKeyPair) {
+          keyPair = keyPair ?? this.currentKeyPair ?? undefined;
+          if (!keyPair) {
             throw new Error('No keypair');
           }
+
           const signature = await this.crypto.sign(
-            this.currentKeyPair.privateKey.key,
+            keyPair.privateKey.key,
             new Uint8Array(bytes),
-            this.currentKeyPair.keyType,
+            keyPair.keyType,
           );
+
           return signature.buffer.slice(
             signature.byteOffset,
             signature.byteOffset + signature.byteLength,
@@ -463,6 +437,7 @@ export class PolycentricClient {
         },
       },
     );
+
     return Proto.SignedEvent.fromBinary(new Uint8Array(signedEventBytes));
   }
 
@@ -1031,11 +1006,11 @@ export class PolycentricClient {
     }
   }
 
-  /** Used for syncing */
+  /** Used for syncing. Returns null for strategies that don't push. */
   private getPushFn(
     strategy: SyncStrategy,
     identity: string,
-  ): (server: string) => Promise<ArrayBuffer | undefined> {
+  ): ((server: string) => Promise<PushResult | undefined>) | null {
     switch (strategy) {
       case SyncStrategy.FULL:
       case SyncStrategy.FULL_PUSH:
@@ -1045,13 +1020,15 @@ export class PolycentricClient {
         return (server) => this.core.pushLocalEvents(identity, server, true);
       case SyncStrategy.FULL_PULL:
       case SyncStrategy.PARTIAL_PULL:
-        return async () => undefined;
+        return null;
     }
   }
 
   /**
    * Sync events for the active identity between this client and
-   * the remote servers. Throws only if the pull fails.
+   * the remote servers. Throws only if the pull fails. Per-server push
+   * outcomes, including events the servers responded with errors/warnings
+   * for, are emitted as `pushResults` on {@link events}.
    * @returns The number of new events pulled
    */
   async sync(strategy?: SyncStrategy): Promise<number> {
@@ -1067,40 +1044,55 @@ export class PolycentricClient {
     const pullTask = pullFn();
 
     // Push new events and blobs to servers
-    const pushTasks = this.servers.map(async (server): Promise<void> => {
-      const responseBytes = await pushFn(server);
-      if (!responseBytes) return; // Nothing was done
+    const servers = this.servers;
+    const pushTasks = (pushFn ? servers : []).map(
+      async (server): Promise<EventPushIssues[]> => {
+        const result = await pushFn?.(server);
+        if (!result) return [];
 
-      const response = Proto.PutEventsResponse.fromBinary(
-        new Uint8Array(responseBytes),
-      );
-      const blobs = response.requestedBlobs;
+        for (const issues of result.eventIssues) {
+          if (issues.errors.length > 0) {
+            console.error('Error from event push:', issues);
+          } else {
+            console.warn('Warning from event push:', issues);
+          }
+        }
 
-      for (const error of response.errors) {
-        console.error('Error from event push:', error);
-      }
+        const response = Proto.PutEventsResponse.fromBinary(
+          new Uint8Array(result.response),
+        );
 
-      await Promise.allSettled(
-        blobs.map(async (blob) => {
-          if (!blob.digest) return;
+        await Promise.allSettled(
+          response.requestedBlobs.map(async (blob) => {
+            if (!blob.digest) return;
 
-          const blobData = await this.fileStore.get(blob.digest);
-          if (!blobData) return;
+            const blobData = await this.fileStore.get(blob.digest);
+            if (!blobData) return;
 
-          await this.uploadBlob(blob, blobData, [server]);
-        }),
-      );
-    });
+            await this.uploadBlob(blob, blobData, [server]);
+          }),
+        );
+
+        return result.eventIssues;
+      },
+    );
 
     const [pullResult, ...pushResults] = await Promise.allSettled([
       pullTask,
       ...pushTasks,
     ]);
 
-    for (const result of pushResults) {
-      if (result.status === 'rejected') {
-        console.error('Sync failed for a server:', result.reason);
-      }
+    if (pushFn) {
+      this.events.emitPushResults(
+        pushResults.map((result, i): ServerPushResult => {
+          const server = servers[i];
+          if (result.status === 'fulfilled') {
+            return { identity, server, eventIssues: result.value };
+          }
+          console.error('Sync failed for a server:', result.reason);
+          return { identity, server, eventIssues: [], error: result.reason };
+        }),
+      );
     }
 
     if (pullResult.status === 'fulfilled') {
@@ -1188,18 +1180,6 @@ export class PolycentricClient {
     );
   }
 
-  public async setCurrentKeyPair(keyPair: KeyPair): Promise<void> {
-    this.currentKeyPair = keyPair;
-    // Restore saved identity key for this key pair
-    this.activeIdentityKey = await this.storageDriver.loadActiveIdentityKey(
-      keyPair.publicKey.key,
-    );
-    this.core.setActiveIdentity(this.activeIdentityKey ?? undefined);
-    if (this.storageHandle) {
-      this.refreshServers();
-    }
-  }
-
   /**
    * Derive `servers` from the active identity's latest Identity document.
    * Identities that have never configured a server list keep the current
@@ -1216,41 +1196,41 @@ export class PolycentricClient {
   }
 
   /**
-   * Update our state to match this identity.
+   * Set our state to match this login and persist it as the active login.
    */
-  public async adoptIdentity(identityKey: string | null): Promise<void> {
-    const changedIdentity = identityKey !== this.activeIdentityKey;
-
-    if (changedIdentity && this.currentKeyPair) {
-      await this.storageDriver.saveActiveIdentityKey(
-        this.currentKeyPair.publicKey.key,
-        identityKey,
-      );
-    }
-
-    if (changedIdentity) {
-      this.activeIdentityKey = identityKey;
-      this.core.setActiveIdentity(identityKey ?? undefined);
-
-      // Tokens minted for the previous identity must not be reused.
+  public async loginAs(
+    login: LoginId | null,
+    persist: boolean = true,
+  ): Promise<void> {
+    if (!login) {
+      if (persist) await this.storageDriver.setActiveLogin(null);
       this.core.clearAuthTokens();
+      this.core.setActiveIdentity(undefined);
+      this.activeIdentityKey = null;
+      this.currentKeyPair = null;
+      return;
     }
 
-    // Use the latest server list from the latest identity state
+    const loginDetails = await this.storage.logins.getLoginDetails(
+      login.identity,
+      login.publicKey,
+    );
+    if (!loginDetails) throw new Error('Login not found.');
+
+    if (persist) await this.storageDriver.setActiveLogin(login);
+
+    this.core.clearAuthTokens();
+    this.core.setActiveIdentity(loginDetails.identity);
+
+    this.activeIdentityKey = loginDetails.identity;
+    this.currentKeyPair = {
+      keyType: loginDetails.publicKey.keyType,
+      privateKey: loginDetails.privateKey,
+      publicKey: loginDetails.publicKey,
+    };
+
     this.refreshServers();
-
-    if (changedIdentity) {
-      // This is really an 'identityChanged' event underneath
-      this.events.emitKeyPairChanged(this.currentKeyPair);
-    }
-  }
-
-  /**
-   * Look up the v2 identity key bound to the given key pair locally.
-   * Returns null if this device has never associated an identity with the pair.
-   */
-  public getIdentityKeyFor(keyPair: KeyPair): Promise<string | null> {
-    return this.storageDriver.loadActiveIdentityKey(keyPair.publicKey.key);
+    this.events.emitKeyPairChanged(this.currentKeyPair);
   }
 
   private setState(state: ClientState) {

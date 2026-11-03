@@ -32,17 +32,16 @@ minimumReleaseAgeExclude:
   - "@devicelab/*"
 
 allowBuilds:
-  '@browserless/goto': false
-  '@bufbuild/buf': false
-  '@parcel/watcher': false
-  '@swc/core': false
+  "@browserless/goto": false
+  "@bufbuild/buf": false
+  "@parcel/watcher": false
+  "@swc/core": false
   better-sqlite3: true
   core-js: false
   esbuild: false
   html-get: false
   puppeteer: false
   re2: false
-  unrs-resolver: false
 
 overrides:
   dompurify@<3.4.17: ">=3.4.17"
@@ -54,6 +53,6 @@ overrides:
   websocket-driver@<0.7.5: ">=0.7.5"
 
 patchedDependencies:
-  '@bsky.app/react-native-uitextview@2.7.1': patches/@bsky.app__react-native-uitextview@2.7.1.patch
+  "@bsky.app/react-native-uitextview@2.7.1": patches/@bsky.app__react-native-uitextview@2.7.1.patch
   "@rn-primitives/hooks@1.5.2": patches/@rn-primitives__hooks@1.5.2.patch
   react-native-safe-area-context@5.10.1: patches/react-native-safe-area-context@5.10.1.patch

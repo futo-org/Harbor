@@ -36,7 +36,7 @@ function matchesBackup(
   if (!backup?.recoveryKey) return false;
   if (backup.identityKey !== identityKey) return false;
 
-  client.identityManager.copyBackupEvents(backup);
+  client.loginManager.copyBackupEvents(backup);
 
   return client.identityManager.checkRecoveryKey(
     backup.recoveryKey,

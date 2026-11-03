@@ -1,23 +1,23 @@
-import type { IStorageDriver } from '@polycentric/js-core';
-import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
-import { IndexedDBKeysRepository } from './keys.repository';
+import type { IStorageDriver, LoginId } from '@polycentric/js-core';
+import { DatabaseError, v2 as Proto } from '@polycentric/js-core';
+import { IndexedDBDatabase } from './database';
+import { IndexedDBLoginRepository } from './login-repository';
 import { IndexedDBEventRepository } from './event.repository';
 import { IndexedDBContentRepository } from './content.repository';
+
+/**
+ * Stored representation of the active login in the `loginState` store.
+ */
+type ActiveLoginEntry = LoginId & { name: 'activeLogin' };
 
 export class IndexedDBStorageDriver implements IStorageDriver {
   private readonly database: IndexedDBDatabase;
 
+  private static readonly LOGIN_STATE_STORE = 'loginState';
+  private static readonly ACTIVE_LOGIN_KEY = 'activeLogin';
+
   private constructor(databaseName: string) {
-    const layout: IndexedDBDatabaseLayout = {
-      version: 3,
-      stores: [],
-    };
-
-    IndexedDBEventRepository.createNeededStores(layout);
-    IndexedDBContentRepository.createNeededStores(layout);
-    IndexedDBKeysRepository.createNeededStores(layout);
-
-    this.database = new IndexedDBDatabase(databaseName, layout);
+    this.database = new IndexedDBDatabase(databaseName);
   }
 
   static async create(databaseName: string): Promise<IndexedDBStorageDriver> {
@@ -32,41 +32,70 @@ export class IndexedDBStorageDriver implements IStorageDriver {
   createContentRepository() {
     return new IndexedDBContentRepository(this.database);
   }
-  createKeysRepository() {
-    return new IndexedDBKeysRepository(this.database);
+  createLoginRepository() {
+    return new IndexedDBLoginRepository(this.database);
   }
 
-  async saveActiveIdentityKey(
-    publicKey: Uint8Array,
-    identityKey: string | null,
-  ): Promise<void> {
+  async setActiveLogin(login: LoginId | null): Promise<void> {
     try {
-      const key = IndexedDBStorageDriver.activeIdentityKey(publicKey);
-      if (identityKey) {
-        localStorage.setItem(key, identityKey);
-      } else {
-        localStorage.removeItem(key);
+      const store = this.loginStateStore('readwrite');
+
+      // TODO: remove this check once we support identity switching.
+      // For now, we should disallow changing the active identity.
+      const existingEntry = await IndexedDBDatabase.requestAsPromise<
+        ActiveLoginEntry | undefined
+      >(store.get(IndexedDBStorageDriver.ACTIVE_LOGIN_KEY));
+
+      if (existingEntry) {
+        throw new DatabaseError('Already logged in.');
       }
-    } catch {}
-  }
 
-  async loadActiveIdentityKey(publicKey: Uint8Array): Promise<string | null> {
-    try {
-      return localStorage.getItem(
-        IndexedDBStorageDriver.activeIdentityKey(publicKey),
-      );
-    } catch {
-      return null;
+      if (login) {
+        const entry: ActiveLoginEntry = {
+          ...login,
+          name: IndexedDBStorageDriver.ACTIVE_LOGIN_KEY,
+        };
+
+        await IndexedDBDatabase.requestAsPromise(store.put(entry));
+      } else {
+        await IndexedDBDatabase.requestAsPromise(
+          store.delete(IndexedDBStorageDriver.ACTIVE_LOGIN_KEY),
+        );
+      }
+
+      store.transaction.commit();
+    } catch (error) {
+      throw new DatabaseError(`set active login: ${error}`, error);
     }
   }
 
-  private static activeIdentityKey(publicKey: Uint8Array): string {
-    return `polycentric:activeIdentity:${IndexedDBStorageDriver.toHex(publicKey, 32)}`;
+  async getActiveLogin(): Promise<LoginId | null> {
+    try {
+      const store = this.loginStateStore('readonly');
+
+      const entry = await IndexedDBDatabase.requestAsPromise<
+        ActiveLoginEntry | undefined
+      >(store.get(IndexedDBStorageDriver.ACTIVE_LOGIN_KEY));
+
+      if (!entry) {
+        return null;
+      }
+
+      return {
+        identity: entry.identity,
+        publicKey: Proto.PublicKey.create({
+          keyType: entry.publicKey.keyType,
+          key: entry.publicKey.key,
+        }),
+      };
+    } catch (error) {
+      throw new DatabaseError(`get active login: ${error}`, error);
+    }
   }
 
-  private static toHex(bytes: Uint8Array, len = 8): string {
-    return Array.from(bytes.slice(0, len))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
+  private loginStateStore(mode: IDBTransactionMode): IDBObjectStore {
+    return this.database
+      .createTransaction(IndexedDBStorageDriver.LOGIN_STATE_STORE, mode)
+      .objectStore(IndexedDBStorageDriver.LOGIN_STATE_STORE);
   }
 }

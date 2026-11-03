@@ -53,6 +53,7 @@ pub async fn tombstoned_keys<Auth>(
 
 /// List all tombstone events
 /// WARNING: These events are unvalidated and can not be trusted
+#[tracing::instrument(skip_all)]
 pub async fn list_tombstones_for_event_keys<C: ConnectionTrait>(
     db: &C,
     keys: &[TargetEventKey],
@@ -188,6 +189,7 @@ fn content_to_delete_event_join() -> RelationDef {
 ///      identity (you can only delete your own content).
 ///   2. The Delete event's signer is authorized under the
 ///      identity's chain
+#[tracing::instrument(skip_all)]
 pub async fn validate_tombstones<Auth>(
     ctx: &RequestContext<Auth>,
     deletes_by_target: HashMap<TargetEventKey, Vec<EventBundle>>,

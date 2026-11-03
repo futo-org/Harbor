@@ -1,4 +1,4 @@
-use sea_orm::sea_query::Values;
+use sea_orm::sea_query::{BinOper, Expr, Value, ValueType, Values};
 use sea_orm::{
     ConnectionTrait, DbErr, ExecResult, QueryResult, RuntimeErr, Statement,
 };
@@ -220,6 +220,7 @@ pub(crate) struct DbTx<'c>(Mutex<sqlx::Transaction<'c, sqlx::Postgres>>);
 
 impl<'c> DbTx<'c> {
     /// Commits this transaction.
+    #[tracing::instrument(name = "db.commit", skip_all)]
     pub(crate) async fn commit(self) -> Result<(), DbErr> {
         self.0
             .into_inner()
@@ -229,6 +230,7 @@ impl<'c> DbTx<'c> {
     }
 
     /// Commits this transaction and start another.
+    #[tracing::instrument(name = "db.commit_and_chain", skip_all)]
     pub(crate) async fn commit_and_chain(&mut self) -> Result<(), DbErr> {
         self.0
             .get_mut()
@@ -239,6 +241,7 @@ impl<'c> DbTx<'c> {
     }
 
     /// Abort this transaction.
+    #[tracing::instrument(name = "db.rollback", skip_all)]
     pub(crate) async fn rollback(self) -> Result<(), DbErr> {
         self.0
             .into_inner()
@@ -314,4 +317,25 @@ fn sqlx_query(
 
 fn into_seaorm_error(err: sqlx::Error) -> DbErr {
     DbErr::Query(RuntimeErr::SqlxError(err.into()))
+}
+
+/// `$value = ANY ($array)`.
+pub(crate) fn in_array<T>(
+    value: Expr,
+    array: impl ExactSizeIterator<Item = T>,
+) -> Expr
+where
+    T: ValueType + Into<Value>,
+{
+    Expr::Binary(
+        Box::new(value),
+        BinOper::Custom("= ANY"),
+        Box::new(Expr::cust_with_expr(
+            "($1)",
+            Expr::Value(Value::Array(
+                T::array_type(),
+                Some(Box::new(array.map(Into::into).collect())),
+            )),
+        )),
+    )
 }

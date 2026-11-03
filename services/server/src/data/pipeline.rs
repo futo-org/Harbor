@@ -1,5 +1,7 @@
 //! Generic query pipeline: `fetch → hydrate → filter → view`.
 
+use tracing::{Instrument, info_span};
+
 use crate::data::{Cursor, CursorFilter, Marker, PageInfo};
 
 pub async fn create_pipeline<
@@ -39,10 +41,18 @@ where
         Hydrated,
     ) -> Result<View, Error>,
 {
-    let fetched = fetch_fn(ctx, params).await?;
-    let hydrated = hydrate_fn(ctx, params, &fetched).await?;
-    let filtered = filter_fn(ctx, params, fetched, &hydrated).await?;
-    view_fn(ctx, params, filtered, hydrated).await
+    let fetched = fetch_fn(ctx, params)
+        .instrument(info_span!("pipeline.fetch"))
+        .await?;
+    let hydrated = hydrate_fn(ctx, params, &fetched)
+        .instrument(info_span!("pipeline.hydrate"))
+        .await?;
+    let filtered = filter_fn(ctx, params, fetched, &hydrated)
+        .instrument(info_span!("pipeline.filter"))
+        .await?;
+    view_fn(ctx, params, filtered, hydrated)
+        .instrument(info_span!("pipeline.view"))
+        .await
 }
 
 /// Remove any extra rows (for checking next page existence) and extracts page

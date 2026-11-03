@@ -1,6 +1,6 @@
 import type { IEventRepository } from '@polycentric/js-core';
 import { DatabaseError, v2 as Proto } from '@polycentric/js-core';
-import { IndexedDBDatabase, type IndexedDBDatabaseLayout } from './database';
+import { IndexedDBDatabase } from './database';
 
 /**
  * Stored representation of an event in IndexedDB.
@@ -37,19 +37,6 @@ export class IndexedDBEventRepository implements IEventRepository {
   private readonly database: IndexedDBDatabase;
 
   private static readonly STORE_NAME = 'events';
-
-  /**
-   * Adds the stores that this repository needs to an IndexedDBDatabaseLayout object
-   */
-  static createNeededStores(layout: IndexedDBDatabaseLayout) {
-    layout.stores.push({
-      name: IndexedDBEventRepository.STORE_NAME,
-      options: {
-        keyPath: ['identity', 'publicKey', 'collection', 'sequence'],
-      },
-      indexes: [],
-    });
-  }
 
   constructor(database: IndexedDBDatabase) {
     this.database = database;

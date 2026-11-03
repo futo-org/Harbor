@@ -32,6 +32,16 @@ use crate::service::proto::{
 
 /// Ingest a batch of signed events. Each event is processed in
 /// isolation with failures reported back in `PutEventsResponse.errors`
+#[tracing::instrument(
+    name = "put_events",
+    skip_all,
+    fields(
+        events = req.event_bundles.len(),
+        inserted = tracing::field::Empty,
+        errors = tracing::field::Empty,
+        warnings = tracing::field::Empty,
+    )
+)]
 pub async fn handle(
     mut ctx: PublicContext,
     req: PutEventsRequest,
@@ -103,6 +113,11 @@ pub async fn handle(
         }
     }
 
+    tracing::Span::current()
+        .record("inserted", stored.values().map(Vec::len).sum::<usize>())
+        .record("errors", errors.len())
+        .record("warnings", warnings.len());
+
     if let Some(pubsub) = heads_pubsub::get()
         && !stored.is_empty()
     {
@@ -131,6 +146,15 @@ pub async fn handle(
 
 /// Validate and persist an event, adding its blobs to `all_blobs`.
 /// Returns its key and whether it was newly stored.
+#[tracing::instrument(
+    skip_all,
+    fields(
+        event.identity = tracing::field::Empty,
+        event.collection = tracing::field::Empty,
+        event.sequence = tracing::field::Empty,
+        event.content_type = tracing::field::Empty,
+    )
+)]
 async fn process_event(
     ctx: &mut PublicContext,
     event_bundle: EventBundle,
@@ -172,6 +196,10 @@ async fn process_event(
         warnings.truncate(start_warning_len);
         Status::invalid_argument("event key is missing")
     })?;
+    tracing::Span::current()
+        .record("event.identity", &key.identity)
+        .record("event.collection", key.collection)
+        .record("event.sequence", key.sequence);
 
     // Early banned check based on the cache.
     let is_banned = banned_cache.get(&*key.identity).copied();
@@ -252,6 +280,7 @@ async fn process_event(
                 .content_body
                 .as_ref()
                 .map(|c| content_types::of(c) as i16);
+            tracing::Span::current().record("event.content_type", content_type);
             Some((content_bytes, content, digest))
         }
     } else {

@@ -3,6 +3,11 @@ import { ed25519 } from '@noble/curves/ed25519.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 
 import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
+import type {
+  EventKey,
+  EventPushIssues,
+  PushResult,
+} from '@polycentric/rs-core-wasm';
 import { PolycentricClient } from './polycentric-client';
 import { StorageHandle } from './data-store/storage-handle';
 import { COLLECTION, SyncStrategy } from './constants';
@@ -204,16 +209,35 @@ function makeBundle(
   });
 }
 
-function putEventsResponse(opts: {
+function pushResult(opts: {
   requestedBlobs?: Proto.Blob[];
-  errors?: Proto.PutEventError[];
-}): ArrayBuffer {
-  return Proto.PutEventsResponse.toBinary(
-    Proto.PutEventsResponse.create({
-      requestedBlobs: opts.requestedBlobs ?? [],
-      errors: opts.errors ?? [],
-    }),
-  ).buffer as ArrayBuffer;
+  eventIssues?: EventPushIssues[];
+}): PushResult {
+  return {
+    response: Proto.PutEventsResponse.toBinary(
+      Proto.PutEventsResponse.create({
+        requestedBlobs: opts.requestedBlobs ?? [],
+      }),
+    ).buffer as ArrayBuffer,
+    eventIssues: opts.eventIssues ?? [],
+  };
+}
+
+/** The core's report of server errors/warnings for one pushed event. */
+function buildEventIssues(
+  sequence: number,
+  opts: { errors?: string[]; warnings?: string[] },
+): EventPushIssues {
+  return {
+    key: {
+      collection: COLLECTION.FEED,
+      identity: 'identity',
+      signedBy: { keyType: 1, key: new Uint8Array([1]).buffer },
+      sequence: BigInt(sequence),
+    },
+    errors: opts.errors ?? [],
+    warnings: opts.warnings ?? [],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -378,14 +402,14 @@ interface CoreMockOptions {
   pullBundles?: (args: any) => Proto.EventBundle[];
   pullError?: string;
   /**
-   * Per-server push response (ArrayBuffer) or undefined.
+   * Per-server push result, or undefined when there was nothing to push.
    * May reject.
    */
   pushResponse?: (
     identity: string,
     server: string,
     partial: boolean,
-  ) => Promise<ArrayBuffer | undefined>;
+  ) => Promise<PushResult | undefined>;
 }
 
 /**
@@ -498,29 +522,16 @@ function makeClient(args: MakeClientArgs = {}) {
     ...(args.contents ?? []),
   ]);
 
-  const cryptoManager = {
-    sign: async (priv: Uint8Array, msg: Uint8Array) => ed25519.sign(msg, priv),
-    verify: async (pub: Uint8Array, msg: Uint8Array, sig: Uint8Array) =>
-      ed25519.verify(sig, msg, pub),
-    toHex: (b: Uint8Array) => bytesToHex(b),
-  } as any;
-
-  const storageDriver = {
-    saveActiveIdentityKey: vi.fn(async () => {}),
-    loadActiveIdentityKey: vi.fn(async () => null),
-  } as any;
-
   const client = new PolycentricClient({
     core,
-    storageDriver,
+    storageDriver: {} as any,
     filestoreDriver: args.fileStoreDriver ?? new MemoryFileStoreDriver(),
-    cryptoManager,
   });
 
   (client as any).storageHandle = new StorageHandle({
     eventRepository,
     contentRepository,
-    keysRepository: {} as any,
+    loginRepository: {} as any,
   });
   client.servers = args.servers ?? ['http://server-1'];
   client.activeIdentityKey = args.identity ? args.identity.key : null;
@@ -607,10 +618,10 @@ describe('PolycentricClient sync', () => {
 
       await (client as any).pull(true);
 
-      const heads = pullQueryArgs(core).heads;
+      const heads: EventKey[] = pullQueryArgs(core).heads;
       // The FEED stream head (seq 3) plus the seeded IDENTITY stream head (seq 1).
       expect(heads).toHaveLength(2);
-      const byStream = new Map(
+      const byStream = new Map<string, EventKey>(
         heads.map((h) => [
           `${h.collection}|${bytesToHex(new Uint8Array(h.signedBy.key))}`,
           h,
@@ -618,9 +629,9 @@ describe('PolycentricClient sync', () => {
       );
       const sA = bytesToHex(signerA.publicKey.key);
       const feedHead = byStream.get(`${COLLECTION.FEED}|${sA}`);
-      expect(feedHead.identity).toBe(identityA.key);
-      expect(feedHead.sequence).toBe(3n);
-      expect(byStream.get(`${COLLECTION.IDENTITY}|${sA}`).sequence).toBe(1n);
+      expect(feedHead?.identity).toBe(identityA.key);
+      expect(feedHead?.sequence).toBe(3n);
+      expect(byStream.get(`${COLLECTION.IDENTITY}|${sA}`)?.sequence).toBe(1n);
     });
 
     it('full push calls pushLocalEvents once with partial=false and pulls nothing', async () => {
@@ -756,7 +767,7 @@ describe('PolycentricClient sync', () => {
         'http://server-1',
         true,
       );
-      const heads = pullQueryArgs(core).heads;
+      const heads: EventKey[] = pullQueryArgs(core).heads;
       // The FEED stream head (seq 5) plus the seeded IDENTITY stream head (seq 1).
       expect(heads).toHaveLength(2);
       const sA = bytesToHex(signerA.publicKey.key);
@@ -765,7 +776,7 @@ describe('PolycentricClient sync', () => {
           h.collection === COLLECTION.FEED &&
           bytesToHex(new Uint8Array(h.signedBy.key)) === sA,
       );
-      expect(feedHead.sequence).toBe(5n);
+      expect(feedHead?.sequence).toBe(5n);
     });
 
     it('a push failure is swallowed but the pull result is still returned', async () => {
@@ -802,7 +813,7 @@ describe('PolycentricClient sync', () => {
     it('a pull failure throws even when the push succeeds', async () => {
       const core = makeCoreMock({
         pullError: 'pull down',
-        pushResponse: async () => putEventsResponse({}),
+        pushResponse: async () => pushResult({}),
       });
       const { client } = makeClient({
         core,
@@ -914,12 +925,12 @@ describe('PolycentricClient sync', () => {
 
       await (client as any).pull(true);
 
-      const heads = pullQueryArgs(core).heads;
+      const heads: EventKey[] = pullQueryArgs(core).heads;
       // 4 non-empty streams -> 4 heads: the 3 content streams plus the seeded
       // IDENTITY stream (GRAPH/signerB is empty and contributes none).
       expect(heads).toHaveLength(4);
 
-      const byStream = new Map(
+      const byStream = new Map<string, bigint>(
         heads.map((h) => [
           `${h.collection}|${bytesToHex(new Uint8Array(h.signedBy.key))}`,
           h.sequence,
@@ -1160,8 +1171,8 @@ describe('PolycentricClient sync', () => {
         pullBundles: () => [],
         pushResponse: async (_identity, server) =>
           server === 'http://server-1'
-            ? putEventsResponse({ requestedBlobs: [blob1] })
-            : putEventsResponse({ requestedBlobs: [blob2] }),
+            ? pushResult({ requestedBlobs: [blob1] })
+            : pushResult({ requestedBlobs: [blob2] }),
       });
       const fileStoreDriver = await makeFileStoreDriver([
         { digest: blob1.digest!, bytes: blob1Bytes },
@@ -1201,7 +1212,7 @@ describe('PolycentricClient sync', () => {
       const blob = makeBlob(new Uint8Array([5, 5, 5]));
       const core = makeCoreMock({
         pullBundles: () => [],
-        pushResponse: async () => putEventsResponse({ requestedBlobs: [blob] }),
+        pushResponse: async () => pushResult({ requestedBlobs: [blob] }),
       });
       const { client } = makeClient({
         core,
@@ -1373,11 +1384,13 @@ describe('PolycentricClient sync', () => {
     it('logs server-reported push errors but still uploads requested blobs', async () => {
       const blobBytes = new Uint8Array([3, 3, 3]);
       const blob = makeBlob(blobBytes);
-      const pushError = Proto.PutEventError.create({});
       const core = makeCoreMock({
         pullBundles: () => [],
         pushResponse: async () =>
-          putEventsResponse({ errors: [pushError], requestedBlobs: [blob] }),
+          pushResult({
+            eventIssues: [buildEventIssues(1, { errors: ['rejected'] })],
+            requestedBlobs: [blob],
+          }),
       });
       const fileStoreDriver = await makeFileStoreDriver([
         { digest: blob.digest!, bytes: blobBytes },
@@ -1433,6 +1446,130 @@ describe('PolycentricClient sync', () => {
         'pullBlobs failed:',
         expect.anything(),
       );
+    });
+  });
+
+  describe('push results', () => {
+    it("emits each server's event issues once all pushes settle", async () => {
+      const rejected = buildEventIssues(1, { errors: ['bad signature'] });
+      const trimmed = buildEventIssues(2, { warnings: ['app name dropped'] });
+      const core = makeCoreMock({
+        pullBundles: () => [],
+        pushResponse: async (_identity, server) =>
+          server === 'http://server-1'
+            ? pushResult({ eventIssues: [rejected, trimmed] })
+            : pushResult({}),
+      });
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { client } = makeClient({
+        core,
+        servers: ['http://server-1', 'http://server-2'],
+        identity: identityA,
+        signer: signerA,
+      });
+      const listener = vi.fn();
+      client.events.onPushResults(listener);
+
+      await client.sync(SyncStrategy.PARTIAL);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith([
+        {
+          identity: identityA.key,
+          server: 'http://server-1',
+          eventIssues: [rejected, trimmed],
+        },
+        { identity: identityA.key, server: 'http://server-2', eventIssues: [] },
+      ]);
+    });
+
+    it('reports a server with nothing to push as clean', async () => {
+      const core = makeCoreMock({ pullBundles: () => [] });
+      const { client } = makeClient({
+        core,
+        identity: identityA,
+        signer: signerA,
+      });
+      const listener = vi.fn();
+      client.events.onPushResults(listener);
+
+      await client.sync(SyncStrategy.PARTIAL_PUSH);
+
+      expect(listener).toHaveBeenCalledWith([
+        { identity: identityA.key, server: 'http://server-1', eventIssues: [] },
+      ]);
+    });
+
+    it('reports a failed push as an error for that server', async () => {
+      const failure = new Error('push down');
+      const core = makeCoreMock({
+        pullBundles: () => [],
+        pushResponse: async () => {
+          throw failure;
+        },
+      });
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { client } = makeClient({
+        core,
+        identity: identityA,
+        signer: signerA,
+      });
+      const listener = vi.fn();
+      client.events.onPushResults(listener);
+
+      await client.sync(SyncStrategy.PARTIAL_PUSH);
+
+      expect(listener).toHaveBeenCalledWith([
+        {
+          identity: identityA.key,
+          server: 'http://server-1',
+          eventIssues: [],
+          error: failure,
+        },
+      ]);
+    });
+
+    it('reports the identity pushed for after the active identity changes', async () => {
+      let switchIdentity = () => {};
+      const core = makeCoreMock({
+        pullBundles: () => [],
+        pushResponse: async () => {
+          switchIdentity();
+          return pushResult({});
+        },
+      });
+      const { client } = makeClient({
+        core,
+        identity: identityA,
+        signer: signerA,
+      });
+      switchIdentity = () => {
+        client.activeIdentityKey = 'other identity';
+      };
+      const listener = vi.fn();
+      client.events.onPushResults(listener);
+
+      await client.sync(SyncStrategy.PARTIAL_PUSH);
+
+      expect(listener).toHaveBeenCalledWith([
+        expect.objectContaining({ identity: identityA.key }),
+      ]);
+    });
+
+    it('emits nothing for a pull-only sync', async () => {
+      const core = makeCoreMock({ pullBundles: () => [] });
+      const { client } = makeClient({
+        core,
+        identity: identityA,
+        signer: signerA,
+      });
+      const listener = vi.fn();
+      client.events.onPushResults(listener);
+
+      await client.sync(SyncStrategy.PARTIAL_PULL);
+
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 
@@ -1743,7 +1880,10 @@ function makeLiveCore(
 const keyOf = (event: Proto.SignedEvent): Proto.EventKey =>
   Proto.Event.fromBinary(event.eventBytes).key!;
 
-const queriesOf = (core: any, type: unknown): any[] =>
+const queriesOf = (
+  core: any,
+  type: typeof Query.ListEvents | typeof Query.SubscribeHeads,
+): any[] =>
   core.fetchQuery.mock.calls.filter(([, query]: any) => query instanceof type);
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));

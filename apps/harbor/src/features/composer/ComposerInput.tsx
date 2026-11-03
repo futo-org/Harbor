@@ -44,8 +44,9 @@ export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
       style={[
         Atoms.flex_row,
         Atoms.items_center,
-        Atoms.gap_lg,
-        Atoms.px_lg,
+        // Same as Post, so the avatar and text line up with the posts around it
+        Atoms.gap_md,
+        Atoms.px_md,
         Atoms.py_md,
         {
           borderBottomWidth: 1,

@@ -3,12 +3,18 @@ import type {
   IEventRepository,
   FileStoreEntry,
   IFileStoreDriver,
-  IKeysRepository,
+  ILoginRepository,
   IStorageDriver,
 } from '../platform-interfaces';
 import { FileStoreError } from '../platform-interfaces/file-store-driver';
 import { segmentsFromPath } from '../utils/path';
-import type { PrivateKey } from '../polycentric-client';
+import type {
+  LoginDetails,
+  LoginId,
+  LoginOverview,
+  LoginStatus,
+} from '../platform-interfaces/login-repository';
+import { LoginRepositoryError } from '../platform-interfaces/login-repository';
 import * as Proto from '../proto/v2';
 import { bytesToHex, toDigestKey } from '../utils/hex';
 
@@ -124,31 +130,132 @@ class MemoryContentRepository implements IContentRepository {
   }
 }
 
-type StoredKeyPair = { privateKey: PrivateKey; publicKey: Proto.PublicKey };
+type StoredLogin = {
+  identity: string;
+  keyType: Proto.KeyType;
+  publicKey: Uint8Array;
+  privateKey: Uint8Array;
+  status: LoginStatus;
+};
 
-function publicKeyString(publicKey: Proto.PublicKey): string {
-  return `${publicKey.keyType}:${bytesToHex(publicKey.key)}`;
+/** Canonical string identity of a login, used as the store's map key. */
+function loginString(
+  identity: string,
+  keyType: Proto.KeyType,
+  publicKey: Uint8Array,
+): string {
+  return `${identity}|${keyType}|${bytesToHex(publicKey)}`;
 }
 
-class MemoryKeysRepository implements IKeysRepository {
-  private readonly map = new Map<string, StoredKeyPair>();
+/** Copy a login ID to avoid aliasing. */
+function copyLoginId(login: LoginId): LoginId {
+  return {
+    identity: login.identity,
+    publicKey: Proto.PublicKey.create({
+      keyType: login.publicKey.keyType,
+      key: login.publicKey.key.slice(),
+    }),
+  };
+}
 
-  async storeKeys(keys: StoredKeyPair): Promise<void> {
-    this.map.set(publicKeyString(keys.publicKey), keys);
+class MemoryLoginRepository implements ILoginRepository {
+  private readonly map = new Map<string, StoredLogin>();
+
+  async putLogin(
+    identity: string,
+    keyType: Proto.KeyType,
+    publicKey: Uint8Array,
+    privateKey: Uint8Array,
+    status: LoginStatus,
+  ): Promise<void> {
+    const key = loginString(identity, keyType, publicKey);
+
+    if (this.map.has(key)) {
+      throw new LoginRepositoryError('already exists', 'login already exists');
+    }
+
+    this.map.set(key, {
+      identity,
+      keyType,
+      publicKey: publicKey.slice(),
+      privateKey: privateKey.slice(),
+      status,
+    });
   }
 
-  async retrieveKeysByPublicKey(
-    publicKey: Proto.PublicKey,
-  ): Promise<StoredKeyPair | null> {
-    return this.map.get(publicKeyString(publicKey)) ?? null;
+  async changeLoginStatus(
+    identity: string,
+    keyType: Proto.KeyType,
+    publicKey: Uint8Array,
+    newStatus: LoginStatus,
+  ): Promise<void> {
+    const entry = this.map.get(loginString(identity, keyType, publicKey));
+
+    if (!entry || entry.status === 'pendingDeletion') {
+      throw new LoginRepositoryError('not found', 'login not found');
+    }
+    entry.status = newStatus;
   }
 
-  async removeKeys(publicKey: Proto.PublicKey): Promise<void> {
-    this.map.delete(publicKeyString(publicKey));
+  async listLogins(identity?: string): Promise<LoginOverview[]> {
+    const isMatchingEntry = (entry: StoredLogin) => {
+      if (entry.status === 'pendingDeletion') return false;
+      if (!identity) return true;
+      return entry.identity === identity;
+    };
+
+    const toOutputFormat = (entry: StoredLogin): LoginOverview => ({
+      identity: entry.identity,
+      publicKey: Proto.PublicKey.create({
+        keyType: entry.keyType,
+        key: entry.publicKey,
+      }),
+      status: entry.status,
+    });
+
+    return [...this.map.values()].filter(isMatchingEntry).map(toOutputFormat);
   }
 
-  async getAllKeys(): Promise<StoredKeyPair[]> {
-    return [...this.map.values()];
+  async getLoginDetails(
+    identity: string,
+    keyType: Proto.KeyType,
+    publicKey: Uint8Array,
+  ): Promise<LoginDetails | null> {
+    const entry = this.map.get(loginString(identity, keyType, publicKey));
+
+    if (!entry || entry.status === 'pendingDeletion') {
+      return null;
+    }
+
+    return {
+      identity: entry.identity,
+      publicKey: Proto.PublicKey.create({
+        keyType: entry.keyType,
+        key: entry.publicKey,
+      }),
+      status: entry.status,
+      privateKey: Proto.PrivateKey.create({
+        keyType: entry.keyType,
+        key: entry.privateKey,
+      }),
+    };
+  }
+
+  async deleteLogin(
+    identity: string,
+    keyType: Proto.KeyType,
+    publicKey: Uint8Array,
+  ): Promise<void> {
+    this.map.delete(loginString(identity, keyType, publicKey));
+  }
+
+  /** Delete logins that are pending deletion. */
+  async sweep(): Promise<void> {
+    for (const [key, entry] of this.map) {
+      if (entry.status === 'pendingDeletion') {
+        this.map.delete(key);
+      }
+    }
   }
 }
 
@@ -160,8 +267,8 @@ class MemoryKeysRepository implements IKeysRepository {
 export class MemoryStorageDriver implements IStorageDriver {
   private readonly events = new MemoryEventRepository();
   private readonly contents = new MemoryContentRepository();
-  private readonly keys = new MemoryKeysRepository();
-  private readonly activeIdentityKeys = new Map<string, string>();
+  private readonly logins = new MemoryLoginRepository();
+  private activeLogin: LoginId | null = null;
 
   createEventRepository() {
     return this.events;
@@ -169,24 +276,16 @@ export class MemoryStorageDriver implements IStorageDriver {
   createContentRepository() {
     return this.contents;
   }
-  createKeysRepository() {
-    return this.keys;
+  createLoginRepository() {
+    return this.logins;
   }
 
-  async saveActiveIdentityKey(
-    publicKey: Uint8Array,
-    identityKey: string | null,
-  ): Promise<void> {
-    const key = bytesToHex(publicKey);
-    if (identityKey) {
-      this.activeIdentityKeys.set(key, identityKey);
-    } else {
-      this.activeIdentityKeys.delete(key);
-    }
+  async setActiveLogin(login: LoginId | null): Promise<void> {
+    this.activeLogin = login ? copyLoginId(login) : null;
   }
 
-  async loadActiveIdentityKey(publicKey: Uint8Array): Promise<string | null> {
-    return this.activeIdentityKeys.get(bytesToHex(publicKey)) ?? null;
+  async getActiveLogin(): Promise<LoginId | null> {
+    return this.activeLogin ? copyLoginId(this.activeLogin) : null;
   }
 }
 

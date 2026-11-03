@@ -1,4 +1,4 @@
-import { COLLECTION, v2 } from '@polycentric/js-core';
+import { COLLECTION, SyncStrategy, v2 } from '@polycentric/js-core';
 import { createPolycentricNodeClient } from '@polycentric/js-node';
 import ejs from 'ejs';
 import {
@@ -131,21 +131,19 @@ route('GET', /^\/$/, async (_req, res) => {
 });
 
 route('POST', /^\/identity$/, async (_req, res) => {
-  if (!client.currentKeyPair) {
-    res.statusCode = 400;
-    res.end('no key pair');
-    return;
-  }
   if (client.activeIdentityKey) {
     res.statusCode = 303;
     res.setHeader('Location', '/');
     res.end();
     return;
   }
-  await client.identityManager.publish({
-    rotationKeys: [client.currentKeyPair.publicKey],
-    signingKeys: [],
-  });
+  const { login, genesisEvent, identityContent } =
+    await client.loginManager.beginSignup();
+  await client.contentManager.save(identityContent);
+  await client.commitEvent(genesisEvent, identityContent);
+  await client.loginManager.finishSignup(login);
+  await client.loginAs(login);
+  await client.sync(SyncStrategy.PARTIAL_PUSH);
   res.statusCode = 303;
   res.setHeader('Location', '/');
   res.end();

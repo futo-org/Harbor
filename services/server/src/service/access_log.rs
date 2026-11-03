@@ -5,13 +5,15 @@
 //! request. `identity` comes from the auth middleware (response
 //! extensions), so authenticated traffic can be attributed to users.
 
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock, OnceLock};
 use std::time::Instant;
 
+use axum::body::Body;
 use axum::extract::Request;
 use axum::http::HeaderMap;
 use axum::middleware::Next;
 use axum::response::Response;
+use http_body_util::BodyExt;
 use opentelemetry::KeyValue;
 use opentelemetry::metrics::{Counter, Histogram};
 use tracing::Instrument;
@@ -64,6 +66,8 @@ pub async fn access_log_middleware(
         return next.run(request).await;
     }
 
+    let start = Instant::now();
+
     let method = request.method().clone();
     let header = |name: &str| {
         headers
@@ -106,7 +110,27 @@ pub async fn access_log_middleware(
     let trace_id = common_telemetry::trace::trace_id(&span).or(parent_trace_id);
     span.record("trace_id", trace_id.as_deref());
 
-    let start = Instant::now();
+    // The body span lives as long as the body is being read: how long the
+    // server waited on the client for it.
+    let body_read = Arc::new(OnceLock::new()); // Arc is needed to make it 'static.
+    let request = request.map(|body| {
+        let mut body_span =
+            Some(tracing::info_span!(parent: &span, "request.body"));
+        let body_read = body_read.clone();
+        Body::new(body.map_frame(move |frame| {
+            if let Some(body) = frame.data_ref()
+                && body.is_empty()
+            {
+                // Drop the span once the entire request body (all data frames)
+                // is read.
+                drop(body_span.take());
+
+                _ = body_read.set(Instant::now());
+            }
+            frame
+        }))
+    });
+
     let response = next.run(request).instrument(span.clone()).await;
 
     let identity = response
@@ -122,7 +146,6 @@ pub async fn access_log_middleware(
         .map(str::to_owned);
     let status = response.status().as_u16();
 
-    span.record("harbor.identity", identity.as_deref());
     span.record("http.response.status_code", status);
     span.record("rpc.grpc.status_code", grpc_status.as_deref());
     if status >= 500 || grpc_status.as_deref().is_some_and(is_server_error) {
@@ -135,7 +158,12 @@ pub async fn access_log_middleware(
         KeyValue::new("status", status as i64),
     ];
     HTTP_REQUESTS.add(1, &attrs);
-    HTTP_DURATION.record(start.elapsed().as_secs_f64(), &attrs);
+    let elapsed = start.elapsed();
+    let method_elapsed = body_read
+        .get()
+        .map(|start| start.elapsed())
+        .unwrap_or(elapsed);
+    HTTP_DURATION.record(elapsed.as_secs_f64(), &attrs);
 
     tracing::info!(
         target: "access",
@@ -143,7 +171,11 @@ pub async fn access_log_middleware(
         path,
         status,
         grpc_status,
-        latency_ms = start.elapsed().as_millis() as u64,
+        // Entire request duration, including reading the request body.
+        latency_ms = elapsed.as_millis() as u64,
+        // Only the gRPC method duration. Not 100% accurate as it starts when
+        // the last bytes of the body is read, not when the request is decoded.
+        method_latency_ms = method_elapsed.as_millis() as u64,
         identity,
         client_ip,
         user_agent,
@@ -156,7 +188,7 @@ pub async fn access_log_middleware(
 #[cfg(test)]
 mod tests {
     use axum::Router;
-    use axum::body::{Body, to_bytes};
+    use axum::body::{Body, Bytes, to_bytes};
     use axum::routing::post;
     use opentelemetry::trace::{SpanKind, Status};
     use tower::ServiceExt;
@@ -240,6 +272,36 @@ mod tests {
             .find(|s| s.name == "polycentric.v2.EventsService/PutEvents")
             .expect("server span");
         assert!(span.span_context.is_sampled());
+    }
+
+    #[tokio::test]
+    async fn the_body_span_ends_when_the_body_has_arrived() {
+        use tokio_stream::StreamExt;
+
+        let (subscriber, exporter) = common_telemetry::testing::subscriber();
+        let _guard = tracing::subscriber::set_default(subscriber);
+
+        let delay = std::time::Duration::from_millis(50);
+        let chunk = Ok::<_, axum::Error>(Bytes::from_static(b"hi"));
+        let body = Body::from_stream(tokio_stream::iter([chunk]).then(
+            move |chunk| async move {
+                tokio::time::sleep(delay).await;
+                chunk
+            },
+        ));
+        let app = Router::new()
+            .route("/upload", post(|_: Bytes| async {}))
+            .layer(axum::middleware::from_fn(access_log_middleware));
+        let request = Request::post("/upload").body(body).unwrap();
+        app.oneshot(request).await.unwrap();
+
+        let spans = exporter.get_finished_spans().unwrap();
+        let find = |name| spans.iter().find(|s| s.name == name).unwrap();
+        let (server, body) = (find("POST /upload"), find("request.body"));
+        assert_eq!(body.parent_span_id, server.span_context.span_id());
+        assert!(
+            body.end_time.duration_since(body.start_time).unwrap() >= delay
+        );
     }
 
     #[test]

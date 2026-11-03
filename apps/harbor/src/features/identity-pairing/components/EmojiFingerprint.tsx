@@ -1,13 +1,15 @@
 import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { publicKeyEmojiFingerprint } from '@/src/features/identity-pairing/publicKeyEmojiFingerprint';
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
+
+const EMOJI_SIZE = 60;
 
 export function EmojiFingerprint({
   publicKey,
   bare = false,
 }: {
-  publicKey: string;
+  publicKey: string | undefined;
   bare?: boolean;
 }) {
   const { theme } = useTheme();
@@ -28,10 +30,16 @@ export function EmojiFingerprint({
         ],
       ]}
     >
-      {publicKeyEmojiFingerprint(publicKey).map((emoji, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: short emoji sequence that doesn't reorder
-        <EmojiImage key={i} sequence={emoji} size={60} />
-      ))}
+      {publicKey === undefined ? (
+        <View style={[Atoms.justify_center, { height: EMOJI_SIZE }]}>
+          <ActivityIndicator />
+        </View>
+      ) : (
+        publicKeyEmojiFingerprint(publicKey).map((emoji, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: short emoji sequence that doesn't reorder
+          <EmojiImage key={i} sequence={emoji} size={EMOJI_SIZE} />
+        ))
+      )}
     </View>
   );
 }

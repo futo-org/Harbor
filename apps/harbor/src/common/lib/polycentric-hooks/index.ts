@@ -28,7 +28,6 @@ export {
   shouldExtend,
   identiconUrl,
   pickImageVariant,
-  timeAgo,
   bytesToHex,
   bundleEventId,
   hexToBytes,
