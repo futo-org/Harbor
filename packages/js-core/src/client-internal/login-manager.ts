@@ -145,7 +145,7 @@ export class LoginManager {
 
     // Persist all of the identity events needed to authorize us.
     const chain = this.client.resolveIdentityChain(identityKey);
-    await this.client.saveBundles(chain);
+    await this.client.saveBundles(identityKey, chain);
 
     // Re-publish the same identity document signed by our own key,
     // proving this key acknowledged its membership.
@@ -297,7 +297,7 @@ export class LoginManager {
     // We persist the existing chain now, and then `publish()` tries to add
     // the final event that we need.
     const identityChain = this.client.resolveIdentityChain(identityKey);
-    await this.client.saveBundles(identityChain);
+    await this.client.saveBundles(identityKey, identityChain);
 
     // This call will attempt the identity switch and bail if it fails.
     await this.publishLogin(identityKey, keyPair, publishArgs);

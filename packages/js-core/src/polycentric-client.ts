@@ -789,7 +789,7 @@ export class PolycentricClient {
    * events came back (another tab may have stored them already).
    *
    * @param after Heads to pull past instead of the stored ones.
-   * @returns The number of new events persisted
+   * @returns The number of events returned from servers
    */
   private async pull(
     partial: boolean,
@@ -798,21 +798,13 @@ export class PolycentricClient {
     if (!this.activeIdentityKey) throw new Error('No active identity');
     const identity = this.activeIdentityKey;
 
-    // Only filter by heads when doing a partial pull
-    let heads = after;
+    // Only filter by heads when doing a partial pull or `after` was specified.
+    let heads: Proto.EventKey[] | undefined = after;
 
     if (partial && !heads) {
       // Partial pulls will skip events at or before each event stream head.
       // Find each head event and then map it to the filter format.
-      const headEvents = await this.storage.events.getByIdentity(identity, {
-        headsOnly: true,
-      });
-      heads = headEvents
-        .map((signedEvent) => {
-          const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-          return event.key;
-        })
-        .filter((head): head is Proto.EventKey => !!head);
+      heads = await this.storage.events.getHeads(identity);
     }
 
     // Fetch new bundles from server
@@ -821,14 +813,21 @@ export class PolycentricClient {
       heads,
     });
 
-    // Collect blobs referenced by the events
+    // Save events/content and collect the blobs referenced
     let blobs: Proto.Blob[] = [];
 
-    // Save new events and content
-    let newCount = 0;
     for (const bundle of bundles) {
-      const isNew = await this.trySaveBundle(bundle, blobs);
-      if (isNew) newCount++;
+      try {
+        await this.saveBundle(identity, bundle);
+
+        const contentBytes = bundle.serializedContent?.contentBytes;
+        if (!contentBytes) continue;
+
+        const content = Proto.Content.fromBinary(contentBytes);
+        blobs.push(...ContentManager.collectBlobs(content));
+      } catch (e) {
+        console.warn('pull: saving bundle failed:', e);
+      }
     }
 
     // Remove duplicate blobs
@@ -841,131 +840,54 @@ export class PolycentricClient {
 
     blobs = [...blobMap.values()];
 
-    // Catch any of our own referenced blobs so they persist locally.
+    // Catch any of our own referenced blobs so they persist locally
     await this.contentManager.pullBlobs(blobs);
 
-    if (newCount > 0 || (after && bundles.length > 0)) {
+    if (bundles.length > 0) {
       this.events.emitPulled(identity);
     }
-    return newCount;
-  }
 
-  /**
-   * Absorb errors and return true only when the event is new and added.
-   * Any discovered blobs are added to `blobs`.
-   */
-  private async trySaveBundle(
-    bundle: Proto.EventBundle,
-    blobs: Proto.Blob[],
-  ): Promise<boolean> {
-    try {
-      if (!bundle.signedEvent) return false;
-
-      const bytes = bundle.signedEvent.eventBytes;
-
-      const event = Proto.Event.fromBinary(bytes);
-      if (!event.key) return false;
-      if (!event.key.signedBy) return false;
-
-      // Try saving content for any event that seems valid, even if it may already exist.
-      await this.trySaveContent(event, bundle, blobs);
-
-      const existing = await this.storage.events.getByEventKey(event.key);
-      if (existing) return false;
-
-      await this.storage.events.save(bundle.signedEvent);
-      return true;
-    } catch (e) {
-      console.warn('Pull event:', e);
-      return false;
-    }
-  }
-
-  /**
-   * Absorb errors and return true only when the content is new and added
-   * Any discovered blobs are added to `blobs`. Content whose bytes do not
-   * hash to the event's contentDigest is rejected.
-   */
-  private async trySaveContent(
-    event: Proto.Event,
-    bundle: Proto.EventBundle,
-    blobs: Proto.Blob[],
-  ): Promise<boolean> {
-    try {
-      const bytes = bundle.serializedContent?.contentBytes;
-      if (!bytes) return false;
-
-      const content = Proto.Content.fromBinary(bytes);
-
-      const digest = event.contentDigest;
-      if (!digest) return false;
-
-      if (
-        digest.type !== Proto.ContentDigestType.SHA256 ||
-        !bytesEqual(sha256(bytes), digest.value)
-      )
-        return false;
-
-      // Try finding blobs before checking content existence,
-      // since we might be missing a blob referenced by content
-      // that we already have.
-      blobs.push(...ContentManager.collectBlobs(content));
-
-      const existing = await this.storage.content.get(digest);
-      if (existing) return false;
-
-      await this.storage.content.save(digest, content);
-      return true;
-    } catch (e) {
-      console.warn('Pull event content:', e);
-      return false;
-    }
+    return bundles.length;
   }
 
   /**
    * Persist each event bundle in order.
    * Throws on the first malformed bundle or failed write.
    */
-  async saveBundles(bundles: Proto.EventBundle[]): Promise<void> {
+  async saveBundles(
+    owner: string,
+    bundles: Proto.EventBundle[],
+  ): Promise<void> {
     for (const bundle of bundles) {
-      await this.saveBundle(bundle);
+      await this.saveBundle(owner, bundle);
     }
   }
 
   /**
-   * Try saving this event bundle, content first.
-   * Throws an error if anything goes wrong.
+   * Try persisting this event bundle.
+   * Throws if anything goes wrong.
    */
-  async saveBundle(bundle: Proto.EventBundle): Promise<void> {
+  async saveBundle(owner: string, bundle: Proto.EventBundle): Promise<void> {
     const signedEvent = bundle.signedEvent;
     if (!signedEvent) throw new Error('Bundle is missing signedEvent');
 
     const event = Proto.Event.fromBinary(signedEvent.eventBytes);
     if (!event.key?.signedBy) throw new Error('Event is missing key');
 
-    const contentBytes = bundle.serializedContent?.contentBytes;
-    if (!contentBytes) throw new Error('Bundle is missing content');
-
     const digest = event.contentDigest;
-    if (
-      !digest ||
-      digest.type !== Proto.ContentDigestType.SHA256 ||
-      !bytesEqual(sha256(contentBytes), digest.value)
-    ) {
-      throw new Error('Content does not match event digest');
+    if (!digest) throw new Error('Event is missing content digest');
+
+    const contentBytes = bundle.serializedContent?.contentBytes;
+    if (contentBytes) {
+      if (
+        digest.type !== Proto.ContentDigestType.SHA256 ||
+        !bytesEqual(sha256(contentBytes), digest.value)
+      ) {
+        throw new Error('Content does not match event digest');
+      }
     }
 
-    const content = Proto.Content.fromBinary(contentBytes);
-
-    // Both writes can throw.
-    // We will skip saving the event if the content fails to write.
-    if (!(await this.storage.content.get(digest))) {
-      await this.storage.content.save(digest, content);
-    }
-
-    if (!(await this.storage.events.getByEventKey(event.key))) {
-      await this.storage.events.save(signedEvent);
-    }
+    await this.storage.events.persist(owner, signedEvent, contentBytes);
   }
 
   /** Used for syncing */
@@ -1004,7 +926,7 @@ export class PolycentricClient {
   /**
    * Sync events for the active identity between this client and
    * the remote servers. Throws only if the pull fails.
-   * @returns The number of new events pulled
+   * @returns The number of events pulled
    */
   async sync(strategy?: SyncStrategy): Promise<number> {
     const identity = this.activeIdentityKey;
