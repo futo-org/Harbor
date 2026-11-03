@@ -34,7 +34,7 @@ const CELL = 72;
 // carries over to other sizes (untested; at 16px thin details are mostly edge).
 const EDGE_ALPHA_EXPONENT = 0.55;
 // Android sprite pages: up to 16x17 cells of 72px, about 5.6 MB per decoded
-// page; 17 rows fit the 264- and 270-emoji categories without a near-empty
+// page; 17 rows fit the 266- and 271-emoji categories without a near-empty
 // overflow page.
 const PAGE_COLUMNS = 16;
 const PAGE_CELLS = PAGE_COLUMNS * 17;

@@ -1344,6 +1344,19 @@
     ]
   },
   {
+    "emoji": "🫪",
+    "name": "distorted face",
+    "category": "smileys-emotion",
+    "tags": [
+      "anxiety",
+      "bloated",
+      "panic",
+      "shocked",
+      "surprised",
+      "vulnerable"
+    ]
+  },
+  {
     "emoji": "🥺",
     "name": "pleading face",
     "category": "smileys-emotion",
@@ -2410,6 +2423,20 @@
     "name": "anger symbol",
     "category": "smileys-emotion",
     "tags": ["anger", "angry", "comic", "mad", "symbol", "upset"]
+  },
+  {
+    "emoji": "🫯",
+    "name": "fight cloud",
+    "category": "smileys-emotion",
+    "tags": [
+      "argument",
+      "brawl",
+      "debate",
+      "disagreement",
+      "fight",
+      "ruckus",
+      "wrestle"
+    ]
   },
   {
     "emoji": "💥",
@@ -5062,6 +5089,21 @@
     "tags": ["fairy", "fantasy", "monster", "tale", "trolling"]
   },
   {
+    "emoji": "🫈",
+    "name": "hairy creature",
+    "category": "people-body",
+    "tags": [
+      "bigfoot",
+      "cryptid",
+      "forest",
+      "giant",
+      "hairy",
+      "sasquatch",
+      "woodwose",
+      "yeti"
+    ]
+  },
+  {
     "emoji": "💆",
     "name": "person getting massage",
     "category": "people-body",
@@ -5629,6 +5671,12 @@
       "rush",
       "speed"
     ]
+  },
+  {
+    "emoji": "🧑‍🩰",
+    "name": "ballet dancer",
+    "category": "people-body",
+    "tags": ["ballet", "dancer"]
   },
   {
     "emoji": "💃",
@@ -7797,6 +7845,12 @@
     "tags": ["animal", "beach", "flipper", "ocean"]
   },
   {
+    "emoji": "🫍",
+    "name": "orca",
+    "category": "animals-nature",
+    "tags": ["marine", "ocean", "whale"]
+  },
+  {
     "emoji": "🦭",
     "name": "seal",
     "category": "animals-nature",
@@ -9386,6 +9440,20 @@
     "name": "mountain",
     "category": "travel-places",
     "tags": ["mountain"]
+  },
+  {
+    "emoji": "🛘",
+    "name": "landslide",
+    "category": "travel-places",
+    "tags": [
+      "avalanche",
+      "danger",
+      "disaster",
+      "earthquake",
+      "mountain",
+      "mudslide",
+      "rocks"
+    ]
   },
   {
     "emoji": "🌋",
@@ -12117,6 +12185,18 @@
     "tags": ["instrument", "music", "sax"]
   },
   {
+    "emoji": "🎺",
+    "name": "trumpet",
+    "category": "objects",
+    "tags": ["instrument", "music"]
+  },
+  {
+    "emoji": "🪊",
+    "name": "trombone",
+    "category": "objects",
+    "tags": ["brass", "instrument", "jazz", "music", "sad", "slide"]
+  },
+  {
     "emoji": "🪗",
     "name": "accordion",
     "category": "objects",
@@ -12140,12 +12220,6 @@
     "name": "musical keyboard",
     "category": "objects",
     "tags": ["instrument", "keyboard", "music", "musical", "piano"]
-  },
-  {
-    "emoji": "🎺",
-    "name": "trumpet",
-    "category": "objects",
-    "tags": ["instrument", "music"]
   },
   {
     "emoji": "🎻",
@@ -12582,6 +12656,21 @@
   },
   { "emoji": "🏷", "name": "label", "category": "objects", "tags": ["tag"] },
   {
+    "emoji": "🪙",
+    "name": "coin",
+    "category": "objects",
+    "tags": [
+      "dollar",
+      "euro",
+      "gold",
+      "metal",
+      "money",
+      "rich",
+      "silver",
+      "treasure"
+    ]
+  },
+  {
     "emoji": "💰",
     "name": "money bag",
     "category": "objects",
@@ -12605,18 +12694,19 @@
     ]
   },
   {
-    "emoji": "🪙",
-    "name": "coin",
+    "emoji": "🪎",
+    "name": "treasure chest",
     "category": "objects",
     "tags": [
-      "dollar",
-      "euro",
+      "gem",
       "gold",
-      "metal",
+      "jewels",
+      "loot",
       "money",
-      "rich",
+      "prize",
       "silver",
-      "treasure"
+      "valuables",
+      "wealth"
     ]
   },
   {
@@ -15724,6 +15814,24 @@
     "tags": ["GB", "flag"]
   },
   {
+    "emoji": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "name": "flag: England",
+    "category": "flags",
+    "tags": ["flag", "gbeng"]
+  },
+  {
+    "emoji": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+    "name": "flag: Scotland",
+    "category": "flags",
+    "tags": ["flag", "gbsct"]
+  },
+  {
+    "emoji": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+    "name": "flag: Wales",
+    "category": "flags",
+    "tags": ["flag", "gbwls"]
+  },
+  {
     "emoji": "🇬🇩",
     "name": "flag: Grenada",
     "category": "flags",
@@ -16784,23 +16892,5 @@
     "name": "flag: Zimbabwe",
     "category": "flags",
     "tags": ["ZW", "flag"]
-  },
-  {
-    "emoji": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    "name": "flag: England",
-    "category": "flags",
-    "tags": ["flag", "gbeng"]
-  },
-  {
-    "emoji": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
-    "name": "flag: Scotland",
-    "category": "flags",
-    "tags": ["flag", "gbsct"]
-  },
-  {
-    "emoji": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
-    "name": "flag: Wales",
-    "category": "flags",
-    "tags": ["flag", "gbwls"]
   }
 ]

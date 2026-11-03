@@ -66,10 +66,10 @@ export const LEGAL_NOTICES: readonly LegalNotice[] = [
   {
     name: 'Unicode emoji data',
     url: 'https://www.unicode.org/reports/tr51/',
-    attribution: 'Copyright © 1991-2024 Unicode, Inc.',
+    attribution: 'Copyright © 1991-2025 Unicode, Inc.',
     license: 'Unicode License v3',
     licenseUrl: 'https://www.unicode.org/license.txt',
-    licenseText: UNICODE_V3('Copyright © 1991-2024 Unicode, Inc.'),
+    licenseText: UNICODE_V3('Copyright © 1991-2025 Unicode, Inc.'),
   },
   {
     name: 'Emojibase',

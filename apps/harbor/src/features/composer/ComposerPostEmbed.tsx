@@ -19,10 +19,7 @@ export default function ComposerPostEmbed({
 }: ComposerPostEmbedProps) {
   const authorName = useUsername(post?.identity ?? null);
   const content = mentionsToPlainText(post?.content ?? '');
-  const contentPreview =
-    content.length > 30
-      ? `${content.slice(0, 30)}…`
-      : content || (post?.images?.length ? 'Image' : '');
+  const contentPreview = content || (post?.images?.length ? 'Image' : '');
 
   const { theme } = useTheme();
   return (
