@@ -62,7 +62,7 @@ impl NotificationWorker {
     /// a DB/proof error propagates so the message is retried.
     async fn hydrate_target(
         &self,
-        ctx: &WorkerContext,
+        ctx: &mut WorkerContext,
         key: &EventKey,
     ) -> Result<Option<EventBundle>, WorkerError> {
         let Some(signed_by) = key.signed_by.as_ref() else {
@@ -70,7 +70,7 @@ impl NotificationWorker {
         };
 
         let Some(row) = FeedsRepository::find_event_by_key(
-            &ctx.db,
+            &mut ctx.db,
             key.collection as i16,
             &key.identity,
             signed_by.key_type as i16,
@@ -91,7 +91,7 @@ impl NotificationWorker {
     /// the claim's own owner — to verify the claim at `claim_key`.
     async fn verification_was_requested(
         &self,
-        ctx: &WorkerContext,
+        ctx: &mut WorkerContext,
         claim_key: &Option<EventKey>,
         verifier: &str,
     ) -> Result<bool, WorkerError> {
@@ -111,7 +111,9 @@ impl NotificationWorker {
             sequence: claim_key.sequence as i64,
         };
         Ok(VerificationsRepository::was_verification_requested(
-            &ctx.db, &key, verifier,
+            &mut ctx.db,
+            &key,
+            verifier,
         )
         .await?)
     }
@@ -121,7 +123,7 @@ impl NotificationWorker {
     /// nor a push.
     async fn drop_recipients_blocking_author(
         &self,
-        ctx: &WorkerContext,
+        ctx: &mut WorkerContext,
         mut notifications: Vec<PendingNotification>,
         author: &str,
     ) -> Result<Vec<PendingNotification>, WorkerError> {
@@ -131,7 +133,7 @@ impl NotificationWorker {
         // TODO: the query called in `identites_blocking` could be more
         // efficient. See the method's doc comment.
         let blockers = GraphRepository::identities_blocking(
-            &ctx.db,
+            &mut ctx.db,
             notifications.iter().map(|n| n.to_identity.as_str()),
             author,
         )
@@ -229,7 +231,7 @@ impl MessageHandler for NotificationWorker {
         let author = &trigger_key.identity;
         let event_notifications = build_notifications(author, &content);
 
-        let ctx = match self.ctx.worker_rw().await {
+        let mut ctx = match self.ctx.worker_rw().await {
             Ok(ctx) => ctx,
             Err(err) => {
                 tracing::error!(
@@ -260,7 +262,10 @@ impl MessageHandler for NotificationWorker {
             ..
         }) = event_notifications.first()
         {
-            match self.verification_was_requested(&ctx, target, author).await {
+            match self
+                .verification_was_requested(&mut ctx, target, author)
+                .await
+            {
                 Ok(true) => {}
                 Ok(false) => return Outcome::Commit,
                 Err(e) => {
@@ -276,7 +281,7 @@ impl MessageHandler for NotificationWorker {
 
         let notifications = match self
             .drop_recipients_blocking_author(
-                &ctx,
+                &mut ctx,
                 event_notifications
                     .into_iter()
                     .chain(mention_notifications)
@@ -369,7 +374,7 @@ impl MessageHandler for NotificationWorker {
         // when it has one; follows and mentions have none.
         let target_event =
             match notifications.iter().find_map(|n| n.target.as_ref()) {
-                Some(key) => match self.hydrate_target(&ctx, key).await {
+                Some(key) => match self.hydrate_target(&mut ctx, key).await {
                     Ok(bundle) => bundle,
                     Err(e) => {
                         tracing::warn!(
@@ -835,11 +840,11 @@ mod tests {
             .append_query_results([vec![blocker_row("bob")]])
             .into_connection();
         let worker = worker(db).await;
-        let ctx = worker.ctx.worker_rw().await.unwrap();
+        let mut ctx = worker.ctx.worker_rw().await.unwrap();
 
         let notifications = worker
             .drop_recipients_blocking_author(
-                &ctx,
+                &mut ctx,
                 vec![pending("bob"), pending("carol")],
                 "alice",
             )
@@ -854,11 +859,11 @@ mod tests {
             .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
             .into_connection();
         let worker = worker(db).await;
-        let ctx = worker.ctx.worker_rw().await.unwrap();
+        let mut ctx = worker.ctx.worker_rw().await.unwrap();
 
         let notifications = worker
             .drop_recipients_blocking_author(
-                &ctx,
+                &mut ctx,
                 vec![pending("bob"), pending("carol")],
                 "alice",
             )
@@ -873,12 +878,12 @@ mod tests {
             .append_query_errors([DbErr::Custom("db is down".to_string())])
             .into_connection();
         let worker = worker(db).await;
-        let ctx = worker.ctx.worker_rw().await.unwrap();
+        let mut ctx = worker.ctx.worker_rw().await.unwrap();
 
         assert!(
             worker
                 .drop_recipients_blocking_author(
-                    &ctx,
+                    &mut ctx,
                     vec![pending("bob")],
                     "alice"
                 )
@@ -892,10 +897,10 @@ mod tests {
         // No `append_query_results`, so the mock errors if a query runs.
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
         let worker = worker(db).await;
-        let ctx = worker.ctx.worker_rw().await.unwrap();
+        let mut ctx = worker.ctx.worker_rw().await.unwrap();
 
         let notifications = worker
-            .drop_recipients_blocking_author(&ctx, vec![], "alice")
+            .drop_recipients_blocking_author(&mut ctx, vec![], "alice")
             .await
             .expect("no lookup should be attempted");
         assert!(notifications.is_empty());

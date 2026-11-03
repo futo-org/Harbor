@@ -13,10 +13,10 @@ use crate::service::proto::{
 };
 
 pub async fn handle(
-    ctx: AuthContext,
+    mut ctx: AuthContext,
     req: ListReportsRequest,
 ) -> Result<ListReportsResponse, Status> {
-    require_moderator(&ctx).await?;
+    require_moderator(&mut ctx).await?;
 
     let page = req.page_params.clone().unwrap_or_default();
     let limit = page_limit(page.limit);
@@ -28,7 +28,7 @@ pub async fn handle(
 
     // Over-fetch one to detect a following page.
     let mut rows =
-        repository::Query::list_reports(&ctx.db, limit + 1, after, status)
+        repository::Query::list_reports(&mut ctx.db, limit + 1, after, status)
             .await
             .map_err(|e| {
                 tracing::error!(error = %e, "list_reports db error");

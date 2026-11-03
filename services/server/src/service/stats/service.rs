@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use polycentric_common::models::protos_v2::{
     EventMetadata, ReactionTally as ProtoReactionTally,
 };
-use sea_orm::{ConnectionTrait, DbErr};
+use sea_orm::DbErr;
 
 use crate::data::EventId;
+use crate::db::Connection;
 use crate::service::stats::repository::{
     InteractionTally, Query, ReactionTally,
 };
@@ -17,8 +18,8 @@ pub struct EventStats {
 }
 
 /// Gather reply counts, reaction summaries, and emoji tallies for events.
-pub async fn gather_stats_for<C: ConnectionTrait>(
-    db: &C,
+pub async fn gather_stats_for<C: Connection>(
+    db: &mut C,
     event_ids: impl ExactSizeIterator<Item = EventId> + Clone,
 ) -> Result<EventStats, DbErr> {
     let interactions = Query::interactions(db, event_ids.clone()).await?;

@@ -43,7 +43,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<Fetched<FollowSuggestionEvent, FollowSuggestionsSortedBy>, Status> {
     let mut rows = Query::suggest_follow(
-        &ctx.db,
+        &mut ctx.db,
         ctx.auth.identity(),
         &params.pagination.cursor_filter,
         params.pagination.limit + 1, // For pagination.
@@ -84,13 +84,12 @@ async fn hydrate(
                 .map(|follower| (&*row.event.identity, &**follower))
         })
         .collect::<Vec<_>>();
-    let follow_events =
-        Query::follow_events(&ctx.db, follows)
-            .await
-            .map_err(|err| {
-                tracing::error!(error = %err, "failed to get follow events");
-                Status::internal("internal server error")
-            })?;
+    let follow_events = Query::follow_events(&mut ctx.db, follows)
+        .await
+        .map_err(|err| {
+            tracing::error!(error = %err, "failed to get follow events");
+            Status::internal("internal server error")
+        })?;
     hydration.follow_events.extend(follow_events);
 
     Ok(hydration)

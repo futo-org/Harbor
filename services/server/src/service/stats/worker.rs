@@ -11,9 +11,9 @@ use polycentric_common::models::protos_v2::{
     attributed_to::To, content::ContentBody,
 };
 use prost::Message as _;
-use sea_orm::ConnectionTrait;
 
 use crate::data::EventWithContentRow;
+use crate::db::Connection;
 use crate::service::context::ServiceContext;
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::Query as FeedsRepository;
@@ -43,7 +43,7 @@ impl StatsWorker {
             return Ok(());
         };
 
-        let ctx = self.ctx.worker_rw().await?;
+        let mut ctx = self.ctx.worker_rw().await?;
 
         match input.content_body {
             ContentBody::Delete(delete) => {
@@ -58,7 +58,7 @@ impl StatsWorker {
 
                 // Try retrieving the content of the deleted event
                 let Some(content_body) =
-                    find_content_by_key(&ctx.db, target).await?
+                    find_content_by_key(&mut ctx.db, target).await?
                 else {
                     return Ok(());
                 };
@@ -69,7 +69,7 @@ impl StatsWorker {
                     && let Some(url) = attributed_reaction_url(&reaction)
                 {
                     Mutation::remove_attributed_reaction_for(
-                        &ctx.db,
+                        &mut ctx.db,
                         url,
                         reaction.positive,
                     )
@@ -81,7 +81,7 @@ impl StatsWorker {
             ContentBody::AttributedToReaction(reaction) => {
                 if let Some(url) = attributed_reaction_url(&reaction) {
                     Mutation::count_attributed_reaction_for(
-                        &ctx.db,
+                        &mut ctx.db,
                         url,
                         reaction.positive,
                     )
@@ -154,8 +154,8 @@ impl Input {
     }
 }
 
-async fn find_event_by_key<C: ConnectionTrait>(
-    db: &C,
+async fn find_event_by_key<C: Connection>(
+    db: &mut C,
     key: EventKey,
 ) -> Result<Option<EventWithContentRow>, WorkerError> {
     let Some(signer) = key.signed_by else {
@@ -177,8 +177,8 @@ async fn find_event_by_key<C: ConnectionTrait>(
 
 /// Try to find the content for the event with key `key`.
 /// Returns `Ok(None)` on failures other than DB errors.
-async fn find_content_by_key<C: ConnectionTrait>(
-    db: &C,
+async fn find_content_by_key<C: Connection>(
+    db: &mut C,
     key: EventKey,
 ) -> Result<Option<ContentBody>, WorkerError> {
     let Some((_, Some(content_row))) = find_event_by_key(db, key).await? else {

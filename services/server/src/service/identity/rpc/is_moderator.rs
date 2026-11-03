@@ -9,12 +9,11 @@ use crate::service::identity::repository as id_repo;
 use crate::service::proto::{IsModeratorRequest, IsModeratorResponse};
 
 pub async fn handle(
-    ctx: AuthContext,
+    mut ctx: AuthContext,
     _: IsModeratorRequest,
 ) -> Result<IsModeratorResponse, Status> {
-    let identity = ctx.identity();
-
-    let is_moderator = id_repo::Query::is_moderator(&ctx.db, identity)
+    let identity = &*ctx.auth;
+    let is_moderator = id_repo::Query::is_moderator(&mut ctx.db, identity)
         .await
         .map_err(|_| Status::internal("internal server error"))?;
 

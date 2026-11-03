@@ -9,12 +9,12 @@ use chrono::{TimeDelta, Utc};
 use entity::url_info_cache;
 use sea_orm::sea_query::{OnConflict, Query as SeaQuery};
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, Order, PaginatorTrait,
-    QueryFilter, Set,
+    ColumnTrait, EntityTrait, Order, PaginatorTrait, QueryFilter, Set,
 };
 use serde::Deserialize;
 use tonic::{Code, Status};
 
+use crate::db::{Connection, DbConn};
 use crate::service::context::ServiceContext;
 use crate::service::proto::{UrlInfoRequest, UrlInfoResponse};
 use crate::util::{http_client, scraper};
@@ -50,8 +50,8 @@ fn ttl(row: &url_info_cache::Model) -> TimeDelta {
 
 /// Read a fresh cached outcome for `url`. Expired rows and database
 /// errors are both treated as cache misses.
-async fn get_cached<C: ConnectionTrait>(
-    db: &C,
+async fn get_cached<C: Connection>(
+    db: &mut C,
     url: &str,
 ) -> Option<ScrapeOutcome> {
     let row = url_info_cache::Entity::find_by_id(url)
@@ -79,8 +79,8 @@ async fn get_cached<C: ConnectionTrait>(
 /// Upsert an outcome for `url`, evicting the oldest rows once the
 /// cache is full. All statements are best-effort: failures are logged
 /// and the response is served regardless.
-async fn insert_cached<C: ConnectionTrait>(
-    db: &C,
+async fn insert_cached<C: Connection>(
+    db: &mut C,
     url: &str,
     outcome: &ScrapeOutcome,
     raw_response: Option<String>,
@@ -137,7 +137,7 @@ async fn insert_cached<C: ConnectionTrait>(
 
 /// Delete the `EVICTION_BATCH` oldest rows once the cache holds at
 /// least `MAX_CACHED_URLS` entries.
-async fn evict_if_full<C: ConnectionTrait>(db: &C) {
+async fn evict_if_full<C: Connection>(db: &mut C) {
     let count = match url_info_cache::Entity::find().count(db).await {
         Ok(count) => count,
         Err(e) => {
@@ -190,9 +190,11 @@ async fn lookup(
 ) -> Result<UrlInfoResponse, Status> {
     let key = target_url.trim();
 
-    if let Some(outcome) = get_cached(&ctx.ro_db, key).await {
+    let mut db = DbConn::from_pool(&ctx.ro_db).await?;
+    if let Some(outcome) = get_cached(&mut db, key).await {
         return outcome.map_err(|(code, message)| Status::new(code, message));
     }
+    drop(db);
 
     let (outcome, raw_response) = match fetch_metadata(scrape_url, key).await {
         Ok((resp, raw)) => (Ok(resp), Some(raw)),
@@ -202,7 +204,9 @@ async fn lookup(
         }
     };
 
-    insert_cached(&ctx.db, key, &outcome, raw_response).await;
+    let mut db = DbConn::from_pool(&ctx.db).await?;
+    insert_cached(&mut db, key, &outcome, raw_response).await;
+    drop(db);
     outcome.map_err(|(code, message)| Status::new(code, message))
 }
 

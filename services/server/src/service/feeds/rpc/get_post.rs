@@ -42,7 +42,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<feeds_pipeline::Fetched, Status> {
     let rows = Query::list_events_at_sequence(
-        &ctx.db,
+        &mut ctx.db,
         &params.identity,
         params.sequence,
     )

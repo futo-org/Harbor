@@ -187,13 +187,6 @@ impl<Auth> RequestContext<Auth> {
     }
 }
 
-impl AuthContext {
-    /// Returns the identity of the authenticated caller.
-    pub(crate) fn identity(&self) -> &str {
-        self.auth.0.as_str()
-    }
-}
-
 /// Authentication of a context.
 ///
 /// This provides optional autentication, when authentication is required use

@@ -10,7 +10,7 @@ use tonic::Status;
 /// (e.g. a video URL). Counts are kept up to date by the stats worker in
 /// `attributed_to_reaction_summaries`; this just reads them.
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: GetAttributedToReactionCountsRequest,
 ) -> Result<GetAttributedToReactionCountsResponse, Status> {
     let url = match req.attributed_to.and_then(|a| a.to) {
@@ -23,7 +23,7 @@ pub async fn handle(
     };
 
     let (upvote_count, downvote_count) =
-        Query::get_attributed_reaction_summary(&ctx.db, &url)
+        Query::get_attributed_reaction_summary(&mut ctx.db, &url)
             .await
             .map_err(|_| Status::internal("internal server error"))?;
 

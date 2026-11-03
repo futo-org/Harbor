@@ -2,6 +2,7 @@ use ::entity::{notification, notification_read_marker};
 use sea_orm::sea_query::{Alias, Expr, Func, OnConflict};
 use sea_orm::*;
 
+use crate::db::Connection;
 use crate::service::events::TargetEventKey;
 
 pub struct Query;
@@ -11,8 +12,8 @@ impl Query {
     /// Notifications addressed to `identity` newer than its read marker,
     /// counted up to `cap`.
     #[tracing::instrument(skip_all)]
-    pub async fn unread_count<C: ConnectionTrait>(
-        db: &C,
+    pub async fn unread_count<C: Connection>(
+        db: &mut C,
         identity: &str,
         cap: u64,
     ) -> Result<u64, DbErr> {
@@ -44,8 +45,8 @@ impl Query {
     /// Id of the notification to `identity` that `trigger` produced, if this
     /// server has it. The newest one, since redelivery can duplicate rows.
     #[tracing::instrument(skip_all)]
-    pub async fn id_of_trigger<C: ConnectionTrait>(
-        db: &C,
+    pub async fn id_of_trigger<C: Connection>(
+        db: &mut C,
         identity: &str,
         trigger: &TargetEventKey,
     ) -> Result<Option<i64>, DbErr> {
@@ -81,8 +82,8 @@ impl Query {
 
     /// Id of the newest notification addressed to `identity`.
     #[tracing::instrument(skip_all)]
-    pub async fn newest_id<C: ConnectionTrait>(
-        db: &C,
+    pub async fn newest_id<C: Connection>(
+        db: &mut C,
         identity: &str,
     ) -> Result<Option<i64>, DbErr> {
         notification::Entity::find()
@@ -97,8 +98,8 @@ impl Query {
 
     /// Notifications addressed to `to_identity`, newest first.
     #[tracing::instrument(skip_all)]
-    pub async fn list_for_identity<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_for_identity<C: Connection>(
+        db: &mut C,
         to_identity: &str,
         limit: u64,
         after_id: Option<i64>,
@@ -119,8 +120,8 @@ impl Query {
 impl Mutation {
     /// Moves `identity`'s read marker up to `up_to_id`, never backwards.
     #[tracing::instrument(skip_all)]
-    pub async fn mark_read<C: ConnectionTrait>(
-        db: &C,
+    pub async fn mark_read<C: Connection>(
+        db: &mut C,
         identity: &str,
         up_to_id: i64,
     ) -> Result<(), DbErr> {
@@ -186,11 +187,11 @@ mod tests {
 
     #[tokio::test]
     async fn returns_rows_mapped_with_kind() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
+        let mut db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([vec![sample_row(2, 2), sample_row(1, 1)]])
             .into_connection();
 
-        let rows = Query::list_for_identity(&db, "bob", 50, None)
+        let rows = Query::list_for_identity(&mut db, "bob", 50, None)
             .await
             .expect("query should succeed");
 
@@ -202,11 +203,11 @@ mod tests {
 
     #[tokio::test]
     async fn without_cursor_filters_orders_and_limits() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
+        let mut db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([Vec::<notification::Model>::new()])
             .into_connection();
 
-        Query::list_for_identity(&db, "bob", 25, None)
+        Query::list_for_identity(&mut db, "bob", 25, None)
             .await
             .unwrap();
 
@@ -226,11 +227,11 @@ mod tests {
 
     #[tokio::test]
     async fn with_cursor_adds_id_upper_bound() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
+        let mut db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([Vec::<notification::Model>::new()])
             .into_connection();
 
-        Query::list_for_identity(&db, "bob", 25, Some(100))
+        Query::list_for_identity(&mut db, "bob", 25, Some(100))
             .await
             .unwrap();
 
@@ -259,12 +260,12 @@ mod tests {
 
     #[tokio::test]
     async fn unread_count_counts_ids_above_the_marker_in_sql() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
+        let mut db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([vec![marker("bob", 5)]])
             .append_query_results([vec![count_row(2)]])
             .into_connection();
 
-        let count = Query::unread_count(&db, "bob", 100).await.unwrap();
+        let count = Query::unread_count(&mut db, "bob", 100).await.unwrap();
 
         assert_eq!(count, 2);
         let sql = format!("{:?}", db.into_transaction_log());
@@ -277,14 +278,14 @@ mod tests {
 
     #[tokio::test]
     async fn unread_count_without_a_marker_counts_everything() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
+        let mut db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([
                 Vec::<notification_read_marker::Model>::new(),
             ])
             .append_query_results([vec![count_row(1)]])
             .into_connection();
 
-        let count = Query::unread_count(&db, "bob", 100).await.unwrap();
+        let count = Query::unread_count(&mut db, "bob", 100).await.unwrap();
 
         assert_eq!(count, 1);
         let sql = format!("{:?}", db.into_transaction_log());
@@ -306,11 +307,13 @@ mod tests {
 
     #[tokio::test]
     async fn id_of_trigger_matches_every_key_column_for_the_recipient() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
+        let mut db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([vec![id_row(9)]])
             .into_connection();
 
-        let id = Query::id_of_trigger(&db, "bob", &trigger()).await.unwrap();
+        let id = Query::id_of_trigger(&mut db, "bob", &trigger())
+            .await
+            .unwrap();
 
         assert_eq!(id, Some(9));
         let sql = format!("{:?}", db.into_transaction_log());
@@ -332,22 +335,24 @@ mod tests {
 
     #[tokio::test]
     async fn id_of_trigger_is_none_when_absent() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
+        let mut db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([Vec::<BTreeMap<&str, Value>>::new()])
             .into_connection();
 
-        let id = Query::id_of_trigger(&db, "bob", &trigger()).await.unwrap();
+        let id = Query::id_of_trigger(&mut db, "bob", &trigger())
+            .await
+            .unwrap();
 
         assert_eq!(id, None);
     }
 
     #[tokio::test]
     async fn newest_id_takes_the_highest_id_for_the_recipient() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
+        let mut db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([vec![id_row(42)]])
             .into_connection();
 
-        let id = Query::newest_id(&db, "bob").await.unwrap();
+        let id = Query::newest_id(&mut db, "bob").await.unwrap();
 
         assert_eq!(id, Some(42));
         let sql = format!("{:?}", db.into_transaction_log());
@@ -360,14 +365,14 @@ mod tests {
 
     #[tokio::test]
     async fn mark_read_upserts_without_moving_backwards() {
-        let db = MockDatabase::new(DatabaseBackend::Postgres)
+        let mut db = MockDatabase::new(DatabaseBackend::Postgres)
             .append_exec_results([MockExecResult {
                 last_insert_id: 0,
                 rows_affected: 1,
             }])
             .into_connection();
 
-        Mutation::mark_read(&db, "bob", 42).await.unwrap();
+        Mutation::mark_read(&mut db, "bob", 42).await.unwrap();
 
         let sql = format!("{:?}", db.into_transaction_log());
         assert!(sql.contains("ON CONFLICT"), "upserts the marker: {sql}");

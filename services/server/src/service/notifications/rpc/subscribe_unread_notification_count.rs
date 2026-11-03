@@ -6,6 +6,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tonic::codegen::BoxStream;
 use tonic::{Request, Status};
 
+use crate::db::DbConn;
 use crate::service::auth::authenticated_identity;
 use crate::service::context::ServiceContext;
 use crate::service::notifications::changes::Change;
@@ -70,7 +71,8 @@ pub async fn handle(
 
 /// Reads the primary: a change arrives before any replica has the row.
 async fn count(ctx: &ServiceContext, identity: &str) -> Result<u64, Status> {
-    Query::unread_count(&ctx.db, identity, MAX_COUNT)
+    let mut db = DbConn::from_pool(&ctx.ro_db).await?;
+    Query::unread_count(&mut db, identity, MAX_COUNT)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "unread count db error");

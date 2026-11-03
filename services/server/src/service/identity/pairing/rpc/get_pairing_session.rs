@@ -9,10 +9,11 @@ use crate::service::proto::{
 };
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: GetPairingSessionRequest,
 ) -> Result<GetPairingSessionResponse, Status> {
-    let session_state = load_session_state(&ctx.db, &req.digest_sha256).await?;
+    let session_state =
+        load_session_state(&mut ctx.db, &req.digest_sha256).await?;
 
     Ok(GetPairingSessionResponse {
         session_state: Some(session_state),

@@ -2,14 +2,16 @@
 
 use entity::event;
 use polycentric_common::merkle;
-use sea_orm::{ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
+
+use crate::db::Connection;
 
 /// Canonically-ordered signatures in `(identity, collection)`. Delegates
 /// to [`polycentric_common::merkle::canonical_signatures`] so client and
 /// server agree on the ordering.
 #[tracing::instrument(skip_all)]
-pub async fn canonical_signatures<C: ConnectionTrait>(
-    db: &C,
+pub async fn canonical_signatures<C: Connection>(
+    db: &mut C,
     identity: &str,
     collection: i32,
 ) -> Result<Vec<Vec<u8>>, DbErr> {

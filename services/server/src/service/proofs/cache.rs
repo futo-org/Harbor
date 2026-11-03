@@ -5,11 +5,14 @@
 //! `build_identity_hints` decoding the rows it already fetched). The
 //! cache never queries the DB for identity content on its own.
 
-use polycentric_common::models::protos_v2::Identity;
-use sea_orm::{ConnectionTrait, DbErr};
 use std::collections::HashMap;
 use std::sync::Arc;
+
+use polycentric_common::models::protos_v2::Identity;
+use sea_orm::DbErr;
 use tokio::sync::RwLock;
+
+use crate::db::Connection;
 
 use super::repository;
 
@@ -37,9 +40,9 @@ impl ProofCache {
     }
 
     /// Canonical signatures for `(identity, collection)`. Cached after the first hit.
-    pub async fn canonical<C: ConnectionTrait>(
+    pub async fn canonical<C: Connection>(
         &self,
-        db: &C,
+        db: &mut C,
         identity: &str,
         collection: i32,
     ) -> Result<Vec<Vec<u8>>, DbErr> {

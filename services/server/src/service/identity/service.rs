@@ -6,11 +6,11 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use polycentric_common::models::collections;
-use sea_orm::{ConnectionTrait, DbErr, RuntimeErr};
+use sea_orm::{DbErr, RuntimeErr};
 use tonic::Status;
 
 use crate::data::EventWithContentRow;
-use crate::db::DbConn;
+use crate::db::{Connection, DbConn};
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::context::RequestContext;
 use crate::service::events::TargetEventKey;
@@ -80,8 +80,9 @@ pub async fn erase_identity(
     }
 
     let mut run = async || {
-        let txn = db.begin().await?;
-        IdentityMutation::erase_derived(&txn, &[identity.to_string()]).await?;
+        let mut txn = db.begin().await?;
+        IdentityMutation::erase_derived(&mut txn, &[identity.to_string()])
+            .await?;
         txn.commit().await
     };
     retry_deadlocks_inline!(run);
@@ -132,7 +133,7 @@ pub async fn erase_signed_by(
         let batch =
             IdentityMutation::erase_events_signed_by(&mut tx, public_key)
                 .await?;
-        IdentityMutation::erase_derived(&tx, identities).await?;
+        IdentityMutation::erase_derived(&mut tx, identities).await?;
         tx.commit().await?;
         Ok(batch)
     })
@@ -248,7 +249,7 @@ async fn delete_blobs(
 /// sequentially so MockDatabase-backed tests stay deterministic; skips the
 /// lookups entirely for an empty list.
 pub async fn list_identity_and_profile_events<A>(
-    ctx: &RequestContext<A>,
+    ctx: &mut RequestContext<A>,
     identities: Vec<String>,
 ) -> Result<(Vec<EventWithContentRow>, Vec<EventWithContentRow>), Status> {
     if identities.is_empty() {
@@ -263,13 +264,15 @@ pub async fn list_identity_and_profile_events<A>(
 /// each identity in `identities`, and warm the proof cache from
 /// whichever Identity content payload is freshest per identity.
 pub async fn list_identity_events<A>(
-    ctx: &RequestContext<A>,
+    ctx: &mut RequestContext<A>,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
-    let rows =
-        IdentityRepo::list_identity_events_for_identities(&ctx.db, identities)
-            .await
-            .map_err(map_db_err)?;
+    let rows = IdentityRepo::list_identity_events_for_identities(
+        &mut ctx.db,
+        identities,
+    )
+    .await
+    .map_err(map_db_err)?;
     warm_identity_cache(ctx, &rows).await;
     Ok(rows)
 }
@@ -277,11 +280,12 @@ pub async fn list_identity_events<A>(
 /// Fetch the latest profile event (display name, avatar, banner)
 /// for each identity in `identities`.
 pub async fn list_profile_events<A>(
-    ctx: &RequestContext<A>,
+    ctx: &mut RequestContext<A>,
     identities: Vec<String>,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     FeedsRepository::Query::list_latest_profiles_for_identities(
-        &ctx.db, identities,
+        &mut ctx.db,
+        identities,
     )
     .await
     .map_err(map_db_err)
@@ -325,8 +329,8 @@ fn map_db_err(e: sea_orm::DbErr) -> Status {
 }
 
 /// The latest valid identity document for `identity`, via the proof cache.
-pub async fn cached_identity_content<C: ConnectionTrait>(
-    db: &C,
+pub async fn cached_identity_content<C: Connection>(
+    db: &mut C,
     proof_cache: &ProofCache,
     identity: &str,
 ) -> Result<polycentric_common::models::protos_v2::Identity, Status> {
@@ -354,8 +358,8 @@ pub async fn cached_identity_content<C: ConnectionTrait>(
 /// `(target_identity, collection)`.
 ///
 /// TODO: share this rule set with `rs-core::client::validate_event`.
-pub async fn authorize_event_signer<C: ConnectionTrait>(
-    db: &C,
+pub async fn authorize_event_signer<C: Connection>(
+    db: &mut C,
     proof_cache: &ProofCache,
     target_identity: &str,
     signer: &PublicKey,

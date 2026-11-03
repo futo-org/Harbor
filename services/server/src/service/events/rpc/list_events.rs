@@ -80,7 +80,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     EventsRepository::list_events(
-        &ctx.db,
+        &mut ctx.db,
         Some(params.size),
         params.collection,
         params.identity.clone(),
@@ -114,7 +114,7 @@ async fn hydrate(
     // so that we can send them as hints.
     let deletes_by_target = tombstone::validated_tombstones(ctx, &keys).await?;
 
-    let stats = gather_stats_for(&ctx.db, rows.iter().map(|(e, _)| e.id))
+    let stats = gather_stats_for(&mut ctx.db, rows.iter().map(|(e, _)| e.id))
         .await
         .map_err(map_db_err)?;
 
