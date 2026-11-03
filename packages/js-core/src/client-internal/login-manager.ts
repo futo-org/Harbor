@@ -5,7 +5,11 @@ import type {
   LoginId,
   LoginStatus,
 } from '../platform-interfaces/login-repository';
-import type { KeyPair, PolycentricClient } from '../polycentric-client';
+import type {
+  KeyPair,
+  LocalBundle,
+  PolycentricClient,
+} from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { KeyType, PrivateKey, PublicKey } from '../proto/v2';
 import { bytesToHex } from '../utils/hex';
@@ -164,39 +168,19 @@ export class LoginManager {
    * by rs-core.
    */
   copyBackupEvents(backup: Proto.IdentityBackup): void {
-    const events: ArrayBuffer[] = [];
-    const contents: { digestBytes: ArrayBuffer; contentBytes: ArrayBuffer }[] =
-      [];
+    const bundles: LocalBundle[] = [];
 
-    for (const bundle of backup.identityChain) {
-      const { signedEvent, serializedContent } = bundle;
+    for (const { signedEvent, serializedContent } of backup.identityChain) {
       if (!signedEvent) continue;
 
-      events.push(
-        Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
-      );
-
-      if (!serializedContent) continue;
-
-      let digest: Proto.ContentDigest;
-      try {
-        const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-        if (!event.contentDigest) continue;
-        digest = event.contentDigest;
-      } catch {
-        continue;
-      }
-
-      const digestBytes = Proto.ContentDigest.toBinary(digest)
-        .buffer as ArrayBuffer;
-      const contentBytes = serializedContent.contentBytes.slice()
-        .buffer as ArrayBuffer;
-      contents.push({ digestBytes, contentBytes });
+      bundles.push({
+        signedEvent,
+        contentBytes: serializedContent?.contentBytes,
+      });
     }
 
     try {
-      this.client.core.copyContents(contents);
-      this.client.core.copyEvents(events);
+      this.client.copyBundles(bundles);
     } catch (e) {
       console.warn(`Backup data failed to copy: ${e}`);
     }

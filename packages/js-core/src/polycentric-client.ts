@@ -44,6 +44,11 @@ export interface KeyPair {
   publicKey: Proto.PublicKey;
 }
 
+export type LocalBundle = {
+  signedEvent: Proto.SignedEvent;
+  contentBytes?: Uint8Array;
+};
+
 /**
  * PolycentricClientConfig defines the dependencies and configuration for a PolycentricClient.
  */
@@ -144,20 +149,36 @@ export class PolycentricClient {
   }
 
   private async initialize() {
+    // Initializate storage
     this.storageHandle = new StorageHandle({
       eventRepository: this.storageDriver.createEventRepository(),
-      contentRepository: this.storageDriver.createContentRepository(),
       loginRepository: this.storageDriver.createLoginRepository(),
     });
 
-    await this.copyEvents();
-    await this.copyContents();
-
+    // Restore active login
     await this.loginManager.restore();
 
-    // Push the JS-side server list into the rust core so that
-    // observables that fan out to every configured server (e.g.
-    // `getIdentityFeed`) actually have somewhere to call.
+    // Hydrate rs-core events/contents
+    if (this.activeIdentityKey) {
+      const localEvents = await this.storage.events.getAll(
+        this.activeIdentityKey,
+      );
+      const bundles: LocalBundle[] = localEvents.map(
+        ({ eventBytes, eventSignature, contentBytes }) => {
+          const signedEvent = Proto.SignedEvent.create({
+            eventBytes,
+            signature: eventSignature,
+          });
+
+          return { signedEvent, contentBytes };
+        },
+      );
+
+      this.copyBundles(bundles);
+    }
+
+    // Ensures that rs-core has an updated server list even if we have no
+    // active login.
     this.refreshServers();
   }
 
@@ -268,37 +289,38 @@ export class PolycentricClient {
   }
 
   /**
-   * Hydrate the Rust core's in-memory stores from persistent storage.
-   * The Rust stores are ephemeral (reset on every load) so anything the
-   * core needs (events for clocks/sequences, content for identity lookups)
-   * must be copied in at startup.
+   * Copy the events and content provided to rs-core.
+   * TODO: Add rs-core API to do this in one step instead of splitting them out.
    */
-  async copyEvents(events?: Proto.SignedEvent[]) {
-    const signedEvents = events ?? (await this.storage.events.getAll());
+  copyBundles(bundles: LocalBundle[]): void {
+    const events: ArrayBuffer[] = [];
+    const contents: { digestBytes: ArrayBuffer; contentBytes: ArrayBuffer }[] =
+      [];
 
-    this.core.copyEvents(
-      signedEvents.map(
-        (s) => Proto.SignedEvent.toBinary(s).buffer as ArrayBuffer,
-      ),
-    );
-  }
+    for (const { signedEvent, contentBytes } of bundles) {
+      let digest: Proto.ContentDigest;
+      try {
+        const event = Proto.Event.fromBinary(signedEvent.eventBytes);
+        if (!event.contentDigest) continue;
+        digest = event.contentDigest;
+      } catch {
+        continue;
+      }
 
-  /**
-   * A temporary function to copy all the content the browser is aware of.
-   * We should make this smarter with the EventBundles, maybe.
-   */
-  async copyContents(
-    contents?: { digest: Proto.ContentDigest; content: Proto.Content }[],
-  ) {
-    const list = contents ?? (await this.storage.content.getAll());
+      events.push(
+        Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
+      );
 
-    this.core.copyContents(
-      list.map((r) => ({
-        digestBytes: Proto.ContentDigest.toBinary(r.digest)
-          .buffer as ArrayBuffer,
-        contentBytes: Proto.Content.toBinary(r.content).buffer as ArrayBuffer,
-      })),
-    );
+      if (!contentBytes) continue;
+
+      contents.push({
+        digestBytes: Proto.ContentDigest.toBinary(digest).buffer as ArrayBuffer,
+        contentBytes: contentBytes.slice().buffer as ArrayBuffer,
+      });
+    }
+
+    this.core.copyContents(contents);
+    this.core.copyEvents(events);
   }
 
   /**
@@ -418,23 +440,13 @@ export class PolycentricClient {
   ): Promise<void> {
     await this.storage.events.save(signedEvent);
 
-    this.core.copyEvents([
-      Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
-    ]);
+    const bundle: LocalBundle = { signedEvent };
 
     if (content) {
-      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-      if (event.contentDigest) {
-        this.core.copyContents([
-          {
-            digestBytes: Proto.ContentDigest.toBinary(event.contentDigest)
-              .buffer as ArrayBuffer,
-            contentBytes: Proto.Content.toBinary(content).buffer as ArrayBuffer,
-          },
-        ]);
-      }
+      bundle.contentBytes = Proto.Content.toBinary(content);
     }
 
+    this.copyBundles([bundle]);
     this.events.emitContentCreated({ signedEvent, content });
   }
 
