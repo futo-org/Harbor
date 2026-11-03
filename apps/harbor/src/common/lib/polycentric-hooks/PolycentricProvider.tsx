@@ -4,6 +4,7 @@ import useBlocks from '@/src/features/block/hooks/useBlocks';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { showPushIssueToasts } from '@/src/features/core/event-push-issues/pushIssueToasts';
 import { useEventPushIssuesStore } from '@/src/features/core/event-push-issues/useEventPushIssuesStore';
 import { useServerFailuresStore } from '@/src/features/core/server-failures/useServerFailuresStore';
 import {
@@ -303,8 +304,10 @@ export function PolycentricProvider({
 
     const handlePushResults = (results: ServerPushResult[]) => {
       if (cancelled) return;
-      useEventPushIssuesStore.getState().record(results);
+      const added = useEventPushIssuesStore.getState().record(results);
       useServerFailuresStore.getState().record(results);
+      const active = ready?.client.activeIdentityKey;
+      showPushIssueToasts(added.filter((i) => i.key.identity === active));
     };
 
     (async () => {
