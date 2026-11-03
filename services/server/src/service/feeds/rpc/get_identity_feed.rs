@@ -59,7 +59,7 @@ async fn caller_blocks_subject(
     ctx: &mut PublicContext,
     subject: &str,
 ) -> Result<bool, Status> {
-    let Some(caller) = ctx.identity().filter(|caller| *caller != subject)
+    let Some(caller) = ctx.auth.identity().filter(|caller| *caller != subject)
     else {
         return Ok(false);
     };

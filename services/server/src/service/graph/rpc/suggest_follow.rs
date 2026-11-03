@@ -44,7 +44,7 @@ async fn fetch(
 ) -> Result<Fetched<FollowSuggestionEvent, FollowSuggestionsSortedBy>, Status> {
     let mut rows = Query::suggest_follow(
         &ctx.db,
-        ctx.identity(),
+        ctx.auth.identity(),
         &params.pagination.cursor_filter,
         params.pagination.limit + 1, // For pagination.
     )
