@@ -29,8 +29,8 @@ async fn connect_db_with_retry(
     loop {
         match build_db_clients(
             durable_commits,
-            Some(std::time::Duration::from_secs(5)), // Statement.
-            Some(std::time::Duration::from_secs(10)), // Transaction.
+            Some(std::time::Duration::from_secs(3)), // Statement.
+            Some(std::time::Duration::from_secs(5)), // Transaction.
         )
         .await
         {
