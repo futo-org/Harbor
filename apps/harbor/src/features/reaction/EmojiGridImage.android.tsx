@@ -1,11 +1,10 @@
 import { EmojiSprite } from '@/modules/emoji-sprite';
 import { EmojiImage } from '@/src/common/components/EmojiImage';
 import {
-  SHEET_INDEX,
+  SPRITE_EMOJIS,
   SPRITE_PAGE_COLUMNS,
   SPRITE_PAGE_STARTS,
-} from '@/src/common/emoji/twemoji/sheet';
-import { twemojiCode } from '@/src/common/util/emoji';
+} from '@/src/common/emoji/spritePages';
 
 type Props = {
   sequence: string;
@@ -18,7 +17,7 @@ type Props = {
  * on Android.
  */
 export function EmojiGridImage({ sequence, size }: Props) {
-  const sheetIndex = SHEET_INDEX[twemojiCode(sequence)];
+  const sheetIndex = getSheetIndexByEmojiMap().get(sequence);
   // Not expected: the pages hold every picker emoji.
   if (sheetIndex === undefined)
     return <EmojiImage sequence={sequence} size={size} />;
@@ -37,4 +36,15 @@ export function EmojiGridImage({ sequence, size }: Props) {
       testID="emoji"
     />
   );
+}
+
+let sheetIndexByEmojiMap: Map<string, number> | undefined;
+
+function getSheetIndexByEmojiMap(): Map<string, number> {
+  if (!sheetIndexByEmojiMap) {
+    sheetIndexByEmojiMap = new Map(
+      SPRITE_EMOJIS.map((emoji, sheetIndex) => [emoji, sheetIndex]),
+    );
+  }
+  return sheetIndexByEmojiMap;
 }

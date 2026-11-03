@@ -4,7 +4,8 @@ import {
   Text,
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
+import { TimeAgo } from '@/src/common/components/TimeAgo';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
 import {
   getKeyFingerprint,
@@ -128,8 +129,6 @@ function QuoteUnavailable() {
 
 /** Author and time info at the top. */
 function AuthorRow({ post }: { post: PostData }) {
-  const time = timeAgo(Number(post.createdAt));
-
   return (
     <View style={[Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}>
       <ProfileAvatar
@@ -143,7 +142,7 @@ function AuthorRow({ post }: { post: PostData }) {
         fontWeight="bold"
       />
       <IdentityTag identity={post.identity} />
-      {time ? (
+      {post.createdAt ? (
         <>
           <Text variant="secondary" color="neutral_500" fontWeight="bold">
             ·
@@ -153,7 +152,7 @@ function AuthorRow({ post }: { post: PostData }) {
             color="neutral_500"
             style={Atoms.flex_shrink_0}
           >
-            {time}
+            <TimeAgo since={post.createdAt} />
           </Text>
         </>
       ) : null}

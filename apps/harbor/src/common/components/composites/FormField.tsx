@@ -10,7 +10,7 @@ import {
   type SpacingToken,
   type PaletteColorToken,
 } from '@/src/common/theme';
-import type { TextInput as RNTextInput } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 
 interface FormFieldProps extends TextInputProps {
   label?: string;
@@ -19,7 +19,7 @@ interface FormFieldProps extends TextInputProps {
   containerStyle?: ViewStyle;
 }
 
-export const FormField = forwardRef<RNTextInput, FormFieldProps>(
+export const FormField = forwardRef<TextInputInstance, FormFieldProps>(
   (
     { label, labelColor, labelMarginBottom = 'sm', containerStyle, ...props },
     ref,

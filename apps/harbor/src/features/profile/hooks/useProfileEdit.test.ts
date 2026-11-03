@@ -5,7 +5,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   invalidateQuery: jest.fn(),
 }));
 const mockClient = { sync: jest.fn().mockResolvedValue(0) };
-jest.mock('@/src/common/lib/polycentric-hooks', () => ({
+jest.mock('@/src/common/lib/polycentric-hooks/context', () => ({
   usePolycentric: () => mockClient,
 }));
 jest.mock('../lib/updateProfile', () => ({

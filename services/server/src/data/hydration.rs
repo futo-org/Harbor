@@ -88,7 +88,7 @@ pub async fn hydrate<Row, A>(
 ) -> Result<HydrationState, Status>
 where
     Row: EventRow,
-    RequestContext<A>: Auth,
+    A: Auth,
 {
     let keys: Vec<TargetEventKey> = rows
         .iter()
@@ -194,7 +194,7 @@ pub async fn post_hydrate<Row, A>(
 ) -> Result<HydrationState, Status>
 where
     Row: EventRow,
-    RequestContext<A>: Auth,
+    A: Auth,
 {
     let config = HydrateConfig {
         post: true,

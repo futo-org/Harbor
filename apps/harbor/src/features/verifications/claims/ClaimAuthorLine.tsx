@@ -4,8 +4,8 @@ import {
   type AvatarSizePreset,
   IdentityTag,
 } from '@/src/common/components/primitives';
+import { TimeAgo } from '@/src/common/components/TimeAgo';
 import { Routes } from '@/src/common/constants';
-import { timeAgo } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
@@ -50,7 +50,7 @@ export function ClaimAuthorLine({
         ·
       </Text>
       <Text variant="secondary" color="neutral_500" style={Atoms.flex_shrink_0}>
-        {timeAgo(Number(createdAt))}
+        <TimeAgo since={createdAt} />
       </Text>
     </View>
   );

@@ -7,8 +7,10 @@ appId: ${MAESTRO_APP_ID}
 - evalScript: ${output.identityName = 'Maestro ' + Date.now().toString(36)}
 - inputText: ${output.identityName}
 - tapOn: ${output.onboarding.continue}
-# Creating the identity publishes to the server, so give it room.
+# Creating the identity publishes to the server, so give it room. The app
+# lands on Explore over a hidden Home, whose sidebar comes first in the page,
+# so match every Profile link rather than the first one by label.
 - extendedWaitUntil:
     visible:
-      id: ${output.nav.profile}
+      css: '[aria-label="${output.nav.profile}"]'
     timeout: 120000

@@ -23,8 +23,12 @@ name: Closing the composer over a draft asks to discard it
     script: window.confirmMessage = ''; window.confirmAnswer = false; return true
 - tapOn:
     css: '[aria-label="${output.composer.closeWeb}"]'
+# The router asks a few renders after the tap, not during it, so wait.
 - evalBrowserScript:
-    script: return window.confirmMessage
+    script: |
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      for (let i = 0; i < 50 && !window.confirmMessage; i++) await sleep(100);
+      return window.confirmMessage;
     output: confirmMessage
 - assertTrue: ${confirmMessage.startsWith(output.composer.discardTitle)}
 - evalBrowserScript:
@@ -43,7 +47,10 @@ name: Closing the composer over a draft asks to discard it
     output: clicked
 - assertTrue: ${clicked === output.composer.backdropWeb}
 - evalBrowserScript:
-    script: return window.confirmMessage
+    script: |
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      for (let i = 0; i < 50 && !window.confirmMessage; i++) await sleep(100);
+      return window.confirmMessage;
     output: confirmMessage
 - assertTrue: ${confirmMessage.startsWith(output.composer.discardTitle)}
 - evalBrowserScript:

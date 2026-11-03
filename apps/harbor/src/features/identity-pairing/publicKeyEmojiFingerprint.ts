@@ -1,19 +1,5 @@
 import { sha256 } from '@noble/hashes/sha2.js';
-import { categories } from '../reaction/emojiData';
-
-const FINGERPRINT_EMOJI_CATEGORIES = new Set([
-  'smileys & emotion',
-  'animals & nature',
-  'food & drink',
-  'travel & places',
-  'activities',
-  'objects',
-]);
-
-const emojiFingerprintPool = categories
-  .filter((cat) => FINGERPRINT_EMOJI_CATEGORIES.has(cat.name.toLowerCase()))
-  .flatMap((cat) => cat.emojis)
-  .map((e) => e.emoji);
+import emojiFingerprintPool from '@/src/common/emoji/fingerprintEmojis.json';
 
 export function publicKeyEmojiFingerprint(
   seed: string,

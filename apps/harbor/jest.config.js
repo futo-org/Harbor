@@ -1,7 +1,7 @@
 const expoPreset = require('jest-expo/jest-preset');
 
 // Packages that ship ESM only and so must be transformed like the app code.
-const ESM_ONLY_PACKAGES = ['fuzzysort'];
+const ESM_ONLY_PACKAGES = ['fuzzysort', '@noble/hashes'];
 
 /** @type {import('jest').Config} */
 module.exports = {

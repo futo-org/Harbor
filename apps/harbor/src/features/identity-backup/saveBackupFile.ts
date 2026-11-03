@@ -26,7 +26,7 @@ export const saveBackupFile: SaveBackupFile = async (name, contents) => {
   try {
     deleteFile();
     file.create();
-    file.write(contents);
+    await file.write(contents);
 
     const [saved] = await saveDocuments({
       sourceUris: [file.uri],

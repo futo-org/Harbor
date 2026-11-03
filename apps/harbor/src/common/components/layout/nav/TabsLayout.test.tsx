@@ -13,7 +13,7 @@ jest.mock('expo-router', () => {
 });
 
 // Leaf stand-ins for the native tab bar; the badge surfaces its text.
-jest.mock('expo-router/unstable-native-tabs', () => {
+jest.mock('expo-router/native-tabs', () => {
   const react = require('react');
   const { Text, View } = require('react-native');
   const NativeTabs = ({ children }: { children?: unknown }) =>

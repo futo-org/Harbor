@@ -1,6 +1,6 @@
 import { View, ActivityIndicator } from 'react-native';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { Text, LinkButton } from '@/src/common/components';
+import { Text, LinkButton } from '@/src/common/components/primitives';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { router, usePathname } from 'expo-router';

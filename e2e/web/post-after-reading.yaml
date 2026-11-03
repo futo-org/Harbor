@@ -6,8 +6,9 @@ tags:
 - runFlow: ../elements/load.yaml
 - runFlow: ../steps/fresh-start.yaml
 - runFlow: ../steps/create-identity.yaml
+- runFlow: ../steps/mark-sidebar.yaml
 - tapOn:
-    id: ${output.nav.explore}
+    css: '#sidebar [aria-label="${output.nav.explore}"]'
 - runFlow: ../steps/scroll-to-end.yaml
 - runFlow: ../steps/open-post.yaml
 # The opened post carries its own reply prompt, so pick the sidebar button.
