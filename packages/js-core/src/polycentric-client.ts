@@ -1,10 +1,7 @@
 import {
-  ClientState,
   ContentManager,
   EventService,
-  HydrationStatus,
   IdentityManager,
-  InitializationStep,
   LoginManager,
   PairingSessionManager,
 } from './client-internal';
@@ -86,11 +83,6 @@ export class PolycentricClient {
   public readonly identityManager = new IdentityManager(this);
   public readonly pairingSessionManager = new PairingSessionManager(this);
 
-  private state = ClientState.UNINITIALIZED;
-  public step = '';
-  public hydrationStatus: HydrationStatus = HydrationStatus.NOT_STARTED;
-  public error: Error | null = null;
-
   public readonly core: CoreType;
 
   public currentKeyPair: KeyPair | null = null;
@@ -152,41 +144,21 @@ export class PolycentricClient {
   }
 
   private async initialize() {
-    try {
-      this.setState(ClientState.INITIALIZING);
-      this.setStep(InitializationStep.STARTING);
+    this.storageHandle = new StorageHandle({
+      eventRepository: this.storageDriver.createEventRepository(),
+      contentRepository: this.storageDriver.createContentRepository(),
+      loginRepository: this.storageDriver.createLoginRepository(),
+    });
 
-      this.setStep(InitializationStep.INITIALIZING_CORE);
+    await this.copyEvents();
+    await this.copyContents();
 
-      this.setStep(InitializationStep.SETTING_UP_STORAGE);
-      this.storageHandle = new StorageHandle({
-        eventRepository: this.storageDriver.createEventRepository(),
-        contentRepository: this.storageDriver.createContentRepository(),
-        loginRepository: this.storageDriver.createLoginRepository(),
-      });
+    await this.loginManager.restore();
 
-      this.setStep(InitializationStep.LOADING_PROCESS_ID);
-
-      this.setStep(InitializationStep.HYDRATING_EVENTS);
-
-      await this.copyEvents();
-      await this.copyContents();
-
-      this.setHydrationStatus(HydrationStatus.COMPLETED);
-
-      await this.loginManager.restore();
-
-      // Push the JS-side server list into the rust core so that
-      // observables that fan out to every configured server (e.g.
-      // `getIdentityFeed`) actually have somewhere to call.
-      this.refreshServers();
-
-      this.setStep(InitializationStep.COMPLETE);
-      this.setState(ClientState.READY);
-    } catch (error) {
-      this.setError(error instanceof Error ? error : new Error(String(error)));
-      throw error;
-    }
+    // Push the JS-side server list into the rust core so that
+    // observables that fan out to every configured server (e.g.
+    // `getIdentityFeed`) actually have somewhere to call.
+    this.refreshServers();
   }
 
   /** Blob URL for each configured server, in order, for fallback. */
@@ -1209,28 +1181,6 @@ export class PolycentricClient {
     this.events.emitKeyPairChanged(this.currentKeyPair);
   }
 
-  private setState(state: ClientState) {
-    this.state = state;
-    this.events.emitStateChanged(state);
-  }
-
-  private setStep(step: InitializationStep) {
-    this.step = step;
-    this.events.emitProgress(step);
-  }
-
-  private setHydrationStatus(status: HydrationStatus) {
-    this.hydrationStatus = status;
-    this.events.emitHydrationStatus(status);
-  }
-
-  private setError(error: Error) {
-    this.state = ClientState.ERROR;
-    this.error = error;
-    this.events.emitStateChanged(this.state);
-    this.events.emitError(error);
-  }
-
   get currentSystem(): Proto.PublicKey {
     return this.currentKeyPair!.publicKey;
   }
@@ -1247,9 +1197,5 @@ export class PolycentricClient {
       throw new Error('Storage handle not initialized');
     }
     return this.storageHandle;
-  }
-
-  get isReady(): boolean {
-    return this.state === ClientState.READY;
   }
 }

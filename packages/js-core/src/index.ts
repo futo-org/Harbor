@@ -59,12 +59,7 @@ export type {
 
 export { ContentManager } from './client-internal/content-manager';
 
-export {
-  EventService,
-  ClientState,
-  InitializationStep,
-  HydrationStatus,
-} from './client-internal/event-service';
+export { EventService } from './client-internal/event-service';
 export type { ContentCreatedPayload } from './client-internal/event-service';
 
 export {
