@@ -36,6 +36,9 @@ Listed in `custom-emojis.json` (`after`: the emoji the picker shows it after),
 with their art in `svg/`, named like Twemoji's files. Each SVG needs a
 `<title>` for Biome. After a change, rerun all three generate scripts.
 
+Its `moved` list puts existing emoji somewhere else in the picker, with the same
+`after`. After a change, rerun `generate:data` and `generate:sprites`.
+
 ## Setup
 
 `generate:font` needs uv (e.g. `brew install uv`).

@@ -15724,6 +15724,24 @@
     "tags": ["GB", "flag"]
   },
   {
+    "emoji": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "name": "flag: England",
+    "category": "flags",
+    "tags": ["flag", "gbeng"]
+  },
+  {
+    "emoji": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+    "name": "flag: Scotland",
+    "category": "flags",
+    "tags": ["flag", "gbsct"]
+  },
+  {
+    "emoji": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+    "name": "flag: Wales",
+    "category": "flags",
+    "tags": ["flag", "gbwls"]
+  },
+  {
     "emoji": "🇬🇩",
     "name": "flag: Grenada",
     "category": "flags",
@@ -16784,23 +16802,5 @@
     "name": "flag: Zimbabwe",
     "category": "flags",
     "tags": ["ZW", "flag"]
-  },
-  {
-    "emoji": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    "name": "flag: England",
-    "category": "flags",
-    "tags": ["flag", "gbeng"]
-  },
-  {
-    "emoji": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
-    "name": "flag: Scotland",
-    "category": "flags",
-    "tags": ["flag", "gbsct"]
-  },
-  {
-    "emoji": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
-    "name": "flag: Wales",
-    "category": "flags",
-    "tags": ["flag", "gbwls"]
   }
 ]
