@@ -3,7 +3,7 @@
 /** Sheet index of the first emoji on each Android sprite page
  * (emoji-sprite module); a page holds the emoji up to the next start. */
 export const SPRITE_PAGE_STARTS = [
-  0, 169, 441, 555, 714, 845, 1063, 1148, 1412, 1636,
+  0, 169, 441, 555, 715, 846, 1064, 1149, 1413, 1637,
 ];
 
 /** Cells per row of an Android sprite page. */
@@ -669,6 +669,7 @@ export const SPRITE_EMOJIS = [
   '\u{1F9AD}',
   '\u{1F41F}',
   '\u{1F420}',
+  '\u{1F434}\u{200D}\u{1F30A}',
   '\u{1F421}',
   '\u{1F988}',
   '\u{1F419}',
@@ -1897,6 +1898,7 @@ export const SPRITE_EMOJIS = [
   '\u{1F1FA}\u{1F1F2}',
   '\u{1F1FA}\u{1F1F3}',
   '\u{1F1FA}\u{1F1F8}',
+  '\u{1F3F4}\u{E0075}\u{E0073}\u{E0074}\u{E0078}\u{E007F}',
   '\u{1F1FA}\u{1F1FE}',
   '\u{1F1FA}\u{1F1FF}',
   '\u{1F1FB}\u{1F1E6}',

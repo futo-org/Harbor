@@ -7815,6 +7815,12 @@
     "tags": ["animal", "fish", "fishes", "tropical"]
   },
   {
+    "emoji": "🐴‍🌊",
+    "name": "seahorse",
+    "category": "animals-nature",
+    "tags": ["seahorse", "sea horse", "ocean", "fish"]
+  },
+  {
     "emoji": "🐡",
     "name": "blowfish",
     "category": "animals-nature",
@@ -16670,6 +16676,12 @@
     "name": "flag: United States",
     "category": "flags",
     "tags": ["US", "flag"]
+  },
+  {
+    "emoji": "🏴󠁵󠁳󠁴󠁸󠁿",
+    "name": "flag: Texas",
+    "category": "flags",
+    "tags": ["texas", "tx", "lone star", "flag"]
   },
   {
     "emoji": "🇺🇾",

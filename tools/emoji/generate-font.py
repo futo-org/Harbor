@@ -16,8 +16,8 @@
 # exclude-newer = "2026-10-09T19:39:05Z"
 # ///
 #
-# Writes the Twemoji SVGs as color fonts, which text draws emoji with. In the
-# app:
+# Writes the Twemoji SVGs and the custom ones (custom-emojis.json) as color
+# fonts, which text draws emoji with. In the app:
 # - `public/fonts/Twemoji-<hash>.woff2`: COLRv0, for web (see `app/+html.tsx`).
 # - `src/common/assets/fonts/Twemoji.ttf`: the same, for iOS and Android 10+.
 # - `src/common/assets/fonts/TwemojiCbdt.ttf`: bitmaps (CBDT), for Android 7-9,
@@ -61,6 +61,9 @@ twemoji_dir = downloads_dir / 'twemoji' / versions['twemoji']
 emoji_variation_sequences_file = (
     downloads_dir / 'unicode' / versions['unicode']['font'] / 'emoji-variation-sequences.txt'
 )
+
+custom_emojis = json.loads((Path(__file__).resolve().parent / 'custom-emojis.json').read_text())['emojis']
+custom_svg_dir = Path(__file__).resolve().parent / 'svg'
 
 app_dir = Path(__file__).resolve().parent.parent.parent / 'apps' / 'harbor'
 web_font_dir = app_dir / 'public' / 'fonts'
@@ -133,6 +136,11 @@ def stage_svgs(svg_dir, build_dir):
     stage_dir.mkdir()
     for svg in svg_dir.glob('*.svg'):
         (stage_dir / svg.name.replace('-fe0f', '')).write_text(make_view_box_square(svg.read_text()))
+    for custom_emoji in custom_emojis:
+        svg = custom_svg_dir / f'{"-".join(custom_emoji["code"]).lower()}.svg'
+        if (stage_dir / svg.name).exists():
+            sys.exit(f'custom emoji {svg.name} clashes with a Twemoji file')
+        (stage_dir / svg.name).write_text(make_view_box_square(svg.read_text()))
     return stage_dir
 
 

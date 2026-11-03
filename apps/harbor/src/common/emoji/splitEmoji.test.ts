@@ -28,6 +28,16 @@ describe('splitEmoji', () => {
     }
   });
 
+  it('keeps the custom emoji whole', () => {
+    // Texas flag (non-RGI tag sequence), seahorse (non-RGI ZWJ sequence)
+    for (const emoji of [
+      '\u{1F3F4}\u{E0075}\u{E0073}\u{E0074}\u{E0078}\u{E007F}',
+      '\u{1F434}\u{200D}\u{1F30A}',
+    ]) {
+      expect(splitEmoji(`a${emoji}b`)).toEqual(['a', emoji, 'b']);
+    }
+  });
+
   it('leaves typographic symbols and digits to the text font', () => {
     for (const text of [
       '1 + 1 = 2',

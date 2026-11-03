@@ -37,7 +37,7 @@ export const LEGAL_NOTICES: readonly LegalNotice[] = [
     name: 'Twemoji',
     url: 'https://github.com/jdecked/twemoji',
     attribution:
-      'Emoji graphics copyright Twitter, Inc and other contributors.',
+      'Emoji graphics copyright Twitter, Inc and other contributors. Harbor adds some of its own.',
     license: 'CC BY 4.0',
     licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
   },
