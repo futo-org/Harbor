@@ -4,7 +4,7 @@ import {
   SPRITE_EMOJIS,
   SPRITE_PAGE_COLUMNS,
   SPRITE_PAGE_STARTS,
-} from '@/src/common/emoji/sheet';
+} from '@/src/common/emoji/spritePages';
 
 type Props = {
   sequence: string;

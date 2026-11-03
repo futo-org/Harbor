@@ -1,5 +1,5 @@
 // Writes the picker's emoji, with emojibase's English search tags, to the
-// app's `src/common/emoji/emojis.json`. See README.md.
+// app's `src/common/emoji/pickerEmojis.json`. See README.md.
 import { writeFileSync } from 'node:fs';
 import emojibaseEmojis from 'emojibase-data/en/compact.json' with {
   type: 'json',
@@ -8,7 +8,7 @@ import versions from './versions.json' with { type: 'json' };
 import { listUnicodeEmojis } from './shared/listUnicodeEmojis.ts';
 
 const outFile = new URL(
-  '../../apps/harbor/src/common/emoji/emojis.json',
+  '../../apps/harbor/src/common/emoji/pickerEmojis.json',
   import.meta.url,
 );
 
@@ -27,14 +27,14 @@ for (const emojibaseEmoji of emojibaseEmojis) {
   );
 }
 
-type Category = {
-  key: string;
-  emojis: { emoji: string; name: string; tags: string[] }[];
-};
-
-const categories: Category[] = [];
+const pickerEmojis: {
+  emoji: string;
+  name: string;
+  category: string;
+  tags: string[];
+}[] = [];
 const unmatchedEmojis: string[] = [];
-for (const { emoji, name, category: key } of listUnicodeEmojis(
+for (const { emoji, name, category } of listUnicodeEmojis(
   versions.unicode.picker,
 )) {
   const tags = tagsByStrippedEmoji.get(stripVariationSelector(emoji));
@@ -42,12 +42,7 @@ for (const { emoji, name, category: key } of listUnicodeEmojis(
     unmatchedEmojis.push(`${emoji} ${name}`);
     continue;
   }
-  let category = categories.at(-1);
-  if (category?.key !== key) {
-    category = { key, emojis: [] };
-    categories.push(category);
-  }
-  category.emojis.push({ emoji, name, tags });
+  pickerEmojis.push({ emoji, name, category, tags });
 }
 
 if (unmatchedEmojis.length > 0) {
@@ -56,7 +51,5 @@ if (unmatchedEmojis.length > 0) {
   );
   process.exit(1);
 }
-writeFileSync(outFile, `${JSON.stringify({ categories })}\n`);
-console.log(
-  `Wrote ${outFile.pathname} (${categories.flatMap((category) => category.emojis).length} emojis)`,
-);
+writeFileSync(outFile, `${JSON.stringify(pickerEmojis)}\n`);
+console.log(`Wrote ${outFile.pathname} (${pickerEmojis.length} emojis)`);

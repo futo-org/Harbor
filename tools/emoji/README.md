@@ -6,8 +6,8 @@ it writes with Biome.
 
 | Script | Writes (under `apps/harbor`) |
 |---|---|
-| `generate:data` (`generate-data.ts`) | `src/common/emoji/emojis.json`: the picker's emoji by category, with names and emojibase's English search tags |
-| `generate:sprites` (`generate-sprites.ts`) | The Android picker's sprite pages (`modules/emoji-sprite/android/src/main/assets/emoji-sprite/`) and their layout (`src/common/emoji/sheet.ts`) |
+| `generate:data` (`generate-data.ts`) | `src/common/emoji/pickerEmojis.json`: the picker's emoji in order, with names, categories and emojibase's English search tags |
+| `generate:sprites` (`generate-sprites.ts`) | The Android picker's sprite pages (`modules/emoji-sprite/android/src/main/assets/emoji-sprite/`) and their layout (`src/common/emoji/spritePages.ts`) |
 | `generate:font` (`generate-font.py`) | The Twemoji color fonts (`public/fonts/Twemoji-<hash>.woff2`, `src/common/assets/fonts/Twemoji.ttf`, `TwemojiCbdt.ttf`) and `src/common/assets/twemojiFont.ts` |
 | `generate:fingerprint-emojis` (`generate-fingerprint-emojis.ts`) | `src/common/emoji/fingerprintEmojis.json`: the pairing fingerprint's pool |
 
@@ -20,8 +20,8 @@ download fetches what it names, and the scripts read exactly that, from
   after it: 17.0.3 is 17.0), for the emoji-style variation sequences the font
   declares. Bump it with `twemoji`.
 - `unicode.picker`: the Unicode version of the picker's emoji (`generate:data`,
-  `generate:sprites`). Bumping it changes `emojis.json` and the sprite pages;
-  the Twemoji release must cover it.
+  `generate:sprites`). Bumping it changes `pickerEmojis.json` and the sprite
+  pages; the Twemoji release must cover it.
 - `unicode.fingerprint`: the version the pairing fingerprint's pool was frozen
   at. Never bumped: both devices of a pairing must pick from the same pool.
 

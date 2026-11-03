@@ -3,7 +3,7 @@ import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { Emoji, EmojiLikeButton } from './Emoji';
-import { INLINE_EMOJIS } from '@/src/common/emoji/emojiData';
+import { inlineEmojis } from '@/src/common/emoji/inlineEmojis';
 
 /** The size (width/height) of an inline emoji picker button */
 const INLINE_SIZE = 36;
@@ -29,11 +29,11 @@ export default function EmojiPickerInline({
   // A selected emoji that isn't one of the defaults (picked from the full
   // sheet) leads the list, so the active reaction is always visible.
   const emojis = useMemo(() => {
-    if (!selectedEmoji || INLINE_EMOJIS.some((e) => e.emoji === selectedEmoji))
-      return INLINE_EMOJIS;
+    if (!selectedEmoji || inlineEmojis.some((e) => e.emoji === selectedEmoji))
+      return inlineEmojis;
     return [
       { code: [], emoji: selectedEmoji, name: selectedEmoji },
-      ...INLINE_EMOJIS,
+      ...inlineEmojis,
     ];
   }, [selectedEmoji]);
 

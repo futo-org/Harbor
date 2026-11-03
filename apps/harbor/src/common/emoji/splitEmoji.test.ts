@@ -1,4 +1,4 @@
-import { splitEmoji } from './emoji';
+import { splitEmoji } from './splitEmoji';
 
 describe('splitEmoji', () => {
   it('returns plain text untouched', () => {

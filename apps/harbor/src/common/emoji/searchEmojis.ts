@@ -1,5 +1,5 @@
 import fuzzysort, { type SnapshotKeys } from 'fuzzysort';
-import { categories, type EmojiEntry } from './emojiData';
+import { type EmojiEntry, pickerEmojis } from './pickerEmojis';
 
 /**
  * Emojis matching `query`, best first. Fuzzy over the name and the emojibase
@@ -24,17 +24,13 @@ type SearchableEmoji = {
   tags: string;
 };
 
-const allEntries: EmojiEntry[] = categories.flatMap(
-  (category) => category.emojis,
-);
-
 // Built on the first search rather than at import: preparing the targets is
 // not free on low-end phones.
 let searchIndex: SnapshotKeys<SearchableEmoji> | undefined;
 
 function getSearchIndex(): SnapshotKeys<SearchableEmoji> {
   if (!searchIndex) {
-    const searchableEmojis = allEntries
+    const searchableEmojis = pickerEmojis
       .filter((entry) => entry.emoji !== US_OUTLYING_ISLANDS_FLAG)
       .map(
         (entry): SearchableEmoji => ({
@@ -59,7 +55,7 @@ let entryByNormalizedEmojiMap: Map<string, EmojiEntry> | undefined;
 function getEntryByEmojiMap(): Map<string, EmojiEntry> {
   if (!entryByNormalizedEmojiMap) {
     entryByNormalizedEmojiMap = new Map(
-      allEntries.map((entry) => [normalizeEmoji(entry.emoji), entry]),
+      pickerEmojis.map((entry) => [normalizeEmoji(entry.emoji), entry]),
     );
   }
   return entryByNormalizedEmojiMap;

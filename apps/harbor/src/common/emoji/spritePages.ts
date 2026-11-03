@@ -9,7 +9,7 @@ export const SPRITE_PAGE_STARTS = [
 /** Cells per row of an Android sprite page. */
 export const SPRITE_PAGE_COLUMNS = 16;
 
-/** The emoji on the sprite pages, in sheet order, as in `emojis.json`. */
+/** The emoji on the sprite pages, in page order, as in `pickerEmojis.json`. */
 export const SPRITE_EMOJIS = [
   '\u{1F600}',
   '\u{1F603}',
