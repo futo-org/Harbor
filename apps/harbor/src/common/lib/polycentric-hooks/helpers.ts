@@ -189,19 +189,22 @@ export function eventKeyId(eventKey: v2.EventKey): string {
   return bytesToHex(v2.EventKey.toBinary(eventKey));
 }
 
+/** An rs-core `EventKey` record as the proto `EventKey` used across the app. */
+export function ffiEventKeyToProto(eventKey: EventKey): v2.EventKey {
+  return v2.EventKey.create({
+    collection: eventKey.collection,
+    identity: eventKey.identity,
+    signedBy: v2.PublicKey.create({
+      keyType: eventKey.signedBy.keyType,
+      key: new Uint8Array(eventKey.signedBy.key),
+    }),
+    sequence: eventKey.sequence,
+  });
+}
+
 /** The {@link eventKeyId} of an rs-core `EventKey` record. */
 export function ffiEventKeyId(eventKey: EventKey): string {
-  return eventKeyId(
-    v2.EventKey.create({
-      collection: eventKey.collection,
-      identity: eventKey.identity,
-      signedBy: v2.PublicKey.create({
-        keyType: eventKey.signedBy.keyType,
-        key: new Uint8Array(eventKey.signedBy.key),
-      }),
-      sequence: eventKey.sequence,
-    }),
-  );
+  return eventKeyId(ffiEventKeyToProto(eventKey));
 }
 
 /** Decode a v2 EventBundle into PostData, or null if not a post. */
