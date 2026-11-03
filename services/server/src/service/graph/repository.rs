@@ -135,9 +135,9 @@ impl Query {
         ctx: &RequestContext<A>,
     ) -> Result<HashSet<String>, Status>
     where
-        RequestContext<A>: Auth,
+        A: Auth,
     {
-        match ctx.identity() {
+        match ctx.auth.identity() {
             Some(caller) => Self::blocked_set(&ctx.db, caller).await,
             None => Ok(HashSet::new()),
         }
