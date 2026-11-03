@@ -3,7 +3,6 @@ import {
   ProfileAvatar,
   Text,
 } from '@/src/common/components/primitives';
-import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
@@ -14,7 +13,8 @@ import {
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
-import { FetchMode, v2 } from '@polycentric/react-native';
+import { COLLECTION, FetchMode, v2 } from '@polycentric/react-native';
+import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -67,12 +67,8 @@ export function PostContentQuote({
   const handlePress = useCallback(() => {
     if (!post) return;
 
-    const keyFingerprint = getKeyFingerprint(post.signedBy);
-    if (!keyFingerprint) return;
-
-    router.navigate(
-      Routes.tabs.post(post.identity, keyFingerprint, post.sequence),
-    );
+    const route = eventRoute({ ...post, collection: COLLECTION.FEED });
+    if (route) router.navigate(route);
   }, [post]);
 
   if (!post) return isLoading ? <QuoteSkeleton /> : <QuoteUnavailable />;

@@ -3,6 +3,7 @@ import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
+import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
@@ -13,6 +14,7 @@ import { CLAIM_TYPES } from '@/src/features/verifications/utils/forms';
 import { getPlatformFromClaim } from '@/src/features/verifications/utils/platforms';
 import { resolveClaimTitle } from '@/src/features/verifications/utils/render';
 import { Username } from '@/src/features/profile/Username';
+import { COLLECTION } from '@polycentric/react-native';
 import { type Href, router } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
@@ -28,14 +30,6 @@ type PostNotification =
   | ReplyNotification
   | QuoteNotification
   | MentionNotification;
-
-/** Route to a post's thread, or `null` when its key can't be fingerprinted. */
-function postRoute(post: PostData) {
-  const fingerprint = getKeyFingerprint(post.signedBy);
-  return fingerprint
-    ? Routes.tabs.post(post.identity, fingerprint, post.sequence)
-    : null;
-}
 
 /** What the actor did, e.g. "reacted to your post". */
 function summary(
@@ -82,7 +76,10 @@ function notificationRoute(
     case 'reaction':
     case 'repost':
       return notification.targetPost
-        ? postRoute(notification.targetPost)
+        ? eventRoute({
+            ...notification.targetPost,
+            collection: COLLECTION.FEED,
+          })
         : null;
     case 'verificationRequest':
     case 'verificationComplete': {
