@@ -52,6 +52,7 @@ export interface IdentityUpdate {
 export interface IdentityDraft {
   identity: Proto.Identity;
   content: Proto.Content;
+  contentBytes: Uint8Array;
 }
 
 /**
@@ -117,7 +118,9 @@ export class IdentityManager {
       contentBody: { oneofKind: 'identity', identity },
     });
 
-    return { identity, content };
+    const contentBytes = Proto.Content.toBinary(content);
+
+    return { identity, content, contentBytes };
   }
 
   /**
@@ -144,8 +147,7 @@ export class IdentityManager {
     }
 
     // Create event/content
-    const { content } = this.draftIdentityContent(args);
-    const contentBytes = Proto.Content.toBinary(content);
+    const { content, contentBytes } = this.draftIdentityContent(args);
 
     const event = await this.client.buildEvent({
       identityKey,

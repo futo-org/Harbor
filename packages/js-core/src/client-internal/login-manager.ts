@@ -80,15 +80,13 @@ export class LoginManager {
     args: PublishArgs,
   ): Promise<IdentityUpdate> {
     // Create event/content
-    const { identity, content } =
+    const { identity, content, contentBytes } =
       this.client.identityManager.draftIdentityContent(args);
 
     const publicKey = keyPair.publicKey;
 
     const power = this.checkAuthorization(identity, publicKey);
     if (!power) throw new Error('Key is not authorized by the identity');
-
-    const contentBytes = Proto.Content.toBinary(content);
 
     const event = await this.client.buildEvent({
       identityKey,
