@@ -1,6 +1,6 @@
 import { Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
-import { timeAgo } from '@/src/common/lib/polycentric-hooks';
+import { TimeAgo } from '@/src/common/components/TimeAgo';
 import { Atoms } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
 import { v2 } from '@polycentric/react-native';
@@ -33,7 +33,7 @@ export function ReportHeader({
             ? '1 report'
             : `${report.reportCount} reports`}
           {' · '}
-          {timeAgo(Number(report.latestReportedAt))}
+          <TimeAgo since={report.latestReportedAt} />
         </Text>
       </View>
       {report.additionalInfo ? (
@@ -91,7 +91,7 @@ export function ReportHeader({
           />
           <Text variant="small" color="neutral_500">
             {' · '}
-            {timeAgo(Number(report.resolvedAt))}
+            <TimeAgo since={report.resolvedAt} />
           </Text>
         </View>
       ) : null}
