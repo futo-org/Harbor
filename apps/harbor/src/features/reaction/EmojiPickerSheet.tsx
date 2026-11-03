@@ -15,8 +15,13 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { categories, getCategory, type EmojiEntry } from './emojiData';
-import { searchEmojis } from './emojiSearch';
+import {
+  type EmojiEntry,
+  emojiCategories,
+  emojiCategoryByKeyMap,
+  pickerEmojis,
+} from '@/src/common/emoji/pickerEmojis';
+import { searchEmojis } from '@/src/common/emoji/searchEmojis';
 import { Emoji, EMOJI_IMAGE_SCALE, EmojiLikeButton } from './Emoji';
 import useReactions from './useReactions';
 import { ALL_CATEGORIES, useEmojiPickerStore } from './useEmojiPickerStore';
@@ -26,9 +31,6 @@ import { isWeb } from '@/src/common/util/platform';
 const TARGET_CELL_WIDTH = 60;
 const MIN_COLUMNS = 8;
 
-/** Every pickable emoji, in category order. */
-const ALL_EMOJIS = categories.flatMap((c) => c.emojis);
-
 const keyExtractor = (item: EmojiEntry) => item.emoji;
 
 const CATEGORY_RAIL_BORDER_WIDTH = 1;
@@ -36,12 +38,12 @@ const CATEGORY_RAIL_BORDER_WIDTH = 1;
 // quarter button at each edge so the outer glyphs sit as far from the sheet
 // edge as adjacent glyphs sit from each other.
 const CATEGORY_ICON_SCALE = 0.5;
-const CATEGORY_BUTTON_COUNT = categories.length + 0.5;
+const CATEGORY_BUTTON_COUNT = emojiCategories.length + 0.5;
 
 /**
  * Emoji picker sheet with a search input, a category rail and a scrollable
- * grid, using `FlashList` over the emoji set from `emojiData`. While a search
- * query is entered the rail is hidden and the grid shows the matches.
+ * grid, using `FlashList` over the emoji set from `pickerEmojis`. While a
+ * search query is entered the rail is hidden and the grid shows the matches.
  * Mounted once at the root; opened per post via `useEmojiPickerStore`.
  */
 export function EmojiPickerSheet() {
@@ -87,8 +89,8 @@ export function EmojiPickerSheet() {
   const categoryEmojis = useMemo(
     () =>
       selectedCategory === ALL_CATEGORIES
-        ? ALL_EMOJIS
-        : (getCategory(selectedCategory)?.emojis ?? ALL_EMOJIS),
+        ? pickerEmojis
+        : (emojiCategoryByKeyMap.get(selectedCategory)?.emojis ?? pickerEmojis),
     [selectedCategory],
   );
 
@@ -280,7 +282,7 @@ function EmojiCategoryRail({
         onLayout={(e) => setRailWidth(e.nativeEvent.layout.width)}
       >
         {railWidth > 0 &&
-          categories.map((cat) => (
+          emojiCategories.map((cat) => (
             <EmojiLikeButton
               key={cat.key}
               size={categoryColWidth}

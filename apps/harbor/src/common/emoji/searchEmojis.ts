@@ -1,10 +1,9 @@
 import fuzzysort, { type SnapshotKeys } from 'fuzzysort';
-import { categories, type EmojiEntry } from './emojiData';
-import emojiTags from './emojiTags.json';
+import { type EmojiEntry, pickerEmojis } from './pickerEmojis';
 
 /**
  * Emojis matching `query`, best first. Fuzzy over the name and the emojibase
- * tags (see `scripts/generate-emoji-tags.mts`), or an exact match when the
+ * tags (see `tools/emoji/generate-data.ts`), or an exact match when the
  * query is an emoji itself.
  */
 export function searchEmojis(query: string): EmojiEntry[] {
@@ -25,26 +24,19 @@ type SearchableEmoji = {
   tags: string;
 };
 
-const tagsByEmoji = emojiTags as Record<string, string[] | undefined>;
-
-const allEntries: EmojiEntry[] = categories.flatMap(
-  (category) => category.emojis,
-);
-
-// Built on the first search rather than at import: `emojiData` is also loaded
-// by the fingerprint code, and preparing the targets is not free on low-end
-// phones.
+// Built on the first search rather than at import: preparing the targets is
+// not free on low-end phones.
 let searchIndex: SnapshotKeys<SearchableEmoji> | undefined;
 
 function getSearchIndex(): SnapshotKeys<SearchableEmoji> {
   if (!searchIndex) {
-    const searchableEmojis = allEntries
+    const searchableEmojis = pickerEmojis
       .filter((entry) => entry.emoji !== US_OUTLYING_ISLANDS_FLAG)
       .map(
         (entry): SearchableEmoji => ({
           entry,
           name: entry.name,
-          tags: (tagsByEmoji[entry.emoji] ?? []).join(' '),
+          tags: entry.tags.join(' '),
         }),
       );
     searchIndex = fuzzysort.snapshot(searchableEmojis, {
@@ -63,7 +55,7 @@ let entryByNormalizedEmojiMap: Map<string, EmojiEntry> | undefined;
 function getEntryByEmojiMap(): Map<string, EmojiEntry> {
   if (!entryByNormalizedEmojiMap) {
     entryByNormalizedEmojiMap = new Map(
-      allEntries.map((entry) => [normalizeEmoji(entry.emoji), entry]),
+      pickerEmojis.map((entry) => [normalizeEmoji(entry.emoji), entry]),
     );
   }
   return entryByNormalizedEmojiMap;

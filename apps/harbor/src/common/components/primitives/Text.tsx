@@ -10,7 +10,7 @@ import {
   typography,
   useTheme,
 } from '@/src/common/theme';
-import { splitEmoji } from '@/src/common/util/emoji';
+import { splitEmoji } from '@/src/common/emoji/splitEmoji';
 import { isWeb } from '@/src/common/util/platform';
 
 // Twemoji draws the emoji (see `app/+html.tsx`).

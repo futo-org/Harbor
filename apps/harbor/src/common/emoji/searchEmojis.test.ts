@@ -1,4 +1,4 @@
-import { searchEmojis } from './emojiSearch';
+import { searchEmojis } from './searchEmojis';
 
 const emojisFor = (query: string) =>
   searchEmojis(query).map((entry) => entry.emoji);
@@ -36,7 +36,6 @@ describe('searchEmojis', () => {
         expect.objectContaining({
           emoji: '👍',
           name: 'thumbs up',
-          category: 'People & Body',
         }),
       ]);
     });
@@ -49,7 +48,7 @@ describe('searchEmojis', () => {
     });
 
     it('ignores the variation selector', () => {
-      // emojis.json spells red heart without U+FE0F.
+      // pickerEmojis.json spells red heart without U+FE0F.
       expect(emojisFor('❤️')).toEqual(['❤']);
       expect(emojisFor('❤')).toEqual(['❤']);
     });
