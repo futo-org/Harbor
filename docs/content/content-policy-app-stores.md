@@ -1,4 +1,5 @@
 ---
+
 title: App Store Content Policy
 sidebar_label: App Store Content Policy
 sidebar_position: 11
@@ -6,7 +7,7 @@ sidebar_position: 11
 
 # App Store Content Policy
 
-Last updated October 19th, 2026
+Last updated November 2nd, 2026
 
 This policy applies to Harbor when installed from **Google Play** or the
 **Apple App Store**. It adds to the [Content Policy](./content-policy.md) for
@@ -41,10 +42,11 @@ removed from FUTO's servers only where it also falls under
 
 ## Filtering
 
-Posts labelled Hate, Self-Harm, Sexually Suggestive, Sexually Explicit, or
-Violence are covered with a warning by default and must be revealed to view.
-In Settings, Content Moderation, you can hide them entirely. These settings
-apply on your device.
+On a store install, posts labelled Hate, Self-Harm, Sexually Explicit, or
+Violence are hidden by default, and posts labelled Sexually Suggestive are
+covered with a warning that must be revealed to view. In Settings, Content
+Moderation, you can change these per label. These settings apply on your
+device.
 
 ## Reporting and blocking
 

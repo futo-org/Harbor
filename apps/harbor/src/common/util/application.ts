@@ -8,6 +8,10 @@ export const APP_VARIANT: string =
   Constants.expoConfig?.extra?.variant ??
   'production';
 
+/** Installed from Google Play or the App Store (`APP_DISTRIBUTION` in eas.json). */
+export const IS_STORE_BUILD =
+  Constants.expoConfig?.extra?.distribution === 'store';
+
 /** Same shape as the native ids in app.config.ts, with a `.web` suffix. */
 export function webApplicationId(variant: string): string {
   const suffix = variant === 'production' ? '' : `.${variant}`;
