@@ -57,6 +57,13 @@ export type BuildEventArgs = {
   content: Proto.Content;
 };
 
+export type CommitEventArgs = {
+  owner: string;
+  signedEvent: Proto.SignedEvent;
+  content: Proto.Content;
+  contentBytes: Uint8Array;
+};
+
 /**
  * PolycentricClientConfig defines the dependencies and configuration for a PolycentricClient.
  */
@@ -428,24 +435,22 @@ export class PolycentricClient {
   }
 
   /**
-   * Sign and persist a v2 Event.
-   *
-   * Mirrors the event (and its content, if supplied) into the Rust core so
-   * subsequent `build_vector_clock` / `next_sequence` calls see it.
+   * Persist a new event with its content and mirror to rs-core.
    */
-  async commitEvent(
-    signedEvent: Proto.SignedEvent,
-    content?: Proto.Content,
-  ): Promise<void> {
-    await this.storage.events.save(signedEvent);
+  async commitEvent({
+    owner,
+    signedEvent,
+    content,
+    contentBytes,
+  }: CommitEventArgs): Promise<void> {
+    // Persist locally
+    await this.storage.events.create(owner, signedEvent, contentBytes);
 
-    const bundle: LocalBundle = { signedEvent };
-
-    if (content) {
-      bundle.contentBytes = Proto.Content.toBinary(content);
-    }
-
+    // Copy to rs-core
+    const bundle: LocalBundle = { signedEvent, contentBytes };
     this.copyBundles([bundle]);
+
+    // Notify listeners
     this.events.emitContentCreated({ signedEvent, content });
   }
 

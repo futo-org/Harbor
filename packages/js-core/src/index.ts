@@ -32,7 +32,6 @@ export {
 
 export {
   StorageHandle,
-  ContentStore,
   EventStore,
   LoginStore,
 } from './data-store';

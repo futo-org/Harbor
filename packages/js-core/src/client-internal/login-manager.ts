@@ -88,20 +88,24 @@ export class LoginManager {
     const power = this.checkAuthorization(identity, publicKey);
     if (!power) throw new Error('Key is not authorized by the identity');
 
-    const digest = this.client.contentManager.buildDigest(content);
-    await this.client.storage.content.save(digest, content);
+    const contentBytes = Proto.Content.toBinary(content);
 
     const event = await this.client.buildEvent({
       identityKey,
       collection: COLLECTION.IDENTITY,
       signer: publicKey,
-      contentBytes: Proto.Content.toBinary(content),
+      contentBytes,
       content,
     });
 
     // Persist locally
     const signedEvent = await this.client.signEvent(event, keyPair);
-    await this.client.commitEvent(signedEvent, content);
+    await this.client.commitEvent({
+      owner: identityKey,
+      signedEvent,
+      content,
+      contentBytes,
+    });
 
     // At this point, we have saved the identity event authorizing us locally
     // and are fully committed to the switch.

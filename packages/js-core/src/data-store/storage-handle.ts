@@ -1,5 +1,4 @@
 import { EventStore } from './event-store';
-import { ContentStore } from './content.store';
 import { LoginStore } from './login-store';
 import type { IEventRepository } from '../platform-interfaces/event-repository';
 import type { ILoginRepository } from '../platform-interfaces/login-repository';

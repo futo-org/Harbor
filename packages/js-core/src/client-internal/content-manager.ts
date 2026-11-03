@@ -25,14 +25,6 @@ export class ContentManager {
   }
 
   /**
-   * Saves the content to the local client store
-   */
-  async save(content: Proto.Content): Promise<void> {
-    const digest = this.buildDigest(content);
-    await this.client.storage.content.save(digest, content);
-  }
-
-  /**
    * Download any blobs in the array that we don't have locally.
    * This is used so that blobs of an identity will eventually
    * persist on other devices in that identity.
