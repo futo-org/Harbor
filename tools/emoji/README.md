@@ -30,6 +30,12 @@ ones resolve as of the `exclude-newer` date in `generate-font.py`'s header. The
 fonts are stamped with the release commit's time, which the release archive
 gives every file, so rebuilding gives identical files.
 
+## Custom emoji
+
+Listed in `custom-emojis.json` (`after`: the emoji the picker shows it after),
+with their art in `svg/`, named like Twemoji's files. Each SVG needs a
+`<title>` for Biome. After a change, rerun all three generate scripts.
+
 ## Setup
 
 `generate:font` needs uv (e.g. `brew install uv`).

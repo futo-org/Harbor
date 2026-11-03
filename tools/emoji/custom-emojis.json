@@ -1,0 +1,16 @@
+{
+  "emojis": [
+    {
+      "code": ["1F3F4", "E0075", "E0073", "E0074", "E0078", "E007F"],
+      "name": "flag: Texas",
+      "tags": ["texas", "tx", "lone star", "flag"],
+      "after": ["1F1FA", "1F1F8"]
+    },
+    {
+      "code": ["1F434", "200D", "1F30A"],
+      "name": "seahorse",
+      "tags": ["seahorse", "sea horse", "ocean", "fish"],
+      "after": ["1F420"]
+    }
+  ]
+}

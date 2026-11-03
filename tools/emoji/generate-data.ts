@@ -1,11 +1,13 @@
-// Writes the picker's emoji, with emojibase's English search tags, to the
-// app's `src/common/emoji/pickerEmojis.json`. See README.md.
+// Writes the picker's emoji, with emojibase's English search tags (custom
+// emoji: their own, from custom-emojis.json), to the app's
+// `src/common/emoji/pickerEmojis.json`. See README.md.
 import { writeFileSync } from 'node:fs';
 import emojibaseEmojis from 'emojibase-data/en/compact.json' with {
   type: 'json',
 };
 import versions from './versions.json' with { type: 'json' };
 import { listUnicodeEmojis } from './shared/listUnicodeEmojis.ts';
+import { mergeCustomEmojis } from './shared/mergeCustomEmojis.ts';
 
 const outFile = new URL(
   '../../apps/harbor/src/common/emoji/pickerEmojis.json',
@@ -34,10 +36,11 @@ const pickerEmojis: {
   tags: string[];
 }[] = [];
 const unmatchedEmojis: string[] = [];
-for (const { emoji, name, category } of listUnicodeEmojis(
-  versions.unicode.picker,
+for (const { emoji, name, category, custom } of mergeCustomEmojis(
+  listUnicodeEmojis(versions.unicode.picker),
 )) {
-  const tags = tagsByStrippedEmoji.get(stripVariationSelector(emoji));
+  const tags =
+    custom?.tags ?? tagsByStrippedEmoji.get(stripVariationSelector(emoji));
   if (!tags) {
     unmatchedEmojis.push(`${emoji} ${name}`);
     continue;

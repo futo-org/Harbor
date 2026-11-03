@@ -1,4 +1,5 @@
-// Builds the Android picker's sprite pages from the Twemoji SVGs, for
+// Builds the Android picker's sprite pages from the Twemoji SVGs and the
+// custom ones (custom-emojis.json), for
 // the emoji-sprite module, which decodes a page only once one of its emoji is
 // shown, and writes their layout to the app's
 // `src/common/emoji/spritePages.ts`.
@@ -16,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import versions from './versions.json' with { type: 'json' };
 import { listUnicodeEmojis } from './shared/listUnicodeEmojis.ts';
+import { mergeCustomEmojis } from './shared/mergeCustomEmojis.ts';
 
 const app = fileURLToPath(new URL('../../apps/harbor/', import.meta.url));
 const twemoji = fileURLToPath(
@@ -41,18 +43,22 @@ const pagesDir = `${app}modules/emoji-sprite/android/src/main/assets/emoji-sprit
 const sheetEmojis: string[] = [];
 const sheetFiles: string[] = [];
 const sheetCategories: string[] = [];
-for (const { emoji, category } of listUnicodeEmojis(versions.unicode.picker)) {
+for (const { emoji, category, custom } of mergeCustomEmojis(
+  listUnicodeEmojis(versions.unicode.picker),
+)) {
   const code = [...emoji]
     .map((character) => character.codePointAt(0)?.toString(16))
     .join('-');
   // Twemoji drops U+FE0F from file names, except in ZWJ sequences other than
   // 👁️‍🗨️ (1f441-200d-1f5e8).
-  const file = [`${code}.svg`, `${code.replaceAll('-fe0f', '')}.svg`].find(
-    (name) => existsSync(`${svgs}${name}`),
-  );
-  if (file) {
+  const svgFile =
+    custom?.svgFile ??
+    [`${svgs}${code}.svg`, `${svgs}${code.replaceAll('-fe0f', '')}.svg`].find(
+      existsSync,
+    );
+  if (svgFile) {
     sheetEmojis.push(emoji);
-    sheetFiles.push(file);
+    sheetFiles.push(svgFile);
     sheetCategories.push(category);
   } else console.warn(`no twemoji for ${emoji} (${code})`);
 }
@@ -125,8 +131,8 @@ console.log(
   `${sheetEmojis.length} emoji -> ${pageStarts.length} Android sprite pages in modules/emoji-sprite`,
 );
 
-async function renderCell(file: string) {
-  const svg = readFileSync(`${svgs}${file}`, 'utf8')
+async function renderCell(svgFile: string) {
+  const svg = readFileSync(svgFile, 'utf8')
     .replace(
       /(<svg[^>]*>)/,
       // sRGB: in the default linearRGB the round trip shifts flat colors.
