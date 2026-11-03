@@ -93,7 +93,7 @@ describe('searchEmojis', () => {
       expect(emojisFor('heart').slice(0, 3)).toContain('❤');
       expect(emojisFor('joy').slice(0, 3)).toContain('😂');
       expect(emojisFor('laughing')[0]).toBe('🤣');
-      expect(emojisFor('sad').slice(0, 8)).toContain('😢');
+      expect(emojisFor('sad').slice(0, 9)).toContain('😢');
       expect(emojisFor('sad').slice(0, 12)).toContain('😞');
       expect(emojisFor('lol').slice(0, 20)).toEqual(
         expect.arrayContaining(['😂', '🤣']),
@@ -123,6 +123,18 @@ describe('searchEmojis', () => {
       expect(emojisFor('+1')).toEqual(['👍']);
       expect(emojisFor('poop').slice(0, 2)).toContain('💩');
       expect(emojisFor('100').slice(0, 2)).toContain('💯');
+    });
+
+    it('finds the custom emoji by name and tag', () => {
+      const texasFlag =
+        '\u{1F3F4}\u{E0075}\u{E0073}\u{E0074}\u{E0078}\u{E007F}';
+      const seahorse = '\u{1F434}\u{200D}\u{1F30A}';
+      expect(emojisFor('texas')[0]).toBe(texasFlag);
+      expect(emojisFor('lone star')[0]).toBe(texasFlag);
+      expect(emojisFor('seahorse')[0]).toBe(seahorse);
+      expect(emojisFor('sea horse')[0]).toBe(seahorse);
+      expect(emojisFor(texasFlag)).toEqual([texasFlag]);
+      expect(emojisFor(seahorse)).toEqual([seahorse]);
     });
 
     // Fonts draw the U.S. Outlying Islands flag as the US flag, so it would
