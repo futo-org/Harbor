@@ -12,6 +12,7 @@ use crate::config;
 pub async fn build_db_clients(
     durable_commits: bool,
     statement_timeout: Option<Duration>,
+    transaction_timeout: Option<Duration>,
 ) -> Result<(DatabaseConnection, DatabaseConnection), sea_orm::DbErr> {
     let config = config::get();
     let max = config.database_max_connections;
@@ -22,12 +23,20 @@ pub async fn build_db_clients(
         max,
         durable_commits,
         statement_timeout,
+        transaction_timeout,
     )
     .await?;
 
     let ro_db = if let Some(url) = config.ro_database_url.as_deref() {
-        create_pool("server-ro", url, max, durable_commits, statement_timeout)
-            .await?
+        create_pool(
+            "server-ro",
+            url,
+            max,
+            durable_commits,
+            statement_timeout,
+            transaction_timeout,
+        )
+        .await?
     } else {
         // If no read-only instance is available reuse the read-write pool.
         db.clone()
@@ -42,6 +51,7 @@ async fn create_pool(
     max: u32,
     durable_commits: bool,
     statement_timeout: Option<Duration>,
+    transaction_timeout: Option<Duration>,
 ) -> Result<DatabaseConnection, sea_orm::DbErr> {
     let mut opt = ConnectOptions::new(url);
     opt.set_application_name("harbor-server")
@@ -70,6 +80,12 @@ async fn create_pool(
             if !durable_commits {
                 connect_options =
                     connect_options.options([("synchronous_commit", "off")]);
+            }
+            if let Some(timeout) = transaction_timeout {
+                connect_options = connect_options.options([(
+                    "transaction_timeout",
+                    timeout.as_millis().to_string(),
+                )]);
             }
             connect_options
         });
