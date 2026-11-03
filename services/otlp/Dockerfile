@@ -30,7 +30,7 @@ RUN cargo build --release \
 
 # CI builds the binaries outside Docker (.forgejo/actions/rust-binaries) and
 # swaps them in for the builder stage, so bookworm here matches its ci/rust.
-FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
 WORKDIR /app
 COPY services/common/runtime-deps.sh runtime-deps.sh
 RUN sh runtime-deps.sh
