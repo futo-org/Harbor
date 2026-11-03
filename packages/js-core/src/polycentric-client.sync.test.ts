@@ -1409,8 +1409,7 @@ describe('PolycentricClient sync', () => {
       await client.sync(SyncStrategy.FULL);
 
       expect(errorSpy).toHaveBeenCalledWith(
-        'Error from event push:',
-        expect.anything(),
+        'Error from event push (http://server-1 collection 2 sequence 1): rejected',
       );
       expect(uploadSpy).toHaveBeenCalledTimes(1);
     });
@@ -1481,6 +1480,38 @@ describe('PolycentricClient sync', () => {
           eventIssues: [rejected, trimmed],
         },
         { identity: identityA.key, server: 'http://server-2', eventIssues: [] },
+      ]);
+    });
+
+    it('still emits issues when the console serializes its arguments', async () => {
+      // React Native's logs will serialize to JSON, which throws
+      // on bigints such as an event key's sequence.
+      const serialize = (...args: unknown[]) => void JSON.stringify(args);
+      vi.spyOn(console, 'error').mockImplementation(serialize);
+      vi.spyOn(console, 'warn').mockImplementation(serialize);
+      const rejected = buildEventIssues(1, { errors: ['banned'] });
+      const trimmed = buildEventIssues(2, { warnings: ['text too long'] });
+      const core = makeCoreMock({
+        pullBundles: () => [],
+        pushResponse: async () =>
+          pushResult({ eventIssues: [rejected, trimmed] }),
+      });
+      const { client } = makeClient({
+        core,
+        identity: identityA,
+        signer: signerA,
+      });
+      const listener = vi.fn();
+      client.events.onPushResults(listener);
+
+      await client.sync(SyncStrategy.PARTIAL);
+
+      expect(listener).toHaveBeenCalledWith([
+        {
+          identity: identityA.key,
+          server: 'http://server-1',
+          eventIssues: [rejected, trimmed],
+        },
       ]);
     });
 

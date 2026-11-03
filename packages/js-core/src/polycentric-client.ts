@@ -1051,10 +1051,18 @@ export class PolycentricClient {
         if (!result) return [];
 
         for (const issues of result.eventIssues) {
+          // React Native's logs will serialize to JSON, and will throw on the key's bigint sequence
+          // type. To avoid, we string interpolate first.
+          const { collection, sequence } = issues.key;
+          const at = `${server} collection ${collection} sequence ${sequence}`;
           if (issues.errors.length > 0) {
-            console.error('Error from event push:', issues);
+            console.error(
+              `Error from event push (${at}): ${issues.errors.join('; ')}`,
+            );
           } else {
-            console.warn('Warning from event push:', issues);
+            console.warn(
+              `Warning from event push (${at}): ${issues.warnings.join('; ')}`,
+            );
           }
         }
 
