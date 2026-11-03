@@ -1,7 +1,8 @@
 import { Text } from '@/src/common/components';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { Routes } from '@/src/common/constants';
-import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
+import { TimeAgo } from '@/src/common/components/TimeAgo';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
@@ -173,7 +174,7 @@ function InteractionNotification({
             {notification.createdAt > 0 ? (
               <Text color="neutral_500">
                 {' '}
-                · {timeAgo(notification.createdAt)}
+                · <TimeAgo since={notification.createdAt} />
               </Text>
             ) : null}
           </Text>

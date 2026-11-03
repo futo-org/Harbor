@@ -24,7 +24,7 @@ impl Validate for ProfileUpdate {
                 errors,
                 |err| map_err(ValidationError::Name(err)),
                 StringConfig {
-                    max_len: Some(50),
+                    max_len: Some(100),
                     ..Default::default()
                 },
             )

@@ -4,7 +4,8 @@ import {
   Text,
 } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
-import { timeAgo, type PostData } from '@/src/common/lib/polycentric-hooks';
+import { TimeAgo } from '@/src/common/components/TimeAgo';
+import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
@@ -65,7 +66,6 @@ export const Post = memo(function Post({
   }, [authorIdentity]);
 
   const shownAt = post.createdAt;
-  const time = useMemo(() => timeAgo(Number(shownAt)), [shownAt]);
   const fullTimestamp = useMemo(() => {
     if (!shownAt) return '';
     const date = new Date(Number(shownAt));
@@ -101,7 +101,7 @@ export const Post = memo(function Post({
         <PostAuthorName identity={authorIdentity} onPress={handleAuthorPress} />
         {authorIdentity ? <IdentityTag identity={authorIdentity} /> : null}
 
-        {time ? (
+        {shownAt ? (
           <>
             <Text
               variant="secondary"
@@ -116,7 +116,7 @@ export const Post = memo(function Post({
               color="neutral_500"
               style={Atoms.flex_shrink_0}
             >
-              {time}
+              <TimeAgo since={shownAt} />
             </Text>
           </>
         ) : null}

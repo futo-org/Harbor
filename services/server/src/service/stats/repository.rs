@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use entity::{attributed_to_reaction_summary, interaction_tally, reaction};
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{
-    Asterisk, ColumnRef, Expr, ExprTrait, Func, OnConflict, Order,
-    SelectStatement,
+    Asterisk, Expr, ExprTrait, Func, OnConflict, SelectStatement,
 };
 use sea_orm::{ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter};
 
 use crate::data::EventId;
+use crate::db::in_array;
 
 pub struct Query;
 
@@ -34,10 +34,10 @@ impl Query {
                 interaction_tally::Column::RepostCount,
                 interaction_tally::Column::QuoteCount,
             ])
-            .cond_where(
-                Expr::col(interaction_tally::Column::EventId.as_column_ref())
-                    .is_in(event_ids),
-            )
+            .cond_where(in_array(
+                Expr::col(interaction_tally::Column::EventId.as_column_ref()),
+                event_ids,
+            ))
             .from(interaction_tally::Entity);
 
         let rows = db.query_all(&query).await?;
@@ -87,10 +87,10 @@ impl Query {
                 "positive",
             )
             .expr_as(Expr::from(Func::count(Expr::col(Asterisk))), "count")
-            .cond_where(
-                Expr::col(reaction::Column::OnPost.as_column_ref())
-                    .is_in(event_ids),
-            )
+            .cond_where(in_array(
+                Expr::col(reaction::Column::OnPost.as_column_ref()),
+                event_ids,
+            ))
             .and_where(
                 Expr::col(reaction::Column::Emoji.as_column_ref())
                     .is_not_null(),
@@ -99,21 +99,6 @@ impl Query {
                 reaction::Column::OnPost.as_column_ref(),
                 reaction::Column::Emoji.as_column_ref(),
                 reaction::Column::Positive.as_column_ref(),
-            ])
-            .order_by_columns([
-                (
-                    ColumnRef::from(reaction::Column::OnPost.as_column_ref()),
-                    Order::Desc,
-                ),
-                (ColumnRef::from("count"), Order::Desc),
-                (
-                    ColumnRef::from(reaction::Column::Emoji.as_column_ref()),
-                    Order::Desc,
-                ),
-                (
-                    ColumnRef::from(reaction::Column::Positive.as_column_ref()),
-                    Order::Desc,
-                ),
             ]);
 
         let rows = db.query_all(&query).await?;

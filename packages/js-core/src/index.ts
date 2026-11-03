@@ -65,7 +65,11 @@ export {
   InitializationStep,
   HydrationStatus,
 } from './client-internal/event-service';
-export type { ContentCreatedPayload } from './client-internal/event-service';
+export type {
+  ContentCreatedPayload,
+  ServerPushResult,
+} from './client-internal/event-service';
+export type { EventPushIssues } from '@polycentric/rs-core-wasm';
 
 export {
   PairingSessionManager,

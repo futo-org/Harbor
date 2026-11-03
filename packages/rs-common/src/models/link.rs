@@ -21,7 +21,7 @@ impl Validate for Link {
             errors,
             |err| map_err(ValidationError::Title(err)),
             StringConfig {
-                max_len: Some(100),
+                max_len: Some(1000),
                 ..Default::default()
             },
         );
@@ -31,7 +31,7 @@ impl Validate for Link {
                 errors,
                 |err| map_err(ValidationError::Description(err)),
                 StringConfig {
-                    max_len: Some(200),
+                    max_len: Some(2000),
                     ..Default::default()
                 },
             );

@@ -17,7 +17,7 @@ pub async fn handle(
     req: SetBanStatusRequest,
 ) -> Result<SetBanStatusResponse, Status> {
     require_moderator(&ctx).await?;
-    let moderator_identity = &ctx.auth;
+    let moderator_identity = &*ctx.auth;
 
     repository::Mutation::set_banned(
         &ctx.db,
@@ -53,7 +53,7 @@ pub async fn handle(
         moderation_repo::Mutation::resolve_reports_by_author(
             &ctx.db,
             &req.target_identity,
-            &ctx.auth,
+            moderator_identity,
         )
         .await
         .map_err(|e| {
