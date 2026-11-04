@@ -68,6 +68,37 @@ export function Toast({ toast }: { toast: ToastData }) {
     transform: [{ translateY: (progress.value - 1) * 16 }],
   }));
 
+  // Define `content` and `bodyStyle` so that they can be reused for
+  // pressable and non-pressable toasts
+  const content = (
+    <>
+      <Icon name={variant.icon} color={variant.color} size={20} />
+      <View style={Atoms.flex_1}>
+        <ToastPrimitive.Title asChild>
+          <Text variant="body" fontWeight="semibold" style={theme.atoms.text}>
+            {toast.title}
+          </Text>
+        </ToastPrimitive.Title>
+        {toast.description ? (
+          <ToastPrimitive.Description asChild>
+            <Text variant="small" style={theme.atoms.text_neutral_medium}>
+              {toast.description}
+            </Text>
+          </ToastPrimitive.Description>
+        ) : null}
+      </View>
+    </>
+  );
+  const bodyStyle = [
+    Atoms.flex_1,
+    Atoms.flex_row,
+    Atoms.items_center,
+    Atoms.gap_sm,
+    Atoms.py_lg,
+    Atoms.pl_lg,
+    Atoms.pr_sm,
+  ];
+
   return (
     <Animated.View layout={LinearTransition} style={animatedStyle}>
       <ToastPrimitive.Root
@@ -78,8 +109,6 @@ export function Toast({ toast }: { toast: ToastData }) {
         style={[
           Atoms.flex_row,
           Atoms.items_center,
-          Atoms.gap_sm,
-          Atoms.p_lg,
           {
             borderRadius: BorderRadius.full,
             backgroundColor: theme.palette.neutral_0,
@@ -89,23 +118,22 @@ export function Toast({ toast }: { toast: ToastData }) {
           },
         ]}
       >
-        <Icon name={variant.icon} color={variant.color} size={20} />
-        <View style={Atoms.flex_1}>
-          <ToastPrimitive.Title asChild>
-            <Text variant="body" fontWeight="semibold" style={theme.atoms.text}>
-              {toast.title}
-            </Text>
-          </ToastPrimitive.Title>
-          {toast.description ? (
-            <ToastPrimitive.Description asChild>
-              <Text variant="small" style={theme.atoms.text_neutral_medium}>
-                {toast.description}
-              </Text>
-            </ToastPrimitive.Description>
-          ) : null}
-        </View>
+        {toast.onPress ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              toast.onPress?.();
+              close();
+            }}
+            style={bodyStyle}
+          >
+            {content}
+          </Pressable>
+        ) : (
+          <View style={bodyStyle}>{content}</View>
+        )}
         <ToastPrimitive.Close asChild>
-          <Pressable hitSlop={8}>
+          <Pressable hitSlop={8} style={[Atoms.py_lg, Atoms.pr_lg]}>
             <Icon name="close" color="neutral_500" size={18} />
           </Pressable>
         </ToastPrimitive.Close>

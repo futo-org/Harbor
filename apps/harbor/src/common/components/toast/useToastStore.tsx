@@ -9,12 +9,15 @@ export interface ToastData {
   variant: ToastVariant;
   // Auto-dismiss delay in ms; null keeps it up until dismissed.
   duration: number | null;
+  // Runs when the toast (anywhere but its close button) is pressed, then dismisses it.
+  onPress?: () => void;
 }
 
 export interface ToastOptions {
   description?: string;
   variant?: ToastVariant;
   duration?: number | null;
+  onPress?: () => void;
 }
 
 const MAX_VISIBLE = 4;
@@ -41,6 +44,7 @@ export const useToastStore = create<ToastStore>((set) => ({
       variant: options.variant ?? 'info',
       duration:
         options.duration === undefined ? DEFAULT_DURATION : options.duration,
+      onPress: options.onPress,
     };
     // Drop the oldest once the stack is full.
     set((s) => ({ toasts: [...s.toasts, toast].slice(-MAX_VISIBLE) }));
