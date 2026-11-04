@@ -7,6 +7,7 @@ import ExpoPagerView, {
 } from '@expo/ui/community/pager-view';
 import { Children, useEffect, useRef, type ReactNode } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
+import { PageActiveContext } from './PageActiveContext';
 
 export type PagerViewCoreProps<T extends string> = {
   values: readonly T[];
@@ -82,7 +83,11 @@ export function PagerViewCore<T extends string>({
       onPageSelected={onPageSelected}
       onPageScrollStateChanged={onPageScrollStateChanged}
     >
-      {Children.map(children, wrapPage)}
+      {Children.map(children, (child, index) => (
+        <PageActiveContext value={index === activeIndex}>
+          {wrapPage(child, index)}
+        </PageActiveContext>
+      ))}
     </ExpoPagerView>
   );
 }
