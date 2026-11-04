@@ -20,7 +20,7 @@ use crate::auth::{AuthenticatedIdentity, auth_middleware};
 use crate::config::Config;
 use crate::forward::{forward, stamp};
 use crate::identity::PolycentricIdentities;
-use crate::records::app_log_records;
+use crate::records::{app_log_records, detach_log_lines};
 use crate::zulip;
 
 pub const LOGS_PATH: &str = "/insert/opentelemetry/v1/logs";
@@ -142,6 +142,9 @@ async fn post_traces(
         &identity,
     );
     relay_feedback(&state, &request);
+    // Log lines go as records: VictoriaTraces drops a span past 1000 fields.
+    let records = app_log_records(&request);
+    detach_log_lines(&mut request);
     let status = forward(
         &state.http,
         &format!("{base}{TRACES_PATH}"),
@@ -149,17 +152,14 @@ async fn post_traces(
         &[],
     )
     .await;
-    mirror_app_records(&state, &request).await;
+    mirror_app_records(&state, records).await;
     status
 }
 
-/// Feedback and error reports also go to VictoriaLogs, where they can be
-/// listed and counted. A failure here is logged, not returned.
-async fn mirror_app_records(state: &AppState, request: &ExportTraceServiceRequest) {
-    let (Some(base), Some(records)) = (
-        state.config.victoria_logs_url.as_deref(),
-        app_log_records(request),
-    ) else {
+/// Feedback, error reports and feedback log lines also go to VictoriaLogs.
+/// A failure here is logged, not returned.
+async fn mirror_app_records(state: &AppState, records: Option<ExportLogsServiceRequest>) {
+    let (Some(base), Some(records)) = (state.config.victoria_logs_url.as_deref(), records) else {
         return;
     };
     let status = forward(

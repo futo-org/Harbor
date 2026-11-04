@@ -139,11 +139,9 @@ async fn a_paired_device_gets_its_traces_to_victoria_stamped() {
         string_value(&span.attributes, "harbor.feedback.message"),
         Some("love it")
     );
-    assert_eq!(span.events[0].name, "log");
-    assert_eq!(
-        string_value(&span.events[0].attributes, "log.message"),
-        Some("slow feed")
-    );
+    // The log line went to VictoriaLogs as a record instead
+    assert!(span.events.is_empty());
+    assert_eq!(span.dropped_events_count, 1);
 }
 
 #[tokio::test]
@@ -422,7 +420,7 @@ async fn feedback_is_mirrored_to_victoria_logs_as_a_record() {
         expected
     );
     let records = &resource.scope_logs[0].log_records;
-    assert_eq!(records.len(), 1);
+    assert_eq!(records.len(), 2);
     assert_eq!(records[0].severity_text, "INFO");
     assert_eq!(
         records[0].body.as_ref().and_then(|b| b.value.as_ref()),
@@ -440,4 +438,22 @@ async fn feedback_is_mirrored_to_victoria_logs_as_a_record() {
         hex::encode(&records[0].trace_id),
         "0af7651916cd43dd8448eb211c80319c"
     );
+
+    // The span's log line, by itself
+    assert_eq!(records[1].time_unix_nano, 1_699_999_999_000_000_000);
+    assert_eq!(records[1].severity_text, "WARN");
+    assert_eq!(
+        records[1].body.as_ref().and_then(|b| b.value.as_ref()),
+        Some(
+            &opentelemetry_proto::tonic::common::v1::any_value::Value::StringValue(
+                "slow feed".to_string()
+            )
+        )
+    );
+    assert_eq!(string_value(&records[1].attributes, ATTR_SPAN_NAME), None);
+    assert_eq!(
+        hex::encode(&records[1].trace_id),
+        "0af7651916cd43dd8448eb211c80319c"
+    );
+    assert_eq!(hex::encode(&records[1].span_id), "b7ad6b7169203331");
 }
