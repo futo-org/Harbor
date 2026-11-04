@@ -1,4 +1,4 @@
-import { bytesToHex, v2 as Proto } from '@polycentric/js-core';
+import { bytesEqual, bytesToHex, v2 as Proto } from '@polycentric/js-core';
 import { requestAsPromise } from '../request';
 import type { IndexedDBMigration } from './index';
 
@@ -169,18 +169,4 @@ async function lookupStatus(
   } catch {
     return 'liveRotationKey';
   }
-}
-
-function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) {
-      return false;
-    }
-  }
-
-  return true;
 }
