@@ -11,7 +11,7 @@ runs:
   using: composite
   steps:
     - shell: bash
-      run: |
+      run: | # zizmor: ignore[adhoc-packages] exact version from packageManager
         npm install -g "$(node -p "require('./package.json').packageManager")"
         pnpm --version
     - if: inputs.install == 'true'
