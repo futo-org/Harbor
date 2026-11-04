@@ -35,6 +35,16 @@ export async function createPolycentricClient(
   await uniffiInitAsync();
   installConsoleLogger();
 
+  // Ask the browser to exempt our storage from quota eviction.
+  try {
+    const persisted = await navigator.storage?.persist?.();
+    if (!persisted) {
+      console.warn('Persistent storage not granted; data may be evicted');
+    }
+  } catch (error) {
+    console.warn('Persistent storage request failed:', error);
+  }
+
   // Private browsing can block IndexedDB/OPFS entirely; fall back to
   // in-memory storage so the app still runs (logged-out, nothing persists).
   let drivers: Pick<
