@@ -3,6 +3,8 @@ import type { LayoutRectangle, TextInputInstance } from 'react-native';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { TOKEN_PRECEDER } from '@/src/common/util/parseTextLinks';
+import { normalizeAlias } from '@/src/features/profile/alias/helpers';
+import { isAliasVerificationFailed } from '@/src/features/profile/alias/useAliasResolutionStore';
 import type { ProfileHookResult } from '@/src/features/profile/hooks/useProfile';
 import { useComposerStore } from '@/src/features/composer/hooks/useComposerStore';
 import type { MentionRange } from '@/src/features/composer/utils/applyTextChange';
@@ -54,8 +56,8 @@ export type MentionStore = {
   measureInput: () => void;
 
   /**
-   * Replace the `@` + query with `@alias` (or the display name, or the
-   * identity), recorded as a mention range that `spliceMentions` turns into
+   * Replace the `@` + query with `@alias` unless its verification failed
+   * (else the display name, else the identity), recorded as a mention range that `spliceMentions` turns into
    * a curly mention on post.
    */
   insertMention: (identity: string, profile: ProfileHookResult) => void;
@@ -87,7 +89,9 @@ export function createMentionStore(): StoreApi<MentionStore> {
       const ctx = findMentionContext(text, caret, mentionRanges);
       if (!ctx || !onChangeText) return;
 
-      const mention = `@${profile.alias ?? profile.name ?? identity}`;
+      const alias = profile.alias ? normalizeAlias(profile.alias) : null;
+      // A pending alias is inserted too, as the row shows it.
+      const mention = `@${alias && !isAliasVerificationFailed(alias, identity) ? alias : (profile.name ?? identity)}`;
 
       // Replace the `@` + query, with one space after the mention: reuse the
       // one already there (mid-text insert) instead of doubling it. The space

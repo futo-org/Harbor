@@ -1,4 +1,8 @@
-import { useAliasResolutionStore } from './useAliasResolutionStore';
+import {
+  forceResolveAlias,
+  isAliasVerificationFailed,
+  useAliasResolutionStore,
+} from './useAliasResolutionStore';
 
 // A format-valid identity: non-empty hex.
 const HEX_IDENTITY =
@@ -161,7 +165,7 @@ describe('resolveAlias', () => {
   });
 });
 
-describe('resolveAlias with force', () => {
+describe('forceResolveAlias', () => {
   it('makes a new request and caches its result', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({}, false));
     resolveAlias('test@example.com');
@@ -170,9 +174,9 @@ describe('resolveAlias with force', () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({ names: { test: HEX_IDENTITY } }),
     );
-    await expect(
-      resolveAlias('test@example.com', { force: true }),
-    ).resolves.toBe(HEX_IDENTITY);
+    await expect(forceResolveAlias('test@example.com')).resolves.toBe(
+      HEX_IDENTITY,
+    );
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(identityOf('test@example.com')).toBe(HEX_IDENTITY);
@@ -188,7 +192,7 @@ describe('resolveAlias with force', () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({ names: { test: OTHER_HEX_IDENTITY } }),
     );
-    const forced = resolveAlias('test@example.com', { force: true });
+    const forced = forceResolveAlias('test@example.com');
     expect(identityOf('test@example.com')).toBe(HEX_IDENTITY);
 
     await forced;
@@ -200,7 +204,7 @@ describe('resolveAlias with force', () => {
       jsonResponse({ names: { test: HEX_IDENTITY } }),
     );
 
-    const forced = resolveAlias('test@example.com', { force: true });
+    const forced = forceResolveAlias('test@example.com');
     expect(resolveAlias('test@example.com')).toBe(forced);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -215,7 +219,7 @@ describe('resolveAlias with force', () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({ names: { test: OTHER_HEX_IDENTITY } }),
     );
-    await resolveAlias('test@example.com', { force: true });
+    await forceResolveAlias('test@example.com');
 
     resolveFirstFetch(jsonResponse({ names: { test: HEX_IDENTITY } }));
     await flushPromises();
@@ -233,7 +237,7 @@ describe('resolveAlias with force', () => {
     fetchMock.mockImplementationOnce(
       () => new Promise((resolve) => (resolveForcedFetch = resolve)),
     );
-    const forced = resolveAlias('test@example.com', { force: true });
+    const forced = forceResolveAlias('test@example.com');
 
     await older;
     expect(identityOf('test@example.com')).toBeUndefined();
@@ -244,8 +248,37 @@ describe('resolveAlias with force', () => {
   });
 });
 
-function resolveAlias(alias: string, options?: { force?: boolean }) {
-  return useAliasResolutionStore.getState().resolveAlias(alias, options);
+describe('isAliasVerificationFailed', () => {
+  it('is false while the alias is pending', () => {
+    expect(isAliasVerificationFailed('test@example.com', HEX_IDENTITY)).toBe(
+      false,
+    );
+  });
+
+  it('is false when the alias resolved to the identity, in any case', () => {
+    useAliasResolutionStore.setState({
+      identityByAlias: { 'test@example.com': HEX_IDENTITY.toUpperCase() },
+    });
+    expect(isAliasVerificationFailed('test@example.com', HEX_IDENTITY)).toBe(
+      false,
+    );
+  });
+
+  it.each([
+    ['nothing', null],
+    ['another identity', OTHER_HEX_IDENTITY],
+  ])('is true when the alias resolved to %s', (_, resolvedIdentity) => {
+    useAliasResolutionStore.setState({
+      identityByAlias: { 'test@example.com': resolvedIdentity },
+    });
+    expect(isAliasVerificationFailed('test@example.com', HEX_IDENTITY)).toBe(
+      true,
+    );
+  });
+});
+
+function resolveAlias(alias: string) {
+  return useAliasResolutionStore.getState().resolveAlias(alias);
 }
 
 function identityOf(normalizedAlias: string) {

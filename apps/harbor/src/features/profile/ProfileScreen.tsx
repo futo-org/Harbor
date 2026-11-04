@@ -1,19 +1,12 @@
 import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
 import { PagerViewWithHeader } from '@/src/common/components/PagerView';
-import { Routes } from '@/src/common/constants/routes';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { replacePath } from '@/src/common/lib/navigation/replacePath';
 import { FeedPage } from '@/src/features/feed/FeedPage';
 import { EMPTY_FEED } from '@/src/features/feed/hooks/types';
 import { useIdentityFeed } from '@/src/features/feed/hooks/useIdentityFeed';
-import {
-  FetchMode,
-  isIdentityKey,
-  normalizeAlias,
-  resolveAlias,
-} from '@polycentric/react-native';
+import { FetchMode } from '@polycentric/react-native';
 import {
   router,
   useFocusEffect,
@@ -27,12 +20,10 @@ import useBlocks from '../block/hooks/useBlocks';
 import { ProfileCompactHeader } from './ProfileCompactHeader';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileTabs } from './ProfileTabs';
+import { isIdentityKey, normalizeAlias } from './alias/helpers';
+import { useAliasResolutionStore } from './alias/useAliasResolutionStore';
+import { useIdentityHandle } from './hooks/useIdentityHandle';
 import { useProfile } from './hooks/useProfile';
-import {
-  getVerifiedAlias,
-  getVerifiedIdentity,
-  recordVerifiedAlias,
-} from './lib/aliasVerificationCache';
 import {
   type ActiveFeed,
   ProfileProvider,
@@ -41,7 +32,6 @@ import {
 import { ProfileVerificationsList } from './ProfileVerificationsList';
 import { ProfileVerifiesList } from './ProfileVerifiesList';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks/helpers';
 import { truncateText } from '@/src/common/util/truncateText';
 
 /** Page order behind the profile's tab bar. */
@@ -66,89 +56,15 @@ export default function ProfileScreen({
   const { identityId } = useLocalSearchParams<{ identityId: string }>();
 
   if (!identityId || isIdentityKey(identityId)) {
-    return <IdentityProfile identityKey={identityId ?? null} tab={tab} />;
+    return (
+      <ProfileProvider identityKey={identityId ?? null} activeFeed={tab}>
+        <ProfileScreenContent />
+      </ProfileProvider>
+    );
   }
 
   // An alias (user@domain, or a bare domain) — resolve it to a key first.
   return <AliasProfile alias={identityId} tab={tab} />;
-}
-
-/**
- * Render a profile addressed by its identity key. If that profile claims an
- * alias that *verifiably* resolves back to this same identity,
- * redirect to the canonical alias URL (`/user@domain`).
- *
- * Verification happens before the redirect: `resolveAlias(alias)` must
- * return this exact identity, so a profile can't bounce us to an alias it
- * doesn't actually own. The alias URL renders `AliasProfile` (not this
- * component), so there's no redirect loop.
- */
-function IdentityProfile({
-  identityKey,
-  tab,
-}: {
-  identityKey: string | null;
-  tab: ActiveFeed;
-}) {
-  const profile = useProfile(identityKey);
-
-  const [verifiedAlias, setVerifiedAlias] = useState<string | null>(() =>
-    identityKey ? getVerifiedAlias(identityKey) : null,
-  );
-  useEffect(() => {
-    setVerifiedAlias(identityKey ? getVerifiedAlias(identityKey) : null);
-  }, [identityKey]);
-
-  useEffect(() => {
-    if (!identityKey || verifiedAlias) return;
-    if (profile.isLoading) return;
-    const alias = profile.alias;
-    if (!alias) return;
-
-    let cancelled = false;
-    void resolveAlias(alias).then((resolved) => {
-      if (cancelled || !resolved) return;
-      // Only accept an alias that points back to THIS identity.
-      if (resolved.toLowerCase() === identityKey.toLowerCase()) {
-        const canonical = normalizeAlias(alias);
-        if (!canonical) return;
-        recordVerifiedAlias(alias, identityKey);
-        setVerifiedAlias(canonical);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [identityKey, verifiedAlias, profile.isLoading, profile.alias]);
-
-  // The address bar shows the canonical alias URL. Rewritten in place —
-  // navigating would remount the profile as `AliasProfile`, a visible flash.
-  useEffect(() => {
-    if (!verifiedAlias) return;
-    // After a tap, expo-router pushes the `/<identity>` URL from a promise
-    // queue that runs after this effect; a cached alias replaced right away
-    // would be overwritten. A macrotask lands after it.
-    const timer = setTimeout(() =>
-      replacePath(
-        tab === 'verification-claims'
-          ? Routes.tabs.profileVerificationClaims(verifiedAlias)
-          : tab === 'verification-verifies'
-            ? Routes.tabs.profileVerificationVerifies(verifiedAlias)
-            : Routes.tabs.profile(verifiedAlias),
-      ),
-    );
-    return () => clearTimeout(timer);
-  }, [verifiedAlias, tab]);
-
-  return (
-    <ProfileProvider
-      identityKey={identityKey}
-      alias={verifiedAlias}
-      activeFeed={tab}
-    >
-      <ProfileScreenContent />
-    </ProfileProvider>
-  );
 }
 
 function ProfileScreenContent() {
@@ -157,9 +73,11 @@ function ProfileScreenContent() {
 
   // The screen's one network fetch; the headers and tabs read the shared cache.
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
-  const shortId = shortenIdentityId(identityKey ?? undefined);
+  const handle = useIdentityHandle(identityKey);
   usePageTitle(
-    profile.name ? `${truncateText(profile.name, 30)} (${shortId})` : shortId,
+    profile.name
+      ? `${truncateText(profile.name, 30)} (${handle.text})`
+      : handle.text,
   );
 
   const isFocused = useIsFocused();
@@ -254,99 +172,44 @@ function ProfileScreenContent() {
   );
 }
 
-type AliasResolution =
-  | { status: 'loading' }
-  // Resolved to a candidate identity, now confirming it claims `alias` back.
-  | { status: 'verifying'; identity: string }
-  // Candidate confirmed; render its profile.
-  | { status: 'verified'; identity: string }
-  | { status: 'unverified' }
-  | { status: 'not-found' };
-
 /**
- * Resolve an alias (`user@domain`) to a polycentric identity, then
- * render the profile for it. The alias stays in the URL; resolution happens
- * in place rather than redirecting to the canonical `/[identityId]`.
+ * Resolve an alias (`user@domain`) to a polycentric identity, then render the
+ * profile for it once that identity claims the alias back. The alias stays in
+ * the URL; resolution happens in place rather than redirecting to the
+ * canonical `/[identityId]`.
  */
 function AliasProfile({ alias, tab }: { alias: string; tab: ActiveFeed }) {
-  const [resolution, setResolution] = useState<AliasResolution>({
-    status: 'loading',
-  });
+  const normalizedAlias = normalizeAlias(alias);
+  // Undefined while resolving, null when nothing was found.
+  const candidate = useAliasResolutionStore((state) =>
+    normalizedAlias ? state.identityByAlias[normalizedAlias] : null,
+  );
+  const resolveAlias = useAliasResolutionStore((state) => state.resolveAlias);
 
-  useEffect(() => {
-    // Fast path: skip the resolve + profile round-trip when this alias was
-    // already verified this session.
-    const cachedIdentity = getVerifiedIdentity(alias);
-    if (cachedIdentity) {
-      setResolution({ status: 'verified', identity: cachedIdentity });
-      return;
-    }
+  useEffect(() => void resolveAlias(alias), [alias, resolveAlias]);
 
-    let cancelled = false;
-    setResolution({ status: 'loading' });
-    // resolveAlias resolves to null on any failure (it never rejects); the
-    // catch is defensive so the loading state can't wedge.
-    void resolveAlias(alias)
-      .then((result) => {
-        if (cancelled) return;
-        setResolution(
-          result
-            ? { status: 'verifying', identity: result }
-            : { status: 'not-found' },
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setResolution({ status: 'not-found' });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [alias]);
+  // Fetches the candidate's profile, which the handle reads from the cache.
+  useProfile(candidate ?? null, { fetchMode: FetchMode.Default });
+  const handle = useIdentityHandle(candidate);
 
-  // Load the candidate's profile to read the alias it claims for itself.
-  const candidate =
-    resolution.status === 'verifying' ? resolution.identity : null;
-  const profile = useProfile(candidate, { fetchMode: FetchMode.Default });
-
-  // Latch the verdict exactly once, when the candidate's profile first loads.
-  useEffect(() => {
-    if (resolution.status !== 'verifying' || profile.isLoading) return;
-    // Both sides go through the same canonicaliser so a leading `@` or
-    // differing case can't cause a false mismatch; a null on either side
-    // fails closed.
-    const expected = normalizeAlias(alias);
-    const claimed = profile.alias ? normalizeAlias(profile.alias) : null;
-    const verified = !!expected && claimed === expected;
-    if (verified) {
-      recordVerifiedAlias(alias, resolution.identity);
-    }
-    setResolution(
-      verified
-        ? { status: 'verified', identity: resolution.identity }
-        : { status: 'unverified' },
+  if (candidate && handle.kind === 'alias' && handle.text === normalizedAlias) {
+    return (
+      <ProfileProvider
+        identityKey={candidate}
+        alias={normalizedAlias}
+        activeFeed={tab}
+      >
+        <ProfileScreenContent />
+      </ProfileProvider>
     );
-  }, [resolution, profile.isLoading, profile.alias, alias]);
-
-  switch (resolution.status) {
-    case 'loading':
-      return <AliasStatus message={`Resolving ${alias}…`} loading />;
-    case 'verifying':
-      return <AliasStatus message={`Verifying ${alias}…`} loading />;
-    case 'not-found':
-      return <AliasStatus message={`Couldn't find ${alias}`} />;
-    case 'unverified':
-      return <AliasStatus message={`Couldn't verify ${alias}`} />;
-    case 'verified':
-      return (
-        <ProfileProvider
-          identityKey={resolution.identity}
-          alias={normalizeAlias(alias) ?? alias}
-          activeFeed={tab}
-        >
-          <ProfileScreenContent />
-        </ProfileProvider>
-      );
   }
+
+  // Still resolving the alias, or loading the profile it points at.
+  if (candidate === undefined || (candidate && handle.kind === 'loading')) {
+    return <AliasStatus message={`Verifying ${alias}…`} loading />;
+  }
+
+  return <AliasStatus message={`Couldn't verify ${alias}`} />;
 }
 
 function AliasStatus({

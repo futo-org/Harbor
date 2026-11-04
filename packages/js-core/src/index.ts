@@ -99,11 +99,6 @@ export {
 } from './constants';
 export type { Collection } from './constants';
 
-export {
-  resolveAlias,
-  normalizeAlias,
-  isIdentityKey,
-} from './http/alias-resolver';
 export { CryptoManager } from './crypto/crypto-manager';
 export {
   createServerJwt,

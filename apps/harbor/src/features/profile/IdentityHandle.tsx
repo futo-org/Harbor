@@ -12,6 +12,8 @@ type IdentityHandleProps = Omit<
 /** Every identity alias or shortened id in the app renders through this. */
 export function IdentityHandle({
   identity,
+  variant = 'secondary',
+  color = 'neutral_500',
   style,
   ...textProps
 }: IdentityHandleProps) {
@@ -20,6 +22,8 @@ export function IdentityHandle({
   return (
     <Text
       {...textProps}
+      variant={variant}
+      color={color}
       numberOfLines={1}
       monospace={handle.kind === 'hash'}
       style={[

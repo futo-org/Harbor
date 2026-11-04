@@ -59,6 +59,28 @@ export const useAliasResolutionStore = create<AliasResolutionStore>(
   }),
 );
 
+// For mutations like saving an alias: a new request even when one is cached.
+export function forceResolveAlias(alias: string): Promise<string | null> {
+  return useAliasResolutionStore
+    .getState()
+    .resolveAlias(alias, { force: true });
+}
+
+// True once `normalizedAlias` has settled to nothing or to another identity;
+// false while it's still pending.
+export function isAliasVerificationFailed(
+  normalizedAlias: string,
+  identity: string,
+): boolean {
+  const resolvedIdentity =
+    useAliasResolutionStore.getState().identityByAlias[normalizedAlias];
+
+  return (
+    resolvedIdentity !== undefined &&
+    resolvedIdentity?.toLowerCase() !== identity.toLowerCase()
+  );
+}
+
 // Null when the request fails or the domain lists no valid identity for the
 // alias.
 async function fetchAliasIdentity({
