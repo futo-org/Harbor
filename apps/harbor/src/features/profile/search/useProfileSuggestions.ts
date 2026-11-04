@@ -3,19 +3,13 @@ import { useFollowList } from '@/src/features/follow/hooks/useFollowList';
 import { useProfiles } from '@/src/features/profile/hooks/useProfiles';
 import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue';
 import { useSearchUsers } from '@/src/features/search/hooks/useSearchUsers';
-import { normalizeAlias, resolveAlias } from '@polycentric/react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-export type ProfileSuggestionSource =
-  | 'following'
-  | 'search'
-  | 'alias'
-  | 'identity';
+export type ProfileSuggestionSource = 'following' | 'search' | 'identity';
 
 export interface ProfileSuggestion {
   identity: string;
   name: string | null;
-  alias: string | null;
   source: ProfileSuggestionSource;
 }
 
@@ -23,14 +17,9 @@ export interface ProfileSuggestionsResult {
   suggestions: ProfileSuggestion[];
   /** True while the follow list is still loading. */
   isLoading: boolean;
-  /** True while an alias-shaped query is waiting on network resolution. */
-  isResolvingAlias: boolean;
   /** True while the user search is waiting on the typing pause or network. */
   isSearching: boolean;
 }
-
-/** Wait for a typing pause before hitting the alias domain's well-known. */
-const ALIAS_DEBOUNCE_MS = 300;
 
 // How many follow edges to list when the query is empty.
 const FOLLOWING_LIMIT = 100;
@@ -49,8 +38,6 @@ function isHex(s: string): boolean {
  * Suggests identities for a partially-typed profile query:
  * - people the current user follows, when the query is empty,
  * - user search results from the network, like the main search screen,
- * - the identity behind a `user@domain` or bare-domain alias, resolved over
- *   the network,
  * - the query itself when it's a pasted identity id.
  */
 export function useProfileSuggestions(
@@ -72,7 +59,6 @@ export function useProfileSuggestions(
   const profiles = useProfiles(followedIdentities);
 
   const trimmed = query.trim();
-  const aliasQuery = normalizeAlias(trimmed);
 
   const debounced = useDebouncedValue(trimmed);
   const search = useSearchUsers(trimmed ? debounced : '', {
@@ -80,36 +66,6 @@ export function useProfileSuggestions(
   });
   const isSearching =
     trimmed.length > 0 && (debounced !== trimmed || search.isLoading);
-
-  // Debounced alias → identity resolution; the result remembers which alias
-  // it answered so a stale response never surfaces for a newer query.
-  const [resolved, setResolved] = useState<{
-    alias: string;
-    identity: string | null;
-  } | null>(null);
-  const [isResolvingAlias, setResolvingAlias] = useState(false);
-
-  useEffect(() => {
-    if (!aliasQuery) {
-      setResolved(null);
-      setResolvingAlias(false);
-      return;
-    }
-    let cancelled = false;
-    setResolvingAlias(true);
-    const timer = setTimeout(() => {
-      // resolveAlias never rejects — failures resolve to null.
-      void resolveAlias(aliasQuery).then((identity) => {
-        if (cancelled) return;
-        setResolved({ alias: aliasQuery, identity });
-        setResolvingAlias(false);
-      });
-    }, ALIAS_DEBOUNCE_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [aliasQuery]);
 
   const excludeJoined = (opts?.exclude ?? []).join('\n');
 
@@ -126,24 +82,10 @@ export function useProfileSuggestions(
       out.push(suggestion);
     };
 
-    if (aliasQuery && resolved?.alias === aliasQuery && resolved.identity) {
-      push({
-        identity: resolved.identity,
-        name: null,
-        alias: aliasQuery,
-        source: 'alias',
-      });
-    }
-
-    if (
-      !aliasQuery &&
-      trimmed.length >= IDENTITY_ID_MIN_LENGTH &&
-      isHex(trimmed)
-    ) {
+    if (trimmed.length >= IDENTITY_ID_MIN_LENGTH && isHex(trimmed)) {
       push({
         identity: trimmed.toLowerCase(),
         name: null,
-        alias: null,
         source: 'identity',
       });
     }
@@ -153,7 +95,6 @@ export function useProfileSuggestions(
         push({
           identity: entry.identity,
           name: null,
-          alias: null,
           source: 'search',
         });
       }
@@ -163,27 +104,17 @@ export function useProfileSuggestions(
         push({
           identity: entry.identity,
           name: profile?.name ?? null,
-          alias: profile?.alias ?? null,
           source: 'following',
         });
       }
     }
 
     return out;
-  }, [
-    aliasQuery,
-    resolved,
-    trimmed,
-    search.entries,
-    following.entries,
-    profiles,
-    excludeJoined,
-  ]);
+  }, [trimmed, search.entries, following.entries, profiles, excludeJoined]);
 
   return {
     suggestions,
     isLoading: following.isLoading,
-    isResolvingAlias,
     isSearching,
   };
 }
