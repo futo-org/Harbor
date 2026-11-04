@@ -21,7 +21,8 @@ async function actAs(client, name) {
       info.keyPair,
       'liveRotationKey',
     );
-  // Hydrates the identity's events into rs-core, which buildEvent needs.
+  // Hydrates the identity's events into rs-core, which createEvent needs to
+  // build on the latest sequence and signature.
   await client.listEvents({
     identity: identityKey,
     collection: COLLECTION.IDENTITY,
@@ -84,9 +85,7 @@ async function verifyNewestClaim(client, name) {
       verificationVerify: { claimEventKey: claim.key },
     },
   });
-  await client.contentManager.save(content);
-  const event = await client.buildEvent(content, COLLECTION.VERIFICATIONS);
-  await client.commitEvent(await client.signEvent(event), content);
+  await client.createEvent({ collection: COLLECTION.VERIFICATIONS, content });
   await client.sync(SyncStrategy.PARTIAL_PUSH);
   return claim.key;
 }
