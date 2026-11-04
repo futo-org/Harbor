@@ -110,7 +110,7 @@ pub async fn run_all_workers(ctx: Arc<ServiceContext>, only: Vec<String>) {
         });
     }
 
-    tracing::info!(count = set.len(), "workers started");
+    tracing::info!(worker_count = set.len(), "workers started");
 
     match set.join_next().await {
         Some(Ok((name, Ok(())))) => {

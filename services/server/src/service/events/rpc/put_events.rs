@@ -36,10 +36,10 @@ use crate::service::proto::{
     name = "put_events",
     skip_all,
     fields(
-        events = req.event_bundles.len(),
-        inserted = tracing::field::Empty,
-        errors = tracing::field::Empty,
-        warnings = tracing::field::Empty,
+        event_count = req.event_bundles.len(),
+        stored_count = tracing::field::Empty,
+        error_count = tracing::field::Empty,
+        warning_count = tracing::field::Empty,
     )
 )]
 pub async fn handle(
@@ -54,7 +54,6 @@ pub async fn handle(
     let mut app_cache = HashMap::new();
     let mut stored = HashMap::<String, Vec<EventKey>>::new();
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
-        let start_warnings = warnings.len();
         match process_event(
             &mut ctx,
             event_bundle,
@@ -70,16 +69,6 @@ pub async fn handle(
         .await
         {
             Ok((key, is_new)) => {
-                if warnings.len() != start_warnings {
-                    tracing::warn!(
-                        key = ?key,
-                        is_new,
-                        warnings = ?&warnings[start_warnings..],
-                        "processed event with warning(s)",
-                    );
-                } else {
-                    tracing::info!(?key, is_new, "processed event");
-                }
                 if is_new {
                     stored.entry(key.identity.clone()).or_default().push(key);
                 }
@@ -100,11 +89,6 @@ pub async fn handle(
                 return Err(status);
             }
             Err(status) => {
-                tracing::warn!(
-                    code = %status.code(),
-                    message = %status.message(),
-                    "failed to process event",
-                );
                 errors.push(PutEventError {
                     event_bundle_index: idx as u32,
                     message: format!("{}: {}", status.code(), status.message()),
@@ -114,9 +98,9 @@ pub async fn handle(
     }
 
     tracing::Span::current()
-        .record("inserted", stored.values().map(Vec::len).sum::<usize>())
-        .record("errors", errors.len())
-        .record("warnings", warnings.len());
+        .record("stored_count", stored.values().map(Vec::len).sum::<usize>())
+        .record("error_count", errors.len())
+        .record("warning_count", warnings.len());
 
     if let Some(pubsub) = heads_pubsub::get()
         && !stored.is_empty()
@@ -148,11 +132,14 @@ pub async fn handle(
 /// Returns its key and whether it was newly stored.
 #[tracing::instrument(
     skip_all,
+    err(level = "warn"),
     fields(
         event.identity = tracing::field::Empty,
         event.collection = tracing::field::Empty,
         event.sequence = tracing::field::Empty,
         event.content_type = tracing::field::Empty,
+        event.stored = tracing::field::Empty,
+        event.warnings = tracing::field::Empty,
     )
 )]
 async fn process_event(
@@ -442,6 +429,14 @@ async fn process_event(
         }
     };
 
+    let span = tracing::Span::current();
+    span.record("event.stored", stored);
+    if warnings.len() != start_warning_len {
+        span.record(
+            "event.warnings",
+            tracing::field::debug(&warnings[start_warning_len..]),
+        );
+    }
     Ok((key, stored))
 }
 

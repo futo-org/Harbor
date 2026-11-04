@@ -259,8 +259,8 @@ impl NotificationManager {
         let errors = response.data.iter().filter(|t| t.status == "error").count();
         tracing::info!(
             identity,
-            tokens = expo_tokens.len(),
-            ticket_errors = errors,
+            token_count = expo_tokens.len(),
+            ticket_error_count = errors,
             "push sent"
         );
         let meter = opentelemetry::global::meter("push-notifications");
