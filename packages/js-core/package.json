@@ -8,35 +8,38 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.es.js"
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js"
+    },
+    "./web": {
+      "types": "./dist/hosts/web.d.ts",
+      "import": "./dist/web.es.js"
+    },
+    "./node": {
+      "types": "./dist/hosts/node.d.ts",
+      "import": "./dist/node.es.js",
+      "require": "./dist/node.cjs.js"
     }
   },
   "files": ["dist"],
   "scripts": {
-    "generate": "mkdir -p ./src/proto && cd ../.. && buf generate && node packages/js-core/scripts/generate-proto-barrel.mjs",
     "build": "tsc -b && webpack",
     "dev": "tsc -b && webpack --watch",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile.junit=./junit.xml"
+    "test:ci": "vitest run --reporter=default --reporter=junit --outputFile.junit=./junit.xml",
+    "test:browser": "vitest run --config vitest.browser.config.ts"
   },
   "dependencies": {
-    "@noble/curves": "catalog:",
-    "@noble/hashes": "catalog:",
-    "@polycentric/rs-core-wasm": "workspace:*",
-    "@protobuf-ts/grpcweb-transport": "^2.11.1",
-    "@protobuf-ts/runtime": "^2.10.0",
-    "@protobuf-ts/runtime-rpc": "^2.11.1",
-    "base64url": "^3.0.1",
-    "eventemitter3": "^5.0.1",
-    "js-base64": "^3.7.8"
+    "@polycentric/rs-core-wasm": "workspace:*"
   },
   "devDependencies": {
-    "@bufbuild/buf": "^1.71.0",
     "@polycentric/tsconfig": "workspace:*",
-    "@protobuf-ts/plugin": "^2.11.1",
+    "@types/node": "catalog:",
+    "@vitest/browser-playwright": "5.0.5",
+    "playwright": "^1.52.0",
     "ts-loader": "^9.5.4",
     "typescript": "catalog:",
     "vitest": "^5.0.0",

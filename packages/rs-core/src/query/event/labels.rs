@@ -132,7 +132,6 @@ pub fn build_label_sets(hints: &[EventHint]) -> Vec<LabelSet> {
 }
 
 /// Return the labels from the `event_hints` field of a feed response
-#[uniffi::export]
 pub fn labels_from_feed_response(response: Vec<u8>) -> Vec<LabelSet> {
     GetFeedResponse::decode(response.as_slice())
         .map(|r| build_label_sets(&r.event_hints))
@@ -140,7 +139,6 @@ pub fn labels_from_feed_response(response: Vec<u8>) -> Vec<LabelSet> {
 }
 
 /// Return the labels from the `event_hints` field of a thread response
-#[uniffi::export]
 pub fn labels_from_thread_response(response: Vec<u8>) -> Vec<LabelSet> {
     GetPostThreadResponse::decode(response.as_slice())
         .map(|r| build_label_sets(&r.event_hints))
@@ -149,7 +147,6 @@ pub fn labels_from_thread_response(response: Vec<u8>) -> Vec<LabelSet> {
 
 /// Return the labels from the `event_hints` field of a list notifications
 /// response.
-#[uniffi::export]
 pub fn labels_from_notifications_response(response: Vec<u8>) -> Vec<LabelSet> {
     ListNotificationsResponse::decode(response.as_slice())
         .map(|r| build_label_sets(&r.event_hints))
@@ -157,7 +154,6 @@ pub fn labels_from_notifications_response(response: Vec<u8>) -> Vec<LabelSet> {
 }
 
 /// Return the labels from the `event_hints` field of a search posts response.
-#[uniffi::export]
 pub fn labels_from_search_response(response: Vec<u8>) -> Vec<LabelSet> {
     SearchPostsResponse::decode(response.as_slice())
         .map(|r| build_label_sets(&r.event_hints))
@@ -165,7 +161,6 @@ pub fn labels_from_search_response(response: Vec<u8>) -> Vec<LabelSet> {
 }
 
 /// Return the labels from the `event_hints` field of a get post response.
-#[uniffi::export]
 pub fn labels_from_get_post_response(response: Vec<u8>) -> Vec<LabelSet> {
     GetPostResponse::decode(response.as_slice())
         .map(|r| build_label_sets(&r.event_hints))

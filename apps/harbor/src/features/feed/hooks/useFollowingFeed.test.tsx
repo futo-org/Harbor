@@ -17,14 +17,14 @@ let mockResolvedIdentity = '';
 type CapturedCall = {
   queryKey: string[];
   enabled: boolean;
-  query: Record<string, unknown>;
+  query: { inner: [Record<string, unknown>] };
 };
 let mockCaptured: CapturedCall[] = [];
 
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: (
     queryKey: string[],
-    factory: (s: unknown, d: unknown) => Record<string, unknown>,
+    factory: (s: unknown, d: unknown) => { inner: [Record<string, unknown>] },
     _opts: unknown,
     enabled: boolean,
   ) => {
@@ -45,24 +45,9 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   RefreshStrategy: { Lazy: 'lazy' },
 }));
 
-jest.mock('@polycentric/react-native', () => {
-  const actual = jest.requireActual(
-    '../../../../../../packages/js-core/src/proto/v2',
-  );
-  return {
-    v2: actual,
-    Query: {
-      GetFollowingFeed: class GetFollowingFeed {
-        constructor(args: Record<string, unknown>) {
-          Object.assign(this, args);
-        }
-      },
-    },
-    QueryStatus: { Loading: 'loading' },
-    UpdateMode: { Merge: 'merge' },
-    FeedSort: { Default: 'default', Top: 'top', Latest: 'latest' },
-  };
-});
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shouldExtend: () => false,
@@ -133,7 +118,7 @@ describe('useFollowingFeed', () => {
 
     const call = renderFollowingFeed();
     expect(call.enabled).toBe(true);
-    expect(call.query.followerIdentity).toBe('id-a');
+    expect(call.query.inner[0].followerIdentity).toBe('id-a');
     expect(call.queryKey).toEqual(['feed', 'following', 'id-a', 'latest']);
   });
 
@@ -145,14 +130,16 @@ describe('useFollowingFeed', () => {
 
     const call = renderFollowingFeed();
     expect(call.enabled).toBe(true);
-    expect(call.query.followerIdentity).toBe('id-a');
+    expect(call.query.inner[0].followerIdentity).toBe('id-a');
   });
 
   it('ignores a stale client field', () => {
     mockActiveIdentityKey = 'id-stale';
     mockResolvedIdentity = 'id-current';
 
-    expect(renderFollowingFeed().query.followerIdentity).toBe('id-current');
+    expect(renderFollowingFeed().query.inner[0].followerIdentity).toBe(
+      'id-current',
+    );
   });
 
   it('changes the query key when the identity arrives, so the query re-subscribes', () => {

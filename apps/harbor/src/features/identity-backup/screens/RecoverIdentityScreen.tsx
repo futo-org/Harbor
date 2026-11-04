@@ -4,10 +4,8 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
-import {
-  decodeIdentityBackup,
-  isStaleBackup,
-} from '@/src/features/identity-backup/backup';
+import { backupIdentity } from '@/src/features/identity-backup/backup';
+import { BackupCheck } from '@polycentric/react-native';
 import {
   BackupFilePicker,
   type PickedBackupFile,
@@ -44,8 +42,8 @@ export default function RecoverIdentityScreen() {
 
     setState({ stage: 'recovering' });
 
-    const backup = decodeIdentityBackup(picked.contents);
-    if (!backup) {
+    const identity = backupIdentity(picked.contents);
+    if (!identity) {
       console.warn('Recovery failed: unable to decode backup file');
       setState({ stage: 'failure' });
       return;
@@ -55,16 +53,15 @@ export default function RecoverIdentityScreen() {
       // Bail if the user was logged in elsewhere in the meantime
       if (await redirectIfLoggedIn(client)) return;
 
-      const pendingLogin = await client.loginManager.beginLogin(
-        backup.identityKey,
-        'recovery',
-      );
-
-      await client.loginManager.recoverIdentity(pendingLogin.keyPair, backup);
+      await client.recoverFromBackup(picked.contents);
     } catch (err: unknown) {
       console.warn('Recovery failed:', err);
 
-      const message = isStaleBackup(client, backup)
+      const stale =
+        (await client
+          .checkBackup(picked.contents, identity)
+          .catch(() => undefined)) === BackupCheck.Stale;
+      const message = stale
         ? 'Recovery failed because the backup file is outdated.'
         : undefined;
 

@@ -3,6 +3,7 @@ import {
   decodeBundle,
   eventKeyId,
   type PostData,
+  queryPayload,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
   RefreshStrategy,
@@ -12,7 +13,8 @@ import {
 import {
   COLLECTION,
   Query,
-  v2,
+  type QueryData,
+  QueryData_Tags,
   type EventKey,
 } from '@polycentric/react-native';
 import { useMemo } from 'react';
@@ -64,17 +66,13 @@ export function postReactionsQueryKey(
  * Decode a `GetReactionsResponse` value and extract the reactions targeting `postId`.
  */
 function decodeResponse(
-  data: ArrayBuffer | undefined,
+  data: QueryData | undefined,
   postId: string | undefined,
 ): ReactionInfo[] {
-  if (!data || !postId) return [];
+  if (!postId) return [];
 
-  let response: v2.GetReactionsResponse;
-  try {
-    response = v2.GetReactionsResponse.fromBinary(new Uint8Array(data));
-  } catch {
-    return [];
-  }
+  const response = queryPayload(data, QueryData_Tags.Reactions)?.response;
+  if (!response) return [];
 
   const reactions: ReactionInfo[] = [];
 
@@ -151,10 +149,7 @@ export function usePostReactions(
     return {
       collection: COLLECTION.FEED,
       identity: post.identity,
-      signedBy: {
-        keyType: post.signedBy.keyType,
-        key: post.signedBy.key.slice().buffer as ArrayBuffer,
-      },
+      signedBy: post.signedBy,
       sequence: BigInt(post.sequence),
     };
   }, [post]);

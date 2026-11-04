@@ -2,7 +2,6 @@ import org.gradle.api.tasks.Exec
 
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.wire)
     alias(libs.plugins.ktlint)
     id("maven-publish")
 }
@@ -14,7 +13,6 @@ version = (findProperty("ktCoreVersion") as? String) ?: "0.0.0"
 // ── Paths ──────────────────────────────────────────────────────────────
 // Repo root is two levels up from packages/kt-core.
 val repoRoot = rootProject.projectDir.parentFile.parentFile
-val protosDir = File(repoRoot, "protos")
 val uniffiOutDir =
     layout.buildDirectory
         .dir("generated/uniffi")
@@ -52,7 +50,6 @@ android {
 
     defaultConfig {
         minSdk = 24
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -93,31 +90,13 @@ val stagedKtFiles =
 
 // ── ktlint (format/lint check) ─────────────────────────────────────────
 ktlint {
-    // uniffi and Wire emit unformatted generated Kotlin (--no-format for
-    // uniffi); lint hand-written sources only.
+    // uniffi emits unformatted generated Kotlin (--no-format); lint
+    // hand-written sources only.
     filter {
         if (stagedKtFiles != null) {
             exclude { element -> element.file.canonicalPath !in stagedKtFiles }
         }
         exclude { element -> element.file.path.contains("generated") }
-    }
-}
-
-// ── Protobuf (Wire) ────────────────────────────────────────────────────
-// Generates Kotlin message classes from the SAME .proto files the server,
-// js-core, and rs-core are generated from. Only v2 is needed; the legacy
-// protos/polycentric.proto (v1) is intentionally excluded — pull it in
-// only if this library grows a v1→v2 migration surface.
-wire {
-    sourcePath {
-        srcDir(protosDir.absolutePath)
-        include("polycentric/v2/*.proto")
-    }
-    kotlin {
-        javaInterop = false
-        // Messages only — no gRPC service stubs. Transport lives in
-        // rs-core (native tonic); stubs would drag in wire-grpc-client.
-        rpcRole = "none"
     }
 }
 
@@ -196,6 +175,12 @@ val uniffiGenerate =
         outputs.dir(uniffiOutDir)
     }
 
+// ktlint's source set includes the generated directory (filtered out
+// above), so order it after generation when both run in one build.
+tasks.withType<org.jlleitschuh.gradle.ktlint.tasks.BaseKtLintCheckTask>().configureEach {
+    mustRunAfter(uniffiGenerate)
+}
+
 if (!skipRust) {
     tasks.named("preBuild") {
         dependsOn(cargoNdkBuild, uniffiGenerate)
@@ -203,26 +188,24 @@ if (!skipRust) {
 }
 
 dependencies {
-    implementation(libs.kotlinx.coroutines.core)
+    // Flow and StateFlow are part of the public API.
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.wire.runtime)
-    implementation(libs.okhttp)
-    implementation(libs.bouncycastle)
     // uniffi Kotlin runtime dependency:
     implementation(libs.jna) { artifact { type = "aar" } }
 
     testImplementation(libs.junit)
-    // android.jar's org.json is a throwing stub on the host JVM; unit tests
-    // that exercise Moderation (and decode JWT segments) need the real one.
-    testImplementation(libs.orgjson)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.mockwebserver)
-    // Robolectric provides the android.database.sqlite storage layer with a
-    // real instance of SQLite.
-    testImplementation(libs.robolectric)
-    testImplementation(libs.androidx.test.ext.junit)
-    testImplementation(libs.androidx.test.core)
-    androidTestImplementation(libs.androidx.test.runner)
+    // The host JVM build of JNA (with its desktop dispatch library) for unit
+    // tests, which load the host-built rs-core.
+    testImplementation(libs.jna)
+}
+
+// Unit tests run the wrapper against the real rs-core, built for the host by
+// cargoHostBuild.
+tasks.withType<Test>().configureEach {
+    systemProperty("jna.library.path", File(repoRoot, "target/release").absolutePath)
+    if (!skipRust) dependsOn(cargoHostBuild)
 }
 
 // ── Publishing ─────────────────────────────────────────────────────────

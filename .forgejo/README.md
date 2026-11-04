@@ -29,8 +29,8 @@ Rules:
   `ci/rs-core-<name>:<key>`, the key a hash of the sources that produce that
   library (`rs-core-libraries.sh`). A job takes the copy for its sources and
   builds the library only when there is none, so a squash commit shares its
-  PR's copy and a copy for other sources is never used. Web and the verifier
-  bot need only wasm, the app only Android and iOS.
+  PR's copy and a copy for other sources is never used. Web needs only wasm,
+  the app only Android and iOS.
 - `pr.yml`'s last job, `Complete`, fails if any job in the run did. It is the
   required status check on `develop` (`PR / Complete (pull_request)`, set in
   harbor-infra `futo-git/org`), so a PR that ran nothing still reports.
@@ -42,9 +42,9 @@ Components: `server`, `moderation`, `push-notifications`, `grayjay-migrator`,
 
 `deploy-<component>-staging.yml` runs on a push to `develop` that touches the
 component's paths (or the workflow and the actions it uses), and manually. A
-service deploy builds the commit's image (the Rust services build their
-binaries in a job of their own first; `web` and `verifier-bot`
-first build the SDKs, and wasm when its copy is missing), packages and pushes
+service deploy builds the commit's image (the Rust services, `verifier-bot`
+included, build their binaries in a job of their own first; `web` first builds
+the SDKs, and wasm when its copy is missing), packages and pushes
 the component's chart as
 `<next patch>-<ref>.g<sha>` with the commit as `appVersion`, then moves the
 image and chart `staging` tags. helm-controller watches the chart tag. `web`

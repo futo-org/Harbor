@@ -1,6 +1,6 @@
 import { toast } from '@/src/common/components/toast/useToast';
 import { Routes } from '@/src/common/constants/routes';
-import { ffiEventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
+import { eventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
 import { router } from 'expo-router';
 import type { EventPushIssue } from './useEventPushIssuesStore';
 
@@ -10,7 +10,7 @@ const WARNING_DURATION_MS = 6000;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const dedupIssueCount = (issues: EventPushIssue[]) =>
-  new Set(issues.map((i) => ffiEventKeyId(i.key))).size;
+  new Set(issues.map((i) => eventKeyId(i.key))).size;
 
 /**
  * Show at most one toast for errors and one toast for warnings encountered when pushing to

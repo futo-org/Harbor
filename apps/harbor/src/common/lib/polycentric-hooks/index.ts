@@ -39,10 +39,16 @@ export {
   getIdentityId,
   getIdentityIdShort,
   shortenIdentityId,
-  signedEventToHex,
-  hexToSignedEvent,
   toBase64,
   fromBase64,
+  asBytes,
+  asBuffer,
+  contentAs,
+  contentKind,
+  bundleEvent,
+  bundleContent,
+  queryPayload,
+  keysEqual,
 } from './helpers';
 export { truncateText as truncateName } from '../../util/truncateText';
 export type {
@@ -52,4 +58,5 @@ export type {
   DecodedBundle,
   LabelSet,
   PostLabel,
+  QueryPayload,
 } from './helpers';

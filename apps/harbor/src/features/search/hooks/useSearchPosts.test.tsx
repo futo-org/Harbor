@@ -1,27 +1,9 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
-// time, which can't run under jest — expose just what the hook needs. The
-// Query stub keeps the args it was constructed with so the tests can assert
-// on what the hook passed in.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-  Query: {
-    SearchPosts: class SearchPosts {
-      constructor(args: Record<string, unknown>) {
-        Object.assign(this, args);
-      }
-    },
-  },
-  QueryStatus: { Loading: 'loading' },
-  UpdateMode: { Merge: 'merge' },
-  SearchPostsSort: { Default: 'default', Top: 'top', Latest: 'latest' },
-  // Mocked responses don't carry event hints, so we should return
-  // an empty set of labels
-  labelsFromSearchResponse: () => [],
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shouldExtend: () => true,
-  decodeV2PostBundle: jest.fn(),
 }));
 
 jest.mock('@/src/common/settings/useOmitLabels', () => ({
@@ -29,14 +11,18 @@ jest.mock('@/src/common/settings/useOmitLabels', () => ({
 }));
 
 type CapturedQuery = {
-  query: string;
-  sortBy: string;
-  omitLabels: string[];
-  forwardToken?: string;
+  inner: [
+    {
+      query: string;
+      sortBy: SearchPostsSort;
+      omitLabels: string[];
+      forwardToken?: string;
+    },
+  ];
 };
 type QueryFactory = (status: unknown, data: unknown) => CapturedQuery;
 
-let mockQueryData: Uint8Array | null = null;
+let mockQueryData: QueryData | null = null;
 let capturedKey: string[] | null = null;
 let capturedFactory: QueryFactory | null = null;
 let capturedEnabled: boolean | null = null;
@@ -63,7 +49,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   RefreshStrategy: { Lazy: 'lazy' },
 }));
 
-import { v2 } from '@polycentric/react-native';
+import { QueryData, SearchPostsSort, v2 } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -75,30 +61,31 @@ function postResult(text: string, sequence: number, rank = 1): v2.SearchResult {
       identity: 'author',
       collection: 2,
       sequence: BigInt(sequence),
-      signedBy: v2.PublicKey.create({ keyType: 1, key: new Uint8Array([1]) }),
+      signedBy: v2.PublicKey.create({
+        keyType: v2.KeyType.Ed25519,
+        key: new Uint8Array([1]).buffer,
+      }),
     }),
     createdAt: BigInt(sequence),
   });
   const content = v2.Content.create({
-    contentBody: { oneofKind: 'post', post: v2.Post.create({ text }) },
+    contentBody: new v2.ContentBody.Post({ post: v2.Post.create({ text }) }),
   });
   return v2.SearchResult.create({
     eventBundle: v2.EventBundle.create({
       signedEvent: v2.SignedEvent.create({
-        eventBytes: v2.Event.toBinary(event),
-        signature: new Uint8Array([0]),
+        event,
+        signature: new Uint8Array([0]).buffer,
       }),
-      serializedContent: v2.SerializedContent.create({
-        contentBytes: v2.Content.toBinary(content),
-      }),
+      serializedContent: v2.SerializedContent.create({ content }),
     }),
     rank,
   });
 }
 
 function respond(results: v2.SearchResult[], hasNextPage = false) {
-  mockQueryData = v2.SearchPostsResponse.toBinary(
-    v2.SearchPostsResponse.create({
+  mockQueryData = new QueryData.SearchPosts({
+    response: v2.SearchPostsResponse.create({
       results,
       pageInfo: {
         startCursor: '',
@@ -107,7 +94,8 @@ function respond(results: v2.SearchResult[], hasNextPage = false) {
         hasNextPage,
       },
     }),
-  );
+    labels: [],
+  });
 }
 
 type HookResult = ReturnType<typeof useSearchPosts>;
@@ -139,15 +127,17 @@ describe('useSearchPosts', () => {
     renderHook('hello');
 
     const built = capturedFactory?.(undefined, undefined);
-    expect(built?.query).toBe('hello');
-    expect(built?.sortBy).toBe('default');
-    expect(built?.omitLabels).toEqual(['hate']);
+    expect(built?.inner[0].query).toBe('hello');
+    expect(built?.inner[0].sortBy).toBe(SearchPostsSort.Default);
+    expect(built?.inner[0].omitLabels).toEqual(['hate']);
   });
 
   it('maps the latest sort onto the proto enum', () => {
     renderHook('hello', { sort: 'latest' });
 
-    expect(capturedFactory?.(undefined, undefined)?.sortBy).toBe('latest');
+    expect(capturedFactory?.(undefined, undefined)?.inner[0].sortBy).toBe(
+      SearchPostsSort.Latest,
+    );
   });
 
   it('keys the cache by sort and term', () => {
@@ -161,7 +151,7 @@ describe('useSearchPosts', () => {
     renderHook('hello');
 
     const built = capturedFactory?.(undefined, mockQueryData);
-    expect(built?.forwardToken).toBe('token');
+    expect(built?.inner[0].forwardToken).toBe('token');
   });
 
   it('decodes results into feed items with page info', () => {

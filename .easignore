@@ -76,4 +76,3 @@ services/
 legacy/
 
 # Browser SDK demo (~150MB of node_modules + bundle, irrelevant to the native build)
-packages/js-browser/examples/

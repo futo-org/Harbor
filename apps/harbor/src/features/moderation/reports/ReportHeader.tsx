@@ -75,10 +75,10 @@ export function ReportHeader({
           </Text>
         ) : null}
       </View>
-      {report.status !== v2.ReportStatus.OPEN ? (
+      {report.status !== v2.ReportStatus.Open ? (
         <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_2xs]}>
           <Text variant="small" color="neutral_500">
-            {report.status === v2.ReportStatus.RESOLVED
+            {report.status === v2.ReportStatus.Resolved
               ? 'Resolved'
               : 'Dismissed'}{' '}
             by{' '}

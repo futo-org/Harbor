@@ -1,8 +1,7 @@
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import { hexToBytes } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { usePostById } from '@/src/features/post/hooks/usePostById';
-import { type types, v2 } from '@polycentric/react-native';
+import { parseEventKeyId, type v2 } from '@polycentric/react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { ComposeSheet } from './ComposeSheet';
@@ -18,7 +17,7 @@ export default function ComposeScreen() {
 
   // Reply
   const replyToEventKey = params.replyTo
-    ? v2.EventKey.fromBinary(hexToBytes(params.replyTo))
+    ? parseEventKeyId(params.replyTo)
     : undefined;
 
   const { post: replyTo } = usePostById(
@@ -29,7 +28,7 @@ export default function ComposeScreen() {
 
   // Quote
   const quoteEventKey = params.quote
-    ? v2.EventKey.fromBinary(hexToBytes(params.quote))
+    ? parseEventKeyId(params.quote)
     : undefined;
 
   const { post: quote } = usePostById(
@@ -41,7 +40,7 @@ export default function ComposeScreen() {
   const attachOnMount = params.attach === '1';
 
   const handlePostCreated = useCallback(
-    async (_signedEvent: types.SignedEvent) => {
+    async (_signedEvent: v2.SignedEvent) => {
       // TODO: decode sequence from the new v2 SignedEvent and navigate to
       // the created post's route.
     },

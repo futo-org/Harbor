@@ -1,4 +1,5 @@
 ---
+
 title: Verifiers
 sidebar_label: Verifiers
 sidebar_position: 5
@@ -8,13 +9,13 @@ sidebar_position: 5
 
 A **verifier** is an automated way to confirm that the owner of a Harbor
 identity also controls an account on some external platform (X, GitHub,
-YouTube, …). When a user makes a *claim* ("this Harbor identity owns the
+YouTube, …). When a user makes a _claim_ ("this Harbor identity owns the
 GitHub account `futo-org`"), the verifier independently checks the platform and,
 if the check passes, publishes a signed **verification** vouching for that
 claim.
 
 Verifiers run inside the **verifier bot** (`services/verifier-bot`), a small
-Node HTTP service. The bot holds its own Harbor identity and publishes
+Rust HTTP service built on `rs-core`. The bot holds its own Harbor identity and publishes
 verifications as that identity, syncing them to the configured Harbor
 server(s).
 
@@ -41,18 +42,18 @@ Routes are derived from each platform's slug (`slug(name)`, e.g. `GitHub` →
 `github`, `Hacker News` → `hacker-news`) and its verifier type (`text` or
 `oauth`):
 
-| Method & path | Purpose |
-|---|---|
-| `GET /identity` | The bot's Harbor identity — `{ identity }` (the identity key it publishes verifications under). Clients use this to recognise and trust the bot's verifications. |
-| `GET /platforms` | List platforms as `{ name, slug, verifiers }`. |
-| `GET /platforms/:slug` | Platform detail: `{ verifierType, platform, slug }`. |
-| `POST /platforms/:slug/:type/verify` | Verify the referenced claim and publish a verification. |
-| `POST /platforms/:slug/:type/check` | Stateless pre-check (no claim needed): text takes `{ claimFields, token }`, OAuth takes `{ claimFields, challengeResponse }`. Clients run this before publishing a claim. |
-| `GET /platforms/:slug/:type/health-check` | Run the verifier's self-test. |
-| `GET /platforms/:slug/oauth/url` | (OAuth) Get the URL to send the user to. |
-| `GET /platforms/:slug/oauth/callback` | (OAuth) Redirect target; bounces back to the web app. |
-| `GET /platforms/:slug/oauth/token` | (OAuth) Exchange the OAuth code for a token. |
-| `POST /platforms/:slug/text/get-claim-fields-by-url` | (Text) Derive claim fields from a profile URL. |
+| Method & path                                        | Purpose                                                                                                                                                                   |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /identity`                                      | The bot's Harbor identity — `{ identity }` (the identity key it publishes verifications under). Clients use this to recognise and trust the bot's verifications.          |
+| `GET /platforms`                                     | List platforms as `{ name, slug, verifiers }`.                                                                                                                            |
+| `GET /platforms/:slug`                               | Platform detail: `{ verifierType, platform, slug }`.                                                                                                                      |
+| `POST /platforms/:slug/:type/verify`                 | Verify the referenced claim and publish a verification.                                                                                                                   |
+| `POST /platforms/:slug/:type/check`                  | Stateless pre-check (no claim needed): text takes `{ claimFields, token }`, OAuth takes `{ claimFields, challengeResponse }`. Clients run this before publishing a claim. |
+| `GET /platforms/:slug/:type/health-check`            | Run the verifier's self-test.                                                                                                                                             |
+| `GET /platforms/:slug/oauth/url`                     | (OAuth) Get the URL to send the user to.                                                                                                                                  |
+| `GET /platforms/:slug/oauth/callback`                | (OAuth) Redirect target; bounces back to the web app.                                                                                                                     |
+| `GET /platforms/:slug/oauth/token`                   | (OAuth) Exchange the OAuth code for a token.                                                                                                                              |
+| `POST /platforms/:slug/text/get-claim-fields-by-url` | (Text) Derive claim fields from a profile URL.                                                                                                                            |
 
 ## Supported platforms
 
@@ -65,28 +66,28 @@ two methods:
   authenticated account matches the claim. OAuth platforms require credentials
   (see [Host a Verifier Bot](../guides/self-hosting-a-verifier.md#environment-variables)).
 
-| Platform | Method | OAuth credentials required |
-|---|---|---|
-| Discord | OAuth | Yes |
-| GitHub | Text | — |
-| GitLab | Text | — |
-| Hacker News | Text | — |
-| Instagram | OAuth | Yes |
-| Kick | Text (headless browser) | — |
-| Nebula | Text | — |
-| Odysee | Text | — |
-| Patreon | OAuth | Yes |
-| Rumble | Text | — |
-| SoundCloud | Text | — |
-| Spotify | OAuth | Yes |
-| Spreadshop | Text | — |
-| Substack | Text | — |
-| Twitch | Text | — |
-| Vimeo | Text | — |
-| Website | Text | — |
-| X | OAuth | Yes |
-| YouTube | Text | — |
+| Platform    | Method                  | OAuth credentials required |
+| ----------- | ----------------------- | -------------------------- |
+| Discord     | OAuth                   | Yes                        |
+| GitHub      | Text                    | —                          |
+| GitLab      | Text                    | —                          |
+| Hacker News | Text                    | —                          |
+| Instagram   | OAuth                   | Yes                        |
+| Kick        | Text (headless browser) | —                          |
+| Nebula      | Text                    | —                          |
+| Odysee      | Text                    | —                          |
+| Patreon     | OAuth                   | Yes                        |
+| Rumble      | Text                    | —                          |
+| SoundCloud  | Text                    | —                          |
+| Spotify     | OAuth                   | Yes                        |
+| Spreadshop  | Text                    | —                          |
+| Substack    | Text                    | —                          |
+| Twitch      | Text                    | —                          |
+| Vimeo       | Text                    | —                          |
+| Website     | Text                    | —                          |
+| X           | OAuth                   | Yes                        |
+| YouTube     | Text                    | —                          |
 
 The authoritative list is the set of platforms registered in
-`services/verifier-bot/src/platforms/platforms.ts`. To add a platform, see
+`services/verifier-bot/src/platforms/mod.rs`. To add a platform, see
 [Add a Platform Verifier](../guides/add-a-platform-verifier.md).

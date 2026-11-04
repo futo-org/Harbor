@@ -18,7 +18,8 @@ import { useQueryStore } from './useQuery';
 
 type Observer = {
   next: (result: {
-    data?: Uint8Array;
+    data?: unknown;
+    empty?: boolean;
     status: QueryStatus;
     successfulServers: number;
     pendingServers: number;
@@ -30,14 +31,14 @@ type Observer = {
 const fetchQuery = jest.fn();
 let observers: Observer[] = [];
 const client = {
-  core: {
-    fetchQuery,
-    invalidateQuery: jest.fn(),
-  },
+  fetchQuery,
+  invalidateQuery: jest.fn(async () => undefined),
 } as never;
 
 const KEY = 'profile\0abc';
-const DATA = new Uint8Array([1, 2, 3]);
+// Query data is opaque to the store.
+const data = (n: number) => ({ tag: 'Profile', inner: { n } });
+const DATA = data(1);
 
 function args(fetchMode: FetchMode) {
   return {
@@ -54,7 +55,7 @@ beforeEach(() => {
   fetchQuery.mockImplementation(() => ({
     subscribe: (observer: Observer) => {
       observers.push(observer);
-      return { unsubscribe: jest.fn() };
+      return jest.fn();
     },
   }));
   useQueryStore.setState({ queries: new Map(), subscriptions: new Map() });
@@ -95,7 +96,8 @@ describe('useQueryStore data retention', () => {
 
     useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineOnly));
     latest().next({
-      data: new Uint8Array([]),
+      data: data(0),
+      empty: true,
       status: QueryStatus.Success,
       successfulServers: 0,
       pendingServers: 0,
@@ -105,7 +107,7 @@ describe('useQueryStore data retention', () => {
 
   it('accepts a non-empty local read over existing data', () => {
     seed();
-    const local = new Uint8Array([4, 5]);
+    const local = data(4);
     latest().next({
       data: local,
       status: QueryStatus.Success,
@@ -117,7 +119,7 @@ describe('useQueryStore data retention', () => {
 
   it('accepts server data over existing data', () => {
     seed();
-    const fresh = new Uint8Array([9]);
+    const fresh = data(9);
     latest().next({
       data: fresh,
       status: QueryStatus.Success,

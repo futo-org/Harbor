@@ -3,17 +3,19 @@ import { act, render } from '@testing-library/react-native';
 // Identity the mocked client reports as active; tests reassign it.
 let mockActiveIdentityKey: string | null = 'me';
 const mockAcknowledgeNotifications = jest.fn(async () => {});
-const mockInvalidateQuery = jest.fn();
+const mockInvalidateQuery = jest.fn(async (_key: string[]) => {});
 // What the mocked useQuery returns; tests reassign it.
-let mockQueryResult: { data: ArrayBuffer | undefined } = { data: undefined };
+let mockQueryResult: { data: QueryData | undefined } = { data: undefined };
 const mockUseQuery = jest.fn((..._args: unknown[]) => mockQueryResult);
 const mockSetQueryCache = jest.fn();
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
+  queryPayload: jest.requireActual('@/src/common/lib/polycentric-hooks/helpers')
+    .queryPayload,
   usePolycentric: () => ({
     activeIdentityKey: mockActiveIdentityKey,
     acknowledgeNotifications: mockAcknowledgeNotifications,
-    core: { invalidateQuery: mockInvalidateQuery },
+    invalidateQuery: mockInvalidateQuery,
   }),
 }));
 
@@ -22,26 +24,20 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...(args as [])),
 }));
 
-// A one-byte stand-in for the proto codec: the count is the byte.
-jest.mock('@polycentric/react-native', () => ({
-  Query: {
-    SubscribeUnreadNotificationCount: class SubscribeUnreadNotificationCount {},
-  },
-  v2: {
-    SubscribeUnreadNotificationCountResponse: {
-      toBinary: ({ count }: { count: number }) => new Uint8Array([count]),
-      fromBinary: (bytes: Uint8Array) => ({ count: bytes[0] ?? 0 }),
-    },
-  },
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
+import { QueryData, v2 } from '@polycentric/react-native';
 import useUnreadNotificationCount, {
   unreadNotificationsBadgeLabel,
   useAcknowledgeNotifications,
 } from './useUnreadNotificationCount';
 
-function countResponse(count: number): ArrayBuffer {
-  return new Uint8Array([count]).buffer as ArrayBuffer;
+function countResponse(count: number): QueryData {
+  return new QueryData.UnreadNotificationCount({
+    response: v2.SubscribeUnreadNotificationCountResponse.create({ count }),
+  });
 }
 
 // `renderHook` renders an empty result under this jest-expo setup, so run

@@ -29,10 +29,7 @@ export function useThread(
     return {
       collection: COLLECTION.FEED,
       identity: post.identity,
-      signedBy: {
-        keyType: post.signedBy.keyType,
-        key: post.signedBy.key.slice().buffer as ArrayBuffer,
-      },
+      signedBy: post.signedBy,
       sequence: BigInt(post.sequence),
     };
   }, [post]);

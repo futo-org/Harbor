@@ -1,7 +1,6 @@
 use crate::rx::subscription::Subscription;
 use std::sync::Arc;
 
-#[uniffi::export(with_foreign)]
 pub trait Observer: Send + Sync {
     fn next(&self, value: String);
     fn error(&self, message: String);

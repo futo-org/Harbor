@@ -1,7 +1,6 @@
 import {
   eventKeyId,
   decodeBundle,
-  hexToBytes,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
@@ -12,6 +11,7 @@ import {
 import type { Reaction } from '@/src/features/feed/hooks/overlayTypes';
 import {
   COLLECTION,
+  parseEventKeyId,
   v2,
   type PolycentricClient,
 } from '@polycentric/react-native';
@@ -108,21 +108,18 @@ const useReactions = create<ReactionsState>((set, get) => {
   ): Promise<ReactionEventDto | undefined> => {
     // Decode the target post id back into an EventKey so the Reaction
     // Content can carry it (the proto field that refresh reads back).
-    const targetKey = v2.EventKey.fromBinary(hexToBytes(targetId));
+    const targetKey = parseEventKeyId(targetId);
+    if (!targetKey) return undefined;
     const content = v2.Content.create({
-      contentBody: {
-        oneofKind: 'reaction',
-        reaction: { eventKey: targetKey, emoji, positive },
-      },
+      contentBody: new v2.ContentBody.Reaction({
+        reaction: v2.Reaction.create({ eventKey: targetKey, emoji, positive }),
+      }),
     });
 
-    await client.contentManager.save(content);
-    const event = await client.buildEvent(content, COLLECTION.INTERACTIONS);
-    const signedEvent = await client.signEvent(event);
-    if (!event.key) return undefined;
-    const eventId = eventKeyId(event.key);
+    const pending = await client.prepareEvent(content, COLLECTION.INTERACTIONS);
+    const eventId = eventKeyId(pending.key);
 
-    await client.commitEvent(signedEvent, content);
+    await client.commitEvent(pending);
 
     return { targetId, emoji, positive, eventId };
   };
@@ -134,22 +131,15 @@ const useReactions = create<ReactionsState>((set, get) => {
     client: PolycentricClient,
     active: ReactionEventDto,
   ): Promise<void> => {
-    const reactionKey = v2.EventKey.fromBinary(hexToBytes(active.eventId));
+    const reactionKey = parseEventKeyId(active.eventId);
+    if (!reactionKey) return;
 
     const deleteContent = v2.Content.create({
-      contentBody: {
-        oneofKind: 'delete',
-        delete: { eventKey: reactionKey },
-      },
+      contentBody: new v2.ContentBody.Delete({
+        delete: v2.Delete.create({ eventKey: reactionKey }),
+      }),
     });
-    await client.contentManager.save(deleteContent);
-    const deleteEvent = await client.buildEvent(
-      deleteContent,
-      COLLECTION.INTERACTIONS,
-    );
-    const signedDelete = await client.signEvent(deleteEvent);
-
-    await client.commitEvent(signedDelete, deleteContent);
+    await client.publish(deleteContent, COLLECTION.INTERACTIONS);
   };
 
   return {
@@ -244,7 +234,10 @@ const useReactions = create<ReactionsState>((set, get) => {
       const self = client.activeIdentityKey;
       if (!self) return;
 
-      const bundles = client.listValidEvents(self, COLLECTION.INTERACTIONS);
+      const bundles = await client.listValidEvents(
+        self,
+        COLLECTION.INTERACTIONS,
+      );
 
       // Collect the latest reaction per target.
       const latest = new Map<

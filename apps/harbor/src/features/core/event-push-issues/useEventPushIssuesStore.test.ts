@@ -1,8 +1,12 @@
-import type { EventKey, ServerPushResult } from '@polycentric/react-native';
+import {
+  type EventKey,
+  KeyType,
+  type ServerPushResult,
+} from '@polycentric/react-native';
 
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 import { useEventPushIssuesStore } from './useEventPushIssuesStore';
 
@@ -16,7 +20,7 @@ const OTHER_IDENTITY = 'other identity';
 const key = (sequence: number, identity = IDENTITY): EventKey => ({
   collection: 2,
   identity,
-  signedBy: { keyType: 1, key: new Uint8Array([1, 2, 3]).buffer },
+  signedBy: { keyType: KeyType.Ed25519, key: new Uint8Array([1, 2, 3]).buffer },
   sequence: BigInt(sequence),
 });
 
@@ -32,12 +36,12 @@ const issues = (
 const result = (
   server: string,
   eventIssues: ServerPushResult['eventIssues'] = [],
-  error?: unknown,
+  error?: string | null,
   identity = IDENTITY,
 ): ServerPushResult =>
   error === undefined
     ? { identity, server, eventIssues }
-    : { identity, server, eventIssues, error };
+    : { identity, server, eventIssues, error: error ?? undefined };
 
 const issueList = (identity = IDENTITY) =>
   Object.values(get().issues[identity] ?? {});
@@ -173,7 +177,7 @@ describe('useEventPushIssuesStore', () => {
 
   it('ignores whether a push failed', () => {
     get().record([result(SERVER_A, [issues(1, { errors: ['too long'] })])]);
-    get().record([result(SERVER_A, [], new Error('unreachable'))]);
+    get().record([result(SERVER_A, [], 'unreachable')]);
 
     expect(issueList()).toHaveLength(1);
   });

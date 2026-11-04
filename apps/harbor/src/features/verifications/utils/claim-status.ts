@@ -1,4 +1,9 @@
-import { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
+import {
+  bundleEvent,
+  contentAs,
+  bundleContent,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import { type DecodedClaim, decodeClaimBundle } from '../hooks/useClaimById';
 import { PLATFORM_SCHEMA_NAME } from './platforms';
 
@@ -23,20 +28,14 @@ export function decodeTargetIdentities(bundles: v2.EventBundle[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const bundle of bundles) {
-    if (!bundle.serializedContent?.contentBytes) continue;
-    try {
-      const content = v2.Content.fromBinary(
-        bundle.serializedContent.contentBytes,
-      );
-      if (content.contentBody.oneofKind !== 'verificationTarget') continue;
-      for (const identity of content.contentBody.verificationTarget
-        .targetIdentities) {
-        if (identity && !seen.has(identity)) {
-          seen.add(identity);
-          out.push(identity);
-        }
+    const target = contentAs(bundleContent(bundle), 'verificationTarget');
+    if (!target) continue;
+    for (const identity of target.targetIdentities) {
+      if (identity && !seen.has(identity)) {
+        seen.add(identity);
+        out.push(identity);
       }
-    } catch {}
+    }
   }
   return out;
 }
@@ -47,11 +46,8 @@ export function decodeVerifierIdentities(
 ): Set<string> {
   const out = new Set<string>();
   for (const bundle of bundles) {
-    if (!bundle.signedEvent) continue;
-    try {
-      const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-      if (event.key?.identity) out.add(event.key.identity);
-    } catch {}
+    const identity = bundleEvent(bundle)?.key?.identity;
+    if (identity) out.add(identity);
   }
   return out;
 }

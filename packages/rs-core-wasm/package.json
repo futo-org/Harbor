@@ -23,13 +23,21 @@
       "default": "./src/generated/wasm/polycentric_core.ts"
     },
     "./polycentric_core.wasm": "./src/generated/wasm/polycentric_core.wasm",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./client-worker": {
+      "types": "./src/generated/client-worker-source.ts",
+      "default": "./src/generated/client-worker-source.ts"
+    },
+    "./client-worker-protocol": {
+      "types": "./src/client-worker-protocol.ts"
+    }
   },
   "files": ["src", "dist", "tools", "ubrn.config.yaml"],
   "scripts": {
     "dev": "ubrn build wasm2",
     "build": "ubrn build wasm2",
-    "postbuild": "tsc -p tsconfig.node.json && node tools/finish-node-build.mjs",
+    "generate": "pnpm run build",
+    "postbuild": "tsc -p tsconfig.node.json && node tools/finish-node-build.mjs && node tools/bundle-client-worker.mjs",
     "clean": "rm -rfv dist/ src/generated/wasm/"
   },
   "dependencies": {
@@ -39,6 +47,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "typescript": "catalog:",
-    "uniffi-bindgen-react-native": "catalog:"
+    "uniffi-bindgen-react-native": "catalog:",
+    "esbuild": "0.28.2"
   }
 }

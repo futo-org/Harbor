@@ -1,10 +1,13 @@
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import {
+  queryPayload,
+  usePolycentric,
+} from '@/src/common/lib/polycentric-hooks';
 import { setQueryCache, useQuery } from '@/src/common/query/hooks/useQuery';
 import {
-  decodeStatusByServer,
-  encodeStatusByServer,
   FetchMode,
   Query,
+  QueryData,
+  QueryData_Tags,
 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import useModerationStatus from './useModerationStatus';
@@ -46,9 +49,8 @@ export default function useBanStatus(
 
   const bannedByServer = useMemo(
     () =>
-      query.data
-        ? decodeStatusByServer(query.data)
-        : new Map<string, boolean>(),
+      queryPayload(query.data, QueryData_Tags.StatusByServer)?.byServer ??
+      new Map<string, boolean>(),
     [query.data],
   );
 
@@ -57,8 +59,10 @@ export default function useBanStatus(
     // Patch the shared cache so the toggle shows immediately, and drop
     // the stale rust-side entry so the next fan-out re-asks the servers.
     const updated = new Map(bannedByServer).set(server, next);
-    setQueryCache(queryKey, { data: encodeStatusByServer(updated) });
-    client.core.invalidateQuery(queryKey);
+    setQueryCache(queryKey, {
+      data: new QueryData.StatusByServer({ byServer: updated }),
+    });
+    void client.invalidateQuery(queryKey);
   };
 
   return { isLoading: query.isLoading, bannedByServer, setBanned };

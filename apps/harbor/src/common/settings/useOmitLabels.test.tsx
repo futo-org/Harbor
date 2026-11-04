@@ -169,24 +169,10 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
 }));
 
 jest.mock('@polycentric/react-native', () => {
-  const actual = jest.requireActual(
-    '../../../../../packages/js-core/src/proto/v2',
-  );
-
-  // Stands in for the rs-common-generated vocabulary, which is only reachable
-  // through native uniffi init.
-  const labels = [
-    'hate',
-    'self-harm',
-    'sexually-suggestive',
-    'sexually-explicit',
-    'violence',
-  ];
+  const shim = jest.requireActual('@/test/polycentric');
 
   return {
-    v2: actual,
-    moderationLabels: () => labels,
-    isModerationLabel: (v: string) => labels.includes(v),
+    ...shim,
     // The real Query enum is uniffi-generated and needs native init, which
     // can't run under jest. This stub keeps the args it was constructed with so
     // the tests can assert on what the hook passed in.

@@ -4,7 +4,6 @@ import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/loadBounde
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
 import {
   eventKeyId,
-  hexToBytes,
   truncateName,
   useCurrentIdentity,
   usePolycentric,
@@ -22,11 +21,13 @@ import {
 } from '@/src/features/feed/hooks/feedCache';
 import {
   COLLECTION,
-  type types,
   v2,
   type PolycentricClient,
   FetchMode,
+  parseEventKeyId,
   Query,
+  type QueryData,
+  QueryData_Tags,
 } from '@polycentric/react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { usePreventRemove } from 'expo-router';
@@ -42,6 +43,7 @@ import {
 import {
   decodePostBundle,
   getKeyFingerprint,
+  queryPayload,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 
 export const MAX_ATTACHMENTS = 4;
@@ -65,8 +67,7 @@ const POST_IMAGE_OPTIONS = {
 const uploadCache = new Map<string, Promise<v2.ImageSet>>();
 
 export type UseComposerArgs = {
-  /** TODO: should be v2 `SignedEvent` */
-  onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
+  onPostCreated: (signedEvent: v2.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
   quote?: PostData | null;
   /** Open the image picker as soon as the composer mounts. */
@@ -105,9 +106,9 @@ export function useComposer({
 
   // If replyTo is itself a reply, inherit its root.
   // Otherwise, replyTo *is* the root.
-  const replyRootEventKey = replyTo?.reply?.rootId
-    ? v2.EventKey.fromBinary(hexToBytes(replyTo.reply.rootId))
-    : replyToEventKey;
+  const replyRootEventKey =
+    (replyTo?.reply?.rootId && parseEventKeyId(replyTo.reply.rootId)) ||
+    replyToEventKey;
 
   const replyAuthorName = useUsername(replyTo?.identity ?? null);
 
@@ -329,24 +330,15 @@ export function useComposer({
       }
 
       if (quote) {
-        post.quote = v2.EventKey.fromBinary(hexToBytes(quote.id));
+        post.quote = parseEventKeyId(quote.id);
       }
 
-      const content = client.contentManager.build({
-        oneofKind: 'post',
-        post,
+      const content = v2.Content.create({
+        contentBody: new v2.ContentBody.Post({ post }),
       });
 
-      await client.contentManager.save(content);
-
-      const event = await client.buildEvent(content);
-
-      const signedEvent = await client.signEvent(event);
-
-      const newBundle = v2.EventBundle.create({
-        signedEvent,
-        serializedContent: { contentBytes: v2.Content.toBinary(content) },
-      });
+      const pending = await client.prepareEvent(content, COLLECTION.FEED);
+      const newBundle = pending.bundle;
       const identity = currentIdentityKey ?? '';
 
       // Optimistically add the new event to feeds and threads
@@ -358,7 +350,7 @@ export function useComposer({
       );
 
       // `commitEvent` persists the event locally
-      await client.commitEvent(signedEvent, content);
+      await client.commitEvent(pending);
 
       setSubmitting(false);
       toast.success(isReply ? 'Reply posted' : 'Post published');
@@ -541,11 +533,12 @@ async function getParentPost(
   client: PolycentricClient,
   postId: string,
 ): Promise<string | undefined> {
-  const key = v2.EventKey.fromBinary(hexToBytes(postId));
+  const key = parseEventKeyId(postId);
+  if (!key) return undefined;
 
-  const data = await new Promise<ArrayBuffer | undefined>((resolve) => {
-    let latest: ArrayBuffer | undefined;
-    client.core
+  const data = await new Promise<QueryData | undefined>((resolve) => {
+    let latest: QueryData | undefined;
+    client
       .fetchQuery(
         undefined,
         new Query.GetEvent({
@@ -565,11 +558,10 @@ async function getParentPost(
       });
   });
 
-  if (!data?.byteLength) return undefined;
+  const bundle = queryPayload(data, QueryData_Tags.Event)?.bundle;
+  if (!bundle) return undefined;
 
-  const post = decodePostBundle(
-    v2.EventBundle.fromBinary(new Uint8Array(data)),
-  );
+  const post = decodePostBundle(bundle);
 
   return post?.reply?.parentId;
 }

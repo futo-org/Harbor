@@ -1,49 +1,25 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
-// time, which can't run under jest — expose just what the hooks need.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-  COLLECTION: { VERIFICATIONS: 8 },
-  SyncStrategy: { PARTIAL_PUSH: 'partial-push' },
-}));
-
-// ESM-only; jest-expo doesn't transform it. The digest content is irrelevant.
-jest.mock('@noble/hashes/sha2.js', () => ({
-  sha256: () => new Uint8Array(32),
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 let mockSequence = 0;
 const mockClient = {
-  contentManager: { save: jest.fn(async () => undefined) },
-  buildEvent: jest.fn(async () => {
-    const { v2 } = jest.requireMock('@polycentric/react-native');
-    return v2.Event.create({
-      key: v2.EventKey.create({
-        identity: 'me',
-        collection: 8,
-        sequence: BigInt(++mockSequence),
-        signedBy: v2.PublicKey.create({ key: new Uint8Array([1, 2, 3]) }),
-      }),
-    });
+  publish: jest.fn(async (content: V2.Content, collection: number) => {
+    const { publishedBundle } = jest.requireActual('../__fixtures__/bundles');
+    return publishedBundle(content, collection, 'me', BigInt(++mockSequence));
   }),
-  signEvent: jest.fn(async (event: unknown) => ({ event })),
-  commitEvent: jest.fn(
-    async (_signed: unknown, _content: unknown) => undefined,
-  ),
-  sync: jest.fn(async () => undefined),
+  sync: jest.fn(async (_strategy?: unknown) => 0),
 };
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
+  ...jest.requireActual('@/src/common/lib/polycentric-hooks/helpers'),
   usePolycentric: () => mockClient,
   useCurrentIdentity: () => ({ identityKey: 'me' }),
-  hexToBytes: (hex: string) => Buffer.from(hex, 'hex'),
 }));
 
 jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => ({
+  ...jest.requireActual('@/src/common/lib/polycentric-hooks/helpers'),
   getKeyFingerprint: (key?: unknown) => (key ? 'fingerprint' : undefined),
-  eventKeyId: (key: unknown) => {
-    const { v2 } = jest.requireMock('@polycentric/react-native');
-    return Buffer.from(v2.EventKey.toBinary(key)).toString('hex');
-  },
 }));
 
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
@@ -56,10 +32,17 @@ jest.mock('../claims/create/ClaimCreateContext', () => ({
 }));
 
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import type { v2 } from '@polycentric/react-native';
+import { contentAs } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  COLLECTION,
+  eventKeyId,
+  SyncStrategy,
+  type v2 as V2,
+} from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
+import { verificationKey } from '../__fixtures__/bundles';
 import { formToSchema } from '../utils/schemas';
 import useCreateClaim, { type ClaimRef } from './useCreateClaim';
 
@@ -91,9 +74,9 @@ async function submit(values: Record<string, string>) {
   return ref;
 }
 
-/** Content committed by the nth commitEvent call. */
-function committedContent(call: number): v2.Content {
-  return mockClient.commitEvent.mock.calls[call][1] as v2.Content;
+/** Content published by the nth publish call. */
+function publishedContent(call: number): V2.Content {
+  return mockClient.publish.mock.calls[call][0];
 }
 
 beforeEach(() => {
@@ -106,21 +89,25 @@ describe('useCreateClaim', () => {
   it('commits a claim event and returns its ref', async () => {
     const ref = await submit({ job_title: 'Developer' });
 
-    expect(mockClient.commitEvent).toHaveBeenCalledTimes(1);
-    const content = committedContent(0);
-    if (content.contentBody.oneofKind !== 'verificationClaim') {
-      throw new Error('expected a verificationClaim');
-    }
-    const fields = content.contentBody.verificationClaim.fields;
-    expect(new TextDecoder().decode(fields.job_title)).toBe('Developer');
+    expect(mockClient.publish).toHaveBeenCalledTimes(1);
+    expect(mockClient.publish.mock.calls[0][1]).toBe(COLLECTION.VERIFICATIONS);
+    const claim = contentAs(publishedContent(0), 'verificationClaim');
+    if (!claim) throw new Error('expected a verificationClaim');
+    expect(claim.schema?.schema).toEqual(SCHEMA);
+    // rs-core derives the schema digest when it publishes.
+    expect(claim.schema?.schema?.name).toBeTruthy();
+    expect(new TextDecoder().decode(claim.fields.get('job_title'))).toBe(
+      'Developer',
+    );
 
-    expect(mockClient.sync).toHaveBeenCalledWith('partial-push');
+    expect(mockClient.sync).toHaveBeenCalledWith(SyncStrategy.PartialPush);
     expect(invalidateQuery).toHaveBeenCalledWith(mockClient, [
       'claims-list',
       'me',
     ]);
     expect(ref).toEqual({
-      id: expect.any(String),
+      // The key of the bundle `publish` returned.
+      id: eventKeyId(verificationKey('me', 1n)),
       identity: 'me',
       keyFingerprint: 'fingerprint',
       sequence: '1',
@@ -130,25 +117,17 @@ describe('useCreateClaim', () => {
   it('omits empty fields from the claim', async () => {
     await submit({ job_title: 'Developer', description: '  ' });
 
-    const content = committedContent(0);
-    if (content.contentBody.oneofKind !== 'verificationClaim') {
-      throw new Error('expected a verificationClaim');
-    }
-    expect(Object.keys(content.contentBody.verificationClaim.fields)).toEqual([
-      'job_title',
-    ]);
+    const claim = contentAs(publishedContent(0), 'verificationClaim');
+    expect([...(claim?.fields.keys() ?? [])]).toEqual(['job_title']);
   });
 
   it('also publishes a target when requesting from an identity', async () => {
     mockRequestFrom = 'them';
     await submit({ job_title: 'Developer' });
 
-    expect(mockClient.commitEvent).toHaveBeenCalledTimes(2);
-    const content = committedContent(1);
-    if (content.contentBody.oneofKind !== 'verificationTarget') {
-      throw new Error('expected a verificationTarget');
-    }
-    const target = content.contentBody.verificationTarget;
+    expect(mockClient.publish).toHaveBeenCalledTimes(2);
+    const target = contentAs(publishedContent(1), 'verificationTarget');
+    if (!target) throw new Error('expected a verificationTarget');
     expect(target.targetIdentities).toEqual(['them']);
     // Points at the claim event committed first.
     expect(target.claimEventKey?.sequence).toBe(1n);
@@ -157,6 +136,6 @@ describe('useCreateClaim', () => {
   it('does not publish a target without requestFrom', async () => {
     await submit({ job_title: 'Developer' });
 
-    expect(mockClient.commitEvent).toHaveBeenCalledTimes(1);
+    expect(mockClient.publish).toHaveBeenCalledTimes(1);
   });
 });

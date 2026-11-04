@@ -2,10 +2,12 @@
  * Alias resolution: maps an alias like `user@domain.com` to the polycentric
  * identity it points at, by looking it up at the domain's
  * `/.well-known/polycentric.json`.
+ *
+ * Parsing stays here, synchronous and free of the rs-core bindings, so UI
+ * code can call it before a client exists. rs-common's `alias` module is
+ * the same logic for Rust; keep the two in sync.
  */
-
-/** Give up on a slow/unresponsive domain rather than hang the resolver. */
-const RESOLVE_TIMEOUT_MS = 10_000;
+import { bindings } from '../bindings';
 
 const HEX_CHARS = new Set('0123456789abcdefABCDEF');
 
@@ -14,15 +16,6 @@ const HEX_CHARS = new Set('0123456789abcdefABCDEF');
  */
 export function isIdentityKey(s: string): boolean {
   return s.length > 0 && Array.from(s).every((c) => HEX_CHARS.has(c));
-}
-
-/**
- * The `/.well-known/polycentric.json` document: a map of alias local-parts to
- * the polycentric identity (hex) each points at. A domain may list every alias
- * it serves here; the client looks up the one it queried.
- */
-interface AliasDocument {
-  names?: Record<string, string>;
 }
 
 // Conservative allow-list for an alias's local part — deliberately tighter than
@@ -113,43 +106,6 @@ export function normalizeAlias(alias: string): string | null {
  * carries no entry for the alias.
  */
 export async function resolveAlias(alias: string): Promise<string | null> {
-  const parsed = parseAlias(alias);
-  if (!parsed) {
-    return null;
-  }
-
-  const url =
-    `https://${parsed.domain}/.well-known/polycentric.json` +
-    `?alias=${encodeURIComponent(parsed.local)}`;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), RESOLVE_TIMEOUT_MS);
-
-  let doc: AliasDocument;
-  try {
-    const response = await fetch(url, {
-      headers: { accept: 'application/json' },
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      // A 404 here just means the domain doesn't know this alias — expected,
-      // not worth a warning.
-      return null;
-    }
-    doc = (await response.json()) as AliasDocument;
-  } catch (error) {
-    // Network error / timeout / unparseable body: surface for debugging rather
-    // than swallowing silently, but still resolve to "not found".
-    console.warn(`alias lookup failed for ${parsed.acct}:`, error);
-    return null;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-
-  const identity = doc.names?.[parsed.local];
-  if (!identity || !isIdentityKey(identity)) {
-    return null;
-  }
-
-  return identity;
+  if (!parseAlias(alias)) return null;
+  return (await bindings().resolveAlias(alias)) ?? null;
 }

@@ -1,12 +1,9 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
-// time, which can't run under jest. We only need the pure `v2` protobuf-ts
-// namespace, so expose just that (sourced from js-core's generated protos).
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 import { v2 } from '@polycentric/react-native';
-import { decodeProfile } from './decodeProfile';
+import { decodeProfile, isProfileResponseEmpty } from './decodeProfile';
 
 const IDENTITY = 'someidentity';
 
@@ -18,10 +15,9 @@ function profileContent(
   }>,
 ): v2.Content {
   return v2.Content.create({
-    contentBody: {
-      oneofKind: 'profileUpdate',
+    contentBody: new v2.ContentBody.ProfileUpdate({
       profileUpdate: v2.ProfileUpdate.create(fields),
-    },
+    }),
   });
 }
 
@@ -36,26 +32,22 @@ function bundle(content: v2.Content, sequence: number): v2.EventBundle {
   });
   return v2.EventBundle.create({
     signedEvent: v2.SignedEvent.create({
-      eventBytes: v2.Event.toBinary(event),
-      signature: new Uint8Array([0]),
+      event,
+      signature: new Uint8Array([0]).buffer,
     }),
-    serializedContent: v2.SerializedContent.create({
-      contentBytes: v2.Content.toBinary(content),
-    }),
+    serializedContent: v2.SerializedContent.create({ content }),
   });
 }
 
 function serializedResponse(
   bundles: v2.EventBundle[],
   counts?: { following: number; followers: number },
-): Uint8Array {
-  return v2.GetProfileResponse.toBinary(
-    v2.GetProfileResponse.create({
-      eventBundles: bundles,
-      followingCount: BigInt(counts?.following ?? 0),
-      followersCount: BigInt(counts?.followers ?? 0),
-    }),
-  );
+): v2.GetProfileResponse {
+  return v2.GetProfileResponse.create({
+    eventBundles: bundles,
+    followingCount: BigInt(counts?.following ?? 0),
+    followersCount: BigInt(counts?.followers ?? 0),
+  });
 }
 
 describe('decodeProfile', () => {
@@ -110,5 +102,19 @@ describe('decodeProfile', () => {
   it('defaults the counters to zero', () => {
     expect(decodeProfile(serializedResponse([])).followingCount).toBe(0);
     expect(decodeProfile(serializedResponse([])).followersCount).toBe(0);
+  });
+
+  it('reports whether a response is empty', () => {
+    expect(isProfileResponseEmpty(serializedResponse([]))).toBe(true);
+    expect(
+      isProfileResponseEmpty(
+        serializedResponse([bundle(profileContent({ name: 'A' }), 1)]),
+      ),
+    ).toBe(false);
+    expect(
+      isProfileResponseEmpty(
+        serializedResponse([], { following: 1, followers: 0 }),
+      ),
+    ).toBe(false);
   });
 });

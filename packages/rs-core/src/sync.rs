@@ -196,10 +196,10 @@ mod tests {
         FfiEventKey {
             collection: collections::IDENTITY,
             identity: "identity".to_string(),
-            signed_by: FfiPublicKey {
-                key_type: 1,
+            signed_by: Some(FfiPublicKey {
+                key_type: crate::records::KeyType::Ed25519,
                 key: vec![1, 2, 3],
-            },
+            }),
             sequence,
         }
     }

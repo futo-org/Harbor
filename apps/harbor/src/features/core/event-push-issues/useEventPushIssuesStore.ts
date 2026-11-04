@@ -1,4 +1,4 @@
-import { ffiEventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
+import { eventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
 import type { EventKey, ServerPushResult } from '@polycentric/react-native';
 import { create } from 'zustand';
 
@@ -38,7 +38,7 @@ interface EventPushIssuesStore {
 }
 
 const issueId = (server: string, key: EventKey) =>
-  `${server} ${ffiEventKeyId(key)}`;
+  `${server} ${eventKeyId(key)}`;
 
 /**
  * Validation warnings/errors returned by servers during the client's push. They're kept until the

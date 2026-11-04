@@ -1,74 +1,48 @@
-# Production image (built in CI). Build context is the repo root (see
-# build_services.yml — buildkit `context=.`).
-#
-# The js SDKs (js-core, js-node, js-storage-sqlite) and rs-core-wasm are
-# built by CI and their `dist/` is pulled into the context as artifacts (the
-# verifier-bot image job `needs: [js-sdks-build, rs-core-wasm-wasm-build]`), so
-# this image does NOT build them. For a self-contained local build that builds
-# the SDKs itself, use Dockerfile.dev. rs-core-wasm ships a compiled `.js`
-# (node export condition), so the bot tsc-compiles to dist/ and runs under node.
-
-# Stage 1: Base — Node
-FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS base
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-
-# Stage 2: Install (SDK dist come prebuilt from the context)
-FROM base AS build
+# Production image. Build context is the repo root. CI builds the binary
+# outside Docker (.forgejo/actions/rust-binaries) and swaps it in for the
+# builder stage, so only the runtime stage builds there.
+FROM rust:1.99-slim-bookworm@sha256:24707e70a4f1e23d9a7b25202ec43126d28a52294b96aad5c670df1fd1f1d400 AS chef
 WORKDIR /app
-# Puppeteer's Chromium comes from the runtime image, not the install.
-ENV PUPPETEER_SKIP_DOWNLOAD=1
-# No git in the build context; make husky's root `prepare` script a no-op.
-ENV HUSKY=0
-# Toolchain for better-sqlite3's native binding (falls back to compiling when
-# no prebuilt binary matches).
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
+COPY services/common/build-deps.sh build-deps.sh
+RUN sh build-deps.sh
+RUN cargo install cargo-chef --locked
 
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-RUN npm install -g "$(node -p "require('./package.json').packageManager")"
-COPY patches patches
+FROM chef AS planner
+COPY Cargo.toml Cargo.lock ./
+COPY packages packages
+COPY services services
 COPY tools tools
-# Prebuilt by CI (js-sdks-build, rs-core-wasm-wasm-build); dist/ arrives via
-# the job's artifacts.
-COPY packages/js-core packages/js-core
-COPY packages/js-storage-sqlite packages/js-storage-sqlite
-COPY packages/js-storage-postgres packages/js-storage-postgres
-COPY packages/js-node packages/js-node
-COPY packages/rs-core-wasm packages/rs-core-wasm
-COPY services/verifier-bot services/verifier-bot
+RUN cargo chef prepare --recipe-path recipe.json
 
-# allowUnusedPatches: the workspace's patchedDependencies target frontend
-# packages (expo, uniffi-bindgen-react-native) absent from this slim install.
-RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
-# Compile the bot to dist/ against the prebuilt SDKs (this also typechecks).
-RUN pnpm --filter @polycentric/verifier-bot build
-# Flatten the prod dependency closure into a self-contained node_modules with
-# `pnpm deploy`. inject-workspace-packages enables the non-legacy deploy (a
-# correct prod closure) without changing the monorepo's global install.
-RUN pnpm --filter @polycentric/verifier-bot --prod \
-  --config.inject-workspace-packages=true --config.allowUnusedPatches=true \
-  deploy /deploy
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+COPY protos protos
+RUN cargo chef cook --release --recipe-path recipe.json --package verifier-bot
+COPY Cargo.toml Cargo.lock ./
+COPY packages packages
+COPY services services
+COPY tools tools
+# Drop the build tree from this layer so the registry cache only carries the
+# binary; the cook layer above keeps the dependencies.
+RUN cargo build --release --package verifier-bot \
+    && mkdir /out \
+    && mv target/release/verifier-bot /out/ \
+    && rm -rf target
 
-# Stage 3: Run
-FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS runner
-WORKDIR /app/services/verifier-bot
-ENV NODE_ENV=production
-# System Chromium for the Puppeteer-based verifiers (e.g. Kick).
-ENV HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+# bookworm matches CI's ci/rust image the binary is built in.
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
+WORKDIR /app
+COPY services/common/runtime-deps.sh runtime-deps.sh
+RUN sh runtime-deps.sh
+# Chromium for the headless-browser verifiers (Kick, Rumble).
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends chromium \
-  && rm -rf /var/lib/apt/lists/*
-
-# The self-contained deploy (node_modules + package.json) plus the bot's
-# tsc-compiled dist/. rs-core-wasm's node export resolves to compiled .js,
-# so the whole chain runs under plain node.
-COPY --from=build /deploy/node_modules ./node_modules
-COPY --from=build /deploy/package.json ./package.json
-COPY --from=build /app/services/verifier-bot/dist ./dist
-RUN mkdir -p state && chown -R node:node /app/services/verifier-bot/state
-
-USER node
+    && apt-get install -y --no-install-recommends chromium fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+ENV HARBOR_VERIFIER_BOT_CHROME_EXECUTABLE_PATH=/usr/bin/chromium
+# The identity database lives in ./state; mount a volume there.
+RUN useradd --system --uid 10001 --create-home --home-dir /home/verifier verifier \
+    && install -d -o verifier -g verifier /app/state
+COPY --chmod=755 --from=builder /out/verifier-bot /app/verifier-bot
+USER verifier
 EXPOSE 3002
-CMD ["node", "dist/app.js"]
+CMD ["/app/verifier-bot"]

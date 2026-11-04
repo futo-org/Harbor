@@ -28,6 +28,6 @@ pub use client::{
     QueryOpts, QueryState, UpdateMode,
 };
 pub use query_observable::{
-    QueryObservable, QueryObserver, QueryResult, QueryResultFfi, QueryStatus, ToFfiBytes,
+    ByteObservable, ByteObserver, ByteResult, QueryResult, QueryStatus, ToFfiBytes,
 };
 pub use transport::{GrpcChannel, channel};

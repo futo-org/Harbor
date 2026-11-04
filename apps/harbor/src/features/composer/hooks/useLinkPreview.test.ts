@@ -62,13 +62,9 @@ jest.mock('@/src/common/link-previews', () => ({
   }),
 }));
 
-jest.mock('@polycentric/react-native', () => ({
-  v2: {
-    // Metadata + the url we requested; return it verbatim so tests can assert
-    // on the resolved `url`.
-    Link: { create: jest.fn((x: unknown) => x) },
-  },
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 // parseTextLinks is a dependency-free pure util — exercise the real one so the
 // url-detection behavior is covered end to end (mirrors the composer test).

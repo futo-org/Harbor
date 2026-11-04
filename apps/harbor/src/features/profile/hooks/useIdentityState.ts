@@ -16,9 +16,7 @@ export function useIdentityState(
   const client = usePolycentric();
   const { identity: self } = useCurrentIdentity();
 
-  const [state, setState] = useState<IdentityState | null>(() =>
-    identityKey ? client.identityManager.resolveIdentity(identityKey) : null,
-  );
+  const [state, setState] = useState<IdentityState | null>(null);
   const [isLoading, setIsLoading] = useState(!!identityKey);
 
   useEffect(() => {
@@ -28,13 +26,23 @@ export function useIdentityState(
       return;
     }
     let cancelled = false;
-    setState(client.identityManager.resolveIdentity(identityKey));
+    let refreshed = false;
+    setState(null);
     setIsLoading(true);
+    // Show what's held locally at once, then refresh from the servers.
+    void client
+      .resolveIdentity(identityKey)
+      .then((local) => {
+        if (!cancelled && !refreshed && local) setState(local);
+      })
+      .catch(() => {});
     void client
       .listEvents({ identity: identityKey, collection: COLLECTION.IDENTITY })
-      .then(() => {
+      .then(() => client.resolveIdentity(identityKey))
+      .then((resolved) => {
         if (cancelled) return;
-        setState(client.identityManager.resolveIdentity(identityKey));
+        refreshed = true;
+        setState(resolved);
       })
       .catch(() => {})
       .finally(() => {

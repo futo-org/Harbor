@@ -1,6 +1,14 @@
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import {
+  queryPayload,
+  usePolycentric,
+} from '@/src/common/lib/polycentric-hooks';
 import { setQueryCache, useQuery } from '@/src/common/query/hooks/useQuery';
-import { Query, v2 } from '@polycentric/react-native';
+import {
+  Query,
+  QueryData,
+  QueryData_Tags,
+  v2,
+} from '@polycentric/react-native';
 import { useCallback, useMemo } from 'react';
 
 /** Servers stop counting here. */
@@ -10,9 +18,10 @@ function queryKey(identity: string) {
   return ['unread_notification_count', identity];
 }
 
-function encodeCount(count: number): ArrayBuffer {
-  return v2.SubscribeUnreadNotificationCountResponse.toBinary({ count })
-    .buffer as ArrayBuffer;
+function countData(count: number): QueryData {
+  return new QueryData.UnreadNotificationCount({
+    response: v2.SubscribeUnreadNotificationCountResponse.create({ count }),
+  });
 }
 
 /** Badge text for `count` unread notifications, or null when none. */
@@ -38,10 +47,10 @@ export default function useUnreadNotificationCount(enabled = true): number {
   );
 
   return useMemo(() => {
-    if (!query.data) return 0;
-    return v2.SubscribeUnreadNotificationCountResponse.fromBinary(
-      new Uint8Array(query.data),
-    ).count;
+    return (
+      queryPayload(query.data, QueryData_Tags.UnreadNotificationCount)?.response
+        .count ?? 0
+    );
   }, [query.data]);
 }
 
@@ -60,9 +69,9 @@ export function useAcknowledgeNotifications(): (
     async (lastSeen: v2.EventKey) => {
       if (!identity) return;
       const key = queryKey(identity);
-      setQueryCache(key, { data: encodeCount(0) });
+      setQueryCache(key, { data: countData(0) });
       await client.acknowledgeNotifications(lastSeen);
-      client.core.invalidateQuery(key);
+      await client.invalidateQuery(key);
     },
     [client, identity],
   );

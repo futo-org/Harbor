@@ -8,35 +8,35 @@ export type ReportOptions = Record<
 export const REPORT_OPTIONS: ReportOptions = {
   spam: {
     label: 'Spam',
-    value: v2.ReportCategory.SPAM,
+    value: v2.ReportCategory.Spam,
   },
   hate: {
     label: 'Hate',
-    value: v2.ReportCategory.HATE,
+    value: v2.ReportCategory.Hate,
   },
   violence: {
     label: 'Violence',
-    value: v2.ReportCategory.VIOLENCE,
+    value: v2.ReportCategory.Violence,
   },
   sexuallyExplicit: {
     label: 'Sexually Explicit',
-    value: v2.ReportCategory.SEXUALLY_EXPLICIT,
+    value: v2.ReportCategory.SexuallyExplicit,
   },
   selfHarm: {
     label: 'Self-Harm',
-    value: v2.ReportCategory.SELF_HARM,
+    value: v2.ReportCategory.SelfHarm,
   },
   childSafety: {
     label: 'Child safety',
-    value: v2.ReportCategory.CHILD_SAFETY,
+    value: v2.ReportCategory.ChildSafety,
   },
   copyright: {
     label: 'Copyright',
-    value: v2.ReportCategory.COPYRIGHT,
+    value: v2.ReportCategory.Copyright,
   },
   serverPolicy: {
     label: 'Violates Server Policies',
-    value: v2.ReportCategory.SERVER_POLICY,
+    value: v2.ReportCategory.ServerPolicy,
   },
 };
 export default function useReportOptions() {

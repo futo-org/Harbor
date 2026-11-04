@@ -1,9 +1,14 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useQueryStore } from '@/src/common/query/hooks/useQuery';
-import { FetchMode, Query } from '@polycentric/react-native';
+import { FetchMode, Query, QueryData_Tags } from '@polycentric/react-native';
+import { queryPayload } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { decodeProfile, type DecodedProfile } from '../lib/decodeProfile';
+import {
+  type DecodedProfile,
+  decodeProfile,
+  isProfileResponseEmpty,
+} from '../lib/decodeProfile';
 import { profileQueryKey } from './useProfile';
 
 export function useProfiles(
@@ -48,11 +53,11 @@ export function useProfiles(
   return useMemo(() => {
     const map = new Map<string, DecodedProfile | null>();
     ids.forEach((identity, i) => {
-      const bytes = data[i];
+      const response = queryPayload(data[i], QueryData_Tags.Profile)?.response;
       let decoded: DecodedProfile | null = null;
-      if (bytes && bytes.byteLength > 0) {
+      if (response && !isProfileResponseEmpty(response)) {
         try {
-          decoded = decodeProfile(bytes);
+          decoded = decodeProfile(response);
         } catch {
           decoded = null;
         }

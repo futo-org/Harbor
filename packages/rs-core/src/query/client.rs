@@ -69,7 +69,7 @@ pub struct QueryOpts {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn spawn<F: Future<Output = ()> + 'static>(fut: F) -> bool {
+pub(crate) fn spawn<F: Future<Output = ()> + 'static>(fut: F) -> bool {
     wasm_bindgen_futures::spawn_local(fut);
     true
 }
@@ -99,7 +99,7 @@ fn fallback_runtime() -> Option<&'static tokio::runtime::Runtime> {
 #[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
 /// Returns `false` when the task could not be spawned (no usable tokio
 /// runtime)
-fn spawn<F: Future<Output = ()> + Send + 'static>(fut: F) -> bool {
+pub(crate) fn spawn<F: Future<Output = ()> + Send + 'static>(fut: F) -> bool {
     match tokio::runtime::Handle::try_current() {
         Ok(handle) => {
             handle.spawn(fut);

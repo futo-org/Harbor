@@ -49,20 +49,17 @@ const useBlocks = create<BlocksState>((set, get) => {
       const blocks = get().blocks;
 
       const content = v2.Content.create({
-        contentBody: {
-          oneofKind: 'block',
-          block: { identity },
-        },
+        contentBody: new v2.ContentBody.Block({
+          block: v2.Block.create({ identity }),
+        }),
       });
 
-      await client.contentManager.save(content);
-      const event = await client.buildEvent(content, COLLECTION.GRAPH);
-      const signedEvent = await client.signEvent(event);
+      const pending = await client.prepareEvent(content, COLLECTION.GRAPH);
 
       setBlocks(new Map(blocks).set(identity, true));
 
       try {
-        await client.commitEvent(signedEvent, content);
+        await client.commitEvent(pending);
       } catch (err) {
         console.error(err);
         setBlocks(blocks);
@@ -80,7 +77,7 @@ const useBlocks = create<BlocksState>((set, get) => {
 
       const blocks = get().blocks;
 
-      const bundles = client.listValidEvents(self, COLLECTION.GRAPH);
+      const bundles = await client.listValidEvents(self, COLLECTION.GRAPH);
 
       const targets = bundles
         .map((bundle) => decodeBundle(bundle, 'block'))
@@ -97,18 +94,11 @@ const useBlocks = create<BlocksState>((set, get) => {
         for (const { event } of targets) {
           if (!event.key) continue;
           const deleteContent = v2.Content.create({
-            contentBody: {
-              oneofKind: 'delete',
-              delete: { eventKey: event.key },
-            },
+            contentBody: new v2.ContentBody.Delete({
+              delete: v2.Delete.create({ eventKey: event.key }),
+            }),
           });
-          await client.contentManager.save(deleteContent);
-          const deleteEvent = await client.buildEvent(
-            deleteContent,
-            COLLECTION.GRAPH,
-          );
-          const signedDelete = await client.signEvent(deleteEvent);
-          await client.commitEvent(signedDelete, deleteContent);
+          await client.publish(deleteContent, COLLECTION.GRAPH);
         }
       } catch (err) {
         console.error(err);
@@ -125,8 +115,9 @@ const useBlocks = create<BlocksState>((set, get) => {
     async refresh(client) {
       if (!client.activeIdentityKey) return;
 
+      const blocked = await client.blockedIdentities();
       const blocks = new Map<string, boolean>(
-        client.blockedIdentities().map((identity) => [identity, true]),
+        blocked.map((identity) => [identity, true]),
       );
 
       if (!hasSameIdentities(blocks, get().blocks)) setBlocks(blocks);

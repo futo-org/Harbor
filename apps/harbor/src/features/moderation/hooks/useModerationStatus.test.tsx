@@ -1,15 +1,22 @@
 import { render } from '@testing-library/react-native';
+import { QueryData } from '@polycentric/react-native';
 
 // Identity the mocked client reports as active; tests reassign it.
 let mockActiveIdentityKey: string | null = 'me';
 // What the mocked useQuery returns; tests reassign it.
-let mockQueryResult: { data: ArrayBuffer | undefined; isLoading: boolean } = {
+let mockQueryResult: { data: QueryData | undefined; isLoading: boolean } = {
   data: undefined,
   isLoading: true,
 };
 const mockUseQuery = jest.fn(() => mockQueryResult);
 
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
+
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
+  queryPayload: jest.requireActual('@/src/common/lib/polycentric-hooks/helpers')
+    .queryPayload,
   usePolycentric: () => ({ activeIdentityKey: mockActiveIdentityKey }),
 }));
 
@@ -17,25 +24,15 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...(args as [])),
 }));
 
-jest.mock('@polycentric/react-native', () => ({
-  Query: { IsModerator: class IsModerator {} },
-  // Mirrors the real wire helper (covered by its own test in js-core):
-  // the fan-out response is a JSON `serverUrl -> bool` map.
-  decodeStatusByServer: (data: ArrayBuffer) =>
-    new Map<string, boolean>(
-      Object.entries(
-        JSON.parse(new TextDecoder().decode(new Uint8Array(data))),
-      ),
-    ),
-}));
-
 import useModerationStatus, {
   type ModerationStatus,
 } from './useModerationStatus';
 
-/** Encode a fan-out response the way the rust core emits it. */
-function statusResponse(record: Record<string, boolean>): ArrayBuffer {
-  return new TextEncoder().encode(JSON.stringify(record)).buffer as ArrayBuffer;
+/** The fan-out result the way the rust core emits it. */
+function statusResponse(record: Record<string, boolean>): QueryData {
+  return new QueryData.StatusByServer({
+    byServer: new Map(Object.entries(record)),
+  });
 }
 
 // `renderHook` renders an empty result under this jest-expo setup, so run

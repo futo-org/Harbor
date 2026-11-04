@@ -1,6 +1,5 @@
 import { toast } from '@/src/common/components/toast';
 import { Routes } from '@/src/common/constants';
-import { isWeb } from '@/src/common/util/platform';
 import type { PolycentricClient } from '@polycentric/react-native';
 import { type Href, router } from 'expo-router';
 
@@ -19,19 +18,12 @@ export async function redirectIfLoggedIn(
     return true;
   }
 
-  // Don't redirect if even local storage doesn't have identity information
-  if (!(await client.storageDriver.getActiveLogin())) return false;
+  // Every tab shares one client, but this tab's snapshot may not have caught
+  // up with a sign-in that just happened elsewhere; ask the client itself.
+  const snapshot = await client.harbor.snapshot();
+  if (!snapshot.login) return false;
 
-  // Local storage has identity information but our polycentric client does not.
-  // On web, another tab could have updated the local storage beyond what we
-  // have loaded in-memory.
-  // In this case, we need to trigger a full page load.
-  if (isWeb) {
-    window.location.assign(Routes.tabs.feed.index);
-  } else {
-    console.warn('In-memory state does not match storage on non-web platform');
-    router.dismissTo(Routes.tabs.feed.index as Href);
-  }
-
+  toast.info("You're already logged in");
+  router.dismissTo(Routes.tabs.feed.index as Href);
   return true;
 }

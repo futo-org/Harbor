@@ -2,11 +2,11 @@ use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
 use crate::media::process_image;
 use crate::pairing;
-use crate::query::{QueryObserver, QueryResultFfi, QueryStatus};
+use crate::query::{ByteObserver, ByteResult, QueryStatus};
 use crate::sync;
 use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
-    AcknowledgeNotificationsRequest, ContentDigest, DeleteContentRequest, Event,
+    AcknowledgeNotificationsRequest, ContentDigest, DeleteContentRequest,
     GetAttributedToReactionCountsRequest, GetServerInfoRequest, Identity, ListEventsResponse,
     PublicKey, PutEventsRequest, ResolveReportRequest, SetBanStatusRequest, SignedEvent,
     SignedMessage, UploadBlobRequest, UrlInfoRequest, content_service_client::ContentServiceClient,
@@ -49,8 +49,7 @@ pub(crate) fn install_panic_hook() {
     LazyLock::force(&lazy);
 }
 
-#[derive(Debug, thiserror::Error, uniffi::Error)]
-#[uniffi(flat_error)]
+#[derive(Debug, thiserror::Error)]
 pub enum CoreError {
     #[error("Decode: {0}")]
     Decode(String),
@@ -77,15 +76,8 @@ pub enum CoreError {
     InvalidInput(String),
 }
 
-impl From<uniffi::UnexpectedUniFFICallbackError> for CoreError {
-    fn from(e: uniffi::UnexpectedUniFFICallbackError) -> Self {
-        CoreError::Callback(e.reason)
-    }
-}
-
 /// The outcome of pushing events to a server, including any warnings or errors that returned from
 /// the server's validation.
-#[derive(uniffi::Record)]
 pub struct PushResult {
     /// Serialized `PutEventsResponse` from the server. Its `requested_blobs`
     /// should be uploaded by the caller.
@@ -94,7 +86,6 @@ pub struct PushResult {
     pub event_issues: Vec<sync::EventPushIssues>,
 }
 
-#[derive(uniffi::Record)]
 pub struct ContentEntry {
     pub digest_bytes: Vec<u8>,
     pub content_bytes: Vec<u8>,
@@ -141,7 +132,7 @@ pub enum Query {
 /// Oneshot sender for [`FirstSuccessObserver`].
 type FirstSuccessSender = futures::channel::oneshot::Sender<Result<Option<Vec<u8>>, CoreError>>;
 
-/// A [`QueryObserver`] implementation that returns the first success recieved from a server, rather
+/// A [`ByteObserver`] implementation that returns the first success recieved from a server, rather
 /// than a subscription. Any errors from servers ignored. If all servers error, a `CoreError` is
 /// returned.
 struct FirstSuccessObserver(Mutex<Option<FirstSuccessSender>>);
@@ -155,8 +146,8 @@ impl FirstSuccessObserver {
     }
 }
 
-impl QueryObserver for FirstSuccessObserver {
-    fn next(&self, result: QueryResultFfi) {
+impl ByteObserver for FirstSuccessObserver {
+    fn next(&self, result: ByteResult) {
         match result.status {
             QueryStatus::Loading => {}
             QueryStatus::Success => self.send(Ok(result.data)),
@@ -176,24 +167,14 @@ impl QueryObserver for FirstSuccessObserver {
     }
 }
 
-// See AuthTokenProvider: single-threaded wasm32 wants non-Send futures.
-#[uniffi::export(with_foreign)]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
-pub trait SignBytesCallback: Send + Sync {
-    async fn sign(&self, bytes: Vec<u8>) -> Result<Vec<u8>, CoreError>;
-}
-
-#[derive(uniffi::Object)]
+/// The protocol engine and query layer. Internal: hosts reach it through
+/// [`crate::sdk::ffi::HarborClient`].
 pub struct PolycentricCore {
-    client: Arc<Mutex<PolycentricClient>>,
-    query_client: crate::query::QueryClient<Vec<u8>>,
+    pub(crate) client: Arc<Mutex<PolycentricClient>>,
+    pub(crate) query_client: crate::query::QueryClient<Vec<u8>>,
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), uniffi::export(async_runtime = "tokio"))]
-#[cfg_attr(target_arch = "wasm32", uniffi::export)]
 impl PolycentricCore {
-    #[uniffi::constructor]
     pub fn new() -> Arc<Self> {
         #[cfg(target_arch = "wasm32")]
         console_error_panic_hook::set_once();
@@ -402,35 +383,6 @@ impl PolycentricCore {
             .map_err(|e| CoreError::Encode(format!("Failed to encode signed event: {e}")))
     }
 
-    /// Sign event bytes via a foreign callback. Validates the inner
-    /// `Event`, calls the callback to produce signature bytes, assembles
-    /// a `SignedEvent`, and re-verifies before returning the canonical
-    /// `SignedEvent` bytes.
-    pub async fn sign_event(
-        &self,
-        event_bytes: Vec<u8>,
-        callback: Arc<dyn SignBytesCallback>,
-    ) -> Result<Vec<u8>, CoreError> {
-        Event::decode(event_bytes.as_slice())
-            .map_err(|e| CoreError::Decode(format!("Invalid event bytes: {e}")))?;
-
-        let signature = callback.sign(event_bytes.clone()).await?;
-
-        let signed_event = SignedEvent {
-            signature,
-            event_bytes,
-        };
-
-        let signed_event_bytes = signed_event
-            .to_bytes()
-            .map_err(|e| CoreError::Encode(format!("Failed to encode signed event: {e}")))?;
-
-        SignedEvent::from_bytes(&signed_event_bytes)
-            .map_err(|e| CoreError::Crypto(format!("Event signature invalid: {e:?}")))?;
-
-        Ok(signed_event_bytes)
-    }
-
     /// Returns serialized `ListEventsResponse` proto bytes for the
     /// non-tombstoned events on (identity, collection).
     pub fn list_valid_events(
@@ -476,13 +428,13 @@ impl PolycentricCore {
     /// `query_key` is the cache key shared across subscribers.
     /// Pass in `None` to bypass the cache.
     /// `opts` carries the optional fetch mode and per-call servers override.
-    /// Always returns a `QueryObservable` regardless of variant.
+    /// Always returns a `ByteObservable` regardless of variant.
     pub fn fetch_query(
         &self,
         query_key: Option<crate::query::QueryKey>,
         query: Query,
         opts: Option<crate::query::QueryOpts>,
-    ) -> Arc<dyn crate::query::QueryObservable> {
+    ) -> Arc<dyn crate::query::ByteObservable> {
         match query {
             Query::GetProfile(args) => {
                 crate::query::profile::get_profile(&self.query_client, query_key, args, opts)

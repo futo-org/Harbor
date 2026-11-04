@@ -1,8 +1,14 @@
-import { Query, v2 } from '@polycentric/react-native';
+import { queryPayload } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  Query,
+  type QueryData,
+  QueryData_Tags,
+} from '@polycentric/react-native';
 import { useClaimBundleList } from './useClaimBundleList';
 
-const parse = (bytes: Uint8Array) =>
-  v2.ListTargetedVerificationClaimsResponse.fromBinary(bytes).claimBundles;
+const parse = (data: QueryData | undefined) =>
+  queryPayload(data, QueryData_Tags.TargetedVerificationClaims)?.response
+    .claimBundles;
 
 /**
  * Claims other identities have asked `identity` to verify — the inbox of

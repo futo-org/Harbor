@@ -9,7 +9,6 @@ use crate::api::CoreError;
 ///
 /// If the returned array is empty it means the event is valid, if it's
 /// non-empty it means its invalid.
-#[uniffi::export]
 pub fn validate_event(event: Vec<u8>) -> Result<Vec<event::ValidationError>, CoreError> {
     let event = Event::decode(event.as_slice())
         .map_err(|e| CoreError::Decode(format!("Invalid event bytes: {e}")))?;
@@ -17,13 +16,9 @@ pub fn validate_event(event: Vec<u8>) -> Result<Vec<event::ValidationError>, Cor
     Ok(Validate::validate(&event).err().unwrap_or_default())
 }
 
-/// Validate encoded `Content` bytes.
-///
-/// If the returned array is empty it means the content is valid, if it's
-/// non-empty it means its invalid.
+/// The problems a server would reject `content` for; empty when it's
+/// valid. Check before publishing.
 #[uniffi::export]
-pub fn validate_content(content: Vec<u8>) -> Result<Vec<content::ValidationError>, CoreError> {
-    let content = Content::decode(content.as_slice())
-        .map_err(|e| CoreError::Decode(format!("Invalid content bytes: {e}")))?;
-    Ok(content.validate().err().unwrap_or_default())
+pub fn validate_content(content: crate::records::Content) -> Vec<content::ValidationError> {
+    Content::from(content).validate().err().unwrap_or_default()
 }

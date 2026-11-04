@@ -10,12 +10,12 @@ const OTHER_IDENTITY = 'other identity';
 
 const result = (
   server: string,
-  error?: unknown,
+  error?: string | null,
   identity = IDENTITY,
 ): ServerPushResult =>
   error === undefined
     ? { identity, server, eventIssues: [] }
-    : { identity, server, eventIssues: [], error };
+    : { identity, server, eventIssues: [], error: error ?? undefined };
 
 beforeEach(() => {
   get().clearAll();
@@ -23,8 +23,8 @@ beforeEach(() => {
 
 describe('useServerFailuresStore', () => {
   it('replaces a server failure each sync', () => {
-    get().record([result(SERVER_A, new Error('unreachable'))], 100);
-    get().record([result(SERVER_A, new Error('timed out'))], 200);
+    get().record([result(SERVER_A, 'unreachable')], 100);
+    get().record([result(SERVER_A, 'timed out')], 200);
 
     expect(get().failures[IDENTITY]).toEqual({
       [SERVER_A]: { message: 'timed out', at: 200 },
@@ -33,7 +33,7 @@ describe('useServerFailuresStore', () => {
 
   it('clears a server failure after a push without one', () => {
     get().record([
-      result(SERVER_A, new Error('unreachable')),
+      result(SERVER_A, 'unreachable'),
       result(SERVER_B, 'offline'),
     ]);
     get().record([result(SERVER_A), result(SERVER_B, 'offline')]);

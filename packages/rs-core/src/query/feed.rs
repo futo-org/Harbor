@@ -16,7 +16,7 @@ use crate::time::now_millis;
 use crate::{
     client::PolycentricClient,
     query::{
-        QueryClient, QueryKey, QueryObservable, QueryOpts,
+        ByteObservable, QueryClient, QueryKey, QueryOpts,
         blocks::{
             retain_unblocked_bundles, retain_unblocked_hints, retain_unblocked_thread_bundles,
         },
@@ -298,7 +298,7 @@ pub fn get_identity_feed(
     query_key: Option<QueryKey>,
     args: GetIdentityFeedArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let GetIdentityFeedArgs {
         identity,
         limit,
@@ -366,7 +366,7 @@ pub fn get_attribution_feed(
     query_key: Option<QueryKey>,
     args: GetAttributionFeedArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let GetAttributionFeedArgs {
         attributed_to,
         limit,
@@ -437,7 +437,7 @@ pub fn get_following_feed(
     query_key: Option<QueryKey>,
     args: GetFollowingFeedArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let GetFollowingFeedArgs {
         follower_identity,
         sort_by,
@@ -510,7 +510,7 @@ pub fn get_recommended_feed(
     query_key: Option<QueryKey>,
     args: GetFollowingFeedArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let GetFollowingFeedArgs {
         follower_identity,
         sort_by,
@@ -581,7 +581,7 @@ pub fn get_explore_feed(
     query_key: Option<QueryKey>,
     args: GetExploreFeedArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let GetExploreFeedArgs {
         identity,
         sort_by,
@@ -656,7 +656,7 @@ pub fn get_post_thread(
     query_key: Option<QueryKey>,
     args: GetPostThreadArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let GetPostThreadArgs {
         event_key,
         limit,

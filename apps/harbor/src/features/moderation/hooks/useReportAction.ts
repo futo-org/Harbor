@@ -1,5 +1,10 @@
-import { hexToBytes, usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import {
+  COLLECTION,
+  parseEventKeyId,
+  SyncStrategy,
+  v2,
+} from '@polycentric/react-native';
 import { useState } from 'react';
 
 export default function useReportAction() {
@@ -23,32 +28,28 @@ export default function useReportAction() {
       }
       setPending(true);
 
-      const eventKey = v2.EventKey.fromBinary(hexToBytes(eventId));
+      const eventKey = parseEventKeyId(eventId);
+      if (!eventKey) {
+        setPending(false);
+        throw new Error(`Invalid event id: ${eventId}`);
+      }
       const content = v2.Content.create({
-        contentBody: {
-          oneofKind: 'report',
-          report: {
+        contentBody: new v2.ContentBody.Report({
+          report: v2.Report.create({
             eventKey,
             category,
             additionalInfo,
-          },
-        },
+          }),
+        }),
       });
 
-      // Persist the content first: the event references it by digest, and
-      // `sync()` looks the content up from the local store to attach it.
-      await client.contentManager.save(content);
-
-      const event = await client.buildEvent(content, COLLECTION.REPORTS);
-      const signedEvent = await client.signEvent(event);
-
-      // Save the event locally and mirror it (with content) into the core.
-      await client.commitEvent(signedEvent, content);
+      // Sign and store the report locally.
+      await client.publish(content, COLLECTION.REPORTS);
 
       // Delivery to servers is best-effort — the report is already saved
       // locally and will be pushed on the next sync if this fails.
       try {
-        await client.sync(SyncStrategy.PARTIAL_PUSH);
+        await client.sync(SyncStrategy.PartialPush);
       } catch (e) {
         console.warn('Failed to push report to servers:', e);
       } finally {

@@ -1,9 +1,6 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
-// time, which can't run under jest. We only need the pure `v2` protobuf-ts
-// namespace, so expose just that (sourced from js-core's generated protos).
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../packages/js-core/src/proto/v2'),
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 // The `polycentric-hooks` barrel imports the (native-heavy) provider. The
 // decode path only needs two pure helpers, so delegate to `helpers` directly.
@@ -34,8 +31,8 @@ const ACTOR = 'actoridentity';
 const TARGET_IDENTITY = 'youridentity';
 
 const SIGNED_BY = v2.PublicKey.create({
-  keyType: 1,
-  key: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
+  keyType: v2.KeyType.Ed25519,
+  key: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]).buffer,
 });
 
 function makeEventKey(identity: string, sequence = 1): v2.EventKey {
@@ -58,12 +55,10 @@ function makeBundle(
   });
   return v2.EventBundle.create({
     signedEvent: v2.SignedEvent.create({
-      eventBytes: v2.Event.toBinary(event),
-      signature: new Uint8Array([0]),
+      event,
+      signature: new Uint8Array([0]).buffer,
     }),
-    serializedContent: v2.SerializedContent.create({
-      contentBytes: v2.Content.toBinary(content),
-    }),
+    serializedContent: v2.SerializedContent.create({ content }),
   });
 }
 
@@ -72,8 +67,7 @@ function postContent(
   extra?: { reply?: v2.EventKey; quote?: v2.EventKey },
 ): v2.Content {
   return v2.Content.create({
-    contentBody: {
-      oneofKind: 'post',
+    contentBody: new v2.ContentBody.Post({
       post: v2.Post.create({
         text,
         reply: extra?.reply
@@ -81,31 +75,31 @@ function postContent(
           : undefined,
         quote: extra?.quote,
       }),
-    },
+    }),
   });
 }
 
 function followContent(identity: string): v2.Content {
   return v2.Content.create({
-    contentBody: {
-      oneofKind: 'follow',
+    contentBody: new v2.ContentBody.Follow({
       follow: v2.Follow.create({ identity }),
-    },
+    }),
   });
 }
 
 function reactionContent(eventKey: v2.EventKey, emoji?: string): v2.Content {
   return v2.Content.create({
-    contentBody: {
-      oneofKind: 'reaction',
+    contentBody: new v2.ContentBody.Reaction({
       reaction: v2.Reaction.create({ eventKey, emoji, positive: true }),
-    },
+    }),
   });
 }
 
 function repostContent(post: v2.EventKey): v2.Content {
   return v2.Content.create({
-    contentBody: { oneofKind: 'repost', repost: v2.Repost.create({ post }) },
+    contentBody: new v2.ContentBody.Repost({
+      repost: v2.Repost.create({ post }),
+    }),
   });
 }
 
@@ -114,26 +108,26 @@ function claimBundle(owner: string): v2.EventBundle {
   const schema = v2.VerificationSchema.create({
     name: 'X Verification',
     fields: [
-      {
+      v2.FieldDef.create({
         key: 'handle',
-        kind: v2.FieldKind.STRING,
+        kind: v2.FieldKind.String,
         description: 'Handle',
+        format: '',
         required: true,
-      },
+      }),
     ],
   });
   return makeBundle(
     owner,
     v2.Content.create({
-      contentBody: {
-        oneofKind: 'verificationClaim',
+      contentBody: new v2.ContentBody.VerificationClaim({
         verificationClaim: v2.VerificationClaim.create({
-          schema: v2.SerializedVerificationSchema.create({
-            schemaBytes: v2.VerificationSchema.toBinary(schema),
-          }),
-          fields: { handle: new TextEncoder().encode('@mark') },
+          schema: v2.SerializedVerificationSchema.create({ schema }),
+          fields: new Map([
+            ['handle', new TextEncoder().encode('@mark').buffer],
+          ]),
         }),
-      },
+      }),
     }),
     3,
   );
@@ -144,13 +138,12 @@ function verificationTargetContent(
   targetIdentities: string[],
 ): v2.Content {
   return v2.Content.create({
-    contentBody: {
-      oneofKind: 'verificationTarget',
+    contentBody: new v2.ContentBody.VerificationTarget({
       verificationTarget: v2.VerificationTarget.create({
         claimEventKey,
         targetIdentities,
       }),
-    },
+    }),
   });
 }
 
@@ -184,7 +177,7 @@ describe('decodeNotifications', () => {
     const items = decodeOne(
       v2.Notification.create({
         triggerEvent: makeBundle(ACTOR, followContent(TARGET_IDENTITY)),
-        kind: v2.NotificationKind.FOLLOW,
+        kind: v2.NotificationKind.Follow,
       }),
     );
     expect(items).toHaveLength(1);
@@ -200,7 +193,7 @@ describe('decodeNotifications', () => {
           postContent('my reply', { reply: TARGET_KEY }),
         ),
         targetEvent: targetBundle,
-        kind: v2.NotificationKind.REPLY,
+        kind: v2.NotificationKind.Reply,
       }),
     );
     expect(item.kind).toBe('reply');
@@ -214,7 +207,7 @@ describe('decodeNotifications', () => {
     const [item] = decodeOne(
       v2.Notification.create({
         triggerEvent: makeBundle(ACTOR, postContent('hey you')),
-        kind: v2.NotificationKind.MENTION,
+        kind: v2.NotificationKind.Mention,
       }),
     );
     expect(item.kind).toBe('mention');
@@ -231,7 +224,7 @@ describe('decodeNotifications', () => {
           postContent('quoting you', { quote: TARGET_KEY }),
         ),
         targetEvent: targetBundle,
-        kind: v2.NotificationKind.QUOTE,
+        kind: v2.NotificationKind.Quote,
       }),
     );
     expect(item.kind).toBe('quote');
@@ -249,7 +242,7 @@ describe('decodeNotifications', () => {
           postContent('my reply', { reply: TARGET_KEY }),
         ),
         targetEvent: targetBundle,
-        kind: v2.NotificationKind.REPLY,
+        kind: v2.NotificationKind.Reply,
       }),
       labelsFor(makeEventKey(ACTOR)),
     );
@@ -270,7 +263,7 @@ describe('decodeNotifications', () => {
           postContent('quoting you', { quote: TARGET_KEY }),
         ),
         targetEvent: targetBundle,
-        kind: v2.NotificationKind.QUOTE,
+        kind: v2.NotificationKind.Quote,
       }),
       labelsFor(makeEventKey(ACTOR)),
     );
@@ -288,7 +281,7 @@ describe('decodeNotifications', () => {
       v2.Notification.create({
         triggerEvent: makeBundle(ACTOR, reactionContent(TARGET_KEY, '👍')),
         targetEvent: targetBundle,
-        kind: v2.NotificationKind.REACTION,
+        kind: v2.NotificationKind.Reaction,
       }),
     );
     expect(item.kind).toBe('reaction');
@@ -303,7 +296,7 @@ describe('decodeNotifications', () => {
       v2.Notification.create({
         triggerEvent: makeBundle(ACTOR, repostContent(TARGET_KEY)),
         targetEvent: targetBundle,
-        kind: v2.NotificationKind.REPOST,
+        kind: v2.NotificationKind.Repost,
       }),
     );
     expect(item.kind).toBe('repost');
@@ -320,7 +313,7 @@ describe('decodeNotifications', () => {
           ACTOR,
           verificationTargetContent(claimKey, [TARGET_IDENTITY]),
         ),
-        kind: v2.NotificationKind.VERIFICATION_REQUEST,
+        kind: v2.NotificationKind.VerificationRequest,
       }),
     );
     expect(item.kind).toBe('verificationRequest');
@@ -334,16 +327,18 @@ describe('decodeNotifications', () => {
     const claimKey = makeEventKey(TARGET_IDENTITY, 3);
     const [item] = decodeOne(
       v2.Notification.create({
-        triggerEvent: makeBundle(ACTOR, {
-          contentBody: {
-            oneofKind: 'verificationVerify',
-            verificationVerify: v2.VerificationVerify.create({
-              claimEventKey: claimKey,
+        triggerEvent: makeBundle(
+          ACTOR,
+          v2.Content.create({
+            contentBody: new v2.ContentBody.VerificationVerify({
+              verificationVerify: v2.VerificationVerify.create({
+                claimEventKey: claimKey,
+              }),
             }),
-          },
-        } as v2.Content),
+          }),
+        ),
         targetEvent: claimBundle(TARGET_IDENTITY),
-        kind: v2.NotificationKind.VERIFICATION_COMPLETE,
+        kind: v2.NotificationKind.VerificationComplete,
       }),
     );
     expect(item.kind).toBe('verificationComplete');
@@ -364,7 +359,7 @@ describe('decodeNotifications', () => {
           verificationTargetContent(claimKey, [TARGET_IDENTITY]),
         ),
         targetEvent: claimBundle(ACTOR),
-        kind: v2.NotificationKind.VERIFICATION_REQUEST,
+        kind: v2.NotificationKind.VerificationRequest,
       }),
     );
     expect(item.kind).toBe('verificationRequest');
@@ -384,7 +379,7 @@ describe('decodeNotifications', () => {
           ACTOR,
           verificationTargetContent(undefined, [TARGET_IDENTITY]),
         ),
-        kind: v2.NotificationKind.VERIFICATION_REQUEST,
+        kind: v2.NotificationKind.VerificationRequest,
       }),
     );
     expect(item.kind).toBe('verificationRequest');
@@ -395,7 +390,7 @@ describe('decodeNotifications', () => {
 
   it('drops a notification without a trigger event', () => {
     const items = decodeOne(
-      v2.Notification.create({ kind: v2.NotificationKind.FOLLOW }),
+      v2.Notification.create({ kind: v2.NotificationKind.Follow }),
     );
     expect(items).toHaveLength(0);
   });
@@ -404,7 +399,7 @@ describe('decodeNotifications', () => {
     const items = decodeOne(
       v2.Notification.create({
         triggerEvent: makeBundle(ACTOR, followContent(TARGET_IDENTITY)),
-        kind: v2.NotificationKind.REPLY,
+        kind: v2.NotificationKind.Reply,
       }),
     );
     expect(items).toHaveLength(0);
@@ -414,7 +409,7 @@ describe('decodeNotifications', () => {
     const items = decodeOne(
       v2.Notification.create({
         triggerEvent: makeBundle(ACTOR, followContent(TARGET_IDENTITY)),
-        kind: v2.NotificationKind.UNSPECIFIED,
+        kind: v2.NotificationKind.Unspecified,
       }),
     );
     expect(items).toHaveLength(0);

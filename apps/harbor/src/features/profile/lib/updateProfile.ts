@@ -39,27 +39,25 @@ export async function updateProfile(
 
   const trimmedAlias = alias?.trim();
 
-  const content = client.contentManager.build({
-    oneofKind: 'profileUpdate',
-    profileUpdate: {
-      name,
-      description: description ? description : undefined,
-      avatar: avatarMeta,
-      banner: banner ?? undefined,
-      alias: trimmedAlias ? trimmedAlias : undefined,
-    },
+  const content = v2.Content.create({
+    contentBody: new v2.ContentBody.ProfileUpdate({
+      profileUpdate: v2.ProfileUpdate.create({
+        name,
+        description: description ? description : undefined,
+        avatar: avatarMeta,
+        banner: banner ?? undefined,
+        alias: trimmedAlias ? trimmedAlias : undefined,
+      }),
+    }),
   });
 
-  const event = await client.buildEvent(content, COLLECTION.PROFILE);
-  const signedEvent = await client.signEvent(event);
-
-  // Persist profile update locally
+  // Store the new avatar's variants locally before the event that
+  // references them.
   await Promise.all(
-    newAvatarVariants.map(({ digest, bytes }) =>
-      client.fileStore.put(digest, bytes),
+    newAvatarVariants.map(({ bytes, blob }) =>
+      client.commitBlob(bytes, blob.mimeType),
     ),
   );
 
-  await client.contentManager.save(content);
-  await client.commitEvent(signedEvent, content);
+  await client.publish(content, COLLECTION.PROFILE);
 }

@@ -94,6 +94,55 @@ pub fn verify_jwt(token: &str) -> Result<VerifiedJwt, JwtError> {
     })
 }
 
+/// How long a minted server JWT stays valid unless overridden.
+pub const DEFAULT_EXPIRY_SECONDS: u64 = 60 * 60;
+
+#[derive(Serialize)]
+struct MintHeader<'a> {
+    alg: &'a str,
+    typ: &'a str,
+    kid: String,
+}
+
+/// Mint a JWT authenticating `iss` (an identity key) against `aud` (a
+/// server URL), valid from `now` (unix seconds) for `expiry_seconds`.
+/// EdDSA-signed with the ed25519 `private_key` seed; the signing key goes
+/// in the header's `kid` as hex.
+pub fn mint_jwt(
+    private_key: &[u8; 32],
+    iss: &str,
+    aud: &str,
+    now: u64,
+    expiry_seconds: u64,
+) -> String {
+    use ed25519_dalek::{Signer, SigningKey};
+
+    let signing_key = SigningKey::from_bytes(private_key);
+    let header = MintHeader {
+        alg: "EdDSA",
+        typ: "JWT",
+        kid: hex::encode(signing_key.verifying_key().as_bytes()),
+    };
+    let claims = ServerJwtClaims {
+        iss: iss.to_string(),
+        aud: aud.to_string(),
+        iat: now,
+        exp: now + expiry_seconds,
+    };
+    let signing_input = format!("{}.{}", encode_segment(&header), encode_segment(&claims));
+    let signature = signing_key.sign(signing_input.as_bytes());
+    format!(
+        "{signing_input}.{}",
+        URL_SAFE_NO_PAD.encode(signature.to_bytes())
+    )
+}
+
+/// A value as a base64url JSON JWT segment.
+fn encode_segment<T: Serialize>(value: &T) -> String {
+    // Serializing these plain structs can't fail.
+    URL_SAFE_NO_PAD.encode(serde_json::to_vec(value).unwrap_or_default())
+}
+
 /// A base64url JWT segment as JSON.
 fn decode_segment<T: for<'a> Deserialize<'a>>(segment: &str) -> Result<T, JwtError> {
     let bytes = URL_SAFE_NO_PAD
@@ -211,5 +260,15 @@ mod tests {
         let verified = mint_and_verify().unwrap();
         let allowed = ["https://other.example.com".to_string(), SERVER.to_string()];
         assert!(verified.validate(&allowed, 1500).is_ok());
+    }
+
+    #[test]
+    fn minted_tokens_verify() {
+        let token = mint_jwt(&[7u8; 32], IDENTITY, SERVER, 1000, DEFAULT_EXPIRY_SECONDS);
+        let verified = verify_jwt(&token).unwrap();
+        assert_eq!(verified.signed_by, signing_key().verifying_key().as_bytes());
+        assert_eq!(verified.claims.iss, IDENTITY);
+        assert_eq!(verified.claims.exp, 1000 + DEFAULT_EXPIRY_SECONDS);
+        assert!(verified.validate(&[SERVER.to_string()], 1001).is_ok());
     }
 }

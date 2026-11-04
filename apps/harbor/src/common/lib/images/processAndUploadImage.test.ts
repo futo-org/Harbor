@@ -9,16 +9,9 @@ jest.mock('@/src/common/util/platform', () => ({
   isAndroid: true,
 }));
 
-// Minimal protobuf factories: just echo the input so we can assert shapes.
-jest.mock('@polycentric/react-native', () => ({
-  v2: {
-    Image: { create: (x: unknown) => ({ ...(x as object) }) },
-    ImageSet: { create: (x: unknown) => ({ ...(x as object) }) },
-    Blob: { create: (x: unknown) => ({ ...(x as object) }) },
-    ContentDigest: { create: (x: unknown) => ({ ...(x as object) }) },
-    ContentDigestType: { SHA256: 1 },
-  },
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 // ESM-only; jest-expo doesn't transform it. The digest content is irrelevant.
 jest.mock('@noble/hashes/sha2.js', () => ({
@@ -108,7 +101,7 @@ function mockSource(srcWidth: number, srcHeight: number) {
 
 function makeClient() {
   return {
-    fileStore: { put: jest.fn(async () => undefined) },
+    commitBlob: jest.fn(async () => undefined),
     uploadBlob: jest.fn(async () => undefined),
     // biome-ignore lint/suspicious/noExplicitAny: test mock cast
   } as any;
@@ -132,7 +125,7 @@ describe('processAndUploadImage', () => {
     });
 
     expect(result.images).toHaveLength(2);
-    expect(client.fileStore.put).toHaveBeenCalledTimes(2);
+    expect(client.commitBlob).toHaveBeenCalledTimes(2);
     expect(client.uploadBlob).toHaveBeenCalledTimes(2);
     // Every uploaded blob is JPEG.
     for (const call of client.uploadBlob.mock.calls) {
@@ -271,7 +264,7 @@ describe('processAndUploadImage', () => {
       processAndUploadImage(client, 'file://in.jpg', { sizes: [512, 4096] }),
     ).rejects.toThrow('at most 2048px');
     expect(mockLoadAsync).not.toHaveBeenCalled();
-    expect(client.fileStore.put).not.toHaveBeenCalled();
+    expect(client.commitBlob).not.toHaveBeenCalled();
   });
 
   it('tags decode failures with the decode stage and keeps the cause', async () => {
@@ -306,7 +299,7 @@ describe('processAndUploadImage', () => {
     mockSource(1000, 1000);
     const client = makeClient();
     const cause = new Error('disk full');
-    client.fileStore.put.mockRejectedValueOnce(cause);
+    client.commitBlob.mockRejectedValueOnce(cause);
 
     await expectStageFailure(
       processAndUploadImage(client, 'file://in.jpg', { sizes: [512] }),

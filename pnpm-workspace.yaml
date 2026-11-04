@@ -1,10 +1,7 @@
 packages:
   - apps/*
   - packages/*
-  - packages/js-browser/examples/*
-  - packages/js-node/examples/*
   - services/scraper
-  - services/verifier-bot
   - tools/*
   - docs/
   - e2e
@@ -36,7 +33,6 @@ allowBuilds:
   "@bufbuild/buf": false
   "@parcel/watcher": false
   "@swc/core": false
-  better-sqlite3: true
   core-js: false
   esbuild: false
   html-get: false

@@ -1,0 +1,47 @@
+[package]
+edition      = "2024"
+name         = "verifier-bot"
+publish      = false
+rust-version = "1.85.0"
+version      = "0.1.0"
+
+[dependencies]
+# Workspace
+common-dotenv = { path = "../common/dotenv" }
+common-telemetry = { path = "../common/telemetry" }
+polycentric-common.workspace = true
+polycentric-core = { path = "../../packages/rs-core" }
+
+# 3rd Party
+async-trait = "0.1"
+axum = { version = "0.8.8", default-features = false, features = ["http1", "json", "query", "tokio"] }
+base64.workspace = true
+# Headless Chrome for the platforms that block plain HTTP clients (Kick,
+# Rumble).
+chromiumoxide = { version = "0.9", default-features = false }
+ego-tree = "0.11"
+futures = "0.3"
+getrandom = { workspace = true, features = ["std"] }
+hex = { workspace = true, features = ["std"] }
+# OAuth 1.0a request signing (X).
+hmac = "0.13"
+percent-encoding = "2"
+prometheus = { workspace = true, features = ["process"] }
+prost.workspace = true
+regex = "1"
+reqwest = { version = "0.13", default-features = false, features = ["cookies", "form", "json", "multipart", "query", "rustls"] }
+scraper = "0.29"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha1 = "0.11"
+sha2.workspace = true
+# Legacy Postgres import (`HARBOR_VERIFIER_BOT_DATABASE_URL`).
+sqlx = { version = "0.9", default-features = false, features = ["postgres", "runtime-tokio", "tls-rustls-ring-webpki"] }
+tokio = { workspace = true, features = ["full"] }
+tower-http = { version = "0.7", default-features = false, features = ["catch-panic", "cors"] }
+tracing.workspace = true
+url = "2"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }
+tower = { version = "0.5", default-features = false, features = ["util"] }

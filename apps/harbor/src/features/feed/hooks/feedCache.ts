@@ -3,6 +3,7 @@ import {
   labelMapFromSets,
   decodePostBundle,
   type PostData,
+  queryPayload,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
   isUnderQueryKey,
@@ -18,9 +19,9 @@ import {
 } from './overlayTypes';
 import {
   FeedSort,
-  labelsFromFeedResponse,
-  labelsFromThreadResponse,
-  v2,
+  type QueryData,
+  QueryData_Tags,
+  type v2,
 } from '@polycentric/react-native';
 import { useEffect } from 'react';
 import { create } from 'zustand';
@@ -97,7 +98,7 @@ const EMPTY_FEED: PostData[] = Object.freeze([] as PostData[]) as PostData[];
  */
 type FeedEntry = {
   /** Latest query data that our posts are derived from. */
-  queryData: ArrayBuffer;
+  queryData: QueryData;
 
   /** Cached page info corresponding to the query data above. */
   pageInfo: v2.PageInfo | undefined;
@@ -135,7 +136,7 @@ type FeedDataStoreState = {
    */
   getFeedEntry: (
     queryKey: string,
-    queryData: ArrayBuffer | undefined,
+    queryData: QueryData | undefined,
     decode: DecodeFn,
   ) => FeedEntry | undefined;
 
@@ -144,7 +145,7 @@ type FeedDataStoreState = {
    * We want to do this before new data is received, since the data in the store
    * is used as a base for new data to merge with.
    */
-  pullCachedFeed: (queryKey: string, queryData: ArrayBuffer) => void;
+  pullCachedFeed: (queryKey: string, queryData: QueryData) => void;
 
   /**
    * If we have any cached data for the corresponding feed, then inject this
@@ -196,30 +197,32 @@ type FeedDataStoreState = {
  * We key on the query data and assume that consumers using the same query data
  * object have the same key and overlay state.
  */
-const derivedFeedCache: WeakMap<ArrayBuffer, FeedEntry> = new WeakMap();
+const derivedFeedCache: WeakMap<QueryData, FeedEntry> = new WeakMap();
 
 /** Callback used for deriving feed entries from query response data. */
-type DecodeFn = (data: ArrayBuffer) => [PostData[], v2.PageInfo | undefined];
+type DecodeFn = (data: QueryData) => [PostData[], v2.PageInfo | undefined];
 
 function decodeFeedResponse(
-  data: ArrayBuffer,
+  data: QueryData,
 ): [PostData[], v2.PageInfo | undefined] {
-  const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));
+  const payload = queryPayload(data, QueryData_Tags.Feed);
+  if (!payload) return [[], undefined];
   return [
-    decodeFeedItems(response, labelMapFromSets(labelsFromFeedResponse(data))),
-    response.pageInfo,
+    decodeFeedItems(payload.response, labelMapFromSets(payload.labels)),
+    payload.response.pageInfo,
   ];
 }
 
 function decodeThreadResponse(
-  data: ArrayBuffer,
+  data: QueryData,
 ): [PostData[], v2.PageInfo | undefined] {
-  const response = v2.GetPostThreadResponse.fromBinary(new Uint8Array(data));
+  const payload = queryPayload(data, QueryData_Tags.PostThread);
+  if (!payload) return [[], undefined];
 
-  const labelMap = labelMapFromSets(labelsFromThreadResponse(data));
+  const labelMap = labelMapFromSets(payload.labels);
 
   const decoded: PostData[] = [];
-  for (const bundle of response.thread) {
+  for (const bundle of payload.response.thread) {
     const d = decodePostBundle(bundle);
     if (d) {
       const labels = labelMap.get(d.id);
@@ -330,7 +333,7 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
   /** Derive a new feed entry from the provided query data and stored overlays. */
   const deriveEntry = (
     queryKey: string,
-    queryData: ArrayBuffer,
+    queryData: QueryData,
     decode: DecodeFn,
   ): FeedEntry => {
     let [items, pageInfo] = decode(queryData);
@@ -422,7 +425,7 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
     state: FeedDataStoreState,
     queryKey: string,
   ): {
-    queryData: ArrayBuffer | undefined;
+    queryData: QueryData | undefined;
     feedData: Map<string, FeedEntry>;
     existing: FeedEntry | undefined;
     purgeCachedEntry: () => void;
@@ -660,7 +663,7 @@ export const useFeedDataStore = create<FeedDataStoreState>((set, get) => {
  */
 export function useFeedWithOverlays(
   queryKey: QueryKey,
-  queryData: ArrayBuffer | undefined,
+  queryData: QueryData | undefined,
 ): PostData[] {
   const key = queryKey.join('\0');
   const output = useFeedDataStore(
@@ -685,7 +688,7 @@ export function useFeedWithOverlays(
  */
 export function useThreadWithOverlays(
   queryKey: QueryKey,
-  queryData: ArrayBuffer | undefined,
+  queryData: QueryData | undefined,
 ): PostData[] {
   const key = queryKey.join('\0');
   const output = useFeedDataStore(
@@ -708,7 +711,7 @@ export function useThreadWithOverlays(
  */
 export function useFeedPageInfo(
   queryKey: QueryKey,
-  queryData: ArrayBuffer | undefined,
+  queryData: QueryData | undefined,
 ): v2.PageInfo | undefined {
   const key = queryKey.join('\0');
   const pageInfo = useFeedDataStore(

@@ -1,25 +1,10 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
-// time, which can't run under jest — expose just what the hook needs.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-  Query: {
-    ListVerificationTargets: function ListVerificationTargets() {},
-    ListVerificationVerifies: function ListVerificationVerifies() {},
-  },
-}));
-
-// ESM-only; jest-expo doesn't transform it. The digest content is irrelevant.
-jest.mock('@noble/hashes/sha2.js', () => ({
-  sha256: () => new Uint8Array(32),
-}));
-
-jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => ({
-  hexToBytes: (hex: string) => new Uint8Array(Buffer.from(hex, 'hex')),
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 // Keyed by the query key's first segment so the targets and verifies
 // queries can respond independently.
-let mockQueryData: Record<string, Uint8Array | null> = {};
+let mockQueryData: Record<string, QueryData | undefined> = {};
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: (
     key: string[],
@@ -27,7 +12,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
     _opts: unknown,
     enabled: boolean,
   ) => ({
-    data: enabled ? mockQueryData[key[0]] : null,
+    data: enabled ? mockQueryData[key[0]] : undefined,
     isLoading: false,
     refresh: jest.fn(),
   }),
@@ -39,68 +24,47 @@ jest.mock('./useVerifierIdentities', () => ({
   useVerifierIdentities: () => mockVerifierBots,
 }));
 
-import { v2 } from '@polycentric/react-native';
+import { eventKeyId, QueryData, v2 } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
+import {
+  eventBundle,
+  verificationKey,
+  verificationTargetContent,
+  verificationVerifyContent,
+} from '../__fixtures__/bundles';
 import { useClaimVerifiers } from './useClaimVerifiers';
 
-const CLAIM_KEY = v2.EventKey.create({
-  identity: 'me',
-  collection: 8,
-  sequence: 7n,
-  signedBy: v2.PublicKey.create({ keyType: 1, key: new Uint8Array([0xaa]) }),
-});
-const CLAIM_ID = Buffer.from(v2.EventKey.toBinary(CLAIM_KEY)).toString('hex');
-
-function bundle(identity: string, content: v2.Content): v2.EventBundle {
-  const event = v2.Event.create({
-    key: v2.EventKey.create({ identity, collection: 8, sequence: 1n }),
-    createdAt: 1000n,
-  });
-  return v2.EventBundle.create({
-    signedEvent: v2.SignedEvent.create({
-      eventBytes: v2.Event.toBinary(event),
-      signature: new Uint8Array([0]),
-    }),
-    serializedContent: v2.SerializedContent.create({
-      contentBytes: v2.Content.toBinary(content),
-    }),
-  });
-}
+const CLAIM_KEY = verificationKey('me', 7n);
+const CLAIM_ID = eventKeyId(CLAIM_KEY);
 
 function targetBundle(targetIdentities: string[]): v2.EventBundle {
-  return bundle(
-    'me',
-    v2.Content.create({
-      contentBody: {
-        oneofKind: 'verificationTarget',
-        verificationTarget: { claimEventKey: CLAIM_KEY, targetIdentities },
-      },
-    }),
+  return eventBundle(
+    verificationKey('me', 1n),
+    verificationTargetContent(targetIdentities, CLAIM_KEY),
   );
 }
 
 function verifyBundle(verifier: string): v2.EventBundle {
-  return bundle(
-    verifier,
-    v2.Content.create({
-      contentBody: {
-        oneofKind: 'verificationVerify',
-        verificationVerify: { claimEventKey: CLAIM_KEY },
-      },
-    }),
+  return eventBundle(
+    verificationKey(verifier, 1n),
+    verificationVerifyContent(CLAIM_KEY),
   );
 }
 
 function respond(targets: v2.EventBundle[], verifies: v2.EventBundle[] = []) {
   mockQueryData = {
-    'verification-targets': v2.ListVerificationTargetsResponse.toBinary(
-      v2.ListVerificationTargetsResponse.create({ eventBundles: targets }),
-    ),
-    'verification-verifies': v2.ListVerificationVerifiesResponse.toBinary(
-      v2.ListVerificationVerifiesResponse.create({ eventBundles: verifies }),
-    ),
+    'verification-targets': new QueryData.VerificationTargets({
+      response: v2.ListVerificationTargetsResponse.create({
+        eventBundles: targets,
+      }),
+    }),
+    'verification-verifies': new QueryData.VerificationVerifies({
+      response: v2.ListVerificationVerifiesResponse.create({
+        eventBundles: verifies,
+      }),
+    }),
   };
 }
 

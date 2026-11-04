@@ -1,11 +1,15 @@
 import {
-  hexToBytes,
   type PostData,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, v2, SyncStrategy } from '@polycentric/react-native';
+import {
+  COLLECTION,
+  parseEventKeyId,
+  SyncStrategy,
+  v2,
+} from '@polycentric/react-native';
 import { router, useLocalSearchParams, useSegments } from 'expo-router';
 import {
   alterPostReplyCount,
@@ -43,20 +47,17 @@ export default function usePostActions(post: PostData): PostActions {
   // Tombstone the event identified by `hexEventKey` (a FEED-collection
   // Delete referencing it).
   const deleteEventAtKey = async (hexEventKey: string) => {
-    const eventKey = v2.EventKey.fromBinary(hexToBytes(hexEventKey));
+    const eventKey = parseEventKeyId(hexEventKey);
+    if (!eventKey) throw new Error(`invalid event key id: ${hexEventKey}`);
     const deleteContent = v2.Content.create({
-      contentBody: {
-        oneofKind: 'delete',
-        delete: { eventKey },
-      },
+      contentBody: new v2.ContentBody.Delete({
+        delete: v2.Delete.create({ eventKey }),
+      }),
     });
-    await client.contentManager.save(deleteContent);
-    const deleteEvent = await client.buildEvent(deleteContent, COLLECTION.FEED);
-    const signedDelete = await client.signEvent(deleteEvent);
-    await client.commitEvent(signedDelete, deleteContent);
+    await client.publish(deleteContent, COLLECTION.FEED);
 
     // TODO: do we care if push failed?
-    await client.sync(SyncStrategy.PARTIAL_PUSH);
+    await client.sync(SyncStrategy.PartialPush);
   };
 
   const invalidateFeeds = (
@@ -71,9 +72,7 @@ export default function usePostActions(post: PostData): PostActions {
     if (replyParent) {
       alterPostReplyCount(feedQueryKeys.following(identity), replyParent, -1);
       alterPostReplyCount(
-        feedQueryKeys.identity(
-          v2.EventKey.fromBinary(hexToBytes(replyParent)).identity,
-        ),
+        feedQueryKeys.identity(parseEventKeyId(replyParent)?.identity ?? ''),
         replyParent,
         -1,
       );
@@ -83,9 +82,7 @@ export default function usePostActions(post: PostData): PostActions {
     if (quoted) {
       alterPostQuoteCount(feedQueryKeys.following(identity), quoted, -1);
       alterPostQuoteCount(
-        feedQueryKeys.identity(
-          v2.EventKey.fromBinary(hexToBytes(quoted)).identity,
-        ),
+        feedQueryKeys.identity(parseEventKeyId(quoted)?.identity ?? ''),
         quoted,
         -1,
       );

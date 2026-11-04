@@ -29,7 +29,7 @@ echo "Using npm dist-tag: ${DIST_TAG}"
 pnpm -r --filter "@polycentric/*" exec npm version "${VERSION}" --no-git-tag-version --allow-same-version
 
 # Topological order; pnpm rewrites workspace:* -> ${VERSION} on publish.
-PACKAGES="@polycentric/rs-core-wasm @polycentric/js-storage-sqlite @polycentric/js-core @polycentric/js-browser @polycentric/js-node @polycentric/react-native"
+PACKAGES="@polycentric/rs-core-wasm @polycentric/js-core @polycentric/react-native"
 
 add_npmrc() {
   # Append to ~/.npmrc unless the exact line is already there

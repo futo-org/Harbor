@@ -1,14 +1,13 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { showAlert } from '@/src/common/lib/dialogs';
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import {
+  usePolycentric,
+  usePolycentricContext,
+} from '@/src/common/lib/polycentric-hooks';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
-import {
-  assembleIdentityBackup,
-  backupFileName,
-  encodeIdentityBackup,
-} from '@/src/features/identity-backup/backup';
+import { backupFileName } from '@/src/features/identity-backup/backup';
 import { BackupStatus } from '@/src/features/identity-backup/components/BackupStatus';
 import { saveBackupFile } from '@/src/features/identity-backup/saveBackupFile';
 import {
@@ -35,20 +34,13 @@ type NewBackupState =
  * Rotate the identity's recovery key and prepare a backup for export.
  */
 async function createNewBackup(client: PolycentricClient) {
-  const identity = client.activeIdentityKey;
-  const myPublicKey = client.currentKeyPair?.publicKey;
-  if (!identity || !myPublicKey)
+  if (!client.activeIdentityKey)
     throw new Error('Must be signed in to create a backup');
 
-  await client.sync(SyncStrategy.PARTIAL_PULL);
+  await client.sync(SyncStrategy.PartialPull);
 
-  const privateKey = await client.identityManager.rotateRecoveryKey();
-  const backup = assembleIdentityBackup(client, privateKey);
-
-  return {
-    backupData: encodeIdentityBackup(backup),
-    fileName: backupFileName(backup),
-  };
+  const backupData = await client.createBackup();
+  return { backupData, fileName: backupFileName(backupData) };
 }
 
 export default function CreateBackupScreen() {
@@ -81,9 +73,8 @@ export default function CreateBackupScreen() {
   }, [state.stage]);
 
   const client = usePolycentric();
-  const [hadExisting] = useState(
-    () => !!client.identityManager.resolveIdentity()?.recoveryKey,
-  );
+  const { currentIdentity } = usePolycentricContext();
+  const [hadExisting] = useState(() => !!currentIdentity?.recoveryKey);
 
   const onContinue = () => {
     switch (state.stage) {

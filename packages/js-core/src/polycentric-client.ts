@@ -1,1279 +1,516 @@
+/**
+ * The Harbor client for JavaScript: rs-core's `HarborClient`, wherever it
+ * runs (see `harbor.ts`), with defaults and JavaScript errors.
+ *
+ * Every operation is asynchronous. The only synchronous members read the
+ * snapshot rs-core pushes whenever what a UI renders changes (`snapshot`
+ * and the getters derived from it); `subscribe` makes that a store for
+ * `useSyncExternalStore`.
+ */
 import {
-  ClientState,
-  ContentManager,
-  EventService,
-  HydrationStatus,
-  IdentityManager,
-  InitializationStep,
-  LoginManager,
-  PairingSessionManager,
-  type ServerPushResult,
-} from './client-internal';
-import { COLLECTION, SyncStrategy, type Collection } from './constants';
-import { sha256 } from '@noble/hashes/sha2.js';
-import type {
-  ICryptoManager,
-  IFileStoreDriver,
-  IStorageDriver,
-} from './platform-interfaces';
-import * as Proto from './proto/v2';
-import { StorageHandle } from './data-store/storage-handle';
-import { FileStore } from './file-store/file-store';
-import { bytesToHex, toDigestKey } from './utils/hex';
-import { bytesEqual } from './utils/bytes';
-import { CryptoManager } from './crypto/crypto-manager';
-import { createServerJwt, DEFAULT_EXPIRY_SECONDS } from './crypto/server-jwt';
-
-import type {
-  PolycentricCoreLike,
-  EventKey,
-  EventPushIssues,
-  PushResult,
-} from '@polycentric/rs-core-wasm';
-
-// `./generated` is the pure-JS bindings subpath; it exposes the Query
-// class and QueryStatus enum without dragging in the wasm asset. The
-// uniffi runtime that backs these (`uniffi-bindgen-react-native`) is
-// externalised in webpack.config.js so consumers resolve it at runtime.
-import {
-  Query,
-  QueryStatus,
+  type Blob,
+  bindings,
+  type ClientEvent,
+  type ClientSnapshot,
+  type Content,
+  type ContentDigest,
+  type EventBundle,
+  type EventKey,
+  type GetServerInfoResponse,
+  type IdentityState,
+  type LegacyEvent,
+  type LegacyLogin,
+  type ListEventsArgs,
+  type LoginId,
+  type LoginKind,
+  type LoginOverview,
+  type LoginStatus,
+  type PairingInfo,
+  type PairingSession,
+  type PublicKey,
+  type PublishArgs,
+  type Query,
+  type QueryData,
   type QueryOpts,
-} from '@polycentric/rs-core-wasm/generated';
-import type { LoginId } from './platform-interfaces/login-repository';
+  type RegisterPushNotificationRequest,
+  type ReportStatus,
+  type ServerPushResult,
+  type SyncStrategy,
+  toBuffer,
+  type UrlInfoResponse,
+  type BackupCheck,
+} from './bindings';
+import { COLLECTION, type Collection } from './constants';
+import { wrapError } from './errors';
+import type { AsyncHarbor, PendingEventRef, QueryStream } from './harbor';
 
-type CoreType = PolycentricCoreLike;
+type Events = {
+  committed: EventBundle;
+  pulled: string;
+  pushResults: ServerPushResult[];
+};
 
-/** The (collection, signer) event stream of `key`. */
-const streamId = (key: Proto.EventKey): string =>
-  `${key.collection}:${key.signedBy?.keyType}:${bytesToHex(key.signedBy?.key ?? new Uint8Array())}`;
-
-export interface KeyPair {
-  keyType: Proto.KeyType;
-  privateKey: Proto.PrivateKey;
-  publicKey: Proto.PublicKey;
-}
-
-/**
- * PolycentricClientConfig defines the dependencies and configuration for a PolycentricClient.
- */
-export interface PolycentricClientConfig {
-  /**
-   * The uniffi-generated `PolycentricCore` instance from
-   * `@polycentric/react-native`. Owns crypto, local stores, image
-   * processing, and gRPC client transport.
-   */
-  core: CoreType;
-  storageDriver: IStorageDriver;
-  filestoreDriver: IFileStoreDriver;
-  /**
-   * gRPC-web URLs the client should start with. Used to seed
-   * `client.servers` before `initialize()` fetches each server's
-   * `ServerInfo`.
-   */
-  seedServers?: string[];
-  /**
-   * False when the storage drivers do not survive a restart (e.g. the
-   * in-memory fallback used when private browsing blocks IndexedDB).
-   * UIs should not offer identity creation/pairing in that case.
-   */
-  persistentStorage?: boolean;
-  /** Stamped on every event this client builds. */
-  application?: Proto.Application;
-}
-
-/**
- * PolycentricClient is the top level API for the Polycentric SDK.
- */
 export class PolycentricClient {
-  public readonly events = new EventService();
+  private current: ClientSnapshot;
+  private readonly stateListeners = new Set<() => void>();
+  private readonly eventListeners: {
+    [K in keyof Events]: Set<(value: Events[K]) => void>;
+  } = { committed: new Set(), pulled: new Set(), pushResults: new Set() };
+  private readonly stopWatching: () => void;
 
-  public readonly loginManager = new LoginManager(this);
-  public readonly contentManager = new ContentManager(this);
-  public readonly identityManager = new IdentityManager(this);
-  public readonly pairingSessionManager = new PairingSessionManager(this);
+  private constructor(
+    /** The underlying client, for calls this class doesn't cover. */
+    readonly harbor: AsyncHarbor,
+    snapshot: ClientSnapshot,
+  ) {
+    this.current = snapshot;
+    this.stopWatching = harbor.watch((event) => this.onEvent(event));
+  }
 
-  private state = ClientState.UNINITIALIZED;
-  public step = '';
-  public hydrationStatus: HydrationStatus = HydrationStatus.NOT_STARTED;
-  public error: Error | null = null;
+  /** Wrap a client, starting from its current snapshot. */
+  static async open(harbor: AsyncHarbor): Promise<PolycentricClient> {
+    return new PolycentricClient(harbor, await harbor.snapshot());
+  }
 
-  public readonly core: CoreType;
+  /** Stop receiving events. The client itself keeps running. */
+  close(): void {
+    this.stopWatching();
+  }
 
-  public currentKeyPair: KeyPair | null = null;
-  /** The identity key the current key pair is actively using. Set by publishIdentity or claimIdentity. */
-  public activeIdentityKey: string | null = null;
-  public servers: string[] = ['http://localhost:3000'];
-
-  public readonly cryptoManager: ICryptoManager = new CryptoManager();
-
-  public storageHandle: StorageHandle | undefined;
-  public readonly storageDriver: IStorageDriver;
-  public readonly fileStore: FileStore;
-  public readonly persistentStorage: boolean;
-  public readonly application: Proto.Application | undefined;
-
-  constructor(config: PolycentricClientConfig) {
-    this.core = config.core;
-    this.storageDriver = config.storageDriver;
-    this.fileStore = new FileStore(config.filestoreDriver);
-    this.persistentStorage = config.persistentStorage ?? true;
-    this.application = config.application;
-    if (config.seedServers && config.seedServers.length > 0) {
-      this.servers = [...config.seedServers];
-    }
-
-    // Authenticate every outgoing gRPC request as the active identity. The
-    // core caches each server's token and only calls back when it expires.
-    this.core.setAuthTokenProvider({
-      authToken: async (serverUrl: string) => {
-        if (!this.currentKeyPair || !this.activeIdentityKey) {
-          return undefined;
+  private onEvent(event: ClientEvent): void {
+    const tags = bindings().ClientEvent_Tags;
+    switch (event.tag) {
+      case tags.Snapshot:
+        this.current = event.inner.snapshot;
+        for (const listener of this.stateListeners) listener();
+        break;
+      case tags.Committed:
+        for (const l of this.eventListeners.committed) l(event.inner.bundle);
+        break;
+      case tags.Pulled:
+        for (const l of this.eventListeners.pulled) l(event.inner.identity);
+        break;
+      case tags.PushResults:
+        for (const l of this.eventListeners.pushResults) {
+          l(event.inner.results);
         }
-        const token = await createServerJwt({
-          keyPair: this.currentKeyPair,
-          iss: this.activeIdentityKey,
-          aud: serverUrl,
-        });
-        return {
-          token,
-          expiresAt: BigInt(
-            Math.floor(Date.now() / 1000) + DEFAULT_EXPIRY_SECONDS,
-          ),
-        };
-      },
-    });
-  }
-
-  /** Set the `traceparent` sent with gRPC requests, or `undefined` for one per request. */
-  public setTraceparent(traceparent: string | undefined): void {
-    this.core.setTraceparent(traceparent);
-  }
-
-  public static async create(
-    config: PolycentricClientConfig,
-  ): Promise<PolycentricClient> {
-    const client = new PolycentricClient(config);
-    await client.initialize();
-    return client;
-  }
-
-  private async initialize() {
-    try {
-      this.setState(ClientState.INITIALIZING);
-      this.setStep(InitializationStep.STARTING);
-
-      this.setStep(InitializationStep.INITIALIZING_CORE);
-
-      this.setStep(InitializationStep.SETTING_UP_STORAGE);
-      this.storageHandle = new StorageHandle({
-        eventRepository: this.storageDriver.createEventRepository(),
-        contentRepository: this.storageDriver.createContentRepository(),
-        loginRepository: this.storageDriver.createLoginRepository(),
-      });
-
-      this.setStep(InitializationStep.LOADING_PROCESS_ID);
-
-      this.setStep(InitializationStep.HYDRATING_EVENTS);
-
-      await this.copyEvents();
-      await this.copyContents();
-
-      this.setHydrationStatus(HydrationStatus.COMPLETED);
-
-      await this.loginManager.restore();
-
-      // Push the JS-side server list into the rust core so that
-      // observables that fan out to every configured server (e.g.
-      // `getIdentityFeed`) actually have somewhere to call.
-      this.refreshServers();
-
-      this.setStep(InitializationStep.COMPLETE);
-      this.setState(ClientState.READY);
-    } catch (error) {
-      this.setError(error instanceof Error ? error : new Error(String(error)));
-      throw error;
+        break;
     }
   }
 
-  /** Blob URL for each configured server, in order, for fallback. */
-  blobUrls(digest: Proto.ContentDigest): string[] {
-    const key = toDigestKey(digest);
-    return this.servers.map((server) => `${server}/blob/${key}`);
+  // ── Snapshot ──────────────────────────────────────────────────────
+
+  /** What a UI renders, as rs-core last reported it. */
+  get snapshot(): ClientSnapshot {
+    return this.current;
   }
 
-  /** First server's blob URL, or `null` if no servers are configured. */
-  blobUrl(digest: Proto.ContentDigest): string | null {
+  /** Call `onChange` whenever `snapshot` changes. */
+  subscribe(onChange: () => void): () => void {
+    this.stateListeners.add(onChange);
+    return () => this.stateListeners.delete(onChange);
+  }
+
+  get activeLogin(): LoginOverview | null {
+    return this.current.login ?? null;
+  }
+
+  get activeIdentityKey(): string | null {
+    return this.current.login?.id.identity ?? null;
+  }
+
+  /** The signed-in key. */
+  get activePublicKey(): PublicKey | null {
+    return this.current.login?.id.publicKey ?? null;
+  }
+
+  get servers(): string[] {
+    return this.current.servers;
+  }
+
+  /** False when storage won't survive a restart. */
+  get persistentStorage(): boolean {
+    return this.current.persistent;
+  }
+
+  /** Listen for `committed` (an event of ours was stored), `pulled`
+   * (events for an identity arrived) or `pushResults`. */
+  on<K extends keyof Events>(
+    event: K,
+    listener: (value: Events[K]) => void,
+  ): () => void {
+    const listeners = this.eventListeners[event] as Set<
+      (value: Events[K]) => void
+    >;
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  }
+
+  // ── Publishing ────────────────────────────────────────────────────
+
+  /** Publish `content` as the signed-in login. */
+  publish(
+    content: Content,
+    collection: Collection | number = COLLECTION.FEED,
+  ): Promise<EventBundle> {
+    return wrapError(() => this.harbor.publish(content, collection));
+  }
+
+  /**
+   * Sign `content` without storing it, e.g. to show it before it's
+   * committed. Commit it with `commitEvent`.
+   */
+  prepareEvent(
+    content: Content,
+    collection: Collection | number = COLLECTION.FEED,
+  ): Promise<PendingEventRef> {
+    return wrapError(() => this.harbor.prepareEvent(content, collection));
+  }
+
+  /** Store a prepared event. Rejects with `AlreadyExistsError` if its
+   * sequence was taken since; prepare it again then. */
+  commitEvent(event: PendingEventRef): Promise<EventBundle> {
+    return wrapError(() => this.harbor.commitEvent(event));
+  }
+
+  // ── Local reads ───────────────────────────────────────────────────
+
+  /** The latest known state of `identity` (default: the signed-in one). */
+  async resolveIdentity(identity?: string): Promise<IdentityState | null> {
+    return (
+      (await wrapError(() => this.harbor.resolveIdentity(identity))) ?? null
+    );
+  }
+
+  /** The identity chain of `identity`, oldest first. */
+  resolveIdentityChain(identity: string): Promise<EventBundle[]> {
+    return wrapError(() => this.harbor.resolveIdentityChain(identity));
+  }
+
+  /** Non-deleted events of one stream, from what's held locally. */
+  listValidEvents(
+    identity: string,
+    collection: number,
+  ): Promise<EventBundle[]> {
+    return wrapError(() => this.harbor.listValidEvents(identity, collection));
+  }
+
+  /** Identities the signed-in identity blocks. */
+  blockedIdentities(): Promise<string[]> {
+    return wrapError(() => this.harbor.blockedIdentities());
+  }
+
+  // ── Queries ───────────────────────────────────────────────────────
+
+  /** Run `query` across the servers; `queryKey` shares a cached result
+   * between subscribers. */
+  fetchQuery(
+    queryKey: string[] | undefined,
+    query: Query,
+    opts?: QueryOpts,
+  ): QueryStream {
+    return this.harbor.query(queryKey, query, opts);
+  }
+
+  /** The first successful result of `query`. */
+  async awaitQuery(
+    query: Query,
+    options: { queryKey?: string[]; opts?: QueryOpts } = {},
+  ): Promise<QueryData | null> {
+    return (
+      (await wrapError(() =>
+        this.harbor.awaitQuery(query, options.queryKey, options.opts),
+      )) ?? null
+    );
+  }
+
+  /** One-shot ListEvents across the servers; results also land in the
+   * engine. */
+  listEvents(
+    args: ListEventsArgs,
+    options: { queryKey?: string[]; opts?: QueryOpts } = {},
+  ): Promise<EventBundle[]> {
+    return wrapError(() =>
+      this.harbor.listEvents(args, options.queryKey, options.opts),
+    );
+  }
+
+  /** Clear the cached results under `queryKey`. */
+  invalidateQuery(queryKey: string[]): Promise<void> {
+    return wrapError(() => this.harbor.invalidateQuery(queryKey));
+  }
+
+  invalidateAllQueries(): Promise<void> {
+    return wrapError(() => this.harbor.invalidateAllQueries());
+  }
+
+  // ── Sync ──────────────────────────────────────────────────────────
+
+  /** Pull and/or push; resolves with the number of events pulled. */
+  sync(strategy?: SyncStrategy): Promise<number> {
+    return wrapError(() =>
+      this.harbor.sync(strategy ?? bindings().SyncStrategy.Full),
+    );
+  }
+
+  startLiveSync(): Promise<void> {
+    return wrapError(() => this.harbor.startLiveSync());
+  }
+
+  stopLiveSync(): Promise<void> {
+    return wrapError(() => this.harbor.stopLiveSync());
+  }
+
+  // ── Blobs ─────────────────────────────────────────────────────────
+
+  /** Store blob bytes; returns the `Blob` to reference from content. It's
+   * uploaded with the content. */
+  commitBlob(bytes: Uint8Array | ArrayBuffer, mimeType: string): Promise<Blob> {
+    return wrapError(() => this.harbor.commitBlob(toBuffer(bytes), mimeType));
+  }
+
+  /** The blob's bytes from local storage. */
+  async getBlob(digest: ContentDigest): Promise<ArrayBuffer | null> {
+    return (await wrapError(() => this.harbor.getBlob(digest))) ?? null;
+  }
+
+  /** The blob's bytes, locally or from the servers. */
+  async fetchBlob(digest: ContentDigest): Promise<ArrayBuffer | null> {
+    return (await wrapError(() => this.harbor.fetchBlob(digest))) ?? null;
+  }
+
+  hasBlob(digest: ContentDigest): Promise<boolean> {
+    return wrapError(() => this.harbor.hasBlob(digest));
+  }
+
+  deleteBlob(digest: ContentDigest): Promise<boolean> {
+    return wrapError(() => this.harbor.deleteBlob(digest));
+  }
+
+  /** Upload a blob's body to `servers` (default: all). */
+  uploadBlob(
+    blob: Blob,
+    body: Uint8Array | ArrayBuffer,
+    servers?: string[],
+  ): Promise<void> {
+    return wrapError(() =>
+      this.harbor.uploadBlob(blob, toBuffer(body), servers),
+    );
+  }
+
+  /** Where the servers serve a blob, best first. */
+  blobUrls(digest: ContentDigest): string[] {
+    return bindings().blobUrls(this.current.servers, digest);
+  }
+
+  blobUrl(digest: ContentDigest): string | null {
     return this.blobUrls(digest)[0] ?? null;
   }
 
-  /**
-   * Proxy a remote image through each server's `/image_proxy` endpoint, in
-   * order, for fallback. Used for link-preview thumbnails so the client never
-   * hotlinks third-party hosts (avoids leaking reader IPs and
-   * mixed-content/CORS issues).
-   */
+  /** `imageUrl` through the servers' image proxies, best first. */
   imageProxyUrls(imageUrl: string): string[] {
-    const q = encodeURIComponent(imageUrl);
-    return this.servers.map((server) => `${server}/image_proxy?url=${q}`);
+    return bindings().imageProxyUrls(this.current.servers, imageUrl);
   }
 
-  /** First server's image-proxy URL, or `null` if no servers are configured. */
   imageProxyUrl(imageUrl: string): string | null {
     return this.imageProxyUrls(imageUrl)[0] ?? null;
   }
 
-  /**
-   * Fetch link-preview metadata for `url` from the configured servers'
-   * unfurl endpoint (`ContentService.UrlInfo`). Tries each server in turn
-   * and returns the first successful `Link`; returns `null` if every server
-   * fails.
-   */
-  async urlInfo(url: string): Promise<Proto.UrlInfoResponse | null> {
-    for (const server of this.servers) {
-      try {
-        const bytes = await this.core.urlInfo(server, url);
-        return Proto.UrlInfoResponse.fromBinary(new Uint8Array(bytes));
-      } catch {
-        // Try the next server.
-      }
-    }
-    return null;
+  // ── Logins ────────────────────────────────────────────────────────
+
+  listLogins(identity?: string): Promise<LoginOverview[]> {
+    return wrapError(() => this.harbor.listLogins(identity));
   }
 
-  /**
-   * Ban or unban `targetIdentity` on `server`
-   * (`IdentityService.SetBanStatus`). The active identity must be a
-   * moderator on `server`.
-   */
-  async setBanStatus(
+  /** Sign in as `login` (remembered for next time), or out with `null`. */
+  loginAs(login: LoginId | null, persist = true): Promise<void> {
+    return wrapError(() => this.harbor.loginAs(login ?? undefined, persist));
+  }
+
+  changeLoginStatus(id: LoginId, status: LoginStatus): Promise<void> {
+    return wrapError(() => this.harbor.changeLoginStatus(id, status));
+  }
+
+  deleteLogin(id: LoginId): Promise<void> {
+    return wrapError(() => this.harbor.deleteLogin(id));
+  }
+
+  /** Create and publish a new identity and sign in as it, adding
+   * `server` to the server list first if given. */
+  createIdentity(server?: string): Promise<LoginId> {
+    return wrapError(() => this.harbor.createIdentity(server));
+  }
+
+  /** Generate and store a key to pair (or recover) into `identity`. */
+  beginLogin(identity: string, kind: LoginKind): Promise<LoginOverview> {
+    return wrapError(() => this.harbor.beginLogin(identity, kind));
+  }
+
+  /** Claim an identity that authorized a pending login's key, then sign
+   * in as it. */
+  claim(login: LoginId, servers?: string[]): Promise<IdentityState> {
+    return wrapError(() => this.harbor.claim(login, servers));
+  }
+
+  // ── Backups ───────────────────────────────────────────────────────
+
+  /** Rotate the recovery key and return a backup of the signed-in
+   * identity as text. Older backups stop working. */
+  createBackup(): Promise<string> {
+    return wrapError(() => this.harbor.createBackup());
+  }
+
+  /** Whether `backup` can restore `identity` (default: the signed-in one). */
+  checkBackup(backup: string, identity?: string): Promise<BackupCheck> {
+    return wrapError(() => this.harbor.checkBackup(backup, identity));
+  }
+
+  /** Restore the identity `backup` is for and sign in as it. */
+  recoverFromBackup(backup: string): Promise<LoginId> {
+    return wrapError(() => this.harbor.recoverFromBackup(backup));
+  }
+
+  // ── Identity ──────────────────────────────────────────────────────
+
+  publishIdentityUpdate(args: PublishArgs): Promise<EventKey> {
+    return wrapError(() => this.harbor.publishIdentityUpdate(args));
+  }
+
+  addSigningKey(key: PublicKey): Promise<EventKey> {
+    return wrapError(() => this.harbor.addSigningKey(key));
+  }
+
+  removeSigningKey(key: PublicKey): Promise<EventKey> {
+    return wrapError(() => this.harbor.removeSigningKey(key));
+  }
+
+  addRotationKey(key: PublicKey): Promise<EventKey> {
+    return wrapError(() => this.harbor.addRotationKey(key));
+  }
+
+  removeRotationKey(key: PublicKey): Promise<EventKey> {
+    return wrapError(() => this.harbor.removeRotationKey(key));
+  }
+
+  /** Add `url` to the signed-in identity's servers. Rejects with
+   * `ServerAlreadyAddedError` if it's there. */
+  addServer(url: string): Promise<EventKey> {
+    return wrapError(() => this.harbor.addServer(url));
+  }
+
+  removeServer(url: string): Promise<EventKey> {
+    return wrapError(() => this.harbor.removeServer(url));
+  }
+
+  /** Use `servers` until the signed-in identity names its own. */
+  setServers(servers: string[]): Promise<void> {
+    return wrapError(() => this.harbor.setServers(servers));
+  }
+
+  // ── Pairing ───────────────────────────────────────────────────────
+
+  /** Issuer: start a pairing session on `server`. */
+  createPairingSession(server: string): Promise<PairingSession> {
+    return wrapError(() => this.harbor.createPairingSession(server));
+  }
+
+  /** Issuer: publish the session's next state (after authorizing). */
+  updatePairingSession(
+    info: PairingInfo,
+    sequence: bigint,
+  ): Promise<PairingSession> {
+    return wrapError(() => this.harbor.updatePairingSession(info, sequence));
+  }
+
+  getPairingSession(info: PairingInfo): Promise<PairingSession> {
+    return wrapError(() => this.harbor.getPairingSession(info));
+  }
+
+  /** Claimer: ask to pair a pending login's key. */
+  joinPairingSession(info: PairingInfo, login: LoginId): Promise<void> {
+    return wrapError(() => this.harbor.joinPairingSession(info, login));
+  }
+
+  /** Issuer: the keys asking to be paired. */
+  pollForClaimers(info: PairingInfo): Promise<PublicKey[]> {
+    return wrapError(() => this.harbor.pollForClaimers(info));
+  }
+
+  /** Claimer: whether the issuer authorized the pending login's key. */
+  pollForAuthorization(info: PairingInfo, login: LoginId): Promise<boolean> {
+    return wrapError(() => this.harbor.pollForAuthorization(info, login));
+  }
+
+  // ── Servers ───────────────────────────────────────────────────────
+
+  async urlInfo(url: string): Promise<UrlInfoResponse | null> {
+    return (await wrapError(() => this.harbor.urlInfo(url))) ?? null;
+  }
+
+  serverInfo(server: string): Promise<GetServerInfoResponse> {
+    return wrapError(() => this.harbor.serverInfo(server));
+  }
+
+  /** A JWT authenticating the signed-in identity to `audience`. */
+  createServerJwt(audience: string): Promise<string> {
+    return wrapError(() => this.harbor.createServerJwt(audience));
+  }
+
+  setBanStatus(
     server: string,
     targetIdentity: string,
     banned: boolean,
   ): Promise<void> {
-    const body = Proto.SetBanStatusRequest.toBinary(
-      Proto.SetBanStatusRequest.create({ targetIdentity, banned }),
+    return wrapError(() =>
+      this.harbor.setBanStatus(server, targetIdentity, banned),
     );
-    await this.core.setBanStatus(server, body.buffer as ArrayBuffer);
   }
 
-  /** Resolve, dismiss or reopen a report (`ModerationService.ResolveReport`). */
-  async resolveReport(
+  resolveReport(
     server: string,
     reportId: bigint,
-    status: Proto.ReportStatus,
+    status: ReportStatus,
   ): Promise<void> {
-    const body = Proto.ResolveReportRequest.toBinary(
-      Proto.ResolveReportRequest.create({ reportId, status }),
-    );
-    await this.core.resolveReport(server, body.buffer as ArrayBuffer);
+    return wrapError(() => this.harbor.resolveReport(server, reportId, status));
   }
 
-  /** Erase an event from one server (`ModerationService.DeleteContent`). */
-  async deleteContent(server: string, target: Proto.EventKey): Promise<void> {
-    const body = Proto.DeleteContentRequest.toBinary(
-      Proto.DeleteContentRequest.create({ target }),
-    );
-    await this.core.deleteContent(server, body.buffer as ArrayBuffer);
+  deleteContent(server: string, target: EventKey): Promise<void> {
+    return wrapError(() => this.harbor.deleteContent(server, target));
   }
 
-  /**
-   * Mark every notification of the active identity as read on each
-   * configured server (`NotificationService.AcknowledgeNotifications`), up to
-   * the notification `lastSeen` triggered. Per-server failures are logged
-   * but do not throw.
-   */
-  async acknowledgeNotifications(lastSeen: Proto.EventKey): Promise<void> {
-    const body = Proto.AcknowledgeNotificationsRequest.toBinary(
-      Proto.AcknowledgeNotificationsRequest.create({ lastSeen }),
-    );
-    const results = await Promise.allSettled(
-      this.servers.map((server) =>
-        this.core.acknowledgeNotifications(server, body.buffer as ArrayBuffer),
-      ),
-    );
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.warn(
-          'acknowledgeNotifications failed for a server:',
-          result.reason,
-        );
-      }
-    }
+  acknowledgeNotifications(lastSeen: EventKey): Promise<void> {
+    return wrapError(() => this.harbor.acknowledgeNotifications(lastSeen));
   }
 
-  /**
-   * Hydrate the Rust core's in-memory stores from persistent storage.
-   * The Rust stores are ephemeral (reset on every load) so anything the
-   * core needs (events for clocks/sequences, content for identity lookups)
-   * must be copied in at startup.
-   */
-  async copyEvents(events?: Proto.SignedEvent[]) {
-    const signedEvents = events ?? (await this.storage.events.getAll());
-
-    this.core.copyEvents(
-      signedEvents.map(
-        (s) => Proto.SignedEvent.toBinary(s).buffer as ArrayBuffer,
-      ),
-    );
-  }
-
-  /**
-   * A temporary function to copy all the content the browser is aware of.
-   * We should make this smarter with the EventBundles, maybe.
-   */
-  async copyContents(
-    contents?: { digest: Proto.ContentDigest; content: Proto.Content }[],
-  ) {
-    const list = contents ?? (await this.storage.content.getAll());
-
-    this.core.copyContents(
-      list.map((r) => ({
-        digestBytes: Proto.ContentDigest.toBinary(r.digest)
-          .buffer as ArrayBuffer,
-        contentBytes: Proto.Content.toBinary(r.content).buffer as ArrayBuffer,
-      })),
-    );
-  }
-
-  /**
-   * Helper function build an Event from a Content.
-   * Uses the current keypair and current identity.
-   */
-  async buildEvent(
-    content: Proto.Content,
-    collection: Collection | number = COLLECTION.FEED,
-    identityKey?: string,
-    publicKey?: Proto.PublicKey,
-  ): Promise<Proto.Event> {
-    const identity = identityKey ?? this.activeIdentityKey;
-    if (!identity) {
-      throw new Error('No active identity');
-    }
-
-    const signer = publicKey ?? this.currentKeyPair?.publicKey;
-    if (!signer) {
-      throw new Error('No keypair');
-    }
-
-    const sequence = this.core.nextSequence(identity, collection);
-
-    // identity_sequence must reference an identity event signed by the
-    // signing key.
-    const identitySequence =
-      collection === COLLECTION.IDENTITY
-        ? sequence
-        : this.core.getIdentitySequence(
-            identity,
-            Proto.PublicKey.toBinary(signer).buffer as ArrayBuffer,
-          );
-
-    if (!identitySequence) {
-      throw new Error(
-        'Cannot build event: signing key has no identity event for the identity (broken pairing?)',
-      );
-    }
-
-    const previousSignature = new Uint8Array(
-      this.core.previousSignature(identity, collection),
-    );
-    const previousRoot = new Uint8Array(
-      this.core.previousRoot(identity, collection),
-    );
-
-    const event = Proto.Event.create({
-      key: Proto.EventKey.create({
-        collection,
-        identity,
-        signedBy: signer,
-        sequence,
-      }),
-      identitySequence,
-      previousSignature,
-      previousRoot,
-      contentDigest: this.contentManager.buildDigest(content),
-      createdAt: BigInt(Date.now()),
-      application: this.application,
-    });
-
-    const identityContentForVC =
-      collection === COLLECTION.IDENTITY &&
-      content.contentBody.oneofKind === 'identity'
-        ? content.contentBody.identity
-        : undefined;
-    event.vectorClock = this.buildVectorClock(event, identityContentForVC);
-
-    return event;
-  }
-
-  /**
-   * Sign an event, using the client's current key pair or a provided one.
-   */
-  async signEvent(
-    event: Proto.Event,
-    keyPair?: KeyPair,
-  ): Promise<Proto.SignedEvent> {
-    const eventBytes = Proto.Event.toBinary(event);
-
-    const signedEventBytes = await this.core.signEvent(
-      eventBytes.buffer as ArrayBuffer,
-      {
-        sign: async (bytes: ArrayBuffer): Promise<ArrayBuffer> => {
-          keyPair = keyPair ?? this.currentKeyPair ?? undefined;
-          if (!keyPair) {
-            throw new Error('No keypair');
-          }
-
-          const signature = await this.crypto.sign(
-            keyPair.privateKey.key,
-            new Uint8Array(bytes),
-            keyPair.keyType,
-          );
-
-          return signature.buffer.slice(
-            signature.byteOffset,
-            signature.byteOffset + signature.byteLength,
-          ) as ArrayBuffer;
-        },
-      },
-    );
-
-    return Proto.SignedEvent.fromBinary(new Uint8Array(signedEventBytes));
-  }
-
-  /**
-   * Sign and persist a v2 Event.
-   *
-   * Mirrors the event (and its content, if supplied) into the Rust core so
-   * subsequent `build_vector_clock` / `next_sequence` calls see it.
-   */
-  async commitEvent(
-    signedEvent: Proto.SignedEvent,
-    content?: Proto.Content,
-  ): Promise<void> {
-    await this.storage.events.save(signedEvent);
-
-    this.core.copyEvents([
-      Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
-    ]);
-
-    if (content) {
-      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-      if (event.contentDigest) {
-        this.core.copyContents([
-          {
-            digestBytes: Proto.ContentDigest.toBinary(event.contentDigest)
-              .buffer as ArrayBuffer,
-            contentBytes: Proto.Content.toBinary(content).buffer as ArrayBuffer,
-          },
-        ]);
-      }
-    }
-
-    this.events.emitContentCreated({ signedEvent, content });
-  }
-
-  /**
-   * Build a vector clock for a single collection within an identity.
-   *
-   * Delegates to the Rust core, which resolves the referenced identity
-   * document from its local content store and computes the clock.
-   * Requires the identity event and its content to already have been
-   * copied into the core via `copy_events` / `copy_contents`.
-   */
-  buildVectorClock(
-    event: Proto.Event,
-    identityContent?: Proto.Identity,
-  ): Proto.VectorClock {
-    const clockBytes = this.core.buildVectorClock(
-      event.key!.identity,
-      event.key!.collection,
-      event.identitySequence,
-      Proto.PublicKey.toBinary(event.key!.signedBy!).buffer as ArrayBuffer,
-      event.key!.sequence,
-      identityContent
-        ? (Proto.Identity.toBinary(identityContent).buffer as ArrayBuffer)
-        : undefined,
-    );
-    return Proto.VectorClock.fromBinary(new Uint8Array(clockBytes));
-  }
-
-  /**
-   * Generic query wrapper around `core.listEvents`. Subscribes to the
-   * fan-out observable, accumulates `event_bundles` from each
-   * per-server emission, and resolves once the observable completes.
-   * Does not persist — callers decide what to do with the response.
-   */
-  async listEvents(options: {
-    limit?: number | null;
-    identity: string;
-    collection?: number | null;
-    signedBy?: Proto.PublicKey | null;
-    /** Exclusive lower bound on EventKey.sequence. */
-    sequenceGt?: number | bigint | null;
-    /** Exclusive upper bound on EventKey.sequence. */
-    sequenceLt?: number | bigint | null;
-    heads?: Proto.EventKey[] | null;
-    queryKey?: string[] | null;
-    queryOpts?: QueryOpts | null;
-  }): Promise<Proto.EventBundle[]> {
-    const sequenceGt =
-      options?.sequenceGt != null ? BigInt(options.sequenceGt) : undefined;
-    const sequenceLt =
-      options?.sequenceLt != null ? BigInt(options.sequenceLt) : undefined;
-
-    // `signedBy.key` is a Uint8Array view into the wire-decoded
-    // message buffer (protobuf-ts uses subarray). `.buffer` would be
-    // the whole message buffer, not just the key bytes — copy through
-    // `.slice()` so the FFI receives exactly the public-key bytes.
-    const signedBy = options?.signedBy
-      ? {
-          keyType: options.signedBy.keyType,
-          key: options.signedBy.key.slice().buffer as ArrayBuffer,
-        }
-      : undefined;
-
-    const heads = this.getFilterHeads(options?.heads ?? []);
-
-    return new Promise<Proto.EventBundle[]>((resolve, reject) => {
-      const observable = this.core.fetchQuery(
-        options?.queryKey ?? undefined,
-        new Query.ListEvents({
-          size: options?.limit ?? undefined,
-          identity: options.identity,
-          collection: options?.collection ?? undefined,
-          signedBy,
-          sequenceGt,
-          sequenceLt,
-          heads,
-        }),
-        options?.queryOpts ?? undefined,
-      );
-
-      // Most up-to-date emission from the query.
-      let latest: ArrayBuffer | undefined;
-
-      // Error to return if we get no success responses but at least one error.
-      let firstError: string | undefined;
-
-      // It's possible for the query to complete before or after `subscribe()`
-      // returns.
-      // We need some extra tracking to manage the subscription's lifetime.
-      let settled = false;
-      let subscription: ReturnType<typeof observable.subscribe> | undefined;
-      const settle = () => {
-        // Manage subscription lifetime
-        settled = true;
-        subscription?.unsubscribe();
-
-        // Finalize the promise
-        if (latest) {
-          try {
-            const response = Proto.ListEventsResponse.fromBinary(
-              new Uint8Array(latest),
-            );
-            resolve(response.eventBundles);
-          } catch (e) {
-            reject(e);
-          }
-        } else if (firstError) {
-          reject(new Error(firstError));
-        } else {
-          resolve([]);
-        }
-      };
-
-      subscription = observable.subscribe({
-        next: (result) => {
-          if (settled) return;
-
-          if (result.data) {
-            latest = result.data;
-
-            // Resolve if the query is no longer loading
-            if (result.status === QueryStatus.Success) {
-              settle();
-            }
-          }
-        },
-
-        error: (message: string) => {
-          if (settled) return;
-          if (!firstError) firstError = message;
-        },
-
-        complete: () => {
-          if (settled) return;
-          settle();
-        },
-      });
-
-      if (settled) subscription.unsubscribe();
-    });
-  }
-
-  /** Convert to FFI types */
-  private getFilterHeads(heads: Proto.EventKey[]): EventKey[] {
-    const out: EventKey[] = [];
-
-    for (const head of heads) {
-      if (!head.signedBy) continue;
-
-      out.push({
-        collection: head.collection,
-        identity: head.identity,
-        signedBy: {
-          keyType: head.signedBy.keyType,
-          key: head.signedBy.key.slice().buffer as ArrayBuffer,
-        },
-        sequence: head.sequence,
-      });
-    }
-
-    return out;
-  }
-
-  /**
-   * Return non-deleted event bundles for an `(identity, collection)` stream
-   * from the local core. Tombstone CRDT is applied by the core: any event
-   * targeted by a `Delete` content in the same collection is excluded.
-   * Content-type filtering is left to the caller.
-   *
-   * Requires the core to be hydrated — e.g. client initialization (which
-   * replays from local storage) and optionally `sync()` to pull new events
-   * from servers.
-   */
-  listValidEvents(identity: string, collection: number): Proto.EventBundle[] {
-    const bytes = this.core.listValidEvents(identity, collection);
-    return Proto.ListEventsResponse.fromBinary(new Uint8Array(bytes))
-      .eventBundles;
-  }
-
-  /**
-   * Identities the active identity blocks, derived from local block events.
-   */
-  blockedIdentities(): string[] {
-    return this.core.blockedIdentities();
-  }
-
-  /**
-   * The canonical identity chain for `identity` as bundles.
-   */
-  resolveIdentityChain(identity: string): Proto.EventBundle[] {
-    const bytes = this.core.resolveIdentityChain(identity);
-    const response = Proto.ListEventsResponse.fromBinary(new Uint8Array(bytes));
-    return response.eventBundles;
-  }
-
-  /**
-   * Decode an image, resize into `width` x `height` per `mode`, and
-   * encode as JPEG via the core. Returns the JPEG bytes plus the
-   * actual output dimensions.
-   *
-   * - `"fill"` (default): scale + center-crop, output is exactly `width` x `height`.
-   * - `"fit"`: preserve aspect ratio, output fits inside `width` x `height`.
-   */
-  processImageToJpeg(
-    image: Uint8Array,
-    width: number,
-    height: number,
-    mode: 'fill' | 'fit' = 'fill',
-  ): { bytes: Uint8Array; width: number; height: number } {
-    const result = this.core.processImageToJpeg(
-      image.buffer as ArrayBuffer,
-      width,
-      height,
-      mode,
-    );
-    return {
-      bytes: new Uint8Array(result.bytes),
-      width: result.width,
-      height: result.height,
-    };
-  }
-
-  /**
-   * Sign a `RegisterPushNotificationRequest` with the active key pair and
-   * deliver it to every configured server via gRPC-web. Per-server failures
-   * are logged but do not throw — registration is best-effort across the
-   * server set.
-   */
-  async registerPushNotifications(
+  registerPushNotifications(
     servers: string[],
-    request: Proto.RegisterPushNotificationRequest,
+    request: RegisterPushNotificationRequest,
   ): Promise<void> {
-    if (!this.currentKeyPair) {
-      throw new Error('registerPushNotifications requires an active key pair');
-    }
-
-    const messageBytes =
-      Proto.RegisterPushNotificationRequest.toBinary(request);
-    const signature = await this.crypto.sign(
-      this.currentKeyPair.privateKey.key,
-      messageBytes,
-      this.currentKeyPair.keyType,
+    return wrapError(() =>
+      this.harbor.registerPushNotifications(servers, request),
     );
-    const signedMessageBytes = Proto.SignedMessage.toBinary(
-      Proto.SignedMessage.create({
-        publicKey: this.currentKeyPair.publicKey,
-        signature,
-        messageBytes,
-      }),
-    );
+  }
 
-    const results = await Promise.allSettled(
-      servers.map((server) =>
-        this.core.registerPushNotifications(
-          server,
-          signedMessageBytes.buffer as ArrayBuffer,
-        ),
+  // ── Migration ─────────────────────────────────────────────────────
+
+  /**
+   * Bring data from an older store into storage: signed events exactly as
+   * stored (each must verify), serialized content exactly as stored, and
+   * logins. Anything already stored is skipped.
+   */
+  importLegacyData(data: {
+    events: LegacyEvent[];
+    contents: ArrayBuffer[];
+    logins: LegacyLogin[];
+    active?: LoginId;
+  }): Promise<void> {
+    return wrapError(() =>
+      this.harbor.importLegacyData(
+        data.events,
+        data.contents,
+        data.logins,
+        data.active,
       ),
     );
-
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error(
-          'registerPushNotifications failed for a server:',
-          result.reason,
-        );
-      }
-    }
-  }
-
-  /**
-   * Hash `bytes` and save to the local filestore. Returns the matching
-   * `Blob` proto. Does not upload to servers.
-   */
-  async commitBlob(bytes: Uint8Array, mimeType: string): Promise<Proto.Blob> {
-    const digest: Proto.ContentDigest = {
-      type: Proto.ContentDigestType.SHA256,
-      value: sha256(bytes),
-    };
-    await this.fileStore.put(digest, bytes);
-    return Proto.Blob.create({
-      digest,
-      mimeType,
-      size: BigInt(bytes.length),
-    });
-  }
-
-  /**
-   * Fetch a blob body by digest, trying each server in turn.
-   * Returns null if none serve it.
-   */
-  async fetchBlobBytes(
-    digest: Proto.ContentDigest,
-  ): Promise<Uint8Array | null> {
-    for (const url of this.blobUrls(digest)) {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        return new Uint8Array(await res.arrayBuffer());
-      } catch {
-        // try next server
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Upload a blob body to all configured servers. The server verifies
-   * that `body` hashes to `blob.digest` before persisting. Rejections
-   * from individual servers are logged but do not throw.
-   */
-  async uploadBlob(
-    blob: Proto.Blob,
-    body: Uint8Array,
-    servers?: string[],
-  ): Promise<void> {
-    servers = servers ?? this.servers;
-
-    const requestBytes = Proto.UploadBlobRequest.toBinary(
-      Proto.UploadBlobRequest.create({ blob, body }),
-    );
-
-    const results = await Promise.allSettled(
-      servers.map((server) =>
-        this.core.uploadBlob(server, requestBytes.buffer as ArrayBuffer),
-      ),
-    );
-
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.error('uploadBlob failed for a server:', result.reason);
-      }
-    }
-  }
-
-  /**
-   * Pull signed events for the active identity from all configured servers
-   * and persist new ones locally. Existing events/content are not overwritten.
-   * Emits `pulled` if any new events were persisted, or with `after` if any
-   * events came back (another tab may have stored them already).
-   *
-   * @param after Heads to pull past instead of the stored ones.
-   * @returns The number of new events persisted
-   */
-  private async pull(
-    partial: boolean,
-    after?: Proto.EventKey[],
-  ): Promise<number> {
-    if (!this.activeIdentityKey) throw new Error('No active identity');
-    const identity = this.activeIdentityKey;
-
-    // Only filter by heads when doing a partial pull
-    let heads = after;
-
-    if (partial && !heads) {
-      // Partial pulls will skip events at or before each event stream head.
-      // Find each head event and then map it to the filter format.
-      const headEvents = await this.storage.events.getByIdentity(identity, {
-        headsOnly: true,
-      });
-      heads = headEvents
-        .map((signedEvent) => {
-          const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-          return event.key;
-        })
-        .filter((head): head is Proto.EventKey => !!head);
-    }
-
-    // Fetch new bundles from server
-    const bundles = await this.listEvents({
-      identity,
-      heads,
-    });
-
-    // Collect blobs referenced by the events
-    let blobs: Proto.Blob[] = [];
-
-    // Save new events and content
-    let newCount = 0;
-    for (const bundle of bundles) {
-      const isNew = await this.trySaveBundle(bundle, blobs);
-      if (isNew) newCount++;
-    }
-
-    // Remove duplicate blobs
-    const blobMap: Map<string, Proto.Blob> = new Map();
-
-    for (const blob of blobs) {
-      if (!blob.digest) continue;
-      blobMap.set(toDigestKey(blob.digest), blob);
-    }
-
-    blobs = [...blobMap.values()];
-
-    // Catch any of our own referenced blobs so they persist locally.
-    await this.contentManager.pullBlobs(blobs);
-
-    if (newCount > 0 || (after && bundles.length > 0)) {
-      this.events.emitPulled(identity);
-    }
-    return newCount;
-  }
-
-  /**
-   * Absorb errors and return true only when the event is new and added.
-   * Any discovered blobs are added to `blobs`.
-   */
-  private async trySaveBundle(
-    bundle: Proto.EventBundle,
-    blobs: Proto.Blob[],
-  ): Promise<boolean> {
-    try {
-      if (!bundle.signedEvent) return false;
-
-      const bytes = bundle.signedEvent.eventBytes;
-
-      const event = Proto.Event.fromBinary(bytes);
-      if (!event.key) return false;
-      if (!event.key.signedBy) return false;
-
-      // Try saving content for any event that seems valid, even if it may already exist.
-      await this.trySaveContent(event, bundle, blobs);
-
-      const existing = await this.storage.events.getByEventKey(event.key);
-      if (existing) return false;
-
-      await this.storage.events.save(bundle.signedEvent);
-      return true;
-    } catch (e) {
-      console.warn('Pull event:', e);
-      return false;
-    }
-  }
-
-  /**
-   * Absorb errors and return true only when the content is new and added
-   * Any discovered blobs are added to `blobs`. Content whose bytes do not
-   * hash to the event's contentDigest is rejected.
-   */
-  private async trySaveContent(
-    event: Proto.Event,
-    bundle: Proto.EventBundle,
-    blobs: Proto.Blob[],
-  ): Promise<boolean> {
-    try {
-      const bytes = bundle.serializedContent?.contentBytes;
-      if (!bytes) return false;
-
-      const content = Proto.Content.fromBinary(bytes);
-
-      const digest = event.contentDigest;
-      if (!digest) return false;
-
-      if (
-        digest.type !== Proto.ContentDigestType.SHA256 ||
-        !bytesEqual(sha256(bytes), digest.value)
-      )
-        return false;
-
-      // Try finding blobs before checking content existence,
-      // since we might be missing a blob referenced by content
-      // that we already have.
-      blobs.push(...ContentManager.collectBlobs(content));
-
-      const existing = await this.storage.content.get(digest);
-      if (existing) return false;
-
-      await this.storage.content.save(digest, content);
-      return true;
-    } catch (e) {
-      console.warn('Pull event content:', e);
-      return false;
-    }
-  }
-
-  /**
-   * Persist each event bundle in order.
-   * Throws on the first malformed bundle or failed write.
-   */
-  async saveBundles(bundles: Proto.EventBundle[]): Promise<void> {
-    for (const bundle of bundles) {
-      await this.saveBundle(bundle);
-    }
-  }
-
-  /**
-   * Try saving this event bundle, content first.
-   * Throws an error if anything goes wrong.
-   */
-  async saveBundle(bundle: Proto.EventBundle): Promise<void> {
-    const signedEvent = bundle.signedEvent;
-    if (!signedEvent) throw new Error('Bundle is missing signedEvent');
-
-    const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-    if (!event.key?.signedBy) throw new Error('Event is missing key');
-
-    const contentBytes = bundle.serializedContent?.contentBytes;
-    if (!contentBytes) throw new Error('Bundle is missing content');
-
-    const digest = event.contentDigest;
-    if (
-      !digest ||
-      digest.type !== Proto.ContentDigestType.SHA256 ||
-      !bytesEqual(sha256(contentBytes), digest.value)
-    ) {
-      throw new Error('Content does not match event digest');
-    }
-
-    const content = Proto.Content.fromBinary(contentBytes);
-
-    // Both writes can throw.
-    // We will skip saving the event if the content fails to write.
-    if (!(await this.storage.content.get(digest))) {
-      await this.storage.content.save(digest, content);
-    }
-
-    if (!(await this.storage.events.getByEventKey(event.key))) {
-      await this.storage.events.save(signedEvent);
-    }
-  }
-
-  /** Used for syncing */
-  private getPullFn(strategy: SyncStrategy): () => Promise<number> {
-    switch (strategy) {
-      case SyncStrategy.FULL:
-      case SyncStrategy.FULL_PULL:
-        return () => this.pull(false);
-      case SyncStrategy.PARTIAL:
-      case SyncStrategy.PARTIAL_PULL:
-        return () => this.pull(true);
-      case SyncStrategy.FULL_PUSH:
-      case SyncStrategy.PARTIAL_PUSH:
-        return async () => 0;
-    }
-  }
-
-  /** Used for syncing. Returns null for strategies that don't push. */
-  private getPushFn(
-    strategy: SyncStrategy,
-    identity: string,
-  ): ((server: string) => Promise<PushResult | undefined>) | null {
-    switch (strategy) {
-      case SyncStrategy.FULL:
-      case SyncStrategy.FULL_PUSH:
-        return (server) => this.core.pushLocalEvents(identity, server, false);
-      case SyncStrategy.PARTIAL:
-      case SyncStrategy.PARTIAL_PUSH:
-        return (server) => this.core.pushLocalEvents(identity, server, true);
-      case SyncStrategy.FULL_PULL:
-      case SyncStrategy.PARTIAL_PULL:
-        return null;
-    }
-  }
-
-  /**
-   * Sync events for the active identity between this client and
-   * the remote servers. Throws only if the pull fails. Per-server push
-   * outcomes, including events the servers responded with errors/warnings
-   * for, are emitted as `pushResults` on {@link events}.
-   * @returns The number of new events pulled
-   */
-  async sync(strategy?: SyncStrategy): Promise<number> {
-    const identity = this.activeIdentityKey;
-    if (!identity) return 0;
-
-    strategy = strategy ?? SyncStrategy.PARTIAL;
-
-    const pullFn = this.getPullFn(strategy);
-    const pushFn = this.getPushFn(strategy, identity);
-
-    // Pull concurrently with pushing new events and blobs
-    const pullTask = pullFn();
-
-    // Push new events and blobs to servers
-    const servers = this.servers;
-    const pushTasks = (pushFn ? servers : []).map(
-      async (server): Promise<EventPushIssues[]> => {
-        const result = await pushFn?.(server);
-        if (!result) return [];
-
-        for (const issues of result.eventIssues) {
-          if (issues.errors.length > 0) {
-            console.error('Error from event push:', issues);
-          } else {
-            console.warn('Warning from event push:', issues);
-          }
-        }
-
-        const response = Proto.PutEventsResponse.fromBinary(
-          new Uint8Array(result.response),
-        );
-
-        await Promise.allSettled(
-          response.requestedBlobs.map(async (blob) => {
-            if (!blob.digest) return;
-
-            const blobData = await this.fileStore.get(blob.digest);
-            if (!blobData) return;
-
-            await this.uploadBlob(blob, blobData, [server]);
-          }),
-        );
-
-        return result.eventIssues;
-      },
-    );
-
-    const [pullResult, ...pushResults] = await Promise.allSettled([
-      pullTask,
-      ...pushTasks,
-    ]);
-
-    if (pushFn) {
-      this.events.emitPushResults(
-        pushResults.map((result, i): ServerPushResult => {
-          const server = servers[i];
-          if (result.status === 'fulfilled') {
-            return { identity, server, eventIssues: result.value };
-          }
-          console.error('Sync failed for a server:', result.reason);
-          return { identity, server, eventIssues: [], error: result.reason };
-        }),
-      );
-    }
-
-    if (pullResult.status === 'fulfilled') {
-      return pullResult.value;
-    } else {
-      throw pullResult.reason;
-    }
-  }
-
-  /**
-   * Pull the active identity's events as its other devices publish them.
-   * Follows identity switches. Returns a function that stops it.
-   */
-  startLiveSync(): () => void {
-    let unsubscribe = this.subscribeHeads();
-    const resubscribe = () => {
-      unsubscribe?.();
-      unsubscribe = this.subscribeHeads();
-    };
-    this.events.onKeyPairChanged(resubscribe);
-    return () => {
-      this.events.offKeyPairChanged(resubscribe);
-      unsubscribe?.();
-    };
-  }
-
-  /** Pulls whenever the active identity's heads move. Returns `unsubscribe`. */
-  private subscribeHeads(): (() => void) | undefined {
-    const identity = this.activeIdentityKey;
-    if (!identity) return undefined;
-
-    // One pull at a time, plus one if heads arrive during it.
-    let pulling = false;
-    let again = false;
-    const pull = async () => {
-      if (pulling) {
-        again = true;
-        return;
-      }
-      pulling = true;
-      try {
-        do {
-          again = false;
-          if (this.activeIdentityKey !== identity) return;
-          await this.pull(true, this.localHeads(identity)).catch((err) => {
-            console.warn('Live sync pull failed:', err);
-          });
-        } while (again);
-      } finally {
-        pulling = false;
-      }
-    };
-
-    const subscription = this.core
-      .fetchQuery(['heads', identity], new Query.SubscribeHeads({}), undefined)
-      .subscribe({
-        next: (result) => {
-          if (!result.data) return;
-          const remote = Proto.ListHeadsResponse.fromBinary(
-            new Uint8Array(result.data),
-          ).heads;
-          if (this.isBehind(identity, remote)) void pull();
-        },
-        // The core reconnects by itself.
-        error: () => {},
-        complete: () => {},
-      });
-    return () => subscription.unsubscribe();
-  }
-
-  /** Heads of the events loaded in this client, which may lag shared storage. */
-  private localHeads(identity: string): Proto.EventKey[] {
-    return Proto.ListHeadsResponse.fromBinary(
-      new Uint8Array(this.core.localHeads(identity)),
-    ).heads;
-  }
-
-  /** Whether any of `remote` is ahead of the local heads of `identity`. */
-  private isBehind(identity: string, remote: Proto.EventKey[]): boolean {
-    const local = new Map(
-      this.localHeads(identity).map((key) => [streamId(key), key.sequence]),
-    );
-    return remote.some(
-      (head) => (local.get(streamId(head)) ?? -1n) < head.sequence,
-    );
-  }
-
-  /**
-   * Derive `servers` from the active identity's latest Identity document.
-   * Identities that have never configured a server list keep the current
-   * (seed) list.
-   */
-  public refreshServers(): void {
-    if (this.activeIdentityKey) {
-      const state = this.identityManager.resolveIdentity();
-      if (state?.servers) {
-        this.servers = [...state.servers];
-      }
-    }
-    this.core.setServers(this.servers);
-  }
-
-  /**
-   * Set our state to match this login and persist it as the active login.
-   */
-  public async loginAs(
-    login: LoginId | null,
-    persist: boolean = true,
-  ): Promise<void> {
-    if (!login) {
-      if (persist) await this.storageDriver.setActiveLogin(null);
-      this.core.clearAuthTokens();
-      this.core.setActiveIdentity(undefined);
-      this.activeIdentityKey = null;
-      this.currentKeyPair = null;
-      return;
-    }
-
-    const loginDetails = await this.storage.logins.getLoginDetails(
-      login.identity,
-      login.publicKey,
-    );
-    if (!loginDetails) throw new Error('Login not found.');
-
-    if (persist) await this.storageDriver.setActiveLogin(login);
-
-    this.core.clearAuthTokens();
-    this.core.setActiveIdentity(loginDetails.identity);
-
-    this.activeIdentityKey = loginDetails.identity;
-    this.currentKeyPair = {
-      keyType: loginDetails.publicKey.keyType,
-      privateKey: loginDetails.privateKey,
-      publicKey: loginDetails.publicKey,
-    };
-
-    this.refreshServers();
-    this.events.emitKeyPairChanged(this.currentKeyPair);
-  }
-
-  private setState(state: ClientState) {
-    this.state = state;
-    this.events.emitStateChanged(state);
-  }
-
-  private setStep(step: InitializationStep) {
-    this.step = step;
-    this.events.emitProgress(step);
-  }
-
-  private setHydrationStatus(status: HydrationStatus) {
-    this.hydrationStatus = status;
-    this.events.emitHydrationStatus(status);
-  }
-
-  private setError(error: Error) {
-    this.state = ClientState.ERROR;
-    this.error = error;
-    this.events.emitStateChanged(this.state);
-    this.events.emitError(error);
-  }
-
-  get currentSystem(): Proto.PublicKey {
-    return this.currentKeyPair!.publicKey;
-  }
-
-  get crypto(): ICryptoManager {
-    if (!this.cryptoManager) {
-      throw new Error('Crypto manager not initialized');
-    }
-    return this.cryptoManager;
-  }
-
-  get storage(): StorageHandle {
-    if (!this.storageHandle) {
-      throw new Error('Storage handle not initialized');
-    }
-    return this.storageHandle;
-  }
-
-  get isReady(): boolean {
-    return this.state === ClientState.READY;
   }
 }

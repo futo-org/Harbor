@@ -1,8 +1,8 @@
-// We need some js-core functionality but not any of the native/wasm code.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../packages/js-core/src/proto/v2'),
-  ...jest.requireActual('../../../../../packages/js-core/src/utils/hex'),
-}));
+// Code encoding itself (hex and both base64 alphabets) is rs-core's, and
+// tested there; the shim stands in for it here.
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 jest.mock('@/src/common/constants', () => ({
   ...jest.requireActual('@/src/common/constants'),
   HARBOR_APP_URL: 'https://harbor.example',
@@ -10,7 +10,6 @@ jest.mock('@/src/common/constants', () => ({
 
 import { v2 } from '@polycentric/react-native';
 import {
-  EncodingMode,
   encodePairingCode,
   extractPairingInfo,
   pairingLinkFrom,
@@ -18,7 +17,7 @@ import {
 
 const PAIRING_INFO = v2.PairingInfo.create({
   server: 'https://server.example',
-  digestSha256: new Uint8Array(Array.from({ length: 32 }, (_, i) => i)),
+  digestSha256: new Uint8Array(Array.from({ length: 32 }, (_, i) => i)).buffer,
 });
 
 function expectMatchingPairingInfo(info: v2.PairingInfo | undefined) {
@@ -27,20 +26,16 @@ function expectMatchingPairingInfo(info: v2.PairingInfo | undefined) {
 }
 
 describe('extractPairingInfo', () => {
-  it('decodes a hex code', () => {
-    const code = encodePairingCode(PAIRING_INFO, EncodingMode.HEX);
-    expectMatchingPairingInfo(extractPairingInfo(code));
-  });
-
-  it('decodes a base64 code', () => {
-    const code = encodePairingCode(PAIRING_INFO, EncodingMode.BASE64);
-    expectMatchingPairingInfo(extractPairingInfo(code));
+  it('decodes a bare code', () => {
+    expectMatchingPairingInfo(
+      extractPairingInfo(encodePairingCode(PAIRING_INFO)),
+    );
   });
 
   it('decodes a pairing link', () => {
     const link = pairingLinkFrom(PAIRING_INFO);
     expect(link).toBe(
-      `https://harbor.example/login/pair?code=${encodePairingCode(PAIRING_INFO, EncodingMode.BASE64)}`,
+      `https://harbor.example/login/pair?code=${encodeURIComponent(encodePairingCode(PAIRING_INFO))}`,
     );
     expectMatchingPairingInfo(extractPairingInfo(link));
   });

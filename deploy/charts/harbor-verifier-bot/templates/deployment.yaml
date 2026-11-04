@@ -6,6 +6,11 @@ metadata:
     {{- include "harbor-verifier-bot.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  {{- if .Values.persistence.enabled }}
+  # The state volume is ReadWriteOnce and SQLite has one writer.
+  strategy:
+    type: Recreate
+  {{- end }}
   selector:
     matchLabels:
       {{- include "harbor-verifier-bot.selectorLabels" . | nindent 6 }}
@@ -40,6 +45,13 @@ spec:
           env:
             - name: PORT
               value: {{ .Values.containerPort | quote }}
+            {{- with .Values.keyEncryptionKey.secretName }}
+            - name: HARBOR_VERIFIER_BOT_KEY_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: {{ $.Values.keyEncryptionKey.secretKey }}
+            {{- end }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -57,6 +69,17 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: state
+              mountPath: /app/state
+          {{- end }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-state" (include "harbor-verifier-bot.fullname" .)) }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

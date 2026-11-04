@@ -1,10 +1,14 @@
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import {
+  eventKeyId,
+  queryPayload,
+  usePolycentric,
+} from '@/src/common/lib/polycentric-hooks';
 import { setQueryCache, useQuery } from '@/src/common/query/hooks/useQuery';
 import {
-  decodeBytesByServer,
-  encodeBytesByServer,
   FetchMode,
   Query,
+  QueryData,
+  QueryData_Tags,
   v2,
 } from '@polycentric/react-native';
 import { useMemo } from 'react';
@@ -44,14 +48,12 @@ export default function useReports(status: v2.ReportStatus): ReportsState {
     servers.length > 0,
   );
 
-  const byServer = useMemo(() => {
-    const decoded = new Map<string, v2.ListReportsResponse>();
-    if (!result.data) return decoded;
-    for (const [server, bytes] of decodeBytesByServer(result.data)) {
-      decoded.set(server, v2.ListReportsResponse.fromBinary(bytes));
-    }
-    return decoded;
-  }, [result.data]);
+  const byServer = useMemo(
+    () =>
+      queryPayload(result.data, QueryData_Tags.ReportsByServer)?.byServer ??
+      new Map<string, v2.ListReportsResponse>(),
+    [result.data],
+  );
 
   const reports = useMemo(() => {
     const rows: ServerReport[] = [];
@@ -75,8 +77,8 @@ export default function useReports(status: v2.ReportStatus): ReportsState {
     affected: (row: v2.ReportSummary) => boolean,
     newStatus: v2.ReportStatus,
   ) => {
-    const keepRow = status === v2.ReportStatus.UNSPECIFIED;
-    const patched = new Map<string, Uint8Array>();
+    const keepRow = status === v2.ReportStatus.Unspecified;
+    const patched = new Map<string, v2.ListReportsResponse>();
     for (const [s, response] of byServer) {
       let rows = response.reports;
       if (s === server) {
@@ -95,26 +97,27 @@ export default function useReports(status: v2.ReportStatus): ReportsState {
       }
       patched.set(
         s,
-        v2.ListReportsResponse.toBinary(
-          v2.ListReportsResponse.create({ ...response, reports: rows }),
-        ),
+        v2.ListReportsResponse.create({ ...response, reports: rows }),
       );
     }
-    setQueryCache(queryKey, { data: encodeBytesByServer(patched) });
-    client.core.invalidateQuery(queryKey);
+    setQueryCache(queryKey, {
+      data: new QueryData.ReportsByServer({ byServer: patched }),
+    });
+    void client.invalidateQuery(queryKey);
   };
 
   const deletePost = async ({ server, report }: ServerReport) => {
     if (!report.target) return;
     const target = report.target;
+    const targetId = eventKeyId(target);
     await client.deleteContent(server, target);
     patchCache(
       server,
       (row) =>
         row.target
-          ? v2.EventKey.equals(row.target, target)
+          ? eventKeyId(row.target) === targetId
           : row.reportId === report.reportId,
-      v2.ReportStatus.RESOLVED,
+      v2.ReportStatus.Resolved,
     );
   };
 
@@ -125,7 +128,7 @@ export default function useReports(status: v2.ReportStatus): ReportsState {
     patchCache(
       server,
       (row) => row.target?.identity === author,
-      v2.ReportStatus.RESOLVED,
+      v2.ReportStatus.Resolved,
     );
   };
 

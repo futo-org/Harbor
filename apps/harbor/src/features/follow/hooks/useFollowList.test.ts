@@ -1,20 +1,12 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
-// time, which can't run under jest — expose just what the hook needs.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-  Query: {
-    ListFollowing: function ListFollowing() {},
-    ListFollowers: function ListFollowers() {},
-  },
-  QueryStatus: { Loading: 'loading' },
-  UpdateMode: { Merge: 'merge' },
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shouldExtend: () => true,
 }));
 
-let mockQueryData: Uint8Array | null = null;
+let mockQueryData: QueryData | null = null;
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: (
     _key: unknown,
@@ -32,7 +24,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   RefreshStrategy: { Lazy: 'lazy' },
 }));
 
-import { v2 } from '@polycentric/react-native';
+import { QueryData, v2 } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -52,22 +44,22 @@ function followBundle(
     createdAt: BigInt(sequence),
   });
   const content = v2.Content.create({
-    contentBody: { oneofKind: 'follow', follow: { identity: target } },
+    contentBody: new v2.ContentBody.Follow({
+      follow: v2.Follow.create({ identity: target }),
+    }),
   });
   return v2.EventBundle.create({
     signedEvent: v2.SignedEvent.create({
-      eventBytes: v2.Event.toBinary(event),
-      signature: new Uint8Array([0]),
+      event,
+      signature: new Uint8Array([0]).buffer,
     }),
-    serializedContent: v2.SerializedContent.create({
-      contentBytes: v2.Content.toBinary(content),
-    }),
+    serializedContent: v2.SerializedContent.create({ content }),
   });
 }
 
 function respond(bundles: v2.EventBundle[], hasNextPage = false) {
-  mockQueryData = v2.ListFollowsResponse.toBinary(
-    v2.ListFollowsResponse.create({
+  mockQueryData = new QueryData.Follows({
+    response: v2.ListFollowsResponse.create({
       eventBundles: bundles,
       pageInfo: {
         startCursor: '',
@@ -76,7 +68,7 @@ function respond(bundles: v2.EventBundle[], hasNextPage = false) {
         hasNextPage,
       },
     }),
-  );
+  });
 }
 
 type HookResult = ReturnType<typeof useFollowList>;

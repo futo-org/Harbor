@@ -1,4 +1,5 @@
 ---
+
 title: Server Auth
 sidebar_label: Server Auth
 sidebar_position: 4
@@ -47,22 +48,16 @@ authorization: Bearer <jwt>
 
 ## Client side
 
-`createServerJwt` in js-core mints tokens:
+rs-core mints tokens with the signed-in key, which never leaves it. Hosts
+that need one for another service ask the client:
 
 ```ts
-import { createServerJwt } from '@polycentric/js-core';
-
-const jwt = await createServerJwt({
-  keyPair: client.currentKeyPair,
-  iss: client.activeIdentityKey,
-  aud: 'https://serv1.posts.futo.org',
-});
+const jwt = await client.createServerJwt('https://serv1.posts.futo.org');
 ```
 
-The app does not call this directly. `PolycentricClient` registers a token
-provider with the rust core, which attaches the header to every outgoing
-request and caches one token per server, asking for a new one only when the
-cached token is about to expire. Switching identity drops the cache.
+For its own requests rs-core attaches the header itself, caching one token
+per server and minting a new one only when the cached token is about to
+expire. Switching identity drops the cache.
 
 ## Server side
 

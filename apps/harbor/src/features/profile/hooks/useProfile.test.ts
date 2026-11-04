@@ -1,15 +1,13 @@
-jest.mock('@polycentric/react-native', () => ({
-  FetchMode: { OfflineOnly: 'OfflineOnly', Default: 'Default' },
-  Query: {
-    GetProfile: class {
-      constructor(_args: unknown) {}
-    },
-  },
-  v2: {},
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 jest.mock('@/src/common/query/hooks/useQuery', () => ({ useQuery: jest.fn() }));
-jest.mock('../lib/decodeProfile', () => ({ decodeProfile: jest.fn() }));
+jest.mock('../lib/decodeProfile', () => ({
+  ...jest.requireActual('../lib/decodeProfile'),
+  decodeProfile: jest.fn(),
+}));
 
+import { FetchMode, QueryData, v2 } from '@polycentric/react-native';
 import { renderHook } from '@testing-library/react-native';
 import { useProfile } from './useProfile';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
@@ -18,12 +16,16 @@ import { decodeProfile } from '../lib/decodeProfile';
 const mockUseQuery = useQuery as jest.Mock;
 const mockDecode = decodeProfile as jest.Mock;
 
+const profileData = new QueryData.Profile({
+  response: v2.GetProfileResponse.create({ followingCount: 1n }),
+});
+
 beforeEach(() => jest.clearAllMocks());
 
 describe('useProfile', () => {
   it('surfaces alias decoded from the query data', async () => {
     mockUseQuery.mockReturnValue({
-      data: new Uint8Array([1]),
+      data: profileData,
       isLoading: false,
       error: null,
       invalidate: jest.fn(),
@@ -37,7 +39,7 @@ describe('useProfile', () => {
     });
 
     const { result } = await renderHook(() =>
-      useProfile('id', { fetchMode: 'Default' as never }),
+      useProfile('id', { fetchMode: FetchMode.Default }),
     );
 
     expect(result.current.alias).toBe('alice@domain.com');
@@ -62,7 +64,7 @@ describe('useProfile', () => {
 describe('useProfile follow counters', () => {
   it('passes the decoded counters through', async () => {
     mockUseQuery.mockReturnValue({
-      data: new Uint8Array([1]),
+      data: profileData,
       isLoading: false,
       error: null,
       invalidate: jest.fn(),

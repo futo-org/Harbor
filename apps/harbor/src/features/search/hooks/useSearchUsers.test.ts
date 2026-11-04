@@ -1,23 +1,12 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
-// time, which can't run under jest — expose just what the hook needs.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-  // Pulled in transitively via useOmitLabels
-  moderationLabels: () => [],
-  isModerationLabel: () => false,
-  Query: {
-    SearchUsers: function SearchUsers() {},
-  },
-  QueryStatus: { Loading: 'loading' },
-  UpdateMode: { Merge: 'merge' },
-  SearchPostsSort: { Default: 'default', Top: 'top', Latest: 'latest' },
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shouldExtend: () => true,
 }));
 
-let mockQueryData: Uint8Array | null = null;
+let mockQueryData: QueryData | null = null;
 let capturedEnabled: boolean | null = null;
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: (
@@ -40,7 +29,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
   RefreshStrategy: { Lazy: 'lazy' },
 }));
 
-import { v2 } from '@polycentric/react-native';
+import { QueryData, v2 } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -61,8 +50,8 @@ function profileResult(
   return v2.SearchResult.create({
     eventBundle: v2.EventBundle.create({
       signedEvent: v2.SignedEvent.create({
-        eventBytes: v2.Event.toBinary(event),
-        signature: new Uint8Array([0]),
+        event,
+        signature: new Uint8Array([0]).buffer,
       }),
     }),
     rank,
@@ -70,8 +59,8 @@ function profileResult(
 }
 
 function respond(results: v2.SearchResult[], hasNextPage = false) {
-  mockQueryData = v2.SearchUsersResponse.toBinary(
-    v2.SearchUsersResponse.create({
+  mockQueryData = new QueryData.SearchUsers({
+    response: v2.SearchUsersResponse.create({
       results,
       pageInfo: {
         startCursor: '',
@@ -80,7 +69,7 @@ function respond(results: v2.SearchResult[], hasNextPage = false) {
         hasNextPage,
       },
     }),
-  );
+  });
 }
 
 type HookResult = ReturnType<typeof useSearchUsers>;

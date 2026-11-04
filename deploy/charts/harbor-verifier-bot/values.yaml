@@ -19,14 +19,37 @@ podAnnotations:
   prometheus.io/path: /metrics
 podLabels: {}
 
-podSecurityContext: {}
+# The image runs as uid 10001; fsGroup lets it write the state volume.
+podSecurityContext:
+  fsGroup: 10001
 
 securityContext: {}
 
-# HARBOR_VERIFIER_BOT_* (servers, database URL, OAuth client secrets) — put
-# secrets in a Secret referenced via envFrom.
+# HARBOR_VERIFIER_BOT_* (servers, OAuth client secrets, ...) — put secrets
+# in a Secret referenced via envFrom.
 env: []
 envFrom: []
+
+# Required: the Secret key holding HARBOR_VERIFIER_BOT_KEY_ENCRYPTION_KEY
+# (64 hex characters; `openssl rand -hex 32`), which seals the bot's private
+# key in its database. Changing it makes the stored identity unreadable.
+# Leave secretName empty only when envFrom already provides the variable.
+keyEncryptionKey:
+  secretName: ""
+  secretKey: key-encryption-key
+
+# The SQLite database holding the bot's identity, at /app/state. Without a
+# volume the identity only survives restarts when
+# HARBOR_VERIFIER_BOT_DATABASE_URL points at the legacy Postgres state it is
+# re-imported from on every start.
+persistence:
+  enabled: false
+  # Use an existing PersistentVolumeClaim instead of creating one.
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
 
 containerPort: 3002
 

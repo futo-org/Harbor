@@ -1,9 +1,16 @@
 import {
+  decodeBundle,
   eventKeyId,
   getKeyFingerprint,
+  queryPayload,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { COLLECTION, Query, v2 } from '@polycentric/react-native';
+import {
+  COLLECTION,
+  Query,
+  QueryData_Tags,
+  type v2,
+} from '@polycentric/react-native';
 import { useMemo } from 'react';
 import { decodeFieldValue } from '../utils/schemas';
 
@@ -30,27 +37,23 @@ export interface DecodedClaim {
  * (empty ones decode to ""); presentation decides how to show them.
  */
 export function decodeClaimBundle(bundle: v2.EventBundle): DecodedClaim | null {
-  if (!bundle.signedEvent || !bundle.serializedContent?.contentBytes) {
-    return null;
-  }
+  const decoded = decodeBundle(bundle, 'verificationClaim');
+  if (!decoded) return null;
   try {
-    const ev = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+    const ev = decoded.event;
     if (!ev.key) return null;
 
-    const content = v2.Content.fromBinary(
-      bundle.serializedContent.contentBytes,
-    );
-    if (content.contentBody.oneofKind !== 'verificationClaim') return null;
-
-    const verificationClaim = content.contentBody.verificationClaim;
-    const schemaBytes = verificationClaim.schema?.schemaBytes;
-    if (!schemaBytes) return null;
-    const schema = v2.VerificationSchema.fromBinary(schemaBytes);
+    const verificationClaim = decoded.content;
+    const schema = verificationClaim.schema?.schema;
+    if (!schema) return null;
 
     const fields: ClaimField[] = schema.fields.map((field) => ({
       key: field.key,
       label: field.description,
-      value: decodeFieldValue(field.kind, verificationClaim.fields[field.key]),
+      value: decodeFieldValue(
+        field.kind,
+        verificationClaim.fields.get(field.key) ?? new ArrayBuffer(0),
+      ),
     }));
 
     return {
@@ -105,9 +108,9 @@ export function useClaimById(
 
   const claim = useMemo<DecodedClaim | null>(() => {
     if (!enabled) return null;
-    if (!query.data || query.data.byteLength === 0) return null;
+    const bundle = queryPayload(query.data, QueryData_Tags.Event)?.bundle;
+    if (!bundle) return null;
     try {
-      const bundle = v2.EventBundle.fromBinary(new Uint8Array(query.data));
       const decoded = decodeClaimBundle(bundle);
       if (!decoded) return null;
       // Verify the bundle matches the requested signer/sequence so a sequence

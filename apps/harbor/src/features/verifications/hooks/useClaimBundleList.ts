@@ -3,7 +3,7 @@ import {
   RefreshStrategy,
   useQuery,
 } from '@/src/common/query/hooks/useQuery';
-import type { v2 } from '@polycentric/react-native';
+import type { QueryData, v2 } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import {
   type ClaimWithStatus,
@@ -19,7 +19,9 @@ import { useVerifierIdentities } from './useVerifierIdentities';
 export function useClaimBundleList(
   queryKey: string[],
   querySource: QuerySource,
-  parse: (bytes: Uint8Array) => v2.VerificationClaimBundle[],
+  parse: (
+    data: QueryData | undefined,
+  ) => v2.VerificationClaimBundle[] | undefined,
   enabled: boolean,
 ): {
   claims: ClaimWithStatus[];
@@ -31,9 +33,9 @@ export function useClaimBundleList(
   const verifierBots = useVerifierIdentities();
 
   const claims = useMemo<ClaimWithStatus[]>(() => {
-    if (!enabled || !query.data || query.data.byteLength === 0) return [];
+    if (!enabled) return [];
     try {
-      return parse(new Uint8Array(query.data))
+      return (parse(query.data) ?? [])
         .map((group) => decodeVerificationClaimBundle(group, verifierBots))
         .filter((c): c is ClaimWithStatus => c !== null)
         .sort((a, b) => Number(b.sequence - a.sequence));

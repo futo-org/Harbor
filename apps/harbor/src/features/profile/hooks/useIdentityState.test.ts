@@ -1,12 +1,12 @@
-jest.mock('@polycentric/react-native', () => ({
-  COLLECTION: { IDENTITY: 1 },
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 let mockSelf: { identityKey: string; servers: string[] } | null = null;
 const mockResolveIdentity = jest.fn();
 const mockListEvents = jest.fn();
 const mockClient = {
-  identityManager: { resolveIdentity: mockResolveIdentity },
+  resolveIdentity: mockResolveIdentity,
   listEvents: mockListEvents,
 };
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
@@ -39,9 +39,10 @@ describe('useIdentityState', () => {
         finishFetch = resolve;
       }),
     );
-    mockResolveIdentity.mockReturnValue(localState);
+    mockResolveIdentity.mockResolvedValue(localState);
 
     const { result } = await renderHook(() => useIdentityState(IDENTITY));
+    await act(async () => {});
 
     expect(result.current.state).toEqual(localState);
     expect(result.current.isLoading).toBe(false);
@@ -50,7 +51,7 @@ describe('useIdentityState', () => {
       collection: 1,
     });
 
-    mockResolveIdentity.mockReturnValue(remoteState);
+    mockResolveIdentity.mockResolvedValue(remoteState);
     await act(async () => {
       finishFetch();
     });
@@ -60,7 +61,7 @@ describe('useIdentityState', () => {
 
   it('reports loading while nothing is known locally', async () => {
     mockListEvents.mockReturnValue(new Promise(() => undefined));
-    mockResolveIdentity.mockReturnValue(null);
+    mockResolveIdentity.mockResolvedValue(null);
 
     const { result } = await renderHook(() => useIdentityState(IDENTITY));
 
@@ -71,7 +72,7 @@ describe('useIdentityState', () => {
   it('prefers the provider copy for the active identity', async () => {
     mockSelf = { identityKey: IDENTITY, servers: ['https://mine'] };
     mockListEvents.mockResolvedValue([]);
-    mockResolveIdentity.mockReturnValue(localState);
+    mockResolveIdentity.mockResolvedValue(localState);
 
     const { result } = await renderHook(() => useIdentityState(IDENTITY));
 

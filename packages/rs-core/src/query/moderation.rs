@@ -31,7 +31,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
-use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
+use crate::query::{ByteObservable, QueryClient, QueryKey, QueryOpts, channel};
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct IsModeratorArgs {}
@@ -124,7 +124,7 @@ pub fn is_moderator(
     query_key: Option<QueryKey>,
     _args: IsModeratorArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let query_fn = move |server_url: String| async move {
         let is_moderator = IdentityServiceClient::new(channel(&server_url).await?)
             .is_moderator(IsModeratorRequest {})
@@ -145,7 +145,7 @@ pub fn is_banned(
     query_key: Option<QueryKey>,
     args: IsBannedArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let IsBannedArgs { target_identity } = args;
     let query_fn = move |server_url: String| {
         let target_identity = target_identity.clone();
@@ -170,7 +170,7 @@ pub fn list_bans(
     query_key: Option<QueryKey>,
     args: ListBansArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let ListBansArgs {
         limit,
         after,
@@ -200,7 +200,7 @@ pub fn list_reports(
     query_key: Option<QueryKey>,
     args: ListReportsArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let ListReportsArgs {
         limit,
         forward_token,

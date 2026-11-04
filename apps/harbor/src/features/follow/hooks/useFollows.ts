@@ -31,21 +31,18 @@ const useFollows = create<FollowsState>((set, get) => ({
     const follows = get().follows;
 
     const content = v2.Content.create({
-      contentBody: {
-        oneofKind: 'follow',
-        follow: { identity },
-      },
+      contentBody: new v2.ContentBody.Follow({
+        follow: v2.Follow.create({ identity }),
+      }),
     });
 
-    await client.contentManager.save(content);
-    const event = await client.buildEvent(content, COLLECTION.GRAPH);
-    const signedEvent = await client.signEvent(event);
+    const pending = await client.prepareEvent(content, COLLECTION.GRAPH);
 
     // Optimistically upate the state
     set({ follows: new Map(follows).set(identity, true) });
 
     try {
-      await client.commitEvent(signedEvent, content);
+      await client.commitEvent(pending);
       await client.sync();
       // `identity` is the followee; the feed belongs to the follower.
       invalidateQuery(
@@ -67,7 +64,7 @@ const useFollows = create<FollowsState>((set, get) => ({
 
     const follows = get().follows;
 
-    const bundles = client.listValidEvents(self, COLLECTION.GRAPH);
+    const bundles = await client.listValidEvents(self, COLLECTION.GRAPH);
 
     // Tombstone every active Follow event this identity wrote that targets
     // `identity`. A single identity may have multiple follow events across
@@ -88,18 +85,11 @@ const useFollows = create<FollowsState>((set, get) => ({
       for (const { event } of targets) {
         if (!event.key) continue;
         const deleteContent = v2.Content.create({
-          contentBody: {
-            oneofKind: 'delete',
-            delete: { eventKey: event.key },
-          },
+          contentBody: new v2.ContentBody.Delete({
+            delete: v2.Delete.create({ eventKey: event.key }),
+          }),
         });
-        await client.contentManager.save(deleteContent);
-        const deleteEvent = await client.buildEvent(
-          deleteContent,
-          COLLECTION.GRAPH,
-        );
-        const signedDelete = await client.signEvent(deleteEvent);
-        await client.commitEvent(signedDelete, deleteContent);
+        await client.publish(deleteContent, COLLECTION.GRAPH);
       }
     } catch (err) {
       console.error(err);
@@ -122,7 +112,7 @@ const useFollows = create<FollowsState>((set, get) => ({
     const identity = client.activeIdentityKey;
     if (!identity) return;
 
-    const bundles = client.listValidEvents(identity, COLLECTION.GRAPH);
+    const bundles = await client.listValidEvents(identity, COLLECTION.GRAPH);
 
     const follows = new Map<string, boolean>();
     for (const bundle of bundles) {

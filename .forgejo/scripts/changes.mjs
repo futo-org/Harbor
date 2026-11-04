@@ -111,10 +111,12 @@ const grayjayMigrator = touches(
 );
 const scraper = touches(NODE_ROOT, 'services/scraper/', CHARTS);
 const verifierBot = touches(
-  NODE_ROOT,
-  /^packages\/js-[^/]+\//,
-  'packages/rs-core-wasm/',
+  CARGO,
+  'packages/rs-core/',
+  'packages/rs-common/',
+  'protos/',
   'services/verifier-bot/',
+  'services/common/',
   CHARTS,
 );
 const app = touches(LOCK, 'apps/', CHARTS);
@@ -169,10 +171,15 @@ const flags = {
     scan: pr,
     rs_core_lint: rsCore,
     rust_services_lint:
-      server || moderation || pushNotifications || otlp || grayjayMigrator,
+      server ||
+      moderation ||
+      pushNotifications ||
+      otlp ||
+      grayjayMigrator ||
+      verifierBot,
     services_db_schema: server || moderation || pushNotifications,
     js_sdk_lint: jsSdk,
-    js_services_lint: scraper || verifierBot,
+    js_services_lint: scraper,
     charts_lint: charts,
     docs_lint: docs,
     app_lint: app,
@@ -180,16 +187,20 @@ const flags = {
     rs_core: rsCore,
     js_sdk: jsSdk || rsCore,
     rust_services:
-      server || moderation || pushNotifications || otlp || grayjayMigrator,
+      server ||
+      moderation ||
+      pushNotifications ||
+      otlp ||
+      grayjayMigrator ||
+      verifierBot,
     scraper,
     app,
     app_typecheck: app || jsSdk || rnSdk || rsCore,
-    build_sdks: rsCore || jsSdk || rnSdk || app || verifierBot,
+    build_sdks: rsCore || jsSdk || rnSdk || app,
     build_rn_sdk: rnSdk || rsCore || app,
     kt_core_lint: ktCore,
     kt_core_build: ktCore,
     image_scraper: scraper,
-    image_verifier_bot: verifierBot,
     web_image: webE2e,
     server_integration: serverIntegration,
     moderation_integration: moderationIntegration,
@@ -235,6 +246,13 @@ const rustServices = [
     changed: otlp,
   },
   {
+    image: 'verifier-bot',
+    label: 'verifier bot',
+    dockerfile: 'services/verifier-bot',
+    packages: 'verifier-bot',
+    changed: verifierBot,
+  },
+  {
     image: 'grayjay-migrator',
     label: 'grayjay migrator',
     dockerfile: 'services/grayjay-migrator',
@@ -263,12 +281,7 @@ if (!flags.service_images) {
   matrix.service_images.include.push({ label: 'Build service images' });
 }
 // Jobs that download the SDK artifacts (sdk-artifacts action) need them built.
-flags.build_sdks ||=
-  flags.image_verifier_bot ||
-  flags.verifier_bot_tests ||
-  flags.web_image ||
-  flags.app_typecheck ||
-  flags.js_sdk;
+flags.build_sdks ||= flags.web_image || flags.app_typecheck || flags.js_sdk;
 flags.build_rn_sdk ||= flags.web_image;
 
 // Outputs -------------------------------------------------------------------

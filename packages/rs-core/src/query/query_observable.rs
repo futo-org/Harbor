@@ -22,7 +22,7 @@ pub struct QueryResult<T> {
 }
 
 /// Convert a query payload into the FFI-facing `Vec<u8>` representation
-/// used by `QueryObservable` emissions.
+/// used by `ByteObservable` emissions.
 pub trait ToFfiBytes {
     fn to_ffi_bytes(&self) -> Vec<u8>;
 }
@@ -33,38 +33,37 @@ impl ToFfiBytes for Vec<u8> {
     }
 }
 
-#[derive(uniffi::Record)]
-pub struct QueryResultFfi {
+/// A [`QueryResult`] with its payload encoded, as merged by the query layer.
+/// [`crate::sdk::queries`] decodes it for hosts.
+pub struct ByteResult {
     pub data: Option<Vec<u8>>,
     pub status: QueryStatus,
     pub successful_servers: u32,
     pub pending_servers: u32,
 }
 
-#[uniffi::export(with_foreign)]
-pub trait QueryObserver: Send + Sync {
-    fn next(&self, result: QueryResultFfi);
+pub trait ByteObserver: Send + Sync {
+    fn next(&self, result: ByteResult);
     fn error(&self, message: String);
     fn complete(&self);
 }
 
-#[uniffi::export]
-pub trait QueryObservable: Send + Sync {
-    fn subscribe(&self, observer: Arc<dyn QueryObserver>) -> Arc<Subscription>;
+pub trait ByteObservable: Send + Sync {
+    fn subscribe(&self, observer: Arc<dyn ByteObserver>) -> Arc<Subscription>;
 }
 
-impl<T> QueryObservable for Observable<QueryResult<T>>
+impl<T> ByteObservable for Observable<QueryResult<T>>
 where
     T: ToFfiBytes + Clone + Send + Sync + 'static,
 {
-    fn subscribe(&self, observer: Arc<dyn QueryObserver>) -> Arc<Subscription> {
+    fn subscribe(&self, observer: Arc<dyn ByteObserver>) -> Arc<Subscription> {
         let next = observer.clone();
         let error = observer.clone();
         let complete = observer;
         Observable::subscribe(
             self,
             move |result: QueryResult<T>| {
-                next.next(QueryResultFfi {
+                next.next(ByteResult {
                     data: result.data.as_ref().map(ToFfiBytes::to_ffi_bytes),
                     status: result.status,
                     successful_servers: result.successful_servers as u32,

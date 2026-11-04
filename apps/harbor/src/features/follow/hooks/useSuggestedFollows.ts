@@ -2,12 +2,17 @@ import {
   shouldExtend,
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
+import {
+  bundleEvent,
+  queryPayload,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import {
   Query,
+  type QueryData,
+  QueryData_Tags,
   QueryStatus,
   UpdateMode,
-  v2,
   type FetchMode,
 } from '@polycentric/react-native';
 import { useMemo } from 'react';
@@ -19,42 +24,31 @@ export interface FollowSuggestionEntry {
   followers: string[];
 }
 
-function extractToken(data: ArrayBuffer | undefined): string | undefined {
-  if (!data) return undefined;
-  try {
-    return v2.SuggestFollowResponse.fromBinary(new Uint8Array(data)).pageInfo
-      ?.endCursor;
-  } catch {
-    return undefined;
-  }
+function extractToken(data: QueryData | undefined): string | undefined {
+  return queryPayload(data, QueryData_Tags.SuggestedFollows)?.response.pageInfo
+    ?.endCursor;
 }
 
 /** Decode the merged pages into rows; returns [entries, hasNextPage]. */
 function decodeEntries(
-  data: ArrayBuffer | undefined,
+  data: QueryData | undefined,
 ): [FollowSuggestionEntry[], boolean] {
-  if (!data || data.byteLength === 0) return [[], false];
-  try {
-    const response = v2.SuggestFollowResponse.fromBinary(new Uint8Array(data));
+  const response = queryPayload(
+    data,
+    QueryData_Tags.SuggestedFollows,
+  )?.response;
+  if (!response) return [[], false];
 
-    // Suggestions are Identity events; the core has already merged them to
-    // one per identity, best connected first.
-    const entries: FollowSuggestionEntry[] = [];
-    for (const suggestion of response.suggestions) {
-      const signedEvent = suggestion.suggestion?.signedEvent;
-      if (!signedEvent) continue;
-      try {
-        const event = v2.Event.fromBinary(signedEvent.eventBytes);
-        const identity = event.key?.identity;
-        if (!identity) continue;
-        entries.push({ identity, followers: suggestion.followers });
-      } catch {}
-    }
-
-    return [entries, response.pageInfo?.hasNextPage ?? false];
-  } catch {
-    return [[], false];
+  // Suggestions are Identity events; the core has already merged them to
+  // one per identity, best connected first.
+  const entries: FollowSuggestionEntry[] = [];
+  for (const suggestion of response.suggestions) {
+    const identity = bundleEvent(suggestion.suggestion)?.key?.identity;
+    if (!identity) continue;
+    entries.push({ identity, followers: suggestion.followers });
   }
+
+  return [entries, response.pageInfo?.hasNextPage ?? false];
 }
 
 /**

@@ -11,15 +11,15 @@ import useReports, { REPORTS_PER_SERVER } from '../hooks/useReports';
 import { ReportItem } from './ReportItem';
 
 const STATUS_TABS: { label: string; status: v2.ReportStatus }[] = [
-  { label: 'Open', status: v2.ReportStatus.OPEN },
-  { label: 'Resolved', status: v2.ReportStatus.RESOLVED },
-  { label: 'Dismissed', status: v2.ReportStatus.DISMISSED },
-  { label: 'All', status: v2.ReportStatus.UNSPECIFIED },
+  { label: 'Open', status: v2.ReportStatus.Open },
+  { label: 'Resolved', status: v2.ReportStatus.Resolved },
+  { label: 'Dismissed', status: v2.ReportStatus.Dismissed },
+  { label: 'All', status: v2.ReportStatus.Unspecified },
 ];
 
 export default function ReportsScreen() {
   const { theme } = useTheme();
-  const [status, setStatus] = useState<v2.ReportStatus>(v2.ReportStatus.OPEN);
+  const [status, setStatus] = useState<v2.ReportStatus>(v2.ReportStatus.Open);
   const {
     isLoading,
     reports,

@@ -1,6 +1,0 @@
-// storage
-export type { StorageHandle, Repositories } from '@polycentric/js-core';
-
-export { IndexedDBDatabase } from './datastore/indexeddb/database';
-export { IndexedDBStorageDriver } from './datastore/indexeddb/storage-driver';
-export { OpfsFileStoreDriver } from './filestore/opfs/file-store-driver';

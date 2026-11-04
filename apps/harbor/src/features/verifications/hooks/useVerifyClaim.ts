@@ -1,12 +1,12 @@
 import { useToast } from '@/src/common/components/toast';
 import {
-  hexToBytes,
   useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { useState } from 'react';
+import { claimEventKey } from '../utils/claim-id';
 
 // Verify a claim as the current identity by publishing a VerificationVerify
 // event referencing the claim.
@@ -29,27 +29,21 @@ export default function useVerifyClaim() {
       }
       setPending(true);
       try {
-        const claimEventKey = v2.EventKey.fromBinary(hexToBytes(claimId));
         const content = v2.Content.create({
-          contentBody: {
-            oneofKind: 'verificationVerify',
-            verificationVerify: { claimEventKey },
-          },
+          contentBody: new v2.ContentBody.VerificationVerify({
+            verificationVerify: v2.VerificationVerify.create({
+              claimEventKey: claimEventKey(claimId),
+            }),
+          }),
         });
-        await client.contentManager.save(content);
-        const event = await client.buildEvent(
-          content,
-          COLLECTION.VERIFICATIONS,
-        );
-        const signedEvent = await client.signEvent(event);
-        await client.commitEvent(signedEvent, content);
+        await client.publish(content, COLLECTION.VERIFICATIONS);
 
         toast.success('Verified!');
 
         // Delivery to servers is best-effort — the verify is already saved
         // locally and will be pushed on the next sync if this fails.
         try {
-          await client.sync(SyncStrategy.PARTIAL_PUSH);
+          await client.sync(SyncStrategy.PartialPush);
         } catch (e) {
           console.warn('Failed to push verification to servers:', e);
         }

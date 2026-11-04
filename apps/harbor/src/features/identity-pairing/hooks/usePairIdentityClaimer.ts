@@ -1,10 +1,10 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
 import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
-import type {
-  PairingSession,
-  PendingLogin,
-  v2,
+import {
+  LoginKind,
+  type LoginOverview,
+  type PairingSession,
+  type v2,
 } from '@polycentric/react-native';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -35,7 +35,8 @@ type GeneratingState = {
 };
 
 type JoiningState = GeneratingState & {
-  pendingLogin: PendingLogin;
+  /** The key this device generated; it never leaves rs-core. */
+  pendingLogin: LoginOverview;
 };
 
 type PollingState = JoiningState;
@@ -101,8 +102,7 @@ export function usePairIdentityClaimer(
 
       const fetchSession = async () => {
         try {
-          const session =
-            await client.pairingSessionManager.getPairingSession(info);
+          const session = await client.getPairingSession(info);
           if (canceled) return;
 
           setState((prev) =>
@@ -126,9 +126,9 @@ export function usePairIdentityClaimer(
 
       const generate = async () => {
         try {
-          const pendingLogin = await client.loginManager.beginLogin(
-            session.digest.issuerIdentity,
-            'pair',
+          const pendingLogin = await client.beginLogin(
+            session.issuerIdentity,
+            LoginKind.Pair,
           );
           if (canceled) return;
 
@@ -151,10 +151,7 @@ export function usePairIdentityClaimer(
 
       const join = async () => {
         try {
-          await client.pairingSessionManager.joinPairingSession(
-            info,
-            pendingLogin.publicKey,
-          );
+          await client.joinPairingSession(info, pendingLogin.id);
           if (canceled) return;
 
           setState({ ...state, stage: 'polling' });
@@ -177,11 +174,10 @@ export function usePairIdentityClaimer(
       // Poll until we get a different marker and then try claiming
       const pollForRemoteChange = async () => {
         try {
-          const isAuthorized =
-            await client.pairingSessionManager.pollForAuthorization(
-              info,
-              pendingLogin.publicKey,
-            );
+          const isAuthorized = await client.pollForAuthorization(
+            info,
+            pendingLogin.id,
+          );
 
           if (canceled || !isAuthorized) return;
 
@@ -214,7 +210,7 @@ export function usePairIdentityClaimer(
           if (canceled) return;
 
           const claimServers = serversForClaim(session, info, client.servers);
-          await client.loginManager.claim(pendingLogin, claimServers);
+          await client.claim(pendingLogin.id, claimServers);
           if (canceled) return;
 
           setState({ stage: 'done' });
@@ -263,12 +259,12 @@ export function usePairIdentityClaimer(
 
   let issuerIdentity: string | undefined;
   if ('session' in state) {
-    issuerIdentity = state.session?.digest.issuerIdentity;
+    issuerIdentity = state.session?.issuerIdentity;
   }
 
   let myPublicKey: v2.PublicKey | undefined;
   if ('pendingLogin' in state) {
-    myPublicKey = state.pendingLogin.publicKey;
+    myPublicKey = state.pendingLogin.id.publicKey;
   }
 
   // Derive return value
@@ -288,18 +284,11 @@ function serversForClaim(
   info: v2.PairingInfo,
   currentServers: string[],
 ): string[] {
-  const bundle = session.issuerState.identityState;
-  if (!bundle) {
+  if (!session.issuerIdentityEvent) {
     throw new Error('Pairing session has no issuer identity state.');
   }
 
-  const decoded = decodeBundle(bundle, 'identity');
-  if (!decoded) {
-    throw new Error('Pairing session issuer identity state is invalid.');
-  }
-
-  const declared = decoded.content.servers;
-  if (declared) return declared.urls;
+  if (session.issuerServers) return session.issuerServers;
 
   return [...new Set([...currentServers, info.server])];
 }

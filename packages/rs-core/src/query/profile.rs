@@ -10,7 +10,7 @@ use crate::lock::LockRecover;
 use crate::query::event::merge::{merge_event_bundles, merge_event_hints};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{
-    FetchMode, QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
+    ByteObservable, FetchMode, QueryClient, QueryKey, QueryOpts, QueryResult, QueryStatus, channel,
 };
 use crate::rx::observable::Observable;
 
@@ -87,7 +87,7 @@ pub fn get_profile(
     query_key: Option<QueryKey>,
     args: GetProfileArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let GetProfileArgs { identity } = args;
     let fetch_mode = opts.as_ref().and_then(|o| o.fetch_mode);
 

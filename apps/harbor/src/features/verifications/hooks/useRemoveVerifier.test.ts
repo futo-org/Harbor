@@ -1,62 +1,50 @@
-// The barrel pulls in native uniffi init at import time — expose just what
-// the hook needs.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-  COLLECTION: { VERIFICATIONS: 8 },
-  SyncStrategy: { PARTIAL_PUSH: 'partial-push' },
-}));
-
-// ESM-only; jest-expo doesn't transform it. The digest content is irrelevant.
-jest.mock('@noble/hashes/sha2.js', () => ({
-  sha256: () => new Uint8Array(32),
-}));
+// The barrel pulls in native uniffi init at import time; use the stand-in.
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 const mockClient = {
   activeIdentityKey: 'me' as string | null,
-  listValidEvents: jest.fn((): unknown[] => []),
-  contentManager: { save: jest.fn(async () => undefined) },
-  buildEvent: jest.fn(async () => ({})),
-  signEvent: jest.fn(async (event: unknown) => ({ event })),
-  commitEvent: jest.fn(
-    async (_signed: unknown, _content: unknown) => undefined,
+  listValidEvents: jest.fn(
+    async (
+      _identity: string,
+      _collection: number,
+    ): Promise<V2.EventBundle[]> => [],
   ),
-  sync: jest.fn(async () => undefined),
+  publish: jest.fn(async (_content: V2.Content, _collection: number) => ({})),
+  sync: jest.fn(async (_strategy?: unknown) => 0),
 };
 
-jest.mock('@/src/common/lib/polycentric-hooks', () => {
-  const helpers = jest.requireActual(
-    '@/src/common/lib/polycentric-hooks/helpers',
-  );
-  return {
-    usePolycentric: () => mockClient,
-    decodeBundle: helpers.decodeBundle,
-    eventKeyId: helpers.eventKeyId,
-  };
-});
+jest.mock('@/src/common/lib/polycentric-hooks', () => ({
+  ...jest.requireActual('@/src/common/lib/polycentric-hooks/helpers'),
+  usePolycentric: () => mockClient,
+}));
 
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   invalidateQuery: jest.fn(),
 }));
 
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import type { v2 as V2 } from '@polycentric/react-native';
+import { contentAs } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  COLLECTION,
+  eventKeyId,
+  SyncStrategy,
+  type v2 as V2,
+} from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
+import {
+  eventBundle,
+  verificationKey,
+  verificationTargetContent,
+} from '../__fixtures__/bundles';
 import type { DecodedClaim } from './useClaimById';
 import useRemoveVerifier, { removeVerifier } from './useRemoveVerifier';
 
-const { v2 } = jest.requireMock('@polycentric/react-native') as {
-  v2: typeof V2;
-};
-
 function eventKey(sequence: number): V2.EventKey {
-  return v2.EventKey.create({
-    collection: 8,
-    identity: 'me',
-    signedBy: v2.PublicKey.create({ key: new Uint8Array([1, 2, 3]) }),
-    sequence: BigInt(sequence),
-  });
+  return verificationKey('me', sequence, [1, 2, 3]);
 }
 
 function targetBundle(
@@ -64,26 +52,14 @@ function targetBundle(
   claimEventKey: V2.EventKey,
   targetIdentities: string[],
 ): V2.EventBundle {
-  const content = v2.Content.create({
-    contentBody: {
-      oneofKind: 'verificationTarget',
-      verificationTarget: { claimEventKey, targetIdentities },
-    },
-  });
-  const event = v2.Event.create({ key, createdAt: 1000n });
-  return v2.EventBundle.create({
-    signedEvent: v2.SignedEvent.create({
-      eventBytes: v2.Event.toBinary(event),
-      signature: new Uint8Array([0]),
-    }),
-    serializedContent: v2.SerializedContent.create({
-      contentBytes: v2.Content.toBinary(content),
-    }),
-  });
+  return eventBundle(
+    key,
+    verificationTargetContent(targetIdentities, claimEventKey),
+  );
 }
 
 const CLAIM_KEY = eventKey(7);
-const CLAIM_ID = Buffer.from(v2.EventKey.toBinary(CLAIM_KEY)).toString('hex');
+const CLAIM_ID = eventKeyId(CLAIM_KEY);
 const OTHER_CLAIM_KEY = eventKey(8);
 
 const CLAIM: DecodedClaim = {
@@ -110,21 +86,20 @@ function renderHook(claim: DecodedClaim = CLAIM): {
   return result;
 }
 
-/** The Delete event keys committed, in order. */
+/** The Delete event keys published, in order. */
 function deletedKeys(): V2.EventKey[] {
-  return mockClient.commitEvent.mock.calls.map(([, content]) => {
-    const body = (content as V2.Content).contentBody;
-    if (body.oneofKind !== 'delete' || !body.delete.eventKey) {
-      throw new Error('expected a delete');
-    }
-    return body.delete.eventKey;
+  return mockClient.publish.mock.calls.map(([content, collection]) => {
+    expect(collection).toBe(COLLECTION.VERIFICATIONS);
+    const eventKey = contentAs(content, 'delete')?.eventKey;
+    if (!eventKey) throw new Error('expected a delete');
+    return eventKey;
   });
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockClient.activeIdentityKey = 'me';
-  mockClient.listValidEvents.mockReturnValue([
+  mockClient.listValidEvents.mockResolvedValue([
     targetBundle(eventKey(10), CLAIM_KEY, ['them']),
     targetBundle(eventKey(11), CLAIM_KEY, ['other']),
     targetBundle(eventKey(12), OTHER_CLAIM_KEY, ['them']),
@@ -136,11 +111,11 @@ describe('removeVerifier', () => {
     await removeVerifier(mockClient as never, CLAIM_ID, 'them');
 
     expect(deletedKeys()).toEqual([expect.objectContaining({ sequence: 10n })]);
-    expect(mockClient.sync).toHaveBeenCalledWith('partial-push');
+    expect(mockClient.sync).toHaveBeenCalledWith(SyncStrategy.PartialPush);
   });
 
   it('tombstones every matching target', async () => {
-    mockClient.listValidEvents.mockReturnValue([
+    mockClient.listValidEvents.mockResolvedValue([
       targetBundle(eventKey(10), CLAIM_KEY, ['them']),
       targetBundle(eventKey(13), CLAIM_KEY, ['them']),
     ]);
@@ -153,7 +128,7 @@ describe('removeVerifier', () => {
   it('is a no-op without a matching target', async () => {
     await removeVerifier(mockClient as never, CLAIM_ID, 'nobody');
 
-    expect(mockClient.commitEvent).not.toHaveBeenCalled();
+    expect(mockClient.publish).not.toHaveBeenCalled();
     expect(mockClient.sync).not.toHaveBeenCalled();
   });
 
@@ -163,7 +138,7 @@ describe('removeVerifier', () => {
     await removeVerifier(mockClient as never, CLAIM_ID, 'them');
 
     expect(mockClient.listValidEvents).not.toHaveBeenCalled();
-    expect(mockClient.commitEvent).not.toHaveBeenCalled();
+    expect(mockClient.publish).not.toHaveBeenCalled();
   });
 
   it('does not throw when the push fails', async () => {
@@ -172,7 +147,7 @@ describe('removeVerifier', () => {
     await expect(
       removeVerifier(mockClient as never, CLAIM_ID, 'them'),
     ).resolves.toBeUndefined();
-    expect(mockClient.commitEvent).toHaveBeenCalled();
+    expect(mockClient.publish).toHaveBeenCalled();
   });
 });
 
@@ -199,8 +174,8 @@ describe('useRemoveVerifier', () => {
   it('reports pending while the removal runs', async () => {
     let finish: () => void = () => {};
     mockClient.sync.mockReturnValueOnce(
-      new Promise<undefined>((resolve) => {
-        finish = () => resolve(undefined);
+      new Promise<number>((resolve) => {
+        finish = () => resolve(0);
       }),
     );
 

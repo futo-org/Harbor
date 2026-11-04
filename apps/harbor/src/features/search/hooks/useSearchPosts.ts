@@ -2,6 +2,7 @@ import {
   decodeFeedItems,
   labelMapFromSets,
   type PostData,
+  queryPayload,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import {
   type QueryKey,
@@ -11,8 +12,9 @@ import {
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import {
   Query,
+  type QueryData,
+  QueryData_Tags,
   QueryStatus,
-  labelsFromSearchResponse,
   SearchPostsSort,
   UpdateMode,
   v2,
@@ -33,20 +35,17 @@ export const searchQueryKeys = {
   users: (query: string): string[] => ['search_users', query],
 };
 
-function extractToken(data: ArrayBuffer | undefined): string | undefined {
-  if (!data) return undefined;
-  try {
-    return v2.SearchPostsResponse.fromBinary(new Uint8Array(data)).pageInfo
-      ?.endCursor;
-  } catch {
-    return undefined;
-  }
+function extractToken(data: QueryData | undefined): string | undefined {
+  return queryPayload(data, QueryData_Tags.SearchPosts)?.response.pageInfo
+    ?.endCursor;
 }
 
 function decodeSearchPostsResponse(
-  data: ArrayBuffer,
+  data: QueryData,
 ): [PostData[], v2.PageInfo | undefined] {
-  const response = v2.SearchPostsResponse.fromBinary(new Uint8Array(data));
+  const payload = queryPayload(data, QueryData_Tags.SearchPosts);
+  if (!payload) return [[], undefined];
+  const { response, labels } = payload;
   const feedShaped = v2.GetFeedResponse.create({
     eventBundles: response.results.flatMap((r) =>
       r.eventBundle ? [r.eventBundle] : [],
@@ -55,10 +54,7 @@ function decodeSearchPostsResponse(
     pageInfo: response.pageInfo,
   });
   return [
-    decodeFeedItems(
-      feedShaped,
-      labelMapFromSets(labelsFromSearchResponse(data)),
-    ),
+    decodeFeedItems(feedShaped, labelMapFromSets(labels)),
     response.pageInfo,
   ];
 }
@@ -72,7 +68,7 @@ function decodeSearchPostsResponse(
  */
 function useSearchPostsWithOverlays(
   queryKey: QueryKey,
-  queryData: ArrayBuffer | undefined,
+  queryData: QueryData | undefined,
 ): PostData[] {
   const key = queryKey.join('\0');
   const output = useFeedDataStore(
@@ -96,7 +92,7 @@ function useSearchPostsWithOverlays(
  */
 function useSearchPostsPageInfo(
   queryKey: QueryKey,
-  queryData: ArrayBuffer | undefined,
+  queryData: QueryData | undefined,
 ): v2.PageInfo | undefined {
   const key = queryKey.join('\0');
   const pageInfo = useFeedDataStore(

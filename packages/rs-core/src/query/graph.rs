@@ -17,7 +17,7 @@ use crate::lock::LockRecover;
 use crate::query::event::merge::{EventDedupKey, event_dedup_key};
 use crate::query::pagination::{FakeCursorToken, merge_page_info, prepare_page_info};
 use crate::query::validation::{log_dropped, retain_validated_bundles, retain_validated_hints};
-use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
+use crate::query::{ByteObservable, QueryClient, QueryKey, QueryOpts, channel};
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListFollowingArgs {
@@ -187,7 +187,7 @@ pub fn list_following(
     query_key: Option<QueryKey>,
     args: ListFollowingArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let ListFollowingArgs {
         identity,
         limit,
@@ -250,7 +250,7 @@ pub fn list_followers(
     query_key: Option<QueryKey>,
     args: ListFollowersArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let ListFollowersArgs {
         identity,
         limit,
@@ -314,7 +314,7 @@ pub fn suggest_follow(
     query_key: Option<QueryKey>,
     args: SuggestFollowArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let SuggestFollowArgs {
         limit,
         backward_token,

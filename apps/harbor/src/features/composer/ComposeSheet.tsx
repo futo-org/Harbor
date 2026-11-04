@@ -5,7 +5,7 @@ import { Sheet } from '@/src/common/components/sheet';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import type { types } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView } from 'react-native';
@@ -17,7 +17,7 @@ import { MentionProvider } from './hooks/useMentionStore';
 
 type ComposeSheetProps = {
   /** TODO: should be v2 `SignedEvent` */
-  onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
+  onPostCreated: (signedEvent: v2.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
   quote?: PostData | null;
   /** Open the image picker as soon as the composer mounts. */

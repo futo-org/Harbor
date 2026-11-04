@@ -3,6 +3,7 @@ import {
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import {
+  bundleEvent,
   eventKeyId,
   getKeyFingerprint,
 } from '@/src/common/lib/polycentric-hooks/helpers';
@@ -45,52 +46,42 @@ export default function useCreateClaim() {
       setPending(true);
 
       try {
-        const fields: { [key: string]: Uint8Array } = {};
+        const fields = new Map<string, ArrayBuffer>();
         for (const field of schema.fields) {
           const raw = values[field.key]?.trim() ?? '';
           // Omit empty fields; required ones are validated by the caller.
           if (raw.length === 0) continue;
-          fields[field.key] = encodeFieldValue(field.kind, raw);
+          fields.set(field.key, encodeFieldValue(field.kind, raw));
         }
 
         const content = v2.Content.create({
-          contentBody: {
-            oneofKind: 'verificationClaim',
-            verificationClaim: {
+          contentBody: new v2.ContentBody.VerificationClaim({
+            verificationClaim: v2.VerificationClaim.create({
               schema: serializeSchema(schema),
               fields,
-            },
-          },
+            }),
+          }),
         });
 
-        // Persist the content first: the event references it by digest, and
-        // `sync()` looks the content up from the local store to attach it.
-        await client.contentManager.save(content);
-
-        const event = await client.buildEvent(
-          content,
-          COLLECTION.VERIFICATIONS,
-        );
-        const signedEvent = await client.signEvent(event);
-
-        // Save the event locally and mirror it (with content) into the core.
-        await client.commitEvent(signedEvent, content);
+        // Sign and store the claim locally.
+        const bundle = await client.publish(content, COLLECTION.VERIFICATIONS);
+        const key = bundleEvent(bundle)?.key;
 
         try {
-          await client.sync(SyncStrategy.PARTIAL_PUSH);
+          await client.sync(SyncStrategy.PartialPush);
         } catch (err) {
           console.error(err);
         }
 
         // The same sync below delivers both events.
-        if (requestFrom && event.key) {
-          await publishVerificationTarget(client, event.key, [requestFrom]);
+        if (requestFrom && key) {
+          await publishVerificationTarget(client, key, [requestFrom]);
         }
 
         // Delivery to servers is best-effort — the claim is already saved
         // locally and will be pushed on the next sync if this fails.
         try {
-          await client.sync(SyncStrategy.PARTIAL_PUSH);
+          await client.sync(SyncStrategy.PartialPush);
         } catch (e) {
           console.warn('Failed to push claim to servers:', e);
         }
@@ -100,7 +91,6 @@ export default function useCreateClaim() {
           invalidateQuery(client, ['claims-list', identityKey]);
         }
 
-        const key = event.key;
         if (!key?.signedBy) return undefined;
         return {
           id: eventKeyId(key),

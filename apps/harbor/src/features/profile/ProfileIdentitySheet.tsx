@@ -2,6 +2,7 @@ import { IconButton, ProfileAvatar, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
 import {
+  keysEqual,
   publicKeyToString,
   useCurrentIdentity,
   usePolycentric,
@@ -13,12 +14,7 @@ import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
 import { ServerRow } from '@/src/features/settings/servers/ServerRow';
 import { useServerSettings } from '@/src/features/settings/servers/useServerSettings';
-import {
-  COLLECTION,
-  FetchMode,
-  IdentityManager,
-  type v2,
-} from '@polycentric/react-native';
+import { COLLECTION, FetchMode, type v2 } from '@polycentric/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
@@ -41,18 +37,18 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
   const { canRotate } = useCurrentAuthorization();
 
   const isSelf = selfKey === identityKey;
-  const deviceKey = client.currentKeyPair?.publicKey;
+  const deviceKey = client.activePublicKey;
   const [showInfoSheet, setShowInfoSheet] = useState(false);
 
   const keys = useMemo<KeyEntry[]>(() => {
     if (!state) return [];
     const entries: KeyEntry[] = [];
     for (const key of [...state.rotationKeys, ...state.signingKeys]) {
-      if (entries.some((e) => IdentityManager.keysEqual(e.key, key))) continue;
+      if (entries.some((e) => keysEqual(e.key, key))) continue;
       entries.push({
         id: publicKeyToString(key),
         key,
-        isThisDevice: !!deviceKey && IdentityManager.keysEqual(deviceKey, key),
+        isThisDevice: !!deviceKey && keysEqual(deviceKey, key),
       });
     }
     return entries;

@@ -1,13 +1,10 @@
 import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
-import {
-  hexToBytes,
-  thirdPartyApplication,
-} from '@/src/common/lib/polycentric-hooks/helpers';
+import { thirdPartyApplication } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
-import { v2 } from '@polycentric/react-native';
+import { parseEventKeyId } from '@polycentric/react-native';
 import { type ExternalPathString, Link, router } from 'expo-router';
 import { memo, useCallback, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
@@ -121,7 +118,7 @@ function ApplicationSubheader({
 function ReplyingToSubheader({ parentId }: { parentId: string }) {
   const parentIdentity = useMemo(() => {
     try {
-      return v2.EventKey.fromBinary(hexToBytes(parentId)).identity;
+      return parseEventKeyId(parentId)?.identity ?? null;
     } catch {
       return null;
     }

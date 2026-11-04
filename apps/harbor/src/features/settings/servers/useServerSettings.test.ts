@@ -6,10 +6,8 @@ jest.mock('@polycentric/react-native', () => ({
 
 const mockClient = {
   servers: ['https://default.example'],
-  identityManager: {
-    addServer: jest.fn(async () => undefined),
-    removeServer: jest.fn(async () => undefined),
-  },
+  addServer: jest.fn(async () => undefined),
+  removeServer: jest.fn(async () => undefined),
 };
 let mockIdentity: { servers?: string[] } | null = null;
 
@@ -91,9 +89,7 @@ describe('addServer', () => {
     });
 
     expect(added).toBe(true);
-    expect(mockClient.identityManager.addServer).toHaveBeenCalledWith(
-      'https://new.example',
-    );
+    expect(mockClient.addServer).toHaveBeenCalledWith('https://new.example');
     expect(invalidateAllQueries).toHaveBeenCalledWith(mockClient);
     expect(mockToast.success).toHaveBeenCalledWith('Server added');
     expect(hook.current.addError).toBeNull();
@@ -108,12 +104,12 @@ describe('addServer', () => {
     });
 
     expect(added).toBe(false);
-    expect(mockClient.identityManager.addServer).not.toHaveBeenCalled();
+    expect(mockClient.addServer).not.toHaveBeenCalled();
   });
 
   it('ignores a second add while one is in flight', async () => {
     let finishFirst: () => void = () => {};
-    mockClient.identityManager.addServer.mockReturnValueOnce(
+    mockClient.addServer.mockReturnValueOnce(
       new Promise<undefined>((resolve) => {
         finishFirst = () => resolve(undefined);
       }),
@@ -131,7 +127,7 @@ describe('addServer', () => {
       second = await hook.current.addServer('https://other.example');
     });
     expect(second).toBe(false);
-    expect(mockClient.identityManager.addServer).toHaveBeenCalledTimes(1);
+    expect(mockClient.addServer).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       finishFirst();
@@ -141,7 +137,7 @@ describe('addServer', () => {
   });
 
   it('reports an already-added server without treating it as an error', async () => {
-    mockClient.identityManager.addServer.mockRejectedValueOnce(
+    mockClient.addServer.mockRejectedValueOnce(
       new ServerAlreadyAddedError('dup'),
     );
     const hook = renderHook();
@@ -157,9 +153,7 @@ describe('addServer', () => {
   });
 
   it('surfaces other failures via toast and addError', async () => {
-    mockClient.identityManager.addServer.mockRejectedValueOnce(
-      new Error('offline'),
-    );
+    mockClient.addServer.mockRejectedValueOnce(new Error('offline'));
     const hook = renderHook();
 
     let added = true;
@@ -173,9 +167,7 @@ describe('addServer', () => {
   });
 
   it('clears a previous error on the next attempt', async () => {
-    mockClient.identityManager.addServer.mockRejectedValueOnce(
-      new Error('offline'),
-    );
+    mockClient.addServer.mockRejectedValueOnce(new Error('offline'));
     const hook = renderHook();
 
     await act(async () => {
@@ -203,7 +195,7 @@ describe('removeServer', () => {
         message: 'Remove https://default.example?',
       }),
     );
-    expect(mockClient.identityManager.removeServer).toHaveBeenCalledWith(
+    expect(mockClient.removeServer).toHaveBeenCalledWith(
       'https://default.example',
     );
     expect(invalidateAllQueries).toHaveBeenCalledWith(mockClient);
@@ -218,13 +210,11 @@ describe('removeServer', () => {
       await hook.current.removeServer('https://default.example');
     });
 
-    expect(mockClient.identityManager.removeServer).not.toHaveBeenCalled();
+    expect(mockClient.removeServer).not.toHaveBeenCalled();
   });
 
   it('surfaces failures via toast', async () => {
-    mockClient.identityManager.removeServer.mockRejectedValueOnce(
-      new Error('offline'),
-    );
+    mockClient.removeServer.mockRejectedValueOnce(new Error('offline'));
     const hook = renderHook();
 
     await act(async () => {

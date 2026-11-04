@@ -5,6 +5,7 @@ import { isWeb } from '@/src/common/util/platform';
 import { File } from 'expo-file-system';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { ImageImportError, type ImageImportStage } from './ImageImportError';
+import { asBuffer } from '@/src/common/lib/polycentric-hooks/helpers';
 
 /** Default variant edge lengths. */
 export const DEFAULT_IMAGE_VARIANT_SIZES = [48, 128, 512];
@@ -82,10 +83,10 @@ export async function encodeImageVariants(
           mode,
         );
 
-        const digest = v2.ContentDigest.create({
-          type: v2.ContentDigestType.SHA256,
-          value: sha256(bytes),
-        });
+        const digest: v2.ContentDigest = {
+          type: v2.ContentDigestType.Sha256,
+          value: asBuffer(sha256(bytes)),
+        };
 
         const blob = v2.Blob.create({
           digest,
@@ -116,7 +117,7 @@ export async function processAndUploadImage(
 
   await runStage('persist', () =>
     Promise.all(
-      variants.map(({ digest, bytes }) => client.fileStore.put(digest, bytes)),
+      variants.map(({ bytes }) => client.commitBlob(bytes, 'image/jpeg')),
     ),
   );
 

@@ -35,12 +35,26 @@ ed25519-dalek.workspace = true
 base64.workspace = true
 uniffi.workspace = true
 hex.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync"], optional = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "time"], optional = true }
+getrandom = { workspace = true, features = ["std"] }
+# Seals private keys at rest under a host-held wrapping key.
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+# Local storage. Native builds compile SQLite from source; wasm32 builds use
+# the SQLite that `sqlite-wasm-rs` ships for that target.
+rusqlite = { version = "0.39", default-features = false, features = ["bundled"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-getrandom.workspace = true
+# Plain HTTP GETs (blob downloads, alias lookups). Same TLS stack as tonic.
+hyper = { version = "1", default-features = false, features = ["client", "http1"] }
+hyper-util = { version = "0.1", default-features = false, features = ["client-legacy", "http1", "tokio"] }
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "ring", "webpki-roots", "tls12"] }
+http-body-util = "0.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { workspace = true, features = ["std", "wasm_js"] }
+sqlite-wasm-rs = { version = "0.5", default-features = false }
+sqlite-wasm-vfs = "0.2"
+web-sys = { version = "0.3", features = ["Headers", "Request", "RequestInit", "Response", "WorkerGlobalScope", "Window"] }
 tonic-web-wasm-client = "0.9"
 console_error_panic_hook = "0.1"
 wasm-bindgen-futures = "0.4"
@@ -54,6 +68,13 @@ wasm-bindgen = "=0.2.125"
 
 [dev-dependencies]
 uniffi = { workspace = true, features = ["build"] }
+tempfile = "3"
+tonic = { workspace = true, features = ["transport", "server", "router"] }
+polycentric-common = { workspace = true, features = ["uniffi", "transport"] }
+tokio-stream = { version = "0.1", default-features = false, features = ["net"] }
 
 [build-dependencies]
 prost-build.workspace = true
+prost-types.workspace = true
+prost = { workspace = true, features = ["std"] }
+heck = "0.5"

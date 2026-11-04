@@ -1,6 +1,6 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { bytesToHex } from '@/src/common/lib/polycentric-hooks/helpers';
-import { v2 } from '@polycentric/react-native';
+import type { ListEventsArgs, v2 } from '@polycentric/react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** No sequence means the latest event. */
@@ -20,13 +20,15 @@ export type SignedEventResult = {
   refetch: () => Promise<v2.EventBundle | null>;
 };
 
-export function lookupQuery(lookup: EventLookup) {
+export function lookupQuery(lookup: EventLookup): ListEventsArgs {
   return {
     identity: lookup.identity,
     collection: lookup.collection,
-    signedBy: lookup.signedBy ?? null,
-    sequenceGt: lookup.sequence != null ? lookup.sequence - 1n : null,
-    sequenceLt: lookup.sequence != null ? lookup.sequence + 1n : null,
+    size: undefined,
+    heads: undefined,
+    signedBy: lookup.signedBy,
+    sequenceGt: lookup.sequence != null ? lookup.sequence - 1n : undefined,
+    sequenceLt: lookup.sequence != null ? lookup.sequence + 1n : undefined,
   };
 }
 
@@ -47,12 +49,31 @@ export function tryOrNull<T>(fn: () => T): T | null {
   }
 }
 
+/** The event a signed event carries. rs-core only exposes it when its
+ *  signature verifies, so `null` also means "not validly signed". */
 export function decodeEvent(
   signedEvent: v2.SignedEvent | null | undefined,
 ): v2.Event | null {
-  if (!signedEvent) return null;
-  const event = tryOrNull(() => v2.Event.fromBinary(signedEvent.eventBytes));
+  const event = signedEvent?.event;
   return event?.key ? event : null;
+}
+
+/** JSON for display: bigints as strings, bytes as hex, maps as objects,
+ *  oneofs as their payload. */
+export function displayJson(value: unknown): string {
+  return JSON.stringify(
+    value,
+    (_key, v) => {
+      if (typeof v === 'bigint') return v.toString();
+      if (v instanceof ArrayBuffer) return bytesToHex(v);
+      if (v instanceof Map) return Object.fromEntries(v);
+      if (v && typeof v === 'object' && 'tag' in v && 'inner' in v) {
+        return (v as { inner: unknown }).inner;
+      }
+      return v;
+    },
+    2,
+  );
 }
 
 // Events are immutable, so exact-sequence hits are kept for instant navigation.

@@ -48,8 +48,7 @@ export async function removeVerifier(
   const self = client.activeIdentityKey;
   if (!self) return;
 
-  const targets = client
-    .listValidEvents(self, COLLECTION.VERIFICATIONS)
+  const targets = (await client.listValidEvents(self, COLLECTION.VERIFICATIONS))
     .map((bundle) => decodeBundle(bundle, 'verificationTarget'))
     .filter(
       (entry): entry is DecodedBundle<'verificationTarget'> =>
@@ -65,19 +64,15 @@ export async function removeVerifier(
   // target for non-platform claims, so this removes exactly one verifier
   for (const { event } of targets) {
     const deleteContent = v2.Content.create({
-      contentBody: { oneofKind: 'delete', delete: { eventKey: event.key } },
+      contentBody: new v2.ContentBody.Delete({
+        delete: v2.Delete.create({ eventKey: event.key }),
+      }),
     });
-    await client.contentManager.save(deleteContent);
-    const deleteEvent = await client.buildEvent(
-      deleteContent,
-      COLLECTION.VERIFICATIONS,
-    );
-    const signedDelete = await client.signEvent(deleteEvent);
-    await client.commitEvent(signedDelete, deleteContent);
+    await client.publish(deleteContent, COLLECTION.VERIFICATIONS);
   }
 
   try {
-    await client.sync(SyncStrategy.PARTIAL_PUSH);
+    await client.sync(SyncStrategy.PartialPush);
   } catch (e) {
     console.warn('Failed to push verifier removal to servers:', e);
   }

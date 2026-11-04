@@ -2,92 +2,78 @@
 // only an http client, so run.mjs serves this in its own process (and it dies
 // with it): POST /verify-newest-claim {"name"} does what it says for that user.
 import { createServer } from 'node:http';
-import { COLLECTION, SyncStrategy, v2 } from '@polycentric/js-core';
-import { Query, QueryStatus } from '@polycentric/rs-core-wasm/generated';
-import { SEEDED_USERS, signupInfoFor } from './seed.mjs';
+import { COLLECTION } from '@polycentric/js-core';
+import {
+  ContentBody,
+  KeyType,
+  LoginStatus,
+  Query,
+  QueryData,
+  SyncStrategy,
+} from '@polycentric/rs-core-wasm';
+import { identityFor, SEEDED_USERS, seedFor } from './seed.mjs';
 
-// loginManager.claim without its identity republish, which would add an
-// identity event every run.
+// Sign in as a seeded user without claiming the identity, whose republish
+// would add an identity event every run.
 async function actAs(client, name) {
-  const info = await signupInfoFor(client, name);
-  const { identity: identityKey, publicKey } = info.login;
-  const stored = await client.storage.logins.getLoginDetails(
-    identityKey,
-    publicKey,
-  );
-  if (!stored)
-    await client.storage.logins.putLogin(
-      identityKey,
-      info.keyPair,
-      'liveRotationKey',
-    );
-  // Hydrates the identity's events into rs-core, which buildEvent needs.
-  await client.listEvents({
-    identity: identityKey,
-    collection: COLLECTION.IDENTITY,
-  });
-  await client.loginAs(info.login, false);
-  await client.sync(SyncStrategy.PARTIAL_PULL);
-  return identityKey;
-}
-
-// The same observable dance as client.listEvents, for any query.
-function fetchQuery(client, query) {
-  return new Promise((resolve, reject) => {
-    let data;
-    // A unique key so rs-core asks the server instead of its cache.
-    const observable = client.core.fetchQuery(
-      ['e2e', String(Date.now())],
-      query,
-      undefined,
-    );
-    const subscription = observable.subscribe({
-      next: (result) => {
-        if (result.data) data = result.data;
-        if (result.status === QueryStatus.Success) {
-          subscription.unsubscribe();
-          resolve(data);
-        }
-      },
-      error: reject,
+  const identity = identityFor(client, name);
+  let [login] = await client.listLogins(identity);
+  if (!login) {
+    await client.importLegacyData({
+      events: [],
+      contents: [],
+      logins: [
+        {
+          identity,
+          keyType: KeyType.Ed25519,
+          privateKey: seedFor(name),
+          status: LoginStatus.LiveRotationKey,
+        },
+      ],
     });
-  });
+    [login] = await client.listLogins(identity);
+  }
+  // Brings the identity's events into rs-core, which publishing needs.
+  await client.listEvents({ identity, collection: COLLECTION.IDENTITY });
+  await client.loginAs(login.id, false);
+  await client.sync(SyncStrategy.PartialPull);
+  return identity;
 }
 
-const eventOf = (bundle) =>
-  bundle.signedEvent && v2.Event.fromBinary(bundle.signedEvent.eventBytes);
+const eventOf = (bundle) => bundle?.signedEvent?.event;
 
 async function verifyNewestClaim(client, name) {
   const identity = await actAs(client, name);
-  const bytes = await fetchQuery(
-    client,
+  // A unique key so rs-core asks the server instead of its cache.
+  const data = await client.awaitQuery(
     new Query.ListTargetedVerificationClaims({ targetIdentity: identity }),
+    { queryKey: ['e2e', String(Date.now())] },
   );
-  const { claimBundles } = v2.ListTargetedVerificationClaimsResponse.fromBinary(
-    new Uint8Array(bytes ?? []),
-  );
+  const claimBundles =
+    data && QueryData.TargetedVerificationClaims.instanceOf(data)
+      ? data.inner.response.claimBundles
+      : [];
   // newest pending claim
   const claim = claimBundles
     .filter(
       (bundle) =>
         !bundle.verifies.some((v) => eventOf(v)?.key?.identity === identity),
     )
-    .map((bundle) => bundle.claim && eventOf(bundle.claim))
+    .map((bundle) => eventOf(bundle.claim))
     .filter((event) => event?.key)
     .sort((a, b) => Number(b.createdAt - a.createdAt))[0];
   if (!claim) throw new Error(`No pending claim targets ${name}`);
 
   // What the app's useVerifyClaim publishes.
-  const content = v2.Content.create({
-    contentBody: {
-      oneofKind: 'verificationVerify',
-      verificationVerify: { claimEventKey: claim.key },
+  await client.publish(
+    {
+      contentBody: new ContentBody.VerificationVerify({
+        verificationVerify: { claimEventKey: claim.key },
+      }),
     },
-  });
-  await client.contentManager.save(content);
-  const event = await client.buildEvent(content, COLLECTION.VERIFICATIONS);
-  await client.commitEvent(await client.signEvent(event), content);
-  await client.sync(SyncStrategy.PARTIAL_PUSH);
+    COLLECTION.VERIFICATIONS,
+  );
+  await client.sync(SyncStrategy.PartialPush);
   return claim.key;
 }
 

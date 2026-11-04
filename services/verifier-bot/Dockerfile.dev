@@ -1,97 +1,44 @@
 # Local development image (referenced by the root compose.yml). Build context
-# is the repo root.
-#
-# Self-contained: unlike the production Dockerfile (which consumes the js SDK
-# and rs-core-wasm dist built by CI), this image builds EVERYTHING from
-# source, including the Rust->wasm rs-core-wasm package — so no host
-# prebuild or CI artifacts are needed. The bot is tsc-compiled to dist/ and runs
-# under plain node (rs-core-wasm ships a compiled .js via its node export).
-
-# Stage 1: Build — Rust + Node toolchain, compile rs-core to wasm, build JS SDKs
-FROM rust:1.99-slim-bookworm@sha256:24707e70a4f1e23d9a7b25202ec43126d28a52294b96aad5c670df1fd1f1d400 AS build
+# is the repo root. Self-contained: builds the bot from source (release
+# mode), so no host build or CI artifact is needed. The runtime stage matches
+# the production Dockerfile.
+FROM rust:1.99-slim-bookworm@sha256:24707e70a4f1e23d9a7b25202ec43126d28a52294b96aad5c670df1fd1f1d400 AS chef
 WORKDIR /app
-ENV PNPM_HOME="/pnpm"
-ENV PATH="/pnpm:$PATH"
-# Don't let Puppeteer fetch Chromium during install (runtime image provides it).
-ENV PUPPETEER_SKIP_DOWNLOAD=1
-# No git in the build context; make husky's root `prepare` script a no-op.
-ENV HUSKY=0
+COPY services/common/build-deps.sh build-deps.sh
+RUN sh build-deps.sh
+RUN cargo install cargo-chef --locked
 
-# System deps: protoc + build tooling for the Rust core, Node 26, and the
-# better-sqlite3 native binding.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-     curl ca-certificates git pkg-config libssl-dev cmake g++ make python3 \
-     protobuf-compiler \
-  && curl -fsSL https://deb.nodesource.com/setup_26.x | bash - \
-  && apt-get install -y --no-install-recommends nodejs \
-  && rm -rf /var/lib/apt/lists/*
-RUN rustup target add wasm32-unknown-unknown
-# wasm-bindgen-cli must match the `wasm-bindgen` pin in packages/rs-core/Cargo.toml.
-RUN cargo install wasm-bindgen-cli@0.2.125
-
-# Cargo workspace: every workspace member must be present for the workspace to
-# resolve, even though only rs-core (+ rs-common) is compiled to wasm here.
+FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./
-COPY protos protos
-COPY packages/rs-common packages/rs-common
-COPY packages/rs-core packages/rs-core
+COPY packages packages
 COPY services services
 COPY tools tools
+RUN cargo chef prepare --recipe-path recipe.json
 
-# pnpm workspace + the JS pieces the bot needs. Frontend workspace members
-# (apps/*) are intentionally NOT copied: pnpm tolerates absent members, and
-# leaving them out keeps their (huge) Expo/RN deps out of node_modules.
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-RUN npm install -g "$(node -p "require('./package.json').packageManager")"
-COPY patches patches
-COPY packages/rs-core-wasm packages/rs-core-wasm
-COPY packages/js-core packages/js-core
-COPY packages/js-storage-sqlite packages/js-storage-sqlite
-COPY packages/js-storage-postgres packages/js-storage-postgres
-COPY packages/js-node packages/js-node
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+COPY protos protos
+RUN cargo chef cook --release --recipe-path recipe.json --package verifier-bot
+COPY Cargo.toml Cargo.lock ./
+COPY packages packages
+COPY services services
+COPY tools tools
+RUN cargo build --release --package verifier-bot \
+    && mkdir /out \
+    && mv target/release/verifier-bot /out/
 
-# allowUnusedPatches: patchedDependencies target frontend packages absent here.
-RUN pnpm install --frozen-lockfile --config.allowUnusedPatches=true
-
-# Build the Rust->wasm core (its postbuild compiles the generated bindings to
-# .js so plain node can load them), then the JS SDKs, then typecheck and
-# tsc-compile the bot to dist/.
-RUN pnpm --filter @polycentric/rs-core-wasm build
-RUN pnpm --filter @polycentric/js-core \
-         --filter @polycentric/js-storage-sqlite \
-         --filter @polycentric/js-storage-postgres \
-         --filter @polycentric/js-node build
-RUN pnpm --filter @polycentric/verifier-bot exec tsc --noEmit
-RUN pnpm --filter @polycentric/verifier-bot build
-
-# Flatten the prod dependency closure into a self-contained node_modules with
-# `pnpm deploy`. inject-workspace-packages enables the non-legacy deploy (a
-# correct prod closure — no dev-only RN/Expo/build tooling) without changing the
-# monorepo's global (symlinked) install. HUSKY=0 (set above) no-ops the root
-# `prepare` so scripts can run and better-sqlite3's native binding is built.
-RUN pnpm --filter @polycentric/verifier-bot --prod \
-  --config.inject-workspace-packages=true --config.allowUnusedPatches=true \
-  deploy /deploy
-
-# Stage 2: Run
-FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS runner
-WORKDIR /app/services/verifier-bot
-ENV NODE_ENV=production
-# System Chromium for the Puppeteer-based verifiers (e.g. Kick).
-ENV HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
+WORKDIR /app
+COPY services/common/runtime-deps.sh runtime-deps.sh
+RUN sh runtime-deps.sh
+# Chromium for the headless-browser verifiers (Kick, Rumble).
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends chromium \
-  && rm -rf /var/lib/apt/lists/*
-
-# The self-contained deploy (node_modules + package.json) plus the bot's
-# tsc-compiled dist/. rs-core-wasm's node export resolves to compiled .js,
-# so the whole chain runs under plain node.
-COPY --from=build /deploy/node_modules ./node_modules
-COPY --from=build /deploy/package.json ./package.json
-COPY --from=build /app/services/verifier-bot/dist ./dist
-RUN mkdir -p state && chown -R node:node /app/services/verifier-bot/state
-
-USER node
+    && apt-get install -y --no-install-recommends chromium fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+ENV HARBOR_VERIFIER_BOT_CHROME_EXECUTABLE_PATH=/usr/bin/chromium
+RUN useradd --system --uid 10001 --create-home --home-dir /home/verifier verifier \
+    && install -d -o verifier -g verifier /app/state
+COPY --chmod=755 --from=builder /out/verifier-bot /app/verifier-bot
+USER verifier
 EXPOSE 3002
-CMD ["node", "dist/app.js"]
+CMD ["/app/verifier-bot"]

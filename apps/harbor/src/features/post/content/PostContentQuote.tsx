@@ -7,14 +7,11 @@ import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
-import {
-  getKeyFingerprint,
-  hexToBytes,
-} from '@/src/common/lib/polycentric-hooks/helpers';
+import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
-import { FetchMode, v2 } from '@polycentric/react-native';
+import { FetchMode, parseEventKeyId } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -45,7 +42,7 @@ export function PostContentQuote({
 
   const eventKey = useMemo(() => {
     try {
-      return v2.EventKey.fromBinary(hexToBytes(quoteId));
+      return parseEventKeyId(quoteId) ?? null;
     } catch {
       return null;
     }

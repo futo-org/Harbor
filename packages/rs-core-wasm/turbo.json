@@ -10,17 +10,45 @@
         "src/index.node.ts",
         "src/index.web.ts",
         "src/wasm.d.ts",
+        "src/client-worker.ts",
+        "src/client-worker-protocol.ts",
         "tools/**",
         "$TURBO_ROOT$/packages/rs-core/src/**",
         "$TURBO_ROOT$/packages/rs-core/Cargo.toml",
         "$TURBO_ROOT$/packages/rs-core/build.rs",
+        "$TURBO_ROOT$/packages/rs-core/build/**",
+        "$TURBO_ROOT$/protos/**",
         "$TURBO_ROOT$/packages/rs-common/src/**",
         "$TURBO_ROOT$/packages/rs-common/Cargo.toml",
         "$TURBO_ROOT$/packages/rs-common/build.rs",
         "$TURBO_ROOT$/Cargo.toml",
         "$TURBO_ROOT$/Cargo.lock"
       ],
-      "outputs": ["src/generated/wasm/**", "dist/**"]
+      "outputs": ["src/generated/**", "dist/**"]
+    },
+    "generate": {
+      "inputs": [
+        "package.json",
+        "ubrn.config.yaml",
+        "tsconfig.node.json",
+        "src/index.node.ts",
+        "src/index.web.ts",
+        "src/wasm.d.ts",
+        "src/client-worker.ts",
+        "src/client-worker-protocol.ts",
+        "tools/**",
+        "$TURBO_ROOT$/packages/rs-core/src/**",
+        "$TURBO_ROOT$/packages/rs-core/Cargo.toml",
+        "$TURBO_ROOT$/packages/rs-core/build.rs",
+        "$TURBO_ROOT$/packages/rs-core/build/**",
+        "$TURBO_ROOT$/protos/**",
+        "$TURBO_ROOT$/packages/rs-common/src/**",
+        "$TURBO_ROOT$/packages/rs-common/Cargo.toml",
+        "$TURBO_ROOT$/packages/rs-common/build.rs",
+        "$TURBO_ROOT$/Cargo.toml",
+        "$TURBO_ROOT$/Cargo.lock"
+      ],
+      "outputs": ["src/generated/**", "dist/**"]
     }
   }
 }

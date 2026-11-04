@@ -14,7 +14,7 @@ use crate::lock::LockRecover;
 use crate::query::event::key::EventKey;
 use crate::query::event::merge::{merge_event_bundles, merge_event_hints};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
-use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
+use crate::query::{ByteObservable, QueryClient, QueryKey, QueryOpts, channel};
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetReactionsArgs {
@@ -90,7 +90,7 @@ pub fn get_reactions(
     query_key: Option<QueryKey>,
     args: GetReactionsArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let GetReactionsArgs {
         target,
         emoji_filter,

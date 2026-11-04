@@ -21,8 +21,8 @@ export function IdentitySettingsSheet({
 
   const [nameExpanded, setNameExpanded] = useState(false);
 
-  const signingKey = client.currentKeyPair?.publicKey
-    ? publicKeyToString(client.currentKeyPair.publicKey)
+  const signingKey = client.activePublicKey
+    ? publicKeyToString(client.activePublicKey)
     : '';
 
   return (

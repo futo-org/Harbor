@@ -1,8 +1,7 @@
 {
   "extends": "@polycentric/tsconfig/compiled-package.json",
   "include": ["src"],
-  "exclude": ["src/proto", "src/**/*.test.ts"],
-  "references": [{ "path": "./src/proto" }],
+  "exclude": ["src/**/*.test.ts"],
   "compilerOptions": {
     "emitDeclarationOnly": false,
     "lib": ["ES2022", "DOM"]

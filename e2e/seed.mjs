@@ -6,9 +6,14 @@
 // nothing is written when the server already has them.
 // These are throwaway test users, so the keys being public is fine.
 import { createHash } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
-import { COLLECTION, KEY_TYPE, v2 } from '@polycentric/js-core';
-import { createPolycentricNodeClient } from '@polycentric/js-node';
+import { COLLECTION } from '@polycentric/js-core';
+import { createNodeClient } from '@polycentric/js-core/node';
+import {
+  ContentBody,
+  identityKeyForSeed,
+  Post,
+  ProfileUpdate,
+} from '@polycentric/rs-core-wasm';
 
 // Passed to the flows as -e variables. Avoid English stop words in names: the
 // server's full-text search would drop "A" and match both users.
@@ -23,36 +28,31 @@ const POSTS_PER_SEEDED_USER = 15;
 const SERVER_URL = process.env.E2E_SERVER_URL ?? 'http://localhost:3000';
 const STATE_DIR = new URL('.seed/', import.meta.url).pathname;
 
-const sha256 = (data) =>
-  new Uint8Array(createHash('sha256').update(data).digest());
+// The seed state's private keys are sealed under this; the users are
+// throwaway, so a fixed key is fine.
+const WRAPPING_KEY = process.env.E2E_WRAPPING_KEY ?? 'e2e0'.repeat(16);
 
-// The signup info (login, key pair, genesis event) of a seeded user. The
-// identity key only depends on the key pair and the client's servers, so it
-// is the same whether or not the identity exists yet.
-export async function signupInfoFor(client, name) {
-  const keyType = KEY_TYPE.ED25519;
-  const privateKey = v2.PrivateKey.create({
-    keyType,
-    key: sha256(`harbor-e2e:${name}`),
-  });
-  const publicKey = v2.PublicKey.create({
-    keyType,
-    key: await client.crypto.derivePublicKey(privateKey.key, keyType),
-  });
-  return client.loginManager.deriveSignupInfo({
-    keyType,
-    privateKey,
-    publicKey,
-  });
+const sha256 = (data) => createHash('sha256').update(data).digest();
+
+/** A seeded user's fixed key (32 bytes). */
+export function seedFor(name) {
+  const seed = sha256(`harbor-e2e:${name}`);
+  return seed.buffer.slice(seed.byteOffset, seed.byteOffset + seed.length);
 }
 
+/** A seeded user's identity: a function of its key and the servers. */
+export function identityFor(client, name) {
+  return identityKeyForSeed(seedFor(name), client.servers);
+}
+
+const publish = (client, contentBody, collection) =>
+  client.publish({ contentBody }, collection);
+
 async function ensureUser(client, name) {
-  const info = await signupInfoFor(client, name);
-  const { identity: identityKey, publicKey } = info.login;
+  const identityKey = identityFor(client, name);
 
   // Ask the server rather than local state: a fresh checkout has none, and
-  // adopting the identity via loginManager.claim would publish a login
-  // event on every run.
+  // claiming the identity would publish a login event on every run.
   const profiles = await client.listEvents({
     identity: identityKey,
     collection: COLLECTION.PROFILE,
@@ -62,42 +62,31 @@ async function ensureUser(client, name) {
     return;
   }
 
-  // The login is stored before anything else is persisted. A run that failed
-  // partway through will already have it.
-  const stored = await client.storage.logins.getLoginDetails(
-    identityKey,
-    publicKey,
+  // A run that failed partway through will already have the login.
+  const [existing] = await client.listLogins(identityKey);
+  if (existing) await client.loginAs(existing.id, false);
+  else await client.createIdentityFromSeed(seedFor(name));
+
+  await publish(
+    client,
+    new ContentBody.ProfileUpdate({
+      profileUpdate: ProfileUpdate.create({
+        name,
+        description: 'Seeded for e2e tests',
+      }),
+    }),
+    COLLECTION.PROFILE,
   );
-  if (!stored) {
-    await client.storage.logins.putLogin(
-      identityKey,
-      info.keyPair,
-      'pendingSignup',
-    );
-  }
-  await client.contentManager.save(info.identityContent);
-  await client.commitEvent(info.genesisEvent, info.identityContent);
-  await client.loginManager.finishSignup(info.login);
-  // Avoid persisting the login since we currently disallow changing the
-  // persisted login once it has been set.
-  await client.loginAs(info.login, false);
-  const content = client.contentManager.build({
-    oneofKind: 'profileUpdate',
-    profileUpdate: { name, description: 'Seeded for e2e tests' },
-  });
-  await client.contentManager.save(content);
-  const event = await client.buildEvent(content, COLLECTION.PROFILE);
-  await client.commitEvent(await client.signEvent(event), content);
   // A fresh server (CI's) has no posts, and the Explore flows scroll past a
   // screen of them.
   for (let i = 1; i <= POSTS_PER_SEEDED_USER; i++) {
-    const postContent = client.contentManager.build({
-      oneofKind: 'post',
-      post: v2.Post.create({ text: `Seeded post ${i} by ${name}` }),
-    });
-    await client.contentManager.save(postContent);
-    const postEvent = await client.buildEvent(postContent);
-    await client.commitEvent(await client.signEvent(postEvent), postContent);
+    await publish(
+      client,
+      new ContentBody.Post({
+        post: Post.create({ text: `Seeded post ${i} by ${name}` }),
+      }),
+      COLLECTION.FEED,
+    );
   }
   await client.sync();
   console.log(`${name}: ${client.activeIdentityKey}`);
@@ -105,10 +94,9 @@ async function ensureUser(client, name) {
 
 // Returns the client, which verify.mjs reuses to act as the seeded users.
 export async function seed() {
-  mkdirSync(`${STATE_DIR}blobs`, { recursive: true });
-  const client = await createPolycentricNodeClient({
+  const client = await createNodeClient({
     databasePath: `${STATE_DIR}seed.db`,
-    blobDirectory: `${STATE_DIR}blobs`,
+    wrappingKey: WRAPPING_KEY,
     seedServers: [SERVER_URL],
   });
   for (const name of Object.values(SEEDED_USERS))

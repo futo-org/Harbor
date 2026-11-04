@@ -15,7 +15,7 @@ use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
 use crate::query::event::merge::{EventDedupKey, event_dedup_key, merge_event_hints};
 use crate::query::validation::retain_validated_hints;
-use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
+use crate::query::{ByteObservable, QueryClient, QueryKey, QueryOpts, channel};
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListNotificationsArgs {
@@ -55,7 +55,7 @@ pub fn subscribe_unread_notification_count(
     query_key: Option<QueryKey>,
     _args: SubscribeUnreadNotificationCountArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let stream_fn = move |server_url: String| async move {
         let stream = NotificationServiceClient::new(channel(&server_url).await?)
             .subscribe_unread_notification_count(SubscribeUnreadNotificationCountRequest {})
@@ -145,7 +145,7 @@ pub fn list_notifications(
     query_key: Option<QueryKey>,
     args: ListNotificationsArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let ListNotificationsArgs {
         identity,
         first,

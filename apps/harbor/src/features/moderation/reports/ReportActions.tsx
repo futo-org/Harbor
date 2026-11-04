@@ -58,7 +58,7 @@ export function ReportActions({
     >
       {pending ? (
         <ActivityIndicator size="small" color={theme.palette.primary_500} />
-      ) : report.status === v2.ReportStatus.OPEN ? (
+      ) : report.status === v2.ReportStatus.Open ? (
         <>
           <Button
             size="sm"
@@ -95,7 +95,7 @@ export function ReportActions({
             title="Dismiss"
             onPress={() =>
               void run('dismiss', () =>
-                setStatus(entry, v2.ReportStatus.DISMISSED),
+                setStatus(entry, v2.ReportStatus.Dismissed),
               )
             }
           />
@@ -105,7 +105,7 @@ export function ReportActions({
             title="Mark as resolved"
             onPress={() =>
               void run('resolve', () =>
-                setStatus(entry, v2.ReportStatus.RESOLVED),
+                setStatus(entry, v2.ReportStatus.Resolved),
               )
             }
           />
@@ -118,7 +118,7 @@ export function ReportActions({
             variant="tertiary"
             title="Reopen"
             onPress={() =>
-              void run('reopen', () => setStatus(entry, v2.ReportStatus.OPEN))
+              void run('reopen', () => setStatus(entry, v2.ReportStatus.Open))
             }
           />
         </>

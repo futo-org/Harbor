@@ -156,10 +156,10 @@ jobs:
         with:
           cache: services-lint
       - name: Format
-        run: cargo fmt --check -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator
+        run: cargo fmt --check -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator -p verifier-bot
       - name: Clippy
         if: ${{ !cancelled() }}
-        run: cargo clippy -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator -- -D warnings
+        run: cargo clippy -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator -p verifier-bot -- -D warnings
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -276,11 +276,7 @@ jobs:
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter polycentric --filter @polycentric/scraper...
-      - name: Verifier bot biome
-        continue-on-error: true
-        run: pnpm exec biome check services/verifier-bot --diagnostic-level=error
       - name: Scraper typecheck
-        if: ${{ !cancelled() }}
         run: pnpm --filter @polycentric/scraper build
 
   charts-lint:
@@ -400,7 +396,7 @@ jobs:
         with:
           cache: services-tests
       - name: Tests
-        run: cargo nextest run -P ci -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator
+        run: cargo nextest run -P ci -p server -p moderation-service -p push-notifications-service -p otlp-service -p grayjay-migrator -p verifier-bot
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -537,12 +533,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/android-build
-      # The android build regenerates the uniffi bindings
-      - name: Check generated bindings up-to-date
-        run: |
-          stale=$(git status --porcelain -- packages/react-native)
-          [ -z "$stale" ] ||
-            { echo "$stale"; echo "::error::Generated bindings are stale; run 'pnpm -C packages/react-native ubrn:ios' (or ubrn:android) and commit the result"; exit 1; }
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -610,7 +600,7 @@ jobs:
           key: ${{ env.RUST_CACHE_KEY }}
           path: ${{ env.RUST_CACHE_PATHS }}
 
-  # The web and verifier bot images need wasm; Android and iOS are published
+  # The web image needs wasm; Android and iOS are published
   # here for the deploys and pr-app.yml.
   sdks:
     name: Build SDKs
@@ -719,49 +709,6 @@ jobs:
           dockerfile: services/scraper
           registry: ${{ needs.changes.outputs.registry }}
           stage-artifact: scraper-build
-          stage: build
-          registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ secrets.REGISTRY_TOKEN }}
-          cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
-
-  verifier-bot-build:
-    name: Build verifier bot
-    needs: [ changes, sdks ]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.image_verifier_bot && needs.sdks.result == 'success' }}
-    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
-    env:
-      PUPPETEER_SKIP_DOWNLOAD: "1"
-      HUSKY: "0"
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/sdk-artifacts
-      - uses: ./.forgejo/actions/js-build
-        with:
-          install-args: --filter @polycentric/verifier-bot...
-          build: pnpm --filter @polycentric/verifier-bot build
-          package: "@polycentric/verifier-bot"
-          deploy-args: --config.inject-workspace-packages=true --config.allowUnusedPatches=true
-          dist: services/verifier-bot/dist
-          artifact: verifier-bot-build
-
-  verifier-bot-image:
-    name: Build verifier bot image
-    needs: [ changes, verifier-bot-build ]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.image_verifier_bot && needs.verifier-bot-build.result == 'success' }}
-    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    timeout-minutes: 15
-    container:
-      image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/service-image
-        with:
-          image: verifier-bot
-          dockerfile: services/verifier-bot
-          registry: ${{ needs.changes.outputs.registry }}
-          stage-artifact: verifier-bot-build
           stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
@@ -889,36 +836,47 @@ jobs:
           path: services/scraper/junit.xml
           retention-days: 7
 
-  # VERIFIER_BOT_ENV_VARS is the base64 .env content (GitLab: a file variable).
+  # The verifier bot's live tests: each platform's health check against the
+  # real site, and the verify flow against a Polycentric server. `local_`
+  # tests are skipped (those platforms block CI runner IPs). The offline tests
+  # run in rust-services. VERIFIER_BOT_ENV_VARS is the base64 .test.env content
+  # (GitLab: a file variable).
   verifier-bot:
     name: Test verifier bot
-    needs: [ changes, sdks ]
-    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.verifier_bot_tests && needs.sdks.result == 'success' }}
+    needs: [ changes, setup-images ]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.verifier_bot_tests && needs.setup-images.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
+    container:
+      image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
+    continue-on-error: true
     env:
-      PUPPETEER_SKIP_DOWNLOAD: "1"
-      HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+      HARBOR_VERIFIER_BOT_CHROME_EXECUTABLE_PATH: /usr/bin/chromium
     steps:
       - name: Install Chromium
         run: apt-get update && apt-get install -y --no-install-recommends chromium && rm -rf /var/lib/apt/lists/*
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/sdk-artifacts
-      - uses: ./.forgejo/actions/setup-pnpm
+      - uses: ./.forgejo/actions/rust-env
         with:
-          install-args: --filter @polycentric/verifier-bot...
+          cache: verifier-bot-tests
       - name: Write test env
         env:
           VERIFIER_BOT_ENV_VARS: ${{ secrets.VERIFIER_BOT_ENV_VARS }}
         run: if [ -n "$VERIFIER_BOT_ENV_VARS" ]; then echo "$VERIFIER_BOT_ENV_VARS" | base64 -d > services/verifier-bot/.test.env; fi
       - name: Tests
-        run: pnpm --filter @polycentric/verifier-bot test:ci
+        run: cargo nextest run -P ci -p verifier-bot --run-ignored only -E 'test(/live_/)'
+      - uses: ./.forgejo/actions/r2-cache
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        with:
+          mode: save
+          key: ${{ env.RUST_CACHE_KEY }}
+          path: ${{ env.RUST_CACHE_PATHS }}
       - uses: forgejo/upload-artifact@v4
         if: always()
         with:
           name: junit-verifier-bot-tests
-          path: services/verifier-bot/junit.xml
+          path: target/nextest/ci/junit.xml
           retention-days: 7
 
   # Drives the web image this run built, started as a job service, against
@@ -1047,8 +1005,6 @@ jobs:
       - service-images
       - scraper-build
       - scraper-image
-      - verifier-bot-build
-      - verifier-bot-image
       - web-build
       - web-image
       - services-integration

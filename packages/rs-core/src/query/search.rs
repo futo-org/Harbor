@@ -20,7 +20,7 @@ use crate::query::event::merge::{
 };
 use crate::query::pagination::{FakeCursorToken, merge_page_info, prepare_page_info};
 use crate::query::validation::retain_validated_hints;
-use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
+use crate::query::{ByteObservable, QueryClient, QueryKey, QueryOpts, channel};
 
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
 pub enum SearchPostsSort {
@@ -277,7 +277,7 @@ pub fn search_posts(
     query_key: Option<QueryKey>,
     args: SearchPostsArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let SearchPostsArgs {
         query,
         sort_by,
@@ -348,7 +348,7 @@ pub fn search_users(
     query_key: Option<QueryKey>,
     args: SearchUsersArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let SearchUsersArgs {
         query,
         sort_by,

@@ -1,7 +1,13 @@
 import { useMemo } from 'react';
-import { FetchMode, Query, type v2 } from '@polycentric/react-native';
+import {
+  FetchMode,
+  Query,
+  QueryData_Tags,
+  type v2,
+} from '@polycentric/react-native';
+import { queryPayload } from '@/src/common/lib/polycentric-hooks/helpers';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { decodeProfile } from '../lib/decodeProfile';
+import { decodeProfile, isProfileResponseEmpty } from '../lib/decodeProfile';
 
 export interface ProfileHookResult {
   /**
@@ -69,10 +75,11 @@ export function useProfile(
     !!identityKey,
   );
 
-  const decoded = useMemo(() => {
-    if (!query.data) return EMPTY_PROFILE;
-    return decodeProfile(query.data);
-  }, [query.data]);
+  const response = queryPayload(query.data, QueryData_Tags.Profile)?.response;
+  const decoded = useMemo(
+    () => (response ? decodeProfile(response) : EMPTY_PROFILE),
+    [response],
+  );
 
   return {
     name: decoded.name,
@@ -85,7 +92,8 @@ export function useProfile(
     isLoading: query.isLoading,
     // A local miss emits an empty response, indistinguishable by data alone.
     isResolved:
-      query.successfulServers > 0 || (query.data?.byteLength ?? 0) > 0,
+      query.successfulServers > 0 ||
+      (!!response && !isProfileResponseEmpty(response)),
     error: query.error ? new Error(query.error) : null,
     refresh: () => query.refresh(RefreshStrategy.Fetch),
   };

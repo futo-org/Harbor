@@ -1,112 +1,30 @@
-export * as v1 from './proto/polycentric';
-export type * as v1Types from './proto/polycentric';
-
-export * as v2 from './proto/v2';
-export type * as v2Types from './proto/v2';
-
-// Re-export commonly used v1 types (namespaced v2 types don't conflict)
-export {
-  Process,
-  Event,
-  Events,
-  SignedEvent,
-  RangesForSystem,
-  ContentType,
-  Opinion,
-  Pointer,
-  Post,
-  Delete,
-  Claim,
-  ClaimFieldEntry,
-  ImageManifest,
-} from './proto/polycentric';
-export { PublicKey, KeyType } from './proto/polycentric/v2/keypair';
-
-export type * from './platform-interfaces';
-export { bytesToHex, hexToBytes, toDigestKey } from './utils/hex';
-export {
-  FileStoreError,
-  MAX_SEGMENT_BYTES,
-  MAX_PATH_BYTES,
-} from './platform-interfaces/file-store-driver';
-
-export {
-  StorageHandle,
-  ContentStore,
-  EventStore,
-  LoginStore,
-} from './data-store';
-export type { Repositories } from './data-store';
-
+/**
+ * The Harbor client for JavaScript. A thin layer over rs-core: the client
+ * itself, its async interface, and JavaScript errors. The protocol's types
+ * (records like `Content` and `EventBundle`) come from the bindings; import
+ * them, with their factories and enums, from the host package
+ * (`@polycentric/react-native`) or `@polycentric/rs-core-wasm`.
+ */
 export { PolycentricClient } from './polycentric-client';
-export type { PolycentricClientConfig, KeyPair } from './polycentric-client';
-export { FileStore } from './file-store';
-export { MemoryStorageDriver, MemoryFileStoreDriver } from './memory-storage';
-
-export { IdentityManager } from './client-internal/identity-manager';
 export type {
-  IdentityState,
-  PublishArgs,
-  IdentityUpdate,
-  IdentityDraft,
-} from './client-internal/identity-manager';
-
-export { LoginManager } from './client-internal/login-manager';
-export type {
-  PendingLogin,
-  SignupInfo,
-} from './client-internal/login-manager';
-
-export { ContentManager } from './client-internal/content-manager';
-
+  AsyncHarbor,
+  PendingEventRef,
+  QueryObserver,
+  QueryStream,
+} from './harbor';
+export { localHarbor } from './harbor';
 export {
-  EventService,
-  ClientState,
-  InitializationStep,
-  HydrationStatus,
-} from './client-internal/event-service';
-export type {
-  ContentCreatedPayload,
-  ServerPushResult,
-} from './client-internal/event-service';
-export type { EventPushIssues } from '@polycentric/rs-core-wasm';
-
-export {
-  PairingSessionManager,
-  PAIRING_SESSION_TTL_MILLIS,
-} from './client-internal/pairing-session-manager';
-export type { PairingSession } from './client-internal/pairing-session-manager';
-
-export type {
-  LoginId,
-  LoginOverview,
-  LoginDetails,
-  LoginStatus,
-  LoginRepositoryErrorCode,
-  PrivateKeyLocation,
-} from './platform-interfaces/login-repository';
-export { LoginRepositoryError } from './platform-interfaces/login-repository';
-
+  generateWrappingKey,
+  openLocalClient,
+  wrappingKeyCipher,
+  type LocalClientConfig,
+} from './local';
+export { registerBindings, type Bindings } from './bindings';
 export * from './errors';
-export * as Errors from './errors';
-export * from './utils';
-
+export { COLLECTION, type Collection } from './constants';
+export { bytesToHex, hexToBytes } from './utils/hex';
 export {
-  KEY_TYPE,
-  COLLECTION,
-  HydrationStrategy,
-  SyncStrategy,
-} from './constants';
-export type { Collection } from './constants';
-
-export {
-  resolveAlias,
-  normalizeAlias,
   isIdentityKey,
+  normalizeAlias,
+  resolveAlias,
 } from './http/alias-resolver';
-export { CryptoManager } from './crypto/crypto-manager';
-export {
-  createServerJwt,
-  DEFAULT_EXPIRY_SECONDS,
-  type ServerJwtClaims,
-} from './crypto/server-jwt';

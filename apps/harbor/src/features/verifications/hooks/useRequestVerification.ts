@@ -1,7 +1,8 @@
-import { hexToBytes, usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { useState } from 'react';
+import { claimEventKey } from '../utils/claim-id';
 import { verifierApi } from '../utils/verifier-api';
 
 type Client = ReturnType<typeof usePolycentric>;
@@ -16,20 +17,16 @@ export async function publishVerificationTarget(
   targetIdentities: string[],
 ): Promise<void> {
   const content = v2.Content.create({
-    contentBody: {
-      oneofKind: 'verificationTarget',
-      verificationTarget: {
+    contentBody: new v2.ContentBody.VerificationTarget({
+      verificationTarget: v2.VerificationTarget.create({
         claimEventKey,
         targetIdentities,
-      },
-    },
+      }),
+    }),
   });
-  await client.contentManager.save(content);
-  const event = await client.buildEvent(content, COLLECTION.VERIFICATIONS);
-  const signedEvent = await client.signEvent(event);
-  await client.commitEvent(signedEvent, content);
+  await client.publish(content, COLLECTION.VERIFICATIONS);
   try {
-    await client.sync(SyncStrategy.PARTIAL_PUSH);
+    await client.sync(SyncStrategy.PartialPush);
   } catch (err) {
     console.error(err);
   }
@@ -46,8 +43,7 @@ export async function publishVerifierBotTargets(
 ): Promise<void> {
   const bots = await verifierApi.verifierIdentities();
   if (bots.size === 0) return;
-  const claimEventKey = v2.EventKey.fromBinary(hexToBytes(claimId));
-  await publishVerificationTarget(client, claimEventKey, [...bots]);
+  await publishVerificationTarget(client, claimEventKey(claimId), [...bots]);
   invalidateQuery(client, ['verification-targets', claimId]);
 }
 
@@ -72,13 +68,14 @@ export default function useRequestVerification() {
       }
       setPending(true);
       try {
-        const claimEventKey = v2.EventKey.fromBinary(hexToBytes(claimId));
-        await publishVerificationTarget(client, claimEventKey, [identity]);
+        await publishVerificationTarget(client, claimEventKey(claimId), [
+          identity,
+        ]);
 
         // Delivery to servers is best-effort — the target is already saved
         // locally and will be pushed on the next sync if this fails.
         try {
-          await client.sync(SyncStrategy.PARTIAL_PUSH);
+          await client.sync(SyncStrategy.PartialPush);
         } catch (e) {
           console.warn('Failed to push verification target to servers:', e);
         }

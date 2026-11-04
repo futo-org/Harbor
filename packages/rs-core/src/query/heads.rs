@@ -11,7 +11,7 @@ use polycentric_common::models::protos_v2::{
 use prost::Message;
 
 use crate::client::PolycentricClient;
-use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
+use crate::query::{ByteObservable, QueryClient, QueryKey, QueryOpts, channel};
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct SubscribeHeadsArgs {}
@@ -38,7 +38,7 @@ pub fn subscribe_heads(
     query_key: Option<QueryKey>,
     _args: SubscribeHeadsArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let stream_fn = move |server_url: String| async move {
         let opened = EventSyncServiceClient::new(channel(&server_url).await?)
             .subscribe_heads(SubscribeHeadsRequest {})

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import {
   FetchMode,
   type Query,
+  type QueryData,
   type QueryOpts,
   QueryStatus,
   type PolycentricClient,
@@ -16,11 +17,11 @@ import { usePolycentric } from '../../lib/polycentric-hooks/context';
  */
 export type QuerySource =
   | Query
-  | ((status: QueryStatus | undefined, data: ArrayBuffer | undefined) => Query);
+  | ((status: QueryStatus | undefined, data: QueryData | undefined) => Query);
 
 export type QueryRef = {
-  /** Latest query response data received from rs-core. */
-  data: ArrayBuffer | undefined;
+  /** Latest query result received from rs-core. */
+  data: QueryData | undefined;
 
   /** The overall status of the fan-out query. */
   status: QueryStatus;
@@ -180,14 +181,9 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
     // Set query to loading state
     updateQueryRef(key, initState);
 
-    // Request from rs-core
-    const observable = args.client.core.fetchQuery(
-      args.queryKey,
-      args.query,
-      args.opts,
-    );
-    // Listen for outputs from relevant servers
-    const sub = observable.subscribe({
+    // Request from rs-core, and listen for outputs from relevant servers
+    const stream = args.client.fetchQuery(args.queryKey, args.query, args.opts);
+    const unsubscribe = stream.subscribe({
       next(result) {
         const patch: Partial<QueryRef> = {
           status: result.status,
@@ -196,8 +192,7 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
         };
 
         const hasData = get().queries.get(key)?.data !== undefined;
-        const localEmpty =
-          result.successfulServers === 0 && result.data?.byteLength === 0;
+        const localEmpty = result.successfulServers === 0 && result.empty;
         if (result.data !== undefined && !(hasData && localEmpty)) {
           patch.data = result.data;
         }
@@ -232,7 +227,7 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       },
     });
     // Dispose of the subscription if we cancel the fetch
-    return () => sub.unsubscribe();
+    return unsubscribe;
   };
 
   return {
@@ -285,7 +280,7 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
 
       // Invalidate rust-side cache
       if (strategy !== RefreshStrategy.Fetch) {
-        sub.args.client.core.invalidateQuery(sub.args.queryKey);
+        void sub.args.client.invalidateQuery(sub.args.queryKey);
       }
 
       // Update javascript-side query store entry
@@ -356,7 +351,7 @@ export function invalidateQuery(
   const prefix = queryKey.join('\0');
 
   // Clears the rust-side cache for the whole partition, subscribed or not.
-  client.core.invalidateQuery(queryKey);
+  void client.invalidateQuery(queryKey);
 
   const strat = lazy ? RefreshStrategy.Lazy : RefreshStrategy.Eager;
 
@@ -373,7 +368,7 @@ export function invalidateQuery(
  * query could return, e.g. the identity's server list changing.
  */
 export function invalidateAllQueries(client: PolycentricClient) {
-  client.core.invalidateAllQueries();
+  void client.invalidateAllQueries();
 
   const state = useQueryStore.getState();
   for (const key of state.subscriptions.keys()) {

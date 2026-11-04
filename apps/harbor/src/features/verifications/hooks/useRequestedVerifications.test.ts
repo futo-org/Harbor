@@ -1,30 +1,13 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
-// time, which can't run under jest — expose just what the hook needs.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-  Query: {
-    ListTargetedVerificationClaims:
-      function ListTargetedVerificationClaims() {},
-  },
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
+
+jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => ({
+  ...jest.requireActual('@/src/common/lib/polycentric-hooks/helpers'),
+  getKeyFingerprint: () => 'fingerprint',
 }));
 
-// ESM-only; jest-expo doesn't transform it. The digest content is irrelevant.
-jest.mock('@noble/hashes/sha2.js', () => ({
-  sha256: () => new Uint8Array(32),
-}));
-
-jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => {
-  const helpers = jest.requireActual(
-    '@/src/common/lib/polycentric-hooks/helpers',
-  );
-  return {
-    bytesToHex: helpers.bytesToHex,
-    getKeyFingerprint: () => 'fingerprint',
-    eventKeyId: helpers.eventKeyId,
-  };
-});
-
-let mockQueryData: Uint8Array | null = null;
+let mockQueryData: QueryData | undefined;
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   useQuery: (
     _key: unknown,
@@ -32,78 +15,50 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
     _opts: unknown,
     enabled: boolean,
   ) => ({
-    data: enabled ? mockQueryData : null,
+    data: enabled ? mockQueryData : undefined,
     isLoading: false,
     refresh: jest.fn(),
   }),
   RefreshStrategy: { Lazy: 'lazy' },
 }));
 
-import { v2 } from '@polycentric/react-native';
+import { QueryData, v2 } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
+import {
+  eventBundle,
+  verificationClaimContent,
+  verificationKey,
+  verificationTargetContent,
+} from '../__fixtures__/bundles';
 import { useRequestedVerifications } from './useRequestedVerifications';
 
 function claimBundle(owner: string, sequence: number): v2.EventBundle {
-  const schema = v2.VerificationSchema.create({ name: 'Freeform' });
-  const content = v2.Content.create({
-    contentBody: {
-      oneofKind: 'verificationClaim',
-      verificationClaim: {
-        schema: { schemaBytes: v2.VerificationSchema.toBinary(schema) },
-        fields: {},
-      },
-    },
-  });
-  const event = v2.Event.create({
-    key: v2.EventKey.create({
-      identity: owner,
-      collection: 8,
-      sequence: BigInt(sequence),
-    }),
-    createdAt: 1000n,
-  });
-  return v2.EventBundle.create({
-    signedEvent: v2.SignedEvent.create({
-      eventBytes: v2.Event.toBinary(event),
-      signature: new Uint8Array([0]),
-    }),
-    serializedContent: v2.SerializedContent.create({
-      contentBytes: v2.Content.toBinary(content),
-    }),
-  });
+  return eventBundle(
+    verificationKey(owner, sequence),
+    verificationClaimContent(
+      v2.VerificationSchema.create({ name: 'Freeform' }),
+    ),
+  );
 }
 
 function targetBundle(
   owner: string,
   targetIdentities: string[],
 ): v2.EventBundle {
-  const content = v2.Content.create({
-    contentBody: {
-      oneofKind: 'verificationTarget',
-      verificationTarget: { targetIdentities },
-    },
-  });
-  const event = v2.Event.create({
-    key: v2.EventKey.create({ identity: owner, collection: 8, sequence: 99n }),
-    createdAt: 1000n,
-  });
-  return v2.EventBundle.create({
-    signedEvent: v2.SignedEvent.create({
-      eventBytes: v2.Event.toBinary(event),
-      signature: new Uint8Array([0]),
-    }),
-    serializedContent: v2.SerializedContent.create({
-      contentBytes: v2.Content.toBinary(content),
-    }),
-  });
+  return eventBundle(
+    verificationKey(owner, 99n),
+    verificationTargetContent(targetIdentities),
+  );
 }
 
 function respond(claimBundles: v2.VerificationClaimBundle[]) {
-  mockQueryData = v2.ListTargetedVerificationClaimsResponse.toBinary(
-    v2.ListTargetedVerificationClaimsResponse.create({ claimBundles }),
-  );
+  mockQueryData = new QueryData.TargetedVerificationClaims({
+    response: v2.ListTargetedVerificationClaimsResponse.create({
+      claimBundles,
+    }),
+  });
 }
 
 type HookResult = ReturnType<typeof useRequestedVerifications>;
@@ -121,7 +76,7 @@ function renderHook(identity: string | undefined): { current: HookResult } {
 }
 
 beforeEach(() => {
-  mockQueryData = null;
+  mockQueryData = undefined;
 });
 
 describe('useRequestedVerifications', () => {

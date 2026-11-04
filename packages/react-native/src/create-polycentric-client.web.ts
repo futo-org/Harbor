@@ -1,80 +1,33 @@
-import {
-  MemoryFileStoreDriver,
-  MemoryStorageDriver,
-  PolycentricClient,
-} from '@polycentric/js-core';
-import {
-  IndexedDBStorageDriver,
-  OpfsFileStoreDriver,
-} from '@polycentric/js-browser';
-import {
-  PolycentricCore,
-  setLogger,
-  uniffiInitAsync,
-} from '@polycentric/rs-core-wasm/web';
-import {
-  createBatchingLogSink,
-  createIdentity,
-  normalizeDatabaseName,
-  type CreatePolycentricClientConfig,
-} from './create-polycentric-client.shared';
+import type { PolycentricClient } from '@polycentric/js-core';
+import { createWebClient } from '@polycentric/js-core/web';
+import { type Application, setLogger } from '@polycentric/rs-core-wasm/web';
+import { createBatchingLogSink, normalizeDatabaseName } from './log-sink';
 
-let loggerInstalled = false;
-function installConsoleLogger() {
-  if (loggerInstalled) return;
-  loggerInstalled = true;
-  setLogger(createBatchingLogSink());
+export interface CreatePolycentricClientConfig {
+  databaseName?: string;
+  /** Servers the client starts with. */
+  seedServers?: string[];
+  /** Stamped on every event the client creates. */
+  application?: Application;
 }
 
+let loggerInstalled = false;
+
+/**
+ * Open the client in the browser: one worker serves every tab, with SQLite
+ * on the origin private file system; memory where the browser can't run it.
+ */
 export async function createPolycentricClient(
   config: CreatePolycentricClientConfig = {},
 ): Promise<PolycentricClient> {
-  const databaseName = normalizeDatabaseName(config.databaseName);
-
-  // Load + initialize the wasm module before constructing the core.
-  await uniffiInitAsync();
-  installConsoleLogger();
-
-  // Ask the browser to exempt our storage from quota eviction.
-  try {
-    const persisted = await navigator.storage?.persist?.();
-    if (!persisted) {
-      console.warn('Persistent storage not granted; data may be evicted');
-    }
-  } catch (error) {
-    console.warn('Persistent storage request failed:', error);
-  }
-
-  // Private browsing can block IndexedDB/OPFS entirely; fall back to
-  // in-memory storage so the app still runs (logged-out, nothing persists).
-  let drivers: Pick<
-    Parameters<typeof PolycentricClient.create>[0],
-    'storageDriver' | 'filestoreDriver' | 'persistentStorage'
-  >;
-  try {
-    drivers = {
-      storageDriver: await IndexedDBStorageDriver.create(databaseName),
-      filestoreDriver: await OpfsFileStoreDriver.create(
-        `${databaseName}-blobs`,
-      ),
-      persistentStorage: true,
-    };
-  } catch (error) {
-    console.warn('Persistent storage unavailable, running in-memory:', error);
-    drivers = {
-      storageDriver: new MemoryStorageDriver(),
-      filestoreDriver: new MemoryFileStoreDriver(),
-      persistentStorage: false,
-    };
-  }
-
-  return PolycentricClient.create({
-    core: new PolycentricCore(),
-    ...drivers,
+  const client = await createWebClient({
+    databaseName: normalizeDatabaseName(config.databaseName),
     seedServers: config.seedServers,
     application: config.application,
   });
+  if (!loggerInstalled) {
+    loggerInstalled = true;
+    setLogger(createBatchingLogSink());
+  }
+  return client;
 }
-
-export { createIdentity };
-export type { CreatePolycentricClientConfig };

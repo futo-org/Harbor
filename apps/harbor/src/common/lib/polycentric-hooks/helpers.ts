@@ -1,14 +1,28 @@
 import {
-  type EventKey,
   type LabelSet,
   type PostLabel,
+  type QueryData,
+  QueryData_Tags,
   type QueryStatus,
-  v2,
+  eventKeyId as ffiEventKeyId,
+  type v2,
 } from '@polycentric/react-native';
 import type { UseQueryResult } from '@/src/common/query/hooks/useQuery';
 
-export function toBase64(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode.apply(null, Array.from(bytes)));
+/** Bytes from rs-core arrive as `ArrayBuffer`s; these accept either. */
+type Bytes = ArrayBuffer | Uint8Array;
+
+export function asBytes(bytes: Bytes): Uint8Array {
+  return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+}
+
+/** A copy of `bytes` as the `ArrayBuffer` rs-core takes. */
+export function asBuffer(bytes: Bytes): ArrayBuffer {
+  return asBytes(bytes).slice().buffer as ArrayBuffer;
+}
+
+export function toBase64(bytes: Bytes): string {
+  return btoa(String.fromCharCode.apply(null, Array.from(asBytes(bytes))));
 }
 
 export function fromBase64(base64: string): Uint8Array {
@@ -21,7 +35,7 @@ export function fromBase64(base64: string): Uint8Array {
 }
 
 export type PostData = {
-  /** Hex of the event key */
+  /** `eventKeyId` of the event key */
   id: string;
 
   identity: v2.EventKey['identity'];
@@ -42,13 +56,13 @@ export type PostData = {
 
   /** Set when the underlying `v2.Post` carried a `reply`. */
   reply?: {
-    /** Hex of the root post's EventKey — same encoding as `PostData.id`. */
+    /** Id of the root post's EventKey — same encoding as `PostData.id`. */
     rootId?: string;
-    /** Hex of the parent post's EventKey — same encoding as `PostData.id`. */
+    /** Id of the parent post's EventKey — same encoding as `PostData.id`. */
     parentId?: string;
   };
 
-  /** Hex of the quoted post's EventKey — same encoding as `PostData.id`. */
+  /** Id of the quoted post's EventKey — same encoding as `PostData.id`. */
   quoteId?: string;
 
   /** Quoted post resolved from the feed's `event_hints`, when the server
@@ -58,7 +72,7 @@ export type PostData = {
   /** Identity that reposted this post, when this item represents a
    *  repost. The rest of the fields are the *reposted* post's data. */
   repostedBy?: string;
-  /** Hex of the repost event's own EventKey — used as the feed list
+  /** Id of the repost event's own EventKey — used as the feed list
    *  key so a repost is distinct from the original post. */
   repostId?: string;
   /** When the repost was made. Feeds rank a repost by this, so it is the
@@ -125,27 +139,55 @@ export function getKeyFingerprint(key?: v2.PublicKey): string | undefined {
   return bytesToHex(key.key).substring(0, 16);
 }
 
-/** Every `Content.contentBody` variant that carries a payload — i.e. each
- *  `oneofKind` except the empty `undefined` case. */
-export type ContentKind = Exclude<
-  v2.Content['contentBody']['oneofKind'],
-  undefined
->;
+/** The payloads a `Content.contentBody` can carry, keyed by field name
+ *  (`post`, `follow`, `verificationClaim`, …). */
+type ContentPayloads = v2.ContentBody extends infer U
+  ? U extends { inner: infer I }
+    ? I
+    : never
+  : never;
+
+/** Every `Content.contentBody` variant, by its field name. */
+export type ContentKind = ContentPayloads extends infer I
+  ? I extends Record<string, unknown>
+    ? keyof I & string
+    : never
+  : never;
 
 /** The payload a given content kind carries. `ContentBodyOf<'follow'>` is
- *  `v2.Follow`, `ContentBodyOf<'post'>` is `v2.Post`, and so on. Inferred
- *  via a mapped type rather than `[K]` indexing, which TS rejects for a
- *  generic key over a discriminated union. */
+ *  `v2.Follow`, `ContentBodyOf<'post'>` is `v2.Post`, and so on. */
 export type ContentBodyOf<K extends ContentKind> =
-  Extract<v2.Content['contentBody'], { oneofKind: K }> extends {
-    [P in K]: infer T;
-  }
+  Extract<ContentPayloads, Record<K, unknown>> extends Readonly<
+    Record<K, infer T>
+  >
     ? T
     : never;
 
-/** A bundle decoded against a specific content kind: the parsed event, the
- *  content narrowed to that kind's payload type, and the bundle's raw
- *  signed event (validated to be present). */
+/** The payload of `content` if it's of `kind`. */
+export function contentAs<K extends ContentKind>(
+  content: v2.Content | undefined,
+  kind: K,
+): ContentBodyOf<K> | undefined {
+  const inner = content?.contentBody?.inner as
+    | Record<string, unknown>
+    | undefined;
+  if (!inner || !(kind in inner)) return undefined;
+  return inner[kind] as ContentBodyOf<K>;
+}
+
+/** The field name of `content`'s payload (`'post'`, `'follow'`, …). */
+export function contentKind(
+  content: v2.Content | undefined,
+): ContentKind | undefined {
+  const inner = content?.contentBody?.inner as
+    | Record<string, unknown>
+    | undefined;
+  return inner ? (Object.keys(inner)[0] as ContentKind) : undefined;
+}
+
+/** A bundle decoded against a specific content kind: the event, the
+ *  content narrowed to that kind's payload type, and the bundle's signed
+ *  event (validated to be present). */
 export type DecodedBundle<K extends ContentKind> = {
   event: v2.Event;
   content: ContentBodyOf<K>;
@@ -153,10 +195,10 @@ export type DecodedBundle<K extends ContentKind> = {
 };
 
 /**
- * Decode an `EventBundle` as a specific content kind, replacing the
- * per-kind `decodeReaction` / `decodeFollow` / `decodePost` helpers.
+ * Narrow an `EventBundle` to a specific content kind. rs-core has already
+ * verified and decoded it; this picks out the event and the payload.
  *
- * Returns `null` when the bundle is malformed or carries a different kind.
+ * Returns `null` when the bundle is incomplete or carries a different kind.
  * The `kind` argument both filters and types the result: the returned
  * `content` is narrowed to that kind's payload, so `decodeBundle(b, 'follow')`
  * yields a `v2.Follow` and `decodeBundle(b, 'post')` a `v2.Post`.
@@ -165,43 +207,32 @@ export function decodeBundle<K extends ContentKind>(
   bundle: v2.EventBundle,
   kind: K,
 ): DecodedBundle<K> | null {
-  if (!bundle.signedEvent || !bundle.serializedContent?.contentBytes) {
-    return null;
-  }
-  let parsed: v2.Content;
-  let event: v2.Event;
-  try {
-    parsed = v2.Content.fromBinary(bundle.serializedContent.contentBytes);
-    event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-  } catch {
-    return null;
-  }
-  if (parsed.contentBody.oneofKind !== kind) return null;
-  // Safe: the oneofKind check above guarantees `kind` is the live payload
-  // key. TS can't index a discriminated union by a generic key, so cast.
-  const content = (
-    parsed.contentBody as unknown as Record<K, ContentBodyOf<K>>
-  )[kind];
-  return { event, content, signedEvent: bundle.signedEvent };
+  const signedEvent = bundle.signedEvent;
+  const event = signedEvent?.event;
+  if (!signedEvent || !event) return null;
+  const content = contentAs(bundle.serializedContent?.content, kind);
+  if (content === undefined) return null;
+  return { event, content, signedEvent };
 }
 
+/** The event in a bundle, if any. */
+export function bundleEvent(
+  bundle: v2.EventBundle | undefined,
+): v2.Event | undefined {
+  return bundle?.signedEvent?.event;
+}
+
+/** The content in a bundle, if any. */
+export function bundleContent(
+  bundle: v2.EventBundle | undefined,
+): v2.Content | undefined {
+  return bundle?.serializedContent?.content;
+}
+
+/** The id an `EventKey` is shared as (links, the verifier): rs-core's
+ *  `eventKeyId`, the hex of its serialization. */
 export function eventKeyId(eventKey: v2.EventKey): string {
-  return bytesToHex(v2.EventKey.toBinary(eventKey));
-}
-
-/** The {@link eventKeyId} of an rs-core `EventKey` record. */
-export function ffiEventKeyId(eventKey: EventKey): string {
-  return eventKeyId(
-    v2.EventKey.create({
-      collection: eventKey.collection,
-      identity: eventKey.identity,
-      signedBy: v2.PublicKey.create({
-        keyType: eventKey.signedBy.keyType,
-        key: new Uint8Array(eventKey.signedBy.key),
-      }),
-      sequence: eventKey.sequence,
-    }),
-  );
+  return ffiEventKeyId(eventKey);
 }
 
 /** Decode a v2 EventBundle into PostData, or null if not a post. */
@@ -258,7 +289,7 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
 export function labelMapFromSets(sets: LabelSet[]): Map<string, PostLabel[]> {
   const labelMap = new Map<string, PostLabel[]>();
   for (const set of sets) {
-    labelMap.set(ffiEventKeyId(set.target), set.labels);
+    labelMap.set(eventKeyId(set.target), set.labels);
   }
   return labelMap;
 }
@@ -345,19 +376,29 @@ export function decodeFeedItems(
   return items;
 }
 
+/** What a `QueryData` of kind `T` carries, e.g. `{ response, labels }`. */
+export type QueryPayload<T extends QueryData_Tags> =
+  Extract<QueryData, { tag: T }> extends { inner: infer I } ? I : never;
+
+/**
+ * The payload of a query result of the given kind, e.g.
+ * `queryPayload(data, QueryData_Tags.Feed)` is the `GetFeedResponse`
+ * with its labels. `undefined` when there's no data or it's another kind.
+ */
+export function queryPayload<T extends QueryData_Tags>(
+  data: QueryData | undefined,
+  tag: T,
+): QueryPayload<T> | undefined {
+  if (!data || data.tag !== tag) return undefined;
+  return data.inner as unknown as QueryPayload<T>;
+}
+
 /** Get the forward cursor token from a previous feed query result */
 export function extractFeedToken(
   _status: QueryStatus | undefined,
-  data: ArrayBuffer | undefined,
+  data: QueryData | undefined,
 ): string | undefined {
-  let forwardToken: string | undefined;
-
-  if (data) {
-    const response = v2.GetFeedResponse.fromBinary(new Uint8Array(data));
-    forwardToken = response.pageInfo?.endCursor;
-  }
-
-  return forwardToken;
+  return queryPayload(data, QueryData_Tags.Feed)?.response.pageInfo?.endCursor;
 }
 
 /** Check whether it's reasonable to fetch more feed data from servers */
@@ -393,23 +434,17 @@ export function pickImageVariant(
   );
 }
 
-export function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
+export function bytesToHex(bytes: Bytes): string {
+  return Array.from(asBytes(bytes))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }
 
-/** Hex of the event key for a bundle — matches `PostData.id` encoding.
- *  Returns `null` if the bundle isn't a well-formed signed event. */
+/** Id of the event key for a bundle — matches `PostData.id` encoding.
+ *  Returns `null` if the bundle has no event. */
 export function bundleEventId(bundle: v2.EventBundle): string | null {
-  if (!bundle.signedEvent) return null;
-  try {
-    const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-    if (!event.key) return null;
-    return eventKeyId(event.key);
-  } catch {
-    return null;
-  }
+  const key = bundle.signedEvent?.event?.key;
+  return key ? eventKeyId(key) : null;
 }
 
 export function hexToBytes(hex: string): Uint8Array {
@@ -421,19 +456,18 @@ export function hexToBytes(hex: string): Uint8Array {
 }
 
 export function publicKeyToString(key: v2.PublicKey): string {
-  const keyType = key.keyType ?? 0;
-  const keyBytes = key.key ?? new Uint8Array();
-  return `${keyType}_${bytesToHex(keyBytes)}`;
+  const keyType = Number(key.keyType ?? 0);
+  return `${keyType}_${bytesToHex(key.key ?? new ArrayBuffer(0))}`;
 }
 
 export function stringToPublicKey(str: string): v2.PublicKey {
   const idx = str.indexOf('_');
   const keyTypeStr = str.slice(0, idx);
   const keyHex = str.slice(idx + 1);
-  return v2.PublicKey.create({
-    keyType: Number(keyTypeStr),
-    key: hexToBytes(keyHex),
-  });
+  return {
+    keyType: Number(keyTypeStr) as v2.KeyType,
+    key: asBuffer(hexToBytes(keyHex)),
+  };
 }
 
 export function publicKeyToStringURLSafe(key: v2.PublicKey): string {
@@ -444,13 +478,18 @@ export function stringURLSafeToPublicKey(str: string): v2.PublicKey {
   return stringToPublicKey(str);
 }
 
+/** Whether two public keys are the same key. */
+export function keysEqual(a: v2.PublicKey, b: v2.PublicKey): boolean {
+  return a.keyType === b.keyType && bytesToHex(a.key) === bytesToHex(b.key);
+}
+
 /**
  * @deprecated misnamed — this returns a short base64 form of the signer's
  * public key, not the identity id. Use {@link shortenIdentityId} or render
  * the v2 `key.identity` string directly.
  */
 export function getIdentityId(publicKey: v2.PublicKey): string {
-  const bytes = publicKey.key ?? new Uint8Array();
+  const bytes = asBytes(publicKey.key ?? new ArrayBuffer(0));
   if (bytes.length === 0) return '...';
   return toBase64(bytes).slice(0, 10);
 }
@@ -469,12 +508,4 @@ export function shortenIdentityId(
 ): string {
   if (!identity) return '...';
   return identity.slice(0, len);
-}
-
-export function signedEventToHex(signedEvent: v2.SignedEvent): string {
-  return bytesToHex(v2.SignedEvent.toBinary(signedEvent));
-}
-
-export function hexToSignedEvent(hex: string): v2.SignedEvent {
-  return v2.SignedEvent.fromBinary(hexToBytes(hex));
 }

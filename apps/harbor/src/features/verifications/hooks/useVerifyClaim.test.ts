@@ -1,34 +1,20 @@
-// `@polycentric/react-native`'s barrel pulls in native uniffi init at import
-// time, which can't run under jest — expose just what the hooks need.
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-  COLLECTION: { VERIFICATIONS: 8 },
-  SyncStrategy: { PARTIAL_PUSH: 'partial-push' },
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
+let mockSequence = 0;
 const mockClient = {
-  contentManager: { save: jest.fn(async () => undefined) },
-  buildEvent: jest.fn(async () => {
-    const { v2 } = jest.requireMock('@polycentric/react-native');
-    return v2.Event.create({
-      key: v2.EventKey.create({
-        identity: 'me',
-        collection: 8,
-        sequence: 9n,
-      }),
-    });
+  publish: jest.fn(async (content: V2.Content, collection: number) => {
+    const { publishedBundle } = jest.requireActual('../__fixtures__/bundles');
+    return publishedBundle(content, collection, 'me', BigInt(++mockSequence));
   }),
-  signEvent: jest.fn(async (event: unknown) => ({ event })),
-  commitEvent: jest.fn(
-    async (_signed: unknown, _content: unknown) => undefined,
-  ),
-  sync: jest.fn(async () => undefined),
+  sync: jest.fn(async (_strategy?: unknown) => 0),
 };
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
+  ...jest.requireActual('@/src/common/lib/polycentric-hooks/helpers'),
   usePolycentric: () => mockClient,
   useCurrentIdentity: () => ({ identityKey: 'me' }),
-  hexToBytes: (hex: string) => Uint8Array.from(Buffer.from(hex, 'hex')),
 }));
 
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
@@ -43,19 +29,21 @@ jest.mock('@/src/common/components/toast', () => ({
 }));
 
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { v2 } from '@polycentric/react-native';
+import { contentAs } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  COLLECTION,
+  eventKeyId,
+  SyncStrategy,
+  type v2 as V2,
+} from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
+import { verificationKey } from '../__fixtures__/bundles';
 import useVerifyClaim from './useVerifyClaim';
 
-// A claim event key as it appears in `DecodedClaim.id`.
-const CLAIM_KEY = v2.EventKey.create({
-  identity: 'them',
-  collection: 8,
-  sequence: 3n,
-});
-const CLAIM_ID = Buffer.from(v2.EventKey.toBinary(CLAIM_KEY)).toString('hex');
+// A claim id as it appears in `DecodedClaim.id`.
+const CLAIM_ID = eventKeyId(verificationKey('them', 3n));
 
 type HookResult = ReturnType<typeof useVerifyClaim>;
 
@@ -80,23 +68,22 @@ async function verify() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSequence = 0;
 });
 
 describe('useVerifyClaim', () => {
   it('publishes a verify referencing the claim', async () => {
     await verify();
 
-    expect(mockClient.commitEvent).toHaveBeenCalledTimes(1);
-    const content = mockClient.commitEvent.mock.calls[0][1] as v2.Content;
-    if (content.contentBody.oneofKind !== 'verificationVerify') {
-      throw new Error('expected a verificationVerify');
-    }
-    const verifyBody = content.contentBody.verificationVerify;
+    expect(mockClient.publish).toHaveBeenCalledTimes(1);
+    const [content, collection] = mockClient.publish.mock.calls[0];
+    const verifyBody = contentAs(content, 'verificationVerify');
+    if (!verifyBody) throw new Error('expected a verificationVerify');
     expect(verifyBody.claimEventKey?.sequence).toBe(3n);
     expect(verifyBody.claimEventKey?.identity).toBe('them');
 
-    expect(mockClient.buildEvent).toHaveBeenCalledWith(content, 8);
-    expect(mockClient.sync).toHaveBeenCalledWith('partial-push');
+    expect(collection).toBe(COLLECTION.VERIFICATIONS);
+    expect(mockClient.sync).toHaveBeenCalledWith(SyncStrategy.PartialPush);
     expect(mockToast.success).toHaveBeenCalled();
   });
 
@@ -117,7 +104,7 @@ describe('useVerifyClaim', () => {
     mockClient.sync.mockRejectedValueOnce(new Error('offline'));
 
     await expect(verify()).resolves.toBeUndefined();
-    expect(mockClient.commitEvent).toHaveBeenCalledTimes(1);
+    expect(mockClient.publish).toHaveBeenCalledTimes(1);
     expect(invalidateQuery).toHaveBeenCalled();
   });
 });

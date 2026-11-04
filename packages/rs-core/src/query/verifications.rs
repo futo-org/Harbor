@@ -19,7 +19,7 @@ use crate::query::event::merge::{
     merge_event_bundles, merge_event_hints,
 };
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
-use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
+use crate::query::{ByteObservable, QueryClient, QueryKey, QueryOpts, channel};
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListVerificationClaimsArgs {
@@ -189,7 +189,7 @@ pub fn list_verification_claims(
     query_key: Option<QueryKey>,
     args: ListVerificationClaimsArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let request = ListVerificationClaimsRequest {
         claimed_by_identity: args.claimed_by_identity,
     };
@@ -235,7 +235,7 @@ pub fn list_verification_targets(
     query_key: Option<QueryKey>,
     args: ListVerificationTargetsArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let request = ListVerificationTargetsRequest {
         claim_event_key: Some(args.claim_event_key.into()),
     };
@@ -280,7 +280,7 @@ pub fn list_verification_verifies(
     query_key: Option<QueryKey>,
     args: ListVerificationVerifiesArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let request = ListVerificationVerifiesRequest {
         claim_event_key: Some(args.claim_event_key.into()),
     };
@@ -326,7 +326,7 @@ pub fn list_targeted_verification_claims(
     query_key: Option<QueryKey>,
     args: ListTargetedVerificationClaimsArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let request = ListTargetedVerificationClaimsRequest {
         target_identity: args.target_identity,
     };
@@ -372,7 +372,7 @@ pub fn resolve_verified_claims(
     query_key: Option<QueryKey>,
     args: ResolveVerifiedClaimsArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let request = ResolveVerifiedClaimsRequest {
         schema_digest: args.schema_digest.map(|value| ContentDigest {
             r#type: ContentDigestType::Sha256 as i32,

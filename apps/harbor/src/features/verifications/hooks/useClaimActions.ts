@@ -1,7 +1,8 @@
-import { hexToBytes, usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { COLLECTION, SyncStrategy, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
+import { claimEventKey } from '../utils/claim-id';
 import type { DecodedClaim } from './useClaimById';
 
 type Client = ReturnType<typeof usePolycentric>;
@@ -11,20 +12,16 @@ export async function deleteClaim(
   client: Client,
   claimId: string,
 ): Promise<void> {
-  const eventKey = v2.EventKey.fromBinary(hexToBytes(claimId));
+  const eventKey = claimEventKey(claimId);
   const deleteContent = v2.Content.create({
-    contentBody: { oneofKind: 'delete', delete: { eventKey } },
+    contentBody: new v2.ContentBody.Delete({
+      delete: v2.Delete.create({ eventKey }),
+    }),
   });
-  await client.contentManager.save(deleteContent);
-  const deleteEvent = await client.buildEvent(
-    deleteContent,
-    COLLECTION.VERIFICATIONS,
-  );
-  const signedDelete = await client.signEvent(deleteEvent);
-  await client.commitEvent(signedDelete, deleteContent);
+  await client.publish(deleteContent, COLLECTION.VERIFICATIONS);
 
   try {
-    await client.sync(SyncStrategy.PARTIAL_PUSH);
+    await client.sync(SyncStrategy.PartialPush);
   } catch (e) {
     console.warn('Failed to push claim deletion to servers:', e);
   }

@@ -38,9 +38,10 @@
     "!**/.*"
   ],
   "scripts": {
+    "generate": "node tools/generate-bindings.mjs",
     "ubrn:ios": "ubrn build ios --and-generate",
     "ubrn:android": "ubrn build android --and-generate",
-    "ubrn:clean": "rm -rfv cpp/ android/CMakeLists.txt android/src/main/java android/*.cpp ios/ src/Native* src/uniffi-init.tsx src/generated/rn",
+    "ubrn:clean": "rm -rfv src/generated src/NativeReactNative.ts src/uniffi-init.tsx cpp ios ReactNative.podspec android/CMakeLists.txt android/build.gradle android/cpp-adapter.cpp android/src/main/AndroidManifest.xml android/src/main/java android/src/main/jniLibs PolycentricReactNativeFramework.xcframework/*/",
     "dev": "bob build --watch",
     "clean": "del-cli android/build lib",
     "build": "bob build",
@@ -63,7 +64,7 @@
     "@types/react": "~19.3.0",
     "del-cli": "^8.0.0",
     "expo-file-system": "~58.0.0",
-    "expo-sqlite": "~58.0.0",
+    "expo-secure-store": "~58.0.2",
     "jest": "catalog:",
     "react": "19.3.0",
     "react-native": "0.88.1",
@@ -72,7 +73,7 @@
   },
   "peerDependencies": {
     "expo-file-system": ">=18.0.0",
-    "expo-sqlite": ">=14.0.0",
+    "expo-secure-store": ">=14.0.0",
     "react": ">=19.0.0",
     "react-native": ">=0.83.0"
   },
@@ -101,13 +102,9 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
-    "@noble/curves": "catalog:",
-    "@polycentric/js-browser": "workspace:*",
     "@polycentric/js-core": "workspace:*",
-    "@polycentric/js-storage-sqlite": "workspace:*",
     "@polycentric/rs-core-wasm": "workspace:*",
     "@ubjs/core": "catalog:",
-    "drizzle-orm": "^0.45.2",
     "fast-text-encoding": "^1.0.6",
     "react-native-get-random-values": "^1.11.0",
     "uniffi-bindgen-react-native": "catalog:"

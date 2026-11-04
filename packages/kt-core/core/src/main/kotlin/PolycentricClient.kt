@@ -1,707 +1,507 @@
 package org.futo.polycentric.core
 
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okio.ByteString.Companion.toByteString
-import org.futo.polycentric.core.ICryptoManager
-import org.futo.polycentric.core.IFileStoreDriver
-import org.futo.polycentric.core.IStorageDriver
-import org.futo.polycentric.core.ServerJwt
-import org.futo.polycentric.core.StoredKeyPair
-import org.futo.polycentric.ffi.AuthToken
-import org.futo.polycentric.ffi.AuthTokenProvider
-import org.futo.polycentric.ffi.ContentEntry
+import android.content.Context
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.callbackFlow
+import org.futo.polycentric.ffi.Application
+import org.futo.polycentric.ffi.BackupCheck
+import org.futo.polycentric.ffi.Blob
+import org.futo.polycentric.ffi.ClientEvent
+import org.futo.polycentric.ffi.ClientListener
+import org.futo.polycentric.ffi.ClientSnapshot
+import org.futo.polycentric.ffi.Content
+import org.futo.polycentric.ffi.ContentDigest
+import org.futo.polycentric.ffi.EventBundle
+import org.futo.polycentric.ffi.EventKey
+import org.futo.polycentric.ffi.GetServerInfoResponse
+import org.futo.polycentric.ffi.HarborClient
+import org.futo.polycentric.ffi.HarborClientBuilder
+import org.futo.polycentric.ffi.HarborClientConfig
+import org.futo.polycentric.ffi.IdentityState
+import org.futo.polycentric.ffi.KeyCipher
+import org.futo.polycentric.ffi.LegacyEvent
+import org.futo.polycentric.ffi.LegacyLogin
 import org.futo.polycentric.ffi.ListEventsArgs
-import org.futo.polycentric.ffi.PolycentricCoreInterface
+import org.futo.polycentric.ffi.LoginId
+import org.futo.polycentric.ffi.LoginKind
+import org.futo.polycentric.ffi.LoginOverview
+import org.futo.polycentric.ffi.LoginStatus
+import org.futo.polycentric.ffi.PairingInfo
+import org.futo.polycentric.ffi.PairingSession
+import org.futo.polycentric.ffi.PendingEvent
+import org.futo.polycentric.ffi.PublicKey
+import org.futo.polycentric.ffi.PublishArgs
 import org.futo.polycentric.ffi.Query
-import org.futo.polycentric.ffi.SignBytesCallback
-import polycentric.v2.Blob
-import polycentric.v2.Content
-import polycentric.v2.ContentDigest
-import polycentric.v2.ContentDigestType
-import polycentric.v2.Event
-import polycentric.v2.EventBundle
-import polycentric.v2.EventKey
-import polycentric.v2.ListEventsResponse
-import polycentric.v2.PublicKey
-import polycentric.v2.PutEventsResponse
-import polycentric.v2.SignedEvent
-import polycentric.v2.UploadBlobRequest
-import polycentric.v2.VectorClock
-import java.security.MessageDigest
-import java.util.logging.Logger
+import org.futo.polycentric.ffi.QueryData
+import org.futo.polycentric.ffi.QueryObserver
+import org.futo.polycentric.ffi.QueryOpts
+import org.futo.polycentric.ffi.QueryResult
+import org.futo.polycentric.ffi.RegisterPushNotificationRequest
+import org.futo.polycentric.ffi.ReportStatus
+import org.futo.polycentric.ffi.StorageConfig
+import org.futo.polycentric.ffi.SyncStrategy
+import org.futo.polycentric.ffi.UrlInfoResponse
+import java.io.File
 
 /**
- * Kotlin port of js-core `PolycentricClient` (polycentric-client.ts).
+ * The Polycentric client for Kotlin: suspend functions and flows over
+ * rs-core's [HarborClient], which does the work — storage, keys, signing,
+ * sync, identities, pairing and queries.
  *
- * Thin orchestration shell over the shared Rust protocol engine
- * (rs-core via UniFFI): the core owns sequences, Merkle anchoring,
- * vector clocks, validation, the networked query engine, and gRPC
- * transport.
- *
- * This class owns key custody, persistent storage, and control flow.
+ * Protocol types are the UniFFI-generated records in
+ * `org.futo.polycentric.ffi` (e.g. [Content], [EventBundle], [EventKey]),
+ * passed through unchanged. Failures surface as the generated
+ * `SdkException`. Anything not wrapped here is on [ffi], and rs-core's
+ * free functions (`eventKeyId`, `encodePairingCode`, `blobUrls`,
+ * `backupInfo`, `aeadKeyCipher`, ...) are called directly.
  */
-class PolycentricClient(
-    val core: PolycentricCoreInterface,
-    private val storageDriver: IStorageDriver,
-    val filestore: IFileStoreDriver,
-    seedServers: List<String> = emptyList(),
-    val crypto: ICryptoManager =
-        org.futo.polycentric.core
-            .Ed25519CryptoManager(),
-    /** Stamped on every event this client builds. */
-    val application: polycentric.v2.Application? = null,
-) {
-    @Volatile
-    var currentKeyPair: StoredKeyPair? = null
-        internal set
+class PolycentricClient private constructor(
+    /** The underlying rs-core client. */
+    val ffi: HarborClient,
+) : AutoCloseable {
+    companion object {
+        /**
+         * Open a client in an Android app's private storage: a SQLite
+         * database named [databaseName] and blobs in [blobDirectory].
+         * Private keys are sealed at rest with [keyCipher], an Android
+         * Keystore key by default.
+         */
+        suspend fun create(
+            context: Context,
+            databaseName: String = "polycentric-v2.db",
+            blobDirectory: File = File(context.filesDir, "polycentric-blobs"),
+            seedServers: List<String> = emptyList(),
+            application: Application? = null,
+            keyCipher: KeyCipher = AndroidKeystoreKeyCipher(),
+        ): PolycentricClient =
+            open(
+                databasePath = context.getDatabasePath(databaseName).absolutePath,
+                keyCipher = keyCipher,
+                blobDirectory = blobDirectory.absolutePath,
+                seedServers = seedServers,
+                application = application,
+            )
 
-    /** Identity key (hex sha256 of genesis Identity doc) the keypair acts as. */
-    @Volatile
-    var activeIdentityKey: String? = null
-        internal set
+        /**
+         * Open a client on a SQLite file at [databasePath], keeping blobs in
+         * [blobDirectory] (or in the database when null). Private keys are
+         * sealed at rest with [keyCipher]; hosts holding a 32-byte wrapping
+         * key can use `aeadKeyCipher(wrappingKey)`.
+         */
+        suspend fun open(
+            databasePath: String,
+            keyCipher: KeyCipher,
+            blobDirectory: String? = null,
+            seedServers: List<String> = emptyList(),
+            application: Application? = null,
+        ): PolycentricClient =
+            open(
+                HarborClientConfig(StorageConfig.Sqlite(databasePath, blobDirectory), seedServers, application),
+                keyCipher,
+            )
 
-    @Volatile
-    var servers: List<String> = seedServers
-        private set
+        /** A client that keeps nothing past its lifetime. */
+        suspend fun inMemory(
+            seedServers: List<String> = emptyList(),
+            application: Application? = null,
+            keyCipher: KeyCipher? = null,
+        ): PolycentricClient = open(HarborClientConfig(StorageConfig.Memory, seedServers, application), keyCipher)
 
-    val events = storageDriver.createEventRepository()
-    val contents = storageDriver.createContentRepository()
-    val keys = storageDriver.createKeysRepository()
-    val eventAcks = storageDriver.createEventAckRepository()
-
-    val identityManager = IdentityManager(this)
-    val contentManager = ContentManager(this)
-    val keyPairManager = KeyPairManager(this)
-    val pairingSessionManager = PairingSessionManager(this)
-
-    /**
-     * Outward event bus (js-core `client.events`; renamed here because
-     * `events` is the event *repository* on this flattened client).
-     */
-    val eventService = EventService()
-
-    @Volatile
-    var error: Throwable? = null
-        private set
-
-    val isReady: Boolean
-        get() = eventService.state.value == ClientState.READY
-
-    /**
-     * Suspends until the client has finished [initialize] and reached
-     * [ClientState.READY] — the point at which `currentKeyPair`/`currentSystem`
-     * are guaranteed set. Returns immediately if already ready. Throws the
-     * initialization failure if the client ended in [ClientState.ERROR], rather
-     * than suspending forever. Lets callers gate on readiness the way js-core's
-     * `await create()` does, instead of touching a half-built client.
-     */
-    suspend fun awaitReady() {
-        eventService.state.first { state ->
-            when (state) {
-                ClientState.READY -> true
-                ClientState.ERROR ->
-                    throw (error ?: PolycentricException("Client initialization failed"))
-                else -> false
+        /**
+         * Open a client from a full [config]. [keyCipher] is required
+         * unless the storage is [StorageConfig.Memory].
+         */
+        suspend fun open(
+            config: HarborClientConfig,
+            keyCipher: KeyCipher?,
+        ): PolycentricClient =
+            HarborClientBuilder(config).use { builder ->
+                keyCipher?.let(builder::keyCipher)
+                PolycentricClient(builder.open())
             }
-        }
     }
 
-    /** The active device public key as a proto (js-core `currentSystem`). */
-    val currentSystem: PublicKey
-        get() = requireNotNull(currentKeyPair) { "No keypair set" }.toPublicKeyProto()
-
-    private val http = OkHttpClient()
-
-    init {
-        // Authenticate every outgoing gRPC request as the active identity.
-        // The core caches each server's token and only calls back when it
-        // expires (js-core parity: the PolycentricClient constructor).
-        core.setAuthTokenProvider(
-            object : AuthTokenProvider {
-                override suspend fun authToken(serverUrl: String): AuthToken? {
-                    val keyPair = currentKeyPair ?: return null
-                    val identity = activeIdentityKey ?: return null
-                    val nowSeconds = System.currentTimeMillis() / 1000
-                    return AuthToken(
-                        token = ServerJwt.create(crypto, keyPair, iss = identity, aud = serverUrl, nowSeconds = nowSeconds),
-                        expiresAt = (nowSeconds + ServerJwt.DEFAULT_EXPIRY_SECONDS).toULong(),
-                    )
+    private val snapshotState = MutableStateFlow(ffi.snapshot())
+    private val snapshotListener =
+        ffi.addListener(
+            object : ClientListener {
+                override fun onEvent(event: ClientEvent) {
+                    if (event is ClientEvent.Snapshot) snapshotState.value = event.snapshot
                 }
             },
         )
+
+    init {
+        // Catch a change between the first read and the listener.
+        snapshotState.value = ffi.snapshot()
     }
 
-    companion object {
-        private val log = Logger.getLogger("PolycentricClient")
-
-        /** Construct and initialize in one step (js-core `PolycentricClient.create`). */
-        suspend fun create(
-            core: PolycentricCoreInterface,
-            storageDriver: IStorageDriver,
-            filestore: IFileStoreDriver,
-            seedServers: List<String> = emptyList(),
-            crypto: ICryptoManager =
-                org.futo.polycentric.core
-                    .Ed25519CryptoManager(),
-        ): PolycentricClient =
-            PolycentricClient(core, storageDriver, filestore, seedServers, crypto)
-                .also { it.initialize() }
-    }
-
-    // ── Lifecycle (js-core: initialize) ────────────────────────────────
+    /** What a UI renders: state, login and servers. */
+    val snapshot: StateFlow<ClientSnapshot> = snapshotState.asStateFlow()
 
     /**
-     * Hydrate the Rust core's ephemeral in-memory stores from persistent
-     * storage, restore (or create) a keypair, and push the server list
-     * into the core. Mirrors js-core `initialize()` including its state
-     * machine and progress/hydration signals.
+     * Everything the client reports, from when collection starts: snapshots,
+     * events committed on this device, pulls and push results.
      */
-    suspend fun initialize() {
-        try {
-            eventService.emitStateChanged(ClientState.INITIALIZING)
-            eventService.emitProgress(InitializationStep.STARTING)
-
-            eventService.emitProgress(InitializationStep.HYDRATING_EVENTS)
-            eventService.emitHydrationStatus(HydrationStatus.IN_PROGRESS)
-            copyEvents()
-            copyContents()
-            eventService.emitHydrationStatus(HydrationStatus.COMPLETED)
-
-            // Restore the first stored keypair, or create an ephemeral one —
-            // the SDK always has a keypair after initialize (js-core parity).
-            val session = storageDriver.loadActiveSession()
-            val allKeys = keys.getAll()
-            // The keypair holding the signed-in identity; fall back to any
-            // stored key so the client always has a keypair (js-core parity)
-            // when logged out.
-            val sessionKey =
-                session?.let { s ->
-                    allKeys.firstOrNull { storageDriver.loadActiveIdentityKey(it.publicKey) == s }
-                }
-            val restored = sessionKey ?: allKeys.firstOrNull()
-            if (restored != null) {
-                currentKeyPair = restored
-                // Signed in only when the session resolved to a keypair we hold.
-                activeIdentityKey = if (restored === sessionKey) session else null
-                eventService.emitKeyPairChanged(restored, activeIdentityKey)
-            } else {
-                eventService.emitProgress(InitializationStep.CREATING_EPHEMERAL_IDENTITY)
-                keyPairManager.createKeyPair(setAsCurrent = true)
-            }
-
-            refreshServers()
-
-            eventService.emitProgress(InitializationStep.COMPLETE)
-            eventService.emitStateChanged(ClientState.READY)
-        } catch (e: Throwable) {
-            error = e
-            // Only report a hydration failure when hydration is what failed;
-            // later steps (keypair restore, server refresh) leave it COMPLETED.
-            if (eventService.hydrationStatus.value == HydrationStatus.IN_PROGRESS) {
-                eventService.emitHydrationStatus(HydrationStatus.FAILED)
-            }
-            eventService.emitStateChanged(ClientState.ERROR)
-            eventService.emitError(e)
-            throw e
-        }
-    }
-
-    /** js-core `copyEvents`: replay stored events into the core. */
-    suspend fun copyEvents(events: List<SignedEvent>? = null) {
-        val all = events ?: this.events.getAll()
-        coreCall { core.copyEvents(all.map { SignedEvent.ADAPTER.encode(it) }) }
-    }
-
-    /** js-core `copyContents`: replay stored content into the core. */
-    suspend fun copyContents() {
-        coreCall {
-            core.copyContents(
-                contents.getAll().map { (digest, contentBytes) ->
-                    ContentEntry(
-                        digestBytes = ContentDigest.ADAPTER.encode(digest),
-                        contentBytes = contentBytes,
-                    )
-                },
-            )
-        }
-    }
-
-    // ── Event construction (js-core: buildEvent / signEvent / commitEvent) ──
-
-    /**
-     * Build an unsigned Event for `content` in `collection` using the
-     * active identity and current keypair. Sequences, previous
-     * signature/root (RFC-6962), and the vector clock all come from the
-     * core — the exact steps of js-core `buildEvent`.
-     *
-     * Note: proto uint64 fields surface as Long in Wire and ULong across
-     * the FFI; conversions are lossless bit-reinterpretations.
-     */
-    fun buildEvent(
-        content: Content,
-        collection: Int = Collections.FEED,
-    ): Event {
-        val keyPair = requireNotNull(currentKeyPair) { "No keypair set" }
-        val identity = requireNotNull(activeIdentityKey) { "No active identity" }
-
-        val sequence = coreCall { core.nextSequence(identity, collection) }
-        val publicKeyProto = keyPair.toPublicKeyProto()
-        val signedByBytes = PublicKey.ADAPTER.encode(publicKeyProto)
-
-        val identitySequence =
-            if (collection == Collections.IDENTITY) {
-                sequence
-            } else {
-                coreCall { core.getIdentitySequence(identity, signedByBytes) }
-                    ?: error("Cannot build event: current keypair has no identity event for the active identity (broken pairing?)")
-            }
-
-        val contentBytes = Content.ADAPTER.encode(content)
-        val digest =
-            ContentDigest(
-                type = ContentDigestType.CONTENT_DIGEST_TYPE_SHA256,
-                value_ = sha256(contentBytes).toByteString(),
-            )
-
-        val identityContentForVc: ByteArray? =
-            if (collection == Collections.IDENTITY) {
-                content.identity
-                    ?.let {
-                        polycentric.v2.Identity.ADAPTER
-                            .encode(it)
-                    }
-            } else {
-                null
-            }
-
-        val clockBytes =
-            coreCall {
-                core.buildVectorClock(
-                    identity,
-                    collection,
-                    identitySequence,
-                    signedByBytes,
-                    sequence,
-                    identityContentForVc,
-                )
-            }
-        return Event(
-            key =
-                EventKey(
-                    collection = collection,
-                    identity = identity,
-                    signed_by = publicKeyProto,
-                    sequence = sequence.toLong(),
-                ),
-            identity_sequence = identitySequence.toLong(),
-            vector_clock = VectorClock.ADAPTER.decode(clockBytes),
-            previous_signature = coreCall { core.previousSignature(identity, collection) }.toByteString(),
-            previous_root = coreCall { core.previousRoot(identity, collection) }.toByteString(),
-            content_digest = digest,
-            created_at = System.currentTimeMillis(),
-            application = application,
-        )
-    }
-
-    /**
-     * Sign via the core's canonical envelope. Private keys never cross
-     * the FFI — the core calls back into [crypto] with the exact bytes
-     * to sign (js-core `signEvent`).
-     */
-    suspend fun signEvent(event: Event): SignedEvent {
-        val keyPair = requireNotNull(currentKeyPair) { "No keypair" }
-        val eventBytes = Event.ADAPTER.encode(event)
-
-        val signedBytes =
-            coreCall {
-                core.signEvent(
-                    eventBytes,
-                    object : SignBytesCallback {
-                        override suspend fun sign(bytes: ByteArray): ByteArray = crypto.sign(keyPair.privateKey, bytes, keyPair.keyType)
+    val events: Flow<ClientEvent> =
+        callbackFlow {
+            val id =
+                ffi.addListener(
+                    object : ClientListener {
+                        override fun onEvent(event: ClientEvent) {
+                            trySend(event)
+                        }
                     },
                 )
-            }
-        return SignedEvent.ADAPTER.decode(signedBytes)
+            awaitClose { ffi.removeListener(id) }
+        }.buffer(Channel.UNLIMITED)
+
+    /** Events this client stored, its own or committed through [commitEvent]. */
+    val committed: Flow<EventBundle> =
+        callbackFlow {
+            val id =
+                ffi.addListener(
+                    object : ClientListener {
+                        override fun onEvent(event: ClientEvent) {
+                            if (event is ClientEvent.Committed) trySend(event.bundle)
+                        }
+                    },
+                )
+            awaitClose { ffi.removeListener(id) }
+        }.buffer(Channel.UNLIMITED)
+
+    /** The signed-in login, if any. */
+    val login: LoginOverview? get() = snapshot.value.login
+
+    /** The servers in use: the signed-in identity's, else the seed servers. */
+    val servers: List<String> get() = snapshot.value.servers
+
+    override fun close() {
+        ffi.removeListener(snapshotListener)
+        ffi.close()
     }
+
+    // ── Events ─────────────────────────────────────────────────────────
+
+    /** Sign and store [content] in [collection] as the signed-in login. */
+    suspend fun publish(
+        content: Content,
+        collection: Int,
+    ): EventBundle = ffi.publish(content, collection)
 
     /**
-     * Persist a signed event (and its content) locally and mirror both
-     * into the core so subsequent sequence/clock reads see them
-     * (js-core `commitEvent`).
+     * Sign [content] in [collection] without storing it, e.g. to show it
+     * optimistically. Store it with [commitEvent].
      */
-    suspend fun commitEvent(
-        signedEvent: SignedEvent,
-        content: Content? = null,
-    ) {
-        // Note that `copyEvents` must be called before saving the event in local
-        // storage, because `copyEvents` may throw an error to reject invalid events.
-        coreCall { core.copyEvents(listOf(SignedEvent.ADAPTER.encode(signedEvent))) }
-        events.save(signedEvent)
-        if (content != null) {
-            val event = Event.ADAPTER.decode(signedEvent.event_bytes)
-            event.content_digest?.let { digest ->
-                val contentBytes = Content.ADAPTER.encode(content)
-                coreCall {
-                    core.copyContents(
-                        listOf(
-                            ContentEntry(
-                                digestBytes = ContentDigest.ADAPTER.encode(digest),
-                                contentBytes = contentBytes,
-                            ),
-                        ),
-                    )
-                }
-                contents.save(digest, contentBytes)
+    suspend fun prepareEvent(
+        content: Content,
+        collection: Int,
+    ): PendingEvent = ffi.prepareEvent(content, collection)
+
+    /**
+     * Store a [prepareEvent] result. Throws `SdkException.AlreadyExists` if
+     * its sequence was taken since; prepare it again then.
+     */
+    suspend fun commitEvent(event: PendingEvent): EventBundle = ffi.commitEvent(event)
+
+    /** Non-deleted events of one stream, from what's held locally. */
+    fun listValidEvents(
+        identity: String,
+        collection: Int,
+    ): List<EventBundle> = ffi.listValidEvents(identity, collection)
+
+    /** The latest known state of [identity] (default: the signed-in one). */
+    fun resolveIdentity(identity: String? = null): IdentityState? = ffi.resolveIdentity(identity)
+
+    /** The identity chain of [identity], oldest first. */
+    fun resolveIdentityChain(identity: String): List<EventBundle> = ffi.resolveIdentityChain(identity)
+
+    /** Identities the signed-in identity blocks. */
+    fun blockedIdentities(): List<String> = ffi.blockedIdentities()
+
+    // ── Queries ────────────────────────────────────────────────────────
+
+    /**
+     * Run [query] across the servers and emit each result as it updates.
+     * [queryKey] is the cache key shared with other subscribers (null
+     * bypasses the cache). Completes when the query does; fails with
+     * [QueryException] if it errors.
+     */
+    fun query(
+        query: Query,
+        queryKey: List<String>? = null,
+        opts: QueryOpts? = null,
+    ): Flow<QueryResult> =
+        callbackFlow {
+            val observable = ffi.fetchQuery(queryKey, query, opts)
+            val subscription =
+                observable.subscribe(
+                    object : QueryObserver {
+                        override fun next(result: QueryResult) {
+                            trySend(result)
+                        }
+
+                        override fun error(message: String) {
+                            close(QueryException(message))
+                        }
+
+                        override fun complete() {
+                            close()
+                        }
+                    },
+                )
+            awaitClose {
+                subscription.unsubscribe()
+                subscription.close()
+                observable.close()
             }
-        }
-        eventService.emitContentCreated(ContentCreatedPayload(signedEvent, content))
-    }
+        }.buffer(Channel.UNLIMITED)
 
-    // ── Queries (js-core: listEvents / listValidEvents) ────────────────
+    /** The first successful result of [query], or null if there was none. */
+    suspend fun awaitQuery(
+        query: Query,
+        queryKey: List<String>? = null,
+        opts: QueryOpts? = null,
+    ): QueryData? = ffi.awaitQuery(query, queryKey, opts)
 
-    /** One-shot ListEvents across all configured servers. */
+    /** One-shot ListEvents; results also land in the local engine. */
+    suspend fun listEvents(
+        args: ListEventsArgs,
+        queryKey: List<String>? = null,
+        opts: QueryOpts? = null,
+    ): List<EventBundle> = ffi.listEvents(args, queryKey, opts)
+
+    /** One-shot ListEvents for one identity's events. */
     suspend fun listEvents(
         identity: String,
         collection: Int? = null,
         limit: Int? = null,
         signedBy: PublicKey? = null,
-        /** Exclusive lower bound on EventKey.sequence. */
         sequenceGt: Long? = null,
-        /** Exclusive upper bound on EventKey.sequence. */
         sequenceLt: Long? = null,
-        heads: List<EventKey> = emptyList(),
-        queryKey: List<String>? = null,
-    ): List<EventBundle> {
-        val bytes =
-            coreCall {
-                core.awaitQuery(
-                    Query.ListEvents(
-                        ListEventsArgs(
-                            size = limit,
-                            identity = identity,
-                            collection = collection,
-                            signedBy = signedBy?.toFfi(),
-                            sequenceGt = sequenceGt,
-                            sequenceLt = sequenceLt,
-                            heads = heads.mapNotNull { it.toFfiOrNull() }.ifEmpty { null },
-                        ),
-                    ),
-                    queryKey = queryKey,
-                    opts = null,
-                )
-            } ?: return emptyList()
-        return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
-    }
+        heads: List<EventKey>? = null,
+        opts: QueryOpts? = null,
+    ): List<EventBundle> =
+        listEvents(
+            ListEventsArgs(limit, identity, collection, signedBy, sequenceGt, sequenceLt, heads),
+            opts = opts,
+        )
 
-    /** Local, tombstone-filtered view of an (identity, collection) stream. */
-    fun listValidEvents(
-        identity: String,
-        collection: Int,
-    ): List<EventBundle> {
-        val bytes = coreCall { core.listValidEvents(identity, collection) }
-        return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
-    }
+    /** Clear the cache for [queryKey] and every key under it. */
+    fun invalidateQuery(queryKey: List<String>) = ffi.invalidateQuery(queryKey)
+
+    fun invalidateAllQueries() = ffi.invalidateAllQueries()
+
+    // ── Sync ───────────────────────────────────────────────────────────
+
+    /** Pull and/or push per [strategy]; returns how many events were pulled. */
+    suspend fun sync(strategy: SyncStrategy = SyncStrategy.PARTIAL): Int = ffi.sync(strategy).toInt()
+
+    /** Pull the signed-in identity's events as its other devices publish them. */
+    fun startLiveSync() = ffi.startLiveSync()
+
+    fun stopLiveSync() = ffi.stopLiveSync()
+
+    /** Use [servers] until the signed-in identity's document names its own. */
+    fun setServers(servers: List<String>) = ffi.setServers(servers)
+
+    // ── Blobs ──────────────────────────────────────────────────────────
 
     /**
-     * Identity chain for [identity] from oldest to newest with
-     * the last bundle as the chain head.
+     * Store blob bytes and return the [Blob] to reference from content.
+     * It's uploaded when the content is pushed.
      */
-    fun resolveIdentityChain(identity: String): List<EventBundle> {
-        val bytes = coreCall { core.resolveIdentityChain(identity) }
-        return ListEventsResponse.ADAPTER.decode(bytes).event_bundles
-    }
-
-    // ── Sync (js-core: sync / pull / push) ─────────────────────────────
-
-    /**
-     * Bidirectional sync for the active identity. Pull fetches bundles
-     * (optionally bounded by local heads) and persists new ones; push
-     * delegates to the core's `pushLocalEvents`, then uploads any blobs
-     * the server reports missing. Mirrors js-core `sync()`.
-     */
-    suspend fun sync(strategy: SyncStrategy = SyncStrategy.PARTIAL): Int =
-        coroutineScope {
-            val identity = activeIdentityKey ?: return@coroutineScope 0
-
-            // A pull failure must not cancel in-flight pushes (js-core joins
-            // both with allSettled): capture it and rethrow after the pushes.
-            val pullTask =
-                async {
-                    try {
-                        Result.success(
-                            when (strategy) {
-                                SyncStrategy.FULL, SyncStrategy.FULL_PULL -> pull(partial = false)
-                                SyncStrategy.PARTIAL, SyncStrategy.PARTIAL_PULL -> pull(partial = true)
-                                else -> 0
-                            },
-                        )
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Throwable) {
-                        Result.failure(e)
-                    }
-                }
-
-            val doPush = strategy != SyncStrategy.FULL_PULL && strategy != SyncStrategy.PARTIAL_PULL
-            val partialPush = strategy == SyncStrategy.PARTIAL || strategy == SyncStrategy.PARTIAL_PUSH
-
-            val pushTasks =
-                if (doPush) {
-                    servers.map { server ->
-                        async {
-                            try {
-                                val result =
-                                    coreCall {
-                                        core.pushLocalEvents(identity, server, partialPush)
-                                    } ?: return@async null
-                                for (issues in result.eventIssues) {
-                                    log.warning("Issues from event push: $issues")
-                                }
-                                val response = PutEventsResponse.ADAPTER.decode(result.response)
-                                for (blob in response.requested_blobs) {
-                                    val digest = blob.digest ?: continue
-                                    val body = filestore.get(digest) ?: continue
-                                    uploadBlob(blob, body, listOf(server))
-                                }
-                                null
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Throwable) {
-                                log.warning("Sync failed for $server: $e")
-                                e
-                            }
-                        }
-                    }
-                } else {
-                    emptyList()
-                }
-
-            val pushFailures = pushTasks.awaitAll()
-            val pullResult = pullTask.await()
-            val pullError = pullResult.exceptionOrNull()
-            if (pullError != null) {
-                throw pullError
-            }
-            pushFailures.firstNotNullOfOrNull { it }?.let { throw it }
-            pullResult.getOrThrow()
-        }
-
-    internal suspend fun pull(partial: Boolean): Int {
-        val identity = activeIdentityKey ?: throw NoActiveIdentityException()
-        val heads =
-            if (partial) {
-                events
-                    .getByIdentity(identity, headsOnly = true)
-                    .mapNotNull { Event.ADAPTER.decode(it.event_bytes).key }
-            } else {
-                emptyList()
-            }
-
-        val bundles = listEvents(identity = identity, heads = heads)
-
-        // Blobs referenced by pulled content, deduped by digest so each
-        // is fetched once (js-core `pull`).
-        val blobs = mutableMapOf<String, polycentric.v2.Blob>()
-
-        var newCount = 0
-        for (bundle in bundles) {
-            if (trySaveBundle(bundle, blobs)) newCount++
-        }
-
-        // Fetch any of our own referenced blobs so they persist locally.
-        contentManager.pullBlobs(blobs.values.toList())
-        return newCount
-    }
-
-    /**
-     * Absorb errors and return true only when the event is new and added.
-     * Discovered blobs are added to [blobs]. (js-core `trySaveBundle`.)
-     */
-    internal suspend fun trySaveBundle(
-        bundle: EventBundle,
-        blobs: MutableMap<String, polycentric.v2.Blob>,
-    ): Boolean {
-        return runCatchingExceptCancellation {
-            val signed = bundle.signed_event ?: return false
-            val event = Event.ADAPTER.decode(signed.event_bytes)
-            val key = event.key ?: return false
-            if (key.signed_by == null) return false
-
-            // Save content (and discover its blobs) even for events the
-            // `getByEventKey` check below reports as already present, in
-            // case an earlier pull stored the event without its content
-            // or blobs.
-            trySaveContent(event, bundle, blobs)
-
-            if (events.getByEventKey(key) != null) return false
-
-            coreCall { core.verifySignedEvent(SignedEvent.ADAPTER.encode(signed)) }
-
-            events.save(signed)
-            true
-        }.getOrElse { e ->
-            log.warning("Pull event: $e")
-            false
-        }
-    }
-
-    /**
-     * Absorb errors and return true only when the content is new and
-     * added. Discovered blobs are added to [blobs] BEFORE the existence
-     * check, in case we are missing a blob referenced by content we already
-     * have. (js-core `trySaveContent`.) Content whose bytes do not hash
-     * to [Event.content_digest] is rejected.
-     */
-    internal suspend fun trySaveContent(
-        event: Event,
-        bundle: EventBundle,
-        blobs: MutableMap<String, polycentric.v2.Blob>,
-    ): Boolean =
-        runCatchingExceptCancellation {
-            val contentBytes = bundle.serialized_content?.content_bytes ?: return false
-            val content = Content.ADAPTER.decode(contentBytes)
-            val digest = event.content_digest ?: return false
-
-            if (digest.type != ContentDigestType.CONTENT_DIGEST_TYPE_SHA256 ||
-                sha256(contentBytes.toByteArray()).toByteString() != digest.value_
-            ) {
-                return false
-            }
-
-            for (blob in ContentManager.collectBlobs(content)) {
-                val blobDigest = blob.digest ?: continue
-                blobs["${blobDigest.type.value}_${blobDigest.value_.hex()}"] = blob
-            }
-
-            if (contents.get(digest) != null) return false
-            contents.save(digest, contentBytes.toByteArray())
-            true
-        }.getOrElse { e ->
-            log.warning("Pull event content: $e")
-            false
-        }
-
-    // ── Blobs (js-core: commitBlob / fetchBlobBytes / uploadBlob) ──────
-
-    /** Blob URL for each configured server, in order, for fallback. */
-    fun blobUrls(digest: ContentDigest): List<String> {
-        val key = "${digest.type.value}_${digest.value_.hex()}"
-        return servers.map { "$it/blob/$key" }
-    }
-
-    /** First server's blob URL, or null if no servers are configured. */
-    fun blobUrl(digest: ContentDigest): String? = blobUrls(digest).firstOrNull()
-
     suspend fun commitBlob(
         bytes: ByteArray,
         mimeType: String,
-    ): Blob {
-        val digest =
-            ContentDigest(
-                type = ContentDigestType.CONTENT_DIGEST_TYPE_SHA256,
-                value_ = sha256(bytes).toByteString(),
-            )
-        filestore.put(digest, bytes)
-        return Blob(digest = digest, mime_type = mimeType, size = bytes.size.toLong())
-    }
+    ): Blob = ffi.commitBlob(bytes, mimeType)
 
-    /** Plain-HTTP blob fetch with per-server fallback. */
-    suspend fun fetchBlobBytes(digest: ContentDigest): ByteArray? =
-        withContext(Dispatchers.IO) {
-            for (url in blobUrls(digest)) {
-                val bytes =
-                    runCatchingExceptCancellation {
-                        http.newCall(Request.Builder().url(url).build()).execute().use { res ->
-                            if (res.isSuccessful) res.body?.bytes() else null
-                        }
-                    }.getOrNull()
-                if (bytes != null) return@withContext bytes
-            }
-            null
-        }
+    /** The blob's bytes from local storage, or null. */
+    suspend fun getBlob(digest: ContentDigest): ByteArray? = ffi.getBlob(digest)
 
+    /** The blob's bytes, locally or from the servers. */
+    suspend fun fetchBlob(digest: ContentDigest): ByteArray? = ffi.fetchBlob(digest)
+
+    suspend fun hasBlob(digest: ContentDigest): Boolean = ffi.hasBlob(digest)
+
+    suspend fun deleteBlob(digest: ContentDigest): Boolean = ffi.deleteBlob(digest)
+
+    /** Upload a blob's body to [servers] (default: all). */
     suspend fun uploadBlob(
         blob: Blob,
         body: ByteArray,
-        targets: List<String> = servers,
-    ) {
-        val requestBytes =
-            UploadBlobRequest.ADAPTER.encode(
-                UploadBlobRequest(blob = blob, body = body.toByteString()),
-            )
-        for (server in targets) {
-            runCatchingExceptCancellation { coreCall { core.uploadBlob(server, requestBytes) } }
-                .onFailure { e ->
-                    log.warning("uploadBlob failed for $server: $e")
-                }
-        }
-    }
+        servers: List<String>? = null,
+    ) = ffi.uploadBlob(blob, body, servers)
 
-    // ── Key / identity state (js-core: setCurrentKeyPair etc.) ─────────
+    // ── Logins ─────────────────────────────────────────────────────────
 
-    suspend fun setCurrentKeyPair(keyPair: StoredKeyPair) {
-        currentKeyPair = keyPair
-        activeIdentityKey = storageDriver.loadActiveIdentityKey(keyPair.publicKey)
-        // Switching to a keypair signs in as its bound identity; persist that
-        // session so it (and a subsequent logout) survives a restart.
-        storageDriver.saveActiveSession(activeIdentityKey)
-        refreshServers()
-        eventService.emitKeyPairChanged(keyPair, activeIdentityKey)
-    }
+    /** Logins stored on this device, optionally only [identity]'s. */
+    suspend fun listLogins(identity: String? = null): List<LoginOverview> = ffi.listLogins(identity)
 
     /**
-     * Look up the v2 identity key bound to the given device keypair
-     * locally; null when this device never associated one with the pair.
+     * Sign in as [login], or out with null. With [persist], it's also the
+     * login restored next time.
      */
-    suspend fun getIdentityKeyFor(keyPair: StoredKeyPair): String? = storageDriver.loadActiveIdentityKey(keyPair.publicKey)
+    suspend fun loginAs(
+        login: LoginId?,
+        persist: Boolean = true,
+    ) = ffi.loginAs(login, persist)
 
-    suspend fun setActiveIdentityKey(identityKey: String?) {
-        activeIdentityKey = identityKey
-        // Tokens minted for the previous identity must not be reused.
-        core.clearAuthTokens()
-        // Persist the session (null = logged out) so it survives a restart.
-        storageDriver.saveActiveSession(identityKey)
-        // Record the key->identity binding on sign-in. Logout (null) leaves the
-        // binding in place so the identity stays listable and can be signed back
-        // into; removing it is deleteActiveIdentity's job.
-        if (identityKey != null) {
-            currentKeyPair?.let {
-                storageDriver.saveActiveIdentityKey(it.publicKey, identityKey)
-            }
-        }
-    }
+    suspend fun changeLoginStatus(
+        id: LoginId,
+        status: LoginStatus,
+    ) = ffi.changeLoginStatus(id, status)
+
+    suspend fun deleteLogin(id: LoginId) = ffi.deleteLogin(id)
 
     /**
-     * Derive `servers` from the active identity's latest Identity doc
-     * (falling back to seeds) and push the list into the core so its
-     * fan-out queries have targets. Mirrors js-core `refreshServers`.
+     * Create and publish a new identity and sign in as it, adding [server]
+     * to its server list first if given.
      */
-    suspend fun refreshServers() {
-        if (activeIdentityKey != null) {
-            identityManager.getCurrent().servers?.let { servers = it }
-        }
-        core.setServers(servers)
-    }
+    suspend fun createIdentity(server: String? = null): LoginId = ffi.createIdentity(server)
 
     /**
-     * Adopt a server list (e.g. one published on the identity document, the
-     * source of truth) and propagate it to the core. Used by IdentityManager
-     * right after publishing so a newly added server receives the push, and by
-     * clients that need to point at a negotiated server before claiming an
-     * identity during device pairing (js-core exposes `servers` as settable).
+     * Generate and store a key pair to pair (or recover) into [identity].
+     * The key stays in rs-core; share its public key from the result.
      */
-    fun adoptServers(list: List<String>) {
-        servers = list.toList()
-        core.setServers(servers)
-    }
+    suspend fun beginLogin(
+        identity: String,
+        kind: LoginKind,
+    ): LoginOverview = ffi.beginLogin(identity, kind)
 
-    private fun sha256(bytes: ByteArray): ByteArray = MessageDigest.getInstance("SHA-256").digest(bytes)
+    /**
+     * Claim an identity that authorized a pending login's key: verify the
+     * chain, store it, publish as the new key and sign in.
+     */
+    suspend fun claim(
+        login: LoginId,
+        servers: List<String>? = null,
+    ): IdentityState = ffi.claim(login, servers)
+
+    /** A JWT authenticating the signed-in identity to [audience]. */
+    fun createServerJwt(audience: String): String = ffi.createServerJwt(audience)
+
+    // ── Backups ────────────────────────────────────────────────────────
+
+    /**
+     * Rotate the recovery key and return a backup of the signed-in identity
+     * as text. Older backups stop working.
+     */
+    suspend fun createBackup(): String = ffi.createBackup()
+
+    /** Whether [backup] can restore [identity] (default: the signed-in one). */
+    fun checkBackup(
+        backup: String,
+        identity: String? = null,
+    ): BackupCheck = ffi.checkBackup(backup, identity)
+
+    /** Restore the identity [backup] is for and sign in as it. */
+    suspend fun recoverFromBackup(backup: String): LoginId = ffi.recoverFromBackup(backup)
+
+    // ── Identity ───────────────────────────────────────────────────────
+
+    /**
+     * Publish a new document for the signed-in identity; the signed-in key
+     * must be a rotation key.
+     */
+    suspend fun publishIdentityUpdate(args: PublishArgs): EventKey = ffi.publishIdentityUpdate(args)
+
+    suspend fun addSigningKey(key: PublicKey): EventKey = ffi.addSigningKey(key)
+
+    suspend fun removeSigningKey(key: PublicKey): EventKey = ffi.removeSigningKey(key)
+
+    suspend fun addRotationKey(key: PublicKey): EventKey = ffi.addRotationKey(key)
+
+    suspend fun removeRotationKey(key: PublicKey): EventKey = ffi.removeRotationKey(key)
+
+    suspend fun addServer(url: String): EventKey = ffi.addServer(url)
+
+    suspend fun removeServer(url: String): EventKey = ffi.removeServer(url)
+
+    // ── Pairing ────────────────────────────────────────────────────────
+
+    /** Issuer: start a session for the signed-in identity on [server]. */
+    suspend fun createPairingSession(server: String): PairingSession = ffi.createPairingSession(server)
+
+    /** Issuer: publish a new state (e.g. after authorizing a claimer). */
+    suspend fun updatePairingSession(
+        info: PairingInfo,
+        sequence: Long,
+    ): PairingSession = ffi.updatePairingSession(info, sequence)
+
+    suspend fun getPairingSession(info: PairingInfo): PairingSession = ffi.getPairingSession(info)
+
+    /** Issuer: the keys asking to be paired. */
+    suspend fun pollForClaimers(info: PairingInfo): List<PublicKey> = ffi.pollForClaimers(info)
+
+    /** Claimer: ask to be paired with a pending [login]'s key. */
+    suspend fun joinPairingSession(
+        info: PairingInfo,
+        login: LoginId,
+    ) = ffi.joinPairingSession(info, login)
+
+    /** Claimer: whether the issuer authorized [login]'s key; then [claim]. */
+    suspend fun pollForAuthorization(
+        info: PairingInfo,
+        login: LoginId,
+    ): Boolean = ffi.pollForAuthorization(info, login)
+
+    // ── Servers ────────────────────────────────────────────────────────
+
+    /** Link preview for [url] from the first server that answers. */
+    suspend fun urlInfo(url: String): UrlInfoResponse? = ffi.urlInfo(url)
+
+    suspend fun serverInfo(server: String): GetServerInfoResponse = ffi.serverInfo(server)
+
+    /** Ban or unban an identity on [server] (moderators only). */
+    suspend fun setBanStatus(
+        server: String,
+        targetIdentity: String,
+        banned: Boolean,
+    ) = ffi.setBanStatus(server, targetIdentity, banned)
+
+    suspend fun resolveReport(
+        server: String,
+        reportId: Long,
+        status: ReportStatus,
+    ) = ffi.resolveReport(server, reportId, status)
+
+    /** Remove an event's content from [server] (moderators only). */
+    suspend fun deleteContent(
+        server: String,
+        target: EventKey,
+    ) = ffi.deleteContent(server, target)
+
+    /** Mark notifications up to [lastSeen] as read on every server. */
+    suspend fun acknowledgeNotifications(lastSeen: EventKey) = ffi.acknowledgeNotifications(lastSeen)
+
+    suspend fun registerPushNotifications(
+        servers: List<String>,
+        request: RegisterPushNotificationRequest,
+    ) = ffi.registerPushNotifications(servers, request)
+
+    // ── Migration ──────────────────────────────────────────────────────
+
+    /**
+     * Bring data from an older store into this client's storage: signed
+     * events and serialized content exactly as stored, and logins. Signs in
+     * as [active] if nobody is signed in.
+     */
+    suspend fun importLegacyData(
+        events: List<LegacyEvent>,
+        contents: List<ByteArray>,
+        logins: List<LegacyLogin>,
+        active: LoginId? = null,
+    ) = ffi.importLegacyData(events, contents, logins, active)
 }
+
+/** A query failed; [message] is rs-core's description. */
+class QueryException(
+    message: String,
+) : Exception(message)

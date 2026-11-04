@@ -1,0 +1,20 @@
+{{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "harbor-verifier-bot.fullname" . }}-state
+  labels:
+    {{- include "harbor-verifier-bot.labels" . | nindent 4 }}
+  annotations:
+    # Keep the bot's identity if the release is uninstalled.
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.accessModes | nindent 4 }}
+  {{- with .Values.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+{{- end }}

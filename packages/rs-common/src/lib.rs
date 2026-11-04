@@ -1,6 +1,7 @@
 #[cfg(feature = "uniffi")]
 uniffi::setup_scaffolding!();
 
+pub mod alias;
 pub mod error;
 pub mod jwt;
 pub mod mentions;

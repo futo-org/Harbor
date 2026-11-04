@@ -1,6 +1,11 @@
-import { hexToBytes } from '@/src/common/lib/polycentric-hooks/helpers';
+import { queryPayload } from '@/src/common/lib/polycentric-hooks/helpers';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import { type EventKey, Query, v2 } from '@polycentric/react-native';
+import {
+  type EventKey,
+  parseEventKeyId,
+  Query,
+  QueryData_Tags,
+} from '@polycentric/react-native';
 import { useMemo } from 'react';
 import {
   type ClaimVerificationStatus,
@@ -30,21 +35,9 @@ const EMPTY_KEY: EventKey = {
 /** The query-arg shape of a claim's hex-encoded event key, or null. */
 function decodeClaimEventKey(claimId: string | undefined): EventKey | null {
   if (!claimId) return null;
-  try {
-    const key = v2.EventKey.fromBinary(hexToBytes(claimId));
-    if (!key.signedBy || !key.identity) return null;
-    return {
-      collection: key.collection,
-      identity: key.identity,
-      signedBy: {
-        keyType: key.signedBy.keyType,
-        key: new Uint8Array(key.signedBy.key).buffer,
-      },
-      sequence: key.sequence,
-    };
-  } catch {
-    return null;
-  }
+  const key = parseEventKeyId(claimId);
+  if (!key?.signedBy || !key.identity) return null;
+  return key;
 }
 
 /**
@@ -79,29 +72,23 @@ export function useClaimVerifiers(
   );
 
   const requested = useMemo<string[]>(() => {
-    if (!enabled || !targets.data || targets.data.byteLength === 0) return [];
-    try {
-      const response = v2.ListVerificationTargetsResponse.fromBinary(
-        new Uint8Array(targets.data),
-      );
-      return decodeTargetIdentities(response.eventBundles);
-    } catch {
-      return [];
-    }
+    if (!enabled) return [];
+    const response = queryPayload(
+      targets.data,
+      QueryData_Tags.VerificationTargets,
+    )?.response;
+    return response ? decodeTargetIdentities(response.eventBundles) : [];
   }, [enabled, targets.data]);
 
   const verifiedBy = useMemo<Set<string>>(() => {
-    if (!enabled || !verifies.data || verifies.data.byteLength === 0) {
-      return new Set();
-    }
-    try {
-      const response = v2.ListVerificationVerifiesResponse.fromBinary(
-        new Uint8Array(verifies.data),
-      );
-      return decodeVerifierIdentities(response.eventBundles);
-    } catch {
-      return new Set();
-    }
+    if (!enabled) return new Set();
+    const response = queryPayload(
+      verifies.data,
+      QueryData_Tags.VerificationVerifies,
+    )?.response;
+    return response
+      ? decodeVerifierIdentities(response.eventBundles)
+      : new Set();
   }, [enabled, verifies.data]);
 
   const status = useMemo(

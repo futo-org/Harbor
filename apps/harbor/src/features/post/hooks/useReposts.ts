@@ -1,11 +1,12 @@
 import {
+  decodeBundle,
   eventKeyId,
-  hexToBytes,
   type PostData,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import {
   COLLECTION,
+  parseEventKeyId,
   v2,
   type PolycentricClient,
 } from '@polycentric/react-native';
@@ -31,20 +32,11 @@ type RepostsState = {
 function decodeRepost(
   bundle: v2.EventBundle,
 ): { event: v2.Event; targetIdHex: string; repostIdHex: string } | null {
-  if (!bundle.signedEvent || !bundle.serializedContent?.contentBytes) {
-    return null;
-  }
-  let content: v2.Content;
-  try {
-    content = v2.Content.fromBinary(bundle.serializedContent.contentBytes);
-  } catch {
-    return null;
-  }
-  if (content.contentBody.oneofKind !== 'repost') return null;
-  const target = content.contentBody.repost.post;
-  if (!target) return null;
-  const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-  if (!event.key) return null;
+  const decoded = decodeBundle(bundle, 'repost');
+  if (!decoded) return null;
+  const { event } = decoded;
+  const target = decoded.content.post;
+  if (!target || !event.key) return null;
   return {
     event,
     targetIdHex: eventKeyId(target),
@@ -71,21 +63,16 @@ const useReposts = create<RepostsState>((set, get) => ({
     const reposts = get().reposts;
     if (reposts.has(post.id)) return;
 
-    const targetKey = v2.EventKey.fromBinary(hexToBytes(post.id));
+    const targetKey = parseEventKeyId(post.id);
+    if (!targetKey) return;
     const repostContent = v2.Content.create({
-      contentBody: {
-        oneofKind: 'repost',
-        repost: { post: targetKey },
-      },
+      contentBody: new v2.ContentBody.Repost({
+        repost: v2.Repost.create({ post: targetKey }),
+      }),
     });
 
-    await client.contentManager.save(repostContent);
-    const repostEvent = await client.buildEvent(repostContent, COLLECTION.FEED);
-    const signedEvent = await client.signEvent(repostEvent);
-
-    const event = v2.Event.fromBinary(signedEvent.eventBytes);
-    if (!event.key) return;
-    const repostIdHex = eventKeyId(event.key);
+    const pending = await client.prepareEvent(repostContent, COLLECTION.FEED);
+    const repostIdHex = eventKeyId(pending.key);
 
     set({ reposts: new Map(reposts).set(post.id, repostIdHex) });
     const self = client.activeIdentityKey ?? '';
@@ -95,7 +82,7 @@ const useReposts = create<RepostsState>((set, get) => ({
     alterPostRepostCount(feedQueryKeys.explore(self), post.id, 1);
 
     try {
-      await client.commitEvent(signedEvent, repostContent);
+      await client.commitEvent(pending);
       await client.sync();
       invalidateFeeds(client, client.activeIdentityKey ?? post.identity);
     } catch (err) {
@@ -112,7 +99,7 @@ const useReposts = create<RepostsState>((set, get) => ({
     if (!self) return;
 
     const reposts = get().reposts;
-    const bundles = client.listValidEvents(self, COLLECTION.FEED);
+    const bundles = await client.listValidEvents(self, COLLECTION.FEED);
 
     // Tombstone every Repost for `targetId` (a single identity may have
     // multiple events across signing keys)
@@ -138,9 +125,7 @@ const useReposts = create<RepostsState>((set, get) => ({
       repostCountChange,
     );
     alterPostRepostCount(
-      feedQueryKeys.identity(
-        v2.EventKey.fromBinary(hexToBytes(targetId)).identity,
-      ),
+      feedQueryKeys.identity(parseEventKeyId(targetId)?.identity ?? ''),
       targetId,
       repostCountChange,
     );
@@ -154,18 +139,11 @@ const useReposts = create<RepostsState>((set, get) => ({
       for (const { event } of targets) {
         if (!event.key) continue;
         const deleteContent = v2.Content.create({
-          contentBody: {
-            oneofKind: 'delete',
-            delete: { eventKey: event.key },
-          },
+          contentBody: new v2.ContentBody.Delete({
+            delete: v2.Delete.create({ eventKey: event.key }),
+          }),
         });
-        await client.contentManager.save(deleteContent);
-        const deleteEvent = await client.buildEvent(
-          deleteContent,
-          COLLECTION.FEED,
-        );
-        const signedDelete = await client.signEvent(deleteEvent);
-        await client.commitEvent(signedDelete, deleteContent);
+        await client.publish(deleteContent, COLLECTION.FEED);
       }
     } catch (err) {
       console.error(err);
@@ -183,7 +161,7 @@ const useReposts = create<RepostsState>((set, get) => ({
   async refresh(client) {
     const identity = client.activeIdentityKey;
     if (!identity) return;
-    const bundles = client.listValidEvents(identity, COLLECTION.FEED);
+    const bundles = await client.listValidEvents(identity, COLLECTION.FEED);
     const reposts = new Map<string, string>();
     for (const bundle of bundles) {
       const decoded = decodeRepost(bundle);

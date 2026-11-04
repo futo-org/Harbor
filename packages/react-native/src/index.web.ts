@@ -1,41 +1,18 @@
 import 'fast-text-encoding';
 
-// Re-export the ubrn web init as `uniffiInitAsync` — consumers must
-// `await` it before constructing a client (it loads + initializes the
-// wasm module).
-export {
-  uniffiInitAsync,
-  EmitMode,
-  FeedSort,
-  FetchMode,
-  isModerationLabel,
-  labelsChanged,
-  labelsFromFeedResponse,
-  labelsFromNotificationsResponse,
-  labelsFromSearchResponse,
-  labelsFromThreadResponse,
-  labelsFromGetPostResponse,
-  moderationLabels,
-  PolycentricCore,
-  Query,
-  QueryStatus,
-  SearchPostsSort,
-  SearchUsersSort,
-  UpdateMode,
-} from '@polycentric/rs-core-wasm/web';
-export type {
-  EventKey,
-  QueryResultFfi,
-  QueryOpts,
-  LabelSet,
-  PostLabel,
-} from '@polycentric/rs-core-wasm/web';
-
+// rs-core's API (see index.tsx). `uniffiInitAsync` loads the wasm module;
+// creating a client does it for you.
+export * from '@polycentric/rs-core-wasm/web';
+// The protocol's records and enums, also as a namespace (`v2.Post`).
+export * as v2 from '@polycentric/rs-core-wasm/web';
 export * from '@polycentric/js-core';
-export * as types from '@polycentric/js-core';
-
 export {
-  createPolycentricClient,
-  createIdentity,
-} from './create-polycentric-client.web';
-export type { CreatePolycentricClientConfig } from './create-polycentric-client.shared';
+  generateWrappingKey,
+  isIdentityKey,
+  normalizeAlias,
+  resolveAlias,
+} from '@polycentric/js-core';
+export type { QueryObserver } from '@polycentric/js-core';
+
+export { createPolycentricClient } from './create-polycentric-client.web';
+export type { CreatePolycentricClientConfig } from './create-polycentric-client.web';

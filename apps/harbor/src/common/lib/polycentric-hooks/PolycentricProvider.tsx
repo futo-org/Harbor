@@ -8,12 +8,13 @@ import { showPushIssueToasts } from '@/src/features/core/event-push-issues/pushI
 import { useEventPushIssuesStore } from '@/src/features/core/event-push-issues/useEventPushIssuesStore';
 import { useServerFailuresStore } from '@/src/features/core/server-failures/useServerFailuresStore';
 import {
+  type EventBundle,
   type PolycentricClient,
   createPolycentricClient,
   type IdentityState,
   type ServerPushResult,
-  v2,
 } from '@polycentric/react-native';
+import { bundleEvent, contentKind } from './helpers';
 import { HARBOR_APPLICATION } from '@/src/common/util/application';
 import {
   useCallback,
@@ -207,7 +208,11 @@ export function PolycentricProvider({
     }
   }, [isLoading, onInitialized]);
 
-  useEffect(() => client?.startLiveSync(), [client]);
+  useEffect(() => {
+    if (!client) return;
+    void client.startLiveSync();
+    return () => void client.stopLiveSync();
+  }, [client]);
 
   const currentIdentityKey = currentIdentity?.identityKey;
   useEffect(() => {
@@ -231,7 +236,7 @@ export function PolycentricProvider({
     let ready: Bootstrap | null = null;
 
     const refresh = async ({ client }: Bootstrap) => {
-      setCurrentIdentity(client.identityManager.resolveIdentity());
+      setCurrentIdentity(await client.resolveIdentity());
       await Promise.all([
         useFollows.getState().refresh(client),
         useReposts.getState().refresh(client),
@@ -240,7 +245,7 @@ export function PolycentricProvider({
       ]);
     };
 
-    const handleKeyPairChanged = async () => {
+    const handleLoginChanged = async () => {
       if (cancelled || !ready) return;
 
       try {
@@ -251,8 +256,11 @@ export function PolycentricProvider({
     };
 
     /** Collect any servers that were removed, and drop data associated with those */
-    const clearRemovedServers = ({ client }: Bootstrap, identity: string) => {
-      const servers = client.identityManager.resolveIdentity(identity)?.servers;
+    const clearRemovedServers = async (
+      { client }: Bootstrap,
+      identity: string,
+    ) => {
+      const servers = (await client.resolveIdentity(identity))?.servers;
       if (!servers) return;
 
       const issues = useEventPushIssuesStore.getState();
@@ -269,21 +277,15 @@ export function PolycentricProvider({
     };
 
     // Keep identity state up to date.
-    const handleContentCreated = ({
-      signedEvent,
-      content,
-    }: {
-      signedEvent: { eventBytes: Uint8Array };
-      content?: { contentBody: { oneofKind?: string } };
-    }) => {
+    const handleCommitted = async (bundle: EventBundle) => {
       if (cancelled || !ready) return;
-      if (content?.contentBody.oneofKind !== 'identity') return;
+      if (contentKind(bundle.serializedContent?.content) !== 'identity') return;
 
-      const event = v2.Event.fromBinary(signedEvent.eventBytes);
-      if (event.key?.identity !== ready.client.activeIdentityKey) return;
+      const key = bundleEvent(bundle)?.key;
+      if (!key || key.identity !== ready.client.activeIdentityKey) return;
 
-      setCurrentIdentity(ready.client.identityManager.resolveIdentity());
-      clearRemovedServers(ready, event.key.identity);
+      setCurrentIdentity(await ready.client.resolveIdentity());
+      await clearRemovedServers(ready, key.identity);
     };
 
     // Refresh stores when we pull from remote servers
@@ -293,9 +295,8 @@ export function PolycentricProvider({
       const { client } = ready;
       if (identityKey !== client.activeIdentityKey) return;
 
-      clearRemovedServers(ready, identityKey);
-
       try {
+        await clearRemovedServers(ready, identityKey);
         await refresh(ready);
       } catch (err) {
         console.warn('Failed to refresh stores after pull:', err);
@@ -310,6 +311,8 @@ export function PolycentricProvider({
       showPushIssueToasts(added.filter((i) => i.key.identity === active));
     };
 
+    const unsubscribe: Array<() => void> = [];
+
     (async () => {
       try {
         const result = await bootstrapClient();
@@ -318,13 +321,21 @@ export function PolycentricProvider({
 
         const { client: c } = result;
         setClient(c);
-        setCurrentIdentity(c.identityManager.resolveIdentity());
+        setCurrentIdentity(await c.resolveIdentity());
         setIsLoading(false);
 
-        c.events.onKeyPairChanged(handleKeyPairChanged);
-        c.events.onContentCreated(handleContentCreated);
-        c.events.onPulled(handlePulled);
-        c.events.onPushResults(handlePushResults);
+        // Refresh when the signed-in identity changes.
+        let identity = c.activeIdentityKey;
+        unsubscribe.push(
+          c.subscribe(() => {
+            if (c.activeIdentityKey === identity) return;
+            identity = c.activeIdentityKey;
+            void handleLoginChanged();
+          }),
+          c.on('committed', (bundle) => void handleCommitted(bundle)),
+          c.on('pulled', (identityKey) => void handlePulled(identityKey)),
+          c.on('pushResults', handlePushResults),
+        );
 
         // Do an initial sync now that we have registered the listener
         void c.sync().catch((syncError) => {
@@ -341,16 +352,13 @@ export function PolycentricProvider({
 
     return () => {
       cancelled = true;
-      ready?.client.events.offKeyPairChanged(handleKeyPairChanged);
-      ready?.client.events.offContentCreated(handleContentCreated);
-      ready?.client.events.offPulled(handlePulled);
-      ready?.client.events.offPushResults(handlePushResults);
+      for (const stop of unsubscribe) stop();
     };
   }, []);
 
   const refreshCurrentIdentity = useCallback(async () => {
     if (!client) return;
-    setCurrentIdentity(client.identityManager.resolveIdentity());
+    setCurrentIdentity(await client.resolveIdentity());
   }, [client]);
 
   const value = useMemo<PolycentricContextValue | null>(() => {

@@ -30,7 +30,7 @@ export function useServerSettings() {
     setIsBusy(true);
     setAddError(null);
     try {
-      await client.identityManager.addServer(url);
+      await client.addServer(url);
       invalidateAllQueries(client);
       toast.success('Server added');
       return true;
@@ -57,7 +57,7 @@ export function useServerSettings() {
     if (!ok) return;
     setIsBusy(true);
     try {
-      await client.identityManager.removeServer(server);
+      await client.removeServer(server);
       invalidateAllQueries(client);
       toast.success('Server removed');
     } catch (err) {

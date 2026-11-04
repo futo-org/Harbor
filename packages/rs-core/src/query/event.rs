@@ -21,7 +21,7 @@ use crate::query::event::merge::{
 };
 use crate::query::validation::retain_validated_hints;
 use crate::query::{
-    QueryClient, QueryKey, QueryObservable, QueryOpts, QueryResult, QueryStatus, channel,
+    ByteObservable, QueryClient, QueryKey, QueryOpts, QueryResult, QueryStatus, channel,
 };
 use crate::rx::observable::Observable;
 use crate::store::keys::EventKey as StoreEventKey;
@@ -77,7 +77,7 @@ pub fn list_events(
     query_key: Option<QueryKey>,
     args: ListEventsArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let ListEventsArgs {
         size,
         identity,
@@ -91,22 +91,7 @@ pub fn list_events(
     let heads = heads
         .unwrap_or_default()
         .into_iter()
-        .map(
-            |EventKey {
-                 collection,
-                 identity,
-                 signed_by,
-                 sequence,
-             }| {
-                let PublicKey { key_type, key } = signed_by;
-                protos_v2::EventKey {
-                    collection,
-                    identity,
-                    signed_by: Some(protos_v2::PublicKey { key_type, key }),
-                    sequence,
-                }
-            },
-        )
+        .map(protos_v2::EventKey::from)
         .collect();
 
     let request = ListEventsRequest {
@@ -160,7 +145,7 @@ pub fn get_event(
     query_key: Option<QueryKey>,
     args: GetEventArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let GetEventArgs {
         identity,
         collection,
@@ -305,7 +290,7 @@ pub fn get_post(
     query_key: Option<QueryKey>,
     args: GetPostArgs,
     opts: Option<QueryOpts>,
-) -> Arc<dyn QueryObservable> {
+) -> Arc<dyn ByteObservable> {
     let GetPostArgs {
         identity,
         sequence,

@@ -17,8 +17,14 @@ import {
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useIdentityState } from '@/src/features/profile/hooks/useIdentityState';
-import { ed25519 } from '@noble/curves/ed25519.js';
-import { COLLECTION, v2 } from '@polycentric/react-native';
+import {
+  COLLECTION,
+  ContentDigestType,
+  KeyType,
+  QueryOpts,
+  type v2,
+} from '@polycentric/react-native';
+import { contentAs } from '@/src/common/lib/polycentric-hooks/helpers';
 import { type ComponentProps, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -29,6 +35,7 @@ import {
 } from 'react-native';
 import {
   decodeEvent,
+  displayJson,
   type EventLookup,
   type EventSource,
   lookupKey,
@@ -160,22 +167,14 @@ function LoadedEvent({
   // Posts arrive without content; fetch it for the raw view.
   const ownBundle = useSignedEvent(bundle ? null : self);
   const content = bundle ?? ownBundle.bundle;
-  const rawEvent = useMemo(
-    () => JSON.stringify(v2.Event.toJson(event), null, 2),
-    [event],
-  );
+  const rawEvent = useMemo(() => displayJson(event), [event]);
   const rawContent = useMemo(() => {
-    const bytes = content?.serializedContent?.contentBytes;
-    if (!bytes) return null;
-    return tryOrNull(() =>
-      JSON.stringify(v2.Content.toJson(v2.Content.fromBinary(bytes)), null, 2),
-    );
+    const parsed = content?.serializedContent?.content;
+    return parsed ? tryOrNull(() => displayJson(parsed)) : null;
   }, [content]);
 
-  const valid = useMemo(
-    () => verifySignature(signedEvent, signer),
-    [signedEvent, signer],
-  );
+  // rs-core only decodes events whose signature verifies.
+  const valid = !!signedEvent.event;
 
   const document = useSignedEvent(
     event.identitySequence > 0n ? identityDoc(event.identitySequence) : null,
@@ -366,11 +365,10 @@ function ServerConfirmations({ lookup }: { lookup: EventLookup }) {
     setResults({});
     for (const server of servers) {
       void client
-        .listEvents({
-          ...lookupQuery(lookup),
+        .listEvents(lookupQuery(lookup), {
           // Per-server key, or the page cache answers for all of them.
           queryKey: ['event-info', 'confirm', server, keyId],
-          queryOpts: { servers: [server] },
+          opts: QueryOpts.create({ servers: [server] }),
         })
         .then((bundles) => (bundles.length > 0 ? 'confirmed' : 'missing'))
         .catch((): Confirmation => 'unreachable')
@@ -560,41 +558,24 @@ function usePreviousSignatureLookup(
 
 // --- Helpers ---
 
-function verifySignature(
-  signedEvent: v2.SignedEvent,
-  signer: v2.PublicKey | undefined,
-): boolean {
-  if (!signer || signer.keyType !== v2.KeyType.ED25519) return false;
-  return (
-    tryOrNull(() =>
-      ed25519.verify(signedEvent.signature, signedEvent.eventBytes, signer.key),
-    ) ?? false
-  );
-}
-
 function decodeIdentity(bundle: v2.EventBundle | null): v2.Identity | null {
-  const bytes = bundle?.serializedContent?.contentBytes;
-  if (!bytes) return null;
-  const content = tryOrNull(() => v2.Content.fromBinary(bytes));
-  return content?.contentBody.oneofKind === 'identity'
-    ? content.contentBody.identity
-    : null;
+  return contentAs(bundle?.serializedContent?.content, 'identity') ?? null;
 }
 
 function sameKey(a: v2.PublicKey, b: v2.PublicKey): boolean {
   return a.keyType === b.keyType && bytesToHex(a.key) === bytesToHex(b.key);
 }
 
-function hexOrNone(bytes?: Uint8Array): string {
-  return bytes && bytes.length > 0 ? bytesToHex(bytes) : 'None';
+function hexOrNone(bytes?: ArrayBuffer): string {
+  return bytes && bytes.byteLength > 0 ? bytesToHex(bytes) : 'None';
 }
 
 function keyTypeName(type?: v2.KeyType): string {
-  return type === v2.KeyType.ED25519 ? 'Ed25519' : 'Unknown';
+  return type === KeyType.Ed25519 ? 'Ed25519' : 'Unknown';
 }
 
 function digestTypeName(type?: v2.ContentDigestType): string {
-  return type === v2.ContentDigestType.SHA256 ? 'SHA-256' : 'Unknown';
+  return type === ContentDigestType.Sha256 ? 'SHA-256' : 'Unknown';
 }
 
 function collectionName(collection: number): string {

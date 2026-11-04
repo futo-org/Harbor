@@ -1,6 +1,9 @@
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import {
+  queryPayload,
+  usePolycentric,
+} from '@/src/common/lib/polycentric-hooks';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
-import { decodeStatusByServer, Query } from '@polycentric/react-native';
+import { Query, QueryData_Tags } from '@polycentric/react-native';
 import { useMemo } from 'react';
 
 export type ModerationStatus = {
@@ -34,8 +37,12 @@ export default function useModerationStatus(): ModerationStatus {
   );
 
   const moderatedServers = useMemo(() => {
-    if (!query.data) return [];
-    return [...decodeStatusByServer(query.data)]
+    const byServer = queryPayload(
+      query.data,
+      QueryData_Tags.StatusByServer,
+    )?.byServer;
+    if (!byServer) return [];
+    return [...byServer]
       .filter(([, isModerator]) => isModerator)
       .map(([server]) => server);
   }, [query.data]);

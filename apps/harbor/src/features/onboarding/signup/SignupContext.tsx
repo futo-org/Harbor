@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { create } from 'zustand';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
-import { createIdentity } from '@polycentric/react-native';
 import { getNextStep, isLastStep, type SignupRoute } from './flow';
 import {
   DEFAULT_SERVER,
@@ -99,7 +98,7 @@ export function useSignup() {
         return;
       }
 
-      await createIdentity(client, DEFAULT_SERVER);
+      await client.createIdentity(DEFAULT_SERVER);
       await updateProfile(client, {
         name: data.displayName,
         description: data.about,

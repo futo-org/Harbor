@@ -4,7 +4,10 @@ import {
   type PostData,
   type PostLabel,
 } from '@/src/common/lib/polycentric-hooks';
-import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  bundleEvent,
+  decodeBundle,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import {
   decodeClaimBundle,
   type DecodedClaim,
@@ -116,23 +119,18 @@ function triggerInfo(bundle: v2.EventBundle | undefined): {
   identity: string;
   createdAt: number;
 } | null {
-  if (!bundle?.signedEvent) return null;
-  try {
-    const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-    const key = event.key;
-    if (!key) return null;
-    return {
-      id: eventKeyId(key),
-      key,
-      identity: key.identity,
-      createdAt: Number(event.createdAt ?? 0),
-    };
-  } catch {
-    return null;
-  }
+  const event = bundleEvent(bundle);
+  const key = event?.key;
+  if (!key) return null;
+  return {
+    id: eventKeyId(key),
+    key,
+    identity: key.identity,
+    createdAt: Number(event.createdAt ?? 0),
+  };
 }
 
-/** Map a single protobuf `Notification` to its tagged variant, or `null`
+/** Map a single `Notification` to its tagged variant, or `null`
  *  when it is unparseable or of an unknown type. */
 function decodeNotification(
   notification: v2.Notification,
@@ -157,10 +155,10 @@ function decodeNotification(
   );
 
   switch (notification.kind) {
-    case v2.NotificationKind.FOLLOW:
+    case v2.NotificationKind.Follow:
       return { ...base, kind: 'follow' };
 
-    case v2.NotificationKind.REPLY: {
+    case v2.NotificationKind.Reply: {
       // The reply itself is the trigger event; drop it if it won't decode.
       const reply = notification.triggerEvent
         ? withLabels(decodeV2PostBundle(notification.triggerEvent), labels)
@@ -169,7 +167,7 @@ function decodeNotification(
       return { ...base, kind: 'reply', reply, targetPost };
     }
 
-    case v2.NotificationKind.MENTION: {
+    case v2.NotificationKind.Mention: {
       // The mentioning post is the trigger event; drop it if it won't decode.
       const mentioningPost = notification.triggerEvent
         ? withLabels(decodeV2PostBundle(notification.triggerEvent), labels)
@@ -178,10 +176,10 @@ function decodeNotification(
       return { ...base, kind: 'mention', mentioningPost };
     }
 
-    case v2.NotificationKind.REPOST:
+    case v2.NotificationKind.Repost:
       return { ...base, kind: 'repost', targetPost };
 
-    case v2.NotificationKind.QUOTE: {
+    case v2.NotificationKind.Quote: {
       // The quoting post is the trigger event; drop it if it won't decode.
       const quote = notification.triggerEvent
         ? withLabels(decodeV2PostBundle(notification.triggerEvent), labels)
@@ -190,7 +188,7 @@ function decodeNotification(
       return { ...base, kind: 'quote', quote, targetPost };
     }
 
-    case v2.NotificationKind.REACTION: {
+    case v2.NotificationKind.Reaction: {
       const reaction = notification.triggerEvent
         ? decodeBundle(notification.triggerEvent, 'reaction')
         : null;
@@ -202,7 +200,7 @@ function decodeNotification(
       };
     }
 
-    case v2.NotificationKind.VERIFICATION_REQUEST: {
+    case v2.NotificationKind.VerificationRequest: {
       // The claim key travels in the trigger's VerificationTarget content;
       // the claim event itself is the notification's target.
       const target = notification.triggerEvent
@@ -219,7 +217,7 @@ function decodeNotification(
       };
     }
 
-    case v2.NotificationKind.VERIFICATION_COMPLETE: {
+    case v2.NotificationKind.VerificationComplete: {
       // The claim key travels in the trigger's VerificationVerify content;
       // the claim event itself is the notification's target.
       const verify = notification.triggerEvent

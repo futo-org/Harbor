@@ -1,10 +1,11 @@
 import {
+  keysEqual,
   publicKeyToString,
   stringToPublicKey,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
 import type { PairingSession, v2 } from '@polycentric/react-native';
-import { IdentityManager, SyncStrategy } from '@polycentric/react-native';
+import { SyncStrategy } from '@polycentric/react-native';
 import { useEffect, useRef, useState } from 'react';
 
 /** Pairing session state that we expose to the caller. */
@@ -117,14 +118,14 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
 
     updateView();
 
-    await client.sync(SyncStrategy.PARTIAL_PULL);
+    await client.sync(SyncStrategy.PartialPull);
     if (stateRef.current.canceled) return;
 
     // Check for prior authorization.
     const identityKey = client.activeIdentityKey;
     if (!identityKey) throw new Error('No active identity');
 
-    const identityState = client.identityManager.resolveIdentity(identityKey);
+    const identityState = await client.resolveIdentity(identityKey);
     if (!identityState)
       throw new Error('No identity chain available for this identity.');
 
@@ -135,7 +136,7 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
       ...identityState.rotationKeys,
       ...identityState.signingKeys,
     ]) {
-      if (IdentityManager.keysEqual(key, otherKey)) {
+      if (keysEqual(key, otherKey)) {
         alreadyAuthorized = true;
         break;
       }
@@ -143,16 +144,15 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
 
     if (!alreadyAuthorized) {
       if (asRotation) {
-        await client.identityManager.addRotationKey(key);
+        await client.addRotationKey(key);
       } else {
-        await client.identityManager.addSigningKey(key);
+        await client.addSigningKey(key);
       }
     }
 
-    const session = await client.pairingSessionManager.updatePairingSession(
-      stateRef.current.session.pairingInfo.server,
-      stateRef.current.session.digestBytes,
-      stateRef.current.session.issuerState.sequence + BigInt(1),
+    const session = await client.updatePairingSession(
+      stateRef.current.session.info,
+      stateRef.current.session.sequence + BigInt(1),
     );
 
     stateRef.current = {
@@ -179,8 +179,7 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
         return;
       }
 
-      const latestClaimers =
-        await client.pairingSessionManager.pollForClaimers(info);
+      const latestClaimers = await client.pollForClaimers(info);
       if (stateRef.current.canceled) return;
       if (stateRef.current.stage !== 'polling') return;
 
@@ -201,8 +200,7 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
         throw new Error('No servers configured');
       }
 
-      const session =
-        await client.pairingSessionManager.createPairingSession(server);
+      const session = await client.createPairingSession(server);
       if (stateRef.current.canceled) return;
       if (stateRef.current.stage !== 'creating') return;
 
@@ -216,7 +214,7 @@ export function usePairIdentityIssuer(): PairIdentityIssuerHookResult {
       updateView();
 
       stateRef.current.pollingInterval = setInterval(() => {
-        poll(session.pairingInfo).catch((e) => {
+        poll(session.info).catch((e) => {
           // Polling may fail due to race conditions if we have sent a state
           // update for an approval while we still have an in-flight poll request.
           // We should only error for real if we fail while still in the polling
@@ -251,8 +249,8 @@ function viewFromState(state: IssuerState): IssuerView {
   let claimers: string[] = [];
 
   if (stage === 'polling' || stage === 'approving' || stage === 'done') {
-    info = state.session.pairingInfo;
-    expiresAt = state.session.expiresAt;
+    info = state.session.info;
+    expiresAt = new Date(Number(state.session.expiresAtMillis));
     claimers = state.claimers;
   }
 

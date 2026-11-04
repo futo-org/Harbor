@@ -1,10 +1,19 @@
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import {
+  queryPayload,
+  usePolycentric,
+} from '@/src/common/lib/polycentric-hooks';
 import {
   RefreshStrategy,
   setQueryCache,
   useQuery,
 } from '@/src/common/query/hooks/useQuery';
-import { FetchMode, Query, v2 } from '@polycentric/react-native';
+import {
+  FetchMode,
+  Query,
+  QueryData,
+  QueryData_Tags,
+  v2,
+} from '@polycentric/react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface BanListState {
@@ -71,10 +80,7 @@ export default function useBanList(
   );
 
   const response = useMemo(
-    () =>
-      result.data
-        ? v2.ListBansResponse.fromBinary(new Uint8Array(result.data))
-        : undefined,
+    () => queryPayload(result.data, QueryData_Tags.Bans)?.response,
     [result.data],
   );
   const bans = response?.bannedIdentities ?? [];
@@ -99,17 +105,17 @@ export default function useBanList(
     await client.setBanStatus(server, identity, false);
     // The rust-side cache for this page still holds the unbanned
     // identity; drop it so the next fan-out re-asks the server.
-    client.core.invalidateQuery(queryKey);
+    void client.invalidateQuery(queryKey);
     const remaining = bans.filter((banned) => banned !== identity);
     if (remaining.length > 0 && response) {
       // Drop the row from the cached page immediately.
-      const patched = v2.ListBansResponse.toBinary(
-        v2.ListBansResponse.create({
+      const patched = new QueryData.Bans({
+        response: v2.ListBansResponse.create({
           ...response,
           bannedIdentities: remaining,
         }),
-      );
-      setQueryCache(queryKey, { data: patched.buffer as ArrayBuffer });
+      });
+      setQueryCache(queryKey, { data: patched });
       return;
     }
     // Unbanning the last row would leave an empty page still showing

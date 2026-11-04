@@ -1,38 +1,27 @@
-// Avoid the native barrel; updateProfile only needs COLLECTION and
-// v2.ImageSet at runtime. The image helper is mocked so no encoding runs.
-jest.mock('@polycentric/react-native', () => ({
-  COLLECTION: { PROFILE: 3 },
-  v2: { ImageSet: { create: (x: unknown) => x } },
-}));
+// The image helper is mocked so no encoding runs.
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 jest.mock('@/src/common/lib/images/processAndUploadImage', () => ({
   encodeImageVariants: jest.fn(),
 }));
 
+import { COLLECTION, type v2 } from '@polycentric/react-native';
+import { contentAs } from '@/src/common/lib/polycentric-hooks/helpers';
 import { updateProfile } from './updateProfile';
 
-type BuildArg = {
-  oneofKind: 'profileUpdate';
-  profileUpdate: {
-    name: string;
-    description: string;
-    alias?: string;
-    avatar?: unknown;
-    banner?: unknown;
-  };
-};
-
 function makeClient() {
-  const build = jest.fn((content: BuildArg) => content);
   const client = {
-    contentManager: { build, save: jest.fn(async () => {}) },
-    buildEvent: jest.fn(async () => ({})),
-    signEvent: jest.fn(async () => ({})),
-    commitEvent: jest.fn(async () => {}),
-    sync: jest.fn(async () => {}),
-    fileStore: { put: jest.fn(async () => {}) },
+    publish: jest.fn(async (_content: v2.Content, _collection: number) => ({})),
+    commitBlob: jest.fn(async () => ({})),
+    sync: jest.fn(async () => 0),
   };
-  // The built ProfileUpdate passed to contentManager.build.
-  const builtProfile = () => build.mock.calls[0][0].profileUpdate;
+  // The ProfileUpdate passed to `publish`.
+  const builtProfile = () => {
+    const update = contentAs(client.publish.mock.calls[0][0], 'profileUpdate');
+    if (!update) throw new Error('not a profile update');
+    return update;
+  };
   return { client, builtProfile };
 }
 
@@ -92,8 +81,16 @@ describe('updateProfile', () => {
       '@/src/common/lib/images/processAndUploadImage',
     );
     const variants = [
-      { meta: { width: 3 }, digest: 'd1', bytes: new Uint8Array([1]) },
-      { meta: { width: 4 }, digest: 'd2', bytes: new Uint8Array([2]) },
+      {
+        meta: { width: 3 },
+        blob: { mimeType: 'image/jpeg' },
+        bytes: new Uint8Array([1]),
+      },
+      {
+        meta: { width: 4 },
+        blob: { mimeType: 'image/jpeg' },
+        bytes: new Uint8Array([2]),
+      },
     ];
     encodeImageVariants.mockResolvedValueOnce(variants);
     const { client, builtProfile } = makeClient();
@@ -106,9 +103,15 @@ describe('updateProfile', () => {
     expect(builtProfile().avatar).toEqual({
       images: variants.map((v) => v.meta),
     });
-    expect(client.fileStore.put).toHaveBeenCalledTimes(2);
-    expect(client.fileStore.put).toHaveBeenCalledWith('d1', variants[0].bytes);
-    expect(client.fileStore.put).toHaveBeenCalledWith('d2', variants[1].bytes);
+    expect(client.commitBlob).toHaveBeenCalledTimes(2);
+    expect(client.commitBlob).toHaveBeenCalledWith(
+      variants[0].bytes,
+      'image/jpeg',
+    );
+    expect(client.commitBlob).toHaveBeenCalledWith(
+      variants[1].bytes,
+      'image/jpeg',
+    );
   });
 
   it('commits without syncing', async () => {
@@ -118,8 +121,8 @@ describe('updateProfile', () => {
       description: '',
       alias: 'user@domain.com',
     });
-    expect(client.contentManager.save).toHaveBeenCalledTimes(1);
-    expect(client.commitEvent).toHaveBeenCalledTimes(1);
+    expect(client.publish).toHaveBeenCalledTimes(1);
+    expect(client.publish.mock.calls[0][1]).toBe(COLLECTION.PROFILE);
     expect(client.sync).not.toHaveBeenCalled();
   });
 });

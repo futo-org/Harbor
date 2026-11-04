@@ -46,7 +46,7 @@ const SIGNUP_BAR_BUTTON_WIDTHS = [97, 88];
  * Runs before the first paint. Applies the theme `ThemeProvider` will
  * resolve (the stored preference, or the system scheme for 'system' or
  * nothing stored), and flags a signed-in visitor by the active identity that
- * js-browser's storage driver keeps in localStorage.
+ * js-core's web host keeps in localStorage.
  */
 export const BOOT_SKELETON_SCRIPT = `
 var root=document.documentElement;

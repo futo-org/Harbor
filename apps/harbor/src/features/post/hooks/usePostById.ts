@@ -3,13 +3,14 @@ import {
   COLLECTION,
   type FetchMode,
   Query,
+  QueryData_Tags,
   v2,
-  labelsFromGetPostResponse,
 } from '@polycentric/react-native';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import {
   decodeFeedItems,
   labelMapFromSets,
+  queryPayload,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useQuery } from '@/src/common/query/hooks/useQuery';
 
@@ -43,12 +44,11 @@ export function usePostById(
 
   const post = useMemo<PostData | null>(() => {
     if (!enabled) return null;
-    if (!query.data || query.data.byteLength === 0) return null;
+    const payload = queryPayload(query.data, QueryData_Tags.Post);
+    if (!payload) return null;
 
     try {
-      const response = v2.GetPostResponse.fromBinary(
-        new Uint8Array(query.data),
-      );
+      const { response, labels } = payload;
 
       // TODO: change feed decoding API to make this step unnecessary
       const feedShaped = v2.GetFeedResponse.create({
@@ -56,7 +56,7 @@ export function usePostById(
         eventHints: response.eventHints,
       });
 
-      const labelMap = labelMapFromSets(labelsFromGetPostResponse(query.data));
+      const labelMap = labelMapFromSets(labels);
       const items = decodeFeedItems(feedShaped, labelMap);
 
       // TODO: should we reject reposts here?

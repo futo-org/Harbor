@@ -1,8 +1,13 @@
-import { Query, v2 } from '@polycentric/react-native';
+import { queryPayload } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  Query,
+  type QueryData,
+  QueryData_Tags,
+} from '@polycentric/react-native';
 import { useClaimBundleList } from './useClaimBundleList';
 
-const parse = (bytes: Uint8Array) =>
-  v2.ListVerificationClaimsResponse.fromBinary(bytes).claimBundles;
+const parse = (data: QueryData | undefined) =>
+  queryPayload(data, QueryData_Tags.VerificationClaims)?.response.claimBundles;
 
 /**
  * List the verification claims created by an identity, newest first, each

@@ -1,12 +1,11 @@
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
-import { labelMapFromSets } from '@/src/common/lib/polycentric-hooks/helpers';
+import {
+  labelMapFromSets,
+  queryPayload,
+} from '@/src/common/lib/polycentric-hooks/helpers';
 import { useOmitLabels } from '@/src/common/settings/useOmitLabels';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
-import {
-  labelsFromNotificationsResponse,
-  Query,
-  v2,
-} from '@polycentric/react-native';
+import { Query, QueryData_Tags } from '@polycentric/react-native';
 import { useMemo } from 'react';
 import { decodeNotifications, type NotificationData } from '../utils';
 
@@ -34,14 +33,12 @@ export default function useListNotifications(
   );
 
   const items = useMemo<NotificationData[]>(() => {
-    if (!query.data) return [];
-    const response = v2.ListNotificationsResponse.fromBinary(
-      new Uint8Array(query.data),
+    const payload = queryPayload(query.data, QueryData_Tags.Notifications);
+    if (!payload) return [];
+    return decodeNotifications(
+      payload.response,
+      labelMapFromSets(payload.labels),
     );
-    const labels = labelMapFromSets(
-      labelsFromNotificationsResponse(query.data),
-    );
-    return decodeNotifications(response, labels);
   }, [query.data]);
 
   return {

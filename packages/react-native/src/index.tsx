@@ -3,43 +3,21 @@ import 'fast-text-encoding';
 // Side-effect: ubrn-generated TurboModule install + uniffi version check.
 import './uniffi-init';
 
+// rs-core's API: the protocol's records (with their factories), enums,
+// queries and stateless helpers.
+export * from './generated/rn/polycentric_core';
+// The client and its JavaScript conveniences. Where names overlap, js-core's
+// wrappers win.
+// The protocol's records and enums, also as a namespace (`v2.Post`).
+export * as v2 from './generated/rn/polycentric_core';
 export * from '@polycentric/js-core';
-export * as types from '@polycentric/js-core';
-
 export {
-  EmitMode,
-  FeedSort,
-  FetchMode,
-  isModerationLabel,
-  labelsChanged,
-  labelsFromFeedResponse,
-  labelsFromNotificationsResponse,
-  labelsFromSearchResponse,
-  labelsFromThreadResponse,
-  labelsFromGetPostResponse,
-  PolycentricCore,
-  Query,
-  QueryStatus,
-  SearchPostsSort,
-  SearchUsersSort,
-  UpdateMode,
-  setLogger,
-  moderationLabels,
-} from './generated/rn/polycentric_core';
-export type {
-  EventKey,
-  Logger,
-  PublicKey,
-  QueryObservable,
-  QueryObserver,
-  QueryResultFfi,
-  QueryOpts,
-  LabelSet,
-  PostLabel,
-} from './generated/rn/polycentric_core';
+  generateWrappingKey,
+  isIdentityKey,
+  normalizeAlias,
+  resolveAlias,
+} from '@polycentric/js-core';
+export type { QueryObserver } from '@polycentric/js-core';
 
-export {
-  createPolycentricClient,
-  createIdentity,
-} from './create-polycentric-client';
+export { createPolycentricClient } from './create-polycentric-client';
 export type { CreatePolycentricClientConfig } from './create-polycentric-client';

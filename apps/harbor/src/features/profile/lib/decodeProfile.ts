@@ -1,4 +1,5 @@
-import { v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
+import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
 import { truncateText } from '@/src/common/util/truncateText';
 
 export const MAX_NAME_LENGTH = 50;
@@ -14,39 +15,39 @@ export type DecodedProfile = {
   followersCount: number;
 };
 
-// Every subscriber of a profile query shares the same response buffer, so
+// Every subscriber of a profile query shares the same response object, so
 // one decode serves all of them (name, avatar, quote header, …).
-const decodeCache = new WeakMap<ArrayBuffer | Uint8Array, DecodedProfile>();
+const decodeCache = new WeakMap<v2.GetProfileResponse, DecodedProfile>();
+
+/** Whether a profile response carries anything; a local miss emits an
+ *  empty one. */
+export function isProfileResponseEmpty(
+  response: v2.GetProfileResponse,
+): boolean {
+  return (
+    response.eventBundles.length === 0 &&
+    response.eventHints.length === 0 &&
+    response.followingCount === 0n &&
+    response.followersCount === 0n
+  );
+}
 
 /**
- * Decode a serialised `GetProfileResponse` into a flattened profile
- * snapshot using only the highest-sequence `ProfileUpdate` event; older
- * updates are ignored.
+ * Flatten a `GetProfileResponse` into a profile snapshot using only the
+ * highest-sequence `ProfileUpdate` event; older updates are ignored.
  */
-export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
-  const cached = decodeCache.get(bytes);
+export function decodeProfile(response: v2.GetProfileResponse): DecodedProfile {
+  const cached = decodeCache.get(response);
   if (cached) return cached;
-
-  const response = v2.GetProfileResponse.fromBinary(
-    bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
-  );
 
   let latest: { sequence: bigint; update: v2.ProfileUpdate } | null = null;
   for (const bundle of response.eventBundles) {
-    if (!bundle.signedEvent || !bundle.serializedContent?.contentBytes)
-      continue;
-    try {
-      const event = v2.Event.fromBinary(bundle.signedEvent.eventBytes);
-      if (!event.key) continue;
-      const content = v2.Content.fromBinary(
-        bundle.serializedContent.contentBytes,
-      );
-      if (content.contentBody.oneofKind !== 'profileUpdate') continue;
-      const sequence = event.key.sequence;
-      if (!latest || sequence > latest.sequence) {
-        latest = { sequence, update: content.contentBody.profileUpdate };
-      }
-    } catch {}
+    const decoded = decodeBundle(bundle, 'profileUpdate');
+    const key = decoded?.event.key;
+    if (!decoded || !key) continue;
+    if (!latest || key.sequence > latest.sequence) {
+      latest = { sequence: key.sequence, update: decoded.content };
+    }
   }
 
   const decoded: DecodedProfile = {
@@ -62,6 +63,6 @@ export function decodeProfile(bytes: ArrayBuffer | Uint8Array): DecodedProfile {
     followingCount: Number(response.followingCount),
     followersCount: Number(response.followersCount),
   };
-  decodeCache.set(bytes, decoded);
+  decodeCache.set(response, decoded);
   return decoded;
 }

@@ -1,22 +1,13 @@
 import type { PostData, PostLabel } from '@/src/common/lib/polycentric-hooks';
 import type { v2 } from '@polycentric/react-native';
 
-// `labelsChanged` is an `rs-core` call, and jest can't load the native module.
-// Mock `labels_changed` with the same characteristics: order-insensitive,
-// comparing (value, labeledBy).
-jest.mock('@polycentric/react-native', () => ({
-  labelsChanged: (a: PostLabel[], b: PostLabel[]) =>
-    a.length !== b.length ||
-    b.some(
-      (label) =>
-        !a.some(
-          (other) =>
-            other.value === label.value && other.labeledBy === label.labeledBy,
-        ),
-    ),
-}));
+// `labelsChanged` is an rs-core call; the stand-in has the same semantics
+// (order-insensitive, comparing value and labeledBy).
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
-import { labelsetChanged, postChanged, updatePostEntry } from './overlayOps';
+import { postChanged, updatePostEntry } from './overlayOps';
 
 const MODERATOR = 'moderatoridentity';
 const OTHER_MODERATOR = 'othermoderatoridentity';

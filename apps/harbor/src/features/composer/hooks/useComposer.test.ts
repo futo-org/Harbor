@@ -1,4 +1,4 @@
-import type { types } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
 import * as React from 'react';
 import { act } from 'react';
 import TestRenderer from 'react-test-renderer';
@@ -8,6 +8,7 @@ import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadI
 import { useComposer } from './useComposer';
 import { useComposerStore } from './useComposerStore';
 import { ImageImportError } from '@/src/common/lib/images/ImageImportError';
+import { contentAs } from '@/src/common/lib/polycentric-hooks/helpers';
 
 // --- Mocks ----------------------------------------------------------------
 
@@ -27,15 +28,12 @@ jest.mock('expo-image-picker', () => ({
 }));
 
 const mockClient = {
-  contentManager: {
-    build: jest.fn((x: { oneofKind: 'post'; post: types.v2.Post }) => ({
-      content: x,
-    })),
-    save: jest.fn(async () => undefined),
-  },
-  buildEvent: jest.fn(async () => ({ event: true })),
-  signEvent: jest.fn(async () => ({ signed: true })),
-  commitEvent: jest.fn(async () => undefined),
+  prepareEvent: jest.fn(async (_content: v2.Content, _collection: number) => ({
+    bundle: {},
+    key: {},
+    handle: null,
+  })),
+  commitEvent: jest.fn(async (_pending: unknown) => ({})),
   sync: jest.fn(async () => undefined),
   urlInfo: jest.fn(async () => ({
     url: 'https://example.com',
@@ -50,7 +48,6 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   useCurrentIdentity: () => ({ identityKey: 'me' }),
   useUsername: () => 'Author',
   truncateName: (n: string) => n,
-  hexToBytes: () => new Uint8Array(),
 }));
 
 // Controllable per test; reset to enabled in beforeEach (the pre-toggle default
@@ -63,16 +60,9 @@ jest.mock('@/src/common/link-previews', () => ({
   }),
 }));
 
-jest.mock('@polycentric/react-native', () => ({
-  COLLECTION: { FEED: 1 },
-  types: {},
-  v2: {
-    EventKey: { create: jest.fn(() => ({})), fromBinary: jest.fn(() => ({})) },
-    EventBundle: { create: jest.fn((x: unknown) => x) },
-    Content: { toBinary: jest.fn(() => new Uint8Array()) },
-    Link: { create: jest.fn((x: unknown) => x) },
-  },
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 jest.mock('@/src/features/feed/hooks/feedCache', () => ({
   injectPostIntoFeedCache: jest.fn(),
@@ -95,6 +85,11 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
 
 const picker = ImagePicker as jest.Mocked<typeof ImagePicker>;
 const mockProcess = processAndUploadImage as jest.Mock;
+
+/** The post handed to `prepareEvent` by the `n`th publish. */
+function builtPost(n = 0): v2.Post | undefined {
+  return contentAs(mockClient.prepareEvent.mock.calls[n]?.[0], 'post');
+}
 
 /** A promise whose resolution we control, to model in-flight uploads. */
 function deferred<T>() {
@@ -374,7 +369,7 @@ describe('useComposer handlePost', () => {
     await act(async () => {
       await result.current.handlePost();
     });
-    expect(mockClient.contentManager.save).not.toHaveBeenCalled();
+    expect(mockClient.prepareEvent).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -386,9 +381,7 @@ describe('useComposer handlePost', () => {
       await result.current.handlePost();
     });
 
-    expect(mockClient.contentManager.build).toHaveBeenCalledWith(
-      expect.objectContaining({ oneofKind: 'post' }),
-    );
+    expect(builtPost()?.text).toBe('hello world');
     expect(mockClient.commitEvent).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
     expect(result.current.submitting).toBe(false);
@@ -416,12 +409,8 @@ describe('useComposer handlePost', () => {
       await result.current.handlePost();
     });
 
-    expect(mockClient.contentManager.build).toHaveBeenCalledWith(
-      expect.objectContaining({
-        post: expect.objectContaining({
-          text: `hi @{${nameId},Jane Doe} @{${aliasId},ann.example.com} @{${accountAliasId},bob@example.com}`,
-        }),
-      }),
+    expect(builtPost()?.text).toBe(
+      `hi @{${nameId},Jane Doe} @{${aliasId},ann.example.com} @{${accountAliasId},bob@example.com}`,
     );
     // Ranges are cleared with the rest of the composer.
     act(() => renderers.at(-1)?.unmount());
@@ -487,8 +476,7 @@ describe('useComposer link previews', () => {
     });
 
     expect(mockClient.urlInfo).toHaveBeenCalledWith('https://example.com');
-    const built = mockClient.contentManager.build.mock.calls[0][0];
-    expect(built.post.links).toHaveLength(1);
+    expect(builtPost()?.links).toHaveLength(1);
   });
 
   it('drops the stale card as soon as the url is swapped', async () => {
@@ -643,8 +631,7 @@ describe('useComposer link previews', () => {
     });
 
     expect(mockClient.urlInfo).not.toHaveBeenCalled();
-    const built = mockClient.contentManager.build.mock.calls[0][0];
-    expect(built.post.links).toHaveLength(0);
+    expect(builtPost()?.links).toHaveLength(0);
   });
 
   it('skips link preview generation when disabled', async () => {
@@ -660,7 +647,6 @@ describe('useComposer link previews', () => {
     });
 
     expect(mockClient.urlInfo).not.toHaveBeenCalled();
-    const built = mockClient.contentManager.build.mock.calls[0][0];
-    expect(built.post.links).toHaveLength(0);
+    expect(builtPost()?.links).toHaveLength(0);
   });
 });

@@ -1,8 +1,8 @@
-import type { EventKey } from '@polycentric/react-native';
+import { type EventKey, KeyType } from '@polycentric/react-native';
 
-jest.mock('@polycentric/react-native', () => ({
-  v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
-}));
+jest.mock('@polycentric/react-native', () =>
+  jest.requireActual('@/test/polycentric'),
+);
 
 const mockNavigate = jest.fn();
 jest.mock('expo-router', () => ({
@@ -30,7 +30,7 @@ const B = 'https://b.example';
 const key = (sequence: number): EventKey => ({
   collection: 2,
   identity: 'identity',
-  signedBy: { keyType: 1, key: new Uint8Array([1, 2, 3]).buffer },
+  signedBy: { keyType: KeyType.Ed25519, key: new Uint8Array([1, 2, 3]).buffer },
   sequence: BigInt(sequence),
 });
 
