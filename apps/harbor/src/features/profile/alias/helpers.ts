@@ -2,10 +2,6 @@ export function normalizeAlias(alias: string): string | null {
   return parseAlias(alias)?.normalizedAlias ?? null;
 }
 
-export function isIdentityKey(s: string): boolean {
-  return /^[0-9a-f]+$/i.test(s);
-}
-
 /**
  * Parse `user@domain.com` or a bare `domain.com` (each with an optional
  * leading `@`) into its lowercased parts. The local part is limited to

@@ -20,7 +20,7 @@ import useBlocks from '../block/hooks/useBlocks';
 import { ProfileCompactHeader } from './ProfileCompactHeader';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileTabs } from './ProfileTabs';
-import { isIdentityKey, normalizeAlias } from './alias/helpers';
+import { normalizeAlias } from './alias/helpers';
 import { useAliasResolutionStore } from './alias/useAliasResolutionStore';
 import { useIdentityHandle } from './hooks/useIdentityHandle';
 import { useProfile } from './hooks/useProfile';
@@ -33,6 +33,7 @@ import { ProfileVerificationsList } from './ProfileVerificationsList';
 import { ProfileVerifiesList } from './ProfileVerifiesList';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { truncateText } from '@/src/common/util/truncateText';
+import { isIdentityKey } from '@/src/common/util/isIdentityKey';
 
 /** Page order behind the profile's tab bar. */
 const PROFILE_TABS: readonly ActiveFeed[] = [

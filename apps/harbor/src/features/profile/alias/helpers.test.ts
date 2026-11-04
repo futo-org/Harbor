@@ -1,4 +1,4 @@
-import { isIdentityKey, normalizeAlias, parseAlias } from './helpers';
+import { normalizeAlias, parseAlias } from './helpers';
 
 describe('normalizeAlias', () => {
   it('normalizes a plain alias', () => {
@@ -64,19 +64,5 @@ describe('parseAlias', () => {
       localPart: '*',
       domain: 'example.com',
     });
-  });
-});
-
-describe('isIdentityKey', () => {
-  it('accepts hex in either case', () => {
-    expect(isIdentityKey('0a2bCD')).toBe(true);
-  });
-
-  it.each([
-    ['empty', ''],
-    ['non-hex', 'xyz'],
-    ['an alias', 'user@domain.com'],
-  ])('rejects %s', (_label, input) => {
-    expect(isIdentityKey(input)).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { isIdentityKey, parseAlias } from './helpers';
+import { isIdentityKey } from '@/src/common/util/isIdentityKey';
+import { parseAlias } from './helpers';
 
 // Give up on a slow or unresponsive domain rather than hang the resolution.
 const RESOLVE_TIMEOUT_MS = 10_000;
