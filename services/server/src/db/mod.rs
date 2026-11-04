@@ -37,7 +37,7 @@ impl DbConn {
         skip_all,
         fields(
             db.pool.size = tracing::field::Empty,
-            db.pool.idle = tracing::field::Empty,
+            db.pool.idle_count = tracing::field::Empty,
         )
     )]
     pub(crate) async fn from_pool(
@@ -48,7 +48,7 @@ impl DbConn {
                 let pool = pool.get_postgres_connection_pool();
                 tracing::Span::current()
                     .record("db.pool.size", pool.size())
-                    .record("db.pool.idle", pool.num_idle());
+                    .record("db.pool.idle_count", pool.num_idle());
                 let conn = pool.acquire().await.map_err(|err| {
                     tracing::error!(
                         error = %err,
