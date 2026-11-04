@@ -17,7 +17,6 @@ import * as Proto from './proto/v2';
 import { StorageHandle } from './data-store/storage-handle';
 import { FileStore } from './file-store/file-store';
 import { bytesToHex, toDigestKey } from './utils/hex';
-import { bytesEqual } from './utils/bytes';
 import { CryptoManager } from './crypto/crypto-manager';
 import { createServerJwt, DEFAULT_EXPIRY_SECONDS } from './crypto/server-jwt';
 
@@ -900,8 +899,21 @@ export class PolycentricClient {
 
     for (const bundle of bundles) {
       try {
+        // Skip events that don't belong to the identity we are syncing.
+        const eventBytes = bundle.signedEvent?.eventBytes;
+        if (!eventBytes) continue;
+
+        const eventIdentity = Proto.Event.fromBinary(eventBytes).key?.identity;
+
+        if (eventIdentity !== identity) {
+          console.warn('pull: skipping event for another identity');
+          continue;
+        }
+
+        // Save event/content
         await this.saveBundle(identity, bundle);
 
+        // Discover referenced blobs
         const contentBytes = bundle.serializedContent?.contentBytes;
         if (!contentBytes) continue;
 
@@ -953,22 +965,10 @@ export class PolycentricClient {
     const signedEvent = bundle.signedEvent;
     if (!signedEvent) throw new Error('Bundle is missing signedEvent');
 
-    const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-    if (!event.key?.signedBy) throw new Error('Event is missing key');
-
-    const digest = event.contentDigest;
-    if (!digest) throw new Error('Event is missing content digest');
-
+    // Validation of the event's signature and content's digest is done in the
+    // event store now.
+    // TODO: consider moving back to syncing logic?
     const contentBytes = bundle.serializedContent?.contentBytes;
-    if (contentBytes) {
-      if (
-        digest.type !== Proto.ContentDigestType.SHA256 ||
-        !bytesEqual(sha256(contentBytes), digest.value)
-      ) {
-        throw new Error('Content does not match event digest');
-      }
-    }
-
     await this.storage.events.persist(owner, signedEvent, contentBytes);
   }
 

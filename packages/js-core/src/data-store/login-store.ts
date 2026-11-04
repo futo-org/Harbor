@@ -7,6 +7,7 @@ import type {
 } from '../platform-interfaces/login-repository';
 import { LoginRepositoryError } from '../platform-interfaces/login-repository';
 import { KeyType, type PublicKey } from '../proto/v2';
+import { assertIdentity } from './guards';
 
 /**
  * LoginStore wraps a platform's login repository with shared input validation.
@@ -25,7 +26,7 @@ export class LoginStore {
     keyPair: KeyPair,
     status: LoginStatus,
   ): Promise<void> {
-    assertIdentity(identity);
+    assertIdentity(identity, invalidIdentity);
     assertKeyPair(keyPair);
 
     await this.repository.putLogin(
@@ -45,7 +46,7 @@ export class LoginStore {
     publicKey: PublicKey,
     newStatus: LoginStatus,
   ): Promise<void> {
-    assertIdentity(identity);
+    assertIdentity(identity, invalidIdentity);
     assertPublicKey(publicKey);
 
     await this.repository.changeLoginStatus(
@@ -61,7 +62,7 @@ export class LoginStore {
    */
   async listLogins(identity?: string): Promise<LoginOverview[]> {
     if (identity !== undefined) {
-      assertIdentity(identity);
+      assertIdentity(identity, invalidIdentity);
     }
 
     return this.repository.listLogins(identity);
@@ -75,7 +76,7 @@ export class LoginStore {
     identity: string,
     publicKey: PublicKey,
   ): Promise<LoginDetails | null> {
-    assertIdentity(identity);
+    assertIdentity(identity, invalidIdentity);
     assertPublicKey(publicKey);
 
     return this.repository.getLoginDetails(
@@ -90,7 +91,7 @@ export class LoginStore {
    * This may not be atomic if the private key is not stored inline.
    */
   async deleteLogin(identity: string, publicKey: PublicKey): Promise<void> {
-    assertIdentity(identity);
+    assertIdentity(identity, invalidIdentity);
     assertPublicKey(publicKey);
 
     await this.repository.deleteLogin(
@@ -113,17 +114,8 @@ export class LoginStore {
 const ED25519_PUBLIC_KEY_LENGTH = 32;
 const ED25519_PRIVATE_KEY_LENGTH = 32;
 
-/** 32 bytes, lowercase hex. */
-const IDENTITY_PATTERN = /^[0-9a-f]{64}$/;
-
-function assertIdentity(identity: string): void {
-  if (!IDENTITY_PATTERN.test(identity)) {
-    throw new LoginRepositoryError(
-      'invalid identity key',
-      'identity must be a 32 byte lowercase hex string',
-    );
-  }
-}
+const invalidIdentity = (message: string) =>
+  new LoginRepositoryError('invalid identity key', message);
 
 function assertSupportedKeyType(keyType: KeyType): void {
   if (keyType !== KeyType.ED25519) {

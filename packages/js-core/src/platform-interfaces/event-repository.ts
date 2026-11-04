@@ -32,6 +32,7 @@ export interface IEventRepository {
   /**
    * Persist a new event in the repository.
    * Throws an error if an event with the same event key already exists.
+   * TODO: support replacing an event?
    */
   insert(row: EventRow): Promise<void>;
 
@@ -84,6 +85,9 @@ export type EventRepositoryErrorCode =
   | 'invalid event'
   | 'invalid content'
   | 'invalid status'
+  | 'unsupported hash'
+  | 'invalid signature'
+  | 'unsupported key type'
   | 'already exists'
   | 'not found'
   /** Generic database error. */

@@ -1674,7 +1674,7 @@ describe('PolycentricClient sync', () => {
       const bundle = bundleOf(Proto.Event.create({})); // no key
 
       await expect(client.saveBundle(identityA.key, bundle)).rejects.toThrow(
-        'Event is missing key',
+        'event key is incomplete',
       );
       expect(inserted()).toEqual([]);
     });
@@ -1695,7 +1695,7 @@ describe('PolycentricClient sync', () => {
       );
 
       await expect(client.saveBundle(identityA.key, bundle)).rejects.toThrow(
-        'Event is missing key',
+        'event key is incomplete',
       );
       expect(inserted()).toEqual([]);
     });
@@ -1717,7 +1717,7 @@ describe('PolycentricClient sync', () => {
       );
 
       await expect(client.saveBundle(identityA.key, bundle)).rejects.toThrow(
-        'Event is missing content digest',
+        'missing content digest',
       );
       expect(inserted()).toEqual([]);
     });
@@ -1737,7 +1737,7 @@ describe('PolycentricClient sync', () => {
       const bundle = makeBundle(event, makeContent('tampered'));
 
       await expect(client.saveBundle(identityA.key, bundle)).rejects.toThrow(
-        'Content does not match event digest',
+        'content does not match event digest',
       );
       expect(inserted()).toEqual([]);
     });
