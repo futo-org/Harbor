@@ -13,21 +13,18 @@ jest.mock('@noble/hashes/sha2.js', () => ({
 
 let mockSequence = 0;
 const mockClient = {
-  contentManager: { save: jest.fn(async () => undefined) },
-  buildEvent: jest.fn(async () => {
-    const { v2 } = jest.requireMock('@polycentric/react-native');
-    return v2.Event.create({
-      key: v2.EventKey.create({
+  createEvent: jest.fn(
+    async (_args: { collection: number; content: v2.Content }) => {
+      const { v2 } = jest.requireMock('@polycentric/react-native');
+      const signer = v2.PublicKey.create({ key: new Uint8Array([1, 2, 3]) });
+      const eventKey = v2.EventKey.create({
         identity: 'me',
         collection: 8,
         sequence: BigInt(++mockSequence),
-        signedBy: v2.PublicKey.create({ key: new Uint8Array([1, 2, 3]) }),
-      }),
-    });
-  }),
-  signEvent: jest.fn(async (event: unknown) => ({ event })),
-  commitEvent: jest.fn(
-    async (_signed: unknown, _content: unknown) => undefined,
+        signedBy: signer,
+      });
+      return { eventKey, signer };
+    },
   ),
   sync: jest.fn(async () => undefined),
 };
@@ -91,9 +88,11 @@ async function submit(values: Record<string, string>) {
   return ref;
 }
 
-/** Content committed by the nth commitEvent call. */
-function committedContent(call: number): v2.Content {
-  return mockClient.commitEvent.mock.calls[call][1] as v2.Content;
+/** Content created by the nth createEvent call, which must be a verification. */
+function createdContent(call: number): v2.Content {
+  const { collection, content } = mockClient.createEvent.mock.calls[call][0];
+  expect(collection).toBe(8);
+  return content;
 }
 
 beforeEach(() => {
@@ -103,11 +102,11 @@ beforeEach(() => {
 });
 
 describe('useCreateClaim', () => {
-  it('commits a claim event and returns its ref', async () => {
+  it('creates a claim event and returns its ref', async () => {
     const ref = await submit({ job_title: 'Developer' });
 
-    expect(mockClient.commitEvent).toHaveBeenCalledTimes(1);
-    const content = committedContent(0);
+    expect(mockClient.createEvent).toHaveBeenCalledTimes(1);
+    const content = createdContent(0);
     if (content.contentBody.oneofKind !== 'verificationClaim') {
       throw new Error('expected a verificationClaim');
     }
@@ -130,7 +129,7 @@ describe('useCreateClaim', () => {
   it('omits empty fields from the claim', async () => {
     await submit({ job_title: 'Developer', description: '  ' });
 
-    const content = committedContent(0);
+    const content = createdContent(0);
     if (content.contentBody.oneofKind !== 'verificationClaim') {
       throw new Error('expected a verificationClaim');
     }
@@ -143,20 +142,20 @@ describe('useCreateClaim', () => {
     mockRequestFrom = 'them';
     await submit({ job_title: 'Developer' });
 
-    expect(mockClient.commitEvent).toHaveBeenCalledTimes(2);
-    const content = committedContent(1);
+    expect(mockClient.createEvent).toHaveBeenCalledTimes(2);
+    const content = createdContent(1);
     if (content.contentBody.oneofKind !== 'verificationTarget') {
       throw new Error('expected a verificationTarget');
     }
     const target = content.contentBody.verificationTarget;
     expect(target.targetIdentities).toEqual(['them']);
-    // Points at the claim event committed first.
+    // Points at the claim event created first.
     expect(target.claimEventKey?.sequence).toBe(1n);
   });
 
   it('does not publish a target without requestFrom', async () => {
     await submit({ job_title: 'Developer' });
 
-    expect(mockClient.commitEvent).toHaveBeenCalledTimes(1);
+    expect(mockClient.createEvent).toHaveBeenCalledTimes(1);
   });
 });

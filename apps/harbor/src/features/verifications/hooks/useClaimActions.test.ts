@@ -7,11 +7,8 @@ jest.mock('@polycentric/react-native', () => ({
 }));
 
 const mockClient = {
-  contentManager: { save: jest.fn(async () => undefined) },
-  buildEvent: jest.fn(async () => ({})),
-  signEvent: jest.fn(async (event: unknown) => ({ event })),
-  commitEvent: jest.fn(
-    async (_signed: unknown, _content: unknown) => undefined,
+  createEvent: jest.fn(
+    async (_args: { collection: number; content: V2.Content }) => ({}),
   ),
   sync: jest.fn(async () => undefined),
 };
@@ -75,9 +72,11 @@ function renderHook(): { current: ReturnType<typeof useClaimActions> } {
   return result;
 }
 
-/** The Content committed by the first commitEvent call. */
-function committedContent(): V2.Content {
-  return mockClient.commitEvent.mock.calls[0][1] as V2.Content;
+/** The Content created by the first createEvent call, which must be a verification. */
+function createdContent(): V2.Content {
+  const { collection, content } = mockClient.createEvent.mock.calls[0][0];
+  expect(collection).toBe(8);
+  return content;
 }
 
 beforeEach(() => {
@@ -86,10 +85,10 @@ beforeEach(() => {
 });
 
 describe('deleteClaim', () => {
-  it('commits a Delete event referencing the claim and pushes it', async () => {
+  it('creates a Delete event referencing the claim and pushes it', async () => {
     await deleteClaim(mockClient as never, CLAIM_ID);
 
-    const content = committedContent();
+    const content = createdContent();
     if (content.contentBody.oneofKind !== 'delete') {
       throw new Error('expected a delete');
     }
@@ -106,7 +105,7 @@ describe('deleteClaim', () => {
     await expect(
       deleteClaim(mockClient as never, CLAIM_ID),
     ).resolves.toBeUndefined();
-    expect(mockClient.commitEvent).toHaveBeenCalled();
+    expect(mockClient.createEvent).toHaveBeenCalled();
   });
 });
 
@@ -115,7 +114,7 @@ describe('useClaimActions', () => {
     const hook = renderHook();
     await act(() => hook.current.deleteAsync());
 
-    expect(committedContent().contentBody.oneofKind).toBe('delete');
+    expect(createdContent().contentBody.oneofKind).toBe('delete');
     expect(invalidateQuery).toHaveBeenCalledWith(mockClient, [
       'claims-list',
       'me',

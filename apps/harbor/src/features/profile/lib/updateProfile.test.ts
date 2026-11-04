@@ -24,10 +24,10 @@ type BuildArg = {
 function makeClient() {
   const build = jest.fn((content: BuildArg) => content);
   const client = {
-    contentManager: { build, save: jest.fn(async () => {}) },
-    buildEvent: jest.fn(async () => ({})),
-    signEvent: jest.fn(async () => ({})),
-    commitEvent: jest.fn(async () => {}),
+    contentManager: { build },
+    createEvent: jest.fn(
+      async (_args: { collection: number; content: BuildArg }) => ({}),
+    ),
     sync: jest.fn(async () => {}),
     fileStore: { put: jest.fn(async () => {}) },
   };
@@ -111,15 +111,18 @@ describe('updateProfile', () => {
     expect(client.fileStore.put).toHaveBeenCalledWith('d2', variants[1].bytes);
   });
 
-  it('commits without syncing', async () => {
+  it('creates a profile event without syncing', async () => {
     const { client } = makeClient();
     await updateProfile(client as never, {
       name: 'A',
       description: '',
       alias: 'user@domain.com',
     });
-    expect(client.contentManager.save).toHaveBeenCalledTimes(1);
-    expect(client.commitEvent).toHaveBeenCalledTimes(1);
+    expect(client.createEvent).toHaveBeenCalledTimes(1);
+    expect(client.createEvent).toHaveBeenCalledWith({
+      collection: 3,
+      content: client.contentManager.build.mock.results[0].value,
+    });
     expect(client.sync).not.toHaveBeenCalled();
   });
 });
