@@ -432,10 +432,16 @@ async fn process_event(
     let span = tracing::Span::current();
     span.record("event.stored", stored);
     if warnings.len() != start_warning_len {
-        span.record(
-            "event.warnings",
-            tracing::field::debug(&warnings[start_warning_len..]),
+        let new_warnings = &warnings[start_warning_len..];
+        span.record("event.warnings", tracing::field::debug(new_warnings));
+        tracing::warn!(
+            ?key,
+            stored,
+            warnings = ?new_warnings,
+            "processed event with warning(s)",
         );
+    } else {
+        tracing::info!(?key, stored, "processed event");
     }
     Ok((key, stored))
 }
