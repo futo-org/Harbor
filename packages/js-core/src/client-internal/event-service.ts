@@ -10,6 +10,17 @@ export type ContentCreatedPayload = {
   content?: Content;
 };
 
+/** The outcome of pushing an identity's events to one server. */
+export type ServerPushResult = {
+  // May no longer be the active identity by the time the push finishes
+  identity: string;
+  server: string;
+  /** Events the server issued errors or warnings for. */
+  eventIssues: EventPushIssues[];
+  /** Set when the push failed outright, e.g. the server was unreachable. */
+  error?: unknown;
+};
+
 // For type safety, this interface maps event names to their payload types
 interface EventMap {
   identityChanged: KeyPair | null;
