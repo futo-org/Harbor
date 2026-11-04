@@ -2,8 +2,7 @@ import { sql } from 'drizzle-orm';
 import type { IStorageDriver, LoginId } from '@polycentric/js-core';
 import { DatabaseError, v2 as Proto } from '@polycentric/js-core';
 import { all, type PgDb } from './database.js';
-import { ContentRepository } from './repositories/content.repository.js';
-import { EventRepository } from './repositories/event.repository.js';
+import { EventRepository } from './repositories/event-repository.js';
 import { LoginRepository } from './repositories/login-repository.js';
 
 export class DrizzlePgStorageDriver implements IStorageDriver {
@@ -11,10 +10,6 @@ export class DrizzlePgStorageDriver implements IStorageDriver {
 
   createEventRepository() {
     return new EventRepository(this.db);
-  }
-
-  createContentRepository() {
-    return new ContentRepository(this.db);
   }
 
   createLoginRepository() {
