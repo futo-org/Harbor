@@ -1,8 +1,7 @@
-# Stage 1: Base - Node + pnpm
-FROM node:24-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS base
+# Stage 1: Base - Node
+FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 
 # Stage: Bogon snapshot - fetch the Team Cymru aggregated IPv4 bogon list at
 # build time and emit it as an nft `define` ($BOGON4). Baking the snapshot into
@@ -36,6 +35,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD=1
 # workspace packages (apps/*, packages/*) are absent here - pnpm tolerates
 # missing workspace members and installs only what's present.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+RUN npm install -g "$(node -p "require('./package.json').packageManager")"
 COPY patches patches
 COPY tools tools
 COPY services/scraper services/scraper

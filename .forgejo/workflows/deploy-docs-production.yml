@@ -5,7 +5,7 @@ name: Deploy docs to production
 on:
   workflow_dispatch:
   push:
-    branches: [develop]
+    branches: [ develop ]
     paths:
       - docs/**
       - protos/polycentric/v2/**
@@ -21,7 +21,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

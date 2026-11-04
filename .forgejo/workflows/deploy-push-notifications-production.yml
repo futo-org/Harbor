@@ -8,7 +8,7 @@ on:
       sha:
         description: Commit to deploy instead of what staging runs (its image and chart must exist)
         type: string
-        default: ''
+        default: ""
 
 concurrency:
   group: deploy-push-notifications-production
@@ -18,7 +18,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
+    container: ${{ vars.CI_TOOLS_IMAGE || 'node:26-alpine' }}
     steps:
       - name: Install tools
         run: apk add --no-cache bash git curl crane
