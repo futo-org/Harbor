@@ -21,8 +21,7 @@ async function actAs(client, name) {
       info.keyPair,
       'liveRotationKey',
     );
-  // Hydrates the identity's events into rs-core, which createEvent needs to
-  // build on the latest sequence and signature.
+  // Hydrates any remote events for this identitty into rs-core.
   await client.listEvents({
     identity: identityKey,
     collection: COLLECTION.IDENTITY,

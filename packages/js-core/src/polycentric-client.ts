@@ -197,27 +197,8 @@ export class PolycentricClient {
       loginRepository: this.storageDriver.createLoginRepository(),
     });
 
-    // Restore active login
+    // Restore active login and hydrate rs-core
     await this.loginManager.restore();
-
-    // Hydrate rs-core events/contents
-    if (this.activeIdentityKey) {
-      const localEvents = await this.storage.events.getAll(
-        this.activeIdentityKey,
-      );
-      const bundles: LocalBundle[] = localEvents.map(
-        ({ eventBytes, eventSignature, contentBytes }) => {
-          const signedEvent = Proto.SignedEvent.create({
-            eventBytes,
-            signature: eventSignature,
-          });
-
-          return { signedEvent, contentBytes };
-        },
-      );
-
-      this.copyBundles(bundles);
-    }
 
     // Ensures that rs-core has an updated server list even if we have no
     // active login.
@@ -328,6 +309,26 @@ export class PolycentricClient {
         );
       }
     }
+  }
+
+  /**
+   * Copy an identity's locally persisted events and content to rs-core.
+   */
+  private async hydrateIdentity(identity: string): Promise<void> {
+    const localEvents = await this.storage.events.getAll(identity);
+
+    const bundles: LocalBundle[] = localEvents.map(
+      ({ eventBytes, eventSignature, contentBytes }) => {
+        const signedEvent = Proto.SignedEvent.create({
+          eventBytes,
+          signature: eventSignature,
+        });
+
+        return { signedEvent, contentBytes };
+      },
+    );
+
+    this.copyBundles(bundles);
   }
 
   /**
@@ -1182,6 +1183,7 @@ export class PolycentricClient {
     login: LoginId | null,
     persist: boolean = true,
   ): Promise<void> {
+    // Fast-path for logging out
     if (!login) {
       if (persist) await this.storageDriver.setActiveLogin(null);
       this.core.clearAuthTokens();
@@ -1191,12 +1193,17 @@ export class PolycentricClient {
       return;
     }
 
+    // Fetch the login details
     const loginDetails = await this.storage.logins.getLoginDetails(
       login.identity,
       login.publicKey,
     );
     if (!loginDetails) throw new Error('Login not found.');
 
+    // Copy new login's local events to rs-core
+    await this.hydrateIdentity(loginDetails.identity);
+
+    // Switch active login
     if (persist) await this.storageDriver.setActiveLogin(login);
 
     this.core.clearAuthTokens();
