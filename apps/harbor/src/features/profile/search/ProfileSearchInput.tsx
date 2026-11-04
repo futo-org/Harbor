@@ -128,7 +128,7 @@ function SuggestionRow({
       identity={suggestion.identity}
       onPress={onPress}
       disabled={disabled}
-      // Followed profiles read from cache like every other list; search and id
+      // Followed profiles read from cache like every other list; search
       // matches are usually strangers, so fetch their profile to show a name.
       fetchMode={
         suggestion.source === 'following'

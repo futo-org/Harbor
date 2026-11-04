@@ -5,7 +5,7 @@ import { useDebouncedValue } from '@/src/features/search/hooks/useDebouncedValue
 import { useSearchUsers } from '@/src/features/search/hooks/useSearchUsers';
 import { useMemo } from 'react';
 
-export type ProfileSuggestionSource = 'following' | 'search' | 'identity';
+export type ProfileSuggestionSource = 'following' | 'search';
 
 export interface ProfileSuggestion {
   identity: string;
@@ -26,19 +26,10 @@ const FOLLOWING_LIMIT = 100;
 
 const SEARCH_LIMIT = 10;
 
-// Long enough to be an intentionally pasted identity id rather than a hex-ish
-// name fragment (full ids are 64 hex chars).
-const IDENTITY_ID_MIN_LENGTH = 32;
-
-function isHex(s: string): boolean {
-  return /^[0-9a-fA-F]+$/.test(s);
-}
-
 /**
  * Suggests identities for a partially-typed profile query:
  * - people the current user follows, when the query is empty,
- * - user search results from the network, like the main search screen,
- * - the query itself when it's a pasted identity id.
+ * - user search results from the network, like the main search screen.
  */
 export function useProfileSuggestions(
   query: string,
@@ -81,14 +72,6 @@ export function useProfileSuggestions(
       seen.add(suggestion.identity);
       out.push(suggestion);
     };
-
-    if (trimmed.length >= IDENTITY_ID_MIN_LENGTH && isHex(trimmed)) {
-      push({
-        identity: trimmed.toLowerCase(),
-        name: null,
-        source: 'identity',
-      });
-    }
 
     if (trimmed) {
       for (const entry of search.entries) {

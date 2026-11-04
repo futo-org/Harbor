@@ -155,18 +155,4 @@ describe('useProfileSuggestions', () => {
       BOB,
     ]);
   });
-
-  it('offers a pasted identity id directly, deduped against follows', () => {
-    follows(ALICE);
-
-    const stranger = 'cd'.repeat(32);
-    const pasted = renderSuggestions(stranger.toUpperCase());
-    expect(pasted.result.current.suggestions).toEqual([
-      { identity: stranger, name: null, source: 'identity' },
-    ]);
-
-    // Pasting someone already followed yields a single row.
-    const followed = renderSuggestions(ALICE);
-    expect(followed.result.current.suggestions).toHaveLength(1);
-  });
 });
