@@ -1,9 +1,7 @@
-# Stage 1: Base, Node + pnpm
-FROM node:24-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS base
+# Stage 1: Base, Node
+FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-# Keep in sync with "packageManager" in the root package.json
-RUN corepack enable && corepack prepare pnpm@10.34.5 --activate
 
 # Stage 2: Dependencies + Build
 FROM base AS build
@@ -16,6 +14,7 @@ WORKDIR /app
 ARG SKIP_WORKSPACE_BUILD=
 
 COPY turbo.jsonc pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+RUN npm install -g "$(node -p "require('./package.json').packageManager")"
 COPY patches patches
 COPY apps apps
 COPY packages packages

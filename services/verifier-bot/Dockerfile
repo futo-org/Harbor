@@ -8,11 +8,10 @@
 # the SDKs itself, use Dockerfile.dev. rs-core-wasm ships a compiled `.js`
 # (node export condition), so the bot tsc-compiles to dist/ and runs under node.
 
-# Stage 1: Base — Node + pnpm
-FROM node:24-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS base
+# Stage 1: Base — Node
+FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 
 # Stage 2: Install (SDK dist come prebuilt from the context)
 FROM base AS build
@@ -28,6 +27,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+RUN npm install -g "$(node -p "require('./package.json').packageManager")"
 COPY patches patches
 COPY tools tools
 # Prebuilt by CI (js-sdks-build, rs-core-wasm-wasm-build); dist/ arrives via
@@ -52,7 +52,7 @@ RUN pnpm --filter @polycentric/verifier-bot --prod \
   deploy /deploy
 
 # Stage 3: Run
-FROM node:24-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS runner
+FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS runner
 WORKDIR /app/services/verifier-bot
 ENV NODE_ENV=production
 # System Chromium for the Puppeteer-based verifiers (e.g. Kick).

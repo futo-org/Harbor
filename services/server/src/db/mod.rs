@@ -1,7 +1,5 @@
 use sea_orm::sea_query::{BinOper, Expr, Value, ValueType, Values};
-use sea_orm::{
-    ConnectionTrait, DbErr, ExecResult, QueryResult, RuntimeErr, Statement,
-};
+use sea_orm::{DbErr, ExecResult, QueryResult, RuntimeErr, Statement};
 use sea_query_sqlx::SqlxValues;
 use sqlx::Executor;
 use tokio::sync::Mutex;
@@ -9,6 +7,9 @@ use tonic::Status;
 
 pub mod client;
 pub(crate) mod fns;
+
+// TODO(1947): replace with out own trait.
+pub(crate) use sea_orm::ConnectionTrait as Connection;
 
 /// Database connection.
 ///
@@ -36,7 +37,7 @@ impl DbConn {
         skip_all,
         fields(
             db.pool.size = tracing::field::Empty,
-            db.pool.idle = tracing::field::Empty,
+            db.pool.idle_count = tracing::field::Empty,
         )
     )]
     pub(crate) async fn from_pool(
@@ -47,7 +48,7 @@ impl DbConn {
                 let pool = pool.get_postgres_connection_pool();
                 tracing::Span::current()
                     .record("db.pool.size", pool.size())
-                    .record("db.pool.idle", pool.num_idle());
+                    .record("db.pool.idle_count", pool.num_idle());
                 let conn = pool.acquire().await.map_err(|err| {
                     tracing::error!(
                         error = %err,
@@ -121,7 +122,7 @@ impl DbConn {
 }
 
 #[async_trait::async_trait]
-impl ConnectionTrait for DbConn {
+impl sea_orm::ConnectionTrait for DbConn {
     fn get_database_backend(&self) -> sea_orm::DbBackend {
         sea_orm::DbBackend::Postgres
     }
@@ -252,7 +253,7 @@ impl<'c> DbTx<'c> {
 }
 
 #[async_trait::async_trait]
-impl<'c> ConnectionTrait for DbTx<'c> {
+impl<'c> sea_orm::ConnectionTrait for DbTx<'c> {
     fn get_database_backend(&self) -> sea_orm::DbBackend {
         sea_orm::DbBackend::Postgres
     }

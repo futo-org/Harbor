@@ -1,17 +1,19 @@
+use entity::{content, event, interaction_tally, profile};
+use sea_orm::sea_query::{Expr, Func, Order, Value};
+use sea_orm::{
+    ColumnTrait, EntityTrait, FromQueryResult, Iterable, JoinType, QueryFilter,
+    QueryOrder, QueryResult, QuerySelect, RelationTrait, TryGetError,
+    TryGetableMany,
+};
+use tonic::Status;
+
 use crate::data::{Cursor, CursorFilter, Marker};
+use crate::db::Connection;
 use crate::service::feeds::repository::{DecayedReactionCount, content_join};
 use crate::service::proto::{SortPostsBy, SortUsersBy};
 use crate::service::search::rpc::search_posts::SortedPostsBy;
 use crate::service::search::rpc::search_users::SortedUsersBy;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
-use entity::{content, event, interaction_tally, profile};
-use sea_orm::sea_query::{Expr, Func, Order, Value};
-use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, FromQueryResult, Iterable,
-    JoinType, QueryFilter, QueryOrder, QueryResult, QuerySelect, RelationTrait,
-    TryGetError, TryGetableMany,
-};
-use tonic::Status;
 
 // This type only exists to work around trying to get additional columns (e.g.
 // the search rank) from SeaORM.
@@ -82,8 +84,8 @@ pub struct Query;
 
 impl Query {
     #[tracing::instrument(skip_all)]
-    pub(super) async fn search_users<C: ConnectionTrait>(
-        db: &C,
+    pub(super) async fn search_users<C: Connection>(
+        db: &mut C,
         search_query: &str,
         sort_by: SortUsersBy,
         limit: u64,
@@ -190,8 +192,8 @@ impl Query {
     }
 
     #[tracing::instrument(skip_all)]
-    pub(super) async fn search_posts<C: ConnectionTrait>(
-        db: &C,
+    pub(super) async fn search_posts<C: Connection>(
+        db: &mut C,
         search_query: &str,
         sort_by: SortPostsBy,
         limit: u64,

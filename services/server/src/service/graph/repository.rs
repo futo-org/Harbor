@@ -14,6 +14,7 @@ use tonic::Status;
 use crate::data::EventWithContentRow;
 use crate::data::hydration::event_identities;
 use crate::data::{Cursor, CursorFilter, EventRow};
+use crate::db::Connection;
 use crate::service::context::{Auth, RequestContext};
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::{EventCreatedAt, content_join};
@@ -89,7 +90,7 @@ impl Query {
     /// This current query is inefficient.
     #[tracing::instrument(skip_all)]
     pub async fn list_followed_identities<A>(
-        ctx: &RequestContext<A>,
+        ctx: &mut RequestContext<A>,
         caller: &str,
     ) -> Result<Vec<String>, Status> {
         list_graph_targets(ctx, caller, decode_followed_identity).await
@@ -99,8 +100,8 @@ impl Query {
     /// No tombstone filtering is required here: the cache only holds rows
     /// for blocks that have not been deleted.
     #[tracing::instrument(skip_all)]
-    async fn list_blocked_identities<C: ConnectionTrait>(
-        db: &C,
+    async fn list_blocked_identities<C: Connection>(
+        db: &mut C,
         caller: &str,
     ) -> Result<Vec<String>, Status> {
         block::Entity::find()
@@ -117,8 +118,8 @@ impl Query {
     /// [`Query::list_blocked_identities`] as a deduplicated set, for
     /// filtering the identities a response may carry.
     #[tracing::instrument(skip_all)]
-    async fn blocked_set<C: ConnectionTrait>(
-        db: &C,
+    async fn blocked_set<C: Connection>(
+        db: &mut C,
         identity: &str,
     ) -> Result<HashSet<String>, Status> {
         Ok(Self::list_blocked_identities(db, identity)
@@ -132,13 +133,13 @@ impl Query {
     /// blocks could apply.
     #[tracing::instrument(skip_all)]
     pub async fn blocked_set_for_caller<A>(
-        ctx: &RequestContext<A>,
+        ctx: &mut RequestContext<A>,
     ) -> Result<HashSet<String>, Status>
     where
         A: Auth,
     {
         match ctx.auth.identity() {
-            Some(caller) => Self::blocked_set(&ctx.db, caller).await,
+            Some(caller) => Self::blocked_set(&mut ctx.db, caller).await,
             None => Ok(HashSet::new()),
         }
     }
@@ -150,8 +151,8 @@ impl Query {
     /// add index such that we can efficiently query only the blocked identity
     /// and get all blockers.
     #[tracing::instrument(skip_all)]
-    pub async fn identities_blocking<'a, I, C: ConnectionTrait>(
-        db: &C,
+    pub async fn identities_blocking<'a, I, C: Connection>(
+        db: &mut C,
         potential_blockers: I,
         blocked: &str,
     ) -> Result<HashSet<String>, Status>
@@ -181,8 +182,8 @@ impl Query {
     }
 
     #[tracing::instrument(skip_all)]
-    pub async fn blocks_identity<C: ConnectionTrait>(
-        db: &C,
+    pub async fn blocks_identity<C: Connection>(
+        db: &mut C,
         blocker: &str,
         blocked: &str,
     ) -> Result<bool, Status> {
@@ -202,7 +203,7 @@ impl Query {
     /// maintained counter would avoid scanning the graph rows.
     #[tracing::instrument(skip_all)]
     pub async fn count_following<A>(
-        ctx: &RequestContext<A>,
+        ctx: &mut RequestContext<A>,
         identity: &str,
     ) -> Result<u64, Status> {
         Ok(Self::list_followed_identities(ctx, identity).await?.len() as u64)
@@ -212,7 +213,7 @@ impl Query {
     /// (tombstone-aware).
     #[tracing::instrument(skip_all)]
     pub async fn count_followers<A>(
-        ctx: &RequestContext<A>,
+        ctx: &mut RequestContext<A>,
         identity: &str,
     ) -> Result<u64, Status> {
         let rows: Vec<EventWithContentRow> = follow_events_query()
@@ -226,7 +227,7 @@ impl Query {
             .map(|(event, _)| TargetEventKey::of(event))
             .collect();
         let raw_tombstones =
-            tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
+            tombstone::list_tombstones_for_event_keys(&mut ctx.db, &keys)
                 .await
                 .map_err(map_db_err)?;
         let valid_tombstones =
@@ -245,8 +246,8 @@ impl Query {
     /// Follow events authored by `identity` — who they follow. Newest
     /// first, keyset-paginated, tombstones NOT yet filtered.
     #[tracing::instrument(skip_all)]
-    pub async fn list_following_events<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_following_events<C: Connection>(
+        db: &mut C,
         identity: &str,
         limit: u32,
         cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -259,8 +260,8 @@ impl Query {
     /// Follow events targeting `identity` — who follows them. Newest
     /// first, keyset-paginated, tombstones NOT yet filtered.
     #[tracing::instrument(skip_all)]
-    pub async fn list_followers_events<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_followers_events<C: Connection>(
+        db: &mut C,
         identity: &str,
         limit: u32,
         cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -273,8 +274,8 @@ impl Query {
     /// `identity` is `None` for an anonymous caller, who follows nobody and
     /// so only gets the default suggestions.
     #[tracing::instrument(skip_all)]
-    pub async fn suggest_follow<C: ConnectionTrait>(
-        db: &C,
+    pub async fn suggest_follow<C: Connection>(
+        db: &mut C,
         identity: Option<&str>,
         cursor_filter: &CursorFilter<FollowSuggestionsSortedBy>,
         limit: u32,
@@ -380,8 +381,8 @@ impl Query {
     /// The latest identity event of each row in `suggestions` (columns
     /// (followee, followers)), most followers first, keyset-paginated.
     #[tracing::instrument(skip_all)]
-    async fn page_suggestions<C: ConnectionTrait>(
-        db: &C,
+    async fn page_suggestions<C: Connection>(
+        db: &mut C,
         suggestions: SelectStatement,
         cursor_filter: &CursorFilter<FollowSuggestionsSortedBy>,
         limit: u32,
@@ -511,8 +512,8 @@ impl Query {
 
     /// `follows` is (followee, follower).
     #[tracing::instrument(skip_all)]
-    pub async fn follow_events<C: ConnectionTrait>(
-        db: &C,
+    pub async fn follow_events<C: Connection>(
+        db: &mut C,
         // NOTE: we should use an iterator here, but that triggers a "known
         // limitation" in the compiler:
         // > lifetime bound not satisfied
@@ -552,7 +553,7 @@ impl Query {
 /// function filters for specific types of graph events.
 #[tracing::instrument(skip_all)]
 async fn list_graph_targets<A>(
-    ctx: &RequestContext<A>,
+    ctx: &mut RequestContext<A>,
     caller: &str,
     extract: fn(&content::Model) -> Option<String>,
 ) -> Result<Vec<String>, Status> {
@@ -570,7 +571,7 @@ async fn list_graph_targets<A>(
         .map(|(event, _)| TargetEventKey::of(event))
         .collect();
     let raw_tombstones =
-        tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
+        tombstone::list_tombstones_for_event_keys(&mut ctx.db, &keys)
             .await
             .map_err(map_db_err)?;
     let valid_tombstones =
@@ -614,8 +615,8 @@ fn follow_join() -> RelationDef {
 /// Apply the (created_at, id) keyset cursor and fetch, newest first.
 /// Mirrors the feeds repository's pagination.
 #[tracing::instrument(skip_all)]
-async fn page_follow_events<C: ConnectionTrait>(
-    db: &C,
+async fn page_follow_events<C: Connection>(
+    db: &mut C,
     query: SelectTwo<event::Entity, content::Entity>,
     limit: u32,
     cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -774,13 +775,13 @@ mod tests {
             ]])
             .append_query_results([no_tombstones()])
             .into_connection();
-        let ctx = ctx(db)
+        let mut ctx = ctx(db)
             .await
             .public_rw(&tonic::Request::new(()))
             .await
             .unwrap();
 
-        let count = Query::count_followers(&ctx, "target").await.unwrap();
+        let count = Query::count_followers(&mut ctx, "target").await.unwrap();
         assert_eq!(count, 2);
     }
 
@@ -794,26 +795,26 @@ mod tests {
             ]])
             .append_query_results([no_tombstones()])
             .into_connection();
-        let ctx = ctx(db)
+        let mut ctx = ctx(db)
             .await
             .public_rw(&tonic::Request::new(()))
             .await
             .unwrap();
 
-        let count = Query::count_following(&ctx, "alice").await.unwrap();
+        let count = Query::count_following(&mut ctx, "alice").await.unwrap();
         assert_eq!(count, 2);
     }
 
     #[tokio::test]
     async fn blocked_set_reads_the_block_cache_table() {
-        let db = MockDatabase::new(DbBackend::Postgres)
+        let mut db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![
                 blocked_column_row("bob"),
                 blocked_column_row("carol"),
             ]])
             .into_connection();
 
-        let blocked = Query::blocked_set(&db, "alice").await.unwrap();
+        let blocked = Query::blocked_set(&mut db, "alice").await.unwrap();
         assert_eq!(
             blocked,
             HashSet::from(["bob".to_string(), "carol".to_string()])
@@ -823,13 +824,13 @@ mod tests {
     #[tokio::test]
     async fn an_anonymous_caller_blocks_nobody() {
         let db = MockDatabase::new(DbBackend::Postgres).into_connection();
-        let ctx = ctx(db)
+        let mut ctx = ctx(db)
             .await
             .public_rw(&tonic::Request::new(()))
             .await
             .unwrap();
 
-        let blocked = Query::blocked_set_for_caller(&ctx).await.unwrap();
+        let blocked = Query::blocked_set_for_caller(&mut ctx).await.unwrap();
         assert!(blocked.is_empty());
     }
 
@@ -842,14 +843,14 @@ mod tests {
             ]])
             .append_query_results([no_tombstones()])
             .into_connection();
-        let ctx = ctx(db)
+        let mut ctx = ctx(db)
             .await
             .public_rw(&tonic::Request::new(()))
             .await
             .unwrap();
 
         assert_eq!(
-            Query::list_followed_identities(&ctx, "alice")
+            Query::list_followed_identities(&mut ctx, "alice")
                 .await
                 .unwrap(),
             ["bob"]
@@ -858,25 +859,33 @@ mod tests {
 
     #[tokio::test]
     async fn blocks_identity_true_for_a_cached_block() {
-        let db = MockDatabase::new(DbBackend::Postgres)
+        let mut db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![block_row(1, "alice", "bob")]])
             .into_connection();
 
-        assert!(Query::blocks_identity(&db, "alice", "bob").await.unwrap());
+        assert!(
+            Query::blocks_identity(&mut db, "alice", "bob")
+                .await
+                .unwrap()
+        );
     }
 
     #[tokio::test]
     async fn blocks_identity_false_without_rows() {
-        let db = MockDatabase::new(DbBackend::Postgres)
+        let mut db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([Vec::<block::Model>::new()])
             .into_connection();
 
-        assert!(!Query::blocks_identity(&db, "alice", "bob").await.unwrap());
+        assert!(
+            !Query::blocks_identity(&mut db, "alice", "bob")
+                .await
+                .unwrap()
+        );
     }
 
     #[tokio::test]
     async fn list_followers_events_returns_rows_newest_first() {
-        let db = MockDatabase::new(DbBackend::Postgres)
+        let mut db = MockDatabase::new(DbBackend::Postgres)
             .append_query_results([vec![
                 (event_row(2, "bob", 1), follow_row(2, "target")),
                 (event_row(1, "alice", 1), follow_row(1, "target")),
@@ -884,7 +893,7 @@ mod tests {
             .into_connection();
 
         let cursor = CursorFilter::default();
-        let rows = Query::list_followers_events(&db, "target", 10, &cursor)
+        let rows = Query::list_followers_events(&mut db, "target", 10, &cursor)
             .await
             .unwrap();
         let identities: Vec<&str> =
@@ -895,10 +904,10 @@ mod tests {
     #[tokio::test]
     async fn forward_end_cursor_short_circuits_without_querying() {
         // No mocked results: a database hit would error the query.
-        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let mut db = MockDatabase::new(DbBackend::Postgres).into_connection();
 
         let rows = Query::list_following_events(
-            &db,
+            &mut db,
             "alice",
             10,
             &CursorFilter::Forward(Cursor::End),
@@ -910,10 +919,10 @@ mod tests {
 
     #[tokio::test]
     async fn backward_start_cursor_short_circuits_without_querying() {
-        let db = MockDatabase::new(DbBackend::Postgres).into_connection();
+        let mut db = MockDatabase::new(DbBackend::Postgres).into_connection();
 
         let rows = Query::list_followers_events(
-            &db,
+            &mut db,
             "alice",
             10,
             &CursorFilter::Backward(Cursor::Start),

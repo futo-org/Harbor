@@ -27,7 +27,7 @@ pub async fn delete_events(args: Vec<String>) {
     let mut db = connect().await;
     let (identities, count, public_key) = match (identity, public_key) {
         (Some(identity), None) => {
-            let count = Query::count_events(&db, &identity)
+            let count = Query::count_events(&mut db, &identity)
                 .await
                 .expect("failed to count events");
             (vec![identity], count, None)
@@ -35,7 +35,7 @@ pub async fn delete_events(args: Vec<String>) {
         (None, Some(key)) => {
             let key = hex::decode(key)
                 .unwrap_or_else(|_| usage_error("--public-key must be hex"));
-            let counts = Query::identities_signed_by(&db, &key)
+            let counts = Query::identities_signed_by(&mut db, &key)
                 .await
                 .expect("failed to find identities");
             let count = counts.iter().map(|(_, n)| *n as u64).sum();
@@ -89,7 +89,7 @@ pub async fn prune_content(args: Vec<String>) {
 
     let mut db = connect().await;
     if !yes {
-        let count = Query::count_orphan_content(&db)
+        let count = Query::count_orphan_content(&mut db)
             .await
             .expect("failed to count orphaned content");
         println!(

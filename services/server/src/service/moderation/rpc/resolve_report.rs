@@ -10,10 +10,12 @@ use crate::service::proto::{
 };
 
 pub async fn handle(
-    ctx: AuthContext,
+    mut ctx: AuthContext,
     req: ResolveReportRequest,
 ) -> Result<ResolveReportResponse, Status> {
-    require_moderator(&ctx).await?;
+    require_moderator(&mut ctx).await?;
+    let moderator = &*ctx.auth;
+
     let status = match req.status() {
         ReportStatus::Unspecified => {
             return Err(Status::invalid_argument("status is required"));
@@ -22,10 +24,10 @@ pub async fn handle(
     };
 
     repository::Mutation::resolve_report(
-        &ctx.db,
+        &mut ctx.db,
         req.report_id,
         status,
-        ctx.identity(),
+        moderator,
     )
     .await
     .map_err(|e| {
@@ -34,7 +36,7 @@ pub async fn handle(
     })?;
 
     tracing::info!(
-        moderator = ctx.identity(),
+        moderator = moderator,
         report_id = req.report_id,
         status,
         "report status changed"

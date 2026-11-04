@@ -15,6 +15,7 @@ use tokio::sync::{Mutex, watch};
 use tokio::task::JoinSet;
 use tonic::Status;
 
+use crate::db::DbConn;
 use crate::service::events::rpc::list_heads::heads;
 
 /// A pool of locks, each identity always using the same one (by hash). Held
@@ -96,7 +97,9 @@ impl HeadsPubSub {
         };
 
         // Subscribed before reading, so no event falls between the two.
-        let current = heads(&self.db, identity).await?;
+        let mut db = DbConn::from_pool(&self.db).await?;
+        let current = heads(&mut db, identity).await?;
+        drop(db);
         self.merge(identity, current.heads);
         Ok(subscription)
     }
@@ -175,7 +178,11 @@ impl HeadsPubSub {
                 reads.join_next().await;
             }
             reads.spawn(async move {
-                match heads(&self.db, &identity).await {
+                let result = match DbConn::from_pool(&self.db).await {
+                    Ok(mut db) => heads(&mut db, &identity).await,
+                    Err(err) => Err(err),
+                };
+                match result {
                     Ok(current) => self.merge(&identity, current.heads),
                     Err(e) => tracing::warn!(error = %e, "heads refresh error"),
                 }

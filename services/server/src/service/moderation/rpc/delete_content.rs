@@ -14,7 +14,8 @@ pub async fn handle(
     mut ctx: AuthContext,
     req: DeleteContentRequest,
 ) -> Result<DeleteContentResponse, Status> {
-    require_moderator(&ctx).await?;
+    require_moderator(&mut ctx).await?;
+    let moderator = &*ctx.auth;
 
     let Some(target) = req.target else {
         return Err(Status::invalid_argument("target is required"));
@@ -37,9 +38,9 @@ pub async fn handle(
             Status::internal("internal server error")
         })?;
     repository::Mutation::resolve_reports_on_target(
-        &ctx.db,
+        &mut ctx.db,
         &key,
-        ctx.identity(),
+        moderator,
     )
     .await
     .map_err(|e| {
@@ -48,7 +49,7 @@ pub async fn handle(
     })?;
 
     tracing::info!(
-        moderator = ctx.identity(),
+        moderator = moderator,
         target = ?target,
         events = erased.events,
         content = erased.content,

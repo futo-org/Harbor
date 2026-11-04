@@ -36,10 +36,10 @@ use crate::service::proto::{
     name = "put_events",
     skip_all,
     fields(
-        events = req.event_bundles.len(),
-        inserted = tracing::field::Empty,
-        errors = tracing::field::Empty,
-        warnings = tracing::field::Empty,
+        event_count = req.event_bundles.len(),
+        stored_count = tracing::field::Empty,
+        error_count = tracing::field::Empty,
+        warning_count = tracing::field::Empty,
     )
 )]
 pub async fn handle(
@@ -54,7 +54,6 @@ pub async fn handle(
     let mut app_cache = HashMap::new();
     let mut stored = HashMap::<String, Vec<EventKey>>::new();
     for (idx, event_bundle) in req.event_bundles.into_iter().enumerate() {
-        let start_warnings = warnings.len();
         match process_event(
             &mut ctx,
             event_bundle,
@@ -70,16 +69,6 @@ pub async fn handle(
         .await
         {
             Ok((key, is_new)) => {
-                if warnings.len() != start_warnings {
-                    tracing::warn!(
-                        key = ?key,
-                        is_new,
-                        warnings = ?&warnings[start_warnings..],
-                        "processed event with warning(s)",
-                    );
-                } else {
-                    tracing::info!(?key, is_new, "processed event");
-                }
                 if is_new {
                     stored.entry(key.identity.clone()).or_default().push(key);
                 }
@@ -100,11 +89,6 @@ pub async fn handle(
                 return Err(status);
             }
             Err(status) => {
-                tracing::warn!(
-                    code = %status.code(),
-                    message = %status.message(),
-                    "failed to process event",
-                );
                 errors.push(PutEventError {
                     event_bundle_index: idx as u32,
                     message: format!("{}: {}", status.code(), status.message()),
@@ -114,9 +98,9 @@ pub async fn handle(
     }
 
     tracing::Span::current()
-        .record("inserted", stored.values().map(Vec::len).sum::<usize>())
-        .record("errors", errors.len())
-        .record("warnings", warnings.len());
+        .record("stored_count", stored.values().map(Vec::len).sum::<usize>())
+        .record("error_count", errors.len())
+        .record("warning_count", warnings.len());
 
     if let Some(pubsub) = heads_pubsub::get()
         && !stored.is_empty()
@@ -128,7 +112,7 @@ pub async fn handle(
         });
     }
 
-    let missing_blobs = remove_present_blobs(&ctx, all_blobs)
+    let missing_blobs = remove_present_blobs(&mut ctx, all_blobs)
         .await
         .unwrap_or_else(|()| {
             // A failure occurred while checking what blobs the server already has.
@@ -148,11 +132,14 @@ pub async fn handle(
 /// Returns its key and whether it was newly stored.
 #[tracing::instrument(
     skip_all,
+    err(level = "warn"),
     fields(
         event.identity = tracing::field::Empty,
         event.collection = tracing::field::Empty,
         event.sequence = tracing::field::Empty,
         event.content_type = tracing::field::Empty,
+        event.stored = tracing::field::Empty,
+        event.warnings = tracing::field::Empty,
     )
 )]
 async fn process_event(
@@ -208,7 +195,7 @@ async fn process_event(
         Some(false) => { /* Ok to continue. */ }
         None => {
             let is_banned = IdentityRepository::is_banned(
-                &ctx.db,
+                &mut ctx.db,
                 &key.identity,
             )
             .await
@@ -234,7 +221,7 @@ async fn process_event(
             let mut app_errors = Vec::<()>::new();
             app.validate_check(&mut app_errors, |_| ());
             if app_errors.is_empty() {
-                let app_id = EventsRepository::Mutation::application_id(&ctx.db, app)
+                let app_id = EventsRepository::Mutation::application_id(&mut ctx.db, app)
                     .await
                     .map_err(|e| {
                         tracing::error!(error = %e, "failed to get/store application info");
@@ -302,7 +289,7 @@ async fn process_event(
 
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
-    let tx = ctx.db.begin().await.map_err(|e| {
+    let mut tx = ctx.db.begin().await.map_err(|e| {
         tracing::error!(error = %e, "failed to begin transaction");
         Status::internal("internal server error")
     })?;
@@ -316,7 +303,7 @@ async fn process_event(
     if key.collection != collections::IDENTITY {
         #[allow(clippy::collapsible_if)] // Easier to understand this way.
         if let Err(err) = authorize_event_signer(
-            &tx,
+            &mut tx,
             &ctx.proof_cache,
             &key.identity,
             &PublicKey {
@@ -365,7 +352,7 @@ async fn process_event(
     };
 
     let stored = match EventsRepository::Mutation::add_event(
-        &tx,
+        &mut tx,
         active_model,
         decoded_content,
     )
@@ -442,6 +429,20 @@ async fn process_event(
         }
     };
 
+    let span = tracing::Span::current();
+    span.record("event.stored", stored);
+    if warnings.len() != start_warning_len {
+        let new_warnings = &warnings[start_warning_len..];
+        span.record("event.warnings", tracing::field::debug(new_warnings));
+        tracing::warn!(
+            ?key,
+            stored,
+            warnings = ?new_warnings,
+            "processed event with warning(s)",
+        );
+    } else {
+        tracing::info!(?key, stored, "processed event");
+    }
     Ok((key, stored))
 }
 
@@ -539,7 +540,7 @@ fn validate_content(
 
 /// Keep only the blobs that are not already present.
 async fn remove_present_blobs(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     blobs: HashSet<Blob>,
 ) -> Result<Vec<Blob>, ()> {
     let digests: Vec<_> = blobs
@@ -548,7 +549,7 @@ async fn remove_present_blobs(
         .collect();
 
     let already_present =
-        ContentRepository::Query::find_digests_in_db(&ctx.db, &digests)
+        ContentRepository::Query::find_digests_in_db(&mut ctx.db, &digests)
             .await
             .map_err(|err| {
                 tracing::error!(error = %err, "failed to find digest of blob");

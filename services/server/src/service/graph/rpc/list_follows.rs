@@ -1,7 +1,6 @@
 //! Shared handler for `ListFollowing` / `ListFollowers`: a page of
 //! Follow events, tombstone-filtered, newest first.
 
-use sea_orm::ConnectionTrait;
 use tonic::Status;
 
 use crate::data::filter::{self, Filtered};
@@ -10,6 +9,7 @@ use crate::data::pipeline::{self, Fetched};
 use crate::data::{
     CursorFilter, EventWithContentRow, PaginationParams, assemble_bundles,
 };
+use crate::db::Connection;
 use crate::service::context::PublicContext;
 use crate::service::events::{TargetEventKey, tombstone};
 use crate::service::feeds::repository::EventCreatedAt;
@@ -58,8 +58,8 @@ pub async fn handle(
     .await
 }
 
-async fn list_page<C: ConnectionTrait>(
-    db: &C,
+async fn list_page<C: Connection>(
+    db: &mut C,
     params: &Params,
     limit: u32,
     cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -91,7 +91,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<Fetched<EventWithContentRow, EventCreatedAt>, Status> {
     let mut rows = list_page(
-        &ctx.db,
+        &mut ctx.db,
         params,
         params.pagination.limit + 1, // Check for next page
         &params.pagination.cursor_filter,
@@ -119,7 +119,7 @@ async fn hydrate(
         .map(|(e, _)| TargetEventKey::of(e))
         .collect();
 
-    let raw = tombstone::list_tombstones_for_event_keys(&ctx.db, &keys)
+    let raw = tombstone::list_tombstones_for_event_keys(&mut ctx.db, &keys)
         .await
         .map_err(map_db_err)?;
     let deletes_by_target = tombstone::validate_tombstones(ctx, raw).await?;

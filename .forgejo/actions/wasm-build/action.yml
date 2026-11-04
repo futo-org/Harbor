@@ -6,6 +6,9 @@ runs:
     - uses: ./.forgejo/actions/rust-env
       with:
         cache: wasm
+    - uses: ./.forgejo/actions/setup-pnpm
+      with:
+        install: "false"
     - shell: bash
       run: pnpm install --filter @polycentric/rs-core-wasm
     - shell: bash
