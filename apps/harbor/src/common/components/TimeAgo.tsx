@@ -2,6 +2,11 @@ import { useEffect, useReducer } from 'react';
 import { AppState } from 'react-native';
 
 export function TimeAgo({ since }: { since: number | bigint }) {
+  return useTimeAgo(since);
+}
+
+// Separate from `TimeAgo` for use cases which need a string rather than a component.
+export function useTimeAgo(since: number | bigint): string {
   const [, forceRender] = useReducer((count: number) => count + 1, 0);
   const sinceMs = Number(since);
   const [label] = formatTimeAgo(sinceMs);

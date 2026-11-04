@@ -8,22 +8,16 @@ interface ServerRowProps {
   server: string;
   status: 'active' | 'suggested';
   onAction?: () => void;
-  // Pressing the row (not its action button). Suggested rows default to `onAction`.
-  onPress?: () => void;
   // Extra content shown before the action button (e.g. a moderation
   // dashboard link). ServerRow stays agnostic about what it is.
   trailing?: ReactNode;
-  // Content shown under the row (used for server push issues)
-  children?: ReactNode;
 }
 
 export function ServerRow({
   server,
   status,
   onAction,
-  onPress,
   trailing,
-  children,
 }: ServerRowProps) {
   const { theme } = useTheme();
 
@@ -57,15 +51,12 @@ export function ServerRow({
     </>
   );
 
-  const rowStyle = [
+  const style = [
     Atoms.flex_row,
     Atoms.justify_between,
     Atoms.items_center,
     Atoms.py_sm,
     Atoms.pl_lg,
-  ];
-
-  const containerStyle = [
     Atoms.rounded_lg,
     status === 'suggested'
       ? {
@@ -77,21 +68,11 @@ export function ServerRow({
         },
   ];
 
-  const handlePress =
-    onPress ?? (status === 'suggested' ? onAction : undefined);
-
-  const row = handlePress ? (
-    <Pressable onPress={handlePress} style={rowStyle}>
+  return status === 'suggested' && onAction ? (
+    <Pressable onPress={onAction} style={style}>
       {content}
     </Pressable>
   ) : (
-    <View style={rowStyle}>{content}</View>
-  );
-
-  return (
-    <View style={containerStyle}>
-      {row}
-      {children}
-    </View>
+    <View style={style}>{content}</View>
   );
 }

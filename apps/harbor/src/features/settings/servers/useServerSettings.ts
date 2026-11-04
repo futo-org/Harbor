@@ -11,7 +11,7 @@ import { useState } from 'react';
 
 export function useServerSettings() {
   const client = usePolycentric();
-  const { identity, identityKey } = useCurrentIdentity();
+  const { identity } = useCurrentIdentity();
   const toast = useToast();
 
   // Servers come from the identity document; identities that have never
@@ -71,7 +71,6 @@ export function useServerSettings() {
   };
 
   return {
-    identityKey,
     servers,
     suggestedServers,
     isBusy,

@@ -22,6 +22,8 @@ import useModerationStatus from '@/src/features/moderation/hooks/useModerationSt
 import { serverHost } from '@/src/features/moderation/serverHost';
 import { ErrorReportsSettingRow } from '@/src/features/telemetry/TelemetrySettingRows';
 import { Username } from '@/src/features/profile/Username';
+import { SyncIssuesChip, useSyncIssues } from './sync-events/SyncIssues';
+import { useLastSyncedLabel } from './sync-events/useLastSyncedLabel';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
@@ -159,6 +161,7 @@ export default function SettingsTabScreen() {
                     {canRotate ? 'Configure servers' : 'View servers'}
                   </Text>
                 </ListItemWrapper>
+                <SyncEventsSettingRow identityKey={identityKey} />
               </ListItemGroup>
 
               {moderatedServers.length > 0 ? (
@@ -262,6 +265,27 @@ function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
         <IdentityTag identity={identityKey} />
       </View>
     </View>
+  );
+}
+
+function SyncEventsSettingRow({ identityKey }: { identityKey: string | null }) {
+  const issues = useSyncIssues(identityKey);
+  const lastSynced = useLastSyncedLabel(identityKey);
+
+  return (
+    <ListItemWrapper
+      onPress={() => router.navigate(Routes.tabs.settings.syncEvents)}
+    >
+      <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
+        <Text variant="body">Sync events</Text>
+        <Text variant="small" color="neutral_500">
+          {lastSynced}
+        </Text>
+      </View>
+      <View style={Atoms.pr_sm}>
+        <SyncIssuesChip issues={issues} />
+      </View>
+    </ListItemWrapper>
   );
 }
 

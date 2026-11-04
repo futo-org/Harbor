@@ -2,7 +2,12 @@ import { IconButton, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { ffiEventKeyToProto } from '@/src/common/lib/polycentric-hooks/helpers';
-import { Atoms, type PaletteColorToken } from '@/src/common/theme';
+import {
+  Atoms,
+  type PaletteColorToken,
+  useTheme,
+  withHexOpacity,
+} from '@/src/common/theme';
 import {
   type EventPushIssue,
   useEventPushIssuesStore,
@@ -40,65 +45,98 @@ const EVENT_LABELS: Record<number, string> = {
   [COLLECTION.VERIFICATIONS]: 'Verification',
 };
 
-export const eventLabel = (collection: number) =>
+const eventLabel = (collection: number) =>
   EVENT_LABELS[collection] ?? `Event (collection ${collection})`;
 
 const severityOf = (issue: EventPushIssue): Severity =>
   issue.errors.length > 0 ? 'error' : 'warning';
 
-export interface ServerIssues {
-  issues: EventPushIssue[];
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+export interface ServerSyncIssues {
+  server: string;
+  pushIssues: EventPushIssue[];
   failure: ServerFailure | undefined;
+}
+
+export interface SyncIssues {
+  servers: ServerSyncIssues[];
   count: number;
   severity: Severity | null;
 }
 
-export function useServerIssues(
-  identityKey: string | null,
-  server: string,
-): ServerIssues {
+/** Push issues and server failures for every server of an identity */
+export function useSyncIssues(identityKey: string | null): SyncIssues {
   const identityIssues = useIdentityPushIssues(identityKey);
-  const failure = useIdentityServerFailures(identityKey)[server];
+  const failures = useIdentityServerFailures(identityKey);
 
   return useMemo(() => {
-    const issues = Object.values(identityIssues)
-      .filter((i) => i.server === server)
-      .sort((a, b) => b.lastSeen - a.lastSeen);
-    const count = issues.length + (failure ? 1 : 0);
+    const byServer = new Map<string, ServerSyncIssues>();
+    const entry = (server: string) => {
+      let found = byServer.get(server);
+      if (!found) {
+        found = { server, pushIssues: [], failure: undefined };
+        byServer.set(server, found);
+      }
+      return found;
+    };
+
+    for (const [server, failure] of Object.entries(failures)) {
+      entry(server).failure = failure;
+    }
+    for (const issue of Object.values(identityIssues)) {
+      entry(issue.server).pushIssues.push(issue);
+    }
+
+    const servers = [...byServer.values()].sort((a, b) =>
+      a.server.localeCompare(b.server),
+    );
+    for (const { pushIssues } of servers) {
+      pushIssues.sort((a, b) => b.lastSeen - a.lastSeen);
+    }
+
+    const all = servers.flatMap((s) => s.pushIssues);
+    const failureCount = servers.filter((s) => s.failure).length;
+    const count = all.length + failureCount;
     const severity: Severity | null =
-      failure || issues.some((i) => i.errors.length > 0)
+      failureCount > 0 || all.some((i) => i.errors.length > 0)
         ? 'error'
-        : issues.length > 0
+        : all.length > 0
           ? 'warning'
           : null;
-    return { issues, failure, count, severity };
-  }, [identityIssues, failure, server]);
+
+    return { servers, count, severity };
+  }, [identityIssues, failures]);
 }
 
-/** Shown beside the server name, above the issue list */
-export function ServerIssueBadge({
-  issues,
-  onPress,
-}: {
-  issues: ServerIssues;
-  onPress: () => void;
-}) {
-  if (!issues.severity) return null;
-  const { icon, color } = SEVERITY[issues.severity];
+/** A pill that shows a warning if there are sync issues, or green if there are none */
+export function SyncIssuesChip({ issues }: { issues: SyncIssues }) {
+  const { theme } = useTheme();
+  const { icon, color, label } = issues.severity
+    ? { ...SEVERITY[issues.severity], label: plural(issues.count, 'issue') }
+    : {
+        icon: 'checkmarkCircle' as const,
+        color: 'positive_500' as const,
+        label: 'No issues',
+      };
 
   return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={8}
-      accessibilityRole="button"
-      accessibilityLabel={`${issues.count} sync ${issues.count === 1 ? 'issue' : 'issues'}`}
-      style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs, Atoms.px_md]}
+    <View
+      style={[
+        Atoms.flex_row,
+        Atoms.items_center,
+        Atoms.gap_2xs,
+        Atoms.px_sm,
+        Atoms.py_xs,
+        Atoms.rounded_full,
+        { backgroundColor: withHexOpacity(theme.palette[color], '20') },
+      ]}
     >
-      <Icon name={icon} size={18} color={color} />
-      <Text variant="secondary" fontWeight="semibold" color={color}>
-        {issues.count}
+      <Icon name={icon} size={14} color={color} />
+      <Text variant="small" fontWeight="semibold" color={color}>
+        {label}
       </Text>
-    </Pressable>
+    </View>
   );
 }
 
@@ -146,25 +184,56 @@ function IssueItem({
   );
 }
 
-/** A list of the server's failure and event issues, shown under its name when expanded. */
-export function ServerIssueList({
+/** For each server with issues, render a section with a list of its issues */
+export function ServerSyncIssuesSection({
   identityKey,
   server,
-  issues,
 }: {
   identityKey: string;
-  server: string;
-  issues: ServerIssues;
+  server: ServerSyncIssues;
 }) {
+  const { theme } = useTheme();
   const dismiss = useEventPushIssuesStore((s) => s.dismiss);
   const clearIssues = useEventPushIssuesStore((s) => s.clearServer);
   const clearFailure = useServerFailuresStore((s) => s.clearServer);
 
-  if (!issues.severity) return null;
-
   return (
-    <View style={[Atoms.gap_xs, Atoms.pl_lg, Atoms.pr_sm, Atoms.pb_sm]}>
-      {issues.failure ? (
+    <View
+      style={[
+        Atoms.rounded_lg,
+        Atoms.gap_xs,
+        Atoms.pl_lg,
+        Atoms.pr_sm,
+        Atoms.py_sm,
+        { backgroundColor: withHexOpacity(theme.palette.neutral_500, '20') },
+      ]}
+    >
+      <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
+        <Text
+          variant="secondary"
+          monospace
+          numberOfLines={1}
+          style={[Atoms.flex_1, Atoms.py_xs]}
+        >
+          {server.server}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Clear issues for ${server.server}`}
+          hitSlop={8}
+          onPress={() => {
+            clearIssues(identityKey, server.server);
+            clearFailure(identityKey, server.server);
+          }}
+          style={[Atoms.py_xs, Atoms.pr_md]}
+        >
+          <Text variant="secondary" fontWeight="semibold" color="primary_500">
+            Clear
+          </Text>
+        </Pressable>
+      </View>
+
+      {server.failure ? (
         <View style={[Atoms.flex_row, Atoms.items_start, Atoms.gap_sm]}>
           <View style={Atoms.pt_sm}>
             <Icon name="closeCircle" size={16} color="negative_500" />
@@ -174,32 +243,19 @@ export function ServerIssueList({
               Couldn't reach server
             </Text>
             <Text variant="small" color="neutral_500">
-              {issues.failure.message}
+              {server.failure.message}
             </Text>
           </View>
         </View>
       ) : null}
 
-      {issues.issues.map((issue) => (
+      {server.pushIssues.map((issue) => (
         <IssueItem
           key={issue.id}
           issue={issue}
           onDismiss={() => dismiss(identityKey, issue.id)}
         />
       ))}
-
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => {
-          clearIssues(identityKey, server);
-          clearFailure(identityKey, server);
-        }}
-        style={[Atoms.self_end, Atoms.py_xs, Atoms.pr_md]}
-      >
-        <Text variant="secondary" fontWeight="semibold" color="primary_500">
-          Clear all
-        </Text>
-      </Pressable>
     </View>
   );
 }

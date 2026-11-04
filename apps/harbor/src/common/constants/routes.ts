@@ -89,6 +89,7 @@ export const Routes = {
       createBackup: '/settings/create-backup',
       checkBackup: '/settings/check-backup',
       servers: '/settings/servers',
+      syncEvents: '/settings/sync-events',
       verificationAuthorities: '/settings/verification-authorities',
       privateKey: '/settings/private-key',
       appearance: '/settings/appearance',
