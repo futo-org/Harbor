@@ -3,7 +3,7 @@ name: Deploy scraper to staging
 on:
   workflow_dispatch:
   push:
-    branches: [develop]
+    branches: [ develop ]
     paths:
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -28,16 +28,16 @@ jobs:
   build:
     name: Build
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
-      PUPPETEER_SKIP_DOWNLOAD: '1'
+      PUPPETEER_SKIP_DOWNLOAD: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/js-build
         with:
           install-args: --filter @polycentric/scraper...
           build: pnpm --filter @polycentric/scraper build
-          package: '@polycentric/scraper'
+          package: "@polycentric/scraper"
           deploy-args: --legacy --config.allowUnusedPatches=true
           dist: services/scraper/dist
           artifact: scraper-build

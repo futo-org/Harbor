@@ -12,22 +12,19 @@ must have path to sdk defined, easiest to create android/local.properties after 
 
 node.sys.req.tested
 
-- node v22.4.1
-- npm or yarn package managers enforced
+- node (version pinned in `.nvmrc`)
+- pnpm (version pinned in the root `package.json` `packageManager` field)
 
 ### getting node
 
 use nvm: https://github.com/nvm-sh/nvm
 
-### getting yarn
-
-just use npm, if opposed you can use yarn.
+### getting pnpm
 
 after node installation and setup
 
 ```bash
-corepack enable
-corepack prepare yarn@latest --activate
+npm install -g "$(node -p "require('./package.json').packageManager")"
 ```
 
 ## E2E tests (Maestro)

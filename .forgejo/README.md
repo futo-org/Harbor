@@ -65,7 +65,7 @@ and `production` tag pins, no login needed.
 
 Repository variables with defaults: `CI_RUNNER` (`docker`), `CI_RUNNER_MACOS`
 (`macos`), `CI_RUNNER_IOS_DEVICE` (`ios-device`), `CI_NODE_IMAGE`
-(`node:24-bookworm`), `CI_TOOLS_IMAGE` (`node:24-alpine`), `CI_REGISTRY`.
+(`node:26-bookworm`), `CI_TOOLS_IMAGE` (`node:26-alpine`), `CI_REGISTRY`.
 
 The docker runner must mount the docker socket into job containers (compose
 integration tests, service containers, the CI image builds). The mac

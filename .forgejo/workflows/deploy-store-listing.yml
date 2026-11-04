@@ -13,9 +13,9 @@ on:
         default: false
       version:
         description: App Store version to create when none is editable (for example 1.4.0)
-        default: ''
+        default: ""
   push:
-    branches: [develop]
+    branches: [ develop ]
     paths:
       - apps/harbor/marketing/**
       - .forgejo/scripts/publish-app-store-listing.mjs
@@ -31,7 +31,7 @@ jobs:
     name: Check exports
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 5
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Listing files match source/listing.mjs
@@ -42,7 +42,7 @@ jobs:
     needs: check
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 30
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -66,7 +66,7 @@ jobs:
     needs: check
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 30
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
       DRY_RUN: ${{ inputs.dry_run }}

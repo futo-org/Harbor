@@ -102,7 +102,7 @@ services:
     networks:
       - scraper_link
     healthcheck:
-      # node:24 ships global fetch; avoids needing curl/wget in the image.
+      # node:26 ships global fetch; avoids needing curl/wget in the image.
       test:
         - CMD
         - node

@@ -9,7 +9,7 @@ on:
       sha:
         description: Commit to deploy instead of what staging runs (its image and chart must exist)
         type: string
-        default: ''
+        default: ""
 
 concurrency:
   group: deploy-web-production
@@ -19,7 +19,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
+    container: ${{ vars.CI_TOOLS_IMAGE || 'node:26-alpine' }}
     env:
       STATIC_S3_ENDPOINT: ${{ secrets.STATIC_S3_ENDPOINT }}
       STATIC_S3_BUCKET: ${{ vars.STATIC_S3_BUCKET }}
@@ -38,6 +38,6 @@ jobs:
           chart-version: ${{ inputs.sha || 'staging' }}
           tag: ${{ inputs.sha || 'staging' }}
           environment: production
-          web-assets: 'true'
+          web-assets: "true"
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
