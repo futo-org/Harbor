@@ -7,6 +7,7 @@ use polycentric_common::jwt;
 use polycentric_common::models::protos_v2::{KeyType, PublicKey};
 use tonic::Status;
 
+use crate::db::DbConn;
 use crate::service::context::ServiceContext;
 use crate::service::identity::service::cached_identity_content;
 
@@ -98,7 +99,7 @@ fn grpc_error_response(status: Status, request: &Request) -> Response {
 
 /// Verify `token` and return the identity it authenticates.
 #[tracing::instrument(name = "auth.verify_token", skip_all)]
-pub async fn verify_auth_token(
+async fn verify_auth_token(
     ctx: &ServiceContext,
     token: &str,
     allow_hosts: &[String],
@@ -117,12 +118,14 @@ pub async fn verify_auth_token(
         key_type: KeyType::Ed25519 as i32,
         key: verified.signed_by,
     };
+    let mut db = DbConn::from_pool(&ctx.ro_db).await?;
     let identity_content = cached_identity_content(
-        &ctx.ro_db,
+        &mut db,
         &ctx.proof_cache,
         &verified.claims.iss,
     )
     .await?;
+    drop(db);
     if !identity_content.authorizes_signer(&signer) {
         return Err(Status::failed_precondition(
             "auth token: signing key is not authorized by the issuer's identity document here",

@@ -1,4 +1,4 @@
-FROM rust:slim-bookworm@sha256:86234e857a413004348b471d11a4ebe1aa92d2eae2b6b143cac68fd1ac3c48be
+FROM rust:slim-bookworm@sha256:24707e70a4f1e23d9a7b25202ec43126d28a52294b96aad5c670df1fd1f1d400
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
@@ -29,9 +29,6 @@ RUN curl -L "https://get.nexte.st/0.9.140/linux" \
     | tar xz -C /usr/local/bin
 
 # Nodejs
-RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+RUN curl -fsSL https://deb.nodesource.com/setup_26.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
-
-# PNPM
-RUN npm install -g pnpm@10.19.0

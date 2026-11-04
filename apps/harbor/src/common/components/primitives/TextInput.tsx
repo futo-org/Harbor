@@ -1,25 +1,27 @@
 import {
+  Platform,
+  StyleSheet,
   TextInput as RNTextInput,
+  type TextInputInstance,
   type TextInputProps as RNTextInputProps,
   type TextStyle,
-  StyleSheet,
-  Platform,
 } from 'react-native';
 import { forwardRef, useState } from 'react';
 import {
-  useTheme,
-  withHexOpacity,
-  typography,
+  Atoms,
   BorderRadius,
-  type PaletteColorToken,
   type BorderRadiusToken,
   type FontSizeToken,
   type LineHeightToken,
+  type PaletteColorToken,
+  typography,
+  useTheme,
+  withHexOpacity,
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
 import {
-  NATIVE_FONTS,
-  NATIVE_MONOSPACE_FONTS,
+  NATIVE_FONT_FAMILY,
+  NATIVE_MONOSPACE_FONT_FAMILY,
   WEB_FONT_STACK,
   WEB_MONOSPACE_FONT_STACK,
 } from './Text';
@@ -36,7 +38,7 @@ export interface TextInputProps
   error?: boolean;
 }
 
-export const TextInput = forwardRef<RNTextInput, TextInputProps>(
+export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
   (
     {
       numberOfLines,
@@ -70,7 +72,9 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
           ? WEB_MONOSPACE_FONT_STACK
           : // As in `Text`, so typed emoji are Twemoji too.
             WEB_FONT_STACK
-        : (monospace ? NATIVE_MONOSPACE_FONTS : NATIVE_FONTS)['400'];
+        : monospace
+          ? NATIVE_MONOSPACE_FONT_FAMILY
+          : NATIVE_FONT_FAMILY;
 
     const baseStyle: TextStyle = {
       paddingVertical: 12,
@@ -80,12 +84,11 @@ export const TextInput = forwardRef<RNTextInput, TextInputProps>(
       lineHeight: typography.lineHeight[lineHeight],
       color: disabled ? theme.palette.neutral_500 : theme.palette.neutral_900,
       opacity: disabled ? 0.5 : 1,
+      // Android pads the placeholder by the font's bounding box, which for the
+      // variable NotoSans overflows the input and top-aligns the placeholder.
+      ...(Platform.OS === 'android' ? { includeFontPadding: false } : null),
       ...(Platform.OS === 'web'
-        ? ({
-            outlineStyle: 'none',
-            outlineWidth: 0,
-            resize: 'none',
-          } as unknown as TextStyle)
+        ? { ...Atoms.outline_none, resize: 'none' }
         : null),
     };
 

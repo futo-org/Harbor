@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from '@/src/common/components/toast/useToast';
 import { resolveAlias, type v2 } from '@polycentric/react-native';
-import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks/context';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { updateProfile } from '../lib/updateProfile';
 import { profileQueryKey } from './useProfile';

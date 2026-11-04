@@ -4,10 +4,13 @@ import useBlocks from '@/src/features/block/hooks/useBlocks';
 import useFollows from '@/src/features/follow/hooks/useFollows';
 import useReposts from '@/src/features/post/hooks/useReposts';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { useEventPushIssuesStore } from '@/src/features/core/event-push-issues/useEventPushIssuesStore';
+import { useServerFailuresStore } from '@/src/features/core/server-failures/useServerFailuresStore';
 import {
   type PolycentricClient,
   createPolycentricClient,
   type IdentityState,
+  type ServerPushResult,
   v2,
 } from '@polycentric/react-native';
 import { HARBOR_APPLICATION } from '@/src/common/util/application';
@@ -246,6 +249,24 @@ export function PolycentricProvider({
       }
     };
 
+    /** Collect any servers that were removed, and drop data associated with those */
+    const clearRemovedServers = ({ client }: Bootstrap, identity: string) => {
+      const servers = client.identityManager.resolveIdentity(identity)?.servers;
+      if (!servers) return;
+
+      const issues = useEventPushIssuesStore.getState();
+      const failures = useServerFailuresStore.getState();
+      const recorded = new Set([
+        ...Object.values(issues.issues[identity] ?? {}).map((i) => i.server),
+        ...Object.keys(failures.failures[identity] ?? {}),
+      ]);
+      for (const server of recorded) {
+        if (servers.includes(server)) continue;
+        issues.clearServer(identity, server);
+        failures.clearServer(identity, server);
+      }
+    };
+
     // Keep identity state up to date.
     const handleContentCreated = ({
       signedEvent,
@@ -261,6 +282,7 @@ export function PolycentricProvider({
       if (event.key?.identity !== ready.client.activeIdentityKey) return;
 
       setCurrentIdentity(ready.client.identityManager.resolveIdentity());
+      clearRemovedServers(ready, event.key.identity);
     };
 
     // Refresh stores when we pull from remote servers
@@ -270,11 +292,19 @@ export function PolycentricProvider({
       const { client } = ready;
       if (identityKey !== client.activeIdentityKey) return;
 
+      clearRemovedServers(ready, identityKey);
+
       try {
         await refresh(ready);
       } catch (err) {
         console.warn('Failed to refresh stores after pull:', err);
       }
+    };
+
+    const handlePushResults = (results: ServerPushResult[]) => {
+      if (cancelled) return;
+      useEventPushIssuesStore.getState().record(results);
+      useServerFailuresStore.getState().record(results);
     };
 
     (async () => {
@@ -291,6 +321,7 @@ export function PolycentricProvider({
         c.events.onKeyPairChanged(handleKeyPairChanged);
         c.events.onContentCreated(handleContentCreated);
         c.events.onPulled(handlePulled);
+        c.events.onPushResults(handlePushResults);
 
         // Do an initial sync now that we have registered the listener
         void c.sync().catch((syncError) => {
@@ -310,6 +341,7 @@ export function PolycentricProvider({
       ready?.client.events.offKeyPairChanged(handleKeyPairChanged);
       ready?.client.events.offContentCreated(handleContentCreated);
       ready?.client.events.offPulled(handlePulled);
+      ready?.client.events.offPushResults(handlePushResults);
     };
   }, []);
 

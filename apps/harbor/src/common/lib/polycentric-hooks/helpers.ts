@@ -1,4 +1,5 @@
 import {
+  type EventKey,
   type LabelSet,
   type PostLabel,
   type QueryStatus,
@@ -190,6 +191,21 @@ export function eventKeyId(eventKey: v2.EventKey): string {
   return bytesToHex(v2.EventKey.toBinary(eventKey));
 }
 
+/** The {@link eventKeyId} of an rs-core `EventKey` record. */
+export function ffiEventKeyId(eventKey: EventKey): string {
+  return eventKeyId(
+    v2.EventKey.create({
+      collection: eventKey.collection,
+      identity: eventKey.identity,
+      signedBy: v2.PublicKey.create({
+        keyType: eventKey.signedBy.keyType,
+        key: new Uint8Array(eventKey.signedBy.key),
+      }),
+      sequence: eventKey.sequence,
+    }),
+  );
+}
+
 /** Decode a v2 EventBundle into PostData, or null if not a post. */
 export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
   const decoded = decodeBundle(bundle, 'post');
@@ -244,16 +260,7 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
 export function labelMapFromSets(sets: LabelSet[]): Map<string, PostLabel[]> {
   const labelMap = new Map<string, PostLabel[]>();
   for (const set of sets) {
-    const target = v2.EventKey.create({
-      collection: set.target.collection,
-      identity: set.target.identity,
-      signedBy: v2.PublicKey.create({
-        keyType: set.target.signedBy.keyType,
-        key: new Uint8Array(set.target.signedBy.key),
-      }),
-      sequence: set.target.sequence,
-    });
-    labelMap.set(eventKeyId(target), set.labels);
+    labelMap.set(ffiEventKeyId(set.target), set.labels);
   }
   return labelMap;
 }
@@ -386,25 +393,6 @@ export function pickImageVariant(
     sorted[sorted.length - 1] ??
     null
   );
-}
-
-export function timeAgo(unixMs: number): string {
-  if (!unixMs) return '';
-  const diff = Date.now() - unixMs;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'now';
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  const date = new Date(unixMs);
-  const sameYear = date.getFullYear() === new Date().getFullYear();
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: sameYear ? undefined : 'numeric',
-  });
 }
 
 export function bytesToHex(bytes: Uint8Array): string {

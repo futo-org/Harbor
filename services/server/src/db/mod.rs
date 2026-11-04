@@ -1,7 +1,5 @@
-use sea_orm::sea_query::Values;
-use sea_orm::{
-    ConnectionTrait, DbErr, ExecResult, QueryResult, RuntimeErr, Statement,
-};
+use sea_orm::sea_query::{BinOper, Expr, Value, ValueType, Values};
+use sea_orm::{DbErr, ExecResult, QueryResult, RuntimeErr, Statement};
 use sea_query_sqlx::SqlxValues;
 use sqlx::Executor;
 use tokio::sync::Mutex;
@@ -9,6 +7,9 @@ use tonic::Status;
 
 pub mod client;
 pub(crate) mod fns;
+
+// TODO(1947): replace with out own trait.
+pub(crate) use sea_orm::ConnectionTrait as Connection;
 
 /// Database connection.
 ///
@@ -121,7 +122,7 @@ impl DbConn {
 }
 
 #[async_trait::async_trait]
-impl ConnectionTrait for DbConn {
+impl sea_orm::ConnectionTrait for DbConn {
     fn get_database_backend(&self) -> sea_orm::DbBackend {
         sea_orm::DbBackend::Postgres
     }
@@ -252,7 +253,7 @@ impl<'c> DbTx<'c> {
 }
 
 #[async_trait::async_trait]
-impl<'c> ConnectionTrait for DbTx<'c> {
+impl<'c> sea_orm::ConnectionTrait for DbTx<'c> {
     fn get_database_backend(&self) -> sea_orm::DbBackend {
         sea_orm::DbBackend::Postgres
     }
@@ -317,4 +318,25 @@ fn sqlx_query(
 
 fn into_seaorm_error(err: sqlx::Error) -> DbErr {
     DbErr::Query(RuntimeErr::SqlxError(err.into()))
+}
+
+/// `$value = ANY ($array)`.
+pub(crate) fn in_array<T>(
+    value: Expr,
+    array: impl ExactSizeIterator<Item = T>,
+) -> Expr
+where
+    T: ValueType + Into<Value>,
+{
+    Expr::Binary(
+        Box::new(value),
+        BinOper::Custom("= ANY"),
+        Box::new(Expr::cust_with_expr(
+            "($1)",
+            Expr::Value(Value::Array(
+                T::array_type(),
+                Some(Box::new(array.map(Into::into).collect())),
+            )),
+        )),
+    )
 }

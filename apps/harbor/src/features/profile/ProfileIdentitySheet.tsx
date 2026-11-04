@@ -21,12 +21,7 @@ import {
 } from '@polycentric/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  type TextStyle,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { isWeb } from '@/src/common/util/platform';
 import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
 import { useIdentityState } from './hooks/useIdentityState';
@@ -245,7 +240,7 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
         style={[
           Atoms.flex_1,
           { minWidth: 0 },
-          isWeb && ({ wordBreak: 'break-all' } as unknown as TextStyle),
+          isWeb && { wordBreak: 'break-all' },
         ]}
         selectable
       >

@@ -44,7 +44,7 @@ impl ServiceContext {
             &self.ro_db,
             self.proof_cache.clone(),
             self.kafka_producer.clone(),
-            auth,
+            auth.map(Identity),
         )
         .await
     }
@@ -59,7 +59,7 @@ impl ServiceContext {
             &self.db,
             self.proof_cache.clone(),
             self.kafka_producer.clone(),
-            auth,
+            auth.map(Identity),
         )
         .await
     }
@@ -74,7 +74,7 @@ impl ServiceContext {
             &self.db,
             self.proof_cache.clone(),
             self.kafka_producer.clone(),
-            auth,
+            Identity(auth),
         )
         .await
     }
@@ -89,7 +89,7 @@ impl ServiceContext {
             &self.db,
             self.proof_cache.clone(),
             self.kafka_producer.clone(),
-            auth,
+            Identity(auth),
         )
         .await
     }
@@ -111,7 +111,7 @@ impl ServiceContext {
             &self.db,
             self.proof_cache.clone(),
             self.kafka_producer.clone(),
-            Some(identity.into()),
+            Some(Identity(identity.into())),
         )
         .await
         .unwrap()
@@ -123,7 +123,7 @@ impl ServiceContext {
             &self.db,
             self.proof_cache.clone(),
             self.kafka_producer.clone(),
-            identity.into(),
+            Identity(identity.into()),
         )
         .await
         .unwrap()
@@ -135,10 +135,22 @@ fn auth_error() -> Status {
 }
 
 /// [`RequestContext`] where the user is optionally authenticated.
-pub(crate) type PublicContext = RequestContext<Option<String>>;
+pub(crate) type PublicContext = RequestContext<Option<Identity>>;
 
 /// [`RequestContext`] where the user is authenticated.
-pub(crate) type AuthContext = RequestContext<String>;
+pub(crate) type AuthContext = RequestContext<Identity>;
+
+/// Authenticated with an identity.
+#[derive(Debug)]
+pub(crate) struct Identity(String);
+
+impl std::ops::Deref for Identity {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        self.0.deref()
+    }
+}
 
 /// [`RequestContext`] for a worker.
 pub(crate) type WorkerContext = RequestContext<()>;
@@ -154,6 +166,7 @@ pub(crate) struct RequestContext<Auth> {
     pub(crate) proof_cache: Arc<ProofCache>,
     /// Message sending to kafka.
     pub(crate) kafka_producer: FutureProducer,
+    /// Authentication information, see [`Auth`].
     pub(crate) auth: Auth,
 }
 
@@ -174,13 +187,6 @@ impl<Auth> RequestContext<Auth> {
     }
 }
 
-impl AuthContext {
-    /// Returns the identity of the authenticated caller.
-    pub(crate) fn identity(&self) -> &str {
-        self.auth.as_str()
-    }
-}
-
 /// Authentication of a context.
 ///
 /// This provides optional autentication, when authentication is required use
@@ -191,19 +197,20 @@ pub(crate) trait Auth {
     fn identity(&self) -> Option<&str>;
 }
 
-impl Auth for PublicContext {
+impl Auth for Option<Identity> {
     fn identity(&self) -> Option<&str> {
-        self.auth.as_deref()
+        self.as_deref()
     }
 }
 
-impl Auth for AuthContext {
+impl Auth for Identity {
     fn identity(&self) -> Option<&str> {
-        Some(self.identity())
+        Some(self.0.as_str())
     }
 }
 
-impl Auth for WorkerContext {
+/// No authentication.
+impl Auth for () {
     fn identity(&self) -> Option<&str> {
         None
     }

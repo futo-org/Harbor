@@ -8,12 +8,12 @@ use sea_orm::sea_query::{
     Asterisk, CommonTableExpression, Expr, Func, Order, SelectStatement,
     UpdateStatement, WithClause,
 };
-use sea_orm::{ColumnTrait, ConnectionTrait, DatabaseConnection, ExprTrait};
+use sea_orm::{ColumnTrait, DatabaseConnection, ExprTrait};
 
 use crate::config;
 use crate::cron::{AdvisoryLock, Cron};
-use crate::db::DbConn;
 use crate::db::fns::decay_interaction_count;
+use crate::db::{Connection, DbConn};
 
 const BATCH_SIZE: u64 = 1000;
 

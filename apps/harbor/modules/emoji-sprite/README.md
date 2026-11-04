@@ -13,10 +13,10 @@ Twemoji font.
 
 ## How it works
 
-- `tools/twemoji/generate.mjs` writes the pages to
+- `tools/emoji/generate-sprites.ts` writes the pages to
   `android/src/main/assets/emoji-sprite/page-N.png` (16 columns of 72px cells, a
   new page at each category) and the page layout (`SPRITE_PAGE_STARTS`,
-  `SPRITE_PAGE_COLUMNS`) to `src/common/emoji/twemoji/sheet.ts`.
+  `SPRITE_PAGE_COLUMNS`, `SPRITE_EMOJIS`) to `src/common/emoji/spritePages.ts`.
 - `EmojiGridImage.android.tsx` maps an emoji to a `page` and `cell` and renders
   `EmojiSprite`.
 - `EmojiSpritePages.kt` decodes pages off the main thread, at half size on

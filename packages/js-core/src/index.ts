@@ -59,7 +59,11 @@ export type {
 export { ContentManager } from './client-internal/content-manager';
 
 export { EventService } from './client-internal/event-service';
-export type { ContentCreatedPayload } from './client-internal/event-service';
+export type {
+  ContentCreatedPayload,
+  ServerPushResult,
+} from './client-internal/event-service';
+export type { EventPushIssues } from '@polycentric/rs-core-wasm';
 
 export {
   PairingSessionManager,

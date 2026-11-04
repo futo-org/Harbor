@@ -16,14 +16,14 @@ pub async fn handle(
     mut ctx: AuthContext,
     req: SetBanStatusRequest,
 ) -> Result<SetBanStatusResponse, Status> {
-    require_moderator(&ctx).await?;
-    let moderator_identity = &ctx.auth;
+    require_moderator(&mut ctx).await?;
+    let moderator = &*ctx.auth;
 
     repository::Mutation::set_banned(
-        &ctx.db,
+        &mut ctx.db,
         &req.target_identity,
         req.banned,
-        moderator_identity,
+        moderator,
     )
     .await
     .map_err(|e| {
@@ -32,7 +32,7 @@ pub async fn handle(
     })?;
 
     tracing::info!(
-        moderator = moderator_identity,
+        moderator = moderator,
         target = req.target_identity,
         banned = req.banned,
         "ban status changed"
@@ -51,9 +51,9 @@ pub async fn handle(
             Status::internal("internal server error")
         })?;
         moderation_repo::Mutation::resolve_reports_by_author(
-            &ctx.db,
+            &mut ctx.db,
             &req.target_identity,
-            &ctx.auth,
+            moderator,
         )
         .await
         .map_err(|e| {

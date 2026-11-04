@@ -27,7 +27,7 @@ jobs:
   changes:
     name: Plan
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     outputs:
       registry: ${{ steps.plan.outputs.registry }}
       images_tag: ${{ steps.plan.outputs.images_tag }}
@@ -44,7 +44,7 @@ jobs:
     name: Build CI images
     needs: changes
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
+    container: ${{ vars.CI_TOOLS_IMAGE || 'node:26-alpine' }}
     steps:
       - name: Install git
         run: apk add --no-cache git
@@ -85,7 +85,7 @@ jobs:
       ${{ !cancelled() && needs.changes.result == 'success' &&
       (needs.wasm.result == 'success' || needs.changes.outputs.have_wasm == 'true') }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/sdk-build
@@ -101,7 +101,7 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     # Up to 45 minutes of deploys, 10 of rollout, then the flows.
     timeout-minutes: 70
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       MAESTRO_WEB_URL: https://staging.harbor.social
       MAESTRO_BROWSER: /usr/local/bin/e2e-chromium
@@ -152,7 +152,7 @@ jobs:
       needs.wasm.result == 'failure' || needs.sdks.result == 'failure') }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 5
-    container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
+    container: ${{ vars.CI_TOOLS_IMAGE || 'node:26-alpine' }}
     steps:
       - name: Install git
         run: apk add --no-cache git

@@ -16,6 +16,7 @@ use sea_orm::sea_query::{
 use sea_orm::*;
 use tonic::Status;
 
+use crate::db::Connection;
 use crate::db::fns::{decay_interaction_count, decay_interaction_count1};
 use crate::service::content::content_repository::Mutation as ContentRepository;
 use crate::service::content::repository::Mutation as ContentChildRepository;
@@ -31,8 +32,8 @@ pub struct Query;
 impl Query {
     #[allow(clippy::too_many_arguments)]
     #[tracing::instrument(skip_all)]
-    pub async fn list_events<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_events<C: Connection>(
+        db: &mut C,
         mut limit: Option<u64>,
         collection: Option<i32>,
         identity: String,
@@ -113,8 +114,8 @@ impl Query {
 
     /// Find the latest sequence numbers for an identity
     #[tracing::instrument(skip_all)]
-    pub async fn list_heads<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_heads<C: Connection>(
+        db: &mut C,
         identity: &str,
     ) -> Result<Vec<HeadInfoRow>, DbErr> {
         event::Entity::find()
@@ -146,8 +147,8 @@ pub struct Mutation;
 impl Mutation {
     /// Find or create the `application` for `app`, returning its id.
     #[tracing::instrument(skip_all)]
-    pub async fn application_id<C: ConnectionTrait>(
-        db: &C,
+    pub async fn application_id<C: Connection>(
+        db: &mut C,
         app: &Application,
     ) -> Result<i32, DbErr> {
         // NOTE: this query is carefully optimised for the common case where the
@@ -258,8 +259,8 @@ impl Mutation {
     /// Returns `true` if the event was stored or `false` if the event is
     /// already stored.
     #[tracing::instrument(skip_all)]
-    pub async fn add_event<C: ConnectionTrait>(
-        db: &C,
+    pub async fn add_event<C: Connection>(
+        db: &mut C,
         event: event::ActiveModel,
         decoded_content: Option<(&[u8], Content, &ContentDigest)>,
     ) -> Result<bool, Status> {

@@ -9,14 +9,15 @@ use crate::service::identity::rpc::common::require_moderator;
 use crate::service::proto::{IsBannedRequest, IsBannedResponse};
 
 pub async fn handle(
-    ctx: AuthContext,
+    mut ctx: AuthContext,
     req: IsBannedRequest,
 ) -> Result<IsBannedResponse, Status> {
-    require_moderator(&ctx).await?;
+    require_moderator(&mut ctx).await?;
 
-    let is_banned = id_repo::Query::is_banned(&ctx.db, &req.target_identity)
-        .await
-        .map_err(|_| Status::internal("internal server error"))?;
+    let is_banned =
+        id_repo::Query::is_banned(&mut ctx.db, &req.target_identity)
+            .await
+            .map_err(|_| Status::internal("internal server error"))?;
 
     Ok(IsBannedResponse { is_banned })
 }

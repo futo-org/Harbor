@@ -2,6 +2,7 @@ import EventEmitter from 'eventemitter3';
 import type { KeyPair } from '../polycentric-client';
 import type { SignedEvent } from '../proto/polycentric/v2/events';
 import type { Content } from '../proto/polycentric/v2/content';
+import type { EventPushIssues } from '@polycentric/rs-core-wasm';
 
 export type ContentCreatedPayload = {
   signedEvent: SignedEvent;
@@ -14,6 +15,7 @@ interface EventMap {
   identityChanged: KeyPair | null;
   contentCreated: ContentCreatedPayload;
   pulled: string; // Identity key of the sync/pull
+  pushResults: ServerPushResult[]; // One per server pushed to by a sync
 }
 
 export class EventService {
@@ -68,6 +70,17 @@ export class EventService {
   }
   offPulled(listener: (identityKey: string) => void) {
     this.off('pulled', listener);
+  }
+
+  // Push events
+  emitPushResults(results: ServerPushResult[]) {
+    this.emit('pushResults', results);
+  }
+  onPushResults(listener: (results: ServerPushResult[]) => void) {
+    this.on('pushResults', listener);
+  }
+  offPushResults(listener: (results: ServerPushResult[]) => void) {
+    this.off('pushResults', listener);
   }
 
   // Utility methods for cleanup

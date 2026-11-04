@@ -134,29 +134,60 @@ class OdyseeTextVerifier extends TextVerifier {
   }
 
   private async getTextFromClaimId(id: string): Promise<Result<string>> {
-    const client = createCookieEnabledAxios();
-    const postData = {
-      jsonrpc: '2.0',
-      method: 'claim_search',
-      params: {
-        claim_ids: [id],
-      },
-    };
+    try {
+      const client = createCookieEnabledAxios();
+      const postData = {
+        jsonrpc: '2.0',
+        method: 'claim_search',
+        params: {
+          claim_ids: [id],
+        },
+      };
 
-    const profileResult = await client.post(
-      'https://api.na-backend.odysee.com/api/v1/proxy?m=claim_search',
-      postData,
-    );
-    if (profileResult.status !== 200) {
+      const profileResult = await client.post(
+        'https://api.na-backend.odysee.com/api/v1/proxy?m=claim_search',
+        postData,
+      );
+      if (profileResult.status !== 200) {
+        return Result.err({
+          message: 'Unable to find your account',
+          extendedMessage: `Failed to get Profile page (${profileResult.status}): '${profileResult.statusText}'.`,
+        });
+      }
+
+      const rpcError = profileResult.data?.error;
+      if (rpcError) {
+        return Result.err({
+          message: 'Unable to find your account',
+          extendedMessage: `Odysee claim_search returned an error for ${id}: ${JSON.stringify(rpcError)}`,
+        });
+      }
+
+      const item = profileResult.data?.result?.items?.[0];
+      if (!item) {
+        return Result.err({
+          message: 'Unable to find your account',
+          extendedMessage: `No claim found for ${id}`,
+        });
+      }
+
+      const description: unknown = item.value?.description;
+      if (typeof description !== 'string') {
+        return Result.err({
+          message: 'No description found',
+          extendedMessage: `Claim ${id} does not have a description`,
+        });
+      }
+
+      return Result.ok(description.trim());
+    } catch (error) {
       return Result.err({
-        message: 'Unable to find your account',
-        extendedMessage: `Failed to get Profile page (${profileResult.status}): '${profileResult.statusText}'.`,
+        message: 'Error connecting to Odysee',
+        extendedMessage: `Error during API call: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       });
     }
-
-    const description: string =
-      profileResult.data?.result?.items?.[0]?.value?.description;
-    return Result.ok(description.trim());
   }
 
   public async getClaimFieldsByUrl(url: string): Promise<Result<ClaimField[]>> {

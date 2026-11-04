@@ -4,15 +4,15 @@ name: Docs preview cleanup
 
 on:
   pull_request:
-    types: [closed]
+    types: [ closed ]
     paths:
-      - 'docs/**'
+      - "docs/**"
 
 jobs:
   docs-review-stop:
     name: Remove docs preview
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Delete the preview

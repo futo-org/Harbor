@@ -3,7 +3,7 @@ use polycentric_common::models::collections;
 use sea_orm::*;
 
 use crate::data::EventWithContentRow;
-use crate::db::DbTx;
+use crate::db::{Connection, DbTx};
 use crate::service::events::TargetEventKey;
 use crate::service::feeds::repository::content_join;
 use crate::service::identity::chain;
@@ -30,8 +30,8 @@ pub struct Query;
 impl Query {
     /// Authorized keys for `identity`'s validated chain head.
     #[tracing::instrument(skip_all)]
-    pub async fn authorized_keys<C: ConnectionTrait>(
-        db: &C,
+    pub async fn authorized_keys<C: Connection>(
+        db: &mut C,
         identity: &str,
     ) -> Result<Vec<AuthorizedKey>, DbErr> {
         let Some(content) =
@@ -60,8 +60,8 @@ impl Query {
     /// validated chain head, or `None` when no valid genesis exists. The
     /// chain walk itself is the pure `chain::validated_chain_head`.
     #[tracing::instrument(skip_all)]
-    pub async fn latest_valid_identity_content<C: ConnectionTrait>(
-        db: &C,
+    pub async fn latest_valid_identity_content<C: Connection>(
+        db: &mut C,
         identity: &str,
     ) -> Result<Option<Identity>, DbErr> {
         let rows = Self::list_identity_events_for_identities(
@@ -74,8 +74,8 @@ impl Query {
 
     /// True when `public_key` is a rotation key on the latest identity state.
     #[tracing::instrument(skip_all)]
-    pub async fn is_rotation_key<C: ConnectionTrait>(
-        db: &C,
+    pub async fn is_rotation_key<C: Connection>(
+        db: &mut C,
         identity_key: &str,
         public_key: &[u8],
     ) -> Result<bool, DbErr> {
@@ -87,8 +87,8 @@ impl Query {
 
     /// True when `identity` has a row in the `moderator` table.
     #[tracing::instrument(skip_all)]
-    pub async fn is_moderator<C: ConnectionTrait>(
-        db: &C,
+    pub async fn is_moderator<C: Connection>(
+        db: &mut C,
         identity: &str,
     ) -> Result<bool, DbErr> {
         moderator::Entity::find_by_id(identity).exists(db).await
@@ -96,8 +96,8 @@ impl Query {
 
     /// Number of events `identity` has.
     #[tracing::instrument(skip_all)]
-    pub async fn count_events<C: ConnectionTrait>(
-        db: &C,
+    pub async fn count_events<C: Connection>(
+        db: &mut C,
         identity: &str,
     ) -> Result<u64, DbErr> {
         event::Entity::find()
@@ -109,8 +109,8 @@ impl Query {
     /// Identities with at least one event signed by `public_key`, with how
     /// many each has. One scan of `events`.
     #[tracing::instrument(skip_all)]
-    pub async fn identities_signed_by<C: ConnectionTrait>(
-        db: &C,
+    pub async fn identities_signed_by<C: Connection>(
+        db: &mut C,
         public_key: &[u8],
     ) -> Result<Vec<(String, i64)>, DbErr> {
         event::Entity::find()
@@ -126,8 +126,8 @@ impl Query {
 
     /// Number of content rows no event references.
     #[tracing::instrument(skip_all)]
-    pub async fn count_orphan_content<C: ConnectionTrait>(
-        db: &C,
+    pub async fn count_orphan_content<C: Connection>(
+        db: &mut C,
     ) -> Result<i64, DbErr> {
         let row = db
             .query_one_raw(Statement::from_string(
@@ -143,8 +143,8 @@ impl Query {
 
     /// True when `identity` has a row in the `ban` table.
     #[tracing::instrument(skip_all)]
-    pub async fn is_banned<C: ConnectionTrait>(
-        db: &C,
+    pub async fn is_banned<C: Connection>(
+        db: &mut C,
         identity: &str,
     ) -> Result<bool, DbErr> {
         ban::Entity::find_by_id(identity).exists(db).await
@@ -156,8 +156,8 @@ impl Query {
     /// page's last row; `query` keeps only identities that begin with it
     /// (case-insensitive prefix). Returns up to `limit` rows.
     #[tracing::instrument(skip_all)]
-    pub async fn list_bans<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_bans<C: Connection>(
+        db: &mut C,
         limit: u64,
         after: Option<&BanCursor>,
         query: Option<&str>,
@@ -195,8 +195,8 @@ impl Query {
     /// `identities`. Sent as hints on feed/thread/list responses so
     /// clients can validate post authors without re-fetching the chain.
     #[tracing::instrument(skip_all)]
-    pub async fn list_identity_events_for_identities<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_identity_events_for_identities<C: Connection>(
+        db: &mut C,
         identities: Vec<String>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         if identities.is_empty() {
@@ -220,8 +220,8 @@ impl Mutation {
     /// row. When banning, records `banned_by` as the issuing moderator.
     /// Idempotent in both directions.
     #[tracing::instrument(skip_all)]
-    pub async fn set_banned<C: ConnectionTrait>(
-        db: &C,
+    pub async fn set_banned<C: Connection>(
+        db: &mut C,
         identity: &str,
         banned: bool,
         banned_by: &str,
@@ -341,8 +341,8 @@ impl Mutation {
     /// notifications and per-event counts. Run once after the batches.
     /// Counts on other events that include their interactions are left as-is.
     #[tracing::instrument(skip_all)]
-    pub async fn erase_derived<C: ConnectionTrait>(
-        db: &C,
+    pub async fn erase_derived<C: Connection>(
+        db: &mut C,
         identities: &[String],
     ) -> Result<(), DbErr> {
         for (table, column) in CACHE_EVENT_IDENTITY_COLUMNS {

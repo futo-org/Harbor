@@ -39,7 +39,7 @@ async fn fetch(
     params: &Params,
 ) -> Result<Vec<EventWithContentRow>, Status> {
     FeedsRepository::get_reactions(
-        &ctx.db,
+        &mut ctx.db,
         &params.target,
         params.emoji.as_deref(),
         params.limit,

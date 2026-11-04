@@ -24,7 +24,7 @@ jobs:
     name: Plan
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     outputs:
       registry: ${{ steps.plan.outputs.registry }}
       images_tag: ${{ steps.plan.outputs.images_tag }}
@@ -47,7 +47,7 @@ jobs:
     needs: changes
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 30
-    container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
+    container: ${{ vars.CI_TOOLS_IMAGE || 'node:26-alpine' }}
     steps:
       - name: Install git
         run: apk add --no-cache git
@@ -69,7 +69,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.workflows
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       ZIZMOR_VERSION: 1.30.0
       ZIZMOR_SHA256: ec8c95cd800845abb9bbc5f377ec7c57d2eb8e2386a00a201d3a74ee4092e5ed
@@ -90,7 +90,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.scan
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     continue-on-error: true
     env:
       TRIVY_NO_PROGRESS: "true"
@@ -252,7 +252,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.js_sdk_lint
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -268,7 +268,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.js_services_lint
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       PUPPETEER_SKIP_DOWNLOAD: "1"
     steps:
@@ -289,7 +289,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.charts_lint
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
+    container: ${{ vars.CI_TOOLS_IMAGE || 'node:26-alpine' }}
     steps:
       - name: Install tools
         run: apk add --no-cache bash git helm
@@ -307,7 +307,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.docs_lint
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -323,7 +323,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.app_lint
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/setup-pnpm
@@ -341,7 +341,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.generated_code
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/setup-pnpm
@@ -421,7 +421,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.js_sdk && needs.sdks.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -445,7 +445,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.scraper
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       PUPPETEER_SKIP_DOWNLOAD: "1"
     steps:
@@ -470,7 +470,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.app
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/setup-pnpm
@@ -491,7 +491,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.app_typecheck && needs.sdks.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/sdk-artifacts
@@ -622,7 +622,7 @@ jobs:
       (needs.ios.result == 'success' || needs.changes.outputs.have_ios == 'true') }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/sdk-build
@@ -689,7 +689,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.image_scraper
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       PUPPETEER_SKIP_DOWNLOAD: "1"
     steps:
@@ -730,7 +730,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.image_verifier_bot && needs.sdks.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       PUPPETEER_SKIP_DOWNLOAD: "1"
       HUSKY: "0"
@@ -773,7 +773,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.web_image && needs.sdks.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       EXPO_PUBLIC_HARBOR_SEED_SERVERS: ${{ vars.EXPO_PUBLIC_HARBOR_SEED_SERVERS }}
       EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS: ${{ vars.EXPO_PUBLIC_HARBOR_VERIFIER_SERVERS }}
@@ -868,7 +868,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.scraper_integration && needs.scraper-image.result != 'failure' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     continue-on-error: true
     env:
       PUPPETEER_SKIP_DOWNLOAD: "1"
@@ -896,7 +896,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.verifier_bot_tests && needs.sdks.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       PUPPETEER_SKIP_DOWNLOAD: "1"
       HARBOR_VERIFIER_BOT_PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
@@ -975,7 +975,7 @@ jobs:
     if: fromJSON(needs.changes.outputs.plan).flags.docs
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/setup-pnpm
@@ -996,7 +996,7 @@ jobs:
     if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.docs_preview && needs.docs.result == 'success' }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_NODE_IMAGE || 'node:24-bookworm' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -1060,7 +1060,7 @@ jobs:
     if: always()
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
-    container: ${{ vars.CI_TOOLS_IMAGE || 'node:24-alpine' }}
+    container: ${{ vars.CI_TOOLS_IMAGE || 'node:26-alpine' }}
     steps:
       - name: Job results
         shell: sh

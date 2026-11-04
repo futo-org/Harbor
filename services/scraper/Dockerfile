@@ -1,8 +1,7 @@
-# Stage 1: Base - Node + pnpm
-FROM node:24-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS base
+# Stage 1: Base - Node
+FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 
 # Stage: Bogon snapshot - fetch the Team Cymru aggregated IPv4 bogon list at
 # build time and emit it as an nft `define` ($BOGON4). Baking the snapshot into
@@ -11,7 +10,7 @@ RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 # the feed is unreachable or returns garbage, so the egress set can't silently
 # ship empty/weak. The reserved-IP list is RFC-stable, so refreshes are rare:
 # bump BOGONS_REV (or build with --no-cache) to bust the layer cache and re-pull.
-FROM debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS bogons
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3 AS bogons
 ARG BOGONS_REV=2026-06-22
 RUN echo "bogon snapshot rev: ${BOGONS_REV}" \
   && apt-get update \
@@ -36,6 +35,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD=1
 # workspace packages (apps/*, packages/*) are absent here - pnpm tolerates
 # missing workspace members and installs only what's present.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+RUN npm install -g "$(node -p "require('./package.json').packageManager")"
 COPY patches patches
 COPY tools tools
 COPY services/scraper services/scraper

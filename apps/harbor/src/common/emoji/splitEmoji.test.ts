@@ -1,0 +1,65 @@
+import { splitEmoji } from './splitEmoji';
+
+describe('splitEmoji', () => {
+  it('returns plain text untouched', () => {
+    expect(splitEmoji('hello world')).toEqual(['hello world']);
+    expect(splitEmoji('')).toEqual(['']);
+  });
+
+  it('interleaves text and emoji runs', () => {
+    expect(splitEmoji('hi 👋 there 🐈')).toEqual([
+      'hi ',
+      '👋',
+      ' there ',
+      '🐈',
+      '',
+    ]);
+    expect(splitEmoji('🐈 first')).toEqual(['', '🐈', ' first']);
+  });
+
+  it('separates adjacent emoji', () => {
+    expect(splitEmoji('❤️😂🤣')).toEqual(['', '❤️', '', '😂', '', '🤣', '']);
+  });
+
+  it('keeps sequences whole', () => {
+    // ZWJ family, skin tone, flag, subdivision flag, keycap
+    for (const emoji of ['👨‍👩‍👧', '👍🏽', '🇬🇧', '🏴󠁧󠁢󠁥󠁮󠁧󠁿', '1️⃣', '#⃣', '🏳️‍🌈']) {
+      expect(splitEmoji(`a${emoji}b`)).toEqual(['a', emoji, 'b']);
+    }
+  });
+
+  it('keeps the custom emoji whole', () => {
+    // Texas flag (non-RGI tag sequence), seahorse (non-RGI ZWJ sequence)
+    for (const emoji of [
+      '\u{1F3F4}\u{E0075}\u{E0073}\u{E0074}\u{E0078}\u{E007F}',
+      '\u{1F434}\u{200D}\u{1F30A}',
+    ]) {
+      expect(splitEmoji(`a${emoji}b`)).toEqual(['a', emoji, 'b']);
+    }
+  });
+
+  it('leaves typographic symbols and digits to the text font', () => {
+    for (const text of [
+      '1 + 1 = 2',
+      'a → b',
+      'a ↔ b',
+      '© 2026 ™',
+      'I ♥ NY',
+      'done ✔',
+      '▶ Play',
+    ]) {
+      expect(splitEmoji(text)).toEqual([text]);
+    }
+  });
+
+  it('treats older pictographs as emoji even without U+FE0F', () => {
+    for (const emoji of ['☹', '☺', '☀', '❤', '✈', '⚠']) {
+      expect(splitEmoji(`a${emoji}b`)).toEqual(['a', emoji, 'b']);
+    }
+  });
+
+  it('renders text-presentation symbols as emoji when asked with U+FE0F', () => {
+    expect(splitEmoji('a ➡️ b')).toEqual(['a ', '➡️', ' b']);
+    expect(splitEmoji('©️')).toEqual(['', '©️', '']);
+  });
+});

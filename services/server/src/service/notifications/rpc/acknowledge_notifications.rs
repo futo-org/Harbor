@@ -9,26 +9,26 @@ use crate::service::proto::{
 };
 
 pub async fn handle(
-    ctx: AuthContext,
+    mut ctx: AuthContext,
     request: AcknowledgeNotificationsRequest,
 ) -> Result<AcknowledgeNotificationsResponse, Status> {
-    let identity = ctx.identity();
+    let identity = &*ctx.auth;
     let last_seen =
         TargetEventKey::from_request(request.last_seen, "last_seen")?;
 
-    let up_to = match Query::id_of_trigger(&ctx.db, identity, &last_seen)
+    let up_to = match Query::id_of_trigger(&mut ctx.db, identity, &last_seen)
         .await
         .map_err(internal)?
     {
         Some(id) => id,
         // Not produced here, so this server has nothing newer to show.
-        None => Query::newest_id(&ctx.db, identity)
+        None => Query::newest_id(&mut ctx.db, identity)
             .await
             .map_err(internal)?
             .unwrap_or(0),
     };
 
-    Mutation::mark_read(&ctx.db, identity, up_to)
+    Mutation::mark_read(&mut ctx.db, identity, up_to)
         .await
         .map_err(internal)?;
 

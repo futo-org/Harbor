@@ -8,7 +8,7 @@
 # under plain node (rs-core-wasm ships a compiled .js via its node export).
 
 # Stage 1: Build — Rust + Node toolchain, compile rs-core to wasm, build JS SDKs
-FROM rust:slim-bookworm@sha256:86234e857a413004348b471d11a4ebe1aa92d2eae2b6b143cac68fd1ac3c48be AS build
+FROM rust:1.99-slim-bookworm@sha256:24707e70a4f1e23d9a7b25202ec43126d28a52294b96aad5c670df1fd1f1d400 AS build
 WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="/pnpm:$PATH"
@@ -17,16 +17,15 @@ ENV PUPPETEER_SKIP_DOWNLOAD=1
 # No git in the build context; make husky's root `prepare` script a no-op.
 ENV HUSKY=0
 
-# System deps: protoc + build tooling for the Rust core, Node 24, and the
+# System deps: protoc + build tooling for the Rust core, Node 26, and the
 # better-sqlite3 native binding.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
      curl ca-certificates git pkg-config libssl-dev cmake g++ make python3 \
      protobuf-compiler \
-  && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+  && curl -fsSL https://deb.nodesource.com/setup_26.x | bash - \
   && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 RUN rustup target add wasm32-unknown-unknown
 # wasm-bindgen-cli must match the `wasm-bindgen` pin in packages/rs-core/Cargo.toml.
 RUN cargo install wasm-bindgen-cli@0.2.125
@@ -44,6 +43,7 @@ COPY tools tools
 # (apps/*) are intentionally NOT copied: pnpm tolerates absent members, and
 # leaving them out keeps their (huge) Expo/RN deps out of node_modules.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+RUN npm install -g "$(node -p "require('./package.json').packageManager")"
 COPY patches patches
 COPY packages/rs-core-wasm packages/rs-core-wasm
 COPY packages/js-core packages/js-core
@@ -75,7 +75,7 @@ RUN pnpm --filter @polycentric/verifier-bot --prod \
   deploy /deploy
 
 # Stage 2: Run
-FROM node:24-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS runner
+FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS runner
 WORKDIR /app/services/verifier-bot
 ENV NODE_ENV=production
 # System Chromium for the Puppeteer-based verifiers (e.g. Kick).

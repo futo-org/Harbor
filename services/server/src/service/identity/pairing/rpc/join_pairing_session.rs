@@ -12,7 +12,7 @@ use crate::service::proto::{
 };
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: JoinPairingSessionRequest,
 ) -> Result<JoinPairingSessionResponse, Status> {
     let claimer_key = req
@@ -23,7 +23,7 @@ pub async fn handle(
     }
 
     let session = pair_repo::Query::get_pairing_session(
-        &ctx.db,
+        &mut ctx.db,
         &req.digest_sha256,
     )
     .await
@@ -34,7 +34,7 @@ pub async fn handle(
     .ok_or_else(|| Status::not_found("session not found"))?;
 
     pair_repo::Query::add_claimer(
-        &ctx.db,
+        &mut ctx.db,
         &session.issuer_identity,
         &req.digest_sha256,
         &claimer_key,
@@ -45,7 +45,7 @@ pub async fn handle(
         Status::internal("internal server error")
     })?;
 
-    let claimers = list_claimers(&ctx.db, &req.digest_sha256).await?;
+    let claimers = list_claimers(&mut ctx.db, &req.digest_sha256).await?;
 
     Ok(JoinPairingSessionResponse {
         session_state: Some(session_state(&session, claimers)),
