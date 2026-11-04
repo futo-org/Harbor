@@ -20,8 +20,10 @@ import {
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
 import {
-  NATIVE_FONT_FAMILY,
-  NATIVE_MONOSPACE_FONT_FAMILY,
+  ANDROID_FONTS,
+  ANDROID_MONOSPACE_FONTS,
+  IOS_FONT_FAMILY,
+  IOS_MONOSPACE_FONT_FAMILY,
   WEB_FONT_STACK,
   WEB_MONOSPACE_FONT_STACK,
 } from './Text';
@@ -72,9 +74,11 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
           ? WEB_MONOSPACE_FONT_STACK
           : // As in `Text`, so typed emoji are Twemoji too.
             WEB_FONT_STACK
-        : monospace
-          ? NATIVE_MONOSPACE_FONT_FAMILY
-          : NATIVE_FONT_FAMILY;
+        : Platform.OS === 'android'
+          ? (monospace ? ANDROID_MONOSPACE_FONTS : ANDROID_FONTS)['400']
+          : monospace
+            ? IOS_MONOSPACE_FONT_FAMILY
+            : IOS_FONT_FAMILY;
 
     const baseStyle: TextStyle = {
       paddingVertical: 12,

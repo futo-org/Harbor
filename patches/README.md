@@ -4,6 +4,8 @@
 
 Drops `#import "RCTBridge.h"` from `RNUITextViewManager.mm`: the quoted import doesn't resolve against the prebuilt React Native core (`RCT_USE_PREBUILT_RNCORE`) used since the Expo 58 upgrade. `<React/RCTUIManager.h>` already imports the bridge. Not fixed upstream as of 2.7.1.
 
+Also forwards `fontVariationSettings` (string form only) from child text to the iOS attributed string, which `Text` uses to set the variable fonts' weight on iOS. The upstream codegen props don't include it as of 2.7.1.
+
 ## `@rn-primitives/hooks@1.5.2`
 
 Makes `useAccessibilityFocus` a no-op on web, where it calls `findNodeHandle`, which react-native-web throws on. Not fixed upstream as of 1.5.2.

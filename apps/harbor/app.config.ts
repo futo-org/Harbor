@@ -152,19 +152,21 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
         android: {
           fonts: [
-            // A font file on Android is otherwise named after its file, so the
-            // variable fonts are registered under their iOS family names, letting
-            // `Text` use the same names on both platforms.
-            {
-              fontFamily: 'Noto Sans',
-              path: './public/fonts/NotoSans.ttf',
-              fontDefinitions: [{ weight: 400 }],
-            },
-            {
-              fontFamily: 'Noto Sans Mono',
-              path: './public/fonts/NotoSansMono.ttf',
-              fontDefinitions: [{ weight: 400 }],
-            },
+            // Each weight of the variable fonts is instanced once, at startup,
+            // as a family of its own (see `ANDROID_FONTS` in `Text`).
+            ...(['NotoSans', 'NotoSansMono'] as const).flatMap((font) =>
+              (
+                [
+                  ['Regular', 400],
+                  ['SemiBold', 600],
+                  ['Bold', 700],
+                ] as const
+              ).map(([face, weight]) => ({
+                fontFamily: `${font}-${face}`,
+                path: `./public/fonts/${font}.ttf`,
+                fontDefinitions: [{ weight }],
+              })),
+            ),
             './src/common/assets/fonts/Twemoji.ttf',
             // The bitmap build is for Android 7-9 (see `twemojiFontFamily`).
             './src/common/assets/fonts/TwemojiCbdt.ttf',
