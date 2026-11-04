@@ -10,14 +10,16 @@ use crate::service::identity::repository as id_repo;
 /// server, returning the moderator's identity. Unauthenticated requests
 /// are rejected as `Unauthenticated`; authenticated non-moderators as
 /// `PermissionDenied`.
-pub(crate) async fn require_moderator(ctx: &AuthContext) -> Result<(), Status> {
-    let identity = ctx.identity();
+pub(crate) async fn require_moderator(
+    ctx: &mut AuthContext,
+) -> Result<(), Status> {
+    let identity = &*ctx.auth;
     if let Some(trusted_moderator) = config::get().trusted_moderator.as_deref()
         && identity == trusted_moderator
     {
         return Ok(());
     }
-    let is_moderator = id_repo::Query::is_moderator(&ctx.db, identity)
+    let is_moderator = id_repo::Query::is_moderator(&mut ctx.db, identity)
         .await
         .map_err(|_| Status::internal("internal server error"))?;
     if !is_moderator {

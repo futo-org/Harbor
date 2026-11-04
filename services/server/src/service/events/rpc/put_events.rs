@@ -128,7 +128,7 @@ pub async fn handle(
         });
     }
 
-    let missing_blobs = remove_present_blobs(&ctx, all_blobs)
+    let missing_blobs = remove_present_blobs(&mut ctx, all_blobs)
         .await
         .unwrap_or_else(|()| {
             // A failure occurred while checking what blobs the server already has.
@@ -208,7 +208,7 @@ async fn process_event(
         Some(false) => { /* Ok to continue. */ }
         None => {
             let is_banned = IdentityRepository::is_banned(
-                &ctx.db,
+                &mut ctx.db,
                 &key.identity,
             )
             .await
@@ -234,7 +234,7 @@ async fn process_event(
             let mut app_errors = Vec::<()>::new();
             app.validate_check(&mut app_errors, |_| ());
             if app_errors.is_empty() {
-                let app_id = EventsRepository::Mutation::application_id(&ctx.db, app)
+                let app_id = EventsRepository::Mutation::application_id(&mut ctx.db, app)
                     .await
                     .map_err(|e| {
                         tracing::error!(error = %e, "failed to get/store application info");
@@ -302,7 +302,7 @@ async fn process_event(
 
     // Start a transaction to ensure all processing of a single event is handled
     // atomically.
-    let tx = ctx.db.begin().await.map_err(|e| {
+    let mut tx = ctx.db.begin().await.map_err(|e| {
         tracing::error!(error = %e, "failed to begin transaction");
         Status::internal("internal server error")
     })?;
@@ -316,7 +316,7 @@ async fn process_event(
     if key.collection != collections::IDENTITY {
         #[allow(clippy::collapsible_if)] // Easier to understand this way.
         if let Err(err) = authorize_event_signer(
-            &tx,
+            &mut tx,
             &ctx.proof_cache,
             &key.identity,
             &PublicKey {
@@ -365,7 +365,7 @@ async fn process_event(
     };
 
     let stored = match EventsRepository::Mutation::add_event(
-        &tx,
+        &mut tx,
         active_model,
         decoded_content,
     )
@@ -539,7 +539,7 @@ fn validate_content(
 
 /// Keep only the blobs that are not already present.
 async fn remove_present_blobs(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     blobs: HashSet<Blob>,
 ) -> Result<Vec<Blob>, ()> {
     let digests: Vec<_> = blobs
@@ -548,7 +548,7 @@ async fn remove_present_blobs(
         .collect();
 
     let already_present =
-        ContentRepository::Query::find_digests_in_db(&ctx.db, &digests)
+        ContentRepository::Query::find_digests_in_db(&mut ctx.db, &digests)
             .await
             .map_err(|err| {
                 tracing::error!(error = %err, "failed to find digest of blob");

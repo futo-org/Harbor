@@ -247,7 +247,7 @@ pub async fn filter<SortedBy>(
 /// Build bundles from live rows, attach revocation proofs, and merge
 /// identity, profile and tombstone hints.
 pub async fn view<SortedBy>(
-    ctx: &PublicContext,
+    ctx: &mut PublicContext,
     filtered: SearchResponseFilter<SortedBy>,
     hydration: HydrationState,
 ) -> Result<SearchResponseView<SortedBy>, Status> {

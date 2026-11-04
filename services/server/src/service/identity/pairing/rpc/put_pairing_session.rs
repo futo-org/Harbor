@@ -3,12 +3,12 @@
 use chrono::{DateTime, TimeDelta, Utc};
 use entity::pairing_session;
 use polycentric_common::error::CoreError;
+use sea_orm::ActiveValue::Set;
 use sea_orm::entity::prelude::DateTimeUtc;
-use sea_orm::{ActiveValue::Set, ConnectionTrait};
 use sha2::{Digest, Sha256};
 use tonic::Status;
 
-use crate::db::DbTx;
+use crate::db::{Connection, DbTx};
 use crate::service::context::PublicContext;
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::identity::pairing::rpc::common::load_session_state;
@@ -39,7 +39,7 @@ pub async fn handle(
 ) -> Result<PutPairingSessionResponse, Status> {
     // Ensure the request is legitimate and extract content
     let input = extract_and_validate_input(req)?;
-    verify_authorization(&ctx.db, &input).await?;
+    verify_authorization(&mut ctx.db, &input).await?;
 
     // Use a transaction to prevent TOCTOU problems
     let mut txn = ctx.db.begin().await.map_err(|e| {
@@ -49,7 +49,7 @@ pub async fn handle(
 
     // Get the existing session info so we know what updates we need to make
     let existing = pair_repo::Query::get_latest_pairing_session(
-        &txn,
+        &mut txn,
         &input.issuer_identity,
     )
     .await
@@ -80,7 +80,7 @@ pub async fn handle(
     // Return latest session state to client
     Ok(PutPairingSessionResponse {
         session_state: Some(
-            load_session_state(&ctx.db, &response_digest).await?,
+            load_session_state(&mut ctx.db, &response_digest).await?,
         ),
     })
 }
@@ -120,8 +120,8 @@ fn extract_and_validate_input(
 }
 
 /// Checks that the signer is authorized to rotate the identity.
-async fn verify_authorization<C: ConnectionTrait>(
-    db: &C,
+async fn verify_authorization<C: Connection>(
+    db: &mut C,
     input: &Input,
 ) -> Result<(), Status> {
     let is_authorized = id_repo::Query::is_rotation_key(

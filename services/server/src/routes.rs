@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::Instrument;
 
+use crate::db::DbConn;
 use crate::grpc::reflection_ui::reflection_ui;
 use crate::service::content::content_filestore::ContentFilestore;
 use crate::service::content::content_repository as ContentRepository;
@@ -66,8 +67,11 @@ async fn get_blob(
     let digest =
         ContentDigest::from_id(&digest_id).ok_or(StatusCode::BAD_REQUEST)?;
 
+    let mut db = DbConn::from_pool(&state.ro_db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let row = ContentRepository::Query::find_blob_by_digest(
-        &state.ro_db,
+        &mut db,
         digest.r#type as i16,
         &digest.value,
     )
@@ -77,6 +81,7 @@ async fn get_blob(
         StatusCode::INTERNAL_SERVER_ERROR
     })?
     .ok_or(StatusCode::NOT_FOUND)?;
+    drop(db);
 
     let body = state.filestore.read_blob(&digest).await.map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {

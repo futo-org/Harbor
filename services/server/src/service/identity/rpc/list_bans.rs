@@ -14,10 +14,10 @@ const DEFAULT_LIMIT: u32 = 10;
 const MAX_LIMIT: u32 = 200;
 
 pub async fn handle(
-    ctx: AuthContext,
+    mut ctx: AuthContext,
     req: ListBansRequest,
 ) -> Result<ListBansResponse, Status> {
-    require_moderator(&ctx).await?;
+    require_moderator(&mut ctx).await?;
 
     let limit = req.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT) as u64;
 
@@ -54,7 +54,7 @@ pub async fn handle(
 
     // Over-fetch one to detect a following page.
     let mut rows = id_repo::Query::list_bans(
-        &ctx.db,
+        &mut ctx.db,
         limit + 1,
         after.as_ref(),
         query.as_deref(),

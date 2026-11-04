@@ -1,13 +1,3 @@
-use crate::config;
-use crate::data::EventWithContentRow;
-use crate::data::{Cursor, CursorFilter};
-use crate::service::events::TargetEventKey;
-use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
-use ::entity::{
-    application, content, content_label, content_post_attributed_url,
-    content_reaction as Contentreaction, event, follow, interaction_tally,
-    quote, reaction, reply, repost,
-};
 use polycentric_common::models::protos_v2::SortPostsBy;
 use polycentric_common::models::{collections, content_types};
 use sea_orm::{
@@ -20,6 +10,18 @@ use sea_query::query::{CommonTableExpression, WithClause};
 use sea_query::{Func, PgFunc, SelectStatement, UnionType};
 use serde::{Deserialize, Serialize};
 use tonic::Status;
+
+use crate::config;
+use crate::data::EventWithContentRow;
+use crate::data::{Cursor, CursorFilter};
+use crate::db::Connection;
+use crate::service::events::TargetEventKey;
+use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
+use ::entity::{
+    application, content, content_label, content_post_attributed_url,
+    content_reaction as Contentreaction, event, follow, interaction_tally,
+    quote, reaction, reply, repost,
+};
 
 /// Application identifiers hidden from the global Explore feed.
 ///
@@ -118,8 +120,8 @@ const NOT_OWN_POSTS: bool = false;
 impl Query {
     /// Returns posts for the global Explore feed.
     #[tracing::instrument(skip_all)]
-    pub async fn explore_feed<C: ConnectionTrait>(
-        db: &C,
+    pub async fn explore_feed<C: Connection>(
+        db: &mut C,
         sort_by: SortPostsBy,
         limit: u64,
         cursor_filter: &CursorFilter<SortedBy>,
@@ -138,8 +140,8 @@ impl Query {
 
     /// Returns posts for the Following feed.
     #[tracing::instrument(skip_all)]
-    pub async fn following_feed<C: ConnectionTrait>(
-        db: &C,
+    pub async fn following_feed<C: Connection>(
+        db: &mut C,
         for_identity: &str,
         sort_by: SortPostsBy,
         limit: u64,
@@ -159,8 +161,8 @@ impl Query {
 
     /// Returns posts for the Recommended / For You feed.
     #[tracing::instrument(skip_all)]
-    pub async fn recommended_feed<C: ConnectionTrait>(
-        db: &C,
+    pub async fn recommended_feed<C: Connection>(
+        db: &mut C,
         for_identity: &str,
         sort_by: SortPostsBy,
         limit: u64,
@@ -187,8 +189,8 @@ impl Query {
     /// `for_identity` is following will be shown. If it's false any interaction
     /// (reaction, repost, etc.) by a followee will include the post.
     #[tracing::instrument(skip_all)]
-    async fn explore_posts<C: ConnectionTrait>(
-        db: &C,
+    async fn explore_posts<C: Connection>(
+        db: &mut C,
         for_identity: Option<&str>,
         posts_created_only: bool,
         include_own_posts: bool,
@@ -483,8 +485,8 @@ impl Query {
     /// List events restricted to events authored by any of `identities`.
     /// Short-circuits with an empty Vec when the identity list is empty.
     #[tracing::instrument(skip_all)]
-    pub async fn list_feed_events_by_identities<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_feed_events_by_identities<C: Connection>(
+        db: &mut C,
         identities: Vec<String>,
         limit: u64,
         cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -504,8 +506,8 @@ impl Query {
     /// match, ignoring the other Link metadata.
     /// Short-circuits with an empty Vec when `url` is empty.
     #[tracing::instrument(skip_all)]
-    pub async fn list_feed_events_by_attributed_url<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_feed_events_by_attributed_url<C: Connection>(
+        db: &mut C,
         url: String,
         limit: u64,
         cursor_filter: &CursorFilter<EventCreatedAt>,
@@ -515,8 +517,8 @@ impl Query {
     }
 
     #[tracing::instrument(skip_all)]
-    async fn do_list_feed_events<C: ConnectionTrait>(
-        db: &C,
+    async fn do_list_feed_events<C: Connection>(
+        db: &mut C,
         limit: u64,
         only_identities: Option<Vec<String>>,
         only_attributed_url: Option<String>,
@@ -580,8 +582,8 @@ impl Query {
     /// tuples. Keys missing a `signed_by` are skipped. Used to hydrate
     /// referenced posts (quote / repost targets) as `event_hints`.
     #[tracing::instrument(skip_all)]
-    pub async fn list_events_by_keys<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_events_by_keys<C: Connection>(
+        db: &mut C,
         keys: &[crate::service::proto::EventKey],
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let mut filter = Condition::any();
@@ -620,8 +622,8 @@ impl Query {
     /// `content_label` → `content` → `events` to check the label
     /// author's identity. Returns empty when no moderator is configured.
     #[tracing::instrument(skip_all)]
-    pub async fn list_labels_for_event_keys<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_labels_for_event_keys<C: Connection>(
+        db: &mut C,
         keys: &[TargetEventKey],
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         let Some(moderator) = config::get().trusted_moderator.as_deref() else {
@@ -731,8 +733,8 @@ impl Query {
 
     /// Look up a single event (with joined content) by its EventKey tuple.
     #[tracing::instrument(skip_all)]
-    pub async fn find_event_by_key<C: ConnectionTrait>(
-        db: &C,
+    pub async fn find_event_by_key<C: Connection>(
+        db: &mut C,
         collection: i16,
         identity: &str,
         public_key_type: i16,
@@ -756,8 +758,8 @@ impl Query {
     /// feed/thread responses so clients can populate author profiles
     /// without a follow-up round-trip.
     #[tracing::instrument(skip_all)]
-    pub async fn list_latest_profiles_for_identities<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_latest_profiles_for_identities<C: Connection>(
+        db: &mut C,
         identities: Vec<String>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         if identities.is_empty() {
@@ -787,8 +789,8 @@ impl Query {
     /// Bulk-fetch event rows by primary key, joining content. Order of the
     /// returned Vec is unspecified — caller reorders against the input list.
     #[tracing::instrument(skip_all)]
-    pub async fn list_events_by_ids<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_events_by_ids<C: Connection>(
+        db: &mut C,
         ids: Vec<i64>,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
         if ids.is_empty() {
@@ -804,8 +806,8 @@ impl Query {
 
     /// Return ids (and height) of ancestors
     #[tracing::instrument(skip_all)]
-    pub async fn list_ancestor_refs<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_ancestor_refs<C: Connection>(
+        db: &mut C,
         subject_event_id: i64,
         max_height: i32,
     ) -> Result<Vec<AncestorRef>, DbErr> {
@@ -857,8 +859,8 @@ impl Query {
     /// depth)`, ordered (depth ASC, created_at DESC) so per-parent groupings
     /// come newest-first. Caller applies branching/sort/flatten.
     #[tracing::instrument(skip_all)]
-    pub async fn list_descendant_refs<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_descendant_refs<C: Connection>(
+        db: &mut C,
         subject_event_id: i64,
         max_depth: i32,
         limit: u64,
@@ -915,8 +917,8 @@ impl Query {
     /// List feed events at a given sequence by a given identity.
     /// This is useful when we don't know the full signing key.
     #[tracing::instrument(skip_all)]
-    pub(super) async fn list_events_at_sequence<C: ConnectionTrait>(
-        db: &C,
+    pub(super) async fn list_events_at_sequence<C: Connection>(
+        db: &mut C,
         identity: &str,
         sequence: u64,
     ) -> Result<Vec<EventWithContentRow>, DbErr> {
@@ -940,8 +942,8 @@ impl Query {
     /// getting the newest one.
     /// Optionally, filter events to only include reactions with `emoji`.
     #[tracing::instrument(skip_all)]
-    pub async fn get_reactions<C: ConnectionTrait>(
-        db: &C,
+    pub async fn get_reactions<C: Connection>(
+        db: &mut C,
         target: &TargetEventKey,
         emoji: Option<&str>,
         limit: u64,

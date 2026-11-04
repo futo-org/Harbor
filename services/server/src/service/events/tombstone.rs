@@ -4,12 +4,13 @@ use entity::{content, content_delete, event};
 use prost::Message;
 use sea_orm::sea_query::{Expr, ExprTrait, IntoCondition};
 use sea_orm::{
-    ColumnTrait, Condition, ConnectionTrait, DbErr, DerivePartialModel,
-    EntityTrait, JoinType, QueryFilter, QuerySelect, RelationDef,
+    ColumnTrait, Condition, DbErr, DerivePartialModel, EntityTrait, JoinType,
+    QueryFilter, QuerySelect, RelationDef,
 };
 use tonic::{Code, Status};
 
 use crate::data::EventWithContentRow;
+use crate::db::Connection;
 use crate::service::context::RequestContext;
 use crate::service::identity::service::authorize_event_signer;
 use crate::service::proto::{
@@ -31,10 +32,10 @@ impl HasEventKey for EventWithContentRow {
 
 /// The valid Delete tombstones for `keys`, by tombstoned event key.
 pub async fn validated_tombstones<Auth>(
-    ctx: &RequestContext<Auth>,
+    ctx: &mut RequestContext<Auth>,
     keys: &[TargetEventKey],
 ) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, Status> {
-    let raw = list_tombstones_for_event_keys(&ctx.db, keys)
+    let raw = list_tombstones_for_event_keys(&mut ctx.db, keys)
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "tombstone db error");
@@ -45,7 +46,7 @@ pub async fn validated_tombstones<Auth>(
 
 /// The subset of `keys` whose events have a valid Delete tombstone.
 pub async fn tombstoned_keys<Auth>(
-    ctx: &RequestContext<Auth>,
+    ctx: &mut RequestContext<Auth>,
     keys: &[TargetEventKey],
 ) -> Result<HashSet<TargetEventKey>, Status> {
     Ok(validated_tombstones(ctx, keys).await?.into_keys().collect())
@@ -54,8 +55,8 @@ pub async fn tombstoned_keys<Auth>(
 /// List all tombstone events
 /// WARNING: These events are unvalidated and can not be trusted
 #[tracing::instrument(skip_all)]
-pub async fn list_tombstones_for_event_keys<C: ConnectionTrait>(
-    db: &C,
+pub async fn list_tombstones_for_event_keys<C: Connection>(
+    db: &mut C,
     keys: &[TargetEventKey],
 ) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, DbErr> {
     if keys.is_empty() {
@@ -191,7 +192,7 @@ fn content_to_delete_event_join() -> RelationDef {
 ///      identity's chain
 #[tracing::instrument(skip_all)]
 pub async fn validate_tombstones<Auth>(
-    ctx: &RequestContext<Auth>,
+    ctx: &mut RequestContext<Auth>,
     deletes_by_target: HashMap<TargetEventKey, Vec<EventBundle>>,
 ) -> Result<HashMap<TargetEventKey, Vec<EventBundle>>, Status> {
     let mut validated: HashMap<TargetEventKey, Vec<EventBundle>> =
@@ -213,7 +214,7 @@ pub async fn validate_tombstones<Auth>(
 }
 
 async fn is_tombstone_authorized<Auth>(
-    ctx: &RequestContext<Auth>,
+    ctx: &mut RequestContext<Auth>,
     target_key: &TargetEventKey,
     bundle: &EventBundle,
 ) -> Result<bool, Status> {
@@ -237,7 +238,7 @@ async fn is_tombstone_authorized<Auth>(
     }
 
     match authorize_event_signer(
-        &ctx.db,
+        &mut ctx.db,
         &ctx.proof_cache,
         &key.identity,
         signer,
@@ -322,7 +323,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_bundle_without_signed_event() {
-        let ctx = mock_ctx().await;
+        let mut ctx = mock_ctx().await;
         let bundle = EventBundle {
             signed_event: None,
             serialized_content: None,
@@ -330,13 +331,14 @@ mod tests {
             meta: None,
         };
         let result =
-            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+            is_tombstone_authorized(&mut ctx, &target_key("alice"), &bundle)
+                .await;
         assert!(!result.unwrap());
     }
 
     #[tokio::test]
     async fn rejects_undecodable_event_bytes() {
-        let ctx = mock_ctx().await;
+        let mut ctx = mock_ctx().await;
         let bundle = EventBundle {
             signed_event: Some(SignedEvent {
                 signature: vec![],
@@ -348,31 +350,34 @@ mod tests {
             meta: None,
         };
         let result =
-            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+            is_tombstone_authorized(&mut ctx, &target_key("alice"), &bundle)
+                .await;
         assert!(!result.unwrap());
     }
 
     #[tokio::test]
     async fn rejects_event_with_no_key() {
-        let ctx = mock_ctx().await;
+        let mut ctx = mock_ctx().await;
         let bundle = bundle_with_key(None);
         let result =
-            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+            is_tombstone_authorized(&mut ctx, &target_key("alice"), &bundle)
+                .await;
         assert!(!result.unwrap());
     }
 
     #[tokio::test]
     async fn rejects_key_with_no_signed_by() {
-        let ctx = mock_ctx().await;
+        let mut ctx = mock_ctx().await;
         let bundle = bundle_with_key(Some(key_with("alice", None, 6)));
         let result =
-            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+            is_tombstone_authorized(&mut ctx, &target_key("alice"), &bundle)
+                .await;
         assert!(!result.unwrap());
     }
 
     #[tokio::test]
     async fn rejects_signer_identity_mismatch() {
-        let ctx = mock_ctx().await;
+        let mut ctx = mock_ctx().await;
         let signer = Some(PublicKey {
             key_type: 1,
             key: vec![0xbb; 32],
@@ -380,26 +385,27 @@ mod tests {
         // Delete event was signed for "mallory" but targets "alice".
         let bundle = bundle_with_key(Some(key_with("mallory", signer, 6)));
         let result =
-            is_tombstone_authorized(&ctx, &target_key("alice"), &bundle).await;
+            is_tombstone_authorized(&mut ctx, &target_key("alice"), &bundle)
+                .await;
         assert!(!result.unwrap());
     }
 
     #[tokio::test]
     async fn validate_tombstones_passes_through_empty_input() {
-        let ctx = mock_ctx().await;
+        let mut ctx = mock_ctx().await;
         let validated =
-            validate_tombstones(&ctx, HashMap::new()).await.unwrap();
+            validate_tombstones(&mut ctx, HashMap::new()).await.unwrap();
         assert!(validated.is_empty());
     }
 
     #[tokio::test]
     async fn validate_tombstones_drops_target_when_all_bundles_invalid() {
-        let ctx = mock_ctx().await;
+        let mut ctx = mock_ctx().await;
         let bad = bundle_with_key(None);
         let mut deletes: HashMap<TargetEventKey, Vec<EventBundle>> =
             HashMap::new();
         deletes.insert(target_key("alice"), vec![bad]);
-        let validated = validate_tombstones(&ctx, deletes).await.unwrap();
+        let validated = validate_tombstones(&mut ctx, deletes).await.unwrap();
         assert!(validated.is_empty());
     }
 }

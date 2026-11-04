@@ -5,12 +5,12 @@ use std::ops::ControlFlow;
 use std::time::Duration;
 
 use sea_orm::sea_query::{Expr, PgFunc, SelectStatement};
-use sea_orm::{ConnectionTrait, DatabaseConnection, DbErr};
+use sea_orm::{DatabaseConnection, DbErr};
 use tokio::time::{MissedTickBehavior, interval};
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
-use crate::db::DbTx;
+use crate::db::{Connection, DbTx};
 
 mod gravity;
 

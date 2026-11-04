@@ -1,9 +1,9 @@
 //! Helpers shared across the pairing RPC handlers.
 
 use entity::pairing_session;
-use sea_orm::ConnectionTrait;
 use tonic::Status;
 
+use crate::db::Connection;
 use crate::service::identity::pairing::repository as pair_repo;
 use crate::service::proto as Proto;
 use crate::service::proto::SignedIssuerState;
@@ -25,8 +25,8 @@ pub fn session_state(
 }
 
 /// Derive an aggregated session state from the database.
-pub async fn load_session_state<C: ConnectionTrait>(
-    db: &C,
+pub async fn load_session_state<C: Connection>(
+    db: &mut C,
     digest_sha256: &[u8],
 ) -> Result<Proto::PairingSessionState, Status> {
     let session = pair_repo::Query::get_pairing_session(db, digest_sha256)
@@ -43,8 +43,8 @@ pub async fn load_session_state<C: ConnectionTrait>(
 }
 
 /// Lists a session's claimers, mapping database failures to a status.
-pub async fn list_claimers<C: ConnectionTrait>(
-    db: &C,
+pub async fn list_claimers<C: Connection>(
+    db: &mut C,
     digest_sha256: &[u8],
 ) -> Result<Vec<Proto::PublicKey>, Status> {
     pair_repo::Query::list_claimers(db, digest_sha256)

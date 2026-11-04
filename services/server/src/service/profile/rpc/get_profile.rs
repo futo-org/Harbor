@@ -12,7 +12,7 @@ use crate::service::proto::{GetProfileRequest, GetProfileResponse};
 use tonic::Status;
 
 pub async fn handle(
-    ctx: PublicContext,
+    mut ctx: PublicContext,
     req: GetProfileRequest,
 ) -> Result<GetProfileResponse, Status> {
     if req.identity.is_empty() {
@@ -20,20 +20,20 @@ pub async fn handle(
     }
 
     let profile_rows =
-        list_profile_events(&ctx, vec![req.identity.clone()]).await?;
+        list_profile_events(&mut ctx, vec![req.identity.clone()]).await?;
     let mut event_bundles = rows_into_bundles(profile_rows);
-    attach_proofs(&ctx, &mut event_bundles).await?;
+    attach_proofs(&mut ctx, &mut event_bundles).await?;
 
     let identity_rows =
-        list_identity_events(&ctx, vec![req.identity.clone()]).await?;
+        list_identity_events(&mut ctx, vec![req.identity.clone()]).await?;
     // The identity's key chain, so clients can validate the bundles.
     let event_hints = rows_into_hints(identity_rows);
 
     let following_count =
-        GraphRepository::count_following(&ctx, &req.identity).await?;
+        GraphRepository::count_following(&mut ctx, &req.identity).await?;
 
     let followers_count =
-        GraphRepository::count_followers(&ctx, &req.identity).await?;
+        GraphRepository::count_followers(&mut ctx, &req.identity).await?;
 
     Ok(GetProfileResponse {
         event_bundles,

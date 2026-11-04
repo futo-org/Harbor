@@ -7,6 +7,7 @@ use sea_orm::sea_query::{
 };
 use sea_orm::*;
 
+use crate::db::Connection;
 use crate::service::events::TargetEventKey;
 use crate::service::proto::ReportStatus;
 
@@ -42,8 +43,8 @@ impl Query {
     /// Oldest first. `after` is the previous page's last `latest_event_id`;
     /// `status` keeps one `ReportStatus`, open being no resolution row.
     #[tracing::instrument(skip_all)]
-    pub async fn list_reports<C: ConnectionTrait>(
-        db: &C,
+    pub async fn list_reports<C: Connection>(
+        db: &mut C,
         limit: u64,
         after: Option<i64>,
         status: Option<i16>,
@@ -198,8 +199,8 @@ pub struct Mutation;
 
 impl Mutation {
     #[tracing::instrument(skip_all)]
-    pub async fn resolve_report<C: ConnectionTrait>(
-        db: &C,
+    pub async fn resolve_report<C: Connection>(
+        db: &mut C,
         content_id: i64,
         status: i16,
         moderator: &str,
@@ -218,8 +219,8 @@ impl Mutation {
 
     /// After the event at `key` was deleted.
     #[tracing::instrument(skip_all)]
-    pub async fn resolve_reports_on_target<C: ConnectionTrait>(
-        db: &C,
+    pub async fn resolve_reports_on_target<C: Connection>(
+        db: &mut C,
         key: &TargetEventKey,
         moderator: &str,
     ) -> Result<(), DbErr> {
@@ -244,8 +245,8 @@ impl Mutation {
 
     /// After `author` was banned.
     #[tracing::instrument(skip_all)]
-    pub async fn resolve_reports_by_author<C: ConnectionTrait>(
-        db: &C,
+    pub async fn resolve_reports_by_author<C: Connection>(
+        db: &mut C,
         author: &str,
         moderator: &str,
     ) -> Result<(), DbErr> {

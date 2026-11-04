@@ -9,7 +9,7 @@ use sea_orm::sea_query::{Expr, InsertStatement, OnConflict};
 use sea_orm::*;
 use sha2::{Digest, Sha256};
 
-use crate::db::DbTx;
+use crate::db::{Connection, DbTx};
 use crate::service::proto::Blob;
 
 pub struct Query;
@@ -17,8 +17,8 @@ pub struct Query;
 impl Query {
     /// Look up a blob row by its body digest. `None` if not tracked.
     #[tracing::instrument(skip_all)]
-    pub async fn find_blob_by_digest<C: ConnectionTrait>(
-        db: &C,
+    pub async fn find_blob_by_digest<C: Connection>(
+        db: &mut C,
         digest_type: i16,
         digest_bytes: &[u8],
     ) -> Result<Option<content_blob::Model>, DbErr> {
@@ -32,8 +32,8 @@ impl Query {
     /// Search the database for blobs matching the provided digests
     /// and return a set of the digests that were found.
     #[tracing::instrument(skip_all)]
-    pub async fn find_digests_in_db<C: ConnectionTrait>(
-        db: &C,
+    pub async fn find_digests_in_db<C: Connection>(
+        db: &mut C,
         digests: &Vec<&ContentDigest>,
     ) -> Result<HashSet<ContentDigest>, DbErr> {
         if digests.is_empty() {
@@ -70,8 +70,8 @@ pub struct Mutation;
 
 impl Mutation {
     #[tracing::instrument(skip_all)]
-    async fn add_content<C: ConnectionTrait>(
-        db: &C,
+    async fn add_content<C: Connection>(
+        db: &mut C,
         serialized_bytes: &[u8],
         digest: &ContentDigest,
     ) -> Result<Option<i64>, DbErr> {
