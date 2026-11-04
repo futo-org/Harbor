@@ -11,7 +11,7 @@ import {
   useTheme,
 } from '@/src/common/theme';
 import { splitEmoji } from '@/src/common/emoji/splitEmoji';
-import { isAndroid, isIOS, isWeb } from '@/src/common/util/platform';
+import { isWeb } from '@/src/common/util/platform';
 
 // Twemoji draws the emoji (see `app/+html.tsx`).
 export const WEB_FONT_STACK =
@@ -19,18 +19,16 @@ export const WEB_FONT_STACK =
 
 export const WEB_MONOSPACE_FONT_STACK = 'NotoSansMono, monospace';
 
-export const IOS_FONT_FAMILY = 'Noto Sans';
-export const IOS_MONOSPACE_FONT_FAMILY = 'Noto Sans Mono';
-
-// Android gets each weight of the variable fonts as a family of its own (see
-// `app.config.ts`).
+// Each weight is its own family on native, named after the variable fonts'
+// instances (see `app.config.ts`). Keyed by every weight the theme can
+// produce, so adding a token without a family fails to compile.
 type FontWeightValue = (typeof typography.fontWeight)[FontWeightToken];
-export const ANDROID_FONTS: Record<FontWeightValue, string> = {
+export const NATIVE_FONTS: Record<FontWeightValue, string> = {
   '400': 'NotoSans-Regular',
   '600': 'NotoSans-SemiBold',
   '700': 'NotoSans-Bold',
 };
-export const ANDROID_MONOSPACE_FONTS: Record<FontWeightValue, string> = {
+export const NATIVE_MONOSPACE_FONTS: Record<FontWeightValue, string> = {
   '400': 'NotoSansMono-Regular',
   '600': 'NotoSansMono-SemiBold',
   '700': 'NotoSansMono-Bold',
@@ -108,13 +106,7 @@ export function Text({
     ? monospace
       ? WEB_MONOSPACE_FONT_STACK
       : WEB_FONT_STACK
-    : isAndroid
-      ? (monospace ? ANDROID_MONOSPACE_FONTS : ANDROID_FONTS)[
-          resolvedFontWeight
-        ]
-      : monospace
-        ? IOS_MONOSPACE_FONT_FAMILY
-        : IOS_FONT_FAMILY;
+    : (monospace ? NATIVE_MONOSPACE_FONTS : NATIVE_FONTS)[resolvedFontWeight];
 
   return (
     <UITextView
@@ -127,13 +119,7 @@ export function Text({
           color: color ? theme.palette[color] : theme.palette.neutral_900,
           fontSize: resolvedFontSize,
           lineHeight: resolvedLineHeight,
-          ...(isWeb && { fontWeight: resolvedFontWeight }),
-          // iOS sets the weight on the variable font's axis: it can't pick
-          // NotoSansMono's weights by `fontWeight` or by name (its file doesn't
-          // name them). The string form, as the iOS UITextView only passes strings.
-          ...(isIOS && {
-            fontVariationSettings: `'wght' ${resolvedFontWeight}`,
-          }),
+          ...(isWeb ? { fontWeight: resolvedFontWeight } : {}),
         },
         style,
       ]}

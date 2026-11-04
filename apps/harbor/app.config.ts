@@ -141,8 +141,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-font',
       {
-        // On iOS, `Text` refers to each font by the family name in its file
-        // ("Noto Sans", "Twemoji").
+        // On iOS, `Text` picks each weight of the variable fonts by its
+        // PostScript name (`NotoSans-SemiBold`, see `NATIVE_FONTS`), which a
+        // variable font gives each of its named instances, and Twemoji by its
+        // family name. The upstream NotoSansMono.ttf names no instances; the
+        // names were added by running this in apps/harbor:
+        // uv run --with fonttools python -c "from fontTools.ttLib import TTFont; f = TTFont('public/fonts/NotoSansMono.ttf', recalcTimestamp=False); [setattr(i, 'postscriptNameID', f['name'].addMultilingualName({'en': 'NotoSansMono-' + f['name'].getDebugName(i.subfamilyNameID)}, mac=False)) for i in f['fvar'].instances]; f.save('public/fonts/NotoSansMono.ttf')"
         ios: {
           fonts: [
             './public/fonts/NotoSans.ttf',
@@ -153,7 +157,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         android: {
           fonts: [
             // Each weight of the variable fonts is instanced once, at startup,
-            // as a family of its own (see `ANDROID_FONTS` in `Text`).
+            // as a family named like its iOS PostScript name.
             ...(['NotoSans', 'NotoSansMono'] as const).flatMap((font) =>
               (
                 [
