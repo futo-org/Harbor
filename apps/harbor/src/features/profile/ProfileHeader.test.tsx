@@ -114,6 +114,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
 jest.mock('@/src/common/theme', () => ({
   ...jest.requireActual('@/src/common/theme'),
   useTheme: () => ({ theme: { palette: { neutral_0: '#fff' } } }),
+  createThemedStyles: () => () => ({}),
   Atoms: new Proxy({}, { get: () => ({}) }),
 }));
 

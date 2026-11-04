@@ -5,6 +5,7 @@ jest.mock('@/src/common/theme', () => ({
       atoms: new Proxy({}, { get: () => ({}) }),
     },
   }),
+  createThemedStyles: () => () => ({}),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
   typography: { lineHeight: new Proxy({}, { get: () => 20 }) },
