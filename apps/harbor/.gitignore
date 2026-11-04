@@ -18,6 +18,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Written by webManifest.js for the dev server
+public/manifest.webmanifest
+
 .kotlin/
 *.orig.*
 *.jks

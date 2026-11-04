@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "APP_VARIANT=dev expo start",
+    "dev": "node webManifest.js && APP_VARIANT=dev expo start",
     "android": "APP_VARIANT=dev expo run:android",
     "ios": "APP_VARIANT=dev expo run:ios --device",
     "ios:e2e": "npx eas-cli env:exec staging 'APP_VARIANT=dev expo run:ios --configuration Release --device'",
@@ -13,7 +13,7 @@
     "android:release": "APP_VARIANT=dev expo run:android --variant release --no-bundler",
     "android:prod": "expo run:android",
     "ios:prod": "expo run:ios",
-    "web": "APP_VARIANT=dev expo start --web",
+    "web": "node webManifest.js && APP_VARIANT=dev expo start --web",
     "build:web": "APP_VARIANT=dev expo export --platform web",
     "serve:web": "PORT=8081 node server.js",
     "test": "jest",

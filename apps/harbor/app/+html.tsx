@@ -27,6 +27,13 @@ const FONT_STYLE = `
 // Switches to dev icons on local builds. Deployed apps use icons defined by server.js
 const ICON_SUFFIX = process.env.APP_VARIANT === 'dev' ? '-dev' : '';
 
+// Registered only on exported builds: the dev server serves bundles Metro
+// rebuilds on the fly, which a worker in front would only get in the way of.
+const SERVICE_WORKER_SCRIPT =
+  process.env.NODE_ENV === 'production'
+    ? "'serviceWorker' in navigator&&navigator.serviceWorker.register('/sw.js')"
+    : '';
+
 export default function Root({ children }: PropsWithChildren) {
   const { htmlAttributes, bodyAttributes, headNodes, bodyNodes } =
     useServerDocumentContext();
@@ -49,6 +56,13 @@ export default function Root({ children }: PropsWithChildren) {
           rel="apple-touch-icon"
           href={`/apple-touch-icon${ICON_SUFFIX}.png`}
         />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        {SERVICE_WORKER_SCRIPT && (
+          <script
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: static script, no user input
+            dangerouslySetInnerHTML={{ __html: SERVICE_WORKER_SCRIPT }}
+          />
+        )}
         {/* Placeholder replaced with runtime env by server.js at startup. */}
         <script
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static placeholder, no user input

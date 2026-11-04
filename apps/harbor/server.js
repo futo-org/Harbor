@@ -7,6 +7,7 @@ const {
   buildAssetLinks,
   buildPolycentricAliases,
 } = require('./appLinks');
+const { buildWebManifest, variantForHost } = require('./webManifest');
 
 const CLIENT_DIR = path.join(__dirname, 'dist', 'client');
 const handler = createRequestHandler({
@@ -146,16 +147,27 @@ function serveStatic(req, res, next) {
   });
 }
 
+// Built per host, since one image serves staging and production.
+function serveWebManifest(req, res, next) {
+  if (req.url.split('?')[0] !== '/manifest.webmanifest') return next();
+
+  res.setHeader('Content-Type', 'application/manifest+json');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.end(JSON.stringify(buildWebManifest(variantForHost(req.headers.host))));
+}
+
 createServer((req, res) => {
   serveVersion(req, res, () => {
     serveAppLinkFile(req, res, () => {
-      serveStatic(req, res, () => {
-        handler(req, res, (err) => {
-          if (err) {
-            console.error(err);
-            res.statusCode = 500;
-            res.end('Internal Server Error');
-          }
+      serveWebManifest(req, res, () => {
+        serveStatic(req, res, () => {
+          handler(req, res, (err) => {
+            if (err) {
+              console.error(err);
+              res.statusCode = 500;
+              res.end('Internal Server Error');
+            }
+          });
         });
       });
     });

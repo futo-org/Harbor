@@ -5,6 +5,7 @@ import accentByVariant from './src/common/assets/images/app-icons/variant-accent
 
 const { version: PKG_VERSION } = require('./package.json');
 const { appLinks } = require('./appLinks');
+const { variantConfig } = require('./variants');
 
 // 'dev' | 'staging' | 'production'. Staging comes from the eas.json
 // profile env; dev from the local scripts.
@@ -17,7 +18,11 @@ const DISTRIBUTION = process.env.APP_DISTRIBUTION ?? 'apk';
 const IS_DEV = VARIANT === 'dev';
 const IS_STAGING = VARIANT === 'staging';
 
-const NAME = IS_DEV ? 'Harbor Dev' : IS_STAGING ? 'Harbor Staging' : 'Harbor';
+const {
+  name: NAME,
+  iconSuffix: ICON_SUFFIX,
+  accent: ACCENT,
+} = variantConfig(VARIANT);
 const ID = IS_DEV
   ? 'org.futo.polycentric.dev'
   : IS_STAGING
@@ -25,12 +30,6 @@ const ID = IS_DEV
     : 'org.futo.polycentric';
 
 const SCHEME = IS_DEV ? 'harbor.dev' : IS_STAGING ? 'harbor.staging' : 'harbor';
-
-const ICON_SUFFIX = IS_DEV ? '-dev' : IS_STAGING ? '-staging' : '';
-// Unknown variants fall back to production, like the values above
-const ACCENT =
-  (accentByVariant as Record<string, string | undefined>)[VARIANT] ??
-  accentByVariant.production;
 
 // Web host whose links open this app (none for dev: verification needs a
 // public HTTPS domain). Claims the whole host; appLinks.js excludes paths.

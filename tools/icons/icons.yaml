@@ -17,9 +17,11 @@ dirs:
 # image resizing darkens semi-transparent pixels, so layers it resizes can't use opacity.
 # The accents are also written to $APP_IMG/app-icons/variant-accents.json for app.config.ts.
 variants:
-  production: { suffix: '', accent: '#FF6A00', white-on-accent: { opacity: 0.9 } }
-  staging: { suffix: '-staging', accent: '#FFBB29', white-on-accent: { opacity: 0.9 } }
-  dev: { suffix: '-dev', accent: '#07CF5E', white-on-accent: { opacity: 0.9 } }
+  production:
+    { suffix: "", accent: "#FF6A00", white-on-accent: { opacity: 0.9 } }
+  staging:
+    { suffix: "-staging", accent: "#FFBB29", white-on-accent: { opacity: 0.9 } }
+  dev: { suffix: "-dev", accent: "#07CF5E", white-on-accent: { opacity: 0.9 } }
 
 # Shared values, referenced below as *name; `<<:` copies a mapping in
 shared:
@@ -33,11 +35,11 @@ shared:
     font: tools/icons/fonts/OpenSans-ExtraBold.ttf
     # In em
     letterSpacing: 0.05
-    fill: '#FFFFFF'
+    fill: "#FFFFFF"
   ios-icon: &ios-icon
     canvas: 1024
     background: accent
-    tower: { <<: *ios-tower, fill: '#FFFFFF', opacity: 0.9 }
+    tower: { <<: *ios-tower, fill: "#FFFFFF", opacity: 0.9 }
 
 icons:
   # An Icon Composer bundle (a folder): the background is its fill, the tower
@@ -63,7 +65,7 @@ icons:
       - $APP_IMG/app-icons/android-icon-monochrome.png
     size: 512
     canvas: 108
-    tower: { <<: *android-tower, fill: '#354479' }
+    tower: { <<: *android-tower, fill: "#354479" }
 
   # The 108 dp canvas scaled to the 288 dp splash canvas (1152 px is xxxhdpi),
   # which keeps the tower inside Android's 192 dp splash circle
@@ -86,7 +88,7 @@ icons:
       - $APP_IMG/app-icons/android-notification-icon.png
     size: 96
     canvas: 24
-    tower: { height: 22, top: 1, fill: '#FFFFFF' }
+    tower: { height: 22, top: 1, fill: "#FFFFFF" }
 
   - files:
       - $APP_IMG/harbor-logo-256.png
@@ -110,13 +112,25 @@ icons:
       - $DOCS/favicon{suffix}.ico
     <<: *ios-icon
     clip: circle
-    sizes: [48, 32, 16]
+    sizes: [ 48, 32, 16 ]
+
+  # The web app manifest's icons, one file per size; the manifest built by
+  # the web app's webManifest.js names the variant's copies.
+  - files:
+      - $APP_PUBLIC/pwa-icon-192{suffix}.png
+    <<: *ios-icon
+    size: 192
+
+  - files:
+      - $APP_PUBLIC/pwa-icon-512{suffix}.png
+    <<: *ios-icon
+    size: 512
 
   # From the Figma design: the tower is top-aligned and centred, the text is centred
   - files:
       - $APP_IMG/harbor-logo-with-text.png
     size: 857
-    tower: { height: 608, top: 0, fill: '#FFFFFF', opacity: 0.9 }
+    tower: { height: 608, top: 0, fill: "#FFFFFF", opacity: 0.9 }
     text: { <<: *wordmark, fontSize: 180, baselineFromBottom: 14 }
 
   # The link preview card (og:image) of the docs and the web app: the logo with
@@ -126,5 +140,5 @@ icons:
       - $DOCS/harbor-social-card.png
     size: 1200x630
     background: accent
-    tower: { height: 288, top: 115, fill: '#FFFFFF', opacity: 0.9 }
+    tower: { height: 288, top: 115, fill: "#FFFFFF", opacity: 0.9 }
     text: { <<: *wordmark, fontSize: 85, baselineFromBottom: 115, opacity: 0.9 }
