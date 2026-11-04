@@ -20,16 +20,28 @@ anything the client put there, so downstream queries can trust those fields.
 | `GET /status` | — |
 
 Only `application/json` bodies are accepted. A signal whose upstream URL is
-unset answers `503`. `app.feedback` and `app.error` spans are also mirrored
-into VictoriaLogs as one record each (body: the feedback message or the
-error's status message; the span's attributes plus `span.name`; the trace
-id), so they can be listed and counted with LogsQL. Every `app.feedback`
-span is also posted to Zulip when the bot below is configured, each as a new
-topic in the channel named after the feedback and its trace id. Both
-happen alongside the trace; a failure is logged, never returned. Logs are forwarded with `VL-Stream-Fields` naming
-`service.name`, `service.version`, `deployment.environment.name` and
-`os.name`, so VictoriaLogs keeps one stream per app build and platform
-rather than one per user.
+unset answers `503`.
+
+Alongside the trace, the service also:
+
+- mirrors `app.feedback` and `app.error` spans into VictoriaLogs as one
+  record each (body: the feedback message or the error's status message;
+  the span's attributes plus `span.name`; the trace id), so they can be
+  listed and counted with LogsQL;
+- turns the `log` events of a feedback span into one record each (the
+  app's level and message as severity and body; the trace and span ids)
+  and drops them from the span, counted in its `droppedEventsCount`.
+  VictoriaTraces keeps a span as one row of at most 1000 fields, five per
+  event, and silently drops a span past that, which the app's 500-line
+  tail is;
+- posts every `app.feedback` span to Zulip when the bot below is
+  configured, as a new topic named after the feedback and its trace id,
+  linking the trace and its log lines in Grafana.
+
+A failure in any of these is logged, never returned. Logs are forwarded
+with `VL-Stream-Fields` naming `service.name`, `service.version`,
+`deployment.environment.name` and `os.name`, so VictoriaLogs keeps one
+stream per app build and platform rather than one per user.
 
 Request counts and latencies are exported as `http_server_requests` and
 `http_server_request_duration_seconds` (by `method`, `route`, `status`) on
@@ -55,6 +67,7 @@ All service variables are read and validated once at startup by
 | `HARBOR_OTLP_APP_URL` | _(unset)_ | Harbor web base URL; when set, relayed feedback links the identity to its profile. |
 | `HARBOR_OTLP_GRAFANA_URL` | _(unset)_ | Grafana in front of the Victoria stack; when set, relayed feedback links the trace to Explore. |
 | `HARBOR_OTLP_GRAFANA_TRACES_DATASOURCE` | `VictoriaTraces` | Uid or name of Grafana's Jaeger-type datasource for VictoriaTraces. |
+| `HARBOR_OTLP_GRAFANA_LOGS_DATASOURCE` | `VictoriaLogs` | Uid or name of Grafana's VictoriaLogs datasource, for the feedback's log lines. |
 
 Additionally various shared variables are read, see the table in
 [`services/server/README.md`](../server/README.md#common-environment-variables).
