@@ -3,7 +3,7 @@ services:
     image: harbor-postgres
     build:
       context: .
-      dockerfile: Dockerfile.pg
+      dockerfile: services/postgres/Dockerfile
     environment:
       POSTGRES_PASSWORD: testing
     volumes:
