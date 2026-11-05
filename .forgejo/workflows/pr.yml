@@ -23,7 +23,7 @@ jobs:
   changes:
     name: Plan
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
-    timeout-minutes: 15
+    timeout-minutes: 2
     container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     outputs:
       registry: ${{ steps.plan.outputs.registry }}
