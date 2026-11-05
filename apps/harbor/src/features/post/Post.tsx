@@ -84,6 +84,7 @@ export const Post = memo(function Post({
   const { hasWarnContent, warnLabels } = usePostModeration(post.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);
   const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
+  const handleWarnRestore = useCallback(() => setWarnDismissed(false), []);
 
   const avatar = authorIdentity ? (
     <ProfileAvatar
@@ -138,8 +139,11 @@ export const Post = memo(function Post({
         post={post}
         hideReplyingTo={hideReplyingTo}
         compactLinkPreview={compactLinkPreview}
-        authorIdentity={authorIdentity}
         focusedView={focusedView}
+        labelPill={{
+          labels: post.labels ?? [],
+          onHide: hasWarnContent ? handleWarnRestore : undefined,
+        }}
       />
     );
 

@@ -3,12 +3,18 @@
 // namespace, so expose just that (sourced from js-core's generated protos).
 jest.mock('@polycentric/react-native', () => ({
   v2: jest.requireActual('../../../../../../packages/js-core/src/proto/v2'),
+  COLLECTION: { IDENTITY: 1 },
+  labelsFromGetProfileResponse: () => mockLabelSets,
 }));
 
 import { v2 } from '@polycentric/react-native';
+import type { LabelSet } from '@polycentric/react-native';
+import { ffiEventKeyId as eventKeyId } from '@/src/common/lib/polycentric-hooks/helpers';
 import { decodeProfile } from './decodeProfile';
 
 const IDENTITY = 'someidentity';
+const SIGNING_KEY = new Uint8Array([7]);
+let mockLabelSets: LabelSet[] = [];
 
 function profileContent(
   fields: Partial<{
@@ -25,11 +31,16 @@ function profileContent(
   });
 }
 
-function bundle(content: v2.Content, sequence: number): v2.EventBundle {
+function bundle(
+  content: v2.Content,
+  sequence: number,
+  collection = 3,
+): v2.EventBundle {
   const event = v2.Event.create({
     key: v2.EventKey.create({
-      collection: 3,
+      collection,
       identity: IDENTITY,
+      signedBy: v2.PublicKey.create({ keyType: 1, key: SIGNING_KEY }),
       sequence: BigInt(sequence),
     }),
     createdAt: 1000n,
@@ -48,10 +59,14 @@ function bundle(content: v2.Content, sequence: number): v2.EventBundle {
 function serializedResponse(
   bundles: v2.EventBundle[],
   counts?: { following: number; followers: number },
+  hints: v2.EventBundle[] = [],
 ): Uint8Array {
   return v2.GetProfileResponse.toBinary(
     v2.GetProfileResponse.create({
       eventBundles: bundles,
+      eventHints: hints.map((eventBundle) =>
+        v2.EventHint.create({ eventBundle }),
+      ),
       followingCount: BigInt(counts?.following ?? 0),
       followersCount: BigInt(counts?.followers ?? 0),
     }),
@@ -110,5 +125,33 @@ describe('decodeProfile', () => {
   it('defaults the counters to zero', () => {
     expect(decodeProfile(serializedResponse([])).followingCount).toBe(0);
     expect(decodeProfile(serializedResponse([])).followersCount).toBe(0);
+  });
+
+  it('targets the first identity event and collects the latest profile labels', () => {
+    const target = (collection: number, sequence: bigint) => ({
+      collection,
+      identity: IDENTITY,
+      signedBy: { keyType: 1, key: SIGNING_KEY.buffer as ArrayBuffer },
+      sequence,
+    });
+    const labels = [{ value: 'hate', labeledBy: 'moderator' }];
+    mockLabelSets = [
+      { target: target(3, 1n), labels: [{ value: 'spam', labeledBy: 'x' }] },
+      { target: target(3, 2n), labels },
+    ];
+    const decoded = decodeProfile(
+      serializedResponse(
+        [
+          bundle(profileContent({ name: 'Alice' }), 1),
+          bundle(profileContent({ name: 'Alice' }), 2),
+        ],
+        undefined,
+        [bundle(v2.Content.create(), 1, 1)],
+      ),
+    );
+    mockLabelSets = [];
+    expect(decoded.eventId).toBe(eventKeyId(target(1, 1n)));
+    expect(decoded.labels).toEqual(labels);
+    expect(decodeProfile(serializedResponse([])).eventId).toBeNull();
   });
 });

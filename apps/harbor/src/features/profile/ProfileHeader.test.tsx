@@ -30,6 +30,7 @@ jest.mock('./hooks/useProfile', () => ({
     banner: null,
     alias: null,
     ...mockCounts,
+    labels: [],
     isLoading: false,
     error: null,
     refresh: () => undefined,
