@@ -274,16 +274,14 @@ async fn label_on_profile_served_with_the_profile() {
     );
     moderator.submit_events().await;
 
-    let resp =
-        profile_service_client::ProfileServiceClient::connect(grpc_addr())
-            .await
-            .expect("failed to connect to gRPC server")
-            .get_profile(GetProfileRequest {
-                identity: author.identity().to_string(),
-            })
-            .await
-            .expect("get_profile failed")
-            .into_inner();
+    let resp = connect_profile()
+        .await
+        .get_profile(GetProfileRequest {
+            identity: author.identity().to_string(),
+        })
+        .await
+        .expect("get_profile failed")
+        .into_inner();
     assert_eq!(resp.event_bundles.len(), 1);
     expect_hints(
         &resp.event_hints,
