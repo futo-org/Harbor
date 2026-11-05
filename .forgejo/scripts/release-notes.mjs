@@ -28,19 +28,17 @@ if (!openRouterToken) {
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
 
-let previous = '';
-try {
-  previous = git(
-    'describe',
-    '--tags',
-    '--abbrev=0',
-    '--match',
-    'v[0-9]*',
-    `${head}^`,
-  ).trim();
-} catch {
-  // First release.
-}
+// The next version down, as a release may be tagged off develop.
+const tags = git('tag', '-l', 'v[0-9]*', '--sort=-v:refname')
+  .split('\n')
+  .filter(Boolean);
+const atHead = new Set(
+  git('tag', '-l', 'v[0-9]*', '--points-at', head).split('\n').filter(Boolean),
+);
+const previous =
+  tags
+    .slice(tags.indexOf(process.env.GITHUB_REF_NAME) + 1)
+    .find((t) => !atHead.has(t)) ?? '';
 
 const FIELD = '\x1f';
 const RECORD = '\x1e';
