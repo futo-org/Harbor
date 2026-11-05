@@ -13,11 +13,9 @@ export class ContentManager {
   }
 
   /**
-   * Builds ContentDigest from a provided Content
+   * Builds ContentDigest from serialized content
    */
-  buildDigest(content: Proto.Content) {
-    const contentBytes = Proto.Content.toBinary(content);
-
+  buildDigest(contentBytes: Uint8Array) {
     return Proto.ContentDigest.create({
       type: Proto.ContentDigestType.SHA256,
       value: sha256(contentBytes),

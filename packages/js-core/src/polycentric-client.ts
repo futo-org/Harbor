@@ -59,13 +59,13 @@ export type BuildEventArgs = {
   identityKey: string;
   collection: Collection | number;
   signer: Proto.PublicKey;
-  contentBytes: Uint8Array;
   content: Proto.Content;
 };
 
 export type BuiltEvent = {
   event: Proto.Event;
   eventKey: Proto.EventKey;
+  contentBytes: Uint8Array;
 };
 
 export type CommitEventArgs = {
@@ -375,6 +375,7 @@ export class PolycentricClient {
     signer,
     content,
   }: BuildEventArgs): Promise<BuiltEvent> {
+    const contentBytes = Proto.Content.toBinary(content);
     const sequence = this.core.nextSequence(identityKey, collection);
 
     // identity_sequence must reference an identity event signed by the
@@ -412,8 +413,7 @@ export class PolycentricClient {
       identitySequence,
       previousSignature,
       previousRoot,
-      // TODO: this should use the serialized content bytes
-      contentDigest: this.contentManager.buildDigest(content),
+      contentDigest: this.contentManager.buildDigest(contentBytes),
       createdAt: BigInt(Date.now()),
       application: this.application,
     });
@@ -425,7 +425,7 @@ export class PolycentricClient {
         : undefined;
     event.vectorClock = this.buildVectorClock(event, identityContentForVC);
 
-    return { event, eventKey };
+    return { event, eventKey, contentBytes };
   }
 
   /**
@@ -496,14 +496,11 @@ export class PolycentricClient {
       throw new Error('Must be logged in to create events.');
     }
 
-    // Derive event and content
-    const contentBytes = Proto.Content.toBinary(content);
-
-    const { event, eventKey } = await this.buildEvent({
+    // Derive event and serialized content
+    const { event, eventKey, contentBytes } = await this.buildEvent({
       identityKey,
       collection,
       signer: keyPair.publicKey,
-      contentBytes,
       content,
     });
 
@@ -511,7 +508,7 @@ export class PolycentricClient {
     const signedEvent = await this.signEvent(event, keyPair);
 
     // Persist event and content locally
-    // This event can be considered reliable after this succeeds
+    // This event can be considered canonical after this succeeds
     await this.commitEvent({
       owner: identityKey,
       signedEvent,

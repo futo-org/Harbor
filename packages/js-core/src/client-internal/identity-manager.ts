@@ -52,7 +52,6 @@ export interface IdentityUpdate {
 export interface IdentityDraft {
   identity: Proto.Identity;
   content: Proto.Content;
-  contentBytes: Uint8Array;
 }
 
 /**
@@ -118,9 +117,7 @@ export class IdentityManager {
       contentBody: { oneofKind: 'identity', identity },
     });
 
-    const contentBytes = Proto.Content.toBinary(content);
-
-    return { identity, content, contentBytes };
+    return { identity, content };
   }
 
   /**

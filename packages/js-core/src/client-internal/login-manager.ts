@@ -80,7 +80,7 @@ export class LoginManager {
     args: PublishArgs,
   ): Promise<IdentityUpdate> {
     // Create event/content
-    const { identity, content, contentBytes } =
+    const { identity, content } =
       this.client.identityManager.draftIdentityContent(args);
 
     const publicKey = keyPair.publicKey;
@@ -88,11 +88,10 @@ export class LoginManager {
     const power = this.checkAuthorization(identity, publicKey);
     if (!power) throw new Error('Key is not authorized by the identity');
 
-    const { event } = await this.client.buildEvent({
+    const { event, contentBytes } = await this.client.buildEvent({
       identityKey,
       collection: COLLECTION.IDENTITY,
       signer: publicKey,
-      contentBytes,
       content,
     });
 
@@ -381,6 +380,9 @@ export class LoginManager {
       contentBody: { oneofKind: 'identity', identity },
     });
 
+    const contentBytes = Proto.Content.toBinary(content);
+
+    // TODO: standardize this with an rs-common API
     const identityKey = bytesToHex(
       sha256(Proto.Identity.toBinary(identity)),
       32,
@@ -398,7 +400,7 @@ export class LoginManager {
       identitySequence: 1n,
       vectorClock: Proto.VectorClock.create({ sequence: [1n] }),
       previousSignature: new Uint8Array(0),
-      contentDigest: this.client.contentManager.buildDigest(content),
+      contentDigest: this.client.contentManager.buildDigest(contentBytes),
       createdAt: BigInt(Date.now()),
       application: this.client.application,
     });
@@ -410,9 +412,7 @@ export class LoginManager {
       keyPair,
       genesisEvent,
       identityContent: content,
-      serializedContent: Proto.SerializedContent.create({
-        contentBytes: Proto.Content.toBinary(content),
-      }),
+      serializedContent: Proto.SerializedContent.create({ contentBytes }),
     };
   }
 
