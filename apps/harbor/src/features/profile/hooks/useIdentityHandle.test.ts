@@ -1,6 +1,9 @@
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   shortenIdentityId: (identity: string) => identity.slice(0, 10),
 }));
+jest.mock('@polycentric/react-native', () => ({
+  FetchMode: { OfflineFirst: 'OfflineFirst' },
+}));
 jest.mock('./useProfile', () => ({ useProfile: jest.fn() }));
 
 import { renderHook, waitFor } from '@testing-library/react-native';
@@ -26,14 +29,14 @@ beforeEach(() => {
 
 describe('useIdentityHandle', () => {
   it('is loading while the profile loads', async () => {
-    mockProfile({ alias: null, isLoading: true, isResolved: false });
+    mockProfile({ alias: null, isLoading: true });
 
     const { result } = await renderHook(() => useIdentityHandle(ALICE));
     expect(result.current).toEqual({ kind: 'loading', text: '…' });
   });
 
   it('is loading without an identity', async () => {
-    mockProfile({ alias: null, isLoading: false, isResolved: false });
+    mockProfile({ alias: null });
 
     const { result } = await renderHook(() => useIdentityHandle(null));
     expect(result.current).toEqual({ kind: 'loading', text: '…' });
@@ -112,14 +115,9 @@ describe('useIdentityHandle', () => {
   });
 });
 
-function mockProfile(profile: {
-  alias: string | null;
-  isLoading?: boolean;
-  isResolved?: boolean;
-}) {
+function mockProfile(profile: { alias: string | null; isLoading?: boolean }) {
   mockUseProfile.mockReturnValue({
     isLoading: false,
-    isResolved: true,
     ...profile,
   });
 }

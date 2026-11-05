@@ -1,4 +1,5 @@
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
+import { FetchMode } from '@polycentric/react-native';
 import { useEffect } from 'react';
 import { normalizeAlias } from '../alias/helpers';
 import { useAliasResolutionStore } from '../alias/useAliasResolutionStore';
@@ -12,7 +13,11 @@ export interface IdentityHandleResult {
 export function useIdentityHandle(
   identity: string | null | undefined,
 ): IdentityHandleResult {
-  const profile = useProfile(identity);
+  const profile = useProfile(identity, {
+    // Identity without profile events has nothing to cache, and would
+    // otherwise never resolve
+    fetchMode: FetchMode.OfflineFirst,
+  });
   const claimedAlias = profile.alias ? normalizeAlias(profile.alias) : null;
 
   const resolvedIdentity = useAliasResolutionStore((state) =>
@@ -24,10 +29,7 @@ export function useIdentityHandle(
     if (claimedAlias) void resolveAlias(claimedAlias);
   }, [claimedAlias, resolveAlias]);
 
-  if (
-    !identity ||
-    (!profile.alias && (profile.isLoading || !profile.isResolved))
-  ) {
+  if (!identity || (!profile.alias && profile.isLoading)) {
     return { kind: 'loading', text: '…' };
   }
 

@@ -159,7 +159,6 @@ jest.mock('@/src/features/profile/hooks/useProfile', () => ({
     name: 'Alice',
     alias: mockProfileAlias,
     isLoading: false,
-    isResolved: true,
   }),
 }));
 
