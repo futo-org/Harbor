@@ -41,13 +41,15 @@ pub struct Zulip {
     pub stream: String,
 }
 
-/// Grafana base URL (`HARBOR_OTLP_GRAFANA_URL`) and the uid or name of its
+/// Grafana base URL (`HARBOR_OTLP_GRAFANA_URL`) and the uids or names of its
 /// Jaeger-type datasource for VictoriaTraces
-/// (`HARBOR_OTLP_GRAFANA_TRACES_DATASOURCE`).
+/// (`HARBOR_OTLP_GRAFANA_TRACES_DATASOURCE`) and VictoriaLogs datasource
+/// (`HARBOR_OTLP_GRAFANA_LOGS_DATASOURCE`).
 #[derive(Clone)]
 pub struct Grafana {
     pub url: String,
     pub traces_datasource: String,
+    pub logs_datasource: String,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -75,6 +77,8 @@ pub fn init() -> Result<&'static Config, String> {
             url,
             traces_datasource: optional("HARBOR_OTLP_GRAFANA_TRACES_DATASOURCE")
                 .unwrap_or_else(|| "VictoriaTraces".to_string()),
+            logs_datasource: optional("HARBOR_OTLP_GRAFANA_LOGS_DATASOURCE")
+                .unwrap_or_else(|| "VictoriaLogs".to_string()),
         }),
     };
     Ok(CONFIG.get_or_init(|| config))

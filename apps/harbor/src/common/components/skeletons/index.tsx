@@ -1,6 +1,7 @@
 import { AVATAR_SIZE_MAP } from '@/src/common/components/Avatar/Avatar';
 import { useTheme, withHexOpacity } from '@/src/common/theme';
-import { Fragment, type ReactNode, useEffect } from 'react';
+import { PageActiveContext } from '@/src/common/components/PagerView/PageActiveContext';
+import { Fragment, type ReactNode, useContext, useEffect } from 'react';
 import { View } from 'react-native';
 import {
   cancelAnimation,
@@ -16,15 +17,19 @@ export const AVATAR_SIZE = AVATAR_SIZE_MAP.md;
 export const PULSE_MS = 900;
 
 export function useShimmerOpacity() {
+  // A running animation makes Reanimated commit the whole tree every frame, so
+  // skeletons on a pager page that isn't showing stay static.
+  const animate = useContext(PageActiveContext);
   const opacity = useSharedValue(0.5);
   useEffect(() => {
+    if (!animate) return;
     opacity.value = withRepeat(
       withTiming(1, { duration: PULSE_MS, easing: Easing.inOut(Easing.ease) }),
       -1,
       true,
     );
     return () => cancelAnimation(opacity);
-  }, [opacity]);
+  }, [opacity, animate]);
   return useAnimatedStyle(() => ({ opacity: opacity.value }));
 }
 

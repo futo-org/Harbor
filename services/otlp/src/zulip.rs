@@ -120,20 +120,49 @@ fn feedback_message(resource: &[KeyValue], span: &Span, config: &Config) -> Stri
     if !email.is_empty() {
         details.push(format!("Email: {email}"));
     }
-    details.push(format!("Logs attached: {logs}"));
+    let grafana = config
+        .grafana
+        .as_ref()
+        .filter(|_| !span.trace_id.is_empty());
+    details.push(format!(
+        "Logs attached: {}",
+        linked(
+            &logs.to_string(),
+            grafana
+                .filter(|_| logs > 0)
+                .map(|grafana| logs_url(grafana, &trace_id, span)),
+        )
+    ));
     details.push(format!(
         "Trace: {}",
         linked(
             &format!("`{trace_id}`"),
-            config
-                .grafana
-                .as_ref()
-                .filter(|_| !span.trace_id.is_empty())
-                .map(|grafana| trace_url(grafana, &trace_id)),
+            grafana.map(|grafana| trace_url(grafana, &trace_id)),
         )
     ));
     lines.push(details.join(" · "));
     lines.join("\n")
+}
+
+/// Explore, listing the feedback's log lines by trace id over the hour
+/// around the span, or the last 30 days when it is untimed.
+fn logs_url(grafana: &Grafana, trace_id: &str, span: &Span) -> String {
+    const HOUR_NANOS: u64 = 3_600_000_000_000;
+    let range = if span.start_time_unix_nano > 0 {
+        let from = span.start_time_unix_nano.saturating_sub(HOUR_NANOS) / 1_000_000;
+        let to = span.end_time_unix_nano.max(span.start_time_unix_nano) + HOUR_NANOS;
+        serde_json::json!({ "from": from.to_string(), "to": (to / 1_000_000).to_string() })
+    } else {
+        serde_json::json!({ "from": "now-30d", "to": "now" })
+    };
+    let panes = serde_json::json!({
+        "a": {
+            "datasource": grafana.logs_datasource,
+            "queries": [{ "refId": "A", "expr": format!("trace_id:{trace_id}") }],
+            "range": range,
+        },
+    });
+    explore_url(grafana, &panes)
 }
 
 fn linked(text: &str, url: Option<String>) -> String {
@@ -148,13 +177,16 @@ fn trace_url(grafana: &Grafana, trace_id: &str) -> String {
     let panes = serde_json::json!({
         "a": {
             "datasource": grafana.traces_datasource,
-            "queries": [{
-                "refId": "A",
-                "datasource": { "type": "jaeger", "uid": grafana.traces_datasource },
-                "query": trace_id,
-            }],
+            "queries": [{ "refId": "A", "query": trace_id }],
         },
     });
+    explore_url(grafana, &panes)
+}
+
+/// The pane datasource may be a uid or a name. Queries carry no datasource
+/// of their own: Grafana drops a query whose datasource uid is not the
+/// pane's, and a name there never matches.
+fn explore_url(grafana: &Grafana, panes: &serde_json::Value) -> String {
     let query = form_urlencoded::Serializer::new(String::new())
         .append_pair("schemaVersion", "1")
         .append_pair("panes", &panes.to_string())
@@ -326,6 +358,7 @@ mod tests {
         let grafana = Grafana {
             url: "https://grafana.example".to_string(),
             traces_datasource: "VictoriaTraces".to_string(),
+            logs_datasource: "VictoriaLogs".to_string(),
         };
         let messages = feedback_messages(
             &request(vec![Span {
@@ -339,7 +372,7 @@ mod tests {
 
         let trace_id = "ab".repeat(16);
         let panes = format!(
-            "{{\"a\":{{\"datasource\":\"VictoriaTraces\",\"queries\":[{{\"datasource\":{{\"type\":\"jaeger\",\"uid\":\"VictoriaTraces\"}},\"query\":\"{trace_id}\",\"refId\":\"A\"}}]}}}}"
+            "{{\"a\":{{\"datasource\":\"VictoriaTraces\",\"queries\":[{{\"query\":\"{trace_id}\",\"refId\":\"A\"}}]}}}}"
         );
         let panes: String = form_urlencoded::byte_serialize(panes.as_bytes()).collect();
         assert_eq!(
@@ -351,10 +384,48 @@ mod tests {
     }
 
     #[test]
+    fn links_attached_logs_to_grafana_around_the_span() {
+        let grafana = Grafana {
+            url: "https://grafana.example".to_string(),
+            traces_datasource: "VictoriaTraces".to_string(),
+            logs_datasource: "VictoriaLogs".to_string(),
+        };
+        let messages = feedback_messages(
+            &request(vec![Span {
+                name: FEEDBACK_SPAN.to_string(),
+                trace_id: vec![0xab; 16],
+                start_time_unix_nano: 1_700_000_000_000_000_000,
+                end_time_unix_nano: 1_700_000_001_000_000_000,
+                attributes: vec![string_attribute("harbor.feedback.message", "hi")],
+                events: vec![Event {
+                    name: "log".to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }]),
+            &config(None, Some(grafana)),
+        );
+
+        let trace_id = "ab".repeat(16);
+        let panes = format!(
+            "{{\"a\":{{\"datasource\":\"VictoriaLogs\",\"queries\":[{{\"expr\":\"trace_id:{trace_id}\",\"refId\":\"A\"}}],\"range\":{{\"from\":\"1699996400000\",\"to\":\"1700003601000\"}}}}}}"
+        );
+        let panes: String = form_urlencoded::byte_serialize(panes.as_bytes()).collect();
+        let details = messages[0].content.lines().last().unwrap().to_string();
+        assert!(
+            details.starts_with(&format!(
+                "Logs attached: [1](https://grafana.example/explore?schemaVersion=1&panes={panes}) · Trace: [`{trace_id}`]("
+            )),
+            "{details}"
+        );
+    }
+
+    #[test]
     fn feedback_without_extras_is_still_relayed() {
         let grafana = Grafana {
             url: "https://grafana.example".to_string(),
             traces_datasource: "VictoriaTraces".to_string(),
+            logs_datasource: "VictoriaLogs".to_string(),
         };
         let messages = feedback_messages(
             &ExportTraceServiceRequest {
