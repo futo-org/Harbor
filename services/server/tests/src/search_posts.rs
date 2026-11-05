@@ -17,7 +17,37 @@ async fn no_match() {
 }
 
 #[tokio::test]
-async fn match_text() {
+async fn match_text_exactly() {
+    let key = signing_key("match_random_text_exactly");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let post_text = "According to Wikipedia Honorificabilitudinitatibus is one of the longest words in the English language";
+    let query = "Honorificabilitudinitatibus";
+    client.post_text(post_text, current_timestamp());
+    client.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query: query.to_owned(),
+            sort_by: None,
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        vec![Post {
+            text: post_text.to_owned(),
+            reply: None,
+            images: vec![],
+            quote: None,
+            links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
+        }],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn match_random_text_exactly() {
     let mut client = TestClient::new().await;
 
     let post_text = random_string();
@@ -45,16 +75,79 @@ async fn match_text() {
 }
 
 #[tokio::test]
+async fn words_are_stemmed() {
+    let key = signing_key("words_are_stemmed");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let post_text = "Running down a dream!"; // https://www.youtube.com/watch?v=dXYl5NrHPb4
+    client.post_text(post_text, current_timestamp());
+    client.submit_events().await;
+
+    for query in ["run", "running", "runs"] {
+        expect_searched_posts(
+            SearchPostsRequest {
+                query: query.to_owned(),
+                sort_by: None,
+                page_params: None,
+                omit_labels: Vec::new(),
+            },
+            vec![Post {
+                text: post_text.to_owned(),
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            }],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
 async fn match_on_hashtags() {
+    let key = signing_key("match_on_hashtags");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let post_text = "We can post #great #stuff with hashtags!";
+    client.post_text(&post_text, current_timestamp());
+    client.submit_events().await;
+
+    for hashtag in ["great", "stuff"] {
+        expect_searched_posts(
+            SearchPostsRequest {
+                query: hashtag.to_owned(),
+                sort_by: None,
+                page_params: None,
+                omit_labels: Vec::new(),
+            },
+            vec![Post {
+                text: post_text.to_owned(),
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            }],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn match_on_random_hashtags() {
     let mut client = TestClient::new().await;
 
-    let post_text = "#great #stuff";
+    let hash = random_string();
+    let post_text = format!("What about hashes? #{hash}.");
     client.post_text(&post_text, current_timestamp());
     client.submit_events().await;
 
     expect_searched_posts(
         SearchPostsRequest {
-            query: post_text.into(),
+            query: hash.to_owned(),
             sort_by: None,
             // Limit to 1 post as each time we test we create another. All we're
             // interested in is that one of them is returned, not which one.
@@ -65,7 +158,7 @@ async fn match_on_hashtags() {
             omit_labels: Vec::new(),
         },
         vec![Post {
-            text: post_text.into(),
+            text: post_text.to_owned(),
             reply: None,
             images: vec![],
             quote: None,
@@ -75,6 +168,224 @@ async fn match_on_hashtags() {
         }],
     )
     .await;
+}
+
+#[tokio::test]
+async fn match_on_identity() {
+    let mut client = TestClient::new().await;
+
+    let post_text = format!("A post with an identity '{}'", client.identity());
+    client.post_text(&post_text, current_timestamp());
+    client.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query: client.identity().to_owned(),
+            sort_by: None,
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        vec![Post {
+            text: post_text.to_owned(),
+            reply: None,
+            images: vec![],
+            quote: None,
+            links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
+        }],
+    )
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "TODO: add prefix matching for this"]
+async fn match_on_identity_prefix() {
+    let mut client = TestClient::new().await;
+
+    let post_text = format!("A post with an identity '{}'", client.identity());
+    client.post_text(&post_text, current_timestamp());
+    client.submit_events().await;
+
+    for n in 4..client.identity().len() {
+        expect_searched_posts(
+            SearchPostsRequest {
+                query: client.identity()[..n].to_owned(),
+                sort_by: None,
+                page_params: None,
+                omit_labels: Vec::new(),
+            },
+            vec![Post {
+                text: post_text.to_owned(),
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            }],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+#[ignore = "TODO: add prefix matching to support matching on '@futo' and 'futo'"]
+async fn match_on_mention() {
+    let key = signing_key("match_on_mention");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let post_text = format!(
+        "Let's mention someone @{{{},mark@futo.tech}}",
+        client.identity()
+    );
+    client.post_text(&post_text, current_timestamp());
+    client.submit_events().await;
+
+    for query in [
+        "mark@futo.tech",
+        "mark@futo",
+        "mark",
+        "mark@",
+        "@futo.tech",
+        "futo.tech",
+        "@futu",
+        "futu",
+        client.identity(),
+    ] {
+        expect_searched_posts(
+            SearchPostsRequest {
+                query: query.to_owned(),
+                sort_by: None,
+                page_params: None,
+                omit_labels: Vec::new(),
+            },
+            vec![Post {
+                text: post_text.to_owned(),
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            }],
+        )
+        .await;
+    }
+
+    for n in 4..client.identity().len() {
+        expect_searched_posts(
+            SearchPostsRequest {
+                query: client.identity()[..n].to_owned(),
+                sort_by: None,
+                page_params: None,
+                omit_labels: Vec::new(),
+            },
+            vec![Post {
+                text: post_text.to_owned(),
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            }],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn non_ascii_words_work() {
+    let key = signing_key("non_ascii_words_work");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let post_text = "「世界、こんにちは。"; // Hello, World! (according to the internet).
+    client.post_text(post_text, current_timestamp());
+    client.submit_events().await;
+
+    for query in ["世界", "こんにちは"] {
+        expect_searched_posts(
+            SearchPostsRequest {
+                query: query.to_owned(),
+                sort_by: None,
+                page_params: None,
+                omit_labels: Vec::new(),
+            },
+            vec![Post {
+                text: post_text.to_owned(),
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            }],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn accents_are_ignored() {
+    let key = signing_key("accents_are_ignored");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let post_text = "Dast ist eine schön café für dich";
+    client.post_text(post_text, current_timestamp());
+    client.submit_events().await;
+
+    for query in ["schon", "cafe", "fur"] {
+        expect_searched_posts(
+            SearchPostsRequest {
+                query: query.to_owned(),
+                sort_by: None,
+                page_params: None,
+                omit_labels: Vec::new(),
+            },
+            vec![Post {
+                text: post_text.to_owned(),
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            }],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn stop_words_are_included() {
+    let key = signing_key("stop_words_are_included");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let post_text = "A or An? That is the question.";
+    client.post_text(post_text, current_timestamp());
+    client.submit_events().await;
+
+    for query in ["a", "an", "the"] {
+        expect_searched_posts_contains(
+            SearchPostsRequest {
+                query: query.to_owned(),
+                sort_by: None,
+                page_params: None,
+                omit_labels: Vec::new(),
+            },
+            vec![Post {
+                text: post_text.to_owned(),
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            }],
+        )
+        .await;
+    }
 }
 
 #[tokio::test]
@@ -390,43 +701,32 @@ async fn pagination_order_by_latest() {
 
 #[tokio::test]
 async fn regression_1570() {
-    let mut client = TestClient::new().await;
+    let key = signing_key("regression_1570");
+    let mut client = TestClient::new_with_identity(key).await;
 
     let post_text = "First line\n#some\n#the";
     client.post_text(post_text, current_timestamp());
-    let post_key = client.get_last_event_key();
     client.submit_events().await;
 
-    let mut search = search_service().await;
-    let request = SearchPostsRequest {
-        query: "some the".to_owned(),
-        sort_by: Some(SortPostsBy::Latest as _),
-        page_params: Some(PageParams {
-            limit: Some(2),
-            ..Default::default()
-        }),
-        omit_labels: Vec::new(),
-    };
-    let response = search.search_posts(request).await.unwrap();
-    let results = response.into_inner().results;
-
     // We can match results, as long as one of them is the text we expect.
-    assert!(results.iter().any(|result| {
-        let key = Event::decode(
-            &*result
-                .event_bundle
-                .as_ref()
-                .unwrap()
-                .signed_event
-                .as_ref()
-                .unwrap()
-                .event_bytes,
-        )
-        .unwrap()
-        .key
-        .unwrap();
-        key == post_key
-    }));
+    expect_searched_posts_contains(
+        SearchPostsRequest {
+            query: "some the".to_owned(),
+            sort_by: None,
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        vec![Post {
+            text: post_text.to_owned(),
+            reply: None,
+            images: vec![],
+            quote: None,
+            links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
+        }],
+    )
+    .await;
 }
 
 async fn expect_searched_posts(
@@ -439,6 +739,46 @@ async fn expect_searched_posts(
         response.into_inner().results
     })
     .await
+}
+
+async fn expect_searched_posts_contains(
+    request: SearchPostsRequest,
+    mut expected: Vec<Post>,
+) {
+    eprintln!("query: {:#?}", request.query);
+    let results = async {
+        let mut search = search_service().await;
+        let response = search.search_posts(request).await.unwrap();
+        response.into_inner().results
+    }
+    .await;
+    eprintln!("expected: {expected:#?}");
+    eprintln!("results: {results:#?}");
+
+    for result in results {
+        let event = result.event_bundle.unwrap();
+        let Some(serialized_content) = event.serialized_content.as_ref() else {
+            panic!("missing content in event: {event:?}");
+        };
+        let Ok(content) = Content::decode(&*serialized_content.content_bytes)
+        else {
+            panic!("failed to decode event: {event:?}");
+        };
+        let Some(ContentBody::Post(post)) = content.content_body else {
+            panic!("unexpected content body: {event:?}");
+        };
+        // Hard to assert the actual rank, so just check we have it.
+        assert!(result.rank >= 0.0);
+
+        let Some(idx) = expected.iter().position(|e| e.text == post.text)
+        else {
+            continue;
+        };
+        let expected = expected.remove(idx);
+        assert_eq!(post, expected);
+    }
+
+    assert!(expected.is_empty(), "missing expected posts: {expected:?}");
 }
 
 async fn expect_searched_posts2<F, Fut>(
