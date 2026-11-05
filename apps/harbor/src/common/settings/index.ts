@@ -30,12 +30,12 @@ export interface SettingsActions {
 
 export type SettingsStore = SettingsState & SettingsActions;
 
-const SHOW_ALL: ModerationPreferences = {
-  hate: 'show',
-  'self-harm': 'show',
-  'sexually-suggestive': 'show',
-  'sexually-explicit': 'show',
-  violence: 'show',
+const WARN_ALL: ModerationPreferences = {
+  hate: 'warn',
+  'self-harm': 'warn',
+  'sexually-suggestive': 'warn',
+  'sexually-explicit': 'warn',
+  violence: 'warn',
 };
 
 /** What the App Store Content Policy requires of store installs. */
@@ -47,11 +47,11 @@ const STORE_POLICY: ModerationPreferences = {
   violence: 'hide',
 };
 
-/** Show everything; store installs follow their content policy. */
+/** Warn on everything; store installs follow their content policy. */
 export function defaultModeration(
   storeBuild = IS_STORE_BUILD,
 ): ModerationPreferences {
-  return storeBuild ? { ...SHOW_ALL, ...STORE_POLICY } : SHOW_ALL;
+  return storeBuild ? { ...WARN_ALL, ...STORE_POLICY } : WARN_ALL;
 }
 
 /**
