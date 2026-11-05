@@ -15,6 +15,7 @@ export {
   labelsFromSearchResponse,
   labelsFromThreadResponse,
   labelsFromGetPostResponse,
+  labelsFromGetProfileResponse,
   moderationLabels,
   PolycentricCore,
   Query,

@@ -1,8 +1,10 @@
 import { Text } from '@/src/common/components/primitives/Text';
 import { useUsername } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
+import { LabelPill } from '@/src/features/moderation/LabelPill';
 import type { ComponentProps } from 'react';
 import { View } from 'react-native';
+import { useProfileModeration } from './hooks/useProfileModeration';
 
 type UsernameProps = Omit<ComponentProps<typeof Text>, 'children'> & {
   identity: string | null | undefined;
@@ -18,7 +20,14 @@ export function Username({
   style,
   ...textProps
 }: UsernameProps) {
+  const { obscured, revealed, warnLabels, reveal, hide } =
+    useProfileModeration(identity);
   const name = useUsername(identity, { fallbackName });
+
+  // The label pill stands in for the name until revealed, then follows it.
+  if (obscured) {
+    return <LabelPill labels={warnLabels} action="Show" onPress={reveal} />;
+  }
 
   return (
     <View
@@ -38,6 +47,9 @@ export function Username({
         >
           {name}
         </Text>
+      ) : null}
+      {revealed ? (
+        <LabelPill labels={warnLabels} action="Hide" onPress={hide} />
       ) : null}
     </View>
   );

@@ -614,6 +614,10 @@ extern "C" {
         RustBuffer response, 
         RustCallStatus *uniffi_out_err
     );
+    RustBuffer uniffi_polycentric_core_fn_func_labels_from_get_profile_response(
+        RustBuffer response, 
+        RustCallStatus *uniffi_out_err
+    );
     RustBuffer uniffi_polycentric_core_fn_func_labels_from_notifications_response(
         RustBuffer response, 
         RustCallStatus *uniffi_out_err
@@ -849,6 +853,8 @@ extern "C" {
     uint16_t uniffi_polycentric_core_checksum_func_labels_from_feed_response(
     );
     uint16_t uniffi_polycentric_core_checksum_func_labels_from_get_post_response(
+    );
+    uint16_t uniffi_polycentric_core_checksum_func_labels_from_get_profile_response(
     );
     uint16_t uniffi_polycentric_core_checksum_func_labels_from_notifications_response(
     );
@@ -6156,6 +6162,14 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_fn_func_labels_from_get_post_response(rt, thisVal, args, count);
         }
     );
+    props["ubrn_uniffi_polycentric_core_fn_func_labels_from_get_profile_response"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_labels_from_get_profile_response"),
+        1,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_fn_func_labels_from_get_profile_response(rt, thisVal, args, count);
+        }
+    );
     props["ubrn_uniffi_polycentric_core_fn_func_labels_from_notifications_response"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_func_labels_from_notifications_response"),
@@ -6642,6 +6656,14 @@ NativePolycentricCore::NativePolycentricCore(
         0,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_polycentric_core_checksum_func_labels_from_get_post_response(rt, thisVal, args, count);
+        }
+    );
+    props["ubrn_uniffi_polycentric_core_checksum_func_labels_from_get_profile_response"] = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_func_labels_from_get_profile_response"),
+        0,
+        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_polycentric_core_checksum_func_labels_from_get_profile_response(rt, thisVal, args, count);
         }
     );
     props["ubrn_uniffi_polycentric_core_checksum_func_labels_from_notifications_response"] = jsi::Function::createFromHostFunction(
@@ -8283,6 +8305,16 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_labels_fro
         
         return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
 }
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_labels_from_get_profile_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
+        auto value = uniffi_polycentric_core_fn_func_labels_from_get_profile_response(uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]), 
+            &status
+        );
+        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
+
+        
+        return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_func_labels_from_notifications_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
         auto value = uniffi_polycentric_core_fn_func_labels_from_notifications_response(uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]), 
@@ -8761,6 +8793,13 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_labe
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_labels_from_get_post_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_checksum_func_labels_from_get_post_response(
+        );
+
+        
+        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_func_labels_from_get_profile_response(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
+        auto value = uniffi_polycentric_core_checksum_func_labels_from_get_profile_response(
         );
 
         

@@ -15,6 +15,7 @@ use polycentric_common::models::protos_v2::graph_service_client::GraphServiceCli
 use polycentric_common::models::protos_v2::identity_service_client::IdentityServiceClient;
 use polycentric_common::models::protos_v2::notification_service_client::NotificationServiceClient;
 use polycentric_common::models::protos_v2::pairing_service_client::PairingServiceClient;
+use polycentric_common::models::protos_v2::profile_service_client::ProfileServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
@@ -105,6 +106,13 @@ pub async fn connect_event_sync()
 
 pub async fn connect_feeds() -> FeedsServiceClient<tonic::transport::Channel> {
     FeedsServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn connect_profile() -> ProfileServiceClient<tonic::transport::Channel>
+{
+    ProfileServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }

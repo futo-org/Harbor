@@ -48,6 +48,10 @@ SELECT identity, now(), now() FROM public.moderator
 ON CONFLICT (identity) DO NOTHING;
 ```
 
+A report on an identity's first event (collection 1) labels the identity's
+latest profile update, as scoring a profile update does. The next profile
+update is a new event, so a corrected profile sheds the label.
+
 Report categories map to labels as follows; every other category is ignored.
 
 | Report category | Label |

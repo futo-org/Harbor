@@ -1,5 +1,10 @@
 import { useMemo } from 'react';
-import { FetchMode, Query, type v2 } from '@polycentric/react-native';
+import {
+  FetchMode,
+  type PostLabel,
+  Query,
+  type v2,
+} from '@polycentric/react-native';
 import { RefreshStrategy, useQuery } from '@/src/common/query/hooks/useQuery';
 import { decodeProfile } from '../lib/decodeProfile';
 
@@ -15,6 +20,10 @@ export interface ProfileHookResult {
   alias: string | null;
   followingCount: number;
   followersCount: number;
+  /** The identity's first event's key id, the target of reports. */
+  eventId: string | null;
+  /** Labels on the latest profile update. */
+  labels: PostLabel[];
   isLoading: boolean;
   /**
    * False until a server has answered or the local store had profile events,
@@ -43,6 +52,8 @@ const EMPTY_PROFILE: Omit<
   alias: null,
   followingCount: 0,
   followersCount: 0,
+  eventId: null,
+  labels: [],
 };
 
 /**
@@ -82,6 +93,8 @@ export function useProfile(
     alias: decoded.alias,
     followingCount: decoded.followingCount,
     followersCount: decoded.followersCount,
+    eventId: decoded.eventId,
+    labels: decoded.labels,
     isLoading: query.isLoading,
     // A local miss emits an empty response, indistinguishable by data alone.
     isResolved:

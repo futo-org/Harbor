@@ -13,6 +13,7 @@ import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { useProfileModeration } from '@/src/features/profile/hooks/useProfileModeration';
 import { Username } from '@/src/features/profile/Username';
 import { router, type Href } from 'expo-router';
 import { memo, useCallback, useState } from 'react';
@@ -48,6 +49,7 @@ function ProfileHeaderInner({
   const { identityKey, isSelf, alias } = useProfileContext();
 
   const profile = useProfile(identityKey);
+  const { obscured } = useProfileModeration(identityKey);
   const [showShareSheet, setShowShareSheet] = useState<boolean>(false);
 
   const displayKey = identityKey ? identityKey.slice(0, 64) : '...';
@@ -131,7 +133,7 @@ function ProfileHeaderInner({
           <ProfileAvatar
             identityKey={identityKey}
             size="xl"
-            onPress={handleAvatarPress}
+            onPress={obscured ? undefined : handleAvatarPress}
           />
         ) : (
           <View />
@@ -192,7 +194,7 @@ function ProfileHeaderInner({
         {identityKey ? (
           <ProfileVerifiedPlatforms identityKey={identityKey} />
         ) : null}
-        {profile.description ? (
+        {profile.description && !obscured ? (
           <View style={Atoms.mt_sm}>
             <Text variant="body" fontSize="sm" color="neutral_1000">
               {profile.description}
