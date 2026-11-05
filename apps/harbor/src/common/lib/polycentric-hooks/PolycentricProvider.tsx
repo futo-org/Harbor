@@ -399,7 +399,7 @@ export function useUsername(
   options?: { fallbackName?: string | null },
 ): string {
   const profile = useProfile(identityKey, {
-    // Iidentity without profile events has nothing to cache, and would
+    // Identity without profile events has nothing to cache, and would
     // otherwise never resolve
     fetchMode: FetchMode.OfflineFirst,
   });
