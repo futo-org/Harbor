@@ -81,7 +81,7 @@ Provisioned by harbor-infra (`futo-git/ci_values`, `ci_variables`).
   `CLOUDFLARE_ACCOUNT_ID`,
   `VERIFIER_BOT_ENV_VARS` (base64 `.env`).
 - `ZULIP_BOT_EMAIL` (variable), `ZULIP_BOT_API_KEY`: the bot that posts
-  releases and e2e-staging failures to `#harbor-alerts`.
+  releases and e2e-staging outcomes to `#harbor-alerts`.
 - `STATIC_S3_ENDPOINT`, `STATIC_S3_ACCESS_KEY_ID`,
   `STATIC_S3_SECRET_ACCESS_KEY`; variables `STATIC_S3_BUCKET`,
   `STATIC_PUBLIC_BASE_URL`.
