@@ -4,7 +4,7 @@ use crate::*;
 use prost::Message;
 
 #[tokio::test]
-async fn search_posts_no_match() {
+async fn no_match() {
     expect_searched_posts(
         SearchPostsRequest {
             query: random_string(),
@@ -18,7 +18,7 @@ async fn search_posts_no_match() {
 }
 
 #[tokio::test]
-async fn search_posts_match_text() {
+async fn match_text() {
     let mut client = TestClient::new().await;
 
     let post_text = random_string();
@@ -46,7 +46,7 @@ async fn search_posts_match_text() {
 }
 
 #[tokio::test]
-async fn search_posts_match_on_hashtags() {
+async fn match_on_hashtags() {
     let mut client = TestClient::new().await;
 
     let post_text = "#a #some";
@@ -79,7 +79,7 @@ async fn search_posts_match_on_hashtags() {
 }
 
 #[tokio::test]
-async fn search_posts_order_by_default() {
+async fn order_by_default() {
     let mut client = TestClient::new().await;
 
     let query = random_string();
@@ -123,7 +123,7 @@ async fn search_posts_order_by_default() {
 }
 
 #[tokio::test]
-async fn search_posts_order_by_latest() {
+async fn order_by_latest() {
     let mut client = TestClient::new().await;
 
     let query = random_string();
@@ -165,7 +165,7 @@ async fn search_posts_order_by_latest() {
 }
 
 #[tokio::test]
-async fn search_posts_omit_labels() {
+async fn omit_labels() {
     let query = random_string();
     let label = random_string();
 
@@ -197,7 +197,7 @@ async fn search_posts_omit_labels() {
 }
 
 #[tokio::test]
-async fn search_posts_pagination_order_by_top() {
+async fn pagination_order_by_top() {
     let mut search = search_service().await;
     let query = random_string();
     let mut clients = Vec::new();
@@ -297,7 +297,7 @@ async fn search_posts_pagination_order_by_top() {
 }
 
 #[tokio::test]
-async fn search_posts_pagination_order_by_latest() {
+async fn pagination_order_by_latest() {
     let mut search = search_service().await;
     let mut client = TestClient::new().await;
 

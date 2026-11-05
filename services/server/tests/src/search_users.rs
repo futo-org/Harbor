@@ -4,7 +4,7 @@ use crate::*;
 use prost::Message;
 
 #[tokio::test]
-async fn search_users_no_match() {
+async fn no_match() {
     expect_searched_users(
         SearchUsersRequest {
             query: random_string(),
@@ -17,7 +17,7 @@ async fn search_users_no_match() {
 }
 
 #[tokio::test]
-async fn search_users_match_profile_name() {
+async fn match_profile_name() {
     let mut client = TestClient::new().await;
 
     let profile_name = random_string();
@@ -43,7 +43,7 @@ async fn search_users_match_profile_name() {
 }
 
 #[tokio::test]
-async fn search_users_does_not_match_description() {
+async fn does_not_match_description() {
     let mut client = TestClient::new().await;
 
     let description = random_string();
@@ -69,7 +69,7 @@ async fn search_users_does_not_match_description() {
 }
 
 #[tokio::test]
-async fn search_users_match_alias() {
+async fn match_alias() {
     let mut client = TestClient::new().await;
 
     let alias = random_string();
@@ -95,7 +95,7 @@ async fn search_users_match_alias() {
 }
 
 #[tokio::test]
-async fn search_users_match_identity() {
+async fn match_identity() {
     let mut client = TestClient::new().await;
 
     let alias = random_string();
@@ -122,7 +122,7 @@ async fn search_users_match_identity() {
 }
 
 #[tokio::test]
-async fn search_users_only_consider_latest_update() {
+async fn only_consider_latest_update() {
     let mut client = TestClient::new().await;
 
     let old_alias = random_string();
@@ -157,7 +157,7 @@ async fn search_users_only_consider_latest_update() {
 }
 
 #[tokio::test]
-async fn search_users_do_not_consider_deleted_updates() {
+async fn do_not_consider_deleted_updates() {
     let mut client = TestClient::new().await;
 
     let alias = random_string();
@@ -198,7 +198,7 @@ async fn search_users_do_not_consider_deleted_updates() {
 }
 
 #[tokio::test]
-async fn search_users_match_on_hashtags() {
+async fn match_on_hashtags() {
     let mut client = TestClient::new().await;
 
     let profile_name = "#a #some";
@@ -229,7 +229,7 @@ async fn search_users_match_on_hashtags() {
 }
 
 #[tokio::test]
-async fn search_users_order_by_rank() {
+async fn order_by_rank() {
     let query = random_string();
 
     let mut expected = Vec::new();
@@ -262,7 +262,7 @@ async fn search_users_order_by_rank() {
 }
 
 #[tokio::test]
-async fn search_users_order_by_alpha() {
+async fn order_by_alpha() {
     let query = random_string();
 
     let mut expected = Vec::new();
@@ -293,7 +293,7 @@ async fn search_users_order_by_alpha() {
 }
 
 #[tokio::test]
-async fn search_users_pagination_order_by_rank() {
+async fn pagination_order_by_rank() {
     let mut search = search_service().await;
     let query = random_string();
 
@@ -385,7 +385,7 @@ async fn search_users_pagination_order_by_rank() {
 }
 
 #[tokio::test]
-async fn search_users_pagination_order_by_alpha() {
+async fn pagination_order_by_alpha() {
     let mut search = search_service().await;
     let query = random_string();
 
