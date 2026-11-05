@@ -190,7 +190,7 @@ jobs:
         with:
           cache: services-db-schema
       - name: Start Postgres
-        run: docker compose up -d --build --wait postgres
+        run: docker compose up -d --build --wait postgres || docker logs harbor-postgres-1
       - name: Install pg_dump
         env:
           DEBIAN_FRONTEND: noninteractive
