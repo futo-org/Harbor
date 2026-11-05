@@ -214,6 +214,7 @@ patchedDependencies:
   '@bsky.app/react-native-uitextview@2.7.1': 3018f282816ac3aa23987aae0ec8d9d485a9ee960e89daaa17be5ac0cfa44ffb
   '@rn-primitives/hooks@1.5.2': d7f36dfa2e61a973ee612194f6624f4e0f3f55db652e629f1ed5e5dddd8b1b78
   react-native-safe-area-context@5.10.1: 086263d8fa3b01fc14378c0bece3a7cdfbd5f937e9337b0c18863d96294ea038
+  uniffi-bindgen-react-native@0.31.0-6: 598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c
 
 importers:
 
@@ -835,7 +836,7 @@ importers:
         version: 1.11.0(react-native@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
-        version: 0.31.0-6
+        version: 0.31.0-6(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c)
     devDependencies:
       '@react-native/babel-preset':
         specifier: 0.83.0
@@ -888,7 +889,7 @@ importers:
         version: 5.9.3
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
-        version: 0.31.0-6
+        version: 0.31.0-6(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c)
 
   services/scraper:
     dependencies:
@@ -27863,7 +27864,7 @@ snapshots:
 
   unicorn-magic@0.4.1: {}
 
-  uniffi-bindgen-react-native@0.31.0-6: {}
+  uniffi-bindgen-react-native@0.31.0-6(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c): {}
 
   unified@11.0.5:
     dependencies:
