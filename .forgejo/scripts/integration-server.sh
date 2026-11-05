@@ -116,7 +116,7 @@ if [ "$NO_DEPS" = false ]; then
 
     echo "    waiting for RustFS (port 9000)…"
     for i in $(seq 1 15); do
-      if curl -sf http://localhost:9000/health > /dev/null 2>&1; then
+      if curl --max-time 10 -sf http://localhost:9000/health > /dev/null 2>&1; then
         echo "    RustFS ready (after ${i}s)"
         break
       fi

@@ -21,7 +21,7 @@ runs:
         if command -v apk >/dev/null; then
           apk add --no-cache cosign
         else
-          curl -fsSL -o /usr/local/bin/cosign "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/cosign-linux-amd64"
+          curl --max-time 10 -fsSL -o /usr/local/bin/cosign "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/cosign-linux-amd64"
           chmod 0755 /usr/local/bin/cosign
         fi
     - shell: bash
