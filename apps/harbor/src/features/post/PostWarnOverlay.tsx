@@ -1,9 +1,9 @@
 import { Text } from '@/src/common/components/primitives';
 import Icon from '@/src/common/components/Icon';
-import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
 import { labelNames } from '@/src/features/moderation/LabelPill';
+import { useIdentityHandle } from '@/src/features/profile/hooks/useIdentityHandle';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Pressable, View } from 'react-native';
 
@@ -25,12 +25,14 @@ export function PostWarnOverlay({
 
   const labeledBy = labels.find((l) => l.labeledBy)?.labeledBy ?? null;
   const byAuthor = labeledBy !== null && labeledBy === authorIdentity;
-  const labelerProfile = useProfile(byAuthor ? null : labeledBy);
+  const labeler = byAuthor ? null : labeledBy;
+  const labelerProfile = useProfile(labeler);
+  const labelerHandle = useIdentityHandle(labeler);
   const attribution = !labeledBy
     ? null
     : byAuthor
       ? 'Applied by the author'
-      : `Applied by ${labelerProfile.name ?? shortenIdentityId(labeledBy)}`;
+      : `Applied by ${labelerProfile.name ?? labelerHandle.text}`;
 
   return (
     <View

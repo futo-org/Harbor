@@ -1,8 +1,5 @@
-import {
-  IdentityTag,
-  ProfileAvatar,
-  Text,
-} from '@/src/common/components/primitives';
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
+import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
@@ -141,7 +138,7 @@ function AuthorRow({ post }: { post: PostData }) {
         variant="secondary"
         fontWeight="bold"
       />
-      <IdentityTag identity={post.identity} />
+      <IdentityHandle identity={post.identity} />
       {post.createdAt ? (
         <>
           <Text variant="secondary" color="neutral_500" fontWeight="bold">

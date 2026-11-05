@@ -9,7 +9,6 @@ let mockContext: {
   isSelf: boolean;
   activeFeed: string;
   setActiveFeed: () => void;
-  alias: string | null;
 };
 
 jest.mock('@/src/features/follow/FollowingBadge', () => ({
@@ -19,6 +18,12 @@ jest.mock('@/src/features/follow/FollowingBadge', () => ({
 
 jest.mock('./ProfileContext', () => ({
   useProfileContext: () => mockContext,
+}));
+
+// The hook has its own tests; set per test.
+let mockHandle: { kind: string; text: string };
+jest.mock('./hooks/useIdentityHandle', () => ({
+  useIdentityHandle: () => mockHandle,
 }));
 
 let mockCounts = { followingCount: 0, followersCount: 0 };
@@ -109,6 +114,7 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
 jest.mock('@/src/common/theme', () => ({
   ...jest.requireActual('@/src/common/theme'),
   useTheme: () => ({ theme: { palette: { neutral_0: '#fff' } } }),
+  createThemedStyles: () => () => ({}),
   Atoms: new Proxy({}, { get: () => ({}) }),
 }));
 
@@ -123,25 +129,31 @@ const baseContext = {
   isSelf: false,
   activeFeed: 'posts',
   setActiveFeed: () => undefined,
-  alias: null as string | null,
 };
 
-describe('ProfileHeader alias', () => {
-  it('shows the alias under the id when present in context', async () => {
-    mockContext = { ...baseContext, alias: 'test@domain.com' };
-    const { queryByText } = await render(
-      <ProfileHeader
-        bannerColors={['#a', '#b']}
-        onBack={() => undefined}
-        scrollY={scrollY}
-      />,
-    );
-    expect(queryByText('test@domain.com')).not.toBeNull();
-    expect(queryByText(IDENTITY)).not.toBeNull();
-  });
+beforeEach(() => {
+  mockContext = { ...baseContext };
+  mockHandle = { kind: 'hash', text: IDENTITY.slice(0, 10) };
+});
 
-  it('shows only the id when there is no alias', async () => {
-    mockContext = { ...baseContext, alias: null };
+describe('ProfileHeader alias', () => {
+  it.each(['alias', 'alias-pending'])(
+    'shows a %s under the id',
+    async (kind) => {
+      mockHandle = { kind, text: 'test@domain.com' };
+      const { queryByText } = await render(
+        <ProfileHeader
+          bannerColors={['#a', '#b']}
+          onBack={() => undefined}
+          scrollY={scrollY}
+        />,
+      );
+      expect(queryByText('test@domain.com')).not.toBeNull();
+      expect(queryByText(IDENTITY)).not.toBeNull();
+    },
+  );
+
+  it('shows only the id without an alias', async () => {
     const { queryByText } = await render(
       <ProfileHeader
         bannerColors={['#a', '#b']}

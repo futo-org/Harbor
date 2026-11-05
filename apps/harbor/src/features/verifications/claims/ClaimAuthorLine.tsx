@@ -1,9 +1,7 @@
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { Text } from '@/src/common/components';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
-import {
-  type AvatarSizePreset,
-  IdentityTag,
-} from '@/src/common/components/primitives';
+import type { AvatarSizePreset } from '@/src/common/components/primitives';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import { Routes } from '@/src/common/constants';
 import { useWebHover } from '@/src/common/lib/useWebHover';
@@ -44,7 +42,7 @@ export function ClaimAuthorLine({
           fontWeight="bold"
           style={hovered && Atoms.text_underline}
         />
-        <IdentityTag identity={identity} />
+        <IdentityHandle identity={identity} />
       </Pressable>
       <Text variant="secondary" color="neutral_500" fontWeight="bold">
         ·
