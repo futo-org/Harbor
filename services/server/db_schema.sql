@@ -301,8 +301,7 @@ CREATE TABLE public.content_post (
     quote_identity character varying,
     quote_public_key_type smallint,
     quote_public_key bytea,
-    quote_sequence bigint,
-    search_data tsvector GENERATED ALWAYS AS (public.create_tsvector('english'::regconfig, (text)::text, 'A'::"char")) STORED NOT NULL
+    quote_sequence bigint
 );
 
 
@@ -1072,13 +1071,6 @@ CREATE INDEX content_label_event_key_idx ON public.content_label USING btree (ev
 --
 
 CREATE INDEX content_post_reply_parent ON public.content_post USING btree (reply_parent_collection, reply_parent_identity, reply_parent_public_key_type, reply_parent_public_key, reply_parent_sequence);
-
-
---
--- Name: content_post_search_data; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX content_post_search_data ON public.content_post USING gin (search_data);
 
 
 --
