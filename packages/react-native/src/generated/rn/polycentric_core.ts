@@ -92,6 +92,26 @@ export function labelsFromGetPostResponse(response: ArrayBuffer): Array<LabelSet
     }
 
 /**
+ * Return the labels from the `event_hints` field of a get profile
+ * response. These target the identity's profile events.
+ */
+export function labelsFromGetProfileResponse(response: ArrayBuffer): Array<LabelSet> {
+    const __rb: Uint8Array = uniffiCaller.rustCall(
+            /*caller:*/ (callStatus) => {
+                return nativeModule().ubrn_uniffi_polycentric_core_fn_func_labels_from_get_profile_response(
+        FfiConverterArrayBuffer.lower(response, nativeModule().rustbuffer_alloc),
+                callStatus);
+            },
+            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+    try {
+        return FfiConverterSequenceTypeLabelSet.lift(__rb);
+    } finally {
+        nativeModule().rustbuffer_free(__rb);
+    }
+    }
+
+/**
  * Return the labels from the `event_hints` field of a list notifications
  * response.
  */
@@ -7109,6 +7129,9 @@ function uniffiEnsureInitialized() {
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_get_post_response() !== 1471) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_get_post_response");
+    }
+    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_get_profile_response() !== 24031) {
+        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_get_profile_response");
     }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_func_labels_from_notifications_response() !== 4814) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_func_labels_from_notifications_response");

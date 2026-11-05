@@ -1,11 +1,11 @@
-import { Button, Text } from '@/src/common/components/primitives';
+import { Text } from '@/src/common/components/primitives';
 import Icon from '@/src/common/components/Icon';
 import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
+import { Atoms, useTheme } from '@/src/common/theme';
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
-import { moderationLabelName } from '@/src/common/settings/moderationLabels';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { labelNames } from '@/src/features/moderation/LabelPill';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 /**
  * Rendered in place of a post's content when a label the user has set to
@@ -23,8 +23,6 @@ export function PostWarnOverlay({
 }) {
   const { theme } = useTheme();
 
-  const labelNames = labels.map((l) => moderationLabelName(l.value)).join(', ');
-
   const labeledBy = labels.find((l) => l.labeledBy)?.labeledBy ?? null;
   const byAuthor = labeledBy !== null && labeledBy === authorIdentity;
   const labelerProfile = useProfile(byAuthor ? null : labeledBy);
@@ -37,36 +35,53 @@ export function PostWarnOverlay({
   return (
     <View
       style={[
-        Atoms.gap_lg,
         Atoms.mt_xs,
-        Atoms.px_md,
-        Atoms.pl_lg,
-        Atoms.py_sm,
         Atoms.flex_row,
         Atoms.align_center,
         Atoms.rounded_md,
-        {
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '14'),
-        },
+        Atoms.overflow_hidden,
+        { backgroundColor: theme.palette.neutral_25 },
       ]}
     >
-      <Icon name="infoOutline" color="neutral_500" />
-      <View style={[Atoms.flex_1]}>
-        <Text variant="secondary" fontWeight="bold" color="neutral_700">
-          {labelNames}
-        </Text>
-        {attribution ? (
-          <Text variant="small" color="neutral_500" fontWeight="regular">
-            {attribution}
+      <View
+        style={[
+          Atoms.flex_1,
+          Atoms.flex_row,
+          Atoms.align_center,
+          Atoms.gap_lg,
+          Atoms.pl_lg,
+          Atoms.pr_md,
+          Atoms.py_sm,
+        ]}
+      >
+        <Icon name="infoOutline" color="neutral_700" />
+        <View style={[Atoms.flex_1]}>
+          <Text variant="secondary" fontWeight="bold" color="neutral_700">
+            Hidden for {labelNames(labels).toLowerCase()}
           </Text>
-        ) : null}
+          {attribution ? (
+            <Text variant="small" color="neutral_500" fontWeight="regular">
+              {attribution}
+            </Text>
+          ) : null}
+        </View>
       </View>
-      <Button
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Show"
         onPress={onDismiss}
-        variant="tertiary"
-        style={[{ borderWidth: 0 }]}
-        title="Show"
-      />
+        style={({ pressed }) => [
+          Atoms.px_md,
+          Atoms.self_stretch,
+          Atoms.justify_center,
+          { backgroundColor: theme.palette.neutral_50 },
+          pressed && { opacity: 0.5 },
+        ]}
+      >
+        <Text variant="secondary" fontWeight="bold" color="neutral_600">
+          Show
+        </Text>
+      </Pressable>
     </View>
   );
 }
