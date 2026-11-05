@@ -13,6 +13,7 @@ import {
   type IdentityState,
   type ServerPushResult,
   v2,
+  FetchMode,
 } from '@polycentric/react-native';
 import { HARBOR_APPLICATION } from '@/src/common/util/application';
 import {
@@ -397,10 +398,14 @@ export function useUsername(
   identityKey: string | null | undefined,
   options?: { fallbackName?: string | null },
 ): string {
-  const profile = useProfile(identityKey);
+  const profile = useProfile(identityKey, {
+    // Identity without profile events has nothing to cache, and would
+    // otherwise never resolve
+    fetchMode: FetchMode.OfflineFirst,
+  });
   if (profile.name) return profile.name;
   if (options?.fallbackName) return options.fallbackName;
-  if (profile.isLoading || !profile.isResolved) return '…';
+  if (profile.isLoading) return '…';
   // An empty fallback reaches here too, and hides the default name.
   return options?.fallbackName ?? DEFAULT_IDENTITY_NAME;
 }
