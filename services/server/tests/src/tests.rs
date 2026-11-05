@@ -876,6 +876,7 @@ pub fn expect_events(got: &[EventBundle], expected: &[ExpectEvent<'_>]) {
 #[derive(Debug, Eq, PartialEq)]
 pub enum ExpectHint {
     Identity(String),
+    Profile(EventKey),
     Post(EventKey),
     Delete(EventKey),
     Labels {
@@ -932,7 +933,8 @@ pub fn expect_hints(got: &[EventHint], mut expected: Vec<ExpectHint>) {
             (ContentBody::Delete(delete), ExpectHint::Delete(expected)) => {
                 assert_eq!(*delete.event_key.as_ref().unwrap(), expected);
             }
-            (ContentBody::Post(_), ExpectHint::Post(expected)) => {
+            (ContentBody::Post(_), ExpectHint::Post(expected))
+            | (ContentBody::ProfileUpdate(_), ExpectHint::Profile(expected)) => {
                 let key = hint_event.key.as_ref().unwrap();
                 assert_eq!(*key, expected);
             }
@@ -983,6 +985,12 @@ fn find_expected(
             let got = hint_event.key.as_ref().unwrap();
             expected.iter().position(
                 |e| matches!(e, ExpectHint::Post(expected) if expected == got),
+            )?
+        }
+        ContentBody::ProfileUpdate(_) => {
+            let got = hint_event.key.as_ref().unwrap();
+            expected.iter().position(
+                |e| matches!(e, ExpectHint::Profile(expected) if expected == got),
             )?
         }
         ContentBody::Labels(labels) => {

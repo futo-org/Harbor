@@ -289,6 +289,41 @@ async fn label_on_profile_served_with_the_profile() {
             ExpectHint::Identity(author.identity().to_string()),
             ExpectHint::moderator_identity(),
             ExpectHint::Labels {
+                post: profile_key.clone(),
+                values: vec!["hate".to_string()],
+            },
+        ],
+    );
+
+    // Feeds carry the profile label too, for clients rendering offline.
+    author.post(
+        Post {
+            text: "by a labeled profile".to_string(),
+            ..Default::default()
+        },
+        current_timestamp() + 2,
+    );
+    author.submit_events().await;
+    let feed = connect_feeds()
+        .await
+        .get_identity_feed(GetIdentityFeedRequest {
+            identity: author.identity().to_string(),
+            page_params: Some(PageParams {
+                limit: Some(10),
+                ..Default::default()
+            }),
+            omit_labels: vec![],
+        })
+        .await
+        .expect("get_identity_feed failed")
+        .into_inner();
+    expect_hints(
+        &feed.event_hints,
+        vec![
+            ExpectHint::Identity(author.identity().to_string()),
+            ExpectHint::moderator_identity(),
+            ExpectHint::Profile(profile_key.clone()),
+            ExpectHint::Labels {
                 post: profile_key,
                 values: vec!["hate".to_string()],
             },

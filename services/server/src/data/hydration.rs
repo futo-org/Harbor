@@ -114,15 +114,6 @@ where
                 tracing::error!(error = %err, "failed to list events");
                 Status::internal("internal server error")
             })?;
-    let label_events = feeds_repository::Query::list_labels_for_event_keys(
-        &mut ctx.db,
-        &display_keys,
-    )
-    .await
-    .map_err(|err| {
-        tracing::error!(error = %err, "failed to list labels");
-        Status::internal("internal server error")
-    })?;
     let stats =
         gather_stats_for(&mut ctx.db, rows.iter().map(|row| row.event_id()))
             .await
@@ -155,6 +146,22 @@ where
 
     let identity_events = list_identity_events(ctx, identities.clone()).await?;
     let profile_events = list_profile_events(ctx, identities).await?;
+
+    // Labels on the displayed posts and on the profiles, so clients can
+    // cover a labeled name offline.
+    let label_keys: Vec<TargetEventKey> = display_keys
+        .into_iter()
+        .chain(profile_events.iter().map(|row| TargetEventKey::of(&row.0)))
+        .collect();
+    let label_events = feeds_repository::Query::list_labels_for_event_keys(
+        &mut ctx.db,
+        &label_keys,
+    )
+    .await
+    .map_err(|err| {
+        tracing::error!(error = %err, "failed to list labels");
+        Status::internal("internal server error")
+    })?;
 
     let mut quote_post_events = Vec::new();
     let mut repost_events = Vec::new();
