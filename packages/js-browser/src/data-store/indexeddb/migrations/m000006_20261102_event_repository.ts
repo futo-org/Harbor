@@ -95,19 +95,21 @@ export const m000006_20261102_event_repository: IndexedDBMigration = {
         bytesToHex(Proto.ContentDigest.toBinary(event.contentDigest)),
       );
 
+      // Copy byte arrays to ensure we don't store a larger backing buffer on
+      // disk for each one.
       requests.push(
         requestAsPromise(
           events.add({
             owner: key.identity,
             eventKeyIdentity: key.identity,
             eventKeyPublicKeyType: signedBy.keyType,
-            eventKeyPublicKeyBytes: signedBy.key,
+            eventKeyPublicKeyBytes: signedBy.key.slice(),
             eventKeyCollection: key.collection,
             eventKeySequence: Number(key.sequence),
-            eventBytes: row.eventBytes,
-            eventSignature: row.signature,
+            eventBytes: row.eventBytes.slice(),
+            eventSignature: row.signature.slice(),
             contentStatus: contentBytes ? 'present' : 'absent',
-            contentBytes,
+            contentBytes: contentBytes?.slice(),
           }),
         ),
       );

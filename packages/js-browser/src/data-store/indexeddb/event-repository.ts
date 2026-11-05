@@ -43,17 +43,19 @@ export class IndexedDBEventRepository implements IEventRepository {
   }
 
   async insert(row: EventRow): Promise<void> {
+    // Copy byte arrays to ensure we don't store a larger backing buffer on
+    // disk for each one.
     const entry: PersistedEvent = {
       owner: row.owner,
       eventKeyIdentity: row.eventKey.identity,
       eventKeyPublicKeyType: row.eventKey.signedBy.keyType,
-      eventKeyPublicKeyBytes: row.eventKey.signedBy.key,
+      eventKeyPublicKeyBytes: row.eventKey.signedBy.key.slice(),
       eventKeyCollection: row.eventKey.collection,
       eventKeySequence: persistedSequence(row.eventKey),
-      eventBytes: row.eventBytes,
-      eventSignature: row.eventSignature,
+      eventBytes: row.eventBytes.slice(),
+      eventSignature: row.eventSignature.slice(),
       contentStatus: row.contentStatus,
-      contentBytes: row.contentBytes,
+      contentBytes: row.contentBytes?.slice(),
     };
 
     try {
@@ -84,7 +86,7 @@ export class IndexedDBEventRepository implements IEventRepository {
       const updated: PersistedEvent = {
         ...entry,
         contentStatus: 'present',
-        contentBytes: serializedContent,
+        contentBytes: serializedContent.slice(),
       };
 
       await IndexedDBDatabase.requestAsPromise(store.put(updated));
