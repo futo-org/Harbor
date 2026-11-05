@@ -171,12 +171,13 @@ pub fn has_matching_label(
                 public_key: signed_by.key,
                 sequence: lk.sequence as i64,
             };
-
-            if label_key == *key {
-                return labels
+            if label_key == *key
+                && labels
                     .label_values
                     .iter()
-                    .any(|v| omit_label_set.contains(v.as_str()));
+                    .any(|v| omit_label_set.contains(v.as_str()))
+            {
+                return true;
             }
         }
     }
@@ -553,6 +554,17 @@ mod tests {
         let labels = vec![make_label_event(&key, &["spam"])];
         let set: HashSet<&str> = HashSet::new();
         assert!(!has_matching_label(&labels, &key, &set));
+    }
+
+    #[test]
+    fn has_matching_label_checks_every_label_event() {
+        let key = make_key("alice", 1);
+        let labels = vec![
+            make_label_event(&key, &["spam"]),
+            make_label_event(&key, &["hate"]),
+        ];
+        let set: HashSet<&str> = ["hate"].into();
+        assert!(has_matching_label(&labels, &key, &set));
     }
 
     #[test]
