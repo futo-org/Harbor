@@ -5,7 +5,8 @@
 //! A moderator listed in the moderation service's `moderator` table reports a
 //! post as violent, and the service publishes a matching `violence` label. A
 //! second report of the same post from an identity absent from that table is
-//! expected to produce nothing.
+//! expected to produce nothing. The moderator also reports the author's
+//! identity as hate, which labels the author's latest profile update.
 //!
 //! It is `#[ignore]`d by default, because it requires the server stack
 //! running before the test can run.
@@ -16,9 +17,9 @@ use polycentric_common::models::{
     collections,
     protos_v2::{
         Content, ContentDigest, ContentDigestType, Event, EventBundle, EventKey, Identity, KeyType,
-        Labels, ListEventsFilters, ListEventsRequest, Post, PublicKey, PutEventsRequest, Report,
-        ReportCategory, SerializedContent, SignedEvent, VectorClock, content::ContentBody,
-        event_sync_service_client::EventSyncServiceClient,
+        Labels, ListEventsFilters, ListEventsRequest, Post, ProfileUpdate, PublicKey,
+        PutEventsRequest, Report, ReportCategory, SerializedContent, SignedEvent, VectorClock,
+        content::ContentBody, event_sync_service_client::EventSyncServiceClient,
     },
 };
 use polycentric_core::query::channel;
@@ -96,35 +97,57 @@ async fn moderator_report_publishes_label_and_untrusted_report_does_not() {
 
     let (reported_post_key, reported_post) = make_post(&author_key, &author_identity, 1);
     let (ignored_post_key, ignored_post) = make_post(&author_key, &author_identity, 2);
-    put_events(vec![reported_post, ignored_post])
+    let (profile_key, profile) = make_profile(&author_key, &author_identity);
+    put_events(vec![reported_post, ignored_post, profile])
         .await
-        .expect("put reported posts");
+        .expect("put reported posts and profile");
 
     put_events(vec![make_report(
         &outsider_key,
         &outsider_identity,
         &ignored_post_key,
         ReportCategory::Violence,
+        1,
     )])
     .await
     .expect("put untrusted report");
 
-    put_events(vec![make_report(
-        &moderator_key,
-        &moderator_identity,
-        &reported_post_key,
-        ReportCategory::Violence,
-    )])
+    let author_identity_key = EventKey {
+        collection: collections::IDENTITY,
+        identity: author_identity.clone(),
+        signed_by: Some(public_key_of(&author_key)),
+        sequence: 1,
+    };
+    put_events(vec![
+        make_report(
+            &moderator_key,
+            &moderator_identity,
+            &reported_post_key,
+            ReportCategory::Violence,
+            1,
+        ),
+        make_report(
+            &moderator_key,
+            &moderator_identity,
+            &author_identity_key,
+            ReportCategory::Hate,
+            2,
+        ),
+    ])
     .await
-    .expect("put moderator report");
+    .expect("put moderator reports");
 
     let mut labeled = false;
+    let mut profile_labeled = false;
     let deadline = Instant::now() + Duration::from_secs(60);
-    while !labeled && Instant::now() < deadline {
+    while !(labeled && profile_labeled) && Instant::now() < deadline {
         labeled = label_exists(&service_identity, &reported_post_key, "violence")
             .await
             .unwrap_or(false);
-        if !labeled {
+        profile_labeled = label_exists(&service_identity, &profile_key, "hate")
+            .await
+            .unwrap_or(false);
+        if !(labeled && profile_labeled) {
             sleep(Duration::from_secs(1)).await;
         }
     }
@@ -139,6 +162,10 @@ async fn moderator_report_publishes_label_and_untrusted_report_does_not() {
     assert!(
         labeled,
         "no violence label was published for the moderator's report"
+    );
+    assert!(
+        profile_labeled,
+        "no hate label was published on the profile for the moderator's report on the identity"
     );
     assert!(
         !untrusted_labeled,
@@ -319,13 +346,39 @@ fn make_post(key: &SigningKey, identity: &str, sequence: u64) -> (EventKey, Even
     (event_key, bundle)
 }
 
-/// A report of `target` under `category`, as the first event in the
-/// reporter's report collection.
+/// The author's first profile update, plus its event key.
+fn make_profile(key: &SigningKey, identity: &str) -> (EventKey, EventBundle) {
+    let update = ProfileUpdate {
+        name: Some("moderator report e2e profile".to_string()),
+        ..Default::default()
+    };
+    let bundle = signed_bundle(
+        identity,
+        key,
+        collections::PROFILE,
+        Content {
+            content_body: Some(ContentBody::ProfileUpdate(update)),
+        },
+        CREATED_AT + HOUR,
+        1,
+    );
+    let event_key = EventKey {
+        collection: collections::PROFILE,
+        identity: identity.to_string(),
+        signed_by: Some(public_key_of(key)),
+        sequence: 1,
+    };
+    (event_key, bundle)
+}
+
+/// A report of `target` under `category`, at `sequence` in the reporter's
+/// report collection.
 fn make_report(
     key: &SigningKey,
     identity: &str,
     target: &EventKey,
     category: ReportCategory,
+    sequence: u64,
 ) -> EventBundle {
     signed_bundle(
         identity,
@@ -338,8 +391,8 @@ fn make_report(
                 additional_info: "moderator report e2e".to_string(),
             })),
         },
-        CREATED_AT + HOUR,
-        1,
+        CREATED_AT + HOUR + sequence,
+        sequence,
     )
 }
 

@@ -195,6 +195,53 @@ impl PolycentricClient {
         &self.identity
     }
 
+    /// The key of `identity`'s latest profile update, from the first server
+    /// that has one. `None` when no server does.
+    pub async fn latest_profile_key(&self, identity: &str) -> Result<Option<EventKey>, String> {
+        let mut last_error = None;
+        for server in &self.servers {
+            let chan = match channel(server).await {
+                Ok(chan) => chan,
+                Err(e) => {
+                    last_error = Some(e);
+                    continue;
+                }
+            };
+            let response = EventSyncServiceClient::new(chan)
+                .list_events(ListEventsRequest {
+                    filters: Some(ListEventsFilters {
+                        collection: Some(collections::PROFILE),
+                        identity: identity.to_string(),
+                        ..Default::default()
+                    }),
+                    size: None,
+                })
+                .await;
+            match response {
+                Ok(response) => {
+                    let key = response
+                        .into_inner()
+                        .event_bundles
+                        .iter()
+                        .filter_map(|bundle| {
+                            Event::decode(bundle.signed_event.as_ref()?.event_bytes.as_slice())
+                                .ok()?
+                                .key
+                        })
+                        .max_by_key(|key| key.sequence);
+                    if key.is_some() {
+                        return Ok(key);
+                    }
+                }
+                Err(e) => last_error = Some(format!("list_events: {e}")),
+            }
+        }
+        match last_error {
+            Some(e) => Err(e),
+            None => Ok(None),
+        }
+    }
+
     /// The public key this service signs events with.
     pub fn public_key(&self) -> &PublicKey {
         &self.public_key

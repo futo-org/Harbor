@@ -254,6 +254,51 @@ async fn omit_labels_hides_labeled_post() {
 }
 
 #[tokio::test]
+async fn label_on_profile_served_with_the_profile() {
+    let mut author = TestClient::new().await;
+    author.profile_update(
+        ProfileUpdate {
+            name: Some("labeled profile".to_string()),
+            ..Default::default()
+        },
+        current_timestamp(),
+    );
+    let profile_key = author.get_last_event_key();
+    author.submit_events().await;
+
+    let (mut moderator, _guard) = TestClient::trusted_moderator().await;
+    moderator.label_key(
+        profile_key.clone(),
+        vec!["hate".to_string()],
+        current_timestamp() + 1,
+    );
+    moderator.submit_events().await;
+
+    let resp =
+        profile_service_client::ProfileServiceClient::connect(grpc_addr())
+            .await
+            .expect("failed to connect to gRPC server")
+            .get_profile(GetProfileRequest {
+                identity: author.identity().to_string(),
+            })
+            .await
+            .expect("get_profile failed")
+            .into_inner();
+    assert_eq!(resp.event_bundles.len(), 1);
+    expect_hints(
+        &resp.event_hints,
+        vec![
+            ExpectHint::Identity(author.identity().to_string()),
+            ExpectHint::moderator_identity(),
+            ExpectHint::Labels {
+                post: profile_key,
+                values: vec!["hate".to_string()],
+            },
+        ],
+    );
+}
+
+#[tokio::test]
 async fn attribution_feed_returns_only_matching_posts() {
     let mut event = connect_event_sync().await;
     let mut feed = connect_feeds().await;
