@@ -1,7 +1,6 @@
 //! Tests for searching posts.
 
 use crate::*;
-use prost::Message;
 
 #[tokio::test]
 async fn no_match() {
@@ -49,7 +48,7 @@ async fn match_text() {
 async fn match_on_hashtags() {
     let mut client = TestClient::new().await;
 
-    let post_text = "#a #some";
+    let post_text = "#great #stuff";
     client.post_text(&post_text, current_timestamp());
     client.submit_events().await;
 
