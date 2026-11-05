@@ -18,7 +18,7 @@ COPY --from=pg_search /licenses* /usr/share/postgresql/18/
 
 # Add scripts that install the extensions.
 RUN echo "echo \"shared_preload_libraries = 'pg_search'\" >> \"${PGDATA}/postgresql.conf\"" >> "/docker-entrypoint-initdb.d/00_pg_search_config.sh"
-RUN echo 'CREATE EXTENSION pg_search CASCADE;' >> "/docker-entrypoint-initdb.d/01_create_pg_search_extension.sql"
+RUN chmod +x "/docker-entrypoint-initdb.d/00_pg_search_config.sh"
 
 # Copied from the Postgres image:
 ENTRYPOINT ["docker-entrypoint.sh"]
