@@ -30,6 +30,8 @@ export function LabelPill({
         Atoms.flex_row,
         Atoms.align_center,
         Atoms.self_start,
+        Atoms.flex_shrink_1,
+        Atoms.max_w_full,
         Atoms.rounded_full,
         Atoms.overflow_hidden,
         { backgroundColor: theme.palette.neutral_25 },
@@ -42,6 +44,7 @@ export function LabelPill({
           Atoms.flex_row,
           Atoms.align_center,
           Atoms.gap_xs,
+          Atoms.flex_shrink_1,
           Atoms.px_xs,
           inline ? { paddingVertical: Spacing['2xs'] } : Atoms.py_xs,
           Atoms.cursor_default,
@@ -52,7 +55,8 @@ export function LabelPill({
           variant="small"
           fontSize="xs"
           lineHeight="xs"
-          style={{ color: textColor }}
+          numberOfLines={1}
+          style={[Atoms.flex_shrink_1, { color: textColor }]}
         >
           {action === 'Show'
             ? `Hidden for ${labelNames(labels).toLowerCase()}`
