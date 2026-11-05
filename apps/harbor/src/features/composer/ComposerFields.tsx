@@ -461,17 +461,19 @@ function AttachmentGrid({
       onLayout={onLayout}
       style={[Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_sm, Atoms.mt_sm]}
     >
-      {attachments.map((a) => (
-        <AttachmentThumb
-          key={a.id}
-          uri={a.uri}
-          status={a.status}
-          width={single ? '100%' : gridItemWidth}
-          aspectRatio={single ? singleImageAspectRatio(a) : 1}
-          disabled={disabled}
-          onRemove={() => onRemoveAttachment(a.id)}
-        />
-      ))}
+      {/* Wait for the measured width: thumbs first rendered without it will stay at height 0 in Safari. */}
+      {(single || containerWidth > 0) &&
+        attachments.map((a) => (
+          <AttachmentThumb
+            key={a.id}
+            uri={a.uri}
+            status={a.status}
+            width={single ? '100%' : gridItemWidth}
+            aspectRatio={single ? singleImageAspectRatio(a) : 1}
+            disabled={disabled}
+            onRemove={() => onRemoveAttachment(a.id)}
+          />
+        ))}
     </View>
   );
 }

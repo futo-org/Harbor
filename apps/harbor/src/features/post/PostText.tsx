@@ -9,7 +9,7 @@ import {
 } from '@/src/common/util/parseTextLinks';
 import { isWeb } from '@/src/common/util/platform';
 import { type Href, Link, router } from 'expo-router';
-import { memo, useMemo, useState } from 'react';
+import { memo, type ReactNode, useMemo, useState } from 'react';
 import { Pressable } from 'react-native';
 
 const PREVIEW_LIMIT = 240;
@@ -26,6 +26,7 @@ export const PostText = memo(function PostText({
   expandable = false,
   large = false,
   selectable = false,
+  trailing,
 }: {
   content: string;
   /** Feed rendering: preview-capped with a Show more toggle. */
@@ -33,6 +34,8 @@ export const PostText = memo(function PostText({
   /** Detail-view sizing for a focused post. */
   large?: boolean;
   selectable?: boolean;
+  /** Rendered inline after the last line of text. */
+  trailing?: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const truncateToPreview = expandable && !expanded;
@@ -76,6 +79,8 @@ export const PostText = memo(function PostText({
           ),
         )}
         {truncated ? '…' : ''}
+        {trailing ? ' ' : null}
+        {trailing}
       </Text>
       {truncateToPreview && truncated ? (
         <ShowMoreToggle onPress={() => setExpanded(true)} />

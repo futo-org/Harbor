@@ -2,24 +2,12 @@ import { render, waitFor } from '@testing-library/react-native';
 
 const IDENTITY =
   'f00df0262908a197391c4cbc619eb11cb6867c90915b6e23a3db7a061def8fc3';
-const OTHER_IDENTITY =
-  '0a2abecb223dbd572729018f8d201f32471e2a5b71e2032c052f6830846c4722';
 const ALIAS = 'test@domain.com';
 
 // --- collaborators, all mocked so we exercise only the routing/verification ---
 
 jest.mock('@polycentric/react-native', () => ({
   FetchMode: { Default: 'Default' },
-  resolveAlias: jest.fn(),
-  isIdentityKey: (s: string): boolean =>
-    s.length > 0 && [...s].every((c) => '0123456789abcdefABCDEF'.includes(c)),
-  normalizeAlias: (alias: string): string | null => {
-    let s = alias.trim();
-    if (s.startsWith('@')) s = s.slice(1);
-    const at = s.indexOf('@');
-    if (at <= 0 || s.indexOf('@', at + 1) !== -1) return null;
-    return s.toLowerCase();
-  },
 }));
 
 jest.mock('expo-router', () => ({
@@ -31,11 +19,9 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('./hooks/useProfile', () => ({ useProfile: jest.fn() }));
-
-jest.mock('./lib/aliasVerificationCache', () => ({
-  getVerifiedIdentity: jest.fn(),
-  getVerifiedAlias: jest.fn(),
-  recordVerifiedAlias: jest.fn(),
+// The hook has its own tests; here it only decides routing.
+jest.mock('./hooks/useIdentityHandle', () => ({
+  useIdentityHandle: jest.fn(),
 }));
 
 // Stub ProfileProvider to a leaf that surfaces its props (and does NOT render
@@ -88,9 +74,6 @@ jest.mock('../block/hooks/useBlocks', () => ({
 jest.mock('@/src/common/lib/navigation/useFocusedRefresh', () => ({
   useFocusedRefresh: () => undefined,
 }));
-jest.mock('@/src/common/lib/navigation/replacePath', () => ({
-  replacePath: jest.fn(),
-}));
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({ theme: { palette: { primary_500: '#000' } } }),
   Atoms: new Proxy({}, { get: () => ({}) }),
@@ -116,55 +99,56 @@ jest.mock('@/src/common/components/layout', () => {
 });
 
 import ProfileScreen from './ProfileScreen';
-import { replacePath } from '@/src/common/lib/navigation/replacePath';
-import { resolveAlias } from '@polycentric/react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { useProfile } from './hooks/useProfile';
+import { useAliasResolutionStore } from './alias/useAliasResolutionStore';
 import {
-  getVerifiedAlias,
-  getVerifiedIdentity,
-  recordVerifiedAlias,
-} from './lib/aliasVerificationCache';
+  type IdentityHandleResult,
+  useIdentityHandle,
+} from './hooks/useIdentityHandle';
+import { useProfile } from './hooks/useProfile';
 
-const mockResolve = resolveAlias as jest.Mock;
-const mockUseProfile = useProfile as jest.Mock;
+const mockResolve = jest.fn();
 const mockParams = useLocalSearchParams as jest.Mock;
-const mockReplacePath = replacePath as jest.Mock;
-const mockGetVerifiedIdentity = getVerifiedIdentity as jest.Mock;
-const mockGetVerifiedAlias = getVerifiedAlias as jest.Mock;
-const mockRecord = recordVerifiedAlias as jest.Mock;
 
-const EMPTY_PROFILE = {
-  name: null,
-  description: null,
-  avatar: null,
-  banner: null,
-  alias: null as string | null,
-  isLoading: false,
-  error: null,
-  refresh: () => undefined,
-};
-
-// The profile useProfile should return for a non-null identity this test.
-let profileResult = EMPTY_PROFILE;
+// What `useIdentityHandle` returns for each identity this test.
+let handleByIdentity: Record<string, IdentityHandleResult> = {};
 
 beforeEach(() => {
   jest.clearAllMocks();
-  profileResult = EMPTY_PROFILE;
-  // Disabled (null id) yields the empty profile; a real id yields the fixture.
-  mockUseProfile.mockImplementation((id: string | null) =>
-    id ? profileResult : EMPTY_PROFILE,
+  handleByIdentity = {};
+  (useProfile as jest.Mock).mockReturnValue({});
+  (useIdentityHandle as jest.Mock).mockImplementation(
+    (identity: string | null | undefined) =>
+      (identity && handleByIdentity[identity]) ?? {
+        kind: 'loading',
+        text: '…',
+      },
   );
-  mockGetVerifiedIdentity.mockReturnValue(null);
-  mockGetVerifiedAlias.mockReturnValue(null);
+  // A request that never settles unless a test says otherwise.
+  mockResolve.mockReturnValue(new Promise(() => undefined));
+  useAliasResolutionStore.setState({
+    identityByAlias: {},
+    identityPromiseByAlias: {},
+    resolveAlias: mockResolve,
+  });
 });
+
+// `alias` settles in the store as `identity`, like a finished request.
+function resolveAliasTo(alias: string, identity: string | null) {
+  mockResolve.mockImplementation(async () => {
+    useAliasResolutionStore.setState((state) => ({
+      identityByAlias: { ...state.identityByAlias, [alias]: identity },
+    }));
+    return identity;
+  });
+}
 
 describe('AliasProfile (alias path)', () => {
   beforeEach(() => mockParams.mockReturnValue({ identityId: ALIAS }));
 
-  it('renders the profile when the identity claims the alias back', async () => {
-    mockResolve.mockResolvedValue(IDENTITY);
-    profileResult = { ...EMPTY_PROFILE, alias: ALIAS };
+  it('renders the profile when the candidate verifies the alias', async () => {
+    resolveAliasTo(ALIAS, IDENTITY);
+    handleByIdentity[IDENTITY] = { kind: 'alias', text: ALIAS };
 
     const { getByTestId } = await render(<ProfileScreen />);
 
@@ -172,85 +156,66 @@ describe('AliasProfile (alias path)', () => {
     const node = getByTestId('profile');
     expect(node.props.identityKey).toBe(IDENTITY);
     expect(node.props.alias).toBe(ALIAS);
-    expect(mockRecord).toHaveBeenCalledWith(ALIAS, IDENTITY);
   });
 
-  it('shows "Couldn\'t verify" when the profile claims a different alias', async () => {
-    mockResolve.mockResolvedValue(IDENTITY);
-    profileResult = { ...EMPTY_PROFILE, alias: 'someone@else.com' };
+  it('renders an already resolved alias on the first frame', async () => {
+    useAliasResolutionStore.setState({
+      identityByAlias: { [ALIAS]: IDENTITY },
+    });
+    handleByIdentity[IDENTITY] = { kind: 'alias', text: ALIAS };
 
+    const { getByTestId } = await render(<ProfileScreen />);
+
+    expect(getByTestId('profile').props.identityKey).toBe(IDENTITY);
+  });
+
+  it('shows "Verifying" while the alias resolves', async () => {
     const { getByText } = await render(<ProfileScreen />);
-
-    await waitFor(() => expect(getByText(/Couldn't verify/)).toBeTruthy());
-    expect(mockRecord).not.toHaveBeenCalled();
+    expect(getByText(/Verifying/)).toBeTruthy();
+    expect(mockResolve).toHaveBeenCalledWith(ALIAS);
   });
 
-  it('shows "Couldn\'t find" when resolution fails', async () => {
-    mockResolve.mockResolvedValue(null);
-    const { getByText } = await render(<ProfileScreen />);
-    await waitFor(() => expect(getByText(/Couldn't find/)).toBeTruthy());
-  });
-
-  it('stays on "Verifying" while the candidate profile loads', async () => {
-    mockResolve.mockResolvedValue(IDENTITY);
-    profileResult = { ...EMPTY_PROFILE, isLoading: true };
+  it('shows "Verifying" while the candidate profile loads', async () => {
+    resolveAliasTo(ALIAS, IDENTITY);
     const { getByText } = await render(<ProfileScreen />);
     await waitFor(() => expect(getByText(/Verifying/)).toBeTruthy());
   });
 
-  it('short-circuits via the cache without hitting the network', async () => {
-    mockGetVerifiedIdentity.mockReturnValue(IDENTITY);
+  it.each<IdentityHandleResult>([
+    { kind: 'alias', text: 'someone@else.com' },
+    { kind: 'alias-pending', text: 'someone@else.com' },
+    { kind: 'hash', text: IDENTITY.slice(0, 10) },
+  ])('shows "Couldn\'t verify" when the candidate is %o', async (handle) => {
+    resolveAliasTo(ALIAS, IDENTITY);
+    handleByIdentity[IDENTITY] = handle;
 
-    const { getByTestId } = await render(<ProfileScreen />);
+    const { getByText } = await render(<ProfileScreen />);
 
-    await waitFor(() => expect(getByTestId('profile')).toBeTruthy());
-    expect(getByTestId('profile').props.identityKey).toBe(IDENTITY);
-    expect(mockResolve).not.toHaveBeenCalled();
+    await waitFor(() => expect(getByText(/Couldn't verify/)).toBeTruthy());
+  });
+
+  it('shows "Couldn\'t verify" when the alias resolves to nothing', async () => {
+    resolveAliasTo(ALIAS, null);
+    const { getByText } = await render(<ProfileScreen />);
+    await waitFor(() => expect(getByText(/Couldn't verify/)).toBeTruthy());
+  });
+
+  it('shows "Couldn\'t verify" for a malformed alias', async () => {
+    mockParams.mockReturnValue({ identityId: 'not-an-alias' });
+    const { getByText } = await render(<ProfileScreen />);
+    expect(getByText(/Couldn't verify/)).toBeTruthy();
   });
 });
 
-describe('IdentityProfile (identity path)', () => {
-  beforeEach(() => mockParams.mockReturnValue({ identityId: IDENTITY }));
+describe('identity path', () => {
+  it('renders the profile without an alias, whatever the handle', async () => {
+    mockParams.mockReturnValue({ identityId: IDENTITY });
+    handleByIdentity[IDENTITY] = { kind: 'alias', text: ALIAS };
 
-  it('redirects to the alias URL when it resolves back to this identity', async () => {
-    profileResult = { ...EMPTY_PROFILE, alias: ALIAS };
-    mockResolve.mockResolvedValue(IDENTITY);
+    const { getByTestId } = await render(<ProfileScreen />);
 
-    await render(<ProfileScreen />);
-
-    await waitFor(() =>
-      expect(mockReplacePath).toHaveBeenCalledWith(`/${ALIAS}`),
-    );
-    expect(mockRecord).toHaveBeenCalledWith(ALIAS, IDENTITY);
-  });
-
-  it('does not redirect when the alias points at a different identity', async () => {
-    profileResult = { ...EMPTY_PROFILE, alias: ALIAS };
-    mockResolve.mockResolvedValue(OTHER_IDENTITY);
-
-    await render(<ProfileScreen />);
-
-    await waitFor(() => expect(mockResolve).toHaveBeenCalled());
-    expect(mockReplacePath).not.toHaveBeenCalled();
-  });
-
-  it('uses the cache fast-path to redirect without a network call', async () => {
-    mockGetVerifiedAlias.mockReturnValue(ALIAS);
-
-    await render(<ProfileScreen />);
-
-    await waitFor(() =>
-      expect(mockReplacePath).toHaveBeenCalledWith(`/${ALIAS}`),
-    );
-    expect(mockResolve).not.toHaveBeenCalled();
-  });
-
-  it('does not redirect a profile with no alias', async () => {
-    profileResult = EMPTY_PROFILE;
-    await render(<ProfileScreen />);
-    // Give effects a chance to run.
-    await waitFor(() => expect(mockUseProfile).toHaveBeenCalled());
-    expect(mockReplacePath).not.toHaveBeenCalled();
-    expect(mockResolve).not.toHaveBeenCalled();
+    const node = getByTestId('profile');
+    expect(node.props.identityKey).toBe(IDENTITY);
+    expect(node.props.alias).toBeNull();
   });
 });

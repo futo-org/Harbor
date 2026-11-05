@@ -4,6 +4,7 @@ import {
   selectMentionQuery,
 } from './useMentionStore';
 import type { ProfileHookResult } from '@/src/features/profile/hooks/useProfile';
+import { useAliasResolutionStore } from '@/src/features/profile/alias/useAliasResolutionStore';
 import { useComposerStore } from './useComposerStore';
 import { applyTextChange } from '../utils/applyTextChange';
 
@@ -145,6 +146,16 @@ describe('findMentionContext', () => {
 });
 
 describe('insertMention', () => {
+  // The aliases below are verified unless a test says otherwise.
+  beforeEach(() =>
+    useAliasResolutionStore.setState({
+      identityByAlias: {
+        'ann.example.com': IDENTITY,
+        'ann@example.com': IDENTITY,
+      },
+    }),
+  );
+
   const setup = (text: string, caret: number) => {
     // A fresh draft, which holds the inserted mention ranges
     useComposerStore.getState().reset();
@@ -221,6 +232,31 @@ describe('insertMention', () => {
       `@${IDENTITY} `,
       IDENTITY.length + 2,
     );
+  });
+
+  it('inserts a pending alias, as the row shows it', () => {
+    useAliasResolutionStore.setState({ identityByAlias: {} });
+    const { store, onChangeText } = setup('@', 1);
+    insert(store, { alias: 'ann@example.com', name: 'Ann' });
+    expect(onChangeText).toHaveBeenCalledWith('@ann@example.com ', 17);
+  });
+
+  it.each([
+    ['failed', null],
+    ['pointing at another identity', 'b'.repeat(64)],
+  ])('falls back to the display name for an alias %s', (_, resolved) => {
+    useAliasResolutionStore.setState({
+      identityByAlias: { 'ann@example.com': resolved },
+    });
+    const { store, onChangeText } = setup('@', 1);
+    insert(store, { alias: 'ann@example.com', name: 'Ann' });
+    expect(onChangeText).toHaveBeenCalledWith('@Ann ', 5);
+  });
+
+  it('inserts the normalized alias', () => {
+    const { store, onChangeText } = setup('@', 1);
+    insert(store, { alias: '@Ann@Example.com', name: 'Ann' });
+    expect(onChangeText).toHaveBeenCalledWith('@ann@example.com ', 17);
   });
 
   it('does nothing when no mention context is open at the caret', () => {

@@ -497,7 +497,8 @@ jobs:
             "harbor-${GITHUB_REF_NAME}.apk=apps/harbor/harbor.apk" \
             "polycentric-core-${GITHUB_REF_NAME#v}.aar=packages/kt-core/core/build/outputs/aar/core-release.aar" \
             crates/*.crate
-      - name: Announce on Mattermost
+      - name: Announce on Zulip
         env:
-          MATTERMOST_RELEASES_WEBHOOK: ${{ secrets.MATTERMOST_RELEASES_WEBHOOK }}
+          ZULIP_BOT_EMAIL: ${{ vars.ZULIP_BOT_EMAIL }}
+          ZULIP_BOT_API_KEY: ${{ secrets.ZULIP_BOT_API_KEY }}
         run: node .forgejo/scripts/announce-release.mjs release_notes.md

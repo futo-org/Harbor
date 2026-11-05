@@ -15,6 +15,7 @@ use polycentric_common::models::protos_v2::graph_service_client::GraphServiceCli
 use polycentric_common::models::protos_v2::identity_service_client::IdentityServiceClient;
 use polycentric_common::models::protos_v2::notification_service_client::NotificationServiceClient;
 use polycentric_common::models::protos_v2::pairing_service_client::PairingServiceClient;
+use polycentric_common::models::protos_v2::profile_service_client::ProfileServiceClient;
 use polycentric_common::models::protos_v2::search_service_client::SearchServiceClient;
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
@@ -105,6 +106,13 @@ pub async fn connect_event_sync()
 
 pub async fn connect_feeds() -> FeedsServiceClient<tonic::transport::Channel> {
     FeedsServiceClient::connect(grpc_addr())
+        .await
+        .expect("failed to connect to gRPC server")
+}
+
+pub async fn connect_profile() -> ProfileServiceClient<tonic::transport::Channel>
+{
+    ProfileServiceClient::connect(grpc_addr())
         .await
         .expect("failed to connect to gRPC server")
 }
@@ -868,6 +876,7 @@ pub fn expect_events(got: &[EventBundle], expected: &[ExpectEvent<'_>]) {
 #[derive(Debug, Eq, PartialEq)]
 pub enum ExpectHint {
     Identity(String),
+    Profile(EventKey),
     Post(EventKey),
     Delete(EventKey),
     Labels {
@@ -924,7 +933,8 @@ pub fn expect_hints(got: &[EventHint], mut expected: Vec<ExpectHint>) {
             (ContentBody::Delete(delete), ExpectHint::Delete(expected)) => {
                 assert_eq!(*delete.event_key.as_ref().unwrap(), expected);
             }
-            (ContentBody::Post(_), ExpectHint::Post(expected)) => {
+            (ContentBody::Post(_), ExpectHint::Post(expected))
+            | (ContentBody::ProfileUpdate(_), ExpectHint::Profile(expected)) => {
                 let key = hint_event.key.as_ref().unwrap();
                 assert_eq!(*key, expected);
             }
@@ -975,6 +985,12 @@ fn find_expected(
             let got = hint_event.key.as_ref().unwrap();
             expected.iter().position(
                 |e| matches!(e, ExpectHint::Post(expected) if expected == got),
+            )?
+        }
+        ContentBody::ProfileUpdate(_) => {
+            let got = hint_event.key.as_ref().unwrap();
+            expected.iter().position(
+                |e| matches!(e, ExpectHint::Profile(expected) if expected == got),
             )?
         }
         ContentBody::Labels(labels) => {

@@ -1,5 +1,5 @@
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import {
-  IdentityTag,
   ListItem,
   ListItemGroup,
   ProfileAvatar,
@@ -262,7 +262,7 @@ function CurrentIdentityBadge({ identityKey }: { identityKey: string }) {
           variant="subtitle"
           fontWeight="semibold"
         />
-        <IdentityTag identity={identityKey} />
+        <IdentityHandle identity={identityKey} />
       </View>
     </View>
   );

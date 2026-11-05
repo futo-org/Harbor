@@ -158,14 +158,7 @@ fn logs_url(grafana: &Grafana, trace_id: &str, span: &Span) -> String {
     let panes = serde_json::json!({
         "a": {
             "datasource": grafana.logs_datasource,
-            "queries": [{
-                "refId": "A",
-                "datasource": {
-                    "type": "victoriametrics-logs-datasource",
-                    "uid": grafana.logs_datasource,
-                },
-                "expr": format!("trace_id:{trace_id}"),
-            }],
+            "queries": [{ "refId": "A", "expr": format!("trace_id:{trace_id}") }],
             "range": range,
         },
     });
@@ -184,16 +177,15 @@ fn trace_url(grafana: &Grafana, trace_id: &str) -> String {
     let panes = serde_json::json!({
         "a": {
             "datasource": grafana.traces_datasource,
-            "queries": [{
-                "refId": "A",
-                "datasource": { "type": "jaeger", "uid": grafana.traces_datasource },
-                "query": trace_id,
-            }],
+            "queries": [{ "refId": "A", "query": trace_id }],
         },
     });
     explore_url(grafana, &panes)
 }
 
+/// The pane datasource may be a uid or a name. Queries carry no datasource
+/// of their own: Grafana drops a query whose datasource uid is not the
+/// pane's, and a name there never matches.
 fn explore_url(grafana: &Grafana, panes: &serde_json::Value) -> String {
     let query = form_urlencoded::Serializer::new(String::new())
         .append_pair("schemaVersion", "1")
@@ -380,7 +372,7 @@ mod tests {
 
         let trace_id = "ab".repeat(16);
         let panes = format!(
-            "{{\"a\":{{\"datasource\":\"VictoriaTraces\",\"queries\":[{{\"datasource\":{{\"type\":\"jaeger\",\"uid\":\"VictoriaTraces\"}},\"query\":\"{trace_id}\",\"refId\":\"A\"}}]}}}}"
+            "{{\"a\":{{\"datasource\":\"VictoriaTraces\",\"queries\":[{{\"query\":\"{trace_id}\",\"refId\":\"A\"}}]}}}}"
         );
         let panes: String = form_urlencoded::byte_serialize(panes.as_bytes()).collect();
         assert_eq!(
@@ -416,7 +408,7 @@ mod tests {
 
         let trace_id = "ab".repeat(16);
         let panes = format!(
-            "{{\"a\":{{\"datasource\":\"VictoriaLogs\",\"queries\":[{{\"datasource\":{{\"type\":\"victoriametrics-logs-datasource\",\"uid\":\"VictoriaLogs\"}},\"expr\":\"trace_id:{trace_id}\",\"refId\":\"A\"}}],\"range\":{{\"from\":\"1699996400000\",\"to\":\"1700003601000\"}}}}}}"
+            "{{\"a\":{{\"datasource\":\"VictoriaLogs\",\"queries\":[{{\"expr\":\"trace_id:{trace_id}\",\"refId\":\"A\"}}],\"range\":{{\"from\":\"1699996400000\",\"to\":\"1700003601000\"}}}}}}"
         );
         let panes: String = form_urlencoded::byte_serialize(panes.as_bytes()).collect();
         let details = messages[0].content.lines().last().unwrap().to_string();

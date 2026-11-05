@@ -79,7 +79,9 @@ Provisioned by harbor-infra (`futo-git/ci_values`, `ci_variables`).
 - `REGISTRY_USER` (variable), `REGISTRY_TOKEN`: zot API key of the CI user.
 - `EXPO_TOKEN`, `OPEN_ROUTER_API_TOKEN`, `CLOUDFLARE_API_TOKEN`,
   `CLOUDFLARE_ACCOUNT_ID`,
-  `MATTERMOST_RELEASES_WEBHOOK`, `VERIFIER_BOT_ENV_VARS` (base64 `.env`).
+  `VERIFIER_BOT_ENV_VARS` (base64 `.env`).
+- `ZULIP_BOT_EMAIL` (variable), `ZULIP_BOT_API_KEY`: the bot that posts
+  releases and e2e-staging outcomes to `#harbor-alerts`.
 - `STATIC_S3_ENDPOINT`, `STATIC_S3_ACCESS_KEY_ID`,
   `STATIC_S3_SECRET_ACCESS_KEY`; variables `STATIC_S3_BUCKET`,
   `STATIC_PUBLIC_BASE_URL`.
@@ -113,11 +115,12 @@ runner to start job containers with seccomp and AppArmor unconfined
 ## Release notes
 
 `release-notes.mjs` has Claude (via OpenRouter) write user-facing notes from
-the subjects of the commits since the last `v*` tag, dropping purely
+the subjects of the commits since the previous `v*` tag (by version, as a
+release may be tagged off `develop`), dropping purely
 technical changes. A `Changelog: <category>` line in the squash commit (from
 the PR template, carried over by `default_merge_message/SQUASH_TEMPLATE.md`)
 is passed along as a hint. The same notes serve a release (the Forgejo
-release and the Mattermost announcement) and every staging and production
+release and the Zulip announcement) and every staging and production
 app build between releases (`apk-deploy` jobs, into the `latest.json` the
 app shows in its update sheet), so a build's notes grow through the cycle
 and restart at each release. If they cannot be written, the build still

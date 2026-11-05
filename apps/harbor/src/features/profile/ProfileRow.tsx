@@ -1,8 +1,7 @@
-import { Text } from '@/src/common/components/primitives/Text';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
-import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile, type ProfileHookResult } from './hooks/useProfile';
+import { IdentityHandle } from './IdentityHandle';
 import { Username } from './Username';
 import type { FetchMode } from '@polycentric/react-native';
 import type { ReactNode } from 'react';
@@ -20,7 +19,6 @@ export function ProfileRow({
   size = 'md',
   fetchMode,
   fallbackName,
-  fallbackAlias,
   disabled,
   activeStyle = 'highlight',
   style,
@@ -30,16 +28,14 @@ export function ProfileRow({
   trailing?: ReactNode;
   size?: 'sm' | 'md';
   fetchMode?: FetchMode;
-  /** Shown when the profile has no cached name/alias yet. */
+  /** Shown when the profile has no cached name yet. */
   fallbackName?: string | null;
-  fallbackAlias?: string | null;
   disabled?: boolean;
   activeStyle?: 'highlight' | 'none';
   style?: StyleProp<ViewStyle>;
 }) {
   const { theme } = useTheme();
   const profile = useProfile(identity, { fetchMode });
-  const alias = profile.alias ?? fallbackAlias;
 
   return (
     <Pressable
@@ -75,15 +71,11 @@ export function ProfileRow({
             fontWeight="semibold"
             selectable={false}
           />
-          <Text
+          <IdentityHandle
+            identity={identity}
             variant="small"
-            color="neutral_500"
-            numberOfLines={1}
             selectable={false}
-            monospace={!alias}
-          >
-            {alias ?? shortenIdentityId(identity)}
-          </Text>
+          />
         </View>
         {trailing}
       </View>

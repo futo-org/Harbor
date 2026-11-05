@@ -448,21 +448,6 @@ export function stringURLSafeToPublicKey(str: string): v2.PublicKey {
 }
 
 /**
- * @deprecated misnamed — this returns a short base64 form of the signer's
- * public key, not the identity id. Use {@link shortenIdentityId} or render
- * the v2 `key.identity` string directly.
- */
-export function getIdentityId(publicKey: v2.PublicKey): string {
-  const bytes = publicKey.key ?? new Uint8Array();
-  if (bytes.length === 0) return '...';
-  return toBase64(bytes).slice(0, 10);
-}
-
-export function getIdentityIdShort(publicKey: v2.PublicKey): string {
-  return getIdentityId(publicKey).slice(0, 4);
-}
-
-/**
  * Short display form of a v2 identity id (hex sha256 of the initial
  * Identity content). Returns a placeholder if the id is empty.
  */
