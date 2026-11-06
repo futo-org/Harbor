@@ -36,8 +36,6 @@ export {
   stringToPublicKey,
   publicKeyToStringURLSafe,
   stringURLSafeToPublicKey,
-  getIdentityId,
-  getIdentityIdShort,
   shortenIdentityId,
   signedEventToHex,
   hexToSignedEvent,

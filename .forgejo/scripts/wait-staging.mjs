@@ -3,9 +3,9 @@
 // deploys, then the Flux rollout, until server and web serve on /version the
 // commit their chart's `staging` tag pins.
 // Env: GITHUB_SERVER_URL, GITHUB_REPOSITORY (set by Forgejo), and what
-// post-e2e-staging-failure.mjs needs to post a failure.
+// post-e2e-staging-outcome.mjs needs to post a failure.
 
-import { postE2eStagingFailure } from './post-e2e-staging-failure.mjs';
+import { postE2eStagingFailure } from './post-e2e-staging-outcome.mjs';
 import { chartAt } from './registry-helpers.mjs';
 
 const SECOND = 1000;

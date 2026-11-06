@@ -1,6 +1,7 @@
 import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon, { type IconName } from '@/src/common/components/Icon';
+import { withIdentity } from '@/src/common/lib/authGate';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { COLLECTION } from '@polycentric/react-native';
@@ -10,6 +11,8 @@ import EventInfoSheet from '@/src/features/core/event-info/EventInfoSheet';
 import useBlocks from '../block/hooks/useBlocks';
 import BanSheet from '../moderation/BanSheet';
 import useModerationStatus from '../moderation/hooks/useModerationStatus';
+import ReportSheet from '../moderation/ReportSheet';
+import { useProfile } from './hooks/useProfile';
 import { useProfileContext } from './ProfileContext';
 
 type ProfileMenuProps = {
@@ -39,6 +42,9 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
 
   const [showBanSheet, setShowBanSheet] = useState<boolean>(false);
   const [showInfoSheet, setShowInfoSheet] = useState<boolean>(false);
+  // Reports on an identity target its first event.
+  const [reportEventId, setReportEventId] = useState<string | null>(null);
+  const profileEventId = useProfile(identityKey ?? null).eventId;
 
   const items: MenuItem[] = [];
   // On your own profile, the header's share button is enough.
@@ -60,6 +66,14 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
     });
   }
   if (!isSelf && identityKey) {
+    items.push({
+      key: 'report',
+      icon: 'flag',
+      label: 'Report',
+      // Null only until the profile has loaded.
+      onPress: () =>
+        withIdentity(() => setReportEventId(profileEventId ?? null)),
+    });
     items.push({
       key: 'block',
       icon: isBlocked ? 'personAdd' : 'personRemove',
@@ -125,6 +139,13 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
       </DropdownMenu>
 
       {/* Modals */}
+      {reportEventId ? (
+        <ReportSheet
+          eventId={reportEventId}
+          open
+          onClose={() => setReportEventId(null)}
+        />
+      ) : null}
       <BanSheet
         identityKey={identityKey}
         open={showBanSheet}

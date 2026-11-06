@@ -1,13 +1,13 @@
 import { defaultModeration, migrateSettings } from './index';
 
 describe('defaultModeration', () => {
-  it('shows every label outside the app stores', () => {
+  it('warns on every label outside the app stores', () => {
     expect(defaultModeration(false)).toEqual({
-      hate: 'show',
-      'self-harm': 'show',
-      'sexually-suggestive': 'show',
-      'sexually-explicit': 'show',
-      violence: 'show',
+      hate: 'warn',
+      'self-harm': 'warn',
+      'sexually-suggestive': 'warn',
+      'sexually-explicit': 'warn',
+      violence: 'warn',
     });
   });
 

@@ -1,0 +1,479 @@
+//! Tests for searching posts.
+
+use crate::*;
+use prost::Message;
+
+#[tokio::test]
+async fn no_match() {
+    expect_searched_posts(
+        SearchPostsRequest {
+            query: random_string(),
+            sort_by: None,
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        Vec::new(),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn match_text() {
+    let mut client = TestClient::new().await;
+
+    let post_text = random_string();
+    client.post_text(&post_text, current_timestamp());
+    client.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query: post_text.clone(),
+            sort_by: None,
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        vec![Post {
+            text: post_text,
+            reply: None,
+            images: vec![],
+            quote: None,
+            links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
+        }],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn match_on_hashtags() {
+    let mut client = TestClient::new().await;
+
+    let post_text = "#a #some";
+    client.post_text(&post_text, current_timestamp());
+    client.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query: post_text.into(),
+            sort_by: None,
+            // Limit to 1 post as each time we test we create another. All we're
+            // interested in is that one of them is returned, not which one.
+            page_params: Some(PageParams {
+                limit: Some(1),
+                ..Default::default()
+            }),
+            omit_labels: Vec::new(),
+        },
+        vec![Post {
+            text: post_text.into(),
+            reply: None,
+            images: vec![],
+            quote: None,
+            links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
+        }],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn order_by_default() {
+    let mut client = TestClient::new().await;
+
+    let query = random_string();
+    let post_text1 = format!("{query} first.");
+    let post_text2 = format!("{query} second.");
+    client.post_text(&post_text1, current_timestamp());
+    client.post_text(&post_text2, current_timestamp() + 1);
+    let post2_key = client.get_last_event_key();
+    client.thumbs_up(post2_key, current_timestamp() + 2);
+    client.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query,
+            sort_by: Some(SortPostsBy::Default as _),
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        vec![
+            Post {
+                text: post_text2,
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            },
+            Post {
+                text: post_text1,
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            },
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn order_by_latest() {
+    let mut client = TestClient::new().await;
+
+    let query = random_string();
+    let post_text1 = format!("{query} first.");
+    let post_text2 = format!("{query} second.");
+    client.post_text(&post_text1, current_timestamp());
+    client.post_text(&post_text2, current_timestamp() + 1);
+    client.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query,
+            sort_by: Some(SortPostsBy::Latest as _),
+            page_params: None,
+            omit_labels: Vec::new(),
+        },
+        vec![
+            Post {
+                text: post_text2,
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            },
+            Post {
+                text: post_text1,
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            },
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn omit_labels() {
+    let query = random_string();
+    let label = random_string();
+
+    let mut client = TestClient::new().await;
+    client.post_text(&query, current_timestamp());
+    let post_event_key = client.get_last_event_key();
+    client.submit_events().await;
+
+    let (mut trusted_moderator, _guard) = TestClient::trusted_moderator().await;
+    trusted_moderator.label(
+        Labels {
+            event_key: Some(post_event_key),
+            label_values: vec![label.clone()],
+        },
+        current_timestamp() + 1,
+    );
+    trusted_moderator.submit_events().await;
+
+    expect_searched_posts(
+        SearchPostsRequest {
+            query,
+            sort_by: None,
+            page_params: None,
+            omit_labels: vec![label],
+        },
+        vec![], // The post should be hidden.
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn pagination_order_by_top() {
+    let mut search = search_service().await;
+    let query = random_string();
+    let mut clients = Vec::new();
+    let mut expected = Vec::new();
+    let mut post_event_keys = Vec::new();
+    for n in 1..=3 {
+        let mut client = TestClient::new().await;
+        let text = format!("{n}. {query}.");
+        client.post_text(&text, current_timestamp());
+        post_event_keys.push(client.get_last_event_key());
+        expected.push(Post {
+            text,
+            reply: None,
+            images: vec![],
+            quote: None,
+            links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
+        });
+        clients.push(client);
+    }
+    for (n, mut client) in clients.into_iter().enumerate() {
+        for post in &post_event_keys[..n + 1] {
+            client.thumbs_up(post.clone(), current_timestamp());
+        }
+        client.submit_events().await;
+    }
+
+    // Forward.
+    let mut page_info: Option<PageInfo> = None;
+    let mut expected_iter = expected.clone().into_iter();
+    while let Some(expected) = expected_iter.next() {
+        expect_searched_posts2(
+            SearchPostsRequest {
+                query: query.clone(),
+                sort_by: Some(SortPostsBy::Top as _),
+                page_params: Some(PageParams {
+                    limit: Some(1),
+                    backward_token: None,
+                    forward_token: page_info.take().map(|i| i.end_cursor),
+                }),
+                omit_labels: Vec::new(),
+            },
+            vec![expected],
+            |request| async {
+                let SearchPostsResponse {
+                    results,
+                    page_info: p_i,
+                    ..
+                } = search.search_posts(request).await.unwrap().into_inner();
+                page_info = p_i;
+                results
+            },
+        )
+        .await;
+
+        let page_info = page_info.as_ref().unwrap();
+        assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
+        assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
+    }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
+
+    // Backward.
+    expected.reverse();
+    let mut expected_iter = expected.clone().into_iter();
+    let _ = expected_iter.next(); // Skip first (previously last) result.
+    while let Some(expected) = expected_iter.next() {
+        expect_searched_posts2(
+            SearchPostsRequest {
+                query: query.clone(),
+                sort_by: Some(SortPostsBy::Top as _),
+                page_params: Some(PageParams {
+                    limit: Some(1),
+                    backward_token: page_info.take().map(|i| i.start_cursor),
+                    forward_token: None,
+                }),
+                omit_labels: Vec::new(),
+            },
+            vec![expected],
+            |request| async {
+                let SearchPostsResponse {
+                    results,
+                    page_info: p_i,
+                    ..
+                } = search.search_posts(request).await.unwrap().into_inner();
+                page_info = p_i;
+                results
+            },
+        )
+        .await;
+
+        let page_info = page_info.as_ref().unwrap();
+        assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
+        assert_eq!(page_info.has_next_page, true);
+    }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
+}
+
+#[tokio::test]
+async fn pagination_order_by_latest() {
+    let mut search = search_service().await;
+    let mut client = TestClient::new().await;
+
+    let query = random_string();
+    let mut expected = Vec::new();
+    for n in 1..=3 {
+        let text = format!("{n}. {query}.");
+        client.post_text(&text, current_timestamp() + n);
+        expected.push(Post {
+            text,
+            reply: None,
+            images: vec![],
+            quote: None,
+            links: vec![],
+            labels: vec![],
+            attributed_to: vec![],
+        });
+    }
+    expected.reverse();
+    client.submit_events().await;
+
+    // Forward.
+    let mut page_info: Option<PageInfo> = None;
+    let mut expected_iter = expected.clone().into_iter();
+    while let Some(expected) = expected_iter.next() {
+        expect_searched_posts2(
+            SearchPostsRequest {
+                query: query.clone(),
+                sort_by: Some(SortPostsBy::Latest as _),
+                page_params: Some(PageParams {
+                    limit: Some(1),
+                    backward_token: None,
+                    forward_token: page_info.take().map(|i| i.end_cursor),
+                }),
+                omit_labels: Vec::new(),
+            },
+            vec![expected],
+            |request| async {
+                let SearchPostsResponse {
+                    results,
+                    page_info: p_i,
+                    ..
+                } = search.search_posts(request).await.unwrap().into_inner();
+                page_info = p_i;
+                results
+            },
+        )
+        .await;
+
+        let page_info = page_info.as_ref().unwrap();
+        assert_eq!(page_info.has_previous_page, expected_iter.len() != 2);
+        assert_eq!(page_info.has_next_page, expected_iter.len() >= 1);
+    }
+    assert!(!page_info.as_ref().unwrap().has_next_page);
+
+    // Backward.
+    expected.reverse();
+    let mut expected_iter = expected.clone().into_iter();
+    let _ = expected_iter.next(); // Skip first (previously last) result.
+    while let Some(expected) = expected_iter.next() {
+        expect_searched_posts2(
+            SearchPostsRequest {
+                query: query.clone(),
+                sort_by: Some(SortPostsBy::Latest as _),
+                page_params: Some(PageParams {
+                    limit: Some(1),
+                    backward_token: page_info.take().map(|i| i.start_cursor),
+                    forward_token: None,
+                }),
+                omit_labels: Vec::new(),
+            },
+            vec![expected],
+            |request| async {
+                let SearchPostsResponse {
+                    results,
+                    page_info: p_i,
+                    ..
+                } = search.search_posts(request).await.unwrap().into_inner();
+                page_info = p_i;
+                results
+            },
+        )
+        .await;
+
+        let page_info = page_info.as_ref().unwrap();
+        assert_eq!(page_info.has_previous_page, expected_iter.len() >= 1);
+        assert_eq!(page_info.has_next_page, true);
+    }
+    assert!(!page_info.as_ref().unwrap().has_previous_page);
+}
+
+#[tokio::test]
+async fn regression_1570() {
+    let mut client = TestClient::new().await;
+
+    let post_text = "First line\n#some\n#the";
+    client.post_text(post_text, current_timestamp());
+    let post_key = client.get_last_event_key();
+    client.submit_events().await;
+
+    let mut search = search_service().await;
+    let request = SearchPostsRequest {
+        query: "some the".to_owned(),
+        sort_by: Some(SortPostsBy::Latest as _),
+        page_params: Some(PageParams {
+            limit: Some(2),
+            ..Default::default()
+        }),
+        omit_labels: Vec::new(),
+    };
+    let response = search.search_posts(request).await.unwrap();
+    let results = response.into_inner().results;
+
+    // We can match results, as long as one of them is the text we expect.
+    assert!(results.iter().any(|result| {
+        let key = Event::decode(
+            &*result
+                .event_bundle
+                .as_ref()
+                .unwrap()
+                .signed_event
+                .as_ref()
+                .unwrap()
+                .event_bytes,
+        )
+        .unwrap()
+        .key
+        .unwrap();
+        key == post_key
+    }));
+}
+
+async fn expect_searched_posts(
+    request: SearchPostsRequest,
+    expected: Vec<Post>,
+) {
+    expect_searched_posts2(request, expected, |request| async {
+        let mut search = search_service().await;
+        let response = search.search_posts(request).await.unwrap();
+        response.into_inner().results
+    })
+    .await
+}
+
+async fn expect_searched_posts2<F, Fut>(
+    request: SearchPostsRequest,
+    expected: Vec<Post>,
+    get_results: F,
+) where
+    F: FnOnce(SearchPostsRequest) -> Fut,
+    Fut: Future<Output = Vec<SearchResult>>,
+{
+    eprintln!("query: {:#?}", request.query);
+    let results = get_results(request).await;
+    eprintln!("expected: {expected:#?}");
+    eprintln!("results: {results:#?}");
+
+    assert_eq!(
+        results.len(),
+        expected.len(),
+        "unexpected amount of results"
+    );
+    for (result, expected) in results.into_iter().zip(expected) {
+        let event = result.event_bundle.unwrap();
+        let Some(serialized_content) = event.serialized_content.as_ref() else {
+            panic!("missing content in event: {event:?}");
+        };
+        let Ok(content) = Content::decode(&*serialized_content.content_bytes)
+        else {
+            panic!("failed to decode event: {event:?}");
+        };
+        let Some(ContentBody::Post(post)) = content.content_body else {
+            panic!("unexpected content body: {event:?}");
+        };
+        assert_eq!(post, expected);
+        // Hard to assert the actual rank, so just check we have it.
+        assert!(result.rank >= 0.0);
+    }
+}

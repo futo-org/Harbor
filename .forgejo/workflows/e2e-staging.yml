@@ -133,9 +133,10 @@ jobs:
           ZULIP_BOT_API_KEY: ${{ secrets.ZULIP_BOT_API_KEY }}
         run: |
           pnpm --filter harbor-e2e test:web || {
-            node .forgejo/scripts/post-e2e-staging-failure.mjs
+            node .forgejo/scripts/post-e2e-staging-outcome.mjs --failed
             exit 1
           }
+          node .forgejo/scripts/post-e2e-staging-outcome.mjs --passed
       - uses: forgejo/upload-artifact@v4
         if: always()
         with:
@@ -162,4 +163,4 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           ZULIP_BOT_EMAIL: ${{ vars.ZULIP_BOT_EMAIL }}
           ZULIP_BOT_API_KEY: ${{ secrets.ZULIP_BOT_API_KEY }}
-        run: node .forgejo/scripts/post-e2e-staging-failure.mjs 'CI setup failed before e2e'
+        run: node .forgejo/scripts/post-e2e-staging-outcome.mjs --failed 'CI setup failed before e2e'

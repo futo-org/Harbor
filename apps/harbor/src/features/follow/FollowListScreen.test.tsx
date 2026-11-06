@@ -5,6 +5,7 @@ jest.mock('@/src/common/theme', () => ({
       atoms: new Proxy({}, { get: () => ({}) }),
     },
   }),
+  createThemedStyles: () => () => ({}),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
   typography: { lineHeight: new Proxy({}, { get: () => 20 }) },
@@ -154,7 +155,11 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
 
 let mockProfileAlias: string | null = null;
 jest.mock('@/src/features/profile/hooks/useProfile', () => ({
-  useProfile: () => ({ name: 'Alice', alias: mockProfileAlias }),
+  useProfile: () => ({
+    name: 'Alice',
+    alias: mockProfileAlias,
+    isLoading: false,
+  }),
 }));
 
 jest.mock('./FollowButton', () => {
@@ -185,6 +190,7 @@ jest.mock('./hooks/useFollowList', () => ({
 
 import { fireEvent, render } from '@testing-library/react-native';
 import * as React from 'react';
+import { useAliasResolutionStore } from '@/src/features/profile/alias/useAliasResolutionStore';
 import FollowListScreen from './FollowListScreen';
 
 function entry(identity: string) {
@@ -197,6 +203,11 @@ beforeEach(() => {
   mockEntries = [];
   mockHasMore = false;
   mockProfileAlias = null;
+  useAliasResolutionStore.setState({
+    identityByAlias: {},
+    identityPromiseByAlias: {},
+    resolveAlias: jest.fn(),
+  });
 });
 
 describe('FollowListScreen header', () => {
@@ -207,11 +218,15 @@ describe('FollowListScreen header', () => {
     expect(screen.getByText(/short-profile-id/)).toBeTruthy();
   });
 
-  it('appends the alias when available', async () => {
+  it('shows the verified alias instead of the identity prefix', async () => {
     mockProfileAlias = 'alice@domain.com';
+    useAliasResolutionStore.setState({
+      identityByAlias: { 'alice@domain.com': 'profile-id' },
+    });
     const screen = await render(<FollowListScreen mode="following" />);
 
-    expect(screen.getByText(/alice@domain.com/)).toBeTruthy();
+    expect(screen.getByText('alice@domain.com')).toBeTruthy();
+    expect(screen.queryByText(/short-profile-id/)).toBeNull();
   });
 });
 

@@ -1,6 +1,7 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { setQueryCache, useQuery } from '@/src/common/query/hooks/useQuery';
 import {
+  COLLECTION,
   decodeBytesByServer,
   encodeBytesByServer,
   FetchMode,
@@ -105,7 +106,9 @@ export default function useReports(status: v2.ReportStatus): ReportsState {
   };
 
   const deletePost = async ({ server, report }: ServerReport) => {
-    if (!report.target) return;
+    if (!report.target || report.target.collection === COLLECTION.IDENTITY) {
+      return;
+    }
     const target = report.target;
     await client.deleteContent(server, target);
     patchCache(

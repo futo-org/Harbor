@@ -44,7 +44,6 @@ Not mapped:
 
 - `data-store/*` (`StorageHandle` and its stores)
 - `file-store/file-store.ts`
-- `http/alias-resolver.ts`
 - `utils/moderation.ts`
 - `utils/base64.ts`, `utils/bytes.ts`, `utils/hex.ts`, `utils/path.ts`, `utils/rust-types.ts`
 

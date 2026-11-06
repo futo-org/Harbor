@@ -1,6 +1,5 @@
-jest.mock('@polycentric/react-native', () => ({
-  resolveAlias: jest.fn(),
-}));
+// The barrel can't load under jest; `ImageImportError` imports it.
+jest.mock('@polycentric/react-native', () => ({}));
 jest.mock('@/src/common/query/hooks/useQuery', () => ({
   invalidateQuery: jest.fn(),
 }));
@@ -13,11 +12,11 @@ jest.mock('../lib/updateProfile', () => ({
 }));
 
 import { act, renderHook } from '@testing-library/react-native';
-import { resolveAlias } from '@polycentric/react-native';
+import { useAliasResolutionStore } from '../alias/useAliasResolutionStore';
 import { useProfileEdit } from './useProfileEdit';
 import { updateProfile } from '../lib/updateProfile';
 
-const mockResolve = resolveAlias as jest.Mock;
+const mockResolve = jest.fn();
 const mockUpdate = updateProfile as jest.Mock;
 
 const IDENTITY =
@@ -42,7 +41,10 @@ async function editAlias(profileAlias: string | null, next: string) {
   return hook.result;
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  useAliasResolutionStore.setState({ resolveAlias: mockResolve });
+});
 
 describe('useProfileEdit alias', () => {
   it('seeds the alias draft from the profile', async () => {
@@ -89,7 +91,9 @@ describe('useProfileEdit alias', () => {
     });
 
     expect(ok).toBe(true);
-    expect(mockResolve).toHaveBeenCalledWith('new@domain.com');
+    expect(mockResolve).toHaveBeenCalledWith('new@domain.com', {
+      force: true,
+    });
     expect(mockUpdate).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ alias: 'new@domain.com' }),

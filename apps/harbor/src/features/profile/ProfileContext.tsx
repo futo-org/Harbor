@@ -20,8 +20,8 @@ interface ProfileContextValue {
   isSelf: boolean;
   activeFeed: ActiveFeed;
   setActiveFeed: (tab: ActiveFeed) => void;
-  // An alias that has been verified to belong to this identity, when
-  // the profile was reached via one. Null otherwise.
+  // The verified alias the profile was opened with, kept in the tab URLs.
+  // Null when opened by identity.
   alias: string | null;
 }
 

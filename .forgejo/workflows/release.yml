@@ -438,7 +438,7 @@ jobs:
           for crate in polycentric-common polycentric-core; do
             # Skip crates already published for this version. Note that the crates.io convention is
             # to index the first few characters before the crate name.
-            if curl -sf "${INDEX_URL}po/ly/${crate}" | grep -q "\"vers\":\"${VERSION}\""; then
+            if curl --max-time 10 -sf "${INDEX_URL}po/ly/${crate}" | grep -q "\"vers\":\"${VERSION}\""; then
               echo "${crate} ${VERSION} is already published; skipping."
               continue
             fi

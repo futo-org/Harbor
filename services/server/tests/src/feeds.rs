@@ -254,6 +254,84 @@ async fn omit_labels_hides_labeled_post() {
 }
 
 #[tokio::test]
+async fn label_on_profile_served_with_the_profile() {
+    let mut author = TestClient::new().await;
+    author.profile_update(
+        ProfileUpdate {
+            name: Some("labeled profile".to_string()),
+            ..Default::default()
+        },
+        current_timestamp(),
+    );
+    let profile_key = author.get_last_event_key();
+    author.submit_events().await;
+
+    let (mut moderator, _guard) = TestClient::trusted_moderator().await;
+    moderator.label_key(
+        profile_key.clone(),
+        vec!["hate".to_string()],
+        current_timestamp() + 1,
+    );
+    moderator.submit_events().await;
+
+    let resp = connect_profile()
+        .await
+        .get_profile(GetProfileRequest {
+            identity: author.identity().to_string(),
+        })
+        .await
+        .expect("get_profile failed")
+        .into_inner();
+    assert_eq!(resp.event_bundles.len(), 1);
+    expect_hints(
+        &resp.event_hints,
+        vec![
+            ExpectHint::Identity(author.identity().to_string()),
+            ExpectHint::moderator_identity(),
+            ExpectHint::Labels {
+                post: profile_key.clone(),
+                values: vec!["hate".to_string()],
+            },
+        ],
+    );
+
+    // Feeds carry the profile label too, for clients rendering offline.
+    author.post(
+        Post {
+            text: "by a labeled profile".to_string(),
+            ..Default::default()
+        },
+        current_timestamp() + 2,
+    );
+    author.submit_events().await;
+    let feed = connect_feeds()
+        .await
+        .get_identity_feed(GetIdentityFeedRequest {
+            identity: author.identity().to_string(),
+            page_params: Some(PageParams {
+                limit: Some(10),
+                ..Default::default()
+            }),
+            omit_labels: vec![],
+        })
+        .await
+        .expect("get_identity_feed failed")
+        .into_inner();
+    expect_hints(
+        &feed.event_hints,
+        vec![
+            ExpectHint::Identity(author.identity().to_string()),
+            ExpectHint::moderator_identity(),
+            ExpectHint::Profile(profile_key.clone()),
+            ExpectHint::Labels {
+                post: profile_key,
+                values: vec!["hate".to_string()],
+            },
+        ],
+    );
+}
+
+#[tokio::test]
 async fn attribution_feed_returns_only_matching_posts() {
     let mut event = connect_event_sync().await;
     let mut feed = connect_feeds().await;

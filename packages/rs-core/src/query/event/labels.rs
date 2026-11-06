@@ -7,7 +7,7 @@ use polycentric_common::models::moderation_label::ModerationLabel;
 use polycentric_common::models::protos_v2::GetPostResponse;
 use polycentric_common::models::protos_v2::{
     Content, Event, EventBundle, EventHint, GetFeedResponse, GetPostThreadResponse,
-    ListNotificationsResponse, SearchPostsResponse, content::ContentBody,
+    GetProfileResponse, ListNotificationsResponse, SearchPostsResponse, content::ContentBody,
 };
 use prost::Message;
 use std::collections::HashMap;
@@ -168,6 +168,15 @@ pub fn labels_from_search_response(response: Vec<u8>) -> Vec<LabelSet> {
 #[uniffi::export]
 pub fn labels_from_get_post_response(response: Vec<u8>) -> Vec<LabelSet> {
     GetPostResponse::decode(response.as_slice())
+        .map(|r| build_label_sets(&r.event_hints))
+        .unwrap_or_default()
+}
+
+/// Return the labels from the `event_hints` field of a get profile
+/// response. These target the identity's profile events.
+#[uniffi::export]
+pub fn labels_from_get_profile_response(response: Vec<u8>) -> Vec<LabelSet> {
+    GetProfileResponse::decode(response.as_slice())
         .map(|r| build_label_sets(&r.event_hints))
         .unwrap_or_default()
 }
@@ -481,6 +490,30 @@ mod tests {
         let sets = labels_from_search_response(response);
         assert_eq!(sets.len(), 1);
         assert_eq!(sets[0].labels, vec![label("violence", MODERATOR)]);
+    }
+
+    #[test]
+    fn labels_from_get_profile_response_reads_the_hints() {
+        let profile_key = ProtoEventKey {
+            collection: collections::PROFILE,
+            ..proto_key(AUTHOR, 1)
+        };
+        let response = GetProfileResponse {
+            event_bundles: Vec::new(),
+            event_hints: hints(vec![labels_bundle(
+                MODERATOR,
+                profile_key.clone(),
+                &["hate"],
+            )]),
+            following_count: 0,
+            followers_count: 0,
+        }
+        .encode_to_vec();
+
+        let sets = labels_from_get_profile_response(response);
+        assert_eq!(sets.len(), 1);
+        assert_eq!(sets[0].target, EventKey::from_proto(profile_key).unwrap());
+        assert_eq!(sets[0].labels, vec![label("hate", MODERATOR)]);
     }
 
     #[test]
