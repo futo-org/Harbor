@@ -191,7 +191,6 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       next(result) {
         const patch: Partial<QueryRef> = {
           status: result.status,
-          successfulServers: result.successfulServers,
           pendingServers: result.pendingServers,
         };
 
@@ -200,6 +199,14 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
           result.successfulServers === 0 && result.data?.byteLength === 0;
         if (result.data !== undefined && !(hasData && localEmpty)) {
           patch.data = result.data;
+        }
+
+        // A local read that found nothing must not erase what the servers
+        // confirmed, or the next consumer would fetch it again.
+        const localMiss =
+          hasData && localEmpty && result.status === QueryStatus.Success;
+        if (!localMiss) {
+          patch.successfulServers = result.successfulServers;
         }
 
         if (result.pendingServers === 0 || result.successfulServers > 0) {
@@ -243,9 +250,17 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       const entry = get().queries.get(key);
       const hasData = entry?.data !== undefined;
 
+      // An offline-only local miss leaves empty data that no server has
+      // confirmed, which a consumer that may reach the servers must not take
+      // as settled.
+      const unconfirmed =
+        args.opts?.fetchMode !== FetchMode.OfflineOnly &&
+        entry?.data?.byteLength === 0 &&
+        entry.successfulServers === 0;
+
       // Resetting a populated entry to `Loading` re-renders every other
       // consumer of the key, and scrolling remounts rows constantly.
-      const initState = hasData ? {} : LOADING_ENTRY;
+      const initState = hasData && !unconfirmed ? {} : LOADING_ENTRY;
 
       const recover = !hasData && entry?.status === QueryStatus.Error;
       const fetchArgs = recover ? forceRemote(args) : args;
@@ -255,7 +270,10 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
         existing.refCount += 1;
         existing.args = args;
 
-        if (recover || args.opts?.fetchMode === FetchMode.Default) {
+        // A fetch already in flight will answer for this consumer too.
+        const upgrade = unconfirmed && entry?.status !== QueryStatus.Loading;
+
+        if (recover || upgrade || args.opts?.fetchMode === FetchMode.Default) {
           existing.dispose();
           existing.dispose = fetch(key, fetchArgs, initState);
         }
