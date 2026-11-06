@@ -222,4 +222,31 @@ describe('useQueryStore offline-only local miss', () => {
       QueryStatus.Success,
     );
   });
+
+  it('keeps a server-confirmed miss when the consumers remount', () => {
+    // A feed row: the avatar reads offline-only, then the name reads
+    // offline-first and the servers confirm there is no profile.
+    localMiss();
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineFirst));
+    latest().next({
+      data: new Uint8Array([]),
+      status: QueryStatus.Success,
+      successfulServers: 1,
+      pendingServers: 0,
+    });
+    latest().complete();
+    expect(fetchQuery).toHaveBeenCalledTimes(2);
+
+    // The row scrolls away and comes back.
+    useQueryStore.getState().unsubscribe(KEY);
+    useQueryStore.getState().unsubscribe(KEY);
+    localMiss();
+    expect(fetchQuery).toHaveBeenCalledTimes(3);
+
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineFirst));
+    expect(fetchQuery).toHaveBeenCalledTimes(3);
+    expect(useQueryStore.getState().queries.get(KEY)?.status).toBe(
+      QueryStatus.Success,
+    );
+  });
 });

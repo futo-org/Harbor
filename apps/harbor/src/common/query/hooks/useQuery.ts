@@ -191,7 +191,6 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
       next(result) {
         const patch: Partial<QueryRef> = {
           status: result.status,
-          successfulServers: result.successfulServers,
           pendingServers: result.pendingServers,
         };
 
@@ -200,6 +199,14 @@ export const useQueryStore = create<QueryStoreState>((set, get) => {
           result.successfulServers === 0 && result.data?.byteLength === 0;
         if (result.data !== undefined && !(hasData && localEmpty)) {
           patch.data = result.data;
+        }
+
+        // A local read that found nothing must not erase what the servers
+        // confirmed, or the next consumer would fetch it again.
+        const localMiss =
+          hasData && localEmpty && result.status === QueryStatus.Success;
+        if (!localMiss) {
+          patch.successfulServers = result.successfulServers;
         }
 
         if (result.pendingServers === 0 || result.successfulServers > 0) {
