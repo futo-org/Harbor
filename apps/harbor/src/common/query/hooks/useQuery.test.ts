@@ -250,3 +250,61 @@ describe('useQueryStore offline-only local miss', () => {
     );
   });
 });
+
+describe('useQueryStore offline-first and offline-only together', () => {
+  function emit(data: Uint8Array, successfulServers: number) {
+    latest().next({
+      data,
+      status: QueryStatus.Success,
+      successfulServers,
+      pendingServers: 0,
+    });
+  }
+
+  it('reads stored data without fetching when offline-only goes first', () => {
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineOnly));
+    emit(DATA, 0);
+
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineFirst));
+    expect(fetchQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads stored data without fetching when offline-first goes first', () => {
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineFirst));
+    emit(DATA, 0);
+    latest().complete();
+
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineOnly));
+    expect(fetchQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets offline-only consumers wait on an offline-first fetch', () => {
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineFirst));
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineOnly));
+    expect(fetchQuery).toHaveBeenCalledTimes(1);
+
+    emit(new Uint8Array([]), 1);
+    const entry = useQueryStore.getState().queries.get(KEY);
+    expect(entry?.status).toBe(QueryStatus.Success);
+    expect(entry?.successfulServers).toBe(1);
+  });
+
+  it('keeps the server answer when offline-first remounts onto the core cache', () => {
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineFirst));
+    emit(new Uint8Array([]), 1);
+    latest().complete();
+    useQueryStore.getState().unsubscribe(KEY);
+
+    // rs-core answers from its own cache: no servers, nothing pending.
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineFirst));
+    expect(useQueryStore.getState().queries.get(KEY)?.status).toBe(
+      QueryStatus.Success,
+    );
+    emit(new Uint8Array([]), 0);
+    latest().complete();
+
+    const entry = useQueryStore.getState().queries.get(KEY);
+    expect(entry?.status).toBe(QueryStatus.Success);
+    expect(entry?.successfulServers).toBe(1);
+  });
+});
