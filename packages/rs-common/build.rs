@@ -62,11 +62,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Requires the transport feature.
         .build_transport(env::var("CARGO_FEATURE_TRANSPORT").is_ok())
         .skip_debug([
-            "EventKey",
             "ContentDigest",
+            "Event",
+            "EventKey",
+            "PublicKey",
             "SerializedContent",
             "SignedEvent",
-            "PublicKey",
         ]); // Manually implemented.
     for ty in ["ImageSet", "Image", "Blob", "ContentDigest"] {
         conf = conf.type_attribute(
