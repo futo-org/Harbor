@@ -177,3 +177,49 @@ describe('useQueryStore recovery', () => {
     expect(fetchQuery).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('useQueryStore offline-only local miss', () => {
+  function localMiss() {
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineOnly));
+    latest().next({
+      data: new Uint8Array([]),
+      status: QueryStatus.Success,
+      successfulServers: 0,
+      pendingServers: 0,
+    });
+  }
+
+  it.each([FetchMode.OfflineFirst, FetchMode.Default])(
+    'fetches and shows loading when a %s consumer joins',
+    (fetchMode) => {
+      localMiss();
+
+      useQueryStore.getState().subscribe(KEY, args(fetchMode));
+      expect(fetchQuery).toHaveBeenCalledTimes(2);
+      expect(fetchQuery.mock.calls[1]?.[2]).toEqual({ fetchMode });
+      expect(useQueryStore.getState().queries.get(KEY)?.status).toBe(
+        QueryStatus.Loading,
+      );
+    },
+  );
+
+  it('does not restart a fetch already in flight', () => {
+    localMiss();
+    expect(fetchQuery).toHaveBeenCalledTimes(1);
+
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineFirst));
+    expect(fetchQuery).toHaveBeenCalledTimes(2);
+
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineFirst));
+    expect(fetchQuery).toHaveBeenCalledTimes(2);
+  });
+
+  it('settles offline-only consumers without fetching', () => {
+    localMiss();
+    useQueryStore.getState().subscribe(KEY, args(FetchMode.OfflineOnly));
+    expect(fetchQuery).toHaveBeenCalledTimes(1);
+    expect(useQueryStore.getState().queries.get(KEY)?.status).toBe(
+      QueryStatus.Success,
+    );
+  });
+});
