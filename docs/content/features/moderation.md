@@ -15,7 +15,7 @@ for you. No single company decides what you see.
 Posts can carry labels applied by a moderation service: Hate, Self-Harm,
 Sexually Suggestive, Sexually Explicit, and Violence. In Settings, Content
 Moderation, you choose per label whether to **Hide** matching posts, **Warn**
-(which covers the post until you reveal it), or **Show** them, the default.
+(which covers the post until you reveal it, the default), or **Show** them.
 The warning names the labels and who applied them. Installs from Google Play
 or the App Store start with Hate, Self-Harm, Sexually Explicit, and Violence
 hidden and Sexually Suggestive warned, see the

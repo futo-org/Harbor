@@ -12,6 +12,7 @@ import {
   withHexOpacity,
 } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
+import { useProfileModeration } from '@/src/features/profile/hooks/useProfileModeration';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -250,13 +251,20 @@ function PostAuthorName({
 }) {
   const styles = useStyles();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
+  const { obscured } = useProfileModeration(identity);
 
   return (
     <Pressable
       onPress={onPress}
       onHoverIn={onHoverIn}
       onHoverOut={onHoverOut}
-      style={inline ? styles.authorNameInline : styles.authorName}
+      style={
+        obscured
+          ? styles.authorNameObscured
+          : inline
+            ? styles.authorNameInline
+            : styles.authorName
+      }
     >
       <Username
         identity={identity}
@@ -273,5 +281,7 @@ const useStyles = createThemedStyles((_, define) =>
     authorName: Atoms.flex_shrink_1,
     // Keeps its full width up to the cap: the alias/hash ellipsizes first
     authorNameInline: [Atoms.flex_shrink_0, { maxWidth: '66%' }],
+    // The label pill reads in full; the alias/hash ellipsizes instead.
+    authorNameObscured: [Atoms.flex_shrink_0, Atoms.max_w_full],
   }),
 );

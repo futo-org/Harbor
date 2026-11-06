@@ -7,6 +7,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
+import { useProfileModeration } from '@/src/features/profile/hooks/useProfileModeration';
 import { v2 } from '@polycentric/react-native';
 import { type ExternalPathString, Link, router } from 'expo-router';
 import { memo, useCallback, useMemo } from 'react';
@@ -141,6 +142,7 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
     if (!parentIdentity) return;
     router.navigate(Routes.tabs.profile(parentIdentity));
   }, [parentIdentity]);
+  const { obscured } = useProfileModeration(parentIdentity);
 
   if (!parentIdentity) return null;
 
@@ -163,11 +165,24 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
       >
         Replying to{' '}
       </Text>
-      <Username
-        identity={parentIdentity}
-        variant="secondary"
-        color="primary_500"
-      />
+      {obscured ? (
+        // No room for the label pill here; the id stands in for the name.
+        <Text
+          variant="secondary"
+          color="primary_500"
+          monospace
+          numberOfLines={1}
+          style={Atoms.flex_shrink_1}
+        >
+          {parentIdentity}
+        </Text>
+      ) : (
+        <Username
+          identity={parentIdentity}
+          variant="secondary"
+          color="primary_500"
+        />
+      )}
     </Pressable>
   );
 }
