@@ -35,6 +35,7 @@ pub(crate) fn set_defaults(config: &mut ClientConfig) {
     if let Ok(value) = env::var("HARBOR_KAFKA_SSL_KEY") {
         config.set("ssl.key.pem", value);
     }
+    config.set("message.max.bytes", "4194304");
 
     config.set(
         "broker.address.family",
