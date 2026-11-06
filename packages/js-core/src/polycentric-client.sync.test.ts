@@ -1522,7 +1522,7 @@ describe('PolycentricClient sync', () => {
         pushResponse: async () =>
           pushResult({ eventIssues: [rejected, trimmed] }),
       });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
