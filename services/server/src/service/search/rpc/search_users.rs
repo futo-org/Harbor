@@ -13,7 +13,6 @@ use crate::service::proto::{
 use crate::service::search::repository::Query;
 use crate::service::search::rpc::{
     self, SearchResponseFilter, SearchResponseView, SearchRow,
-    prepare_search_query,
 };
 
 struct Params {
@@ -26,9 +25,7 @@ pub async fn handle(
     req: SearchUsersRequest,
 ) -> Result<SearchUsersResponse, Status> {
     let sort_by = req.sort_by();
-    let query = prepare_search_query(&req.query)
-        .ok_or_else(|| Status::invalid_argument("empty search query"))?;
-    let common = rpc::Params::from_req_params(query, &req.page_params)?;
+    let common = rpc::Params::from_req_params(req.query, &req.page_params)?;
     let params = Params { common, sort_by };
     let result =
         create_pipeline(&mut ctx, &params, fetch, hydrate, filter, view)
