@@ -35,15 +35,7 @@ export default function useReportAction() {
         },
       });
 
-      // Persist the content first: the event references it by digest, and
-      // `sync()` looks the content up from the local store to attach it.
-      await client.contentManager.save(content);
-
-      const event = await client.buildEvent(content, COLLECTION.REPORTS);
-      const signedEvent = await client.signEvent(event);
-
-      // Save the event locally and mirror it (with content) into the core.
-      await client.commitEvent(signedEvent, content);
+      await client.createEvent({ collection: COLLECTION.REPORTS, content });
 
       // Delivery to servers is best-effort — the report is already saved
       // locally and will be pushed on the next sync if this fails.

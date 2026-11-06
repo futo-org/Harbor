@@ -50,9 +50,6 @@ export async function updateProfile(
     },
   });
 
-  const event = await client.buildEvent(content, COLLECTION.PROFILE);
-  const signedEvent = await client.signEvent(event);
-
   // Persist profile update locally
   await Promise.all(
     newAvatarVariants.map(({ digest, bytes }) =>
@@ -60,6 +57,5 @@ export async function updateProfile(
     ),
   );
 
-  await client.contentManager.save(content);
-  await client.commitEvent(signedEvent, content);
+  await client.createEvent({ collection: COLLECTION.PROFILE, content });
 }

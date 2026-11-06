@@ -12,6 +12,7 @@ use crate::config;
 pub async fn build_db_clients(
     durable_commits: bool,
     statement_timeout: Option<Duration>,
+    transaction_timeout: Option<Duration>,
 ) -> Result<(DatabaseConnection, DatabaseConnection), sea_orm::DbErr> {
     let config = config::get();
     let max = config.database_max_connections;
@@ -22,12 +23,20 @@ pub async fn build_db_clients(
         max,
         durable_commits,
         statement_timeout,
+        transaction_timeout,
     )
     .await?;
 
     let ro_db = if let Some(url) = config.ro_database_url.as_deref() {
-        create_pool("server-ro", url, max, durable_commits, statement_timeout)
-            .await?
+        create_pool(
+            "server-ro",
+            url,
+            max,
+            durable_commits,
+            statement_timeout,
+            transaction_timeout,
+        )
+        .await?
     } else {
         // If no read-only instance is available reuse the read-write pool.
         db.clone()
@@ -42,15 +51,15 @@ async fn create_pool(
     max: u32,
     durable_commits: bool,
     statement_timeout: Option<Duration>,
+    transaction_timeout: Option<Duration>,
 ) -> Result<DatabaseConnection, sea_orm::DbErr> {
-    let mut opt =
-        ConnectOptions::new(with_connection_options(url, durable_commits));
+    let mut opt = ConnectOptions::new(url);
     opt.set_application_name("harbor-server")
         .set_schema_search_path("public")
         .max_connections(max)
         .min_connections(5)
-        .connect_timeout(Duration::from_secs(8))
-        .acquire_timeout(Duration::from_secs(8))
+        .connect_timeout(Duration::from_secs(1))
+        .acquire_timeout(Duration::from_secs(2))
         .idle_timeout(Duration::from_secs(600))
         .max_lifetime(Duration::from_secs(1800))
         .record_stmt_in_spans(false)
@@ -61,10 +70,24 @@ async fn create_pool(
             log::LevelFilter::Warn,
             Duration::from_secs(1),
         )
-        .map_sqlx_postgres_pool_opts(|options| {
-            options
+        .map_sqlx_postgres_pool_opts(|pool_options| {
+            pool_options
                 .acquire_slow_level(log::LevelFilter::Warn)
                 .acquire_slow_threshold(Duration::from_secs(1))
+        })
+        .map_sqlx_postgres_opts(move |mut connect_options| {
+            connect_options = connect_options.options([("timezone", "UTC")]);
+            if !durable_commits {
+                connect_options =
+                    connect_options.options([("synchronous_commit", "off")]);
+            }
+            if let Some(timeout) = transaction_timeout {
+                connect_options = connect_options.options([(
+                    "transaction_timeout",
+                    timeout.as_millis().to_string(),
+                )]);
+            }
+            connect_options
         });
     if let Some(timeout) = statement_timeout {
         opt.statement_timeout(timeout);
@@ -78,18 +101,4 @@ async fn create_pool(
     );
 
     Ok(db)
-}
-
-/// Append startup parameters: a strict UTC timezone, plus asynchronous
-/// commits when `durable_commits` is off. Existing `options=` are kept.
-fn with_connection_options(url: &str, durable_commits: bool) -> String {
-    if url.contains("options=") {
-        return url.to_string();
-    }
-    let mut options = String::from("-c%20timezone%3DUTC");
-    if !durable_commits {
-        options.push_str("%20-c%20synchronous_commit%3Doff");
-    }
-    let sep = if url.contains('?') { '&' } else { '?' };
-    format!("{url}{sep}options={options}")
 }

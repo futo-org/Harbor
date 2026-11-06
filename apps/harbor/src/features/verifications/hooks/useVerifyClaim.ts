@@ -36,13 +36,10 @@ export default function useVerifyClaim() {
             verificationVerify: { claimEventKey },
           },
         });
-        await client.contentManager.save(content);
-        const event = await client.buildEvent(
+        await client.createEvent({
+          collection: COLLECTION.VERIFICATIONS,
           content,
-          COLLECTION.VERIFICATIONS,
-        );
-        const signedEvent = await client.signEvent(event);
-        await client.commitEvent(signedEvent, content);
+        });
 
         toast.success('Verified!');
 

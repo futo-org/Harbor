@@ -118,6 +118,8 @@ export function thirdPartyApplication(
 
 // A key fingerprint is the first 16 characters of the hex bytes of the key contents
 // It does not include the key type.
+export function getKeyFingerprint(key: v2.PublicKey): string;
+export function getKeyFingerprint(key?: v2.PublicKey): string | undefined;
 export function getKeyFingerprint(key?: v2.PublicKey): string | undefined {
   if (!key) {
     return undefined;

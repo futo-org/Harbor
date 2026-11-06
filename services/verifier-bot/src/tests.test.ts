@@ -243,14 +243,12 @@ async function publishClaim(
       },
     },
   });
-  await client.contentManager.save(content);
-  const event = await client.buildEvent(content, COLLECTION.VERIFICATIONS);
-  const signedEvent = await client.signEvent(event);
-  await client.commitEvent(signedEvent, content);
+  const { eventKey } = await client.createEvent({
+    collection: COLLECTION.VERIFICATIONS,
+    content,
+  });
   await client.sync(SyncStrategy.PARTIAL_PUSH);
-  const key = v2.Event.fromBinary(signedEvent.eventBytes).key;
-  if (!key) throw new Error('published claim has no key');
-  return Buffer.from(v2.EventKey.toBinary(key)).toString('hex');
+  return Buffer.from(v2.EventKey.toBinary(eventKey)).toString('hex');
 }
 
 describe('requestVerify flow', () => {

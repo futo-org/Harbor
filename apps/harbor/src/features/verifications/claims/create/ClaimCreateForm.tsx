@@ -44,7 +44,7 @@ export function ClaimCreateForm({
     setError(null);
     try {
       const ref = await submit({ schema: formToSchema(claimType), values });
-      if (ref) onSubmitted(ref);
+      onSubmitted(ref);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }

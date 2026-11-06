@@ -185,11 +185,9 @@ export async function publishVerify(
       verificationVerify: { claimEventKey },
     },
   });
-  await client.contentManager.save(content);
-  const event = await client.buildEvent(content, COLLECTION.VERIFICATIONS);
-  const signedEvent = await client.signEvent(event);
-  await client.commitEvent(signedEvent, content);
-  const verifyEvent = v2.Event.fromBinary(signedEvent.eventBytes);
-  if (!verifyEvent.key) throw new Error('Verify event has no key.');
-  return Buffer.from(v2.EventKey.toBinary(verifyEvent.key)).toString('hex');
+  const { eventKey } = await client.createEvent({
+    collection: COLLECTION.VERIFICATIONS,
+    content,
+  });
+  return Buffer.from(v2.EventKey.toBinary(eventKey)).toString('hex');
 }

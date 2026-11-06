@@ -14,11 +14,8 @@ jest.mock('@noble/hashes/sha2.js', () => ({
 const mockClient = {
   activeIdentityKey: 'me' as string | null,
   listValidEvents: jest.fn((): unknown[] => []),
-  contentManager: { save: jest.fn(async () => undefined) },
-  buildEvent: jest.fn(async () => ({})),
-  signEvent: jest.fn(async (event: unknown) => ({ event })),
-  commitEvent: jest.fn(
-    async (_signed: unknown, _content: unknown) => undefined,
+  createEvent: jest.fn(
+    async (_args: { collection: number; content: V2.Content }) => ({}),
   ),
   sync: jest.fn(async () => undefined),
 };
@@ -110,10 +107,11 @@ function renderHook(claim: DecodedClaim = CLAIM): {
   return result;
 }
 
-/** The Delete event keys committed, in order. */
+/** The Delete event keys created, in order. */
 function deletedKeys(): V2.EventKey[] {
-  return mockClient.commitEvent.mock.calls.map(([, content]) => {
-    const body = (content as V2.Content).contentBody;
+  return mockClient.createEvent.mock.calls.map(([{ collection, content }]) => {
+    expect(collection).toBe(8);
+    const body = content.contentBody;
     if (body.oneofKind !== 'delete' || !body.delete.eventKey) {
       throw new Error('expected a delete');
     }
@@ -153,7 +151,7 @@ describe('removeVerifier', () => {
   it('is a no-op without a matching target', async () => {
     await removeVerifier(mockClient as never, CLAIM_ID, 'nobody');
 
-    expect(mockClient.commitEvent).not.toHaveBeenCalled();
+    expect(mockClient.createEvent).not.toHaveBeenCalled();
     expect(mockClient.sync).not.toHaveBeenCalled();
   });
 
@@ -163,7 +161,7 @@ describe('removeVerifier', () => {
     await removeVerifier(mockClient as never, CLAIM_ID, 'them');
 
     expect(mockClient.listValidEvents).not.toHaveBeenCalled();
-    expect(mockClient.commitEvent).not.toHaveBeenCalled();
+    expect(mockClient.createEvent).not.toHaveBeenCalled();
   });
 
   it('does not throw when the push fails', async () => {
@@ -172,7 +170,7 @@ describe('removeVerifier', () => {
     await expect(
       removeVerifier(mockClient as never, CLAIM_ID, 'them'),
     ).resolves.toBeUndefined();
-    expect(mockClient.commitEvent).toHaveBeenCalled();
+    expect(mockClient.createEvent).toHaveBeenCalled();
   });
 });
 

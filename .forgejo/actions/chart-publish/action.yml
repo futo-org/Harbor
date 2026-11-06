@@ -30,7 +30,7 @@ runs:
         REGISTRY: ${{ inputs.registry }}
         CHART: ${{ inputs.chart }}
       run: |
-        latest=$(curl -fsS "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases?limit=1" | jq -r '.[0].tag_name // "0.0.0"') || latest=""
+        latest=$(curl --max-time 10 -fsS "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases?limit=1" | jq -r '.[0].tag_name // "0.0.0"') || latest=""
         [ -n "$latest" ] || latest="0.0.0"
         core=${latest#v}; core=${core%%-*}
         oldIFS=$IFS; IFS=.; set -- $core; IFS=$oldIFS

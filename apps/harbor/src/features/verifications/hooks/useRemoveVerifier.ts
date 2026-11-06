@@ -67,13 +67,10 @@ export async function removeVerifier(
     const deleteContent = v2.Content.create({
       contentBody: { oneofKind: 'delete', delete: { eventKey: event.key } },
     });
-    await client.contentManager.save(deleteContent);
-    const deleteEvent = await client.buildEvent(
-      deleteContent,
-      COLLECTION.VERIFICATIONS,
-    );
-    const signedDelete = await client.signEvent(deleteEvent);
-    await client.commitEvent(signedDelete, deleteContent);
+    await client.createEvent({
+      collection: COLLECTION.VERIFICATIONS,
+      content: deleteContent,
+    });
   }
 
   try {

@@ -110,7 +110,7 @@ pub async fn prune_content(args: Vec<String>) {
 
 /// No statement timeout: finding a key's identities scans every event.
 async fn connect() -> DbConn {
-    let pool = build_db_clients(true, None)
+    let pool = build_db_clients(true, None, None)
         .await
         .expect("failed to connect to database")
         .0;

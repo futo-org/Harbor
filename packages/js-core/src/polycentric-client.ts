@@ -1,10 +1,7 @@
 import {
-  ClientState,
   ContentManager,
   EventService,
-  HydrationStatus,
   IdentityManager,
-  InitializationStep,
   LoginManager,
   PairingSessionManager,
   type ServerPushResult,
@@ -20,7 +17,6 @@ import * as Proto from './proto/v2';
 import { StorageHandle } from './data-store/storage-handle';
 import { FileStore } from './file-store/file-store';
 import { bytesToHex, toDigestKey } from './utils/hex';
-import { bytesEqual } from './utils/bytes';
 import { CryptoManager } from './crypto/crypto-manager';
 import { createServerJwt, DEFAULT_EXPIRY_SECONDS } from './crypto/server-jwt';
 
@@ -53,6 +49,46 @@ export interface KeyPair {
   privateKey: Proto.PrivateKey;
   publicKey: Proto.PublicKey;
 }
+
+export type LocalBundle = {
+  signedEvent: Proto.SignedEvent;
+  contentBytes?: Uint8Array;
+};
+
+export type BuildEventArgs = {
+  identityKey: string;
+  collection: Collection | number;
+  signer: Proto.PublicKey;
+  content: Proto.Content;
+};
+
+export type BuiltEvent = {
+  event: Proto.Event;
+  eventKey: Proto.EventKey;
+  contentBytes: Uint8Array;
+};
+
+export type CommitEventArgs = {
+  owner: string;
+  signedEvent: Proto.SignedEvent;
+  content: Proto.Content;
+  contentBytes: Uint8Array;
+};
+
+export type CreateEventArgs = {
+  collection: Collection | number;
+  content: Proto.Content;
+};
+
+export type CreatedEvent = {
+  signedEvent: Proto.SignedEvent;
+  event: Proto.Event;
+  eventKey: Proto.EventKey;
+  signer: Proto.PublicKey;
+  eventBytes: Uint8Array;
+  content: Proto.Content;
+  contentBytes: Uint8Array;
+};
 
 /**
  * PolycentricClientConfig defines the dependencies and configuration for a PolycentricClient.
@@ -92,11 +128,6 @@ export class PolycentricClient {
   public readonly contentManager = new ContentManager(this);
   public readonly identityManager = new IdentityManager(this);
   public readonly pairingSessionManager = new PairingSessionManager(this);
-
-  private state = ClientState.UNINITIALIZED;
-  public step = '';
-  public hydrationStatus: HydrationStatus = HydrationStatus.NOT_STARTED;
-  public error: Error | null = null;
 
   public readonly core: CoreType;
 
@@ -159,41 +190,18 @@ export class PolycentricClient {
   }
 
   private async initialize() {
-    try {
-      this.setState(ClientState.INITIALIZING);
-      this.setStep(InitializationStep.STARTING);
+    // Initializate storage
+    this.storageHandle = new StorageHandle({
+      eventRepository: this.storageDriver.createEventRepository(),
+      loginRepository: this.storageDriver.createLoginRepository(),
+    });
 
-      this.setStep(InitializationStep.INITIALIZING_CORE);
+    // Restore active login and hydrate rs-core
+    await this.loginManager.restore();
 
-      this.setStep(InitializationStep.SETTING_UP_STORAGE);
-      this.storageHandle = new StorageHandle({
-        eventRepository: this.storageDriver.createEventRepository(),
-        contentRepository: this.storageDriver.createContentRepository(),
-        loginRepository: this.storageDriver.createLoginRepository(),
-      });
-
-      this.setStep(InitializationStep.LOADING_PROCESS_ID);
-
-      this.setStep(InitializationStep.HYDRATING_EVENTS);
-
-      await this.copyEvents();
-      await this.copyContents();
-
-      this.setHydrationStatus(HydrationStatus.COMPLETED);
-
-      await this.loginManager.restore();
-
-      // Push the JS-side server list into the rust core so that
-      // observables that fan out to every configured server (e.g.
-      // `getIdentityFeed`) actually have somewhere to call.
-      this.refreshServers();
-
-      this.setStep(InitializationStep.COMPLETE);
-      this.setState(ClientState.READY);
-    } catch (error) {
-      this.setError(error instanceof Error ? error : new Error(String(error)));
-      throw error;
-    }
+    // Ensures that rs-core has an updated server list even if we have no
+    // active login.
+    this.refreshServers();
   }
 
   /** Blob URL for each configured server, in order, for fallback. */
@@ -303,60 +311,72 @@ export class PolycentricClient {
   }
 
   /**
-   * Hydrate the Rust core's in-memory stores from persistent storage.
-   * The Rust stores are ephemeral (reset on every load) so anything the
-   * core needs (events for clocks/sequences, content for identity lookups)
-   * must be copied in at startup.
+   * Copy an identity's locally persisted events and content to rs-core.
    */
-  async copyEvents(events?: Proto.SignedEvent[]) {
-    const signedEvents = events ?? (await this.storage.events.getAll());
+  private async hydrateIdentity(identity: string): Promise<void> {
+    const localEvents = await this.storage.events.getAll(identity);
 
-    this.core.copyEvents(
-      signedEvents.map(
-        (s) => Proto.SignedEvent.toBinary(s).buffer as ArrayBuffer,
-      ),
+    const bundles: LocalBundle[] = localEvents.map(
+      ({ eventBytes, eventSignature, contentBytes }) => {
+        const signedEvent = Proto.SignedEvent.create({
+          eventBytes,
+          signature: eventSignature,
+        });
+
+        return { signedEvent, contentBytes };
+      },
     );
+
+    this.copyBundles(bundles);
   }
 
   /**
-   * A temporary function to copy all the content the browser is aware of.
-   * We should make this smarter with the EventBundles, maybe.
+   * Copy the events and content provided to rs-core.
+   * TODO: Add rs-core API to do this in one step instead of splitting them out.
    */
-  async copyContents(
-    contents?: { digest: Proto.ContentDigest; content: Proto.Content }[],
-  ) {
-    const list = contents ?? (await this.storage.content.getAll());
+  copyBundles(bundles: LocalBundle[]): void {
+    const events: ArrayBuffer[] = [];
+    const contents: { digestBytes: ArrayBuffer; contentBytes: ArrayBuffer }[] =
+      [];
 
-    this.core.copyContents(
-      list.map((r) => ({
-        digestBytes: Proto.ContentDigest.toBinary(r.digest)
-          .buffer as ArrayBuffer,
-        contentBytes: Proto.Content.toBinary(r.content).buffer as ArrayBuffer,
-      })),
-    );
+    for (const { signedEvent, contentBytes } of bundles) {
+      let digest: Proto.ContentDigest;
+      try {
+        const event = Proto.Event.fromBinary(signedEvent.eventBytes);
+        if (!event.contentDigest) continue;
+        digest = event.contentDigest;
+      } catch {
+        continue;
+      }
+
+      events.push(
+        Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
+      );
+
+      if (!contentBytes) continue;
+
+      contents.push({
+        digestBytes: Proto.ContentDigest.toBinary(digest).buffer as ArrayBuffer,
+        contentBytes: contentBytes.slice().buffer as ArrayBuffer,
+      });
+    }
+
+    this.core.copyContents(contents);
+    this.core.copyEvents(events);
   }
 
   /**
    * Helper function build an Event from a Content.
    * Uses the current keypair and current identity.
    */
-  async buildEvent(
-    content: Proto.Content,
-    collection: Collection | number = COLLECTION.FEED,
-    identityKey?: string,
-    publicKey?: Proto.PublicKey,
-  ): Promise<Proto.Event> {
-    const identity = identityKey ?? this.activeIdentityKey;
-    if (!identity) {
-      throw new Error('No active identity');
-    }
-
-    const signer = publicKey ?? this.currentKeyPair?.publicKey;
-    if (!signer) {
-      throw new Error('No keypair');
-    }
-
-    const sequence = this.core.nextSequence(identity, collection);
+  async buildEvent({
+    identityKey,
+    collection,
+    signer,
+    content,
+  }: BuildEventArgs): Promise<BuiltEvent> {
+    const contentBytes = Proto.Content.toBinary(content);
+    const sequence = this.core.nextSequence(identityKey, collection);
 
     // identity_sequence must reference an identity event signed by the
     // signing key.
@@ -364,7 +384,7 @@ export class PolycentricClient {
       collection === COLLECTION.IDENTITY
         ? sequence
         : this.core.getIdentitySequence(
-            identity,
+            identityKey,
             Proto.PublicKey.toBinary(signer).buffer as ArrayBuffer,
           );
 
@@ -375,23 +395,25 @@ export class PolycentricClient {
     }
 
     const previousSignature = new Uint8Array(
-      this.core.previousSignature(identity, collection),
+      this.core.previousSignature(identityKey, collection),
     );
     const previousRoot = new Uint8Array(
-      this.core.previousRoot(identity, collection),
+      this.core.previousRoot(identityKey, collection),
     );
 
+    const eventKey = Proto.EventKey.create({
+      collection,
+      identity: identityKey,
+      signedBy: signer,
+      sequence,
+    });
+
     const event = Proto.Event.create({
-      key: Proto.EventKey.create({
-        collection,
-        identity,
-        signedBy: signer,
-        sequence,
-      }),
+      key: eventKey,
       identitySequence,
       previousSignature,
       previousRoot,
-      contentDigest: this.contentManager.buildDigest(content),
+      contentDigest: this.contentManager.buildDigest(contentBytes),
       createdAt: BigInt(Date.now()),
       application: this.application,
     });
@@ -403,15 +425,15 @@ export class PolycentricClient {
         : undefined;
     event.vectorClock = this.buildVectorClock(event, identityContentForVC);
 
-    return event;
+    return { event, eventKey, contentBytes };
   }
 
   /**
-   * Sign an event, using the client's current key pair or a provided one.
+   * Sign an event using the provided key pair.
    */
   async signEvent(
     event: Proto.Event,
-    keyPair?: KeyPair,
+    keyPair: KeyPair,
   ): Promise<Proto.SignedEvent> {
     const eventBytes = Proto.Event.toBinary(event);
 
@@ -419,11 +441,6 @@ export class PolycentricClient {
       eventBytes.buffer as ArrayBuffer,
       {
         sign: async (bytes: ArrayBuffer): Promise<ArrayBuffer> => {
-          keyPair = keyPair ?? this.currentKeyPair ?? undefined;
-          if (!keyPair) {
-            throw new Error('No keypair');
-          }
-
           const signature = await this.crypto.sign(
             keyPair.privateKey.key,
             new Uint8Array(bytes),
@@ -442,35 +459,73 @@ export class PolycentricClient {
   }
 
   /**
-   * Sign and persist a v2 Event.
-   *
-   * Mirrors the event (and its content, if supplied) into the Rust core so
-   * subsequent `build_vector_clock` / `next_sequence` calls see it.
+   * Persist a new event with its content and mirror to rs-core.
    */
-  async commitEvent(
-    signedEvent: Proto.SignedEvent,
-    content?: Proto.Content,
-  ): Promise<void> {
-    await this.storage.events.save(signedEvent);
+  async commitEvent({
+    owner,
+    signedEvent,
+    content,
+    contentBytes,
+  }: CommitEventArgs): Promise<void> {
+    // Persist locally
+    await this.storage.events.create(owner, signedEvent, contentBytes);
 
-    this.core.copyEvents([
-      Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
-    ]);
+    // Copy to rs-core
+    const bundle: LocalBundle = { signedEvent, contentBytes };
+    this.copyBundles([bundle]);
 
-    if (content) {
-      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-      if (event.contentDigest) {
-        this.core.copyContents([
-          {
-            digestBytes: Proto.ContentDigest.toBinary(event.contentDigest)
-              .buffer as ArrayBuffer,
-            contentBytes: Proto.Content.toBinary(content).buffer as ArrayBuffer,
-          },
-        ]);
-      }
+    // Notify listeners
+    this.events.emitContentCreated({ signedEvent, content });
+  }
+
+  /**
+   * Create a new event under the current login.
+   * This should be used for most user content where the API fits.
+   * Handles signing, persisting locally, and mirroring to rs-core.
+   * Does not sync to remote servers.
+   * Throws on failure.
+   */
+  async createEvent({
+    collection,
+    content,
+  }: CreateEventArgs): Promise<CreatedEvent> {
+    // Snapshot the current login at the start
+    const identityKey = this.activeIdentityKey;
+    const keyPair = this.currentKeyPair;
+    if (!identityKey || !keyPair) {
+      throw new Error('Must be logged in to create events.');
     }
 
-    this.events.emitContentCreated({ signedEvent, content });
+    // Derive event and serialized content
+    const { event, eventKey, contentBytes } = await this.buildEvent({
+      identityKey,
+      collection,
+      signer: keyPair.publicKey,
+      content,
+    });
+
+    // Sign event
+    const signedEvent = await this.signEvent(event, keyPair);
+
+    // Persist event and content locally
+    // This event can be considered canonical after this succeeds
+    await this.commitEvent({
+      owner: identityKey,
+      signedEvent,
+      content,
+      contentBytes,
+    });
+
+    // Expose all derived objects to caller
+    return {
+      signedEvent,
+      event,
+      eventKey,
+      signer: keyPair.publicKey,
+      eventBytes: signedEvent.eventBytes,
+      content,
+      contentBytes,
+    };
   }
 
   /**
@@ -812,7 +867,7 @@ export class PolycentricClient {
    * events came back (another tab may have stored them already).
    *
    * @param after Heads to pull past instead of the stored ones.
-   * @returns The number of new events persisted
+   * @returns The number of events returned from servers
    */
   private async pull(
     partial: boolean,
@@ -821,21 +876,13 @@ export class PolycentricClient {
     if (!this.activeIdentityKey) throw new Error('No active identity');
     const identity = this.activeIdentityKey;
 
-    // Only filter by heads when doing a partial pull
-    let heads = after;
+    // Only filter by heads when doing a partial pull or `after` was specified.
+    let heads: Proto.EventKey[] | undefined = after;
 
     if (partial && !heads) {
       // Partial pulls will skip events at or before each event stream head.
       // Find each head event and then map it to the filter format.
-      const headEvents = await this.storage.events.getByIdentity(identity, {
-        headsOnly: true,
-      });
-      heads = headEvents
-        .map((signedEvent) => {
-          const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-          return event.key;
-        })
-        .filter((head): head is Proto.EventKey => !!head);
+      heads = await this.storage.events.getHeads(identity);
     }
 
     // Fetch new bundles from server
@@ -844,14 +891,34 @@ export class PolycentricClient {
       heads,
     });
 
-    // Collect blobs referenced by the events
+    // Save events/content and collect the blobs referenced
     let blobs: Proto.Blob[] = [];
 
-    // Save new events and content
-    let newCount = 0;
     for (const bundle of bundles) {
-      const isNew = await this.trySaveBundle(bundle, blobs);
-      if (isNew) newCount++;
+      try {
+        // Skip events that don't belong to the identity we are syncing.
+        const eventBytes = bundle.signedEvent?.eventBytes;
+        if (!eventBytes) continue;
+
+        const eventIdentity = Proto.Event.fromBinary(eventBytes).key?.identity;
+
+        if (eventIdentity !== identity) {
+          console.warn('pull: skipping event for another identity');
+          continue;
+        }
+
+        // Save event/content
+        await this.saveBundle(identity, bundle);
+
+        // Discover referenced blobs
+        const contentBytes = bundle.serializedContent?.contentBytes;
+        if (!contentBytes) continue;
+
+        const content = Proto.Content.fromBinary(contentBytes);
+        blobs.push(...ContentManager.collectBlobs(content));
+      } catch (e) {
+        console.warn('pull: saving bundle failed:', e);
+      }
     }
 
     // Remove duplicate blobs
@@ -864,131 +931,42 @@ export class PolycentricClient {
 
     blobs = [...blobMap.values()];
 
-    // Catch any of our own referenced blobs so they persist locally.
+    // Catch any of our own referenced blobs so they persist locally
     await this.contentManager.pullBlobs(blobs);
 
-    if (newCount > 0 || (after && bundles.length > 0)) {
+    if (bundles.length > 0) {
       this.events.emitPulled(identity);
     }
-    return newCount;
-  }
 
-  /**
-   * Absorb errors and return true only when the event is new and added.
-   * Any discovered blobs are added to `blobs`.
-   */
-  private async trySaveBundle(
-    bundle: Proto.EventBundle,
-    blobs: Proto.Blob[],
-  ): Promise<boolean> {
-    try {
-      if (!bundle.signedEvent) return false;
-
-      const bytes = bundle.signedEvent.eventBytes;
-
-      const event = Proto.Event.fromBinary(bytes);
-      if (!event.key) return false;
-      if (!event.key.signedBy) return false;
-
-      // Try saving content for any event that seems valid, even if it may already exist.
-      await this.trySaveContent(event, bundle, blobs);
-
-      const existing = await this.storage.events.getByEventKey(event.key);
-      if (existing) return false;
-
-      await this.storage.events.save(bundle.signedEvent);
-      return true;
-    } catch (e) {
-      console.warn('Pull event:', e);
-      return false;
-    }
-  }
-
-  /**
-   * Absorb errors and return true only when the content is new and added
-   * Any discovered blobs are added to `blobs`. Content whose bytes do not
-   * hash to the event's contentDigest is rejected.
-   */
-  private async trySaveContent(
-    event: Proto.Event,
-    bundle: Proto.EventBundle,
-    blobs: Proto.Blob[],
-  ): Promise<boolean> {
-    try {
-      const bytes = bundle.serializedContent?.contentBytes;
-      if (!bytes) return false;
-
-      const content = Proto.Content.fromBinary(bytes);
-
-      const digest = event.contentDigest;
-      if (!digest) return false;
-
-      if (
-        digest.type !== Proto.ContentDigestType.SHA256 ||
-        !bytesEqual(sha256(bytes), digest.value)
-      )
-        return false;
-
-      // Try finding blobs before checking content existence,
-      // since we might be missing a blob referenced by content
-      // that we already have.
-      blobs.push(...ContentManager.collectBlobs(content));
-
-      const existing = await this.storage.content.get(digest);
-      if (existing) return false;
-
-      await this.storage.content.save(digest, content);
-      return true;
-    } catch (e) {
-      console.warn('Pull event content:', e);
-      return false;
-    }
+    return bundles.length;
   }
 
   /**
    * Persist each event bundle in order.
    * Throws on the first malformed bundle or failed write.
    */
-  async saveBundles(bundles: Proto.EventBundle[]): Promise<void> {
+  async saveBundles(
+    owner: string,
+    bundles: Proto.EventBundle[],
+  ): Promise<void> {
     for (const bundle of bundles) {
-      await this.saveBundle(bundle);
+      await this.saveBundle(owner, bundle);
     }
   }
 
   /**
-   * Try saving this event bundle, content first.
-   * Throws an error if anything goes wrong.
+   * Try persisting this event bundle.
+   * Throws if anything goes wrong.
    */
-  async saveBundle(bundle: Proto.EventBundle): Promise<void> {
+  async saveBundle(owner: string, bundle: Proto.EventBundle): Promise<void> {
     const signedEvent = bundle.signedEvent;
     if (!signedEvent) throw new Error('Bundle is missing signedEvent');
 
-    const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-    if (!event.key?.signedBy) throw new Error('Event is missing key');
-
+    // Validation of the event's signature and content's digest is done in the
+    // event store now.
+    // TODO: consider moving back to syncing logic?
     const contentBytes = bundle.serializedContent?.contentBytes;
-    if (!contentBytes) throw new Error('Bundle is missing content');
-
-    const digest = event.contentDigest;
-    if (
-      !digest ||
-      digest.type !== Proto.ContentDigestType.SHA256 ||
-      !bytesEqual(sha256(contentBytes), digest.value)
-    ) {
-      throw new Error('Content does not match event digest');
-    }
-
-    const content = Proto.Content.fromBinary(contentBytes);
-
-    // Both writes can throw.
-    // We will skip saving the event if the content fails to write.
-    if (!(await this.storage.content.get(digest))) {
-      await this.storage.content.save(digest, content);
-    }
-
-    if (!(await this.storage.events.getByEventKey(event.key))) {
-      await this.storage.events.save(signedEvent);
-    }
+    await this.storage.events.persist(owner, signedEvent, contentBytes);
   }
 
   /** Used for syncing */
@@ -1029,7 +1007,7 @@ export class PolycentricClient {
    * the remote servers. Throws only if the pull fails. Per-server push
    * outcomes, including events the servers responded with errors/warnings
    * for, are emitted as `pushResults` on {@link events}.
-   * @returns The number of new events pulled
+   * @returns The number of events pulled
    */
   async sync(strategy?: SyncStrategy): Promise<number> {
     const identity = this.activeIdentityKey;
@@ -1210,6 +1188,7 @@ export class PolycentricClient {
     login: LoginId | null,
     persist: boolean = true,
   ): Promise<void> {
+    // Fast-path for logging out
     if (!login) {
       if (persist) await this.storageDriver.setActiveLogin(null);
       this.core.clearAuthTokens();
@@ -1219,12 +1198,17 @@ export class PolycentricClient {
       return;
     }
 
+    // Fetch the login details
     const loginDetails = await this.storage.logins.getLoginDetails(
       login.identity,
       login.publicKey,
     );
     if (!loginDetails) throw new Error('Login not found.');
 
+    // Copy new login's local events to rs-core
+    await this.hydrateIdentity(loginDetails.identity);
+
+    // Switch active login
     if (persist) await this.storageDriver.setActiveLogin(login);
 
     this.core.clearAuthTokens();
@@ -1239,28 +1223,6 @@ export class PolycentricClient {
 
     this.refreshServers();
     this.events.emitKeyPairChanged(this.currentKeyPair);
-  }
-
-  private setState(state: ClientState) {
-    this.state = state;
-    this.events.emitStateChanged(state);
-  }
-
-  private setStep(step: InitializationStep) {
-    this.step = step;
-    this.events.emitProgress(step);
-  }
-
-  private setHydrationStatus(status: HydrationStatus) {
-    this.hydrationStatus = status;
-    this.events.emitHydrationStatus(status);
-  }
-
-  private setError(error: Error) {
-    this.state = ClientState.ERROR;
-    this.error = error;
-    this.events.emitStateChanged(this.state);
-    this.events.emitError(error);
   }
 
   get currentSystem(): Proto.PublicKey {
@@ -1279,9 +1241,5 @@ export class PolycentricClient {
       throw new Error('Storage handle not initialized');
     }
     return this.storageHandle;
-  }
-
-  get isReady(): boolean {
-    return this.state === ClientState.READY;
   }
 }

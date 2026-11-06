@@ -23,6 +23,7 @@ export {
 export { PublicKey, KeyType } from './proto/polycentric/v2/keypair';
 
 export type * from './platform-interfaces';
+export { bytesEqual } from './utils/bytes';
 export { bytesToHex, hexToBytes, toDigestKey } from './utils/hex';
 export {
   FileStoreError,
@@ -32,7 +33,6 @@ export {
 
 export {
   StorageHandle,
-  ContentStore,
   EventStore,
   LoginStore,
 } from './data-store';
@@ -59,12 +59,7 @@ export type {
 
 export { ContentManager } from './client-internal/content-manager';
 
-export {
-  EventService,
-  ClientState,
-  InitializationStep,
-  HydrationStatus,
-} from './client-internal/event-service';
+export { EventService } from './client-internal/event-service';
 export type {
   ContentCreatedPayload,
   ServerPushResult,
@@ -86,6 +81,14 @@ export type {
   PrivateKeyLocation,
 } from './platform-interfaces/login-repository';
 export { LoginRepositoryError } from './platform-interfaces/login-repository';
+
+export type {
+  EventKey,
+  EventRow,
+  ContentStatus,
+  EventRepositoryErrorCode,
+} from './platform-interfaces/event-repository';
+export { EventRepositoryError } from './platform-interfaces/event-repository';
 
 export * from './errors';
 export * as Errors from './errors';

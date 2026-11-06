@@ -37,16 +37,14 @@ const useFollows = create<FollowsState>((set, get) => ({
       },
     });
 
-    await client.contentManager.save(content);
-    const event = await client.buildEvent(content, COLLECTION.GRAPH);
-    const signedEvent = await client.signEvent(event);
-
-    // Optimistically upate the state
-    set({ follows: new Map(follows).set(identity, true) });
-
     try {
-      await client.commitEvent(signedEvent, content);
+      // Update local state
+      await client.createEvent({ collection: COLLECTION.GRAPH, content });
+      set({ follows: new Map(follows).set(identity, true) });
+
+      // Sync to remotes
       await client.sync();
+
       // `identity` is the followee; the feed belongs to the follower.
       invalidateQuery(
         client,
@@ -93,13 +91,10 @@ const useFollows = create<FollowsState>((set, get) => ({
             delete: { eventKey: event.key },
           },
         });
-        await client.contentManager.save(deleteContent);
-        const deleteEvent = await client.buildEvent(
-          deleteContent,
-          COLLECTION.GRAPH,
-        );
-        const signedDelete = await client.signEvent(deleteEvent);
-        await client.commitEvent(signedDelete, deleteContent);
+        await client.createEvent({
+          collection: COLLECTION.GRAPH,
+          content: deleteContent,
+        });
       }
     } catch (err) {
       console.error(err);

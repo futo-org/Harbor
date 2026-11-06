@@ -20,6 +20,41 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: paradedb; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA paradedb;
+
+
+--
+-- Name: vector; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
+
+
+--
+-- Name: pg_search; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_search WITH SCHEMA paradedb;
+
+
+--
+-- Name: EXTENSION pg_search; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_search IS 'pg_search: One Postgres for your application data, full-text search, vector retrieval, and aggregations';
+
+
+--
 -- Name: tsvector_agg(tsvector); Type: AGGREGATE; Schema: public; Owner: -
 --
 

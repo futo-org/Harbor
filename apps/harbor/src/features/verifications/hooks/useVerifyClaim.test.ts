@@ -7,20 +7,8 @@ jest.mock('@polycentric/react-native', () => ({
 }));
 
 const mockClient = {
-  contentManager: { save: jest.fn(async () => undefined) },
-  buildEvent: jest.fn(async () => {
-    const { v2 } = jest.requireMock('@polycentric/react-native');
-    return v2.Event.create({
-      key: v2.EventKey.create({
-        identity: 'me',
-        collection: 8,
-        sequence: 9n,
-      }),
-    });
-  }),
-  signEvent: jest.fn(async (event: unknown) => ({ event })),
-  commitEvent: jest.fn(
-    async (_signed: unknown, _content: unknown) => undefined,
+  createEvent: jest.fn(
+    async (_args: { collection: number; content: v2.Content }) => ({}),
   ),
   sync: jest.fn(async () => undefined),
 };
@@ -86,8 +74,9 @@ describe('useVerifyClaim', () => {
   it('publishes a verify referencing the claim', async () => {
     await verify();
 
-    expect(mockClient.commitEvent).toHaveBeenCalledTimes(1);
-    const content = mockClient.commitEvent.mock.calls[0][1] as v2.Content;
+    expect(mockClient.createEvent).toHaveBeenCalledTimes(1);
+    const { collection, content } = mockClient.createEvent.mock.calls[0][0];
+    expect(collection).toBe(8);
     if (content.contentBody.oneofKind !== 'verificationVerify') {
       throw new Error('expected a verificationVerify');
     }
@@ -95,7 +84,6 @@ describe('useVerifyClaim', () => {
     expect(verifyBody.claimEventKey?.sequence).toBe(3n);
     expect(verifyBody.claimEventKey?.identity).toBe('them');
 
-    expect(mockClient.buildEvent).toHaveBeenCalledWith(content, 8);
     expect(mockClient.sync).toHaveBeenCalledWith('partial-push');
     expect(mockToast.success).toHaveBeenCalled();
   });
@@ -117,7 +105,7 @@ describe('useVerifyClaim', () => {
     mockClient.sync.mockRejectedValueOnce(new Error('offline'));
 
     await expect(verify()).resolves.toBeUndefined();
-    expect(mockClient.commitEvent).toHaveBeenCalledTimes(1);
+    expect(mockClient.createEvent).toHaveBeenCalledTimes(1);
     expect(invalidateQuery).toHaveBeenCalled();
   });
 });

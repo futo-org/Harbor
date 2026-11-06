@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { KEY_TYPE, PolycentricClient } from '@polycentric/js-core';
-import { ClientState, InitializationStep } from '@polycentric/js-core';
 import type { PolycentricClientConfig, Identity } from '@polycentric/js-core';
 import wasmUrl from '@polycentric/rs-core-wasm-browser/polycentric_core_bg.wasm';
 import {
@@ -27,43 +26,6 @@ describe('PolycentricClient EventService', () => {
     } catch {
       // ignore cleanup errors
     }
-  });
-
-  it('should have correct initial state after creation', async () => {
-    const clientConfig: PolycentricClientConfig = {
-      coreBridge: new BrowserWasmBridge(wasmUrl),
-      storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
-      cryptoManager: new BrowserCryptoManager(),
-    };
-
-    const client = await PolycentricClient.create(clientConfig);
-
-    // Verify final state after initialization
-    expect(client.state).toBe(ClientState.READY);
-    expect(client.isReady).toBe(true);
-    expect(client.error).toBeNull();
-    expect(client.step).toBe(InitializationStep.COMPLETE);
-  });
-
-  it('should emit progress events during initialization', async () => {
-    const clientConfig: PolycentricClientConfig = {
-      coreBridge: new BrowserWasmBridge(wasmUrl),
-      storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
-      cryptoManager: new BrowserCryptoManager(),
-    };
-
-    const progressSteps: InitializationStep[] = [];
-
-    const client = await PolycentricClient.create(clientConfig);
-
-    client.events.onProgress((step: InitializationStep) => {
-      progressSteps.push(step);
-    });
-
-    // Trigger a progress event
-    client.events.emitProgress(InitializationStep.HYDRATING_EVENTS);
-
-    expect(progressSteps).toContain(InitializationStep.HYDRATING_EVENTS);
   });
 
   it('should emit identity change events when creating identity', async () => {
@@ -124,78 +86,6 @@ describe('PolycentricClient EventService', () => {
     expect(switchedIdentity!.keyPair).toEqual(keyPair1);
   });
 
-  it('should emit state change events', async () => {
-    const clientConfig: PolycentricClientConfig = {
-      coreBridge: new BrowserWasmBridge(wasmUrl),
-      storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
-      cryptoManager: new BrowserCryptoManager(),
-    };
-
-    const client = await PolycentricClient.create(clientConfig);
-
-    let stateChanged = false;
-    let emittedState: ClientState | null = null;
-
-    client.events.onStateChanged((state: ClientState) => {
-      stateChanged = true;
-      emittedState = state;
-    });
-
-    // Trigger a state change
-    client.events.emitStateChanged(ClientState.INITIALIZING);
-
-    expect(stateChanged).toBe(true);
-    expect(emittedState).toBe(ClientState.INITIALIZING);
-  });
-
-  it('should emit error events', async () => {
-    const clientConfig: PolycentricClientConfig = {
-      coreBridge: new BrowserWasmBridge(wasmUrl),
-      storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
-      cryptoManager: new BrowserCryptoManager(),
-    };
-
-    const client = await PolycentricClient.create(clientConfig);
-
-    let stateChanged = false;
-    let emittedState: ClientState | null = null;
-
-    client.events.onStateChanged((state: ClientState) => {
-      stateChanged = true;
-      emittedState = state;
-    });
-
-    // Trigger a state change
-    client.events.emitStateChanged(ClientState.INITIALIZING);
-
-    expect(stateChanged).toBe(true);
-    expect(emittedState).toBe(ClientState.INITIALIZING);
-  });
-
-  it('should emit error events', async () => {
-    const clientConfig: PolycentricClientConfig = {
-      coreBridge: new BrowserWasmBridge(wasmUrl),
-      storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
-      cryptoManager: new BrowserCryptoManager(),
-    };
-
-    const client = await PolycentricClient.create(clientConfig);
-
-    let errorEmitted = false;
-    let emittedError: Error | null = null;
-
-    client.events.onError((error: Error) => {
-      errorEmitted = true;
-      emittedError = error;
-    });
-
-    const testError = new Error('Test error');
-    client.events.emitError(testError);
-
-    expect(errorEmitted).toBe(true);
-    expect(emittedError).toBe(testError);
-  });
-
   it('should track current identity state', async () => {
     const clientConfig: PolycentricClientConfig = {
       coreBridge: new BrowserWasmBridge(wasmUrl),
@@ -215,32 +105,6 @@ describe('PolycentricClient EventService', () => {
     expect(client.currentIdentity).toBeDefined();
     expect(client.currentIdentity.keyPair).toEqual(keyPair);
     expect(client.currentIdentity.process).toEqual(client.process);
-  });
-
-  it('should emit multiple events in sequence', async () => {
-    const clientConfig: PolycentricClientConfig = {
-      coreBridge: new BrowserWasmBridge(wasmUrl),
-      storageDriver: await SqlStorageDriver.create(TEST_DB_NAME),
-      cryptoManager: new BrowserCryptoManager(),
-    };
-
-    const client = await PolycentricClient.create(clientConfig);
-
-    const events: string[] = [];
-
-    client.events.onStateChanged(() => events.push('stateChanged'));
-    client.events.onProgress(() => events.push('progress'));
-    client.events.onIdentityChanged(() => events.push('identityChanged'));
-    client.events.onError(() => events.push('error'));
-
-    // Trigger multiple events
-    client.events.emitProgress(InitializationStep.STARTING);
-    await client.createIdentity({ keyType: KEY_TYPE.ED25519 });
-    client.events.emitError(new Error('Test'));
-
-    expect(events).toContain('progress');
-    expect(events).toContain('identityChanged');
-    expect(events).toContain('error');
   });
 
   it('should handle multiple listeners for the same event', async () => {

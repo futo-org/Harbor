@@ -255,6 +255,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
       KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_message_max_bytes: 4194304 # Matches the maximum size of a gRPC request.
     ports:
       - 9092:9092
     volumes:
