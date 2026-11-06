@@ -24,7 +24,7 @@ cd "$GITHUB_WORKSPACE"
 # request <curl args...>: prints the status (000 on a transport error) and
 # keeps the response in $body.
 request() {
-  curl -sS --connect-timeout 15 --max-time 900 "${sign[@]}" -o "$body" -w '%{http_code}' "$@" "$url" || true
+  curl -sS --connect-timeout 15 --max-time 30 "${sign[@]}" -o "$body" -w '%{http_code}' "$@" "$url" || true
 }
 report() {
   echo "r2-cache: $1 $2 for $key" >&2
