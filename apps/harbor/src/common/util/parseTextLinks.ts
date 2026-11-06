@@ -1,3 +1,5 @@
+import { isIdentityKey } from './isIdentityKey';
+
 // The server mirrors the mention rules below in
 // `packages/rs-common/src/mentions.rs` (to notify mentioned users). Keep the
 // two in sync. Alias mentions are only links for older posts: new ones are
@@ -24,9 +26,6 @@ const TLD =
 // `.` (`café.co.uk`, and keeps `a.a.a.a…` from backtracking quadratically). An
 // `@` after it means it's an email's local part (`john.co@gmail.com`).
 const DOMAIN = `(?<![\\p{L}\\p{N}_.-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+${TLD}(?![\\p{L}\\p{N}_@-])`;
-
-// A polycentric identity: exactly 64 hex chars (a SHA-256 hash).
-const HEX64 = /^[0-9a-fA-F]{64}$/;
 
 // Matches, in order: curly mentions (`@{identity,displayName}` — braces so the
 // display name may contain spaces), any other `@…` run (classified as
@@ -167,7 +166,7 @@ function parseSegment(raw: string, isCurly: boolean): SegmentBody | null {
       ? content.slice(0, separatorIndex)
       : content;
 
-    if (!HEX64.test(identity)) return null;
+    if (!isIdentityKey(identity)) return null;
 
     // Falls back to the identity when the name is empty: `@{id,}`.
     const name = ~separatorIndex ? content.slice(separatorIndex + 1) : '';
@@ -177,7 +176,7 @@ function parseSegment(raw: string, isCurly: boolean): SegmentBody | null {
   if (raw[0] === '@') {
     const body = raw.slice(1);
 
-    if (HEX64.test(body))
+    if (isIdentityKey(body))
       return { type: 'identity', value: raw, identity: body };
 
     if (body.includes('.')) return { type: 'alias', value: raw, alias: body };

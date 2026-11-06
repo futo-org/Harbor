@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from '@/src/common/components/toast/useToast';
-import { resolveAlias, type v2 } from '@polycentric/react-native';
+import type { v2 } from '@polycentric/react-native';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks/context';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import { updateProfile } from '../lib/updateProfile';
+import { forceResolveAlias } from '../alias/useAliasResolutionStore';
 import { profileQueryKey } from './useProfile';
 import { formatImageImportErrorOrFallback } from '@/src/common/lib/images/ImageImportError';
 
@@ -76,7 +77,8 @@ export function useProfileEdit(
       const alias = aliasDraft.trim();
       const original = (profile.alias ?? '').trim();
       if (alias && alias !== original) {
-        const resolved = await resolveAlias(alias);
+        // Forced: the user may have just published their polycentric.json.
+        const resolved = await forceResolveAlias(alias);
         if (!resolved || resolved.toLowerCase() !== identityKey.toLowerCase()) {
           setAliasError("This alias isn't linked to your profile.");
           return false;

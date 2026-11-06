@@ -31,7 +31,7 @@ runs:
         CRANE_SHA256: 0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0
       run: |
         command -v crane >/dev/null && exit 0
-        curl -fsSL -o crane.tar.gz "https://github.com/google/go-containerregistry/releases/download/v$CRANE_VERSION/go-containerregistry_Linux_x86_64.tar.gz"
+        curl --max-time 10 -fsSL -o crane.tar.gz "https://github.com/google/go-containerregistry/releases/download/v$CRANE_VERSION/go-containerregistry_Linux_x86_64.tar.gz"
         echo "$CRANE_SHA256  crane.tar.gz" | sha256sum -c
         tar xzf crane.tar.gz -C /usr/local/bin crane
     - if: inputs.wasm-artifact == 'true'
