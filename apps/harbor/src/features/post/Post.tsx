@@ -1,21 +1,14 @@
-import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
-import { useWebHover } from '@/src/common/lib/useWebHover';
-import {
-  Atoms,
-  createThemedStyles,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
-import { Username } from '@/src/features/profile/Username';
+import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { PostContent } from './content/PostContent';
+import { PostAuthor } from './PostAuthor';
 import { PostHeader } from './PostHeader';
 import PostMenu from './PostMenu';
 import { PostToolbar } from './toolbar/PostToolbar';
@@ -101,17 +94,7 @@ export const Post = memo(function Post({
       <View
         style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
       >
-        <PostAuthorName
-          identity={authorIdentity}
-          onPress={handleAuthorPress}
-          inline
-        />
-        {authorIdentity ? (
-          <IdentityHandle
-            identity={authorIdentity}
-            style={Atoms.flex_shrink_1}
-          />
-        ) : null}
+        <PostAuthor identity={authorIdentity} onNamePress={handleAuthorPress} />
 
         {shownAt ? (
           <>
@@ -186,15 +169,11 @@ export const Post = memo(function Post({
           <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
             {avatar}
             <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
-              <PostAuthorName
+              <PostAuthor
                 identity={authorIdentity}
-                onPress={handleAuthorPress}
+                onNamePress={handleAuthorPress}
+                stacked
               />
-              {authorIdentity ? (
-                <View style={Atoms.self_start}>
-                  <IdentityHandle identity={authorIdentity} />
-                </View>
-              ) : null}
             </View>
             <PostMenu post={post} />
           </View>
@@ -237,41 +216,3 @@ export const Post = memo(function Post({
     </Pressable>
   );
 });
-
-function PostAuthorName({
-  identity,
-  onPress,
-  inline,
-}: {
-  identity: string | null;
-  onPress: () => void;
-  // Shares the feed's author row with the alias.
-  inline?: boolean;
-}) {
-  const styles = useStyles();
-  const { hovered, onHoverIn, onHoverOut } = useWebHover();
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onHoverIn={onHoverIn}
-      onHoverOut={onHoverOut}
-      style={inline ? styles.authorNameInline : styles.authorName}
-    >
-      <Username
-        identity={identity}
-        variant="secondary"
-        fontWeight="bold"
-        style={hovered && { textDecorationLine: 'underline' }}
-      />
-    </Pressable>
-  );
-}
-
-const useStyles = createThemedStyles((_, define) =>
-  define({
-    authorName: Atoms.flex_shrink_1,
-    // Keeps its full width up to the cap: the alias/hash ellipsizes first
-    authorNameInline: [Atoms.flex_shrink_0, { maxWidth: '66%' }],
-  }),
-);

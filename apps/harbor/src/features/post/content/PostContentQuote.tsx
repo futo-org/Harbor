@@ -1,4 +1,3 @@
-import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
@@ -10,7 +9,6 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
 import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Username } from '@/src/features/profile/Username';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -18,6 +16,7 @@ import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { usePostById } from '../hooks/usePostById';
 import { usePostModeration } from '../hooks/usePostModeration';
+import { PostAuthor } from '../PostAuthor';
 import { PostImages } from '../PostImages';
 import { PostWarnOverlay } from '../PostWarnOverlay';
 
@@ -133,12 +132,7 @@ function AuthorRow({ post }: { post: PostData }) {
         size="xs"
         style={Atoms.mr_md}
       />
-      <Username
-        identity={post.identity}
-        variant="secondary"
-        fontWeight="bold"
-      />
-      <IdentityHandle identity={post.identity} />
+      <PostAuthor identity={post.identity} />
       {post.createdAt ? (
         <>
           <Text variant="secondary" color="neutral_500" fontWeight="bold">
