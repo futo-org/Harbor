@@ -58,6 +58,32 @@ impl Event {
     }
 }
 
+impl fmt::Debug for Event {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Event {
+            key,
+            identity_sequence,
+            vector_clock,
+            previous_signature,
+            content_digest,
+            created_at,
+            previous_root,
+            application,
+        } = self;
+
+        f.debug_struct("Event")
+            .field("key", key)
+            .field("identity_sequence", identity_sequence)
+            .field("vector_clock", vector_clock)
+            .field("previous_signature", &hex::encode(previous_signature))
+            .field("content_digest", content_digest)
+            .field("created_at", created_at)
+            .field("previous_root", &hex::encode(previous_root))
+            .field("application", application)
+            .finish()
+    }
+}
+
 impl Serializable for Event {
     fn to_bytes(&self) -> Result<Vec<u8>, Error> {
         let mut buf = Vec::new();
