@@ -34,7 +34,8 @@ mod heads;
 mod notifications;
 mod pairing;
 mod reactions;
-mod search;
+mod search_posts;
+mod search_users;
 mod traces;
 mod verifications;
 
