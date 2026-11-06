@@ -1115,9 +1115,11 @@ export class PolycentricClient {
         do {
           again = false;
           if (this.activeIdentityKey !== identity) return;
-          await this.pull(true, this.localHeads(identity)).catch((err) => {
-            console.warn('Live sync pull failed:', err);
-          });
+          await this.localHeads(identity)
+            .then((heads) => this.pull(true, heads))
+            .catch((err) => {
+              console.warn('Live sync pull failed:', err);
+            });
         } while (again);
       } finally {
         pulling = false;
@@ -1132,7 +1134,13 @@ export class PolycentricClient {
           const remote = Proto.ListHeadsResponse.fromBinary(
             new Uint8Array(result.data),
           ).heads;
-          if (this.isBehind(identity, remote)) void pull();
+          void this.isBehind(identity, remote)
+            .then((behind) => {
+              if (behind) void pull();
+            })
+            .catch((err) => {
+              console.warn('Live sync heads check failed:', err);
+            });
         },
         // The core reconnects by itself.
         error: () => {},
@@ -1141,20 +1149,52 @@ export class PolycentricClient {
     return () => subscription.unsubscribe();
   }
 
-  /** Heads of the events loaded in this client, which may lag shared storage. */
-  private localHeads(identity: string): Proto.EventKey[] {
-    return Proto.ListHeadsResponse.fromBinary(
+  /**
+   * For each event stream, resolve the minimum sequence number known by
+   * rs-core and our local storage.
+   * This way, we don't create any gaps in either while pulling.
+   */
+  private async localHeads(identity: string): Promise<Proto.EventKey[]> {
+    const storedHeads = await this.storage.events.getHeads(identity);
+
+    // Map a stream to a head
+    const stored: Map<string, Proto.EventKey> = new Map(
+      storedHeads.map((key) => [streamId(key), key]),
+    );
+
+    const cachedHeads = Proto.ListHeadsResponse.fromBinary(
       new Uint8Array(this.core.localHeads(identity)),
     ).heads;
+
+    // Resolve the minimum sequence number for each stream.
+    // Omit the head entirely to pull in all events from that stream if either
+    // source has no head for that stream.
+    const resolvedHeads: Proto.EventKey[] = [];
+    for (const cached of cachedHeads) {
+      const persisted = stored.get(streamId(cached));
+      if (!persisted) continue;
+
+      const resolved =
+        persisted.sequence < cached.sequence ? persisted : cached;
+
+      resolvedHeads.push(resolved);
+    }
+
+    return resolvedHeads;
   }
 
   /** Whether any of `remote` is ahead of the local heads of `identity`. */
-  private isBehind(identity: string, remote: Proto.EventKey[]): boolean {
-    const local = new Map(
-      this.localHeads(identity).map((key) => [streamId(key), key.sequence]),
+  private async isBehind(
+    identity: string,
+    remote: Proto.EventKey[],
+  ): Promise<boolean> {
+    const localHeads = await this.localHeads(identity);
+    const localMap: Map<string, bigint> = new Map(
+      localHeads.map((key) => [streamId(key), key.sequence]),
     );
+
     return remote.some(
-      (head) => (local.get(streamId(head)) ?? -1n) < head.sequence,
+      (head) => (localMap.get(streamId(head)) ?? -1n) < head.sequence,
     );
   }
 

@@ -1875,12 +1875,13 @@ describe('PolycentricClient live sync', () => {
     stop();
   });
 
-  it('does not pull when the core is up to date', async () => {
+  it('does not pull when up to date', async () => {
     const { core, emitHeads } = makeLiveCore({}, [keyOf(remote)]);
     const { client } = await makeClient({
       core,
       identity: identityA,
       signer: signerA,
+      events: [...seeded, remote],
     });
 
     const stop = client.startLiveSync();
