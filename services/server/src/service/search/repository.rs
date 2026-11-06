@@ -213,13 +213,13 @@ impl Query {
         query = query
             // TODO: we can use ts_rank_cd as well here.
             .expr_as(
-                Expr::cust("ts_rank(search_data, search_query($1))"),
+                Expr::cust("pdb.score(content_post.text)"),
                 SEARCH_RANK_COLUMN,
             )
             .join(JoinType::InnerJoin, content_join())
             .join(JoinType::InnerJoin, content::Relation::ContentPost.def())
             .filter(Expr::cust_with_values(
-                "search_data @@ search_query($1)",
+                "content_post.text @@@ pdb.match($1, /* Tokenizer */ NULL, /* Distance */ 1, /* Transposition cost one */ FALSE, /* Prefix */ TRUE, /* Conjunction mode */ FALSE)",
                 [search_query],
             ));
 

@@ -1110,6 +1110,13 @@ CREATE INDEX content_post_reply_parent ON public.content_post USING btree (reply
 
 
 --
+-- Name: content_post_search; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX content_post_search ON public.content_post USING paradedb (((text)::pdb.icu('ascii_folding=true', 'stemmer=english')));
+
+
+--
 -- Name: content_post_search_data; Type: INDEX; Schema: public; Owner: -
 --
 
