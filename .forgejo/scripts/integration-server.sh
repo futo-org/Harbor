@@ -68,11 +68,6 @@ cleanup() {
     wait "$SERVER_PID" 2>/dev/null || true
     echo "    server stopped (PID $SERVER_PID)"
   fi
-  if [ -n "${TRACES_PID:-}" ]; then
-    kill "$TRACES_PID" 2>/dev/null || true
-    wait "$TRACES_PID" 2>/dev/null || true
-    echo "    traces receiver stopped (PID $TRACES_PID)"
-  fi
   if [ "$CI_MODE" = true ]; then
     docker network disconnect "${COMPOSE_PROJECT_NAME}_default" "$(self_container)" >/dev/null 2>&1 || true
   fi
@@ -145,27 +140,7 @@ if [ "$NO_DEPS" = false ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 2. Traces receiver: the server exports to it for the whole run, and the
-#    traces test asks it for the spans it expects (traces.rs).
-# ---------------------------------------------------------------------------
-echo "==> Starting traces receiver…"
-cargo run -q -p integration-tests --bin traces-receiver &
-TRACES_PID=$!
-for i in $(seq 1 300); do
-  if (exec 3<>"/dev/tcp/localhost/4318") 2>/dev/null; then
-    exec 3>&- 3<&-
-    echo "    traces receiver ready (after ${i}s)"
-    break
-  fi
-  if [ "$i" -eq 300 ]; then
-    echo "ERROR: traces receiver did not start within 300 seconds"
-    exit 1
-  fi
-  sleep 1
-done
-
-# ---------------------------------------------------------------------------
-# 3. Start server (CI) or start server and run migrations (local)
+# 2. Start server (CI) or start server and run migrations (local)
 # ---------------------------------------------------------------------------
 if [ "$CI_MODE" = true ]; then
   NETWORK="${COMPOSE_PROJECT_NAME}_default"
@@ -281,7 +256,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Run the integration test suite
+# 3. Run the integration test suite
 # ---------------------------------------------------------------------------
 echo ""
 echo "==> Running integration tests…"
