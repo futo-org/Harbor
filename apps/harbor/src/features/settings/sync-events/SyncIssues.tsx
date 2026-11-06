@@ -2,12 +2,7 @@ import { IconButton, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { ffiEventKeyToProto } from '@/src/common/lib/polycentric-hooks/helpers';
-import {
-  Atoms,
-  type PaletteColorToken,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
+import { Atoms, type PaletteColorToken, useTheme } from '@/src/common/theme';
 import {
   type EventPushIssue,
   useEventPushIssuesStore,
@@ -27,10 +22,22 @@ type Severity = 'error' | 'warning';
 
 const SEVERITY: Record<
   Severity,
-  { icon: 'ban' | 'flag'; color: PaletteColorToken }
+  {
+    icon: 'alertCircle' | 'warning';
+    color: PaletteColorToken;
+    background: PaletteColorToken;
+  }
 > = {
-  error: { icon: 'ban', color: 'negative_500' },
-  warning: { icon: 'flag', color: 'warning_500' },
+  error: {
+    icon: 'alertCircle',
+    color: 'negative_500',
+    background: 'negative_50',
+  },
+  warning: {
+    icon: 'warning',
+    color: 'warning_500',
+    background: 'warning_50',
+  },
 };
 
 // Used to provide more context about warnings/errors
@@ -50,6 +57,8 @@ const eventLabel = (collection: number) =>
 
 const severityOf = (issue: EventPushIssue): Severity =>
   issue.errors.length > 0 ? 'error' : 'warning';
+
+const DIVIDER = { borderBottomWidth: 1 };
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -112,11 +121,12 @@ export function useSyncIssues(identityKey: string | null): SyncIssues {
 /** A pill that shows a warning if there are sync issues, or green if there are none */
 export function SyncIssuesChip({ issues }: { issues: SyncIssues }) {
   const { theme } = useTheme();
-  const { icon, color, label } = issues.severity
+  const { icon, color, background, label } = issues.severity
     ? { ...SEVERITY[issues.severity], label: plural(issues.count, 'issue') }
     : {
         icon: 'checkmarkCircle' as const,
         color: 'positive_500' as const,
+        background: 'positive_50' as const,
         label: 'No issues',
       };
 
@@ -129,7 +139,7 @@ export function SyncIssuesChip({ issues }: { issues: SyncIssues }) {
         Atoms.px_sm,
         Atoms.py_xs,
         Atoms.rounded_full,
-        { backgroundColor: withHexOpacity(theme.palette[color], '20') },
+        { backgroundColor: theme.palette[background] },
       ]}
     >
       <Icon name={icon} size={14} color={color} />
@@ -148,6 +158,7 @@ function IssueItem({
   issue: EventPushIssue;
   onDismiss: () => void;
 }) {
+  const { theme } = useTheme();
   const { icon, color } = SEVERITY[severityOf(issue)];
   const messages = [...issue.errors, ...issue.warnings];
   const route = eventRoute(ffiEventKeyToProto(issue.key));
@@ -156,7 +167,16 @@ function IssueItem({
     <Pressable
       onPress={route ? () => router.navigate(route) : undefined}
       accessibilityRole={route ? 'link' : undefined}
-      style={[Atoms.flex_row, Atoms.items_start, Atoms.gap_sm]}
+      style={[
+        Atoms.flex_row,
+        Atoms.items_start,
+        Atoms.gap_sm,
+        Atoms.pl_lg,
+        Atoms.pr_sm,
+        Atoms.py_sm,
+        theme.atoms.border_neutral_low,
+        DIVIDER,
+      ]}
     >
       <View style={Atoms.pt_sm}>
         <Icon name={icon} size={16} color={color} />
@@ -198,19 +218,22 @@ export function ServerSyncIssuesSection({
   const clearFailure = useServerFailuresStore((s) => s.clearServer);
 
   return (
-    <View
-      style={[
-        Atoms.rounded_lg,
-        Atoms.gap_xs,
-        Atoms.pl_lg,
-        Atoms.pr_sm,
-        Atoms.py_sm,
-        { backgroundColor: withHexOpacity(theme.palette.neutral_500, '20') },
-      ]}
-    >
-      <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
+    <View>
+      <View
+        style={[
+          Atoms.flex_row,
+          Atoms.items_center,
+          Atoms.gap_sm,
+          Atoms.px_lg,
+          Atoms.pt_lg,
+          Atoms.pb_xs,
+          theme.atoms.border_neutral_low,
+          DIVIDER,
+        ]}
+      >
         <Text
           variant="secondary"
+          fontWeight="semibold"
           monospace
           numberOfLines={1}
           style={[Atoms.flex_1, Atoms.py_xs]}
@@ -225,7 +248,7 @@ export function ServerSyncIssuesSection({
             clearIssues(identityKey, server.server);
             clearFailure(identityKey, server.server);
           }}
-          style={[Atoms.py_xs, Atoms.pr_md]}
+          style={Atoms.py_xs}
         >
           <Text variant="secondary" fontWeight="semibold" color="primary_500">
             Clear
@@ -234,9 +257,19 @@ export function ServerSyncIssuesSection({
       </View>
 
       {server.failure ? (
-        <View style={[Atoms.flex_row, Atoms.items_start, Atoms.gap_sm]}>
+        <View
+          style={[
+            Atoms.flex_row,
+            Atoms.items_start,
+            Atoms.gap_sm,
+            Atoms.px_lg,
+            Atoms.py_sm,
+            theme.atoms.border_neutral_low,
+            DIVIDER,
+          ]}
+        >
           <View style={Atoms.pt_sm}>
-            <Icon name="closeCircle" size={16} color="negative_500" />
+            <Icon name="alertCircle" size={16} color="negative_500" />
           </View>
           <View style={[Atoms.flex_1, Atoms.py_xs]}>
             <Text variant="secondary" fontWeight="semibold">

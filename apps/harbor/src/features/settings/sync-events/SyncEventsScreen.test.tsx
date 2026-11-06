@@ -7,7 +7,6 @@ jest.mock('@/src/common/theme', () => ({
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 0 }),
-  withHexOpacity: (color: string) => color,
 }));
 
 jest.mock('@/src/common/lib/navigation/usePageTitle', () => ({
@@ -170,8 +169,8 @@ describe('issue list', () => {
       screen.getByText('Reaction or repost saved without content'),
     ).toBeTruthy();
     expect(screen.getByText('dropped')).toBeTruthy();
-    expect(screen.getByTestId('icon-ban')).toBeTruthy();
-    expect(screen.getByTestId('icon-flag')).toBeTruthy();
+    expect(screen.getByTestId('icon-alertCircle')).toBeTruthy();
+    expect(screen.getByTestId('icon-warning')).toBeTruthy();
   });
 
   it('dismisses a single issue', async () => {

@@ -41,27 +41,23 @@ export default function SyncEventsScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View
-          style={[
-            Atoms.px_lg,
-            Atoms.flex_1,
-            { backgroundColor: theme.atoms.bg.backgroundColor },
-          ]}
-        >
-          <ScreenHeader title="Sync events" onBack={back} />
+        <View style={[Atoms.flex_1, theme.atoms.bg]}>
+          <View style={Atoms.px_lg}>
+            <ScreenHeader title="Sync events" onBack={back} />
+          </View>
           <ScrollView
             style={Atoms.flex_1}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              Atoms.gap_lg,
-              { paddingBottom: insets.bottom + Spacing['4xl'] },
-            ]}
+            contentContainerStyle={{
+              paddingBottom: insets.bottom + Spacing['4xl'],
+            }}
           >
             <View
               style={[
                 Atoms.flex_row,
                 Atoms.items_center,
                 Atoms.justify_between,
+                Atoms.px_lg,
               ]}
             >
               <Text variant="secondary" color="neutral_500">
@@ -85,11 +81,15 @@ export default function SyncEventsScreen() {
             </View>
 
             {issues.servers.length === 0 || !identityKey ? (
-              <Text variant="secondary" color="neutral_500">
+              <Text
+                variant="secondary"
+                color="neutral_500"
+                style={[Atoms.px_lg, Atoms.pt_lg]}
+              >
                 No servers have reported problems with your events.
               </Text>
             ) : (
-              <View style={Atoms.gap_sm}>
+              <View>
                 {issues.servers.map((server) => (
                   <ServerSyncIssuesSection
                     key={server.server}

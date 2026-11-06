@@ -33,6 +33,7 @@ export const IconsMap = {
   addCircleOutline: defineIcon(MaterialCommunityIcons, 'plus-circle-outline'),
   addOutline: defineIcon(Ionicons, 'add-circle-outline'),
   airplane: defineIcon(MaterialCommunityIcons, 'airplane'),
+  alertCircle: defineIcon(Ionicons, 'alert-circle-outline'),
   arrowBack: defineIcon(Ionicons, 'arrow-back'),
   at: defineIcon(Ionicons, 'at'),
   ban: defineIcon(Ionicons, 'ban'),
@@ -103,6 +104,7 @@ export const IconsMap = {
   trash: defineIcon(Ionicons, 'trash-outline'),
   trashBin: defineIcon(Ionicons, 'trash-bin'),
   verify: defineIcon(MaterialCommunityIcons, 'check-decagram-outline'),
+  warning: defineIcon(Ionicons, 'warning-outline'),
 };
 
 export type IconName = keyof typeof IconsMap;

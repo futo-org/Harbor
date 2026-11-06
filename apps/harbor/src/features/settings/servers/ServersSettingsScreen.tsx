@@ -32,13 +32,7 @@ export default function ServersSettingsScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View
-          style={[
-            Atoms.px_lg,
-            Atoms.flex_1,
-            { backgroundColor: theme.atoms.bg.backgroundColor },
-          ]}
-        >
+        <View style={[Atoms.px_lg, Atoms.flex_1, theme.atoms.bg]}>
           <ScreenHeader title="Servers" onBack={back} />
           <ScrollView
             style={Atoms.flex_1}
