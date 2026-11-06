@@ -3,17 +3,35 @@
 //! started with `HARBOR_TRACES_URL` pointing at the suite's receiver
 //! (traces_receiver.rs), see `.forgejo/scripts/integration-server.sh`.
 
-use crate::*;
+use std::collections::HashMap;
+use std::sync::OnceLock;
+use std::thread;
+use std::time::{Duration, Instant};
+
 use opentelemetry_proto::tonic::collector::trace::v1::ExportTraceServiceRequest;
 use opentelemetry_proto::tonic::common::v1::any_value::Value;
 use opentelemetry_proto::tonic::trace::v1::Span;
 use opentelemetry_proto::tonic::trace::v1::span::SpanKind;
 use prost::Message;
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
+
+use crate::*;
 
 const TRACE_TIMEOUT: Duration = Duration::from_secs(30);
 const SERVER_SPAN: &str = "polycentric.v2.EventSyncService/PutEvents";
+
+fn start_traces_receiver() {
+    static HANDLE: OnceLock<thread::JoinHandle<()>> = OnceLock::new();
+    HANDLE.get_or_init(|| {
+        thread::spawn(|| {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .name("traces receiver")
+                .build_local(tokio::runtime::LocalOptions::default())
+                .unwrap()
+                .block_on(traces_receiver::main());
+        })
+    });
+}
 
 /// Where the receiver answers. Override with `HARBOR_TEST_TRACES_URL`.
 fn traces_url() -> String {
@@ -85,6 +103,8 @@ fn descends_from(
 
 #[tokio::test]
 async fn a_request_trace_is_exported_with_its_children() {
+    start_traces_receiver();
+
     let mut client = TestClient::new().await;
     client.submit_events().await;
     client.post_text("traced", current_timestamp());

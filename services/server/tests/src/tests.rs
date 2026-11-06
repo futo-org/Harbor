@@ -37,6 +37,7 @@ mod reactions;
 mod search_posts;
 mod search_users;
 mod traces;
+mod traces_receiver;
 mod verifications;
 
 /// gRPC server address. Override with `HARBOR_TEST_SERVER` env var.
