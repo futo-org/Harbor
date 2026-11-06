@@ -1,4 +1,3 @@
-use std::cmp::min;
 use std::mem::take;
 use std::time::SystemTime;
 
@@ -76,7 +75,15 @@ pub fn sha256(data: &[u8]) -> Vec<u8> {
 }
 
 pub fn random_string() -> String {
-    SampleString::sample_string(&Alphabetic, &mut rand::rng(), 20)
+    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 20);
+    // When searching Postgres uses a technique called stemming where it removes
+    // the end of certain English words, e.g. "party" and "party" both become
+    // "part" so that when you search for "party" it matches both. However, when
+    // using random values this sometimes causes the searching tests to fail
+    // when not using this technique (e.g. for aliases and names).
+    // So add some characters that should not be stemmed.
+    s.push_str("BBB");
+    s
 }
 
 pub fn repeated_string(n: usize, s: &str, separator: &str) -> String {
@@ -162,13 +169,6 @@ pub async fn notification_service()
 pub fn generate_signing_key() -> SigningKey {
     let mut bytes = [0u8; 32];
     getrandom::fill(&mut bytes).expect("OS random number generator failed");
-    SigningKey::from_bytes(&bytes)
-}
-
-pub fn signing_key(key: &str) -> SigningKey {
-    let mut bytes = [0u8; 32];
-    let len = min(bytes.len(), key.len());
-    bytes[..len].copy_from_slice(&key.as_bytes()[..len]);
     SigningKey::from_bytes(&bytes)
 }
 

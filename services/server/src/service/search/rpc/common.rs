@@ -37,9 +37,8 @@ impl<SortedBy> Params<SortedBy> {
     where
         SortedBy: for<'a> Deserialize<'a>,
     {
-        if query.is_empty() {
-            return Err(Status::invalid_argument("empty search query"));
-        }
+        let query = prepare_search_query(&query)
+            .ok_or_else(|| Status::invalid_argument("empty search query"))?;
         let PaginationParams {
             cursor_filter,
             limit,
@@ -54,7 +53,7 @@ impl<SortedBy> Params<SortedBy> {
 
 /// Construct a search query from a user defined `query` to use in
 /// `search_query`.
-pub(crate) fn prepare_search_query(search_query: &str) -> Option<String> {
+fn prepare_search_query(search_query: &str) -> Option<String> {
     let search_query = search_query.trim();
     if search_query.is_empty() {
         return None;

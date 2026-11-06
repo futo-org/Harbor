@@ -97,7 +97,7 @@ async fn upload_blob_rejects_size_mismatch() {
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
     assert_eq!(
         err.message(),
-        "upload_blob: declared size 26 does not match body length 25"
+        "upload_blob: declared size 29 does not match body length 28"
     );
 }
 
@@ -110,7 +110,7 @@ async fn upload_blob_validation_blob_too_large() {
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
     assert_eq!(
         err.message(),
-        "upload_blob: blob is invalid: size is too large (104857626), maximum is 104857600"
+        "upload_blob: blob is invalid: size is too large (104857629), maximum is 104857600"
     );
 }
 
