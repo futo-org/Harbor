@@ -234,6 +234,7 @@ else
   # The test crate reads this to know where to reach the server.
   export HARBOR_TEST_SERVER="${HARBOR_TEST_SERVER:-http://localhost:3000}"
   export HARBOR_TRACES_URL="${HARBOR_TRACES_URL:-http://localhost:4318}"
+  export HARBOR_TRACES_SCHEDULE_DELAY_MS="${HARBOR_TRACES_SCHEDULE_DELAY_MS:-100}"
 
   cargo run -p server &
   SERVER_PID=$!
