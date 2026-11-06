@@ -219,7 +219,7 @@ impl Query {
             .join(JoinType::InnerJoin, content_join())
             .join(JoinType::InnerJoin, content::Relation::ContentPost.def())
             .filter(Expr::cust_with_values(
-                "content_post.text ||| $1",
+                "content_post.text @@@ pdb.match($1, /* Tokenizer */ NULL, /* Distance */ 1, /* Transposition cost one */ FALSE, /* Prefix */ TRUE, /* Conjunction mode */ FALSE)",
                 [search_query],
             ));
 

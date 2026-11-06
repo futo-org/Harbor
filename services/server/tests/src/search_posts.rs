@@ -84,13 +84,8 @@ async fn words_are_stemmed() {
     client.submit_events().await;
 
     for query in ["run", "running", "runs"] {
-        expect_searched_posts(
-            SearchPostsRequest {
-                query: query.to_owned(),
-                sort_by: None,
-                page_params: None,
-                omit_labels: Vec::new(),
-            },
+        expect_searched_posts_contains(
+            query,
             vec![Post {
                 text: post_text.to_owned(),
                 reply: None,
@@ -174,7 +169,7 @@ async fn match_on_random_hashtags() {
 async fn match_on_identity() {
     let mut client = TestClient::new().await;
 
-    let post_text = format!("A post with an identity '{}'", client.identity());
+    let post_text = format!("Post with identity '{}'", client.identity());
     client.post_text(&post_text, current_timestamp());
     client.submit_events().await;
 
@@ -199,11 +194,10 @@ async fn match_on_identity() {
 }
 
 #[tokio::test]
-#[ignore = "TODO: add prefix matching for this"]
 async fn match_on_identity_prefix() {
     let mut client = TestClient::new().await;
 
-    let post_text = format!("A post with an identity '{}'", client.identity());
+    let post_text = format!("Post with identity '{}'", client.identity());
     client.post_text(&post_text, current_timestamp());
     client.submit_events().await;
 
@@ -230,7 +224,6 @@ async fn match_on_identity_prefix() {
 }
 
 #[tokio::test]
-#[ignore = "TODO: add prefix matching to support matching on '@futo' and 'futo'"]
 async fn match_on_mention() {
     let key = signing_key("match_on_mention");
     let mut client = TestClient::new_with_identity(key).await;
@@ -335,7 +328,8 @@ async fn accents_are_ignored() {
     client.post_text(post_text, current_timestamp());
     client.submit_events().await;
 
-    for query in ["schon", "cafe", "fur"] {
+    // Note "fur" matches too many posts from other tests.
+    for query in ["schon", "cafe"] {
         expect_searched_posts(
             SearchPostsRequest {
                 query: query.to_owned(),
@@ -368,12 +362,7 @@ async fn stop_words_are_included() {
 
     for query in ["a", "an", "the"] {
         expect_searched_posts_contains(
-            SearchPostsRequest {
-                query: query.to_owned(),
-                sort_by: None,
-                page_params: None,
-                omit_labels: Vec::new(),
-            },
+            query,
             vec![Post {
                 text: post_text.to_owned(),
                 reply: None,
@@ -710,12 +699,7 @@ async fn regression_1570() {
 
     // We can match results, as long as one of them is the text we expect.
     expect_searched_posts_contains(
-        SearchPostsRequest {
-            query: "some the".to_owned(),
-            sort_by: None,
-            page_params: None,
-            omit_labels: Vec::new(),
-        },
+        "some the",
         vec![Post {
             text: post_text.to_owned(),
             reply: None,
@@ -741,15 +725,39 @@ async fn expect_searched_posts(
     .await
 }
 
-async fn expect_searched_posts_contains(
-    request: SearchPostsRequest,
-    mut expected: Vec<Post>,
-) {
-    eprintln!("query: {:#?}", request.query);
+async fn expect_searched_posts_contains(query: &str, mut expected: Vec<Post>) {
+    eprintln!("query: {:#?}", query);
     let results = async {
         let mut search = search_service().await;
-        let response = search.search_posts(request).await.unwrap();
-        response.into_inner().results
+        let mut results = Vec::new();
+        let mut request = SearchPostsRequest {
+            query: query.to_owned(),
+            sort_by: None,
+            page_params: Some(PageParams {
+                limit: Some(200),
+                ..Default::default()
+            }),
+            omit_labels: Vec::new(),
+        };
+        loop {
+            let response = search
+                .search_posts(request.clone())
+                .await
+                .unwrap()
+                .into_inner();
+            results.extend(response.results);
+
+            if let Some(page_info) = response.page_info {
+                if !page_info.has_next_page || page_info.end_cursor.is_empty() {
+                    break;
+                }
+                request.page_params.get_or_insert_default().forward_token =
+                    Some(page_info.end_cursor);
+            } else {
+                break;
+            }
+        }
+        results
     }
     .await;
     eprintln!("expected: {expected:#?}");
