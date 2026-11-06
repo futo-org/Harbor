@@ -152,6 +152,9 @@ export class IdentityManager {
       content,
     });
 
+    // Ensure our server list is up to date with the latest identity state
+    this.client.refreshServers();
+
     // Push to servers
     // Push errors are currently swallowed
     await this.client.sync(SyncStrategy.PARTIAL_PUSH);
