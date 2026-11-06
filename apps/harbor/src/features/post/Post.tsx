@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { PostContent } from './content/PostContent';
-import { PostAuthorNameAndHandle } from './PostAuthorNameAndHandle';
+import { PostAuthor } from './PostAuthor';
 import { PostHeader } from './PostHeader';
 import PostMenu from './PostMenu';
 import { PostToolbar } from './toolbar/PostToolbar';
@@ -94,10 +94,7 @@ export const Post = memo(function Post({
       <View
         style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
       >
-        <PostAuthorNameAndHandle
-          identity={authorIdentity}
-          onNamePress={handleAuthorPress}
-        />
+        <PostAuthor identity={authorIdentity} onNamePress={handleAuthorPress} />
 
         {shownAt ? (
           <>
@@ -172,7 +169,7 @@ export const Post = memo(function Post({
           <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
             {avatar}
             <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
-              <PostAuthorNameAndHandle
+              <PostAuthor
                 identity={authorIdentity}
                 onNamePress={handleAuthorPress}
                 stacked

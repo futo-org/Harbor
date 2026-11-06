@@ -5,17 +5,14 @@ import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { Username } from '@/src/features/profile/Username';
 import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
 
-type PostAuthorNameAndHandleProps = {
+type PostAuthorProps = {
   identity: string | null;
   onNamePress?: () => void;
   // Puts the handle under the name instead of after it
   stacked?: boolean;
 };
 
-export function PostAuthorNameAndHandle({
-  stacked = false,
-  ...props
-}: PostAuthorNameAndHandleProps) {
+export function PostAuthor({ stacked = false, ...props }: PostAuthorProps) {
   return stacked ? (
     <StackedNameAndHandle {...props} />
   ) : (
@@ -23,10 +20,7 @@ export function PostAuthorNameAndHandle({
   );
 }
 
-function StackedNameAndHandle({
-  identity,
-  onNamePress,
-}: PostAuthorNameAndHandleProps) {
+function StackedNameAndHandle({ identity, onNamePress }: PostAuthorProps) {
   return (
     <>
       <AuthorName
@@ -43,10 +37,7 @@ function StackedNameAndHandle({
   );
 }
 
-function InlineNameAndHandle({
-  identity,
-  onNamePress,
-}: PostAuthorNameAndHandleProps) {
+function InlineNameAndHandle({ identity, onNamePress }: PostAuthorProps) {
   const styles = useStyles();
   const isHandleHash = useIdentityHandle(identity).kind === 'hash';
 

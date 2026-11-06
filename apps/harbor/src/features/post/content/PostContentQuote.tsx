@@ -16,7 +16,7 @@ import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { usePostById } from '../hooks/usePostById';
 import { usePostModeration } from '../hooks/usePostModeration';
-import { PostAuthorNameAndHandle } from '../PostAuthorNameAndHandle';
+import { PostAuthor } from '../PostAuthor';
 import { PostImages } from '../PostImages';
 import { PostWarnOverlay } from '../PostWarnOverlay';
 
@@ -132,7 +132,7 @@ function AuthorRow({ post }: { post: PostData }) {
         size="xs"
         style={Atoms.mr_md}
       />
-      <PostAuthorNameAndHandle identity={post.identity} />
+      <PostAuthor identity={post.identity} />
       {post.createdAt ? (
         <>
           <Text variant="secondary" color="neutral_500" fontWeight="bold">
