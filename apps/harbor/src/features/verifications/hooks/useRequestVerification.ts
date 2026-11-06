@@ -24,10 +24,7 @@ export async function publishVerificationTarget(
       },
     },
   });
-  await client.contentManager.save(content);
-  const event = await client.buildEvent(content, COLLECTION.VERIFICATIONS);
-  const signedEvent = await client.signEvent(event);
-  await client.commitEvent(signedEvent, content);
+  await client.createEvent({ collection: COLLECTION.VERIFICATIONS, content });
   try {
     await client.sync(SyncStrategy.PARTIAL_PUSH);
   } catch (err) {

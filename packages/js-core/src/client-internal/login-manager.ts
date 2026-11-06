@@ -5,7 +5,11 @@ import type {
   LoginId,
   LoginStatus,
 } from '../platform-interfaces/login-repository';
-import type { KeyPair, PolycentricClient } from '../polycentric-client';
+import type {
+  KeyPair,
+  LocalBundle,
+  PolycentricClient,
+} from '../polycentric-client';
 import * as Proto from '../proto/v2';
 import { KeyType, PrivateKey, PublicKey } from '../proto/v2';
 import { bytesToHex } from '../utils/hex';
@@ -84,19 +88,21 @@ export class LoginManager {
     const power = this.checkAuthorization(identity, publicKey);
     if (!power) throw new Error('Key is not authorized by the identity');
 
-    const digest = this.client.contentManager.buildDigest(content);
-    await this.client.storage.content.save(digest, content);
-
-    const event = await this.client.buildEvent(
-      content,
-      COLLECTION.IDENTITY,
+    const { event, contentBytes } = await this.client.buildEvent({
       identityKey,
-      publicKey,
-    );
+      collection: COLLECTION.IDENTITY,
+      signer: publicKey,
+      content,
+    });
 
     // Persist locally
     const signedEvent = await this.client.signEvent(event, keyPair);
-    await this.client.commitEvent(signedEvent, content);
+    await this.client.commitEvent({
+      owner: identityKey,
+      signedEvent,
+      content,
+      contentBytes,
+    });
 
     // At this point, we have saved the identity event authorizing us locally
     // and are fully committed to the switch.
@@ -141,7 +147,7 @@ export class LoginManager {
 
     // Persist all of the identity events needed to authorize us.
     const chain = this.client.resolveIdentityChain(identityKey);
-    await this.client.saveBundles(chain);
+    await this.client.saveBundles(identityKey, chain);
 
     // Re-publish the same identity document signed by our own key,
     // proving this key acknowledged its membership.
@@ -164,39 +170,19 @@ export class LoginManager {
    * by rs-core.
    */
   copyBackupEvents(backup: Proto.IdentityBackup): void {
-    const events: ArrayBuffer[] = [];
-    const contents: { digestBytes: ArrayBuffer; contentBytes: ArrayBuffer }[] =
-      [];
+    const bundles: LocalBundle[] = [];
 
-    for (const bundle of backup.identityChain) {
-      const { signedEvent, serializedContent } = bundle;
+    for (const { signedEvent, serializedContent } of backup.identityChain) {
       if (!signedEvent) continue;
 
-      events.push(
-        Proto.SignedEvent.toBinary(signedEvent).buffer as ArrayBuffer,
-      );
-
-      if (!serializedContent) continue;
-
-      let digest: Proto.ContentDigest;
-      try {
-        const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-        if (!event.contentDigest) continue;
-        digest = event.contentDigest;
-      } catch {
-        continue;
-      }
-
-      const digestBytes = Proto.ContentDigest.toBinary(digest)
-        .buffer as ArrayBuffer;
-      const contentBytes = serializedContent.contentBytes.slice()
-        .buffer as ArrayBuffer;
-      contents.push({ digestBytes, contentBytes });
+      bundles.push({
+        signedEvent,
+        contentBytes: serializedContent?.contentBytes,
+      });
     }
 
     try {
-      this.client.core.copyContents(contents);
-      this.client.core.copyEvents(events);
+      this.client.copyBundles(bundles);
     } catch (e) {
       console.warn(`Backup data failed to copy: ${e}`);
     }
@@ -313,7 +299,7 @@ export class LoginManager {
     // We persist the existing chain now, and then `publish()` tries to add
     // the final event that we need.
     const identityChain = this.client.resolveIdentityChain(identityKey);
-    await this.client.saveBundles(identityChain);
+    await this.client.saveBundles(identityKey, identityChain);
 
     // This call will attempt the identity switch and bail if it fails.
     await this.publishLogin(identityKey, keyPair, publishArgs);
@@ -394,6 +380,9 @@ export class LoginManager {
       contentBody: { oneofKind: 'identity', identity },
     });
 
+    const contentBytes = Proto.Content.toBinary(content);
+
+    // TODO: standardize this with an rs-common API
     const identityKey = bytesToHex(
       sha256(Proto.Identity.toBinary(identity)),
       32,
@@ -411,7 +400,7 @@ export class LoginManager {
       identitySequence: 1n,
       vectorClock: Proto.VectorClock.create({ sequence: [1n] }),
       previousSignature: new Uint8Array(0),
-      contentDigest: this.client.contentManager.buildDigest(content),
+      contentDigest: this.client.contentManager.buildDigest(contentBytes),
       createdAt: BigInt(Date.now()),
       application: this.client.application,
     });
@@ -423,9 +412,7 @@ export class LoginManager {
       keyPair,
       genesisEvent,
       identityContent: content,
-      serializedContent: Proto.SerializedContent.create({
-        contentBytes: Proto.Content.toBinary(content),
-      }),
+      serializedContent: Proto.SerializedContent.create({ contentBytes }),
     };
   }
 

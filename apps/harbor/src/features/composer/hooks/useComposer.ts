@@ -337,15 +337,14 @@ export function useComposer({
         post,
       });
 
-      await client.contentManager.save(content);
-
-      const event = await client.buildEvent(content);
-
-      const signedEvent = await client.signEvent(event);
+      const { signedEvent, contentBytes } = await client.createEvent({
+        collection: COLLECTION.FEED,
+        content,
+      });
 
       const newBundle = v2.EventBundle.create({
         signedEvent,
-        serializedContent: { contentBytes: v2.Content.toBinary(content) },
+        serializedContent: { contentBytes },
       });
       const identity = currentIdentityKey ?? '';
 
@@ -356,9 +355,6 @@ export function useComposer({
         replyTo ?? undefined,
         quote ?? undefined,
       );
-
-      // `commitEvent` persists the event locally
-      await client.commitEvent(signedEvent, content);
 
       setSubmitting(false);
       toast.success(isReply ? 'Reply posted' : 'Post published');

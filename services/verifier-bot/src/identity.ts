@@ -5,10 +5,14 @@ import type { PolycentricClient } from '@polycentric/js-core';
  * Caller is responsible for pushing it to remote servers.
  */
 export async function createIdentity(client: PolycentricClient) {
-  const { login, genesisEvent, identityContent } =
+  const { login, genesisEvent, identityContent, serializedContent } =
     await client.loginManager.beginSignup();
-  await client.contentManager.save(identityContent);
-  await client.commitEvent(genesisEvent, identityContent);
+  await client.commitEvent({
+    owner: login.identity,
+    signedEvent: genesisEvent,
+    content: identityContent,
+    contentBytes: serializedContent.contentBytes,
+  });
   await client.loginManager.finishSignup(login);
   await client.loginAs(login);
 }

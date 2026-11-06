@@ -14,11 +14,15 @@ import { COLLECTION, SyncStrategy } from './constants';
 import { bytesToHex, toDigestKey } from './utils/hex';
 import * as Proto from './proto/v2';
 import { FileStore } from './file-store/file-store';
-import { MemoryFileStoreDriver } from './memory-storage/memory-storage';
+import {
+  MemoryFileStoreDriver,
+  MemoryStorageDriver,
+} from './memory-storage/memory-storage';
 import type {
-  IContentRepository,
-  IEventRepository,
-} from './platform-interfaces';
+  ContentStatus,
+  EventRow,
+  EventKey as RequiredEventKey,
+} from './platform-interfaces/event-repository';
 
 // ---------------------------------------------------------------------------
 // Deterministic data helpers
@@ -48,16 +52,23 @@ function makeSigner(seed: number): Signer {
 }
 
 /**
+ * An event to seed into the event repository.
+ * Its content is stored as present when given, absent otherwise.
+ */
+type SeedEvent =
+  | Proto.SignedEvent
+  | { signedEvent: Proto.SignedEvent; content: Proto.Content };
+
+/**
  * An identity and the identity-collection data that backs it.
- * `identityEvents` / `identityContents` are seeded into the repositories so
- * validity checks can resolve the identity's authorized keys.
+ * `identityEvents` are seeded into the repository so validity checks can
+ * resolve the identity's authorized keys.
  */
 interface TestIdentity {
   key: string;
   rotationKeys: Signer[];
   signingKeys: Signer[];
-  identityEvents: Proto.SignedEvent[];
-  identityContents: { digest: Proto.ContentDigest; content: Proto.Content }[];
+  identityEvents: SeedEvent[];
 }
 
 /**
@@ -79,7 +90,7 @@ function makeIdentity(
   const content = Proto.Content.create({
     contentBody: { oneofKind: 'identity', identity: initialDoc },
   });
-  const event = makeSignedEvent({
+  const signedEvent = makeSignedEvent({
     signer: rotationKeys[0],
     identity: key,
     collection: COLLECTION.IDENTITY,
@@ -92,8 +103,7 @@ function makeIdentity(
     key,
     rotationKeys,
     signingKeys,
-    identityEvents: [event],
-    identityContents: [{ digest: buildDigest(content), content }],
+    identityEvents: [{ signedEvent, content }],
   };
 }
 
@@ -137,6 +147,8 @@ interface MakeEventArgs {
   content: Proto.Content;
   identitySequence?: bigint | number;
   createdAt?: bigint | number;
+  /** Overrides the digest of `content`. */
+  contentDigest?: Proto.ContentDigest;
 }
 
 /** Accept either an identity key or a `TestIdentity` and return the key. */
@@ -158,7 +170,7 @@ function makeSignedEvent(args: MakeEventArgs): Proto.SignedEvent {
     identitySequence: BigInt(args.identitySequence ?? 1),
     previousSignature: new Uint8Array(),
     previousRoot: new Uint8Array(),
-    contentDigest: buildDigest(args.content),
+    contentDigest: args.contentDigest ?? buildDigest(args.content),
     createdAt: BigInt(args.createdAt ?? 1_700_000_000_000),
   });
   const eventBytes = Proto.Event.toBinary(event);
@@ -244,138 +256,47 @@ function buildEventIssues(
 // In-memory fakes
 // ---------------------------------------------------------------------------
 
-/** Canonical string identity of an EventKey, used as the store's map key. */
-const eventKeyString = (key: Proto.EventKey): string =>
-  `${key.collection}|${key.identity}|${
-    key.signedBy
-      ? `${key.signedBy.keyType}:${bytesToHex(key.signedBy.key)}`
-      : '?'
-  }|${key.sequence}`;
-
-/**
- * In-memory mock of `IEventRepository` backed by a `Map` keyed by EventKey.
- * Lets tests assert that pushes/pulls read and write the correct events, and
- * that streams are correctly segmented by (identity, signer, collection) so a
- * regression that mixes up identities or signers is detectable.
- * `saved` records the events written via `save()` (seeded events are inserted
- * without being recorded) so tests can distinguish newly persisted events from
- * pre-existing.
- */
-class FakeEventRepository implements IEventRepository {
-  readonly map = new Map<string, Proto.SignedEvent>();
-  readonly saved: Proto.SignedEvent[] = [];
-
-  constructor(events: Proto.SignedEvent[] = []) {
-    for (const e of events) this.insert(e);
-  }
-
-  /** Insert without recording as a save (for seeding the store). */
-  private insert(signedEvent: Proto.SignedEvent): void {
-    const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-    this.map.set(eventKeyString(event.key!), signedEvent);
-  }
-
-  async save(
-    signedEvents: Proto.SignedEvent | Proto.SignedEvent[],
-  ): Promise<void> {
-    const list = Array.isArray(signedEvents) ? signedEvents : [signedEvents];
-    for (const e of list) {
-      this.saved.push(e);
-      this.insert(e);
-    }
-  }
-
-  async getAll(): Promise<Proto.SignedEvent[]> {
-    return [...this.map.values()];
-  }
-
-  async getBatch(): Promise<{ events: Proto.SignedEvent[]; offset: number }> {
-    return { events: await this.getAll(), offset: 0 };
-  }
-
-  async getByEventKey(key: Proto.EventKey): Promise<Proto.SignedEvent | null> {
-    return this.map.get(eventKeyString(key)) ?? null;
-  }
-
-  async getByIdentity(
-    identity: string,
-    options?: {
-      signer?: Proto.PublicKey;
-      collection?: number;
-      headsOnly?: boolean;
-    },
-  ): Promise<Proto.SignedEvent[]> {
-    let events = [...this.map.values()]
-      .map((se) => ({ se, event: Proto.Event.fromBinary(se.eventBytes) }))
-      .filter(({ event }) => event.key!.identity === identity);
-
-    if (options?.signer) {
-      const wanted = bytesToHex(options.signer.key);
-      events = events.filter(
-        ({ event }) => bytesToHex(event.key!.signedBy!.key) === wanted,
-      );
-    }
-    if (options?.collection != null) {
-      events = events.filter(
-        ({ event }) => event.key!.collection === options.collection,
-      );
-    }
-
-    if (options?.headsOnly) {
-      // One head (max sequence) per (collection, signer) stream.
-      const heads = new Map<string, { se: Proto.SignedEvent; seq: bigint }>();
-      for (const { se, event } of events) {
-        const stream = `${event.key!.collection}|${bytesToHex(
-          event.key!.signedBy!.key,
-        )}`;
-        const seq = event.key!.sequence;
-        const cur = heads.get(stream);
-        if (!cur || seq > cur.seq) heads.set(stream, { se, seq });
-      }
-      return [...heads.values()].map((h) => h.se);
-    }
-
-    return events.map(({ se }) => se);
-  }
+/** The event key of a signed event, in the repository's required form. */
+function requiredKeyOf(signedEvent: Proto.SignedEvent): RequiredEventKey {
+  const key = Proto.Event.fromBinary(signedEvent.eventBytes).key!;
+  return { ...key, signedBy: key.signedBy! };
 }
 
 /**
- * In-memory mock of `IContentRepository` backed by a `Map` keyed by content
- * digest.
- * `saved` records writes so tests can assert content is (or isn't) persisted,
- * e.g. dedup by digest.
+ * A repository row for seeding an event.
+ * The content is marked present when given, absent otherwise.
  */
-class FakeContentRepository implements IContentRepository {
-  readonly map = new Map<
-    string,
-    { digest: Proto.ContentDigest; content: Proto.Content }
-  >();
-  readonly saved: { digest: Proto.ContentDigest; content: Proto.Content }[] =
-    [];
+function seedRow(owner: string, seed: SeedEvent): EventRow {
+  const { signedEvent, content } =
+    'signedEvent' in seed ? seed : { signedEvent: seed, content: undefined };
+  return {
+    owner,
+    eventKey: requiredKeyOf(signedEvent),
+    eventBytes: signedEvent.eventBytes,
+    eventSignature: signedEvent.signature,
+    contentStatus: content ? 'present' : 'absent',
+    contentBytes: content ? Proto.Content.toBinary(content) : undefined,
+  };
+}
 
-  constructor(
-    contents: { digest: Proto.ContentDigest; content: Proto.Content }[] = [],
-  ) {
-    for (const c of contents) this.map.set(toDigestKey(c.digest), c);
-  }
+/** A persisted row decoded back into the protos the tests compare against. */
+interface StoredEvent {
+  signedEvent: Proto.SignedEvent;
+  contentStatus: ContentStatus;
+  content?: Proto.Content;
+}
 
-  async save(
-    digest: Proto.ContentDigest,
-    content: Proto.Content,
-  ): Promise<void> {
-    this.saved.push({ digest, content });
-    this.map.set(toDigestKey(digest), { digest, content });
-  }
-
-  async get(digest: Proto.ContentDigest): Promise<Proto.Content | null> {
-    return this.map.get(toDigestKey(digest))?.content ?? null;
-  }
-
-  async getAll(): Promise<
-    { digest: Proto.ContentDigest; content: Proto.Content }[]
-  > {
-    return [...this.map.values()];
-  }
+function decodeRow(row: EventRow): StoredEvent {
+  return {
+    signedEvent: Proto.SignedEvent.create({
+      signature: row.eventSignature,
+      eventBytes: row.eventBytes,
+    }),
+    contentStatus: row.contentStatus,
+    content: row.contentBytes
+      ? Proto.Content.fromBinary(row.contentBytes)
+      : undefined,
+  };
 }
 
 /**
@@ -490,8 +411,8 @@ interface MakeClientArgs {
   /** Other identities present in the store (seeded but not made active). */
   otherIdentities?: TestIdentity[];
   signer?: Signer;
-  events?: Proto.SignedEvent[];
-  contents?: { digest: Proto.ContentDigest; content: Proto.Content }[];
+  /** Events to seed, with their content when it should be present. */
+  events?: SeedEvent[];
   fileStoreDriver?: MemoryFileStoreDriver;
 }
 
@@ -500,12 +421,18 @@ interface MakeClientArgs {
  * The constructor does not run `initialize()`, so the fields that step would
  * normally populate (storage handle, server list, active identity, current key
  * pair) are set directly here, and the seeded events/content are loaded into
- * the fake repositories.
+ * an in-memory event repository owned by the active identity.
+ * Nothing is persisted without an owner, so seeding or reading back events
+ * requires an active identity.
  * Returns the client alongside the mocks so tests can both drive behavior and
- * inspect what was read/written.
+ * inspect what was read/written:
+ * - `stored(event)` reads back what the repository holds for an event.
+ * - `inserted()` lists the events newly inserted after seeding.
+ * - `addContent` spies on content filled in for already-present events.
  */
-function makeClient(args: MakeClientArgs = {}) {
+async function makeClient(args: MakeClientArgs = {}) {
   const core = args.core ?? makeCoreMock();
+  const owner = args.identity?.key;
 
   // Seed each identity's identity event + document so validity checks can
   // resolve its authorized keys.
@@ -513,14 +440,27 @@ function makeClient(args: MakeClientArgs = {}) {
     ...(args.identity ? [args.identity] : []),
     ...(args.otherIdentities ?? []),
   ];
-  const eventRepository = new FakeEventRepository([
+  const eventRepository = new MemoryStorageDriver().createEventRepository();
+  for (const seed of [
     ...seededIdentities.flatMap((i) => i.identityEvents),
     ...(args.events ?? []),
-  ]);
-  const contentRepository = new FakeContentRepository([
-    ...seededIdentities.flatMap((i) => i.identityContents),
-    ...(args.contents ?? []),
-  ]);
+  ]) {
+    if (!owner) throw new Error('Seeding events requires an active identity');
+    await eventRepository.insert(seedRow(owner, seed));
+  }
+
+  // Spy after seeding so seeded events aren't counted.
+  const insert = vi.spyOn(eventRepository, 'insert');
+  const addContent = vi.spyOn(eventRepository, 'addContent');
+  const inserted = (): Proto.SignedEvent[] =>
+    insert.mock.calls.map(([row]) => decodeRow(row).signedEvent);
+  const stored = async (
+    signedEvent: Proto.SignedEvent,
+  ): Promise<StoredEvent | null> => {
+    if (!owner) throw new Error('Reading events requires an active identity');
+    const row = await eventRepository.get(owner, requiredKeyOf(signedEvent));
+    return row ? decodeRow(row) : null;
+  };
 
   const client = new PolycentricClient({
     core,
@@ -530,7 +470,6 @@ function makeClient(args: MakeClientArgs = {}) {
 
   (client as any).storageHandle = new StorageHandle({
     eventRepository,
-    contentRepository,
     loginRepository: {} as any,
   });
   client.servers = args.servers ?? ['http://server-1'];
@@ -551,7 +490,15 @@ function makeClient(args: MakeClientArgs = {}) {
   vi.spyOn(client.fileStore, 'put');
   const fileStore = client.fileStore;
 
-  return { client, core, eventRepository, contentRepository, fileStore };
+  return {
+    client,
+    core,
+    eventRepository,
+    fileStore,
+    stored,
+    inserted,
+    addContent,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -566,7 +513,7 @@ const identityB = makeIdentity([signerOther]);
 
 describe('PolycentricClient sync', () => {
   describe('simple scope (one server, one identity, one signer)', () => {
-    it('full pull persists new events + content and returns the new count', async () => {
+    it('full pull persists new events + content and returns the pulled count', async () => {
       const content = makeContent('hello');
       const remote = makeSignedEvent({
         signer: signerA,
@@ -578,7 +525,7 @@ describe('PolycentricClient sync', () => {
       const core = makeCoreMock({
         pullBundles: () => [makeBundle(remote, content)],
       });
-      const { client, eventRepository, contentRepository } = makeClient({
+      const { client, stored } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -587,13 +534,12 @@ describe('PolycentricClient sync', () => {
       const count = await (client as any).pull(false);
 
       expect(count).toBe(1);
-      // The exact event is persisted under its key.
-      const event = Proto.Event.fromBinary(remote.eventBytes);
-      expect(await eventRepository.getByEventKey(event.key!)).toEqual(remote);
-      // The exact content is persisted under the event's content digest.
-      expect(await contentRepository.get(event.contentDigest!)).toEqual(
+      // The exact event and its content are persisted under its key.
+      expect(await stored(remote)).toEqual({
+        signedEvent: remote,
+        contentStatus: 'present',
         content,
-      );
+      });
       // Full pull => no heads filter (empty heads array).
       expect(pullQueryArgs(core).heads).toEqual([]);
       expect(pullQueryArgs(core).identity).toBe(identityA.key);
@@ -609,7 +555,7 @@ describe('PolycentricClient sync', () => {
         label: 'seeded',
       });
       const core = makeCoreMock({ pullBundles: () => [] });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -636,7 +582,7 @@ describe('PolycentricClient sync', () => {
 
     it('full push calls pushLocalEvents once with partial=false and pulls nothing', async () => {
       const core = makeCoreMock();
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -656,7 +602,7 @@ describe('PolycentricClient sync', () => {
 
     it('partial push calls pushLocalEvents with partial=true', async () => {
       const core = makeCoreMock();
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -671,36 +617,40 @@ describe('PolycentricClient sync', () => {
       );
     });
 
-    it('trySaveContent dedups by digest', async () => {
+    it('does not rewrite an event whose content is already present', async () => {
       const content = makeContent('dup');
-      const digest = buildDigest(content);
-      const { client, contentRepository } = makeClient({
+      const event = makeSignedEvent({
+        signer: signerA,
+        identity: identityA,
+        collection: COLLECTION.FEED,
+        sequence: 1,
+        content,
+      });
+      const core = makeCoreMock({
+        pullBundles: () => [makeBundle(event, content)],
+      });
+      const { client, stored, inserted, addContent } = await makeClient({
+        core,
         identity: identityA,
         signer: signerA,
-        contents: [{ digest, content }],
+        events: [{ signedEvent: event, content }],
       });
-      const event = Proto.Event.create({ contentDigest: digest });
-      const bundle = makeBundle(
-        makeSignedEvent({
-          signer: signerA,
-          identity: identityA,
-          collection: COLLECTION.FEED,
-          sequence: 1,
-          content,
-        }),
+
+      const count = await (client as any).pull(false);
+
+      expect(count).toBe(1); // counts bundles pulled, not new events
+      expect(inserted()).toEqual([]);
+      expect(addContent).not.toHaveBeenCalled();
+      expect(await stored(event)).toEqual({
+        signedEvent: event,
+        contentStatus: 'present',
         content,
-      );
-
-      const blobs: Proto.Blob[] = [];
-      const added = await (client as any).trySaveContent(event, bundle, blobs);
-
-      expect(added).toBe(false);
-      expect(contentRepository.saved).toHaveLength(0);
+      });
     });
 
     it('a failed pull propagates out of sync()', async () => {
       const core = makeCoreMock({ pullError: 'server exploded' });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -725,7 +675,7 @@ describe('PolycentricClient sync', () => {
       const core = makeCoreMock({
         pullBundles: () => [makeBundle(pulled, content)],
       });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -753,7 +703,7 @@ describe('PolycentricClient sync', () => {
         label: 'seeded',
       });
       const core = makeCoreMock({ pullBundles: () => [] });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -795,7 +745,7 @@ describe('PolycentricClient sync', () => {
         },
       });
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -815,7 +765,7 @@ describe('PolycentricClient sync', () => {
         pullError: 'pull down',
         pushResponse: async () => pushResult({}),
       });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -871,7 +821,7 @@ describe('PolycentricClient sync', () => {
 
     it('full push targets every server with the active identity only', async () => {
       const core = makeCoreMock();
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         servers,
         identity: identityA,
@@ -898,7 +848,7 @@ describe('PolycentricClient sync', () => {
 
     it('pull requests only the active identity', async () => {
       const core = makeCoreMock({ pullBundles: () => [] });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         servers,
         identity: identityA,
@@ -914,7 +864,7 @@ describe('PolycentricClient sync', () => {
 
     it('partial pull derives exactly one head per non-empty stream, never cross-wired', async () => {
       const core = makeCoreMock({ pullBundles: () => [] });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         servers,
         identity: identityA,
@@ -951,23 +901,25 @@ describe('PolycentricClient sync', () => {
 
     it('push-only sync does not mutate the event store', async () => {
       const core = makeCoreMock();
-      const { client, eventRepository } = makeClient({
-        core,
-        servers,
-        identity: identityA,
-        otherIdentities: [identityB],
-        signer: signerA,
-        events: seedStore(),
-      });
-      const before = (await eventRepository.getAll()).length;
+      const { client, eventRepository, inserted, addContent } =
+        await makeClient({
+          core,
+          servers,
+          identity: identityA,
+          otherIdentities: [identityB],
+          signer: signerA,
+          events: seedStore(),
+        });
+      const before = await eventRepository.getAll(identityA.key);
 
       await client.sync(SyncStrategy.FULL_PUSH);
 
-      expect(eventRepository.saved).toHaveLength(0);
-      expect((await eventRepository.getAll()).length).toBe(before);
+      expect(inserted()).toEqual([]);
+      expect(addContent).not.toHaveBeenCalled();
+      expect(await eventRepository.getAll(identityA.key)).toEqual(before);
     });
 
-    it('newCount counts only genuinely new events; existing ones are not re-saved', async () => {
+    it('counts every pulled bundle; existing events are not re-inserted', async () => {
       const existingContent = makeContent('already-here');
       const existing = makeSignedEvent({
         signer: signerA,
@@ -990,7 +942,7 @@ describe('PolycentricClient sync', () => {
           makeBundle(fresh, freshContent),
         ],
       });
-      const { client, eventRepository, contentRepository } = makeClient({
+      const { client, stored, inserted } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -999,29 +951,28 @@ describe('PolycentricClient sync', () => {
 
       const count = await (client as any).pull(false);
 
-      expect(count).toBe(1); // only `fresh` is new
-      // Only `fresh` is saved, and it is exactly `fresh`.
-      expect(eventRepository.saved).toEqual([fresh]);
+      expect(count).toBe(2); // every bundle the servers returned
+      // Only `fresh` is inserted, and it is exactly `fresh`.
+      expect(inserted()).toEqual([fresh]);
 
       // `fresh` landed under its own key, paired with its own content — no swap.
-      const freshEvent = Proto.Event.fromBinary(fresh.eventBytes);
-      expect(await eventRepository.getByEventKey(freshEvent.key!)).toEqual(
-        fresh,
-      );
-      expect(await contentRepository.get(freshEvent.contentDigest!)).toEqual(
-        freshContent,
-      );
-      // `existing` is untouched (not overwritten with the wrong data).
-      const existingEvent = Proto.Event.fromBinary(existing.eventBytes);
-      expect(await eventRepository.getByEventKey(existingEvent.key!)).toEqual(
-        existing,
-      );
+      expect(await stored(fresh)).toEqual({
+        signedEvent: fresh,
+        contentStatus: 'present',
+        content: freshContent,
+      });
+      // `existing` keeps its own event bytes and gains its own content.
+      expect(await stored(existing)).toEqual({
+        signedEvent: existing,
+        contentStatus: 'present',
+        content: existingContent,
+      });
     });
 
     it('strategy matrix: pull-only never pushes, push-only never pulls', async () => {
-      const make = () => {
+      const make = async () => {
         const core = makeCoreMock({ pullBundles: () => [] });
-        const { client } = makeClient({
+        const { client } = await makeClient({
           core,
           servers,
           identity: identityA,
@@ -1034,7 +985,7 @@ describe('PolycentricClient sync', () => {
         SyncStrategy.FULL_PULL,
         SyncStrategy.PARTIAL_PULL,
       ]) {
-        const { core, client } = make();
+        const { core, client } = await make();
         await client.sync(strategy);
         expect(core.pushLocalEvents).not.toHaveBeenCalled();
         expect(core.fetchQuery).toHaveBeenCalledTimes(1);
@@ -1044,7 +995,7 @@ describe('PolycentricClient sync', () => {
         SyncStrategy.FULL_PUSH,
         SyncStrategy.PARTIAL_PUSH,
       ]) {
-        const { core, client } = make();
+        const { core, client } = await make();
         const count = await client.sync(strategy);
         expect(count).toBe(0);
         expect(core.fetchQuery).not.toHaveBeenCalled();
@@ -1076,7 +1027,7 @@ describe('PolycentricClient sync', () => {
       const fileStoreDriver = await makeFileStoreDriver([
         { digest: presentBlob.digest!, bytes: presentBytes },
       ]);
-      const { client, fileStore } = makeClient({
+      const { client, fileStore } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1125,7 +1076,7 @@ describe('PolycentricClient sync', () => {
           makeBundle(event2, content2),
         ],
       });
-      const { client, contentRepository } = makeClient({
+      const { client, stored } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1150,13 +1101,9 @@ describe('PolycentricClient sync', () => {
       ).toHaveLength(1);
       expect(fetched).toHaveLength(2);
 
-      // Each content persisted under its own digest — not swapped.
-      expect(await contentRepository.get(buildDigest(content1))).toEqual(
-        content1,
-      );
-      expect(await contentRepository.get(buildDigest(content2))).toEqual(
-        content2,
-      );
+      // Each content persisted with its own event — not swapped.
+      expect((await stored(event1))?.content).toEqual(content1);
+      expect((await stored(event2))?.content).toEqual(content2);
     });
 
     it('uploads each server-requested blob to the requesting server only', async () => {
@@ -1178,7 +1125,7 @@ describe('PolycentricClient sync', () => {
         { digest: blob1.digest!, bytes: blob1Bytes },
         { digest: blob2.digest!, bytes: blob2Bytes },
       ]);
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         servers,
         identity: identityA,
@@ -1214,7 +1161,7 @@ describe('PolycentricClient sync', () => {
         pullBundles: () => [],
         pushResponse: async () => pushResult({ requestedBlobs: [blob] }),
       });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1242,7 +1189,7 @@ describe('PolycentricClient sync', () => {
         pullBundles: () => [makeBundle(event, content)],
       });
       // Seed the event but NOT its content.
-      const { client, eventRepository, contentRepository } = makeClient({
+      const { client, stored, inserted, addContent } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1251,16 +1198,46 @@ describe('PolycentricClient sync', () => {
 
       const count = await (client as any).pull(false);
 
-      expect(count).toBe(0); // the event is not new
-      expect(eventRepository.saved).toHaveLength(0); // event not re-saved
+      expect(count).toBe(1);
+      expect(inserted()).toEqual([]); // event not re-inserted
       // ...but the previously-missing content is now persisted.
-      const decoded = Proto.Event.fromBinary(event.eventBytes);
-      expect(await contentRepository.get(decoded.contentDigest!)).toEqual(
+      expect(addContent).toHaveBeenCalledTimes(1);
+      expect(await stored(event)).toEqual({
+        signedEvent: event,
+        contentStatus: 'present',
         content,
-      );
-      expect(contentRepository.saved).toContainEqual({
-        digest: decoded.contentDigest,
+      });
+    });
+
+    it('keeps omitted content omitted when it is pulled again', async () => {
+      const content = makeContent('deliberately-dropped');
+      const event = makeSignedEvent({
+        signer: signerA,
+        identity: identityA,
+        collection: COLLECTION.FEED,
+        sequence: 1,
         content,
+      });
+      const core = makeCoreMock({
+        pullBundles: () => [makeBundle(event, content)],
+      });
+      const { client, eventRepository, stored, inserted, addContent } =
+        await makeClient({
+          core,
+          identity: identityA,
+          signer: signerA,
+          events: [{ signedEvent: event, content }],
+        });
+      await eventRepository.deleteContent(identityA.key, requiredKeyOf(event));
+
+      await (client as any).pull(false);
+
+      expect(inserted()).toEqual([]);
+      expect(addContent).not.toHaveBeenCalled();
+      expect(await stored(event)).toEqual({
+        signedEvent: event,
+        contentStatus: 'omitted',
+        content: undefined,
       });
     });
 
@@ -1280,12 +1257,11 @@ describe('PolycentricClient sync', () => {
       });
       // Seed BOTH the event and its content; the blob is absent from the
       // (empty) filestore.
-      const { client, fileStore } = makeClient({
+      const { client, fileStore } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
-        events: [event],
-        contents: [{ digest: buildDigest(content), content }],
+        events: [{ signedEvent: event, content }],
       });
       const fetchSpy = vi
         .spyOn(client, 'fetchBlobBytes')
@@ -1294,7 +1270,7 @@ describe('PolycentricClient sync', () => {
       const count = await (client as any).pull(false);
 
       // Nothing new, yet the missing blob is still requested and stored.
-      expect(count).toBe(0);
+      expect(count).toBe(1);
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       expect(toDigestKey(fetchSpy.mock.calls[0][0])).toBe(
         toDigestKey(blob.digest!),
@@ -1325,7 +1301,7 @@ describe('PolycentricClient sync', () => {
         pullBundles: () => [badBundle, makeBundle(good, goodContent)],
       });
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const { client, eventRepository, contentRepository } = makeClient({
+      const { client, stored, inserted } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1333,18 +1309,18 @@ describe('PolycentricClient sync', () => {
 
       const count = await (client as any).pull(false);
 
-      expect(count).toBe(1); // only the good event counted
+      expect(count).toBe(2); // every bundle the servers returned
       // The good sibling, with its own content, is what landed.
-      expect(eventRepository.saved).toEqual([good]);
-      const goodEvent = Proto.Event.fromBinary(good.eventBytes);
-      expect(await contentRepository.get(goodEvent.contentDigest!)).toEqual(
-        goodContent,
+      expect(inserted()).toEqual([good]);
+      expect((await stored(good))?.content).toEqual(goodContent);
+      expect(warnSpy).toHaveBeenCalledWith(
+        'pull: saving bundle failed:',
+        expect.anything(),
       );
-      expect(warnSpy).toHaveBeenCalledWith('Pull event:', expect.anything());
     });
 
-    it('skips undecodable content (logs warn) but still saves the event', async () => {
-      const content = makeContent('real');
+    it('never persists content that does not hash to the event digest', async () => {
+      const content = makeContent('valid');
       const event = makeSignedEvent({
         signer: signerA,
         identity: identityA,
@@ -1352,33 +1328,83 @@ describe('PolycentricClient sync', () => {
         sequence: 1,
         content,
       });
-      const bundle = Proto.EventBundle.create({
+      // Swap in different content bytes whose sha256 differs from the
+      // event's contentDigest.
+      const tampered = Proto.EventBundle.create({
         signedEvent: event,
         serializedContent: Proto.SerializedContent.create({
-          contentBytes: new Uint8Array([0xff, 0xff, 0xff]), // not valid Content
+          contentBytes: Proto.Content.toBinary(makeContent('tampered')),
         }),
         eventProofs: [],
       });
-      const core = makeCoreMock({ pullBundles: () => [bundle] });
+      const goodContent = makeContent('good');
+      const good = makeSignedEvent({
+        signer: signerA,
+        identity: identityA,
+        collection: COLLECTION.FEED,
+        sequence: 2,
+        content: goodContent,
+      });
+      const core = makeCoreMock({
+        pullBundles: () => [tampered, makeBundle(good, goodContent)],
+      });
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const { client, eventRepository, contentRepository } = makeClient({
+      const { client, stored } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
       });
 
-      const count = await (client as any).pull(false);
+      await (client as any).pull(false);
 
-      expect(count).toBe(1);
-      // The event itself is saved exactly; its content is genuinely absent.
-      expect(eventRepository.saved).toEqual([event]);
-      expect(contentRepository.saved).toHaveLength(0);
-      const savedEvent = Proto.Event.fromBinary(event.eventBytes);
-      expect(await contentRepository.get(savedEvent.contentDigest!)).toBeNull();
+      expect((await stored(event))?.content).toBeUndefined();
+      expect((await stored(good))?.content).toEqual(goodContent);
       expect(warnSpy).toHaveBeenCalledWith(
-        'Pull event content:',
+        'pull: saving bundle failed:',
         expect.anything(),
       );
+    });
+
+    it('content that matches its digest but does not decode does not stop the pull', async () => {
+      // Digest the undecodable bytes so they pass the hash check.
+      const contentBytes = new Uint8Array([0xff, 0xff, 0xff]); // not valid Content
+      const event = makeSignedEvent({
+        signer: signerA,
+        identity: identityA,
+        collection: COLLECTION.FEED,
+        sequence: 1,
+        content: makeContent('unused'),
+        contentDigest: Proto.ContentDigest.create({
+          type: Proto.ContentDigestType.SHA256,
+          value: sha256(contentBytes),
+        }),
+      });
+      const bundle = Proto.EventBundle.create({
+        signedEvent: event,
+        serializedContent: Proto.SerializedContent.create({ contentBytes }),
+        eventProofs: [],
+      });
+      const goodContent = makeContent('good');
+      const good = makeSignedEvent({
+        signer: signerA,
+        identity: identityA,
+        collection: COLLECTION.FEED,
+        sequence: 2,
+        content: goodContent,
+      });
+      const core = makeCoreMock({
+        pullBundles: () => [bundle, makeBundle(good, goodContent)],
+      });
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { client, stored } = await makeClient({
+        core,
+        identity: identityA,
+        signer: signerA,
+      });
+
+      // Whether the undecodable content is kept is deliberately unspecified.
+      await expect((client as any).pull(false)).resolves.toBe(2);
+      expect((await stored(good))?.content).toEqual(goodContent);
     });
 
     it('logs server-reported push errors but still uploads requested blobs', async () => {
@@ -1396,7 +1422,7 @@ describe('PolycentricClient sync', () => {
         { digest: blob.digest!, bytes: blobBytes },
       ]);
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1429,7 +1455,7 @@ describe('PolycentricClient sync', () => {
         pullBundles: () => [makeBundle(event, content)],
       });
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const { client, fileStore } = makeClient({
+      const { client, fileStore } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1462,7 +1488,7 @@ describe('PolycentricClient sync', () => {
       });
       vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         servers: ['http://server-1', 'http://server-2'],
         identity: identityA,
@@ -1486,7 +1512,7 @@ describe('PolycentricClient sync', () => {
 
     it('reports a server with nothing to push as clean', async () => {
       const core = makeCoreMock({ pullBundles: () => [] });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1510,7 +1536,7 @@ describe('PolycentricClient sync', () => {
         },
       });
       vi.spyOn(console, 'error').mockImplementation(() => {});
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1539,7 +1565,7 @@ describe('PolycentricClient sync', () => {
           return pushResult({});
         },
       });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1559,7 +1585,7 @@ describe('PolycentricClient sync', () => {
 
     it('emits nothing for a pull-only sync', async () => {
       const core = makeCoreMock({ pullBundles: () => [] });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         identity: identityA,
         signer: signerA,
@@ -1576,7 +1602,7 @@ describe('PolycentricClient sync', () => {
   describe('edge cases', () => {
     it('sync() with no active identity returns 0 and does nothing', async () => {
       const core = makeCoreMock();
-      const { client } = makeClient({ core, signer: signerA }); // no identity
+      const { client } = await makeClient({ core, signer: signerA }); // no identity
 
       const count = await client.sync(SyncStrategy.FULL);
 
@@ -1586,7 +1612,7 @@ describe('PolycentricClient sync', () => {
     });
 
     it('pull() throws when there is no active identity', async () => {
-      const { client } = makeClient({ signer: signerA }); // no identity
+      const { client } = await makeClient({ signer: signerA }); // no identity
 
       await expect((client as any).pull(false)).rejects.toThrow(
         'No active identity',
@@ -1595,7 +1621,7 @@ describe('PolycentricClient sync', () => {
 
     it('sync() with no servers does not push', async () => {
       const core = makeCoreMock({ pullBundles: () => [] });
-      const { client } = makeClient({
+      const { client } = await makeClient({
         core,
         servers: [],
         identity: identityA,
@@ -1616,52 +1642,10 @@ describe('PolycentricClient sync', () => {
     });
   });
 
-  describe('trySaveBundle guards', () => {
-    it('returns false and saves nothing when the bundle has no signedEvent', async () => {
-      const { client, eventRepository } = makeClient({
-        identity: identityA,
-        signer: signerA,
-      });
-      const bundle = Proto.EventBundle.create({ eventProofs: [] });
-
-      const saved = await (client as any).trySaveBundle(bundle, []);
-
-      expect(saved).toBe(false);
-      expect(eventRepository.saved).toHaveLength(0);
-    });
-
-    it('returns false and saves nothing when the event has no key', async () => {
-      const { client, eventRepository } = makeClient({
-        identity: identityA,
-        signer: signerA,
-      });
-      const bundle = Proto.EventBundle.create({
-        signedEvent: Proto.SignedEvent.create({
-          signature: new Uint8Array([1]),
-          eventBytes: Proto.Event.toBinary(Proto.Event.create({})), // no key
-        }),
-        eventProofs: [],
-      });
-
-      const saved = await (client as any).trySaveBundle(bundle, []);
-
-      expect(saved).toBe(false);
-      expect(eventRepository.saved).toHaveLength(0);
-    });
-
-    it('returns false and saves nothing when the event key has no signedBy', async () => {
-      const { client, eventRepository } = makeClient({
-        identity: identityA,
-        signer: signerA,
-      });
-      const event = Proto.Event.create({
-        key: Proto.EventKey.create({
-          collection: COLLECTION.FEED,
-          identity: identityA.key,
-          sequence: 1n,
-        }), // no signedBy
-      });
-      const bundle = Proto.EventBundle.create({
+  describe('saveBundle guards', () => {
+    /** A bundle around raw event bytes, signed with a placeholder signature. */
+    const bundleOf = (event: Proto.Event): Proto.EventBundle =>
+      Proto.EventBundle.create({
         signedEvent: Proto.SignedEvent.create({
           signature: new Uint8Array([1]),
           eventBytes: Proto.Event.toBinary(event),
@@ -1669,42 +1653,97 @@ describe('PolycentricClient sync', () => {
         eventProofs: [],
       });
 
-      const saved = await (client as any).trySaveBundle(bundle, []);
+    it('rejects a bundle with no signedEvent and saves nothing', async () => {
+      const { client, inserted } = await makeClient({
+        identity: identityA,
+        signer: signerA,
+      });
+      const bundle = Proto.EventBundle.create({ eventProofs: [] });
 
-      expect(saved).toBe(false);
-      expect(eventRepository.saved).toHaveLength(0);
+      await expect(client.saveBundle(identityA.key, bundle)).rejects.toThrow(
+        'Bundle is missing signedEvent',
+      );
+      expect(inserted()).toEqual([]);
     });
 
-    it('returns false and does not re-save an already-present event', async () => {
-      const existing = makeSignedEvent({
+    it('rejects an event with no key and saves nothing', async () => {
+      const { client, inserted } = await makeClient({
+        identity: identityA,
+        signer: signerA,
+      });
+      const bundle = bundleOf(Proto.Event.create({})); // no key
+
+      await expect(client.saveBundle(identityA.key, bundle)).rejects.toThrow(
+        'event key is incomplete',
+      );
+      expect(inserted()).toEqual([]);
+    });
+
+    it('rejects an event key with no signedBy and saves nothing', async () => {
+      const { client, inserted } = await makeClient({
+        identity: identityA,
+        signer: signerA,
+      });
+      const bundle = bundleOf(
+        Proto.Event.create({
+          key: Proto.EventKey.create({
+            collection: COLLECTION.FEED,
+            identity: identityA.key,
+            sequence: 1n,
+          }), // no signedBy
+        }),
+      );
+
+      await expect(client.saveBundle(identityA.key, bundle)).rejects.toThrow(
+        'event key is incomplete',
+      );
+      expect(inserted()).toEqual([]);
+    });
+
+    it('rejects an event with no contentDigest and saves nothing', async () => {
+      const { client, inserted } = await makeClient({
+        identity: identityA,
+        signer: signerA,
+      });
+      const bundle = bundleOf(
+        Proto.Event.create({
+          key: Proto.EventKey.create({
+            collection: COLLECTION.FEED,
+            identity: identityA.key,
+            signedBy: signerA.publicKey,
+            sequence: 1n,
+          }),
+        }), // no contentDigest
+      );
+
+      await expect(client.saveBundle(identityA.key, bundle)).rejects.toThrow(
+        'missing content digest',
+      );
+      expect(inserted()).toEqual([]);
+    });
+
+    it('rejects content bytes that do not hash to the event digest and saves nothing', async () => {
+      const { client, inserted } = await makeClient({
+        identity: identityA,
+        signer: signerA,
+      });
+      const event = makeSignedEvent({
         signer: signerA,
         identity: identityA,
         collection: COLLECTION.FEED,
         sequence: 1,
-        content: makeContent('already-here'),
+        content: makeContent('valid'),
       });
-      const { client, eventRepository } = makeClient({
-        identity: identityA,
-        signer: signerA,
-        events: [existing],
-      });
-      // No serializedContent, so the content path is a no-op; isolate the
-      // event dedup-by-key guard.
-      const bundle = Proto.EventBundle.create({
-        signedEvent: existing,
-        eventProofs: [],
-      });
+      const bundle = makeBundle(event, makeContent('tampered'));
 
-      const saved = await (client as any).trySaveBundle(bundle, []);
-
-      expect(saved).toBe(false);
-      expect(eventRepository.saved).toHaveLength(0);
+      await expect(client.saveBundle(identityA.key, bundle)).rejects.toThrow(
+        'content does not match event digest',
+      );
+      expect(inserted()).toEqual([]);
     });
-  });
 
-  describe('trySaveContent guards', () => {
-    it('returns false and collects no blobs when the bundle has no content', async () => {
-      const { client, contentRepository } = makeClient({
+    it('stores the event with absent content when the bundle has no content', async () => {
+      const { client, stored, inserted } = await makeClient({
         identity: identityA,
         signer: signerA,
       });
@@ -1715,129 +1754,15 @@ describe('PolycentricClient sync', () => {
         sequence: 1,
         content: makeContent('x'),
       });
-      const decodedEvent = Proto.Event.fromBinary(event.eventBytes);
-      const bundle = Proto.EventBundle.create({
+
+      await client.saveBundle(identityA.key, makeBundle(event)); // no serializedContent
+
+      expect(inserted()).toEqual([event]);
+      expect(await stored(event)).toEqual({
         signedEvent: event,
-        eventProofs: [],
-      }); // no serializedContent
-
-      const blobs: Proto.Blob[] = [];
-      const saved = await (client as any).trySaveContent(
-        decodedEvent,
-        bundle,
-        blobs,
-      );
-
-      expect(saved).toBe(false);
-      expect(blobs).toHaveLength(0);
-      expect(contentRepository.saved).toHaveLength(0);
-    });
-
-    it('returns false and collects no blobs when the event has no contentDigest', async () => {
-      const { client, contentRepository } = makeClient({
-        identity: identityA,
-        signer: signerA,
+        contentStatus: 'absent',
+        content: undefined,
       });
-      const content = makeContent('with-blob', [
-        makeBlob(new Uint8Array([1, 2, 3])),
-      ]);
-      const bundle = makeBundle(
-        makeSignedEvent({
-          signer: signerA,
-          identity: identityA,
-          collection: COLLECTION.FEED,
-          sequence: 1,
-          content,
-        }),
-        content,
-      );
-      const eventWithoutDigest = Proto.Event.create({}); // no contentDigest
-
-      const blobs: Proto.Blob[] = [];
-      const saved = await (client as any).trySaveContent(
-        eventWithoutDigest,
-        bundle,
-        blobs,
-      );
-
-      expect(saved).toBe(false);
-      expect(blobs).toHaveLength(0);
-      expect(contentRepository.saved).toHaveLength(0);
-    });
-
-    it('collects referenced blobs even when the content already exists', async () => {
-      const blob = makeBlob(new Uint8Array([4, 5, 6]));
-      const content = makeContent('seen', [blob]);
-      const digest = buildDigest(content);
-      const { client, contentRepository } = makeClient({
-        identity: identityA,
-        signer: signerA,
-        contents: [{ digest, content }], // content already present
-      });
-      const event = Proto.Event.create({ contentDigest: digest });
-      const bundle = makeBundle(
-        makeSignedEvent({
-          signer: signerA,
-          identity: identityA,
-          collection: COLLECTION.FEED,
-          sequence: 1,
-          content,
-        }),
-        content,
-      );
-
-      const blobs: Proto.Blob[] = [];
-      const saved = await (client as any).trySaveContent(event, bundle, blobs);
-
-      // Already present, so not re-saved...
-      expect(saved).toBe(false);
-      expect(contentRepository.saved).toHaveLength(0);
-      // ...but its blob is still collected so the pull can fetch it.
-      expect(blobs).toEqual([blob]);
-    });
-
-    it('returns false and collects no blobs when content bytes do not hash to the event digest', async () => {
-      const { client, contentRepository } = makeClient({
-        identity: identityA,
-        signer: signerA,
-      });
-      const content = makeContent('valid');
-      const event = makeSignedEvent({
-        signer: signerA,
-        identity: identityA,
-        collection: COLLECTION.FEED,
-        sequence: 1,
-        content,
-      });
-      // Swap in different content bytes whose sha256 differs from the
-      // event's contentDigest.
-      const tampered = makeContent('tampered');
-      const bundle = Proto.EventBundle.create({
-        signedEvent: event,
-        serializedContent: Proto.SerializedContent.create({
-          contentBytes: Proto.Content.toBinary(tampered),
-        }),
-        eventProofs: [],
-      });
-
-      const blobs: Proto.Blob[] = [];
-      // Unchecked cast: trySaveContent is private; named seam for the one call.
-      const internal = client as unknown as {
-        trySaveContent(
-          event: Proto.Event,
-          bundle: Proto.EventBundle,
-          blobs: Proto.Blob[],
-        ): Promise<boolean>;
-      };
-      const saved = await internal.trySaveContent(
-        Proto.Event.fromBinary(event.eventBytes),
-        bundle,
-        blobs,
-      );
-
-      expect(saved).toBe(false);
-      expect(blobs).toHaveLength(0);
-      expect(contentRepository.saved).toHaveLength(0);
     });
   });
 });
@@ -1910,7 +1835,7 @@ describe('PolycentricClient live sync', () => {
       { pullBundles: () => [makeBundle(remote, content)] },
       [keyOf(seeded[0])],
     );
-    const { client, eventRepository } = makeClient({
+    const { client, stored } = await makeClient({
       core,
       identity: identityA,
       signer: signerA,
@@ -1921,9 +1846,7 @@ describe('PolycentricClient live sync', () => {
     emitHeads([keyOf(remote)]);
 
     await vi.waitFor(async () =>
-      expect(await eventRepository.getByEventKey(keyOf(remote))).toEqual(
-        remote,
-      ),
+      expect((await stored(remote))?.signedEvent).toEqual(remote),
     );
     expect(queriesOf(core, Query.ListEvents)[0][1].inner[0].heads).toEqual([
       expect.objectContaining({ sequence: 1n }),
@@ -1936,7 +1859,7 @@ describe('PolycentricClient live sync', () => {
       { pullBundles: () => [makeBundle(remote, content)] },
       [keyOf(seeded[0])],
     );
-    const { client } = makeClient({
+    const { client } = await makeClient({
       core,
       identity: identityA,
       signer: signerA,
@@ -1954,7 +1877,7 @@ describe('PolycentricClient live sync', () => {
 
   it('does not pull when the core is up to date', async () => {
     const { core, emitHeads } = makeLiveCore({}, [keyOf(remote)]);
-    const { client } = makeClient({
+    const { client } = await makeClient({
       core,
       identity: identityA,
       signer: signerA,
@@ -1970,7 +1893,7 @@ describe('PolycentricClient live sync', () => {
 
   it('follows identity switches and stops when asked', async () => {
     const { core, unsubscribe } = makeLiveCore();
-    const { client } = makeClient({
+    const { client } = await makeClient({
       core,
       identity: identityA,
       signer: signerA,

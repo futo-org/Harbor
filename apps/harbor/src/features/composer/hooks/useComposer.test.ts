@@ -31,11 +31,13 @@ const mockClient = {
     build: jest.fn((x: { oneofKind: 'post'; post: types.v2.Post }) => ({
       content: x,
     })),
-    save: jest.fn(async () => undefined),
   },
-  buildEvent: jest.fn(async () => ({ event: true })),
-  signEvent: jest.fn(async () => ({ signed: true })),
-  commitEvent: jest.fn(async () => undefined),
+  createEvent: jest.fn(
+    async (_args: { collection: number; content: unknown }) => ({
+      signedEvent: { signed: true },
+      contentBytes: new Uint8Array(),
+    }),
+  ),
   sync: jest.fn(async () => undefined),
   urlInfo: jest.fn(async () => ({
     url: 'https://example.com',
@@ -374,7 +376,7 @@ describe('useComposer handlePost', () => {
     await act(async () => {
       await result.current.handlePost();
     });
-    expect(mockClient.contentManager.save).not.toHaveBeenCalled();
+    expect(mockClient.createEvent).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -389,7 +391,10 @@ describe('useComposer handlePost', () => {
     expect(mockClient.contentManager.build).toHaveBeenCalledWith(
       expect.objectContaining({ oneofKind: 'post' }),
     );
-    expect(mockClient.commitEvent).toHaveBeenCalled();
+    expect(mockClient.createEvent).toHaveBeenCalledWith({
+      collection: 1,
+      content: mockClient.contentManager.build.mock.results[0].value,
+    });
     expect(onClose).toHaveBeenCalled();
     expect(result.current.submitting).toBe(false);
     // Closing unmounts the composer, which resets it.
@@ -428,7 +433,7 @@ describe('useComposer handlePost', () => {
     expect(useComposerStore.getState().mentionRanges).toEqual([]);
   });
 
-  it('awaits the in-flight upload before committing the post', async () => {
+  it('awaits the in-flight upload before creating the post', async () => {
     libraryReturns([{ uri: 'file://a.jpg', width: 100, height: 80 }]);
     const upload = deferred<{ images: [] }>();
     mockProcess.mockReturnValueOnce(upload.promise);
@@ -446,8 +451,8 @@ describe('useComposer handlePost', () => {
       postPromise = result.current.handlePost();
     });
 
-    // It should be waiting on the upload, not yet committed.
-    expect(mockClient.commitEvent).not.toHaveBeenCalled();
+    // It should be waiting on the upload, not yet created.
+    expect(mockClient.createEvent).not.toHaveBeenCalled();
     expect(result.current.submitting).toBe(true);
 
     // Resolve the upload; the post completes.
@@ -456,12 +461,12 @@ describe('useComposer handlePost', () => {
       await postPromise;
     });
 
-    expect(mockClient.commitEvent).toHaveBeenCalled();
+    expect(mockClient.createEvent).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
   });
 
   it('shows a fixed message, not the raw error, when posting fails', async () => {
-    mockClient.commitEvent.mockRejectedValueOnce(new Error('commit boom'));
+    mockClient.createEvent.mockRejectedValueOnce(new Error('create boom'));
     const { result } = await renderComposer();
     act(() => result.current.setText('hello'));
 

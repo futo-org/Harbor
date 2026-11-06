@@ -1,11 +1,15 @@
 import type {
-  IContentRepository,
   IEventRepository,
   FileStoreEntry,
   IFileStoreDriver,
   ILoginRepository,
   IStorageDriver,
 } from '../platform-interfaces';
+import type {
+  EventKey,
+  EventRow,
+} from '../platform-interfaces/event-repository';
+import { EventRepositoryError } from '../platform-interfaces/event-repository';
 import { FileStoreError } from '../platform-interfaces/file-store-driver';
 import { segmentsFromPath } from '../utils/path';
 import type {
@@ -16,117 +20,106 @@ import type {
 } from '../platform-interfaces/login-repository';
 import { LoginRepositoryError } from '../platform-interfaces/login-repository';
 import * as Proto from '../proto/v2';
-import { bytesToHex, toDigestKey } from '../utils/hex';
+import { bytesToHex } from '../utils/hex';
 
 /** Canonical string identity of an EventKey, used as the store's map key. */
-function eventKeyString(key: Proto.EventKey): string {
-  return `${key.collection}|${key.identity}|${
-    key.signedBy
-      ? `${key.signedBy.keyType}:${bytesToHex(key.signedBy.key)}`
-      : '?'
-  }|${key.sequence}`;
+function eventKeyString(key: EventKey): string {
+  return `${key.collection}|${key.identity}|${key.signedBy.keyType}:${bytesToHex(
+    key.signedBy.key,
+  )}|${key.sequence}`;
+}
+
+/** Copy an event key to avoid aliasing. */
+function copyEventKey(key: EventKey): EventKey {
+  return {
+    ...key,
+    signedBy: Proto.PublicKey.create({
+      keyType: key.signedBy.keyType,
+      key: key.signedBy.key.slice(),
+    }),
+  };
+}
+
+/** Copy an event row to avoid aliasing. */
+function copyRow(row: EventRow): EventRow {
+  return {
+    ...row,
+    eventKey: copyEventKey(row.eventKey),
+    eventBytes: row.eventBytes.slice(),
+    eventSignature: row.eventSignature.slice(),
+    contentBytes: row.contentBytes?.slice(),
+  };
 }
 
 class MemoryEventRepository implements IEventRepository {
-  private readonly map = new Map<string, Proto.SignedEvent>();
+  private readonly owners = new Map<string, Map<string, EventRow>>();
 
-  async save(
-    signedEvents: Proto.SignedEvent | Proto.SignedEvent[],
+  /** Get the stored row for an event, throwing if it is not present. */
+  private require(owner: string, eventKey: EventKey): EventRow {
+    const row = this.owners.get(owner)?.get(eventKeyString(eventKey));
+    if (!row) throw new EventRepositoryError('not found', 'event not found');
+    return row;
+  }
+
+  async insert(row: EventRow): Promise<void> {
+    let rows = this.owners.get(row.owner);
+    if (!rows) {
+      rows = new Map();
+      this.owners.set(row.owner, rows);
+    }
+
+    const key = eventKeyString(row.eventKey);
+    if (rows.has(key)) {
+      throw new EventRepositoryError('already exists', 'event already exists');
+    }
+
+    rows.set(key, copyRow(row));
+  }
+
+  async addContent(
+    owner: string,
+    eventKey: EventKey,
+    serializedContent: Uint8Array,
   ): Promise<void> {
-    const list = Array.isArray(signedEvents) ? signedEvents : [signedEvents];
-    for (const signedEvent of list) {
-      const event = Proto.Event.fromBinary(signedEvent.eventBytes);
-      if (!event.key) continue;
-      this.map.set(eventKeyString(event.key), signedEvent);
-    }
+    const row = this.require(owner, eventKey);
+    row.contentStatus = 'present';
+    row.contentBytes = serializedContent.slice();
   }
 
-  async getAll(): Promise<Proto.SignedEvent[]> {
-    return [...this.map.values()];
+  async deleteContent(owner: string, eventKey: EventKey): Promise<void> {
+    const row = this.require(owner, eventKey);
+    row.contentStatus = 'omitted';
+    row.contentBytes = undefined;
   }
 
-  async getBatch(
-    batchSize: number,
-    offset = 0,
-  ): Promise<{ events: Proto.SignedEvent[]; offset: number }> {
-    const all = [...this.map.values()];
-    const events = all.slice(offset, offset + batchSize);
-    return { events, offset: offset + events.length };
+  async get(owner: string, eventKey: EventKey): Promise<EventRow | null> {
+    const row = this.owners.get(owner)?.get(eventKeyString(eventKey));
+    return row ? copyRow(row) : null;
   }
 
-  async getByEventKey(key: Proto.EventKey): Promise<Proto.SignedEvent | null> {
-    return this.map.get(eventKeyString(key)) ?? null;
+  async getAll(owner: string): Promise<EventRow[]> {
+    const rows = this.owners.get(owner)?.values();
+    if (!rows) return [];
+
+    return [...rows].map(copyRow);
   }
 
-  async getByIdentity(
-    identity: string,
-    options?: {
-      signer?: Proto.PublicKey;
-      collection?: number;
-      headsOnly?: boolean;
-    },
-  ): Promise<Proto.SignedEvent[]> {
-    let events = [...this.map.values()]
-      .map((se) => ({ se, event: Proto.Event.fromBinary(se.eventBytes) }))
-      .filter(({ event }) => event.key?.identity === identity);
+  async getHeads(owner: string): Promise<EventKey[]> {
+    // One head (max sequence) per (collection, signer) stream.
+    const heads = new Map<string, EventKey>();
+    for (const { eventKey } of this.owners.get(owner)?.values() ?? []) {
+      if (eventKey.identity !== owner) continue;
 
-    if (options?.signer) {
-      const wanted = bytesToHex(options.signer.key);
-      events = events.filter(
-        ({ event }) =>
-          event.key?.signedBy && bytesToHex(event.key.signedBy.key) === wanted,
-      );
-    }
-    if (options?.collection != null) {
-      events = events.filter(
-        ({ event }) => event.key?.collection === options.collection,
-      );
+      const col = eventKey.collection;
+      const keyType = eventKey.signedBy.keyType;
+      const keyBytes = eventKey.signedBy.key;
+      const stream = `${col}|${keyType}:${bytesToHex(keyBytes)}`;
+
+      const cur = heads.get(stream);
+      if (!cur || eventKey.sequence > cur.sequence) heads.set(stream, eventKey);
     }
 
-    if (options?.headsOnly) {
-      // One head (max sequence) per (collection, signer) stream.
-      const heads = new Map<string, { se: Proto.SignedEvent; seq: bigint }>();
-      for (const { se, event } of events) {
-        if (!event.key?.signedBy) continue;
-        const stream = `${event.key.collection}|${bytesToHex(
-          event.key.signedBy.key,
-        )}`;
-        const seq = event.key.sequence;
-        const cur = heads.get(stream);
-        if (!cur || seq > cur.seq) heads.set(stream, { se, seq });
-      }
-      return [...heads.values()].map((h) => h.se);
-    }
-
-    return events
-      .sort((a, b) =>
-        Number((a.event.key?.sequence ?? 0n) - (b.event.key?.sequence ?? 0n)),
-      )
-      .map(({ se }) => se);
-  }
-}
-
-class MemoryContentRepository implements IContentRepository {
-  private readonly map = new Map<
-    string,
-    { digest: Proto.ContentDigest; content: Proto.Content }
-  >();
-
-  async save(
-    digest: Proto.ContentDigest,
-    content: Proto.Content,
-  ): Promise<void> {
-    this.map.set(toDigestKey(digest), { digest, content });
-  }
-
-  async get(digest: Proto.ContentDigest): Promise<Proto.Content | null> {
-    return this.map.get(toDigestKey(digest))?.content ?? null;
-  }
-
-  async getAll(): Promise<
-    { digest: Proto.ContentDigest; content: Proto.Content }[]
-  > {
-    return [...this.map.values()];
+    return [...heads.values()].map(copyEventKey);
   }
 }
 
@@ -266,15 +259,11 @@ class MemoryLoginRepository implements ILoginRepository {
  */
 export class MemoryStorageDriver implements IStorageDriver {
   private readonly events = new MemoryEventRepository();
-  private readonly contents = new MemoryContentRepository();
   private readonly logins = new MemoryLoginRepository();
   private activeLogin: LoginId | null = null;
 
   createEventRepository() {
     return this.events;
-  }
-  createContentRepository() {
-    return this.contents;
   }
   createLoginRepository() {
     return this.logins;

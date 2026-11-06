@@ -38,7 +38,7 @@ export default function useCreateClaim() {
     }: {
       schema: v2.VerificationSchema;
       values: Record<string, string>;
-    }): Promise<ClaimRef | undefined> => {
+    }): Promise<ClaimRef> => {
       if (isPending) {
         throw 'Already pending';
       }
@@ -63,18 +63,10 @@ export default function useCreateClaim() {
           },
         });
 
-        // Persist the content first: the event references it by digest, and
-        // `sync()` looks the content up from the local store to attach it.
-        await client.contentManager.save(content);
-
-        const event = await client.buildEvent(
+        const { eventKey, signer } = await client.createEvent({
+          collection: COLLECTION.VERIFICATIONS,
           content,
-          COLLECTION.VERIFICATIONS,
-        );
-        const signedEvent = await client.signEvent(event);
-
-        // Save the event locally and mirror it (with content) into the core.
-        await client.commitEvent(signedEvent, content);
+        });
 
         try {
           await client.sync(SyncStrategy.PARTIAL_PUSH);
@@ -83,8 +75,8 @@ export default function useCreateClaim() {
         }
 
         // The same sync below delivers both events.
-        if (requestFrom && event.key) {
-          await publishVerificationTarget(client, event.key, [requestFrom]);
+        if (requestFrom) {
+          await publishVerificationTarget(client, eventKey, [requestFrom]);
         }
 
         // Delivery to servers is best-effort — the claim is already saved
@@ -100,13 +92,11 @@ export default function useCreateClaim() {
           invalidateQuery(client, ['claims-list', identityKey]);
         }
 
-        const key = event.key;
-        if (!key?.signedBy) return undefined;
         return {
-          id: eventKeyId(key),
-          identity: key.identity,
-          keyFingerprint: getKeyFingerprint(key.signedBy) ?? '',
-          sequence: key.sequence.toString(),
+          id: eventKeyId(eventKey),
+          identity: eventKey.identity,
+          keyFingerprint: getKeyFingerprint(signer),
+          sequence: eventKey.sequence.toString(),
         };
       } finally {
         setPending(false);

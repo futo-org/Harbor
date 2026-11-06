@@ -75,8 +75,12 @@ async function ensureUser(client, name) {
       'pendingSignup',
     );
   }
-  await client.contentManager.save(info.identityContent);
-  await client.commitEvent(info.genesisEvent, info.identityContent);
+  await client.commitEvent({
+    owner: identityKey,
+    signedEvent: info.genesisEvent,
+    content: info.identityContent,
+    contentBytes: info.serializedContent.contentBytes,
+  });
   await client.loginManager.finishSignup(info.login);
   // Avoid persisting the login since we currently disallow changing the
   // persisted login once it has been set.
@@ -85,9 +89,7 @@ async function ensureUser(client, name) {
     oneofKind: 'profileUpdate',
     profileUpdate: { name, description: 'Seeded for e2e tests' },
   });
-  await client.contentManager.save(content);
-  const event = await client.buildEvent(content, COLLECTION.PROFILE);
-  await client.commitEvent(await client.signEvent(event), content);
+  await client.createEvent({ collection: COLLECTION.PROFILE, content });
   // A fresh server (CI's) has no posts, and the Explore flows scroll past a
   // screen of them.
   for (let i = 1; i <= POSTS_PER_SEEDED_USER; i++) {
@@ -95,9 +97,10 @@ async function ensureUser(client, name) {
       oneofKind: 'post',
       post: v2.Post.create({ text: `Seeded post ${i} by ${name}` }),
     });
-    await client.contentManager.save(postContent);
-    const postEvent = await client.buildEvent(postContent);
-    await client.commitEvent(await client.signEvent(postEvent), postContent);
+    await client.createEvent({
+      collection: COLLECTION.FEED,
+      content: postContent,
+    });
   }
   await client.sync();
   console.log(`${name}: ${client.activeIdentityKey}`);

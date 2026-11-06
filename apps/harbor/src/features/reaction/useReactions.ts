@@ -109,6 +109,7 @@ const useReactions = create<ReactionsState>((set, get) => {
     // Decode the target post id back into an EventKey so the Reaction
     // Content can carry it (the proto field that refresh reads back).
     const targetKey = v2.EventKey.fromBinary(hexToBytes(targetId));
+
     const content = v2.Content.create({
       contentBody: {
         oneofKind: 'reaction',
@@ -116,13 +117,12 @@ const useReactions = create<ReactionsState>((set, get) => {
       },
     });
 
-    await client.contentManager.save(content);
-    const event = await client.buildEvent(content, COLLECTION.INTERACTIONS);
-    const signedEvent = await client.signEvent(event);
-    if (!event.key) return undefined;
-    const eventId = eventKeyId(event.key);
+    const { eventKey } = await client.createEvent({
+      collection: COLLECTION.INTERACTIONS,
+      content,
+    });
 
-    await client.commitEvent(signedEvent, content);
+    const eventId = eventKeyId(eventKey);
 
     return { targetId, emoji, positive, eventId };
   };
@@ -142,14 +142,10 @@ const useReactions = create<ReactionsState>((set, get) => {
         delete: { eventKey: reactionKey },
       },
     });
-    await client.contentManager.save(deleteContent);
-    const deleteEvent = await client.buildEvent(
-      deleteContent,
-      COLLECTION.INTERACTIONS,
-    );
-    const signedDelete = await client.signEvent(deleteEvent);
-
-    await client.commitEvent(signedDelete, deleteContent);
+    await client.createEvent({
+      collection: COLLECTION.INTERACTIONS,
+      content: deleteContent,
+    });
   };
 
   return {

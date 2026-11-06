@@ -50,10 +50,10 @@ export default function usePostActions(post: PostData): PostActions {
         delete: { eventKey },
       },
     });
-    await client.contentManager.save(deleteContent);
-    const deleteEvent = await client.buildEvent(deleteContent, COLLECTION.FEED);
-    const signedDelete = await client.signEvent(deleteEvent);
-    await client.commitEvent(signedDelete, deleteContent);
+    await client.createEvent({
+      collection: COLLECTION.FEED,
+      content: deleteContent,
+    });
 
     // TODO: do we care if push failed?
     await client.sync(SyncStrategy.PARTIAL_PUSH);

@@ -18,7 +18,7 @@ import {
 import { isWeb } from '@/src/common/util/platform';
 import { useIdentityState } from '@/src/features/profile/hooks/useIdentityState';
 import { ed25519 } from '@noble/curves/ed25519.js';
-import { COLLECTION, v2 } from '@polycentric/react-native';
+import { bytesEqual, COLLECTION, v2 } from '@polycentric/react-native';
 import { type ComponentProps, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -582,7 +582,7 @@ function decodeIdentity(bundle: v2.EventBundle | null): v2.Identity | null {
 }
 
 function sameKey(a: v2.PublicKey, b: v2.PublicKey): boolean {
-  return a.keyType === b.keyType && bytesToHex(a.key) === bytesToHex(b.key);
+  return a.keyType === b.keyType && bytesEqual(a.key, b.key);
 }
 
 function hexOrNone(bytes?: Uint8Array): string {

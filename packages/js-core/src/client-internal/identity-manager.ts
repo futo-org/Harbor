@@ -145,19 +145,12 @@ export class IdentityManager {
 
     // Create event/content
     const { content } = this.draftIdentityContent(args);
-    const digest = this.client.contentManager.buildDigest(content);
-    await this.client.storage.content.save(digest, content);
-
-    const event = await this.client.buildEvent(
-      content,
-      COLLECTION.IDENTITY,
-      identityKey,
-      keyPair.publicKey,
-    );
 
     // Persist locally
-    const signedEvent = await this.client.signEvent(event, keyPair);
-    await this.client.commitEvent(signedEvent, content);
+    const { signedEvent } = await this.client.createEvent({
+      collection: COLLECTION.IDENTITY,
+      content,
+    });
 
     // Push to servers
     // Push errors are currently swallowed
