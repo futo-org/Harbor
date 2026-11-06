@@ -142,7 +142,7 @@ async fn a_request_trace_is_exported_with_its_children() {
         if wanted.iter().all(|name| has(name)) || Instant::now() > deadline {
             break spans;
         }
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
     };
     let names: Vec<&str> = spans.iter().map(|(_, s)| s.name.as_str()).collect();
 

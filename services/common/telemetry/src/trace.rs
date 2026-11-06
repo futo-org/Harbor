@@ -2,6 +2,7 @@
 
 use std::env;
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use opentelemetry::propagation::{Extractor, Injector};
 use opentelemetry::trace::{TraceContextExt, TracerProvider};
@@ -23,6 +24,10 @@ pub struct Config {
     /// Base URL of the OTLP/HTTP collector; spans go to `/v1/traces` under it.
     pub url: String,
     pub service_name: String,
+    /// Delay between processing of two batches.
+    ///
+    /// Only set to speed up testing.
+    pub schedule_delay: Option<Duration>,
 }
 
 impl Config {
@@ -37,7 +42,16 @@ impl Config {
             .filter(|v| !v.is_empty())
             .or_else(|| Some(env::current_exe().ok()?.file_stem()?.to_str()?.to_owned()))
             .unwrap_or_else(|| "unknown_service".to_owned());
-        Some(Self { url, service_name })
+        let schedule_delay = env::var("HARBOR_TRACES_SCHEDULE_DELAY_MS")
+            .ok()
+            .filter(|v| !v.is_empty())
+            .and_then(|schedule_delay| schedule_delay.parse().ok())
+            .map(Duration::from_millis);
+        Some(Self {
+            url,
+            service_name,
+            schedule_delay,
+        })
     }
 }
 
@@ -52,8 +66,16 @@ where
         .with_http()
         .with_endpoint(format!("{}/v1/traces", config.url.trim_end_matches('/')))
         .build()?;
+    let mut batch_config = opentelemetry_sdk::trace::BatchConfigBuilder::default();
+    if let Some(schedule_delay) = config.schedule_delay {
+        batch_config = batch_config.with_scheduled_delay(schedule_delay);
+    }
+    let batch_config = batch_config.build();
+    let batch = opentelemetry_sdk::trace::BatchSpanProcessor::builder(exporter)
+        .with_batch_config(batch_config)
+        .build();
     let provider = SdkTracerProvider::builder()
-        .with_batch_exporter(exporter)
+        .with_span_processor(batch)
         // Not the parent-based default: a request's `traceparent` comes from
         // an untrusted client, which must not be able to switch tracing off
         // with its sampled flag.
