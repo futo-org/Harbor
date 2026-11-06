@@ -15,13 +15,10 @@ impl MigrationTrait for Migration {
         Ok(())
     }
 
-    // Still cleans up after the original version of this migration.
+    // Still cleans up after the original version of this migration. The
+    // extension is owned by the cluster, not by the app role.
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let tx = manager.get_connection();
-        tx.execute_unprepared("DROP EXTENSION IF EXISTS pg_search")
-            .await?;
-        tx.execute_unprepared("DROP SCHEMA IF EXISTS paradedb")
-            .await?;
         let db_name: String = tx
             .query_one_raw(Statement::from_string(
                 tx.get_database_backend(),

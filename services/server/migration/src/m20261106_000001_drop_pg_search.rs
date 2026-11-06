@@ -14,12 +14,9 @@ pub struct Migration;
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let tx = manager.get_connection();
+        // The extension itself is owned by the cluster, not by the app role,
+        // so it is dropped there once this index is gone.
         tx.execute_unprepared("DROP INDEX IF EXISTS content_post_search")
-            .await?;
-        tx.execute_unprepared("DROP EXTENSION IF EXISTS pg_search")
-            .await?;
-        // The extension's schema is not a member of it, so it survives the drop.
-        tx.execute_unprepared("DROP SCHEMA IF EXISTS paradedb")
             .await?;
         let db_name: String = tx
             .query_one_raw(Statement::from_string(
