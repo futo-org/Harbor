@@ -15,7 +15,7 @@ path=${REGISTRY#*/}
 check() {
   missing=false
   for name in "$@"; do
-    if curl -fsSI \
+    if curl --max-time 10 -fsSI \
       -H 'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
       "https://$host/v2/$path/ci/$name/manifests/$TAG" >/dev/null 2>&1; then
       echo "ci/$name:$TAG exists"

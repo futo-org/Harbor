@@ -11,8 +11,9 @@ import { v2 } from '@polycentric/react-native';
 import { type ExternalPathString, Link, router } from 'expo-router';
 import { memo, useCallback, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
+import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
+import { LabelPill } from '@/src/features/moderation/LabelPill';
 import { PostImages } from '../PostImages';
-import { PostLabels } from '../PostLabels';
 import { PostText } from '../PostText';
 import { LinkPreviewCard } from './LinkPreviewCard';
 import { PostContentQuote } from './PostContentQuote';
@@ -22,18 +23,29 @@ export const PostContent = memo(function PostContent({
   post,
   hideReplyingTo,
   compactLinkPreview,
-  authorIdentity,
   focusedView = false,
+  labelPill,
 }: {
   post: PostData;
   hideReplyingTo: boolean;
   compactLinkPreview: boolean;
-  authorIdentity: string | null;
   /** Focused-post rendering: larger, selectable text. */
   focusedView?: boolean;
+  /** The post's labels, with `onHide` once revealed. */
+  labelPill?: { labels: PostLabel[]; onHide?: () => void };
 }) {
   const replyParentId = hideReplyingTo ? undefined : post.reply?.parentId;
   const withApp = thirdPartyApplication(post.application);
+  // Inline after the text, or after the attachments when there is none.
+  const pill =
+    labelPill && labelPill.labels.length > 0 ? (
+      <LabelPill
+        labels={labelPill.labels}
+        action={labelPill.onHide ? 'Hide' : undefined}
+        onPress={labelPill.onHide}
+        inline={!!post.content}
+      />
+    ) : null;
 
   return (
     <View style={Atoms.gap_2xs}>
@@ -58,16 +70,13 @@ export const PostContent = memo(function PostContent({
         </View>
       ) : null}
 
-      {post.labels && post.labels.length > 0 ? (
-        <PostLabels labels={post.labels} authorIdentity={authorIdentity} />
-      ) : null}
-
       {post.content ? (
         <PostText
           content={post.content}
           expandable={!focusedView}
           large={focusedView}
           selectable={focusedView}
+          trailing={pill}
         />
       ) : null}
       {/* Render only the first link preview. A post may carry multiple
@@ -79,6 +88,7 @@ export const PostContent = memo(function PostContent({
       {post.quoteId ? (
         <PostContentQuote quoteId={post.quoteId} quotePost={post.quotePost} />
       ) : null}
+      {post.content ? null : pill}
     </View>
   );
 });

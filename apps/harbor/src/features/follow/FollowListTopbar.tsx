@@ -1,8 +1,7 @@
-import { Text } from '@/src/common/components';
 import Topbar from '@/src/common/components/layout/Topbar';
-import { shortenIdentityId } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { Username } from '@/src/features/profile/Username';
 import { FetchMode } from '@polycentric/react-native';
 import { View } from 'react-native';
@@ -10,9 +9,8 @@ import { View } from 'react-native';
 /** Names whose follow lists these are. Shared by both pages, so it sits above
  *  the tab bar rather than inside either list. */
 export function FollowListTopbar({ identityId }: { identityId?: string }) {
-  const profile = useProfile(identityId ?? null, {
-    fetchMode: FetchMode.Default,
-  });
+  // Fetches the profile that `Username` and `IdentityHandle` read from the cache.
+  useProfile(identityId ?? null, { fetchMode: FetchMode.Default });
 
   return (
     <Topbar
@@ -22,15 +20,11 @@ export function FollowListTopbar({ identityId }: { identityId?: string }) {
           <View style={Atoms.max_w_full}>
             <Username identity={identityId} variant="title" />
           </View>
-          <Text
+          <IdentityHandle
+            identity={identityId}
             variant="small"
-            color="neutral_500"
-            numberOfLines={1}
             style={Atoms.max_w_full}
-          >
-            {identityId ? shortenIdentityId(identityId) : ''}
-            {profile.alias ? ` · ${profile.alias}` : ''}
-          </Text>
+          />
         </View>
       }
     />

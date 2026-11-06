@@ -47,7 +47,7 @@ check() {
   for name in "$@"; do
     ref=$(image "$name")
     have=false
-    curl -fsSI \
+    curl --max-time 10 -fsSI \
       -H 'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
       "https://$host/v2/$path/ci/rs-core-$name/manifests/${ref##*:}" >/dev/null 2>&1 && have=true
     echo "$ref: $have"

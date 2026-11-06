@@ -5,8 +5,11 @@ import {
   pickImageVariant,
   usePolycentric,
 } from '../../lib/polycentric-hooks';
+import Icon from '@/src/common/components/Icon';
 import { useFallbackUri } from '@/src/common/components/Image';
+import { Atoms } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { useProfileModeration } from '@/src/features/profile/hooks/useProfileModeration';
 import { FollowingBadge } from '@/src/features/follow/FollowingBadge';
 import { View } from 'react-native';
 
@@ -34,6 +37,7 @@ export function ProfileAvatar({
   ...rest
 }: ProfileAvatarProps) {
   const profile = useProfile(identityKey);
+  const { obscured } = useProfileModeration(identityKey);
   const client = usePolycentric();
   const { minPixels } = useAvatarSizeRequest(size, 0.1);
 
@@ -64,11 +68,29 @@ export function ProfileAvatar({
       <Avatar
         {...rest}
         size={size}
-        source={uri ? { uri } : undefined}
+        // A warned profile shows the empty circle, not a blur.
+        source={uri && !obscured ? { uri } : undefined}
         // The identity, not the URL
         recyclingKey={identityKey}
         onError={uri ? () => onError(uri) : undefined}
       />
+      {obscured ? (
+        <View
+          pointerEvents="none"
+          style={[
+            Atoms.absolute,
+            Atoms.inset_0,
+            Atoms.align_center,
+            Atoms.justify_center,
+          ]}
+        >
+          <Icon
+            name="infoOutline"
+            color="neutral_500"
+            size={Math.round(pixels / 2)}
+          />
+        </View>
+      ) : null}
       <FollowingBadge
         identity={identityKey}
         size={badge}

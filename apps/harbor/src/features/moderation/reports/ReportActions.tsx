@@ -1,7 +1,7 @@
 import { Button } from '@/src/common/components';
 import { confirm } from '@/src/common/lib/dialogs/alert';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { v2 } from '@polycentric/react-native';
+import { COLLECTION, v2 } from '@polycentric/react-native';
 import { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import type { ServerReport } from '../hooks/useReports';
@@ -22,6 +22,7 @@ export function ReportActions({
   const { server, report } = entry;
   const [pending, setPending] = useState<boolean>(false);
   const host = serverHost(server);
+  const isPost = report.target?.collection !== COLLECTION.IDENTITY;
 
   const run = async (label: string, action: () => Promise<void>) => {
     setPending(true);
@@ -60,20 +61,22 @@ export function ReportActions({
         <ActivityIndicator size="small" color={theme.palette.primary_500} />
       ) : report.status === v2.ReportStatus.OPEN ? (
         <>
-          <Button
-            size="sm"
-            variant="destructive"
-            title="Delete post"
-            disabled={!report.target}
-            onPress={() =>
-              void confirmed(
-                'Delete Post',
-                `Delete this post from ${host}?`,
-                'Delete',
-                () => deletePost(entry),
-              )
-            }
-          />
+          {isPost ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              title="Delete post"
+              disabled={!report.target}
+              onPress={() =>
+                void confirmed(
+                  'Delete Post',
+                  `Delete this post from ${host}?`,
+                  'Delete',
+                  () => deletePost(entry),
+                )
+              }
+            />
+          ) : null}
           <Button
             size="sm"
             variant="destructive"

@@ -1,8 +1,12 @@
 //! `get_profile`: the identity's latest profile events plus its
 //! follow counters.
 
+use crate::config;
 use crate::data::{rows_into_bundles, rows_into_hints};
 use crate::service::context::PublicContext;
+use crate::service::events::TargetEventKey;
+use crate::service::feeds::repository::Query as FeedsRepository;
+use crate::service::feeds::util::map_db_err;
 use crate::service::graph::repository::Query as GraphRepository;
 use crate::service::identity::service::{
     list_identity_events, list_profile_events,
@@ -21,13 +25,27 @@ pub async fn handle(
 
     let profile_rows =
         list_profile_events(&mut ctx, vec![req.identity.clone()]).await?;
+    let profile_keys: Vec<TargetEventKey> = profile_rows
+        .iter()
+        .map(|row| TargetEventKey::of(&row.0))
+        .collect();
     let mut event_bundles = rows_into_bundles(profile_rows);
     attach_proofs(&mut ctx, &mut event_bundles).await?;
 
-    let identity_rows =
-        list_identity_events(&mut ctx, vec![req.identity.clone()]).await?;
-    // The identity's key chain, so clients can validate the bundles.
-    let event_hints = rows_into_hints(identity_rows);
+    let label_rows =
+        FeedsRepository::list_labels_for_event_keys(&mut ctx.db, &profile_keys)
+            .await
+            .map_err(map_db_err)?;
+
+    // The key chains behind the bundles and the labels, so clients can
+    // validate them.
+    let mut identities = vec![req.identity.clone()];
+    if !label_rows.is_empty() {
+        identities.extend(config::get().trusted_moderator.clone());
+    }
+    let mut hint_rows = list_identity_events(&mut ctx, identities).await?;
+    hint_rows.extend(label_rows);
+    let event_hints = rows_into_hints(hint_rows);
 
     let following_count =
         GraphRepository::count_following(&mut ctx, &req.identity).await?;

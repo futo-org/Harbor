@@ -1,4 +1,5 @@
-import { IdentityTag, ProfileAvatar } from '@/src/common/components/primitives';
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
+import { ProfileAvatar } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
@@ -81,7 +82,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
             fontWeight="bold"
             color="neutral_1000"
           />
-          <IdentityTag identity={currentIdentity.identityKey} />
+          <IdentityHandle identity={currentIdentity.identityKey} />
         </View>
         {hovered ? (
           <View

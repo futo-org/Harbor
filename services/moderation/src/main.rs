@@ -699,9 +699,29 @@ async fn process_moderator_report(
         return Outcome::Commit;
     };
 
-    let Some(target) = report.event_key.clone() else {
+    let Some(reported) = report.event_key.clone() else {
         tracing::warn!("moderator report missing event_key");
         return Outcome::Commit;
+    };
+
+    // A report on an identity labels its latest profile update.
+    let target = if reported.collection == collections::IDENTITY {
+        match ctx.polycentric.latest_profile_key(&reported.identity).await {
+            Ok(Some(key)) => key,
+            Ok(None) => {
+                tracing::info!(
+                    identity = reported.identity,
+                    "identity has no profile to label"
+                );
+                return Outcome::Commit;
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, identity = reported.identity, "latest_profile_key error");
+                return Outcome::Retry;
+            }
+        }
+    } else {
+        reported
     };
 
     let labels = vec![label.value().to_string()];

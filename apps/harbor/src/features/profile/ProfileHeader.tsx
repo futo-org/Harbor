@@ -12,7 +12,9 @@ import {
 import { Routes } from '@/src/common/constants';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
+import { useIdentityHandle } from '@/src/features/profile/hooks/useIdentityHandle';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { useProfileModeration } from '@/src/features/profile/hooks/useProfileModeration';
 import { Username } from '@/src/features/profile/Username';
 import { router, type Href } from 'expo-router';
 import { memo, useCallback, useState } from 'react';
@@ -23,6 +25,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FollowButton from '../follow/FollowButton';
+import { IdentityHandle } from './IdentityHandle';
 import { useProfileContext } from './ProfileContext';
 import ProfileMenu from './ProfileMenu';
 import ProfileShareSheet from './ProfileShareSheet';
@@ -45,9 +48,11 @@ function ProfileHeaderInner({
 }: ProfileHeaderProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { identityKey, isSelf, alias } = useProfileContext();
+  const { identityKey, isSelf } = useProfileContext();
 
   const profile = useProfile(identityKey);
+  const { obscured } = useProfileModeration(identityKey);
+  const handle = useIdentityHandle(identityKey);
   const [showShareSheet, setShowShareSheet] = useState<boolean>(false);
 
   const displayKey = identityKey ? identityKey.slice(0, 64) : '...';
@@ -131,7 +136,7 @@ function ProfileHeaderInner({
           <ProfileAvatar
             identityKey={identityKey}
             size="xl"
-            onPress={handleAvatarPress}
+            onPress={obscured ? undefined : handleAvatarPress}
           />
         ) : (
           <View />
@@ -188,11 +193,14 @@ function ProfileHeaderInner({
           <Icon name="key" size={HEADER_ROW_ICON_SIZE} color="neutral_500" />
           <IdentityKeyText value={displayKey} />
         </Pressable>
-        {alias ? <AliasLabel alias={alias} /> : null}
+        {/* The full key is right above, so no hash fallback here. */}
+        {handle.kind === 'alias' || handle.kind === 'alias-pending' ? (
+          <AliasLabel identity={identityKey} alias={handle.text} />
+        ) : null}
         {identityKey ? (
           <ProfileVerifiedPlatforms identityKey={identityKey} />
         ) : null}
-        {profile.description ? (
+        {profile.description && !obscured ? (
           <View style={Atoms.mt_sm}>
             <Text variant="body" fontSize="sm" color="neutral_1000">
               {profile.description}
@@ -302,10 +310,16 @@ function FollowCounts({
 }
 
 /**
- * The verified alias, truncated to one line. Built on the shared HoverCard (hover on web, tap on
- * native), which portals + positions the reveal bubble correctly here.
+ * The claimed alias, greyed until verified, truncated to one line. Built on the shared HoverCard
+ * (hover on web, tap on native), which portals + positions the reveal bubble correctly here.
  */
-function AliasLabel({ alias }: { alias: string }) {
+function AliasLabel({
+  identity,
+  alias,
+}: {
+  identity: string | null;
+  alias: string;
+}) {
   const { theme } = useTheme();
 
   return (
@@ -319,14 +333,7 @@ function AliasLabel({ alias }: { alias: string }) {
           style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}
         >
           <Icon name="at" size={HEADER_ROW_ICON_SIZE} color="neutral_500" />
-          <Text
-            variant="secondary"
-            color="neutral_500"
-            numberOfLines={1}
-            style={{ flexShrink: 1 }}
-          >
-            {alias}
-          </Text>
+          <IdentityHandle identity={identity} style={{ flexShrink: 1 }} />
         </Pressable>
       </HoverCard.Trigger>
       <HoverCard.Content side="bottom" align="start" animated={false}>

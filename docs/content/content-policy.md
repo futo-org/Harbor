@@ -74,7 +74,7 @@ Explicit**, and **Violence**.
 In Settings, Content Moderation, you choose per label whether to **Hide**
 matching posts, **Warn** (the post is covered with a warning that names the
 labels and who applied them, and you tap to reveal it), or **Show** them.
-Everything is shown by default. These preferences apply on your device.
+Everything warns by default. These preferences apply on your device.
 Installs from Google Play or the App Store start with stricter defaults, see
 the [App Store Content Policy](./content-policy-app-stores.md). They never stop you from posting, and they are never applied to your
 account by us. See [Content Moderation](./features/moderation.md).

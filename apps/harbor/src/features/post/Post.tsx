@@ -1,14 +1,16 @@
-import {
-  IdentityTag,
-  ProfileAvatar,
-  Text,
-} from '@/src/common/components/primitives';
+import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
+import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import {
+  Atoms,
+  createThemedStyles,
+  useTheme,
+  withHexOpacity,
+} from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -84,6 +86,7 @@ export const Post = memo(function Post({
   const { hasWarnContent, warnLabels } = usePostModeration(post.labels);
   const [warnDismissed, setWarnDismissed] = useState(false);
   const handleWarnDismiss = useCallback(() => setWarnDismissed(true), []);
+  const handleWarnRestore = useCallback(() => setWarnDismissed(false), []);
 
   const avatar = authorIdentity ? (
     <ProfileAvatar
@@ -98,8 +101,17 @@ export const Post = memo(function Post({
       <View
         style={[Atoms.flex_1, Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}
       >
-        <PostAuthorName identity={authorIdentity} onPress={handleAuthorPress} />
-        {authorIdentity ? <IdentityTag identity={authorIdentity} /> : null}
+        <PostAuthorName
+          identity={authorIdentity}
+          onPress={handleAuthorPress}
+          inline
+        />
+        {authorIdentity ? (
+          <IdentityHandle
+            identity={authorIdentity}
+            style={Atoms.flex_shrink_1}
+          />
+        ) : null}
 
         {shownAt ? (
           <>
@@ -138,8 +150,11 @@ export const Post = memo(function Post({
         post={post}
         hideReplyingTo={hideReplyingTo}
         compactLinkPreview={compactLinkPreview}
-        authorIdentity={authorIdentity}
         focusedView={focusedView}
+        labelPill={{
+          labels: post.labels ?? [],
+          onHide: hasWarnContent ? handleWarnRestore : undefined,
+        }}
       />
     );
 
@@ -177,7 +192,7 @@ export const Post = memo(function Post({
               />
               {authorIdentity ? (
                 <View style={Atoms.self_start}>
-                  <IdentityTag identity={authorIdentity} />
+                  <IdentityHandle identity={authorIdentity} />
                 </View>
               ) : null}
             </View>
@@ -226,10 +241,14 @@ export const Post = memo(function Post({
 function PostAuthorName({
   identity,
   onPress,
+  inline,
 }: {
   identity: string | null;
   onPress: () => void;
+  // Shares the feed's author row with the alias.
+  inline?: boolean;
 }) {
+  const styles = useStyles();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   return (
@@ -237,7 +256,7 @@ function PostAuthorName({
       onPress={onPress}
       onHoverIn={onHoverIn}
       onHoverOut={onHoverOut}
-      style={Atoms.flex_shrink_1}
+      style={inline ? styles.authorNameInline : styles.authorName}
     >
       <Username
         identity={identity}
@@ -248,3 +267,11 @@ function PostAuthorName({
     </Pressable>
   );
 }
+
+const useStyles = createThemedStyles((_, define) =>
+  define({
+    authorName: Atoms.flex_shrink_1,
+    // Keeps its full width up to the cap: the alias/hash ellipsizes first
+    authorNameInline: [Atoms.flex_shrink_0, { maxWidth: '66%' }],
+  }),
+);
