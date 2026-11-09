@@ -23,7 +23,8 @@ export default function ComposeIntentScreen() {
       .getState()
       .setPendingShare({ text: sharedText, images: [] });
 
-    router.replace(Routes.tabs.feed.compose);
+    // Back to an open composer instead of stacking a second one on it
+    router.dismissTo(Routes.tabs.feed.compose);
   }, [sharedText]);
 
   return null;
