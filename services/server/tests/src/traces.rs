@@ -4,8 +4,7 @@
 //! (traces_receiver.rs), see `.forgejo/scripts/integration-server.sh`.
 
 use std::collections::HashMap;
-use std::sync::OnceLock;
-use std::thread;
+use std::sync::Once;
 use std::time::{Duration, Instant};
 
 use opentelemetry_proto::tonic::collector::trace::v1::ExportTraceServiceRequest;
@@ -20,16 +19,9 @@ const TRACE_TIMEOUT: Duration = Duration::from_secs(30);
 const SERVER_SPAN: &str = "polycentric.v2.EventSyncService/PutEvents";
 
 fn start_traces_receiver() {
-    static HANDLE: OnceLock<thread::JoinHandle<()>> = OnceLock::new();
-    HANDLE.get_or_init(|| {
-        thread::spawn(|| {
-            tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .name("traces receiver")
-                .build_local(tokio::runtime::LocalOptions::default())
-                .unwrap()
-                .block_on(traces_receiver::main());
-        })
+    static START: Once = Once::new();
+    START.call_once(|| {
+        tokio::spawn(traces_receiver::main());
     });
 }
 
