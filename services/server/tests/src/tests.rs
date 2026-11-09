@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::mem::take;
 use std::time::SystemTime;
 
@@ -169,6 +170,13 @@ pub async fn notification_service()
 pub fn generate_signing_key() -> SigningKey {
     let mut bytes = [0u8; 32];
     getrandom::fill(&mut bytes).expect("OS random number generator failed");
+    SigningKey::from_bytes(&bytes)
+}
+
+pub fn signing_key(key: &str) -> SigningKey {
+    let mut bytes = [0u8; 32];
+    let len = min(bytes.len(), key.len());
+    bytes[..len].copy_from_slice(&key.as_bytes()[..len]);
     SigningKey::from_bytes(&bytes)
 }
 
