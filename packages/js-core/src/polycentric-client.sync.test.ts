@@ -1892,6 +1892,66 @@ describe('PolycentricClient live sync', () => {
     stop();
   });
 
+  it('pulls from the stored heads when the core cached newer events', async () => {
+    // The core cached `remote` (e.g. from viewing our own profile) but it was
+    // never persisted, so pulling past the core's head would leave a gap.
+
+    const { core, emitHeads } = makeLiveCore(
+      { pullBundles: () => [makeBundle(remote, content)] },
+      [keyOf(remote)],
+    );
+
+    const { client, stored } = await makeClient({
+      core,
+      identity: identityA,
+      signer: signerA,
+      events: seeded,
+    });
+
+    const stop = client.startLiveSync();
+    emitHeads([keyOf(remote)]);
+
+    await vi.waitFor(async () =>
+      expect((await stored(remote))?.signedEvent).toEqual(remote),
+    );
+
+    expect(queriesOf(core, Query.ListEvents)[0][1].inner[0].heads).toEqual([
+      expect.objectContaining({ sequence: 1n }),
+    ]);
+
+    stop();
+  });
+
+  it('pulls from the core heads when storage is ahead of the core', async () => {
+    // If another tab created an event, it would be in storage but not copied
+    // to our rs-core.
+
+    const { core, emitHeads } = makeLiveCore(
+      { pullBundles: () => [makeBundle(remote, content)] },
+      [keyOf(seeded[0])],
+    );
+
+    const { client } = await makeClient({
+      core,
+      identity: identityA,
+      signer: signerA,
+      events: [...seeded, remote],
+    });
+
+    const stop = client.startLiveSync();
+    emitHeads([keyOf(remote)]);
+
+    await vi.waitFor(() =>
+      expect(queriesOf(core, Query.ListEvents)).toHaveLength(1),
+    );
+
+    expect(queriesOf(core, Query.ListEvents)[0][1].inner[0].heads).toEqual([
+      expect.objectContaining({ sequence: 1n }),
+    ]);
+
+    stop();
+  });
+
   it('follows identity switches and stops when asked', async () => {
     const { core, unsubscribe } = makeLiveCore();
     const { client } = await makeClient({
