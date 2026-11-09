@@ -133,7 +133,6 @@ function RootStack() {
             }}
           />
           <Stack.Screen name="verifications/index" />
-          <Stack.Screen name="share-debug" />
         </Stack.Protected>
 
         <Stack.Screen

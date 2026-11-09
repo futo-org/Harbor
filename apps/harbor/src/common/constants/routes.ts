@@ -106,8 +106,6 @@ export const Routes = {
       reports: '/moderation/reports',
     },
   },
-  // Temporary landing page for shared content, until it goes to the composer
-  shareDebug: '/share-debug',
   onboarding: {
     index: '/',
     login: '/login',

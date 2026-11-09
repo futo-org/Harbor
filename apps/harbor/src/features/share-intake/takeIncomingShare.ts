@@ -13,7 +13,6 @@ import {
   type PendingShareImage,
   usePendingShareStore,
 } from './usePendingShareStore';
-import { useShareDebugStore } from './useShareDebugStore';
 
 // Longest edge decoded to read an image's dimensions; only the aspect ratio
 // is used, so a small decode is enough.
@@ -23,7 +22,7 @@ const DIMENSIONS_DECODE_MAX_EDGE = 256;
  * Take what was shared into the app from the share sheet into
  * `usePendingShareStore`. Called when expo-sharing's URL opens the app.
  */
-export async function takeIncomingShare(launch: 'cold' | 'warm') {
+export async function takeIncomingShare() {
   const payloads = getSharedPayloads();
   if (payloads.length === 0) return;
 
@@ -46,33 +45,30 @@ export async function takeIncomingShare(launch: 'cold' | 'warm') {
   );
 
   const images: PendingShareImage[] = [];
-  const failedImages: { sourceUri: string; error: string }[] = [];
 
-  importResults.forEach((result, index) => {
+  for (const result of importResults) {
     if (result.status === 'fulfilled') {
       images.push(result.value);
     } else {
-      failedImages.push({
-        sourceUri: imagePayloads[index].value,
-        error: String(result.reason),
-      });
+      console.warn('shared image import failed:', result.reason);
     }
-  });
+  }
+
+  const failedImageCount = importResults.length - images.length;
+  if (failedImageCount > 0) {
+    toast.error(
+      failedImageCount === 1
+        ? "Couldn't add a shared image"
+        : `Couldn't add ${failedImageCount} shared images`,
+    );
+  }
 
   usePendingShareStore
     .getState()
     .setPendingShare({ text: buildSharedText(payloads), images });
-
-  useShareDebugStore.getState().setShareDebugInfo({
-    source: 'native share',
-    launch,
-    receivedAt: Date.now(),
-    rawPayloads: payloads,
-    failedImages,
-  });
 }
 
-export function buildSharedText(payloads: SharePayload[]): string {
+function buildSharedText(payloads: SharePayload[]): string {
   return joinSharedText(
     payloads
       .filter((payload) => payload.shareType === 'text')
