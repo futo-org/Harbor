@@ -47,6 +47,8 @@ impl Config {
             .filter(|v| !v.is_empty())
             .and_then(|schedule_delay| schedule_delay.parse().ok())
             .map(Duration::from_millis);
+        println!("[DEBUG] url = {url:?}");
+        println!("[DEBUG] schedule_delay = {schedule_delay:?}");
         Some(Self {
             url,
             service_name,
