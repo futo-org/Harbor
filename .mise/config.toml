@@ -1,0 +1,33 @@
+[tools]
+k3d = "5.9.0"
+kubectl = "1.37.1"
+helm = "4.3.0"
+tilt = "0.37.8"
+
+[settings]
+idiomatic_version_file_enable_tools = []
+
+[tasks."k3d:up"]
+description = "Create the local k3d cluster (context k3d-harbor)"
+run = '''
+k3d cluster get harbor >/dev/null 2>&1 || k3d cluster create --config deploy/local/k3d.yaml
+kubectl --context k3d-harbor wait --for=condition=Ready nodes --all --timeout=120s
+'''
+
+[tasks."k3d:down"]
+description = "Delete the local k3d cluster and its registry"
+run = 'k3d cluster delete harbor'
+
+[tasks."tilt:up"]
+description = "Deploy the stack to the k3d cluster; args after -- are the resources to run (default all)"
+# Docker Desktop's credential helper flakes under WSL; the local registry needs none.
+env = { DOCKER_CONFIG = "{{config_root}}/deploy/local/docker" }
+run = 'tilt up -f deploy/local/Tiltfile --context k3d-harbor -- "$@"'
+
+[tasks."tilt:status"]
+description = "Build and runtime status of each resource in the running stack"
+run = '''tilt get uiresources -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.updateStatus}{"\t"}{.status.runtimeStatus}{"\n"}{end}' | sort | column -t'''
+
+[tasks."tilt:down"]
+description = "Remove the stack from the k3d cluster"
+run = 'tilt down -f deploy/local/Tiltfile --context k3d-harbor --delete-namespaces -- "$@"'

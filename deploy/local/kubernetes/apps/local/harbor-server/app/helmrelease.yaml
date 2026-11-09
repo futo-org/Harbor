@@ -1,0 +1,65 @@
+---
+# harbor-ops' release with local values: the chart from this checkout, the
+# image built by Tilt, plaintext Kafka, and the dev Secret (deploy/local/.env)
+# in place of the 1Password ExternalSecrets.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: harbor-server
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: deploy/charts/harbor-server
+      sourceRef:
+        kind: GitRepository
+        name: harbor
+  values:
+    replicaCount: 1
+    workers:
+      - name: all
+        enabled: true
+        replicas: 1
+    env:
+      - name: HARBOR_SERVER_NAME
+        value: http://${HARBOR_SERVER_HOST}
+      - name: HARBOR_ALLOW_HOSTS
+        value: ${HARBOR_SERVER_ALLOW_HOSTS},http://harbor-server.harbor-server.svc
+      - name: HARBOR_CONTENT_BLOB_OS_BUCKET
+        value: polycentric-blobs
+      - name: HARBOR_CONTENT_BLOB_OS_ENDPOINT
+        value: http://rustfs.rustfs.svc:9000
+      - name: HARBOR_CONTENT_BLOB_OS_FORCE_PATH_STYLE
+        value: "true"
+      - name: HARBOR_CONTENT_BLOB_OS_ACCESS_KEY
+        value: rustfsadmin
+      - name: HARBOR_CONTENT_BLOB_OS_SECRET_KEY
+        value: rustfsadmin
+      - name: HARBOR_KAFKA_BROKERS
+        value: kafka-kafka-bootstrap.kafka.svc:9092
+      - name: HARBOR_KAFKA_CLUSTER_ID
+        value: harbor-server
+      # Mirrored from the harbor-pg cluster by the ExternalSecret in this directory.
+      - name: HARBOR_DATABASE_URL
+        valueFrom:
+          secretKeyRef:
+            name: harbor-server-db
+            key: HARBOR_DATABASE_URL
+      - name: HARBOR_DATABASE_URL_RO
+        valueFrom:
+          secretKeyRef:
+            name: harbor-server-db
+            key: HARBOR_DATABASE_URL_RO
+      - name: HARBOR_SCRAPER_URL
+        value: http://harbor-scraper.harbor-scraper.svc
+      - name: HARBOR_TRACES_URL
+        value: http://victoria-traces.o11y.svc:10428/insert/opentelemetry
+      - name: RUST_LOG
+        value: info,server=debug,common_kafka=debug,common_object_store=debug,polycentric_common=debug
+    envFrom:
+      - secretRef:
+          name: harbor-server-valkey
+      # HARBOR_MODERATION_IDENTITY, once create-local-identity.sh has written it.
+      - secretRef:
+          name: harbor-dev-env
+          optional: true

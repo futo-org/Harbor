@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kafka
+  namespace: flux-system
+spec:
+  targetNamespace: kafka
+  path: ./deploy/local/kubernetes/apps/local/kafka/app
+  prune: true
+  wait: true
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: harbor
+  dependsOn:
+    - name: strimzi

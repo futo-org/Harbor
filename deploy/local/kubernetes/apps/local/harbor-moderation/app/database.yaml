@@ -1,0 +1,12 @@
+---
+# Applied by harbor-pg's kustomization.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: moderation
+spec:
+  name: moderation
+  owner: harbor
+  cluster:
+    name: postgres
+  databaseReclaimPolicy: retain

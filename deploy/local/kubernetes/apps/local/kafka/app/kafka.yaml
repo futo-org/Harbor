@@ -1,0 +1,59 @@
+---
+# One node with both roles; harbor-ops runs a controller pool and a broker pool.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: dual-role
+  labels:
+    strimzi.io/cluster: kafka
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 5Gi
+        deleteClaim: true
+        kraftMetadata: shared
+---
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: kafka
+  annotations:
+    strimzi.io/node-pools: enabled
+    strimzi.io/kraft: enabled
+spec:
+  kafka:
+    listeners:
+      # Plaintext, like compose; harbor-ops uses mTLS on 9093.
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      # For host clients, through the 9092 port-forward.
+      - name: host
+        port: 9094
+        type: internal
+        tls: false
+        configuration:
+          brokers:
+            - broker: 0
+              advertisedHost: localhost
+              advertisedPort: 9092
+    config:
+      auto.create.topics.enable: true
+      num.partitions: 3
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      group.initial.rebalance.delay.ms: 0
+      message.max.bytes: 4194304
+  entityOperator:
+    topicOperator: {}

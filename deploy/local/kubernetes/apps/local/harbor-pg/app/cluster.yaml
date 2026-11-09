@@ -1,0 +1,23 @@
+---
+# One instance of harbor-ops' cluster. The standard image carries pgvector;
+# harbor-ops adds it to the operator's default image as an extension volume.
+# CNPG mints the postgres-app secret the services' ExternalSecrets read.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.2-standard-trixie
+  storage:
+    size: 5Gi
+  postgresql:
+    shared_preload_libraries:
+      - pg_stat_statements
+      - vector
+    parameters:
+      max_connections: "200"
+  bootstrap:
+    initdb:
+      database: harbor
+      owner: harbor

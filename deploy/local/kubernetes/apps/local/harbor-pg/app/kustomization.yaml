@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./cluster.yaml
+  - ./pooler.yaml
+  - ./secret-reader.yaml
+  # Each service declares its database next to its own manifests; CNPG wants
+  # them in the Cluster's namespace.
+  - ../../harbor-server/app/database.yaml
+  - ../../harbor-moderation/app/database.yaml
+  - ../../harbor-push-notifications/app/database.yaml
+  - ../../harbor-verifier-bot/app/database.yaml
+patches:
+  - target:
+      kind: Database
+    patch: |-
+      - op: add
+        path: /spec/extensions
+        value:
+          - name: pg_stat_statements
+          - name: pg_buffercache
+          - name: vector

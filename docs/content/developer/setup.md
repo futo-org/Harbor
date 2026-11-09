@@ -1,4 +1,5 @@
 ---
+
 title: Development Setup
 sidebar_label: Setup
 sidebar_position: 1
@@ -17,15 +18,15 @@ edges and occasional breaking changes on `develop`.
 
 ## Prerequisites
 
-| Tool                                                          | Notes                                                    |
-| ------------------------------------------------------------- | -------------------------------------------------------- |
-| [Node.js](https://nodejs.org)                                 | Version pinned in `.nvmrc`; `nvm install` picks it up.    |
-| [pnpm](https://pnpm.io)                                       | The workspace's package manager, version set in `package.json`. |
-| [Rust toolchain](https://rustup.rs)                           | Builds `rs-core`, the server, and the WASM bindings.     |
-| [`protoc`](https://github.com/protocolbuffers/protobuf)       | Compiles the protobuf definitions in `protos/`.          |
-| [JDK](https://adoptium.net) 17+                               | Only for working on `packages/kt-core`; the pre-commit hook formats its Kotlin through Gradle. |
-| [Android SDK](https://developer.android.com/studio)           | Only for working on `packages/kt-core`; AGP needs it to configure the build.                  |
-| [`docker compose`](https://github.com/docker/compose)         | Runs PostgreSQL, the object store, and the server.       |
+| Tool                                                    | Notes                                                                                          |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [Node.js](https://nodejs.org)                           | Version pinned in `.nvmrc`; `nvm install` picks it up.                                         |
+| [pnpm](https://pnpm.io)                                 | The workspace's package manager, version set in `package.json`.                                |
+| [Rust toolchain](https://rustup.rs)                     | Builds `rs-core`, the server, and the WASM bindings.                                           |
+| [`protoc`](https://github.com/protocolbuffers/protobuf) | Compiles the protobuf definitions in `protos/`.                                                |
+| [JDK](https://adoptium.net) 17+                         | Only for working on `packages/kt-core`; the pre-commit hook formats its Kotlin through Gradle. |
+| [Android SDK](https://developer.android.com/studio)     | Only for working on `packages/kt-core`; AGP needs it to configure the build.                   |
+| [`docker compose`](https://github.com/docker/compose)   | Runs PostgreSQL, the object store, and the server.                                             |
 
 System packages on Debian/Ubuntu:
 
@@ -91,6 +92,30 @@ commands, and how to run the server from source instead of in Docker; the
 covers its environment variables and integration tests.
 
 If you use Podman, make sure `docker compose` resolves to Compose v2.
+
+### On Kubernetes instead
+
+The same services can run in a local [k3d](https://k3d.io) cluster the way
+production runs them. `deploy/local/kubernetes` is a Flux environment laid
+out like the harbor-ops repository (CloudNativePG, Strimzi, Valkey and
+external-secrets from their pinned charts, each service from its chart in
+`deploy/charts`), and [Tilt](https://tilt.dev) deploys it with images built
+from this checkout. The tools are pinned with [mise](https://mise.jdx.dev):
+
+```sh
+mise install
+mise run k3d:up    # one-node cluster, kube context k3d-harbor
+mise run tilt:up   # deploys everything; `mise run tilt:status` for a table
+```
+
+Every service runs, including the moderation service, whose identity the
+stack creates and publishes once the server is up. Rust changes rebuild the
+affected image from an incremental dev build, so after the first build a
+change is redeployed in well under a minute. Host ports are the same as with
+Compose, so `pnpm run:web` needs no changes. The Tilt UI on
+`http://localhost:10350` has the logs. Secrets such as the Azure keys go in
+`deploy/local/.env`, which the stack mounts as the `harbor-dev-env` Secret.
+`mise run tilt:down` removes the stack and `mise run k3d:down` the cluster.
 
 ## Run the app
 

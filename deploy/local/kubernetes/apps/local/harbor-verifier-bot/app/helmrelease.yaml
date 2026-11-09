@@ -1,0 +1,22 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: harbor-verifier-bot
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: deploy/charts/harbor-verifier-bot
+      sourceRef:
+        kind: GitRepository
+        name: harbor
+  values:
+    replicaCount: 1
+    env:
+      - name: HARBOR_VERIFIER_BOT_SERVERS
+        value: http://harbor-server.harbor-server.svc
+    # HARBOR_VERIFIER_BOT_DATABASE_URL, from the ExternalSecret in this directory.
+    envFrom:
+      - secretRef:
+          name: harbor-verifier-bot-db

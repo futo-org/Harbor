@@ -1,0 +1,13 @@
+---
+# This service's database on the shared cluster, adopting the initdb one.
+# Applied by harbor-pg's kustomization.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: harbor-server
+spec:
+  name: harbor
+  owner: harbor
+  cluster:
+    name: postgres
+  databaseReclaimPolicy: retain

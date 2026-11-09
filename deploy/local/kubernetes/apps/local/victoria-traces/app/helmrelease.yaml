@@ -1,0 +1,14 @@
+---
+# Stands in for the FUTO o11y cluster harbor-ops ships traces to.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: victoria-traces
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: victoria-traces-single
+  values:
+    server:
+      fullnameOverride: victoria-traces

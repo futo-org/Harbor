@@ -1,0 +1,17 @@
+---
+# Only harbor-server pods may reach the scraper, which fetches user-supplied URLs.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: scraper-ingress
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: harbor-server
+      ports:
+        - port: 8855
