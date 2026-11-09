@@ -20,41 +20,6 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: paradedb; Type: SCHEMA; Schema: -; Owner: -
---
-
-CREATE SCHEMA paradedb;
-
-
---
--- Name: vector; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
-
-
---
--- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
-
-
---
--- Name: pg_search; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS pg_search WITH SCHEMA paradedb;
-
-
---
--- Name: EXTENSION pg_search; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION pg_search IS 'pg_search: One Postgres for your application data, full-text search, vector retrieval, and aggregations';
-
-
---
 -- Name: tsvector_agg(tsvector); Type: AGGREGATE; Schema: public; Owner: -
 --
 
@@ -1107,13 +1072,6 @@ CREATE INDEX content_label_event_key_idx ON public.content_label USING btree (ev
 --
 
 CREATE INDEX content_post_reply_parent ON public.content_post USING btree (reply_parent_collection, reply_parent_identity, reply_parent_public_key_type, reply_parent_public_key, reply_parent_sequence);
-
-
---
--- Name: content_post_search; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX content_post_search ON public.content_post USING paradedb (((text)::pdb.icu('ascii_folding=true', 'stemmer=english')));
 
 
 --
