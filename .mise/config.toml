@@ -3,9 +3,11 @@ k3d = "5.9.0"
 kubectl = "1.37.1"
 helm = "4.3.0"
 tilt = "0.37.8"
+# Node comes from .nvmrc; keep pnpm in step with package.json's packageManager.
+pnpm = "12.16.1"
 
 [settings]
-idiomatic_version_file_enable_tools = []
+idiomatic_version_file_enable_tools = ["node"]
 
 [tasks.dev]
 description = "Bring the dev environment up: cluster, stack and the app dev servers"
