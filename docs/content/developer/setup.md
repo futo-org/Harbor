@@ -1,4 +1,5 @@
 ---
+
 title: Development Setup
 sidebar_label: Setup
 sidebar_position: 1
@@ -17,15 +18,15 @@ edges and occasional breaking changes on `develop`.
 
 ## Prerequisites
 
-| Tool                                                          | Notes                                                    |
-| ------------------------------------------------------------- | -------------------------------------------------------- |
-| [Node.js](https://nodejs.org)                                 | Version pinned in `.nvmrc`; `nvm install` picks it up.    |
-| [pnpm](https://pnpm.io)                                       | The workspace's package manager, version set in `package.json`. |
-| [Rust toolchain](https://rustup.rs)                           | Builds `rs-core`, the server, and the WASM bindings.     |
-| [`protoc`](https://github.com/protocolbuffers/protobuf)       | Compiles the protobuf definitions in `protos/`.          |
-| [JDK](https://adoptium.net) 17+                               | Only for working on `packages/kt-core`; the pre-commit hook formats its Kotlin through Gradle. |
-| [Android SDK](https://developer.android.com/studio)           | Only for working on `packages/kt-core`; AGP needs it to configure the build.                  |
-| [`docker compose`](https://github.com/docker/compose)         | Runs PostgreSQL, the object store, and the server.       |
+| Tool                                                    | Notes                                                                                          |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [Node.js](https://nodejs.org)                           | Version pinned in `.nvmrc`; `nvm install` picks it up.                                         |
+| [pnpm](https://pnpm.io)                                 | The workspace's package manager, version set in `package.json`.                                |
+| [Rust toolchain](https://rustup.rs)                     | Builds `rs-core`, the server, and the WASM bindings.                                           |
+| [`protoc`](https://github.com/protocolbuffers/protobuf) | Compiles the protobuf definitions in `protos/`.                                                |
+| [JDK](https://adoptium.net) 17+                         | Only for working on `packages/kt-core`; the pre-commit hook formats its Kotlin through Gradle. |
+| [Android SDK](https://developer.android.com/studio)     | Only for working on `packages/kt-core`; AGP needs it to configure the build.                   |
+| [`docker compose`](https://github.com/docker/compose)   | Runs PostgreSQL, the object store, and the server.                                             |
 
 System packages on Debian/Ubuntu:
 
@@ -60,13 +61,21 @@ cd harbor
 # Install the pinned Node.js version.
 nvm install
 
-# Install dependencies and build every package.
+# Install dependencies, generate bindings, and build every package.
 pnpm install
+pnpm generate
 pnpm build
 
 # Install the git pre-commit hooks (formatting and linting).
 pnpm prepare
 ```
+
+The React Native package's uniffi bindings are generated from `rs-core`.
+`pnpm generate` builds `rs-core` for your machine and runs
+`uniffi-bindgen-react-native` on it
+(`packages/react-native/tools/generate-bindings.mjs`), so it needs only the
+Rust toolchain, not the Android NDK or Xcode. Remember to re-generate after
+changes to `rs-core`, or typechecking will fail.
 
 `pnpm build` runs through [Turbo](https://turborepo.com) and covers the Rust
 core, the generated uniffi bindings for React Native and web, and the JavaScript
@@ -150,9 +159,10 @@ pnpm build
 ```
 
 If the generated uniffi bindings themselves are stale rather than just their
-cache, regenerate them:
+cache, delete and regenerate them:
 
 ```sh
 pnpm ubrn:clean
+pnpm generate
 pnpm build
 ```

@@ -1,5 +1,5 @@
 name: wasm-build
-description: rs-core-wasm release build, uploaded as rs-core-wasm-build (GitLab build_rs_core.yml). ci/rust job image; save the Rust cache after it.
+description: rs-core-wasm release build, plus generated react-native bindings from rs-core, uploaded as rs-core-wasm-build (GitLab build_rs_core.yml). ci/rust job image; save the Rust cache after it.
 runs:
   using: composite
   steps:
@@ -13,10 +13,24 @@ runs:
       run: pnpm install --filter @polycentric/rs-core-wasm
     - shell: bash
       run: pnpm --filter @polycentric/rs-core-wasm build --release
+    - shell: bash
+      run: pnpm --filter @polycentric/react-native generate
     - uses: forgejo/upload-artifact@v4
       with:
         name: rs-core-wasm-build
         path: |
           packages/rs-core-wasm/src/generated/wasm
           packages/rs-core-wasm/dist
+          packages/react-native/src/generated
+          packages/react-native/src/NativeReactNative.ts
+          packages/react-native/src/uniffi-init.tsx
+          packages/react-native/cpp
+          packages/react-native/ios/ReactNative.h
+          packages/react-native/ios/ReactNative.mm
+          packages/react-native/ReactNative.podspec
+          packages/react-native/android/CMakeLists.txt
+          packages/react-native/android/build.gradle
+          packages/react-native/android/cpp-adapter.cpp
+          packages/react-native/android/src/main/AndroidManifest.xml
+          packages/react-native/android/src/main/java
         retention-days: 7
