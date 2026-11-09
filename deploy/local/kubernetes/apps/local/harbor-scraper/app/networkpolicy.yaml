@@ -1,5 +1,5 @@
 ---
-# Only harbor-server pods may reach the scraper, which fetches user-supplied URLs.
+# Only harbor-server may reach it (it fetches user URLs).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

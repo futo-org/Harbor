@@ -1,6 +1,5 @@
 ---
-# Services connect through this, as in harbor-ops; no replica, so it also
-# serves the read-only URLs.
+# As in harbor-ops; also serves read-only URLs (no replica).
 apiVersion: postgresql.cnpg.io/v1
 kind: Pooler
 metadata:

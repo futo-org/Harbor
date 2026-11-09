@@ -1,7 +1,5 @@
 ---
-# harbor-ops' release with local values: the chart from this checkout, the
-# image built by Tilt, plaintext Kafka, and the dev Secret (deploy/local/.env)
-# in place of the 1Password ExternalSecrets.
+# harbor-ops' release: local chart and image, plaintext Kafka, dev Secret.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -39,7 +37,7 @@ spec:
         value: kafka-kafka-bootstrap.kafka.svc:9092
       - name: HARBOR_KAFKA_CLUSTER_ID
         value: harbor-server
-      # Mirrored from the harbor-pg cluster by the ExternalSecret in this directory.
+      # From this directory's ExternalSecret.
       - name: HARBOR_DATABASE_URL
         valueFrom:
           secretKeyRef:
@@ -59,7 +57,7 @@ spec:
     envFrom:
       - secretRef:
           name: harbor-server-valkey
-      # HARBOR_MODERATION_IDENTITY, once create-local-identity.sh has written it.
+      # Moderation identity, once created.
       - secretRef:
           name: harbor-dev-env
           optional: true

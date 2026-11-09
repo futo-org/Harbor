@@ -3,10 +3,9 @@ k3d = "5.9.0"
 kubectl = "1.37.1"
 helm = "4.3.0"
 tilt = "0.37.8"
-# Node comes from .nvmrc; keep pnpm in step with package.json's packageManager.
+# Node from .nvmrc; pnpm matches package.json.
 pnpm = "12.16.1"
-# The wasm build of rs-core, which the web dev server needs: the toolchain the
-# Dockerfiles use, protoc as in the CI image, wasm-bindgen as Cargo.lock pins.
+# For the rs-core wasm build; pinned as in the Dockerfiles, CI and Cargo.lock.
 rust = { version = "1.99.1", targets = "wasm32-unknown-unknown" }
 protoc = "21.12"
 "cargo:wasm-bindgen-cli" = "0.2.125"
@@ -15,9 +14,11 @@ protoc = "21.12"
 idiomatic_version_file_enable_tools = ["node"]
 
 [tasks.dev]
-description = "Bring the dev environment up: cluster, stack and the app dev servers"
-depends = ["k3d:up", "js:install"]
-run = 'mise run tilt:up ::: js:dev'
+description = "Bring the cluster and stack up in Tilt; run the JS dev servers in another tab with `mise js`"
+depends = ["k3d:up"]
+# Tilt's UI needs the TTY.
+raw = true
+run = 'mise run tilt:up'
 
 [tasks."js:install"]
 description = "Install the JS workspace"
@@ -25,9 +26,18 @@ run = 'pnpm install'
 sources = ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "patches/*"]
 outputs = ["node_modules/.pnpm/lock.yaml"]
 
+[tasks."js:build"]
+description = "Build every package (Turbo-cached); the dev servers need their deps' dist/"
+depends = ["js:install"]
+run = 'pnpm build'
+
 [tasks."js:dev"]
-description = "Run the dev servers of every package that has one (turbo dev)"
-run = 'pnpm dev'
+description = "Build the JS workspace and run its dev servers with turbo, less the services Tilt runs"
+alias = "js"
+depends = ["js:build"]
+# turbo's UI needs the TTY.
+raw = true
+run = "pnpm dev --filter='!@polycentric/verifier-bot' --filter='!@polycentric/scraper'"
 
 [tasks."k3d:up"]
 description = "Create the local k3d cluster (context k3d-harbor)"
@@ -45,8 +55,9 @@ sed -i '/^HARBOR_MODERATION_\(IDENTITY\|SIGNING_KEY\)=/d' deploy/local/.env 2>/d
 
 [tasks."tilt:up"]
 description = "Deploy the stack to the k3d cluster; args after -- are the resources to run (default all)"
-# Docker Desktop's credential helper flakes under WSL; the local registry needs none.
+# Skips Docker Desktop's credential helper (flaky under WSL).
 env = { DOCKER_CONFIG = "{{config_root}}/deploy/local/docker" }
+raw = true
 run = 'tilt up -f deploy/local/Tiltfile --context k3d-harbor -- "$@"'
 
 [tasks."tilt:status"]

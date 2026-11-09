@@ -1,17 +1,10 @@
-# Harbor on a local k3d cluster, an alternative to compose.yml. kubernetes/
-# is a Flux environment laid out like harbor-ops. Tilt reads each app's Flux
-# Kustomization (ks.yaml) for its path, namespace and ordering, installs the
-# HelmReleases (pinned OCI charts, or deploy/charts with images built from
-# this checkout) and applies the other manifests. WIRING carries what the
-# manifests do not: images, ports, Tilt-only dependencies. deploy/local/.env
-# becomes the harbor-dev-env Secret.
-#
-#   tilt up -f deploy/local/Tiltfile [resources]
+# Harbor on local k3d from the Flux apps in kubernetes/. WIRING adds images,
+# ports and Tilt-only deps; deploy/local/.env becomes the harbor-dev-env Secret.
 
 load('ext://helm_resource', 'helm_resource')
 
 allow_k8s_contexts('k3d-harbor')
-# Migrations run as a helm hook, longer than Tilt's 30s default.
+# Helm-hook migrations outlast the 30s default.
 update_settings(max_parallel_updates=6, k8s_upsert_timeout_secs=600)
 
 config.define_string_list('to-run', args=True, usage='Resources to run, with their resource_deps; default all')
@@ -47,7 +40,7 @@ WIRING = {
     },
     'harbor-push-notifications': {'image': rust('push-notifications-service'), 'ports': ['3001:3001']},
     'harbor-otlp': {'image': rust('otlp-service'), 'ports': ['3003:3003']},
-    'harbor-moderation': {'image': rust('moderation-service'), 'dev_env': True, 'deps': ['rustfs-init', 'moderation-identity']},
+    'harbor-moderation': {'image': rust('moderation-service'), 'dev_env': True, 'deps': ['rustfs-init', 'harbor-moderation-identity']},
 }
 
 SETTINGS = read_yaml('kubernetes/clusters/local/cluster-settings.yaml')['data']
@@ -68,7 +61,7 @@ def load_dotenv():
     return env
 
 DOTENV = load_dotenv()
-# Rolls the pods that take the Secret when .env changes.
+# Restarts the Secret's pods when .env changes.
 DOTENV_STAMP = str(local('sha256sum .env 2>/dev/null | cut -c1-16', quiet=True, echo_off=True)).strip()
 
 WORKLOADS = ['Deployment', 'StatefulSet', 'DaemonSet', 'Job', 'CronJob']
@@ -85,11 +78,10 @@ def chart_for(release, charts):
         return oci['url'], ['--version=' + str(oci['ref']['tag'])], False
     return os.path.join(ROOT, spec['chart']['spec']['chart']), [], True
 
-# Namespaces first, as one resource everything else waits on.
+# Everything waits on the namespaces.
 namespaces = []
 
-# Each app directory holds its namespace and its Flux Kustomization, which
-# names the manifests' path, their namespace and what they depend on.
+# Each app's Flux Kustomization gives its path, namespace and deps.
 for overlay in listdir('kubernetes/apps/local', recursive=True):
     if os.path.basename(overlay) != 'kustomization.yaml' or os.path.basename(os.path.dirname(overlay)) in ['app', 'repos']:
         continue
@@ -156,7 +148,7 @@ for overlay in listdir('kubernetes/apps/local', recursive=True):
 k8s_yaml(encode_yaml_stream(namespaces))
 k8s_resource(new_name='namespaces', objects=[fragment(d) for d in namespaces], labels=['infra'])
 
-# Tunnels to the Service rather than a pod, since the release also runs the workers.
+# The Service, not a pod: the release also runs workers.
 local_resource(
     'harbor-server-forward',
     serve_cmd='while true; do kubectl --context k3d-harbor -n harbor-server port-forward svc/harbor-server 3000:80; sleep 1; done',
@@ -165,10 +157,9 @@ local_resource(
     labels=['apps'],
 )
 
-# Creates and publishes the moderation identity once the server is up, unless
-# deploy/local/.env already has one. The identity tool runs in the server pod.
+# Creates the moderation identity unless deploy/local/.env has one.
 local_resource(
-    'moderation-identity',
+    'harbor-moderation-identity',
     cmd='[ -n "$HARBOR_MODERATION_IDENTITY" ] || services/moderation/create-local-identity.sh',
     dir=ROOT,
     env={
@@ -178,5 +169,5 @@ local_resource(
         'IDENTITY_TOOL': 'kubectl --context k3d-harbor -n harbor-server exec deploy/harbor-server -- /app/polycentric-identity',
     },
     resource_deps=['harbor-server'],
-    labels=['apps'],
+    labels=['setup'],
 )

@@ -42,8 +42,7 @@ spec:
         value: harbor-server
       - name: RUST_LOG
         value: info
-    # HARBOR_MODERATION_IDENTITY and _SIGNING_KEY from create-local-identity.sh;
-    # HARBOR_AZURE_CONTENT_SAFETY_ENDPOINT and _KEY, HARBOR_PHOTODNA_KEY if set.
+    # Moderation identity, and Azure/PhotoDNA keys if set.
     envFrom:
       - secretRef:
           name: harbor-dev-env

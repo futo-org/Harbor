@@ -4,8 +4,7 @@ resources:
   - ./cluster.yaml
   - ./pooler.yaml
   - ./secret-reader.yaml
-  # Each service declares its database next to its own manifests; CNPG wants
-  # them in the Cluster's namespace.
+  # The services' databases; CNPG needs them here.
   - ../../harbor-server/app/database.yaml
   - ../../harbor-moderation/app/database.yaml
   - ../../harbor-push-notifications/app/database.yaml

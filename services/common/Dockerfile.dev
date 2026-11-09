@@ -1,5 +1,4 @@
-# Dev image of the Rust services for the k3d stack (deploy/local): one cached
-# cargo build, SERVICE picks the binary. Build context is the repo root.
+# Rust services for the k3d stack; SERVICE picks the binary.
 FROM rust:1.99-slim-bookworm@sha256:24707e70a4f1e23d9a7b25202ec43126d28a52294b96aad5c670df1fd1f1d400 AS builder
 WORKDIR /app
 COPY services/common/build-deps.sh build-deps.sh

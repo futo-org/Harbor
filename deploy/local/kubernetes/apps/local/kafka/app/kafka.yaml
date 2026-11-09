@@ -1,5 +1,5 @@
 ---
-# One node with both roles; harbor-ops runs a controller pool and a broker pool.
+# One combined node; harbor-ops splits the pools.
 apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
 metadata:
@@ -30,12 +30,12 @@ metadata:
 spec:
   kafka:
     listeners:
-      # Plaintext, like compose; harbor-ops uses mTLS on 9093.
+      # Plaintext, like compose.
       - name: plain
         port: 9092
         type: internal
         tls: false
-      # For host clients, through the 9092 port-forward.
+      # Host clients, via port-forward.
       - name: host
         port: 9094
         type: internal

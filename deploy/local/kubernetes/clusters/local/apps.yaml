@@ -15,7 +15,7 @@ spec:
   dependsOn:
     - name: cluster-repos
   patches:
-    # Substitute cluster-settings into every app Kustomization, as harbor-ops does.
+    # cluster-settings substitution, as in harbor-ops.
     - target:
         group: kustomize.toolkit.fluxcd.io
         kind: Kustomization

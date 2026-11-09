@@ -16,7 +16,7 @@ spec:
     env:
       - name: HARBOR_VERIFIER_BOT_SERVERS
         value: http://harbor-server.harbor-server.svc
-    # HARBOR_VERIFIER_BOT_DATABASE_URL, from the ExternalSecret in this directory.
+    # DB URL from this directory's ExternalSecret.
     envFrom:
       - secretRef:
           name: harbor-verifier-bot-db

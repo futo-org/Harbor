@@ -1,5 +1,5 @@
 ---
-# Stands in for the S3 bucket, like compose's rustfs.
+# S3 stand-in, as in compose.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -30,7 +30,7 @@ spec:
         - name: rustfs
           image: rustfs/rustfs:latest@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2
           env:
-            # rustfs refuses the default credentials on non-loopback listeners otherwise.
+            # Else default credentials are refused off loopback.
             - name: RUSTFS_ALLOW_INSECURE_DEFAULT_CREDENTIALS
               value: "true"
           ports:
@@ -63,7 +63,7 @@ spec:
     - name: console
       port: 9001
 ---
-# Creates the blob bucket, like compose's rustfs-init.
+# Creates the blob bucket.
 apiVersion: batch/v1
 kind: Job
 metadata:

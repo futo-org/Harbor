@@ -9,10 +9,8 @@
 #
 # Env:
 #   MODERATION_SERVER   server to publish to (default: http://localhost:3000)
-#   ENV_FILE            env file to write, relative to the repository root
-#                       (default: .env; the k3d stack uses deploy/local/.env)
-#   IDENTITY_TOOL       command that runs polycentric-identity (default: cargo
-#                       run; the k3d stack runs it inside the server pod)
+#   ENV_FILE            env file to write (default: .env)
+#   IDENTITY_TOOL       polycentric-identity command (default: cargo run)
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."

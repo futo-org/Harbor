@@ -1,7 +1,6 @@
 ---
-# One instance of harbor-ops' cluster. The standard image carries pgvector;
-# harbor-ops adds it to the operator's default image as an extension volume.
-# CNPG mints the postgres-app secret the services' ExternalSecrets read.
+# harbor-ops' cluster, one instance; the standard image has pgvector.
+# postgres-app, read by the services' ExternalSecrets.
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:

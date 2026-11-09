@@ -1,5 +1,5 @@
 ---
-# This service's database on the shared cluster, adopting the initdb one.
+# Adopts the initdb database.
 # Applied by harbor-pg's kustomization.
 apiVersion: postgresql.cnpg.io/v1
 kind: Database
