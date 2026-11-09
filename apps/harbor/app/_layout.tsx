@@ -6,6 +6,7 @@ import { installConsoleCapture } from '@/src/features/telemetry/lib/console';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
 import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
 import { ModerationWarningSheet } from '@/src/features/moderation/ModerationWarningSheet';
+import { LoggedOutShareNotice } from '@/src/features/share-intake/LoggedOutShareNotice';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import {
   PolycentricProvider,
@@ -132,6 +133,7 @@ function RootStack() {
             }}
           />
           <Stack.Screen name="verifications/index" />
+          <Stack.Screen name="share-debug" />
         </Stack.Protected>
 
         <Stack.Screen
@@ -189,6 +191,7 @@ export default function RootLayout() {
                   <PortalHost />
                   <Toaster />
                   <AuthGateSheet />
+                  <LoggedOutShareNotice />
                   <EmojiPickerSheet />
                   <ModerationWarningSheet />
                   <AppUpdater />
