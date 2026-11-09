@@ -721,33 +721,6 @@ export class PolycentricClient {
   }
 
   /**
-   * Decode an image, resize into `width` x `height` per `mode`, and
-   * encode as JPEG via the core. Returns the JPEG bytes plus the
-   * actual output dimensions.
-   *
-   * - `"fill"` (default): scale + center-crop, output is exactly `width` x `height`.
-   * - `"fit"`: preserve aspect ratio, output fits inside `width` x `height`.
-   */
-  processImageToJpeg(
-    image: Uint8Array,
-    width: number,
-    height: number,
-    mode: 'fill' | 'fit' = 'fill',
-  ): { bytes: Uint8Array; width: number; height: number } {
-    const result = this.core.processImageToJpeg(
-      image.buffer as ArrayBuffer,
-      width,
-      height,
-      mode,
-    );
-    return {
-      bytes: new Uint8Array(result.bytes),
-      width: result.width,
-      height: result.height,
-    };
-  }
-
-  /**
    * Sign a `RegisterPushNotificationRequest` with the active key pair and
    * deliver it to every configured server via gRPC-web. Per-server failures
    * are logged but do not throw — registration is best-effort across the
