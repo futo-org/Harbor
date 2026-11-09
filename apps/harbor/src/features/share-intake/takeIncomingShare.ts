@@ -8,6 +8,7 @@ import {
   getSharedPayloads,
   type SharePayload,
 } from 'expo-sharing';
+import { joinSharedText } from './joinSharedText';
 import {
   type PendingShareImage,
   usePendingShareStore,
@@ -71,22 +72,15 @@ export async function takeIncomingShare(launch: 'cold' | 'warm') {
   });
 }
 
-/** The shared text, then each shared URL the text doesn't already contain. */
 export function buildSharedText(payloads: SharePayload[]): string {
-  const texts = payloads
-    .filter((payload) => payload.shareType === 'text')
-    .map((payload) => payload.value.trim())
-    .filter(Boolean);
-
-  const urls = payloads
-    .filter(
-      (payload) =>
-        payload.shareType === 'url' &&
-        !texts.some((text) => text.includes(payload.value)),
-    )
-    .map((payload) => payload.value);
-
-  return [...texts, ...urls].join('\n');
+  return joinSharedText(
+    payloads
+      .filter((payload) => payload.shareType === 'text')
+      .map((payload) => payload.value),
+    payloads
+      .filter((payload) => payload.shareType === 'url')
+      .map((payload) => payload.value),
+  );
 }
 
 /** Bring a shared image into the app cache and read its dimensions. */
