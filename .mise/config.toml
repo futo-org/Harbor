@@ -5,6 +5,11 @@ helm = "4.3.0"
 tilt = "0.37.8"
 # Node comes from .nvmrc; keep pnpm in step with package.json's packageManager.
 pnpm = "12.16.1"
+# The wasm build of rs-core, which the web dev server needs: the toolchain the
+# Dockerfiles use, protoc as in the CI image, wasm-bindgen as Cargo.lock pins.
+rust = { version = "1.99.1", targets = "wasm32-unknown-unknown" }
+protoc = "21.12"
+"cargo:wasm-bindgen-cli" = "0.2.125"
 
 [settings]
 idiomatic_version_file_enable_tools = ["node"]
