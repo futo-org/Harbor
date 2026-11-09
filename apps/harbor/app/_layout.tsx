@@ -51,6 +51,13 @@ const imageViewerScreenOptions = {
   ...(isWeb ? {} : { orientation: 'all' as const }),
 };
 
+// For screens that draw their own sheet, or nothing, over the screen below
+const transparentScreenOptions = {
+  presentation: 'transparentModal' as const,
+  animation: 'none' as const,
+  contentStyle: { backgroundColor: 'transparent' },
+};
+
 // Anchor the root stack on the tabs so that deep-linking directly
 // into a modal route (e.g. `/feed/compose`, `/settings/identity`)
 // mounts the tabs underneath — giving the modal something to sit on
@@ -126,11 +133,7 @@ function RootStack() {
           <Stack.Screen name="moderation" />
           <Stack.Screen
             name="[identityId]/edit"
-            options={{
-              presentation: 'transparentModal',
-              animation: 'none',
-              contentStyle: { backgroundColor: 'transparent' },
-            }}
+            options={transparentScreenOptions}
           />
           <Stack.Screen name="verifications/index" />
         </Stack.Protected>
@@ -150,11 +153,11 @@ function RootStack() {
 
         <Stack.Screen
           name="[identityId]/identity"
-          options={{
-            presentation: 'transparentModal',
-            animation: 'none',
-            contentStyle: { backgroundColor: 'transparent' },
-          }}
+          options={transparentScreenOptions}
+        />
+        <Stack.Screen
+          name="intent/compose"
+          options={transparentScreenOptions}
         />
         <Stack.Screen
           name="[identityId]/post/[keyFingerprint]/[sequence]/image/[index]"
