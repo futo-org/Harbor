@@ -104,18 +104,21 @@ from this checkout. The tools are pinned with [mise](https://mise.jdx.dev):
 
 ```sh
 mise install
-mise run k3d:up    # one-node cluster, kube context k3d-harbor
-mise run tilt:up   # deploys everything; `mise run tilt:status` for a table
+mise run dev       # cluster, stack and the app dev servers; `mise run tilt:status` for a table
 ```
 
-Every service runs, including the moderation service, whose identity the
-stack creates and publishes once the server is up. Rust changes rebuild the
+`dev` creates the one-node cluster (kube context `k3d-harbor`), installs the
+JS workspace, deploys the stack with Tilt and runs `pnpm dev`; each piece is
+also its own task (`k3d:up`, `js:install`, `tilt:up`, `js:dev`). Every
+service runs, including the moderation service, whose identity the stack
+creates and publishes once the server is up. Rust changes rebuild the
 affected image from an incremental dev build, so after the first build a
 change is redeployed in well under a minute. Host ports are the same as with
-Compose, so `pnpm run:web` needs no changes. The Tilt UI on
-`http://localhost:10350` has the logs. Secrets such as the Azure keys go in
-`deploy/local/.env`, which the stack mounts as the `harbor-dev-env` Secret.
-`mise run tilt:down` removes the stack and `mise run k3d:down` the cluster.
+Compose. The Tilt UI on `http://localhost:10350` has the logs. Secrets such
+as the Azure keys go in `deploy/local/.env`, which the stack mounts as the
+`harbor-dev-env` Secret. `mise run tilt:down` removes the stack and
+`mise run k3d:down` the cluster; both forget the moderation identity, since
+it was published to the server they delete.
 
 ## Run the app
 

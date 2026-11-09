@@ -7,6 +7,21 @@ tilt = "0.37.8"
 [settings]
 idiomatic_version_file_enable_tools = []
 
+[tasks.dev]
+description = "Bring the dev environment up: cluster, stack and the app dev servers"
+depends = ["k3d:up", "js:install"]
+run = 'mise run tilt:up ::: js:dev'
+
+[tasks."js:install"]
+description = "Install the JS workspace"
+run = 'pnpm install'
+sources = ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "patches/*"]
+outputs = ["node_modules/.pnpm/lock.yaml"]
+
+[tasks."js:dev"]
+description = "Run the dev servers of every package that has one (turbo dev)"
+run = 'pnpm dev'
+
 [tasks."k3d:up"]
 description = "Create the local k3d cluster (context k3d-harbor)"
 run = '''
@@ -15,8 +30,11 @@ kubectl --context k3d-harbor wait --for=condition=Ready nodes --all --timeout=12
 '''
 
 [tasks."k3d:down"]
-description = "Delete the local k3d cluster and its registry"
-run = 'k3d cluster delete harbor'
+description = "Delete the local k3d cluster, and the moderation identity published to it"
+run = '''
+k3d cluster delete harbor
+sed -i '/^HARBOR_MODERATION_\(IDENTITY\|SIGNING_KEY\)=/d' deploy/local/.env 2>/dev/null || true
+'''
 
 [tasks."tilt:up"]
 description = "Deploy the stack to the k3d cluster; args after -- are the resources to run (default all)"
@@ -29,5 +47,8 @@ description = "Build and runtime status of each resource in the running stack"
 run = '''tilt get uiresources -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.updateStatus}{"\t"}{.status.runtimeStatus}{"\n"}{end}' | sort | column -t'''
 
 [tasks."tilt:down"]
-description = "Remove the stack from the k3d cluster"
-run = 'tilt down -f deploy/local/Tiltfile --context k3d-harbor --delete-namespaces -- "$@"'
+description = "Remove the stack from the k3d cluster, and the moderation identity published to it"
+run = '''
+tilt down -f deploy/local/Tiltfile --context k3d-harbor --delete-namespaces -- "$@"
+sed -i '/^HARBOR_MODERATION_\(IDENTITY\|SIGNING_KEY\)=/d' deploy/local/.env 2>/dev/null || true
+'''

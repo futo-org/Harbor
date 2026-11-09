@@ -174,7 +174,7 @@ local_resource(
     env={
         'HARBOR_MODERATION_IDENTITY': DOTENV.get('HARBOR_MODERATION_IDENTITY', ''),
         'ENV_FILE': 'deploy/local/.env',
-        'MODERATION_SERVER': 'http://harbor-server.harbor-server.svc',
+        'MODERATION_SERVER': 'http://localhost:3000',
         'IDENTITY_TOOL': 'kubectl --context k3d-harbor -n harbor-server exec deploy/harbor-server -- /app/polycentric-identity',
     },
     resource_deps=['harbor-server'],
