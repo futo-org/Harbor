@@ -11,6 +11,8 @@
 #   MODERATION_SERVER   server to publish to (default: http://localhost:3000)
 #   ENV_FILE            env file to write, relative to the repository root
 #                       (default: .env; the k3d stack uses deploy/local/.env)
+#   IDENTITY_TOOL       command that runs polycentric-identity (default: cargo
+#                       run; the k3d stack runs it inside the server pod)
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -24,7 +26,7 @@ DIR=$(mktemp -d)
 trap 'rm -rf "$DIR"' EXIT
 
 identity_tool() {
-  cargo run -q -p polycentric-identity -- --dir "$DIR" "$@"
+  ${IDENTITY_TOOL:-cargo run -q -p polycentric-identity --} --dir "$DIR" "$@"
 }
 
 upsert_env() {

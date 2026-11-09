@@ -166,14 +166,17 @@ local_resource(
 )
 
 # Creates and publishes the moderation identity once the server is up, unless
-# deploy/local/.env already has one. Needs cargo on the host.
+# deploy/local/.env already has one. The identity tool runs in the server pod.
 local_resource(
     'moderation-identity',
-    cmd='''[ -n "$HARBOR_MODERATION_IDENTITY" ] && exit 0
-for _ in $(seq 1 60); do curl -sf -o /dev/null http://localhost:3000/status && break; sleep 1; done
-ENV_FILE=deploy/local/.env services/moderation/create-local-identity.sh''',
+    cmd='[ -n "$HARBOR_MODERATION_IDENTITY" ] || services/moderation/create-local-identity.sh',
     dir=ROOT,
-    env={'HARBOR_MODERATION_IDENTITY': DOTENV.get('HARBOR_MODERATION_IDENTITY', '')},
-    resource_deps=['harbor-server-forward'],
+    env={
+        'HARBOR_MODERATION_IDENTITY': DOTENV.get('HARBOR_MODERATION_IDENTITY', ''),
+        'ENV_FILE': 'deploy/local/.env',
+        'MODERATION_SERVER': 'http://harbor-server.harbor-server.svc',
+        'IDENTITY_TOOL': 'kubectl --context k3d-harbor -n harbor-server exec deploy/harbor-server -- /app/polycentric-identity',
+    },
+    resource_deps=['harbor-server'],
     labels=['apps'],
 )

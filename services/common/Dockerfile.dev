@@ -16,10 +16,11 @@ RUN --mount=type=cache,target=/app/target \
       --package push-notifications-service --package push-notifications-migration \
       --package otlp-service \
       --package moderation-service --package moderation-migration \
+      --package polycentric-identity \
     && mkdir /out \
     && cd target/debug \
     && cp server server-migration push-notifications-service push-notifications-migration \
-          otlp-service moderation-service moderation-migration /out/
+          otlp-service moderation-service moderation-migration polycentric-identity /out/
 
 FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
 WORKDIR /app
