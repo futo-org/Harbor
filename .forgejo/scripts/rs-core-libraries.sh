@@ -12,7 +12,7 @@ set -euo pipefail
 # the sources the library is built from
 inputs() {
   case $1 in
-    wasm) echo packages/rs-core packages/rs-common packages/rs-core-wasm protos Cargo.toml Cargo.lock patches .forgejo/images ;;
+    wasm) echo packages/rs-core packages/rs-common packages/rs-core-wasm protos Cargo.toml Cargo.lock patches .forgejo/images .forgejo/actions/wasm-build ;;
     android | ios) echo packages/rs-core packages/rs-common packages/react-native protos Cargo.toml Cargo.lock .forgejo/images ;;
     *) echo "unknown library $1" >&2; exit 2 ;;
   esac
