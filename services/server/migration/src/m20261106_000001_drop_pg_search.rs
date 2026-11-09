@@ -4,7 +4,6 @@
 //! down every replica of the cluster as soon as the index is created. The
 //! migrations that set it up are no-ops now, this cleans up where they ran.
 
-use sea_orm::Statement;
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -18,24 +17,43 @@ impl MigrationTrait for Migration {
         // so it is dropped there once this index is gone.
         tx.execute_unprepared("DROP INDEX IF EXISTS content_post_search")
             .await?;
-        let db_name: String = tx
-            .query_one_raw(Statement::from_string(
-                tx.get_database_backend(),
-                "SELECT current_database()",
-            ))
-            .await?
-            .ok_or_else(|| {
-                DbErr::Custom("can't get current database".to_owned())
-            })?
-            .try_get_by(0)?;
-        tx.execute_unprepared(&format!(
-            "ALTER DATABASE {db_name} RESET paradedb.planner_warnings"
-        ))
-        .await?;
-        Ok(())
+        reset_planner_warnings(tx).await
     }
 
     async fn down(&self, _manager: &SchemaManager) -> Result<(), DbErr> {
         Ok(())
     }
+}
+
+/// Only where the setting exists: resetting an unknown placeholder parameter
+/// needs superuser once pg_search is no longer loaded.
+pub(crate) async fn reset_planner_warnings(
+    tx: &SchemaManagerConnection<'_>,
+) -> Result<(), DbErr> {
+    tx.execute_unprepared(
+        r#"
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1
+                FROM pg_db_role_setting s
+                JOIN pg_database d ON d.oid = s.setdatabase
+                WHERE d.datname = current_database()
+                  AND s.setrole = 0
+                  AND EXISTS (
+                      SELECT 1 FROM unnest(s.setconfig) c
+                      WHERE c LIKE 'paradedb.planner_warnings=%'
+                  )
+            ) THEN
+                EXECUTE format(
+                    'ALTER DATABASE %I RESET paradedb.planner_warnings',
+                    current_database()
+                );
+            END IF;
+        END
+        $$
+        "#,
+    )
+    .await?;
+    Ok(())
 }

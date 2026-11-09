@@ -3,8 +3,9 @@
 //! Community pg_search cannot replicate to standbys, so this no longer does
 //! anything; m20261106_000001_drop_pg_search removes it where it was applied.
 
-use sea_orm::Statement;
 use sea_orm_migration::prelude::*;
+
+use super::m20261106_000001_drop_pg_search::reset_planner_warnings;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -18,21 +19,6 @@ impl MigrationTrait for Migration {
     // Still cleans up after the original version of this migration. The
     // extension is owned by the cluster, not by the app role.
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        let tx = manager.get_connection();
-        let db_name: String = tx
-            .query_one_raw(Statement::from_string(
-                tx.get_database_backend(),
-                "SELECT current_database()",
-            ))
-            .await?
-            .ok_or_else(|| {
-                DbErr::Custom("can't get current database".to_owned())
-            })?
-            .try_get_by(0)?;
-        tx.execute_unprepared(&format!(
-            "ALTER DATABASE {db_name} RESET paradedb.planner_warnings"
-        ))
-        .await?;
-        Ok(())
+        reset_planner_warnings(manager.get_connection()).await
     }
 }
