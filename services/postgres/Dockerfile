@@ -4,7 +4,7 @@ FROM ghcr.io/cloudnative-pg/pgvector:0.8.7-18-trixie AS pg_vector
 FROM paradedb/paradedb-extension:0.26.4-18-trixie@sha256:ed7fc01654c309433238e4db15fbc7613b349c12663b03bc2d70e1b97bf0ef6b AS pg_search
 
 # Official Postgres image.
-FROM postgres:18-trixie@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81 as pg
+FROM postgres:18-trixie@sha256:e3d24f6906d0760bf4da0dae872415391ededefad23fd471c47dc53b0ddf3c42 as pg
 
 # Copy pg_vector extension.
 COPY --from=pg_vector /lib/* /usr/lib/postgresql/18/lib/
