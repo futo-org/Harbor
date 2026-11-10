@@ -54,7 +54,6 @@ export function ProfileTabs({
               open={open}
               onClose={onClose}
               title="Verifications"
-              detents={[0.4]}
               options={[
                 {
                   label: 'Claims',
