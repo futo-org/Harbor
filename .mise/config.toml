@@ -8,7 +8,7 @@ pnpm = "12.16.1"
 # For the rs-core wasm build; pinned as in the Dockerfiles, CI and Cargo.lock.
 rust = { version = "1.99.1", targets = "wasm32-unknown-unknown" }
 protoc = "21.12"
-"cargo:wasm-bindgen-cli" = "0.2.125"
+"cargo:wasm-bindgen-cli" = "0.2.130"
 
 [settings]
 idiomatic_version_file_enable_tools = ["node"]
