@@ -23,7 +23,7 @@ on:
 
 concurrency:
   group: deploy-web-staging
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   CARGO_INCREMENTAL: "0"
