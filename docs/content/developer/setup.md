@@ -1,4 +1,5 @@
 ---
+
 title: Development Setup
 sidebar_label: Setup
 sidebar_position: 1
@@ -17,15 +18,15 @@ edges and occasional breaking changes on `develop`.
 
 ## Prerequisites
 
-| Tool                                                          | Notes                                                    |
-| ------------------------------------------------------------- | -------------------------------------------------------- |
-| [Node.js](https://nodejs.org)                                 | Version pinned in `.nvmrc`; `nvm install` picks it up.    |
-| [pnpm](https://pnpm.io)                                       | The workspace's package manager, version set in `package.json`. |
-| [Rust toolchain](https://rustup.rs)                           | Builds `rs-core`, the server, and the WASM bindings.     |
-| [`protoc`](https://github.com/protocolbuffers/protobuf)       | Compiles the protobuf definitions in `protos/`.          |
-| [JDK](https://adoptium.net) 17+                               | Only for working on `packages/kt-core`; the pre-commit hook formats its Kotlin through Gradle. |
-| [Android SDK](https://developer.android.com/studio)           | Only for working on `packages/kt-core`; AGP needs it to configure the build.                  |
-| [`docker compose`](https://github.com/docker/compose)         | Runs PostgreSQL, the object store, and the server.       |
+| Tool                                                    | Notes                                                                                          |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [Node.js](https://nodejs.org)                           | Version pinned in `.nvmrc`; `nvm install` picks it up.                                         |
+| [pnpm](https://pnpm.io)                                 | The workspace's package manager, version set in `package.json`.                                |
+| [Rust toolchain](https://rustup.rs)                     | Builds `rs-core`, the server, and the WASM bindings.                                           |
+| [`protoc`](https://github.com/protocolbuffers/protobuf) | Compiles the protobuf definitions in `protos/`.                                                |
+| [JDK](https://adoptium.net) 17+                         | Only for working on `packages/kt-core`; the pre-commit hook formats its Kotlin through Gradle. |
+| [Android SDK](https://developer.android.com/studio)     | Only for working on `packages/kt-core`; AGP needs it to configure the build.                   |
+| [`docker compose`](https://github.com/docker/compose)   | Runs PostgreSQL, the object store, and the server.                                             |
 
 System packages on Debian/Ubuntu:
 
@@ -92,12 +93,76 @@ covers its environment variables and integration tests.
 
 If you use Podman, make sure `docker compose` resolves to Compose v2.
 
+### On Kubernetes instead
+
+The same services can run in a local [k3d](https://k3d.io) cluster the way
+production runs them. `deploy/local/kubernetes` is a Flux environment laid
+out like the harbor-ops repository (CloudNativePG, Strimzi, Valkey and
+external-secrets from their pinned charts, each service from its chart in
+`deploy/charts`), and [Tilt](https://tilt.dev) deploys it with images built
+from this checkout. The tools (k3d, kubectl, Helm, Tilt, pnpm, and the Rust
+toolchain for the wasm build) are pinned with [mise](https://mise.jdx.dev).
+
+Run the stack and the JS dev servers in two terminals:
+
+```sh
+mise install
+
+# Terminal 1: the cluster and the stack, in Tilt.
+mise dev
+
+# Terminal 2: build the JS workspace and run its dev servers, in turbo.
+mise js
+```
+
+`mise dev` creates the one-node cluster (kube context `k3d-harbor`) if it
+does not exist and runs Tilt in the foreground. Every service runs, including
+the moderation service, whose identity the stack creates and publishes once
+the server is up (the `harbor-moderation-identity` resource, in Tilt's
+`setup` group). Rust changes rebuild the affected image from an incremental
+dev build, so after the first build a change is redeployed in well under a
+minute. Host ports are the same as with Compose. The Tilt UI on
+`http://localhost:10350` has each resource's logs; `mise run tilt:status`
+prints a table of their status.
+
+`mise js` installs and builds the JS workspace (`pnpm build`, cached by
+turbo, so only the first run is slow), then runs `pnpm dev` in turbo's
+terminal UI: the library watchers, the docs site on `http://localhost:3004`
+and Expo on `http://localhost:8081`. Select a task in the UI to see its
+output, including Expo's QR code. The verifier bot and scraper are left out,
+since the stack already runs them.
+
+The wasm build of the Rust core is built once when `mise js` starts and is
+not watched. After changing `packages/rs-core` or `packages/rs-common`, rebuild
+it with `pnpm --filter @polycentric/rs-core-wasm build` (or restart its task in
+turbo). The Android and iOS dev clients compile the Rust core into the app, so
+a Rust change reaches them through `pnpm run:android` / `pnpm run:ios`.
+
+Stop either terminal with Ctrl-C. Secrets such as the Azure keys go in
+`deploy/local/.env`, which the stack mounts as the `harbor-dev-env` Secret.
+`mise run tilt:down` removes the stack and `mise run k3d:down` the cluster;
+both forget the moderation identity, since it was published to the server
+they delete.
+
+| Task                               | What it does                                                         |
+| ---------------------------------- | -------------------------------------------------------------------- |
+| `mise dev`                         | `k3d:up`, then `tilt:up`                                             |
+| `mise js` (`js:dev`)               | `js:build`, then the JS dev servers in turbo                         |
+| `mise run k3d:up` / `k3d:down`     | Create or delete the cluster                                         |
+| `mise run tilt:up [-- resources…]` | Deploy the stack, or only the named resources and their dependencies |
+| `mise run tilt:down`               | Remove the stack from the cluster                                    |
+| `mise run tilt:status`             | Build and runtime status of each resource                            |
+| `mise run js:install` / `js:build` | `pnpm install` / `pnpm build`                                        |
+
 ## Run the app
 
 ```sh
 # Start the dev servers for every package that has one.
 pnpm dev
 ```
+
+With the stack on Kubernetes, use `mise js` instead: it builds the workspace
+first and leaves out the services the stack already runs.
 
 To start a single platform directly:
 

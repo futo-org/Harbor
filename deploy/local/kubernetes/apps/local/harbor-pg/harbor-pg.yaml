@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: harbor-pg
+  namespace: flux-system
+spec:
+  targetNamespace: harbor-pg
+  path: ./deploy/local/kubernetes/apps/local/harbor-pg/app
+  prune: true
+  wait: true
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: harbor
+  dependsOn:
+    - name: cloudnative-pg

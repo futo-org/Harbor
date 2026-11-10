@@ -1,0 +1,10 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: strimzi
+spec:
+  interval: 5m
+  chartRef:
+    kind: OCIRepository
+    name: strimzi

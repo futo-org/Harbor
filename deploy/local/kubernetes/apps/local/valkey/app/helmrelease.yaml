@@ -1,0 +1,21 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: valkey
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: valkey
+  values:
+    fullnameOverride: valkey
+    auth:
+      enabled: true
+      usersExistingSecret: valkey-users
+      aclUsers:
+        default:
+          permissions: "~* &* +@all"
+    valkeyConfig: |
+      save ""
+      appendonly no

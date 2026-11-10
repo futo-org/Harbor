@@ -1,0 +1,33 @@
+# Rust services for the k3d stack; SERVICE picks the binary.
+FROM rust:1.99-slim-bookworm@sha256:24707e70a4f1e23d9a7b25202ec43126d28a52294b96aad5c670df1fd1f1d400 AS builder
+WORKDIR /app
+COPY services/common/build-deps.sh build-deps.sh
+RUN sh build-deps.sh
+COPY Cargo.toml Cargo.lock ./
+COPY protos protos
+COPY packages packages
+COPY services services
+COPY tools tools
+RUN --mount=type=cache,target=/app/target \
+    --mount=type=cache,target=/usr/local/cargo/registry \
+    CARGO_PROFILE_DEV_DEBUG=line-tables-only cargo build --locked \
+      --package server --package server-migration \
+      --package push-notifications-service --package push-notifications-migration \
+      --package otlp-service \
+      --package moderation-service --package moderation-migration \
+      --package polycentric-identity \
+    && mkdir /out \
+    && cd target/debug \
+    && cp server server-migration push-notifications-service push-notifications-migration \
+          otlp-service moderation-service moderation-migration polycentric-identity /out/
+
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
+WORKDIR /app
+COPY services/common/runtime-deps.sh runtime-deps.sh
+RUN sh runtime-deps.sh
+COPY --chmod=755 --from=builder /out/ /app/
+# The server chart runs /app/migration.
+RUN ln -s server-migration migration
+ARG SERVICE
+ENV SERVICE=$SERVICE
+CMD exec /app/$SERVICE
