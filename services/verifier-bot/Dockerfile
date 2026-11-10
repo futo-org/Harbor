@@ -9,7 +9,7 @@
 # (node export condition), so the bot tsc-compiles to dist/ and runs under node.
 
 # Stage 1: Base — Node
-FROM node:26-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072 AS base
+FROM node:26-trixie-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072 AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
@@ -52,7 +52,7 @@ RUN pnpm --filter @polycentric/verifier-bot --prod \
   deploy /deploy
 
 # Stage 3: Run
-FROM node:26-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072 AS runner
+FROM node:26-trixie-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072 AS runner
 WORKDIR /app/services/verifier-bot
 ENV NODE_ENV=production
 # System Chromium for the Puppeteer-based verifiers (e.g. Kick).
