@@ -3,9 +3,8 @@ import Icon from '@/src/common/components/Icon';
 import { Atoms, useTheme } from '@/src/common/theme';
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
 import { labelNames } from '@/src/features/moderation/LabelPill';
-import { ModerationWarningSheet } from '@/src/features/moderation/ModerationWarningSheet';
 import { useLabeler } from '@/src/features/moderation/useLabeler';
-import { useState } from 'react';
+import { useModerationWarningStore } from '@/src/features/moderation/useModerationWarningStore';
 import { Pressable, View } from 'react-native';
 
 /**
@@ -23,7 +22,7 @@ export function PostWarnOverlay({
   onDismiss: () => void;
 }) {
   const { theme } = useTheme();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const openWarning = useModerationWarningStore((s) => s.openFor);
 
   const labeler = useLabeler(labels, authorIdentity);
   const attribution = !labeler
@@ -69,7 +68,14 @@ export function PostWarnOverlay({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Show"
-        onPress={() => setSheetOpen(true)}
+        onPress={() =>
+          openWarning({
+            labels,
+            identity: authorIdentity,
+            subject: 'post',
+            onConfirm: onDismiss,
+          })
+        }
         style={({ pressed }) => [
           Atoms.px_md,
           Atoms.self_stretch,
@@ -82,17 +88,6 @@ export function PostWarnOverlay({
           Show
         </Text>
       </Pressable>
-      <ModerationWarningSheet
-        labels={labels}
-        identity={authorIdentity}
-        subject="post"
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        onConfirm={() => {
-          setSheetOpen(false);
-          onDismiss();
-        }}
-      />
     </View>
   );
 }

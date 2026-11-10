@@ -1,8 +1,6 @@
 import Icon from '@/src/common/components/Icon';
 import { Button, LinkButton, Text } from '@/src/common/components/primitives';
 import { Sheet } from '@/src/common/components/sheet';
-import { Routes } from '@/src/common/constants';
-import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
 import { useSettings } from '@/src/common/settings';
 import {
   isModerationLabel,
@@ -11,31 +9,28 @@ import {
 } from '@/src/common/settings/moderationLabels';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { IS_STORE_BUILD } from '@/src/common/util/application';
+import ModerationSettingsSheet from '@/src/features/settings/ModerationSettingsSheet';
 import { useEffect, useState } from 'react';
 import { Switch, View } from 'react-native';
 import { useLabeler } from './useLabeler';
+import { useModerationWarningStore } from './useModerationWarningStore';
 
-/** Confirms revealing labelled content, and can stop warning for its labels. */
-export function ModerationWarningSheet({
-  labels,
-  identity,
-  subject,
-  open,
-  onClose,
-  onConfirm,
-}: {
-  labels: PostLabel[];
-  /** The labelled identity, or the post's author, for self-applied labels. */
-  identity: string | null;
-  subject: 'profile' | 'post';
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
+/**
+ * Confirms revealing labelled content, and can stop warning for its labels.
+ * Mounted once at the root; opened via `useModerationWarningStore`.
+ */
+export function ModerationWarningSheet() {
   const { theme } = useTheme();
   const setModeration = useSettings((s) => s.setModeration);
+  const request = useModerationWarningStore((s) => s.request);
+  const open = useModerationWarningStore((s) => s.open);
+  const onClose = useModerationWarningStore((s) => s.close);
+  const labels = request?.labels ?? [];
+  const identity = request?.identity ?? null;
+  const subject = request?.subject ?? 'post';
   const labeler = useLabeler(labels, identity);
   const [always, setAlways] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   useEffect(() => {
     if (!open) setAlways(false);
   }, [open]);
@@ -55,7 +50,8 @@ export function ModerationWarningSheet({
         .map((label) => [label, 'show'] as const);
       setModeration(Object.fromEntries(prefs));
     }
-    onConfirm();
+    request?.onConfirm();
+    onClose();
   };
 
   return (
@@ -144,11 +140,14 @@ export function ModerationWarningSheet({
             fontWeight="regular"
             underlineOnHover
             containerStyle={Atoms.self_start}
-            href={Routes.tabs.settings.moderationSettings}
-            onPress={onClose}
+            onPress={() => setSettingsOpen(true)}
           />
         </View>
       </Sheet.Content>
+      <ModerationSettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </Sheet>
   );
 }
