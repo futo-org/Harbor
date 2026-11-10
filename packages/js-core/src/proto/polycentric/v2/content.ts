@@ -11,8 +11,10 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { Blob } from "./media";
 import { ContentDigest } from "./common";
 import { EventKey } from "./event_key";
+import { ImageSet } from "./media";
 import { VerificationTarget } from "./verifications";
 import { VerificationVerify } from "./verifications";
 import { VerificationClaim } from "./verifications";
@@ -353,58 +355,6 @@ export interface ProfileUpdate {
      * @generated from protobuf field: optional string alias = 5
      */
     alias?: string;
-}
-/**
- * If an uploaded Blob is uploaded to the servers Object Storage and not
- * then attached added to the Content repository, the server will delete from Object Storage.
- *
- * @generated from protobuf message polycentric.v2.Blob
- */
-export interface Blob {
-    /**
-     * Digest/Checksum of the blob
-     *
-     * @generated from protobuf field: polycentric.v2.ContentDigest digest = 1
-     */
-    digest?: ContentDigest;
-    /**
-     * @generated from protobuf field: string mime_type = 2
-     */
-    mimeType: string;
-    /**
-     * @generated from protobuf field: int64 size = 3
-     */
-    size: bigint;
-}
-/**
- * Single image with reference to the blob
- *
- * @generated from protobuf message polycentric.v2.Image
- */
-export interface Image {
-    /**
-     * @generated from protobuf field: polycentric.v2.Blob blob = 1
-     */
-    blob?: Blob;
-    /**
-     * @generated from protobuf field: int32 width = 2
-     */
-    width: number;
-    /**
-     * @generated from protobuf field: int32 height = 3
-     */
-    height: number;
-}
-/**
- * Collection of different variants of an image
- *
- * @generated from protobuf message polycentric.v2.ImageSet
- */
-export interface ImageSet {
-    /**
-     * @generated from protobuf field: repeated polycentric.v2.Image images = 1
-     */
-    images: Image[];
 }
 /**
  * @generated from protobuf message polycentric.v2.Report
@@ -1439,177 +1389,6 @@ class ProfileUpdate$Type extends MessageType<ProfileUpdate> {
  * @generated MessageType for protobuf message polycentric.v2.ProfileUpdate
  */
 export const ProfileUpdate = new ProfileUpdate$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class Blob$Type extends MessageType<Blob> {
-    constructor() {
-        super("polycentric.v2.Blob", [
-            { no: 1, name: "digest", kind: "message", T: () => ContentDigest },
-            { no: 2, name: "mime_type", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "size", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
-        ]);
-    }
-    create(value?: PartialMessage<Blob>): Blob {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.mimeType = "";
-        message.size = 0n;
-        if (value !== undefined)
-            reflectionMergePartial<Blob>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Blob): Blob {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* polycentric.v2.ContentDigest digest */ 1:
-                    message.digest = ContentDigest.internalBinaryRead(reader, reader.uint32(), options, message.digest);
-                    break;
-                case /* string mime_type */ 2:
-                    message.mimeType = reader.string();
-                    break;
-                case /* int64 size */ 3:
-                    message.size = reader.int64().toBigInt();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: Blob, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* polycentric.v2.ContentDigest digest = 1; */
-        if (message.digest)
-            ContentDigest.internalBinaryWrite(message.digest, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* string mime_type = 2; */
-        if (message.mimeType !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.mimeType);
-        /* int64 size = 3; */
-        if (message.size !== 0n)
-            writer.tag(3, WireType.Varint).int64(message.size);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message polycentric.v2.Blob
- */
-export const Blob = new Blob$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class Image$Type extends MessageType<Image> {
-    constructor() {
-        super("polycentric.v2.Image", [
-            { no: 1, name: "blob", kind: "message", T: () => Blob },
-            { no: 2, name: "width", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
-            { no: 3, name: "height", kind: "scalar", T: 5 /*ScalarType.INT32*/ }
-        ]);
-    }
-    create(value?: PartialMessage<Image>): Image {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.width = 0;
-        message.height = 0;
-        if (value !== undefined)
-            reflectionMergePartial<Image>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Image): Image {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* polycentric.v2.Blob blob */ 1:
-                    message.blob = Blob.internalBinaryRead(reader, reader.uint32(), options, message.blob);
-                    break;
-                case /* int32 width */ 2:
-                    message.width = reader.int32();
-                    break;
-                case /* int32 height */ 3:
-                    message.height = reader.int32();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: Image, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* polycentric.v2.Blob blob = 1; */
-        if (message.blob)
-            Blob.internalBinaryWrite(message.blob, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* int32 width = 2; */
-        if (message.width !== 0)
-            writer.tag(2, WireType.Varint).int32(message.width);
-        /* int32 height = 3; */
-        if (message.height !== 0)
-            writer.tag(3, WireType.Varint).int32(message.height);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message polycentric.v2.Image
- */
-export const Image = new Image$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ImageSet$Type extends MessageType<ImageSet> {
-    constructor() {
-        super("polycentric.v2.ImageSet", [
-            { no: 1, name: "images", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => Image }
-        ]);
-    }
-    create(value?: PartialMessage<ImageSet>): ImageSet {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.images = [];
-        if (value !== undefined)
-            reflectionMergePartial<ImageSet>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ImageSet): ImageSet {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* repeated polycentric.v2.Image images */ 1:
-                    message.images.push(Image.internalBinaryRead(reader, reader.uint32(), options));
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: ImageSet, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* repeated polycentric.v2.Image images = 1; */
-        for (let i = 0; i < message.images.length; i++)
-            Image.internalBinaryWrite(message.images[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message polycentric.v2.ImageSet
- */
-export const ImageSet = new ImageSet$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class Report$Type extends MessageType<Report> {
     constructor() {

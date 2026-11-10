@@ -16,6 +16,7 @@ export * from './polycentric/v2/identity';
 export * from './polycentric/v2/identity_service';
 export * from './polycentric/v2/identity_service.client';
 export * from './polycentric/v2/keypair';
+export * from './polycentric/v2/media';
 export * from './polycentric/v2/moderation_service';
 export * from './polycentric/v2/moderation_service.client';
 export * from './polycentric/v2/notifications';

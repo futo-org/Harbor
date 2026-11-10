@@ -14,7 +14,7 @@ import { MessageType } from "@protobuf-ts/runtime";
 import { AttributedTo } from "./content";
 import { PageInfo } from "./common";
 import { PageParams } from "./common";
-import { Blob } from "./content";
+import { Blob } from "./media";
 import { PublicKey } from "./keypair";
 import { SerializedContent } from "./content";
 import { ContentDigest } from "./common";
