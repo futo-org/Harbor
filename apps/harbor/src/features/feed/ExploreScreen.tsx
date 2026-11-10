@@ -7,7 +7,6 @@ import { TabFilterSheet } from '@/src/common/components/tabs';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { View } from 'react-native';
@@ -53,8 +52,6 @@ export default function ExploreScreen({
   // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
   const showComposeFab = !isWeb && !isIOS;
   const { theme } = useTheme();
-
-  usePageTitle(routeTab === 'people' ? 'People' : 'Explore');
 
   const ready = useEagerLoad();
   const { tab, onTabPress } = useExploreTab(routeTab);
@@ -119,7 +116,7 @@ export default function ExploreScreen({
   );
 
   return (
-    <Screen>
+    <Screen pageTitle={routeTab === 'people' ? 'People' : 'Explore'}>
       <Screen.PrimaryColumn>
         {/* Held back so posts don't fetch with the default sort first. */}
         {hydrated ? (

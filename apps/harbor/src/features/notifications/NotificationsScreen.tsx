@@ -5,7 +5,6 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms } from '@/src/common/theme';
 import { useIsFocused } from 'expo-router';
 import { useEffect, useRef } from 'react';
@@ -17,8 +16,6 @@ import type { NotificationData } from './utils';
 import { isWeb } from '@/src/common/util/platform';
 
 export default function NotificationsScreen() {
-  usePageTitle('Notifications');
-
   const enabled = useEagerLoad();
   const { items, isLoading, isRefreshing, refresh } =
     useListNotifications(enabled);
@@ -41,7 +38,7 @@ export default function NotificationsScreen() {
   }, [focused, isLoading, isRefreshing, newest, acknowledge]);
 
   return (
-    <Screen>
+    <Screen pageTitle="Notifications">
       <Screen.PrimaryColumn>
         <List<NotificationData>
           ref={listRef}

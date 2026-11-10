@@ -28,9 +28,6 @@ jest.mock('@/src/common/lib/navigation/useEagerLoad', () => ({
 jest.mock('@/src/common/lib/navigation/useFocusedRefresh', () => ({
   useFocusedRefresh: () => undefined,
 }));
-jest.mock('@/src/common/lib/navigation/usePageTitle', () => ({
-  usePageTitle: () => undefined,
-}));
 
 // Inert stubs for the list and chrome; only the acknowledge effect is
 // under test.

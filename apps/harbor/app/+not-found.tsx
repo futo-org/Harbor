@@ -1,15 +1,12 @@
 import { Button, Screen, Text } from '@/src/common/components';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
 
 // Without this route, expo-router renders its own fallback outside the root
 // layout, so the providers never mount and the web boot skeleton never hides
 export default function NotFoundScreen() {
-  usePageTitle('Page not found');
-
   return (
-    <Screen>
+    <Screen pageTitle="Page not found">
       <Screen.PrimaryColumn>
         <View
           style={[

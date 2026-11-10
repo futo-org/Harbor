@@ -6,7 +6,6 @@ import {
   ScreenHeader,
   Text,
 } from '@/src/common/components';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { ScrollView, View } from 'react-native';
@@ -43,12 +42,11 @@ function NoticeGroup({ notice }: { notice: LegalNotice }) {
 }
 
 export default function LegalNoticesScreen() {
-  usePageTitle('Legal notices');
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
-    <Screen>
+    <Screen pageTitle="Legal notices">
       <Screen.PrimaryColumn>
         <View
           style={[

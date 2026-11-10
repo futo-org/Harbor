@@ -2,7 +2,6 @@ import { Text } from '@/src/common/components';
 import { Screen } from '@/src/common/components/layout';
 import { APP_NAME } from '@/src/common/constants';
 import { Atoms } from '@/src/common/theme';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { truncateText } from '@/src/common/util/truncateText';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
@@ -29,15 +28,14 @@ export default function FeedPostScreen() {
   );
 
   const author = useProfile(post?.identity ?? null);
-  usePageTitle(
+  const pageTitle =
     post && author.name
       ? `${author.name} on ${APP_NAME}: "${truncateText(mentionsToPlainText(post.content), 80)}"`
-      : 'Post',
-  );
+      : 'Post';
 
   if (!post) {
     return (
-      <Screen>
+      <Screen pageTitle={pageTitle}>
         <Screen.PrimaryColumn>
           <Screen.Topbar title="Post" />
           {isLoading ? null : (
@@ -51,7 +49,7 @@ export default function FeedPostScreen() {
   }
 
   return (
-    <Screen>
+    <Screen pageTitle={pageTitle}>
       <Screen.PrimaryColumn>
         <View style={Atoms.flex_1}>
           <ThreadList

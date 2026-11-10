@@ -6,7 +6,6 @@ import { PagerView } from '@/src/common/components/PagerView';
 import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
-import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { TabFilterSheet } from '@/src/common/components/tabs';
 import { ComposerInput } from '@/src/features/composer';
@@ -51,8 +50,6 @@ export default function FeedScreen() {
   // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
   const showComposeFab = !isWeb && !isIOS;
 
-  usePageTitle('Home');
-
   const ready = useEagerLoad();
   const { tab, hydrated, onTabPress } = useFeedTabs('following');
   const sort = useFeedSettingsStore((state) => state.feeds.following.sort);
@@ -94,7 +91,7 @@ export default function FeedScreen() {
   );
 
   return (
-    <Screen>
+    <Screen pageTitle="Home">
       <Screen.PrimaryColumn>
         {/* Held back so the pager does not open on the default tab first. */}
         {hydrated ? (
