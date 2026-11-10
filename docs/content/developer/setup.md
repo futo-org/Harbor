@@ -46,7 +46,7 @@ version, so install the one `packages/rs-core/Cargo.toml` pins:
 
 ```sh
 rustup target add wasm32-unknown-unknown
-cargo install wasm-bindgen-cli@0.2.125
+cargo install wasm-bindgen-cli@0.2.130
 ```
 
 Building or running the mobile app additionally needs the Android SDK/NDK, or
