@@ -168,7 +168,8 @@ export function ClaimCreateSheet({
     <Sheet
       open={open}
       onClose={close}
-      detents={[0.5]}
+      // Images don't fit at half height, so go full screen once there are any.
+      detents={form?.hasAttachments ? [1] : [0.5]}
       header={
         <Sheet.Header
           title={stepTitle(step)}

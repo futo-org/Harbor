@@ -53,6 +53,7 @@ function claimBundle(owner: string, sequence: number): v2.EventBundle {
       verificationClaim: {
         schema: { schemaBytes: v2.VerificationSchema.toBinary(schema) },
         fields: {},
+        images: [],
       },
     },
   });

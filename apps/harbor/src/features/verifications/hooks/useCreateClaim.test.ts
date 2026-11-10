@@ -79,11 +79,14 @@ function renderHook(): { current: HookResult } {
   return result;
 }
 
-async function submit(values: Record<string, string>) {
+async function submit(
+  values: Record<string, string>,
+  images: v2.ImageSet[] = [],
+) {
   const hook = renderHook();
   let ref: ClaimRef | undefined;
   await act(async () => {
-    ref = await hook.current.submit({ schema: SCHEMA, values });
+    ref = await hook.current.submit({ schema: SCHEMA, values, images });
   });
   return ref;
 }
@@ -136,6 +139,22 @@ describe('useCreateClaim', () => {
     expect(Object.keys(content.contentBody.verificationClaim.fields)).toEqual([
       'job_title',
     ]);
+  });
+
+  it('puts the images on the claim', async () => {
+    const { v2 } = jest.requireMock('@polycentric/react-native');
+    const images = [
+      v2.ImageSet.create({
+        images: [v2.Image.create({ width: 512, height: 384 })],
+      }),
+    ];
+    await submit({ job_title: 'Developer' }, images);
+
+    const content = createdContent(0);
+    if (content.contentBody.oneofKind !== 'verificationClaim') {
+      throw new Error('expected a verificationClaim');
+    }
+    expect(content.contentBody.verificationClaim.images).toEqual(images);
   });
 
   it('also publishes a target when requesting from an identity', async () => {
