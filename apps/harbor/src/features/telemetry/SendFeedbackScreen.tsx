@@ -8,6 +8,7 @@ import {
 import Topbar from '@/src/common/components/layout/Topbar';
 import { TextArea } from '@/src/common/components/TextArea';
 import { useToast } from '@/src/common/components/toast';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { router } from 'expo-router';
@@ -22,6 +23,7 @@ import {
 import { getTelemetryIdentity } from './lib/identity';
 
 export default function SendFeedbackScreen() {
+  usePageTitle('Send feedback');
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -58,7 +60,7 @@ export default function SendFeedbackScreen() {
   };
 
   return (
-    <Screen pageTitle="Send feedback" keyboardAvoiding>
+    <Screen keyboardAvoiding>
       <Screen.PrimaryColumn>
         <View style={[Atoms.flex_1, theme.atoms.bg]}>
           <Topbar

@@ -39,7 +39,6 @@ import { openCompose } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
 import { AppFooter } from './AppFooter';
-import { PageTitle } from './PageTitle';
 import { VerticalNav } from './nav/VerticalNav';
 import Topbar from './Topbar';
 import { SuggestedFollowWidget } from '@/src/features/follow/SuggestedFollowWidget';
@@ -127,12 +126,10 @@ type ScreenProps = {
   keyboardAvoiding?: boolean;
   // The screen pads its own content by the top inset, e.g. to run a banner under the status bar.
   drawUnderStatusBar?: boolean;
-  pageTitle?: string;
 };
 
 function Screen({
   children,
-  pageTitle,
   showLeftSidebar = true,
   keyboardAvoiding = false,
   drawUnderStatusBar = false,
@@ -189,7 +186,6 @@ function Screen({
       ]}
       dir="ltr"
     >
-      {pageTitle ? <PageTitle title={pageTitle} /> : null}
       {drawerMode && (
         <View style={{ position: 'sticky', top: 0, zIndex: ZIndex.raised }}>
           <Topbar

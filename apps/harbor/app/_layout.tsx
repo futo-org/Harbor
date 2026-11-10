@@ -11,7 +11,8 @@ import {
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { renderScreenWithSplashHide } from '@/src/common/lib/renderScreenWithSplashHide';
-import { APP_NAME, Routes } from '@/src/common/constants';
+import { useResyncTitleOnPopstate } from '@/src/common/lib/navigation/useResyncTitleOnPopstate';
+import { Routes } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
 import { TelemetryIdentitySync } from '@/src/features/telemetry/TelemetryIdentitySync';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
@@ -28,7 +29,6 @@ import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
-import Head from 'expo-router/head';
 
 // Otherwise expo-router hides the splash as soon as navigation mounts, before
 // the providers below have anything to show; the root stack hides it once a
@@ -170,11 +170,10 @@ function RootStack() {
 }
 
 export default function RootLayout() {
+  useResyncTitleOnPopstate();
+
   return (
     <>
-      <Head>
-        <title>{APP_NAME}</title>
-      </Head>
       <GestureHandlerRootView style={Atoms.flex_1}>
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <ThemeProvider>

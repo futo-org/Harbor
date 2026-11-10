@@ -11,6 +11,7 @@ import { AppFooter } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { SegmentedButton } from '@/src/common/components/SegmentedButton';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Routes, TAB_BAR_HEIGHT } from '@/src/common/constants';
 import { useLinkPreviews } from '@/src/common/link-previews';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
@@ -88,12 +89,14 @@ function LinkPreviewSettingRow() {
 }
 
 export default function SettingsTabScreen() {
+  usePageTitle('Settings');
+
   const { identityKey } = useCurrentIdentity();
   const { canRotate } = useCurrentAuthorization();
   const { moderatedServers } = useModerationStatus();
 
   return (
-    <Screen pageTitle="Settings">
+    <Screen>
       <Screen.PrimaryColumn>
         <View style={[Atoms.flex_1]}>
           <ScrollView

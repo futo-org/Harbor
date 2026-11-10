@@ -31,6 +31,7 @@ import {
 } from './ProfileContext';
 import { ProfileVerificationsList } from './ProfileVerificationsList';
 import { ProfileVerifiesList } from './ProfileVerifiesList';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { truncateText } from '@/src/common/util/truncateText';
 import { isIdentityKey } from '@/src/common/util/isIdentityKey';
 
@@ -74,9 +75,11 @@ function ProfileScreenContent() {
   // The screen's one network fetch; the headers and tabs read the shared cache.
   const profile = useProfile(identityKey, { fetchMode: FetchMode.Default });
   const handle = useIdentityHandle(identityKey);
-  const pageTitle = profile.name
-    ? `${truncateText(profile.name, 30)} (${handle.text})`
-    : handle.text;
+  usePageTitle(
+    profile.name
+      ? `${truncateText(profile.name, 30)} (${handle.text})`
+      : handle.text,
+  );
 
   const isFocused = useIsFocused();
 
@@ -133,7 +136,7 @@ function ProfileScreenContent() {
   );
 
   return (
-    <Screen pageTitle={pageTitle} drawUnderStatusBar>
+    <Screen drawUnderStatusBar>
       <Screen.PrimaryColumn>
         <PagerViewWithHeader
           values={PROFILE_TABS}

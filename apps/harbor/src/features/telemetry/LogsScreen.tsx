@@ -3,6 +3,7 @@ import Icon from '@/src/common/components/Icon';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { Tabs } from '@/src/common/components/tabs';
 import { confirm } from '@/src/common/lib/dialogs/alert';
+import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, type PaletteColorToken, useTheme } from '@/src/common/theme';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
@@ -113,6 +114,7 @@ function LogRow({
 }
 
 export default function LogsScreen() {
+  usePageTitle('Logs');
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const entries = useLogStore((state) => state.entries);
@@ -151,7 +153,7 @@ export default function LogsScreen() {
   };
 
   return (
-    <Screen pageTitle="Logs">
+    <Screen>
       <Screen.PrimaryColumn>
         <View style={[Atoms.flex_1, theme.atoms.bg]}>
           <Topbar
