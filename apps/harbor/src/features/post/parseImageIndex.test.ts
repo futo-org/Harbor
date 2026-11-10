@@ -15,7 +15,7 @@ jest.mock('@/src/common/lib/polycentric-hooks/helpers', () => ({
 jest.mock('@/src/common/lib/navigation/openWithReturn', () => ({
   openWithReturn: () => undefined,
 }));
-jest.mock('@/src/features/composer/hooks/useComposer', () => ({
+jest.mock('@/src/common/lib/images/useImageAttachments', () => ({
   MAX_ATTACHMENTS: 4,
 }));
 jest.mock('./hooks/usePostById', () => ({ usePostById: () => ({}) }));
