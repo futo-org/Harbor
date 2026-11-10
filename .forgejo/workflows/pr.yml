@@ -328,9 +328,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/setup-pnpm
         with:
-          install-args: --filter polycentric-app...
+          install-args: --filter polycentric-app... --filter harbor-browser-extension...
       - name: Biome
-        run: pnpm exec biome check apps/harbor --diagnostic-level=error
+        run: pnpm exec biome check apps/harbor apps/harbor-browser-extension --diagnostic-level=error
+      - name: Browser extension typecheck
+        run: pnpm --filter harbor-browser-extension typecheck
       - name: Store listing exports
         run: node apps/harbor/marketing/source/export.mjs --check
 
@@ -786,6 +788,34 @@ jobs:
           after-deploy: npx expo export --platform web
           artifact: web-build
 
+  # The store zips of the dev extension, as the browser-extension-dev artifact.
+  browser-extension:
+    name: Build browser extension
+    needs: [ changes, sdks ]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.browser_extension && needs.sdks.result == 'success' }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    timeout-minutes: 15
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
+    env:
+      EXPO_PUBLIC_APP_VARIANT: dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/browser-extension-build
+        with:
+          variant: dev
+
+  browser-extension-safari:
+    name: Build Safari app
+    needs: [ changes, browser-extension ]
+    if: ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.browser_extension && needs.browser-extension.result == 'success' }}
+    runs-on: ${{ vars.CI_RUNNER_MACOS || 'macos' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/safari-extension-build
+        with:
+          variant: dev
+
   web-image:
     name: Build web image
     needs: [ changes, web-build ]
@@ -1045,6 +1075,8 @@ jobs:
       - verifier-bot-image
       - web-build
       - web-image
+      - browser-extension
+      - browser-extension-safari
       - services-integration
       - scraper-integration
       - verifier-bot

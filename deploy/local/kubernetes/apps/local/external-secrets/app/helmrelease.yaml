@@ -1,0 +1,12 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-secrets
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: external-secrets
+  install:
+    crds: CreateReplace

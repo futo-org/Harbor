@@ -1,0 +1,19 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: harbor-otlp
+  namespace: flux-system
+spec:
+  targetNamespace: harbor-otlp
+  path: ./deploy/local/kubernetes/apps/local/harbor-otlp/app
+  prune: true
+  wait: true
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: harbor
+  dependsOn:
+    - name: harbor-server
+    - name: victoria-logs
+    - name: victoria-traces

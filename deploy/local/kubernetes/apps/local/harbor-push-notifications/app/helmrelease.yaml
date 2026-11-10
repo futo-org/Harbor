@@ -1,0 +1,37 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: harbor-push-notifications
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: deploy/charts/harbor-push-notifications
+      sourceRef:
+        kind: GitRepository
+        name: harbor
+  values:
+    replicaCount: 1
+    env:
+      - name: HARBOR_DATABASE_URL
+        valueFrom:
+          secretKeyRef:
+            name: harbor-push-notifications-db
+            key: HARBOR_DATABASE_URL
+      - name: HARBOR_DATABASE_URL_RO
+        valueFrom:
+          secretKeyRef:
+            name: harbor-push-notifications-db
+            key: HARBOR_DATABASE_URL_RO
+      # Must match the server's HARBOR_SERVER_NAME.
+      - name: HARBOR_MAIN_SERVER
+        value: http://${HARBOR_SERVER_HOST}
+      - name: HARBOR_QUERY_SERVERS
+        value: http://harbor-server.harbor-server.svc
+      - name: HARBOR_KAFKA_BROKERS
+        value: kafka-kafka-bootstrap.kafka.svc:9092
+      - name: HARBOR_KAFKA_CLUSTER_ID
+        value: harbor-server
+      - name: RUST_LOG
+        value: info

@@ -1,5 +1,5 @@
 name: wasm-build
-description: rs-core-wasm release build, plus generated react-native bindings from rs-core, uploaded as rs-core-wasm-build (GitLab build_rs_core.yml). ci/rust job image; save the Rust cache after it.
+description: rs-core-wasm release build (wasm-release profile optimized with wasm-opt), plus generated react-native bindings from rs-core, uploaded as rs-core-wasm-build (GitLab build_rs_core.yml). ci/rust job image; save the Rust cache after it.
 runs:
   using: composite
   steps:
@@ -12,7 +12,13 @@ runs:
     - shell: bash
       run: pnpm install --filter @polycentric/rs-core-wasm
     - shell: bash
-      run: pnpm --filter @polycentric/rs-core-wasm build --release
+      run: pnpm --filter @polycentric/rs-core-wasm build --profile wasm-release
+    - shell: bash
+      run: |
+        wasm=packages/rs-core-wasm/src/generated/wasm/polycentric_core.wasm
+        before=$(stat -c%s "$wasm")
+        wasm-opt -Oz -g "$wasm" -o "$wasm"
+        echo "wasm-opt: $before -> $(stat -c%s "$wasm") bytes"
     - shell: bash
       run: pnpm --filter @polycentric/react-native generate
     - uses: forgejo/upload-artifact@v4

@@ -1,0 +1,173 @@
+# Harbor on local k3d from the Flux apps in kubernetes/. WIRING adds images,
+# ports and Tilt-only deps; deploy/local/.env becomes the harbor-dev-env Secret.
+
+load('ext://helm_resource', 'helm_resource')
+
+allow_k8s_contexts('k3d-harbor')
+# Helm-hook migrations outlast the 30s default.
+update_settings(max_parallel_updates=6, k8s_upsert_timeout_secs=600)
+
+config.define_string_list('to-run', args=True, usage='Resources to run, with their resource_deps; default all')
+config.set_enabled_resources(config.parse().get('to-run', []))
+
+ROOT = os.path.abspath('../..')
+RUST_SOURCES = ['Cargo.toml', 'Cargo.lock', 'protos', 'packages/rs-common', 'packages/rs-core', 'services', 'tools']
+RUST_IGNORE = ['services/scraper', 'services/verifier-bot']
+JS_SOURCES = ['turbo.jsonc', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'package.json', 'patches']
+
+def rust(service):
+    return {'dockerfile': 'services/common/Dockerfile.dev', 'build_args': {'SERVICE': service}, 'only': RUST_SOURCES, 'ignore': RUST_IGNORE}
+
+WIRING = {
+    'valkey': {'ports': ['6379:6379']},
+    'victoria-logs': {'ports': ['9428:9428']},
+    'victoria-traces': {'ports': ['10428:10428']},
+    'harbor-pg': {'ports': ['5432:5432']},
+    'kafka': {'ports': ['9092:9094']},
+    'rustfs': {'ports': ['9000:9000', '9001:9001']},
+    'rustfs-init': {'deps': ['rustfs']},
+    'harbor-scraper': {
+        'image': {'dockerfile': 'services/scraper/Dockerfile', 'only': JS_SOURCES + ['tools', 'services/scraper']},
+    },
+    'harbor-server': {'image': rust('server'), 'dev_env': True, 'deps': ['rustfs-init']},
+    'harbor-verifier-bot': {
+        'image': {
+            'dockerfile': 'services/verifier-bot/Dockerfile.dev',
+            'only': RUST_SOURCES + JS_SOURCES + ['packages/rs-core-wasm', 'packages/js-core', 'packages/js-storage-sqlite', 'packages/js-storage-postgres', 'packages/js-node'],
+            'ignore': ['services/scraper'],
+        },
+        'ports': ['3002:3002'],
+    },
+    'harbor-push-notifications': {'image': rust('push-notifications-service'), 'ports': ['3001:3001']},
+    'harbor-otlp': {'image': rust('otlp-service'), 'ports': ['3003:3003']},
+    'harbor-moderation': {'image': rust('moderation-service'), 'dev_env': True, 'deps': ['rustfs-init', 'harbor-moderation-identity']},
+}
+
+SETTINGS = read_yaml('kubernetes/clusters/local/cluster-settings.yaml')['data']
+
+def substitute(text):
+    for key, value in SETTINGS.items():
+        text = text.replace('${%s}' % key, value)
+    return text
+
+def load_dotenv():
+    env = {}
+    for line in str(read_file('.env', default='')).splitlines():
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, _, value = line.partition('=')
+        env[key.strip()] = value.strip().strip('"').strip("'")
+    return env
+
+DOTENV = load_dotenv()
+# Restarts the Secret's pods when .env changes.
+DOTENV_STAMP = str(local('sha256sum .env 2>/dev/null | cut -c1-16', quiet=True, echo_off=True)).strip()
+
+WORKLOADS = ['Deployment', 'StatefulSet', 'DaemonSet', 'Job', 'CronJob']
+CLUSTER_SCOPED = ['Namespace', 'ClusterRole', 'ClusterRoleBinding', 'CustomResourceDefinition']
+
+def fragment(doc):
+    namespace = doc['metadata'].get('namespace', '')
+    return '%s:%s%s' % (doc['metadata']['name'], doc['kind'].lower(), ':' + namespace if namespace else '')
+
+def chart_for(release, charts):
+    spec = release['spec']
+    if 'chartRef' in spec:
+        oci = charts[spec['chartRef']['name']]['spec']
+        return oci['url'], ['--version=' + str(oci['ref']['tag'])], False
+    return os.path.join(ROOT, spec['chart']['spec']['chart']), [], True
+
+# Everything waits on the namespaces.
+namespaces = []
+
+# Each app's Flux Kustomization gives its path, namespace and deps.
+for overlay in listdir('kubernetes/apps/local', recursive=True):
+    if os.path.basename(overlay) != 'kustomization.yaml' or os.path.basename(os.path.dirname(overlay)) in ['app', 'repos']:
+        continue
+    overlay_docs = decode_yaml_stream(str(kustomize(os.path.dirname(overlay))))
+    namespaces += [d for d in overlay_docs if d['kind'] == 'Namespace']
+    ks = [d for d in overlay_docs if d['kind'] == 'Kustomization'][0]
+    name, spec = ks['metadata']['name'], ks['spec']
+    namespace = spec['targetNamespace']
+    wiring = WIRING.get(name, {})
+    label = 'apps' if 'image' in wiring else 'infra'
+    deps = ['namespaces'] + [d['name'] for d in spec.get('dependsOn', [])] + wiring.get('deps', [])
+
+    docs = decode_yaml_stream(substitute(str(kustomize(os.path.join(ROOT, spec['path']), flags=['--load-restrictor=LoadRestrictionsNone']))))
+    for doc in docs:
+        if doc['kind'] not in CLUSTER_SCOPED:
+            doc['metadata']['namespace'] = namespace
+    releases = [d for d in docs if d['kind'] == 'HelmRelease']
+    charts = {d['metadata']['name']: d for d in docs if d['kind'] == 'OCIRepository'}
+    objects = [d for d in docs if d['kind'] not in ['Namespace', 'HelmRelease', 'OCIRepository']]
+
+    if not releases:
+        k8s_yaml(encode_yaml_stream(objects))
+        workloads = [d['metadata']['name'] for d in objects if d['kind'] in WORKLOADS]
+        others = [fragment(d) for d in objects if d['kind'] not in WORKLOADS + ['Service']]
+        if workloads:
+            primary = name if name in workloads else workloads[0]
+            k8s_resource(primary, objects=others, resource_deps=deps, port_forwards=wiring.get('ports', []), labels=[label])
+            for workload in [w for w in workloads if w != primary]:
+                k8s_resource(workload, resource_deps=WIRING.get(workload, {}).get('deps', []), labels=[label])
+        else:
+            k8s_resource(new_name=name, objects=others, resource_deps=deps, port_forwards=wiring.get('ports', []), labels=[label])
+        continue
+
+    release = releases[0]
+    chart, flags, local_chart = chart_for(release, charts)
+    for key, value in release['spec'].get('values', {}).items():
+        flags.append('--set-json=%s=%s' % (key, str(encode_json(value)).rstrip('\n')))
+    if wiring.get('dev_env'):
+        objects.append({'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {'name': 'harbor-dev-env', 'namespace': namespace}, 'stringData': DOTENV})
+        flags.append('--set-json=podAnnotations={"dev-env":"%s"}' % DOTENV_STAMP)
+    # Anything else in the directory goes first.
+    if objects:
+        k8s_yaml(encode_yaml_stream(objects))
+        k8s_resource(new_name=name + '-objects', objects=[fragment(d) for d in objects], resource_deps=deps, labels=[label])
+        deps = deps + [name + '-objects']
+    image_deps, image_keys = [], []
+    if local_chart and 'image' in wiring:
+        image = wiring['image']
+        docker_build(name, ROOT, dockerfile=os.path.join(ROOT, image['dockerfile']), build_args=image.get('build_args', {}), only=image['only'], ignore=image.get('ignore', []))
+        image_deps, image_keys = [name], [('image.repository', 'image.tag')]
+    helm_resource(
+        name,
+        chart,
+        namespace=namespace,
+        flags=flags,
+        image_deps=image_deps,
+        image_keys=image_keys,
+        resource_deps=deps,
+        deps=[chart] if local_chart else [],
+        port_forwards=wiring.get('ports', []),
+        labels=[label],
+    )
+
+k8s_yaml(encode_yaml_stream(namespaces))
+k8s_resource(new_name='namespaces', objects=[fragment(d) for d in namespaces], labels=['infra'])
+
+# The Service, not a pod: the release also runs workers.
+local_resource(
+    'harbor-server-forward',
+    serve_cmd='while true; do kubectl --context k3d-harbor -n harbor-server port-forward svc/harbor-server 3000:80; sleep 1; done',
+    resource_deps=['harbor-server'],
+    links=[link('http://localhost:3000/status', 'harbor-server')],
+    labels=['apps'],
+)
+
+# Creates the moderation identity unless deploy/local/.env has one.
+local_resource(
+    'harbor-moderation-identity',
+    cmd='[ -n "$HARBOR_MODERATION_IDENTITY" ] || services/moderation/create-local-identity.sh',
+    dir=ROOT,
+    env={
+        'HARBOR_MODERATION_IDENTITY': DOTENV.get('HARBOR_MODERATION_IDENTITY', ''),
+        'ENV_FILE': 'deploy/local/.env',
+        'MODERATION_SERVER': 'http://localhost:3000',
+        'IDENTITY_TOOL': 'kubectl --context k3d-harbor -n harbor-server exec deploy/harbor-server -- /app/polycentric-identity',
+    },
+    resource_deps=['harbor-server'],
+    labels=['setup'],
+)

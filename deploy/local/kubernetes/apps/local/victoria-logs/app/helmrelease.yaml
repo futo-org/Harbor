@@ -1,0 +1,14 @@
+---
+# Stand-in for the FUTO o11y cluster.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: victoria-logs
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: victoria-logs-single
+  values:
+    server:
+      fullnameOverride: victoria-logs

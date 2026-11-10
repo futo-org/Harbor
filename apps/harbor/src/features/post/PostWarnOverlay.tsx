@@ -3,8 +3,8 @@ import Icon from '@/src/common/components/Icon';
 import { Atoms, useTheme } from '@/src/common/theme';
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
 import { labelNames } from '@/src/features/moderation/LabelPill';
-import { useIdentityHandle } from '@/src/features/profile/hooks/useIdentityHandle';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { useLabeler } from '@/src/features/moderation/useLabeler';
+import { useModerationWarningStore } from '@/src/features/moderation/useModerationWarningStore';
 import { Pressable, View } from 'react-native';
 
 /**
@@ -22,17 +22,14 @@ export function PostWarnOverlay({
   onDismiss: () => void;
 }) {
   const { theme } = useTheme();
+  const openWarning = useModerationWarningStore((s) => s.openFor);
 
-  const labeledBy = labels.find((l) => l.labeledBy)?.labeledBy ?? null;
-  const byAuthor = labeledBy !== null && labeledBy === authorIdentity;
-  const labeler = byAuthor ? null : labeledBy;
-  const labelerProfile = useProfile(labeler);
-  const labelerHandle = useIdentityHandle(labeler);
-  const attribution = !labeledBy
+  const labeler = useLabeler(labels, authorIdentity);
+  const attribution = !labeler
     ? null
-    : byAuthor
+    : labeler.isSubject
       ? 'Applied by the author'
-      : `Applied by ${labelerProfile.name ?? labelerHandle.text}`;
+      : `Applied by ${labeler.name}`;
 
   return (
     <View
@@ -71,7 +68,14 @@ export function PostWarnOverlay({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Show"
-        onPress={onDismiss}
+        onPress={() =>
+          openWarning({
+            labels,
+            identity: authorIdentity,
+            subject: 'post',
+            onConfirm: onDismiss,
+          })
+        }
         style={({ pressed }) => [
           Atoms.px_md,
           Atoms.self_stretch,

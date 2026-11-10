@@ -78,6 +78,9 @@ jest.mock('./ProfileShareSheet', () => ({
 jest.mock('./ProfileVerifiedPlatforms', () => ({
   ProfileVerifiedPlatforms: () => null,
 }));
+jest.mock('@/src/features/moderation/ModerationWarningSheet', () => ({
+  ModerationWarningSheet: () => null,
+}));
 jest.mock('@/src/common/components/composites', () => ({
   BackButton: () => null,
 }));

@@ -29,7 +29,7 @@ on:
 
 concurrency:
   group: deploy-verifier-bot-staging
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   CARGO_INCREMENTAL: "0"

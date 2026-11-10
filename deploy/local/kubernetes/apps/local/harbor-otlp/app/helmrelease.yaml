@@ -1,0 +1,26 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: harbor-otlp
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: deploy/charts/harbor-otlp
+      sourceRef:
+        kind: GitRepository
+        name: harbor
+  values:
+    replicaCount: 1
+    env:
+      - name: HARBOR_ALLOW_HOSTS
+        value: http://${HARBOR_OTLP_HOST}
+      - name: HARBOR_QUERY_SERVERS
+        value: http://harbor-server.harbor-server.svc
+      - name: HARBOR_VICTORIA_LOGS_URL
+        value: http://victoria-logs.o11y.svc:9428
+      - name: HARBOR_VICTORIA_TRACES_URL
+        value: http://victoria-traces.o11y.svc:10428
+      - name: RUST_LOG
+        value: info

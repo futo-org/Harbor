@@ -1,9 +1,6 @@
 services:
   postgres:
-    image: harbor-postgres
-    build:
-      context: services/postgres
-      dockerfile: Dockerfile
+    image: postgres:18@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
     environment:
       POSTGRES_PASSWORD: testing
     volumes:
@@ -200,7 +197,7 @@ services:
   victoriatraces:
     profiles:
       - otlp
-    image: victoriametrics/victoria-traces:v0.12.1@sha256:609abddf298c9642496045296f30a3968b5a4b79b678373e2e7ef29c844f5578
+    image: victoriametrics/victoria-traces:v0.13.0@sha256:3018df8f99429d7d3029167ab9f70848bf0a778c31c49dff16c86c7e34759fbd
     command: [ "-storageDataPath=/data" ]
     volumes:
       - victoriatraces-data:/data
