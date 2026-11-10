@@ -1,5 +1,5 @@
-import { assertIdentity } from '../data-store/guards';
-import type { IFileStoreDriver } from '../platform-interfaces';
+import { assertIdentity, isIdentityKey } from '../data-store/guards';
+import type { IFileStoreDriver, IStorageDriver } from '../platform-interfaces';
 import { FileStoreError } from '../platform-interfaces/file-store-driver';
 import type * as Proto from '../proto/v2';
 import { toDigestKey } from '../utils/hex';
@@ -78,7 +78,56 @@ export class FileStore {
   deleteLegacy(digest: Proto.ContentDigest): Promise<boolean> {
     return this.driver.delete(this.legacyPathFor(digest));
   }
+
+  /**
+   * Ensure that we have migrated legacy blobs.
+   * Skips the migration work if a previous v2 migration has completed.
+   * Copies the legacy blobs without deleting them.
+   *
+   * TODO: more sophisticated migration logic once we have more than one.
+   */
+  async migrate({ storage }: FileStoreMigrationOptions): Promise<void> {
+    // Path at which the marker is placed when the migration has completed.
+    const MIGRATION_MARKER = 'migrations/v2';
+
+    // File names written by the legacy store at the root: `{type}_{hex}`.
+    const LEGACY_BLOB_NAME = /^\d+_(?:[0-9a-f]{2})+$/;
+
+    if (await this.driver.has(MIGRATION_MARKER)) return;
+
+    // Find active identity/owner
+    const login = await storage.getActiveLogin();
+    const identity = login?.identity;
+    if (!identity || !isIdentityKey(identity)) {
+      await this.driver.put(MIGRATION_MARKER, new Uint8Array());
+      return;
+    }
+
+    // Find blobs to migrate
+    const entries = (await this.driver.list('')) ?? [];
+    const names = entries
+      .filter((e) => e.kind === 'file' && LEGACY_BLOB_NAME.test(e.name))
+      .map((e) => e.name);
+
+    // Copy blobs
+    for (const name of names) {
+      const bytes = await this.driver.get(name);
+      if (!bytes) continue;
+
+      await this.driver.put(`blobs/${identity}/${name}`, bytes);
+    }
+
+    // Write completion marker
+    await this.driver.put(MIGRATION_MARKER, new Uint8Array());
+  }
 }
+
+export type FileStoreMigrationOptions = {
+  /**
+   * Required so that we can read what the active login is.
+   */
+  storage: IStorageDriver;
+};
 
 const invalidOwner = (message: string) =>
   new FileStoreError('invalid owner', message);
