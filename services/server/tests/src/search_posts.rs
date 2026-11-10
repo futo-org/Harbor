@@ -225,6 +225,43 @@ async fn match_on_identity_prefix() {
 }
 
 #[tokio::test]
+async fn match_on_scientific_notation_identity_prefix() {
+    // Ensure that identity `9e30a460...`, which Postgres' text search
+    // parser would read as the float `9e30` followed by `a460...`, gets
+    // parsed as a full identity string, and not into split lexemes.
+    // This ensures that search for more characters than just the first
+    // four (which are valid scientific notation by themselves, and match
+    // Postgres' default lexeme parsing) match the same identity string.
+    let key = signing_key("match_on_sci_notation_12");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let post_text = format!("Post with identity '{}'", client.identity());
+    client.post_text(&post_text, current_timestamp());
+    client.submit_events().await;
+
+    for n in [4, 7, 8, 10, client.identity().len()] {
+        expect_searched_posts(
+            SearchPostsRequest {
+                query: client.identity()[..n].to_owned(),
+                sort_by: None,
+                page_params: None,
+                omit_labels: Vec::new(),
+            },
+            vec![Post {
+                text: post_text.to_owned(),
+                reply: None,
+                images: vec![],
+                quote: None,
+                links: vec![],
+                labels: vec![],
+                attributed_to: vec![],
+            }],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
 #[ignore = "Fails with Postgres Full Text Search (FTS), but previously worked with pg_search"]
 async fn match_on_mention() {
     let key = signing_key("match_on_mention");
