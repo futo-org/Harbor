@@ -18,31 +18,20 @@ export class DrizzleStorageDriver implements IStorageDriver {
 
   async setActiveLogin(login: LoginId | null): Promise<void> {
     try {
-      // TODO: remove this check and fix conflict behavior once we support
-      // identity switching.
-      // For now, we disallow changing the active identity once it is set.
       if (login) {
-        const rows = await this.db.all(sql`
+        await this.db.run(sql`
           INSERT INTO active_login (id, identity, key_type, public_key)
           VALUES (
             1, ${login.identity}, ${login.publicKey.keyType},
             ${login.publicKey.key}
           )
-          ON CONFLICT DO NOTHING
-          RETURNING id
+          ON CONFLICT (id) DO UPDATE SET
+            identity = excluded.identity,
+            key_type = excluded.key_type,
+            public_key = excluded.public_key
         `);
-
-        if (rows.length === 0) {
-          throw new DatabaseError('Already logged in.');
-        }
       } else {
-        const rows = await this.db.all(sql`
-          SELECT id FROM active_login LIMIT 1
-        `);
-
-        if (rows.length > 0) {
-          throw new DatabaseError('Already logged in.');
-        }
+        await this.db.run(sql`DELETE FROM active_login`);
       }
     } catch (error) {
       throw new DatabaseError(`set active login: ${error}`, error);
