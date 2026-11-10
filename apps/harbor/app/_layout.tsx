@@ -5,6 +5,7 @@ import { installErrorReporter } from '@/src/features/telemetry/lib/error-reporte
 import { installConsoleCapture } from '@/src/features/telemetry/lib/console';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
 import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
+import { ModerationWarningSheet } from '@/src/features/moderation/ModerationWarningSheet';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import {
   PolycentricProvider,
@@ -189,6 +190,7 @@ export default function RootLayout() {
                   <Toaster />
                   <AuthGateSheet />
                   <EmojiPickerSheet />
+                  <ModerationWarningSheet />
                   <AppUpdater />
                 </TrueSheetProvider>
               </PolycentricProvider>
