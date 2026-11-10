@@ -191,6 +191,7 @@ const flags = {
     image_scraper: scraper,
     image_verifier_bot: verifierBot,
     web_image: webE2e,
+    browser_extension: app || jsSdk || rnSdk || rsCore,
     server_integration: serverIntegration,
     moderation_integration: moderationIntegration,
     scraper_integration: scraper,
@@ -267,9 +268,10 @@ flags.build_sdks ||=
   flags.image_verifier_bot ||
   flags.verifier_bot_tests ||
   flags.web_image ||
+  flags.browser_extension ||
   flags.app_typecheck ||
   flags.js_sdk;
-flags.build_rn_sdk ||= flags.web_image;
+flags.build_rn_sdk ||= flags.web_image || flags.browser_extension;
 
 // Outputs -------------------------------------------------------------------
 
