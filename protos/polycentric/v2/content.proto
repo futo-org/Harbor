@@ -4,6 +4,7 @@ package polycentric.v2;
 import "polycentric/v2/common.proto";
 import "polycentric/v2/event_key.proto";
 import "polycentric/v2/identity.proto";
+import "polycentric/v2/media.proto";
 import "polycentric/v2/verifications.proto";
 
 // Content of the event
@@ -120,27 +121,6 @@ message ProfileUpdate {
   optional string description = 4;
   // A domain-based alias (e.g. user@domain.com) the profile claims for itself.
   optional string alias = 5;
-}
-
-// If an uploaded Blob is uploaded to the servers Object Storage and not
-// then attached added to the Content repository, the server will delete from Object Storage.
-message Blob {
-  // Digest/Checksum of the blob
-  ContentDigest digest = 1;
-  string mime_type = 2;
-  int64 size = 3;
-}
-
-// Single image with reference to the blob
-message Image {
-  Blob blob = 1;
-  int32 width = 2;
-  int32 height = 3;
-}
-
-// Collection of different variants of an image
-message ImageSet {
-  repeated Image images = 1;
 }
 
 enum ReportCategory {
