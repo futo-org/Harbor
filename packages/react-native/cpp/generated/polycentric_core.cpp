@@ -3273,6 +3273,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfacesignbytescallbackmethod
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_bytes {
+            RustBuffer buf;
+            ~Free_rs_bytes() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_bytes { rs_bytes };
         auto js_bytes = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_bytes);
         auto js_uniffiFutureCallback = uniffi::polycentric_core::Bridging<UniffiForeignFutureCompleteRustBuffer>::toJs(rt, callInvoker, rs_uniffiFutureCallback);
         auto js_uniffiCallbackData = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiCallbackData);
@@ -3576,6 +3582,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceloggermethod0::vtableca
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_message {
+            RustBuffer buf;
+            ~Free_rs_message() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_message { rs_message };
         auto js_message = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_message);
 
         // Now we are ready to call the callback.
@@ -3871,6 +3883,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceauthtokenprovidermethod
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_serverUrl {
+            RustBuffer buf;
+            ~Free_rs_serverUrl() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_serverUrl { rs_serverUrl };
         auto js_serverUrl = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_serverUrl);
         auto js_uniffiFutureCallback = uniffi::polycentric_core::Bridging<UniffiForeignFutureCompleteRustBuffer>::toJs(rt, callInvoker, rs_uniffiFutureCallback);
         auto js_uniffiCallbackData = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiCallbackData);
@@ -4475,6 +4493,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfacequeryobservermethod0::v
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_result {
+            RustBuffer buf;
+            ~Free_rs_result() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_result { rs_result };
         auto js_result = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_result);
 
         // Now we are ready to call the callback.
@@ -4606,6 +4630,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfacequeryobservermethod1::v
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_message {
+            RustBuffer buf;
+            ~Free_rs_message() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_message { rs_message };
         auto js_message = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_message);
 
         // Now we are ready to call the callback.
@@ -5031,6 +5061,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceobservermethod0::vtable
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_value {
+            RustBuffer buf;
+            ~Free_rs_value() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_value { rs_value };
         auto js_value = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_value);
 
         // Now we are ready to call the callback.
@@ -5162,6 +5198,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceobservermethod1::vtable
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_message {
+            RustBuffer buf;
+            ~Free_rs_message() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_message { rs_message };
         auto js_message = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_message);
 
         // Now we are ready to call the callback.
