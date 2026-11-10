@@ -15,7 +15,11 @@ pub(super) fn add_query(
     claim: VerificationClaim,
     content_id: (DynIden, DynIden),
 ) -> Result<InsertStatement, Status> {
-    let VerificationClaim { schema, fields } = claim;
+    let VerificationClaim {
+        schema,
+        fields,
+        images: _,
+    } = claim;
     let schema = schema.ok_or_else(|| {
         Status::invalid_argument("verification claim missing schema")
     })?;

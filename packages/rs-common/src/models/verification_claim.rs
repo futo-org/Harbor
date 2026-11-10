@@ -4,7 +4,7 @@ use prost::Message;
 
 use crate::models::protos_v2::{VerificationClaim, VerificationSchema};
 use crate::models::validate::{self, SliceConfig, SliceError, StringConfig, StringError, Validate};
-use crate::models::{serialized_verification_schema, verification_schema};
+use crate::models::{image_set, serialized_verification_schema, verification_schema};
 
 impl Validate for VerificationClaim {
     type Error = ValidationError;
@@ -13,7 +13,11 @@ impl Validate for VerificationClaim {
     where
         F: Fn(Self::Error) -> E,
     {
-        let VerificationClaim { schema, fields } = self;
+        let VerificationClaim {
+            schema,
+            fields,
+            images,
+        } = self;
         let start_errors_len = errors.len();
         if let Some(schema) = schema.as_ref() {
             schema.validate_check(errors, |err| map_err(ValidationError::Schema(err)))
@@ -81,6 +85,17 @@ impl Validate for VerificationClaim {
                 }
             }
         }
+        validate::slice2(
+            images,
+            errors,
+            |err| map_err(ValidationError::ImageSet(err)),
+            |index, error| map_err(ValidationError::ImageSetItem { index, error }),
+            SliceConfig {
+                max_len: Some(4),
+                ..Default::default()
+            },
+            |image_set, errors, map_err| image_set.validate_check(errors, map_err),
+        );
     }
 }
 
@@ -113,6 +128,11 @@ pub enum ValidationError {
     FieldsMissing {
         key: String,
     },
+    ImageSet(SliceError),
+    ImageSetItem {
+        index: u32,
+        error: image_set::ValidationError,
+    },
 }
 
 impl fmt::Display for ValidationError {
@@ -136,6 +156,10 @@ impl fmt::Display for ValidationError {
             }
             ValidationError::FieldsMissing { key } => {
                 write!(f, "field required field '{key}' missing")
+            }
+            ValidationError::ImageSet(err) => write!(f, "image set {err}"),
+            ValidationError::ImageSetItem { index, error } => {
+                write!(f, "image set {index}-th {error}")
             }
         }
     }
