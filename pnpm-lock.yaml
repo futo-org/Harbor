@@ -897,7 +897,7 @@ importers:
         version: 14.1.5(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
       html-get:
         specifier: ^2.24.6
-        version: 2.27.17(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
+        version: 2.27.19(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
       metascraper:
         specifier: ^5.50.6
         version: 5.58.5(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
@@ -8698,9 +8698,9 @@ packages:
   html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
 
-  html-get@2.27.17:
-    resolution: {integrity: sha512-CYp/pdWZbfSvJG1uvjYLLutmCledFDDE3we5RJdCbo2pdt40mkq8KgwoUhgKWXhz/7t6wZEgVZeUbPzGGaFGZA==}
-    engines: {node: '>= 22'}
+  html-get@2.27.19:
+    resolution: {integrity: sha512-bxZCB2U7R2JZrgIUj6YZ85p8RgWZDy4BjTfeCCMVoYxvM0UosaOjOv177Mm7LmMubi8c1dybceeLXja7VBkHgg==}
+    engines: {node: '>= 24'}
     hasBin: true
 
   html-minifier-terser@6.1.0:
@@ -12761,9 +12761,9 @@ packages:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
 
-  unpdf@1.9.1:
-    resolution: {integrity: sha512-nO1npM2kNyd4hj1fKzUVU6bvnWjDSxI97eycM/DgzI83dYyW+pNRI9NeMQVEfef8fI3Q06i9lkMeE1HxrQqKoA==}
-    engines: {node: '>=22'}
+  unpdf@2.1.0:
+    resolution: {integrity: sha512-G/Hsrm++g0EoubUhV8TDFItq6oQ+FUu9EMvIRtHUwseKXB0iJoCvaLvBGOpYUBqyvggv/XfxhYYtohL2QpE3xQ==}
+    engines: {node: '>=24'}
     peerDependencies:
       '@napi-rs/canvas': ^0.1.69 || ^1.0.0
     peerDependenciesMeta:
@@ -23018,7 +23018,7 @@ snapshots:
 
   html-escaper@2.0.2: {}
 
-  html-get@2.27.17(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1)):
+  html-get@2.27.19(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1)):
     dependencies:
       '@kikobeats/got': 11.8.9
       '@kikobeats/time-span': 1.0.13
@@ -23039,7 +23039,7 @@ snapshots:
       p-retry: 4.6.2
       tinyspawn: 1.5.9
       top-sites: 1.1.228
-      unpdf: 1.9.1
+      unpdf: 2.1.0
     transitivePeerDependencies:
       - '@napi-rs/canvas'
       - '@noble/hashes'
@@ -27982,7 +27982,7 @@ snapshots:
 
   universalify@2.0.1: {}
 
-  unpdf@1.9.1: {}
+  unpdf@2.1.0: {}
 
   unpipe@1.0.0: {}
 
