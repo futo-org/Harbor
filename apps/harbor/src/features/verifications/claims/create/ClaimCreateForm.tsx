@@ -1,6 +1,16 @@
 import { Text, TextInput } from '@/src/common/components';
+import {
+  AttachImageButtons,
+  AttachmentGrid,
+} from '@/src/common/components/composites';
+import {
+  type ImageAttachment,
+  type ImageAttachmentStatus,
+  useImageAttachments,
+} from '@/src/common/lib/images/useImageAttachments';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { isWeb } from '@/src/common/util/platform';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { ClaimType, FormField } from '../../utils/forms';
 import useCreateClaim, { type ClaimRef } from '../../hooks/useCreateClaim';
@@ -12,6 +22,7 @@ export type ClaimFormState = {
   submit: () => void;
   isValid: boolean;
   isPending: boolean;
+  hasAttachments: boolean;
 };
 
 // Renders the input form for a claim type, collects values, and publishes the
@@ -29,21 +40,62 @@ export function ClaimCreateForm({
   const { theme } = useTheme();
   const { submit, isPending } = useCreateClaim();
   const [values, setValues] = useState<Record<string, string>>({});
+  const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const addAttachments = useCallback((additions: ImageAttachment[]) => {
+    setAttachments((prev) => [...prev, ...additions]);
+  }, []);
+  const setAttachmentStatus = useCallback(
+    (id: string, status: ImageAttachmentStatus) => {
+      setAttachments((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, status } : a)),
+      );
+    },
+    [],
+  );
+  const removeAttachment = useCallback((id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+  const getAttachments = useCallback(() => attachments, [attachments]);
+
+  const {
+    attachDisabled,
+    handleAttachImage,
+    handleCaptureImage,
+    handleRemoveAttachment,
+    resolveImageSets,
+  } = useImageAttachments({
+    getAttachments,
+    addAttachments,
+    setAttachmentStatus,
+    removeAttachment,
+    disabled: isPending,
+    setError,
+  });
+
+  const hasAttachments = attachments.length > 0;
 
   const isValid = useMemo(
     () =>
       claimType.fields.every(
         (f) => !f.required || (values[f.key]?.trim().length ?? 0) > 0,
-      ),
-    [claimType, values],
+      ) &&
+      // Wait for every image upload to finish before allowing submit.
+      attachments.every((a) => a.status === 'ready'),
+    [claimType, values, attachments],
   );
 
   const onSubmit = async () => {
     if (!isValid || isPending) return;
     setError(null);
     try {
-      const ref = await submit({ schema: formToSchema(claimType), values });
+      const images = await resolveImageSets();
+      const ref = await submit({
+        schema: formToSchema(claimType),
+        values,
+        images,
+      });
       onSubmitted(ref);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -64,9 +116,10 @@ export function ClaimCreateForm({
       submit: () => void onSubmitRef.current(),
       isValid,
       isPending,
+      hasAttachments,
     });
     return () => onFormState(null);
-  }, [onFormState, isValid, isPending]);
+  }, [onFormState, isValid, isPending, hasAttachments]);
 
   return (
     <View style={Atoms.gap_md}>
@@ -82,6 +135,19 @@ export function ClaimCreateForm({
           disabled={isPending}
         />
       ))}
+
+      {hasAttachments && (
+        <AttachmentGrid
+          attachments={attachments}
+          disabled={isPending}
+          onRemoveAttachment={handleRemoveAttachment}
+        />
+      )}
+      <AttachImageButtons
+        onAttachImage={() => void handleAttachImage()}
+        onCaptureImage={isWeb ? undefined : () => void handleCaptureImage()}
+        disabled={attachDisabled}
+      />
 
       {error && (
         <Text variant="body" style={{ color: theme.palette.negative_600 }}>
