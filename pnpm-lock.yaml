@@ -894,7 +894,7 @@ importers:
     dependencies:
       browserless:
         specifier: ^14.0.0
-        version: 14.0.33(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
+        version: 14.1.5(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
       html-get:
         specifier: ^2.24.6
         version: 2.27.17(@noble/hashes@2.4.0)(debug@4.4.3(supports-color@8.1.1))
@@ -1979,18 +1979,18 @@ packages:
     resolution: {integrity: sha512-mmMAa1Sfy/2CXQIqKERhgF5zX9R3FQB5Nl5PSOjf1A9/3N6UWbGftfuUomSB3cLpim32oaCcbwQV6ZtqOg8Uhw==}
     engines: {node: '>= 24'}
 
-  '@browserless/goto@14.0.33':
-    resolution: {integrity: sha512-h77oWQcvZq8xN5ATSP8KwewOvf/6BJJVyxkKEutHK/mwi7M12+hA61hWt7JdX/ApOss04vBCSr9c2RvVbMcjHg==}
+  '@browserless/goto@14.1.5':
+    resolution: {integrity: sha512-mtgGyB7LGAa/wdjW5oqmPZ2dCQ+4dwTuM1n1OlLeatWccrJDze4Lvr6yNXfPHDzQklNibr6fZ+F+cFAUMjUqOA==}
     engines: {node: '>= 24'}
     peerDependencies:
       puppeteer: '25'
 
-  '@browserless/pdf@14.0.33':
-    resolution: {integrity: sha512-0/hJFGSBULy1Qfl82BJWGhLSggXUiNuGFtwX2truT2PM/t32/tRIEgc0vHx8qj+x0l4b2hFKdKfbo7oB69KANg==}
+  '@browserless/pdf@14.1.5':
+    resolution: {integrity: sha512-3Tv5+tsPzl8WfoYp0RlrOj8xcTCT8QpmCXcsn8klES8Dj/g8KJAFTc/2ZdG9DI8ieYZT9EvFYTJMFsT8PkAM6A==}
     engines: {node: '>= 24'}
 
-  '@browserless/screenshot@14.0.33':
-    resolution: {integrity: sha512-9M2VVXEbSlYqtCobcFk/2oAxRdLPRzxR9ON1auMMOJaZtVEnigGaAetHtP8Yp8L1rtsTYQ8mQOQqekX2JfWgfQ==}
+  '@browserless/screenshot@14.1.5':
+    resolution: {integrity: sha512-CCczsveXsPwWHgLEFtXRbWTAL+YvG2oK/UDyTqXqgqasGT0e225K9BvpRRnK2snEAr8D7EY7jsdO7ZimvdEg5g==}
     engines: {node: '>= 24'}
 
   '@bsky.app/react-native-uitextview@2.7.1':
@@ -2674,8 +2674,8 @@ packages:
     resolution: {integrity: sha512-xx0W3eav2uW1NRIpuHJWNwLTC15xPNjU4Uxi9NSnd3swYC96BE3vFiT93SD8s24kmAAWNwgZwfZ2fghGZ01Lcw==}
     engines: {node: '>=20.0'}
 
-  '@duckduckgo/autoconsent@16.61.0':
-    resolution: {integrity: sha512-XRHCE4J9Q3tpF6TgbCilKDemBQsAWHBFR9S93UEwCnFA9jP54FTENz8nYez8/zyxh2O3O3r/K/gI8+DwtE4p6Q==}
+  '@duckduckgo/autoconsent@17.3.0':
+    resolution: {integrity: sha512-r5CMwORVH9jPDe0+jxgXWXP909MqvQoF+rACMFrQqZsU1IdSkDbb4nYXMk12h06hReo7bd6d9Ea62Nrx97O3sw==}
 
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
@@ -6227,6 +6227,10 @@ packages:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
 
+  agent-base@9.0.0:
+    resolution: {integrity: sha512-TQf59BsZnytt8GdJKLPfUZ54g/iaUL2OWDSFCCvMOhsHduDQxO8xC4PNeyIkVcA5KwL2phPSv0douC0fgWzmnA==}
+    engines: {node: '>= 20'}
+
   agent-cli-detector@0.1.7:
     resolution: {integrity: sha512-d8OWDVdZMgjhLUT9ZPgSv/BdFFF9pVuscC0JdUSz3bjwE15gcp6u/o0/JooM2yyAWC49KThFhXlgTXRa9B7yng==}
     engines: {node: '>=18.18'}
@@ -6598,8 +6602,8 @@ packages:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
     engines: {node: '>=8'}
 
-  browserless@14.0.33:
-    resolution: {integrity: sha512-pLLA6qw7NQ195YZrIDzALjqGNwn7EwTHl6w8J46ee26jMEqVCSLp69VWsjM036xXJuESZUb6ENqN1ouQFSvO+w==}
+  browserless@14.1.5:
+    resolution: {integrity: sha512-bRJoVzP4xLIO6rcDZGphEZifsA8Ym9+P+huWyD8x6kI7FHSeq6OZ2FjVsSIcY/h0jvRAmUZjidabZDmRI4rZkQ==}
     engines: {node: '>= 24'}
 
   browserslist@4.29.4:
@@ -8918,6 +8922,10 @@ packages:
 
   invariant@2.2.4:
     resolution: {integrity: sha512-phJfQVBuaJM5raOpJjSfkiD6BpbCE4Ns//LaXl6wGYtUBY83nWS6Rf9tXm2e8VaK60JEjYldbPif/A2B1C2gNA==}
+
+  ip-address@10.7.6:
+    resolution: {integrity: sha512-00LYkM6byILa9eQIx6qoaXCM40xTLd56AZ4vyaPW3YTyb49VZYPo5xsiAq4tuQ54GH4R7gVdYScJ1B7B77PuTg==}
+    engines: {node: '>= 12'}
 
   ip-regex@4.3.0:
     resolution: {integrity: sha512-B9ZWJxHHOHUhUjCPrMpLD4xEq35bUTClHM1S6CBU5ixQnkZmwipwgc96vAd7AAGM9TGHvJR+Uss+/Ak6UphK+Q==}
@@ -11312,6 +11320,10 @@ packages:
     resolution: {integrity: sha512-5nnx0yGyVUcY6t9RnWcARWtwT9F1D8O9rt08htPvnd49W1IgZtmLkhu9WfMzQj1cFxjHIO6connUNVW5k7AVyQ==}
     engines: {node: '>= 0.10'}
 
+  proxy-chain@3.0.1:
+    resolution: {integrity: sha512-ZISgL5pwUBXcijycj9ofC8wbJ9GmSEka71kn4dzjphDxfZcecQ6uvU2NWuyQcGdEf0XfscXWDs3KKgjxeQXTZw==}
+    engines: {node: '>=20.11'}
+
   proxy-from-env@2.1.0:
     resolution: {integrity: sha512-cJ+oHTW1VAEa8cJslgmUZrc+sjRKgAKl3Zyse6+PV38hZe/V6Z14TbCuXcan9F9ghlz4QrFr2c92TNF82UkYHA==}
     engines: {node: '>=10'}
@@ -12136,6 +12148,10 @@ packages:
     resolution: {integrity: sha512-vZ7rfeehZui7wQs438JXBckYLkIIdfHOXsaVEUMyS5fHo1483l1bMdo0EDSWYclY0yZKFOipDy4KHuKs6ssvdg==}
     engines: {node: '>=8.0.0'}
 
+  smart-buffer@4.2.0:
+    resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
+    engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
+
   smartquotes@2.3.2:
     resolution: {integrity: sha512-0R6YJ5hLpDH4mZR7N5eZ12oCMLspvGOHL9A9SEm2e3b/CQmQidekW4SWSKEmor/3x6m3NCBBEqLzikcZC9VJNQ==}
     engines: {node: '>=4.0.0'}
@@ -12145,6 +12161,14 @@ packages:
 
   sockjs@0.3.24:
     resolution: {integrity: sha512-GJgLTZ7vYb/JtPSSZ10hsOYIvEYsjbNU+zPdIHcUaWVNUEPivzxku31865sSSud0Da0W4lEeOPlmw93zLQchuQ==}
+
+  socks-proxy-agent@10.1.0:
+    resolution: {integrity: sha512-WlMj/67cEJ6MDI1OcsnjuYKDNDoyPCCYZ249kuuXPiMDw9F8PXkVaQ7YWu3siTydfQ/4BEZcvGzu+aYvz7dDCQ==}
+    engines: {node: '>= 20'}
+
+  socks@2.8.10:
+    resolution: {integrity: sha512-e0VyvkVTwVYViNovRkZ9aodhxVlyoMn7eJhVUPxZ+eK9P/7CBkxvvsBOHqFPEH416726W8tLXXXjKwqgTErrCQ==}
+    engines: {node: '>= 10.0.0', npm: '>= 3.0.0'}
 
   sort-css-media-queries@2.2.0:
     resolution: {integrity: sha512-0xtkGhWCC9MGt/EzgnvbbbKhqWjl1+/rncmhTh5qCpbYguXh6S/qwePfv/JQ8jePXXmqingylxoC49pCkSPIbA==}
@@ -14475,10 +14499,10 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@browserless/goto@14.0.33(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)':
+  '@browserless/goto@14.1.5(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)':
     dependencies:
       '@browserless/devices': 14.0.22(supports-color@8.1.1)
-      '@duckduckgo/autoconsent': 16.61.0
+      '@duckduckgo/autoconsent': 17.3.0
       '@ghostery/adblocker-puppeteer': 2.20.1(puppeteer@25.16.0)
       '@kikobeats/got': 11.8.9
       debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
@@ -14492,10 +14516,10 @@ snapshots:
       - debug
       - supports-color
 
-  '@browserless/pdf@14.0.33(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)':
+  '@browserless/pdf@14.1.5(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)':
     dependencies:
-      '@browserless/goto': 14.0.33(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
-      '@browserless/screenshot': 14.0.33(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
+      '@browserless/goto': 14.1.5(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
+      '@browserless/screenshot': 14.1.5(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
       '@kikobeats/time-span': 1.0.13
       debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
       p-reflect: 2.1.0
@@ -14506,10 +14530,10 @@ snapshots:
       - puppeteer
       - supports-color
 
-  '@browserless/screenshot@14.0.33(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)':
+  '@browserless/screenshot@14.1.5(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)':
     dependencies:
       '@browserless/errors': 14.0.22(debug@4.4.3(supports-color@8.1.1))
-      '@browserless/goto': 14.0.33(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
+      '@browserless/goto': 14.1.5(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
       '@kikobeats/content-type': 1.0.4
       '@kikobeats/got': 11.8.9
       '@kikobeats/time-span': 1.0.13
@@ -16054,7 +16078,7 @@ snapshots:
       - uglify-js
       - webpack-cli
 
-  '@duckduckgo/autoconsent@16.61.0': {}
+  '@duckduckgo/autoconsent@17.3.0': {}
 
   '@emnapi/core@1.10.0':
     dependencies:
@@ -20041,6 +20065,8 @@ snapshots:
 
   agent-base@7.1.4: {}
 
+  agent-base@9.0.0: {}
+
   agent-cli-detector@0.1.7: {}
 
   aggregate-error@3.1.0:
@@ -20587,17 +20613,18 @@ snapshots:
     dependencies:
       fill-range: 7.1.1
 
-  browserless@14.0.33(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1):
+  browserless@14.1.5(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1):
     dependencies:
       '@browserless/errors': 14.0.22(debug@4.4.3(supports-color@8.1.1))
-      '@browserless/goto': 14.0.33(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
-      '@browserless/pdf': 14.0.33(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
-      '@browserless/screenshot': 14.0.33(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
+      '@browserless/goto': 14.1.5(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
+      '@browserless/pdf': 14.1.5(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
+      '@browserless/screenshot': 14.1.5(@types/node@26.6.6)(debug@4.4.3(supports-color@8.1.1))(puppeteer@25.16.0)(supports-color@8.1.1)
       debug-logfmt: 1.4.15(debug@4.4.3(supports-color@8.1.1))
       kill-process-group: 1.0.16
       p-reflect: 2.1.0
       p-retry: 4.6.2
       p-timeout: 4.1.0
+      proxy-chain: 3.0.1(supports-color@8.1.1)
       require-one-of: 1.0.25(supports-color@8.1.1)
       superlock: 1.4.11
     transitivePeerDependencies:
@@ -23247,6 +23274,8 @@ snapshots:
   invariant@2.2.4:
     dependencies:
       loose-envify: 1.4.0
+
+  ip-address@10.7.6: {}
 
   ip-regex@4.3.0: {}
 
@@ -26304,6 +26333,14 @@ snapshots:
       forwarded: 0.2.0
       ipaddr.js: 1.9.1
 
+  proxy-chain@3.0.1(supports-color@8.1.1):
+    dependencies:
+      socks: 2.8.10
+      socks-proxy-agent: 10.1.0(supports-color@8.1.1)
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - supports-color
+
   proxy-from-env@2.1.0: {}
 
   punycode2@1.0.1: {}
@@ -27385,6 +27422,8 @@ snapshots:
 
   slugify@1.6.9: {}
 
+  smart-buffer@4.2.0: {}
+
   smartquotes@2.3.2: {}
 
   snake-case@3.0.4:
@@ -27397,6 +27436,19 @@ snapshots:
       faye-websocket: 0.11.4
       uuid: 14.0.2
       websocket-driver: 0.7.5
+
+  socks-proxy-agent@10.1.0(supports-color@8.1.1):
+    dependencies:
+      agent-base: 9.0.0
+      debug: 4.4.3(supports-color@8.1.1)
+      socks: 2.8.10
+    transitivePeerDependencies:
+      - supports-color
+
+  socks@2.8.10:
+    dependencies:
+      ip-address: 10.7.6
+      smart-buffer: 4.2.0
 
   sort-css-media-queries@2.2.0: {}
 
