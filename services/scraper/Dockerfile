@@ -10,7 +10,7 @@ ENV PATH="$PNPM_HOME:$PATH"
 # the feed is unreachable or returns garbage, so the egress set can't silently
 # ship empty/weak. The reserved-IP list is RFC-stable, so refreshes are rare:
 # bump BOGONS_REV (or build with --no-cache) to bust the layer cache and re-pull.
-FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3 AS bogons
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS bogons
 ARG BOGONS_REV=2026-06-22
 RUN echo "bogon snapshot rev: ${BOGONS_REV}" \
   && apt-get update \
