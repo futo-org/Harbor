@@ -1,7 +1,6 @@
 import { toast } from '@/src/common/components/toast/useToast';
 import { confirm } from '@/src/common/lib/dialogs';
-import { IMAGE_PICKER_DEFAULT_OPTIONS } from '@/src/common/lib/images/loadBoundedImage';
-import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
+import { useImageAttachments } from '@/src/common/lib/images/useImageAttachments';
 import {
   eventKeyId,
   hexToBytes,
@@ -32,41 +31,18 @@ import {
   FetchMode,
   Query,
 } from '@polycentric/react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Keyboard } from 'react-native';
 import { useComposerStore } from './useComposerStore';
 import { spliceMentions } from '../utils/spliceMentions';
 import { useLinkPreview } from './useLinkPreview';
-import {
-  ImageImportError,
-  formatImageImportErrorOrFallback,
-} from '@/src/common/lib/images/ImageImportError';
+import { formatImageImportErrorOrFallback } from '@/src/common/lib/images/ImageImportError';
 import {
   decodePostBundle,
   getKeyFingerprint,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 
-export const MAX_ATTACHMENTS = 4;
 export const MAX_POST_LENGTH = 2000;
-
-/** Longest edge lengths for post image variants. */
-const POST_VARIANT_SIZES = [512, 1280];
-
-const POST_IMAGE_OPTIONS = {
-  mode: 'fit',
-  sizes: POST_VARIANT_SIZES,
-} as const;
-
-/**
- * In-flight (or completed) image processing+upload promises, keyed by
- * attachment id. We start the work as soon as an image is attached so the
- * blobs are usually on the server by the time the user hits Post; `handlePost`
- * then just awaits these instead of starting from scratch. Module-level so it
- * survives the hook remounting (sheet composer vs. full-screen tab).
- */
-const uploadCache = new Map<string, Promise<v2.ImageSet>>();
 
 export type UseComposerArgs = {
   /** TODO: should be v2 `SignedEvent` */
@@ -82,6 +58,9 @@ export type UseComposerArgs = {
    */
   onClose: () => void;
 };
+
+// Stable, and current right after `resetAll()` (a share replacing a draft).
+const getComposerAttachments = () => useComposerStore.getState().attachments;
 
 /**
  * All composer state + behavior for `ComposeSheet`, which owns the
@@ -127,6 +106,22 @@ export function useComposer({
   const setError = useComposerStore((s) => s.setError);
   const resetComposer = useComposerStore((s) => s.reset);
 
+  const {
+    attachDisabled,
+    handleAttachImage,
+    handleCaptureImage,
+    handleRemoveAttachment,
+    resolveImageSets,
+    ingestAssets,
+  } = useImageAttachments({
+    getAttachments: getComposerAttachments,
+    addAttachments,
+    setAttachmentStatus,
+    removeAttachment,
+    disabled: submitting,
+    setError,
+  });
+
   // Live link preview: spotting a newly typed url, unfurling it, and reusing
   // the resolved Link at post time. See `useLinkPreview` for the state machine.
   const {
@@ -148,122 +143,20 @@ export function useComposer({
     text.length <= MAX_POST_LENGTH &&
     !submitting &&
     !linkPreviewLoading;
-  const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
 
   const [posted, setPosted] = useState(false);
   useDiscardDraftConfirmation(hasDraft && !posted, isReply);
 
-  // Reset composer state and drop any in-flight/cached uploads so nothing
-  // carries over to the next open.
+  // Reset composer state so nothing carries over to the next open.
   const resetAll = useCallback(() => {
-    uploadCache.clear();
     resetLinkPreview();
     resetComposer();
   }, [resetComposer, resetLinkPreview]);
-
-  // Begin processing + uploading an attachment immediately, caching the
-  // promise by id so `handlePost` can await the already-running work (it waits
-  // here if the user hits Post before processing finishes). The attachment's
-  // `status` drives the thumbnail's loading/error overlay.
-  const startUpload = useCallback(
-    (id: string, uri: string) => {
-      const work = processAndUploadImage(client, uri, POST_IMAGE_OPTIONS);
-      uploadCache.set(id, work);
-      work.then(
-        () => setAttachmentStatus(id, 'ready'),
-        (err) => {
-          // Drop the failed promise so the post path can retry from scratch.
-          uploadCache.delete(id);
-          if (err instanceof ImageImportError && err.stage === 'upload') {
-            // A failed upload may be transient: keep the attachment, flag the
-            // thumbnail, and let `handlePost` retry it. Rarely reached: the
-            // client's `uploadBlob` swallows server errors and the blob is
-            // re-sent on the next sync.
-            setAttachmentStatus(id, 'error');
-          } else {
-            // The image can't be processed or saved locally: drop it and say
-            // why.
-            removeAttachment(id);
-            setError(
-              formatImageImportErrorOrFallback(
-                err,
-                "Couldn't attach this image.",
-              ),
-            );
-          }
-        },
-      );
-    },
-    [client, setAttachmentStatus, removeAttachment, setError],
-  );
 
   const handleClose = useCallback(() => {
     if (submitting) return;
     onClose();
   }, [submitting, onClose]);
-
-  // Turn picked/captured/shared assets into attachments: show the thumbnails
-  const ingestAssets = useCallback(
-    (assets: (ImagePicker.ImagePickerAsset | PendingShareImage)[]) => {
-      // From the store: a shared image arrives right after the draft is reset
-      const numAttachments =
-        MAX_ATTACHMENTS - useComposerStore.getState().attachments.length;
-      if (numAttachments <= 0) return;
-      // Picking again clears any prior error (permission, failed upload).
-      setError(null);
-      const additions = assets.slice(0, numAttachments).map((asset, i) => ({
-        id: `${Date.now()}-${i}-${asset.uri}`,
-        uri: asset.uri,
-        width: asset.width,
-        height: asset.height,
-        status: 'processing' as const,
-      }));
-      addAttachments(additions);
-      additions.forEach((a) => {
-        startUpload(a.id, a.uri);
-      });
-    },
-    [addAttachments, startUpload, setError],
-  );
-
-  // Pick existing photo(s) from the media library.
-  const handleAttachImage = useCallback(async () => {
-    if (attachDisabled) return;
-    // Dismiss the keyboard first so TrueSheet resets its footer keyboard
-    // offset; otherwise the footer keeps the keyboard gap after the picker
-    // closes (the keyboard is gone, but the inset/offset lingers).
-    Keyboard.dismiss();
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsMultipleSelection: true,
-      selectionLimit: MAX_ATTACHMENTS - attachments.length,
-      ...IMAGE_PICKER_DEFAULT_OPTIONS,
-    });
-    if (result.canceled || !result.assets?.length) return;
-    ingestAssets(result.assets);
-  }, [attachDisabled, attachments.length, ingestAssets]);
-
-  // Capture a new photo with the camera (mobile only).
-  const handleCaptureImage = useCallback(async () => {
-    if (attachDisabled) return;
-    Keyboard.dismiss();
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setError('Camera permission is required to take a photo.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync();
-    if (result.canceled || !result.assets?.length) return;
-    ingestAssets(result.assets);
-  }, [attachDisabled, ingestAssets, setError]);
-
-  const handleRemoveAttachment = useCallback(
-    (id: string) => {
-      removeAttachment(id);
-      uploadCache.delete(id);
-      setError(null);
-    },
-    [removeAttachment, setError],
-  );
 
   // Editing the draft (text or images) clears any prior post error.
   const handleTextChange = useCallback(
@@ -300,20 +193,7 @@ export function useComposer({
     setError(null);
     setSubmitting(true);
     try {
-      // Attachments started processing/uploading when they were added, so
-      // every blob body is usually already on the server. Await those cached
-      // promises; fall back to a fresh run if one is missing or previously
-      // failed (the catch in `startUpload` evicts failures).
-      const imageSets: v2.ImageSet[] =
-        attachments.length > 0
-          ? await Promise.all(
-              attachments.map(
-                (a) =>
-                  uploadCache.get(a.id) ??
-                  processAndUploadImage(client, a.uri, POST_IMAGE_OPTIONS),
-              ),
-            )
-          : [];
+      const imageSets = await resolveImageSets();
 
       // Embed the targeted url's preview in the signed post (best-effort —
       // null yields no card).
@@ -404,6 +284,7 @@ export function useComposer({
     replyTo,
     replyToEventKey,
     replyRootEventKey,
+    resolveImageSets,
     resolveLinkForPost,
     setSubmitting,
     setError,

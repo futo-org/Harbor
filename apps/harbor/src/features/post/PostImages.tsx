@@ -7,8 +7,8 @@ import { Atoms } from '@/src/common/theme';
 import {
   MAX_ASPECT_RATIO,
   MIN_ASPECT_RATIO,
-} from '@/src/features/composer/utils/attachmentLayout';
-import { MAX_ATTACHMENTS } from '@/src/features/composer/hooks/useComposer';
+} from '@/src/common/lib/images/attachmentLayout';
+import { MAX_ATTACHMENTS } from '@/src/common/lib/images/useImageAttachments';
 import { openPostImage } from '@/src/features/post/PostImageViewerScreen';
 import { memo, useCallback, useMemo } from 'react';
 import { Image } from '@/src/common/components/Image';

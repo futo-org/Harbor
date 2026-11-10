@@ -1,3 +1,5 @@
+export * from './AttachImageButtons';
+export * from './AttachmentGrid';
 export * from './BackButton';
 export * from './CharCount';
 export * from './ClaimChip';

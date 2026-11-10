@@ -5,7 +5,7 @@ import { Routes } from '@/src/common/constants/routes';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { openWithReturn } from '@/src/common/lib/navigation/openWithReturn';
-import { MAX_ATTACHMENTS } from '@/src/features/composer/hooks/useComposer';
+import { MAX_ATTACHMENTS } from '@/src/common/lib/images/useImageAttachments';
 import { usePostById } from './hooks/usePostById';
 
 /**

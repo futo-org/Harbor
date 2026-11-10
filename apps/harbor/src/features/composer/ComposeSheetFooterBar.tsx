@@ -1,10 +1,10 @@
-import Icon from '@/src/common/components/Icon';
+import { AttachImageButtons } from '@/src/common/components/composites/AttachImageButtons';
 import { CharCount } from '@/src/common/components/composites/CharCount';
 import { Kbd, Text } from '@/src/common/components/primitives';
 import { useKeyboardOffset } from '@/src/common/lib/animation';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { hasPointerHover, isApplePlatform } from '@/src/common/util/platform';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -49,42 +49,13 @@ export function ComposeSheetFooterBar({
     ),
   }));
 
-  const attachButton = onAttachImage ? (
-    <Pressable
-      onPress={onAttachImage}
-      disabled={attachDisabled}
-      hitSlop={10}
-      accessibilityLabel="Attach image"
-      style={[
-        Atoms.p_xs,
-        Atoms.rounded_md,
-        { opacity: attachDisabled ? 0.4 : 1 },
-      ]}
-    >
-      <Icon name="image" size={22} color="neutral_700" />
-    </Pressable>
-  ) : null;
-
-  const captureButton = onCaptureImage ? (
-    <Pressable
-      onPress={onCaptureImage}
-      disabled={attachDisabled}
-      hitSlop={10}
-      accessibilityLabel="Take photo"
-      style={[
-        Atoms.p_xs,
-        Atoms.rounded_md,
-        { opacity: attachDisabled ? 0.4 : 1 },
-      ]}
-    >
-      <Icon name="camera" size={22} color="neutral_700" />
-    </Pressable>
-  ) : null;
-
   const leading = (
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
-      {attachButton}
-      {captureButton}
+      <AttachImageButtons
+        onAttachImage={onAttachImage}
+        onCaptureImage={onCaptureImage}
+        disabled={attachDisabled}
+      />
       <CharCount count={charCount} max={MAX_POST_LENGTH} />
     </View>
   );
