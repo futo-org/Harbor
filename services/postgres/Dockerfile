@@ -1,6 +1,6 @@
 # NOTE: match these two with the Postgres image (major version & Debian version)
 # and Harbor infra.
-FROM ghcr.io/cloudnative-pg/pgvector:0.8.7-18-trixie AS pg_vector
+FROM ghcr.io/cloudnative-pg/pgvector:0.8.7-18-trixie@sha256:77dd77f7a4d10f55d83cd71d9f707cbbf79293fe857ccce4a19c113d538a2fa9 AS pg_vector
 FROM paradedb/paradedb-extension:0.26.4-18-trixie@sha256:ed7fc01654c309433238e4db15fbc7613b349c12663b03bc2d70e1b97bf0ef6b AS pg_search
 
 # Official Postgres image.
