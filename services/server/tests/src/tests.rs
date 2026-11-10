@@ -565,6 +565,7 @@ impl TestClient {
         let claim = VerificationClaim {
             schema: Some(schema),
             fields,
+            images: Vec::new(),
         };
         self.verification_claim(claim, created_at)
     }
@@ -1231,6 +1232,7 @@ pub fn make_verification_claim_bundle(
                 digest: Some(schema_digest),
             }),
             fields,
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);

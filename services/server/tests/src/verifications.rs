@@ -67,6 +67,53 @@ async fn list_verification_claims_one() {
     );
 }
 
+#[tokio::test]
+async fn verification_claim_images_are_requested_as_blobs() {
+    let mut client = TestClient::new().await;
+    let body = format!("claim-image-{}", random_string()).into_bytes();
+    let blob = Blob {
+        digest: Some(ContentDigest {
+            r#type: ContentDigestType::Sha256 as i32,
+            value: sha256(&body),
+        }),
+        mime_type: "image/jpeg".to_owned(),
+        size: body.len() as i64,
+    };
+    let schema_bytes = prost::Message::encode_to_vec(&VerificationSchema {
+        name: "Freeform".to_owned(),
+        ..Default::default()
+    });
+    let claim = VerificationClaim {
+        schema: Some(SerializedVerificationSchema {
+            digest: Some(ContentDigest {
+                r#type: ContentDigestType::Sha256 as i32,
+                value: sha256(&schema_bytes),
+            }),
+            schema_bytes,
+        }),
+        fields: HashMap::new(),
+        images: vec![ImageSet {
+            images: vec![Image {
+                blob: Some(blob.clone()),
+                width: 100,
+                height: 100,
+            }],
+        }],
+    };
+    client.verification_claim(claim, current_timestamp());
+    let event_bundles = client.take_pending_events();
+
+    let response = client
+        .event_sync_client()
+        .put_events(PutEventsRequest { event_bundles })
+        .await
+        .expect("put_events failed")
+        .into_inner();
+
+    assert!(response.errors.is_empty(), "errors: {:?}", response.errors);
+    assert_eq!(response.requested_blobs, vec![blob]);
+}
+
 #[derive(Debug)]
 struct ExpectVerificationClaim<'a> {
     claim: ExpectEvent<'a>,

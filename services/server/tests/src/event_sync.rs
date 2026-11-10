@@ -5188,6 +5188,7 @@ async fn validation_content_content_body_verification_claim_collection() {
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5232,6 +5233,7 @@ async fn validation_content_content_body_verification_claim_schema_too_large() {
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5276,6 +5278,7 @@ async fn validation_content_content_body_verification_claim_schema_invalid() {
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5333,6 +5336,7 @@ async fn validation_content_content_body_verification_claim_digest_invalid() {
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5390,6 +5394,7 @@ async fn validation_content_content_body_verification_claim_digest_mismatch() {
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5443,6 +5448,7 @@ async fn validation_content_content_body_verification_claim_digest_missing() {
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5501,6 +5507,7 @@ async fn validation_content_content_body_verification_claim_schema_name_too_long
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5559,6 +5566,7 @@ async fn validation_content_content_body_verification_claim_schema_description_t
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5620,6 +5628,7 @@ async fn validation_content_content_body_verification_claim_schema_too_many_fiel
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5678,6 +5687,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_key_em
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5736,6 +5746,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_key_to
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5794,6 +5805,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_kind_v
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5852,6 +5864,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_kind_u
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5910,6 +5923,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_format
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -5968,6 +5982,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_descri
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6026,6 +6041,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_regex_
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6095,6 +6111,7 @@ async fn validation_content_content_body_verification_claim_schema_fields_duplic
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6130,6 +6147,7 @@ async fn validation_content_content_body_verification_claim_schema_missing() {
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: None,
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6191,6 +6209,7 @@ async fn validation_content_content_body_verification_claim_fields_key_empty() {
                 f.insert("".to_owned(), Vec::new());
                 f
             },
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6253,6 +6272,7 @@ async fn validation_content_content_body_verification_claim_fields_key_too_long(
                 f.insert("k".repeat(201), Vec::new());
                 f
             },
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6315,6 +6335,7 @@ async fn validation_content_content_body_verification_claim_fields_value_too_lon
                 f.insert("key1".to_owned(), vec![255; 10001]);
                 f
             },
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6375,6 +6396,7 @@ async fn validation_content_content_body_verification_claim_fields_too_many() {
                 .into_iter()
                 .map(|n| (format!("key{n}"), Vec::new()))
                 .collect(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6437,6 +6459,7 @@ async fn validation_content_content_body_verification_claim_fields_key_unknown()
                 f.insert("unknown".to_owned(), vec![0x0]);
                 f
             },
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6499,6 +6522,7 @@ async fn validation_content_content_body_verification_claim_fields_value_not_val
                 f.insert("key1".to_owned(), vec![0x80, 0xBF]);
                 f
             },
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6561,6 +6585,7 @@ async fn validation_content_content_body_verification_claim_fields_value_string_
                 f.insert("key1".to_owned(), vec![b'A'; 2]);
                 f
             },
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6623,6 +6648,7 @@ async fn validation_content_content_body_verification_claim_fields_value_invalid
                 f.insert("key1".to_owned(), vec![b'A']);
                 f
             },
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6685,6 +6711,7 @@ async fn validation_content_content_body_verification_claim_fields_value_invalid
                 f.insert("key1".to_owned(), vec![12]);
                 f
             },
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6747,6 +6774,7 @@ async fn validation_content_content_body_verification_claim_fields_value_bytes_t
                 f.insert("key1".to_owned(), vec![1, 2, 3]);
                 f
             },
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -6805,6 +6833,7 @@ async fn validation_content_content_body_verification_claim_fields_missing_requi
         content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
             schema: Some(serialized_schema),
             fields: HashMap::new(),
+            images: Vec::new(),
         })),
     };
     let (content_bytes, digest) = content_with_digest(content);
@@ -7322,4 +7351,126 @@ fn expect_errors(
             ),
         }
     }
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_imageset_too_many()
+{
+    let mut client = TestClient::new().await;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: Vec::new(),
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+            images: {
+                let mut i = Vec::new();
+                i.resize(5, ImageSet { images: Vec::new() });
+                i
+            },
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        client.previous_signature(),
+        client.previous_root(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim image set is too long (5), maximum is 4",
+            ),
+        }],
+    );
+}
+
+#[tokio::test]
+async fn validation_content_content_body_verification_claim_imageset_images_too_many()
+ {
+    let mut client = TestClient::new().await;
+
+    let schema = VerificationSchema {
+        name: "Testing Verification".to_owned(),
+        description: "Testing verification".to_owned(),
+        fields: Vec::new(),
+    };
+    let schema_bytes = schema.encode_to_vec();
+    let digest = ContentDigest {
+        r#type: ContentDigestType::Sha256.into(),
+        value: sha256(&schema_bytes),
+    };
+    let serialized_schema = SerializedVerificationSchema {
+        schema_bytes,
+        digest: Some(digest),
+    };
+    let content = Content {
+        content_body: Some(ContentBody::VerificationClaim(VerificationClaim {
+            schema: Some(serialized_schema),
+            fields: HashMap::new(),
+            images: vec![ImageSet {
+                images: {
+                    let mut i = Vec::new();
+                    i.resize(
+                        11,
+                        Image {
+                            blob: Some(Blob {
+                                digest: Some(ContentDigest {
+                                    r#type: ContentDigestType::Sha256 as i32,
+                                    value: sha256(&[]),
+                                }),
+                                mime_type: "image/png".to_owned(),
+                                size: 1,
+                            }),
+                            width: 1,
+                            height: 1,
+                        },
+                    );
+                    i
+                },
+            }],
+        })),
+    };
+    let (content_bytes, digest) = content_with_digest(content);
+    let event = client.make_event(
+        COLLECTION_VERIFICATIONS,
+        client.previous_signature(),
+        client.previous_root(),
+        digest,
+        0,
+    );
+    client.push_event_bundle2(event, content_bytes);
+
+    let result = client.try_submit_events().await;
+    expect_errors(
+        result,
+        &[],
+        &[ExpectError {
+            bundle_index: 1,
+            kind: ExpectErrorKind::MsgContains(
+                "content content body verification claim image set 0-th images is too long (11), maximum is 10",
+            ),
+        }],
+    );
 }
