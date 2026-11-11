@@ -128,7 +128,7 @@ async fn run_server() {
     let filestore = ContentFilestore::new(filestore_cfg).await;
     let server_cfg = server_config();
 
-    let cron = cron::start_jobs(db.clone());
+    let cron = cron::start_jobs(db.clone(), filestore.clone());
 
     let grpc_router = build_grpc_router(
         db.clone(),

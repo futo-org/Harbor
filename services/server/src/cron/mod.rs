@@ -11,17 +11,23 @@ use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
 use crate::db::{Connection, DbTx};
+use crate::service::content::content_filestore::ContentFilestore;
 
+mod blob_prune;
 mod gravity;
 
 /// Start all cron jobs.
-pub(crate) fn start_jobs(db: DatabaseConnection) -> Cron {
+pub(crate) fn start_jobs(
+    db: DatabaseConnection,
+    filestore: ContentFilestore,
+) -> Cron {
     let cron = Cron {
         tasks: TaskTracker::new(),
         cancel: CancellationToken::new(),
     };
 
     gravity::update(&cron, db.clone());
+    blob_prune::run(&cron, db.clone(), filestore);
 
     cron
 }
