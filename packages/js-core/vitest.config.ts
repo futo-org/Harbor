@@ -5,7 +5,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@polycentric/rs-core-wasm/generated': path.resolve(
-        __dirname,
+        import.meta.dirname,
         'src/__mocks__/rs-core-wasm-generated.ts',
       ),
     },

@@ -24,9 +24,7 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc -b && webpack",
-    "dev": "tsc -b && webpack --watch",
-    "test": "vitest",
-    "test:run": "vitest run"
+    "dev": "tsc -b && webpack --watch"
   },
   "dependencies": {
     "@polycentric/js-core": "workspace:*",
@@ -37,11 +35,8 @@
   },
   "devDependencies": {
     "@polycentric/tsconfig": "workspace:*",
-    "@vitest/browser": "^5.0.0",
     "globals": "^17.4.0",
-    "playwright": "^1.52.0",
     "ts-loader": "^9.5.2",
-    "vitest": "^5.0.0",
     "webpack": "^5.100.1",
     "webpack-cli": "^7.0.0",
     "typescript": "catalog:"
