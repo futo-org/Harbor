@@ -54,9 +54,9 @@ impl MigrationTrait for Migration {
                 || setweight(array_to_tsvector(ARRAY[profile.identity]), 'A')
                 || create_tsvector('simple', COALESCE(profile.name, ''), 'B')
             FROM events
-            LEFT JOIN content ON events.content_digest_type = content.digest_type
+            INNER JOIN content ON events.content_digest_type = content.digest_type
               AND events.content_digest_bytes = content.digest_bytes
-            LEFT JOIN content_profile_update ON content.id = content_profile_update.content_id
+            INNER JOIN content_profile_update ON content.id = content_profile_update.content_id
             WHERE events.id = profile.event_id
         ").await?;
         tx.execute_unprepared("CREATE INDEX profile_search_data ON profile USING gin (search_data)").await?;
