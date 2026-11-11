@@ -6,8 +6,8 @@ Browser extension for Chrome, Brave, Firefox and Safari, built with
 Clicking the toolbar icon opens Harbor in the browser's sidebar. Safari has no
 sidebar API for extensions, so there it opens as a popup.
 
-The extension has no UI of its own. It frames the Harbor app's `/anywhere`
-route (`apps/harbor/src/features/anywhere`) and tells it which page the active
+The extension has no UI of its own. It frames the Harbor app's `/browser-extension`
+route (`apps/harbor/src/features/browser-extension`) and tells it which page the active
 tab is on.
 
 ## Develop

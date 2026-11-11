@@ -10,11 +10,11 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 
 /** Posted to the browser extension once this screen can receive the page. */
-const READY_MESSAGE = 'harbor-anywhere:ready';
+const READY_MESSAGE = 'harbor-browser-extension:ready';
 /** Posted by the browser extension when the active tab's page changes. */
-const PAGE_URL_MESSAGE = 'harbor-anywhere:url';
+const PAGE_URL_MESSAGE = 'harbor-browser-extension:url';
 
-export default function AnywhereScreen() {
+export default function BrowserExtensionScreen() {
   usePageTitle('Anywhere');
   const { theme } = useTheme();
   const { url } = useLocalSearchParams<{ url?: string }>();
