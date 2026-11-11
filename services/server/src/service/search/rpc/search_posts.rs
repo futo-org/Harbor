@@ -28,8 +28,7 @@ pub async fn handle(
     req: SearchPostsRequest,
 ) -> Result<SearchPostsResponse, Status> {
     let sort_by = req.sort_by();
-
-    let common = rpc::Params::from_req_params(req.query, &req.page_params)?;
+    let common = rpc::Params::from_req_params(&req.query, &req.page_params)?;
     let params = Params {
         common,
         sort_by,

@@ -81,6 +81,8 @@ mod m20261030_000001_list_events_index;
 mod m20261105_000001_setup_pg_search;
 mod m20261105_000002_search_posts_using_pg_search;
 mod m20261106_000001_drop_pg_search;
+mod m20261110_000001_customer_tsvector_parser;
+mod m20261110_000002_update_search_data;
 
 mod old_entity;
 
@@ -171,6 +173,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20261105_000001_setup_pg_search::Migration),
             Box::new(m20261105_000002_search_posts_using_pg_search::Migration),
             Box::new(m20261106_000001_drop_pg_search::Migration),
+            Box::new(m20261110_000001_customer_tsvector_parser::Migration),
+            Box::new(m20261110_000002_update_search_data::Migration),
         ]
     }
 }
