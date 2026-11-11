@@ -73,6 +73,12 @@ export interface IEventRepository {
    * Useful for syncing.
    */
   getHeads(owner: string): Promise<EventKey[]>;
+
+  /**
+   * Get all identity and profile events for each local identity (owner).
+   * Useful for hydrating rs-core for the identity switcher.
+   */
+  getProfiles(): Promise<EventRow[]>;
 }
 
 /**

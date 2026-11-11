@@ -5,7 +5,11 @@ import type {
   IEventRepository,
   KeyType,
 } from '@polycentric/js-core';
-import { EventRepositoryError, v2 as Proto } from '@polycentric/js-core';
+import {
+  COLLECTION,
+  EventRepositoryError,
+  v2 as Proto,
+} from '@polycentric/js-core';
 import { IndexedDBDatabase } from './database';
 
 /**
@@ -37,6 +41,7 @@ export class IndexedDBEventRepository implements IEventRepository {
   private readonly database: IndexedDBDatabase;
 
   private static readonly STORE_NAME = 'events';
+  private static readonly COLLECTION_INDEX = 'idx_events_collection';
 
   constructor(database: IndexedDBDatabase) {
     this.database = database;
@@ -186,6 +191,29 @@ export class IndexedDBEventRepository implements IEventRepository {
       return heads;
     } catch (error) {
       throw toEventRepositoryError('get heads', error);
+    }
+  }
+
+  async getProfiles(): Promise<EventRow[]> {
+    try {
+      const index = this.store('readonly').index(
+        IndexedDBEventRepository.COLLECTION_INDEX,
+      );
+
+      const groups = await Promise.all(
+        [COLLECTION.IDENTITY, COLLECTION.PROFILE].map((collection) =>
+          IndexedDBDatabase.requestAsPromise<PersistedEvent[]>(
+            index.getAll(collection),
+          ),
+        ),
+      );
+
+      return groups
+        .flat()
+        .filter((entry) => entry.owner === entry.eventKeyIdentity)
+        .map(toEventRow);
+    } catch (error) {
+      throw toEventRepositoryError('get profiles', error);
     }
   }
 

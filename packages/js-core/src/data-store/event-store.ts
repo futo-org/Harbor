@@ -111,6 +111,14 @@ export class EventStore {
   }
 
   /**
+   * Get all identity and profile events for each local identity (owner).
+   * Useful for hydrating rs-core for the identity switcher.
+   */
+  async getProfiles(): Promise<EventRow[]> {
+    return await this.repository.getProfiles();
+  }
+
+  /**
    * Check that the content matches our stored digest and store it.
    * We assume that the stored event is immutable.
    */
