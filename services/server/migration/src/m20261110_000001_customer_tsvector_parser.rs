@@ -88,8 +88,15 @@ RETURN (
   )
   -- After stemming remove the starting hashtag so that searching \"hashtag\"
   -- matches \"#hashtag\".
-  SELECT array_agg(ltrim(transformed.term, '#'))
-  FROM transformed
+  -- Turn empty strings into NULL (which are removed by array_agg) to avoid
+  -- issues with array_to_tsvector.
+  SELECT array_agg(transformed.term)
+  FROM (
+    SELECT ltrim(transformed.term, '#')
+    FROM transformed
+  ) AS transformed(term)
+  WHERE transformed.term IS NOT NULL
+    AND transformed.term != ''
 );
 ";
 
