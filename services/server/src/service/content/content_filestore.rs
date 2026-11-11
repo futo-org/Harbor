@@ -1,4 +1,4 @@
 pub use common_object_store::{
-    ObjectStore as ContentFilestore,
+    DateTime, ObjectStore as ContentFilestore,
     ObjectStoreConfig as ContentFilestoreConfig,
 };

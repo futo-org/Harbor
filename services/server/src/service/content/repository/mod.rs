@@ -2,6 +2,17 @@
 //! `Mutation::save_content_child` dispatches each `ContentBody` variant
 //! to its own submodule, which owns that table's insert logic.
 
+use entity::{content, content_blob, content_image, event};
+use sea_orm::sea_query::{
+    CommonTableExpression, DynIden, Expr, ExprTrait, SelectStatement,
+    SubQueryStatement, UnionType, WithClause,
+};
+use sea_orm::{ColumnTrait, DbErr};
+use tonic::Status;
+
+use crate::db::{Connection, DbConn};
+use crate::service::proto::{EventKey, PublicKey, content::ContentBody};
+
 mod attributed_to_reaction;
 mod block;
 mod delete;
@@ -16,10 +27,6 @@ mod repost;
 mod verification_claim;
 mod verification_target;
 mod verification_verify;
-
-use crate::service::proto::{EventKey, PublicKey, content::ContentBody};
-use sea_orm::sea_query::{DynIden, SubQueryStatement, WithClause};
-use tonic::Status;
 
 pub struct Mutation;
 
@@ -59,6 +66,85 @@ impl Mutation {
             ContentBody::VerificationTarget(target) => return verification_target::add_query(with, target, content_id).map(|q| q.map(Into::into)),
             ContentBody::VerificationVerify(verify) => verification_verify::add_query(verify, content_id)?.into(),
         }))
+    }
+}
+
+pub struct Query;
+
+impl Query {
+    /// Check if an non-deleted event exists that references a blob with the
+    /// given digest type and bytes.
+    pub(crate) async fn blob_has_event(
+        db: &mut DbConn,
+        digest_type: i32,
+        digest_bytes: &[u8],
+    ) -> Result<bool, DbErr> {
+        let mut select_content_image_id = SelectStatement::new();
+        select_content_image_id
+            .column(content_image::Column::ContentId)
+            .from(content_image::Entity)
+            .and_where(
+                Expr::col(
+                    content_image::Column::BlobDigestType.as_column_ref(),
+                )
+                .eq(Expr::Value(digest_type.into())),
+            )
+            .and_where(
+                Expr::col(
+                    content_image::Column::BlobDigestBytes.as_column_ref(),
+                )
+                .eq(Expr::Value(digest_bytes.into())),
+            );
+
+        let mut select_content_blob_id = SelectStatement::new();
+        select_content_blob_id
+            .column(content_blob::Column::ContentId)
+            .from(content_blob::Entity)
+            .and_where(
+                Expr::col(content_blob::Column::DigestType.as_column_ref())
+                    .eq(Expr::cust("$1")),
+            )
+            .and_where(
+                Expr::col(content_blob::Column::DigestBytes.as_column_ref())
+                    .eq(Expr::cust("$2")),
+            )
+            .union(UnionType::All, select_content_image_id);
+
+        let mut with = WithClause::new();
+        let mut cte = CommonTableExpression::new();
+        const BLOB_CONTENT: &str = "blob_content";
+        cte.table_name(BLOB_CONTENT).query(select_content_blob_id);
+        with.cte(cte);
+
+        let mut query = SelectStatement::new();
+        query
+            .expr_as(Expr::Constant(true.into()), "has_event")
+            .from(BLOB_CONTENT)
+            .left_join(
+                content::Entity,
+                Expr::col(content::Column::Id.as_column_ref()).eq(Expr::col((
+                    BLOB_CONTENT,
+                    content_image::Column::ContentId,
+                ))),
+            )
+            .left_join(
+                event::Entity,
+                Expr::col(event::Column::ContentDigestType.as_column_ref())
+                    .eq(Expr::col(content::Column::DigestType))
+                    .and(
+                        Expr::col(
+                            event::Column::ContentDigestBytes.as_column_ref(),
+                        )
+                        .eq(Expr::col(content::Column::DigestBytes)),
+                    ),
+            );
+        let query = query.with(with);
+
+        let result = db.query_one(&query).await?;
+        let Some(row) = result else {
+            return Ok(false);
+        };
+        Ok(row.try_get_by(0)?)
     }
 }
 

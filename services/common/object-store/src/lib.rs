@@ -15,6 +15,9 @@ use aws_sdk_s3::types::Object;
 use futures_util::stream::Stream;
 use polycentric_common::models::protos_v2::ContentDigest;
 
+// Types reexported to make the users not have to import the AWS S3 sdk.
+pub use aws_sdk_s3::primitives::DateTime;
+
 fn err_chain<E: Error>(e: &E) -> String {
     let mut out = e.to_string();
     let mut src = e.source();
@@ -169,7 +172,7 @@ impl ObjectStore {
 
     /// List objects in the bucket.
     #[tracing::instrument(name = "object_store.list_objects", skip_all)]
-    pub async fn list_objects(&self) -> impl Stream<Item = io::Result<Object>> {
+    pub fn list_objects(&self) -> impl Stream<Item = io::Result<Object>> + Unpin {
         let mut stream = self
             .client
             .list_objects_v2()
