@@ -1,7 +1,7 @@
 {
   "name": "polycentric",
   "author": "FUTO",
-  "packageManager": "pnpm@12.16.1",
+  "packageManager": "pnpm@12.18.0",
   "scripts": {
     "dev": "turbo run dev --concurrency=20",
     "build": "turbo run build",
@@ -23,7 +23,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.4",
+    "@biomejs/biome": "2.6.6",
     "@types/react": "~19.3.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",

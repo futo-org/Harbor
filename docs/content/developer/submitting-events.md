@@ -1,4 +1,5 @@
 ---
+
 title: Submitting Events
 sidebar_label: Submitting Events
 sidebar_position: 5
@@ -60,14 +61,14 @@ message EventKey {
 
 The `collection` is a number for the stream the event is connected with.
 Polycentric currently reserver a number of these:
-* `1`: identity
-* `2`: feed
-* `3`: profile
-* `4`: interactions (likes etc)
-* `5`: social graph (follows)
-* `6`: reports
-* `7`: labels
-* `8`: verifications
+- `1`: identity
+- `2`: feed
+- `3`: profile
+- `4`: interactions (likes etc)
+- `5`: social graph (follows)
+- `6`: reports
+- `7`: labels
+- `8`: verifications
 
 The `identity` is the identity key (a SHA256 hash of the initial
 [`Identity`](/docs/protocol/data-model#identity) content). `signed_by` contains
@@ -122,7 +123,7 @@ Now we've created the event, let's make it useful with some content.
 ## Serialized Content
 
 The
-[`SerializedContent`](http://localhost:3001/docs/protocol/data-model#content-1)
+[`SerializedContent`](../protocol/data-model.md#content-1)
 type is defined as the following:
 
 ```protobuf

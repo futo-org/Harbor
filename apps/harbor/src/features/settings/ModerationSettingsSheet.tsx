@@ -74,15 +74,24 @@ function ModerationLabelRow({
   );
 }
 
-export default function ModerationSettingsSheet() {
+/** A route sheet by default; pass `open` to drive it inline. */
+export default function ModerationSettingsSheet({
+  open,
+  onClose,
+}: {
+  open?: boolean;
+  onClose?: () => void;
+} = {}) {
   const entries = getModerationLabelEntries();
+  const close = onClose ?? (() => router.canGoBack() && router.back());
+  const mode:
+    | { open?: undefined; onClose?: undefined }
+    | { open: boolean; onClose?: () => void } =
+    open === undefined ? {} : { open, onClose };
 
   return (
-    <Sheet detents={[0.5, 1]} dismissible>
-      <Sheet.Header
-        title="Content Moderation"
-        onClose={() => router.canGoBack() && router.back()}
-      />
+    <Sheet detents={[0.5, 1]} dismissible {...mode}>
+      <Sheet.Header title="Content Moderation" onClose={close} />
       <Sheet.Content style={[Atoms.p_0]}>
         {entries.map((entry, index) => (
           <ModerationLabelRow

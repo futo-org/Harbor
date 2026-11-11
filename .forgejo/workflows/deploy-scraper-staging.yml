@@ -22,7 +22,7 @@ on:
 
 concurrency:
   group: deploy-scraper-staging
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:

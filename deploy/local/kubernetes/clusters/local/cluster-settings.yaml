@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-settings
+  namespace: flux-system
+data:
+  HARBOR_SERVER_HOST: localhost:3000
+  HARBOR_SERVER_ALLOW_HOSTS: http://localhost:3000
+  HARBOR_OTLP_HOST: localhost:3003

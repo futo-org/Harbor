@@ -8,7 +8,7 @@ and the CI toolchain images (`images/`) all live here.
 
 | Workflow | Runs on | Does |
 |---|---|---|
-| `pr.yml` | pull requests | lint, package, image and docs builds, unit, integration and e2e tests, docs preview |
+| `pr.yml` | pull requests | lint, package, image, browser extension and docs builds, unit, integration and e2e tests, docs preview |
 | `pr-app.yml` | `PR / Build App` label on a PR, or `PR / Build App / Android APK`, `PR / Build App / Android AAB`, `PR / Build App / iOS` for one target | staging EAS builds |
 | `pr-docs-cleanup.yml` | PR closed | remove the docs preview |
 | `deploy-<component>-staging.yml` | push to `develop` touching the component, manual run | staging deploy |
@@ -38,7 +38,7 @@ Rules:
 ## Deploys
 
 Components: `server`, `moderation`, `push-notifications`, `grayjay-migrator`,
-`scraper`, `verifier-bot`, `web`, `app`, `docs`.
+`scraper`, `verifier-bot`, `web`, `app`, `browser-extension`, `docs`.
 
 `deploy-<component>-staging.yml` runs on a push to `develop` that touches the
 component's paths (or the workflow and the actions it uses), and manually. A
@@ -49,7 +49,12 @@ the component's chart as
 `<next patch>-<ref>.g<sha>` with the commit as `appVersion`, then moves the
 image and chart `staging` tags. helm-controller watches the chart tag. `web`
 also uploads its bundle to the static bucket. `app` builds the staging apps on
-EAS and submits them; `ios_e2e` runs the iOS suite on the store build. `docs`
+EAS and submits them; `ios_e2e` runs the iOS suite on the store build.
+`browser-extension` builds the staging extension for Chrome, Edge, Firefox and
+Safari with the staging services packaged in, and keeps the store zips as the
+`browser-extension-staging` artifact; the mac runner wraps the Safari build in
+an unsigned macOS app (`browser-extension-safari-staging`). Nothing is
+submitted to a store. `docs`
 deploys to Cloudflare Pages.
 
 `deploy-<component>-production.yml` moves the `staging` image and chart tags
@@ -57,6 +62,8 @@ to `production`, so production gets what staging runs. `sha` deploys that
 commit instead; its image and chart must exist, and a commit has a chart only
 for the components deployed at it. `deploy-app-production.yml` builds the
 production apps from `develop`'s head and submits them.
+`deploy-browser-extension-production.yml` builds the production extension from
+`develop`'s head (`browser-extension-production` artifact).
 
 `node .forgejo/scripts/deployed.mjs` prints the commit each chart's `staging`
 and `production` tag pins, no login needed.

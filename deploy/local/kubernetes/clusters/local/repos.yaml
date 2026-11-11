@@ -1,0 +1,14 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cluster-repos
+  namespace: flux-system
+spec:
+  interval: 1h
+  path: ./deploy/local/kubernetes/apps/local/repos
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: harbor

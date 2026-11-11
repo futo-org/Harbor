@@ -20,41 +20,6 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: paradedb; Type: SCHEMA; Schema: -; Owner: -
---
-
-CREATE SCHEMA paradedb;
-
-
---
--- Name: vector; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
-
-
---
--- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
-
-
---
--- Name: pg_search; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS pg_search WITH SCHEMA paradedb;
-
-
---
--- Name: EXTENSION pg_search; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION pg_search IS 'pg_search: One Postgres for your application data, full-text search, vector retrieval, and aggregations';
-
-
---
 -- Name: tsvector_agg(tsvector); Type: AGGREGATE; Schema: public; Owner: -
 --
 
@@ -71,7 +36,7 @@ CREATE AGGREGATE public.tsvector_agg(tsvector) (
 
 CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char") RETURNS tsvector
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
+    RETURN ((setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(array_to_tsvector(ARRAY(SELECT DISTINCT lower(m.m[1]) AS lower FROM regexp_matches(COALESCE(create_tsvector.text, ''::text), '([0-9a-fA-F]{64})'::text, 'g'::text) m(m))), weight)) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
 
 
 --
