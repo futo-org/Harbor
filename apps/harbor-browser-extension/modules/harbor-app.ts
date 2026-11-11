@@ -3,13 +3,13 @@ import { join, relative, resolve } from 'node:path';
 import { defineWxtModule } from 'wxt/modules';
 
 // Packages the Harbor web export (apps/harbor/dist) into the extension, with
-// its /anywhere page as anywhere.html. Dev frames the Expo dev server instead.
+// its /browser-extension page as browser-extension.html. Dev frames the Expo dev server instead.
 export default defineWxtModule((wxt) => {
   if (wxt.config.command === 'serve') return;
 
   const exportDir = resolve(wxt.config.root, '../harbor/dist');
   const clientDir = join(exportDir, 'client');
-  const pagePath = join(exportDir, 'server/anywhere.html');
+  const pagePath = join(exportDir, 'server/browser-extension.html');
 
   wxt.hooks.hook('build:publicAssets', (_, files) => {
     if (!existsSync(pagePath)) {
@@ -52,23 +52,26 @@ export default defineWxtModule((wxt) => {
       /<script(\s[^>]*)?>([\s\S]*?)<\/script>/g,
       (script, attributes = '', contents) => {
         if (/\ssrc=/.test(attributes)) return script;
-        const name = `anywhere-inline-${inlineScripts++}.js`;
+        const name = `browser-extension-inline-${inlineScripts++}.js`;
         files.push({ relativeDest: name, contents });
         return `<script${attributes} src="/${name}"></script>`;
       },
     );
 
-    // The router reads the path, which would otherwise be /anywhere.html.
+    // The router reads the path, which would otherwise be /browser-extension.html.
     files.push({
-      relativeDest: 'anywhere-route.js',
+      relativeDest: 'browser-extension-route.js',
       contents:
-        "history.replaceState(null, '', '/anywhere' + location.search);",
+        "history.replaceState(null, '', '/browser-extension' + location.search);",
     });
     files.push({
-      relativeDest: 'anywhere.html',
+      relativeDest: 'browser-extension.html',
       contents: page
         .replaceAll('"/_expo/', '"/expo/')
-        .replace('<head>', '<head><script src="/anywhere-route.js"></script>'),
+        .replace(
+          '<head>',
+          '<head><script src="/browser-extension-route.js"></script>',
+        ),
     });
   });
 });
