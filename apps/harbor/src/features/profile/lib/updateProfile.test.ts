@@ -21,9 +21,12 @@ type BuildArg = {
   };
 };
 
+const IDENTITY = 'ab'.repeat(32);
+
 function makeClient() {
   const build = jest.fn((content: BuildArg) => content);
   const client = {
+    activeIdentityKey: IDENTITY,
     contentManager: { build },
     createEvent: jest.fn(
       async (_args: { collection: number; content: BuildArg }) => ({}),
@@ -107,8 +110,16 @@ describe('updateProfile', () => {
       images: variants.map((v) => v.meta),
     });
     expect(client.fileStore.put).toHaveBeenCalledTimes(2);
-    expect(client.fileStore.put).toHaveBeenCalledWith('d1', variants[0].bytes);
-    expect(client.fileStore.put).toHaveBeenCalledWith('d2', variants[1].bytes);
+    expect(client.fileStore.put).toHaveBeenCalledWith(
+      IDENTITY,
+      'd1',
+      variants[0].bytes,
+    );
+    expect(client.fileStore.put).toHaveBeenCalledWith(
+      IDENTITY,
+      'd2',
+      variants[1].bytes,
+    );
   });
 
   it('creates a profile event without syncing', async () => {

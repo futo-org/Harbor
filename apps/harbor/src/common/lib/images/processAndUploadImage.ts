@@ -112,11 +112,18 @@ export async function processAndUploadImage(
   uri: string,
   options: ProcessAndUploadOptions = {},
 ): Promise<v2.ImageSet> {
+  const identity = client.activeIdentityKey;
+  if (!identity) {
+    throw new ImageImportError('persist', new Error('No active identity'));
+  }
+
   const variants = await encodeImageVariants(uri, options);
 
   await runStage('persist', () =>
     Promise.all(
-      variants.map(({ digest, bytes }) => client.fileStore.put(digest, bytes)),
+      variants.map(({ digest, bytes }) =>
+        client.fileStore.put(identity, digest, bytes),
+      ),
     ),
   );
 
