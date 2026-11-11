@@ -12,9 +12,6 @@ pub(crate) mod fns;
 pub(crate) use sea_orm::ConnectionTrait as Connection;
 
 /// Database connection.
-///
-/// Prefer to use [`RwDbConn`] for queries that write and [`RoDbConn`] for
-/// queries that only read.
 // NOTE: we should only use the connection for one request, so this mutex should
 // never be contented, but its required for the ConnectionTrait implementation.
 pub(crate) struct DbConn(DbInner);
