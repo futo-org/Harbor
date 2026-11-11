@@ -153,6 +153,16 @@ async fn match_on_hashtags() {
         .await;
     }
 }
+#[tokio::test]
+async fn empty_hashtag() {
+    let key = signing_key("match_on_hashtags");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let post_text = "#";
+    client.post_text(&post_text, current_timestamp());
+    // This shouldn't fail.
+    client.submit_events().await;
+}
 
 #[tokio::test]
 async fn match_on_random_hashtags() {
