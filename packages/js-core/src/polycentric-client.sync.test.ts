@@ -1824,7 +1824,11 @@ const queriesOf = (
 ): any[] =>
   core.fetchQuery.mock.calls.filter(([, query]: any) => query instanceof type);
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+/**
+ * Waits for pending promise chains to finish.
+ * This may need updating if actual async work is done.
+ */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('PolycentricClient live sync', () => {
   const seeded = makeStream({
@@ -1855,12 +1859,12 @@ describe('PolycentricClient live sync', () => {
       events: seeded,
     });
 
+    const pulled = new Promise((resolve) => client.events.onPulled(resolve));
     const stop = client.startLiveSync();
     emitHeads([keyOf(remote)]);
+    await pulled;
 
-    await vi.waitFor(async () =>
-      expect((await stored(remote))?.signedEvent).toEqual(remote),
-    );
+    expect((await stored(remote))?.signedEvent).toEqual(remote);
     expect(queriesOf(core, Query.ListEvents)[0][1].inner[0].heads).toEqual([
       expect.objectContaining({ sequence: 1n }),
     ]);
@@ -1878,13 +1882,11 @@ describe('PolycentricClient live sync', () => {
       signer: signerA,
       events: [...seeded, remote],
     });
-    const pulled = vi.fn();
-    client.events.onPulled(pulled);
-
+    const pulled = new Promise((resolve) => client.events.onPulled(resolve));
     const stop = client.startLiveSync();
     emitHeads([keyOf(remote)]);
 
-    await vi.waitFor(() => expect(pulled).toHaveBeenCalledWith(identityA.key));
+    await expect(pulled).resolves.toBe(identityA.key);
     stop();
   });
 
@@ -1901,6 +1903,9 @@ describe('PolycentricClient live sync', () => {
     emitHeads([keyOf(remote)]);
     await settle();
 
+    // Ensure the heads check ran before `settle()` returned
+    // and that we didn't query for events
+    expect(core.localHeads).toHaveBeenCalled();
     expect(queriesOf(core, Query.ListEvents)).toHaveLength(0);
     stop();
   });
@@ -1921,13 +1926,12 @@ describe('PolycentricClient live sync', () => {
       events: seeded,
     });
 
+    const pulled = new Promise((resolve) => client.events.onPulled(resolve));
     const stop = client.startLiveSync();
     emitHeads([keyOf(remote)]);
+    await pulled;
 
-    await vi.waitFor(async () =>
-      expect((await stored(remote))?.signedEvent).toEqual(remote),
-    );
-
+    expect((await stored(remote))?.signedEvent).toEqual(remote);
     expect(queriesOf(core, Query.ListEvents)[0][1].inner[0].heads).toEqual([
       expect.objectContaining({ sequence: 1n }),
     ]);
@@ -1951,13 +1955,12 @@ describe('PolycentricClient live sync', () => {
       events: [...seeded, remote],
     });
 
+    const pulled = new Promise((resolve) => client.events.onPulled(resolve));
     const stop = client.startLiveSync();
     emitHeads([keyOf(remote)]);
+    await pulled;
 
-    await vi.waitFor(() =>
-      expect(queriesOf(core, Query.ListEvents)).toHaveLength(1),
-    );
-
+    expect(queriesOf(core, Query.ListEvents)).toHaveLength(1);
     expect(queriesOf(core, Query.ListEvents)[0][1].inner[0].heads).toEqual([
       expect.objectContaining({ sequence: 1n }),
     ]);
