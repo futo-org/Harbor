@@ -3,6 +3,7 @@
 
 use std::error::Error;
 use std::fmt::Write;
+use std::task::Poll;
 use std::{env, io};
 
 use aws_config::{BehaviorVersion, Region};
@@ -10,6 +11,8 @@ use aws_sdk_s3::Client;
 use aws_sdk_s3::config::Credentials;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStream;
+use aws_sdk_s3::types::Object;
+use futures_util::stream::Stream;
 use polycentric_common::models::protos_v2::ContentDigest;
 
 fn err_chain<E: Error>(e: &E) -> String {
@@ -162,6 +165,35 @@ impl ObjectStore {
             .into_bytes()
             .to_vec();
         Ok(bytes)
+    }
+
+    /// List objects in the bucket.
+    #[tracing::instrument(name = "object_store.list_objects", skip_all)]
+    pub async fn list_objects(&self) -> impl Stream<Item = io::Result<Object>> {
+        let mut stream = self
+            .client
+            .list_objects_v2()
+            .bucket(&self.bucket)
+            .into_paginator()
+            .send();
+        let mut page_objects = Vec::new();
+        futures_util::stream::poll_fn(move |ctx| {
+            loop {
+                if let Some(object) = page_objects.pop() {
+                    return Poll::Ready(Some(Ok(object)));
+                }
+
+                let page = match stream.poll_next(ctx) {
+                    Poll::Ready(Some(Ok(page))) => page,
+                    Poll::Ready(Some(Err(err))) => return Poll::Ready(Some(Err(sdk_err(err)))),
+                    Poll::Ready(None) => return Poll::Ready(None),
+                    Poll::Pending => return Poll::Pending,
+                };
+                page_objects = page.contents.unwrap_or_default();
+                page_objects.reverse(); // We pop from the end, so reverse the order.
+                // Return the objects on the next iteration.
+            }
+        })
     }
 }
 

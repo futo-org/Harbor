@@ -8,3 +8,4 @@ tracing.workspace = true
 polycentric-common.workspace = true
 aws-config = { version = "1", default-features = false, features = ["behavior-version-latest", "rt-tokio", "default-https-client"] }
 aws-sdk-s3 = { version = "1", default-features = false, features = ["behavior-version-latest", "rt-tokio", "default-https-client"] }
+futures-util = { version = "0.3.34", default-features = false }
