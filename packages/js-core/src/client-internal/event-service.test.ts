@@ -1,5 +1,5 @@
 /**
- * Tests the basic functionality of the events service.
+ * Tests the basic functionality of the event service.
  */
 
 import { describe, expect, it, vi } from 'vitest';
