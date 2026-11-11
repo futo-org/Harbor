@@ -1,7 +1,3 @@
-/**
- * Tests the IndexedDB storage driver in a real browser.
- */
-
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IndexedDBDatabase } from './database';
 import { DATABASE_VERSION } from './migrations';
