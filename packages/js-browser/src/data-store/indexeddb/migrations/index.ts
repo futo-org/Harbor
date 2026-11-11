@@ -3,6 +3,7 @@ import { m000003_20261020_initial } from './m000003_20261020_initial';
 import { m000004_20261021_drop_event_acks } from './m000004_20261021_drop_event_acks';
 import { m000005_20261021_login_repository } from './m000005_20261021_login_repository';
 import { m000006_20261102_event_repository } from './m000006_20261102_event_repository';
+import { m000007_20261111_events_collection_index } from './m000007_20261111_events_collection_index';
 
 /**
  * A single schema migration for the indexedDB database
@@ -27,6 +28,7 @@ const MIGRATIONS: readonly IndexedDBMigration[] = [
   m000004_20261021_drop_event_acks,
   m000005_20261021_login_repository,
   m000006_20261102_event_repository,
+  m000007_20261111_events_collection_index,
 ];
 
 // Sanity check the migration versions
