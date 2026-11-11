@@ -455,13 +455,6 @@ class FakeCore(
 
     override fun localHeads(identity: String): ByteArray = error("not used by sync tests")
 
-    override fun processImageToJpeg(
-        image: ByteArray,
-        width: UInt,
-        height: UInt,
-        mode: String,
-    ): org.futo.polycentric.ffi.ProcessedImage = error("not used by sync tests")
-
     override suspend fun putEvents(
         serverUrl: String,
         eventBundlesBytes: ByteArray,

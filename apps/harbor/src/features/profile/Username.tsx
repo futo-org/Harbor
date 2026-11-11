@@ -26,7 +26,14 @@ export function Username({
 
   // The label pill stands in for the name until revealed, then follows it.
   if (obscured) {
-    return <LabelPill labels={warnLabels} action="Show" onPress={reveal} />;
+    return (
+      <LabelPill
+        labels={warnLabels}
+        identity={identity}
+        action="Show"
+        onPress={reveal}
+      />
+    );
   }
 
   return (

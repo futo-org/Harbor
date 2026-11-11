@@ -1749,56 +1749,6 @@ const FfiConverterTypeListVerificationVerifiesArgs = (() => {
 })();
 
 /**
- * JPEG bytes plus the exact output dimensions of the resized image.
- */
-export type ProcessedImage = {
-    bytes: ArrayBuffer,
-    width: number,
-    height: number
-}
-
-/**
- * Generated factory for {@link ProcessedImage} record objects.
- */
-export const ProcessedImage = (() => {
-    const defaults = () => ({
-    });
-    const create = (() => {
-        return uniffiCreateRecord<ProcessedImage, ReturnType<typeof defaults>>(defaults);
-    })();
-    return Object.freeze({
-        create,
-        new: create,
-        defaults: () => Object.freeze(defaults()) as Partial<ProcessedImage>,
-    });
-})();
-
-const FfiConverterTypeProcessedImage = (() => {
-    type TypeName = ProcessedImage;
-    class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-        readFromCursor(c: Cursor): TypeName {
-            return {
-                bytes: FfiConverterArrayBuffer.readFromCursor(c), 
-                width: FfiConverterUInt32.readFromCursor(c), 
-                height: FfiConverterUInt32.readFromCursor(c)
-            };
-        }
-        writeIntoCursor(value: TypeName, c: Cursor): void {
-            FfiConverterArrayBuffer.writeIntoCursor(value.bytes, c);
-            FfiConverterUInt32.writeIntoCursor(value.width, c);
-            FfiConverterUInt32.writeIntoCursor(value.height, c);
-        }
-        allocationSize(value: TypeName): number {
-            return FfiConverterArrayBuffer.allocationSize(value.bytes) +
-             FfiConverterUInt32.allocationSize(value.width) +
-             FfiConverterUInt32.allocationSize(value.height);
-            
-        }
-    };
-    return new FFIConverter();
-})();
-
-/**
  * The outcome of pushing events to a server, including any warnings or errors that returned from
  * the server's validation.
  */
@@ -2484,7 +2434,6 @@ export enum CoreError_Tags {
     Encode = "Encode",
     Crypto = "Crypto",
     Store = "Store",
-    Image = "Image",
     Network = "Network",
     Callback = "Callback",
     InvalidInput = "InvalidInput"
@@ -2586,7 +2535,7 @@ export const CoreError = (() => {
             );
         }
     }
-    class Image extends UniffiError {
+    class Network extends UniffiError {
         /**
          * @private
          * This field is private and should not be used.
@@ -2598,30 +2547,6 @@ export const CoreError = (() => {
          */
         readonly [variantOrdinalSymbol] = 5;
 
-        readonly tag = CoreError_Tags.Image;
-
-        constructor(message: string) {
-            super("CoreError", "Image", message);
-        }
-
-        static instanceOf(e: any): e is Image {
-            return (
-                instanceOf(e) && (e as any)[variantOrdinalSymbol] === 5
-            );
-        }
-    }
-    class Network extends UniffiError {
-        /**
-         * @private
-         * This field is private and should not be used.
-         */
-        readonly [uniffiTypeNameSymbol]: string = "CoreError";
-        /**
-         * @private
-         * This field is private and should not be used.
-         */
-        readonly [variantOrdinalSymbol] = 6;
-
         readonly tag = CoreError_Tags.Network;
 
         constructor(message: string) {
@@ -2630,7 +2555,7 @@ export const CoreError = (() => {
 
         static instanceOf(e: any): e is Network {
             return (
-                instanceOf(e) && (e as any)[variantOrdinalSymbol] === 6
+                instanceOf(e) && (e as any)[variantOrdinalSymbol] === 5
             );
         }
     }
@@ -2644,7 +2569,7 @@ export const CoreError = (() => {
          * @private
          * This field is private and should not be used.
          */
-        readonly [variantOrdinalSymbol] = 7;
+        readonly [variantOrdinalSymbol] = 6;
 
         readonly tag = CoreError_Tags.Callback;
 
@@ -2654,7 +2579,7 @@ export const CoreError = (() => {
 
         static instanceOf(e: any): e is Callback {
             return (
-                instanceOf(e) && (e as any)[variantOrdinalSymbol] === 7
+                instanceOf(e) && (e as any)[variantOrdinalSymbol] === 6
             );
         }
     }
@@ -2668,7 +2593,7 @@ export const CoreError = (() => {
          * @private
          * This field is private and should not be used.
          */
-        readonly [variantOrdinalSymbol] = 8;
+        readonly [variantOrdinalSymbol] = 7;
 
         readonly tag = CoreError_Tags.InvalidInput;
 
@@ -2678,7 +2603,7 @@ export const CoreError = (() => {
 
         static instanceOf(e: any): e is InvalidInput {
             return (
-                instanceOf(e) && (e as any)[variantOrdinalSymbol] === 8
+                instanceOf(e) && (e as any)[variantOrdinalSymbol] === 7
             );
         }
     }
@@ -2692,7 +2617,6 @@ export const CoreError = (() => {
         Encode,
         Crypto,
         Store,
-        Image,
         Network,
         Callback,
         InvalidInput,
@@ -2702,7 +2626,7 @@ export const CoreError = (() => {
 
 // Union type for CoreError error type.
 export type CoreError = InstanceType<
-    typeof CoreError['Decode' | 'Encode' | 'Crypto' | 'Store' | 'Image' | 'Network' | 'Callback' | 'InvalidInput']
+    typeof CoreError['Decode' | 'Encode' | 'Crypto' | 'Store' | 'Network' | 'Callback' | 'InvalidInput']
 >;
 
 const FfiConverterTypeCoreError = (() => {
@@ -2726,19 +2650,15 @@ const FfiConverterTypeCoreError = (() => {
                     FfiConverterString.readFromCursor(c)
                 );
             
-                case 5: return new CoreError.Image(
+                case 5: return new CoreError.Network(
                     FfiConverterString.readFromCursor(c)
                 );
             
-                case 6: return new CoreError.Network(
+                case 6: return new CoreError.Callback(
                     FfiConverterString.readFromCursor(c)
                 );
             
-                case 7: return new CoreError.Callback(
-                    FfiConverterString.readFromCursor(c)
-                );
-            
-                case 8: return new CoreError.InvalidInput(
+                case 7: return new CoreError.InvalidInput(
                     FfiConverterString.readFromCursor(c)
                 );
             
@@ -5553,11 +5473,6 @@ export interface PolycentricCoreLike {
  */
     previousSignature(identity: string, collection: number): ArrayBuffer;
 /**
- * Decode `image`, resize to `width`x`height` per `mode` ("fill" or
- * "fit"), encode as JPEG.
- */
-    processImageToJpeg(image: ArrayBuffer, width: number, height: number, mode: string) /*throws*/: ProcessedImage;
-/**
  * Push events belonging to `identity` to remote `server`.
  * Pushes all relevant local events if `partial` is false.
  * Otherwise, only push events that we believe the server to be missing.
@@ -6410,31 +6325,6 @@ export class PolycentricCore extends UniffiAbstractObject implements Polycentric
     }
     
 /**
- * Decode `image`, resize to `width`x`height` per `mode` ("fill" or
- * "fit"), encode as JPEG.
- */
-    processImageToJpeg(image: ArrayBuffer, width: number, height: number, mode: string): ProcessedImage /*throws*/ {
-    const __rb: Uint8Array = uniffiCaller.rustCallWithError(
-            /*liftError:*/ FfiConverterTypeCoreError.lift.bind(FfiConverterTypeCoreError),
-            /*caller:*/ (callStatus) => {
-                return nativeModule().ubrn_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(
-                uniffiTypePolycentricCoreObjectFactory.clonePointer(this),
-        FfiConverterArrayBuffer.lower(image, nativeModule().rustbuffer_alloc),
-        FfiConverterUInt32.lower(width, nativeModule().rustbuffer_alloc),
-        FfiConverterUInt32.lower(height, nativeModule().rustbuffer_alloc),
-        FfiConverterString.lower(mode, nativeModule().rustbuffer_alloc),
-                callStatus);
-            },
-            /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    );
-    try {
-        return FfiConverterTypeProcessedImage.lift(__rb);
-    } finally {
-        nativeModule().rustbuffer_free(__rb);
-    }
-    }
-    
-/**
  * Push events belonging to `identity` to remote `server`.
  * Pushes all relevant local events if `partial` is false.
  * Otherwise, only push events that we believe the server to be missing.
@@ -7259,9 +7149,6 @@ function uniffiEnsureInitialized() {
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature() !== 18222) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature");
     }
-    if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg() !== 45203) {
-        throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg");
-    }
     if (nativeModule().ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events() !== 10041) {
         throw new UniffiInternalError.ApiChecksumMismatch("uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events");
     }
@@ -7378,7 +7265,6 @@ export default Object.freeze({
     FfiConverterTypeObserver,
     FfiConverterTypePolycentricCore,
     FfiConverterTypePostLabel,
-    FfiConverterTypeProcessedImage,
     FfiConverterTypePublicKey,
     FfiConverterTypePushResult,
     FfiConverterTypeQuery,

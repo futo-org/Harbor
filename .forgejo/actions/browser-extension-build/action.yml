@@ -1,0 +1,37 @@
+name: browser-extension-build
+description: Exports the web app and packages it into the browser extension for every browser, uploaded as browser-extension-<variant> (store zips, plus the Firefox sources zip). Needs the sdk-build artifacts; the job's EXPO_PUBLIC_* env is the packaged app's config.
+inputs:
+  variant:
+    description: APP_VARIANT (dev, staging or production)
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: ./.forgejo/actions/sdk-artifacts
+      with:
+        rn-sdk: "true"
+    - uses: ./.forgejo/actions/setup-pnpm
+      with:
+        install-args: --filter polycentric-app... --filter harbor-browser-extension...
+    - name: Export the web app
+      shell: bash
+      working-directory: apps/harbor
+      env:
+        APP_VARIANT: ${{ inputs.variant }}
+      run: |
+        export APP_VERSION="$(node ../../tools/expo/resolve-version.js)+$(echo "$GITHUB_SHA" | cut -c1-8)"
+        npx expo export --platform web
+    - name: Build the extensions
+      shell: bash
+      working-directory: apps/harbor-browser-extension
+      env:
+        APP_VARIANT: ${{ inputs.variant }}
+      run: |
+        for browser in chrome edge firefox safari; do
+          pnpm exec wxt zip -b "$browser" --mv3
+        done
+    - uses: forgejo/upload-artifact@v4
+      with:
+        name: browser-extension-${{ inputs.variant }}
+        path: apps/harbor-browser-extension/dist/*.zip
+        retention-days: 7

@@ -3,7 +3,7 @@ name: Deploy server to staging
 on:
   workflow_dispatch:
   push:
-    branches: [develop]
+    branches: [ develop ]
     paths:
       - Cargo.toml
       - Cargo.lock
@@ -21,10 +21,10 @@ on:
 
 concurrency:
   group: deploy-server-staging
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
-  CARGO_INCREMENTAL: '0'
+  CARGO_INCREMENTAL: "0"
   SCCACHE_R2_BUCKET: ${{ vars.SCCACHE_R2_BUCKET }}
   SCCACHE_R2_ENDPOINT: ${{ secrets.SCCACHE_R2_ENDPOINT }}
   SCCACHE_R2_ACCESS_KEY_ID: ${{ secrets.SCCACHE_R2_ACCESS_KEY_ID }}

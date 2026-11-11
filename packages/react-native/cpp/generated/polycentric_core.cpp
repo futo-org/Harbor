@@ -375,14 +375,6 @@ extern "C" {
         int32_t collection, 
         RustCallStatus *uniffi_out_err
     );
-    RustBuffer uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(
-        /*handle*/ uint64_t ptr, 
-        RustBuffer image, 
-        uint32_t width, 
-        uint32_t height, 
-        RustBuffer mode, 
-        RustCallStatus *uniffi_out_err
-    );
     /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_push_local_events(
         /*handle*/ uint64_t ptr, 
         RustBuffer identity, 
@@ -923,8 +915,6 @@ extern "C" {
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_previous_root(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature(
-    );
-    uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events(
     );
@@ -3273,6 +3263,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfacesignbytescallbackmethod
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_bytes {
+            RustBuffer buf;
+            ~Free_rs_bytes() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_bytes { rs_bytes };
         auto js_bytes = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_bytes);
         auto js_uniffiFutureCallback = uniffi::polycentric_core::Bridging<UniffiForeignFutureCompleteRustBuffer>::toJs(rt, callInvoker, rs_uniffiFutureCallback);
         auto js_uniffiCallbackData = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiCallbackData);
@@ -3576,6 +3572,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceloggermethod0::vtableca
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_message {
+            RustBuffer buf;
+            ~Free_rs_message() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_message { rs_message };
         auto js_message = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_message);
 
         // Now we are ready to call the callback.
@@ -3871,6 +3873,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceauthtokenprovidermethod
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_serverUrl {
+            RustBuffer buf;
+            ~Free_rs_serverUrl() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_serverUrl { rs_serverUrl };
         auto js_serverUrl = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_serverUrl);
         auto js_uniffiFutureCallback = uniffi::polycentric_core::Bridging<UniffiForeignFutureCompleteRustBuffer>::toJs(rt, callInvoker, rs_uniffiFutureCallback);
         auto js_uniffiCallbackData = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiCallbackData);
@@ -4475,6 +4483,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfacequeryobservermethod0::v
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_result {
+            RustBuffer buf;
+            ~Free_rs_result() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_result { rs_result };
         auto js_result = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_result);
 
         // Now we are ready to call the callback.
@@ -4606,6 +4620,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfacequeryobservermethod1::v
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_message {
+            RustBuffer buf;
+            ~Free_rs_message() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_message { rs_message };
         auto js_message = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_message);
 
         // Now we are ready to call the callback.
@@ -5031,6 +5051,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceobservermethod0::vtable
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_value {
+            RustBuffer buf;
+            ~Free_rs_value() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_value { rs_value };
         auto js_value = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_value);
 
         // Now we are ready to call the callback.
@@ -5162,6 +5188,12 @@ namespace uniffi::polycentric_core::cb::callbackinterfaceobservermethod1::vtable
         // Convert the arguments from Rust, into jsi::Values.
         // We'll use the Bridging class to do this…
         auto js_uniffiHandle = uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+        // Rust hands this buffer over to us, and `toJs` only gives JS a view of it.
+        // The JS side lifts (copies) it during the call, so free it when `body` exits.
+        struct Free_rs_message {
+            RustBuffer buf;
+            ~Free_rs_message() { uniffi::polycentric_core::Bridging<RustBuffer>::rustbuffer_free(buf); }
+        } free_rs_message { rs_message };
         auto js_message = uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_message);
 
         // Now we are ready to call the callback.
@@ -5728,14 +5760,6 @@ NativePolycentricCore::NativePolycentricCore(
         3,
         [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(rt, thisVal, args, count);
-        }
-    );
-    props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg"] = jsi::Function::createFromHostFunction(
-        rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg"),
-        5,
-        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(rt, thisVal, args, count);
         }
     );
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_push_local_events"] = jsi::Function::createFromHostFunction(
@@ -6938,14 +6962,6 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature(rt, thisVal, args, count);
         }
     );
-    props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg"] = jsi::Function::createFromHostFunction(
-        rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg"),
-        0,
-        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg(rt, thisVal, args, count);
-        }
-    );
     props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_push_local_events"),
@@ -7756,16 +7772,6 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycent
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
         auto value = uniffi_polycentric_core_fn_method_polycentriccore_previous_signature(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi_jsi::Bridging<int32_t>::fromJs(rt, callInvoker, args[2]), 
-            &status
-        );
-        uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
-
-        
-        return uniffi::polycentric_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        RustCallStatus status = uniffi::polycentric_core::Bridging<RustCallStatus>::rustSuccess(rt);
-        auto value = uniffi_polycentric_core_fn_method_polycentriccore_process_image_to_jpeg(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi_jsi::Bridging<uint32_t>::fromJs(rt, callInvoker, args[2]), uniffi_jsi::Bridging<uint32_t>::fromJs(rt, callInvoker, args[3]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[4]), 
             &status
         );
         uniffi::polycentric_core::Bridging<RustCallStatus>::copyIntoJs(rt, callInvoker, status, args[count - 1]);
@@ -9038,13 +9044,6 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_po
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_checksum_method_polycentriccore_previous_signature(
-        );
-
-        
-        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        auto value = uniffi_polycentric_core_checksum_method_polycentriccore_process_image_to_jpeg(
         );
 
         
