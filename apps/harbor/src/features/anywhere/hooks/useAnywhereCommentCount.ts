@@ -15,15 +15,23 @@ function decodePostCount(data: ArrayBuffer | undefined): number | undefined {
   }
 }
 
+/** The last count seen for each page, shown until a fresher one arrives. */
+const knownCounts = new Map<string, number>();
+
+/** Notes a page's comment count learned elsewhere, such as from a list. */
+export function rememberCommentCount(url: string, count: number) {
+  knownCounts.set(url, count);
+}
+
 /**
- * The comment count of the page at `url`, fetched once `listed` (the number
- * of comments shown) is known and again when it changes.
+ * The comment count of the page at `url`, fetched again when `listed` (the
+ * number of comments shown) changes.
  */
 export function useAnywhereCommentCount(
   url: string | undefined,
   listed: number | undefined,
 ): number | undefined {
-  const enabled = !!url && listed !== undefined;
+  const enabled = !!url;
 
   const query = useQuery(
     ['attributed-to-stats', url ?? ''],
@@ -46,7 +54,9 @@ export function useAnywhereCommentCount(
     counted.current = listed;
   }, [listed, refresh]);
 
-  return useMemo(() => decodePostCount(query.data), [query.data]);
+  const count = useMemo(() => decodePostCount(query.data), [query.data]);
+  if (url && count !== undefined) knownCounts.set(url, count);
+  return count ?? (url ? knownCounts.get(url) : undefined);
 }
 
 /** "1 comment", "2 comments". */

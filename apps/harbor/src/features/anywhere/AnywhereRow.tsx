@@ -7,7 +7,10 @@ import { urlHost } from '@/src/common/util/anywhere-url';
 import { type Href, router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
-import { commentCountLabel } from './hooks/useAnywhereCommentCount';
+import {
+  commentCountLabel,
+  rememberCommentCount,
+} from './hooks/useAnywhereCommentCount';
 import { useAnywhereLink } from './hooks/useAnywhereLink';
 import type { AnywhereFeedItem } from './hooks/useAttributedToFeed';
 
@@ -31,9 +34,10 @@ export function AnywhereRow({ link: known, postCount }: AnywhereFeedItem) {
   return (
     <Pressable
       accessibilityRole="link"
-      onPress={() =>
-        router.navigate(Routes.tabs.anywhere.url(link.url) as Href)
-      }
+      onPress={() => {
+        rememberCommentCount(link.url, postCount);
+        router.navigate(Routes.tabs.anywhere.url(link.url) as Href);
+      }}
       style={({ pressed }) => [
         Atoms.flex_row,
         Atoms.align_center,
@@ -48,14 +52,11 @@ export function AnywhereRow({ link: known, postCount }: AnywhereFeedItem) {
       ]}
     >
       <View style={[Atoms.flex_1, Atoms.gap_xs]}>
-        <Text variant="small" color="neutral_500" numberOfLines={1}>
-          {urlHost(link.url) ?? link.url}
-        </Text>
         <Text fontWeight="bold" numberOfLines={2}>
           {link.title || link.url}
         </Text>
-        <Text variant="secondary" color="neutral_500">
-          {commentCountLabel(postCount)}
+        <Text variant="secondary" color="neutral_500" numberOfLines={1}>
+          {commentCountLabel(postCount)} · {urlHost(link.url) ?? link.url}
         </Text>
       </View>
       {imageUris.length > 0 ? (

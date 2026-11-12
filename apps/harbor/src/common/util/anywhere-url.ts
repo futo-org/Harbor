@@ -54,9 +54,11 @@ export function parseAnywhereUrl(text: string): string | undefined {
   return url.href;
 }
 
-/** The host of a page's address, if it has one. */
+/** The host of a page's address, if it has one; YouTube without its `www.`. */
 export function urlHost(url: string): string | undefined {
-  return URL.canParse(url) ? new URL(url).hostname : undefined;
+  if (!URL.canParse(url)) return undefined;
+  const { hostname } = new URL(url);
+  return hostname === 'www.youtube.com' ? 'youtube.com' : hostname;
 }
 
 /** The address that a decoded `domain` and `path` stand for. */

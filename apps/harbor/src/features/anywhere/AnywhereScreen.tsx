@@ -50,7 +50,7 @@ export default function AnywhereScreen() {
           onEndReached={loadMore}
           HeaderComponent={
             <>
-              <Topbar title="Anywhere" left={isWeb ? <></> : undefined} />
+              {isWeb ? <Topbar title="Anywhere" left={<></>} /> : null}
               <View
                 style={[
                   // As the search bar on Explore.
@@ -71,6 +71,9 @@ export default function AnywhereScreen() {
             pages.length > 0 ? (
               <Text
                 variant="title"
+                color="neutral_1000"
+                fontSize={24}
+                lineHeight="xl"
                 style={[Atoms.px_lg, Atoms.pt_lg, Atoms.pb_sm]}
                 accessibilityRole="header"
               >

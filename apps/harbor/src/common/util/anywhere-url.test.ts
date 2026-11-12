@@ -3,6 +3,7 @@ import {
   encodeAnywhereUrl,
   anywhereUrlFromSegments,
   parseAnywhereUrl,
+  urlHost,
 } from './anywhere-url';
 
 /** As a path holding it is read back. */
@@ -66,5 +67,13 @@ describe('page URL paths', () => {
     ]) {
       expect(roundTrip(url)).toBe(url);
     }
+  });
+});
+
+describe('urlHost', () => {
+  it('drops the www. of YouTube only', () => {
+    expect(urlHost('https://www.youtube.com/watch?v=abc')).toBe('youtube.com');
+    expect(urlHost('https://www.example.com/a')).toBe('www.example.com');
+    expect(urlHost('not an address')).toBeUndefined();
   });
 });
