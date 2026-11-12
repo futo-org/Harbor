@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use sea_orm::sea_query::{Expr, PgFunc, SelectStatement};
 use sea_orm::{DatabaseConnection, DbErr};
-use tokio::time::{MissedTickBehavior, interval};
+use tokio::time::{MissedTickBehavior, interval, sleep};
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
@@ -62,6 +62,25 @@ impl Cron {
                     if let ControlFlow::Break(()) = f().await {
                         break;
                     }
+                }
+            }));
+    }
+
+    /// Run `f` then sleep for the returned duration and call `f` again.
+    fn repeated<F, Fut>(&self, mut f: F)
+    where
+        F: FnMut() -> Fut + Send + 'static,
+        Fut: Future<Output = ControlFlow<(), Duration>> + Send + 'static,
+    {
+        let cancel = self.cancel.clone();
+        self.tasks
+            .spawn(cancel.run_until_cancelled_owned(async move {
+                loop {
+                    let duration = match f().await {
+                        ControlFlow::Continue(duration) => duration,
+                        ControlFlow::Break(()) => break,
+                    };
+                    sleep(duration).await;
                 }
             }));
     }
