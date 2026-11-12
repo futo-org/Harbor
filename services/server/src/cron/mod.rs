@@ -87,13 +87,24 @@ impl Cron {
 }
 
 /// Postgres lock.
-#[repr(u8)]
-#[derive(Copy, Clone, Debug)]
-enum AdvisoryLock {
-    Gravity = 0,
-}
+struct AdvisoryLock(i64);
+
+const GRAVITY: i64 = 1 << 32;
+const BLOB_PRUNE: i64 = 1 << 32;
 
 impl AdvisoryLock {
+    pub(crate) const fn gravity() -> AdvisoryLock {
+        AdvisoryLock(GRAVITY)
+    }
+
+    pub(crate) fn blob_prune(prefix: &str) -> AdvisoryLock {
+        let mut bytes = [0; 4];
+        let len = prefix.len().min(bytes.len());
+        bytes[..len].copy_from_slice(&prefix.as_bytes()[..len]);
+        let key = i32::from_le_bytes(bytes) as i64;
+        AdvisoryLock(BLOB_PRUNE | key)
+    }
+
     /// Lock the key and run `f`.
     ///
     /// In production/staging we run multiple instances of the server
@@ -113,10 +124,12 @@ impl AdvisoryLock {
     /// We could use row level locking as well, but then we lock all out all
     /// other users of the rows, which is not ideal for rows that are accessed a
     /// lot (especially if it's not needed).
-    async fn try_lock(self, tx: &mut DbTx<'_>) -> Result<bool, DbErr> {
-        let lock_key = self as i64;
+    pub(crate) async fn try_lock(
+        self,
+        tx: &mut DbTx<'_>,
+    ) -> Result<bool, DbErr> {
         let mut query = SelectStatement::new();
-        query.expr(PgFunc::try_advisory_lock(Expr::Constant(lock_key.into())));
+        query.expr(PgFunc::try_advisory_lock(Expr::Constant(self.0.into())));
         if tx
             .query_one(&query)
             .await?

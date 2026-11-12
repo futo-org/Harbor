@@ -82,6 +82,7 @@ mod m20261105_000001_setup_pg_search;
 mod m20261105_000002_search_posts_using_pg_search;
 mod m20261106_000001_drop_pg_search;
 mod m20261109_000001_index_identities_in_post_text;
+mod m20261112_000001_blob_prune_tables;
 
 mod old_entity;
 
@@ -173,6 +174,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20261105_000002_search_posts_using_pg_search::Migration),
             Box::new(m20261106_000001_drop_pg_search::Migration),
             Box::new(m20261109_000001_index_identities_in_post_text::Migration),
+            Box::new(m20261112_000001_blob_prune_tables::Migration),
         ]
     }
 }

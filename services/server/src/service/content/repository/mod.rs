@@ -2,15 +2,18 @@
 //! `Mutation::save_content_child` dispatches each `ContentBody` variant
 //! to its own submodule, which owns that table's insert logic.
 
-use entity::{content, content_blob, content_image, event};
+use std::time::Duration;
+
+use entity::{blob_prune_prefix, content, content_blob, content_image, event};
+use sea_orm::entity::prelude::DateTimeWithTimeZone;
 use sea_orm::sea_query::{
-    CommonTableExpression, DynIden, Expr, ExprTrait, SelectStatement,
-    SubQueryStatement, UnionType, WithClause,
+    CommonTableExpression, DynIden, Expr, ExprTrait, Order, SelectStatement,
+    SubQueryStatement, UnionType, UpdateStatement, WithClause,
 };
 use sea_orm::{ColumnTrait, DbErr};
 use tonic::Status;
 
-use crate::db::{Connection, DbConn};
+use crate::db::Connection;
 use crate::service::proto::{EventKey, PublicKey, content::ContentBody};
 
 mod attributed_to_reaction;
@@ -72,10 +75,86 @@ impl Mutation {
 pub struct Query;
 
 impl Query {
+    pub(crate) async fn blob_prune_next_prefix<C: Connection>(
+        db: &mut C,
+        since_last_checked: Duration,
+        last_prefix: Option<&str>,
+    ) -> Result<Option<String>, DbErr> {
+        let mut query = SelectStatement::new();
+        query
+            .expr(Expr::col(blob_prune_prefix::Column::Prefix.as_column_ref()))
+            .from(blob_prune_prefix::Entity)
+            .and_where(
+                Expr::current_timestamp()
+                    .sub(Expr::col(
+                        blob_prune_prefix::Column::LastChecked.as_column_ref(),
+                    ))
+                    // SeaORM doesn't support passing Duration, so we need to do
+                    // it ourselves. Second precision is fine here.
+                    .gt(Expr::cust_with_values(
+                        "make_interval(secs => $1)",
+                        [since_last_checked.as_secs()],
+                    )),
+            )
+            .order_by(
+                blob_prune_prefix::Column::Prefix.as_column_ref(),
+                Order::Asc,
+            )
+            .limit(1);
+
+        if let Some(last_prefix) = last_prefix {
+            query.and_where(
+                Expr::col(blob_prune_prefix::Column::Prefix.as_column_ref())
+                    .gt(last_prefix),
+            );
+        }
+
+        match db.query_one(&query).await? {
+            Some(row) => Ok(Some(row.try_get_by(0)?)),
+            None => Ok(None),
+        }
+    }
+
+    /// Returns the timestamp of the blob prefix that is least recently run.
+    pub(crate) async fn blob_prune_least_recent_run<C: Connection>(
+        db: &mut C,
+    ) -> Result<Option<DateTimeWithTimeZone>, DbErr> {
+        let mut query = SelectStatement::new();
+        query
+            .expr(
+                Expr::col(
+                    blob_prune_prefix::Column::LastChecked.as_column_ref(),
+                )
+                .min(),
+            )
+            .from(blob_prune_prefix::Entity);
+        match db.query_one(&query).await? {
+            Some(row) => Ok(Some(row.try_get_by(0)?)),
+            None => Ok(None),
+        }
+    }
+
+    /// Mark the `prefix` as just processed.
+    pub(crate) async fn blob_prune_processed_prefix<C: Connection>(
+        db: &mut C,
+        prefix: &str,
+    ) -> Result<(), DbErr> {
+        let mut query = UpdateStatement::new();
+        query
+            .table(blob_prune_prefix::Entity)
+            .value(
+                blob_prune_prefix::Column::LastChecked,
+                Expr::current_timestamp(),
+            )
+            .and_where(blob_prune_prefix::Column::Prefix.eq(prefix));
+        db.execute(&query).await?;
+        Ok(())
+    }
+
     /// Check if an non-deleted event exists that references a blob with the
     /// given digest type and bytes.
-    pub(crate) async fn blob_has_event(
-        db: &mut DbConn,
+    pub(crate) async fn blob_has_event<C: Connection>(
+        db: &mut C,
         digest_type: i32,
         digest_bytes: &[u8],
     ) -> Result<bool, DbErr> {

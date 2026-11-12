@@ -141,6 +141,17 @@ CREATE TABLE public.ban (
 
 
 --
+-- Name: blob_prune_prefix; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.blob_prune_prefix (
+    prefix text NOT NULL,
+    last_checked timestamp with time zone NOT NULL,
+    CONSTRAINT blob_prune_prefix_prefix_check CHECK (((octet_length(prefix) >= 1) AND (octet_length(prefix) <= 4)))
+);
+
+
+--
 -- Name: block; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -727,6 +738,14 @@ ALTER TABLE ONLY public.attributed_to_reaction_summaries
 
 ALTER TABLE ONLY public.ban
     ADD CONSTRAINT ban_pkey PRIMARY KEY (identity);
+
+
+--
+-- Name: blob_prune_prefix blob_prune_prefix_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.blob_prune_prefix
+    ADD CONSTRAINT blob_prune_prefix_pkey PRIMARY KEY (prefix);
 
 
 --

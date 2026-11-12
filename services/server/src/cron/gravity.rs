@@ -63,10 +63,11 @@ pub(crate) fn update(cron: &Cron, db: DatabaseConnection) {
             // Luckily this job should run pretty often so it's a time
             // window of a couple of minutes were this could be the case.
 
-            match AdvisoryLock::Gravity.try_lock(&mut tx).await {
+            match AdvisoryLock::gravity().try_lock(&mut tx).await {
                 Ok(true) => {},
                 // Another instance is doing the work.
                 Ok(false) => {
+                    tracing::debug!("gravity lock is locked, skipping");
                     if let Err(err) = tx.rollback().await {
                         tracing::warn!(error = %err, "failed to abort transaction");
                     }

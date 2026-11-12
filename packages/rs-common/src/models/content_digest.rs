@@ -56,6 +56,11 @@ impl ContentDigest {
     pub fn verify_against(&self, content_bytes: &[u8]) -> Result<(), DigestError> {
         verify_digest(self.r#type, &self.value, content_bytes)
     }
+
+    /// Returns an array of all known digest types.
+    pub fn all_known_types() -> [ContentDigestType; 1] {
+        [ContentDigestType::Sha256]
+    }
 }
 
 impl fmt::Debug for ContentDigest {
