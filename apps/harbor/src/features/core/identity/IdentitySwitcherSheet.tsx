@@ -88,7 +88,7 @@ export function IdentitySwitcherSheet() {
       open={isOpen}
       onClose={close}
       detents={[0.5, 0.9]}
-      header={<Sheet.Header title="Switch identity" onClose={close} />}
+      header={<Sheet.Header title="Identities" onClose={close} />}
     >
       <Sheet.Content style={{ padding: 0 }}>
         <View
