@@ -122,13 +122,21 @@ export class IdentityManager {
 
   /**
    * Publish an update to the current identity state.
+   * The identity key passed in must match the client's active identity.
    */
-  async publishUpdate(args: PublishArgs): Promise<IdentityUpdate> {
+  async publishUpdate(
+    args: PublishArgs & { identityKey: string },
+  ): Promise<IdentityUpdate> {
+    const { identityKey } = args;
+
     // Require an active login
-    const identityKey = this.client.activeIdentityKey;
     const keyPair = this.client.currentKeyPair;
-    if (!identityKey || !keyPair) {
+    if (!this.client.activeIdentityKey || !keyPair) {
       throw new Error('Must be logged in to publish identity updates.');
+    }
+
+    if (this.client.activeIdentityKey !== identityKey) {
+      throw new Error('Identity update does not match the active identity.');
     }
 
     // Check authorization

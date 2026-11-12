@@ -1,4 +1,5 @@
 import { toast } from '@/src/common/components/toast';
+import { Routes } from '@/src/common/constants';
 import { bytesToHex, usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import type {
   LoginId,
@@ -6,6 +7,7 @@ import type {
   LoginStatus,
   PolycentricClient,
 } from '@polycentric/react-native';
+import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { create } from 'zustand';
 
@@ -133,7 +135,13 @@ export const useIdentitySwitcherStore = create<IdentitySwitcherState>(
         // Do identity switch
         try {
           await client.loginAs(login);
+
           get().close();
+
+          // Dismiss pages since they may contain stale data from the old
+          // identity.
+          if (router.canDismiss()) router.dismissAll();
+          router.replace(Routes.tabs.feed.index);
         } catch (e) {
           console.warn('IdentitySwitcher: failed to switch identity:', e);
           toast.error('Failed to switch identity');
