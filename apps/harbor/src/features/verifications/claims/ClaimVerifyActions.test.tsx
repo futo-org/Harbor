@@ -76,6 +76,7 @@ function claimOf(
     id: 'aabb',
     schemaName,
     fields: fields.map((f) => ({ ...f, label: f.key })),
+    images: [],
     identity: 'me',
     keyFingerprint: 'fp',
     sequence: 1n,

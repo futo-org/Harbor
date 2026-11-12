@@ -81,6 +81,7 @@ function claim(sequence: number, identity = 'profile-id'): DecodedClaim {
     id: `id-${sequence}`,
     schemaName: 'Freeform',
     fields: [],
+    images: [],
     identity,
     keyFingerprint: 'fp',
     sequence: BigInt(sequence),

@@ -54,6 +54,7 @@ const CLAIM: DecodedClaim = {
   id: CLAIM_ID,
   schemaName: 'Freeform',
   fields: [],
+  images: [],
   identity: 'me',
   keyFingerprint: 'fp',
   sequence: 7n,

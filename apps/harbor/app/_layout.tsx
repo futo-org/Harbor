@@ -164,6 +164,10 @@ function RootStack() {
           options={imageViewerScreenOptions}
         />
         <Stack.Screen
+          name="[identityId]/verifications/[keyFingerprint]/[sequence]/image/[index]"
+          options={imageViewerScreenOptions}
+        />
+        <Stack.Screen
           name="[identityId]/photo"
           options={imageViewerScreenOptions}
         />

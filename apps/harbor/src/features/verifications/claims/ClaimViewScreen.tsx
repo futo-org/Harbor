@@ -1,4 +1,5 @@
 import { Text } from '@/src/common/components';
+import { ImageGrid } from '@/src/common/components/composites';
 import { Screen } from '@/src/common/components/layout';
 import Topbar, { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
@@ -6,7 +7,7 @@ import { ScrollView } from '@/src/common/components/ScrollView';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, Linking, View } from 'react-native';
 import { type ClaimField, useClaimById } from '../hooks/useClaimById';
 import { useClaimVerifiers } from '../hooks/useClaimVerifiers';
@@ -17,6 +18,7 @@ import { CLAIM_TYPES } from '../utils/forms';
 import { getPlatformFromClaim } from '../utils/platforms';
 import { resolveClaimTitle } from '../utils/render';
 import { ClaimAuthorLine } from './ClaimAuthorLine';
+import { openClaimImage } from './ClaimImageViewerScreen';
 import { ClaimTypeChip } from './toolbar/ClaimTypeChip';
 import { StatusChip } from './toolbar/StatusChip';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -70,6 +72,11 @@ export default function ViewClaimScreen() {
       claim
         ? resolveClaimTitle(claim.schemaName, claim.fields)
         : { title: '', bodyFields: [] },
+    [claim],
+  );
+
+  const openImage = useCallback(
+    (index: number) => claim && openClaimImage(claim, index),
     [claim],
   );
 
@@ -197,6 +204,10 @@ export default function ViewClaimScreen() {
                     );
                   })}
                 </View>
+
+                {claim.images.length > 0 && (
+                  <ImageGrid images={claim.images} onOpenImage={openImage} />
+                )}
 
                 <ClaimVerifiersList claim={claim} verifiers={verifiers} />
 

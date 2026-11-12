@@ -82,6 +82,14 @@ export const Routes = {
       keyFingerprint: string,
       sequence: string,
     ) => `/${identityId}/verifications/${keyFingerprint}/${sequence}` as const,
+    claimImage: (
+      identityId: string,
+      keyFingerprint: string,
+      sequence: string,
+      /** 1-based image position, as it appears in the URL. */
+      index: number,
+    ) =>
+      `/${identityId}/verifications/${keyFingerprint}/${sequence}/image/${index}` as const,
     settings: {
       index: '/settings',
       identity: '/settings/identity',
