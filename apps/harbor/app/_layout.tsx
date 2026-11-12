@@ -6,6 +6,7 @@ import { installConsoleCapture } from '@/src/features/telemetry/lib/console';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
 import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
 import { ModerationWarningSheet } from '@/src/features/moderation/ModerationWarningSheet';
+import { LoggedOutShareNotice } from '@/src/features/share-intake/LoggedOutShareNotice';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import {
   PolycentricProvider,
@@ -48,6 +49,13 @@ const imageViewerScreenOptions = {
   // Let just these screens rotate to landscape; the rest of the app
   // stays portrait.
   ...(isWeb ? {} : { orientation: 'all' as const }),
+};
+
+// For screens that draw their own sheet, or nothing, over the screen below
+const transparentScreenOptions = {
+  presentation: 'transparentModal' as const,
+  animation: 'none' as const,
+  contentStyle: { backgroundColor: 'transparent' },
 };
 
 // Anchor the root stack on the tabs so that deep-linking directly
@@ -125,11 +133,7 @@ function RootStack() {
           <Stack.Screen name="moderation" />
           <Stack.Screen
             name="[identityId]/edit"
-            options={{
-              presentation: 'transparentModal',
-              animation: 'none',
-              contentStyle: { backgroundColor: 'transparent' },
-            }}
+            options={transparentScreenOptions}
           />
           <Stack.Screen name="verifications/index" />
         </Stack.Protected>
@@ -149,11 +153,11 @@ function RootStack() {
 
         <Stack.Screen
           name="[identityId]/identity"
-          options={{
-            presentation: 'transparentModal',
-            animation: 'none',
-            contentStyle: { backgroundColor: 'transparent' },
-          }}
+          options={transparentScreenOptions}
+        />
+        <Stack.Screen
+          name="intent/compose"
+          options={transparentScreenOptions}
         />
         <Stack.Screen
           name="[identityId]/post/[keyFingerprint]/[sequence]/image/[index]"
@@ -189,6 +193,7 @@ export default function RootLayout() {
                   <PortalHost />
                   <Toaster />
                   <AuthGateSheet />
+                  <LoggedOutShareNotice />
                   <EmojiPickerSheet />
                   <ModerationWarningSheet />
                   <AppUpdater />

@@ -13,6 +13,10 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
 import {
+  type PendingShareImage,
+  usePendingShareStore,
+} from '@/src/features/share-intake/usePendingShareStore';
+import {
   alterPostReplyCount,
   alterPostQuoteCount,
   feedQueryKeys,
@@ -139,7 +143,11 @@ export function useComposer({
   // While the link preview is fetching, hold the Post button so the user
   // either waits for the card (it gets embedded in the signed post) or
   // removes it with the X, which clears the loading state.
-  const canPost = hasDraft && !submitting && !linkPreviewLoading;
+  const canPost =
+    hasDraft &&
+    text.length <= MAX_POST_LENGTH &&
+    !submitting &&
+    !linkPreviewLoading;
   const attachDisabled = submitting || attachments.length >= MAX_ATTACHMENTS;
 
   const [posted, setPosted] = useState(false);
@@ -194,10 +202,12 @@ export function useComposer({
     onClose();
   }, [submitting, onClose]);
 
-  // Turn picked/captured assets into attachments: show the thumbnails
+  // Turn picked/captured/shared assets into attachments: show the thumbnails
   const ingestAssets = useCallback(
-    (assets: ImagePicker.ImagePickerAsset[]) => {
-      const numAttachments = MAX_ATTACHMENTS - attachments.length;
+    (assets: (ImagePicker.ImagePickerAsset | PendingShareImage)[]) => {
+      // From the store: a shared image arrives right after the draft is reset
+      const numAttachments =
+        MAX_ATTACHMENTS - useComposerStore.getState().attachments.length;
       if (numAttachments <= 0) return;
       // Picking again clears any prior error (permission, failed upload).
       setError(null);
@@ -213,7 +223,7 @@ export function useComposer({
         startUpload(a.id, a.uri);
       });
     },
-    [attachments.length, addAttachments, startUpload, setError],
+    [addAttachments, startUpload, setError],
   );
 
   // Pick existing photo(s) from the media library.
@@ -271,6 +281,8 @@ export function useComposer({
       resetAll();
     };
   }, [resetAll]);
+
+  useTakePendingShare({ hasDraft, resetAll, setText, ingestAssets });
 
   // Auto-open the image picker once when the caller requested it
   // (e.g. tapping the attach icon in the inline composer).
@@ -455,6 +467,50 @@ function useDiscardDraftConfirmation(
       },
     });
   });
+}
+
+/**
+ * Take a share into the draft, asking first when it would replace one. It may
+ * arrive after mounting: on a cold start the composer opens before the shared
+ * images are imported.
+ */
+function useTakePendingShare({
+  hasDraft,
+  resetAll,
+  setText,
+  ingestAssets,
+}: {
+  hasDraft: boolean;
+  resetAll: () => void;
+  setText: (text: string) => void;
+  ingestAssets: (assets: PendingShareImage[]) => void;
+}) {
+  const pendingShare = usePendingShareStore((s) => s.pendingShare);
+
+  useEffect(() => {
+    if (!pendingShare) return;
+
+    usePendingShareStore.getState().clearPendingShare();
+
+    const replaceDraftWithShare = () => {
+      resetAll();
+      setText(pendingShare.text);
+      ingestAssets(pendingShare.images);
+    };
+
+    if (!hasDraft) {
+      replaceDraftWithShare();
+      return;
+    }
+
+    void confirm({
+      title: 'Discard post?',
+      message: 'Shared content will replace your draft.',
+      confirmText: 'Discard',
+      destructive: true,
+      onConfirm: replaceDraftWithShare,
+    });
+  }, [pendingShare, hasDraft, resetAll, setText, ingestAssets]);
 }
 
 /**
