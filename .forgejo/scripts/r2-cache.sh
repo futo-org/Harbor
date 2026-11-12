@@ -22,10 +22,18 @@ trap 'rm -f "$tarball" "$body"' EXIT
 cd "$GITHUB_WORKSPACE"
 
 # request <curl args...>: prints the status (000 on a transport error) and
-# keeps the response in $body.
+# keeps the response in $body. Abort on a stalled transfer (under 100 KB/s
+# for 30s), or a download that takes more than 5 minutes.
 request() {
-  curl -sS --connect-timeout 15 --max-time 30 "${sign[@]}" -o "$body" -w '%{http_code}' "$@" "$url" || true
+  local status
+  if status=$(curl -sS --connect-timeout 15 --speed-limit 102400 --speed-time 30 --max-time 300 \
+    "${sign[@]}" -o "$body" -w '%{http_code}' "$@" "$url"); then
+    echo "$status"
+  else
+    echo 000
+  fi
 }
+
 report() {
   echo "r2-cache: $1 $2 for $key" >&2
   head -c 1000 "$body" >&2
