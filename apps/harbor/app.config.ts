@@ -181,6 +181,26 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-sqlite',
     'expo-web-browser',
     [
+      'expo-sharing',
+      {
+        // "Share to Harbor": what the share sheet offers Harbor for
+        ios: {
+          enabled: true,
+          activationRule: {
+            supportsText: true,
+            supportsWebUrlWithMaxCount: 1,
+            // MAX_ATTACHMENTS in the composer
+            supportsImageWithMaxCount: 4,
+          },
+        },
+        android: {
+          enabled: true,
+          singleShareMimeTypes: ['text/plain', 'image/*'],
+          multipleShareMimeTypes: ['image/*'],
+        },
+      },
+    ],
+    [
       'expo-dev-client',
       {
         launchMode: 'most-recent',

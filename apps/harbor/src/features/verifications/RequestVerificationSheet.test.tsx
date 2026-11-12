@@ -18,15 +18,6 @@ jest.mock('@/src/common/components', () => {
   };
 });
 
-jest.mock('@/src/common/components/ScrollView', () => {
-  const react = require('react');
-  const { View } = require('react-native');
-  return {
-    ScrollView: ({ children }: { children?: unknown }) =>
-      react.createElement(View, null, children),
-  };
-});
-
 jest.mock('@/src/common/components/sheet', () => {
   const react = require('react');
   const { View } = require('react-native');
@@ -49,10 +40,6 @@ jest.mock('@/src/common/components/sheet', () => {
 const mockToast = { success: jest.fn(), error: jest.fn() };
 jest.mock('@/src/common/components/toast', () => ({
   useToast: () => mockToast,
-}));
-
-jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({

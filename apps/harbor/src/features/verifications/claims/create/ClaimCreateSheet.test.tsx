@@ -38,15 +38,6 @@ jest.mock('@/src/common/components/Icon', () => ({
   default: () => null,
 }));
 
-jest.mock('@/src/common/components/ScrollView', () => {
-  const react = require('react');
-  const { View } = require('react-native');
-  return {
-    ScrollView: ({ children }: { children?: unknown }) =>
-      react.createElement(View, null, children),
-  };
-});
-
 jest.mock('@/src/common/components/sheet', () => {
   const react = require('react');
   const { Text, View } = require('react-native');
@@ -99,10 +90,6 @@ jest.mock('react-native-reanimated', () => {
   chain.delay = () => chain;
   return { __esModule: true, default: { View }, FadeInDown: chain };
 });
-
-jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
-}));
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   useCurrentIdentity: () => ({ identityKey: 'me' }),
