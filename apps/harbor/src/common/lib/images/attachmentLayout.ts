@@ -1,5 +1,5 @@
 /**
- * Pure layout math for image previews, shared with `PostImages` so a preview
+ * Pure layout math for image previews, shared with `ImageGrid` so a preview
  * matches the posted result. Kept separate from the components so it can be
  * unit-tested without rendering.
  */

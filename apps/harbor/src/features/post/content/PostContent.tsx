@@ -1,3 +1,4 @@
+import { ImageGrid } from '@/src/common/components/composites';
 import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
@@ -13,7 +14,7 @@ import { memo, useCallback, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
 import { LabelPill } from '@/src/features/moderation/LabelPill';
-import { PostImages } from '../PostImages';
+import { openPostImage } from '../PostImageViewerScreen';
 import { PostText } from '../PostText';
 import { LinkPreviewCard } from './LinkPreviewCard';
 import { PostContentQuote } from './PostContentQuote';
@@ -36,6 +37,10 @@ export const PostContent = memo(function PostContent({
 }) {
   const replyParentId = hideReplyingTo ? undefined : post.reply?.parentId;
   const withApp = thirdPartyApplication(post.application);
+  const openImage = useCallback(
+    (index: number) => openPostImage(post, index),
+    [post],
+  );
   // Inline after the text, or after the attachments when there is none.
   const pill =
     labelPill && labelPill.labels.length > 0 ? (
@@ -84,7 +89,9 @@ export const PostContent = memo(function PostContent({
       {post.links?.[0] ? (
         <LinkPreviewCard link={post.links[0]} compact={compactLinkPreview} />
       ) : null}
-      {post.images?.length > 0 && <PostImages post={post} />}
+      {post.images?.length > 0 && (
+        <ImageGrid images={post.images} onOpenImage={openImage} />
+      )}
       {post.quoteId ? (
         <PostContentQuote quoteId={post.quoteId} quotePost={post.quotePost} />
       ) : null}

@@ -15,7 +15,7 @@ export const COMPACT_IMAGE_WIDTH = 96;
 /**
  * Open-Graph style preview card for a `Link` attached to a post.
  * Tapping opens the URL; the tap is stopped from also triggering the surrounding
- * post-card press (same pattern as PostImages).
+ * post-card press (same pattern as ImageGrid).
  *
  * Metadata fields are best-effort — proto3 leaves unset strings empty, so each
  * is rendered only when present.
