@@ -1,4 +1,5 @@
 ---
+
 title: Posts
 sidebar_label: Posts
 sidebar_position: 1
@@ -35,3 +36,12 @@ profile.
 Open the "…" menu on your own post and choose delete. Clients stop showing
 the post. Posts can't be edited after publishing, so delete and repost if
 you need to change something.
+
+## Sharing to Harbor
+
+Share text, a link or up to four images from another app on iOS or Android
+and pick Harbor in the share sheet: the New Post composer opens with them
+filled in. If you already have a draft, Harbor asks before replacing it.
+
+Websites can add a "Share on Harbor" button with a
+[share link](../guides/share-links.md), which works on the web too.

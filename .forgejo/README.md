@@ -142,3 +142,9 @@ publishes with the commit title.
 - An empty matrix creates no job and blocks anything that `needs` it.
 - No `workflow_run` event, so a deploy cannot follow a CI run; it checks the
   registry for the commit's image instead.
+- Cancelling a job (including through `concurrency: cancel-in-progress`)
+  doesn't stop it on an ephemeral runner: it runs every remaining step to the
+  end, side effects included, with its logs and artifacts dropped
+  ([forgejo#14589](https://codeberg.org/forgejo/forgejo/issues/14589)). A
+  step with side effects in a cancellable workflow checks its own run's status
+  first (`isRunCancelled` in `post-e2e-staging-outcome.mjs`).

@@ -4,10 +4,10 @@
 // wait-staging.mjs imports it; workflow steps run
 // `node post-e2e-staging-outcome.mjs --failed ['<why not run>']`, with no
 // reason when the flows ran and failed, or `--passed` after the flows passed,
-// which posts only if the previous run failed.
+// which posts only if the previous run failed. A cancelled run posts nothing.
 // Env: COMMIT_MESSAGE, Forgejo's GITHUB_SHA, GITHUB_REF_NAME,
-// GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_NUMBER, plus
-// ZULIP_BOT_EMAIL and ZULIP_BOT_API_KEY.
+// GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_RUN_NUMBER,
+// plus ZULIP_BOT_EMAIL and ZULIP_BOT_API_KEY.
 
 import { postToZulip } from './zulip-helpers.mjs';
 
@@ -57,6 +57,10 @@ async function postE2eStagingRecovery() {
 }
 
 async function postE2eStagingOutcome(outcome, details) {
+  if (await isRunCancelled()) {
+    console.log(`Run cancelled, not posting: ${outcome}`);
+    return;
+  }
   const commitTitle = (env.COMMIT_MESSAGE ?? '').split('\n')[0];
   const content = [
     `${outcome} on [\`${env.GITHUB_SHA.slice(0, 8)}\`](${repoUrl}/commit/${env.GITHUB_SHA}) ${commitTitle} - [Run #${env.GITHUB_RUN_NUMBER}](${repoUrl}/actions/runs/${env.GITHUB_RUN_NUMBER})`,
@@ -71,4 +75,21 @@ async function postE2eStagingOutcome(outcome, details) {
     'harbor-staging',
     content,
   );
+}
+
+// Forgejo marks a superseded run cancelled, but its ephemeral runner keeps
+// running the job to the end
+// (https://codeberg.org/forgejo/forgejo/issues/14589). An API error counts as
+// not cancelled, so it doesn't drop an alert or skip e2e.
+export async function isRunCancelled() {
+  try {
+    const response = await fetch(
+      `${env.GITHUB_SERVER_URL}/api/v1/repos/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}`,
+    );
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return (await response.json()).status === 'cancelled';
+  } catch (error) {
+    console.error(`Forgejo run status: ${error.message}`);
+    return false;
+  }
 }

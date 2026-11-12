@@ -103,9 +103,8 @@ impl Query {
             content::Column::iter(),
         );
         query = query
-            // TODO: we can use ts_rank_cd as well here.
             .expr_as(
-                Expr::cust("ts_rank(profile.search_data, search_query($1))"),
+                Expr::cust("ts_rank(profile.search_data, create_tsquery($1))"),
                 SEARCH_RANK_COLUMN,
             )
             .expr_as(
@@ -115,7 +114,7 @@ impl Query {
             .inner_join(event::Entity)
             .join(JoinType::InnerJoin, content_join())
             .filter(Expr::cust_with_values(
-                "profile.search_data @@ search_query($1)",
+                "profile.search_data @@ create_tsquery($1)",
                 [search_query],
             ));
 
@@ -138,7 +137,7 @@ impl Query {
                             sorted_by: SortedUsersBy::Rank(rank),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, search_query($$1)), events.id) < ($1, $2)",
+                            "(ts_rank(search_data, create_tsquery($$1)), events.id) < ($1, $2)",
                             [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
@@ -166,7 +165,7 @@ impl Query {
                             sorted_by: SortedUsersBy::Rank(rank),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, search_query($$1)), events.id) > ($1, $2)",
+                            "(ts_rank(search_data, create_tsquery($$1)), events.id) > ($1, $2)",
                             [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
@@ -211,15 +210,14 @@ impl Query {
             content::Column::iter(),
         );
         query = query
-            // TODO: we can use ts_rank_cd as well here.
             .expr_as(
-                Expr::cust("ts_rank(search_data, search_query($1))"),
+                Expr::cust("ts_rank(search_data, create_tsquery($1))"),
                 SEARCH_RANK_COLUMN,
             )
             .join(JoinType::InnerJoin, content_join())
             .join(JoinType::InnerJoin, content::Relation::ContentPost.def())
             .filter(Expr::cust_with_values(
-                "search_data @@ search_query($1)",
+                "search_data @@ create_tsquery($1)",
                 [search_query],
             ));
 

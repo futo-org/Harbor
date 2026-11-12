@@ -202,6 +202,11 @@ export class PolycentricClient {
     // Ensures that rs-core has an updated server list even if we have no
     // active login.
     this.refreshServers();
+
+    // Start background task to ensure blobs are migrated.
+    this.fileStore.migrate({ storage: this.storageDriver }).catch((e) => {
+      console.error('migrating blobs failed:', e);
+    });
   }
 
   /** Blob URL for each configured server, in order, for fallback. */
@@ -773,11 +778,16 @@ export class PolycentricClient {
    * `Blob` proto. Does not upload to servers.
    */
   async commitBlob(bytes: Uint8Array, mimeType: string): Promise<Proto.Blob> {
+    const identity = this.activeIdentityKey;
+    if (!identity) throw new Error('No active identity');
+
     const digest: Proto.ContentDigest = {
       type: Proto.ContentDigestType.SHA256,
       value: sha256(bytes),
     };
-    await this.fileStore.put(digest, bytes);
+
+    await this.fileStore.put(identity, digest, bytes);
+
     return Proto.Blob.create({
       digest,
       mimeType,
@@ -905,7 +915,7 @@ export class PolycentricClient {
     blobs = [...blobMap.values()];
 
     // Catch any of our own referenced blobs so they persist locally
-    await this.contentManager.pullBlobs(blobs);
+    await this.contentManager.pullBlobs(identity, blobs);
 
     if (bundles.length > 0) {
       this.events.emitPulled(identity);
@@ -1017,7 +1027,7 @@ export class PolycentricClient {
           response.requestedBlobs.map(async (blob) => {
             if (!blob.digest) return;
 
-            const blobData = await this.fileStore.get(blob.digest);
+            const blobData = await this.fileStore.get(identity, blob.digest);
             if (!blobData) return;
 
             await this.uploadBlob(blob, blobData, [server]);
@@ -1200,6 +1210,7 @@ export class PolycentricClient {
       this.core.setActiveIdentity(undefined);
       this.activeIdentityKey = null;
       this.currentKeyPair = null;
+      this.events.emitKeyPairChanged(null);
       return;
     }
 
