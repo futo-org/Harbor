@@ -724,16 +724,22 @@ async fn attributed_to_feed_filters_by_application() {
 }
 
 #[tokio::test]
-async fn top_attributions_orders_urls_by_post_count() {
-    let popular = format!("https://example.com/{}", random_string());
-    let quiet = format!("https://example.com/{}", random_string());
+async fn top_attributions_orders_urls_by_commenters() {
+    let discussed = format!("https://example.com/{}", random_string());
+    let spammed = format!("https://example.com/{}", random_string());
 
-    let mut author = TestClient::new().await;
+    // Two identities post once about one url; a third posts more, and
+    // later, about the other.
     let now = current_timestamp();
-    author.post(post_about(&popular, "First title", "one"), now + 1);
-    author.post(post_about(&quiet, "Quiet title", "two"), now + 2);
-    author.post(post_about(&popular, "Second title", "three"), now + 3);
-    author.post(post_about(&popular, "Latest title", "four"), now + 4);
+    for n in 1..=2 {
+        let mut author = TestClient::new().await;
+        author.post(post_about(&discussed, "Discussed", "one"), now + n);
+        author.submit_events().await;
+    }
+    let mut author = TestClient::new().await;
+    author.post(post_about(&spammed, "First title", "one"), now + 3);
+    author.post(post_about(&spammed, "Second title", "two"), now + 4);
+    author.post(post_about(&spammed, "Latest title", "three"), now + 5);
     author.submit_events().await;
 
     let top = top_attributions().await;
@@ -742,13 +748,16 @@ async fn top_attributions_orders_urls_by_post_count() {
             .position(|(link, _)| link.url == url)
             .unwrap_or_else(|| panic!("{url} is not in {top:?}"))
     };
-    let (popular_at, quiet_at) = (position(&popular), position(&quiet));
+    let (discussed_at, spammed_at) = (position(&discussed), position(&spammed));
 
-    assert!(popular_at < quiet_at, "more posts should come first");
-    assert_eq!(top[popular_at].1, 3);
-    assert_eq!(top[quiet_at].1, 1);
+    assert!(
+        discussed_at < spammed_at,
+        "more commenters should come first"
+    );
+    assert_eq!(top[discussed_at].1, 2);
+    assert_eq!(top[spammed_at].1, 3, "every post is still counted");
     assert_eq!(
-        top[popular_at].0.title, "Latest title",
+        top[spammed_at].0.title, "Latest title",
         "described as its latest post describes it",
     );
 }

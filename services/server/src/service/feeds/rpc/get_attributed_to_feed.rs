@@ -84,7 +84,7 @@ async fn fetch(
         params.limit,
         |row| Marker {
             sorted_by: AttributedUrlSortKey {
-                decayed_post_count: row.decayed_post_count.clone(),
+                decayed_commenter_count: row.decayed_commenter_count.clone(),
                 url: row.url.clone(),
             },
             event_id: row.latest_event_id,
