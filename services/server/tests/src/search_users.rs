@@ -348,6 +348,79 @@ async fn accents_are_ignored() {
 }
 
 #[tokio::test]
+async fn prefer_following_identities() {
+    // When matching multiple profiles we want to always have the porfiles we
+    // follow before anyone else.
+
+    let mut client = TestClient::new().await;
+
+    let profile_name = random_string();
+
+    let mut other_profiles = Vec::with_capacity(5);
+    for n in 0..other_profiles.capacity() {
+        let mut client = TestClient::new().await;
+        let profile_update = ProfileUpdate {
+            name: Some(format!("{n}. {profile_name}")),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        };
+        client.profile_update(profile_update.clone(), current_timestamp());
+        client.submit_events().await;
+
+        other_profiles.push((client, profile_update));
+    }
+
+    client.follow_identity(
+        other_profiles[0].0.identity().to_owned(),
+        current_timestamp(),
+    );
+    client.submit_events().await;
+
+    let limit = 2;
+
+    // No authentication, following doesn't (can't) effect the ordering.
+    expect_searched_users(
+        SearchUsersRequest {
+            query: profile_name.clone(),
+            sort_by: Some(SortUsersBy::Default.into()),
+            page_params: Some(PageParams {
+                limit: Some(limit),
+                ..Default::default()
+            }),
+        },
+        vec![other_profiles[4].1.clone(), other_profiles[3].1.clone()],
+    )
+    .await;
+
+    // With authentication following changes the results.
+    expect_searched_users2(
+        SearchUsersRequest {
+            query: profile_name.clone(),
+            sort_by: Some(SortUsersBy::Default.into()),
+            page_params: Some(PageParams {
+                limit: Some(limit),
+                ..Default::default()
+            }),
+        },
+        // Following profile 0, so it should come first.
+        vec![other_profiles[0].1.clone(), other_profiles[4].1.clone()],
+        |request| async {
+            let mut search = search_service().await;
+            let mut request = tonic::Request::new(request);
+            request.metadata_mut().insert(
+                "authorization",
+                client.create_auth_token().try_into().unwrap(),
+            );
+            let response = search.search_users(request).await.unwrap();
+            response.into_inner().results
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn order_by_rank() {
     let query = random_string();
 

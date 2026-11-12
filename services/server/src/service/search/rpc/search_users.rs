@@ -43,6 +43,7 @@ async fn fetch(
 ) -> Result<Fetched<SearchRow, SortedUsersBy>, Status> {
     let mut rows = Query::search_users(
         &mut ctx.db,
+        ctx.auth.as_deref(),
         &params.common.query,
         params.sort_by,
         params.common.limit + 1, // For pagination.
