@@ -6699,7 +6699,9 @@ export enum VerificationClaimValidationError_Tags {
     FieldsTooMany = "FieldsTooMany",
     FieldsTooLarge = "FieldsTooLarge",
     FieldsInvalid = "FieldsInvalid",
-    FieldsMissing = "FieldsMissing"
+    FieldsMissing = "FieldsMissing",
+    ImageSet = "ImageSet",
+    ImageSetItem = "ImageSetItem"
 }
 export const VerificationClaimValidationError = (() => {
 
@@ -6946,6 +6948,70 @@ inner: {key: string }): FieldsMissing_ {
 
     }
 
+    type ImageSet__interface = {
+        tag: VerificationClaimValidationError_Tags.ImageSet;
+        inner: 
+Readonly<
+[SliceError
+]>
+    };
+    class ImageSet_ extends UniffiEnum implements ImageSet__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "VerificationClaimValidationError";
+        readonly tag = VerificationClaimValidationError_Tags.ImageSet;
+        readonly inner: 
+Readonly<
+[SliceError
+]>;
+        constructor(v0: SliceError) {
+            super("VerificationClaimValidationError", "ImageSet");
+
+            this.inner = Object.freeze([v0]);
+        }
+        static new(v0: SliceError): ImageSet_ {
+            return new ImageSet_(v0);
+        }
+
+        static instanceOf(obj: any): obj is ImageSet_ {
+            return obj.tag === VerificationClaimValidationError_Tags.ImageSet;
+        }
+
+    }
+
+    type ImageSetItem__interface = {
+        tag: VerificationClaimValidationError_Tags.ImageSetItem;
+        inner: 
+Readonly<{index: number; error: ImageSetValidationError}>
+    };
+    class ImageSetItem_ extends UniffiEnum implements ImageSetItem__interface {
+        /**
+         * @private
+         * This field is private and should not be used, use `tag` instead.
+         */
+        readonly [uniffiTypeNameSymbol] = "VerificationClaimValidationError";
+        readonly tag = VerificationClaimValidationError_Tags.ImageSetItem;
+        readonly inner: 
+Readonly<{index: number; error: ImageSetValidationError}>;
+        constructor(
+inner: {index: number; error: ImageSetValidationError }) {
+            super("VerificationClaimValidationError", "ImageSetItem");
+
+            this.inner = Object.freeze(inner);
+        }
+        static new(
+inner: {index: number; error: ImageSetValidationError }): ImageSetItem_ {
+            return new ImageSetItem_(inner);
+        }
+
+        static instanceOf(obj: any): obj is ImageSetItem_ {
+            return obj.tag === VerificationClaimValidationError_Tags.ImageSetItem;
+        }
+
+    }
+
     function instanceOf(obj: any): obj is VerificationClaimValidationError {
         return obj[uniffiTypeNameSymbol] === "VerificationClaimValidationError";
     }
@@ -6959,12 +7025,14 @@ inner: {key: string }): FieldsMissing_ {
   FieldsTooMany: FieldsTooMany_, 
   FieldsTooLarge: FieldsTooLarge_, 
   FieldsInvalid: FieldsInvalid_, 
-  FieldsMissing: FieldsMissing_
+  FieldsMissing: FieldsMissing_, 
+  ImageSet: ImageSet_, 
+  ImageSetItem: ImageSetItem_
     });
 
 })();
 export type VerificationClaimValidationError = InstanceType<
-    typeof VerificationClaimValidationError['Schema' | 'SchemaMissing' | 'FieldsKey' | 'FieldsValue' | 'FieldsTooMany' | 'FieldsTooLarge' | 'FieldsInvalid' | 'FieldsMissing']
+    typeof VerificationClaimValidationError['Schema' | 'SchemaMissing' | 'FieldsKey' | 'FieldsValue' | 'FieldsTooMany' | 'FieldsTooLarge' | 'FieldsInvalid' | 'FieldsMissing' | 'ImageSet' | 'ImageSetItem']
 >;
 
 // FfiConverter for enum VerificationClaimValidationError
@@ -6981,6 +7049,8 @@ const FfiConverterTypeVerificationClaimValidationError = (() => {
                 case 6: return new VerificationClaimValidationError.FieldsTooLarge({totalLength: FfiConverterUInt32.readFromCursor(c), max: FfiConverterUInt32.readFromCursor(c) });
                 case 7: return new VerificationClaimValidationError.FieldsInvalid({key: FfiConverterString.readFromCursor(c), error: FfiConverterTypeVerificationSchemaFieldValidationError.readFromCursor(c) });
                 case 8: return new VerificationClaimValidationError.FieldsMissing({key: FfiConverterString.readFromCursor(c) });
+                case 9: return new VerificationClaimValidationError.ImageSet(FfiConverterTypeSliceError.readFromCursor(c));
+                case 10: return new VerificationClaimValidationError.ImageSetItem({index: FfiConverterUInt32.readFromCursor(c), error: FfiConverterTypeImageSetValidationError.readFromCursor(c) });
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
             }
         }
@@ -7035,6 +7105,19 @@ const FfiConverterTypeVerificationClaimValidationError = (() => {
                     c.writeI32(8);
                     const inner = value.inner;
                     FfiConverterString.writeIntoCursor(inner.key, c);
+                    return;
+                }
+                case VerificationClaimValidationError_Tags.ImageSet: {
+                    c.writeI32(9);
+                    const inner = value.inner;
+                    FfiConverterTypeSliceError.writeIntoCursor(inner[0], c);
+                    return;
+                }
+                case VerificationClaimValidationError_Tags.ImageSetItem: {
+                    c.writeI32(10);
+                    const inner = value.inner;
+                    FfiConverterUInt32.writeIntoCursor(inner.index, c);
+                    FfiConverterTypeImageSetValidationError.writeIntoCursor(inner.error, c);
                     return;
                 }
                 default:
@@ -7092,6 +7175,19 @@ const FfiConverterTypeVerificationClaimValidationError = (() => {
                     const inner = value.inner;
                     let size = 4;
                     size += FfiConverterString.allocationSize(inner.key);
+                    return size;
+                }
+                case VerificationClaimValidationError_Tags.ImageSet: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterTypeSliceError.allocationSize(inner[0]);
+                    return size;
+                }
+                case VerificationClaimValidationError_Tags.ImageSetItem: {
+                    const inner = value.inner;
+                    let size = 4;
+                    size += FfiConverterUInt32.allocationSize(inner.index);
+                    size += FfiConverterTypeImageSetValidationError.allocationSize(inner.error);
                     return size;
                 }
                 default: throw new UniffiInternalError.UnexpectedEnumCase();
