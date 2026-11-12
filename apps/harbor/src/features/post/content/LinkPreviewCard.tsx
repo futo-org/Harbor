@@ -4,6 +4,7 @@ import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import type { v2 } from '@polycentric/react-native';
 import { Image } from '@/src/common/components/Image';
+import { urlHost } from '@/src/common/util/anywhere-url';
 import { Linking, Pressable, View } from 'react-native';
 
 const IMAGE_BG = 'rgba(0,0,0,0.04)';
@@ -40,14 +41,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
     [client, link.image],
   );
 
-  const host = useMemo(() => {
-    try {
-      return new URL(link.url).hostname;
-    } catch {
-      // Fall back to the raw URL if it doesn't parse.
-      return link.url;
-    }
-  }, [link.url]);
+  const host = urlHost(link.url) ?? link.url;
 
   const image =
     imageUris.length > 0 ? (

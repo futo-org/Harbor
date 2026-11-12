@@ -12,13 +12,18 @@ import { Pressable, StyleSheet, View } from 'react-native';
 interface ComposerInputProps {
   /** When set, opens the composer pre-filled to reply to this post. */
   replyTo?: PostData['id'];
+  /** Takes over from opening the compose route. */
+  onCompose?: (options: { attachImage?: boolean }) => void;
 }
 
 /**
  * A non-interactive placeholder that looks like a composer input. Tapping
  * anywhere on it opens the full compose modal.
  */
-export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
+export function ComposerInput({
+  replyTo,
+  onCompose = (options) => openCompose({ ...options, replyTo }),
+}: ComposerInputProps = {}) {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
@@ -38,7 +43,7 @@ export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
   return (
     <Pressable
       accessibilityLabel="New post"
-      onPress={() => openCompose({ replyTo })}
+      onPress={() => onCompose({})}
       onHoverIn={onHoverIn}
       onHoverOut={onHoverOut}
       style={[
@@ -65,7 +70,7 @@ export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
         accessibilityLabel="Attach image"
         onPress={(e) => {
           e.stopPropagation?.();
-          openCompose({ attachImage: true, replyTo });
+          onCompose({ attachImage: true });
         }}
         onHoverIn={onAttachHoverIn}
         onHoverOut={onAttachHoverOut}

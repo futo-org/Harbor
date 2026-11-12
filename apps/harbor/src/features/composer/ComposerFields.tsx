@@ -237,7 +237,9 @@ export function ComposerFields({
               }
               onChangeText={onChangeText}
               disabled={submitting}
-              maxLength={MAX_POST_LENGTH}
+              // Shared text can be over the limit: keep it whole, but don't
+              // let typing make it longer
+              maxLength={Math.max(MAX_POST_LENGTH, text.length)}
               numberOfLines={isWeb ? 1 : undefined}
               scrollEnabled={false}
               style={[

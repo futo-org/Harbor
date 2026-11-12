@@ -1,67 +1,104 @@
-import HARBOR_LOGO from '@/src/common/assets/images/harbor-logo-256.png';
-import { Text } from '@/src/common/components';
-import { TOPBAR_HEIGHT } from '@/src/common/components/metrics';
+import { List, type ListRef } from '@/src/common/components/List';
+import { ListEmpty } from '@/src/common/components/ListEmpty';
+import { Screen } from '@/src/common/components/layout';
+import Topbar from '@/src/common/components/layout/Topbar';
+import { Text } from '@/src/common/components/primitives';
+import { Routes } from '@/src/common/constants';
+import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
+import { useFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect } from 'react';
+import { Link } from 'expo-router';
+import { useRef } from 'react';
 import { View } from 'react-native';
+import { AnywhereRow } from './AnywhereRow';
+import { AnywhereUrlField } from './AnywhereUrlBar';
+import {
+  type AnywhereFeedItem,
+  useAttributedToFeed,
+} from './hooks/useAttributedToFeed';
 
-/** Posted to the browser extension once this screen can receive the page. */
-const READY_MESSAGE = 'harbor-anywhere:ready';
-/** Posted by the browser extension when the active tab's page changes. */
-const PAGE_URL_MESSAGE = 'harbor-anywhere:url';
-
+/**
+ * Where Harbor Anywhere starts: the address field, over the pages with the
+ * most comments.
+ */
 export default function AnywhereScreen() {
   usePageTitle('Anywhere');
   const { theme } = useTheme();
-  const { url } = useLocalSearchParams<{ url?: string }>();
-
-  useEffect(() => {
-    if (!isWeb || window.parent === window) return;
-    const onMessage = (event: MessageEvent) => {
-      if (event.source !== window.parent) return;
-      if (event.data?.type !== PAGE_URL_MESSAGE) return;
-      router.setParams({ url: event.data.url });
-    };
-    window.addEventListener('message', onMessage);
-    // The extension's origin differs per browser and install.
-    window.parent.postMessage({ type: READY_MESSAGE }, '*');
-    return () => window.removeEventListener('message', onMessage);
-  }, []);
+  const { pages, isLoading, loadMore, refresh } = useAttributedToFeed();
+  const listRef = useRef<ListRef>(null);
+  // A nav re-tap scrolls back to the top and refreshes.
+  useFocusedRefresh(() => {
+    listRef.current?.scrollToTop();
+    refresh();
+  });
 
   return (
-    <View style={[Atoms.flex_1, theme.atoms.bg]}>
-      <View
-        style={[
-          Atoms.flex_row,
-          Atoms.align_center,
-          Atoms.gap_sm,
-          Atoms.px_md,
-          { height: TOPBAR_HEIGHT },
-          {
-            borderBottomWidth: 1,
-            borderBottomColor: withHexOpacity(theme.palette.neutral_500, '10'),
-          },
-        ]}
-      >
-        <Image
-          source={HARBOR_LOGO}
-          contentFit="contain"
-          style={{ width: 36, height: 36 }}
+    <Screen>
+      <Screen.PrimaryColumn>
+        <List<AnywhereFeedItem>
+          ref={listRef}
+          data={pages}
+          refreshControl={
+            isWeb ? undefined : (
+              <PullRefreshControl refreshing={isLoading} onRefresh={refresh} />
+            )
+          }
+          keyExtractor={(page) => page.link.url}
+          renderItem={({ item }) => <AnywhereRow {...item} />}
+          onEndReached={loadMore}
+          HeaderComponent={
+            <>
+              {isWeb ? <Topbar title="Anywhere" left={<></>} /> : null}
+              <View
+                style={[
+                  // As the search bar on Explore.
+                  Atoms.px_lg,
+                  Atoms.py_md,
+                  theme.atoms.bg,
+                  {
+                    borderBottomWidth: 1,
+                    borderBottomColor: theme.palette.neutral_25,
+                  },
+                ]}
+              >
+                <AnywhereUrlField />
+              </View>
+            </>
+          }
+          ListHeaderComponent={
+            pages.length > 0 ? (
+              <Text
+                variant="title"
+                color="neutral_1000"
+                fontSize={24}
+                lineHeight="xl"
+                style={[Atoms.px_lg, Atoms.pt_lg, Atoms.pb_sm]}
+                accessibilityRole="header"
+              >
+                Most commented
+              </Text>
+            ) : null
+          }
+          ListEmptyComponent={() =>
+            !isLoading && (
+              <ListEmpty>
+                <Text color="neutral_500" style={Atoms.text_center}>
+                  Enter a web address to comment on that page, or comment beside
+                  the page itself with the{' '}
+                  <Link
+                    className="underlineOnHover"
+                    href={Routes.tabs.anywhere.browserExtension.index}
+                  >
+                    <Text color="primary_500">browser extension</Text>
+                  </Link>
+                </Text>
+              </ListEmpty>
+            )
+          }
         />
-        <Text variant="title" fontWeight="bold" numberOfLines={1}>
-          Harbor{' '}
-          <Text variant="title" fontWeight="regular">
-            Anywhere
-          </Text>
-        </Text>
-      </View>
-      <View style={Atoms.p_md}>
-        <Text variant="body">{url ?? 'No page in this tab'}</Text>
-      </View>
-    </View>
+      </Screen.PrimaryColumn>
+    </Screen>
   );
 }
