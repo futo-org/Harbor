@@ -43,6 +43,10 @@ pub(crate) fn run(
             };
             drop(db); // Don't use the pool any more.
 
+            let mut total_processed = 0;
+            let mut total_skipped = 0;
+            let mut total_deleted = 0;
+
             let mut last_prefix = None;
             loop {
                 let prefix = match Query::blob_prune_next_prefix(&mut conn, TIME_BETWEEN_CHECKS, last_prefix.as_deref()).await {
@@ -83,6 +87,10 @@ pub(crate) fn run(
                     }
                 };
 
+                let mut processed = 0;
+                let mut skipped = 0;
+                let mut deleted = 0;
+
                 for digest_type in ContentDigest::all_known_types() {
                     let blob_prefix = format!("{}_{prefix}", digest_type as i32);
                     tracing::debug!(%prefix, %blob_prefix, "fetching blobs from object storage");
@@ -96,20 +104,24 @@ pub(crate) fn run(
                             },
                             None => break, // Processed all.
                         };
+                        processed += 1;
 
                         // Skip blob without a key (seems unlikely), that are too
                         // recently modified (created) and don't have the expected key
                         // format.
                         let Some(key) = object.key else {
                             tracing::debug!("skipped object without key");
+                            skipped += 1;
                             continue;
                         };
                         if let Some(last_modified) = object.last_modified && last_modified <= minimum_age {
                             tracing::debug!(%key, "skipped object that is too young");
+                            skipped += 1;
                             continue;
                         };
                         let Some(digest) = ContentDigest::from_id(&key) else {
                             tracing::debug!(%key, "skipped object as it has the wrong key format");
+                            skipped += 1;
                             continue;
                         };
 
@@ -124,6 +136,7 @@ pub(crate) fn run(
                         if !has_event {
                             if let Err(error) = filestore.delete_blob(&digest).await {
                                 tracing::warn!(%key, %error, "failed to delete unused blob");
+                                deleted += 1;
                             }
                         }
                     }
@@ -138,8 +151,11 @@ pub(crate) fn run(
                     return ControlFlow::Continue(ERROR_RETRY);
                 }
 
-                tracing::debug!(%prefix, elapsed = ?start_prefix.elapsed(), "pruned blobs with prefix");
+                tracing::debug!(%prefix, processed, skipped, deleted, elapsed = ?start_prefix.elapsed(), "pruned blobs with prefix");
                 last_prefix = Some(prefix);
+                total_processed += processed;
+                total_skipped += skipped;
+                total_deleted += total_processed;
             }
 
             let next_check = match Query::blob_prune_least_recent_run(&mut conn).await {
@@ -159,7 +175,8 @@ pub(crate) fn run(
                     ERROR_RETRY
                 },
             };
-            tracing::info!(elapsed = ?start.elapsed(), "pruned blobs");
+
+            tracing::info!(processed = total_processed, skipped = total_skipped, deleted = total_deleted, elapsed = ?start.elapsed(), "pruned blobs");
             ControlFlow::Continue(next_check)
         }
     });
