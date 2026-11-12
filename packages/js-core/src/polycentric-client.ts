@@ -1210,6 +1210,7 @@ export class PolycentricClient {
       this.core.setActiveIdentity(undefined);
       this.activeIdentityKey = null;
       this.currentKeyPair = null;
+      this.events.emitKeyPairChanged(null);
       return;
     }
 

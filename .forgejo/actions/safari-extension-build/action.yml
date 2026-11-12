@@ -34,9 +34,9 @@ runs:
           "project/$APP_NAME/$APP_NAME.xcodeproj/project.pbxproj"
         xcodebuild -project "project/$APP_NAME/$APP_NAME.xcodeproj" -alltargets \
           -configuration Release SYMROOT="$PWD/build" CODE_SIGNING_ALLOWED=NO
-        ditto -c -k --keepParent "build/Release/$APP_NAME.app" harbor-anywhere-safari.zip
+        ditto -c -k --keepParent "build/Release/$APP_NAME.app" harbor-browser-extension-safari.zip
     - uses: forgejo/upload-artifact@v4
       with:
         name: browser-extension-safari-${{ inputs.variant }}
-        path: safari/harbor-anywhere-safari.zip
+        path: safari/harbor-browser-extension-safari.zip
         retention-days: 7

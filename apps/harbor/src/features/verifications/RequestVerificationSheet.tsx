@@ -1,12 +1,11 @@
 import { Text } from '@/src/common/components';
-import { ScrollView } from '@/src/common/components/ScrollView';
 import { Sheet } from '@/src/common/components/sheet';
 import { useToast } from '@/src/common/components/toast';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, Spacing, useTheme } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { ProfileSearchInput } from '@/src/features/profile/search';
 import { useState } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollView } from 'react-native';
 import useRequestVerification from './hooks/useRequestVerification';
 
 export function RequestVerificationSheet({
@@ -21,7 +20,6 @@ export function RequestVerificationSheet({
 }) {
   const { theme } = useTheme();
   const toast = useToast();
-  const insets = useSafeAreaInsets();
   const { identityKey } = useCurrentIdentity();
   const request = useRequestVerification();
 
@@ -51,15 +49,11 @@ export function RequestVerificationSheet({
       header={<Sheet.Header title="Request verification" onClose={onClose} />}
     >
       <Sheet.Content scrollable={false} style={{ padding: 0 }}>
-        {/* TrueSheet's `scrollable` pins this ScrollView and insets it for
-            the keyboard; taps on suggestions must land while it's open. */}
+        {/* RN's ScrollView, so TrueSheet finds it to pin and inset; taps on
+            suggestions must land while the keyboard is open. */}
         <ScrollView
           style={Atoms.flex_1}
-          contentContainerStyle={[
-            Atoms.pt_lg,
-            Atoms.gap_md,
-            { paddingBottom: insets.bottom + Spacing['lg'] },
-          ]}
+          contentContainerStyle={[Atoms.pt_lg, Atoms.gap_md, Atoms.pb_lg]}
           keyboardShouldPersistTaps="handled"
         >
           <Text
