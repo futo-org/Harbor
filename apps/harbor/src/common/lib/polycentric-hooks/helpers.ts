@@ -105,6 +105,34 @@ export type PostData = {
 export type { LabelSet, PostLabel } from '@polycentric/react-native';
 
 const OWN_APP_ID_PREFIX = 'org.futo.polycentric';
+const GRAYJAY_APP_ID_PREFIX = 'com.futo.platformplayer';
+
+/** Whether a post was made with Grayjay, in any of its builds. */
+export function isGrayjay(application?: v2.Application): boolean {
+  return !!application?.id.startsWith(GRAYJAY_APP_ID_PREFIX);
+}
+
+/**
+ * Grayjay comments carry the page they are about as a link card too. It is
+ * shown as the page the post is about instead, as Harbor Anywhere's are.
+ */
+export function postLinks(
+  post: v2.Post,
+  application?: v2.Application,
+): { links: v2.Link[]; attributedLink?: v2.Link } {
+  const attributedTo = post.attributedTo.find(
+    ({ to }) => to.oneofKind === 'link',
+  )?.to;
+  const attributed =
+    attributedTo?.oneofKind === 'link' ? attributedTo.link : undefined;
+  if (!isGrayjay(application)) {
+    return { links: post.links, attributedLink: attributed };
+  }
+  const card = attributed
+    ? post.links.find((link) => link.url === attributed.url)
+    : post.links[0];
+  return { links: [], attributedLink: card ?? attributed };
+}
 
 /** The app a post came from; `undefined` for our own builds. */
 export function thirdPartyApplication(
@@ -228,9 +256,6 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
         }
       : undefined;
     const quoteId = post.quote ? eventKeyId(post.quote) : undefined;
-    const attributedTo = post.attributedTo.find(
-      ({ to }) => to.oneofKind === 'link',
-    )?.to;
 
     return {
       id,
@@ -241,9 +266,7 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
       createdAt: Number(event.createdAt ?? 0),
       application: event.application,
       images: post.images,
-      links: post.links,
-      attributedLink:
-        attributedTo?.oneofKind === 'link' ? attributedTo.link : undefined,
+      ...postLinks(post, event.application),
       reply,
       quoteId,
       replyCount: bundle.meta?.replyCount,

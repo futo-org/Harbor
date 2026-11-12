@@ -8,14 +8,20 @@ import { type Href, router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import { commentCountLabel } from './hooks/useAnywhereCommentCount';
+import { useAnywhereLink } from './hooks/useAnywhereLink';
 import type { AnywhereFeedItem } from './hooks/useAttributedToFeed';
 
 const THUMBNAIL_SIZE = 64;
 
 /** A commented-on web page in a list; opens its comments. */
-export function AnywhereRow({ link, postCount }: AnywhereFeedItem) {
+export function AnywhereRow({ link: known, postCount }: AnywhereFeedItem) {
   const { theme } = useTheme();
   const client = usePolycentric();
+  const unfurled = useAnywhereLink(
+    known.title && known.image ? undefined : known.url,
+    known,
+  );
+  const link = unfurled.link ?? known;
   // Through the server's image proxy, as link previews are.
   const imageUris = useMemo(
     () => (link.image ? client.imageProxyUrls(link.image) : []),

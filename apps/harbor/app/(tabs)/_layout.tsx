@@ -1,20 +1,12 @@
-import { Routes, openCompose } from '@/src/common/constants';
+import { Routes } from '@/src/common/constants';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { useTheme } from '@/src/common/theme';
 import useUnreadNotificationCount, {
   unreadNotificationsBadgeLabel,
 } from '@/src/features/notifications/hooks/useUnreadNotificationCount';
-import { isIOS, isWeb } from '@/src/common/util/platform';
+import { isWeb } from '@/src/common/util/platform';
 import { Stack } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
-import { Platform } from 'react-native';
-
-/**
- * iPhones before iOS 26 show five tabs at most and fold the rest into
- * "More", so Anywhere stays off their tab bar.
- */
-const IOS_TAB_BAR_FULL =
-  isIOS && Number.parseInt(String(Platform.Version), 10) < 26;
 
 export default function TabsLayout() {
   const { theme } = useTheme();
@@ -49,7 +41,6 @@ export default function TabsLayout() {
           <Stack.Screen name="feed" />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="verifications" />
-          <Stack.Screen name="compose" />
           <Stack.Screen name="profile" />
           <Stack.Screen name="claims" />
         </Stack.Protected>
@@ -82,7 +73,7 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="anywhere" hidden={IOS_TAB_BAR_FULL}>
+      <NativeTabs.Trigger name="anywhere">
         <NativeTabs.Trigger.Label>Anywhere</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="globe" md="language" />
       </NativeTabs.Trigger>
@@ -101,21 +92,6 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Verifications</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="checkmark.seal" md="verified" />
       </NativeTabs.Trigger>
-
-      {isIOS ? (
-        <NativeTabs.Trigger
-          name="compose"
-          role="search"
-          // This tab screen cannot be selected: the tap opens the same
-          // root-stack composer that New Post on Android and replies (both iOS
-          // and Android) use
-          disabled
-          listeners={{ tabPress: () => openCompose() }}
-        >
-          <NativeTabs.Trigger.Label hidden>Compose</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon sf="square.and.pencil" md="edit" />
-        </NativeTabs.Trigger>
-      ) : null}
     </NativeTabs>
   );
 }

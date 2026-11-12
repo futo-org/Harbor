@@ -3,6 +3,7 @@ import { Routes } from '@/src/common/constants';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import {
   hexToBytes,
+  isGrayjay,
   thirdPartyApplication,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms } from '@/src/common/theme';
@@ -30,9 +31,11 @@ export function PostSubheader({
   hideReplyingTo: boolean;
 }) {
   const replyParentId = hideReplyingTo ? undefined : post.reply?.parentId;
-  // Not worth saying of posts made with the app showing them.
+  // Not worth saying of posts made with the app showing them, nor of
+  // Grayjay's comments on a page.
   const withApp =
-    post.application?.id === HARBOR_APPLICATION.id
+    post.application?.id === HARBOR_APPLICATION.id ||
+    (isGrayjay(post.application) && post.attributedLink)
       ? undefined
       : thirdPartyApplication(post.application);
   // Not shown where every post listed is about the same page.

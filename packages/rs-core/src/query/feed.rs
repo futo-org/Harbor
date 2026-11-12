@@ -1,15 +1,15 @@
 //! Feed-service RPCs surfaced as observables via `Query`.
 
 use std::cmp::Reverse;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
-    AttributedTo, EventBundle, EventHint, GetAttributedToFeedRequest, GetAttributedToFeedResponse,
-    GetAttributedToStatsRequest, GetAttributedToStatsResponse, GetAttributionFeedRequest,
-    GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest,
-    GetPostThreadRequest, GetPostThreadResponse, PageParams, SortPostsBy, attributed_to::To,
-    feeds_service_client::FeedsServiceClient,
+    AttributedTo, AttributedToFeedItem, EventBundle, EventHint, GetAttributedToFeedRequest,
+    GetAttributedToFeedResponse, GetAttributedToStatsRequest, GetAttributedToStatsResponse,
+    GetAttributionFeedRequest, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
+    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageParams, SortPostsBy,
+    attributed_to::To, feeds_service_client::FeedsServiceClient,
 };
 use prost::Message;
 
@@ -379,29 +379,67 @@ pub fn get_identity_feed(
     ))
 }
 
-/// Concatenate per-server pages in the order the servers ranked them, and
-/// keep one item per target.
+/// The URL an attributed-to feed item is for.
+fn attributed_url(item: &AttributedToFeedItem) -> Option<&str> {
+    match item.attributed_to.as_ref()?.to.as_ref()? {
+        To::Link(link) => Some(&link.url),
+    }
+}
+
+/// Keep one item per target with its highest count, most posts first. Rows
+/// already emitted keep their place.
 fn merge_attributed_to_feed_responses(
     values: &[Vec<u8>],
-    _previous: Option<&Vec<u8>>,
+    previous: Option<&Vec<u8>>,
     _client: &Arc<Mutex<PolycentricClient>>,
 ) -> Vec<u8> {
     let mut merged = GetAttributedToFeedResponse::default();
+    let mut index: HashMap<String, usize> = HashMap::new();
 
     for v in values {
-        if let Ok(incoming) = GetAttributedToFeedResponse::decode(v.as_slice()) {
-            merged.items.extend(incoming.items);
-            merged.page_info = merge_page_info(merged.page_info, incoming.page_info);
+        let Ok(incoming) = GetAttributedToFeedResponse::decode(v.as_slice()) else {
+            continue;
+        };
+        merged.page_info = merge_page_info(merged.page_info, incoming.page_info);
+        for item in incoming.items {
+            let Some(url) = attributed_url(&item).map(str::to_owned) else {
+                continue;
+            };
+            match index.get(&url) {
+                Some(&at) => {
+                    let kept = &mut merged.items[at];
+                    kept.post_count = kept.post_count.max(item.post_count);
+                }
+                None => {
+                    index.insert(url, merged.items.len());
+                    merged.items.push(item);
+                }
+            }
         }
     }
 
-    let mut seen: HashSet<String> = HashSet::new();
-    merged.items.retain(
-        |item| match item.attributed_to.as_ref().and_then(|a| a.to.as_ref()) {
-            Some(To::Link(link)) => seen.insert(link.url.clone()),
-            None => false,
-        },
-    );
+    let anchor: HashMap<String, usize> = previous
+        .and_then(|p| GetAttributedToFeedResponse::decode(p.as_slice()).ok())
+        .map(|previous| {
+            previous
+                .items
+                .iter()
+                .enumerate()
+                .filter_map(|(position, item)| Some((attributed_url(item)?.to_owned(), position)))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    merged.items.sort_by_cached_key(|item| {
+        let url = attributed_url(item).map(str::to_owned);
+        (
+            url.as_ref()
+                .and_then(|url| anchor.get(url).copied())
+                .unwrap_or(usize::MAX),
+            Reverse(item.post_count),
+            url,
+        )
+    });
 
     merged.encode_to_vec()
 }
@@ -858,7 +896,7 @@ mod tests {
 
     use super::*;
     use polycentric_common::models::protos_v2::{
-        Event, EventBundle, EventHint, EventKey, EventMetadata, GetFeedResponse, PageInfo,
+        Event, EventBundle, EventHint, EventKey, EventMetadata, GetFeedResponse, Link, PageInfo,
         PublicKey, SignedEvent,
     };
 
@@ -1431,5 +1469,68 @@ mod tests {
 
         let merged = merge_feed_responses(&[page1, page2], None, &test_client());
         assert_eq!(created_ats(&merged), vec![100, 90, 80, 70]);
+    }
+
+    fn attributed_page(items: &[(&str, i64)]) -> Vec<u8> {
+        GetAttributedToFeedResponse {
+            items: items
+                .iter()
+                .map(|(url, post_count)| AttributedToFeedItem {
+                    attributed_to: Some(AttributedTo {
+                        to: Some(To::Link(Link {
+                            url: url.to_string(),
+                            ..Default::default()
+                        })),
+                    }),
+                    post_count: *post_count,
+                })
+                .collect(),
+            page_info: None,
+        }
+        .encode_to_vec()
+    }
+
+    fn attributed_rows(merged: &[u8]) -> Vec<(String, i64)> {
+        GetAttributedToFeedResponse::decode(merged)
+            .unwrap()
+            .items
+            .iter()
+            .map(|item| (attributed_url(item).unwrap().to_string(), item.post_count))
+            .collect()
+    }
+
+    #[test]
+    fn attributed_to_servers_are_ranked_together() {
+        let a = attributed_page(&[("a", 5), ("b", 2)]);
+        let b = attributed_page(&[("c", 9), ("b", 4), ("d", 1)]);
+
+        let merged = merge_attributed_to_feed_responses(&[a, b], None, &test_client());
+        assert_eq!(
+            attributed_rows(&merged),
+            [
+                ("c".to_string(), 9),
+                ("a".to_string(), 5),
+                ("b".to_string(), 4),
+                ("d".to_string(), 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn attributed_to_paging_does_not_move_emitted_rows() {
+        let page1 = attributed_page(&[("a", 5), ("b", 2)]);
+        let client = test_client();
+        let first = merge_attributed_to_feed_responses(std::slice::from_ref(&page1), None, &client);
+
+        let page2 = attributed_page(&[("c", 9), ("b", 7)]);
+        let second = merge_attributed_to_feed_responses(&[page1, page2], Some(&first), &client);
+        assert_eq!(
+            attributed_rows(&second),
+            [
+                ("a".to_string(), 5),
+                ("b".to_string(), 7),
+                ("c".to_string(), 9),
+            ]
+        );
     }
 }

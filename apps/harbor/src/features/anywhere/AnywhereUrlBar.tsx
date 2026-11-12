@@ -3,6 +3,7 @@ import { TextInput } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { parseAnywhereUrl } from '@/src/common/util/anywhere-url';
+import { isIOS } from '@/src/common/util/platform';
 import { SearchField } from '@/src/features/search/SearchField';
 import { type Href, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -38,7 +39,12 @@ export function AnywhereUrlField({ url = '' }: { url?: string }) {
         autoCorrect={false}
         keyboardType="url"
         returnKeyType="go"
-        style={[Atoms.py_0, Atoms.px_0, Atoms.flex_1]}
+        style={[
+          Atoms.py_0,
+          Atoms.px_0,
+          Atoms.flex_1,
+          isIOS && { lineHeight: undefined },
+        ]}
       />
     </SearchField>
   );

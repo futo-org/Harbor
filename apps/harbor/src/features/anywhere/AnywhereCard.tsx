@@ -18,7 +18,7 @@ export function AnywhereCard({
   commentCount,
 }: {
   link: v2.Link;
-  /** How many comments the page has, shown under the card once known. */
+  /** How many comments the page has; its line is held open until known. */
   commentCount?: number;
   /** Stands in for the card while what it shows is being fetched. */
   loading?: boolean;
@@ -32,11 +32,11 @@ export function AnywhereCard({
       ) : (
         <LinkPreviewCard link={link} compact={compact} />
       )}
-      {commentCount === undefined ? null : (
-        <Text variant="secondary" color="neutral_500" style={Atoms.mt_md}>
-          {commentCountLabel(commentCount)}
-        </Text>
-      )}
+      <Text variant="secondary" color="neutral_500" style={Atoms.mt_md}>
+        {commentCount === undefined
+          ? '\u00A0'
+          : commentCountLabel(commentCount)}
+      </Text>
     </View>
   );
 }
