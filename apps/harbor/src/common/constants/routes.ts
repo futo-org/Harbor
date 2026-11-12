@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { withIdentity } from '../lib/authGate';
 import type { PostData } from '../lib/polycentric-hooks';
+import { encodeAnywhereUrl } from '../util/anywhere-url';
 
 /** Query param carrying where onboarding should land the user afterwards. */
 export const RETURN_TO_PARAM = 'returnTo';
@@ -53,6 +54,17 @@ export const Routes = {
       index: '/explore',
       people: '/explore/people',
       search: '/explore/search',
+    },
+    anywhere: {
+      index: '/anywhere',
+      /** A web page and the posts about it. */
+      url: (url: string) => `/anywhere/u/${encodeAnywhereUrl(url)}` as const,
+      browserExtension: {
+        /** Where to get the browser extension. */
+        index: '/anywhere/browser-extension',
+        /** The screen the browser extension frames. */
+        panel: '/anywhere/browser-extension/panel',
+      },
     },
     claims: '/claims',
     profile: (identityId: string) => `/${identityId}` as const,

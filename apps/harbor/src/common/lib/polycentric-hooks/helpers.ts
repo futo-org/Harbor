@@ -40,6 +40,9 @@ export type PostData = {
   /** Attached link previews (Open Graph metadata), in author-provided order. */
   links: v2.Link[];
 
+  /** The page the post is about, when it is attributed to a link. */
+  attributedLink?: v2.Link;
+
   /** Set when the underlying `v2.Post` carried a `reply`. */
   reply?: {
     /** Hex of the root post's EventKey — same encoding as `PostData.id`. */
@@ -225,6 +228,9 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
         }
       : undefined;
     const quoteId = post.quote ? eventKeyId(post.quote) : undefined;
+    const attributedTo = post.attributedTo.find(
+      ({ to }) => to.oneofKind === 'link',
+    )?.to;
 
     return {
       id,
@@ -236,6 +242,8 @@ export function decodePostBundle(bundle: v2.EventBundle): PostData | null {
       application: event.application,
       images: post.images,
       links: post.links,
+      attributedLink:
+        attributedTo?.oneofKind === 'link' ? attributedTo.link : undefined,
       reply,
       quoteId,
       replyCount: bundle.meta?.replyCount,

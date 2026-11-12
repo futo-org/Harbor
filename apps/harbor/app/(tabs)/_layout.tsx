@@ -7,6 +7,14 @@ import useUnreadNotificationCount, {
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Stack } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
+import { Platform } from 'react-native';
+
+/**
+ * iPhones before iOS 26 show five tabs at most and fold the rest into
+ * "More", so Anywhere stays off their tab bar.
+ */
+const IOS_TAB_BAR_FULL =
+  isIOS && Number.parseInt(String(Platform.Version), 10) < 26;
 
 export default function TabsLayout() {
   const { theme } = useTheme();
@@ -46,6 +54,7 @@ export default function TabsLayout() {
           <Stack.Screen name="claims" />
         </Stack.Protected>
         <Stack.Screen name="explore" />
+        <Stack.Screen name="anywhere" />
         <Stack.Screen name="search" />
       </Stack>
     );
@@ -71,6 +80,11 @@ export default function TabsLayout() {
       <NativeTabs.Trigger name="explore">
         <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="anywhere" hidden={IOS_TAB_BAR_FULL}>
+        <NativeTabs.Trigger.Label>Anywhere</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="globe" md="language" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="notifications">
