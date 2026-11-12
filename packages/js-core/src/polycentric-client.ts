@@ -255,6 +255,54 @@ export class PolycentricClient {
   }
 
   /**
+   * The URLs recent posts are attributed to, with their post counts
+   * (`FeedsService.GetAttributedToFeed`). `null` if every server fails.
+   */
+  async attributedToFeed(
+    request: Proto.GetAttributedToFeedRequest,
+  ): Promise<Proto.GetAttributedToFeedResponse | null> {
+    const body = Proto.GetAttributedToFeedRequest.toBinary(request);
+    for (const server of this.servers) {
+      try {
+        const bytes = await this.core.getAttributedToFeed(
+          server,
+          body.buffer as ArrayBuffer,
+        );
+        return Proto.GetAttributedToFeedResponse.fromBinary(
+          new Uint8Array(bytes),
+        );
+      } catch {
+        // Try the next server.
+      }
+    }
+    return null;
+  }
+
+  /**
+   * The post and reaction counts of a URL
+   * (`FeedsService.GetAttributedToStats`). `null` if every server fails.
+   */
+  async attributedToStats(
+    request: Proto.GetAttributedToStatsRequest,
+  ): Promise<Proto.GetAttributedToStatsResponse | null> {
+    const body = Proto.GetAttributedToStatsRequest.toBinary(request);
+    for (const server of this.servers) {
+      try {
+        const bytes = await this.core.getAttributedToStats(
+          server,
+          body.buffer as ArrayBuffer,
+        );
+        return Proto.GetAttributedToStatsResponse.fromBinary(
+          new Uint8Array(bytes),
+        );
+      } catch {
+        // Try the next server.
+      }
+    }
+    return null;
+  }
+
+  /**
    * Ban or unban `targetIdentity` on `server`
    * (`IdentityService.SetBanStatus`). The active identity must be a
    * moderator on `server`.

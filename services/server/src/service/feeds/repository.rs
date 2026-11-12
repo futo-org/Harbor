@@ -7,7 +7,7 @@ use sea_orm::{
     *,
 };
 use sea_query::query::{CommonTableExpression, WithClause};
-use sea_query::{Func, PgFunc, SelectStatement, UnionType};
+use sea_query::{Alias, Asterisk, Func, PgFunc, SelectStatement, UnionType};
 use serde::{Deserialize, Serialize};
 use tonic::Status;
 
@@ -18,9 +18,9 @@ use crate::db::Connection;
 use crate::service::events::TargetEventKey;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
 use ::entity::{
-    application, content, content_label, content_post_attributed_url,
-    content_reaction as Contentreaction, event, follow, interaction_tally,
-    quote, reaction, reply, repost,
+    application, content, content_delete, content_label,
+    content_post_attributed_url, content_reaction as Contentreaction, event,
+    follow, interaction_tally, quote, reaction, reply, repost,
 };
 
 /// Application identifiers hidden from the global Explore feed.
@@ -578,6 +578,140 @@ impl Query {
         sea_cursor.all(db).await
     }
 
+    /// The URLs recent Feed posts are attributed to: most posts first for
+    /// `SortPostsBy::Top`, with older posts counting for less, otherwise
+    /// latest post first.
+    #[tracing::instrument(skip_all)]
+    pub async fn attributed_urls<C: Connection>(
+        db: &mut C,
+        filter: AttributedUrlsFilter,
+        sort_by: SortPostsBy,
+        limit: u64,
+        cursor_filter: &CursorFilter<AttributedUrlSortKey>,
+    ) -> Result<Vec<AttributedUrl>, DbErr> {
+        let AttributedUrlsFilter {
+            within_days,
+            omit_labels,
+            only_applications,
+            omit_applications,
+        } = filter;
+        let latest = Expr::from(Func::max(Expr::col((
+            content::Entity,
+            content::Column::Id,
+        ))));
+        let sort_key = match sort_by {
+            // Each post counts for less as it ages, as posts do on Explore.
+            SortPostsBy::Top => Expr::from(Func::sum(
+                Func::cust("decay_interaction_count")
+                    .arg(Expr::value(0_i64))
+                    .arg(Expr::col((event::Entity, event::Column::CreatedAt))),
+            )),
+            SortPostsBy::Default | SortPostsBy::Latest => {
+                Expr::from(Func::cast_as(latest.clone(), "NUMERIC"))
+            }
+        };
+        let (forward, marker) = match cursor_filter {
+            CursorFilter::Forward(Cursor::End)
+            | CursorFilter::Backward(Cursor::Start) => return Ok(Vec::new()),
+            CursorFilter::Forward(Cursor::Start) => (true, None),
+            CursorFilter::Forward(Cursor::Mid(marker)) => (true, Some(marker)),
+            CursorFilter::Backward(Cursor::Mid(marker)) => {
+                (false, Some(marker))
+            }
+            CursorFilter::Backward(Cursor::End) => (false, None),
+        };
+        let url = Expr::col((
+            content_post_attributed_url::Entity,
+            content_post_attributed_url::Column::Url,
+        ));
+        let since = chrono::Utc::now().fixed_offset()
+            - chrono::Duration::days(within_days.into());
+        let application = application_join();
+        let mut query = attributed_posts(omit_labels);
+        query
+            .expr_as(url.clone(), "url")
+            .expr_as(Func::count(Expr::col(Asterisk)), "post_count")
+            .expr_as(latest.clone(), "latest_content_id")
+            .expr_as(Func::cast_as(sort_key.clone(), "TEXT"), "sort_key")
+            .left_join(application.to_tbl.clone(), application)
+            .and_where(
+                Expr::col((event::Entity, event::Column::CreatedAt)).gte(since),
+            )
+            .add_group_by([url]);
+
+        let identifier =
+            Expr::col((application::Entity, application::Column::Identifier));
+        if !only_applications.is_empty() {
+            query.and_where(identifier.clone().is_in(only_applications));
+        }
+        if !omit_applications.is_empty() {
+            query.and_where(
+                identifier
+                    .clone()
+                    .is_null()
+                    .or(identifier.is_not_in(omit_applications)),
+            );
+        }
+
+        if let Some(marker) = marker {
+            let key = Expr::tuple([sort_key.clone(), latest.clone()]);
+            let at = Expr::tuple([
+                Expr::cust_with_values(
+                    "($1)::NUMERIC",
+                    [marker.sorted_by.clone()],
+                ),
+                Expr::from(marker.event_id),
+            ]);
+            query.and_having(if forward { key.lt(at) } else { key.gt(at) });
+        }
+        let order = if forward { Order::Desc } else { Order::Asc };
+        query
+            .order_by_expr(sort_key, order.clone())
+            .order_by_expr(latest, order)
+            .limit(limit);
+
+        let stmt = db.get_database_backend().build(&query);
+        let mut rows = AttributedUrl::find_by_statement(stmt).all(db).await?;
+        if !forward {
+            rows.reverse();
+        }
+        Ok(rows)
+    }
+
+    /// The number of Feed posts attributed to `url`.
+    #[tracing::instrument(skip_all)]
+    pub async fn count_posts_attributed_to_url<C: Connection>(
+        db: &mut C,
+        url: String,
+        omit_labels: Vec<String>,
+    ) -> Result<i64, DbErr> {
+        let mut query = attributed_posts(omit_labels);
+        query.expr(Func::count(Expr::col(Asterisk))).and_where(
+            Expr::col((
+                content_post_attributed_url::Entity,
+                content_post_attributed_url::Column::Url,
+            ))
+            .eq(url),
+        );
+        let row = db.query_one(&query).await?;
+        row.map_or(Ok(0), |row| row.try_get_by(0))
+    }
+
+    /// The serialized content with each of `ids`.
+    #[tracing::instrument(skip_all)]
+    pub async fn list_content_by_ids<C: Connection>(
+        db: &mut C,
+        ids: Vec<i64>,
+    ) -> Result<Vec<content::Model>, DbErr> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        content::Entity::find()
+            .filter(content::Column::Id.is_in(ids))
+            .all(db)
+            .await
+    }
+
     /// Bulk-fetch events (with joined content) by their EventKey
     /// tuples. Keys missing a `signed_by` are skipped. Used to hydrate
     /// referenced posts (quote / repost targets) as `event_hints`.
@@ -1034,6 +1168,139 @@ fn sort_posts_by_column(sort_by: SortPostsBy) -> Expr {
             Expr::col(interaction_tally::Column::DecayedCount.as_column_ref())
         }
     }
+}
+
+/// Feed posts joined to the URLs they are attributed to, without those
+/// deleted by their author or given any of `omit_labels` by the trusted
+/// moderator.
+fn attributed_posts(omit_labels: Vec<String>) -> SelectStatement {
+    let content = content_join();
+    let attributed = attributed_url_join();
+    let by_identity =
+        Expr::col((Alias::new(BY_EVENT), event::Column::Identity));
+
+    let mut deletes = targeting_event([
+        content_delete::Column::ContentId,
+        content_delete::Column::EventKeyCollection,
+        content_delete::Column::EventKeyIdentity,
+        content_delete::Column::EventKeyPublicKeyType,
+        content_delete::Column::EventKeyPublicKey,
+        content_delete::Column::EventKeySequence,
+    ]);
+    deletes.and_where(
+        by_identity
+            .clone()
+            .equals((event::Entity, event::Column::Identity)),
+    );
+
+    let mut query = SelectStatement::new();
+    query
+        .from(event::Entity)
+        .inner_join(content.to_tbl.clone(), content)
+        .inner_join(attributed.to_tbl.clone(), attributed)
+        .and_where(
+            Expr::col((event::Entity, event::Column::Collection))
+                .eq(Expr::Constant(FEED_COLLECTION.into())),
+        )
+        .and_where(Expr::exists(deletes).not());
+
+    if let Some(moderator) = config::get().trusted_moderator.as_deref()
+        && !omit_labels.is_empty()
+    {
+        let mut labels = targeting_event([
+            content_label::Column::ContentId,
+            content_label::Column::EventKeyCollection,
+            content_label::Column::EventKeyIdentity,
+            content_label::Column::EventKeyPublicKeyType,
+            content_label::Column::EventKeyPublicKey,
+            content_label::Column::EventKeySequence,
+        ]);
+        labels.and_where(by_identity.eq(moderator)).and_where(
+            Expr::col(content_label::Column::LabelValue.as_column_ref())
+                .is_in(omit_labels),
+        );
+        query.and_where(Expr::exists(labels).not());
+    }
+
+    query
+}
+
+/// Alias of the event carrying a row of [`targeting_event`].
+const BY_EVENT: &str = "by_event";
+
+/// Subquery of a content table's rows that target the outer query's event.
+/// The columns are the table's content id, then its event key.
+fn targeting_event<C: ColumnTrait>(
+    [
+        content_id,
+        collection,
+        identity,
+        public_key_type,
+        public_key,
+        sequence,
+    ]: [C; 6],
+) -> SelectStatement {
+    let by_content = Alias::new("by_content");
+    let by_event = Alias::new(BY_EVENT);
+
+    let mut query = SelectStatement::new();
+    query
+        .expr(Expr::value(1))
+        .from(content_id.entity_name())
+        .join_as(
+            JoinType::InnerJoin,
+            content::Entity,
+            by_content.clone(),
+            Expr::col((by_content.clone(), content::Column::Id))
+                .equals(content_id.as_column_ref()),
+        )
+        .join_as(
+            JoinType::InnerJoin,
+            event::Entity,
+            by_event.clone(),
+            Expr::col((by_event.clone(), event::Column::ContentDigestType))
+                .equals((by_content.clone(), content::Column::DigestType))
+                .and(
+                    Expr::col((by_event, event::Column::ContentDigestBytes))
+                        .equals((by_content, content::Column::DigestBytes)),
+                ),
+        );
+    for (key, of_event) in [
+        (collection, event::Column::Collection),
+        (identity, event::Column::Identity),
+        (public_key_type, event::Column::PublicKeyType),
+        (public_key, event::Column::PublicKey),
+        (sequence, event::Column::Sequence),
+    ] {
+        query.and_where(
+            Expr::col(key.as_column_ref()).equals((event::Entity, of_event)),
+        );
+    }
+    query
+}
+
+/// A URL's decayed post count, or the content id of its latest post. A
+/// `NUMERIC` as text, like [`DecayedReactionCount`].
+pub type AttributedUrlSortKey = String;
+
+/// Which posts count towards [`Query::attributed_urls`].
+#[derive(Clone)]
+pub struct AttributedUrlsFilter {
+    /// How far back posts count.
+    pub within_days: i32,
+    pub omit_labels: Vec<String>,
+    /// Application identifiers. Empty allows every application.
+    pub only_applications: Vec<String>,
+    pub omit_applications: Vec<String>,
+}
+
+#[derive(Debug, FromQueryResult)]
+pub struct AttributedUrl {
+    pub url: String,
+    pub post_count: i64,
+    /// Content of the latest post attributed to the URL.
+    pub latest_content_id: i64,
+    pub sort_key: AttributedUrlSortKey,
 }
 
 #[derive(Debug, FromQueryResult)]

@@ -6,10 +6,11 @@ use crate::sync;
 use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
     AcknowledgeNotificationsRequest, ContentDigest, DeleteContentRequest, Event,
-    GetAttributedToReactionCountsRequest, GetServerInfoRequest, Identity, ListEventsResponse,
-    PublicKey, PutEventsRequest, ResolveReportRequest, SetBanStatusRequest, SignedEvent,
-    SignedMessage, UploadBlobRequest, UrlInfoRequest, content_service_client::ContentServiceClient,
-    event_sync_service_client::EventSyncServiceClient,
+    GetAttributedToFeedRequest, GetAttributedToReactionCountsRequest, GetAttributedToStatsRequest,
+    GetServerInfoRequest, Identity, ListEventsResponse, PublicKey, PutEventsRequest,
+    ResolveReportRequest, SetBanStatusRequest, SignedEvent, SignedMessage, UploadBlobRequest,
+    UrlInfoRequest, content_service_client::ContentServiceClient,
+    event_sync_service_client::EventSyncServiceClient, feeds_service_client::FeedsServiceClient,
     identity_service_client::IdentityServiceClient,
     moderation_service_client::ModerationServiceClient,
     notification_service_client::NotificationServiceClient,
@@ -723,6 +724,44 @@ impl PolycentricCore {
             .get_attributed_to_reaction_counts(request)
             .await
             .map_err(|e| CoreError::Network(format!("get_attributed_to_reaction_counts: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Fetch the URLs recent posts are attributed to. Takes a serialized
+    /// `GetAttributedToFeedRequest`, returns a `GetAttributedToFeedResponse`.
+    pub async fn get_attributed_to_feed(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let request =
+            GetAttributedToFeedRequest::decode(request_bytes.as_slice()).map_err(|e| {
+                CoreError::Decode(format!("Failed to decode GetAttributedToFeedRequest: {e}"))
+            })?;
+        let mut client = FeedsServiceClient::new(channel(&server_url).await?);
+        let response = client
+            .get_attributed_to_feed(request)
+            .await
+            .map_err(|e| CoreError::Network(format!("get_attributed_to_feed: {e}")))?;
+        Ok(response.into_inner().encode_to_vec())
+    }
+
+    /// Fetch the post and reaction counts of a URL. Takes a serialized
+    /// `GetAttributedToStatsRequest`, returns a `GetAttributedToStatsResponse`.
+    pub async fn get_attributed_to_stats(
+        &self,
+        server_url: String,
+        request_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let request =
+            GetAttributedToStatsRequest::decode(request_bytes.as_slice()).map_err(|e| {
+                CoreError::Decode(format!("Failed to decode GetAttributedToStatsRequest: {e}"))
+            })?;
+        let mut client = FeedsServiceClient::new(channel(&server_url).await?);
+        let response = client
+            .get_attributed_to_stats(request)
+            .await
+            .map_err(|e| CoreError::Network(format!("get_attributed_to_stats: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
     }
 

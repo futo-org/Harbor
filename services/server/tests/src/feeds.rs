@@ -517,6 +517,284 @@ fn attribution_feed_request(
     }
 }
 
+/// A post attributed to `url`, described by `title`.
+fn post_about(url: &str, title: &str, text: &str) -> Post {
+    Post {
+        text: text.to_owned(),
+        attributed_to: vec![AttributedTo {
+            to: Some(attributed_to::To::Link(Link {
+                title: title.to_owned(),
+                url: url.to_owned(),
+                ..Default::default()
+            })),
+        }],
+        ..Default::default()
+    }
+}
+
+/// A page of the attributed-to feed as `(link, post_count)`, and its page
+/// info.
+async fn attributed_to_feed(
+    sort_by: SortPostsBy,
+    page_params: PageParams,
+    omit_labels: Vec<String>,
+) -> (Vec<(Link, i64)>, PageInfo) {
+    let resp = connect_feeds()
+        .await
+        .get_attributed_to_feed(GetAttributedToFeedRequest {
+            identity: None,
+            page_params: Some(page_params),
+            omit_labels,
+            sort_by: Some(sort_by as i32),
+            ..Default::default()
+        })
+        .await
+        .expect("get_attributed_to_feed failed")
+        .into_inner();
+    let items = resp
+        .items
+        .into_iter()
+        .map(|item| {
+            let Some(attributed_to::To::Link(link)) =
+                item.attributed_to.and_then(|a| a.to)
+            else {
+                panic!("attributed-to feed item without a link");
+            };
+            (link, item.post_count)
+        })
+        .collect();
+    (items, resp.page_info.expect("page info"))
+}
+
+/// The first 100 targets of the attributed-to feed, most posts first.
+async fn top_attributions(omit_labels: Vec<String>) -> Vec<(Link, i64)> {
+    let first_page = PageParams {
+        limit: Some(100),
+        ..Default::default()
+    };
+    attributed_to_feed(SortPostsBy::Top, first_page, omit_labels)
+        .await
+        .0
+}
+
+#[tokio::test]
+async fn attributed_to_feed_latest_first_pages_through_urls() {
+    let older = format!("https://example.com/{}", random_string());
+    let newer = format!("https://example.com/{}", random_string());
+
+    let mut author = TestClient::new().await;
+    let now = current_timestamp();
+    author.post(post_about(&older, "Older", "one"), now + 1);
+    author.post(post_about(&older, "Older", "two"), now + 2);
+    author.post(post_about(&newer, "Newer", "three"), now + 3);
+    author.submit_events().await;
+
+    // Other tests post too, so walk the pages until both have been seen.
+    let mut seen = Vec::new();
+    let mut page_params = PageParams {
+        limit: Some(1),
+        ..Default::default()
+    };
+    for _ in 0..200 {
+        let (items, page_info) = attributed_to_feed(
+            SortPostsBy::Latest,
+            page_params.clone(),
+            vec![],
+        )
+        .await;
+        assert!(items.len() <= 1, "pages hold at most `limit` targets");
+        seen.extend(items.into_iter().map(|(link, _)| link.url));
+        if seen.contains(&older) || !page_info.has_next_page {
+            break;
+        }
+        page_params.forward_token = Some(page_info.end_cursor);
+    }
+
+    let position = |url: &str| {
+        seen.iter()
+            .position(|seen| seen == url)
+            .unwrap_or_else(|| panic!("{url} is not in {seen:?}"))
+    };
+    assert!(
+        position(&newer) < position(&older),
+        "the target posted about latest should come first",
+    );
+}
+
+#[tokio::test]
+async fn attributed_to_feed_filters_by_application() {
+    let url = format!("https://example.com/{}", random_string());
+    let one = format!("app.one.{}", random_string());
+    let two = format!("app.two.{}", random_string());
+
+    // A post about the url made with each application, and one with none.
+    let mut author = TestClient::new().await;
+    let now = current_timestamp();
+    for (n, app_id) in [&one, &two].into_iter().enumerate() {
+        let content = Content {
+            content_body: Some(ContentBody::Post(post_about(
+                &url,
+                "Title",
+                &format!("made with {app_id}"),
+            ))),
+        };
+        let (content_bytes, digest) = content_with_digest(content);
+        let mut event = author.make_event(
+            COLLECTION_FEED,
+            author.previous_signature(),
+            author.previous_root(),
+            digest,
+            now + 1 + n as u64,
+        );
+        event.application = Some(Application {
+            name: "Test".to_owned(),
+            id: app_id.clone(),
+            version: "v1".to_owned(),
+            url: "https://example.com".to_owned(),
+        });
+        author.push_event_bundle2(event, content_bytes);
+    }
+    author.post(post_about(&url, "Title", "made with none"), now + 3);
+    author.submit_events().await;
+
+    let count = |only: Vec<&String>, omit: Vec<&String>| {
+        let url = url.clone();
+        let request = GetAttributedToFeedRequest {
+            page_params: Some(PageParams {
+                limit: Some(100),
+                ..Default::default()
+            }),
+            sort_by: Some(SortPostsBy::Latest as i32),
+            only_applications: only.into_iter().cloned().collect(),
+            omit_applications: omit.into_iter().cloned().collect(),
+            ..Default::default()
+        };
+        async move {
+            connect_feeds()
+                .await
+                .get_attributed_to_feed(request)
+                .await
+                .expect("get_attributed_to_feed failed")
+                .into_inner()
+                .items
+                .into_iter()
+                .find(|item| {
+                    matches!(
+                        item.attributed_to.as_ref().and_then(|a| a.to.as_ref()),
+                        Some(attributed_to::To::Link(link)) if link.url == url
+                    )
+                })
+                .map(|item| item.post_count)
+        }
+    };
+
+    assert_eq!(count(vec![], vec![]).await, Some(3), "all applications");
+    assert_eq!(count(vec![&one], vec![]).await, Some(1), "only one");
+    assert_eq!(count(vec![&one, &two], vec![]).await, Some(2), "only both");
+    assert_eq!(count(vec![], vec![&one]).await, Some(2), "all but one");
+    assert_eq!(count(vec![&one], vec![&one]).await, None, "none left");
+}
+
+#[tokio::test]
+async fn top_attributions_orders_urls_by_post_count() {
+    let popular = format!("https://example.com/{}", random_string());
+    let quiet = format!("https://example.com/{}", random_string());
+
+    let mut author = TestClient::new().await;
+    let now = current_timestamp();
+    author.post(post_about(&popular, "First title", "one"), now + 1);
+    author.post(post_about(&quiet, "Quiet title", "two"), now + 2);
+    author.post(post_about(&popular, "Second title", "three"), now + 3);
+    author.post(post_about(&popular, "Latest title", "four"), now + 4);
+    author.submit_events().await;
+
+    let top = top_attributions(vec![]).await;
+    let position = |url: &str| {
+        top.iter()
+            .position(|(link, _)| link.url == url)
+            .unwrap_or_else(|| panic!("{url} is not in {top:?}"))
+    };
+    let (popular_at, quiet_at) = (position(&popular), position(&quiet));
+
+    assert!(popular_at < quiet_at, "more posts should come first");
+    assert_eq!(top[popular_at].1, 3);
+    assert_eq!(top[quiet_at].1, 1);
+    assert_eq!(
+        top[popular_at].0.title, "Latest title",
+        "described as its latest post describes it",
+    );
+}
+
+#[tokio::test]
+async fn top_attributions_skips_deleted_and_omitted_posts() {
+    let url = format!("https://example.com/{}", random_string());
+
+    let mut author = TestClient::new().await;
+    let (mut moderator, _guard) = TestClient::trusted_moderator().await;
+    let now = current_timestamp();
+    author.post(post_about(&url, "Title", "kept"), now + 1);
+    author.post(post_about(&url, "Title", "labeled"), now + 2);
+    let labeled = author.get_last_event_key();
+    author.post(post_about(&url, "Title", "deleted"), now + 3);
+    let deleted = author.get_last_event_key();
+    author.delete_key(deleted, now + 4);
+    author.submit_events().await;
+    moderator.label_key(labeled, vec!["spam".to_string()], now + 5);
+    moderator.submit_events().await;
+
+    let count = |top: Vec<(Link, i64)>| {
+        top.into_iter()
+            .find(|(link, _)| link.url == url)
+            .map(|(_, count)| count)
+    };
+
+    assert_eq!(count(top_attributions(vec![]).await), Some(2));
+    assert_eq!(
+        count(top_attributions(vec!["spam".to_string()]).await),
+        Some(1),
+    );
+
+    // The target's own stats count the same posts.
+    assert_eq!(attributed_to_stats(&url, vec![]).await.post_count, 2);
+    assert_eq!(
+        attributed_to_stats(&url, vec!["spam".to_string()])
+            .await
+            .post_count,
+        1,
+    );
+}
+
+/// The stats of the posts and reactions attributed to `url`.
+async fn attributed_to_stats(
+    url: &str,
+    omit_labels: Vec<String>,
+) -> GetAttributedToStatsResponse {
+    connect_feeds()
+        .await
+        .get_attributed_to_stats(GetAttributedToStatsRequest {
+            attributed_to: Some(AttributedTo {
+                to: Some(attributed_to::To::Link(Link {
+                    url: url.to_string(),
+                    ..Default::default()
+                })),
+            }),
+            omit_labels,
+        })
+        .await
+        .expect("get_attributed_to_stats failed")
+        .into_inner()
+}
+
+#[tokio::test]
+async fn attributed_to_stats_of_unknown_url_are_zero() {
+    let url = format!("https://example.com/{}", random_string());
+    let stats = attributed_to_stats(&url, vec![]).await;
+    assert_eq!(
+        (stats.post_count, stats.upvote_count, stats.downvote_count),
+        (0, 0, 0),
+    );
+}
+
 #[tokio::test]
 async fn omit_labels_non_matching_keeps_post_and_labels() {
     let mut event = connect_event_sync().await;

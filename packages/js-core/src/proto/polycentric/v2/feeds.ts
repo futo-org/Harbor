@@ -198,6 +198,113 @@ export interface GetAttributionFeedRequest {
     omitLabels: string[];
 }
 /**
+ * @generated from protobuf message polycentric.v2.GetAttributedToFeedRequest
+ */
+export interface GetAttributedToFeedRequest {
+    /**
+     * Identity of the caller to return relevant targets for
+     *
+     * @generated from protobuf field: optional string identity = 1
+     */
+    identity?: string;
+    /**
+     * @generated from protobuf field: optional polycentric.v2.PageParams page_params = 2
+     */
+    pageParams?: PageParams;
+    /**
+     * Posts with these label values are not counted
+     *
+     * @generated from protobuf field: repeated string omit_labels = 3
+     */
+    omitLabels: string[];
+    /**
+     * Top: most posts first, decayed by age. Otherwise: latest post first.
+     *
+     * @generated from protobuf field: optional polycentric.v2.SortPostsBy sort_by = 4
+     */
+    sortBy?: SortPostsBy;
+    /**
+     * Only count posts made with these `Application.id`s. Empty allows all.
+     *
+     * @generated from protobuf field: repeated string only_applications = 5
+     */
+    onlyApplications: string[];
+    /**
+     * Do not count posts made with these `Application.id`s
+     *
+     * @generated from protobuf field: repeated string omit_applications = 6
+     */
+    omitApplications: string[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.AttributedToFeedItem
+ */
+export interface AttributedToFeedItem {
+    /**
+     * The target, with the metadata of the latest post about it
+     *
+     * @generated from protobuf field: polycentric.v2.AttributedTo attributed_to = 1
+     */
+    attributedTo?: AttributedTo;
+    /**
+     * Recent posts attributed to the target
+     *
+     * @generated from protobuf field: int64 post_count = 2
+     */
+    postCount: bigint;
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetAttributedToFeedResponse
+ */
+export interface GetAttributedToFeedResponse {
+    /**
+     * @generated from protobuf field: repeated polycentric.v2.AttributedToFeedItem items = 1
+     */
+    items: AttributedToFeedItem[];
+    /**
+     * @generated from protobuf field: optional polycentric.v2.PageInfo page_info = 2
+     */
+    pageInfo?: PageInfo;
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetAttributedToStatsRequest
+ */
+export interface GetAttributedToStatsRequest {
+    /**
+     * @generated from protobuf field: polycentric.v2.AttributedTo attributed_to = 1
+     */
+    attributedTo?: AttributedTo;
+    /**
+     * Posts with these label values are not counted
+     *
+     * @generated from protobuf field: repeated string omit_labels = 2
+     */
+    omitLabels: string[];
+}
+/**
+ * @generated from protobuf message polycentric.v2.GetAttributedToStatsResponse
+ */
+export interface GetAttributedToStatsResponse {
+    /**
+     * Posts attributed to the target
+     *
+     * @generated from protobuf field: int64 post_count = 1
+     */
+    postCount: bigint;
+    /**
+     * Positive reactions on the target
+     *
+     * @generated from protobuf field: int64 upvote_count = 2
+     */
+    upvoteCount: bigint;
+    /**
+     * Negative reactions on the target
+     *
+     * @generated from protobuf field: int64 downvote_count = 3
+     */
+    downvoteCount: bigint;
+}
+/**
  * @generated from protobuf enum polycentric.v2.FeedAlgorithm
  */
 export enum FeedAlgorithm {
@@ -771,6 +878,315 @@ class GetAttributionFeedRequest$Type extends MessageType<GetAttributionFeedReque
  * @generated MessageType for protobuf message polycentric.v2.GetAttributionFeedRequest
  */
 export const GetAttributionFeedRequest = new GetAttributionFeedRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetAttributedToFeedRequest$Type extends MessageType<GetAttributedToFeedRequest> {
+    constructor() {
+        super("polycentric.v2.GetAttributedToFeedRequest", [
+            { no: 1, name: "identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "page_params", kind: "message", T: () => PageParams },
+            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 4, name: "sort_by", kind: "enum", opt: true, T: () => ["polycentric.v2.SortPostsBy", SortPostsBy, "SORT_POSTS_BY_"] },
+            { no: 5, name: "only_applications", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 6, name: "omit_applications", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GetAttributedToFeedRequest>): GetAttributedToFeedRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.omitLabels = [];
+        message.onlyApplications = [];
+        message.omitApplications = [];
+        if (value !== undefined)
+            reflectionMergePartial<GetAttributedToFeedRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetAttributedToFeedRequest): GetAttributedToFeedRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* optional string identity */ 1:
+                    message.identity = reader.string();
+                    break;
+                case /* optional polycentric.v2.PageParams page_params */ 2:
+                    message.pageParams = PageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
+                    break;
+                case /* repeated string omit_labels */ 3:
+                    message.omitLabels.push(reader.string());
+                    break;
+                case /* optional polycentric.v2.SortPostsBy sort_by */ 4:
+                    message.sortBy = reader.int32();
+                    break;
+                case /* repeated string only_applications */ 5:
+                    message.onlyApplications.push(reader.string());
+                    break;
+                case /* repeated string omit_applications */ 6:
+                    message.omitApplications.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetAttributedToFeedRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* optional string identity = 1; */
+        if (message.identity !== undefined)
+            writer.tag(1, WireType.LengthDelimited).string(message.identity);
+        /* optional polycentric.v2.PageParams page_params = 2; */
+        if (message.pageParams)
+            PageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated string omit_labels = 3; */
+        for (let i = 0; i < message.omitLabels.length; i++)
+            writer.tag(3, WireType.LengthDelimited).string(message.omitLabels[i]);
+        /* optional polycentric.v2.SortPostsBy sort_by = 4; */
+        if (message.sortBy !== undefined)
+            writer.tag(4, WireType.Varint).int32(message.sortBy);
+        /* repeated string only_applications = 5; */
+        for (let i = 0; i < message.onlyApplications.length; i++)
+            writer.tag(5, WireType.LengthDelimited).string(message.onlyApplications[i]);
+        /* repeated string omit_applications = 6; */
+        for (let i = 0; i < message.omitApplications.length; i++)
+            writer.tag(6, WireType.LengthDelimited).string(message.omitApplications[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetAttributedToFeedRequest
+ */
+export const GetAttributedToFeedRequest = new GetAttributedToFeedRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class AttributedToFeedItem$Type extends MessageType<AttributedToFeedItem> {
+    constructor() {
+        super("polycentric.v2.AttributedToFeedItem", [
+            { no: 1, name: "attributed_to", kind: "message", T: () => AttributedTo },
+            { no: 2, name: "post_count", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
+        ]);
+    }
+    create(value?: PartialMessage<AttributedToFeedItem>): AttributedToFeedItem {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.postCount = 0n;
+        if (value !== undefined)
+            reflectionMergePartial<AttributedToFeedItem>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AttributedToFeedItem): AttributedToFeedItem {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.AttributedTo attributed_to */ 1:
+                    message.attributedTo = AttributedTo.internalBinaryRead(reader, reader.uint32(), options, message.attributedTo);
+                    break;
+                case /* int64 post_count */ 2:
+                    message.postCount = reader.int64().toBigInt();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: AttributedToFeedItem, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.AttributedTo attributed_to = 1; */
+        if (message.attributedTo)
+            AttributedTo.internalBinaryWrite(message.attributedTo, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* int64 post_count = 2; */
+        if (message.postCount !== 0n)
+            writer.tag(2, WireType.Varint).int64(message.postCount);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.AttributedToFeedItem
+ */
+export const AttributedToFeedItem = new AttributedToFeedItem$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetAttributedToFeedResponse$Type extends MessageType<GetAttributedToFeedResponse> {
+    constructor() {
+        super("polycentric.v2.GetAttributedToFeedResponse", [
+            { no: 1, name: "items", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => AttributedToFeedItem },
+            { no: 2, name: "page_info", kind: "message", T: () => PageInfo }
+        ]);
+    }
+    create(value?: PartialMessage<GetAttributedToFeedResponse>): GetAttributedToFeedResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.items = [];
+        if (value !== undefined)
+            reflectionMergePartial<GetAttributedToFeedResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetAttributedToFeedResponse): GetAttributedToFeedResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated polycentric.v2.AttributedToFeedItem items */ 1:
+                    message.items.push(AttributedToFeedItem.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* optional polycentric.v2.PageInfo page_info */ 2:
+                    message.pageInfo = PageInfo.internalBinaryRead(reader, reader.uint32(), options, message.pageInfo);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetAttributedToFeedResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated polycentric.v2.AttributedToFeedItem items = 1; */
+        for (let i = 0; i < message.items.length; i++)
+            AttributedToFeedItem.internalBinaryWrite(message.items[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* optional polycentric.v2.PageInfo page_info = 2; */
+        if (message.pageInfo)
+            PageInfo.internalBinaryWrite(message.pageInfo, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetAttributedToFeedResponse
+ */
+export const GetAttributedToFeedResponse = new GetAttributedToFeedResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetAttributedToStatsRequest$Type extends MessageType<GetAttributedToStatsRequest> {
+    constructor() {
+        super("polycentric.v2.GetAttributedToStatsRequest", [
+            { no: 1, name: "attributed_to", kind: "message", T: () => AttributedTo },
+            { no: 2, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GetAttributedToStatsRequest>): GetAttributedToStatsRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.omitLabels = [];
+        if (value !== undefined)
+            reflectionMergePartial<GetAttributedToStatsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetAttributedToStatsRequest): GetAttributedToStatsRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* polycentric.v2.AttributedTo attributed_to */ 1:
+                    message.attributedTo = AttributedTo.internalBinaryRead(reader, reader.uint32(), options, message.attributedTo);
+                    break;
+                case /* repeated string omit_labels */ 2:
+                    message.omitLabels.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetAttributedToStatsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.AttributedTo attributed_to = 1; */
+        if (message.attributedTo)
+            AttributedTo.internalBinaryWrite(message.attributedTo, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated string omit_labels = 2; */
+        for (let i = 0; i < message.omitLabels.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.omitLabels[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetAttributedToStatsRequest
+ */
+export const GetAttributedToStatsRequest = new GetAttributedToStatsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GetAttributedToStatsResponse$Type extends MessageType<GetAttributedToStatsResponse> {
+    constructor() {
+        super("polycentric.v2.GetAttributedToStatsResponse", [
+            { no: 1, name: "post_count", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 2, name: "upvote_count", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 3, name: "downvote_count", kind: "scalar", T: 3 /*ScalarType.INT64*/, L: 0 /*LongType.BIGINT*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GetAttributedToStatsResponse>): GetAttributedToStatsResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.postCount = 0n;
+        message.upvoteCount = 0n;
+        message.downvoteCount = 0n;
+        if (value !== undefined)
+            reflectionMergePartial<GetAttributedToStatsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GetAttributedToStatsResponse): GetAttributedToStatsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* int64 post_count */ 1:
+                    message.postCount = reader.int64().toBigInt();
+                    break;
+                case /* int64 upvote_count */ 2:
+                    message.upvoteCount = reader.int64().toBigInt();
+                    break;
+                case /* int64 downvote_count */ 3:
+                    message.downvoteCount = reader.int64().toBigInt();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GetAttributedToStatsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* int64 post_count = 1; */
+        if (message.postCount !== 0n)
+            writer.tag(1, WireType.Varint).int64(message.postCount);
+        /* int64 upvote_count = 2; */
+        if (message.upvoteCount !== 0n)
+            writer.tag(2, WireType.Varint).int64(message.upvoteCount);
+        /* int64 downvote_count = 3; */
+        if (message.downvoteCount !== 0n)
+            writer.tag(3, WireType.Varint).int64(message.downvoteCount);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message polycentric.v2.GetAttributedToStatsResponse
+ */
+export const GetAttributedToStatsResponse = new GetAttributedToStatsResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.FeedsService
  */
@@ -781,5 +1197,7 @@ export const FeedsService = new ServiceType("polycentric.v2.FeedsService", [
     { name: "GetExploreFeed", options: {}, I: GetExploreFeedRequest, O: GetFeedResponse },
     { name: "GetPost", options: {}, I: GetPostRequest, O: GetPostResponse },
     { name: "GetPostThread", options: {}, I: GetPostThreadRequest, O: GetPostThreadResponse },
-    { name: "GetAttributionFeed", options: {}, I: GetAttributionFeedRequest, O: GetFeedResponse }
+    { name: "GetAttributionFeed", options: {}, I: GetAttributionFeedRequest, O: GetFeedResponse },
+    { name: "GetAttributedToFeed", options: {}, I: GetAttributedToFeedRequest, O: GetAttributedToFeedResponse },
+    { name: "GetAttributedToStats", options: {}, I: GetAttributedToStatsRequest, O: GetAttributedToStatsResponse }
 ]);
