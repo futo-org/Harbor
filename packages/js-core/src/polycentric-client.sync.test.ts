@@ -2009,4 +2009,44 @@ describe('PolycentricClient live sync', () => {
     client.events.emitKeyPairChanged(null);
     expect(queriesOf(core, Query.SubscribeHeads)).toHaveLength(2);
   });
+
+  it('pulls for the subscribed identity when an identity switch occurs concurrently', async () => {
+    const { core, emitHeads } = makeLiveCore(
+      { pullBundles: () => [makeBundle(remote, content)] },
+      [keyOf(seeded[0])],
+    );
+    const { client, stored } = await makeClient({
+      core,
+      identity: identityA,
+      signer: signerA,
+      events: seeded,
+    });
+
+    // Live sync reads A's stored heads twice: once to see that A is behind,
+    // then again to build the pull. Switch to B during that second read.
+    const getHeads = client.storage.events.getHeads.bind(client.storage.events);
+    vi.spyOn(client.storage.events, 'getHeads')
+      .mockImplementationOnce(getHeads)
+      .mockImplementationOnce((owner) => {
+        client.activeIdentityKey = identityB.key;
+        client.events.emitKeyPairChanged(null);
+        return getHeads(owner);
+      });
+
+    const pulled: string[] = [];
+    client.events.onPulled((identity) => pulled.push(identity));
+    const stop = client.startLiveSync();
+    emitHeads([keyOf(remote)]);
+    await settle();
+
+    const pulls = queriesOf(core, Query.ListEvents);
+    expect(pulls).toHaveLength(1);
+    expect(pulls[0][1].inner[0].identity).toBe(identityA.key);
+    expect(pulls[0][1].inner[0].heads).toEqual([
+      expect.objectContaining({ sequence: 1n }),
+    ]);
+    expect(pulled).toEqual([identityA.key]);
+    expect((await stored(remote))?.signedEvent).toEqual(remote);
+    stop();
+  });
 });

@@ -946,23 +946,24 @@ export class PolycentricClient {
   }
 
   /**
-   * Pull signed events for the active identity from all configured servers
-   * and persist new ones locally. Existing events/content are not overwritten.
-   * Emits `pulled` if any new events were persisted, or with `after` if any
-   * events came back (another tab may have stored them already).
+   * Pull signed events for an identity from all configured servers and
+   * persist new ones locally. Existing events/content are not overwritten.
+   * Emits `pulled` if any events came back (another tab may have stored them
+   * already).
    *
-   * @param after Heads to pull past instead of the stored ones.
+   * @param after Pull `identity`'s events past `heads` instead of the active
+   *   identity's stored heads. The value specified for `partial` is ignored.
    * @returns The number of events returned from servers
    */
   private async pull(
     partial: boolean,
-    after?: Proto.EventKey[],
+    after?: { identity: string; heads: Proto.EventKey[] },
   ): Promise<number> {
-    if (!this.activeIdentityKey) throw new Error('No active identity');
-    const identity = this.activeIdentityKey;
+    const identity = after?.identity ?? this.activeIdentityKey;
+    if (!identity) throw new Error('No active identity');
 
     // Only filter by heads when doing a partial pull or `after` was specified.
-    let heads: Proto.EventKey[] | undefined = after;
+    let heads: Proto.EventKey[] | undefined = after?.heads;
 
     if (partial && !heads) {
       // Partial pulls will skip events at or before each event stream head.
@@ -1201,7 +1202,7 @@ export class PolycentricClient {
           again = false;
           if (this.activeIdentityKey !== identity) return;
           await this.localHeads(identity)
-            .then((heads) => this.pull(true, heads))
+            .then((heads) => this.pull(true, { identity, heads }))
             .catch((err) => {
               console.warn('Live sync pull failed:', err);
             });
