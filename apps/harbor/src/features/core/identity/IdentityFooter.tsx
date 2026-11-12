@@ -13,6 +13,7 @@ import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useIdentitySwitcher } from './useIdentitySwitcher';
 
 type IdentityFooterProps = {
   /** Render only the avatar — used in the narrow sidebar. */
@@ -23,6 +24,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
+  const { open: openIdentitySwitcher } = useIdentitySwitcher();
 
   // This component shouldn't mount if a current identity is not set.
   if (!currentIdentity?.identityKey) {
@@ -61,8 +63,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
     >
       {avatar}
       <Pressable
-        // TODO  Route to identitySwitch when that is implemented
-        onPress={() => router.navigate(Routes.tabs.settings.identity)}
+        onPress={openIdentitySwitcher}
         onHoverIn={onHoverIn}
         onHoverOut={onHoverOut}
         hitSlop={10}

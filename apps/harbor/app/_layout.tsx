@@ -4,6 +4,7 @@ import { AppUpdater } from '@/src/features/core/apk-update';
 import { installErrorReporter } from '@/src/features/telemetry/lib/error-reporter';
 import { installConsoleCapture } from '@/src/features/telemetry/lib/console';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
+import { IdentitySwitcherSheet } from '@/src/features/core/identity/IdentitySwitcherSheet';
 import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
 import { ModerationWarningSheet } from '@/src/features/moderation/ModerationWarningSheet';
 import { LoggedOutShareNotice } from '@/src/features/share-intake/LoggedOutShareNotice';
@@ -195,6 +196,7 @@ export default function RootLayout() {
                   <AuthGateSheet />
                   <LoggedOutShareNotice />
                   <EmojiPickerSheet />
+                  <IdentitySwitcherSheet />
                   <ModerationWarningSheet />
                   <AppUpdater />
                 </TrueSheetProvider>

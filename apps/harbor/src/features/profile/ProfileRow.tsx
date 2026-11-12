@@ -1,4 +1,10 @@
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
+import {
+  AVATAR_SIZE,
+  Block,
+  SkeletonList,
+  useShimmerOpacity,
+} from '@/src/common/components/skeletons';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile, type ProfileHookResult } from './hooks/useProfile';
 import { IdentityHandle } from './IdentityHandle';
@@ -6,6 +12,7 @@ import { Username } from './Username';
 import type { FetchMode } from '@polycentric/react-native';
 import type { ReactNode } from 'react';
 import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 /**
  * A pressable identity row: avatar, name, and alias/shortened-id subtitle,
@@ -80,5 +87,39 @@ export function ProfileRow({
         {trailing}
       </View>
     </Pressable>
+  );
+}
+
+/**
+ * Placeholder shaped like a `ProfileRow` without a trailing element.
+ */
+export function ProfileRowSkeleton() {
+  const animatedStyle = useShimmerOpacity();
+
+  return (
+    <Animated.View
+      style={[
+        Atoms.flex_row,
+        Atoms.align_center,
+        Atoms.gap_md,
+        Atoms.px_lg,
+        Atoms.py_md,
+        animatedStyle,
+      ]}
+    >
+      <Block width={AVATAR_SIZE} height={AVATAR_SIZE} />
+      <View style={[Atoms.flex_1, Atoms.gap_sm]}>
+        <Block width={120} />
+        <Block width={80} height={10} />
+      </View>
+    </Animated.View>
+  );
+}
+
+export function ProfileRowSkeletonList({ count }: { count: number }) {
+  return (
+    <SkeletonList count={count}>
+      <ProfileRowSkeleton />
+    </SkeletonList>
   );
 }
