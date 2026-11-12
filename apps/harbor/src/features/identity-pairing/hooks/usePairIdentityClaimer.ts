@@ -1,6 +1,6 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { decodeBundle } from '@/src/common/lib/polycentric-hooks/helpers';
-import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
+import { redirectIfLoggedInAs } from '@/src/features/onboarding/redirectIfLoggedInAs';
 import type {
   PairingSession,
   PendingLogin,
@@ -209,8 +209,9 @@ export function usePairIdentityClaimer(
 
       void (async () => {
         try {
-          // Bail if the user was logged in elsewhere during the pairing process
-          if (await redirectIfLoggedIn(client)) return;
+          // Bail if we already logged into this identity elsewhere.
+          const identity = session.digest.issuerIdentity;
+          if (await redirectIfLoggedInAs(client, identity)) return;
           if (canceled) return;
 
           const claimServers = serversForClaim(session, info, client.servers);

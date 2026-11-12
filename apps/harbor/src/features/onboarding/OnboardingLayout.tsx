@@ -6,7 +6,6 @@ import { Routes } from '@/src/common/constants';
 import { useVirtualKeyboardOverlap } from '@/src/common/lib/useVirtualKeyboardOverlap';
 import { Atoms, Breakpoints, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
-import { useRedirectWhenLoggedIn } from '@/src/features/onboarding/hooks/useRedirectWhenLoggedIn';
 import { Image } from 'expo-image';
 import { router, Slot, usePathname } from 'expo-router';
 import { KeyboardAvoidingView, useWindowDimensions, View } from 'react-native';
@@ -37,10 +36,6 @@ export default function OnboardingLayout() {
   const isFlowEnd = pathname.endsWith('/success');
   const showBack =
     !isFlowEnd && !FLOW_ENTRY_ROUTES.includes(pathname) && router.canGoBack();
-
-  // Guard the user from accessing an onboarding screen while already logged in.
-  // Exempt flow end screens since they should be shown after a successful login.
-  useRedirectWhenLoggedIn(!isFlowEnd);
 
   return (
     <View

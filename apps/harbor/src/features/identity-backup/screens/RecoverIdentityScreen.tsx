@@ -14,7 +14,7 @@ import {
 } from '@/src/features/identity-backup/components/BackupFilePicker';
 import { BackupStatus } from '@/src/features/identity-backup/components/BackupStatus';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
-import { redirectIfLoggedIn } from '@/src/features/onboarding/redirectIfLoggedIn';
+import { redirectIfLoggedInAs } from '@/src/features/onboarding/redirectIfLoggedInAs';
 import { router } from 'expo-router';
 import { type ReactNode, useState } from 'react';
 import { View } from 'react-native';
@@ -52,8 +52,8 @@ export default function RecoverIdentityScreen() {
     }
 
     try {
-      // Bail if the user was logged in elsewhere in the meantime
-      if (await redirectIfLoggedIn(client)) return;
+      // Bail if this device already has a login for the backup's identity
+      if (await redirectIfLoggedInAs(client, backup.identityKey)) return;
 
       const pendingLogin = await client.loginManager.beginLogin(
         backup.identityKey,

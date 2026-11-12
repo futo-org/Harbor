@@ -15,6 +15,7 @@ import { PairIdentityCamera } from '@/src/features/identity-pairing/components/P
 import { usePairIdentityClaimer } from '@/src/features/identity-pairing/hooks/usePairIdentityClaimer';
 import { EmojiFingerprint } from '@/src/features/identity-pairing/components/EmojiFingerprint';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
+import { useRedirectWhenLoggedInAs } from '@/src/features/onboarding/hooks/useRedirectWhenLoggedInAs';
 import { PAIRING_CODE_PARAM, Routes } from '@/src/common/constants';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -52,6 +53,9 @@ export default function PairIdentityClaimerScreen() {
 
   const { error, approved, stage, issuerIdentity, myPublicKey, join } =
     usePairIdentityClaimer(pairingInfo);
+
+  // Bail before joining if this device already has a login for the identity
+  useRedirectWhenLoggedInAs(issuerIdentity);
 
   useEffect(() => {
     if (!approved) return;
