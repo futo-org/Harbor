@@ -223,7 +223,7 @@ impl Query {
         let Some(row) = result else {
             return Ok(false);
         };
-        Ok(row.try_get_by(0)?)
+        row.try_get_by(0)
     }
 }
 

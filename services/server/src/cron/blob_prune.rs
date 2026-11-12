@@ -133,16 +133,14 @@ pub(crate) fn run(
                             },
                         };
 
-                        if !has_event {
-                            if let Err(error) = filestore.delete_blob(&digest).await {
-                                tracing::warn!(%key, %error, "failed to delete unused blob");
-                                deleted += 1;
-                            }
+                        if !has_event && let Err(error) = filestore.delete_blob(&digest).await {
+                            tracing::warn!(%key, %error, "failed to delete unused blob");
+                            deleted += 1;
                         }
                     }
                 }
 
-                if let Err(error) = Query::blob_prune_processed_prefix(&mut tx, &*prefix).await {
+                if let Err(error) = Query::blob_prune_processed_prefix(&mut tx, &prefix).await {
                     tracing::warn!(%error, "failed to mark blob prefix as processed");
                     return ControlFlow::Continue(ERROR_RETRY);
                 }
