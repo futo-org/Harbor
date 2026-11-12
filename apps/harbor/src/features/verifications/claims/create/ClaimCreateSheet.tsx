@@ -1,6 +1,5 @@
 import { Button, Text } from '@/src/common/components';
 import Icon, { type IconName } from '@/src/common/components/Icon';
-import { ScrollView } from '@/src/common/components/ScrollView';
 import { Sheet } from '@/src/common/components/sheet';
 import { useToast } from '@/src/common/components/toast';
 import { Routes } from '@/src/common/constants/routes';
@@ -14,9 +13,8 @@ import {
 } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { DecodedClaim } from '../../hooks/useClaimById';
 import { useClaimsList } from '../../hooks/useClaimsList';
 import type { ClaimRef } from '../../hooks/useCreateClaim';
@@ -89,7 +87,6 @@ export function ClaimCreateSheet({
 }) {
   const { theme } = useTheme();
   const toast = useToast();
-  const insets = useSafeAreaInsets();
 
   const initialStep: Step = requestFrom ? { kind: 'choose' } : { kind: 'type' };
   const [stack, setStack] = useState<Step[]>([initialStep]);
@@ -209,14 +206,10 @@ export function ClaimCreateSheet({
       {/* The sheet portals its subtree, so the provider must ride inside. */}
       <ClaimCreateProvider value={options}>
         <Sheet.Content scrollable={false} style={{ padding: 0 }}>
-          {/* TrueSheet's `scrollable` pins this ScrollView and insets it for
-              the keyboard. */}
+          {/* RN's ScrollView, so TrueSheet finds it to pin and inset. */}
           <ScrollView
             style={Atoms.flex_1}
-            contentContainerStyle={[
-              Atoms.pt_lg,
-              { paddingBottom: insets.bottom + Spacing['lg'] },
-            ]}
+            contentContainerStyle={[Atoms.pt_lg, Atoms.pb_lg]}
             keyboardShouldPersistTaps="handled"
           >
             <Animated.View
