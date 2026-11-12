@@ -212,27 +212,21 @@ export interface GetAttributedToFeedRequest {
      */
     pageParams?: PageParams;
     /**
-     * Posts with these label values are not counted
-     *
-     * @generated from protobuf field: repeated string omit_labels = 3
-     */
-    omitLabels: string[];
-    /**
      * Top: most posts first, decayed by age. Otherwise: latest post first.
      *
-     * @generated from protobuf field: optional polycentric.v2.SortPostsBy sort_by = 4
+     * @generated from protobuf field: optional polycentric.v2.SortPostsBy sort_by = 3
      */
     sortBy?: SortPostsBy;
     /**
      * Only count posts made with these `Application.id`s. Empty allows all.
      *
-     * @generated from protobuf field: repeated string only_applications = 5
+     * @generated from protobuf field: repeated string only_applications = 4
      */
     onlyApplications: string[];
     /**
      * Do not count posts made with these `Application.id`s
      *
-     * @generated from protobuf field: repeated string omit_applications = 6
+     * @generated from protobuf field: repeated string omit_applications = 5
      */
     omitApplications: string[];
 }
@@ -274,12 +268,6 @@ export interface GetAttributedToStatsRequest {
      * @generated from protobuf field: polycentric.v2.AttributedTo attributed_to = 1
      */
     attributedTo?: AttributedTo;
-    /**
-     * Posts with these label values are not counted
-     *
-     * @generated from protobuf field: repeated string omit_labels = 2
-     */
-    omitLabels: string[];
 }
 /**
  * @generated from protobuf message polycentric.v2.GetAttributedToStatsResponse
@@ -884,15 +872,13 @@ class GetAttributedToFeedRequest$Type extends MessageType<GetAttributedToFeedReq
         super("polycentric.v2.GetAttributedToFeedRequest", [
             { no: 1, name: "identity", kind: "scalar", opt: true, T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "page_params", kind: "message", T: () => PageParams },
-            { no: 3, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 4, name: "sort_by", kind: "enum", opt: true, T: () => ["polycentric.v2.SortPostsBy", SortPostsBy, "SORT_POSTS_BY_"] },
-            { no: 5, name: "only_applications", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
-            { no: 6, name: "omit_applications", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 3, name: "sort_by", kind: "enum", opt: true, T: () => ["polycentric.v2.SortPostsBy", SortPostsBy, "SORT_POSTS_BY_"] },
+            { no: 4, name: "only_applications", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 5, name: "omit_applications", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<GetAttributedToFeedRequest>): GetAttributedToFeedRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.omitLabels = [];
         message.onlyApplications = [];
         message.omitApplications = [];
         if (value !== undefined)
@@ -910,16 +896,13 @@ class GetAttributedToFeedRequest$Type extends MessageType<GetAttributedToFeedReq
                 case /* optional polycentric.v2.PageParams page_params */ 2:
                     message.pageParams = PageParams.internalBinaryRead(reader, reader.uint32(), options, message.pageParams);
                     break;
-                case /* repeated string omit_labels */ 3:
-                    message.omitLabels.push(reader.string());
-                    break;
-                case /* optional polycentric.v2.SortPostsBy sort_by */ 4:
+                case /* optional polycentric.v2.SortPostsBy sort_by */ 3:
                     message.sortBy = reader.int32();
                     break;
-                case /* repeated string only_applications */ 5:
+                case /* repeated string only_applications */ 4:
                     message.onlyApplications.push(reader.string());
                     break;
-                case /* repeated string omit_applications */ 6:
+                case /* repeated string omit_applications */ 5:
                     message.omitApplications.push(reader.string());
                     break;
                 default:
@@ -940,18 +923,15 @@ class GetAttributedToFeedRequest$Type extends MessageType<GetAttributedToFeedReq
         /* optional polycentric.v2.PageParams page_params = 2; */
         if (message.pageParams)
             PageParams.internalBinaryWrite(message.pageParams, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
-        /* repeated string omit_labels = 3; */
-        for (let i = 0; i < message.omitLabels.length; i++)
-            writer.tag(3, WireType.LengthDelimited).string(message.omitLabels[i]);
-        /* optional polycentric.v2.SortPostsBy sort_by = 4; */
+        /* optional polycentric.v2.SortPostsBy sort_by = 3; */
         if (message.sortBy !== undefined)
-            writer.tag(4, WireType.Varint).int32(message.sortBy);
-        /* repeated string only_applications = 5; */
+            writer.tag(3, WireType.Varint).int32(message.sortBy);
+        /* repeated string only_applications = 4; */
         for (let i = 0; i < message.onlyApplications.length; i++)
-            writer.tag(5, WireType.LengthDelimited).string(message.onlyApplications[i]);
-        /* repeated string omit_applications = 6; */
+            writer.tag(4, WireType.LengthDelimited).string(message.onlyApplications[i]);
+        /* repeated string omit_applications = 5; */
         for (let i = 0; i < message.omitApplications.length; i++)
-            writer.tag(6, WireType.LengthDelimited).string(message.omitApplications[i]);
+            writer.tag(5, WireType.LengthDelimited).string(message.omitApplications[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1074,13 +1054,11 @@ export const GetAttributedToFeedResponse = new GetAttributedToFeedResponse$Type(
 class GetAttributedToStatsRequest$Type extends MessageType<GetAttributedToStatsRequest> {
     constructor() {
         super("polycentric.v2.GetAttributedToStatsRequest", [
-            { no: 1, name: "attributed_to", kind: "message", T: () => AttributedTo },
-            { no: 2, name: "omit_labels", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+            { no: 1, name: "attributed_to", kind: "message", T: () => AttributedTo }
         ]);
     }
     create(value?: PartialMessage<GetAttributedToStatsRequest>): GetAttributedToStatsRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.omitLabels = [];
         if (value !== undefined)
             reflectionMergePartial<GetAttributedToStatsRequest>(this, message, value);
         return message;
@@ -1092,9 +1070,6 @@ class GetAttributedToStatsRequest$Type extends MessageType<GetAttributedToStatsR
             switch (fieldNo) {
                 case /* polycentric.v2.AttributedTo attributed_to */ 1:
                     message.attributedTo = AttributedTo.internalBinaryRead(reader, reader.uint32(), options, message.attributedTo);
-                    break;
-                case /* repeated string omit_labels */ 2:
-                    message.omitLabels.push(reader.string());
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1111,9 +1086,6 @@ class GetAttributedToStatsRequest$Type extends MessageType<GetAttributedToStatsR
         /* polycentric.v2.AttributedTo attributed_to = 1; */
         if (message.attributedTo)
             AttributedTo.internalBinaryWrite(message.attributedTo, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* repeated string omit_labels = 2; */
-        for (let i = 0; i < message.omitLabels.length; i++)
-            writer.tag(2, WireType.LengthDelimited).string(message.omitLabels[i]);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

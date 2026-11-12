@@ -537,14 +537,12 @@ fn post_about(url: &str, title: &str, text: &str) -> Post {
 async fn attributed_to_feed(
     sort_by: SortPostsBy,
     page_params: PageParams,
-    omit_labels: Vec<String>,
 ) -> (Vec<(Link, i64)>, PageInfo) {
     let resp = connect_feeds()
         .await
         .get_attributed_to_feed(GetAttributedToFeedRequest {
             identity: None,
             page_params: Some(page_params),
-            omit_labels,
             sort_by: Some(sort_by as i32),
             ..Default::default()
         })
@@ -567,14 +565,12 @@ async fn attributed_to_feed(
 }
 
 /// The first 100 targets of the attributed-to feed, most posts first.
-async fn top_attributions(omit_labels: Vec<String>) -> Vec<(Link, i64)> {
+async fn top_attributions() -> Vec<(Link, i64)> {
     let first_page = PageParams {
         limit: Some(100),
         ..Default::default()
     };
-    attributed_to_feed(SortPostsBy::Top, first_page, omit_labels)
-        .await
-        .0
+    attributed_to_feed(SortPostsBy::Top, first_page).await.0
 }
 
 #[tokio::test]
@@ -596,12 +592,8 @@ async fn attributed_to_feed_latest_first_pages_through_urls() {
         ..Default::default()
     };
     for _ in 0..200 {
-        let (items, page_info) = attributed_to_feed(
-            SortPostsBy::Latest,
-            page_params.clone(),
-            vec![],
-        )
-        .await;
+        let (items, page_info) =
+            attributed_to_feed(SortPostsBy::Latest, page_params.clone()).await;
         assert!(items.len() <= 1, "pages hold at most `limit` targets");
         seen.extend(items.into_iter().map(|(link, _)| link.url));
         if seen.contains(&older) || !page_info.has_next_page {
@@ -708,7 +700,7 @@ async fn top_attributions_orders_urls_by_post_count() {
     author.post(post_about(&popular, "Latest title", "four"), now + 4);
     author.submit_events().await;
 
-    let top = top_attributions(vec![]).await;
+    let top = top_attributions().await;
     let position = |url: &str| {
         top.iter()
             .position(|(link, _)| link.url == url)
@@ -726,49 +718,30 @@ async fn top_attributions_orders_urls_by_post_count() {
 }
 
 #[tokio::test]
-async fn top_attributions_skips_deleted_and_omitted_posts() {
+async fn top_attributions_skips_deleted_posts() {
     let url = format!("https://example.com/{}", random_string());
 
     let mut author = TestClient::new().await;
-    let (mut moderator, _guard) = TestClient::trusted_moderator().await;
     let now = current_timestamp();
     author.post(post_about(&url, "Title", "kept"), now + 1);
-    author.post(post_about(&url, "Title", "labeled"), now + 2);
-    let labeled = author.get_last_event_key();
-    author.post(post_about(&url, "Title", "deleted"), now + 3);
+    author.post(post_about(&url, "Title", "deleted"), now + 2);
     let deleted = author.get_last_event_key();
-    author.delete_key(deleted, now + 4);
+    author.delete_key(deleted, now + 3);
     author.submit_events().await;
-    moderator.label_key(labeled, vec!["spam".to_string()], now + 5);
-    moderator.submit_events().await;
 
-    let count = |top: Vec<(Link, i64)>| {
-        top.into_iter()
-            .find(|(link, _)| link.url == url)
-            .map(|(_, count)| count)
-    };
-
-    assert_eq!(count(top_attributions(vec![]).await), Some(2));
-    assert_eq!(
-        count(top_attributions(vec!["spam".to_string()]).await),
-        Some(1),
-    );
+    let count = top_attributions()
+        .await
+        .into_iter()
+        .find(|(link, _)| link.url == url)
+        .map(|(_, count)| count);
+    assert_eq!(count, Some(1));
 
     // The target's own stats count the same posts.
-    assert_eq!(attributed_to_stats(&url, vec![]).await.post_count, 2);
-    assert_eq!(
-        attributed_to_stats(&url, vec!["spam".to_string()])
-            .await
-            .post_count,
-        1,
-    );
+    assert_eq!(attributed_to_stats(&url).await.post_count, 1);
 }
 
 /// The stats of the posts and reactions attributed to `url`.
-async fn attributed_to_stats(
-    url: &str,
-    omit_labels: Vec<String>,
-) -> GetAttributedToStatsResponse {
+async fn attributed_to_stats(url: &str) -> GetAttributedToStatsResponse {
     connect_feeds()
         .await
         .get_attributed_to_stats(GetAttributedToStatsRequest {
@@ -778,7 +751,6 @@ async fn attributed_to_stats(
                     ..Default::default()
                 })),
             }),
-            omit_labels,
         })
         .await
         .expect("get_attributed_to_stats failed")
@@ -788,7 +760,7 @@ async fn attributed_to_stats(
 #[tokio::test]
 async fn attributed_to_stats_of_unknown_url_are_zero() {
     let url = format!("https://example.com/{}", random_string());
-    let stats = attributed_to_stats(&url, vec![]).await;
+    let stats = attributed_to_stats(&url).await;
     assert_eq!(
         (stats.post_count, stats.upvote_count, stats.downvote_count),
         (0, 0, 0),

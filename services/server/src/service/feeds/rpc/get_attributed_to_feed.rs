@@ -42,7 +42,6 @@ pub async fn handle(
     let GetAttributedToFeedRequest {
         identity: _,
         page_params,
-        omit_labels,
         sort_by: _,
         only_applications,
         omit_applications,
@@ -54,7 +53,6 @@ pub async fn handle(
     let params = Params {
         filter: AttributedUrlsFilter {
             within_days: WITHIN_DAYS,
-            omit_labels,
             only_applications,
             omit_applications,
         },

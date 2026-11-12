@@ -85,14 +85,12 @@ message GetAttributedToFeedRequest {
   // Identity of the caller to return relevant targets for
   optional string identity = 1;
   optional PageParams page_params = 2;
-  // Posts with these label values are not counted
-  repeated string omit_labels = 3;
   // Top: most posts first, decayed by age. Otherwise: latest post first.
-  optional SortPostsBy sort_by = 4;
+  optional SortPostsBy sort_by = 3;
   // Only count posts made with these `Application.id`s. Empty allows all.
-  repeated string only_applications = 5;
+  repeated string only_applications = 4;
   // Do not count posts made with these `Application.id`s
-  repeated string omit_applications = 6;
+  repeated string omit_applications = 5;
 }
 
 message AttributedToFeedItem {
@@ -109,8 +107,6 @@ message GetAttributedToFeedResponse {
 
 message GetAttributedToStatsRequest {
   AttributedTo attributed_to = 1;
-  // Posts with these label values are not counted
-  repeated string omit_labels = 2;
 }
 
 message GetAttributedToStatsResponse {

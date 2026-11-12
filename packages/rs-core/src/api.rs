@@ -6,11 +6,10 @@ use crate::sync;
 use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
     AcknowledgeNotificationsRequest, ContentDigest, DeleteContentRequest, Event,
-    GetAttributedToReactionCountsRequest, GetAttributedToStatsRequest, GetServerInfoRequest,
-    Identity, ListEventsResponse, PublicKey, PutEventsRequest, ResolveReportRequest,
-    SetBanStatusRequest, SignedEvent, SignedMessage, UploadBlobRequest, UrlInfoRequest,
-    content_service_client::ContentServiceClient,
-    event_sync_service_client::EventSyncServiceClient, feeds_service_client::FeedsServiceClient,
+    GetAttributedToReactionCountsRequest, GetServerInfoRequest, Identity, ListEventsResponse,
+    PublicKey, PutEventsRequest, ResolveReportRequest, SetBanStatusRequest, SignedEvent,
+    SignedMessage, UploadBlobRequest, UrlInfoRequest, content_service_client::ContentServiceClient,
+    event_sync_service_client::EventSyncServiceClient,
     identity_service_client::IdentityServiceClient,
     moderation_service_client::ModerationServiceClient,
     notification_service_client::NotificationServiceClient,
@@ -113,6 +112,7 @@ pub enum Query {
     GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
     GetAttributionFeed(crate::query::feed::GetAttributionFeedArgs),
     GetAttributedToFeed(crate::query::feed::GetAttributedToFeedArgs),
+    GetAttributedToStats(crate::query::feed::GetAttributedToStatsArgs),
     ListNotifications(crate::query::notification::ListNotificationsArgs),
     SubscribeUnreadNotificationCount(
         crate::query::notification::SubscribeUnreadNotificationCountArgs,
@@ -498,6 +498,12 @@ impl PolycentricCore {
                 args,
                 opts,
             ),
+            Query::GetAttributedToStats(args) => crate::query::feed::get_attributed_to_stats(
+                &self.query_client,
+                query_key,
+                args,
+                opts,
+            ),
             Query::ListNotifications(args) => crate::query::notification::list_notifications(
                 &self.query_client,
                 query_key,
@@ -731,25 +737,6 @@ impl PolycentricCore {
             .get_attributed_to_reaction_counts(request)
             .await
             .map_err(|e| CoreError::Network(format!("get_attributed_to_reaction_counts: {e}")))?;
-        Ok(response.into_inner().encode_to_vec())
-    }
-
-    /// Fetch the post and reaction counts of a URL. Takes a serialized
-    /// `GetAttributedToStatsRequest`, returns a `GetAttributedToStatsResponse`.
-    pub async fn get_attributed_to_stats(
-        &self,
-        server_url: String,
-        request_bytes: Vec<u8>,
-    ) -> Result<Vec<u8>, CoreError> {
-        let request =
-            GetAttributedToStatsRequest::decode(request_bytes.as_slice()).map_err(|e| {
-                CoreError::Decode(format!("Failed to decode GetAttributedToStatsRequest: {e}"))
-            })?;
-        let mut client = FeedsServiceClient::new(channel(&server_url).await?);
-        let response = client
-            .get_attributed_to_stats(request)
-            .await
-            .map_err(|e| CoreError::Network(format!("get_attributed_to_stats: {e}")))?;
         Ok(response.into_inner().encode_to_vec())
     }
 

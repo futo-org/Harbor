@@ -28,13 +28,10 @@ pub async fn handle(
         StatsRepository::get_attributed_reaction_summary(&mut ctx.db, &url)
             .await
             .map_err(map_db_err)?;
-    let post_count = FeedsRepository::count_posts_attributed_to_url(
-        &mut ctx.db,
-        url,
-        req.omit_labels,
-    )
-    .await
-    .map_err(map_db_err)?;
+    let post_count =
+        FeedsRepository::count_posts_attributed_to_url(&mut ctx.db, url)
+            .await
+            .map_err(map_db_err)?;
 
     Ok(GetAttributedToStatsResponse {
         post_count,

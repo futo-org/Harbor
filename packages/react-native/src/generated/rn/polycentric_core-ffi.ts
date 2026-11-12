@@ -119,7 +119,6 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_delete_content(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_fetch_query(uniffiSelf: bigint, queryKey: Uint8Array, query: Uint8Array, opts: Uint8Array, uniffi_out_err: UniffiRustCallStatus): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_reaction_counts(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
-    ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_stats(uniffiSelf: bigint, serverUrl: Uint8Array, requestBytes: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence(uniffiSelf: bigint, identity: Uint8Array, signer: Uint8Array, uniffi_out_err: UniffiRustCallStatus): Uint8Array;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_pairing_session(uniffiSelf: bigint, serverUrl: Uint8Array, digestSha256: Uint8Array): bigint;
     ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_server_info(uniffiSelf: bigint, serverUrl: Uint8Array): bigint;
@@ -191,7 +190,6 @@ interface NativeModuleInterface {
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_delete_content(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_reaction_counts(): number;
-    ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_stats(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_pairing_session(): number;
     ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_server_info(): number;

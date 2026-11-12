@@ -6,9 +6,10 @@ use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
     AttributedTo, EventBundle, EventHint, GetAttributedToFeedRequest, GetAttributedToFeedResponse,
-    GetAttributionFeedRequest, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
-    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageParams, SortPostsBy,
-    attributed_to::To, feeds_service_client::FeedsServiceClient,
+    GetAttributedToStatsRequest, GetAttributedToStatsResponse, GetAttributionFeedRequest,
+    GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest,
+    GetPostThreadRequest, GetPostThreadResponse, PageParams, SortPostsBy, attributed_to::To,
+    feeds_service_client::FeedsServiceClient,
 };
 use prost::Message;
 
@@ -111,12 +112,17 @@ pub struct GetAttributionFeedArgs {
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
+pub struct GetAttributedToStatsArgs {
+    /// Serialized `AttributedTo` proto to get the stats of.
+    pub attributed_to: Vec<u8>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
 pub struct GetAttributedToFeedArgs {
     pub sort_by: Option<FeedSort>,
     pub limit: Option<i32>,
     pub backward_token: Option<String>,
     pub forward_token: Option<String>,
-    pub omit_labels: Vec<String>,
     /// `Application.id`s to count posts from. Empty allows all.
     pub only_applications: Vec<String>,
     pub omit_applications: Vec<String>,
@@ -414,13 +420,11 @@ pub fn get_attributed_to_feed(
         limit,
         backward_token,
         forward_token,
-        omit_labels,
         only_applications,
         omit_applications,
     } = args;
 
     let query_fn = move |server_url: String| {
-        let omit_labels = omit_labels.clone();
         let only_applications = only_applications.clone();
         let omit_applications = omit_applications.clone();
 
@@ -437,7 +441,6 @@ pub fn get_attributed_to_feed(
                         backward_token,
                         forward_token,
                     }),
-                    omit_labels,
                     sort_by: sort_by.map(|s| SortPostsBy::from(s) as i32),
                     only_applications,
                     omit_applications,
@@ -460,6 +463,62 @@ pub fn get_attributed_to_feed(
         query_key,
         query_fn,
         merge_attributed_to_feed_responses,
+        opts,
+    ))
+}
+
+/// Servers each hold their own count, so keep the highest of each.
+fn merge_attributed_to_stats_responses(
+    values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
+    _client: &Arc<Mutex<PolycentricClient>>,
+) -> Vec<u8> {
+    let mut merged = GetAttributedToStatsResponse::default();
+
+    for v in values {
+        if let Ok(incoming) = GetAttributedToStatsResponse::decode(v.as_slice()) {
+            merged.post_count = merged.post_count.max(incoming.post_count);
+            merged.upvote_count = merged.upvote_count.max(incoming.upvote_count);
+            merged.downvote_count = merged.downvote_count.max(incoming.downvote_count);
+        }
+    }
+
+    merged.encode_to_vec()
+}
+
+/// Returns the post and reaction counts of a target (e.g. a URL). Emits
+/// serialized `GetAttributedToStatsResponse` bytes.
+pub fn get_attributed_to_stats(
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: Option<QueryKey>,
+    args: GetAttributedToStatsArgs,
+    opts: Option<QueryOpts>,
+) -> Arc<dyn QueryObservable> {
+    let GetAttributedToStatsArgs { attributed_to } = args;
+
+    let query_fn = move |server_url: String| {
+        let attributed_to = attributed_to.clone();
+
+        async move {
+            let attributed_to = AttributedTo::decode(&attributed_to[..])
+                .map_err(|e| format!("decode AttributedTo: {e}"))?;
+
+            let response = FeedsServiceClient::new(channel(&server_url).await?)
+                .get_attributed_to_stats(GetAttributedToStatsRequest {
+                    attributed_to: Some(attributed_to),
+                })
+                .await
+                .map_err(|e| format!("get_attributed_to_stats [{server_url}]: {e}"))?
+                .into_inner();
+
+            Ok(response.encode_to_vec())
+        }
+    };
+
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        merge_attributed_to_stats_responses,
         opts,
     ))
 }

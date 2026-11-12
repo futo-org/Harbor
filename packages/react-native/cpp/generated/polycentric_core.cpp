@@ -291,11 +291,6 @@ extern "C" {
         RustBuffer server_url, 
         RustBuffer request_bytes
     );
-    /*handle*/ uint64_t uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_stats(
-        /*handle*/ uint64_t ptr, 
-        RustBuffer server_url, 
-        RustBuffer request_bytes
-    );
     RustBuffer uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence(
         /*handle*/ uint64_t ptr, 
         RustBuffer identity, 
@@ -888,8 +883,6 @@ extern "C" {
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_fetch_query(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_reaction_counts(
-    );
-    uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_stats(
     );
     uint16_t uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence(
     );
@@ -5641,14 +5634,6 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_reaction_counts(rt, thisVal, args, count);
         }
     );
-    props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_stats"] = jsi::Function::createFromHostFunction(
-        rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_stats"),
-        3,
-        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_stats(rt, thisVal, args, count);
-        }
-    );
     props["ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_fn_method_polycentriccore_get_identity_sequence"),
@@ -6849,14 +6834,6 @@ NativePolycentricCore::NativePolycentricCore(
             return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_reaction_counts(rt, thisVal, args, count);
         }
     );
-    props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_stats"] = jsi::Function::createFromHostFunction(
-        rt,
-        jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_stats"),
-        0,
-        [this](jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_stats(rt, thisVal, args, count);
-        }
-    );
     props["ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence"] = jsi::Function::createFromHostFunction(
         rt,
         jsi::PropNameID::forAscii(rt, "ubrn_uniffi_polycentric_core_checksum_method_polycentriccore_get_identity_sequence"),
@@ -7655,13 +7632,6 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycent
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_reaction_counts(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_reaction_counts(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2])
-        );
-
-        
-        return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_stats(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        auto value = uniffi_polycentric_core_fn_method_polycentriccore_get_attributed_to_stats(uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker, args[0]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]), uniffi::polycentric_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2])
         );
 
         
@@ -8962,13 +8932,6 @@ jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_po
 }
 jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_reaction_counts(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
         auto value = uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_reaction_counts(
-        );
-
-        
-        return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativePolycentricCore::cpp_uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_stats(jsi::Runtime& rt, const jsi::Value& thisVal, const jsi::Value* args, size_t count) {
-        auto value = uniffi_polycentric_core_checksum_method_polycentriccore_get_attributed_to_stats(
         );
 
         
