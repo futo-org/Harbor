@@ -1,7 +1,6 @@
 import { Text } from '@/src/common/components';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { Routes } from '@/src/common/constants';
-import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
@@ -24,6 +23,7 @@ import type {
   QuoteNotification,
   ReplyNotification,
 } from './utils';
+import { EventSummary } from './EventSummary';
 
 /** Notifications rendered as the actor's own post. */
 type PostNotification =
@@ -142,8 +142,6 @@ function InteractionNotification({
     <Pressable
       onPress={handlePress}
       style={[
-        Atoms.flex_row,
-        Atoms.gap_md,
         Atoms.p_md,
         {
           borderBottomWidth: 1,
@@ -151,48 +149,35 @@ function InteractionNotification({
         },
       ]}
     >
-      <ProfileAvatar
-        identityKey={notification.fromIdentity}
-        size="md"
-        onPress={openProfile}
-      />
-      <View style={[Atoms.flex_1, Atoms.gap_xs]}>
-        <View
-          style={[Atoms.flex_row, Atoms.items_center, { flexWrap: 'wrap' }]}
-        >
+      <EventSummary
+        leading={
+          <ProfileAvatar
+            identityKey={notification.fromIdentity}
+            size="md"
+            onPress={openProfile}
+          />
+        }
+        title={
           <Username
             identity={notification.fromIdentity}
             fontWeight="bold"
             onPress={openProfile}
           />
-          <Text>
-            {' '}
-            {summary(notification)}
-            {notification.createdAt > 0 ? (
-              <Text color="neutral_500">
-                {' '}
-                · <TimeAgo since={notification.createdAt} />
-              </Text>
-            ) : null}
-          </Text>
-        </View>
-
-        {/* The post the action was taken against, quoted. */}
-        {quoted?.content ? (
-          <View style={[]}>
-            <Text variant="secondary" color="neutral_500" numberOfLines={2}>
-              {mentionsToPlainText(quoted.content)}
-            </Text>
-          </View>
-        ) : null}
-
+        }
+        action={summary(notification)}
+        createdAt={notification.createdAt}
+        // The post the action was taken against, quoted.
+        preview={
+          quoted?.content ? mentionsToPlainText(quoted.content) : undefined
+        }
+      >
         {/* The claim in question: its type and title. */}
         {(notification.kind === 'verificationRequest' ||
           notification.kind === 'verificationComplete') &&
         notification.claim ? (
           <ClaimSummary claim={notification.claim} />
         ) : null}
-      </View>
+      </EventSummary>
     </Pressable>
   );
 }

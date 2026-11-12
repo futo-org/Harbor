@@ -7,6 +7,12 @@ jest.mock('@/src/common/theme', () => ({
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 0 }),
+  typography: { lineHeight: { md: 20 } },
+}));
+
+const mockConfirm = jest.fn(async () => true);
+jest.mock('@/src/common/lib/dialogs/alert', () => ({
+  confirm: (...args: unknown[]) => mockConfirm(...(args as [])),
 }));
 
 jest.mock('@/src/common/lib/navigation/usePageTitle', () => ({
@@ -29,16 +35,48 @@ jest.mock('@/src/common/components', () => {
     IconButton: ({
       icon,
       onPress,
+      accessibilityLabel,
+      disabled,
     }: {
-      icon?: () => unknown;
+      icon?: (props: object) => unknown;
       onPress?: () => void;
-    }) => react.createElement(rn.Pressable, { onPress }, icon?.()),
-    Screen,
-    ScreenHeader: ({ title, onBack }: { title: string; onBack: () => void }) =>
+      accessibilityLabel?: string;
+      disabled?: boolean;
+    }) =>
       react.createElement(
         rn.Pressable,
-        { onPress: onBack, accessibilityLabel: 'Back' },
+        {
+          onPress,
+          accessibilityLabel,
+          disabled,
+          accessibilityState: { disabled: !!disabled },
+        },
+        icon?.({}),
+      ),
+    Screen,
+  };
+});
+
+jest.mock('@/src/common/components/layout/Topbar', () => {
+  const react = require('react');
+  const rn = require('react-native');
+  return {
+    __esModule: true,
+    default: ({
+      title,
+      left,
+      right,
+    }: {
+      title: string;
+      left?: unknown;
+      right?: unknown;
+    }) =>
+      react.createElement(
+        rn.View,
+        null,
+        left,
         react.createElement(rn.Text, null, title),
+        right,
       ),
   };
 });
@@ -58,7 +96,24 @@ jest.mock('@polycentric/react-native', () => ({
   COLLECTION: jest.requireActual(
     '../../../../../../packages/js-core/src/constants',
   ).COLLECTION,
+  FetchMode: { OfflineOnly: 3 },
 }));
+
+jest.mock('@/src/features/post/hooks/usePostById', () => ({
+  usePostById: () => ({ post: null, isLoading: false, error: null }),
+}));
+
+jest.mock('@/src/common/components/Avatar/ProfileAvatar', () => ({
+  ProfileAvatar: () => null,
+}));
+
+jest.mock('@/src/features/profile/Username', () => {
+  const react = require('react');
+  const { Text } = require('react-native');
+  return {
+    Username: () => react.createElement(Text, null, 'Me'),
+  };
+});
 
 const mockRouter = {
   canGoBack: jest.fn(() => true),
@@ -86,6 +141,12 @@ import SyncEventsScreen from './SyncEventsScreen';
 
 const A = 'https://one.example';
 const B = 'https://two.example';
+// Servers are shown without their scheme
+const HOST_A = 'one.example';
+const HOST_B = 'two.example';
+// An item's label ends with the server that reported it, in parentheses
+const fromServer = (host: string) =>
+  new RegExp(`\\(${host.replace(/\./g, '\\.')}\\)$`);
 
 const key = (collection: number, sequence: number): EventKey => ({
   collection,
@@ -124,11 +185,11 @@ describe('page', () => {
     const screen = await renderScreen();
     expect(screen.getByText('Sync events')).toBeTruthy();
 
-    await fireEvent.press(screen.getByLabelText('Back'));
+    await fireEvent.press(screen.getByLabelText('Go back'));
     expect(mockRouter.back).toHaveBeenCalled();
 
     mockRouter.canGoBack.mockReturnValueOnce(false);
-    await fireEvent.press(screen.getByLabelText('Back'));
+    await fireEvent.press(screen.getByLabelText('Go back'));
     expect(mockRouter.navigate).toHaveBeenCalledWith('/settings');
   });
 
@@ -145,12 +206,14 @@ describe('page', () => {
     expect(
       screen.getByText('No servers have reported problems with your events.'),
     ).toBeTruthy();
-    expect(screen.queryByText('Clear all')).toBeNull();
+    expect(
+      screen.getByLabelText('Clear all issues').props.accessibilityState,
+    ).toMatchObject({ disabled: true });
   });
 });
 
 describe('issue list', () => {
-  it('groups issues under the server that reported them', async () => {
+  it('names the server that reported each issue', async () => {
     await record([
       {
         eventIssues: [
@@ -161,12 +224,12 @@ describe('issue list', () => {
     ]);
     const screen = await renderScreen();
 
-    expect(screen.getByText(A)).toBeTruthy();
-    expect(screen.queryByText(B)).toBeNull();
-    expect(screen.getByText('Post not saved')).toBeTruthy();
+    expect(screen.getAllByText(fromServer(HOST_A))).toHaveLength(2);
+    expect(screen.queryByText(fromServer(HOST_B))).toBeNull();
+    expect(screen.getByText(`Post not saved (${HOST_A})`)).toBeTruthy();
     expect(screen.getByText('too long')).toBeTruthy();
     expect(
-      screen.getByText('Reaction or repost saved without content'),
+      screen.getByText(`Reaction or repost saved without content (${HOST_A})`),
     ).toBeTruthy();
     expect(screen.getByText('dropped')).toBeTruthy();
     expect(screen.getByTestId('icon-alertCircle')).toBeTruthy();
@@ -186,26 +249,23 @@ describe('issue list', () => {
 
     await fireEvent.press(screen.getAllByTestId('icon-close')[0]);
 
-    expect(screen.getAllByText('Post not saved')).toHaveLength(1);
+    expect(screen.getAllByText(/^Post not saved/)).toHaveLength(1);
     expect(
       Object.values(useEventPushIssuesStore.getState().issues.identity),
     ).toHaveLength(1);
   });
 
-  it('shows a server failure above its event issues', async () => {
+  it('shows a server failure as its own item', async () => {
     await record([{ error: new Error('connection refused') }]);
     const screen = await renderScreen();
 
-    expect(screen.getByText(A)).toBeTruthy();
-    expect(screen.getByText("Couldn't reach server")).toBeTruthy();
+    expect(screen.getByText(`Sync failed (${HOST_A})`)).toBeTruthy();
     expect(screen.getByText('connection refused')).toBeTruthy();
   });
 
-  it("clears one server's issues", async () => {
+  it('dismisses a server failure', async () => {
     await record([
-      {
-        eventIssues: [{ key: key(2, 1), errors: ['too long'], warnings: [] }],
-      },
+      { error: new Error('offline') },
       {
         server: B,
         eventIssues: [{ key: key(2, 1), errors: ['too long'], warnings: [] }],
@@ -213,15 +273,12 @@ describe('issue list', () => {
     ]);
     const screen = await renderScreen();
 
-    await fireEvent.press(screen.getByLabelText(`Clear issues for ${A}`));
+    // Failures are listed before event issues
+    await fireEvent.press(screen.getAllByTestId('icon-close')[0]);
 
-    expect(screen.queryByText(A)).toBeNull();
-    expect(screen.getByText(B)).toBeTruthy();
-    expect(
-      Object.values(useEventPushIssuesStore.getState().issues.identity).map(
-        (i) => i.server,
-      ),
-    ).toEqual([B]);
+    expect(screen.queryByText('offline')).toBeNull();
+    expect(screen.getByText(fromServer(HOST_B))).toBeTruthy();
+    expect(useServerFailuresStore.getState().failures.identity).toEqual({});
   });
 
   it('clears every server', async () => {
@@ -233,11 +290,22 @@ describe('issue list', () => {
     ]);
     const screen = await renderScreen();
 
-    await fireEvent.press(screen.getByText('Clear all'));
+    await fireEvent.press(screen.getByLabelText('Clear all issues'));
+    expect(mockConfirm).toHaveBeenCalled();
 
-    expect(screen.queryByText(A)).toBeNull();
-    expect(screen.queryByText(B)).toBeNull();
+    expect(screen.queryByText(fromServer(HOST_A))).toBeNull();
+    expect(screen.queryByText(fromServer(HOST_B))).toBeNull();
     expect(useServerFailuresStore.getState().failures.identity).toEqual({});
+  });
+
+  it('keeps issues when clearing is cancelled', async () => {
+    await record([{ error: new Error('offline') }]);
+    mockConfirm.mockResolvedValueOnce(false);
+    const screen = await renderScreen();
+
+    await fireEvent.press(screen.getByLabelText('Clear all issues'));
+
+    expect(screen.getByText('offline')).toBeTruthy();
   });
 
   it("opens a post's page, or the profile for a profile update", async () => {
@@ -252,18 +320,22 @@ describe('issue list', () => {
     ]);
     const screen = await renderScreen();
 
-    await fireEvent.press(screen.getByText('Post not saved'));
+    await fireEvent.press(screen.getByText(`Post not saved (${HOST_A})`));
     // Signer key [1, 2, 3] has fingerprint 010203.
     expect(mockRouter.navigate).toHaveBeenLastCalledWith(
       '/identity/post/010203/7',
     );
 
-    await fireEvent.press(screen.getByText('Profile update not saved'));
+    await fireEvent.press(
+      screen.getByText(`Profile update not saved (${HOST_A})`),
+    );
     expect(mockRouter.navigate).toHaveBeenLastCalledWith('/identity');
 
     // A reaction has no page of its own.
     mockRouter.navigate.mockClear();
-    await fireEvent.press(screen.getByText('Reaction or repost not saved'));
+    await fireEvent.press(
+      screen.getByText(`Reaction or repost not saved (${HOST_A})`),
+    );
     expect(mockRouter.navigate).not.toHaveBeenCalled();
   });
 
@@ -275,7 +347,7 @@ describe('issue list', () => {
       },
     ]);
     const screen = await renderScreen();
-    expect(screen.queryByText(A)).toBeNull();
+    expect(screen.queryByText(fromServer(HOST_A))).toBeNull();
     expect(screen.getByText('Not synced yet')).toBeTruthy();
   });
 });

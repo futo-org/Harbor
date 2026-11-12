@@ -48,6 +48,8 @@ export const typography = {
     md: 20,
     lg: 24,
     xl: 32,
+    /** Line height for monospace text at `xs` font size, used in Logs and Sync Issues screens */
+    logs: 17,
   } as const,
 };
 

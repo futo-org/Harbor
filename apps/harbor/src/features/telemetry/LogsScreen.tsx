@@ -4,7 +4,12 @@ import Topbar from '@/src/common/components/layout/Topbar';
 import { Tabs } from '@/src/common/components/tabs';
 import { confirm } from '@/src/common/lib/dialogs/alert';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import { Atoms, type PaletteColorToken, useTheme } from '@/src/common/theme';
+import {
+  Atoms,
+  type PaletteColorToken,
+  typography,
+  useTheme,
+} from '@/src/common/theme';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,8 +34,6 @@ const DOT_COLOR: Partial<Record<LogLevel, PaletteColorToken>> = {
   error: 'negative_500',
 };
 
-const FONT_SIZE = 12;
-const LINE_HEIGHT = 17;
 const COLLAPSED_LINES = 2;
 const DOT_SIZE = 8;
 
@@ -69,15 +72,15 @@ function LogRow({
           width: DOT_SIZE,
           height: DOT_SIZE,
           borderRadius: DOT_SIZE / 2,
-          marginTop: (LINE_HEIGHT - DOT_SIZE) / 2,
+          marginTop: (typography.lineHeight.logs - DOT_SIZE) / 2,
           backgroundColor: dot ? theme.palette[dot] : 'transparent',
         }}
       />
       <View style={[Atoms.flex_1, Atoms.gap_xs]}>
         <Text
           monospace
-          fontSize={FONT_SIZE}
-          lineHeight={LINE_HEIGHT}
+          fontSize="xs"
+          lineHeight="logs"
           numberOfLines={expanded ? undefined : COLLAPSED_LINES}
           selectable={expanded}
         >
@@ -94,8 +97,8 @@ function LogRow({
         {expanded ? (
           <Text
             monospace
-            fontSize={FONT_SIZE}
-            lineHeight={LINE_HEIGHT}
+            fontSize="xs"
+            lineHeight="logs"
             color="neutral_600"
             selectable
             style={[

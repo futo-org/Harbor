@@ -1,8 +1,18 @@
 import { IconButton, Text } from '@/src/common/components';
+import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import Icon from '@/src/common/components/Icon';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
-import { ffiEventKeyToProto } from '@/src/common/lib/polycentric-hooks/helpers';
-import { Atoms, type PaletteColorToken, useTheme } from '@/src/common/theme';
+import {
+  ffiEventKeyToProto,
+  getKeyFingerprint,
+} from '@/src/common/lib/polycentric-hooks/helpers';
+import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
+import {
+  Atoms,
+  type PaletteColorToken,
+  typography,
+  useTheme,
+} from '@/src/common/theme';
 import {
   type EventPushIssue,
   useEventPushIssuesStore,
@@ -13,7 +23,10 @@ import {
   useIdentityServerFailures,
   useServerFailuresStore,
 } from '@/src/features/core/server-failures/useServerFailuresStore';
-import { COLLECTION } from '@polycentric/react-native';
+import { EventSummary } from '@/src/features/notifications/EventSummary';
+import { usePostById } from '@/src/features/post/hooks/usePostById';
+import { Username } from '@/src/features/profile/Username';
+import { COLLECTION, FetchMode } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
@@ -150,7 +163,86 @@ export function SyncIssuesChip({ issues }: { issues: SyncIssues }) {
   );
 }
 
-/** A row displayed for each issue in a server's issue list */
+/** What the event did, phrased like a notification's action line. */
+const EVENT_SUMMARIES: Record<number, string> = {
+  [COLLECTION.IDENTITY]: 'updated their identity',
+  [COLLECTION.FEED]: 'posted',
+  [COLLECTION.PROFILE]: 'updated their profile',
+  [COLLECTION.INTERACTIONS]: 'reacted to or reposted a post',
+  [COLLECTION.GRAPH]: 'followed or blocked someone',
+  [COLLECTION.REPORTS]: 'filed a report',
+  [COLLECTION.LABELS]: 'applied a label',
+  [COLLECTION.VERIFICATIONS]: 'made a verification',
+};
+
+// A compact IconButton has a 40px hit area; let it overhang the 20px text line and right padding
+// of the `EventSummary` rather collide with those bounding boxes
+const DISMISS_OVERHANG = -(40 - typography.lineHeight.md) / 2;
+const DISMISS_OVERHANG_RIGHT = -(40 - 16) / 2;
+
+/** Get a server URL without `https://` or any other scheme. */
+const serverLabel = (server: string) => server.replace(/^[a-z]+:\/\//i, '');
+
+/**
+ * The error/warning shown at the top of an item: a severity icon, the label and the server that
+ * reported it, then the messages under it.
+ */
+function ErrorMessage({
+  severity,
+  label,
+  server,
+  messages,
+  onDismiss,
+}: {
+  severity: Severity;
+  label: string;
+  server: string;
+  messages: string[];
+  onDismiss: () => void;
+}) {
+  const { icon, color } = SEVERITY[severity];
+  return (
+    <View>
+      <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
+        <Icon name={icon} size={16} color={color} />
+        <Text
+          variant="body"
+          color={color}
+          numberOfLines={1}
+          style={Atoms.flex_1}
+        >
+          {`${label} (${serverLabel(server)})`}
+        </Text>
+        <IconButton
+          variant="ghost"
+          compact
+          style={{
+            marginVertical: DISMISS_OVERHANG,
+            marginRight: DISMISS_OVERHANG_RIGHT,
+          }}
+          accessibilityLabel="Dismiss"
+          icon={() => <Icon name="close" size={16} color="neutral_500" />}
+          onPress={onDismiss}
+        />
+      </View>
+      <Text
+        color="neutral_500"
+        monospace
+        fontSize="xs"
+        lineHeight="logs"
+        numberOfLines={2}
+        // Indented past the 16px icon and 8px gap, to line up with the label
+        style={Atoms.pl_2xl}
+      >
+        {messages.join('; ')}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * A row displayed for each validation warning/error.
+ */
 function IssueItem({
   issue,
   onDismiss,
@@ -159,130 +251,112 @@ function IssueItem({
   onDismiss: () => void;
 }) {
   const { theme } = useTheme();
-  const { icon, color } = SEVERITY[severityOf(issue)];
-  const messages = [...issue.errors, ...issue.warnings];
-  const route = eventRoute(ffiEventKeyToProto(issue.key));
+  const protoKey = ffiEventKeyToProto(issue.key);
+  const route = eventRoute(protoKey);
+  const isPost = issue.key.collection === COLLECTION.FEED;
+
+  // The event was authored locally, so read it from the local store only
+  const { post } = usePostById(
+    isPost ? protoKey.identity : undefined,
+    getKeyFingerprint(protoKey.signedBy),
+    protoKey.sequence,
+    { fetchMode: FetchMode.OfflineOnly },
+  );
+
+  const summary = isPost
+    ? post?.reply
+      ? 'replied'
+      : post?.quoteId
+        ? 'quoted a post'
+        : 'posted'
+    : (EVENT_SUMMARIES[issue.key.collection] ?? 'published an event');
 
   return (
     <Pressable
       onPress={route ? () => router.navigate(route) : undefined}
       accessibilityRole={route ? 'link' : undefined}
-      style={[
-        Atoms.flex_row,
-        Atoms.items_start,
-        Atoms.gap_sm,
-        Atoms.pl_lg,
-        Atoms.pr_sm,
-        Atoms.py_sm,
-        theme.atoms.border_neutral_low,
-        DIVIDER,
-      ]}
+      style={[Atoms.p_md, theme.atoms.border_neutral_low, DIVIDER]}
     >
-      <View style={Atoms.pt_sm}>
-        <Icon name={icon} size={16} color={color} />
-      </View>
-      <View style={[Atoms.flex_1, Atoms.py_xs]}>
-        <Text variant="secondary" fontWeight="semibold">
-          {issue.errors.length > 0
+      <ErrorMessage
+        severity={severityOf(issue)}
+        label={
+          issue.errors.length > 0
             ? `${eventLabel(issue.key.collection)} not saved`
-            : `${eventLabel(issue.key.collection)} saved without content`}
-        </Text>
-        {messages.map((message) => (
-          <Text key={message} variant="small" color="neutral_500">
-            {message}
-          </Text>
-        ))}
-      </View>
-      <IconButton
-        variant="ghost"
-        compact
-        accessibilityLabel="Dismiss"
-        icon={() => <Icon name="close" size={18} color="neutral_500" />}
-        onPress={onDismiss}
+            : `${eventLabel(issue.key.collection)} saved without content`
+        }
+        server={issue.server}
+        messages={[...issue.errors, ...issue.warnings]}
+        onDismiss={onDismiss}
+      />
+
+      <EventSummary
+        style={[Atoms.pl_2xl, Atoms.mt_md]}
+        leading={<ProfileAvatar identityKey={issue.key.identity} size="md" />}
+        title={<Username identity={issue.key.identity} fontWeight="bold" />}
+        action={summary}
+        createdAt={post?.createdAt}
+        preview={post?.content ? mentionsToPlainText(post.content) : undefined}
       />
     </Pressable>
   );
 }
 
-/** For each server with issues, render a section with a list of its issues */
-export function ServerSyncIssuesSection({
-  identityKey,
+/** A row for a server that couldn't be reached. */
+function FailureItem({
   server,
+  failure,
+  onDismiss,
 }: {
-  identityKey: string;
-  server: ServerSyncIssues;
+  server: string;
+  failure: ServerFailure;
+  onDismiss: () => void;
 }) {
   const { theme } = useTheme();
+  return (
+    <View style={[Atoms.p_md, theme.atoms.border_neutral_low, DIVIDER]}>
+      <ErrorMessage
+        severity="error"
+        label="Sync failed"
+        server={server}
+        messages={[failure.message]}
+        onDismiss={onDismiss}
+      />
+    </View>
+  );
+}
+
+/**
+ * Every sync issue of an identity in one list: server failures first, then event issues, most
+ * recently reported first.
+ */
+export function SyncIssuesList({
+  identityKey,
+  issues,
+}: {
+  identityKey: string;
+  issues: SyncIssues;
+}) {
   const dismiss = useEventPushIssuesStore((s) => s.dismiss);
-  const clearIssues = useEventPushIssuesStore((s) => s.clearServer);
   const clearFailure = useServerFailuresStore((s) => s.clearServer);
+
+  const failures = issues.servers.flatMap(({ server, failure }) =>
+    failure ? [{ server, failure }] : [],
+  );
+  const pushIssues = issues.servers
+    .flatMap((s) => s.pushIssues)
+    .sort((a, b) => b.lastSeen - a.lastSeen);
 
   return (
     <View>
-      <View
-        style={[
-          Atoms.flex_row,
-          Atoms.items_center,
-          Atoms.gap_sm,
-          Atoms.px_lg,
-          Atoms.pt_lg,
-          Atoms.pb_xs,
-          theme.atoms.border_neutral_low,
-          DIVIDER,
-        ]}
-      >
-        <Text
-          variant="secondary"
-          fontWeight="semibold"
-          monospace
-          numberOfLines={1}
-          style={[Atoms.flex_1, Atoms.py_xs]}
-        >
-          {server.server}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Clear issues for ${server.server}`}
-          hitSlop={8}
-          onPress={() => {
-            clearIssues(identityKey, server.server);
-            clearFailure(identityKey, server.server);
-          }}
-          style={Atoms.py_xs}
-        >
-          <Text variant="secondary" fontWeight="semibold" color="primary_500">
-            Clear
-          </Text>
-        </Pressable>
-      </View>
-
-      {server.failure ? (
-        <View
-          style={[
-            Atoms.flex_row,
-            Atoms.items_start,
-            Atoms.gap_sm,
-            Atoms.px_lg,
-            Atoms.py_sm,
-            theme.atoms.border_neutral_low,
-            DIVIDER,
-          ]}
-        >
-          <View style={Atoms.pt_sm}>
-            <Icon name="alertCircle" size={16} color="negative_500" />
-          </View>
-          <View style={[Atoms.flex_1, Atoms.py_xs]}>
-            <Text variant="secondary" fontWeight="semibold">
-              Couldn't reach server
-            </Text>
-            <Text variant="small" color="neutral_500">
-              {server.failure.message}
-            </Text>
-          </View>
-        </View>
-      ) : null}
-
-      {server.pushIssues.map((issue) => (
+      {failures.map(({ server, failure }) => (
+        <FailureItem
+          key={server}
+          server={server}
+          failure={failure}
+          onDismiss={() => clearFailure(identityKey, server)}
+        />
+      ))}
+      {pushIssues.map((issue) => (
         <IssueItem
           key={issue.id}
           issue={issue}

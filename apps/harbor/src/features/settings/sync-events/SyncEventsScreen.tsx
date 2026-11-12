@@ -1,5 +1,8 @@
-import { Screen, ScreenHeader, Text } from '@/src/common/components';
+import { IconButton, Screen, Text } from '@/src/common/components';
+import Icon from '@/src/common/components/Icon';
+import Topbar from '@/src/common/components/layout/Topbar';
 import { Routes } from '@/src/common/constants/routes';
+import { confirm } from '@/src/common/lib/dialogs/alert';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
@@ -8,7 +11,7 @@ import { useServerFailuresStore } from '@/src/features/core/server-failures/useS
 import { router } from 'expo-router';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ServerSyncIssuesSection, useSyncIssues } from './SyncIssues';
+import { SyncIssuesList, useSyncIssues } from './SyncIssues';
 import { useLastSyncedLabel } from './useLastSyncedLabel';
 
 /**
@@ -24,14 +27,20 @@ export default function SyncEventsScreen() {
   const lastSynced = useLastSyncedLabel(identityKey);
   const clearIssues = useEventPushIssuesStore((s) => s.clearServer);
   const clearFailure = useServerFailuresStore((s) => s.clearServer);
-
   const back = () =>
     router.canGoBack()
       ? router.back()
       : router.navigate(Routes.tabs.settings.index);
 
-  const clearAll = () => {
+  const clearAll = async () => {
     if (!identityKey) return;
+    const ok = await confirm({
+      title: 'Clear sync issues',
+      message:
+        'Remove every reported sync issue? Issues reappear if a later sync reports them again.',
+      confirmText: 'Clear',
+    });
+    if (!ok) return;
     for (const { server } of issues.servers) {
       clearIssues(identityKey, server);
       clearFailure(identityKey, server);
@@ -42,9 +51,31 @@ export default function SyncEventsScreen() {
     <Screen>
       <Screen.PrimaryColumn>
         <View style={[Atoms.flex_1, theme.atoms.bg]}>
-          <View style={Atoms.px_lg}>
-            <ScreenHeader title="Sync events" onBack={back} />
-          </View>
+          <Topbar
+            title="Sync events"
+            // Custom back button which goes back to settings if there's no router history
+            left={
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                onPress={back}
+                hitSlop={Spacing.lg}
+                style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+              >
+                <Icon name="chevronBack" size={24} color="neutral_900" />
+              </Pressable>
+            }
+            right={
+              <IconButton
+                size="sm"
+                variant="ghost"
+                accessibilityLabel="Clear all issues"
+                icon={(props) => <Icon name="trash" {...props} />}
+                disabled={issues.servers.length === 0}
+                onPress={() => void clearAll()}
+              />
+            }
+          />
           <ScrollView
             style={Atoms.flex_1}
             showsVerticalScrollIndicator={false}
@@ -52,34 +83,6 @@ export default function SyncEventsScreen() {
               paddingBottom: insets.bottom + Spacing['4xl'],
             }}
           >
-            <View
-              style={[
-                Atoms.flex_row,
-                Atoms.items_center,
-                Atoms.justify_between,
-                Atoms.px_lg,
-              ]}
-            >
-              <Text variant="secondary" color="neutral_500">
-                {lastSynced}
-              </Text>
-              {issues.servers.length > 0 ? (
-                <Pressable
-                  accessibilityRole="button"
-                  hitSlop={8}
-                  onPress={clearAll}
-                >
-                  <Text
-                    variant="secondary"
-                    fontWeight="semibold"
-                    color="primary_500"
-                  >
-                    Clear all
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-
             {issues.servers.length === 0 || !identityKey ? (
               <Text
                 variant="secondary"
@@ -89,16 +92,12 @@ export default function SyncEventsScreen() {
                 No servers have reported problems with your events.
               </Text>
             ) : (
-              <View>
-                {issues.servers.map((server) => (
-                  <ServerSyncIssuesSection
-                    key={server.server}
-                    identityKey={identityKey}
-                    server={server}
-                  />
-                ))}
-              </View>
+              <SyncIssuesList identityKey={identityKey} issues={issues} />
             )}
+
+            <Text variant="secondary" color="neutral_500" style={Atoms.p_md}>
+              {lastSynced}
+            </Text>
           </ScrollView>
         </View>
       </Screen.PrimaryColumn>
