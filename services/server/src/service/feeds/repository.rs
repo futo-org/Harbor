@@ -1,5 +1,7 @@
-use polycentric_common::models::protos_v2::SortPostsBy;
+use polycentric_common::models::protos_v2::content::ContentBody;
+use polycentric_common::models::protos_v2::{Content, SortPostsBy};
 use polycentric_common::models::{collections, content_types};
+use prost::Message;
 use sea_orm::{
     Condition, FromQueryResult,
     entity::prelude::*,
@@ -12,8 +14,8 @@ use serde::{Deserialize, Serialize};
 use tonic::Status;
 
 use crate::config;
-use crate::data::EventWithContentRow;
 use crate::data::{Cursor, CursorFilter};
+use crate::data::{EventId, EventWithContentRow};
 use crate::db::Connection;
 use crate::service::events::TargetEventKey;
 use crate::util::db::{CONTENT_PREFIX, EVENT_PREFIX, select_model_columns};
@@ -627,7 +629,8 @@ impl Query {
         let since = chrono::Utc::now().fixed_offset()
             - chrono::Duration::days(within_days.into());
         let application = application_join();
-        let mut query = attributed_posts(omit_labels);
+        let omitted = Self::labeled_attributed_posts(db, &omit_labels).await?;
+        let mut query = attributed_posts(omitted);
         query
             .expr_as(url.clone(), "url")
             .expr_as(Func::count(Expr::col(Asterisk)), "post_count")
@@ -678,6 +681,64 @@ impl Query {
         Ok(rows)
     }
 
+    /// Ids of the attributed Feed posts the trusted moderator has given any
+    /// of `labels`. The values are read from the label events' content, as
+    /// `content_label.label_value` does not hold them.
+    #[tracing::instrument(skip_all)]
+    async fn labeled_attributed_posts<C: Connection>(
+        db: &mut C,
+        labels: &[String],
+    ) -> Result<Vec<EventId>, DbErr> {
+        let Some(moderator) = config::get().trusted_moderator.as_deref() else {
+            return Ok(Vec::new());
+        };
+        if labels.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let content = content_join();
+        let attributed = attributed_url_join();
+        let mut query = targeting_event([
+            content_label::Column::ContentId,
+            content_label::Column::EventKeyCollection,
+            content_label::Column::EventKeyIdentity,
+            content_label::Column::EventKeyPublicKeyType,
+            content_label::Column::EventKeyPublicKey,
+            content_label::Column::EventKeySequence,
+        ]);
+        query
+            .clear_selects()
+            .expr(Expr::col((event::Entity, event::Column::Id)))
+            .expr(Expr::col((
+                Alias::new(BY_CONTENT),
+                content::Column::SerializedBytes,
+            )))
+            // The subquery's conditions tie each label to its event.
+            .inner_join(event::Entity, Expr::value(true))
+            .inner_join(content.to_tbl.clone(), content)
+            .inner_join(attributed.to_tbl.clone(), attributed)
+            .and_where(
+                Expr::col((Alias::new(BY_EVENT), event::Column::Identity))
+                    .eq(moderator),
+            );
+
+        let mut labeled = Vec::new();
+        for row in db.query_all(&query).await? {
+            let bytes: Vec<u8> = row.try_get_by(1)?;
+            if let Ok(Content {
+                content_body: Some(ContentBody::Labels(given)),
+            }) = Content::decode(bytes.as_slice())
+                && given
+                    .label_values
+                    .iter()
+                    .any(|value| labels.contains(value))
+            {
+                labeled.push(row.try_get_by(0)?);
+            }
+        }
+        Ok(labeled)
+    }
+
     /// The number of Feed posts attributed to `url`.
     #[tracing::instrument(skip_all)]
     pub async fn count_posts_attributed_to_url<C: Connection>(
@@ -685,7 +746,8 @@ impl Query {
         url: String,
         omit_labels: Vec<String>,
     ) -> Result<i64, DbErr> {
-        let mut query = attributed_posts(omit_labels);
+        let omitted = Self::labeled_attributed_posts(db, &omit_labels).await?;
+        let mut query = attributed_posts(omitted);
         query.expr(Func::count(Expr::col(Asterisk))).and_where(
             Expr::col((
                 content_post_attributed_url::Entity,
@@ -1171,13 +1233,10 @@ fn sort_posts_by_column(sort_by: SortPostsBy) -> Expr {
 }
 
 /// Feed posts joined to the URLs they are attributed to, without those
-/// deleted by their author or given any of `omit_labels` by the trusted
-/// moderator.
-fn attributed_posts(omit_labels: Vec<String>) -> SelectStatement {
+/// deleted by their author and those with an id in `omitted`.
+fn attributed_posts(omitted: Vec<EventId>) -> SelectStatement {
     let content = content_join();
     let attributed = attributed_url_join();
-    let by_identity =
-        Expr::col((Alias::new(BY_EVENT), event::Column::Identity));
 
     let mut deletes = targeting_event([
         content_delete::Column::ContentId,
@@ -1188,8 +1247,7 @@ fn attributed_posts(omit_labels: Vec<String>) -> SelectStatement {
         content_delete::Column::EventKeySequence,
     ]);
     deletes.and_where(
-        by_identity
-            .clone()
+        Expr::col((Alias::new(BY_EVENT), event::Column::Identity))
             .equals((event::Entity, event::Column::Identity)),
     );
 
@@ -1204,28 +1262,18 @@ fn attributed_posts(omit_labels: Vec<String>) -> SelectStatement {
         )
         .and_where(Expr::exists(deletes).not());
 
-    if let Some(moderator) = config::get().trusted_moderator.as_deref()
-        && !omit_labels.is_empty()
-    {
-        let mut labels = targeting_event([
-            content_label::Column::ContentId,
-            content_label::Column::EventKeyCollection,
-            content_label::Column::EventKeyIdentity,
-            content_label::Column::EventKeyPublicKeyType,
-            content_label::Column::EventKeyPublicKey,
-            content_label::Column::EventKeySequence,
-        ]);
-        labels.and_where(by_identity.eq(moderator)).and_where(
-            Expr::col(content_label::Column::LabelValue.as_column_ref())
-                .is_in(omit_labels),
+    if !omitted.is_empty() {
+        query.and_where(
+            Expr::col((event::Entity, event::Column::Id)).is_not_in(omitted),
         );
-        query.and_where(Expr::exists(labels).not());
     }
 
     query
 }
 
-/// Alias of the event carrying a row of [`targeting_event`].
+/// Aliases of the content of a [`targeting_event`] row, and of the event
+/// carrying it.
+const BY_CONTENT: &str = "by_content";
 const BY_EVENT: &str = "by_event";
 
 /// Subquery of a content table's rows that target the outer query's event.
@@ -1240,7 +1288,7 @@ fn targeting_event<C: ColumnTrait>(
         sequence,
     ]: [C; 6],
 ) -> SelectStatement {
-    let by_content = Alias::new("by_content");
+    let by_content = Alias::new(BY_CONTENT);
     let by_event = Alias::new(BY_EVENT);
 
     let mut query = SelectStatement::new();

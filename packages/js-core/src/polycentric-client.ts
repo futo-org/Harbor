@@ -255,30 +255,6 @@ export class PolycentricClient {
   }
 
   /**
-   * The URLs recent posts are attributed to, with their post counts
-   * (`FeedsService.GetAttributedToFeed`). `null` if every server fails.
-   */
-  async attributedToFeed(
-    request: Proto.GetAttributedToFeedRequest,
-  ): Promise<Proto.GetAttributedToFeedResponse | null> {
-    const body = Proto.GetAttributedToFeedRequest.toBinary(request);
-    for (const server of this.servers) {
-      try {
-        const bytes = await this.core.getAttributedToFeed(
-          server,
-          body.buffer as ArrayBuffer,
-        );
-        return Proto.GetAttributedToFeedResponse.fromBinary(
-          new Uint8Array(bytes),
-        );
-      } catch {
-        // Try the next server.
-      }
-    }
-    return null;
-  }
-
-  /**
    * The post and reaction counts of a URL
    * (`FeedsService.GetAttributedToStats`). `null` if every server fails.
    */

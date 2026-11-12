@@ -440,11 +440,6 @@ class FakeCore(
         requestBytes: ByteArray,
     ): ByteArray = error("not used by sync tests")
 
-    override suspend fun getAttributedToFeed(
-        serverUrl: String,
-        requestBytes: ByteArray,
-    ): ByteArray = error("not used by sync tests")
-
     override suspend fun getAttributedToStats(
         serverUrl: String,
         requestBytes: ByteArray,

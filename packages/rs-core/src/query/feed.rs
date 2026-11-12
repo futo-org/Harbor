@@ -1,13 +1,14 @@
 //! Feed-service RPCs surfaced as observables via `Query`.
 
 use std::cmp::Reverse;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use polycentric_common::models::protos_v2::{
-    AttributedTo, EventBundle, EventHint, GetAttributionFeedRequest, GetExploreFeedRequest,
-    GetFeedResponse, GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostThreadRequest,
-    GetPostThreadResponse, PageParams, SortPostsBy, feeds_service_client::FeedsServiceClient,
+    AttributedTo, EventBundle, EventHint, GetAttributedToFeedRequest, GetAttributedToFeedResponse,
+    GetAttributionFeedRequest, GetExploreFeedRequest, GetFeedResponse, GetFollowingFeedRequest,
+    GetIdentityFeedRequest, GetPostThreadRequest, GetPostThreadResponse, PageParams, SortPostsBy,
+    attributed_to::To, feeds_service_client::FeedsServiceClient,
 };
 use prost::Message;
 
@@ -107,6 +108,18 @@ pub struct GetAttributionFeedArgs {
     pub omit_labels: Vec<String>,
     /// Posts the emission may carry; the rest is held back.
     pub window_size: Option<i32>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct GetAttributedToFeedArgs {
+    pub sort_by: Option<FeedSort>,
+    pub limit: Option<i32>,
+    pub backward_token: Option<String>,
+    pub forward_token: Option<String>,
+    pub omit_labels: Vec<String>,
+    /// `Application.id`s to count posts from. Empty allows all.
+    pub only_applications: Vec<String>,
+    pub omit_applications: Vec<String>,
 }
 
 /// The key servers ordered a feed by. Merging has to order pages by the
@@ -356,6 +369,97 @@ pub fn get_identity_feed(
         query_key,
         query_fn,
         validated_feed_merge(FeedOrder::CreatedAt, window_size),
+        opts,
+    ))
+}
+
+/// Concatenate per-server pages in the order the servers ranked them, and
+/// keep one item per target.
+fn merge_attributed_to_feed_responses(
+    values: &[Vec<u8>],
+    _previous: Option<&Vec<u8>>,
+    _client: &Arc<Mutex<PolycentricClient>>,
+) -> Vec<u8> {
+    let mut merged = GetAttributedToFeedResponse::default();
+
+    for v in values {
+        if let Ok(incoming) = GetAttributedToFeedResponse::decode(v.as_slice()) {
+            merged.items.extend(incoming.items);
+            merged.page_info = merge_page_info(merged.page_info, incoming.page_info);
+        }
+    }
+
+    let mut seen: HashSet<String> = HashSet::new();
+    merged.items.retain(
+        |item| match item.attributed_to.as_ref().and_then(|a| a.to.as_ref()) {
+            Some(To::Link(link)) => seen.insert(link.url.clone()),
+            None => false,
+        },
+    );
+
+    merged.encode_to_vec()
+}
+
+/// Returns the targets recent posts are attributed to (e.g. the URLs being
+/// commented on), with their post counts. Emits serialized
+/// `GetAttributedToFeedResponse` bytes.
+pub fn get_attributed_to_feed(
+    query_client: &QueryClient<Vec<u8>>,
+    query_key: Option<QueryKey>,
+    args: GetAttributedToFeedArgs,
+    opts: Option<QueryOpts>,
+) -> Arc<dyn QueryObservable> {
+    let GetAttributedToFeedArgs {
+        sort_by,
+        limit,
+        backward_token,
+        forward_token,
+        omit_labels,
+        only_applications,
+        omit_applications,
+    } = args;
+
+    let query_fn = move |server_url: String| {
+        let omit_labels = omit_labels.clone();
+        let only_applications = only_applications.clone();
+        let omit_applications = omit_applications.clone();
+
+        let (backward_token, backward_offset) =
+            FakeCursorToken::extract(&backward_token, &server_url);
+        let (forward_token, forward_offset) = FakeCursorToken::extract(&forward_token, &server_url);
+
+        async move {
+            let mut response = FeedsServiceClient::new(channel(&server_url).await?)
+                .get_attributed_to_feed(GetAttributedToFeedRequest {
+                    identity: None,
+                    page_params: Some(PageParams {
+                        limit,
+                        backward_token,
+                        forward_token,
+                    }),
+                    omit_labels,
+                    sort_by: sort_by.map(|s| SortPostsBy::from(s) as i32),
+                    only_applications,
+                    omit_applications,
+                })
+                .await
+                .map_err(|e| format!("get_attributed_to_feed [{server_url}]: {e}"))?
+                .into_inner();
+
+            prepare_page_info(
+                &mut response.page_info,
+                &server_url,
+                backward_offset,
+                forward_offset,
+            )?;
+            Ok(response.encode_to_vec())
+        }
+    };
+
+    Arc::new(query_client.fetch(
+        query_key,
+        query_fn,
+        merge_attributed_to_feed_responses,
         opts,
     ))
 }
