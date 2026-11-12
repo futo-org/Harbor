@@ -1,7 +1,4 @@
-import {
-  usePolycentric,
-  type PostData,
-} from '@/src/common/lib/polycentric-hooks';
+import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { resolveImageSources } from '@/src/common/components/ImageViewer';
 import { Atoms } from '@/src/common/theme';
 import {
@@ -9,13 +6,13 @@ import {
   MIN_ASPECT_RATIO,
 } from '@/src/common/lib/images/attachmentLayout';
 import { MAX_ATTACHMENTS } from '@/src/common/lib/images/useImageAttachments';
-import { openPostImage } from '@/src/features/post/PostImageViewerScreen';
-import { memo, useCallback, useMemo } from 'react';
+import type { v2 } from '@polycentric/react-native';
+import { memo, useMemo } from 'react';
 import { Image } from '@/src/common/components/Image';
 import { Pressable, View } from 'react-native';
 
 /** Target pixel size we want for displayed attachments. */
-const POST_IMAGE_TARGET = 512;
+const IMAGE_TARGET = 512;
 /** Aspect ratio of the whole grid when there are 2+ images. */
 const GRID_ASPECT = 16 / 9;
 /** Pixel gutter between grid tiles. */
@@ -23,31 +20,28 @@ const GRID_GAP = 2;
 const TILE_BG = 'rgba(0,0,0,0.04)';
 
 /**
- * Image grid for a post. Twitter-style layouts for 1–4 images; extras
- * are dropped (matches the composer's `MAX_ATTACHMENTS`). Tapping any
- * tile opens the full-screen `ImageViewer`.
+ * Image grid for attached images (posts, claims). Twitter-style layouts for
+ * 1-4 images; extras are dropped (matches the composer's `MAX_ATTACHMENTS`).
+ * Tapping a tile calls `onOpenImage` with its index.
  */
-export const PostImages = memo(function PostImages({
-  post,
+export const ImageGrid = memo(function ImageGrid({
+  images,
+  onOpenImage,
 }: {
-  post: PostData;
+  images: v2.ImageSet[];
+  onOpenImage: (index: number) => void;
 }) {
   const client = usePolycentric();
-  const capped = useMemo(
-    () => post.images.slice(0, MAX_ATTACHMENTS),
-    [post.images],
-  );
+  const capped = useMemo(() => images.slice(0, MAX_ATTACHMENTS), [images]);
   const sources = useMemo(
     () =>
       resolveImageSources(
         capped,
         (digest) => client.blobUrls(digest),
-        POST_IMAGE_TARGET,
+        IMAGE_TARGET,
       ),
     [client, capped],
   );
-
-  const openViewer = useCallback((i: number) => openPostImage(post, i), [post]);
 
   if (sources.length === 0) return null;
 
@@ -59,7 +53,7 @@ export const PostImages = memo(function PostImages({
         // unstable_pressDelay={300}
         onPress={(e) => {
           e.stopPropagation?.();
-          openViewer(0);
+          onOpenImage(0);
         }}
         style={({ pressed }) => [
           Atoms.w_full,
@@ -104,26 +98,26 @@ export const PostImages = memo(function PostImages({
     >
       {sources.length === 2 ? (
         <>
-          <GridTile uris={sources[0].uris} index={0} onOpen={openViewer} />
-          <GridTile uris={sources[1].uris} index={1} onOpen={openViewer} />
+          <GridTile uris={sources[0].uris} index={0} onOpen={onOpenImage} />
+          <GridTile uris={sources[1].uris} index={1} onOpen={onOpenImage} />
         </>
       ) : sources.length === 3 ? (
         <>
-          <GridTile uris={sources[0].uris} index={0} onOpen={openViewer} />
+          <GridTile uris={sources[0].uris} index={0} onOpen={onOpenImage} />
           <View style={[Atoms.flex_1, Atoms.flex_col, { gap: GRID_GAP }]}>
-            <GridTile uris={sources[1].uris} index={1} onOpen={openViewer} />
-            <GridTile uris={sources[2].uris} index={2} onOpen={openViewer} />
+            <GridTile uris={sources[1].uris} index={1} onOpen={onOpenImage} />
+            <GridTile uris={sources[2].uris} index={2} onOpen={onOpenImage} />
           </View>
         </>
       ) : (
         <>
           <View style={[Atoms.flex_1, Atoms.flex_col, { gap: GRID_GAP }]}>
-            <GridTile uris={sources[0].uris} index={0} onOpen={openViewer} />
-            <GridTile uris={sources[2].uris} index={2} onOpen={openViewer} />
+            <GridTile uris={sources[0].uris} index={0} onOpen={onOpenImage} />
+            <GridTile uris={sources[2].uris} index={2} onOpen={onOpenImage} />
           </View>
           <View style={[Atoms.flex_1, Atoms.flex_col, { gap: GRID_GAP }]}>
-            <GridTile uris={sources[1].uris} index={1} onOpen={openViewer} />
-            <GridTile uris={sources[3].uris} index={3} onOpen={openViewer} />
+            <GridTile uris={sources[1].uris} index={1} onOpen={onOpenImage} />
+            <GridTile uris={sources[3].uris} index={3} onOpen={onOpenImage} />
           </View>
         </>
       )}
@@ -143,7 +137,7 @@ function GridTile({
   return (
     <Pressable
       onPress={(e) => {
-        // Stop the outer post-card press from also firing.
+        // Stop the outer card press from also firing.
         e.stopPropagation?.();
         onOpen(index);
       }}
