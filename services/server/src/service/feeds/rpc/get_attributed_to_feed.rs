@@ -31,7 +31,7 @@ pub struct Params {
 
 type Fetched = pipeline::Fetched<AttributedUrl, AttributedUrlSortKey>;
 
-/// Serialized content of each URL's latest post, by content id.
+/// Serialized content of each URL's latest post, by event id.
 type Hydrated = HashMap<i64, Vec<u8>>;
 
 pub async fn handle(
@@ -83,8 +83,11 @@ async fn fetch(
         &params.cursor_filter,
         params.limit,
         |row| Marker {
-            sorted_by: row.sort_key.clone(),
-            event_id: row.latest_content_id,
+            sorted_by: AttributedUrlSortKey {
+                decayed_post_count: row.decayed_post_count.clone(),
+                url: row.url.clone(),
+            },
+            event_id: row.latest_event_id,
         },
     );
     Ok(Fetched { rows, page_info })
@@ -96,19 +99,17 @@ async fn hydrate(
     _: &Params,
     fetched: &Fetched,
 ) -> Result<Hydrated, Status> {
-    let latest = FeedsRepository::list_content_by_ids(
+    let latest = FeedsRepository::list_events_by_ids(
         &mut ctx.db,
-        fetched
-            .rows
-            .iter()
-            .map(|row| row.latest_content_id)
-            .collect(),
+        fetched.rows.iter().map(|row| row.latest_event_id).collect(),
     )
     .await
     .map_err(map_db_err)?;
     Ok(latest
         .into_iter()
-        .map(|content| (content.id, content.serialized_bytes))
+        .filter_map(|(event, content)| {
+            Some((event.id, content?.serialized_bytes))
+        })
         .collect())
 }
 
@@ -133,7 +134,7 @@ async fn view(
         .into_iter()
         .map(|row| {
             let link = latest
-                .get(&row.latest_content_id)
+                .get(&row.latest_event_id)
                 .and_then(|bytes| attributed_link(bytes, &row.url))
                 .unwrap_or_else(|| Link {
                     url: row.url,

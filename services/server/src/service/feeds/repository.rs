@@ -594,21 +594,25 @@ impl Query {
             only_applications,
             omit_applications,
         } = filter;
-        let latest = Expr::from(Func::max(Expr::col((
-            content::Entity,
-            content::Column::Id,
-        ))));
-        let sort_key = match sort_by {
-            // Each post counts for less as it ages, as posts do on Explore.
-            SortPostsBy::Top => Expr::from(Func::sum(
+        let latest =
+            Expr::from(Func::max(Expr::col(event::Column::Id.as_column_ref())));
+        let url =
+            Expr::col(content_post_attributed_url::Column::Url.as_column_ref());
+        // Each post counts for less as it ages, as posts do on Explore.
+        let decayed_post_count = match sort_by {
+            SortPostsBy::Top => Some(Expr::from(Func::sum(
                 Func::cust("decay_interaction_count")
-                    .arg(Expr::value(0_i64))
-                    .arg(Expr::col((event::Entity, event::Column::CreatedAt))),
-            )),
-            SortPostsBy::Default | SortPostsBy::Latest => {
-                Expr::from(Func::cast_as(latest.clone(), "NUMERIC"))
-            }
+                    .arg(Expr::Constant(0_i64.into()))
+                    .arg(Expr::col(event::Column::CreatedAt.as_column_ref())),
+            ))),
+            SortPostsBy::Default | SortPostsBy::Latest => None,
         };
+        // A post can be attributed to several URLs, which then share their
+        // latest event, so the URL is what makes the order unique.
+        let key = decayed_post_count
+            .iter()
+            .cloned()
+            .chain([latest.clone(), url.clone()]);
         let (forward, marker) = match cursor_filter {
             CursorFilter::Forward(Cursor::End)
             | CursorFilter::Backward(Cursor::Start) => return Ok(Vec::new()),
@@ -619,10 +623,6 @@ impl Query {
             }
             CursorFilter::Backward(Cursor::End) => (false, None),
         };
-        let url = Expr::col((
-            content_post_attributed_url::Entity,
-            content_post_attributed_url::Column::Url,
-        ));
         let since = chrono::Utc::now().fixed_offset()
             - chrono::Duration::days(within_days.into());
         let application = application_join();
@@ -630,16 +630,24 @@ impl Query {
         query
             .expr_as(url.clone(), "url")
             .expr_as(Func::count(Expr::col(Asterisk)), "post_count")
-            .expr_as(latest.clone(), "latest_content_id")
-            .expr_as(Func::cast_as(sort_key.clone(), "TEXT"), "sort_key")
+            .expr_as(latest, "latest_event_id")
+            .expr_as(
+                match &decayed_post_count {
+                    Some(count) => {
+                        Expr::from(Func::cast_as(count.clone(), "TEXT"))
+                    }
+                    None => Expr::Constant(None::<String>.into()),
+                },
+                "decayed_post_count",
+            )
             .left_join(application.to_tbl.clone(), application)
             .and_where(
-                Expr::col((event::Entity, event::Column::CreatedAt)).gte(since),
+                Expr::col(event::Column::CreatedAt.as_column_ref()).gte(since),
             )
             .add_group_by([url]);
 
         let identifier =
-            Expr::col((application::Entity, application::Column::Identifier));
+            Expr::col(application::Column::Identifier.as_column_ref());
         if !only_applications.is_empty() {
             query.and_where(identifier.clone().is_in(only_applications));
         }
@@ -653,21 +661,31 @@ impl Query {
         }
 
         if let Some(marker) = marker {
-            let key = Expr::tuple([sort_key.clone(), latest.clone()]);
-            let at = Expr::tuple([
-                Expr::cust_with_values(
-                    "($1)::NUMERIC",
-                    [marker.sorted_by.clone()],
-                ),
+            let AttributedUrlSortKey {
+                decayed_post_count: count_at,
+                url: url_at,
+            } = &marker.sorted_by;
+            if count_at.is_some() != decayed_post_count.is_some() {
+                return Err(DbErr::Custom(
+                    "wrong combination of sort_by and pagination parameters"
+                        .to_owned(),
+                ));
+            }
+            let count_at = count_at
+                .iter()
+                .map(|count| Expr::cust_with_values("($1)::NUMERIC", [count]));
+            let at = Expr::tuple(count_at.chain([
                 Expr::from(marker.event_id),
-            ]);
+                Expr::from(url_at.as_str()),
+            ]));
+            let key = Expr::tuple(key.clone());
             query.and_having(if forward { key.lt(at) } else { key.gt(at) });
         }
         let order = if forward { Order::Desc } else { Order::Asc };
-        query
-            .order_by_expr(sort_key, order.clone())
-            .order_by_expr(latest, order)
-            .limit(limit);
+        for expr in key {
+            query.order_by_expr(expr, order.clone());
+        }
+        query.limit(limit);
 
         let stmt = db.get_database_backend().build(&query);
         let mut rows = AttributedUrl::find_by_statement(stmt).all(db).await?;
@@ -685,29 +703,11 @@ impl Query {
     ) -> Result<i64, DbErr> {
         let mut query = attributed_posts();
         query.expr(Func::count(Expr::col(Asterisk))).and_where(
-            Expr::col((
-                content_post_attributed_url::Entity,
-                content_post_attributed_url::Column::Url,
-            ))
-            .eq(url),
+            Expr::col(content_post_attributed_url::Column::Url.as_column_ref())
+                .eq(url),
         );
         let row = db.query_one(&query).await?;
         row.map_or(Ok(0), |row| row.try_get_by(0))
-    }
-
-    /// The serialized content with each of `ids`.
-    #[tracing::instrument(skip_all)]
-    pub async fn list_content_by_ids<C: Connection>(
-        db: &mut C,
-        ids: Vec<i64>,
-    ) -> Result<Vec<content::Model>, DbErr> {
-        if ids.is_empty() {
-            return Ok(Vec::new());
-        }
-        content::Entity::find()
-            .filter(content::Column::Id.is_in(ids))
-            .all(db)
-            .await
     }
 
     /// Bulk-fetch events (with joined content) by their EventKey
@@ -1179,9 +1179,14 @@ fn attributed_posts() -> SelectStatement {
         .from(event::Entity)
         .inner_join(content.to_tbl.clone(), content)
         .inner_join(attributed.to_tbl.clone(), attributed)
+        // Only posts. Matches the `events_feed_posts_idx` index.
         .and_where(
-            Expr::col((event::Entity, event::Column::Collection))
+            Expr::col(event::Column::Collection.as_column_ref())
                 .eq(Expr::Constant(FEED_COLLECTION.into())),
+        )
+        .and_where(
+            Expr::col(event::Column::ContentType.as_column_ref())
+                .eq(Expr::Constant(content_types::POST.into())),
         )
         .and_where(Expr::exists(deletes_by_author()).not());
     query
@@ -1253,9 +1258,14 @@ fn deletes_by_author() -> SelectStatement {
     query
 }
 
-/// A URL's decayed post count, or the content id of its latest post. A
-/// `NUMERIC` as text, like [`DecayedReactionCount`].
-pub type AttributedUrlSortKey = String;
+/// What [`Query::attributed_urls`] sorts by, next to the event id of each
+/// URL's latest post.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AttributedUrlSortKey {
+    /// Only when sorted by `SortPostsBy::Top`.
+    pub decayed_post_count: Option<DecayedReactionCount>,
+    pub url: String,
+}
 
 /// Which posts count towards [`Query::attributed_urls`].
 #[derive(Clone)]
@@ -1271,9 +1281,10 @@ pub struct AttributedUrlsFilter {
 pub struct AttributedUrl {
     pub url: String,
     pub post_count: i64,
-    /// Content of the latest post attributed to the URL.
-    pub latest_content_id: i64,
-    pub sort_key: AttributedUrlSortKey,
+    /// The latest post attributed to the URL.
+    pub latest_event_id: i64,
+    /// Only when sorted by `SortPostsBy::Top`.
+    pub decayed_post_count: Option<DecayedReactionCount>,
 }
 
 #[derive(Debug, FromQueryResult)]

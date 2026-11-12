@@ -614,6 +614,42 @@ async fn attributed_to_feed_latest_first_pages_through_urls() {
 }
 
 #[tokio::test]
+async fn attributed_to_feed_pages_through_urls_of_the_same_post() {
+    let urls = [
+        format!("https://example.com/{}", random_string()),
+        format!("https://example.com/{}", random_string()),
+    ];
+
+    // Both targets share their latest post, so they sort the same.
+    let mut post = post_about(&urls[0], "First", "about both");
+    post.attributed_to
+        .extend(post_about(&urls[1], "Second", "").attributed_to);
+    let mut author = TestClient::new().await;
+    author.post(post, current_timestamp() + 1);
+    author.submit_events().await;
+
+    for sort_by in [SortPostsBy::Latest, SortPostsBy::Top] {
+        let mut seen = Vec::new();
+        let mut page_params = PageParams {
+            limit: Some(1),
+            ..Default::default()
+        };
+        for _ in 0..200 {
+            let (items, page_info) =
+                attributed_to_feed(sort_by, page_params.clone()).await;
+            seen.extend(items.into_iter().map(|(link, _)| link.url));
+            if !page_info.has_next_page {
+                break;
+            }
+            page_params.forward_token = Some(page_info.end_cursor);
+        }
+        for url in &urls {
+            assert!(seen.contains(url), "{sort_by:?}: {url} was skipped");
+        }
+    }
+}
+
+#[tokio::test]
 async fn attributed_to_feed_filters_by_application() {
     let url = format!("https://example.com/{}", random_string());
     let one = format!("app.one.{}", random_string());
