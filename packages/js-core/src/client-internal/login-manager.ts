@@ -318,7 +318,7 @@ export class LoginManager {
    * Returns whether `key` is authorized for rotation, signing, or nothing
    * in the given identity state.
    */
-  private checkAuthorization(
+  checkAuthorization(
     identity: {
       rotationKeys: Proto.PublicKey[];
       signingKeys: Proto.PublicKey[];

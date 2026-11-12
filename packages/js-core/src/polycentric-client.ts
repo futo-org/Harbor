@@ -36,13 +36,42 @@ import {
   QueryStatus,
   type QueryOpts,
 } from '@polycentric/rs-core-wasm/generated';
-import type { LoginId } from './platform-interfaces/login-repository';
+import type {
+  LoginId,
+  LoginOverview,
+  LoginStatus,
+} from './platform-interfaces/login-repository';
 
 type CoreType = PolycentricCoreLike;
 
 /** The (collection, signer) event stream of `key`. */
 const streamId = (key: Proto.EventKey): string =>
   `${key.collection}:${key.signedBy?.keyType}:${bytesToHex(key.signedBy?.key ?? new Uint8Array())}`;
+
+/**
+ * Derive the new status that a login should have based on its existing status
+ * and the power derived from resolving the latest identity state.
+ * Returns `null` when no status update should be made.
+ */
+export function deriveKeyStatus(
+  status: LoginStatus,
+  power: 'rotation' | 'signing' | null,
+): LoginStatus | null {
+  if (status === 'pendingDeletion') return null;
+
+  let target: LoginStatus;
+  if (power === 'rotation') {
+    target = 'liveRotationKey';
+  } else if (power === 'signing') {
+    target = 'liveSigningKey';
+  } else if (status === 'liveRotationKey' || status === 'liveSigningKey') {
+    target = 'revoked';
+  } else {
+    return null;
+  }
+
+  return target === status ? null : target;
+}
 
 export interface KeyPair {
   keyType: Proto.KeyType;
@@ -203,6 +232,11 @@ export class PolycentricClient {
     // active login.
     this.refreshServers();
 
+    // Hydrate all local identities and refresh login statuses in the background.
+    this.refreshLocalIdentities().catch((e) => {
+      console.error('refreshing local identities failed:', e);
+    });
+
     // Start background task to ensure blobs are migrated.
     this.fileStore.migrate({ storage: this.storageDriver }).catch((e) => {
       console.error('migrating blobs failed:', e);
@@ -333,6 +367,74 @@ export class PolycentricClient {
     );
 
     this.copyBundles(bundles);
+  }
+
+  /**
+   * Hydrate the identity and profile events of every local identity to
+   * rs-core.
+   * We will also use the hydrated events to update the login statuses.
+   * Errors from hydration are thrown.
+   * Errors from updating a login status are logged.
+   */
+  async refreshLocalIdentities(): Promise<void> {
+    // Hydrate identity and profile events
+    const rows = await this.storage.events.getProfiles();
+
+    const bundles: LocalBundle[] = rows.map(
+      ({ eventBytes, eventSignature, contentBytes }) => ({
+        signedEvent: Proto.SignedEvent.create({
+          eventBytes,
+          signature: eventSignature,
+        }),
+        contentBytes,
+      }),
+    );
+
+    this.copyBundles(bundles);
+
+    // Group logins by identity
+    const logins = await this.storage.logins.listLogins();
+    const byIdentity: Map<string, LoginOverview[]> = new Map();
+
+    for (const login of logins) {
+      const group = byIdentity.get(login.identity);
+
+      if (group) {
+        group.push(login);
+      } else {
+        byIdentity.set(login.identity, [login]);
+      }
+    }
+
+    // Update login statuses from the latest identity state
+    for (const [identity, group] of byIdentity) {
+      try {
+        const state = this.identityManager.resolveIdentity(identity);
+        if (!state) continue;
+
+        for (const login of group) {
+          try {
+            const power = this.loginManager.checkAuthorization(
+              state,
+              login.publicKey,
+            );
+
+            const next = deriveKeyStatus(login.status, power);
+            if (!next) continue;
+
+            await this.storage.logins.changeLoginStatus(
+              identity,
+              login.publicKey,
+              next,
+            );
+          } catch (e) {
+            console.warn('refreshLocalIdentities: updating login failed:', e);
+          }
+        }
+      } catch (e) {
+        console.warn('refreshLocalIdentities: resolving identity failed:', e);
+      }
+    }
   }
 
   /**
