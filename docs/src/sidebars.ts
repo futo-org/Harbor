@@ -59,6 +59,7 @@ const sidebars: SidebarsConfig = {
         'guides/self-hosting-a-verifier',
         'guides/add-a-platform-verifier',
         'guides/setting-up-an-alias',
+        'guides/share-links',
       ],
     },
     {

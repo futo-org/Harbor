@@ -20,6 +20,48 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: unaccent; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION unaccent; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION unaccent IS 'text search dictionary that removes accents';
+
+
+--
+-- Name: parse_for_search(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.parse_for_search(text text) RETURNS text[]
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    RETURN (WITH token_numword AS (SELECT ts_token_type.tokid AS id FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description) WHERE (ts_token_type.alias = 'numword'::text) LIMIT 1), token_word AS (SELECT ts_token_type.tokid AS id FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description) WHERE (ts_token_type.alias = 'word'::text) LIMIT 1), token_sfloat AS (SELECT ts_token_type.tokid AS id FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description) WHERE (ts_token_type.alias = 'sfloat'::text) LIMIT 1), token_blank AS (SELECT ts_token_type.tokid AS id FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description) WHERE (ts_token_type.alias = 'blank'::text) LIMIT 1), parsed AS (SELECT CASE WHEN ((parsed.tokid = (SELECT token_sfloat.id FROM token_sfloat)) AND (lead(parsed.tokid, 1, NULL::integer) OVER () = (SELECT token_numword.id FROM token_numword))) THEN (parsed.token || lead(parsed.token, 1, ''::text) OVER ()) WHEN ((parsed.tokid = (SELECT token_numword.id FROM token_numword)) AND (lag(parsed.tokid, 1, NULL::integer) OVER () = (SELECT token_sfloat.id FROM token_sfloat))) THEN ''::text WHEN ((parsed.tokid = (SELECT token_blank.id FROM token_blank)) AND ("right"(parsed.token, 1) = '#'::text)) THEN ('#'::text || lead(parsed.token, 1, ''::text) OVER ()) WHEN ((lag(parsed.tokid, 1, NULL::integer) OVER () = (SELECT token_blank.id FROM token_blank)) AND (lag("right"(parsed.token, 1), 1, NULL::text) OVER () = '#'::text)) THEN ''::text WHEN (parsed.token = '@'::text) THEN ((lag(parsed.token, 1, ''::text) OVER () || '@'::text) || lead(parsed.token, 1, ''::text) OVER ()) ELSE parsed.token END AS token, parsed.tokid FROM ts_parse('default'::text, parse_for_search.text) parsed(tokid, token)), transformed AS (SELECT unnest(ts_lexize('english_stem'::regdictionary, public.unaccent(TRIM(BOTH '	
+ '::text FROM parsed.token)))) AS term FROM parsed WHERE ((octet_length(parsed.token) <> 0) AND (NOT ((parsed.tokid = (SELECT token_blank.id FROM token_blank)) AND ("left"(parsed.token, 1) <> '#'::text) AND (parsed.token !~~ '%@%'::text))))) SELECT array_agg(transformed.term) AS array_agg FROM (SELECT ltrim(transformed_1.term, '#'::text) AS ltrim FROM transformed transformed_1) transformed(term) WHERE ((transformed.term IS NOT NULL) AND (transformed.term <> ''::text)));
+
+
+--
+-- Name: create_tsquery(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_tsquery(query text) RETURNS tsquery
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    RETURN (WITH transformed AS (SELECT CASE WHEN ((terms.term ~~ '%@%'::text) AND (lag(terms.term, 1, NULL::text) OVER () IS NOT NULL) AND (lead(terms.term, 1, NULL::text) OVER () IS NOT NULL)) THEN ((((((('( '::text || lag(terms.term, 1, NULL::text) OVER ()) || ' | '::text) || terms.term) || ':*'::text) || ' | '::text) || lead(terms.term, 1, NULL::text) OVER ()) || ' )'::text) WHEN ((lead(terms.term, 1, NULL::text) OVER () ~~ '%@%'::text) OR (lag(terms.term, 1, NULL::text) OVER () ~~ '%@%'::text)) THEN NULL::text WHEN (lead(terms.term, 1, NULL::text) OVER () IS NULL) THEN (terms.term || ':*'::text) ELSE terms.term END AS term FROM unnest(public.parse_for_search(create_tsquery.query)) terms(term)) SELECT COALESCE((string_agg(transformed.term, ' & '::text))::tsquery, ''::tsquery) AS query FROM transformed);
+
+
+--
+-- Name: create_tsvector(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_tsvector(text text) RETURNS tsvector
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    RETURN (SELECT COALESCE(array_to_tsvector(public.parse_for_search(text)), ''::tsvector) AS vector);
+
+
+--
 -- Name: tsvector_agg(tsvector); Type: AGGREGATE; Schema: public; Owner: -
 --
 
@@ -36,7 +78,7 @@ CREATE AGGREGATE public.tsvector_agg(tsvector) (
 
 CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char") RETURNS tsvector
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
+    RETURN ((setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(array_to_tsvector(ARRAY(SELECT DISTINCT lower(m.m[1]) AS lower FROM regexp_matches(COALESCE(create_tsvector.text, ''::text), '([0-9a-fA-F]{64})'::text, 'g'::text) m(m))), weight)) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
 
 
 --
@@ -302,7 +344,7 @@ CREATE TABLE public.content_post (
     quote_public_key_type smallint,
     quote_public_key bytea,
     quote_sequence bigint,
-    search_data tsvector GENERATED ALWAYS AS (public.create_tsvector('english'::regconfig, (text)::text, 'A'::"char")) STORED NOT NULL
+    search_data tsvector GENERATED ALWAYS AS (public.create_tsvector((text)::text)) STORED NOT NULL
 );
 
 

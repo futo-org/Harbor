@@ -1,6 +1,5 @@
 use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
-use crate::media::process_image;
 use crate::pairing;
 use crate::query::{QueryObserver, QueryResultFfi, QueryStatus};
 use crate::sync;
@@ -63,9 +62,6 @@ pub enum CoreError {
 
     #[error("Store: {0}")]
     Store(String),
-
-    #[error("Image: {0}")]
-    Image(String),
 
     #[error("Network: {0}")]
     Network(String),
@@ -450,23 +446,6 @@ impl PolycentricCore {
         };
 
         Ok(response.encode_to_vec())
-    }
-
-    /// Decode `image`, resize to `width`x`height` per `mode` ("fill" or
-    /// "fit"), encode as JPEG.
-    pub fn process_image_to_jpeg(
-        &self,
-        image: Vec<u8>,
-        width: u32,
-        height: u32,
-        mode: String,
-    ) -> Result<process_image::ProcessedImage, CoreError> {
-        let mode = match mode.as_str() {
-            "fit" => process_image::ResizeMode::Fit,
-            _ => process_image::ResizeMode::Fill,
-        };
-        process_image::process_image(&image, width, height, mode)
-            .map_err(|e| CoreError::Image(format!("process_image failed: {e}")))
     }
 
     // ── Network ops (gRPC / gRPC-web) ──────────────────────────────

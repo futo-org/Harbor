@@ -5,7 +5,9 @@ import TestRenderer from 'react-test-renderer';
 import { Keyboard } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { processAndUploadImage } from '@/src/common/lib/images/processAndUploadImage';
-import { useComposer } from './useComposer';
+import { confirm } from '@/src/common/lib/dialogs';
+import { usePendingShareStore } from '@/src/features/share-intake/usePendingShareStore';
+import { MAX_POST_LENGTH, useComposer } from './useComposer';
 import { useComposerStore } from './useComposerStore';
 import { ImageImportError } from '@/src/common/lib/images/ImageImportError';
 
@@ -17,6 +19,10 @@ jest.mock('@/src/common/lib/images/processAndUploadImage', () => ({
 
 jest.mock('expo-router', () => ({
   usePreventRemove: jest.fn(),
+}));
+
+jest.mock('@/src/common/lib/dialogs', () => ({
+  confirm: jest.fn(),
 }));
 
 jest.mock('expo-image-picker', () => ({
@@ -97,6 +103,7 @@ jest.mock('@/src/common/query/hooks/useQuery', () => ({
 
 const picker = ImagePicker as jest.Mocked<typeof ImagePicker>;
 const mockProcess = processAndUploadImage as jest.Mock;
+const mockConfirm = confirm as jest.Mock;
 
 /** A promise whose resolution we control, to model in-flight uploads. */
 function deferred<T>() {
@@ -150,6 +157,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockLinkPreviewsEnabled = true;
   useComposerStore.getState().reset();
+  usePendingShareStore.getState().clearPendingShare();
   // Default: uploads succeed immediately.
   mockProcess.mockResolvedValue({ images: [] });
   jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => undefined);
@@ -367,6 +375,111 @@ describe('useComposer canPost', () => {
 
     act(() => result.current.setText('hello'));
     expect(result.current.canPost).toBe(true);
+  });
+
+  it('is false while the text is over the limit', async () => {
+    const { result } = await renderComposer();
+
+    act(() => result.current.setText('a'.repeat(MAX_POST_LENGTH)));
+    expect(result.current.canPost).toBe(true);
+
+    act(() => result.current.setText('a'.repeat(MAX_POST_LENGTH + 1)));
+    expect(result.current.canPost).toBe(false);
+  });
+});
+
+describe('useComposer pending share', () => {
+  const sharedImage = { uri: 'file://shared.jpg', width: 300, height: 200 };
+
+  it('fills an empty draft with a share that arrives after mounting', async () => {
+    const { result } = await renderComposer();
+
+    act(() =>
+      usePendingShareStore
+        .getState()
+        .setPendingShare({ text: 'shared text', images: [sharedImage] }),
+    );
+
+    expect(result.current.text).toBe('shared text');
+    expect(result.current.attachments).toEqual([
+      expect.objectContaining({ ...sharedImage, status: 'processing' }),
+    ]);
+    expect(processAndUploadImage).toHaveBeenCalledWith(
+      mockClient,
+      sharedImage.uri,
+      expect.objectContaining({ mode: 'fit' }),
+    );
+    expect(usePendingShareStore.getState().pendingShare).toBeNull();
+    expect(mockConfirm).not.toHaveBeenCalled();
+  });
+
+  it('takes a share that was pending before mounting', async () => {
+    usePendingShareStore
+      .getState()
+      .setPendingShare({ text: 'shared text', images: [] });
+
+    const { result } = await renderComposer();
+
+    expect(result.current.text).toBe('shared text');
+    expect(usePendingShareStore.getState().pendingShare).toBeNull();
+  });
+
+  it('prefills text over the limit in full', async () => {
+    const longText = 'a'.repeat(MAX_POST_LENGTH + 10);
+    const { result } = await renderComposer();
+
+    act(() =>
+      usePendingShareStore
+        .getState()
+        .setPendingShare({ text: longText, images: [] }),
+    );
+
+    expect(result.current.text).toBe(longText);
+    expect(result.current.canPost).toBe(false);
+  });
+
+  it('replaces an open draft once the discard is confirmed', async () => {
+    libraryReturns([{ uri: 'file://a.jpg', width: 100, height: 80 }]);
+    const { result } = await renderComposer();
+    act(() => result.current.setText('my draft'));
+    await act(async () => {
+      await result.current.handleAttachImage();
+    });
+
+    act(() =>
+      usePendingShareStore
+        .getState()
+        .setPendingShare({ text: 'shared text', images: [sharedImage] }),
+    );
+
+    // Nothing changes until the user answers
+    expect(mockConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Discard post?' }),
+    );
+    expect(result.current.text).toBe('my draft');
+    expect(usePendingShareStore.getState().pendingShare).toBeNull();
+
+    act(() => mockConfirm.mock.calls[0][0].onConfirm());
+
+    expect(result.current.text).toBe('shared text');
+    expect(result.current.attachments).toEqual([
+      expect.objectContaining({ uri: sharedImage.uri }),
+    ]);
+  });
+
+  it('keeps an open draft and drops the share when the discard is cancelled', async () => {
+    const { result } = await renderComposer();
+    act(() => result.current.setText('my draft'));
+
+    act(() =>
+      usePendingShareStore
+        .getState()
+        .setPendingShare({ text: 'shared text', images: [] }),
+    );
+    act(() => mockConfirm.mock.calls[0][0].onCancel?.());
+
+    expect(result.current.text).toBe('my draft');
+    expect(usePendingShareStore.getState().pendingShare).toBeNull();
   });
 });
 

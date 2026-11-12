@@ -304,11 +304,12 @@ function decodeRow(row: EventRow): StoredEvent {
  * already has.
  */
 async function makeFileStoreDriver(
+  owner: string,
   entries: { digest: Proto.ContentDigest; bytes: Uint8Array }[] = [],
 ): Promise<MemoryFileStoreDriver> {
   const driver = new MemoryFileStoreDriver();
   const fileStore = new FileStore(driver);
-  for (const e of entries) await fileStore.put(e.digest, e.bytes);
+  for (const e of entries) await fileStore.put(owner, e.digest, e.bytes);
   return driver;
 }
 
@@ -1024,7 +1025,7 @@ describe('PolycentricClient sync', () => {
       });
 
       // The present blob is already in the local filestore.
-      const fileStoreDriver = await makeFileStoreDriver([
+      const fileStoreDriver = await makeFileStoreDriver(identityA.key, [
         { digest: presentBlob.digest!, bytes: presentBytes },
       ]);
       const { client, fileStore } = await makeClient({
@@ -1045,7 +1046,14 @@ describe('PolycentricClient sync', () => {
         toDigestKey(missingBlob.digest!),
       );
       expect(fileStore.put).toHaveBeenCalledTimes(1);
-      expect(await fileStore.has(missingBlob.digest!)).toBe(true);
+      expect(fileStore.put).toHaveBeenCalledWith(
+        identityA.key,
+        missingBlob.digest,
+        missingBytes,
+      );
+      expect(await fileStore.has(identityA.key, missingBlob.digest!)).toBe(
+        true,
+      );
     });
 
     it('a blob referenced by multiple events is fetched only once', async () => {
@@ -1121,7 +1129,7 @@ describe('PolycentricClient sync', () => {
             ? pushResult({ requestedBlobs: [blob1] })
             : pushResult({ requestedBlobs: [blob2] }),
       });
-      const fileStoreDriver = await makeFileStoreDriver([
+      const fileStoreDriver = await makeFileStoreDriver(identityA.key, [
         { digest: blob1.digest!, bytes: blob1Bytes },
         { digest: blob2.digest!, bytes: blob2Bytes },
       ]);
@@ -1276,7 +1284,12 @@ describe('PolycentricClient sync', () => {
         toDigestKey(blob.digest!),
       );
       expect(fileStore.put).toHaveBeenCalledTimes(1);
-      expect(await fileStore.has(blob.digest!)).toBe(true);
+      expect(fileStore.put).toHaveBeenCalledWith(
+        identityA.key,
+        blob.digest,
+        blobBytes,
+      );
+      expect(await fileStore.has(identityA.key, blob.digest!)).toBe(true);
     });
   });
 
@@ -1418,7 +1431,7 @@ describe('PolycentricClient sync', () => {
             requestedBlobs: [blob],
           }),
       });
-      const fileStoreDriver = await makeFileStoreDriver([
+      const fileStoreDriver = await makeFileStoreDriver(identityA.key, [
         { digest: blob.digest!, bytes: blobBytes },
       ]);
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -1596,6 +1609,23 @@ describe('PolycentricClient sync', () => {
       await client.sync(SyncStrategy.PARTIAL_PULL);
 
       expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('pulled event', () => {
+    it('emits nothing when the pull returns no bundles', async () => {
+      const core = makeCoreMock({ pullBundles: () => [] });
+      const { client } = await makeClient({
+        core,
+        identity: identityA,
+        signer: signerA,
+      });
+      const pulled = vi.fn();
+      client.events.onPulled(pulled);
+
+      await client.sync(SyncStrategy.FULL_PULL);
+
+      expect(pulled).not.toHaveBeenCalled();
     });
   });
 
@@ -1811,7 +1841,11 @@ const queriesOf = (
 ): any[] =>
   core.fetchQuery.mock.calls.filter(([, query]: any) => query instanceof type);
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+/**
+ * Waits for pending promise chains to finish.
+ * This may need updating if actual async work is done.
+ */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('PolycentricClient live sync', () => {
   const seeded = makeStream({
@@ -1842,12 +1876,12 @@ describe('PolycentricClient live sync', () => {
       events: seeded,
     });
 
+    const pulled = new Promise((resolve) => client.events.onPulled(resolve));
     const stop = client.startLiveSync();
     emitHeads([keyOf(remote)]);
+    await pulled;
 
-    await vi.waitFor(async () =>
-      expect((await stored(remote))?.signedEvent).toEqual(remote),
-    );
+    expect((await stored(remote))?.signedEvent).toEqual(remote);
     expect(queriesOf(core, Query.ListEvents)[0][1].inner[0].heads).toEqual([
       expect.objectContaining({ sequence: 1n }),
     ]);
@@ -1865,13 +1899,11 @@ describe('PolycentricClient live sync', () => {
       signer: signerA,
       events: [...seeded, remote],
     });
-    const pulled = vi.fn();
-    client.events.onPulled(pulled);
-
+    const pulled = new Promise((resolve) => client.events.onPulled(resolve));
     const stop = client.startLiveSync();
     emitHeads([keyOf(remote)]);
 
-    await vi.waitFor(() => expect(pulled).toHaveBeenCalledWith(identityA.key));
+    await expect(pulled).resolves.toBe(identityA.key);
     stop();
   });
 
@@ -1888,6 +1920,9 @@ describe('PolycentricClient live sync', () => {
     emitHeads([keyOf(remote)]);
     await settle();
 
+    // Ensure the heads check ran before `settle()` returned
+    // and that we didn't query for events
+    expect(core.localHeads).toHaveBeenCalled();
     expect(queriesOf(core, Query.ListEvents)).toHaveLength(0);
     stop();
   });
@@ -1908,13 +1943,12 @@ describe('PolycentricClient live sync', () => {
       events: seeded,
     });
 
+    const pulled = new Promise((resolve) => client.events.onPulled(resolve));
     const stop = client.startLiveSync();
     emitHeads([keyOf(remote)]);
+    await pulled;
 
-    await vi.waitFor(async () =>
-      expect((await stored(remote))?.signedEvent).toEqual(remote),
-    );
-
+    expect((await stored(remote))?.signedEvent).toEqual(remote);
     expect(queriesOf(core, Query.ListEvents)[0][1].inner[0].heads).toEqual([
       expect.objectContaining({ sequence: 1n }),
     ]);
@@ -1938,13 +1972,12 @@ describe('PolycentricClient live sync', () => {
       events: [...seeded, remote],
     });
 
+    const pulled = new Promise((resolve) => client.events.onPulled(resolve));
     const stop = client.startLiveSync();
     emitHeads([keyOf(remote)]);
+    await pulled;
 
-    await vi.waitFor(() =>
-      expect(queriesOf(core, Query.ListEvents)).toHaveLength(1),
-    );
-
+    expect(queriesOf(core, Query.ListEvents)).toHaveLength(1);
     expect(queriesOf(core, Query.ListEvents)[0][1].inner[0].heads).toEqual([
       expect.objectContaining({ sequence: 1n }),
     ]);
