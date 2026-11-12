@@ -99,6 +99,11 @@ async fn match_alias() {
         format!("{name}@"),
         format!("{name}@futo"),
         format!("{name}@futo.tech"),
+        // Tests for #2010.
+        format!("{name}@f"),
+        format!("{name}@fu"),
+        format!("{name}@fut"),
+        format!("{name}@futo"),
     ] {
         expect_searched_users(
             SearchUsersRequest {
