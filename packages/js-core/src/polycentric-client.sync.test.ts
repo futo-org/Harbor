@@ -1612,6 +1612,23 @@ describe('PolycentricClient sync', () => {
     });
   });
 
+  describe('pulled event', () => {
+    it('emits nothing when the pull returns no bundles', async () => {
+      const core = makeCoreMock({ pullBundles: () => [] });
+      const { client } = await makeClient({
+        core,
+        identity: identityA,
+        signer: signerA,
+      });
+      const pulled = vi.fn();
+      client.events.onPulled(pulled);
+
+      await client.sync(SyncStrategy.FULL_PULL);
+
+      expect(pulled).not.toHaveBeenCalled();
+    });
+  });
+
   describe('edge cases', () => {
     it('sync() with no active identity returns 0 and does nothing', async () => {
       const core = makeCoreMock();
