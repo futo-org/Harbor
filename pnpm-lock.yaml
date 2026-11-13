@@ -295,6 +295,9 @@ importers:
       '@polycentric/react-native':
         specifier: workspace:*
         version: link:../../packages/react-native
+      '@polycentric/video-transcoding':
+        specifier: workspace:*
+        version: link:../../packages/video-transcoding
       '@react-native-async-storage/async-storage':
         specifier: ^2.2.0
         version: 2.2.0(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))
@@ -908,6 +911,15 @@ importers:
       uniffi-bindgen-react-native:
         specifier: 'catalog:'
         version: 0.31.0-6(patch_hash=598feb8dcf52c24d7e65cf849d0d21b96855f02f1385f81ac530cb8ca88a8d9c)
+
+  packages/video-transcoding:
+    devDependencies:
+      expo:
+        specifier: ^58.0.21
+        version: 58.0.22(@expo/metro-runtime@58.0.16)(react-dom@19.3.0(react@19.3.0))(react-native-web@0.21.4(encoding@0.1.13)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-native-webview@14.0.1(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(supports-color@8.1.1)(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
   services/scraper:
     dependencies:

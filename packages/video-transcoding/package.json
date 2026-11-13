@@ -1,0 +1,51 @@
+{
+  "name": "@polycentric/video-transcoding",
+  "version": "0.1.0",
+  "description": "On-device transcoding to H.264 MP4 for Expo, using platform encoders",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "react-native": "./index.ts",
+  "browser": "./index.web.ts",
+  "files": [
+    "index.ts",
+    "index.web.ts",
+    "src",
+    "android",
+    "ios",
+    "expo-module.config.json",
+    "!android/build",
+    "!ios/build",
+    "!**/__tests__",
+    "!**/*.test.ts"
+  ],
+  "scripts": {
+    "typecheck": "tsc",
+    "lint": "biome lint ."
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "video",
+    "transcode",
+    "gif",
+    "mp4",
+    "h264",
+    "ios",
+    "android",
+    "web"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.futo.org/polycentric/polycentric.git"
+  },
+  "author": "FUTO",
+  "homepage": "https://harbor.social",
+  "license": "MIT",
+  "devDependencies": {
+    "expo": "^58.0.21",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "expo": ">=58.0.0"
+  }
+}
