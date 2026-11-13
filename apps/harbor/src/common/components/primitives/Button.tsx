@@ -14,9 +14,9 @@ import {
 import { type Href, Link, router } from 'expo-router';
 import {
   Animated,
-  Platform,
   Pressable,
   type PressableProps,
+  type StyleProp,
   StyleSheet,
   View,
   type ViewStyle,
@@ -133,6 +133,16 @@ export function Button({
       ]}
       {...props}
     >
+      {/* Tertiary has no fill of its own to darken */}
+      {!isDisabled && hovered && variant === 'tertiary' && (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { borderRadius },
+            theme.atoms_new.overlay.hover,
+          ]}
+        />
+      )}
       <View style={[styles.content, iconOnly && styles.iconOnlyContent]}>
         {icon &&
           (typeof icon === 'function' ? (
@@ -189,7 +199,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export const textColorMap: Record<ButtonVariant, TextColor> = {
+const textColorMap: Record<ButtonVariant, TextColor> = {
   primary: 'light',
   secondary: 'accent',
   tertiary: 'primary',
@@ -198,58 +208,37 @@ export const textColorMap: Record<ButtonVariant, TextColor> = {
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
 
-export function getVariantStyle(theme: Theme, variant: ButtonVariant) {
+function getVariantStyle(
+  theme: Theme,
+  variant: ButtonVariant,
+): StyleProp<ViewStyle> {
+  const { box, shadow, transparent } = theme.atoms_new;
   switch (variant) {
     case 'primary':
-      return {
-        backgroundColor: theme.palette.primary_500,
-        borderColor: theme.palette.primary_500,
-        shadowColor: theme.palette.primary_900,
-        shadowOpacity: 0.22,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-        elevation: Platform.OS === 'android' ? 4 : 0,
-      };
+      return [box.accent.bg, box.accent.border, shadow.accent];
     case 'secondary':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.primary_500, '20'),
-        borderColor: withHexOpacity(theme.palette.primary_500, '40'),
-      };
+      return [box.accent.bg_subtle, box.accent.border_subtle];
     case 'tertiary':
-      return {
-        backgroundColor: 'transparent',
-        borderColor: withHexOpacity(theme.palette.neutral_500, '60'),
-      };
+      return [transparent.bg, box.neutral.border_subtle];
     case 'destructive':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.negative_500, '15'),
-        borderColor: withHexOpacity(theme.palette.negative_500, '80'),
-      };
+      return [box.danger.bg_subtle, box.danger.border_subtle];
   }
 }
 
-function getHoverVariantStyle(theme: Theme, variant: ButtonVariant): ViewStyle {
+function getHoverVariantStyle(
+  theme: Theme,
+  variant: ButtonVariant,
+): StyleProp<ViewStyle> {
+  const { box } = theme.atoms_new;
   switch (variant) {
     case 'primary':
-      return {
-        backgroundColor: theme.palette.primary_600,
-        borderColor: theme.palette.primary_700,
-      };
+      return box.accent.bg_hover;
     case 'secondary':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.primary_500, '32'),
-        borderColor: withHexOpacity(theme.palette.primary_500, '55'),
-      };
+      return box.accent.bg_subtle_hover;
     case 'tertiary':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.neutral_500, '14'),
-        borderColor: withHexOpacity(theme.palette.neutral_500, '78'),
-      };
+      return undefined;
     case 'destructive':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.negative_500, '26'),
-        borderColor: withHexOpacity(theme.palette.negative_500, 'A0'),
-      };
+      return box.danger.bg_subtle_hover;
   }
 }
 

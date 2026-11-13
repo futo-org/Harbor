@@ -1,17 +1,14 @@
-import {
-  blend,
-  clampChroma,
-  converter,
-  formatHex,
-  formatHex8,
-  parse,
-} from 'culori';
+import { clampChroma, converter, formatHex, formatHex8, parse } from 'culori';
 import type { Palette } from './palette';
 import type { ThemeScheme } from './themes';
 
-const SUBTLE_BOX_OPACITY = 0.2;
-// OKLCH lightness; borders go darker in light mode and lighter in dark mode
-const BORDER_LIGHTNESS_SHIFT = 0.12;
+const SUBTLE_BOX_OPACITY = 0.125;
+const SUBTLE_BOX_HOVER_OPACITY = 0.2;
+const SUBTLE_BORDER_OPACITY = 0.3;
+// border of the neutral boxes (page, cards), drawn in neutral_500
+const NEUTRAL_BORDER_OPACITY = 0.15;
+// OKLCH lightness; solid boxes darken on hover in both themes
+const HOVER_LIGHTNESS_SHIFT = -0.03;
 const DISABLED_OPACITY = 0.4;
 // offset and blur shared by all shadows
 const SHADOW_GEOMETRY = '0 6px 16px';
@@ -60,6 +57,10 @@ function buildColorAtoms(
   colors: ReturnType<typeof buildColors>,
 ) {
   const shadowOpacity = SHADOW_OPACITY[scheme];
+  const neutralBorder = withOpacity(
+    palette.neutral_500,
+    NEUTRAL_BORDER_OPACITY,
+  );
 
   return {
     primary: { color: colors.primary },
@@ -72,13 +73,13 @@ function buildColorAtoms(
     light: { color: colors.light },
     dark: { color: colors.dark },
     box: {
-      primary: buildBox(palette, scheme, palette.neutral_0, true),
-      secondary: buildBox(palette, scheme, palette.neutral_25, true),
-      neutral: buildBox(palette, scheme, palette.neutral_500),
-      accent: buildBox(palette, scheme, palette.primary_500),
-      danger: buildBox(palette, scheme, palette.negative_500),
-      success: buildBox(palette, scheme, palette.positive_500),
-      warning: buildBox(palette, scheme, palette.warning_500),
+      primary: buildBox(palette.neutral_0, neutralBorder),
+      secondary: buildBox(palette.neutral_25, neutralBorder),
+      neutral: buildBox(palette.neutral_500),
+      accent: buildBox(palette.primary_500),
+      danger: buildBox(palette.negative_500),
+      success: buildBox(palette.positive_500),
+      warning: buildBox(palette.warning_500),
     },
     overlay: {
       hover: { backgroundColor: withOpacity(palette.neutral_900, 0.06) },
@@ -107,45 +108,31 @@ function buildColorAtoms(
   };
 }
 
-function buildBox(
-  palette: Palette,
-  scheme: ThemeScheme,
-  bg: string,
-  primaryBorderVisible = false,
-) {
-  const bgSubtle = withOpacity(bg, SUBTLE_BOX_OPACITY);
+// A hue box's solid border matches its fill, so it keeps the border width
+// without a visible outline.
+function buildBox(bg: string, border = bg) {
   return {
     bg: { backgroundColor: bg },
-    bg_subtle: { backgroundColor: bgSubtle },
-    border: {
-      borderColor: primaryBorderVisible ? shiftLightness(bg, scheme) : bg,
+    bg_hover: { backgroundColor: shiftLightness(bg, HOVER_LIGHTNESS_SHIFT) },
+    bg_subtle: { backgroundColor: withOpacity(bg, SUBTLE_BOX_OPACITY) },
+    bg_subtle_hover: {
+      backgroundColor: withOpacity(bg, SUBTLE_BOX_HOVER_OPACITY),
     },
-    border_subtle: {
-      // the border rule runs on what the subtle box looks like, so composite it first
-      borderColor: shiftLightness(
-        composite(bgSubtle, palette.neutral_0),
-        scheme,
-      ),
-    },
+    border: { borderColor: border },
+    border_subtle: { borderColor: withOpacity(bg, SUBTLE_BORDER_OPACITY) },
   };
 }
 
 const toOklch = converter('oklch');
 
-function shiftLightness(color: string, scheme: ThemeScheme): string {
+function shiftLightness(color: string, shift: number): string {
   const oklch = toOklch(parseColor(color));
-  const shift =
-    scheme === 'light' ? -BORDER_LIGHTNESS_SHIFT : BORDER_LIGHTNESS_SHIFT;
   const lightness = Math.min(1, Math.max(0, oklch.l + shift));
   return formatHex(clampChroma({ ...oklch, l: lightness }, 'oklch'));
 }
 
 function withOpacity(color: string, opacity: number): string {
   return formatHex8({ ...parseColor(color), alpha: opacity });
-}
-
-function composite(foreground: string, background: string): string {
-  return formatHex(blend([parseColor(background), parseColor(foreground)]));
 }
 
 function parseColor(color: string) {

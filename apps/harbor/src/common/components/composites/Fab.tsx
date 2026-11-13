@@ -1,7 +1,7 @@
 import type { IconName, IconRenderFn } from '@/src/common/components/Icon';
 import { Button } from '@/src/common/components/primitives';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
-import { Platform, View } from 'react-native';
+import { Atoms, useTheme } from '@/src/common/theme';
+import { View } from 'react-native';
 
 interface FabProps {
   onPress: () => void;
@@ -17,22 +17,6 @@ export function Fab({
   accessibilityLabel,
 }: FabProps) {
   const { theme } = useTheme();
-  const isLight = theme.scheme === 'light';
-  const shadow =
-    Platform.OS === 'web'
-      ? {
-          boxShadow: `0 6px 16px ${withHexOpacity(
-            theme.palette.primary_900,
-            isLight ? '28' : '40',
-          )}`,
-        }
-      : {
-          shadowColor: theme.palette.primary_900,
-          shadowOpacity: isLight ? 0.16 : 0.26,
-          shadowRadius: isLight ? 14 : 10,
-          shadowOffset: { width: 0, height: isLight ? 3 : 4 },
-          elevation: isLight ? 4 : 6,
-        };
 
   return (
     <View style={[Atoms.absolute, { bottom: 0, right: 0 }, Atoms.p_lg]}>
@@ -43,12 +27,7 @@ export function Fab({
         variant="primary"
         size="md"
         icon={icon}
-        style={[
-          shadow,
-          isLight && {
-            borderWidth: 0,
-          },
-        ]}
+        style={theme.scheme === 'light' && { borderWidth: 0 }}
       />
     </View>
   );

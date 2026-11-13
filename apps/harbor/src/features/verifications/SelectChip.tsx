@@ -16,13 +16,11 @@ export function SelectChip({
   title,
   icon,
   color,
-  selected = false,
   onPress,
 }: {
   title: string;
   icon: IconName | ((props: { size: number; color: string }) => ReactNode);
   color?: PaletteColorToken;
-  selected?: boolean;
   onPress: () => void;
 }) {
   const { theme } = useTheme();
@@ -48,17 +46,9 @@ export function SelectChip({
         </View>
       )}
       variant="tertiary"
-      style={({ hovered }) => [
-        {
-          borderColor: selected
-            ? theme.palette.primary_100
-            : theme.palette.neutral_50,
-          backgroundColor: selected
-            ? theme.palette.primary_50
-            : hovered
-              ? withHexOpacity(theme.palette.neutral_100, '80')
-              : withHexOpacity(theme.palette.neutral_25, '90'),
-        },
+      style={[
+        theme.atoms_new.box.secondary.bg,
+        theme.atoms_new.box.secondary.border,
         {
           paddingVertical: Spacing.sm,
           paddingHorizontal: Spacing.md,
