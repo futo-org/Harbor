@@ -22,6 +22,8 @@ on:
       - .forgejo/scripts/publish-play-listing.mjs
       - .forgejo/workflows/deploy-store-listing.yml
 
+enable-openid-connect: true
+
 concurrency:
   group: deploy-store-listing
   cancel-in-progress: false
@@ -44,17 +46,14 @@ jobs:
     timeout-minutes: 30
     container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
-      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-      ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-      ASC_REVIEW_FIRST_NAME: ${{ secrets.ASC_REVIEW_FIRST_NAME }}
-      ASC_REVIEW_LAST_NAME: ${{ secrets.ASC_REVIEW_LAST_NAME }}
-      ASC_REVIEW_EMAIL: ${{ secrets.ASC_REVIEW_EMAIL }}
-      ASC_REVIEW_PHONE: ${{ secrets.ASC_REVIEW_PHONE }}
       ASC_VERSION: ${{ inputs.version }}
       DRY_RUN: ${{ inputs.dry_run }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
       - name: Push listing
         run: |
           FLAGS=""
@@ -68,10 +67,13 @@ jobs:
     timeout-minutes: 30
     container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
-      PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
       DRY_RUN: ${{ inputs.dry_run }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
       - name: Push listing
         run: |
           FLAGS=""
