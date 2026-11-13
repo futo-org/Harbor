@@ -8,6 +8,8 @@ on:
   push:
     tags: [ "v*", "app-*" ]
 
+enable-openid-connect: true
+
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -16,9 +18,6 @@ env:
   CARGO_INCREMENTAL: "0"
   CARGO_PROFILE_DEV_DEBUG: "0"
   SCCACHE_R2_BUCKET: ${{ vars.SCCACHE_R2_BUCKET }}
-  SCCACHE_R2_ENDPOINT: ${{ secrets.SCCACHE_R2_ENDPOINT }}
-  SCCACHE_R2_ACCESS_KEY_ID: ${{ secrets.SCCACHE_R2_ACCESS_KEY_ID }}
-  SCCACHE_R2_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_R2_SECRET_ACCESS_KEY }}
   CI_COMMIT_TAG: ${{ github.ref_name }}
 
 jobs:
@@ -49,14 +48,19 @@ jobs:
       - name: Install git
         run: apk add --no-cache git
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/ci-images
         if: needs.changes.outputs.images_missing == 'true'
         with:
           registry: ${{ needs.changes.outputs.registry }}
           tag: ${{ needs.changes.outputs.images_tag }}
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ secrets.REGISTRY_TOKEN }}
-          cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
+          cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
   # Packages -----------------------------------------------------------------
   # The rs-core libraries, unless the registry has them for these sources.
@@ -70,6 +74,11 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -88,6 +97,11 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust-android:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/android-build
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -119,11 +133,16 @@ jobs:
       GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: HARBOR_CI_TOKEN SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/kt-core-build
       - name: Publish the AAR to the Maven registry
         if: startsWith(github.ref_name, 'v')
         env:
-          HARBOR_CI_TOKEN: ${{ secrets.HARBOR_CI_TOKEN }}
+          HARBOR_CI_TOKEN: ${{ env.HARBOR_CI_TOKEN }}
         run: |
           cd packages/kt-core
           ./gradlew :core:publishReleasePublicationToForgejoRepository -PktCoreVersion="${GITHUB_REF_NAME#v}"
@@ -147,6 +166,11 @@ jobs:
     container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: REGISTRY_TOKEN
       - uses: ./.forgejo/actions/sdk-build
         with:
           registry: ${{ needs.changes.outputs.registry }}
@@ -156,7 +180,7 @@ jobs:
           ios-artifact: ${{ needs.ios.result == 'success' }}
           rn-sdk: "true"
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
 
   # Images -------------------------------------------------------------------
 
@@ -168,6 +192,11 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/rust-binaries
         with:
           packages: server server-migration
@@ -180,6 +209,11 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/service-image
         with:
           image: server
@@ -187,8 +221,8 @@ jobs:
           registry: ${{ needs.changes.outputs.registry }}
           stage-artifact: rust-service-binaries
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ secrets.REGISTRY_TOKEN }}
-          cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
+          cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
   # The tag is the version (tools/expo/resolve-version.js reads CI_COMMIT_TAG).
   web-build:
@@ -222,6 +256,11 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/buildkit:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/service-image
         with:
           image: web
@@ -230,8 +269,8 @@ jobs:
           stage-artifact: web-build
           stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ secrets.REGISTRY_TOKEN }}
-          cosign-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
+          cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
   # Apps ---------------------------------------------------------------------
 
@@ -252,10 +291,13 @@ jobs:
           - platform: ios
             name: app-ios-production
             label: Build iOS app
-    env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: EXPO_TOKEN
       - uses: ./.forgejo/actions/eas-build
         with:
           platform: ${{ matrix.platform }}
@@ -271,10 +313,13 @@ jobs:
     needs: sdks
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
-    env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: EXPO_TOKEN
       - uses: ./.forgejo/actions/eas-build
         with:
           platform: android
@@ -304,10 +349,13 @@ jobs:
           - platform: ios
             build: app-ios-production
             label: Deploy iOS app
-    env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: EXPO_TOKEN
       - uses: forgejo/download-artifact@v4
         with:
           name: ${{ matrix.build }}
@@ -330,15 +378,17 @@ jobs:
     container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     env:
       UPDATE_CHANNEL: production
-      STATIC_S3_ENDPOINT: ${{ secrets.STATIC_S3_ENDPOINT }}
       STATIC_S3_BUCKET: ${{ vars.STATIC_S3_BUCKET }}
-      STATIC_S3_ACCESS_KEY_ID: ${{ secrets.STATIC_S3_ACCESS_KEY_ID }}
-      STATIC_S3_SECRET_ACCESS_KEY: ${{ secrets.STATIC_S3_SECRET_ACCESS_KEY }}
       STATIC_PUBLIC_BASE_URL: ${{ vars.STATIC_PUBLIC_BASE_URL }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: OPEN_ROUTER_API_TOKEN STATIC_S3_ACCESS_KEY_ID STATIC_S3_ENDPOINT STATIC_S3_SECRET_ACCESS_KEY
       - uses: forgejo/download-artifact@v4
         with:
           name: app-android-apk-production
@@ -348,7 +398,7 @@ jobs:
       - name: Release notes
         continue-on-error: true
         env:
-          OPEN_ROUTER_API_TOKEN: ${{ secrets.OPEN_ROUTER_API_TOKEN }}
+          OPEN_ROUTER_API_TOKEN: ${{ env.OPEN_ROUTER_API_TOKEN }}
         run: node .forgejo/scripts/release-notes.mjs release_notes.md
       - name: Publish the APK
         run: |
@@ -366,10 +416,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: OPEN_ROUTER_API_TOKEN
       - name: Release notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPEN_ROUTER_API_TOKEN: ${{ secrets.OPEN_ROUTER_API_TOKEN }}
+          OPEN_ROUTER_API_TOKEN: ${{ env.OPEN_ROUTER_API_TOKEN }}
         run: node .forgejo/scripts/release-notes.mjs release_notes.md
       - uses: forgejo/upload-artifact@v4
         with:
@@ -382,10 +437,13 @@ jobs:
     needs: sdks
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
-    env:
-      HARBOR_CI_TOKEN: ${{ secrets.HARBOR_CI_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: HARBOR_CI_TOKEN
       - uses: ./.forgejo/actions/sdk-artifacts
         with:
           rn-sdk: "true"
@@ -403,10 +461,13 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
-    env:
-      HARBOR_CI_TOKEN: ${{ secrets.HARBOR_CI_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: HARBOR_CI_TOKEN
       - name: Package crates
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -454,11 +515,16 @@ jobs:
       - name: Install tools
         run: apk add --no-cache bash git crane
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: REGISTRY_TOKEN
       - uses: ./.forgejo/actions/registry-login
         with:
           registry: ${{ needs.changes.outputs.registry }}
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
       - name: Tag the release images
         env:
           REGISTRY: ${{ needs.changes.outputs.registry }}
@@ -473,6 +539,11 @@ jobs:
     container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/infisical-secrets
+        with:
+          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+          environment: prod
+          secrets: ZULIP_BOT_API_KEY
       - uses: forgejo/download-artifact@v4
         with:
           name: release-notes
@@ -500,5 +571,5 @@ jobs:
       - name: Announce on Zulip
         env:
           ZULIP_BOT_EMAIL: ${{ vars.ZULIP_BOT_EMAIL }}
-          ZULIP_BOT_API_KEY: ${{ secrets.ZULIP_BOT_API_KEY }}
+          ZULIP_BOT_API_KEY: ${{ env.ZULIP_BOT_API_KEY }}
         run: node .forgejo/scripts/announce-release.mjs release_notes.md

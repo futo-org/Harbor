@@ -1,0 +1,15 @@
+name: infisical-secrets
+description: Log in to Infisical with the job's OIDC token and export the named CI secrets as environment variables
+inputs:
+  identity:
+    description: Infisical machine identity to log in as
+    required: true
+  environment:
+    description: Infisical environment to read besides global (staging or prod, from protected refs only)
+    default: ""
+  secrets:
+    description: Names of the secrets to export, separated by whitespace
+    required: true
+runs:
+  using: node20
+  main: index.js
