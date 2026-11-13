@@ -19,7 +19,10 @@ runs:
       env:
         APP_VARIANT: ${{ inputs.variant }}
       run: |
-        export APP_VERSION="$(node ../../tools/expo/resolve-version.js)+$(echo "$GITHUB_SHA" | cut -c1-8)"
+        VERSION="$(node ../../tools/expo/resolve-version.js)"
+        # Up to four numbers; the run number keeps each build above the last.
+        echo "EXTENSION_VERSION=${VERSION%%-*}.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+        export APP_VERSION="$VERSION+$(echo "$GITHUB_SHA" | cut -c1-8)"
         npx expo export --platform web
     - name: Build the extensions
       shell: bash

@@ -1,0 +1,41 @@
+name: browser-extension-submit
+description: Submits the browser-extension-<variant> artifact's zip to one store for review. `wxt submit` reads the store's CHROME_*, FIREFOX_* or EDGE_* settings from the job's env; a store with no listing set there is skipped.
+inputs:
+  variant:
+    description: APP_VARIANT (staging or production)
+    required: true
+  store:
+    description: chrome, firefox or edge
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: forgejo/download-artifact@v4
+      with:
+        name: browser-extension-${{ inputs.variant }}
+        path: apps/harbor-browser-extension/dist
+    - uses: ./.forgejo/actions/setup-pnpm
+      with:
+        install-args: --filter harbor-browser-extension...
+    - name: Submit to the store
+      shell: bash
+      working-directory: apps/harbor-browser-extension
+      env:
+        STORE: ${{ inputs.store }}
+      run: |
+        case "$STORE" in
+          chrome) listing="$CHROME_EXTENSION_ID" ;;
+          firefox) listing="$FIREFOX_JWT_ISSUER" ;;
+          edge) listing="$EDGE_PRODUCT_ID" ;;
+          *) echo "unknown store $STORE"; exit 1 ;;
+        esac
+        if [ -z "$listing" ]; then
+          echo "No $STORE listing is set up, nothing submitted"
+          exit 0
+        fi
+        args=("--$STORE-zip" dist/*-"$STORE".zip)
+        # Firefox reviewers build the extension from its sources.
+        if [ "$STORE" = firefox ]; then
+          args+=(--firefox-sources-zip dist/*-sources.zip)
+        fi
+        pnpm exec wxt submit "${args[@]}"
