@@ -7,9 +7,17 @@ inputs:
 runs:
   using: composite
   steps:
+    - uses: ./.forgejo/actions/infisical-secrets
+      id: cache
+      if: env.SCCACHE_R2_BUCKET != ''
+      with:
+        secrets: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
     - shell: bash
       env:
         CACHE: ${{ inputs.cache }}
+        SCCACHE_R2_ENDPOINT: ${{ steps.cache.outputs.SCCACHE_R2_ENDPOINT }}
+        SCCACHE_R2_ACCESS_KEY_ID: ${{ steps.cache.outputs.SCCACHE_R2_ACCESS_KEY_ID }}
+        SCCACHE_R2_SECRET_ACCESS_KEY: ${{ steps.cache.outputs.SCCACHE_R2_SECRET_ACCESS_KEY }}
       run: |
         key="rust-$CACHE-$({ rustc -V; git ls-files -z Cargo.lock '*Cargo.toml' | xargs -0 cat; } | sha256sum | cut -c1-16)"
         {
@@ -18,14 +26,15 @@ runs:
           echo "RUSTC_WRAPPER=sccache"
           echo "RUST_CACHE_KEY=$key"
           echo "RUST_CACHE_PATHS=.cargo/registry/index .cargo/registry/cache .cargo/git/db target"
-          if [ -n "${SCCACHE_R2_BUCKET:-}" ]; then
-            echo "SCCACHE_BUCKET=$SCCACHE_R2_BUCKET"
-            echo "SCCACHE_ENDPOINT=$SCCACHE_R2_ENDPOINT"
-            echo "SCCACHE_REGION=auto"
-            echo "AWS_ACCESS_KEY_ID=$SCCACHE_R2_ACCESS_KEY_ID"
-            echo "AWS_SECRET_ACCESS_KEY=$SCCACHE_R2_SECRET_ACCESS_KEY"
-          else
-            echo "SCCACHE_DIR=$GITHUB_WORKSPACE/.sccache"
-          fi
         } >> "$GITHUB_ENV"
+        if [ -n "${SCCACHE_R2_ACCESS_KEY_ID:-}" ]; then
+          # The sccache server holds the bucket credentials; the steps that
+          # compile only talk to it, so nothing secret goes in the job's env.
+          sccache --stop-server >/dev/null 2>&1 || true
+          SCCACHE_BUCKET="$SCCACHE_R2_BUCKET" SCCACHE_ENDPOINT="$SCCACHE_R2_ENDPOINT" SCCACHE_REGION=auto \
+            AWS_ACCESS_KEY_ID="$SCCACHE_R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$SCCACHE_R2_SECRET_ACCESS_KEY" \
+            SCCACHE_IDLE_TIMEOUT=0 sccache --start-server
+        else
+          echo "SCCACHE_DIR=$GITHUB_WORKSPACE/.sccache" >> "$GITHUB_ENV"
+        fi
         .forgejo/scripts/r2-cache.sh restore "$key"

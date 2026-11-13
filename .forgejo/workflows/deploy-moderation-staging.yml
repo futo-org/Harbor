@@ -28,6 +28,8 @@ concurrency:
 env:
   CARGO_INCREMENTAL: "0"
   SCCACHE_R2_BUCKET: ${{ vars.SCCACHE_R2_BUCKET }}
+  INFISICAL_IDENTITY: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
+  INFISICAL_ENVIRONMENT: staging
 
 jobs:
   binaries:
@@ -36,12 +38,6 @@ jobs:
     container: ${{ vars.CI_REGISTRY || 'registry.futo.org/harbor' }}/ci/rust:latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
-        with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/rust-binaries
         with:
           packages: moderation-service moderation-migration
@@ -58,8 +54,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
           secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/service-image
         with:

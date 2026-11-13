@@ -10,6 +10,9 @@ on:
 
 enable-openid-connect: true
 
+env:
+  INFISICAL_IDENTITY: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
+
 jobs:
   docs-review-stop:
     name: Remove docs preview
@@ -20,7 +23,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
           secrets: CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN
       - name: Delete the preview
         run: node .forgejo/scripts/cf-pages-delete-branch.mjs

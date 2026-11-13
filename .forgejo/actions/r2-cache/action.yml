@@ -1,5 +1,5 @@
 name: r2-cache
-description: Restore or save workspace paths as a tarball in the R2 cache bucket (scripts/r2-cache.sh), immutable per key. No-op without SCCACHE_R2_* in env.
+description: Restore or save workspace paths as a tarball in the R2 cache bucket (scripts/r2-cache.sh), immutable per key. No-op without SCCACHE_R2_BUCKET in env; the credentials come from Infisical.
 inputs:
   mode:
     description: restore or save
@@ -12,10 +12,18 @@ inputs:
 runs:
   using: composite
   steps:
+    - uses: ./.forgejo/actions/infisical-secrets
+      id: cache
+      if: env.SCCACHE_R2_BUCKET != ''
+      with:
+        secrets: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
     - shell: bash
       env:
         MODE: ${{ inputs.mode }}
         KEY: ${{ inputs.key }}
         PATHS: ${{ inputs.path }}
+        SCCACHE_R2_ENDPOINT: ${{ steps.cache.outputs.SCCACHE_R2_ENDPOINT }}
+        SCCACHE_R2_ACCESS_KEY_ID: ${{ steps.cache.outputs.SCCACHE_R2_ACCESS_KEY_ID }}
+        SCCACHE_R2_SECRET_ACCESS_KEY: ${{ steps.cache.outputs.SCCACHE_R2_SECRET_ACCESS_KEY }}
       # shellcheck disable=SC2086
       run: .forgejo/scripts/r2-cache.sh "$MODE" "$KEY" $PATHS

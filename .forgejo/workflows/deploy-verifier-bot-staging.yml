@@ -37,6 +37,8 @@ env:
   CARGO_INCREMENTAL: "0"
   CARGO_PROFILE_DEV_DEBUG: "0"
   SCCACHE_R2_BUCKET: ${{ vars.SCCACHE_R2_BUCKET }}
+  INFISICAL_IDENTITY: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
+  INFISICAL_ENVIRONMENT: staging
 
 jobs:
   changes:
@@ -67,8 +69,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
           secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/ci-images
         if: needs.changes.outputs.images_missing == 'true'
@@ -89,12 +89,6 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
-        with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -117,8 +111,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
           secrets: REGISTRY_TOKEN
       - uses: ./.forgejo/actions/sdk-build
         with:
@@ -160,8 +152,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
           secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/service-image
         with:

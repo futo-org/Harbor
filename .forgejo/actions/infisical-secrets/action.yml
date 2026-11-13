@@ -1,17 +1,14 @@
 name: infisical-secrets
-description: Log in to Infisical with the job's OIDC token and fetch the named CI secrets
+description: Log in to Infisical with the job's OIDC token and return the named CI secrets as step outputs
 inputs:
-  identity:
-    description: Infisical machine identity to log in as
-    required: true
-  environment:
-    description: Infisical environment to read besides global (staging or prod, from protected refs only)
-    default: ""
   secrets:
-    description: Names to return as step outputs, for the steps that reference them
+    description: Names of the secrets to fetch, separated by whitespace
+    required: true
+  identity:
+    description: Infisical machine identity to log in as (default INFISICAL_IDENTITY, set by the workflow)
     default: ""
-  env:
-    description: Names to export to the job environment, for tools that read them from there
+  environment:
+    description: Infisical environment to read besides global, staging or prod (default INFISICAL_ENVIRONMENT)
     default: ""
 runs:
   using: node24

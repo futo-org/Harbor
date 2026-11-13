@@ -19,6 +19,8 @@ env:
   CARGO_PROFILE_DEV_DEBUG: "0"
   SCCACHE_R2_BUCKET: ${{ vars.SCCACHE_R2_BUCKET }}
   CI_COMMIT_TAG: ${{ github.ref_name }}
+  INFISICAL_IDENTITY: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+  INFISICAL_ENVIRONMENT: prod
 
 jobs:
   changes:
@@ -51,8 +53,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
           secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/ci-images
         if: needs.changes.outputs.images_missing == 'true'
@@ -75,12 +75,6 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
-        with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -99,12 +93,6 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust-android:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
-        with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/android-build
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -139,10 +127,7 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
           secrets: HARBOR_CI_TOKEN
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/kt-core-build
       - name: Publish the AAR to the Maven registry
         if: startsWith(github.ref_name, 'v')
@@ -174,8 +159,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
           secrets: REGISTRY_TOKEN
       - uses: ./.forgejo/actions/sdk-build
         with:
@@ -198,12 +181,6 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
-        with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/rust-binaries
         with:
           packages: server server-migration
@@ -219,8 +196,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
           secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/service-image
         with:
@@ -267,8 +242,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
           secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/service-image
         with:
@@ -305,13 +278,13 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          env: EXPO_TOKEN
+          secrets: EXPO_TOKEN
       - uses: ./.forgejo/actions/eas-build
         with:
           platform: ${{ matrix.platform }}
           profile: production
+        env:
+          EXPO_TOKEN: ${{ steps.secrets.outputs.EXPO_TOKEN }}
       - uses: forgejo/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
@@ -328,14 +301,14 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          env: EXPO_TOKEN
+          secrets: EXPO_TOKEN
       - uses: ./.forgejo/actions/eas-build
         with:
           platform: android
           profile: production-apk
           wait: "true"
+        env:
+          EXPO_TOKEN: ${{ steps.secrets.outputs.EXPO_TOKEN }}
       - uses: forgejo/upload-artifact@v4
         with:
           name: app-android-apk-production
@@ -344,7 +317,9 @@ jobs:
             apps/harbor/harbor.apk
           retention-days: 7
 
-  # eas-cli needs the expo project config even when submitting by id.
+        # eas-cli needs the expo project config even when submitting by id.
+        env:
+          EXPO_TOKEN: ${{ steps.secrets.outputs.EXPO_TOKEN }}
   store-deploy:
     name: ${{ matrix.label }}
     needs: store
@@ -365,9 +340,7 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          env: EXPO_TOKEN
+          secrets: EXPO_TOKEN
       - uses: forgejo/download-artifact@v4
         with:
           name: ${{ matrix.build }}
@@ -379,6 +352,7 @@ jobs:
         working-directory: apps/harbor
         env:
           PLATFORM: ${{ matrix.platform }}
+          EXPO_TOKEN: ${{ steps.secrets.outputs.EXPO_TOKEN }}
         run: |
           BUILD_ID=$(node -p "[].concat(JSON.parse(require('fs').readFileSync('eas-build.json', 'utf8')))[0].id")
           npx eas-cli submit --platform "$PLATFORM" --profile production --id "$BUILD_ID" --non-interactive --no-wait
@@ -399,10 +373,7 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          secrets: OPEN_ROUTER_API_TOKEN
-          env: STATIC_S3_ACCESS_KEY_ID STATIC_S3_ENDPOINT STATIC_S3_SECRET_ACCESS_KEY
+          secrets: OPEN_ROUTER_API_TOKEN STATIC_S3_ACCESS_KEY_ID STATIC_S3_ENDPOINT STATIC_S3_SECRET_ACCESS_KEY
       - uses: forgejo/download-artifact@v4
         with:
           name: app-android-apk-production
@@ -420,7 +391,11 @@ jobs:
           export CI_COMMIT_TITLE=$(git log -1 --format=%s)
           node .forgejo/scripts/publish-android-update.mjs
 
-  # Release ------------------------------------------------------------------
+        # Release ------------------------------------------------------------------
+        env:
+          STATIC_S3_ACCESS_KEY_ID: ${{ steps.secrets.outputs.STATIC_S3_ACCESS_KEY_ID }}
+          STATIC_S3_ENDPOINT: ${{ steps.secrets.outputs.STATIC_S3_ENDPOINT }}
+          STATIC_S3_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.STATIC_S3_SECRET_ACCESS_KEY }}
 
   notes:
     name: Write notes
@@ -433,8 +408,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
           secrets: OPEN_ROUTER_API_TOKEN
       - name: Release notes
         env:
@@ -457,9 +430,7 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          env: HARBOR_CI_TOKEN
+          secrets: HARBOR_CI_TOKEN
       - uses: ./.forgejo/actions/sdk-artifacts
         with:
           rn-sdk: "true"
@@ -470,6 +441,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Publish
         run: .forgejo/scripts/npm_publish.sh
+        env:
+          HARBOR_CI_TOKEN: ${{ steps.secrets.outputs.HARBOR_CI_TOKEN }}
 
   crates:
     name: Package crates
@@ -482,9 +455,7 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          env: HARBOR_CI_TOKEN
+          secrets: HARBOR_CI_TOKEN
       - name: Package crates
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -522,6 +493,8 @@ jobs:
             fi
             cargo publish --registry harbor -p "${crate}" --no-verify --allow-dirty
           done
+        env:
+          HARBOR_CI_TOKEN: ${{ steps.secrets.outputs.HARBOR_CI_TOKEN }}
 
   tag-images:
     name: Tag images
@@ -535,8 +508,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
           secrets: REGISTRY_TOKEN
       - uses: ./.forgejo/actions/registry-login
         with:
@@ -560,8 +531,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
           secrets: ZULIP_BOT_API_KEY
       - uses: forgejo/download-artifact@v4
         with:

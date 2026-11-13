@@ -26,6 +26,10 @@ concurrency:
   group: deploy-scraper-staging
   cancel-in-progress: true
 
+env:
+  INFISICAL_IDENTITY: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
+  INFISICAL_ENVIRONMENT: staging
+
 jobs:
   build:
     name: Build
@@ -56,8 +60,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
           secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/service-image
         with:

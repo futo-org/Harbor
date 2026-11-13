@@ -33,6 +33,8 @@ env:
   CARGO_INCREMENTAL: "0"
   CARGO_PROFILE_DEV_DEBUG: "0"
   SCCACHE_R2_BUCKET: ${{ vars.SCCACHE_R2_BUCKET }}
+  INFISICAL_IDENTITY: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
+  INFISICAL_ENVIRONMENT: staging
 
 jobs:
   changes:
@@ -65,8 +67,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
           secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
       - uses: ./.forgejo/actions/ci-images
         if: needs.changes.outputs.images_missing == 'true'
@@ -88,12 +88,6 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
-        with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -112,12 +106,6 @@ jobs:
       image: ${{ needs.changes.outputs.registry }}/ci/rust-android:${{ needs.changes.outputs.images_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
-        with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/android-build
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -154,8 +142,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
           secrets: REGISTRY_TOKEN
       - uses: ./.forgejo/actions/sdk-build
         with:
@@ -190,13 +176,13 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
-          env: EXPO_TOKEN
+          secrets: EXPO_TOKEN
       - uses: ./.forgejo/actions/eas-build
         with:
           platform: ${{ matrix.platform }}
           profile: staging
+        env:
+          EXPO_TOKEN: ${{ steps.secrets.outputs.EXPO_TOKEN }}
       - uses: forgejo/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
@@ -213,14 +199,14 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
-          env: EXPO_TOKEN
+          secrets: EXPO_TOKEN
       - uses: ./.forgejo/actions/eas-build
         with:
           platform: android
           profile: staging-apk
           wait: "true"
+        env:
+          EXPO_TOKEN: ${{ steps.secrets.outputs.EXPO_TOKEN }}
       - uses: forgejo/upload-artifact@v4
         with:
           name: app-android-apk-staging
@@ -229,7 +215,9 @@ jobs:
             apps/harbor/harbor.apk
           retention-days: 7
 
-  # eas-cli needs the expo project config even when submitting by id.
+        # eas-cli needs the expo project config even when submitting by id.
+        env:
+          EXPO_TOKEN: ${{ steps.secrets.outputs.EXPO_TOKEN }}
   store-deploy:
     name: ${{ matrix.label }}
     needs: store
@@ -250,9 +238,7 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
-          env: EXPO_TOKEN
+          secrets: EXPO_TOKEN
       - uses: forgejo/download-artifact@v4
         with:
           name: ${{ matrix.build }}
@@ -264,6 +250,7 @@ jobs:
         working-directory: apps/harbor
         env:
           PLATFORM: ${{ matrix.platform }}
+          EXPO_TOKEN: ${{ steps.secrets.outputs.EXPO_TOKEN }}
         run: |
           BUILD_ID=$(node -p "[].concat(JSON.parse(require('fs').readFileSync('eas-build.json', 'utf8')))[0].id")
           npx eas-cli submit --platform "$PLATFORM" --profile staging --id "$BUILD_ID" --non-interactive --no-wait
@@ -284,10 +271,7 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
-          secrets: OPEN_ROUTER_API_TOKEN
-          env: STATIC_S3_ACCESS_KEY_ID STATIC_S3_ENDPOINT STATIC_S3_SECRET_ACCESS_KEY
+          secrets: OPEN_ROUTER_API_TOKEN STATIC_S3_ACCESS_KEY_ID STATIC_S3_ENDPOINT STATIC_S3_SECRET_ACCESS_KEY
       - uses: forgejo/download-artifact@v4
         with:
           name: app-android-apk-staging
@@ -305,7 +289,11 @@ jobs:
           export CI_COMMIT_TITLE=$(git log -1 --format=%s)
           node .forgejo/scripts/publish-android-update.mjs
 
-  # An empty matrix creates no job; an `if` would wait for the device runner.
+        # An empty matrix creates no job; an `if` would wait for the device runner.
+        env:
+          STATIC_S3_ACCESS_KEY_ID: ${{ steps.secrets.outputs.STATIC_S3_ACCESS_KEY_ID }}
+          STATIC_S3_ENDPOINT: ${{ steps.secrets.outputs.STATIC_S3_ENDPOINT }}
+          STATIC_S3_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.STATIC_S3_SECRET_ACCESS_KEY }}
   ios-e2e:
     name: Test iOS e2e
     needs: store
@@ -321,9 +309,7 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
-          environment: staging
-          env: EXPO_TOKEN
+          secrets: EXPO_TOKEN
       - uses: forgejo/download-artifact@v4
         with:
           name: app-ios-staging
@@ -336,6 +322,8 @@ jobs:
           BUILD_ID=$(node -p "[].concat(JSON.parse(require('fs').readFileSync('eas-build.json', 'utf8')))[0].id")
           node "$GITHUB_WORKSPACE/tools/expo/resign-build.js" "$BUILD_ID" --output harbor.ipa
           MAESTRO_APP_FILE="$PWD/harbor.ipa" pnpm --filter harbor-e2e test:ios
+        env:
+          EXPO_TOKEN: ${{ steps.secrets.outputs.EXPO_TOKEN }}
       - uses: forgejo/upload-artifact@v4
         if: always()
         with:

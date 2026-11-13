@@ -28,6 +28,10 @@ concurrency:
   group: deploy-store-listing
   cancel-in-progress: false
 
+env:
+  INFISICAL_IDENTITY: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+  INFISICAL_ENVIRONMENT: prod
+
 jobs:
   check:
     name: Check exports
@@ -53,14 +57,20 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          env: ASC_ISSUER_ID ASC_KEY_ID ASC_PRIVATE_KEY ASC_REVIEW_EMAIL ASC_REVIEW_FIRST_NAME ASC_REVIEW_LAST_NAME ASC_REVIEW_PHONE
+          secrets: ASC_ISSUER_ID ASC_KEY_ID ASC_PRIVATE_KEY ASC_REVIEW_EMAIL ASC_REVIEW_FIRST_NAME ASC_REVIEW_LAST_NAME ASC_REVIEW_PHONE
       - name: Push listing
         run: |
           FLAGS=""
           if [ "$DRY_RUN" = true ]; then FLAGS="--dry-run"; fi
           node .forgejo/scripts/publish-app-store-listing.mjs $FLAGS
+        env:
+          ASC_ISSUER_ID: ${{ steps.secrets.outputs.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ steps.secrets.outputs.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY: ${{ steps.secrets.outputs.ASC_PRIVATE_KEY }}
+          ASC_REVIEW_EMAIL: ${{ steps.secrets.outputs.ASC_REVIEW_EMAIL }}
+          ASC_REVIEW_FIRST_NAME: ${{ steps.secrets.outputs.ASC_REVIEW_FIRST_NAME }}
+          ASC_REVIEW_LAST_NAME: ${{ steps.secrets.outputs.ASC_REVIEW_LAST_NAME }}
+          ASC_REVIEW_PHONE: ${{ steps.secrets.outputs.ASC_REVIEW_PHONE }}
 
   play:
     name: Google Play
@@ -75,11 +85,11 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          env: PLAY_SERVICE_ACCOUNT_JSON
+          secrets: PLAY_SERVICE_ACCOUNT_JSON
       - name: Push listing
         run: |
           FLAGS=""
           if [ "$DRY_RUN" = true ]; then FLAGS="--dry-run"; fi
           node .forgejo/scripts/publish-play-listing.mjs $FLAGS
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ steps.secrets.outputs.PLAY_SERVICE_ACCOUNT_JSON }}

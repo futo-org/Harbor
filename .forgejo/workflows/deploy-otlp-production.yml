@@ -16,6 +16,10 @@ concurrency:
   group: deploy-otlp-production
   cancel-in-progress: false
 
+env:
+  INFISICAL_IDENTITY: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+  INFISICAL_ENVIRONMENT: prod
+
 jobs:
   deploy:
     name: Deploy
@@ -28,8 +32,6 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
           secrets: REGISTRY_TOKEN
       - uses: ./.forgejo/actions/deploy-tag
         with:

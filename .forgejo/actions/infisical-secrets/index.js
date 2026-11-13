@@ -58,17 +58,12 @@ async function fetchSecret(token, name, folders) {
   throw new Error(`${name} is not in Infisical`);
 }
 
-function write(file, name, value) {
-  const delimiter = `EOF_${crypto.randomUUID()}`;
-  fs.appendFileSync(file, `${name}<<${delimiter}\n${value}\n${delimiter}\n`);
-}
-
 async function main() {
-  const [identity] = input('identity');
-  const [environment] = input('environment');
-  const outputs = input('secrets');
-  const exports = input('env');
-  const { GITHUB_OUTPUT: outputFile, GITHUB_ENV: envFile } = process.env;
+  const { INFISICAL_IDENTITY, INFISICAL_ENVIRONMENT, GITHUB_OUTPUT } =
+    process.env;
+  const identity = input('identity')[0] || INFISICAL_IDENTITY;
+  const environment = input('environment')[0] || INFISICAL_ENVIRONMENT;
+  const names = input('secrets');
 
   const token = await login(identity);
   if (!token) {
@@ -85,7 +80,7 @@ async function main() {
   ];
   if (environment) folders.unshift([environment, '/ci/harbor']);
 
-  for (const name of new Set([...outputs, ...exports])) {
+  for (const name of names) {
     const value = await fetchSecret(token, name, folders);
     for (const line of value.split('\n')) {
       if (line.trim())
@@ -93,10 +88,13 @@ async function main() {
           `::add-mask::${line.replaceAll('%', '%25').replaceAll('\r', '%0D')}`,
         );
     }
-    if (outputs.includes(name)) write(outputFile, name, value);
-    if (exports.includes(name)) write(envFile, name, value);
+    const delimiter = `EOF_${crypto.randomUUID()}`;
+    fs.appendFileSync(
+      GITHUB_OUTPUT,
+      `${name}<<${delimiter}\n${value}\n${delimiter}\n`,
+    );
   }
-  console.log(`fetched ${[...new Set([...outputs, ...exports])].join(', ')}`);
+  console.log(`fetched ${names.join(', ')}`);
 }
 
 main().catch((error) => {

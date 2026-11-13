@@ -17,6 +17,10 @@ concurrency:
   group: deploy-web-production
   cancel-in-progress: false
 
+env:
+  INFISICAL_IDENTITY: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
+  INFISICAL_ENVIRONMENT: prod
+
 jobs:
   deploy:
     name: Deploy
@@ -32,10 +36,7 @@ jobs:
       - uses: ./.forgejo/actions/infisical-secrets
         id: secrets
         with:
-          identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
-          environment: prod
-          secrets: REGISTRY_TOKEN
-          env: STATIC_S3_ACCESS_KEY_ID STATIC_S3_ENDPOINT STATIC_S3_SECRET_ACCESS_KEY
+          secrets: REGISTRY_TOKEN STATIC_S3_ACCESS_KEY_ID STATIC_S3_ENDPOINT STATIC_S3_SECRET_ACCESS_KEY
       - uses: ./.forgejo/actions/deploy-tag
         with:
           registry: ${{ vars.CI_REGISTRY || 'registry.futo.org/harbor' }}
@@ -47,3 +48,7 @@ jobs:
           web-assets: "true"
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ steps.secrets.outputs.REGISTRY_TOKEN }}
+        env:
+          STATIC_S3_ACCESS_KEY_ID: ${{ steps.secrets.outputs.STATIC_S3_ACCESS_KEY_ID }}
+          STATIC_S3_ENDPOINT: ${{ steps.secrets.outputs.STATIC_S3_ENDPOINT }}
+          STATIC_S3_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.STATIC_S3_SECRET_ACCESS_KEY }}
