@@ -19,24 +19,47 @@ const SHADOW_GEOMETRY = '0 6px 16px';
 const SHADOW_OPACITY = { light: 0.16, dark: 0.25 };
 
 export function buildThemeColors(palette: Palette, scheme: ThemeScheme) {
+  const colors = buildColors(palette);
+  return { colors, atoms_new: buildColorAtoms(palette, scheme, colors) };
+}
+
+// raw strings for consumers that can't take a style object
+function buildColors(palette: Palette) {
+  return {
+    primary: palette.neutral_900,
+    secondary: palette.neutral_700,
+    muted: palette.neutral_500,
+    accent: palette.primary_500,
+    danger: palette.negative_500,
+    success: palette.positive_500,
+    warning: palette.warning_500,
+    // theme-independent, for text and icons on colored boxes and media
+    white: palette.white,
+    dark: palette.black,
+    transparent: 'transparent',
+  };
+}
+
+function buildColorAtoms(
+  palette: Palette,
+  scheme: ThemeScheme,
+  colors: ReturnType<typeof buildColors>,
+) {
   const shadowOpacity = SHADOW_OPACITY[scheme];
 
   return {
-    text: {
-      primary: { color: palette.neutral_900 },
-      secondary: { color: palette.neutral_700 },
-      muted: { color: palette.neutral_500 },
-      accent: { color: palette.primary_500 },
-      danger: { color: palette.negative_500 },
-      success: { color: palette.positive_500 },
-      warning: { color: palette.warning_500 },
-    },
-    // theme-independent, for text and icons on colored boxes and media
-    white: { color: palette.white },
-    dark: { color: palette.black },
+    primary: { color: colors.primary },
+    secondary: { color: colors.secondary },
+    muted: { color: colors.muted },
+    accent: { color: colors.accent },
+    danger: { color: colors.danger },
+    success: { color: colors.success },
+    warning: { color: colors.warning },
+    white: { color: colors.white },
+    dark: { color: colors.dark },
     box: {
-      background: buildBox(palette, scheme, palette.neutral_0, true),
-      background_inset: buildBox(palette, scheme, palette.neutral_25, true),
+      primary: buildBox(palette, scheme, palette.neutral_0, true),
+      secondary: buildBox(palette, scheme, palette.neutral_25, true),
       neutral: buildBox(palette, scheme, palette.neutral_500),
       accent: buildBox(palette, scheme, palette.primary_500),
       danger: buildBox(palette, scheme, palette.negative_500),
@@ -52,11 +75,11 @@ export function buildThemeColors(palette: Palette, scheme: ThemeScheme) {
     },
     // controls on images; the box rules don't apply over media
     media_control: {
-      fill: { backgroundColor: withOpacity(palette.black, 0.69) },
+      bg: { backgroundColor: withOpacity(palette.black, 0.69) },
     },
     transparent: {
-      fill: { backgroundColor: 'transparent' },
-      border: { borderColor: 'transparent' },
+      bg: { backgroundColor: colors.transparent },
+      border: { borderColor: colors.transparent },
     },
     shadow: {
       accent: {
@@ -73,19 +96,22 @@ export function buildThemeColors(palette: Palette, scheme: ThemeScheme) {
 function buildBox(
   palette: Palette,
   scheme: ThemeScheme,
-  fill: string,
+  bg: string,
   primaryBorderVisible = false,
 ) {
-  const subtle = withOpacity(fill, SUBTLE_BOX_OPACITY);
+  const bgSubtle = withOpacity(bg, SUBTLE_BOX_OPACITY);
   return {
-    fill: { backgroundColor: fill },
-    subtle: { backgroundColor: subtle },
+    bg: { backgroundColor: bg },
+    bg_subtle: { backgroundColor: bgSubtle },
     border: {
-      borderColor: primaryBorderVisible ? shiftLightness(fill, scheme) : fill,
+      borderColor: primaryBorderVisible ? shiftLightness(bg, scheme) : bg,
     },
-    subtle_border: {
+    border_subtle: {
       // the border rule runs on what the subtle box looks like, so composite it first
-      borderColor: shiftLightness(composite(subtle, palette.neutral_0), scheme),
+      borderColor: shiftLightness(
+        composite(bgSubtle, palette.neutral_0),
+        scheme,
+      ),
     },
   };
 }

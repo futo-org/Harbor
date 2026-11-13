@@ -39,7 +39,8 @@ export type Theme = {
   scheme: ThemeScheme;
   name: ThemeName;
   palette: Palette;
-  colors: ReturnType<typeof buildThemeColors>;
+  colors: ReturnType<typeof buildThemeColors>['colors'];
+  atoms_new: ReturnType<typeof buildThemeColors>['atoms_new'];
   atoms: ThemeAtoms;
 };
 
@@ -53,12 +54,14 @@ export function createTheme({
   palette: Palette;
 }): Theme {
   const shadowColor = palette.black;
+  const { colors, atoms_new } = buildThemeColors(palette, scheme);
 
   return {
     scheme,
     name,
     palette,
-    colors: buildThemeColors(palette, scheme),
+    colors,
+    atoms_new,
     atoms: {
       text: {
         color: palette.neutral_1000,
