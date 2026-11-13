@@ -13,10 +13,9 @@ import {
   type BorderRadiusToken,
   type FontSizeToken,
   type LineHeightToken,
-  type PaletteColorToken,
+  type TextColor,
   typography,
   useTheme,
-  withHexOpacity,
 } from '@/src/common/theme';
 import { BlurView } from 'expo-blur';
 import {
@@ -33,7 +32,7 @@ export interface TextInputProps
   fontSize?: FontSizeToken;
   lineHeight?: LineHeightToken;
   monospace?: boolean;
-  placeholderTextColor?: PaletteColorToken;
+  placeholderTextColor?: TextColor;
   disabled?: boolean;
   error?: boolean;
 }
@@ -44,7 +43,7 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
       numberOfLines,
       multiline,
       style,
-      placeholderTextColor,
+      placeholderTextColor = 'muted',
       variant = 'default',
       rounded = 'md',
       fontSize = 'md',
@@ -80,8 +79,6 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
       fontFamily,
       fontSize: typography.fontSize[fontSize],
       lineHeight: typography.lineHeight[lineHeight],
-      color: disabled ? theme.palette.neutral_500 : theme.palette.neutral_900,
-      opacity: disabled ? 0.5 : 1,
       // Android pads the placeholder by the font's bounding box, which for the
       // variable NotoSans overflows the input and top-aligns the placeholder.
       ...(Platform.OS === 'android' ? { includeFontPadding: false } : null),
@@ -107,13 +104,16 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
         autoCapitalize={autoCapitalize ?? (autoCorrect ? 'sentences' : 'none')}
         multiline={multiline}
         numberOfLines={numberOfLines}
-        style={[baseStyle, multilineStyle, style]}
-        placeholderTextColor={
-          placeholderTextColor
-            ? theme.palette[placeholderTextColor]
-            : theme.palette.neutral_500
-        }
-        selectionColor={theme.palette.primary_500}
+        style={[
+          baseStyle,
+          disabled
+            ? [theme.atoms_new.muted, theme.atoms_new.faded]
+            : theme.atoms_new.primary,
+          multilineStyle,
+          style,
+        ]}
+        placeholderTextColor={theme.colors[placeholderTextColor]}
+        selectionColor={theme.colors.accent}
         onFocus={(e) => {
           setIsFocused(true);
           onFocus?.(e);
@@ -136,14 +136,12 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
         tint={isDark ? 'dark' : 'light'}
         style={[
           styles.blurContainer,
-          {
-            borderRadius: BorderRadius[rounded],
-            borderColor: error
-              ? withHexOpacity(theme.palette.negative_500, '80')
-              : isFocused
-                ? theme.palette.neutral_500
-                : withHexOpacity(theme.palette.neutral_500, '40'),
-          },
+          { borderRadius: BorderRadius[rounded] },
+          error
+            ? theme.atoms_new.box.danger.border
+            : isFocused
+              ? theme.atoms_new.box.neutral.border
+              : theme.atoms_new.box.neutral.border_subtle,
         ]}
       >
         {input}

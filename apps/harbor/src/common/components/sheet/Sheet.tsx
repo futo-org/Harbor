@@ -162,6 +162,7 @@ function SheetHeader({
   right,
   disabled,
 }: SheetHeaderProps) {
+  const { theme } = useTheme();
   // Native sheets dismiss by swiping down, so the close button is redundant
   // there — hide it. Web modals keep it, and back chevrons show everywhere.
   const hideDefault = !isWeb && closeIcon === 'close';
@@ -176,7 +177,9 @@ function SheetHeader({
         onPress={onClose}
         hitSlop={Spacing['lg']}
         disabled={disabled}
-        style={({ pressed }) => [(disabled || pressed) && { opacity: 0.5 }]}
+        style={({ pressed }) => [
+          (disabled || pressed) && theme.atoms_new.faded,
+        ]}
       >
         <Icon name={closeIcon} size={24} color="primary" />
       </Pressable>
@@ -209,7 +212,6 @@ export function SheetFooter({
   const { theme } = useTheme();
 
   const insets = useSafeAreaInsets();
-  const backgroundColor = theme.palette.neutral_0;
   const padding = Spacing.lg;
 
   return (
@@ -218,14 +220,17 @@ export function SheetFooter({
       style={[
         Atoms.flex_row,
         { padding, paddingBottom: insets.bottom + padding },
-        !fadeTop && { backgroundColor },
+        !fadeTop && theme.atoms_new.box.primary.bg,
         // The web footer sits below the scrolling body instead of over it, so
         // pull it up over the body's bottom padding for the fade to overlap.
         fadeTop && isWeb && { marginTop: -padding },
       ]}
     >
       {fadeTop && (
-        <FooterFadeBackground color={backgroundColor} height={padding} />
+        <FooterFadeBackground
+          color={theme.atoms_new.box.primary.bg.backgroundColor}
+          height={padding}
+        />
       )}
       <View style={Atoms.flex_1}>{left}</View>
       <View style={Atoms.self_end}>{right}</View>
@@ -339,7 +344,6 @@ function NativeSheet({
   const [sheetWidth, setSheetWidth] = useState(0);
   const { width: windowWidth } = useWindowDimensions();
 
-  const surface = theme.palette.neutral_0;
   const sizesToContent = detents.includes('auto');
   const detent = detents[detentIndex];
   // The sheet is horizontally centered: a few points off the screen edges in
@@ -357,7 +361,7 @@ function NativeSheet({
     <TrueSheet
       ref={sheetRef}
       dimmed={dimmed}
-      backgroundColor={surface}
+      backgroundColor={theme.atoms_new.box.primary.bg.backgroundColor}
       detents={detents}
       initialDetentIndex={0}
       dismissible={dismissible}
@@ -391,7 +395,7 @@ function NativeSheet({
         style={[
           Atoms.w_full,
           !sizesToContent && Atoms.flex_1,
-          { backgroundColor: surface },
+          theme.atoms_new.box.primary.bg,
           sideInsets,
         ]}
       >
@@ -506,7 +510,7 @@ function WebModal({
           style={[
             Atoms.fixed,
             Atoms.inset_0,
-            { backgroundColor: 'rgba(0,0,0,0.45)' },
+            theme.atoms_new.overlay.modal_backdrop,
           ]}
           onPress={dismissible ? close : undefined}
         />
@@ -522,10 +526,8 @@ function WebModal({
             { maxWidth: 600, marginVertical: 'auto', marginHorizontal: 'auto' },
             compact && Atoms.max_w_full,
             maxWidth !== undefined && { maxWidth },
-            {
-              backgroundColor: theme.palette.neutral_0,
-              borderRadius: BorderRadius.xl,
-            },
+            theme.atoms_new.box.primary.bg,
+            { borderRadius: BorderRadius.xl },
           ]}
         >
           {header}
