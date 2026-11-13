@@ -32,19 +32,20 @@ export type TextColor = keyof Pick<
 >;
 
 export function buildThemeColors(palette: Palette, scheme: ThemeScheme) {
-  const colors = buildColors(palette);
+  const colors = buildColors(palette, scheme);
   return { colors, atoms_new: buildColorAtoms(palette, scheme, colors) };
 }
 
 // raw strings for consumers that can't take a style object
-function buildColors(palette: Palette) {
+function buildColors(palette: Palette, scheme: ThemeScheme) {
   return {
     primary: palette.neutral_900,
     secondary: palette.neutral_700,
     muted: palette.neutral_500,
     accent: palette.primary_500,
-    danger: palette.negative_500,
-    success: palette.positive_500,
+    // the 500 steps are too dark for text on the dark background
+    danger: scheme === 'dark' ? palette.negative_600 : palette.negative_500,
+    success: scheme === 'dark' ? palette.positive_600 : palette.positive_500,
     warning: palette.warning_500,
     // theme-independent, for text and icons on colored boxes and media
     light: palette.white,
