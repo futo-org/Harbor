@@ -24,8 +24,12 @@ const TLD =
 // A dotted hostname whose final label is a known TLD. It must not be glued to
 // a word on either side (`foo_bar.com`, `america.jpeg`), or start right after a
 // `.` (`café.co.uk`, and keeps `a.a.a.a…` from backtracking quadratically). An
-// `@` after it means it's an email's local part (`john.co@gmail.com`).
-const DOMAIN = `(?<![\\p{L}\\p{N}_.-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+${TLD}(?![\\p{L}\\p{N}_@-])`;
+// `@` after it means it's an email's local part (`john.co@gmail.com`). A label
+// is alphanumeric runs joined by hyphens, so it parses only one way: an
+// ambiguous form like `[a-z0-9](?:[a-z0-9-]*[a-z0-9])?` makes Hermes (not V8)
+// backtrack for seconds over dotted code (`foo.bar.baz`), then throw
+// "Maximum regex stack depth reached".
+const DOMAIN = `(?<![\\p{L}\\p{N}_.-])(?:[a-z0-9]+(?:-+[a-z0-9]+)*\\.)+${TLD}(?![\\p{L}\\p{N}_@-])`;
 
 // Matches, in order: curly mentions (`@{identity,displayName}` — braces so the
 // display name may contain spaces), any other `@…` run (classified as
