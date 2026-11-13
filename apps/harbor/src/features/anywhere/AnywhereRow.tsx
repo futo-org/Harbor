@@ -11,10 +11,10 @@ import {
   commentCountLabel,
   rememberCommentCount,
 } from './hooks/useAnywhereCommentCount';
-import { useAnywhereLink } from './hooks/useAnywhereLink';
+import { rememberAnywhereLink, useAnywhereLink } from './hooks/useAnywhereLink';
 import type { AnywhereFeedItem } from './hooks/useAttributedToFeed';
 
-const THUMBNAIL_SIZE = 64;
+const THUMBNAIL_SIZE = 80;
 
 /** A commented-on web page in a list; opens its comments. */
 export function AnywhereRow({ link: known, postCount }: AnywhereFeedItem) {
@@ -36,6 +36,7 @@ export function AnywhereRow({ link: known, postCount }: AnywhereFeedItem) {
       accessibilityRole="link"
       onPress={() => {
         rememberCommentCount(link.url, postCount);
+        rememberAnywhereLink(link);
         router.navigate(Routes.tabs.anywhere.url(link.url) as Href);
       }}
       style={({ pressed }) => [
@@ -59,20 +60,25 @@ export function AnywhereRow({ link: known, postCount }: AnywhereFeedItem) {
           {commentCountLabel(postCount)} · {urlHost(link.url) ?? link.url}
         </Text>
       </View>
-      {imageUris.length > 0 ? (
-        <Image
-          uris={imageUris}
-          contentFit="cover"
-          style={[
-            Atoms.rounded_md,
-            {
-              width: THUMBNAIL_SIZE,
-              height: THUMBNAIL_SIZE,
-              backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-            },
-          ]}
-        />
-      ) : null}
+      <View
+        style={[
+          Atoms.rounded_md,
+          Atoms.overflow_hidden,
+          {
+            width: THUMBNAIL_SIZE,
+            height: THUMBNAIL_SIZE,
+            backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
+          },
+        ]}
+      >
+        {imageUris.length > 0 ? (
+          <Image
+            uris={imageUris}
+            contentFit="cover"
+            style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
+          />
+        ) : null}
+      </View>
     </Pressable>
   );
 }

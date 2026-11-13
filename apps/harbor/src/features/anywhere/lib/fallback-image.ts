@@ -15,7 +15,7 @@ function youtubeImage(url: URL): string | undefined {
           : url.pathname.match(/^\/(?:shorts|embed|live)\/([^/]+)/)?.[1]
         : undefined;
   if (!id || !/^[\w-]+$/.test(id)) return undefined;
-  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  return `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
 }
 
 async function rumbleImage(url: URL): Promise<string | undefined> {

@@ -21,10 +21,12 @@ export type OpenComposeOptions = {
   quote?: PostData['id'];
   /** Immediately launch the image picker once the composer mounts. */
   attachImage?: boolean;
+  /** The address of the page the post is about. */
+  attributedTo?: string;
 };
 
 export function openCompose(options: OpenComposeOptions = {}) {
-  const { replyTo, quote, attachImage } = options;
+  const { replyTo, quote, attachImage, attributedTo } = options;
   const params = new URLSearchParams();
   if (replyTo) {
     params.set('replyTo', replyTo);
@@ -33,6 +35,8 @@ export function openCompose(options: OpenComposeOptions = {}) {
     params.set('quote', quote);
   }
   if (attachImage) params.set('attach', '1');
+  // The router decodes params once more than they were encoded.
+  if (attributedTo) params.set('about', attributedTo.replace(/%/g, '%25'));
   const queryString = params.toString();
   withIdentity(() =>
     router.navigate(

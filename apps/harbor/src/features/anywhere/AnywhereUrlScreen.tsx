@@ -1,6 +1,8 @@
 import { Screen } from '@/src/common/components/layout';
+import { openCompose } from '@/src/common/constants';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
+import { isWeb } from '@/src/common/util/platform';
 import { ComposerInput, ComposeSheet } from '@/src/features/composer';
 import FeedList from '@/src/features/feed/FeedList';
 import { useAttributionFeed } from '@/src/features/feed/hooks/useAttributionFeed';
@@ -42,7 +44,13 @@ export default function AnywhereUrlScreen() {
                     loading={loading}
                     commentCount={commentCount}
                   />
-                  <ComposerInput onCompose={setComposing} />
+                  <ComposerInput
+                    onCompose={(options) =>
+                      isWeb
+                        ? setComposing(options)
+                        : openCompose({ ...options, attributedTo: link.url })
+                    }
+                  />
                 </>
               }
             />

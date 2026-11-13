@@ -3,7 +3,7 @@ import { TextInput } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { parseAnywhereUrl } from '@/src/common/util/anywhere-url';
-import { isIOS } from '@/src/common/util/platform';
+import { isAndroid, isIOS, isWeb } from '@/src/common/util/platform';
 import { SearchField } from '@/src/features/search/SearchField';
 import { type Href, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -13,6 +13,7 @@ import { Pressable, type TextInputInstance, View } from 'react-native';
 export function AnywhereUrlField({ url = '' }: { url?: string }) {
   const inputRef = useRef<TextInputInstance>(null);
   const [text, setText] = useState(url);
+  const [focused, setFocused] = useState(false);
   useEffect(() => setText(url), [url]);
 
   const submit = () => {
@@ -30,7 +31,17 @@ export function AnywhereUrlField({ url = '' }: { url?: string }) {
         variant="plain"
         accessibilityLabel="Web address"
         placeholder="Enter a web address"
-        value={text}
+        value={focused ? text : text.replace(/^https:\/\/(www\.)?/, '')}
+        selection={isAndroid && !focused ? { start: 0, end: 0 } : undefined}
+        onFocus={() => {
+          setFocused(true);
+          requestAnimationFrame(() => {
+            const input = inputRef.current;
+            if (isWeb) (input as unknown as HTMLInputElement | null)?.select();
+            else input?.setSelection(0, text.length);
+          });
+        }}
+        onBlur={() => setFocused(false)}
         onChangeText={setText}
         onSubmitEditing={submit}
         // The whole address is replaced more often than edited.
