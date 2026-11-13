@@ -311,6 +311,16 @@ async fn match_on_mention() {
         "@futo",
         "futo",
         client.identity(),
+        // Two words:
+        "mention mark@futo.tech",
+        "mention mark@futo",
+        "mention mark",
+        "mention mark@",
+        "mention @futo.tech",
+        "mention futo.tech",
+        "mention @futo",
+        "mention futo",
+        &format!("mention {}", client.identity()),
     ] {
         expect_searched_posts_contains(
             query,
