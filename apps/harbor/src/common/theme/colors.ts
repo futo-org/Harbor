@@ -18,6 +18,19 @@ const SHADOW_GEOMETRY = '0 6px 16px';
 // shadows need more opacity to show on a dark background
 const SHADOW_OPACITY = { light: 0.16, dark: 0.25 };
 
+export type TextColor = keyof Pick<
+  ReturnType<typeof buildColorAtoms>,
+  | 'primary'
+  | 'secondary'
+  | 'muted'
+  | 'accent'
+  | 'danger'
+  | 'success'
+  | 'warning'
+  | 'light'
+  | 'dark'
+>;
+
 export function buildThemeColors(palette: Palette, scheme: ThemeScheme) {
   const colors = buildColors(palette);
   return { colors, atoms_new: buildColorAtoms(palette, scheme, colors) };
@@ -34,7 +47,7 @@ function buildColors(palette: Palette) {
     success: palette.positive_500,
     warning: palette.warning_500,
     // theme-independent, for text and icons on colored boxes and media
-    white: palette.white,
+    light: palette.white,
     dark: palette.black,
     transparent: 'transparent',
   };
@@ -55,7 +68,7 @@ function buildColorAtoms(
     danger: { color: colors.danger },
     success: { color: colors.success },
     warning: { color: colors.warning },
-    white: { color: colors.white },
+    light: { color: colors.light },
     dark: { color: colors.dark },
     box: {
       primary: buildBox(palette, scheme, palette.neutral_0, true),
