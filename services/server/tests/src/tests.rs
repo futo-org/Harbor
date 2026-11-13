@@ -21,7 +21,9 @@ use polycentric_common::models::protos_v2::search_service_client::SearchServiceC
 use polycentric_common::models::protos_v2::verifications_service_client::VerificationsServiceClient;
 use polycentric_common::models::protos_v2::*;
 use prost::Message;
+use rand::distr::Distribution;
 use rand::distr::{Alphabetic, SampleString};
+use rand::{Rng, RngExt};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use tokio::sync::{Mutex, MutexGuard};
@@ -77,15 +79,46 @@ pub fn sha256(data: &[u8]) -> Vec<u8> {
 }
 
 pub fn random_string() -> String {
-    let mut s = SampleString::sample_string(&Alphabetic, &mut rand::rng(), 20);
-    // When searching Postgres uses a technique called stemming where it removes
-    // the end of certain English words, e.g. "party" and "party" both become
-    // "part" so that when you search for "party" it matches both. However, when
-    // using random values this sometimes causes the searching tests to fail
-    // when not using this technique (e.g. for aliases and names).
-    // So add some characters that should not be stemmed.
-    s.push_str("BBB");
-    s
+    SampleString::sample_string(&Alphabetic, &mut rand::rng(), 20)
+}
+
+/// Random string that isn't stemmed.
+pub fn random_unstemmed_string() -> String {
+    struct Unstemmed;
+
+    impl Distribution<u8> for Unstemmed {
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> u8 {
+            const RANGE: u8 = 26 + 26;
+            let offset = rng.random_range(0..RANGE) + b'A';
+            let byte = offset + (offset > b'Z') as u8 * (b'a' - b'Z' - 1);
+            match byte {
+                b @ (
+                    b'a' | b'e' | b'i' | b'o' | b'u' | b's' | b'y' |
+                    // Uppercase:
+                    b'A' | b'E' | b'I' | b'O' | b'U' | b'S' | b'Y'
+                ) => b + 1,
+                b => b,
+            }
+        }
+    }
+
+    impl SampleString for Unstemmed {
+        fn append_string<R: Rng + ?Sized>(
+            &self,
+            rng: &mut R,
+            string: &mut String,
+            len: usize,
+        ) {
+            // SAFETY: we only add ASCII, which is valid UTF-8.
+            unsafe {
+                let v = string.as_mut_vec();
+                v.reserve(len);
+                v.extend(self.sample_iter(rng).take(len));
+            }
+        }
+    }
+
+    SampleString::sample_string(&Unstemmed, &mut rand::rng(), 20)
 }
 
 pub fn repeated_string(n: usize, s: &str, separator: &str) -> String {

@@ -82,7 +82,7 @@ async fn does_not_match_description() {
 async fn match_alias() {
     let mut client = TestClient::new().await;
 
-    let name = random_string();
+    let name = random_unstemmed_string();
     let alias = format!("{name}@futo.tech");
     let profile_update = ProfileUpdate {
         name: Some(random_string()),
@@ -114,6 +114,37 @@ async fn match_alias() {
             vec![profile_update.clone()],
         )
         .await;
+    }
+}
+
+#[tokio::test]
+async fn match_alias_domain() {
+    let mut client = TestClient::new().await;
+
+    let domain = random_unstemmed_string();
+    let alias = format!("Bob@{domain}.com");
+    let profile_update = ProfileUpdate {
+        name: Some(random_string()),
+        avatar: None,
+        banner: None,
+        description: None,
+        alias: Some(alias.clone()),
+    };
+    client.profile_update(profile_update.clone(), current_timestamp());
+    client.submit_events().await;
+
+    for n in 4..domain.len() {
+        for prefix in ["", "@"] {
+            expect_searched_users(
+                SearchUsersRequest {
+                    query: format!("{prefix}{}", &domain[..n]),
+                    sort_by: None,
+                    page_params: None,
+                },
+                vec![profile_update.clone()],
+            )
+            .await;
+        }
     }
 }
 
