@@ -200,3 +200,4 @@ async fn run_workers(only: Vec<String>) {
     workers::run_all_workers(ctx, only).await;
     common_telemetry::trace::shutdown();
 }
+// ci test
