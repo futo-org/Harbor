@@ -21,8 +21,11 @@ plan: which jobs run, from the changed paths) and builds missing CI images.
 
 Rules:
 
-- A `pr.yml` job runs when its paths changed, or the workflow (or an action
-  or script it uses) changed. Tags build everything.
+- A `pr.yml` job runs when its paths changed, or an action or script it uses
+  changed. A change to the workflow, or to what plans it, runs every job.
+  Tags build everything.
+- Web e2e runs on every PR. It uses the run's web and server images where
+  the PR changed their sources, and the `staging` tag of each otherwise.
 - Images are pushed as `<image>:<sha>`; every run builds the ones it needs
   and BuildKit's registry cache decides what that costs.
 - The rs-core libraries (wasm, Android, iOS) are pushed as
