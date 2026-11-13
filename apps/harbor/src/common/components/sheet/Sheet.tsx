@@ -507,11 +507,7 @@ function WebModal({
       >
         <Pressable
           accessibilityLabel="Dismiss"
-          style={[
-            Atoms.fixed,
-            Atoms.inset_0,
-            theme.atoms_new.overlay.modal_backdrop,
-          ]}
+          style={[Atoms.fixed, Atoms.inset_0, theme.atoms_new.backdrop.modal]}
           onPress={dismissible ? close : undefined}
         />
         <View

@@ -35,7 +35,7 @@ export function ImageViewerBackdrop({
       pointerEvents="none"
       style={[
         StyleSheet.absoluteFill,
-        theme.atoms_new.overlay.media_backdrop,
+        theme.atoms_new.backdrop.media,
         backdropStyle,
       ]}
     />

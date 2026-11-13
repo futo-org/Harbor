@@ -341,7 +341,7 @@ function SidebarDrawer({ onClose }: { onClose: () => void }) {
         accessibilityRole="button"
         accessibilityLabel="Close menu"
         onPress={onClose}
-        style={[Atoms.flex_1, theme.atoms_new.overlay.modal_backdrop]}
+        style={[Atoms.flex_1, theme.atoms_new.backdrop.modal]}
       />
     </View>
   );

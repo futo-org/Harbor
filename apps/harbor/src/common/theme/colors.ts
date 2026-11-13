@@ -52,9 +52,9 @@ function buildColors(palette: Palette, scheme: ThemeScheme) {
       success: buildBox(palette.positive_500, palette.positive_600),
       warning: buildBox(palette.warning_500, palette.warning_600),
     },
-    overlay: {
-      modal_backdrop: withOpacity(palette.black, 0.45),
-      media_backdrop: withOpacity(palette.black, 0.92),
+    backdrop: {
+      modal: withOpacity(palette.black, 0.45),
+      media: withOpacity(palette.black, 0.92),
     },
     // controls on images; the box rules don't apply over media
     media_control: {
@@ -104,9 +104,9 @@ function buildAtoms(
       success: buildBoxAtoms(colors.box.success),
       warning: buildBoxAtoms(colors.box.warning),
     },
-    overlay: {
-      modal_backdrop: { backgroundColor: colors.overlay.modal_backdrop },
-      media_backdrop: { backgroundColor: colors.overlay.media_backdrop },
+    backdrop: {
+      modal: { backgroundColor: colors.backdrop.modal },
+      media: { backgroundColor: colors.backdrop.media },
     },
     media_control: {
       bg: { backgroundColor: colors.media_control.bg },
