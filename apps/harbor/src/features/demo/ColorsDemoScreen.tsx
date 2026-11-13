@@ -62,7 +62,7 @@ export default function ColorsDemoScreen() {
 
       <Section
         title="box"
-        description="Each box as a solid button (fill, border, on) and as a subtle pill (subtle, subtle_border, text color of its hue)."
+        description="Each box as a solid button (fill, border, white text) and as a subtle pill (subtle, subtle_border, text color of its hue)."
       >
         <OnEachBackground>
           <BoxSamples />
@@ -95,9 +95,12 @@ export default function ColorsDemoScreen() {
         </View>
       </Section>
 
-      <Section title="shadow" description="A raised card.">
+      <Section
+        title="shadow"
+        description="accent: primary button and FAB. neutral: toast and raised card."
+      >
         <OnEachBackground>
-          <ShadowSample />
+          <ShadowSamples />
         </OnEachBackground>
       </Section>
 
@@ -130,7 +133,7 @@ function Section({
         <Text variant="subtitle" monospace>
           {title}
         </Text>
-        <Text style={{ color: theme.colors.text.muted }}>{description}</Text>
+        <Text style={theme.colors.text.muted}>{description}</Text>
       </View>
       {children}
     </View>
@@ -162,10 +165,10 @@ function TextSamples() {
 
   return (
     <View style={Atoms.gap_sm}>
-      {Object.entries(theme.colors.text).map(([name, color]) => (
+      {Object.entries(theme.colors.text).map(([name, atom]) => (
         <View key={name}>
-          <Text style={{ color }}>{SAMPLE_SENTENCE}</Text>
-          <ColorLabel>{`text.${name} ${color}`}</ColorLabel>
+          <Text style={atom}>{SAMPLE_SENTENCE}</Text>
+          <ColorLabel>{`text.${name} ${formatAtomValues(atom)}`}</ColorLabel>
         </View>
       ))}
     </View>
@@ -191,7 +194,9 @@ function BoxSamples() {
               </Text>
             </View>
             <ColorLabel>
-              {`fill ${box.fill}  subtle ${box.subtle}  border ${box.border}  subtle_border ${box.subtle_border}  on ${box.on}`}
+              {Object.entries(box)
+                .map(([key, atom]) => `${key} ${formatAtomValues(atom)}`)
+                .join('  ')}
             </ColorLabel>
           </View>
         );
@@ -232,7 +237,7 @@ function StateOverlaySamples() {
         ))}
       </View>
       <ColorLabel>
-        {`hover ${colors.overlay.hover}  pressed ${colors.overlay.pressed}  selected ${colors.overlay.selected}`}
+        {`hover ${formatAtomValues(colors.overlay.hover)}  pressed ${formatAtomValues(colors.overlay.pressed)}  selected ${formatAtomValues(colors.overlay.selected)}`}
       </ColorLabel>
     </View>
   );
@@ -248,20 +253,17 @@ function ModalBackdropSample() {
       <View style={styles.mockScreen}>
         <FakeFeed />
         <View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: colors.overlay.modal_backdrop },
-          ]}
+          style={[StyleSheet.absoluteFill, colors.overlay.modal_backdrop]}
         />
         <View style={styles.mockSheet}>
           <Text fontWeight="semibold">Sheet</Text>
-          <Text style={{ color: colors.text.secondary }}>
+          <Text style={colors.text.secondary}>
             Content behind is dimmed by the backdrop.
           </Text>
           <SolidBox name="accent">Confirm</SolidBox>
         </View>
       </View>
-      <ColorLabel>{`overlay.modal_backdrop ${colors.overlay.modal_backdrop}`}</ColorLabel>
+      <ColorLabel>{`overlay.modal_backdrop ${formatAtomValues(colors.overlay.modal_backdrop)}`}</ColorLabel>
     </View>
   );
 }
@@ -289,7 +291,7 @@ function PostImageSample() {
         </View>
       </View>
       <ColorLabel>
-        {`media_control fill ${theme.colors.media_control.fill}  on ${theme.colors.media_control.on}`}
+        {`media_control.fill ${formatAtomValues(theme.colors.media_control.fill)}  white ${formatAtomValues(theme.colors.white)}`}
       </ColorLabel>
     </View>
   );
@@ -309,7 +311,7 @@ function ImageViewerSample() {
             StyleSheet.absoluteFill,
             Atoms.align_center,
             Atoms.justify_center,
-            { backgroundColor: colors.overlay.media_backdrop },
+            colors.overlay.media_backdrop,
           ]}
         >
           <Image
@@ -331,7 +333,7 @@ function ImageViewerSample() {
               Atoms.gap_xs,
               Atoms.p_xs,
               Atoms.rounded_full,
-              { backgroundColor: colors.media_control.fill },
+              colors.media_control.fill,
             ]}
           >
             {[0, 1, 2].map((index) => (
@@ -339,7 +341,8 @@ function ImageViewerSample() {
                 key={index}
                 style={[
                   styles.navDot,
-                  { backgroundColor: colors.media_control.on },
+                  // dots are glyphs on the control, so they take the text color
+                  { backgroundColor: colors.white.color },
                   // the current image's dot is wider
                   index === 1 && { width: 14 },
                 ]}
@@ -348,34 +351,49 @@ function ImageViewerSample() {
           </View>
         </View>
       </View>
-      <ColorLabel>{`overlay.media_backdrop ${colors.overlay.media_backdrop}`}</ColorLabel>
+      <ColorLabel>{`overlay.media_backdrop ${formatAtomValues(colors.overlay.media_backdrop)}`}</ColorLabel>
     </View>
   );
 }
 
-function ShadowSample() {
+function ShadowSamples() {
   const { theme } = useTheme();
   const { colors } = theme;
 
   return (
-    <View style={Atoms.gap_xs}>
+    <View style={Atoms.gap_lg}>
+      <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_lg]}>
+        <View style={[Atoms.rounded_full, colors.shadow.accent]}>
+          <SolidBox name="accent">Post</SolidBox>
+        </View>
+        <View
+          style={[
+            Atoms.p_lg,
+            Atoms.rounded_full,
+            colors.box.accent.fill,
+            colors.shadow.accent,
+          ]}
+        >
+          <Text fontWeight="bold" style={colors.white}>
+            +
+          </Text>
+        </View>
+      </View>
       <View
         style={[
           Atoms.p_lg,
           Atoms.rounded_lg,
           Atoms.gap_xs,
-          buildBoxStyle(colors, 'background'),
-          {
-            boxShadow: `0 10px 15px -3px ${colors.shadow}, 0 4px 6px -4px ${colors.shadow}`,
-          },
+          ...buildBoxStyle(colors, 'background'),
+          colors.shadow.neutral,
         ]}
       >
         <Text fontWeight="semibold">Raised card</Text>
-        <Text style={{ color: colors.text.secondary }}>
-          box.background with shadow
-        </Text>
+        <Text style={colors.text.secondary}>Toasts and the QR card</Text>
       </View>
-      <ColorLabel>{`shadow ${colors.shadow}`}</ColorLabel>
+      <ColorLabel>
+        {`accent ${formatAtomValues(colors.shadow.accent)}  neutral ${formatAtomValues(colors.shadow.neutral)}`}
+      </ColorLabel>
     </View>
   );
 }
@@ -397,7 +415,7 @@ function DisabledSamples() {
           <SubtleBox name="danger">Delete</SubtleBox>
         </View>
       </View>
-      <ColorLabel>{`disabled ${JSON.stringify(theme.colors.disabled)}`}</ColorLabel>
+      <ColorLabel>{`disabled ${formatAtomValues(theme.colors.disabled)}`}</ColorLabel>
     </View>
   );
 }
@@ -412,7 +430,8 @@ function SolidBox({
   children: ReactNode;
 }) {
   const { theme } = useTheme();
-  const box = theme.colors.box[name];
+  const { colors } = theme;
+  const isBackground = name === 'background' || name === 'background_inset';
 
   return (
     <View
@@ -422,11 +441,14 @@ function SolidBox({
         Atoms.rounded_full,
         Atoms.overflow_hidden,
         Atoms.self_start,
-        buildBoxStyle(theme.colors, name),
+        ...buildBoxStyle(colors, name),
       ]}
     >
       <StateOverlay state={state} />
-      <Text fontWeight="semibold" style={{ color: box.on }}>
+      <Text
+        fontWeight="semibold"
+        style={isBackground ? colors.text.primary : colors.white}
+      >
         {children}
       </Text>
     </View>
@@ -445,7 +467,7 @@ function SubtleBox({
   const { theme } = useTheme();
   const { colors } = theme;
   const box = colors.box[name];
-  const textColor =
+  const textAtom =
     name in colors.text
       ? colors.text[name as keyof ThemeColors['text']]
       : colors.text.primary;
@@ -458,15 +480,13 @@ function SubtleBox({
         Atoms.rounded_full,
         Atoms.overflow_hidden,
         Atoms.self_start,
-        {
-          backgroundColor: box.subtle,
-          borderColor: box.subtle_border,
-          borderWidth: 1,
-        },
+        box.subtle,
+        box.subtle_border,
+        { borderWidth: 1 },
       ]}
     >
       <StateOverlay state={state} />
-      <Text fontWeight="semibold" style={{ color: textColor }}>
+      <Text fontWeight="semibold" style={textAtom}>
         {children}
       </Text>
     </View>
@@ -479,12 +499,7 @@ function StateOverlay({ state }: { state: OverlayStateName | null }) {
     return null;
   }
   return (
-    <View
-      style={[
-        StyleSheet.absoluteFill,
-        { backgroundColor: theme.colors.overlay[state] },
-      ]}
-    />
+    <View style={[StyleSheet.absoluteFill, theme.colors.overlay[state]]} />
   );
 }
 
@@ -497,10 +512,10 @@ function MediaControl({ children }: { children: ReactNode }) {
         Atoms.px_sm,
         Atoms.py_xs,
         Atoms.rounded_full,
-        { backgroundColor: theme.colors.media_control.fill },
+        theme.colors.media_control.fill,
       ]}
     >
-      <Text variant="small" style={{ color: theme.colors.media_control.on }}>
+      <Text variant="small" style={theme.colors.white}>
         {children}
       </Text>
     </View>
@@ -517,9 +532,7 @@ function FakeFeed() {
       {[0, 1].map((index) => (
         <View key={index} style={Atoms.gap_xs}>
           <Text fontWeight="semibold">Someone posted</Text>
-          <Text style={{ color: colors.text.secondary }}>
-            {SAMPLE_SENTENCE}
-          </Text>
+          <Text style={colors.text.secondary}>{SAMPLE_SENTENCE}</Text>
           <View style={[Atoms.flex_row, Atoms.gap_sm]}>
             <SubtleBox name="accent">Reply</SubtleBox>
             <SubtleBox name="neutral">Share</SubtleBox>
@@ -538,7 +551,7 @@ function ColorLabel({ children }: { children: string }) {
       variant="small"
       monospace
       fontWeight="regular"
-      style={{ color: theme.colors.text.muted }}
+      style={theme.colors.text.muted}
     >
       {children}
     </Text>
@@ -546,20 +559,17 @@ function ColorLabel({ children }: { children: string }) {
 }
 
 function buildBoxStyle(colors: ThemeColors, name: BoxName) {
-  return {
-    backgroundColor: colors.box[name].fill,
-    borderColor: colors.box[name].border,
-    borderWidth: 1,
-  };
+  return [colors.box[name].fill, colors.box[name].border, { borderWidth: 1 }];
+}
+
+// `{ color: '#fff' }` -> `#fff`, for labels
+function formatAtomValues(atom: object): string {
+  return Object.values(atom).join(' ');
 }
 
 const useStyles = createThemedStyles((theme, define) =>
   define({
-    page: [
-      Atoms.p_3xl,
-      Atoms.gap_3xl,
-      { backgroundColor: theme.colors.box.background.fill },
-    ],
+    page: [Atoms.p_3xl, Atoms.gap_3xl, theme.colors.box.background.fill],
     header: [
       Atoms.flex_row,
       Atoms.align_center,
@@ -575,18 +585,18 @@ const useStyles = createThemedStyles((theme, define) =>
     mockScreen: [
       Atoms.overflow_hidden,
       Atoms.rounded_lg,
-      buildBoxStyle(theme.colors, 'background'),
+      ...buildBoxStyle(theme.colors, 'background'),
       { width: MOCK_SCREEN_WIDTH, height: MOCK_SCREEN_HEIGHT },
     ],
     mockSheet: [
       Atoms.absolute,
       Atoms.p_lg,
       Atoms.gap_sm,
+      theme.colors.box.background.fill,
       {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: theme.colors.box.background.fill,
         borderTopLeftRadius: BorderRadius.xl,
         borderTopRightRadius: BorderRadius.xl,
       },
