@@ -5,7 +5,6 @@ import {
   BorderRadius,
   Spacing,
   useTheme,
-  withHexOpacity,
   type BorderRadiusToken,
   type FontWeightToken,
   type TextColor,
@@ -89,13 +88,7 @@ export function Button({
     ? sizeConfig.paddingV
     : sizeConfig.paddingH;
   const isDisabled = !!disabled;
-  const iconColor = textColorMap[variant];
-  const disabledIconColor = isDisabled
-    ? withHexOpacity(theme.palette.neutral_500, '80')
-    : undefined;
-  const surfaceStyle = isDisabled
-    ? getDisabledSurfaceStyle(theme)
-    : getVariantStyle(theme, variant);
+  const textColor = isDisabled ? 'muted' : textColorMap[variant];
   const hoverStyle =
     !isDisabled && hovered ? getHoverVariantStyle(theme, variant) : undefined;
 
@@ -127,7 +120,13 @@ export function Button({
           paddingHorizontal,
           borderRadius,
         },
-        surfaceStyle,
+        isDisabled
+          ? [
+              theme.atoms_new.box.neutral.bg_subtle,
+              theme.atoms_new.box.neutral.border_subtle,
+              theme.atoms_new.disabled,
+            ]
+          : getVariantStyle(theme, variant),
         hoverStyle,
         typeof style === 'function' ? style(state) : style,
       ]}
@@ -146,25 +145,15 @@ export function Button({
       <View style={[styles.content, iconOnly && styles.iconOnlyContent]}>
         {icon &&
           (typeof icon === 'function' ? (
-            icon({ size: sizeConfig.iconSize, color: iconColor })
+            icon({ size: sizeConfig.iconSize, color: textColor })
           ) : (
-            <Icon
-              name={icon}
-              size={sizeConfig.iconSize}
-              color={iconColor}
-              customColor={disabledIconColor}
-            />
+            <Icon name={icon} size={sizeConfig.iconSize} color={textColor} />
           ))}
         {!iconOnly && (
           <Text
             fontSize={size}
             fontWeight={FONT_WEIGHT}
-            color={isDisabled ? 'primary' : textColorMap[variant]}
-            style={
-              isDisabled
-                ? { color: withHexOpacity(theme.palette.neutral_500, '80') }
-                : undefined
-            }
+            color={textColor}
             numberOfLines={1}
           >
             {title}
@@ -240,11 +229,4 @@ function getHoverVariantStyle(
     case 'destructive':
       return box.danger.bg_subtle_hover;
   }
-}
-
-function getDisabledSurfaceStyle(theme: Theme): ViewStyle {
-  return {
-    backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
-    borderColor: withHexOpacity(theme.palette.neutral_500, '20'),
-  };
 }

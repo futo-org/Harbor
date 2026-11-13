@@ -4,7 +4,7 @@ import type { ThemeScheme } from './themes';
 const SUBTLE_BOX_OPACITY = 0.125;
 const SUBTLE_BOX_HOVER_OPACITY = 0.2;
 const SUBTLE_BORDER_OPACITY = 0.3;
-const DISABLED_OPACITY = 0.4;
+const DISABLED_OPACITY = 0.5;
 // offset and blur shared by all shadows
 const SHADOW_GEOMETRY = '0 6px 16px';
 // shadows need more opacity to show on a dark background
