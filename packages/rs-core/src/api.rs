@@ -111,6 +111,8 @@ pub enum Query {
     GetRecommendedFeed(crate::query::feed::GetFollowingFeedArgs),
     GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
     GetAttributionFeed(crate::query::feed::GetAttributionFeedArgs),
+    GetAttributedToFeed(crate::query::feed::GetAttributedToFeedArgs),
+    GetAttributedToStats(crate::query::feed::GetAttributedToStatsArgs),
     ListNotifications(crate::query::notification::ListNotificationsArgs),
     SubscribeUnreadNotificationCount(
         crate::query::notification::SubscribeUnreadNotificationCountArgs,
@@ -490,6 +492,18 @@ impl PolycentricCore {
             Query::GetAttributionFeed(args) => {
                 crate::query::feed::get_attribution_feed(&self.query_client, query_key, args, opts)
             }
+            Query::GetAttributedToFeed(args) => crate::query::feed::get_attributed_to_feed(
+                &self.query_client,
+                query_key,
+                args,
+                opts,
+            ),
+            Query::GetAttributedToStats(args) => crate::query::feed::get_attributed_to_stats(
+                &self.query_client,
+                query_key,
+                args,
+                opts,
+            ),
             Query::ListNotifications(args) => crate::query::notification::list_notifications(
                 &self.query_client,
                 query_key,

@@ -24,6 +24,7 @@ import {
   injectReplyIntoThreadCache,
   threadQueryKey,
 } from '@/src/features/feed/hooks/feedCache';
+import { linkAttribution } from '@/src/features/feed/hooks/useAttributionFeed';
 import {
   COLLECTION,
   type types,
@@ -73,6 +74,8 @@ export type UseComposerArgs = {
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
   quote?: PostData | null;
+  /** The page the post is about, if any. */
+  attributedTo?: v2.Link;
   /** Open the image picker as soon as the composer mounts. */
   attachOnMount?: boolean;
   /**
@@ -91,6 +94,7 @@ export function useComposer({
   onPostCreated,
   replyTo,
   quote,
+  attributedTo,
   attachOnMount = false,
   onClose,
 }: UseComposerArgs) {
@@ -329,8 +333,9 @@ export function useComposer({
         links: link ? [link] : [],
         // Tag posts authored in Harbor with the client label (Post.labels).
         labels: ['harbor'],
-        // Regular posts aren't attributed to an external URL.
-        attributedTo: [],
+        attributedTo: attributedTo
+          ? [linkAttribution(attributedTo.url, attributedTo)]
+          : [],
       };
 
       if (isReply) {
@@ -367,6 +372,12 @@ export function useComposer({
         replyTo ?? undefined,
         quote ?? undefined,
       );
+      if (attributedTo) {
+        injectPostIntoFeedCache(
+          feedQueryKeys.attribution(attributedTo.url),
+          newBundle,
+        );
+      }
 
       setSubmitting(false);
       toast.success(isReply ? 'Reply posted' : 'Post published');
@@ -401,6 +412,7 @@ export function useComposer({
     currentIdentityKey,
     isReply,
     quote,
+    attributedTo,
     replyTo,
     replyToEventKey,
     replyRootEventKey,
@@ -560,6 +572,11 @@ async function refreshAfterPosting(
   invalidateQuery(client, feedQueryKeys.following(identity));
   invalidateQuery(client, feedQueryKeys.identity(identity));
   invalidateQuery(client, feedQueryKeys.explore(identity));
+  for (const { to } of post.attributedTo) {
+    if (to.oneofKind === 'link') {
+      invalidateQuery(client, feedQueryKeys.attribution(to.link.url));
+    }
+  }
 
   // Threads
   const ancestors: Set<string> = new Set();

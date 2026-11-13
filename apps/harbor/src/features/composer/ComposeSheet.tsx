@@ -5,7 +5,7 @@ import { Sheet } from '@/src/common/components/sheet';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
-import type { types } from '@polycentric/react-native';
+import type { types, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView } from 'react-native';
@@ -20,20 +20,26 @@ type ComposeSheetProps = {
   onPostCreated: (signedEvent: types.SignedEvent) => void | Promise<void>;
   replyTo?: PostData | null;
   quote?: PostData | null;
+  /** The page the post is about, if any. */
+  attributedTo?: v2.Link;
   /** Open the image picker as soon as the composer mounts. */
   attachOnMount?: boolean;
+  /** Closes a composer shown within a screen, rather than as a route modal. */
+  onClose?: () => void;
 };
 
 export function ComposeSheet({
   onPostCreated,
   replyTo,
   quote,
+  attributedTo,
   attachOnMount = false,
+  onClose: closeInline,
 }: ComposeSheetProps) {
   const { theme } = useTheme();
 
   // The composer is presented as a route modal; closing pops it.
-  const onClose = useCallback(() => {
+  const popRoute = useCallback(() => {
     if (router.canGoBack()) router.back();
   }, []);
 
@@ -41,8 +47,9 @@ export function ComposeSheet({
     onPostCreated,
     replyTo,
     quote,
+    attributedTo,
     attachOnMount,
-    onClose,
+    onClose: closeInline ?? popRoute,
   });
 
   // Focus the field only after the sheet has presented (iOS fix)
@@ -140,6 +147,9 @@ export function ComposeSheet({
 
   return (
     <Sheet
+      {...(closeInline
+        ? { open: true, onClose: composer.handleClose }
+        : { open: undefined })}
       detents={[1]}
       onPresented={() => setAutoFocus(true)}
       footer={footer}

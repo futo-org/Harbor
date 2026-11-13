@@ -1,9 +1,9 @@
-use entity::{content, event, interaction_tally, profile};
+use entity::{content, event, follow, interaction_tally, profile};
 use sea_orm::sea_query::{Expr, Func, Order, Value};
 use sea_orm::{
-    ColumnTrait, EntityTrait, FromQueryResult, Iterable, JoinType, QueryFilter,
-    QueryOrder, QueryResult, QuerySelect, RelationTrait, TryGetError,
-    TryGetableMany,
+    ColumnTrait, EntityTrait, ExprTrait, FromQueryResult, Iterable, JoinType,
+    QueryFilter, QueryOrder, QueryResult, QuerySelect, QueryTrait,
+    RelationTrait, TryGetError, TryGetableMany,
 };
 use tonic::Status;
 
@@ -86,6 +86,7 @@ impl Query {
     #[tracing::instrument(skip_all)]
     pub(super) async fn search_users<C: Connection>(
         db: &mut C,
+        current_identity: Option<&str>,
         search_query: &str,
         sort_by: SortUsersBy,
         limit: u64,
@@ -118,6 +119,28 @@ impl Query {
                 [search_query],
             ));
 
+        // If the user is authenticated order the users they follow before
+        // anyone else.
+        if let Some(current_identity) = current_identity {
+            QueryTrait::query(&mut query)
+                .left_join(
+                    follow::Entity,
+                    Expr::col(follow::Column::Followee.as_column_ref())
+                        .eq(Expr::col(
+                            profile::Column::Identity.as_column_ref(),
+                        ))
+                        .and(
+                            Expr::col(follow::Column::Follower.as_column_ref())
+                                .eq(Expr::Value(current_identity.into())),
+                        ),
+                )
+                .order_by_expr(
+                    Expr::col(follow::Entity).is_not_null(),
+                    Order::Desc,
+                );
+        }
+
+        // NOTE: potentially ordering by following first (see above).
         let (column, order) = sort_users_by_column(sort_by);
         QueryOrder::query(&mut query)
             .order_by_expr(column, order.clone())

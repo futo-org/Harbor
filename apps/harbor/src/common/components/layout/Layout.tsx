@@ -6,7 +6,7 @@ import {
   withHexOpacity,
   ZIndex,
 } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
+import { isBrowserExtension, isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
 import { Link, usePathname } from 'expo-router';
 import {
@@ -33,9 +33,10 @@ import {
   SignupBar,
   SignupWidget,
 } from '@/src/features/core/identity/SignupWidget';
+import { GetExtensionWidget } from '@/src/features/anywhere/GetExtensionWidget';
 import { SidebarSearch } from '@/src/features/search/SidebarSearch';
 import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
-import { openCompose } from '../../constants';
+import { openCompose, Routes } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
 import { AppFooter } from './AppFooter';
@@ -139,11 +140,13 @@ function Screen({
   const { width: deviceWidth } = useWindowDimensions();
   const { identity } = useCurrentIdentity();
 
-  showLeftSidebar = showLeftSidebar && isWeb;
+  // The browser extension has no navigation of its own.
+  showLeftSidebar = showLeftSidebar && isWeb && !isBrowserExtension;
 
   // On the smallest web viewports the left sidebar is replaced by a
   // topbar whose menu button opens it as a drawer.
-  const drawerMode = isWeb && deviceWidth <= Breakpoints.sm;
+  const drawerMode =
+    isWeb && !isBrowserExtension && deviceWidth <= Breakpoints.sm;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
 
@@ -420,6 +423,7 @@ export const RightSidebar = memo(function RightSidebar() {
     : LAYOUT_SIZES.rightSidebarWideMargin;
 
   const { identity } = useCurrentIdentity();
+  const onAnywhere = usePathname().startsWith(Routes.tabs.anywhere.index);
 
   return (
     <View style={{ width, marginRight, height: '100%' }}>
@@ -441,6 +445,8 @@ export const RightSidebar = memo(function RightSidebar() {
         >
           <View style={[Atoms.flex_1, Atoms.w_full, Atoms.pt_lg, Atoms.gap_md]}>
             <SidebarSearch />
+
+            {onAnywhere && <GetExtensionWidget />}
 
             {!identity && <SignupWidget />}
 

@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react';
 
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import Icon from '@/src/common/components/Icon';
+import { Routes } from '@/src/common/constants';
 import useUnreadNotificationCount, {
   unreadNotificationsBadgeLabel,
 } from '@/src/features/notifications/hooks/useUnreadNotificationCount';
@@ -38,6 +39,12 @@ export function VerticalNav({ style, showLabels }: VerticalNavProps) {
         icon={<Icon name="searchOutline" size={24} />}
         // Signed out, the explore feed is the homepage.
         href={identity ? '/explore' : '/'}
+        showLabel={showLabels}
+      />
+      <NavItem
+        label="Anywhere"
+        icon={<Icon name="globe" size={24} />}
+        href={Routes.tabs.anywhere.index}
         showLabel={showLabels}
       />
       {identity && (

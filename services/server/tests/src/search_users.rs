@@ -1,7 +1,6 @@
-//! Tests for the searching users.
+//! Tests for searching users.
 
 use crate::*;
-use prost::Message;
 
 #[tokio::test]
 async fn no_match() {
@@ -33,7 +32,18 @@ async fn match_profile_name() {
 
     expect_searched_users(
         SearchUsersRequest {
-            query: profile_name,
+            query: profile_name.clone(),
+            sort_by: None,
+            page_params: None,
+        },
+        vec![profile_update.clone()],
+    )
+    .await;
+
+    // Prefix match.
+    expect_searched_users(
+        SearchUsersRequest {
+            query: profile_name[..5].to_owned(),
             sort_by: None,
             page_params: None,
         },
@@ -72,7 +82,8 @@ async fn does_not_match_description() {
 async fn match_alias() {
     let mut client = TestClient::new().await;
 
-    let alias = random_string();
+    let name = random_string();
+    let alias = format!("{name}@futo.tech");
     let profile_update = ProfileUpdate {
         name: Some(random_string()),
         avatar: None,
@@ -83,15 +94,27 @@ async fn match_alias() {
     client.profile_update(profile_update.clone(), current_timestamp());
     client.submit_events().await;
 
-    expect_searched_users(
-        SearchUsersRequest {
-            query: alias,
-            sort_by: None,
-            page_params: None,
-        },
-        vec![profile_update],
-    )
-    .await;
+    for query in [
+        format!("{name}"),
+        format!("{name}@"),
+        format!("{name}@futo"),
+        format!("{name}@futo.tech"),
+        // Tests for #2010.
+        format!("{name}@f"),
+        format!("{name}@fu"),
+        format!("{name}@fut"),
+        format!("{name}@futo"),
+    ] {
+        expect_searched_users(
+            SearchUsersRequest {
+                query,
+                sort_by: None,
+                page_params: None,
+            },
+            vec![profile_update.clone()],
+        )
+        .await;
+    }
 }
 
 #[tokio::test]
@@ -119,6 +142,34 @@ async fn match_identity() {
         vec![profile_update],
     )
     .await;
+}
+
+#[tokio::test]
+async fn match_identity_prefix() {
+    let mut client = TestClient::new().await;
+
+    let alias = random_string();
+    let profile_update = ProfileUpdate {
+        name: Some(random_string()),
+        avatar: None,
+        banner: None,
+        description: None,
+        alias: Some(alias.clone()),
+    };
+    client.profile_update(profile_update.clone(), current_timestamp());
+    client.submit_events().await;
+
+    for n in 4..client.identity().len() {
+        expect_searched_users(
+            SearchUsersRequest {
+                query: client.identity()[..n].to_owned(),
+                sort_by: None,
+                page_params: None,
+            },
+            vec![profile_update.clone()],
+        )
+        .await;
+    }
 }
 
 #[tokio::test]
@@ -224,6 +275,147 @@ async fn match_on_hashtags() {
             }),
         },
         vec![profile_update],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn non_ascii_words_work() {
+    let key = signing_key("non_ascii_words_work");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let profile_name = "「世界、こんにちは。"; // Hello, World! (according to the internet).
+    let profile_update = ProfileUpdate {
+        name: Some(profile_name.into()),
+        avatar: None,
+        banner: None,
+        description: None,
+        alias: None,
+    };
+    client.profile_update(profile_update.clone(), current_timestamp());
+    client.submit_events().await;
+
+    for query in ["世界", "こんにちは"] {
+        expect_searched_users(
+            SearchUsersRequest {
+                query: query.to_owned(),
+                sort_by: None,
+                // Limit to 1 post as each time we test we create another. All we're
+                // interested in is that one of them is returned, not which one.
+                page_params: Some(PageParams {
+                    limit: Some(1),
+                    ..Default::default()
+                }),
+            },
+            vec![profile_update.clone()],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn accents_are_ignored() {
+    let key = signing_key("accents_are_ignored");
+    let mut client = TestClient::new_with_identity(key).await;
+
+    let profile_name = "Dast ist eine schön café für dich";
+    let profile_update = ProfileUpdate {
+        name: Some(profile_name.into()),
+        avatar: None,
+        banner: None,
+        description: None,
+        alias: None,
+    };
+    client.profile_update(profile_update.clone(), current_timestamp());
+    client.submit_events().await;
+
+    for query in ["schon", "fur", "cafe"] {
+        expect_searched_users(
+            SearchUsersRequest {
+                query: query.to_owned(),
+                sort_by: None,
+                // Limit to 1 post as each time we test we create another. All we're
+                // interested in is that one of them is returned, not which one.
+                page_params: Some(PageParams {
+                    limit: Some(1),
+                    ..Default::default()
+                }),
+            },
+            vec![profile_update.clone()],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn prefer_following_identities() {
+    // When matching multiple profiles we want to always have the porfiles we
+    // follow before anyone else.
+
+    let mut client = TestClient::new().await;
+
+    let profile_name = random_string();
+
+    let mut other_profiles = Vec::with_capacity(5);
+    for n in 0..other_profiles.capacity() {
+        let mut client = TestClient::new().await;
+        let profile_update = ProfileUpdate {
+            name: Some(format!("{n}. {profile_name}")),
+            avatar: None,
+            banner: None,
+            description: None,
+            alias: None,
+        };
+        client.profile_update(profile_update.clone(), current_timestamp());
+        client.submit_events().await;
+
+        other_profiles.push((client, profile_update));
+    }
+
+    client.follow_identity(
+        other_profiles[0].0.identity().to_owned(),
+        current_timestamp(),
+    );
+    client.submit_events().await;
+
+    let limit = 2;
+
+    // No authentication, following doesn't (can't) effect the ordering.
+    expect_searched_users(
+        SearchUsersRequest {
+            query: profile_name.clone(),
+            sort_by: Some(SortUsersBy::Default.into()),
+            page_params: Some(PageParams {
+                limit: Some(limit),
+                ..Default::default()
+            }),
+        },
+        vec![other_profiles[4].1.clone(), other_profiles[3].1.clone()],
+    )
+    .await;
+
+    // With authentication following changes the results.
+    expect_searched_users2(
+        SearchUsersRequest {
+            query: profile_name.clone(),
+            sort_by: Some(SortUsersBy::Default.into()),
+            page_params: Some(PageParams {
+                limit: Some(limit),
+                ..Default::default()
+            }),
+        },
+        // Following profile 0, so it should come first.
+        vec![other_profiles[0].1.clone(), other_profiles[4].1.clone()],
+        |request| async {
+            let mut search = search_service().await;
+            let mut request = tonic::Request::new(request);
+            request.metadata_mut().insert(
+                "authorization",
+                client.create_auth_token().try_into().unwrap(),
+            );
+            let response = search.search_users(request).await.unwrap();
+            response.into_inner().results
+        },
     )
     .await;
 }
