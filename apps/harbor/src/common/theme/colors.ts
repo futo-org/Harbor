@@ -1,11 +1,8 @@
 import type { Palette } from './palette';
 import type { ThemeScheme } from './themes';
 
-// offset and blur shared by all shadows
-const SHADOW_GEOMETRY = '0 6px 16px';
-
 export type TextColor = keyof Pick<
-  ReturnType<typeof buildColorAtoms>,
+  ReturnType<typeof buildAtoms>,
   | 'primary'
   | 'secondary'
   | 'muted'
@@ -19,7 +16,7 @@ export type TextColor = keyof Pick<
 
 export function buildThemeColors(palette: Palette, scheme: ThemeScheme) {
   const colors = buildColors(palette, scheme);
-  return { colors, atoms_new: buildColorAtoms(palette, scheme, colors) };
+  return { colors, atoms_new: buildAtoms(palette, scheme, colors) };
 }
 
 // raw strings for consumers that can't take a style object
@@ -69,13 +66,27 @@ function buildColors(palette: Palette, scheme: ThemeScheme) {
   };
 }
 
-function buildColorAtoms(
+// A hue box's solid border matches its fill, so it keeps the border width
+// without a visible outline.
+function buildBox(bg: string, hover: string, border = bg) {
+  return {
+    bg,
+    bg_hover: hover,
+    bg_subtle: withOpacity(bg, 0.125),
+    bg_subtle_hover: withOpacity(bg, 0.2),
+    border,
+    border_subtle: withOpacity(bg, 0.3),
+  };
+}
+
+function buildAtoms(
   palette: Palette,
   scheme: ThemeScheme,
   colors: ReturnType<typeof buildColors>,
 ) {
   // shadows need more opacity to show on a dark background
   const shadowOpacity = scheme === 'dark' ? 0.25 : 0.16;
+  const shadowGeometry = '0 6px 16px';
 
   return {
     primary: { color: colors.primary },
@@ -112,27 +123,14 @@ function buildColorAtoms(
     },
     shadow: {
       accent: {
-        boxShadow: `${SHADOW_GEOMETRY} ${withOpacity(palette.primary_900, shadowOpacity)}`,
+        boxShadow: `${shadowGeometry} ${withOpacity(palette.primary_900, shadowOpacity)}`,
       },
       neutral: {
-        boxShadow: `${SHADOW_GEOMETRY} ${withOpacity(palette.black, shadowOpacity)}`,
+        boxShadow: `${shadowGeometry} ${withOpacity(palette.black, shadowOpacity)}`,
       },
     },
     faded: { opacity: 0.5 },
     faded_subtle: { opacity: 0.8 },
-  };
-}
-
-// A hue box's solid border matches its fill, so it keeps the border width
-// without a visible outline.
-function buildBox(bg: string, hover: string, border = bg) {
-  return {
-    bg,
-    bg_hover: hover,
-    bg_subtle: withOpacity(bg, 0.125),
-    bg_subtle_hover: withOpacity(bg, 0.2),
-    border,
-    border_subtle: withOpacity(bg, 0.3),
   };
 }
 
