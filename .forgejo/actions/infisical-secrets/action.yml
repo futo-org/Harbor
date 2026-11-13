@@ -1,18 +1,23 @@
 name: infisical-secrets
-description: Log in to Infisical with the job's OIDC token and fetch the named CI secrets
+description: Export the CI secrets of an Infisical environment to the job's environment (needs enable-openid-connect)
 inputs:
   identity:
     description: Infisical machine identity to log in as
     required: true
   environment:
-    description: Infisical environment to read besides global (staging or prod, from protected refs only)
-    default: ""
-  secrets:
-    description: Names to return as step outputs, for the steps that reference them
-    default: ""
-  env:
-    description: Names to export to the job environment, for tools that read them from there
-    default: ""
+    description: global (pull requests), staging or prod
+    required: true
 runs:
-  using: node24
-  main: index.js
+  using: composite
+  steps:
+    # Fork pull requests get no OIDC token, as they got no secrets before.
+    - uses: https://github.com/Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
+      if: github.event.pull_request.head.repo.fork != true
+      with:
+        method: oidc
+        identity-id: ${{ inputs.identity }}
+        oidc-audience: https://infisical.futo.network
+        domain: https://infisical.futo.network
+        project-slug: harbor
+        env-slug: ${{ inputs.environment }}
+        secret-path: /ci/harbor

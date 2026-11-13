@@ -51,11 +51,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
           environment: prod
-          env: ASC_ISSUER_ID ASC_KEY_ID ASC_PRIVATE_KEY ASC_REVIEW_EMAIL ASC_REVIEW_FIRST_NAME ASC_REVIEW_LAST_NAME ASC_REVIEW_PHONE
       - name: Push listing
         run: |
           FLAGS=""
@@ -73,11 +71,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_PROD_ID }}
           environment: prod
-          env: PLAY_SERVICE_ACCOUNT_JSON
       - name: Push listing
         run: |
           FLAGS=""

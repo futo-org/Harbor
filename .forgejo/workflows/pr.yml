@@ -52,18 +52,17 @@ jobs:
         run: apk add --no-cache git
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
+          environment: global
       - uses: ./.forgejo/actions/ci-images
         if: needs.changes.outputs.images_missing == 'true'
         with:
           registry: ${{ needs.changes.outputs.registry }}
           tag: ${{ needs.changes.outputs.images_tag }}
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ steps.secrets.outputs.REGISTRY_TOKEN }}
-          cosign-key: ${{ steps.secrets.outputs.COSIGN_PRIVATE_KEY }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
+          cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
   # Lint ---------------------------------------------------------------------
 
@@ -128,10 +127,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: packages-lint
@@ -162,10 +160,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: services-lint
@@ -201,10 +198,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: services-db-schema
@@ -389,10 +385,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: packages-tests
@@ -423,10 +418,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: services-tests
@@ -549,10 +543,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - uses: ./.forgejo/actions/wasm-build
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -573,10 +566,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - uses: ./.forgejo/actions/android-build
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -612,10 +604,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - uses: ./.forgejo/actions/kt-core-build
         with:
           task: ":core:ktlintCheck"
@@ -642,10 +633,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - uses: ./.forgejo/actions/kt-core-build
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
@@ -671,10 +661,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          secrets: REGISTRY_TOKEN
+          environment: global
       - uses: ./.forgejo/actions/sdk-build
         with:
           registry: ${{ needs.changes.outputs.registry }}
@@ -683,7 +672,7 @@ jobs:
           ios-artifact: ${{ needs.ios.result == 'success' }}
           rn-sdk: ${{ fromJSON(needs.changes.outputs.plan).flags.build_rn_sdk }}
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ steps.secrets.outputs.REGISTRY_TOKEN }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
 
   # Images -------------------------------------------------------------------
 
@@ -700,10 +689,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - name: List packages
         id: packages
         env:
@@ -727,10 +715,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
+          environment: global
       - uses: ./.forgejo/actions/service-image
         with:
           image: ${{ matrix.image }}
@@ -738,8 +725,8 @@ jobs:
           registry: ${{ needs.changes.outputs.registry }}
           stage-artifact: rust-service-binaries
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ steps.secrets.outputs.REGISTRY_TOKEN }}
-          cosign-key: ${{ steps.secrets.outputs.COSIGN_PRIVATE_KEY }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
+          cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
   # The JS images build in the node image like the Rust ones in ci/rust, and
   # the image job only adds the runtime stage (js-build, service-image).
@@ -774,10 +761,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
+          environment: global
       - uses: ./.forgejo/actions/service-image
         with:
           image: scraper
@@ -786,8 +772,8 @@ jobs:
           stage-artifact: scraper-build
           stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ steps.secrets.outputs.REGISTRY_TOKEN }}
-          cosign-key: ${{ steps.secrets.outputs.COSIGN_PRIVATE_KEY }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
+          cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
   verifier-bot-build:
     name: Build verifier bot
@@ -822,10 +808,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
+          environment: global
       - uses: ./.forgejo/actions/service-image
         with:
           image: verifier-bot
@@ -834,8 +819,8 @@ jobs:
           stage-artifact: verifier-bot-build
           stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ steps.secrets.outputs.REGISTRY_TOKEN }}
-          cosign-key: ${{ steps.secrets.outputs.COSIGN_PRIVATE_KEY }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
+          cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
   web-build:
     name: Build web
@@ -901,10 +886,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          secrets: COSIGN_PRIVATE_KEY REGISTRY_TOKEN
+          environment: global
       - uses: ./.forgejo/actions/service-image
         with:
           image: web
@@ -913,8 +897,8 @@ jobs:
           stage-artifact: web-build
           stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ steps.secrets.outputs.REGISTRY_TOKEN }}
-          cosign-key: ${{ steps.secrets.outputs.COSIGN_PRIVATE_KEY }}
+          registry-token: ${{ env.REGISTRY_TOKEN }}
+          cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
 
   # Tests on the builds ------------------------------------------------------
 
@@ -937,10 +921,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: SCCACHE_R2_ACCESS_KEY_ID SCCACHE_R2_ENDPOINT SCCACHE_R2_SECRET_ACCESS_KEY
+          environment: global
       - uses: ./.forgejo/actions/rust-env
         with:
           cache: services-integration
@@ -1013,17 +996,16 @@ jobs:
         run: apt-get update && apt-get install -y --no-install-recommends chromium && rm -rf /var/lib/apt/lists/*
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          secrets: VERIFIER_BOT_ENV_VARS
+          environment: global
       - uses: ./.forgejo/actions/sdk-artifacts
       - uses: ./.forgejo/actions/setup-pnpm
         with:
           install-args: --filter @polycentric/verifier-bot...
       - name: Write test env
         env:
-          VERIFIER_BOT_ENV_VARS: ${{ steps.secrets.outputs.VERIFIER_BOT_ENV_VARS }}
+          VERIFIER_BOT_ENV_VARS: ${{ env.VERIFIER_BOT_ENV_VARS }}
         run: if [ -n "$VERIFIER_BOT_ENV_VARS" ]; then echo "$VERIFIER_BOT_ENV_VARS" | base64 -d > services/verifier-bot/.test.env; fi
       - name: Tests
         run: pnpm --filter @polycentric/verifier-bot test:ci
@@ -1119,10 +1101,9 @@ jobs:
         with:
           sparse-checkout: .forgejo/actions/infisical-secrets
       - uses: ./.forgejo/actions/infisical-secrets
-        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_DEV_ID }}
-          env: CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN
+          environment: global
       - uses: forgejo/download-artifact@v4
         with:
           name: docs-build
