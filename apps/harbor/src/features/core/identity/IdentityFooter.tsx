@@ -1,6 +1,5 @@
 import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { ProfileAvatar } from '@/src/common/components/primitives';
-import { Routes } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
@@ -11,7 +10,6 @@ import {
 } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
-import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useIdentitySwitcher } from './useIdentitySwitcher';
 
@@ -37,22 +35,11 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
       ? withHexOpacity(theme.palette.neutral_500, '14')
       : withHexOpacity(theme.palette.black, '28');
 
-  const avatar = (
-    <Pressable
-      onPress={() => {
-        if (!currentIdentity.identityKey) return;
-        router.navigate(Routes.tabs.profile(currentIdentity.identityKey));
-      }}
-    >
-      <ProfileAvatar identityKey={currentIdentity.identityKey} />
-    </Pressable>
-  );
+  const avatar = <ProfileAvatar identityKey={currentIdentity.identityKey} />;
 
-  if (compact) {
-    return avatar;
-  }
-
-  return (
+  const identityDisplay = compact ? (
+    avatar
+  ) : (
     <View
       style={[
         Atoms.flex_row,
@@ -62,11 +49,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
       ]}
     >
       {avatar}
-      <Pressable
-        onPress={openIdentitySwitcher}
-        onHoverIn={onHoverIn}
-        onHoverOut={onHoverOut}
-        hitSlop={10}
+      <View
         style={[
           Atoms.flex_1,
           Atoms.flex_row,
@@ -98,7 +81,20 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
           />
         ) : null}
         <Icon name="chevronDown" size={18} color="neutral_1000" />
-      </Pressable>
+      </View>
     </View>
+  );
+
+  return (
+    <Pressable
+      onPress={openIdentitySwitcher}
+      onHoverIn={onHoverIn}
+      onHoverOut={onHoverOut}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel="Switch identity"
+    >
+      {identityDisplay}
+    </Pressable>
   );
 }
