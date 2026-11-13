@@ -19,8 +19,7 @@ use prost::Message;
 
 type Received = Arc<Mutex<Vec<ResourceSpans>>>;
 
-#[tokio::main]
-async fn main() {
+pub(crate) async fn main() {
     let port: u16 = std::env::var("HARBOR_TEST_TRACES_PORT")
         .ok()
         .and_then(|p| p.parse().ok())
