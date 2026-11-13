@@ -1,6 +1,7 @@
 import type { TextStyle, ViewStyle } from 'react-native';
 import type { Palette } from './palette';
 import { darkPalette, lightPalette } from './palette';
+import { buildThemeColors } from './colors';
 
 export type ThemeAtoms = {
   text: TextStyle;
@@ -38,6 +39,7 @@ export type Theme = {
   scheme: ThemeScheme;
   name: ThemeName;
   palette: Palette;
+  colors: ReturnType<typeof buildThemeColors>;
   atoms: ThemeAtoms;
 };
 
@@ -56,6 +58,7 @@ export function createTheme({
     scheme,
     name,
     palette,
+    colors: buildThemeColors(palette, scheme),
     atoms: {
       text: {
         color: palette.neutral_1000,
