@@ -76,8 +76,11 @@ export function deriveIdentityRows(
     .sort((a, b) => compareStrings(a.identity, b.identity));
 }
 
+/** The current display mode of the sheet. */
+export type IdentitySwitcherMode = 'closed' | 'switching' | 'adding';
+
 type IdentitySwitcherState = {
-  isOpen: boolean;
+  mode: IdentitySwitcherMode;
 
   /**
    * Cached rows from the most recent refresh.
@@ -92,6 +95,9 @@ type IdentitySwitcherState = {
 
   close: () => void;
 
+  /** Toggle whether the sheet is switching identities or adding an identity. */
+  toggleMode: () => void;
+
   /** Switch the active login and close the sheet. */
   switchTo: (client: PolycentricClient, login: LoginId) => Promise<void>;
 };
@@ -99,12 +105,12 @@ type IdentitySwitcherState = {
 export const useIdentitySwitcherStore = create<IdentitySwitcherState>(
   (set, get) => {
     return {
-      isOpen: false,
+      mode: 'closed',
       rows: null,
       switchingIdentity: null,
 
       openWith: (client) => {
-        set({ isOpen: true });
+        set({ mode: 'switching' });
 
         void (async () => {
           try {
@@ -125,7 +131,13 @@ export const useIdentitySwitcherStore = create<IdentitySwitcherState>(
         })();
       },
 
-      close: () => set({ isOpen: false }),
+      close: () => set({ mode: 'closed' }),
+
+      toggleMode: () => {
+        const { mode } = get();
+        if (mode === 'closed') return;
+        set({ mode: mode === 'switching' ? 'adding' : 'switching' });
+      },
 
       switchTo: async (client, login) => {
         // Guard against concurrent switches
@@ -162,7 +174,7 @@ export function useIdentitySwitcher(): {
   close: () => void;
 } {
   const client = usePolycentric();
-  const isOpen = useIdentitySwitcherStore((state) => state.isOpen);
+  const isOpen = useIdentitySwitcherStore((state) => state.mode !== 'closed');
   const openWith = useIdentitySwitcherStore((state) => state.openWith);
   const close = useIdentitySwitcherStore((state) => state.close);
 

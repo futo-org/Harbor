@@ -2,8 +2,12 @@ import type {
   LoginId,
   LoginOverview,
   LoginStatus,
+  PolycentricClient,
 } from '@polycentric/react-native';
-import { deriveIdentityRows } from './useIdentitySwitcher';
+import {
+  deriveIdentityRows,
+  useIdentitySwitcherStore,
+} from './useIdentitySwitcher';
 
 jest.mock('@/src/common/components/toast', () => ({
   toast: { error: jest.fn() },
@@ -124,5 +128,59 @@ describe('deriveIdentityRows', () => {
         deriveIdentityRows(permutation, null).map((row) => row.identity),
       ).toEqual(['a', 'b', 'c']);
     }
+  });
+});
+
+describe('useIdentitySwitcherStore', () => {
+  const client = {
+    activeIdentityKey: null,
+    currentKeyPair: null,
+    storage: { logins: { listLogins: async () => [] } },
+  } as unknown as PolycentricClient;
+
+  const store = useIdentitySwitcherStore;
+  const mode = () => store.getState().mode;
+
+  beforeEach(() => {
+    store.setState({ mode: 'closed' });
+  });
+
+  it('opens in switching mode', () => {
+    store.getState().openWith(client);
+    expect(mode()).toBe('switching');
+  });
+
+  it('reopens in switching mode after closing while adding', () => {
+    store.getState().openWith(client);
+    store.getState().toggleMode();
+    store.getState().close();
+    store.getState().openWith(client);
+    expect(mode()).toBe('switching');
+  });
+
+  it('resets to switching mode when opened while adding', () => {
+    store.getState().openWith(client);
+    store.getState().toggleMode();
+    store.getState().openWith(client);
+    expect(mode()).toBe('switching');
+  });
+
+  it.each(['switching', 'adding'] as const)('closes from %s mode', (from) => {
+    store.setState({ mode: from });
+    store.getState().close();
+    expect(mode()).toBe('closed');
+  });
+
+  it('toggles between switching and adding', () => {
+    store.getState().openWith(client);
+    store.getState().toggleMode();
+    expect(mode()).toBe('adding');
+    store.getState().toggleMode();
+    expect(mode()).toBe('switching');
+  });
+
+  it('does not toggle while closed', () => {
+    store.getState().toggleMode();
+    expect(mode()).toBe('closed');
   });
 });

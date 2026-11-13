@@ -29,6 +29,7 @@ function defineHarborIcon(name: HarborSvgName) {
  * Map of icon names to their icon set definitions
  */
 export const IconsMap = {
+  accountSwitch: defineIcon(MaterialCommunityIcons, 'account-switch-outline'),
   add: defineIcon(Ionicons, 'add'),
   addCircleOutline: defineIcon(MaterialCommunityIcons, 'plus-circle-outline'),
   addOutline: defineIcon(Ionicons, 'add-circle-outline'),
