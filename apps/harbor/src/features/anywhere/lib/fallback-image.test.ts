@@ -21,7 +21,7 @@ describe('fallbackImage', () => {
       'https://youtube.com/shorts/dQw4w9WgXcQ',
     ]) {
       expect(await fallbackImage(url)).toBe(
-        'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+        'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
       );
     }
     expect(fetchMock).not.toHaveBeenCalled();

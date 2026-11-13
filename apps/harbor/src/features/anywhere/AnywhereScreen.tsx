@@ -2,6 +2,7 @@ import { List, type ListRef } from '@/src/common/components/List';
 import { ListEmpty } from '@/src/common/components/ListEmpty';
 import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
+import { TopbarSettingsButton } from '@/src/common/components/layout/topbar/SettingsButton';
 import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
@@ -49,23 +50,30 @@ export default function AnywhereScreen() {
           renderItem={({ item }) => <AnywhereRow {...item} />}
           onEndReached={loadMore}
           HeaderComponent={
-            <>
-              {isWeb ? <Topbar title="Anywhere" left={<></>} /> : null}
-              <View
-                style={[
-                  // As the search bar on Explore.
-                  Atoms.px_lg,
-                  Atoms.py_md,
-                  theme.atoms.bg,
-                  {
-                    borderBottomWidth: 1,
-                    borderBottomColor: theme.palette.neutral_25,
-                  },
-                ]}
-              >
-                <AnywhereUrlField />
-              </View>
-            </>
+            isWeb ? (
+              <>
+                <Topbar title="Anywhere" left={<></>} />
+                <View
+                  style={[
+                    // As the search bar on Explore.
+                    Atoms.px_lg,
+                    Atoms.py_md,
+                    theme.atoms.bg,
+                    {
+                      borderBottomWidth: 1,
+                      borderBottomColor: theme.palette.neutral_25,
+                    },
+                  ]}
+                >
+                  <AnywhereUrlField />
+                </View>
+              </>
+            ) : (
+              <Screen.Topbar
+                center={<AnywhereUrlField />}
+                right={<TopbarSettingsButton />}
+              />
+            )
           }
           ListHeaderComponent={
             pages.length > 0 ? (
