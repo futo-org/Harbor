@@ -54,6 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets
+        id: secrets
         with:
           identity: ${{ vars.INFISICAL_HARBOR_CI_PLAN_STAGING_ID }}
           environment: staging
@@ -66,16 +67,16 @@ jobs:
           stage-artifact: scraper-build
           stage: build
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ env.REGISTRY_TOKEN }}
-          cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
+          registry-token: ${{ steps.secrets.outputs.REGISTRY_TOKEN }}
+          cosign-key: ${{ steps.secrets.outputs.COSIGN_PRIVATE_KEY }}
       - uses: ./.forgejo/actions/chart-publish
         id: chart
         with:
           registry: ${{ env.REGISTRY }}
           chart: harbor-scraper
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ env.REGISTRY_TOKEN }}
-          cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
+          registry-token: ${{ steps.secrets.outputs.REGISTRY_TOKEN }}
+          cosign-key: ${{ steps.secrets.outputs.COSIGN_PRIVATE_KEY }}
       - uses: ./.forgejo/actions/deploy-tag
         with:
           registry: ${{ env.REGISTRY }}
@@ -84,4 +85,4 @@ jobs:
           chart-version: ${{ steps.chart.outputs.version }}
           environment: staging
           registry-user: ${{ vars.REGISTRY_USER }}
-          registry-token: ${{ env.REGISTRY_TOKEN }}
+          registry-token: ${{ steps.secrets.outputs.REGISTRY_TOKEN }}

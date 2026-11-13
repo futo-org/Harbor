@@ -1,19 +1,14 @@
-// Exports CI secrets from the Infisical project `harbor` to the job's
-// environment. Needs `enable-openid-connect: true` on the workflow and a
-// runner on the NetBird mesh. No dependencies: it runs in every job image.
+// Fetches CI secrets from the Infisical project `harbor`, by name. Needs
+// `enable-openid-connect: true` on the workflow and a runner on the NetBird
+// mesh. No dependencies: it runs in every job image.
 const fs = require('node:fs');
 const crypto = require('node:crypto');
 
 const url = 'https://infisical.futo.network';
 const input = (name) =>
-  (process.env[`INPUT_${name.toUpperCase()}`] || '').trim();
-
-async function request(what, target, options) {
-  const response = await fetch(target, options);
-  if (!response.ok)
-    throw new Error(`${what}: ${response.status} ${await response.text()}`);
-  return response.json();
-}
+  (process.env[`INPUT_${name.toUpperCase()}`] || '')
+    .split(/\s+/)
+    .filter(Boolean);
 
 async function login(identity) {
   const {
@@ -21,47 +16,61 @@ async function login(identity) {
     ACTIONS_ID_TOKEN_REQUEST_TOKEN: tokenAuth,
   } = process.env;
   if (!tokenUrl) return null;
-  const oidc = await request(
-    'OIDC token',
-    `${tokenUrl}&audience=${encodeURIComponent(url)}`,
-    {
-      headers: { authorization: `bearer ${tokenAuth}` },
-    },
-  );
-  const session = await request(
-    'Infisical login',
-    `${url}/api/v1/auth/oidc-auth/login`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ identityId: identity, jwt: oidc.value }),
-    },
-  );
-  return session.accessToken;
+
+  const oidc = await fetch(`${tokenUrl}&audience=${encodeURIComponent(url)}`, {
+    headers: { authorization: `bearer ${tokenAuth}` },
+  });
+  if (!oidc.ok) throw new Error(`OIDC token: ${oidc.status}`);
+
+  const session = await fetch(`${url}/api/v1/auth/oidc-auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      identityId: identity,
+      jwt: (await oidc.json()).value,
+    }),
+  });
+  if (!session.ok) {
+    throw new Error(
+      `Infisical login: ${session.status} ${await session.text()}`,
+    );
+  }
+  return (await session.json()).accessToken;
 }
 
-async function list(token, environment, path) {
-  const query = new URLSearchParams({
-    workspaceSlug: 'harbor',
-    environment,
-    secretPath: path,
-  });
-  const { secrets } = await request(
-    `${environment}:${path}`,
-    `${url}/api/v3/secrets/raw?${query}`,
-    {
+// The first folder that has the secret wins: the environment's, the repo's,
+// then the org's.
+async function fetchSecret(token, name, folders) {
+  for (const [environment, secretPath] of folders) {
+    const query = new URLSearchParams({
+      workspaceSlug: 'harbor',
+      environment,
+      secretPath,
+    });
+    const response = await fetch(`${url}/api/v3/secrets/raw/${name}?${query}`, {
       headers: { authorization: `Bearer ${token}` },
-    },
-  );
-  return Object.fromEntries(
-    secrets.map((secret) => [secret.secretKey, secret.secretValue]),
-  );
+    });
+    if (response.ok) return (await response.json()).secret.secretValue;
+    if (response.status !== 404) {
+      throw new Error(`${name}: ${response.status} ${await response.text()}`);
+    }
+  }
+  throw new Error(`${name} is not in Infisical`);
+}
+
+function write(file, name, value) {
+  const delimiter = `EOF_${crypto.randomUUID()}`;
+  fs.appendFileSync(file, `${name}<<${delimiter}\n${value}\n${delimiter}\n`);
 }
 
 async function main() {
-  const names = input('secrets').split(/\s+/).filter(Boolean);
-  const environment = input('environment');
-  const token = await login(input('identity'));
+  const [identity] = input('identity');
+  const [environment] = input('environment');
+  const outputs = input('secrets');
+  const exports = input('env');
+  const { GITHUB_OUTPUT: outputFile, GITHUB_ENV: envFile } = process.env;
+
+  const token = await login(identity);
   if (!token) {
     // Fork pull requests get no OIDC token, as they got no secrets before.
     console.log(
@@ -70,35 +79,24 @@ async function main() {
     return;
   }
 
-  // Later folders win: the org's, the repo's, then the environment's.
   const folders = [
-    ['global', '/ci/org'],
     ['global', '/ci/harbor'],
+    ['global', '/ci/org'],
   ];
-  if (environment) folders.push([environment, '/ci/harbor']);
-  const secrets = {};
-  for (const [env, path] of folders)
-    Object.assign(secrets, await list(token, env, path));
+  if (environment) folders.unshift([environment, '/ci/harbor']);
 
-  const missing = names.filter((name) => !secrets[name]);
-  if (missing.length)
-    throw new Error(`not in Infisical: ${missing.join(', ')}`);
-
-  const { GITHUB_ENV: envFile } = process.env;
-  for (const name of names) {
-    const value = secrets[name];
-    for (const line of value.split('\n'))
+  for (const name of new Set([...outputs, ...exports])) {
+    const value = await fetchSecret(token, name, folders);
+    for (const line of value.split('\n')) {
       if (line.trim())
         console.log(
           `::add-mask::${line.replaceAll('%', '%25').replaceAll('\r', '%0D')}`,
         );
-    const delimiter = `EOF_${crypto.randomUUID()}`;
-    fs.appendFileSync(
-      envFile,
-      `${name}<<${delimiter}\n${value}\n${delimiter}\n`,
-    );
+    }
+    if (outputs.includes(name)) write(outputFile, name, value);
+    if (exports.includes(name)) write(envFile, name, value);
   }
-  console.log(`exported ${names.join(', ')}`);
+  console.log(`fetched ${[...new Set([...outputs, ...exports])].join(', ')}`);
 }
 
 main().catch((error) => {
