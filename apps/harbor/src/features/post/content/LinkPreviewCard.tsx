@@ -1,12 +1,11 @@
 import { Text } from '@/src/common/components/primitives';
 import { memo, useMemo } from 'react';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import type { v2 } from '@polycentric/react-native';
 import { Image } from '@/src/common/components/Image';
 import { Linking, Pressable, View } from 'react-native';
 
-const IMAGE_BG = 'rgba(0,0,0,0.04)';
 /** Open-Graph standard image ratio (1200×630). */
 const OG_ASPECT = 1.91;
 /** Thumbnail width when `compact` places the image beside the text. */
@@ -59,11 +58,13 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
           compact
             ? [
                 Atoms.self_stretch,
-                { width: COMPACT_IMAGE_WIDTH, backgroundColor: IMAGE_BG },
+                theme.atoms_new.box.neutral.bg_subtle,
+                { width: COMPACT_IMAGE_WIDTH },
               ]
             : [
                 Atoms.w_full,
-                { aspectRatio: OG_ASPECT, backgroundColor: IMAGE_BG },
+                theme.atoms_new.box.neutral.bg_subtle,
+                { aspectRatio: OG_ASPECT },
               ]
         }
       />
@@ -108,11 +109,9 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
         Atoms.mt_md,
         Atoms.overflow_hidden,
         compact && Atoms.flex_row,
-        {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-        },
-        pressed && { opacity: 0.8 },
+        theme.atoms_new.box.neutral.border_subtle,
+        { borderWidth: 1 },
+        pressed && theme.atoms_new.faded_subtle,
       ]}
     >
       {compact ? (

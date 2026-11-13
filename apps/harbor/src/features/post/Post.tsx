@@ -3,7 +3,7 @@ import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -143,13 +143,11 @@ export const Post = memo(function Post({
       style={({ pressed }) => [
         Atoms.w_full,
         Atoms.px_md,
-        !hideBottomBorder && {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
-        pressed && {
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
-        },
+        !hideBottomBorder && [
+          theme.atoms_new.box.primary.border,
+          { borderBottomWidth: 1 },
+        ],
+        pressed && theme.atoms_new.box.primary.bg_hover,
       ]}
       onPress={handlePress}
       disabled={disablePress}
@@ -190,13 +188,8 @@ export const Post = memo(function Post({
               <View
                 style={[
                   Atoms.flex_1,
-                  {
-                    width: 2,
-                    backgroundColor: withHexOpacity(
-                      theme.palette.neutral_500,
-                      '30',
-                    ),
-                  },
+                  theme.atoms_new.box.neutral.border_subtle,
+                  { borderLeftWidth: 2 },
                 ]}
               />
             ) : null}

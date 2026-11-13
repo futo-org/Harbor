@@ -2,12 +2,7 @@ import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { Text } from '@/src/common/components/primitives/Text';
 import Icon, { type IconName } from '@/src/common/components/Icon';
 import { withIdentity } from '@/src/common/lib/authGate';
-import {
-  Atoms,
-  type TextColor,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { useCallback } from 'react';
 import {
   type GestureResponderEvent,
@@ -23,7 +18,7 @@ type PostActionButtonProps = {
   count?: number;
   active?: boolean;
   highlighted?: boolean;
-  color?: TextColor;
+  variant?: 'neutral' | 'accent' | 'success';
   size?: number | undefined;
 } & Omit<PressableProps, 'style' | 'children'>;
 
@@ -33,12 +28,14 @@ export default function PostActionButton({
   count,
   active = false,
   highlighted = false,
-  color = 'muted',
+  variant = 'neutral',
   size = 18,
   onPress,
   ...props
 }: PostActionButtonProps) {
   const { theme } = useTheme();
+  // The neutral box's text token is `muted`
+  const color = variant === 'neutral' ? 'muted' : variant;
 
   const handlePress = useCallback(
     (event: GestureResponderEvent) => {
@@ -69,11 +66,7 @@ export default function PostActionButton({
                 Atoms.rounded_full,
                 // overflow:hidden forces a rounded clip on native
                 Atoms.overflow_hidden,
-                {
-                  backgroundColor: isHighlighted
-                    ? withHexOpacity(theme.colors[color], '14')
-                    : 'transparent',
-                },
+                isHighlighted && theme.atoms_new.box[variant].bg_subtle,
               ]}
             >
               {emoji ? (

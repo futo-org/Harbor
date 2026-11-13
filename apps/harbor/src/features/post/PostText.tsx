@@ -132,7 +132,7 @@ function Segment({
         className="underlineOnHover"
         href={href}
         target={segment.type === 'link' ? '_blank' : undefined}
-        style={{ color: theme.palette.primary_500 }}
+        style={theme.atoms_new.accent}
         // Don't open the surrounding post card.
         onPress={(e) => e.stopPropagation?.()}
       >

@@ -43,7 +43,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
     <PostActionButton
       icon="repost"
       active={hasReposted}
-      color={'success'}
+      variant="success"
       accessibilityLabel="Repost or quote"
       count={count}
     />

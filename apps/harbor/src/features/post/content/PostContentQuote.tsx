@@ -8,7 +8,7 @@ import {
   hexToBytes,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
-import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -80,10 +80,8 @@ export function PostContentQuote({
         Atoms.p_md,
         Atoms.rounded_md,
         Atoms.mt_sm,
-        {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-        },
+        theme.atoms_new.box.neutral.border_subtle,
+        { borderWidth: 1 },
       ]}
     >
       <AuthorRow post={post} />
@@ -108,10 +106,8 @@ function QuoteUnavailable() {
         Atoms.p_md,
         Atoms.rounded_md,
         Atoms.mt_sm,
-        {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-        },
+        theme.atoms_new.box.neutral.border_subtle,
+        { borderWidth: 1 },
       ]}
     >
       <View style={[Atoms.justify_center, { height: PLACEHOLDER_HEIGHT }]}>
@@ -182,10 +178,8 @@ function QuoteSkeleton() {
         Atoms.rounded_md,
         Atoms.mt_sm,
         animatedStyle,
-        {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-        },
+        theme.atoms_new.box.neutral.border_subtle,
+        { borderWidth: 1 },
       ]}
     >
       <View style={[Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}>

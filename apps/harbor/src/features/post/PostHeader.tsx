@@ -2,7 +2,7 @@ import { Text } from '@/src/common/components/primitives';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import { Routes } from '@/src/common/constants';
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
@@ -38,10 +38,8 @@ function ThreadHeader() {
         <View
           style={[
             Atoms.flex_1,
-            {
-              width: 2,
-              backgroundColor: withHexOpacity(theme.palette.neutral_500, '30'),
-            },
+            theme.atoms_new.box.neutral.border_subtle,
+            { borderLeftWidth: 2 },
           ]}
         />
       </View>

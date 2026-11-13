@@ -4,7 +4,7 @@ import {
   SkeletonList,
   useShimmerOpacity,
 } from '@/src/common/components/skeletons';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -24,10 +24,8 @@ export function PostSkeleton() {
         Atoms.flex_row,
         Atoms.gap_md,
         animatedStyle,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
+        theme.atoms_new.box.primary.border,
+        { borderBottomWidth: 1 },
       ]}
     >
       <Block width={AVATAR_SIZE} height={AVATAR_SIZE} />

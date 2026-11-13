@@ -3,7 +3,7 @@ import {
   type PostData,
 } from '@/src/common/lib/polycentric-hooks';
 import { resolveImageSources } from '@/src/common/components/ImageViewer';
-import { Atoms } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import {
   MAX_ASPECT_RATIO,
   MIN_ASPECT_RATIO,
@@ -20,7 +20,6 @@ const POST_IMAGE_TARGET = 512;
 const GRID_ASPECT = 16 / 9;
 /** Pixel gutter between grid tiles. */
 const GRID_GAP = 2;
-const TILE_BG = 'rgba(0,0,0,0.04)';
 
 /**
  * Image grid for a post. Twitter-style layouts for 1–4 images; extras
@@ -32,6 +31,7 @@ export const PostImages = memo(function PostImages({
 }: {
   post: PostData;
 }) {
+  const { theme } = useTheme();
   const client = usePolycentric();
   const capped = useMemo(
     () => post.images.slice(0, MAX_ATTACHMENTS),
@@ -65,7 +65,7 @@ export const PostImages = memo(function PostImages({
           Atoms.w_full,
           Atoms.rounded_md,
           Atoms.mt_sm,
-          pressed && { opacity: 0.8 },
+          pressed && theme.atoms_new.faded_subtle,
         ]}
       >
         <Image
@@ -79,8 +79,8 @@ export const PostImages = memo(function PostImages({
                 MAX_ASPECT_RATIO,
                 Math.max(sources[0].aspectRatio ?? 1, MIN_ASPECT_RATIO),
               ),
-              backgroundColor: TILE_BG,
             },
+            theme.atoms_new.box.neutral.bg_subtle,
           ]}
         />
       </Pressable>
@@ -95,11 +95,8 @@ export const PostImages = memo(function PostImages({
         Atoms.rounded_md,
         Atoms.overflow_hidden,
         Atoms.mt_sm,
-        {
-          aspectRatio: GRID_ASPECT,
-          gap: GRID_GAP,
-          backgroundColor: TILE_BG,
-        },
+        theme.atoms_new.box.neutral.bg_subtle,
+        { aspectRatio: GRID_ASPECT, gap: GRID_GAP },
       ]}
     >
       {sources.length === 2 ? (
@@ -140,6 +137,7 @@ function GridTile({
   index: number;
   onOpen: (index: number) => void;
 }) {
+  const { theme } = useTheme();
   return (
     <Pressable
       onPress={(e) => {
@@ -147,12 +145,19 @@ function GridTile({
         e.stopPropagation?.();
         onOpen(index);
       }}
-      style={({ pressed }) => [Atoms.flex_1, pressed && { opacity: 0.8 }]}
+      style={({ pressed }) => [
+        Atoms.flex_1,
+        pressed && theme.atoms_new.faded_subtle,
+      ]}
     >
       <Image
         uris={uris}
         contentFit="cover"
-        style={[Atoms.w_full, Atoms.h_full, { backgroundColor: TILE_BG }]}
+        style={[
+          Atoms.w_full,
+          Atoms.h_full,
+          theme.atoms_new.box.neutral.bg_subtle,
+        ]}
       />
     </Pressable>
   );

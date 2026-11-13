@@ -7,7 +7,7 @@ import {
   type PostData,
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -66,12 +66,7 @@ export default function PostMenu({ post }: PostMenuProps) {
                 // overflow:hidden forces a rounded clip on native — without it the
                 // press background renders with square corners.
                 Atoms.overflow_hidden,
-                (hovered || pressed) && {
-                  backgroundColor: withHexOpacity(
-                    theme.palette.neutral_500,
-                    '14',
-                  ),
-                },
+                (hovered || pressed) && theme.atoms_new.box.neutral.bg_subtle,
               ]}
             >
               <Icon name="more" color="muted" size={16} />
