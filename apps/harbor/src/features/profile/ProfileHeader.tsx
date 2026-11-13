@@ -202,7 +202,7 @@ function ProfileHeaderInner({
         ) : null}
         {profile.description && !obscured ? (
           <View style={Atoms.mt_sm}>
-            <Text variant="body" fontSize="sm" color="neutral_1000">
+            <Text variant="body" fontSize="sm" color="primary">
               {profile.description}
             </Text>
           </View>
@@ -235,7 +235,7 @@ function IdentityKeyText({ value }: { value: string }) {
     return (
       <Text
         variant="secondary"
-        color="neutral_500"
+        color="muted"
         numberOfLines={1}
         ellipsizeMode="middle"
         style={{ flexShrink: 1 }}
@@ -248,13 +248,13 @@ function IdentityKeyText({ value }: { value: string }) {
     <View style={[Atoms.flex_row, { flexShrink: 1, minWidth: 0 }]}>
       <Text
         variant="secondary"
-        color="neutral_500"
+        color="muted"
         numberOfLines={1}
         style={{ flexShrink: 1, minWidth: 0 }}
       >
         {value.slice(0, -KEY_TAIL_LENGTH)}
       </Text>
-      <Text variant="secondary" color="neutral_500" style={{ flexShrink: 0 }}>
+      <Text variant="secondary" color="muted" style={{ flexShrink: 0 }}>
         {value.slice(-KEY_TAIL_LENGTH)}
       </Text>
     </View>
@@ -297,7 +297,7 @@ function FollowCounts({
           onPress={() => router.navigate(route)}
           style={({ pressed }) => [pressed && { opacity: 0.5 }]}
         >
-          <Text variant="secondary" color="neutral_500" selectable={false}>
+          <Text variant="secondary" color="muted" selectable={false}>
             <Text variant="secondary" fontWeight="semibold">
               {count}
             </Text>{' '}
@@ -349,7 +349,7 @@ function AliasLabel({
             },
           ]}
         >
-          <Text variant="secondary" color="neutral_900">
+          <Text variant="secondary" color="primary">
             {alias}
           </Text>
         </View>

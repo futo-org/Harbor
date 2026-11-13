@@ -178,7 +178,7 @@ export default function ReactionDetailsSheet({
   } else if (selected.reactions.length === 0) {
     footer = (
       <View style={[Atoms.items_center, Atoms.px_lg, Atoms.py_3xl]}>
-        <Text color="neutral_500">No reactions to show.</Text>
+        <Text color="muted">No reactions to show.</Text>
       </View>
     );
   }

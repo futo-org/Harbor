@@ -81,12 +81,7 @@ export function NavItem({
               },
             ]}
           >
-            <Text
-              fontSize="xs"
-              lineHeight={18}
-              fontWeight="bold"
-              color="neutral_0"
-            >
+            <Text fontSize="xs" lineHeight={18} fontWeight="bold" color="light">
               {badge}
             </Text>
           </View>

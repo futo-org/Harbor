@@ -75,13 +75,13 @@ export function Toast({ toast }: { toast: ToastData }) {
       <Icon name={variant.icon} color={variant.color} size={20} />
       <View style={Atoms.flex_1}>
         <ToastPrimitive.Title asChild>
-          <Text variant="body" fontWeight="semibold" style={theme.atoms.text}>
+          <Text variant="body" fontWeight="semibold">
             {toast.title}
           </Text>
         </ToastPrimitive.Title>
         {toast.description ? (
           <ToastPrimitive.Description asChild>
-            <Text variant="small" style={theme.atoms.text_neutral_medium}>
+            <Text variant="small" color="secondary">
               {toast.description}
             </Text>
           </ToastPrimitive.Description>

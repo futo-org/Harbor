@@ -61,7 +61,7 @@ export function IdentitySettingsSheet({
           ]}
         >
           <View style={Atoms.gap_xs}>
-            <Text variant="small" color="neutral_500">
+            <Text variant="small" color="muted">
               IDENTITY
             </Text>
             <Text variant="secondary" monospace selectable>
@@ -77,7 +77,7 @@ export function IdentitySettingsSheet({
           />
 
           <View style={Atoms.gap_xs}>
-            <Text variant="small" color="neutral_500">
+            <Text variant="small" color="muted">
               SIGNING KEY
             </Text>
             <Text variant="secondary" monospace selectable>

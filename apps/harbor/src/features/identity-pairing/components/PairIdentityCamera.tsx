@@ -48,7 +48,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
     <>
       {canUseCamera && device ? (
         <>
-          <Text variant="body" color="neutral_500">
+          <Text variant="body" color="muted">
             On your other device, go to Settings {'->'} Pair Identity.
           </Text>
           <View

@@ -101,7 +101,7 @@ function ShowMoreToggle({ onPress }: { onPress: () => void }) {
     >
       <Text
         variant="body"
-        color="primary_500"
+        color="accent"
         style={hovered ? { textDecorationLine: 'underline' } : undefined}
       >
         Show more
@@ -144,7 +144,7 @@ function Segment({
   return (
     <Text
       variant="secondary"
-      color="primary_500"
+      color="accent"
       fontWeight="regular"
       {...size}
       onPress={(e) => {

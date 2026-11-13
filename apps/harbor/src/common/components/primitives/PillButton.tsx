@@ -8,7 +8,7 @@ import { Text } from './Text';
 import {
   useTheme,
   withHexOpacity,
-  type PaletteColorToken,
+  type TextColor,
   type FontWeightToken,
 } from '@/src/common/theme';
 import { usePressAnimation } from '@/src/common/lib/animation';
@@ -24,10 +24,10 @@ interface SmallButtonProps extends Omit<PressableProps, 'style'> {
   icon?: IconRenderFn;
 }
 
-const textColorMap: Record<SmallButtonVariant, PaletteColorToken> = {
-  primary: 'white',
-  secondary: 'primary_600',
-  destructive: 'negative_500',
+const textColorMap: Record<SmallButtonVariant, TextColor> = {
+  primary: 'light',
+  secondary: 'accent',
+  destructive: 'danger',
 };
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
@@ -42,7 +42,7 @@ export function PillButton({
   const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
-  const textColor = theme.palette[textColorMap[variant]];
+  const textColor = theme.colors[textColorMap[variant]];
 
   const variantStyle = (() => {
     switch (variant) {

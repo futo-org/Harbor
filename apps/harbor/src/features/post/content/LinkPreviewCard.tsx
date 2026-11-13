@@ -71,7 +71,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
 
   const text = (
     <View style={[Atoms.p_md, compact && Atoms.flex_1]}>
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         {host}
       </Text>
       {link.title ? (
@@ -79,7 +79,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
           variant="secondary"
           fontWeight="bold"
           numberOfLines={2}
-          style={[Atoms.mt_xs, theme.atoms.text_neutral_high]}
+          style={Atoms.mt_xs}
         >
           {link.title}
         </Text>
@@ -87,7 +87,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
       {link.description ? (
         <Text
           variant="secondary"
-          color="neutral_500"
+          color="muted"
           numberOfLines={2}
           style={Atoms.mt_xs}
         >

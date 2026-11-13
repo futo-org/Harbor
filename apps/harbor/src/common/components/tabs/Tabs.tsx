@@ -296,7 +296,7 @@ function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
             // Content-sized tabs keep a constant weight so they don't change
             // width when selected.
             fontWeight={expand ? (active ? 'bold' : 'regular') : 'semibold'}
-            color={active ? 'neutral_900' : 'neutral_500'}
+            color={active ? 'primary' : 'muted'}
             selectable={false}
           >
             {children}

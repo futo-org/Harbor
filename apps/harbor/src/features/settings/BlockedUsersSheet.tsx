@@ -29,7 +29,7 @@ export default function BlockedUsersSheet() {
       />
       <Sheet.Content style={[Atoms.p_0]}>
         {blocked.length === 0 ? (
-          <Text variant="secondary" color="neutral_500" style={[Atoms.p_lg]}>
+          <Text variant="secondary" color="muted" style={[Atoms.p_lg]}>
             {"You haven't blocked anyone"}
           </Text>
         ) : (

@@ -97,7 +97,7 @@ export default function OnboardingWelcomeScreen() {
             />
           </>
         ) : (
-          <Text variant="small" color="neutral_500" style={Atoms.text_center}>
+          <Text variant="small" color="muted" style={Atoms.text_center}>
             {PRIVATE_BROWSING_NOTICE}
           </Text>
         )}

@@ -140,7 +140,7 @@ function PostShortcutHint() {
       {(isApplePlatform ? ['⌘', '⏎'] : ['Ctrl', 'Enter']).map((key) => (
         <Kbd key={key}>{key}</Kbd>
       ))}
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         to post
       </Text>
     </View>

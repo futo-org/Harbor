@@ -72,7 +72,8 @@ export function ProfileSearchInput({
         <Text
           variant="small"
           fontWeight="semibold"
-          style={[theme.atoms.text_neutral_medium, Atoms.px_lg]}
+          color="secondary"
+          style={Atoms.px_lg}
         >
           People you follow
         </Text>
@@ -100,7 +101,7 @@ export function ProfileSearchInput({
       </View>
 
       {showEmpty && (
-        <Text variant="small" color="neutral_500" style={Atoms.px_lg}>
+        <Text variant="small" color="muted" style={Atoms.px_lg}>
           {trimmed
             ? 'No matches. Try a full alias (user@domain) or identity id.'
             : 'Not following anyone yet — enter an alias (user@domain) or identity id.'}

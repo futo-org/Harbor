@@ -79,10 +79,7 @@ export function UpdateSheet() {
                   size="small"
                   color={theme.palette.neutral_500}
                 />
-                <Text
-                  variant="secondary"
-                  style={theme.atoms.text_neutral_medium}
-                >
+                <Text variant="secondary" color="secondary">
                   Waiting for the installer…
                 </Text>
               </View>
@@ -126,7 +123,7 @@ export function UpdateSheet() {
           </Text>
           {available.notes ? <ReleaseNotes notes={available.notes} /> : null}
           {phase === 'error' && error ? (
-            <Text variant="secondary" color="negative_500">
+            <Text variant="secondary" color="danger">
               {error}
             </Text>
           ) : null}

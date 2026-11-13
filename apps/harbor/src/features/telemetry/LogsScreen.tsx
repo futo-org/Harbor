@@ -83,12 +83,7 @@ function LogRow({
         >
           {entry.message}
         </Text>
-        <Text
-          fontSize={11}
-          lineHeight={14}
-          fontWeight="regular"
-          color="neutral_400"
-        >
+        <Text fontSize={11} lineHeight={14} fontWeight="regular" color="muted">
           {formatRowTime(entry.at)}
         </Text>
         {expanded ? (
@@ -96,7 +91,7 @@ function LogRow({
             monospace
             fontSize={FONT_SIZE}
             lineHeight={LINE_HEIGHT}
-            color="neutral_600"
+            color="secondary"
             selectable
             style={[
               Atoms.p_sm,
@@ -223,7 +218,7 @@ export default function LogsScreen() {
                   Atoms.p_xl,
                 ]}
               >
-                <Text variant="secondary" color="neutral_500">
+                <Text variant="secondary" color="muted">
                   {entries.length === 0
                     ? 'No logs recorded yet.'
                     : 'No matching logs.'}

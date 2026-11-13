@@ -44,7 +44,7 @@ export default function SetDisplayNameScreen() {
           />
           <CharCount count={data.displayName.length} max={MAX_NAME_LENGTH} />
           {error && (
-            <Text variant="secondary" color="negative_500">
+            <Text variant="secondary" color="danger">
               {error}
             </Text>
           )}

@@ -64,7 +64,7 @@ export function ClaimMenu({
           {isAuthor ? (
             <DropdownMenu.Item onPress={onDeletePress}>
               <Icon name="trashBin" color="negative_500" size={16} />
-              <Text variant="secondary" fontWeight="bold" color="negative_500">
+              <Text variant="secondary" fontWeight="bold" color="danger">
                 Delete
               </Text>
             </DropdownMenu.Item>

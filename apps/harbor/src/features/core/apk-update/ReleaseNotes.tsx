@@ -1,5 +1,5 @@
 import { Text } from '@/src/common/components/primitives/Text';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms } from '@/src/common/theme';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
@@ -23,8 +23,6 @@ function renderInline(text: string): ReactNode {
 /** Just enough markdown for the GitLab changelog output: `###` headings,
  *  `-` bullets, links, and bold. */
 export function ReleaseNotes({ notes }: { notes: string }) {
-  const { theme } = useTheme();
-
   const lines = notes.split('\n');
 
   return (
@@ -52,13 +50,10 @@ export function ReleaseNotes({ notes }: { notes: string }) {
         if (bullet) {
           return (
             <View key={key} style={[Atoms.flex_row, Atoms.gap_sm, Atoms.pl_xs]}>
-              <Text variant="secondary" style={theme.atoms.text_neutral_medium}>
+              <Text variant="secondary" color="secondary">
                 {'•'}
               </Text>
-              <Text
-                variant="secondary"
-                style={[Atoms.flex_1, theme.atoms.text_neutral_medium]}
-              >
+              <Text variant="secondary" color="secondary" style={Atoms.flex_1}>
                 {renderInline(bullet[1])}
               </Text>
             </View>
@@ -66,11 +61,7 @@ export function ReleaseNotes({ notes }: { notes: string }) {
         }
 
         return (
-          <Text
-            key={key}
-            variant="secondary"
-            style={theme.atoms.text_neutral_medium}
-          >
+          <Text key={key} variant="secondary" color="secondary">
             {renderInline(trimmed)}
           </Text>
         );

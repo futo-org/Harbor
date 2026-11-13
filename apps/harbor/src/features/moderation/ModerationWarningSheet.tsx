@@ -90,16 +90,16 @@ export function ModerationWarningSheet() {
         >
           <Icon name="infoOutline" size={24} color="neutral_700" />
           <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
-            <Text fontWeight="bold" color="neutral_700">
+            <Text fontWeight="bold" color="secondary">
               Hidden for {names}
             </Text>
             {descriptions.map((description) => (
-              <Text key={description} variant="secondary" color="neutral_500">
+              <Text key={description} variant="secondary" color="muted">
                 {description}
               </Text>
             ))}
             {labeler ? (
-              <Text variant="small" color="neutral_500">
+              <Text variant="small" color="muted">
                 {!labeler.isSubject
                   ? `Applied by ${labeler.name}`
                   : subject === 'post'
@@ -120,9 +120,9 @@ export function ModerationWarningSheet() {
                 Atoms.gap_md,
               ]}
             >
-              <Text variant="secondary" color="neutral_500">
+              <Text variant="secondary" color="muted">
                 Always show{' '}
-                <Text variant="secondary" color="neutral_500" fontWeight="bold">
+                <Text variant="secondary" color="muted" fontWeight="bold">
                   {names}
                 </Text>
               </Text>
@@ -136,7 +136,7 @@ export function ModerationWarningSheet() {
           <LinkButton
             title="Change your moderation settings"
             variant="secondary"
-            color="neutral_500"
+            color="muted"
             fontWeight="regular"
             underlineOnHover
             containerStyle={Atoms.self_start}

@@ -8,7 +8,7 @@ import {
   withHexOpacity,
   type BorderRadiusToken,
   type FontWeightToken,
-  type PaletteColorToken,
+  type TextColor,
   type Theme,
 } from '@/src/common/theme';
 import { type Href, Link, router } from 'expo-router';
@@ -97,7 +97,7 @@ export function Button({
   const isDisabled = !!disabled;
   const iconColor = isDisabled
     ? withHexOpacity(theme.palette.neutral_500, '80')
-    : theme.palette[textColorMap[variant]];
+    : theme.colors[textColorMap[variant]];
   const surfaceStyle = isDisabled
     ? getDisabledSurfaceStyle(theme)
     : getVariantStyle(theme, variant);
@@ -149,7 +149,7 @@ export function Button({
           <Text
             fontSize={size}
             fontWeight={FONT_WEIGHT}
-            color={isDisabled ? 'neutral_1000' : textColorMap[variant]}
+            color={isDisabled ? 'primary' : textColorMap[variant]}
             style={
               isDisabled
                 ? { color: withHexOpacity(theme.palette.neutral_500, '80') }
@@ -189,11 +189,11 @@ const styles = StyleSheet.create({
   },
 });
 
-export const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
-  primary: 'white',
-  secondary: 'primary_600',
-  tertiary: 'neutral_1000',
-  destructive: 'negative_500',
+export const textColorMap: Record<ButtonVariant, TextColor> = {
+  primary: 'light',
+  secondary: 'accent',
+  tertiary: 'primary',
+  destructive: 'danger',
 };
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';

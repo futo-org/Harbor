@@ -55,11 +55,11 @@ export function PostWarnOverlay({
       >
         <Icon name="infoOutline" color="neutral_700" />
         <View style={[Atoms.flex_1]}>
-          <Text variant="secondary" fontWeight="bold" color="neutral_700">
+          <Text variant="secondary" fontWeight="bold" color="secondary">
             Hidden for {labelNames(labels).toLowerCase()}
           </Text>
           {attribution ? (
-            <Text variant="small" color="neutral_500" fontWeight="regular">
+            <Text variant="small" color="muted" fontWeight="regular">
               {attribution}
             </Text>
           ) : null}
@@ -84,7 +84,7 @@ export function PostWarnOverlay({
           pressed && { opacity: 0.5 },
         ]}
       >
-        <Text variant="secondary" fontWeight="bold" color="neutral_600">
+        <Text variant="secondary" fontWeight="bold" color="secondary">
           Show
         </Text>
       </Pressable>

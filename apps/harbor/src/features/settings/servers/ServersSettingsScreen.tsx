@@ -32,7 +32,7 @@ export function ServersSettingsSheet() {
     >
       <Sheet.Content style={[Atoms.gap_lg]}>
         {servers.length === 0 ? (
-          <Text variant="secondary" color="neutral_500">
+          <Text variant="secondary" color="muted">
             No servers configured
           </Text>
         ) : (
@@ -50,7 +50,7 @@ export function ServersSettingsSheet() {
 
         {suggestedServers.length > 0 && (
           <View style={Atoms.gap_sm}>
-            <Text variant="secondary" color="neutral_500">
+            <Text variant="secondary" color="muted">
               Suggested servers
             </Text>
             {suggestedServers.map((server) => (

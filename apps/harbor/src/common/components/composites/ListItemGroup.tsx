@@ -21,7 +21,7 @@ export function ListItemGroup({ label, children }: ListItemGroupProps) {
   return (
     <View style={Atoms.gap_sm}>
       {label && (
-        <Text variant="secondary" color="neutral_500">
+        <Text variant="secondary" color="muted">
           {label}
         </Text>
       )}

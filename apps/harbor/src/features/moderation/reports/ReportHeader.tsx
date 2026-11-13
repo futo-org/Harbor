@@ -28,7 +28,7 @@ export function ReportHeader({
     <View style={[Atoms.px_md, Atoms.pt_md, Atoms.gap_xs]}>
       <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
         <Text fontWeight="bold">{categoryName(report.category)}</Text>
-        <Text variant="small" color="neutral_500">
+        <Text variant="small" color="muted">
           {report.reportCount === 1
             ? '1 report'
             : `${report.reportCount} reports`}
@@ -41,12 +41,12 @@ export function ReportHeader({
       ) : null}
       <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}>
         <Icon name="shieldAccount" size={14} color="neutral_500" />
-        <Text variant="small" color="neutral_500">
+        <Text variant="small" color="muted">
           Reported on{' '}
         </Text>
         <Text
           variant="small"
-          color="neutral_700"
+          color="secondary"
           fontWeight="semibold"
           monospace
           numberOfLines={1}
@@ -63,21 +63,21 @@ export function ReportHeader({
           Atoms.gap_xs,
         ]}
       >
-        <Text variant="small" color="neutral_500">
+        <Text variant="small" color="muted">
           Reported by
         </Text>
         {report.reporters.map((reporter) => (
           <ReporterChip key={reporter} identity={reporter} />
         ))}
         {more > 0 ? (
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             and {more} more
           </Text>
         ) : null}
       </View>
       {report.status !== v2.ReportStatus.OPEN ? (
         <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_2xs]}>
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             {report.status === v2.ReportStatus.RESOLVED
               ? 'Resolved'
               : 'Dismissed'}{' '}
@@ -86,10 +86,10 @@ export function ReportHeader({
           <Username
             identity={report.resolvedBy}
             variant="small"
-            color="neutral_500"
+            color="muted"
             fontWeight="semibold"
           />
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             {' · '}
             <TimeAgo since={report.resolvedAt} />
           </Text>

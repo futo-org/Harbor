@@ -38,7 +38,7 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
       <View style={[Atoms.p_md, Atoms.gap_md]}>
         <View>
           <Text fontWeight="bold">Join Harbor</Text>
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             Share to the world, not platforms.
           </Text>
         </View>
@@ -60,7 +60,7 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
             />
           </View>
         ) : (
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             {PRIVATE_BROWSING_NOTICE}
           </Text>
         )}
@@ -104,7 +104,7 @@ export function SignupBar() {
     >
       <View style={Atoms.flex_shrink_1}>
         <Text fontWeight="bold">Join Harbor</Text>
-        <Text variant="small" color="neutral_500">
+        <Text variant="small" color="muted">
           Share to the world, not platforms.
         </Text>
       </View>

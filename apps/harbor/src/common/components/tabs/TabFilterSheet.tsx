@@ -67,11 +67,7 @@ export function TabFilterSheet<T extends string>({
                   {option.label}
                 </Text>
                 {option.subtitle ? (
-                  <Text
-                    variant="small"
-                    style={theme.atoms.text_neutral_medium}
-                    fontWeight="regular"
-                  >
+                  <Text variant="small" color="secondary" fontWeight="regular">
                     {option.subtitle}
                   </Text>
                 ) : null}

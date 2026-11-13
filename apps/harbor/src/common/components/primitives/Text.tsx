@@ -6,7 +6,7 @@ import {
   type FontSizeToken,
   type FontWeightToken,
   type LineHeightToken,
-  type PaletteColorToken,
+  type TextColor,
   typography,
   useTheme,
 } from '@/src/common/theme';
@@ -64,7 +64,7 @@ export type TextVariant = 'title' | 'subtitle' | 'body' | 'secondary' | 'small';
 
 interface TextProps extends RNTextProps {
   variant?: TextVariant;
-  color?: PaletteColorToken;
+  color?: TextColor;
   fontWeight?: FontWeightToken;
   fontSize?: FontSizeToken | number;
   lineHeight?: LineHeightToken | number;
@@ -73,7 +73,7 @@ interface TextProps extends RNTextProps {
 
 export function Text({
   variant = 'body',
-  color,
+  color = 'primary',
   fontWeight,
   fontSize,
   lineHeight,
@@ -116,11 +116,11 @@ export function Text({
       style={[
         {
           fontFamily,
-          color: color ? theme.palette[color] : theme.palette.neutral_900,
           fontSize: resolvedFontSize,
           lineHeight: resolvedLineHeight,
           ...(isWeb ? { fontWeight: resolvedFontWeight } : {}),
         },
+        theme.atoms_new[color],
         style,
       ]}
       {...props}

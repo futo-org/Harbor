@@ -26,7 +26,7 @@ export function Kbd({ children }: KbdProps) {
     >
       <Text
         variant="small"
-        color="neutral_500"
+        color="muted"
         // Words stay on the neighboring text's baseline; single glyphs
         // (⌘, ⏎, ↑) have no baseline to keep and move with the box.
         style={isWord && { transform: [{ translateY: -KEY_BOX_DROP }] }}

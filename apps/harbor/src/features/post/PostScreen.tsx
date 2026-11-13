@@ -42,7 +42,7 @@ export default function FeedPostScreen() {
           <Screen.Topbar title="Post" />
           {isLoading ? null : (
             <View style={[Atoms.items_center, Atoms.py_3xl]}>
-              <Text color="neutral_500">Post not found.</Text>
+              <Text color="muted">Post not found.</Text>
             </View>
           )}
         </Screen.PrimaryColumn>

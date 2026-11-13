@@ -57,7 +57,7 @@ export function ClaimCreatePlatformPicker({
   if (failed) {
     return (
       <View style={[Atoms.gap_md, Atoms.items_start]}>
-        <Text variant="body" style={theme.atoms.text_neutral_medium}>
+        <Text variant="body" color="secondary">
           Could not reach any of the configured verification servers. Check your
           connection and try again.
         </Text>

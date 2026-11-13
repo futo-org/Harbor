@@ -103,14 +103,14 @@ function ApplicationSubheader({
   url?: string;
 }) {
   const label = (
-    <Text variant="secondary" color="neutral_500" fontWeight="regular">
+    <Text variant="secondary" color="muted" fontWeight="regular">
       {name}
     </Text>
   );
 
   return (
     <View style={[Atoms.flex_row, Atoms.align_center, Atoms.flex_shrink_0]}>
-      <Text variant="secondary" color="neutral_500" fontWeight="regular">
+      <Text variant="secondary" color="muted" fontWeight="regular">
         {prefix}
       </Text>
       {url ? (
@@ -157,17 +157,13 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
     >
       <Text
         variant="secondary"
-        color="neutral_500"
+        color="muted"
         fontWeight="regular"
         style={Atoms.flex_shrink_0}
       >
         Replying to{' '}
       </Text>
-      <Username
-        identity={parentIdentity}
-        variant="secondary"
-        color="primary_500"
-      />
+      <Username identity={parentIdentity} variant="secondary" color="accent" />
     </Pressable>
   );
 }

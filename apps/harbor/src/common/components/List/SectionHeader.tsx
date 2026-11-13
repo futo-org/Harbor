@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { Atoms, useTheme } from '../../theme';
+import { Atoms } from '../../theme';
 import { InfoTooltip } from '../InfoTooltip';
 import { Text } from '../primitives';
 
@@ -11,7 +11,6 @@ export function SectionHeader({
   title: string;
   tooltip?: string;
 }) {
-  const { theme } = useTheme();
   return (
     <View
       style={[
@@ -23,11 +22,7 @@ export function SectionHeader({
         Atoms.pb_sm,
       ]}
     >
-      <Text
-        variant="small"
-        style={theme.atoms.text_neutral_medium}
-        fontWeight="semibold"
-      >
+      <Text variant="small" color="secondary" fontWeight="semibold">
         {title}
       </Text>
       {tooltip ? <InfoTooltip text={tooltip} size={14} /> : null}

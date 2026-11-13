@@ -100,17 +100,13 @@ export const Post = memo(function Post({
           <>
             <Text
               variant="secondary"
-              color="neutral_500"
+              color="muted"
               fontWeight="bold"
               style={Atoms.flex_shrink_0}
             >
               ·
             </Text>
-            <Text
-              variant="secondary"
-              color="neutral_500"
-              style={Atoms.flex_shrink_0}
-            >
+            <Text variant="secondary" color="muted" style={Atoms.flex_shrink_0}>
               <TimeAgo since={shownAt} />
             </Text>
           </>
@@ -179,7 +175,7 @@ export const Post = memo(function Post({
           </View>
           <View style={Atoms.gap_2xs}>{body}</View>
           {fullTimestamp ? (
-            <Text variant="secondary" color="neutral_500">
+            <Text variant="secondary" color="muted">
               {fullTimestamp}
             </Text>
           ) : null}

@@ -81,7 +81,7 @@ export default function ProfileShareSheet({
               variant="title"
               fontWeight="bold"
               numberOfLines={2}
-              color="black"
+              color="dark"
               style={Atoms.text_center}
             />
           </View>

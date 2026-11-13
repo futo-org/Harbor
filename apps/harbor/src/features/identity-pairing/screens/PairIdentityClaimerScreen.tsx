@@ -81,7 +81,7 @@ export default function PairIdentityClaimerScreen() {
     body = (
       <>
         <Text variant="title">Error</Text>
-        <Text variant="body" color="negative_500">
+        <Text variant="body" color="danger">
           {error}
         </Text>
         <Button
@@ -166,7 +166,7 @@ function PairingEmojiCard({
 
       <Text
         variant="small"
-        color="neutral_500"
+        color="muted"
         selectable
         monospace
         style={[
@@ -180,7 +180,7 @@ function PairingEmojiCard({
 
       <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
         <ActivityIndicator size="small" />
-        <Text variant="small" color="neutral_500" style={Atoms.flex_shrink_1}>
+        <Text variant="small" color="muted" style={Atoms.flex_shrink_1}>
           Waiting for approval from other device
         </Text>
       </View>
@@ -269,7 +269,7 @@ function IssuerProfile({ identityKey }: { identityKey: string }) {
       />
       <Text
         variant="secondary"
-        color="neutral_500"
+        color="muted"
         selectable
         monospace
         style={[
@@ -307,11 +307,7 @@ function ApprovalLoadingBody() {
       </Text>
       <View style={[Atoms.items_center, Atoms.gap_xs]}>
         <Text variant="title">Approved!</Text>
-        <Text
-          variant="body"
-          color="neutral_500"
-          style={{ textAlign: 'center' }}
-        >
+        <Text variant="body" color="muted" style={{ textAlign: 'center' }}>
           Completing setup...
         </Text>
       </View>

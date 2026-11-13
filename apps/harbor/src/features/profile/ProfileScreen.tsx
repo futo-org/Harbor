@@ -236,7 +236,7 @@ function AliasStatus({
           {loading ? (
             <ActivityIndicator color={theme.palette.primary_500} />
           ) : null}
-          <Text variant="body" color="neutral_500">
+          <Text variant="body" color="muted">
             {message}
           </Text>
         </View>

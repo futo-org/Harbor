@@ -118,7 +118,7 @@ export function SearchResults({
               Atoms.pt_xl,
             ]}
           >
-            <Text color="neutral_500">Search for posts and people.</Text>
+            <Text color="muted">Search for posts and people.</Text>
           </View>
         </KeyboardAvoidingView>
       </View>

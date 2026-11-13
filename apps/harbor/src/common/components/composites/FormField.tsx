@@ -5,16 +5,12 @@ import {
   TextInput,
   type TextInputProps,
 } from '@/src/common/components/primitives';
-import {
-  Spacing,
-  type SpacingToken,
-  type PaletteColorToken,
-} from '@/src/common/theme';
+import { Spacing, type SpacingToken, type TextColor } from '@/src/common/theme';
 import type { TextInputInstance } from 'react-native';
 
 interface FormFieldProps extends TextInputProps {
   label?: string;
-  labelColor?: PaletteColorToken;
+  labelColor?: TextColor;
   labelMarginBottom?: SpacingToken;
   containerStyle?: ViewStyle;
 }
@@ -28,7 +24,7 @@ export const FormField = forwardRef<TextInputInstance, FormFieldProps>(
       <View style={containerStyle}>
         {label && (
           <View style={{ marginBottom: Spacing[labelMarginBottom] }}>
-            <Text variant="secondary" color={labelColor ?? 'neutral_500'}>
+            <Text variant="secondary" color={labelColor ?? 'muted'}>
               {label}
             </Text>
           </View>

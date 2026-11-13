@@ -57,7 +57,7 @@ export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
       ]}
     >
       <ProfileAvatar identityKey={currentIdentity.identityKey} size="md" />
-      <Text variant="body" color="neutral_500" style={Atoms.flex_1}>
+      <Text variant="body" color="muted" style={Atoms.flex_1}>
         {replyTo ? 'Post your reply' : "What's on your mind?"}
       </Text>
       <Pressable

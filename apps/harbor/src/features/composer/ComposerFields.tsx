@@ -195,7 +195,7 @@ export function ComposerFields({
             },
           ]}
         >
-          <Text variant="secondary" color="negative_500">
+          <Text variant="secondary" color="danger">
             {error}
           </Text>
         </View>
@@ -290,7 +290,7 @@ export function ComposerFields({
                 aria-hidden
                 fontSize="lg"
                 lineHeight="lg"
-                color={submitting ? 'neutral_500' : undefined}
+                color={submitting ? 'muted' : undefined}
                 style={[
                   styles.webMirror,
                   submitting && styles.webMirrorDisabled,
@@ -401,7 +401,7 @@ function ComposerLinkPreview({
           ]}
         >
           <ActivityIndicator size="small" color={theme.palette.neutral_500} />
-          <Text variant="secondary" color="neutral_500">
+          <Text variant="secondary" color="muted">
             Loading preview…
           </Text>
         </View>

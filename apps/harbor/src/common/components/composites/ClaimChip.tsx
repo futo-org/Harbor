@@ -23,9 +23,6 @@ export function ClaimChip({
 }: ClaimChipProps) {
   const { theme } = useTheme();
 
-  const selectedTextToken =
-    theme.scheme === 'dark' ? 'primary_500' : 'primary_600';
-
   return (
     <Chip
       title={TITLE_MAP[type]}
@@ -37,7 +34,7 @@ export function ClaimChip({
       borderColor={
         isSelected ? theme.palette.primary_300 : theme.palette.neutral_200
       }
-      textColor={isSelected ? selectedTextToken : 'neutral_800'}
+      textColor={isSelected ? 'accent' : 'primary'}
     />
   );
 }

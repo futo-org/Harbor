@@ -25,7 +25,7 @@ export function ClaimTypeChip({
       <ChipIcon name={icon} render={logo} color={color} />
       <Text
         variant="small"
-        color="neutral_700"
+        color="secondary"
         fontWeight="semibold"
         numberOfLines={1}
         selectable={false}
@@ -34,7 +34,7 @@ export function ClaimTypeChip({
         {name}
         {name && value ? ': ' : null}
         {value ? (
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             {value}
           </Text>
         ) : null}

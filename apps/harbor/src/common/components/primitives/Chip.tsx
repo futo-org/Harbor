@@ -7,7 +7,7 @@ import {
   withHexOpacity,
   type BorderRadiusToken,
   type FontWeightToken,
-  type PaletteColorToken,
+  type TextColor,
 } from '@/src/common/theme';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
@@ -28,7 +28,7 @@ interface ChipProps {
   backgroundColor?: string;
   hoverBackgroundColor?: string;
   borderColor?: string;
-  textColor?: PaletteColorToken;
+  textColor?: TextColor;
 }
 
 const SIZE_CONFIG: Record<
@@ -81,7 +81,7 @@ export function Chip({
   backgroundColor: backgroundColorProp,
   hoverBackgroundColor,
   borderColor: borderColorProp,
-  textColor = 'neutral_1000',
+  textColor = 'primary',
 }: ChipProps) {
   const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
@@ -89,7 +89,7 @@ export function Chip({
 
   const sizeConfig = SIZE_CONFIG[size];
   const resolvedFontWeight = fontWeight || FONT_WEIGHT_MAP[size];
-  const resolvedTextColor = theme.palette[textColor];
+  const resolvedTextColor = theme.colors[textColor];
   const backgroundColor =
     backgroundColorProp ?? withHexOpacity(theme.palette.neutral_500, '20');
   const borderColor =

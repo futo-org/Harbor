@@ -15,7 +15,7 @@ export function TimeChip({ createdAt }: { createdAt: bigint }) {
       <ChipIcon name="time" />
       <Text
         variant="small"
-        color="neutral_700"
+        color="secondary"
         fontWeight="semibold"
         selectable={false}
       >

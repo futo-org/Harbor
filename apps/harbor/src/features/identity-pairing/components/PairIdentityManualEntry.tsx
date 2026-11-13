@@ -15,12 +15,12 @@ export function PairIdentityManualEntry({
 }: PairIdentityManualEntryProps) {
   return (
     <>
-      <Text variant="body" color="neutral_500">
+      <Text variant="body" color="muted">
         On your other device, go to Settings {'->'} Pair Identity.
       </Text>
 
       <View style={Atoms.gap_xs}>
-        <Text variant="small" color="neutral_500">
+        <Text variant="small" color="muted">
           PAIRING LINK
         </Text>
         <TextInput

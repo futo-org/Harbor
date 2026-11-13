@@ -87,7 +87,7 @@ export function ClaimListItem({
           </View>
           <ClaimMenu claim={claim} icon="more" iconSize={16} />
         </View>
-        <Text variant="body" style={theme.atoms.text} selectable={false}>
+        <Text variant="body" selectable={false}>
           {title}
         </Text>
         <View

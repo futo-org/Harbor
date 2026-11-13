@@ -48,7 +48,7 @@ export default function BanSheet({
             accessibilityLabel="Checking moderator status"
           />
         ) : servers.length === 0 ? (
-          <Text variant="secondary" color="neutral_500">
+          <Text variant="secondary" color="muted">
             You are not a moderator on any servers
           </Text>
         ) : (

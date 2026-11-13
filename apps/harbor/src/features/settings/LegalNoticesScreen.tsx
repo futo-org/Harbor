@@ -32,7 +32,7 @@ function NoticeGroup({ notice }: { notice: LegalNotice }) {
             />
           </View>
           {notice.licenseText ? (
-            <Text variant="small" fontWeight="regular" color="neutral_600">
+            <Text variant="small" fontWeight="regular" color="secondary">
               {notice.licenseText}
             </Text>
           ) : null}

@@ -43,7 +43,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
     <PostActionButton
       icon="repost"
       active={hasReposted}
-      color={'positive_500'}
+      color={'success'}
       accessibilityLabel="Repost or quote"
       count={count}
     />
@@ -63,10 +63,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
               color={hasReposted ? 'negative_500' : 'neutral_500'}
               size={16}
             />
-            <Text
-              fontWeight="bold"
-              color={hasReposted ? 'negative_500' : 'neutral_900'}
-            >
+            <Text fontWeight="bold" color={hasReposted ? 'danger' : 'primary'}>
               {hasReposted ? 'Undo Repost' : 'Repost'}
             </Text>
           </DropdownMenu.Item>

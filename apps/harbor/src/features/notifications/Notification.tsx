@@ -172,7 +172,7 @@ function InteractionNotification({
             {' '}
             {summary(notification)}
             {notification.createdAt > 0 ? (
-              <Text color="neutral_500">
+              <Text color="muted">
                 {' '}
                 · <TimeAgo since={notification.createdAt} />
               </Text>
@@ -183,7 +183,7 @@ function InteractionNotification({
         {/* The post the action was taken against, quoted. */}
         {quoted?.content ? (
           <View style={[]}>
-            <Text variant="secondary" color="neutral_500" numberOfLines={2}>
+            <Text variant="secondary" color="muted" numberOfLines={2}>
               {mentionsToPlainText(quoted.content)}
             </Text>
           </View>
@@ -215,7 +215,7 @@ function ClaimSummary({ claim }: { claim: DecodedClaim }) {
         logo={platform?.logo}
         color={platform?.color ?? claimType?.color}
       />
-      <Text variant="secondary" color="neutral_500" numberOfLines={1}>
+      <Text variant="secondary" color="muted" numberOfLines={1}>
         {title}
       </Text>
     </View>

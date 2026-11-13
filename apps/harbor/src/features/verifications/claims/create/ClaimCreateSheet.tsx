@@ -247,11 +247,7 @@ export function ClaimCreateSheet({
                   ))}
                   {existingClaims.claims.length === 0 &&
                     !existingClaims.isLoading && (
-                      <Text
-                        variant="body"
-                        color="neutral_500"
-                        style={Atoms.px_lg}
-                      >
+                      <Text variant="body" color="muted" style={Atoms.px_lg}>
                         You haven&apos;t created any claims yet.
                       </Text>
                     )}
@@ -262,7 +258,8 @@ export function ClaimCreateSheet({
                 <>
                   <Text
                     variant="small"
-                    style={[theme.atoms.text_neutral_medium, Atoms.px_lg]}
+                    color="secondary"
+                    style={Atoms.px_lg}
                     fontWeight="semibold"
                   >
                     Select the type of claim to create
@@ -374,17 +371,12 @@ function OptionRow({
         <Icon name={icon} size={20} color={color} />
       </View>
       <View style={Atoms.flex_1}>
-        <Text
-          variant="secondary"
-          fontWeight="semibold"
-          style={theme.atoms.text}
-          selectable={false}
-        >
+        <Text variant="secondary" fontWeight="semibold" selectable={false}>
           {title}
         </Text>
         <Text
           variant="small"
-          style={theme.atoms.text_neutral_medium}
+          color="secondary"
           fontWeight="regular"
           selectable={false}
         >

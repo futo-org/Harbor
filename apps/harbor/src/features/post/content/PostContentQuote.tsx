@@ -115,7 +115,7 @@ function QuoteUnavailable() {
       ]}
     >
       <View style={[Atoms.justify_center, { height: PLACEHOLDER_HEIGHT }]}>
-        <Text variant="secondary" color="neutral_500">
+        <Text variant="secondary" color="muted">
           This post is unavailable.
         </Text>
       </View>
@@ -135,14 +135,10 @@ function AuthorRow({ post }: { post: PostData }) {
       <PostAuthor identity={post.identity} />
       {post.createdAt ? (
         <>
-          <Text variant="secondary" color="neutral_500" fontWeight="bold">
+          <Text variant="secondary" color="muted" fontWeight="bold">
             ·
           </Text>
-          <Text
-            variant="secondary"
-            color="neutral_500"
-            style={Atoms.flex_shrink_0}
-          >
+          <Text variant="secondary" color="muted" style={Atoms.flex_shrink_0}>
             <TimeAgo since={post.createdAt} />
           </Text>
         </>
@@ -153,8 +149,6 @@ function AuthorRow({ post }: { post: PostData }) {
 
 /** A preview of the post's content. */
 function PostBody({ post }: { post: PostData }) {
-  const { theme } = useTheme();
-
   const content = mentionsToPlainText(post.content ?? '');
   const preview =
     content.length > QUOTE_PREVIEW_LIMIT
@@ -164,11 +158,7 @@ function PostBody({ post }: { post: PostData }) {
   return (
     <>
       {preview ? (
-        <Text
-          variant="secondary"
-          numberOfLines={4}
-          style={[Atoms.mt_xs, theme.atoms.text_neutral_high]}
-        >
+        <Text variant="secondary" numberOfLines={4} style={Atoms.mt_xs}>
           {preview}
         </Text>
       ) : null}

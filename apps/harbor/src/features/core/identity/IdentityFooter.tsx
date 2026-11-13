@@ -80,7 +80,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
             fallbackName=""
             fontSize="md"
             fontWeight="bold"
-            color="neutral_1000"
+            color="primary"
           />
           <IdentityHandle identity={currentIdentity.identityKey} />
         </View>

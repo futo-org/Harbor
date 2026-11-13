@@ -104,7 +104,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
           ]}
         >
           <View style={Atoms.gap_xs}>
-            <Text variant="small" color="neutral_500">
+            <Text variant="small" color="muted">
               IDENTITY KEY
             </Text>
             <CopyableValue value={identityKey} label="identity key" />
@@ -124,7 +124,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
                   <Icon name="infoOutline" size={16} color="neutral_500" />
                   <Text
                     variant="small"
-                    color="neutral_700"
+                    color="secondary"
                     style={pressed && { opacity: 0.65 }}
                   >
                     Identity info
@@ -137,13 +137,13 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
           {divider}
 
           <View style={Atoms.gap_sm}>
-            <Text variant="small" color="neutral_500">
+            <Text variant="small" color="muted">
               SIGNING KEYS
             </Text>
             {isLoading && keys.length === 0 ? (
               <ActivityIndicator style={Atoms.self_start} />
             ) : keys.length === 0 ? (
-              <Text variant="secondary" color="neutral_500">
+              <Text variant="secondary" color="muted">
                 No identity document found
               </Text>
             ) : (
@@ -155,13 +155,13 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
         </View>
 
         <View style={Atoms.gap_sm}>
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             SERVERS
           </Text>
           {isLoading && !state ? (
             <ActivityIndicator style={Atoms.self_start} />
           ) : servers.length === 0 ? (
-            <Text variant="secondary" color="neutral_500">
+            <Text variant="secondary" color="muted">
               No servers listed
             </Text>
           ) : (
@@ -217,7 +217,7 @@ function SigningKeyRow({
             },
           ]}
         >
-          <Text variant="small" color="primary_500">
+          <Text variant="small" color="accent">
             This device
           </Text>
         </View>

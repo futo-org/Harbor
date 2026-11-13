@@ -256,12 +256,12 @@ function Segment({
         <StaticSegmentIndicator isFirst={isFirst} isLast={isLast} />
       )}
       <Animated.View style={[contentStyle, inactiveContentStyle]}>
-        <SegmentContent label={label} icon={icon} color="neutral_500" />
+        <SegmentContent label={label} icon={icon} color="muted" />
       </Animated.View>
       <Animated.View
         style={[StyleSheet.absoluteFill, contentStyle, activeContentStyle]}
       >
-        <SegmentContent label={label} icon={icon} color="white" />
+        <SegmentContent label={label} icon={icon} color="light" />
       </Animated.View>
     </Pressable>
   );
@@ -321,11 +321,13 @@ function SegmentContent({
 }: {
   label: string;
   icon?: IconName;
-  color: 'neutral_500' | 'white';
+  color: 'muted' | 'light';
 }) {
+  const { theme } = useTheme();
+
   return (
     <>
-      {icon && <Icon name={icon} size={12} color={color} />}
+      {icon && <Icon name={icon} size={12} color={theme.colors[color]} />}
       <Text
         variant="small"
         fontWeight="semibold"

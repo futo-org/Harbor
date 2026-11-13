@@ -4,7 +4,7 @@ import {
   Atoms,
   useTheme,
   type FontWeightToken,
-  type PaletteColorToken,
+  type TextColor,
 } from '@/src/common/theme';
 import { type Href, Link, router } from 'expo-router';
 import {
@@ -22,7 +22,7 @@ interface LinkButtonProps extends Omit<PressableProps, 'style' | 'href'> {
   onPress?: () => void;
   href?: Href;
   title: string;
-  color?: PaletteColorToken;
+  color?: TextColor;
   icon?: IconRenderFn;
   style?: StyleProp<ViewStyle>;
   containerStyle?: StyleProp<ViewStyle>;
@@ -35,7 +35,7 @@ export function LinkButton({
   onPress,
   href,
   title,
-  color = 'primary_500',
+  color = 'accent',
   icon,
   style,
   containerStyle,
@@ -49,7 +49,7 @@ export function LinkButton({
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
-  const textColor = theme.palette[color];
+  const textColor = theme.colors[color];
 
   const linkHref = href && !disabled ? Link.resolveHref(href) : undefined;
   const handlePress = (event?: { preventDefault?: () => void }) => {

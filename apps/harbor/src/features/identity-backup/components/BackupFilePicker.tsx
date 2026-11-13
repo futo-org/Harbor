@@ -77,7 +77,7 @@ export function BackupFilePicker({
         onPress={() => void onPress()}
       />
       {picked && (
-        <Text variant="small" color="neutral_500" numberOfLines={1} monospace>
+        <Text variant="small" color="muted" numberOfLines={1} monospace>
           {picked.name}
         </Text>
       )}

@@ -82,13 +82,13 @@ function RepostHeader({
         <Username
           identity={identity}
           variant="small"
-          color="neutral_500"
+          color="muted"
           fontWeight="bold"
           style={hovered && Atoms.text_underline}
         />
         <Text
           variant="small"
-          color="neutral_500"
+          color="muted"
           fontWeight="bold"
           style={[Atoms.flex_shrink_0, hovered && Atoms.text_underline]}
         >

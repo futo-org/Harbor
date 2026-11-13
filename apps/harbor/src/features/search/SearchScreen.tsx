@@ -61,7 +61,7 @@ function SearchTopbar({ children }: { children: ReactNode }) {
           hitSlop={Spacing.lg}
           style={({ pressed }) => [pressed && { opacity: 0.5 }]}
         >
-          <Text color="neutral_500">Cancel</Text>
+          <Text color="muted">Cancel</Text>
         </Pressable>
       ) : null}
     </View>

@@ -66,15 +66,15 @@ export function AddServerForm({ isBusy, error, onSubmit }: AddServerFormProps) {
             },
           ]}
         >
-          <Text variant="secondary" color="negative_500">
+          <Text variant="secondary" color="danger">
             Could not add server.
-            <Text fontWeight="bold" color="negative_500">
+            <Text fontWeight="bold" color="danger">
               {' '}
               {showErrorLogs ? 'Hide logs' : 'Show logs'}.
             </Text>
           </Text>
           {showErrorLogs && (
-            <Text variant="secondary" color="neutral_500" monospace>
+            <Text variant="secondary" color="muted" monospace>
               {error.stack ?? error.message}
             </Text>
           )}

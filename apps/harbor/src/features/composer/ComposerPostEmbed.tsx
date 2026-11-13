@@ -36,14 +36,10 @@ export default function ComposerPostEmbed({
         },
       ]}
     >
-      <Text variant="small" style={theme.atoms.text_neutral_high}>
+      <Text variant="small">
         {intentText} {truncateName(authorName, 20)}
       </Text>
-      <Text
-        variant="secondary"
-        numberOfLines={2}
-        style={[theme.atoms.text_neutral_high, { marginTop: 2 }]}
-      >
+      <Text variant="secondary" numberOfLines={2} style={{ marginTop: 2 }}>
         {contentPreview}
       </Text>
     </View>

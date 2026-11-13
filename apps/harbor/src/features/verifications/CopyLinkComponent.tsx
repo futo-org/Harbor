@@ -31,7 +31,7 @@ export function CopyLinkComponent({ link }: { link: string }) {
         // Identity keys make the link too long to fit; it's here to copy.
         numberOfLines={1}
         monospace
-        style={[Atoms.flex_1, theme.atoms.text]}
+        style={Atoms.flex_1}
       >
         {link}
       </Text>

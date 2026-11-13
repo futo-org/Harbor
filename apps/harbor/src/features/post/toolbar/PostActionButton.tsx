@@ -4,7 +4,7 @@ import Icon, { type IconName } from '@/src/common/components/Icon';
 import { withIdentity } from '@/src/common/lib/authGate';
 import {
   Atoms,
-  type PaletteColorToken,
+  type TextColor,
   useTheme,
   withHexOpacity,
 } from '@/src/common/theme';
@@ -23,7 +23,7 @@ type PostActionButtonProps = {
   count?: number;
   active?: boolean;
   highlighted?: boolean;
-  color?: PaletteColorToken;
+  color?: TextColor;
   size?: number | undefined;
 } & Omit<PressableProps, 'style' | 'children'>;
 
@@ -33,7 +33,7 @@ export default function PostActionButton({
   count,
   active = false,
   highlighted = false,
-  color = 'neutral_500',
+  color = 'muted',
   size = 18,
   onPress,
   ...props
@@ -71,7 +71,7 @@ export default function PostActionButton({
                 Atoms.overflow_hidden,
                 {
                   backgroundColor: isHighlighted
-                    ? withHexOpacity(theme.palette[color], '14')
+                    ? withHexOpacity(theme.colors[color], '14')
                     : 'transparent',
                 },
               ]}
@@ -82,14 +82,14 @@ export default function PostActionButton({
                 <Icon
                   name={icon}
                   size={size}
-                  color={active || highlighted ? color : 'neutral_500'}
+                  color={theme.colors[active || highlighted ? color : 'muted']}
                 />
               )}
               {count ? (
                 <Text
                   variant="small"
                   fontSize="sm"
-                  color={active || highlighted ? color : 'neutral_500'}
+                  color={active || highlighted ? color : 'muted'}
                 >
                   {String(count)}
                 </Text>

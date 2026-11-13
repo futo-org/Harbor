@@ -81,7 +81,7 @@ export function Tooltip({
           },
         ]}
       >
-        <Text variant="small" color="neutral_600" fontWeight="semibold">
+        <Text variant="small" color="secondary" fontWeight="semibold">
           {text}
         </Text>
       </View>

@@ -2,7 +2,7 @@ import { Text } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
 import { useToast } from '@/src/common/components/toast';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms } from '@/src/common/theme';
 import { ProfileSearchInput } from '@/src/features/profile/search';
 import { useState } from 'react';
 import { ScrollView } from 'react-native';
@@ -18,7 +18,6 @@ export function RequestVerificationSheet({
   // Hex-encoded claim event key (`DecodedClaim.id`).
   claimId: string;
 }) {
-  const { theme } = useTheme();
   const toast = useToast();
   const { identityKey } = useCurrentIdentity();
   const request = useRequestVerification();
@@ -56,10 +55,7 @@ export function RequestVerificationSheet({
           contentContainerStyle={[Atoms.pt_lg, Atoms.gap_md, Atoms.pb_lg]}
           keyboardShouldPersistTaps="handled"
         >
-          <Text
-            variant="body"
-            style={[theme.atoms.text_neutral_medium, Atoms.px_lg]}
-          >
+          <Text variant="body" color="secondary" style={Atoms.px_lg}>
             Ask someone to verify this claim.
           </Text>
 

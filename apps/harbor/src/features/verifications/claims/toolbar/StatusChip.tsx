@@ -19,7 +19,7 @@ export function StatusChip({
       />
       <Text
         variant="small"
-        color="neutral_700"
+        color="secondary"
         fontWeight="semibold"
         selectable={false}
       >

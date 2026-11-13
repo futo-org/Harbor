@@ -177,15 +177,15 @@ function MentionShortcutHint() {
     >
       <Kbd>↑</Kbd>
       <Kbd>↓</Kbd>
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         to choose,
       </Text>
       <Kbd>Tab</Kbd>
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         or
       </Text>
       <Kbd>{isApplePlatform ? '⏎' : 'Enter'}</Kbd>
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         to insert
       </Text>
     </View>

@@ -61,7 +61,7 @@ export default function ReportsScreen() {
                 />
               </View>
             ) : reports.length === 0 ? (
-              <Text variant="secondary" color="neutral_500" style={Atoms.p_lg}>
+              <Text variant="secondary" color="muted" style={Atoms.p_lg}>
                 No reports here.
               </Text>
             ) : (
@@ -76,7 +76,7 @@ export default function ReportsScreen() {
               ))
             )}
             {truncated ? (
-              <Text variant="small" color="neutral_500" style={Atoms.p_lg}>
+              <Text variant="small" color="muted" style={Atoms.p_lg}>
                 Showing the oldest {REPORTS_PER_SERVER} reports per server.
               </Text>
             ) : null}

@@ -54,7 +54,7 @@ function InboxPage({ active, ready }: PageProps) {
       empty={
         <ListEmpty>
           <View style={[Atoms.items_center, Atoms.gap_lg]}>
-            <Text variant="body" color="neutral_500" style={Atoms.text_center}>
+            <Text variant="body" color="muted" style={Atoms.text_center}>
               When someone asks you to verify a claim, it will show up here.
             </Text>
           </View>
@@ -82,7 +82,7 @@ function OutboxPage({
       empty={
         <ListEmpty>
           <View style={[Atoms.items_center, Atoms.gap_lg]}>
-            <Text variant="body" color="neutral_500" style={Atoms.text_center}>
+            <Text variant="body" color="muted" style={Atoms.text_center}>
               You haven't made any claims yet
             </Text>
             <Button

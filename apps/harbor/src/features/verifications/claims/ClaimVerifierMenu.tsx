@@ -96,14 +96,14 @@ export function ClaimVerifierMenu({
           {verifier.verified ? (
             <>
               <Icon name="personRemove" color="negative_500" size={16} />
-              <Text variant="secondary" fontWeight="bold" color="negative_500">
+              <Text variant="secondary" fontWeight="bold" color="danger">
                 Remove verifier
               </Text>
             </>
           ) : (
             <>
               <Icon name="close" color="neutral_500" size={16} />
-              <Text variant="secondary" fontWeight="bold" color="neutral_500">
+              <Text variant="secondary" fontWeight="bold" color="muted">
                 Cancel request
               </Text>
             </>

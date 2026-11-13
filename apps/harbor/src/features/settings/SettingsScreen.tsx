@@ -307,7 +307,7 @@ function VersionRow() {
         ]}
       >
         <Text variant="body">Version</Text>
-        <Text variant="body" color="neutral_500">
+        <Text variant="body" color="muted">
           {version ?? 'unknown'}
           {build ? ` (${build})` : ''}
         </Text>

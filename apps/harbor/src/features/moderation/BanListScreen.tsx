@@ -44,7 +44,7 @@ export default function BanListScreen() {
             <View style={[Atoms.p_lg, Atoms.gap_lg]}>
               <Text
                 variant="secondary"
-                color="neutral_500"
+                color="muted"
                 monospace
                 numberOfLines={1}
               >
@@ -68,7 +68,7 @@ export default function BanListScreen() {
                   />
                 </View>
               ) : bans.length === 0 ? (
-                <Text variant="secondary" color="neutral_500">
+                <Text variant="secondary" color="muted">
                   {debouncedSearch
                     ? 'No banned users match your search.'
                     : 'No banned users.'}
@@ -101,7 +101,7 @@ export default function BanListScreen() {
                     disabled={!hasPrev || isLoading}
                     onPress={goPrev}
                   />
-                  <Text variant="secondary" color="neutral_500">
+                  <Text variant="secondary" color="muted">
                     Page {page}
                   </Text>
                   <Button

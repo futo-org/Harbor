@@ -43,7 +43,7 @@ export const PostToolbar = memo(function PostToolbar({
       <PostActionButton
         icon="reply"
         onPress={onReplyPress}
-        color={'primary_500'}
+        color={'accent'}
         count={post.replyCount}
       />
       <RepostButton post={post} />

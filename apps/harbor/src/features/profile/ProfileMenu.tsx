@@ -129,7 +129,7 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
               <Text
                 variant="secondary"
                 fontWeight="bold"
-                color={item.destructive ? 'negative_500' : undefined}
+                color={item.destructive ? 'danger' : undefined}
               >
                 {item.label}
               </Text>

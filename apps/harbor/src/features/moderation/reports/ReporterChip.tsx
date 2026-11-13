@@ -16,7 +16,7 @@ export function ReporterChip({ identity }: { identity: string }) {
       <Username
         identity={identity}
         variant="small"
-        color="neutral_700"
+        color="secondary"
         fontWeight="semibold"
         selectable={false}
       />

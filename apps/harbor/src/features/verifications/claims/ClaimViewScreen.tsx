@@ -3,7 +3,7 @@ import { Screen } from '@/src/common/components/layout';
 import Topbar, { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { PullRefreshControl } from '@/src/common/components/PullRefreshControl';
 import { ScrollView } from '@/src/common/components/ScrollView';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
@@ -22,7 +22,6 @@ import { StatusChip } from './toolbar/StatusChip';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ViewClaimScreen() {
-  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const {
     identityId,
@@ -111,9 +110,7 @@ export default function ViewClaimScreen() {
             )}
 
             {!isLoading && !claim && (
-              <Text variant="body" style={theme.atoms.text}>
-                Invalid claim reference
-              </Text>
+              <Text variant="body">Invalid claim reference</Text>
             )}
 
             {claim && (
@@ -133,10 +130,7 @@ export default function ViewClaimScreen() {
                     Atoms.flex_wrap,
                   ]}
                 >
-                  <Text
-                    variant="body"
-                    style={[theme.atoms.text, Atoms.flex_shrink_1]}
-                  >
+                  <Text variant="body" style={Atoms.flex_shrink_1}>
                     {title}
                   </Text>
                 </View>
@@ -166,7 +160,7 @@ export default function ViewClaimScreen() {
                       <View key={field.key} style={Atoms.gap_xs}>
                         <Text
                           variant="small"
-                          style={theme.atoms.text_neutral_medium}
+                          color="secondary"
                           fontWeight="semibold"
                         >
                           {field.label}
@@ -174,7 +168,7 @@ export default function ViewClaimScreen() {
                         {isLink ? (
                           <Text
                             variant="body"
-                            color="primary_500"
+                            color="accent"
                             onPress={() =>
                               void Linking.openURL(value).catch(() => {})
                             }
@@ -184,11 +178,7 @@ export default function ViewClaimScreen() {
                         ) : (
                           <Text
                             variant="body"
-                            style={
-                              value
-                                ? theme.atoms.text
-                                : theme.atoms.text_neutral_medium
-                            }
+                            color={value ? 'primary' : 'secondary'}
                           >
                             {value || 'N/A'}
                           </Text>

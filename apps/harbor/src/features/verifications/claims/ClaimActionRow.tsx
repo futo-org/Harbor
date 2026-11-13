@@ -40,7 +40,7 @@ export function ClaimActionRow({
           <Text
             variant="secondary"
             fontWeight="semibold"
-            color="primary_500"
+            color="accent"
             selectable={false}
           >
             {title}
@@ -48,7 +48,7 @@ export function ClaimActionRow({
           {subtitle ? (
             <Text
               variant="small"
-              style={theme.atoms.text_neutral_medium}
+              color="secondary"
               fontWeight="regular"
               selectable={false}
             >

@@ -36,7 +36,7 @@ export function ModeratedPost({
   if (!post) {
     return (
       <View style={[Atoms.px_md, Atoms.py_sm]}>
-        <Text variant="secondary" color="neutral_500">
+        <Text variant="secondary" color="muted">
           Post unavailable. It may have been deleted or is not on this server.
         </Text>
       </View>

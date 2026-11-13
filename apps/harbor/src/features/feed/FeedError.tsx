@@ -23,7 +23,7 @@ export function FeedError({
         Atoms.gap_lg,
       ]}
     >
-      <Text color="neutral_500">{message}</Text>
+      <Text color="muted">{message}</Text>
       <Button title="Retry" variant="secondary" onPress={onRetry} />
     </View>
   );

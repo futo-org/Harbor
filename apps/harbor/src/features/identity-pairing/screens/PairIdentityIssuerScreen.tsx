@@ -9,7 +9,7 @@ import Icon from '@/src/common/components/Icon';
 import type { IconProps } from '@/src/common/components/Icon';
 import { Sheet } from '@/src/common/components/sheet';
 import { Routes } from '@/src/common/constants/routes';
-import { Atoms, type Palette, useTheme } from '@/src/common/theme';
+import { Atoms, type TextColor, useTheme } from '@/src/common/theme';
 import { usePairIdentityIssuer } from '@/src/features/identity-pairing/hooks/usePairIdentityIssuer';
 import { EmojiFingerprint } from '@/src/features/identity-pairing/components/EmojiFingerprint';
 import { router } from 'expo-router';
@@ -197,8 +197,6 @@ function CountdownTimer({
 }: {
   remainingSeconds: number | null;
 }) {
-  const { theme } = useTheme();
-
   let timeStr = '--:--';
 
   if (remainingSeconds !== null) {
@@ -210,15 +208,9 @@ function CountdownTimer({
   return (
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
       <Icon name="time" size={16} color="neutral_500" />
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         Valid for{'  '}
-        <Text
-          variant="small"
-          monospace
-          style={{
-            color: theme.palette.primary_500,
-          }}
-        >
+        <Text variant="small" monospace color="accent">
           {timeStr}
         </Text>
       </Text>
@@ -240,20 +232,20 @@ function StatusDisplay({
 
   let iconName: IconProps['name'];
   let iconColor: IconProps['color'];
-  let detailsColor: keyof Palette;
+  let detailsColor: TextColor;
   let detailsBg: string;
   let detailsBorder: string;
 
   if (icon === 'success') {
     iconName = 'checkmarkCircle';
     iconColor = 'primary_500';
-    detailsColor = 'neutral_900';
+    detailsColor = 'primary';
     detailsBg = theme.palette.neutral_25;
     detailsBorder = theme.palette.neutral_100;
   } else {
     iconName = 'closeCircle';
     iconColor = 'negative_500';
-    detailsColor = 'negative_600';
+    detailsColor = 'danger';
     detailsBg = theme.palette.negative_25;
     detailsBorder = theme.palette.negative_100;
   }
@@ -349,7 +341,7 @@ function ApprovalSheet({
 
               <Text
                 variant="small"
-                color="neutral_500"
+                color="muted"
                 monospace
                 style={{ textAlign: 'center' }}
                 selectable
@@ -436,7 +428,7 @@ function ApprovalSheet({
                 <Text variant="small" fontWeight="semibold">
                   Add as rotation key
                 </Text>
-                <Text variant="small" color="neutral_500">
+                <Text variant="small" color="muted">
                   Gives this device management access.
                 </Text>
               </View>

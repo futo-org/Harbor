@@ -17,7 +17,7 @@ type IdentityHandleProps = Omit<
 export function IdentityHandle({
   identity,
   variant = 'secondary',
-  color = 'neutral_500',
+  color = 'muted',
   style,
   ...textProps
 }: IdentityHandleProps) {

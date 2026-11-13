@@ -1,6 +1,6 @@
 import { Button, Text } from '@/src/common/components';
 import { useToast } from '@/src/common/components/toast';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms } from '@/src/common/theme';
 import { View } from 'react-native';
 import type { ClaimRef } from '../../hooks/useCreateClaim';
 import useOAuthVerifyPlatformClaim from '../../hooks/useOAuthVerifyPlatformClaim';
@@ -14,7 +14,6 @@ export function ClaimCreatePlatformOAuth({
   platform: Platform;
   onVerified: (ref: ClaimRef) => void;
 }) {
-  const { theme } = useTheme();
   const toast = useToast();
   const verify = useOAuthVerifyPlatformClaim();
 
@@ -29,7 +28,7 @@ export function ClaimCreatePlatformOAuth({
 
   return (
     <View style={Atoms.gap_md}>
-      <Text variant="small" style={theme.atoms.text_neutral_medium}>
+      <Text variant="small" color="secondary">
         Sign in with your {platform.name} account to prove you own it.
         You&apos;ll be sent to {platform.name} and brought back here once
         you&apos;ve signed in.
