@@ -228,7 +228,7 @@ export function SheetFooter({
     >
       {fadeTop && (
         <FooterFadeBackground
-          color={theme.atoms_new.box.primary.bg.backgroundColor}
+          color={theme.colors.box.primary.bg}
           height={padding}
         />
       )}
@@ -361,7 +361,7 @@ function NativeSheet({
     <TrueSheet
       ref={sheetRef}
       dimmed={dimmed}
-      backgroundColor={theme.atoms_new.box.primary.bg.backgroundColor}
+      backgroundColor={theme.colors.box.primary.bg}
       detents={detents}
       initialDetentIndex={0}
       dismissible={dismissible}

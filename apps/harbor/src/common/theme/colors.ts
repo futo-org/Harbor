@@ -1,15 +1,8 @@
 import type { Palette } from './palette';
 import type { ThemeScheme } from './themes';
 
-const SUBTLE_BOX_OPACITY = 0.125;
-const SUBTLE_BOX_HOVER_OPACITY = 0.2;
-const SUBTLE_BORDER_OPACITY = 0.3;
-const FADED_OPACITY = 0.5;
-const FADED_SUBTLE_OPACITY = 0.8;
 // offset and blur shared by all shadows
 const SHADOW_GEOMETRY = '0 6px 16px';
-// shadows need more opacity to show on a dark background
-const SHADOW_OPACITY = { light: 0.16, dark: 0.25 };
 
 export type TextColor = keyof Pick<
   ReturnType<typeof buildColorAtoms>,
@@ -44,26 +37,6 @@ function buildColors(palette: Palette, scheme: ThemeScheme) {
     light: palette.white,
     dark: palette.black,
     transparent: 'transparent',
-  };
-}
-
-function buildColorAtoms(
-  palette: Palette,
-  scheme: ThemeScheme,
-  colors: ReturnType<typeof buildColors>,
-) {
-  const shadowOpacity = SHADOW_OPACITY[scheme];
-
-  return {
-    primary: { color: colors.primary },
-    secondary: { color: colors.secondary },
-    muted: { color: colors.muted },
-    accent: { color: colors.accent },
-    danger: { color: colors.danger },
-    success: { color: colors.success },
-    warning: { color: colors.warning },
-    light: { color: colors.light },
-    dark: { color: colors.dark },
     // hover is the next palette step; the neutral boxes' border is too
     box: {
       primary: buildBox(
@@ -83,15 +56,55 @@ function buildColorAtoms(
       warning: buildBox(palette.warning_500, palette.warning_600),
     },
     overlay: {
-      hover: { backgroundColor: withOpacity(palette.neutral_900, 0.06) },
-      pressed: { backgroundColor: withOpacity(palette.neutral_900, 0.12) },
-      selected: { backgroundColor: withOpacity(palette.neutral_900, 0.12) },
-      modal_backdrop: { backgroundColor: withOpacity(palette.black, 0.45) },
-      media_backdrop: { backgroundColor: withOpacity(palette.black, 0.92) },
+      hover: withOpacity(palette.neutral_900, 0.06),
+      pressed: withOpacity(palette.neutral_900, 0.12),
+      selected: withOpacity(palette.neutral_900, 0.12),
+      modal_backdrop: withOpacity(palette.black, 0.45),
+      media_backdrop: withOpacity(palette.black, 0.92),
     },
     // controls on images; the box rules don't apply over media
     media_control: {
-      bg: { backgroundColor: withOpacity(palette.black, 0.69) },
+      bg: withOpacity(palette.black, 0.69),
+    },
+  };
+}
+
+function buildColorAtoms(
+  palette: Palette,
+  scheme: ThemeScheme,
+  colors: ReturnType<typeof buildColors>,
+) {
+  // shadows need more opacity to show on a dark background
+  const shadowOpacity = scheme === 'dark' ? 0.25 : 0.16;
+
+  return {
+    primary: { color: colors.primary },
+    secondary: { color: colors.secondary },
+    muted: { color: colors.muted },
+    accent: { color: colors.accent },
+    danger: { color: colors.danger },
+    success: { color: colors.success },
+    warning: { color: colors.warning },
+    light: { color: colors.light },
+    dark: { color: colors.dark },
+    box: {
+      primary: buildBoxAtoms(colors.box.primary),
+      secondary: buildBoxAtoms(colors.box.secondary),
+      neutral: buildBoxAtoms(colors.box.neutral),
+      accent: buildBoxAtoms(colors.box.accent),
+      danger: buildBoxAtoms(colors.box.danger),
+      success: buildBoxAtoms(colors.box.success),
+      warning: buildBoxAtoms(colors.box.warning),
+    },
+    overlay: {
+      hover: { backgroundColor: colors.overlay.hover },
+      pressed: { backgroundColor: colors.overlay.pressed },
+      selected: { backgroundColor: colors.overlay.selected },
+      modal_backdrop: { backgroundColor: colors.overlay.modal_backdrop },
+      media_backdrop: { backgroundColor: colors.overlay.media_backdrop },
+    },
+    media_control: {
+      bg: { backgroundColor: colors.media_control.bg },
     },
     transparent: {
       bg: { backgroundColor: colors.transparent },
@@ -105,8 +118,8 @@ function buildColorAtoms(
         boxShadow: `${SHADOW_GEOMETRY} ${withOpacity(palette.black, shadowOpacity)}`,
       },
     },
-    faded: { opacity: FADED_OPACITY },
-    faded_subtle: { opacity: FADED_SUBTLE_OPACITY },
+    faded: { opacity: 0.5 },
+    faded_subtle: { opacity: 0.8 },
   };
 }
 
@@ -114,14 +127,23 @@ function buildColorAtoms(
 // without a visible outline.
 function buildBox(bg: string, hover: string, border = bg) {
   return {
-    bg: { backgroundColor: bg },
-    bg_hover: { backgroundColor: hover },
-    bg_subtle: { backgroundColor: withOpacity(bg, SUBTLE_BOX_OPACITY) },
-    bg_subtle_hover: {
-      backgroundColor: withOpacity(bg, SUBTLE_BOX_HOVER_OPACITY),
-    },
-    border: { borderColor: border },
-    border_subtle: { borderColor: withOpacity(bg, SUBTLE_BORDER_OPACITY) },
+    bg,
+    bg_hover: hover,
+    bg_subtle: withOpacity(bg, 0.125),
+    bg_subtle_hover: withOpacity(bg, 0.2),
+    border,
+    border_subtle: withOpacity(bg, 0.3),
+  };
+}
+
+function buildBoxAtoms(box: ReturnType<typeof buildBox>) {
+  return {
+    bg: { backgroundColor: box.bg },
+    bg_hover: { backgroundColor: box.bg_hover },
+    bg_subtle: { backgroundColor: box.bg_subtle },
+    bg_subtle_hover: { backgroundColor: box.bg_subtle_hover },
+    border: { borderColor: box.border },
+    border_subtle: { borderColor: box.border_subtle },
   };
 }
 
