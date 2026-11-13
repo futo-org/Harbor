@@ -306,11 +306,10 @@ async fn match_on_mention() {
         "mark@futo",
         "mark",
         "mark@",
-        // NOTE: the following search don't work as Postgres
-        //"@futo.tech",
-        //"futo.tech",
-        //"@futo",
-        //"futo",
+        "@futo.tech",
+        "futo.tech",
+        "@futo",
+        "futo",
         client.identity(),
     ] {
         expect_searched_posts_contains(

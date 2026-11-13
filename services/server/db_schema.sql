@@ -35,10 +35,63 @@ COMMENT ON EXTENSION unaccent IS 'text search dictionary that removes accents';
 -- Name: parse_for_search(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.parse_for_search(text text) RETURNS text[]
+CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (WITH token_numword AS (SELECT ts_token_type.tokid AS id FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description) WHERE (ts_token_type.alias = 'numword'::text) LIMIT 1), token_word AS (SELECT ts_token_type.tokid AS id FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description) WHERE (ts_token_type.alias = 'word'::text) LIMIT 1), token_sfloat AS (SELECT ts_token_type.tokid AS id FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description) WHERE (ts_token_type.alias = 'sfloat'::text) LIMIT 1), token_blank AS (SELECT ts_token_type.tokid AS id FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description) WHERE (ts_token_type.alias = 'blank'::text) LIMIT 1), parsed AS (SELECT CASE WHEN ((parsed.tokid = (SELECT token_sfloat.id FROM token_sfloat)) AND (lead(parsed.tokid, 1, NULL::integer) OVER () = (SELECT token_numword.id FROM token_numword))) THEN (parsed.token || lead(parsed.token, 1, ''::text) OVER ()) WHEN ((parsed.tokid = (SELECT token_numword.id FROM token_numword)) AND (lag(parsed.tokid, 1, NULL::integer) OVER () = (SELECT token_sfloat.id FROM token_sfloat))) THEN ''::text WHEN ((parsed.tokid = (SELECT token_blank.id FROM token_blank)) AND ("right"(parsed.token, 1) = '#'::text)) THEN ('#'::text || lead(parsed.token, 1, ''::text) OVER ()) WHEN ((lag(parsed.tokid, 1, NULL::integer) OVER () = (SELECT token_blank.id FROM token_blank)) AND (lag("right"(parsed.token, 1), 1, NULL::text) OVER () = '#'::text)) THEN ''::text WHEN (parsed.token = '@'::text) THEN ((lag(parsed.token, 1, ''::text) OVER () || '@'::text) || lead(parsed.token, 1, ''::text) OVER ()) ELSE parsed.token END AS token, parsed.tokid FROM ts_parse('default'::text, parse_for_search.text) parsed(tokid, token)), transformed AS (SELECT unnest(ts_lexize('english_stem'::regdictionary, public.unaccent(TRIM(BOTH '	
- '::text FROM parsed.token)))) AS term FROM parsed WHERE ((octet_length(parsed.token) <> 0) AND (NOT ((parsed.tokid = (SELECT token_blank.id FROM token_blank)) AND ("left"(parsed.token, 1) <> '#'::text) AND (parsed.token !~~ '%@%'::text))))) SELECT array_agg(transformed.term) AS array_agg FROM (SELECT ltrim(transformed_1.term, '#'::text) AS ltrim FROM transformed transformed_1) transformed(term) WHERE ((transformed.term IS NOT NULL) AND (transformed.term <> ''::text)));
+    BEGIN ATOMIC
+ WITH token_numword AS (
+          SELECT ts_token_type.tokid AS id
+            FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
+           WHERE (ts_token_type.alias = 'numword'::text)
+          LIMIT 1
+         ), token_word AS (
+          SELECT ts_token_type.tokid AS id
+            FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
+           WHERE (ts_token_type.alias = 'word'::text)
+          LIMIT 1
+         ), token_sfloat AS (
+          SELECT ts_token_type.tokid AS id
+            FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
+           WHERE (ts_token_type.alias = 'sfloat'::text)
+          LIMIT 1
+         ), token_blank AS (
+          SELECT ts_token_type.tokid AS id
+            FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
+           WHERE (ts_token_type.alias = 'blank'::text)
+          LIMIT 1
+         ), parsed AS (
+          SELECT parsed.tokid,
+                 CASE
+                     WHEN ((parsed.tokid = ( SELECT token_sfloat.id
+                        FROM token_sfloat)) AND (lead(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_numword.id
+                        FROM token_numword))) THEN (parsed.token || lead(parsed.token, 1, ''::text) OVER ())
+                     WHEN ((parsed.tokid = ( SELECT token_numword.id
+                        FROM token_numword)) AND (lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_sfloat.id
+                        FROM token_sfloat))) THEN ''::text
+                     WHEN ((parsed.tokid = ( SELECT token_blank.id
+                        FROM token_blank)) AND ("right"(parsed.token, 1) = '#'::text)) THEN ('#'::text || lead(parsed.token, 1, ''::text) OVER ())
+                     WHEN ((lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_blank.id
+                        FROM token_blank)) AND (lag("right"(parsed.token, 1), 1, NULL::text) OVER () = '#'::text)) THEN ''::text
+                     WHEN ((parsed.token = '@'::text) AND (lag(parsed.token, 1, NULL::text) OVER () IS NOT NULL) AND (lead(parsed.token, 1, NULL::text) OVER () IS NOT NULL)) THEN ((lag(parsed.token, 1, ''::text) OVER () || '@'::text) || lead(parsed.token, 1, ''::text) OVER ())
+                     WHEN (parsed.token = '@'::text) THEN NULL::text
+                     ELSE parsed.token
+                 END AS token
+            FROM ts_parse('default'::text, parse_for_search.text) parsed(tokid, token)
+         ), transformed AS (
+          SELECT unnest(ts_lexize('english_stem'::regdictionary, public.unaccent(TRIM(BOTH '	
+ '::text FROM unnest(
+                 CASE
+                     WHEN (parsed.token ~~ '%@%'::text) THEN array_append(string_to_array(parsed.token, '@'::text), parsed.token)
+                     ELSE ARRAY[parsed.token]
+                 END))))) AS term
+            FROM parsed
+           WHERE ((octet_length(parsed.token) <> 0) AND (parsed.token IS NOT NULL) AND ((parsed.tokid <> ( SELECT token_blank.id
+                    FROM token_blank)) OR ("left"(parsed.token, 1) = '#'::text) OR (parsed.token ~~ '%@%'::text)))
+         )
+  SELECT transformed.term
+    FROM ( SELECT ltrim(transformed_1.term, '#'::text) AS ltrim
+            FROM transformed transformed_1) transformed(term)
+   WHERE ((transformed.term IS NOT NULL) AND (transformed.term <> ''::text));
+END;
 
 
 --
@@ -47,7 +100,7 @@ CREATE FUNCTION public.parse_for_search(text text) RETURNS text[]
 
 CREATE FUNCTION public.create_tsquery(query text) RETURNS tsquery
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (WITH transformed AS (SELECT CASE WHEN ((terms.term ~~ '%@%'::text) AND (lag(terms.term, 1, NULL::text) OVER () IS NOT NULL) AND (lead(terms.term, 1, NULL::text) OVER () IS NOT NULL)) THEN ((((((('( '::text || lag(terms.term, 1, NULL::text) OVER ()) || ' | '::text) || terms.term) || ':*'::text) || ' | '::text) || lead(terms.term, 1, NULL::text) OVER ()) || ' )'::text) WHEN ((lead(terms.term, 1, NULL::text) OVER () ~~ '%@%'::text) OR (lag(terms.term, 1, NULL::text) OVER () ~~ '%@%'::text)) THEN NULL::text WHEN (lead(terms.term, 1, NULL::text) OVER () IS NULL) THEN (terms.term || ':*'::text) ELSE terms.term END AS term FROM unnest(public.parse_for_search(create_tsquery.query)) terms(term)) SELECT COALESCE((string_agg(transformed.term, ' & '::text))::tsquery, ''::tsquery) AS query FROM transformed);
+    RETURN (WITH unique_terms AS (SELECT DISTINCT ON (terms.term) terms.term, terms.n FROM (SELECT row_number() OVER () AS n, ltrim(all_terms.term, '@'::text) AS term FROM public.parse_for_search(create_tsquery.query) all_terms(term)) terms), transformed AS (SELECT CASE WHEN ((terms.term ~~ '%@%'::text) AND (lag(terms.term, 1, NULL::text) OVER () IS NOT NULL) AND (lead(terms.term, 1, NULL::text) OVER () IS NOT NULL)) THEN ((((((('( '::text || lag(terms.term, 1, NULL::text) OVER ()) || ' | '::text) || terms.term) || ':*'::text) || ' | '::text) || lead(terms.term, 1, NULL::text) OVER ()) || ' )'::text) WHEN ((lead(terms.term, 1, NULL::text) OVER () ~~ '%@%'::text) OR (lag(terms.term, 1, NULL::text) OVER () ~~ '%@%'::text)) THEN NULL::text WHEN (lead(terms.term, 1, NULL::text) OVER () IS NULL) THEN (terms.term || ':*'::text) ELSE terms.term END AS term FROM (SELECT unique_terms.term FROM unique_terms ORDER BY unique_terms.n) terms) SELECT COALESCE((string_agg(transformed.term, ' & '::text))::tsquery, ''::tsquery) AS query FROM transformed);
 
 
 --
@@ -56,7 +109,7 @@ CREATE FUNCTION public.create_tsquery(query text) RETURNS tsquery
 
 CREATE FUNCTION public.create_tsvector(text text) RETURNS tsvector
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (SELECT COALESCE(array_to_tsvector(public.parse_for_search(text)), ''::tsvector) AS vector);
+    RETURN (SELECT COALESCE(array_to_tsvector(array_agg(terms.term)), ''::tsvector) AS vector FROM public.parse_for_search(create_tsvector.text) terms(term) WHERE (terms.term <> ALL (ARRAY['@{'::text, '{'::text, '}'::text])));
 
 
 --
