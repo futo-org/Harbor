@@ -109,6 +109,7 @@ export function IdentitySwitcherSheet() {
               accessibilityLabel={isAdding ? 'Switch identity' : 'Add identity'}
               variant="ghost"
               size="md"
+              hitSlop={Spacing.sm}
               disabled={switchingIdentity !== null}
               // IconButton doesn't dim itself when disabled.
               style={switchingIdentity !== null && { opacity: 0.5 }}

@@ -11,6 +11,7 @@ import { isWeb } from '@/src/common/util/platform';
 import {
   Animated,
   Pressable,
+  type PressableProps,
   type StyleProp,
   StyleSheet,
   View,
@@ -34,6 +35,7 @@ interface IconButtonProps {
   /** Remove container padding (ghost variant only) */
   compact?: boolean;
   accessibilityLabel?: string;
+  hitSlop?: PressableProps['hitSlop'];
 }
 
 const SIZE_CONFIG: Record<
