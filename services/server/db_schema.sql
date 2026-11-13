@@ -183,6 +183,19 @@ CREATE TABLE public.ban (
 
 
 --
+-- Name: blob_index; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.blob_index (
+    key text NOT NULL,
+    digest_type smallint NOT NULL,
+    digest_value bytea NOT NULL,
+    size bigint NOT NULL,
+    last_modified timestamp with time zone NOT NULL
+);
+
+
+--
 -- Name: blob_prune_prefix; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -780,6 +793,14 @@ ALTER TABLE ONLY public.attributed_to_reaction_summaries
 
 ALTER TABLE ONLY public.ban
     ADD CONSTRAINT ban_pkey PRIMARY KEY (identity);
+
+
+--
+-- Name: blob_index blob_index_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.blob_index
+    ADD CONSTRAINT blob_index_pkey PRIMARY KEY (key);
 
 
 --

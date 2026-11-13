@@ -60,6 +60,7 @@
 pub mod application;
 pub mod attributed_to_reaction_summary;
 pub mod ban;
+pub mod blob_index;
 pub mod blob_prune_prefix;
 pub mod block;
 pub mod content;

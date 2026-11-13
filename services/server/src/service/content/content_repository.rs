@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use ::entity::{content, content_blob};
+use ::entity::{blob_index, content, content_blob};
 use chrono::Utc;
 use polycentric_common::models::protos_v2::{ContentDigest, ContentDigestType};
 use prost::Message;
@@ -109,15 +109,16 @@ impl Mutation {
         query
     }
 
+    /// Returns true if the blob is stored, false if it's already stored.
     #[tracing::instrument(skip_all)]
     pub async fn save_blob(
         db: &mut DbTx<'_>,
         blob: &Blob,
-    ) -> Result<(), DbErr> {
+    ) -> Result<bool, DbErr> {
         // Digest for the actual blob data
         let digest = match &blob.digest {
             Some(d) => d,
-            None => return Ok(()),
+            None => return Ok(false),
         };
 
         // Digest for the blob object metadata
@@ -137,7 +138,7 @@ impl Mutation {
         let Some(content_id) = content_id else {
             // Content with this digest already tracked — the blob child row
             // would have been written then; nothing to do.
-            return Ok(());
+            return Ok(false);
         };
 
         let blob_insert =
@@ -160,8 +161,35 @@ impl Mutation {
             .await;
 
         match blob_insert {
-            Ok(_) | Err(DbErr::RecordNotInserted) => Ok(()),
+            Ok(_) => Ok(true),
+            Err(DbErr::RecordNotInserted) => Ok(false),
             Err(e) => Err(e),
         }
+    }
+
+    /// Add a blob that is upload to content store to our local blob index.
+    #[tracing::instrument(skip_all)]
+    pub(crate) async fn add_blob_index<C: Connection>(
+        db: &mut C,
+        key: String,
+        digest: ContentDigest,
+        size: i64,
+    ) -> Result<(), DbErr> {
+        blob_index::Entity::insert(blob_index::ActiveModel {
+            key: ActiveValue::Set(key),
+            digest_type: ActiveValue::Set(digest.r#type),
+            digest_value: ActiveValue::Set(digest.value),
+            size: ActiveValue::Set(size),
+            last_modified: ActiveValue::Set(Utc::now().into()),
+        })
+        .on_conflict({
+            // Unlikely, but let's not stop now as the blob is uploaded.
+            let mut c = OnConflict::new();
+            c.do_nothing();
+            c
+        })
+        .exec_without_returning(db)
+        .await?;
+        Ok(())
     }
 }
