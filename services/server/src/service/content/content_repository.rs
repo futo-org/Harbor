@@ -192,4 +192,21 @@ impl Mutation {
         .await?;
         Ok(())
     }
+
+    /// Returns the amount of blobs inserted.
+    #[tracing::instrument(skip_all)]
+    pub(crate) async fn update_blob_index<C: Connection>(
+        db: &mut C,
+        blobs: Vec<blob_index::ActiveModel>,
+    ) -> Result<u64, DbErr> {
+        blob_index::Entity::insert_many(blobs)
+            .on_conflict({
+                // If the blob is already in the index we don't have to do anything.
+                let mut c = OnConflict::new();
+                c.do_nothing();
+                c
+            })
+            .exec_without_returning(db)
+            .await
+    }
 }
