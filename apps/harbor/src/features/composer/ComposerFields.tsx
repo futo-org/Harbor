@@ -11,7 +11,6 @@ import {
   Spacing,
   typography,
   useTheme,
-  withHexOpacity,
 } from '@/src/common/theme';
 import { useCallback, useRef, useState } from 'react';
 import {
@@ -185,14 +184,8 @@ export function ComposerFields({
         <View
           style={[
             Atoms.p_md,
-            {
-              borderBottomWidth: 1,
-              borderBottomColor: withHexOpacity(
-                theme.palette.negative_500,
-                '80',
-              ),
-              marginBottom: 10,
-            },
+            theme.atoms_new.box.danger.border,
+            { borderBottomWidth: 1, marginBottom: 10 },
           ]}
         >
           <Text variant="secondary" color="danger">
@@ -394,13 +387,11 @@ function ComposerLinkPreview({
             Atoms.p_md,
             Atoms.rounded_md,
             Atoms.mt_md,
-            {
-              borderWidth: 1,
-              borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-            },
+            theme.atoms_new.box.neutral.border_subtle,
+            { borderWidth: 1 },
           ]}
         >
-          <ActivityIndicator size="small" color={theme.palette.neutral_500} />
+          <ActivityIndicator size="small" color={theme.colors.muted} />
           <Text variant="secondary" color="muted">
             Loading preview…
           </Text>
@@ -411,20 +402,22 @@ function ComposerLinkPreview({
         disabled={disabled}
         accessibilityLabel="Remove link preview"
         hitSlop={6}
-        style={{
-          position: 'absolute',
-          // Below the card's own mt_md top margin (margins stay inside the
-          // wrapper, so the card's top edge is Spacing.md down from ours).
-          top: Spacing.md + 4,
-          right: 4,
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: withHexOpacity(theme.palette.black, 'b0'),
-          opacity: disabled ? 0.4 : 1,
-        }}
+        style={[
+          theme.atoms_new.media_control.bg,
+          disabled && theme.atoms_new.faded,
+          {
+            position: 'absolute',
+            // Below the card's own mt_md top margin (margins stay inside the
+            // wrapper, so the card's top edge is Spacing.md down from ours).
+            top: Spacing.md + 4,
+            right: 4,
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+        ]}
       >
         <Icon name="close" size={14} color="light" />
       </Pressable>
@@ -498,19 +491,19 @@ function AttachmentThumb({
   const { theme } = useTheme();
   return (
     <View
-      style={{
-        width,
-        aspectRatio,
-        borderRadius: 8,
-        overflow: 'hidden',
-        backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-      }}
+      style={[
+        theme.atoms_new.box.neutral.bg_subtle,
+        { width, aspectRatio, borderRadius: 8, overflow: 'hidden' },
+      ]}
     >
       <Image
         source={{ uri }}
         recyclingKey={uri}
         contentFit="cover"
-        style={{ width: '100%', height: '100%' }}
+        style={[
+          { width: '100%', height: '100%' },
+          status !== 'ready' && theme.atoms_new.faded,
+        ]}
       />
       {/* Loading / error overlay while the blobs are being processed+uploaded */}
       {status !== 'ready' && (
@@ -524,19 +517,13 @@ function AttachmentThumb({
               right: 0,
               bottom: 0,
               left: 0,
-              backgroundColor: withHexOpacity(
-                status === 'error'
-                  ? theme.palette.negative_500
-                  : theme.palette.black,
-                '40',
-              ),
             },
           ]}
         >
           {status === 'error' ? (
             <Icon name="ban" size={22} color="light" />
           ) : (
-            <ActivityIndicator size="small" color="white" />
+            <ActivityIndicator size="small" color={theme.colors.light} />
           )}
         </View>
       )}
@@ -545,18 +532,20 @@ function AttachmentThumb({
         disabled={disabled}
         accessibilityLabel="Remove attachment"
         hitSlop={6}
-        style={{
-          position: 'absolute',
-          top: 2,
-          right: 2,
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: withHexOpacity(theme.palette.black, 'b0'),
-          opacity: disabled ? 0.4 : 1,
-        }}
+        style={[
+          theme.atoms_new.media_control.bg,
+          disabled && theme.atoms_new.faded,
+          {
+            position: 'absolute',
+            top: 2,
+            right: 2,
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+        ]}
       >
         <Icon name="close" size={14} color="light" />
       </Pressable>
@@ -568,7 +557,7 @@ const useStyles = createThemedStyles((theme, define) =>
   define({
     webTextareaUnderMirror: {
       color: 'transparent',
-      caretColor: theme.palette.neutral_900,
+      caretColor: theme.colors.primary,
     },
     webMirror: [
       StyleSheet.absoluteFill,
@@ -577,6 +566,6 @@ const useStyles = createThemedStyles((theme, define) =>
       { pointerEvents: 'none' },
     ],
     // As the disabled input
-    webMirrorDisabled: { opacity: 0.5 },
+    webMirrorDisabled: theme.atoms_new.faded,
   }),
 );

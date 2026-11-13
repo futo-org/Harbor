@@ -43,11 +43,9 @@ export function MentionSearchOverlay() {
             (inputPageY - insets.top),
           zIndex: ZIndex.raised,
         },
-        {
-          backgroundColor: theme.palette.neutral_0,
-          borderTopWidth: 1,
-          borderColor: theme.palette.neutral_25,
-        },
+        theme.atoms_new.box.primary.bg,
+        theme.atoms_new.box.primary.border,
+        { borderTopWidth: 1 },
       ]}
     >
       <ScrollView

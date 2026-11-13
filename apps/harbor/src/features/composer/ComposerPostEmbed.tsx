@@ -4,7 +4,7 @@ import {
   truncateName,
   useUsername,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { View } from 'react-native';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
 
@@ -27,13 +27,9 @@ export default function ComposerPostEmbed({
       style={[
         Atoms.p_md,
         Atoms.rounded_md,
-        {
-          minHeight: 64,
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-          marginBottom: 10,
-        },
+        theme.atoms_new.box.secondary.bg,
+        theme.atoms_new.box.secondary.border,
+        { minHeight: 64, borderBottomWidth: 1, marginBottom: 10 },
       ]}
     >
       <Text variant="small">

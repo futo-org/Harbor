@@ -51,7 +51,7 @@ export function ComposeSheet({
   const postAction = composer.submitting ? (
     <ActivityIndicator
       size="small"
-      color={theme.palette.primary_500}
+      color={theme.colors.accent}
       accessibilityLabel="Posting"
     />
   ) : (
@@ -113,7 +113,7 @@ export function ComposeSheet({
                 accessibilityLabel="Cancel"
                 onPress={composer.handleClose}
                 hitSlop={Spacing.lg}
-                style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+                style={({ pressed }) => [pressed && theme.atoms_new.faded]}
               >
                 <Text color="muted">Cancel</Text>
               </Pressable>
