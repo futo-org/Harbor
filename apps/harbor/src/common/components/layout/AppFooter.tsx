@@ -104,7 +104,7 @@ function FooterLink({ href, text }: FooterLinkProps) {
       href={href}
       target="_blank"
       accessibilityLabel={text}
-      style={theme.atoms.text_neutral_low}
+      style={theme.atoms_new.muted}
     >
       {text}
     </Link>

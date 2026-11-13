@@ -71,11 +71,9 @@ export function SegmentedButton({
       style={[
         Atoms.flex_row,
         Atoms.rounded_full,
-        {
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: theme.palette.neutral_50,
-          backgroundColor: theme.palette.neutral_25,
-        },
+        theme.atoms_new.box.secondary.bg,
+        theme.atoms_new.box.secondary.border,
+        { borderWidth: StyleSheet.hairlineWidth },
         style,
       ]}
       {...props}
@@ -171,11 +169,11 @@ function ActiveSegmentIndicator({
     <Animated.View
       style={[
         Atoms.absolute,
+        theme.atoms_new.box.accent.bg,
         {
           // Covers the track's top and bottom border.
           top: -StyleSheet.hairlineWidth,
           bottom: -StyleSheet.hairlineWidth,
-          backgroundColor: theme.palette.primary_500,
         },
         indicatorStyle,
       ]}
@@ -245,7 +243,7 @@ function Segment({
         hovered && !active
           ? // A hovered segment stays below the indicator, so on web its
             // background can't cover the indicator's edge after pixel rounding.
-            { backgroundColor: theme.palette.neutral_50 }
+            theme.atoms_new.box.secondary.bg_hover
           : { zIndex: ZIndex.raised },
         // Keeps the hover background inside the track's rounded ends.
         isFirst && LEFT_ROUNDED,
@@ -284,6 +282,7 @@ function StaticSegmentIndicator({
     <View
       style={[
         Atoms.absolute,
+        theme.atoms_new.box.accent.bg,
         {
           // Covers the separators and track border around the segment,
           // like `ActiveSegmentIndicator`.
@@ -291,7 +290,6 @@ function StaticSegmentIndicator({
           bottom: -StyleSheet.hairlineWidth,
           left: -StyleSheet.hairlineWidth,
           right: -StyleSheet.hairlineWidth,
-          backgroundColor: theme.palette.primary_500,
         },
         isFirst && LEFT_ROUNDED,
         isLast && RIGHT_ROUNDED,
@@ -306,10 +304,10 @@ function SegmentSeparator() {
 
   return (
     <View
-      style={{
-        width: StyleSheet.hairlineWidth,
-        backgroundColor: theme.palette.neutral_50,
-      }}
+      style={[
+        theme.atoms_new.box.secondary.border,
+        { borderLeftWidth: StyleSheet.hairlineWidth },
+      ]}
     />
   );
 }

@@ -19,8 +19,8 @@ export function Kbd({ children }: KbdProps) {
       style={[
         Atoms.px_xs,
         Atoms.rounded_sm,
-        theme.atoms.bg_neutral_25,
-        theme.atoms.border_neutral_medium,
+        theme.atoms_new.box.secondary.bg,
+        theme.atoms_new.box.secondary.border,
         { borderWidth: 1, transform: [{ translateY: KEY_BOX_DROP }] },
       ]}
     >

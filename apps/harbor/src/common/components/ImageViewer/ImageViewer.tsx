@@ -1,5 +1,5 @@
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity, Spacing } from '@/src/common/theme';
+import { Atoms, useTheme, Spacing } from '@/src/common/theme';
 import Icon from '@/src/common/components/Icon';
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
@@ -140,8 +140,6 @@ export function ImageViewer({
   const hasPrev = safeIndex > 0;
   const hasNext = safeIndex < count - 1;
 
-  const chipBg = withHexOpacity(theme.palette.black, 'b0');
-
   // Rendered by the image-viewer routes (post images, profile photo),
   // declared with `orientation: 'all'`, so it rotates to landscape and
   // fills the screen while the rest of the app stays portrait. The route
@@ -185,13 +183,8 @@ export function ImageViewer({
           Atoms.items_center,
           Atoms.justify_center,
           Atoms.rounded_full,
-          {
-            top: insets.top,
-            right: 16,
-            width: 40,
-            height: 40,
-            backgroundColor: chipBg,
-          },
+          theme.atoms_new.media_control.bg,
+          { top: insets.top, right: 16, width: 40, height: 40 },
         ]}
       >
         <Icon name="close" size={24} color="light" />
@@ -201,8 +194,8 @@ export function ImageViewer({
           preferable then */}
       {hasPointerHover && (
         <>
-          {hasPrev && <NavArrow side="left" onPress={goPrev} bg={chipBg} />}
-          {hasNext && <NavArrow side="right" onPress={goNext} bg={chipBg} />}
+          {hasPrev && <NavArrow side="left" onPress={goPrev} />}
+          {hasNext && <NavArrow side="right" onPress={goNext} />}
         </>
       )}
 

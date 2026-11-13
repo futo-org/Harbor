@@ -74,11 +74,9 @@ export function Tooltip({
           Atoms.pl_md,
           Atoms.pr_md,
           Atoms.rounded_md,
-          {
-            borderWidth: 1,
-            borderColor: theme.palette.neutral_50,
-            backgroundColor: theme.palette.neutral_25,
-          },
+          theme.atoms_new.box.secondary.bg,
+          theme.atoms_new.box.secondary.border,
+          { borderWidth: 1 },
         ]}
       >
         <Text variant="small" color="secondary" fontWeight="semibold">

@@ -20,11 +20,12 @@ function DropdownMenuContent({
           // Typed as nullable, but flattening these objects never returns null
           style={
             StyleSheet.flatten([
-              { borderWidth: 1, borderColor: theme.palette.neutral_50 },
+              theme.atoms_new.box.secondary.border,
+              { borderWidth: 1 },
               Atoms.rounded_lg,
               { minWidth: 225 },
               Atoms.outline_none,
-              { backgroundColor: theme.palette.neutral_25 },
+              theme.atoms_new.box.secondary.bg,
               Atoms.overflow_hidden,
               typeof style === 'function' ? undefined : style,
             ]) as ViewStyle
@@ -52,15 +53,11 @@ function DropdownMenuItem({
           style={[
             Atoms.py_md,
             Atoms.px_lg,
-            // Press on native mirrors hover on web — same highlight, so items
-            // give feedback on touch devices that have no hover state.
-            (hovered || pressed) && {
-              backgroundColor: theme.palette.neutral_50,
-            },
+            (pressed || hovered) && theme.atoms_new.box.secondary.bg_hover,
             Atoms.flex_row,
             Atoms.align_center,
             Atoms.gap_lg,
-            props.disabled && { opacity: 0.5 },
+            props.disabled && theme.atoms_new.faded,
           ]}
         >
           {children}

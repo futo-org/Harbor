@@ -132,16 +132,6 @@ export function Button({
       ]}
       {...props}
     >
-      {/* Tertiary has no fill of its own to darken */}
-      {!isDisabled && hovered && variant === 'tertiary' && (
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            { borderRadius },
-            theme.atoms_new.overlay.hover,
-          ]}
-        />
-      )}
       <View style={[styles.content, iconOnly && styles.iconOnlyContent]}>
         {icon &&
           (typeof icon === 'function' ? (
@@ -225,7 +215,7 @@ function getHoverVariantStyle(
     case 'secondary':
       return box.accent.bg_subtle_hover;
     case 'tertiary':
-      return undefined;
+      return box.neutral.bg_subtle;
     case 'destructive':
       return box.danger.bg_subtle_hover;
   }

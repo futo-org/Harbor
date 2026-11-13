@@ -54,9 +54,7 @@ export function TabFilterSheet<T extends string>({
                 Atoms.gap_md,
                 Atoms.py_lg,
                 Atoms.px_lg,
-                (hovered || pressed) && {
-                  backgroundColor: theme.palette.neutral_25,
-                },
+                (pressed || hovered) && theme.atoms_new.box.primary.bg_hover,
               ]}
             >
               {option.icon ? (

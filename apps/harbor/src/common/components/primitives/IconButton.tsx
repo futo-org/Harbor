@@ -3,7 +3,6 @@ import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   BorderRadius,
   useTheme,
-  withHexOpacity,
   type BorderRadiusToken,
   type TextColor,
 } from '@/src/common/theme';
@@ -70,22 +69,14 @@ export function IconButton({
     color: iconColor,
   });
 
-  const ghostFill = withHexOpacity(
-    theme.palette.neutral_500,
-    hovered ? '22' : '00',
-  );
-  const filledFill = withHexOpacity(
-    theme.palette.neutral_500,
-    hovered ? '22' : '10',
-  );
-
-  const chromeBorder = {
-    borderWidth: 1,
-    borderColor: withHexOpacity(theme.palette.neutral_500, '60'),
-  };
-
+  const { box } = theme.atoms_new;
   const showChrome = !(variant === 'ghost' && compact);
-  const surfaceBg = variant === 'ghost' ? ghostFill : filledFill;
+  const surfaceFill =
+    variant === 'ghost'
+      ? hovered && box.neutral.bg_subtle
+      : hovered
+        ? box.neutral.bg_subtle_hover
+        : box.neutral.bg_subtle;
 
   return (
     <Animated.View pointerEvents="box-none" style={[animatedStyle, style]}>
@@ -106,7 +97,7 @@ export function IconButton({
               ? ({ cursor: disabled ? 'default' : 'pointer' } as ViewStyle)
               : {}),
           },
-          hovered && { opacity: 0.8 },
+          hovered && theme.atoms_new.faded_subtle,
         ]}
         {...props}
       >
@@ -114,11 +105,9 @@ export function IconButton({
           <View
             style={[
               styles.surface,
-              chromeBorder,
-              {
-                borderRadius: resolvedBorderRadius,
-                backgroundColor: surfaceBg,
-              },
+              box.neutral.border_subtle,
+              { borderWidth: 1, borderRadius: resolvedBorderRadius },
+              surfaceFill,
             ]}
           >
             {iconElement}

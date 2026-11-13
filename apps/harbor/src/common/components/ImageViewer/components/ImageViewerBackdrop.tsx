@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   type SharedValue,
 } from 'react-native-reanimated';
+import { useTheme } from '@/src/common/theme';
 import { PINCH_CLOSE_SCALE } from '../constants';
 
 export function ImageViewerBackdrop({
@@ -14,6 +15,7 @@ export function ImageViewerBackdrop({
   scale: SharedValue<number>;
   dismissY: SharedValue<number>;
 }) {
+  const { theme } = useTheme();
   const { height } = useWindowDimensions();
 
   const backdropStyle = useAnimatedStyle(() => {
@@ -33,7 +35,7 @@ export function ImageViewerBackdrop({
       pointerEvents="none"
       style={[
         StyleSheet.absoluteFill,
-        { backgroundColor: 'rgba(0,0,0,0.92)' },
+        theme.atoms_new.overlay.media_backdrop,
         backdropStyle,
       ]}
     />

@@ -46,8 +46,10 @@ export function SelectChip({
         </View>
       )}
       variant="tertiary"
-      style={[
-        theme.atoms_new.box.secondary.bg,
+      style={({ hovered }) => [
+        hovered
+          ? theme.atoms_new.box.secondary.bg_hover
+          : theme.atoms_new.box.secondary.bg,
         theme.atoms_new.box.secondary.border,
         {
           paddingVertical: Spacing.sm,

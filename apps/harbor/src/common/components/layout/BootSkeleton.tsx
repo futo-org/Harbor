@@ -14,11 +14,9 @@ import { POST_SKELETON_LIST_COUNT } from '@/src/features/post/PostSkeleton';
 import {
   BorderRadius,
   Breakpoints,
-  darkPalette,
-  lightPalette,
-  type Palette,
   Spacing,
-  withHexOpacity,
+  type Theme,
+  themes,
   ZIndex,
 } from '@/src/common/theme';
 
@@ -61,15 +59,15 @@ try{for(var i=0;i<localStorage.length;i++)if(localStorage.key(i).indexOf('polyce
  * width `useWindowDimensions` reports, so the breakpoints match `Layout`.
  */
 export const BOOT_SKELETON_STYLE = `
-:root{${buildColorVariables(lightPalette)}}
-:root[data-theme=dark]{${buildColorVariables(darkPalette)}}
+:root{${buildColorVariables(themes.light.colors)}}
+:root[data-theme=dark]{${buildColorVariables(themes.dark.colors)}}
 :root:not([data-signed-in]) .sk-signed-in,:root[data-signed-in] .sk-signed-out{display:none!important}
 #${BOOT_SKELETON_ID}{position:fixed;inset:0;z-index:${ZIndex.bootSkeleton};overflow:hidden;background:var(--sk-bg);container-type:inline-size;transition:opacity ${FADE_OUT_MS}ms}
 @keyframes sk-pulse{from{opacity:.5}to{opacity:1}}
 .sk-screen{display:flex;height:100%}
 .sk-bone{flex-shrink:0;height:${BAR_HEIGHT}px;border-radius:${BorderRadius.full}px;background:var(--sk-bone)}
 .sk-row{display:flex;align-items:center;gap:${Spacing.sm}px}
-.sk-topbar{display:none;flex-shrink:0;align-items:center;justify-content:space-between;height:${TOPBAR_HEIGHT}px;padding:0 ${Spacing.md}px;box-sizing:border-box;border-bottom:1px solid var(--sk-topbar-border)}
+.sk-topbar{display:none;flex-shrink:0;align-items:center;justify-content:space-between;height:${TOPBAR_HEIGHT}px;padding:0 ${Spacing.md}px;box-sizing:border-box;border-bottom:1px solid var(--sk-border)}
 .sk-left{flex:1 0 auto;display:flex;justify-content:flex-end}
 .sk-left-inner{display:flex;flex-direction:column;width:${LAYOUT_SIZES.leftSidebarWideWidth}px;padding:0 ${LAYOUT_SIZES.leftSidebarWidePadding}px;box-sizing:border-box}
 .sk-logo{margin:${Spacing.sm}px ${Spacing.lg}px ${Spacing.lg}px}
@@ -255,11 +253,10 @@ function Bone({
   );
 }
 
-function buildColorVariables(palette: Palette) {
+function buildColorVariables(colors: Theme['colors']) {
   return [
-    `--sk-bg:${palette.neutral_0}`,
-    `--sk-border:${palette.neutral_25}`,
-    `--sk-bone:${withHexOpacity(palette.neutral_500, '20')}`,
-    `--sk-topbar-border:${withHexOpacity(palette.neutral_500, '10')}`,
+    `--sk-bg:${colors.box.primary.bg}`,
+    `--sk-border:${colors.box.primary.border}`,
+    `--sk-bone:${colors.box.neutral.bg_subtle}`,
   ].join(';');
 }

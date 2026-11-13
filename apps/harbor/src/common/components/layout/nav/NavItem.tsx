@@ -82,8 +82,8 @@ export function NavItem({
                 right: -8,
                 minWidth: 18,
                 height: 18,
-                backgroundColor: theme.palette.primary_500,
               },
+              theme.atoms_new.box.accent.bg,
             ]}
           >
             <Text fontSize="xs" lineHeight={18} fontWeight="bold" color="light">
@@ -103,11 +103,6 @@ export function NavItem({
     Atoms.align_center,
     Atoms.gap_sm,
   ];
-
-  const activeItemStyle = {
-    backgroundColor: theme.palette.neutral_25,
-  };
-  const hoverItemStyle = { backgroundColor: theme.palette.neutral_50 };
 
   return (
     <Link
@@ -136,8 +131,9 @@ export function NavItem({
         Atoms.pr_2xl,
         !labelVisible && Atoms.pr_lg,
         Atoms.gap_md,
-        isActive && activeItemStyle,
-        hovering && hoverItemStyle,
+        isActive
+          ? theme.atoms_new.box.secondary.bg
+          : hovering && theme.atoms_new.box.secondary.bg_hover,
       ]}
       {...props}
     >

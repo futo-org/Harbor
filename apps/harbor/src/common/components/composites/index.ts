@@ -1,6 +1,5 @@
 export * from './BackButton';
 export * from './CharCount';
-export * from './ClaimChip';
 export * from './CloseButton';
 export * from './CopyButton';
 export * from './EditButton';

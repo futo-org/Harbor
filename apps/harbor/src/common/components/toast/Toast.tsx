@@ -32,14 +32,6 @@ const VARIANTS: Record<ToastVariant, { icon: IconName; color: TextColor }> = {
   warning: { icon: 'flag', color: 'warning' },
 };
 
-const shadow = {
-  shadowColor: '#000',
-  shadowOpacity: 0.12,
-  shadowRadius: 12,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 4,
-};
-
 export function Toast({ toast }: { toast: ToastData }) {
   const { theme } = useTheme();
   const dismiss = useToastStore((s) => s.dismiss);
@@ -106,13 +98,10 @@ export function Toast({ toast }: { toast: ToastData }) {
         style={[
           Atoms.flex_row,
           Atoms.items_center,
-          {
-            borderRadius: BorderRadius.full,
-            backgroundColor: theme.palette.neutral_0,
-            borderWidth: 1,
-            borderColor: theme.palette.neutral_50,
-            ...shadow,
-          },
+          theme.atoms_new.box.primary.bg,
+          theme.atoms_new.box.primary.border,
+          theme.atoms_new.shadow.neutral,
+          { borderRadius: BorderRadius.full, borderWidth: 1 },
         ]}
       >
         {toast.onPress ? (

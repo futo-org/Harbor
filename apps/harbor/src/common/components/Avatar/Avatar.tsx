@@ -1,5 +1,5 @@
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import { Atoms, createThemedStyles, withHexOpacity } from '@/src/common/theme';
+import { Atoms, createThemedStyles } from '@/src/common/theme';
 import { Image, type ImageProps } from 'expo-image';
 import {
   Pressable,
@@ -134,10 +134,12 @@ export function Avatar({
       onPress={onPress}
       onHoverIn={onHoverIn}
       onHoverOut={onHoverOut}
-      style={({ pressed }) => [circleStyle, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        circleStyle,
+        pressed ? styles.pressed : hovered && styles.hovered,
+      ]}
     >
       {image}
-      {hovered && <View pointerEvents="none" style={styles.hoverOverlay} />}
     </Pressable>
   );
 }
@@ -147,22 +149,16 @@ const useStyles = createThemedStyles((theme, define) =>
     circle: [
       Atoms.overflow_hidden,
       Atoms.rounded_full,
-      { backgroundColor: theme.palette.background_primary },
+      theme.atoms_new.box.secondary.bg,
     ],
     image: [Atoms.w_full, Atoms.h_full],
-    pressed: { opacity: 0.5 },
+    pressed: theme.atoms_new.faded,
+    hovered: theme.atoms_new.faded_subtle,
     safetyRing: [
       StyleSheet.absoluteFill,
       Atoms.rounded_full,
-      {
-        borderWidth: 1,
-        borderColor: withHexOpacity(theme.palette.neutral_500, '40'),
-      },
-    ],
-    hoverOverlay: [
-      StyleSheet.absoluteFill,
-      Atoms.rounded_full,
-      { backgroundColor: withHexOpacity(theme.palette.black, '28') },
+      theme.atoms_new.box.neutral.border_subtle,
+      { borderWidth: 1 },
     ],
   }),
 );

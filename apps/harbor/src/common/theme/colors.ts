@@ -53,9 +53,6 @@ function buildColors(palette: Palette, scheme: ThemeScheme) {
       warning: buildBox(palette.warning_500, palette.warning_600),
     },
     overlay: {
-      hover: withOpacity(palette.neutral_900, 0.06),
-      pressed: withOpacity(palette.neutral_900, 0.12),
-      selected: withOpacity(palette.neutral_900, 0.12),
       modal_backdrop: withOpacity(palette.black, 0.45),
       media_backdrop: withOpacity(palette.black, 0.92),
     },
@@ -108,9 +105,6 @@ function buildAtoms(
       warning: buildBoxAtoms(colors.box.warning),
     },
     overlay: {
-      hover: { backgroundColor: colors.overlay.hover },
-      pressed: { backgroundColor: colors.overlay.pressed },
-      selected: { backgroundColor: colors.overlay.selected },
       modal_backdrop: { backgroundColor: colors.overlay.modal_backdrop },
       media_backdrop: { backgroundColor: colors.overlay.media_backdrop },
     },

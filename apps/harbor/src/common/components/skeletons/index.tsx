@@ -1,5 +1,5 @@
 import { AVATAR_SIZE_MAP } from '@/src/common/components/Avatar/Avatar';
-import { useTheme, withHexOpacity } from '@/src/common/theme';
+import { useTheme } from '@/src/common/theme';
 import { PageActiveContext } from '@/src/common/components/PagerView/PageActiveContext';
 import { Fragment, type ReactNode, useContext, useEffect } from 'react';
 import { View } from 'react-native';
@@ -53,12 +53,10 @@ export function Block({
   const { theme } = useTheme();
   return (
     <View
-      style={{
-        width,
-        height,
-        borderRadius: radius ?? height / 2,
-        backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-      }}
+      style={[
+        { width, height, borderRadius: radius ?? height / 2 },
+        theme.atoms_new.box.neutral.bg_subtle,
+      ]}
     />
   );
 }

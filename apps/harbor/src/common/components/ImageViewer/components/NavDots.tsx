@@ -4,7 +4,7 @@ import Animated, {
   useAnimatedStyle,
   interpolate,
 } from 'react-native-reanimated';
-import { Atoms, withHexOpacity, useTheme } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 
 // Animated dots for carousel-like UIs
 export function NavDots({
@@ -25,7 +25,7 @@ export function NavDots({
         Atoms.rounded_lg,
         Atoms.flex_row,
         Atoms.gap_xs,
-        { backgroundColor: withHexOpacity(theme.palette.black, 'b0') },
+        theme.atoms_new.media_control.bg,
       ]}
     >
       {Array.from({ length: count }).map((_, index) => (
@@ -86,7 +86,8 @@ function NavDot({
           width: 10,
           height: 10,
           borderRadius: 5,
-          backgroundColor: theme.palette.white,
+          // white in both themes, like the `light` icons on media
+          backgroundColor: theme.colors.light,
         },
         style,
       ]}

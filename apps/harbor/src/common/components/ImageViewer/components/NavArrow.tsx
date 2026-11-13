@@ -1,16 +1,16 @@
 import Icon from '@/src/common/components/Icon';
-import { Atoms } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Pressable } from 'react-native';
 
 export function NavArrow({
   side,
   onPress,
-  bg,
 }: {
   side: 'left' | 'right';
   onPress: () => void;
-  bg: string;
 }) {
+  const { theme } = useTheme();
+
   return (
     <Pressable
       onPress={onPress}
@@ -21,12 +21,12 @@ export function NavArrow({
         Atoms.items_center,
         Atoms.justify_center,
         Atoms.rounded_full,
+        theme.atoms_new.media_control.bg,
         {
           top: '50%',
           width: 44,
           height: 44,
           transform: [{ translateY: -22 }],
-          backgroundColor: bg,
         },
         side === 'left' ? { left: 16 } : { right: 16 },
       ]}

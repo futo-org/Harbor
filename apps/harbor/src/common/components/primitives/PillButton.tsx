@@ -7,7 +7,6 @@ import {
 import { Text } from './Text';
 import {
   useTheme,
-  withHexOpacity,
   type TextColor,
   type FontWeightToken,
 } from '@/src/common/theme';
@@ -44,17 +43,11 @@ export function PillButton({
   const variantStyle = (() => {
     switch (variant) {
       case 'primary':
-        return {
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        };
+        return theme.atoms_new.box.neutral.bg_subtle;
       case 'secondary':
-        return {
-          backgroundColor: withHexOpacity(theme.palette.primary_500, '20'),
-        };
+        return theme.atoms_new.box.accent.bg_subtle;
       case 'destructive':
-        return {
-          backgroundColor: withHexOpacity(theme.palette.negative_500, '20'),
-        };
+        return theme.atoms_new.box.danger.bg_subtle;
     }
   })();
 

@@ -1,11 +1,6 @@
 import { usePressAnimation } from '@/src/common/lib/animation';
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import {
-  Spacing,
-  useTheme,
-  withHexOpacity,
-  type SpacingToken,
-} from '@/src/common/theme';
+import { Spacing, useTheme, type SpacingToken } from '@/src/common/theme';
 import { Animated, Pressable, View } from 'react-native';
 
 interface ListItemProps {
@@ -49,14 +44,12 @@ export function ListItem({
         onPressOut={onPressOut}
         onHoverIn={onHoverIn}
         onHoverOut={onHoverOut}
-        style={{
-          ...padding,
+        style={[
+          padding,
           // We assume that the container has drawn the background,
           // so we only handle tinting on hover.
-          backgroundColor: hovered
-            ? withHexOpacity(theme.palette.neutral_500, '20')
-            : 'transparent',
-        }}
+          hovered && theme.atoms_new.box.neutral.bg_subtle,
+        ]}
       >
         <View {...props}>{children}</View>
       </Pressable>

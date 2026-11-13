@@ -1,5 +1,5 @@
 import { Text } from '@/src/common/components/primitives';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Children, Fragment, isValidElement } from 'react';
 import { View } from 'react-native';
 
@@ -16,7 +16,7 @@ export function ListItemGroup({ label, children }: ListItemGroupProps) {
 
   if (items.length === 0) return null;
 
-  const surface = withHexOpacity(theme.palette.neutral_500, '20');
+  const surface = theme.atoms_new.box.neutral.bg_subtle;
 
   return (
     <View style={Atoms.gap_sm}>
@@ -25,18 +25,10 @@ export function ListItemGroup({ label, children }: ListItemGroupProps) {
           {label}
         </Text>
       )}
-      <View
-        style={[
-          Atoms.rounded_md,
-          Atoms.overflow_hidden,
-          { backgroundColor: surface },
-        ]}
-      >
+      <View style={[Atoms.rounded_md, Atoms.overflow_hidden, surface]}>
         {items.map((item, index) => (
           <Fragment key={isValidElement(item) ? item.key : index}>
-            {index > 0 && (
-              <View style={{ height: 1, backgroundColor: surface }} />
-            )}
+            {index > 0 && <View style={[{ height: 1 }, surface]} />}
             {item}
           </Fragment>
         ))}
