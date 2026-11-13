@@ -147,6 +147,7 @@ function serveStatic(req, res, next) {
 }
 
 createServer((req, res) => {
+  res.setHeader('X-Frame-Options', 'DENY');
   serveVersion(req, res, () => {
     serveAppLinkFile(req, res, () => {
       serveStatic(req, res, () => {

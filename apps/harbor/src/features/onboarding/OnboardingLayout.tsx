@@ -2,12 +2,18 @@ import HARBOR_LOGO from '@/src/common/assets/images/harbor-logo-256.png';
 import SCENE_SPLASH from '@/src/common/assets/images/harbor-scene-splash.svg';
 import { BackButton } from '@/src/common/components/composites/BackButton';
 import { CloseButton } from '@/src/common/components/composites/CloseButton';
-import { Routes } from '@/src/common/constants';
+import { RETURN_TO_PARAM, Routes, safeReturnTo } from '@/src/common/constants';
 import { useVirtualKeyboardOverlap } from '@/src/common/lib/useVirtualKeyboardOverlap';
 import { Atoms, Breakpoints, useTheme } from '@/src/common/theme';
 import { isIOS, isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
-import { router, Slot, usePathname } from 'expo-router';
+import {
+  type Href,
+  router,
+  Slot,
+  useGlobalSearchParams,
+  usePathname,
+} from 'expo-router';
 import { KeyboardAvoidingView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,8 +31,11 @@ export default function OnboardingLayout() {
   const keyboardOverlap = useVirtualKeyboardOverlap();
   const pathname = usePathname();
 
+  const returnTo = safeReturnTo(useGlobalSearchParams()[RETURN_TO_PARAM]);
+
   const close = () => {
-    if (router.canGoBack()) router.dismissAll();
+    if (returnTo) router.dismissTo(returnTo as Href);
+    else if (router.canGoBack()) router.dismissAll();
     else router.dismissTo(Routes.tabs.explore.index);
   };
 

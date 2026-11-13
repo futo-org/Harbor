@@ -9,7 +9,7 @@ import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, useTheme } from '@/src/common/theme';
-import { isIOS, isWeb } from '@/src/common/util/platform';
+import { isWeb } from '@/src/common/util/platform';
 import { View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import { SuggestedFollowList } from '../follow/SuggestedFollowList';
@@ -50,8 +50,7 @@ export default function ExploreScreen({
 }: {
   tab?: ExploreTab;
 }) {
-  // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
-  const showComposeFab = !isWeb && !isIOS;
+  const showComposeFab = !isWeb;
   const { theme } = useTheme();
 
   usePageTitle(routeTab === 'people' ? 'People' : 'Explore');
@@ -138,7 +137,7 @@ export default function ExploreScreen({
           <Fab
             onPress={openCompose}
             accessibilityLabel="New post"
-            icon={() => <Icon name="add" size={32} color="white" />}
+            icon={({ color }) => <Icon name="add" size={32} color={color} />}
           />
         ) : null}
       </Screen.PrimaryColumn>

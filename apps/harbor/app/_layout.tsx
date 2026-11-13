@@ -5,6 +5,9 @@ import { installErrorReporter } from '@/src/features/telemetry/lib/error-reporte
 import { installConsoleCapture } from '@/src/features/telemetry/lib/console';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
 import { IdentitySwitcherSheet } from '@/src/features/core/identity/IdentitySwitcherSheet';
+import { ExtensionLoginSheet } from '@/src/features/anywhere/ExtensionLoginSheet';
+import { useExtensionNavigation } from '@/src/features/anywhere/hooks/useExtensionNavigation';
+import { extensionScreenLayout } from '@/src/features/anywhere/browser-extension/lib/extension-screen-layout';
 import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
 import { ModerationWarningSheet } from '@/src/features/moderation/ModerationWarningSheet';
 import { LoggedOutShareNotice } from '@/src/features/share-intake/LoggedOutShareNotice';
@@ -19,7 +22,7 @@ import { Routes } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
 import { TelemetryIdentitySync } from '@/src/features/telemetry/TelemetryIdentitySync';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
+import { isBrowserExtension, isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { PortalHost } from '@rn-primitives/portal';
@@ -80,7 +83,13 @@ function RootStack() {
       <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
       <NavigationBar style={theme.name === 'dark' ? 'light' : 'dark'} />
       <Stack
-        screenLayout={isWeb ? undefined : renderScreenWithSplashHide}
+        screenLayout={
+          isBrowserExtension
+            ? extensionScreenLayout
+            : isWeb
+              ? undefined
+              : renderScreenWithSplashHide
+        }
         screenOptions={{
           headerShown: false,
           fullScreenGestureEnabled: !isWeb,
@@ -177,6 +186,7 @@ function RootStack() {
 
 export default function RootLayout() {
   useResyncTitleOnPopstate();
+  useExtensionNavigation();
 
   return (
     <>
@@ -195,6 +205,7 @@ export default function RootLayout() {
                   <Toaster />
                   <AuthGateSheet />
                   <LoggedOutShareNotice />
+                  {isWeb ? <ExtensionLoginSheet /> : null}
                   <EmojiPickerSheet />
                   <IdentitySwitcherSheet />
                   <ModerationWarningSheet />

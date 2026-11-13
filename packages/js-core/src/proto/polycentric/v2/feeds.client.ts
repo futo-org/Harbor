@@ -4,6 +4,10 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { FeedsService } from "./feeds";
+import type { GetAttributedToStatsResponse } from "./feeds";
+import type { GetAttributedToStatsRequest } from "./feeds";
+import type { GetAttributedToFeedResponse } from "./feeds";
+import type { GetAttributedToFeedRequest } from "./feeds";
 import type { GetAttributionFeedRequest } from "./feeds";
 import type { GetPostThreadResponse } from "./feeds";
 import type { GetPostThreadRequest } from "./feeds";
@@ -67,6 +71,18 @@ export interface IFeedsServiceClient {
      * @generated from protobuf rpc: GetAttributionFeed
      */
     getAttributionFeed(input: GetAttributionFeedRequest, options?: RpcOptions): UnaryCall<GetAttributionFeedRequest, GetFeedResponse>;
+    /**
+     * Targets recent posts are attributed to (e.g. URLs), with post counts
+     *
+     * @generated from protobuf rpc: GetAttributedToFeed
+     */
+    getAttributedToFeed(input: GetAttributedToFeedRequest, options?: RpcOptions): UnaryCall<GetAttributedToFeedRequest, GetAttributedToFeedResponse>;
+    /**
+     * Post and reaction counts of a target
+     *
+     * @generated from protobuf rpc: GetAttributedToStats
+     */
+    getAttributedToStats(input: GetAttributedToStatsRequest, options?: RpcOptions): UnaryCall<GetAttributedToStatsRequest, GetAttributedToStatsResponse>;
 }
 /**
  * *
@@ -144,5 +160,23 @@ export class FeedsServiceClient implements IFeedsServiceClient, ServiceInfo {
     getAttributionFeed(input: GetAttributionFeedRequest, options?: RpcOptions): UnaryCall<GetAttributionFeedRequest, GetFeedResponse> {
         const method = this.methods[6], opt = this._transport.mergeOptions(options);
         return stackIntercept<GetAttributionFeedRequest, GetFeedResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Targets recent posts are attributed to (e.g. URLs), with post counts
+     *
+     * @generated from protobuf rpc: GetAttributedToFeed
+     */
+    getAttributedToFeed(input: GetAttributedToFeedRequest, options?: RpcOptions): UnaryCall<GetAttributedToFeedRequest, GetAttributedToFeedResponse> {
+        const method = this.methods[7], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetAttributedToFeedRequest, GetAttributedToFeedResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * Post and reaction counts of a target
+     *
+     * @generated from protobuf rpc: GetAttributedToStats
+     */
+    getAttributedToStats(input: GetAttributedToStatsRequest, options?: RpcOptions): UnaryCall<GetAttributedToStatsRequest, GetAttributedToStatsResponse> {
+        const method = this.methods[8], opt = this._transport.mergeOptions(options);
+        return stackIntercept<GetAttributedToStatsRequest, GetAttributedToStatsResponse>("unary", this._transport, method, opt, input);
     }
 }

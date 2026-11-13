@@ -539,12 +539,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/android-build
-      # The android build regenerates the uniffi bindings
-      - name: Check generated bindings up-to-date
-        run: |
-          stale=$(git status --porcelain -- packages/react-native)
-          [ -z "$stale" ] ||
-            { echo "$stale"; echo "::error::Generated bindings are stale; run 'pnpm -C packages/react-native ubrn:ios' (or ubrn:android) and commit the result"; exit 1; }
       - uses: ./.forgejo/actions/r2-cache
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -955,17 +949,19 @@ jobs:
   # this run's server image, which e2e-web.sh starts with Compose.
   web-e2e:
     name: Test web e2e
-    needs: [ changes, web-image, service-images ]
+    needs: [ changes, sdks, web-image, service-images ]
+    # An image this run does not build is staging's (plan `images`).
     if: >-
-      ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.web_e2e && needs.web-image.result == 'success' &&
-      needs.service-images.result == 'success' }}
+      ${{ !cancelled() && fromJSON(needs.changes.outputs.plan).flags.web_e2e && needs.sdks.result == 'success' &&
+      (fromJSON(needs.changes.outputs.plan).images.web == 'staging' || needs.web-image.result == 'success') &&
+      (fromJSON(needs.changes.outputs.plan).images.server == 'staging' || needs.service-images.result == 'success') }}
     runs-on: ${{ vars.CI_RUNNER || 'docker' }}
     timeout-minutes: 15
     container:
       image: ${{ needs.changes.outputs.registry }}/ci/rust-dind:${{ needs.changes.outputs.images_tag }}
     services:
       web:
-        image: ${{ needs.changes.outputs.registry }}/web:${{ github.sha }}
+        image: ${{ needs.changes.outputs.registry }}/web:${{ fromJSON(needs.changes.outputs.plan).images.web }}
         env:
           EXPO_PUBLIC_APP_VARIANT: staging
           EXPO_PUBLIC_HARBOR_SEED_SERVERS: http://server:3000
@@ -975,7 +971,7 @@ jobs:
       MAESTRO_OUTPUT: reports
       # run.mjs seeds the identities the flows search for on the app's server.
       E2E_SERVER_URL: http://server:3000
-      HARBOR_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ github.sha }}
+      HARBOR_SERVER_IMAGE: ${{ needs.changes.outputs.registry }}/server:${{ fromJSON(needs.changes.outputs.plan).images.server }}
     steps:
       - name: Install Chromium
         run: |

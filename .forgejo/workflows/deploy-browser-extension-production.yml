@@ -1,7 +1,7 @@
 name: Deploy browser extension to production
 
 # Builds the production extension for every browser from the default branch's
-# head; the store zips are the run's browser-extension-production artifact.
+# head, submits it to the stores and uploads the builds to the static bucket.
 
 on:
   workflow_dispatch:
@@ -120,3 +120,70 @@ jobs:
       - uses: ./.forgejo/actions/safari-extension-build
         with:
           variant: production
+
+  # Safari is not submitted: its app is unsigned.
+  store-deploy:
+    name: ${{ matrix.label }}
+    needs: build
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - store: chrome
+            label: Submit to the Chrome Web Store
+          - store: firefox
+            label: Submit to Firefox Add-ons
+          - store: edge
+            label: Submit to Edge Add-ons
+    env:
+      CHROME_API_VERSION: v2
+      CHROME_EXTENSION_ID: ${{ vars.CHROME_EXTENSION_ID_PRODUCTION }}
+      CHROME_PUBLISHER_ID: ${{ vars.CHROME_PUBLISHER_ID }}
+      CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ vars.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
+      CHROME_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.CHROME_SERVICE_ACCOUNT_PRIVATE_KEY }}
+      # A build still in review gives way to this one.
+      CHROME_CANCEL_PENDING: "true"
+      # The gecko id in apps/harbor-browser-extension/wxt.config.ts
+      FIREFOX_EXTENSION_ID: anywhere@harbor.social
+      FIREFOX_CHANNEL: listed
+      FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+      FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+      EDGE_PRODUCT_ID: ${{ vars.EDGE_PRODUCT_ID_PRODUCTION }}
+      EDGE_CLIENT_ID: ${{ vars.EDGE_CLIENT_ID }}
+      EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.forgejo/actions/browser-extension-submit
+        with:
+          variant: production
+          store: ${{ matrix.store }}
+
+  # Runs without the Safari app when its build failed.
+  static-deploy:
+    name: Deploy to the static bucket
+    needs: [ build, safari ]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ${{ vars.CI_RUNNER || 'docker' }}
+    container: ${{ vars.CI_NODE_IMAGE || 'node:26-bookworm' }}
+    env:
+      UPDATE_CHANNEL: production
+      STATIC_S3_ENDPOINT: ${{ secrets.STATIC_S3_ENDPOINT }}
+      STATIC_S3_BUCKET: ${{ vars.STATIC_S3_BUCKET }}
+      STATIC_S3_ACCESS_KEY_ID: ${{ secrets.STATIC_S3_ACCESS_KEY_ID }}
+      STATIC_S3_SECRET_ACCESS_KEY: ${{ secrets.STATIC_S3_SECRET_ACCESS_KEY }}
+      STATIC_PUBLIC_BASE_URL: ${{ vars.STATIC_PUBLIC_BASE_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: forgejo/download-artifact@v4
+        with:
+          name: browser-extension-production
+          path: apps/harbor-browser-extension/dist
+      - uses: forgejo/download-artifact@v4
+        if: needs.safari.result == 'success'
+        with:
+          name: browser-extension-safari-production
+          path: apps/harbor-browser-extension/dist
+      - name: Publish the builds
+        run: node .forgejo/scripts/publish-browser-extension.mjs
