@@ -4,7 +4,10 @@
 
 use std::time::Duration;
 
-use entity::{blob_prune_prefix, content, content_blob, content_image, event};
+use entity::{
+    blob_prune_prefix, content, content_blob, content_delete, content_image,
+    event,
+};
 use sea_orm::entity::prelude::DateTimeWithTimeZone;
 use sea_orm::sea_query::{
     CommonTableExpression, DynIden, Expr, ExprTrait, Order, SelectStatement,
@@ -216,7 +219,48 @@ impl Query {
                         )
                         .eq(Expr::col(content::Column::DigestBytes)),
                     ),
-            );
+            )
+            // Event is not deleted.
+            .left_join(
+                content_delete::Entity,
+                Expr::col(event::Column::Collection.as_column_ref())
+                    .eq(Expr::col(
+                        content_delete::Column::EventKeyCollection
+                            .as_column_ref(),
+                    ))
+                    .and(
+                        Expr::col(event::Column::Identity.as_column_ref()).eq(
+                            Expr::col(
+                                content_delete::Column::EventKeyIdentity
+                                    .as_column_ref(),
+                            ),
+                        ),
+                    )
+                    .and(
+                        Expr::col(event::Column::PublicKeyType.as_column_ref())
+                            .eq(Expr::col(
+                                content_delete::Column::EventKeyPublicKeyType
+                                    .as_column_ref(),
+                            )),
+                    )
+                    .and(
+                        Expr::col(event::Column::PublicKey.as_column_ref()).eq(
+                            Expr::col(
+                                content_delete::Column::EventKeyPublicKey
+                                    .as_column_ref(),
+                            ),
+                        ),
+                    )
+                    .and(
+                        Expr::col(event::Column::Sequence.as_column_ref()).eq(
+                            Expr::col(
+                                content_delete::Column::EventKeySequence
+                                    .as_column_ref(),
+                            ),
+                        ),
+                    ),
+            )
+            .and_where(Expr::col(content_delete::Entity).is_null());
         let query = query.with(with);
 
         let result = db.query_one(&query).await?;
