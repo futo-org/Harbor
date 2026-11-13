@@ -11,16 +11,15 @@ import {
 } from '@/src/common/theme';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
+import { type IconName, type IconRenderFn, renderIcon } from '../Icon';
 
 type ChipSize = 'sm' | 'md' | 'lg';
-
-type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 
 interface ChipProps {
   title: string;
   size?: ChipSize;
-  leftIcon?: IconRenderFn;
-  rightIcon?: IconRenderFn;
+  leftIcon?: IconName | IconRenderFn;
+  rightIcon?: IconName | IconRenderFn;
   fontWeight?: FontWeightToken;
   isPressable?: boolean;
   onPress?: () => void;
@@ -89,7 +88,6 @@ export function Chip({
 
   const sizeConfig = SIZE_CONFIG[size];
   const resolvedFontWeight = fontWeight || FONT_WEIGHT_MAP[size];
-  const resolvedTextColor = theme.colors[textColor];
   const backgroundColor =
     backgroundColorProp ?? withHexOpacity(theme.palette.neutral_500, '20');
   const borderColor =
@@ -111,7 +109,7 @@ export function Chip({
   const content = (
     <>
       {leftIcon &&
-        leftIcon({ size: sizeConfig.iconSize, color: resolvedTextColor })}
+        renderIcon(leftIcon, { size: sizeConfig.iconSize, color: textColor })}
       <Text
         variant="body"
         color={textColor}
@@ -123,7 +121,7 @@ export function Chip({
         {title}
       </Text>
       {rightIcon &&
-        rightIcon({ size: sizeConfig.iconSize, color: resolvedTextColor })}
+        renderIcon(rightIcon, { size: sizeConfig.iconSize, color: textColor })}
     </>
   );
 

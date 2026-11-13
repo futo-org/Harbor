@@ -194,7 +194,7 @@ export function ImageViewer({
           },
         ]}
       >
-        <Icon name="close" size={24} color="white" />
+        <Icon name="close" size={24} color="light" />
       </Pressable>
 
       {/* No nav arrows where the primary input is touch: swiping is

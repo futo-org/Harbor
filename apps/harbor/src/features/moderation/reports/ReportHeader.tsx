@@ -40,7 +40,7 @@ export function ReportHeader({
         <Text variant="secondary">{report.additionalInfo}</Text>
       ) : null}
       <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}>
-        <Icon name="shieldAccount" size={14} color="neutral_500" />
+        <Icon name="shieldAccount" size={14} color="muted" />
         <Text variant="small" color="muted">
           Reported on{' '}
         </Text>

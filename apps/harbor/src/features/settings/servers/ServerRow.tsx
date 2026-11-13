@@ -42,7 +42,7 @@ export function ServerRow({
             <Icon
               name={status === 'suggested' ? 'addOutline' : 'remove'}
               size={22}
-              color={status === 'suggested' ? 'primary_500' : 'negative_500'}
+              color={status === 'suggested' ? 'accent' : 'danger'}
             />
           )}
           onPress={onAction}

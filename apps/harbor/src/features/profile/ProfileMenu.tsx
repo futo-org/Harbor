@@ -114,7 +114,7 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
                 },
               ]}
             >
-              <Icon name="dotsVertical" color="neutral_500" size={20} />
+              <Icon name="dotsVertical" color="muted" size={20} />
             </View>
           )}
         </DropdownMenu.Trigger>
@@ -123,7 +123,7 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
             <DropdownMenu.Item key={item.key} onPress={item.onPress}>
               <Icon
                 name={item.icon}
-                color={item.destructive ? 'negative_500' : 'neutral_500'}
+                color={item.destructive ? 'danger' : 'muted'}
                 size={16}
               />
               <Text

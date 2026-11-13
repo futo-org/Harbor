@@ -65,7 +65,7 @@ export function ClaimListItem({
       >
         <Icon
           name="verify"
-          color={isVerified ? 'neutral_0' : 'neutral_600'}
+          color={isVerified ? 'light' : 'secondary'}
           size={24}
         />
       </View>

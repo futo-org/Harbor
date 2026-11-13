@@ -56,21 +56,21 @@ export function ClaimMenu({
                 },
               ]}
             >
-              <Icon name={icon} color="neutral_500" size={iconSize} />
+              <Icon name={icon} color="muted" size={iconSize} />
             </View>
           )}
         </DropdownMenu.Trigger>
         <DropdownMenu.Content>
           {isAuthor ? (
             <DropdownMenu.Item onPress={onDeletePress}>
-              <Icon name="trashBin" color="negative_500" size={16} />
+              <Icon name="trashBin" color="danger" size={16} />
               <Text variant="secondary" fontWeight="bold" color="danger">
                 Delete
               </Text>
             </DropdownMenu.Item>
           ) : (
             <DropdownMenu.Item onPress={() => setShowReportSheet(true)}>
-              <Icon name="flag" color="neutral_500" size={16} />
+              <Icon name="flag" color="muted" size={16} />
               <Text variant="secondary" fontWeight="bold">
                 Report
               </Text>

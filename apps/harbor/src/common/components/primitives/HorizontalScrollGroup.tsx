@@ -1,4 +1,3 @@
-import Icon from '@/src/common/components/Icon';
 import { useHorizontalWheelScroll } from '@/src/common/lib/useHorizontalWheelScroll';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
@@ -346,13 +345,7 @@ function EdgeChevron({
             accessibilityLabel={
               side === 'left' ? 'Scroll left' : 'Scroll right'
             }
-            icon={({ size, color }) => (
-              <Icon
-                name={side === 'left' ? 'chevronBack' : 'chevronForward'}
-                size={size}
-                color={color}
-              />
-            )}
+            icon={side === 'left' ? 'chevronBack' : 'chevronForward'}
           />
         )}
       </View>

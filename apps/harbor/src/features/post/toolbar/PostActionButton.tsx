@@ -82,7 +82,7 @@ export default function PostActionButton({
                 <Icon
                   name={icon}
                   size={size}
-                  color={theme.colors[active || highlighted ? color : 'muted']}
+                  color={active || highlighted ? color : 'muted'}
                 />
               )}
               {count ? (

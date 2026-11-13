@@ -426,7 +426,7 @@ function ComposerLinkPreview({
           opacity: disabled ? 0.4 : 1,
         }}
       >
-        <Icon name="close" size={14} color="white" />
+        <Icon name="close" size={14} color="light" />
       </Pressable>
     </View>
   );
@@ -534,7 +534,7 @@ function AttachmentThumb({
           ]}
         >
           {status === 'error' ? (
-            <Icon name="ban" size={22} color="white" />
+            <Icon name="ban" size={22} color="light" />
           ) : (
             <ActivityIndicator size="small" color="white" />
           )}
@@ -558,7 +558,7 @@ function AttachmentThumb({
           opacity: disabled ? 0.4 : 1,
         }}
       >
-        <Icon name="close" size={14} color="white" />
+        <Icon name="close" size={14} color="light" />
       </Pressable>
     </View>
   );

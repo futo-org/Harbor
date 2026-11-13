@@ -1,5 +1,4 @@
 import { IconButton, Screen, Text } from '@/src/common/components';
-import Icon from '@/src/common/components/Icon';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { Tabs } from '@/src/common/components/tabs';
 import { confirm } from '@/src/common/lib/dialogs/alert';
@@ -159,7 +158,7 @@ export default function LogsScreen() {
                   size="sm"
                   variant="ghost"
                   accessibilityLabel="Clear logs"
-                  icon={(props) => <Icon name="trash" {...props} />}
+                  icon="trash"
                   disabled={entries.length === 0}
                   onPress={() => void onClear()}
                 />
@@ -167,7 +166,7 @@ export default function LogsScreen() {
                   size="sm"
                   variant="ghost"
                   accessibilityLabel="Share logs"
-                  icon={(props) => <Icon name="share" {...props} />}
+                  icon="share"
                   disabled={entries.length === 0}
                   onPress={() => void shareLogs(entries)}
                 />

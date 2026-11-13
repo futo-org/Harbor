@@ -2,7 +2,6 @@ import { Avatar, Button } from '@/src/common/components/primitives';
 import { useImagePicker } from '@/src/common/lib/fs-pickers/useImagePicker';
 import { Atoms } from '@/src/common/theme';
 import { useSignup } from '@/src/features/onboarding/signup/SignupContext';
-import Icon from '@/src/common/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { View } from 'react-native';
@@ -53,18 +52,14 @@ export default function SetAvatarScreen() {
           variant="secondary"
           fullWidth
           onPress={takePhoto}
-          icon={({ size, color }) => (
-            <Icon name="camera" size={size} color={color} />
-          )}
+          icon="camera"
         />
         <Button
           title="Choose from Library"
           variant="secondary"
           fullWidth
           onPress={pickPhoto}
-          icon={({ size, color }) => (
-            <Icon name="images" size={size} color={color} />
-          )}
+          icon="images"
         />
         {data.avatarUri && (
           <Button
@@ -72,9 +67,7 @@ export default function SetAvatarScreen() {
             variant="destructive"
             fullWidth
             onPress={removePhoto}
-            icon={({ size, color }) => (
-              <Icon name="trash" size={size} color={color} />
-            )}
+            icon="trash"
           />
         )}
       </View>

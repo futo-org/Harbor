@@ -60,7 +60,7 @@ export function TabFilterSheet<T extends string>({
               ]}
             >
               {option.icon ? (
-                <Icon name={option.icon} size={24} color="neutral_900" />
+                <Icon name={option.icon} size={24} color="primary" />
               ) : null}
               <View style={Atoms.flex_1}>
                 <Text variant="title" fontWeight="regular">

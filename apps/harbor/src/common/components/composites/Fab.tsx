@@ -1,16 +1,11 @@
+import type { IconName, IconRenderFn } from '@/src/common/components/Icon';
 import { Button } from '@/src/common/components/primitives';
 import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
 import { Platform, View } from 'react-native';
 
-type IconRenderFn = (props: {
-  size: number;
-  color: string;
-  style?: object;
-}) => React.ReactNode;
-
 interface FabProps {
   onPress: () => void;
-  icon: IconRenderFn;
+  icon: IconName | IconRenderFn;
   title?: string;
   accessibilityLabel?: string;
 }

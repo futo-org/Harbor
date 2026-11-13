@@ -22,17 +22,11 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Text } from './Text';
-import Icon, { type IconName } from '../Icon';
+import Icon, { type IconName, type IconRenderFn } from '../Icon';
 
 type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'destructive';
 
 type ButtonSize = 'sm' | 'md' | 'lg';
-
-type IconRenderFn = (props: {
-  size: number;
-  color: string;
-  style?: object;
-}) => React.ReactNode;
 
 // `href` is redeclared as an expo-router Href; RNW types it as a string.
 interface ButtonProps extends Omit<PressableProps, 'style' | 'href'> {
@@ -95,9 +89,10 @@ export function Button({
     ? sizeConfig.paddingV
     : sizeConfig.paddingH;
   const isDisabled = !!disabled;
-  const iconColor = isDisabled
+  const iconColor = textColorMap[variant];
+  const disabledIconColor = isDisabled
     ? withHexOpacity(theme.palette.neutral_500, '80')
-    : theme.colors[textColorMap[variant]];
+    : undefined;
   const surfaceStyle = isDisabled
     ? getDisabledSurfaceStyle(theme)
     : getVariantStyle(theme, variant);
@@ -143,7 +138,12 @@ export function Button({
           (typeof icon === 'function' ? (
             icon({ size: sizeConfig.iconSize, color: iconColor })
           ) : (
-            <Icon name={icon} size={sizeConfig.iconSize} color={iconColor} />
+            <Icon
+              name={icon}
+              size={sizeConfig.iconSize}
+              color={iconColor}
+              customColor={disabledIconColor}
+            />
           ))}
         {!iconOnly && (
           <Text

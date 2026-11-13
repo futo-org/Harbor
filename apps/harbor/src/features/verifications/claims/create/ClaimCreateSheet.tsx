@@ -368,7 +368,7 @@ function OptionRow({
           { backgroundColor: withHexOpacity(tint, '25') },
         ]}
       >
-        <Icon name={icon} size={20} color={color} />
+        <Icon name={icon} size={20} customColor={tint} />
       </View>
       <View style={Atoms.flex_1}>
         <Text variant="secondary" fontWeight="semibold" selectable={false}>
@@ -383,7 +383,7 @@ function OptionRow({
           {description}
         </Text>
       </View>
-      <Icon name="chevronForward" size={18} color="neutral_500" />
+      <Icon name="chevronForward" size={18} color="muted" />
     </Pressable>
   );
 }

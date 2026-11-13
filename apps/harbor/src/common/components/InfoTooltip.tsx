@@ -11,7 +11,7 @@ export function InfoTooltip({
 }) {
   return (
     <Tooltip text={text} accessibilityLabel="More information" inline>
-      <Icon name="infoOutline" size={size} color="neutral_500" />
+      <Icon name="infoOutline" size={size} color="muted" />
     </Tooltip>
   );
 }

@@ -323,11 +323,9 @@ function SegmentContent({
   icon?: IconName;
   color: 'muted' | 'light';
 }) {
-  const { theme } = useTheme();
-
   return (
     <>
-      {icon && <Icon name={icon} size={12} color={theme.colors[color]} />}
+      {icon && <Icon name={icon} size={12} color={color} />}
       <Text
         variant="small"
         fontWeight="semibold"

@@ -38,7 +38,7 @@ export function CopyLinkComponent({ link }: { link: string }) {
       <Icon
         name={justCopied ? 'checkmark' : 'copy'}
         size={18}
-        color={justCopied ? 'positive_500' : 'neutral_500'}
+        color={justCopied ? 'success' : 'muted'}
       />
     </Pressable>
   );

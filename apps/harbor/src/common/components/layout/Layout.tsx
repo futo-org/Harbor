@@ -196,7 +196,7 @@ function Screen({
                 onPress={() => setDrawerOpen(true)}
                 hitSlop={Spacing.lg}
               >
-                <Icon name="menu" size={24} color="neutral_900" />
+                <Icon name="menu" size={24} color="primary" />
               </Pressable>
             }
           />
@@ -285,9 +285,7 @@ function SidebarContent({
               variant="primary"
               size="md"
               fullWidth={!narrow}
-              icon={({ size, color }) => (
-                <Icon name="add" size={size} color={color} />
-              )}
+              icon="add"
               onPress={() => openCompose()}
             />
           )}

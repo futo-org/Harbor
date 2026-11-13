@@ -46,7 +46,7 @@ export function FollowingBadge({
         <Icon
           name="personCheck"
           size={glyphSize}
-          color={theme.colors[buttonTextColorMap.primary]}
+          color={buttonTextColorMap.primary}
         />
       </View>
     </Tooltip>

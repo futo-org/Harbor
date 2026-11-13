@@ -31,7 +31,7 @@ export function ChipIcon({
       {render ? (
         render({ size: 12, color: theme.palette[color] })
       ) : (
-        <Icon name={name} color={color} size={12} />
+        <Icon name={name} customColor={theme.palette[color]} size={12} />
       )}
     </View>
   );

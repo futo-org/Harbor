@@ -80,7 +80,7 @@ export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
           },
         ]}
       >
-        <Icon name="image" size={22} color="neutral_700" />
+        <Icon name="image" size={22} color="secondary" />
       </Pressable>
       {hovered ? (
         <View

@@ -5,9 +5,10 @@ import {
   useTheme,
   withHexOpacity,
   type BorderRadiusToken,
-  type PaletteColorToken,
+  type TextColor,
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
+import { type IconName, type IconRenderFn, renderIcon } from '../Icon';
 import {
   Animated,
   Pressable,
@@ -20,15 +21,13 @@ import {
 type IconButtonSize = 'sm' | 'md' | 'lg';
 type IconButtonVariant = 'filled' | 'ghost';
 
-type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
-
 interface IconButtonProps {
-  icon: IconRenderFn;
+  icon: IconName | IconRenderFn;
   onPress: () => void;
   disabled?: boolean;
   size?: IconButtonSize;
   variant?: IconButtonVariant;
-  iconColor?: PaletteColorToken;
+  iconColor?: TextColor;
   borderRadius?: BorderRadiusToken;
   style?: StyleProp<ViewStyle>;
   /** Remove container padding (ghost variant only) */
@@ -51,7 +50,7 @@ export function IconButton({
   disabled = false,
   size = 'md',
   variant = 'filled',
-  iconColor = 'neutral_1000',
+  iconColor = 'primary',
   borderRadius,
   style,
   compact = false,
@@ -62,14 +61,13 @@ export function IconButton({
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   const sizeConfig = SIZE_CONFIG[size];
-  const resolvedIconColor = theme.palette[iconColor];
   const resolvedBorderRadius = borderRadius
     ? BorderRadius[borderRadius]
     : sizeConfig.containerSize / 2;
 
-  const iconElement = icon({
+  const iconElement = renderIcon(icon, {
     size: sizeConfig.iconSize,
-    color: resolvedIconColor,
+    color: iconColor,
   });
 
   const ghostFill = withHexOpacity(

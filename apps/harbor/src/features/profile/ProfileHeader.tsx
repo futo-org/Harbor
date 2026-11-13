@@ -164,7 +164,7 @@ function ProfileHeaderInner({
               size="sm"
               accessibilityLabel="Share profile"
               variant="ghost"
-              icon={(props) => <Icon name="share" {...props} />}
+              icon="share"
               onPress={openShareSheet}
             />
           ) : null}
@@ -190,7 +190,7 @@ function ProfileHeaderInner({
             pressed && { opacity: 0.5 },
           ]}
         >
-          <Icon name="key" size={HEADER_ROW_ICON_SIZE} color="neutral_500" />
+          <Icon name="key" size={HEADER_ROW_ICON_SIZE} color="muted" />
           <IdentityKeyText value={displayKey} />
         </Pressable>
         {/* The full key is right above, so no hash fallback here. */}
@@ -332,7 +332,7 @@ function AliasLabel({
           accessibilityLabel={alias}
           style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}
         >
-          <Icon name="at" size={HEADER_ROW_ICON_SIZE} color="neutral_500" />
+          <Icon name="at" size={HEADER_ROW_ICON_SIZE} color="muted" />
           <IdentityHandle identity={identity} style={{ flexShrink: 1 }} />
         </Pressable>
       </HoverCard.Trigger>

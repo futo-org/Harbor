@@ -174,7 +174,7 @@ function CreateClaimButton({ onPress }: { onPress: () => void }) {
         pressed && { backgroundColor: theme.palette.neutral_25 },
       ]}
     >
-      <Icon name="add" size={24} color="neutral_800" />
+      <Icon name="add" size={24} color="primary" />
     </Pressable>
   );
 }

@@ -207,7 +207,7 @@ function CountdownTimer({
 
   return (
     <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
-      <Icon name="time" size={16} color="neutral_500" />
+      <Icon name="time" size={16} color="muted" />
       <Text variant="small" color="muted">
         Valid for{'  '}
         <Text variant="small" monospace color="accent">
@@ -238,13 +238,13 @@ function StatusDisplay({
 
   if (icon === 'success') {
     iconName = 'checkmarkCircle';
-    iconColor = 'primary_500';
+    iconColor = 'accent';
     detailsColor = 'primary';
     detailsBg = theme.palette.neutral_25;
     detailsBorder = theme.palette.neutral_100;
   } else {
     iconName = 'closeCircle';
-    iconColor = 'negative_500';
+    iconColor = 'danger';
     detailsColor = 'danger';
     detailsBg = theme.palette.negative_25;
     detailsBorder = theme.palette.negative_100;
@@ -421,7 +421,7 @@ function ApprovalSheet({
                 }}
               >
                 {asRotation ? (
-                  <Icon name="checkmark" size={14} color="neutral_0" />
+                  <Icon name="checkmark" size={14} color="light" />
                 ) : null}
               </View>
               <View style={[Atoms.flex_1, Atoms.gap_xs]}>

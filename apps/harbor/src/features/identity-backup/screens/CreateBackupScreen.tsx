@@ -1,5 +1,4 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
-import Icon from '@/src/common/components/Icon';
 import { showAlert } from '@/src/common/lib/dialogs';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
@@ -329,9 +328,7 @@ function BackupContent({ onSave }: { onSave: () => void }) {
         title="Save backup file"
         variant="primary"
         fullWidth
-        icon={({ size, color }) => (
-          <Icon name="download" size={size} color={color} />
-        )}
+        icon="download"
         onPress={onSave}
       />
     </View>

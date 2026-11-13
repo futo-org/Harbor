@@ -76,7 +76,7 @@ function RepostHeader({
       ]}
     >
       <View style={[Atoms.items_end, { flexBasis: LEFT_COL_FLEX_BASIS }]}>
-        <Icon size={16} name="repost" color="neutral_500" />
+        <Icon size={16} name="repost" color="muted" />
       </View>
       <View style={[Atoms.flex_row, Atoms.align_center, Atoms.flex_shrink_1]}>
         <Username

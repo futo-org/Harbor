@@ -84,7 +84,7 @@ export function ClaimVerifierMenu({
             ]}
           >
             {statusText}
-            <Icon name="dotsVertical" color="neutral_500" size={20} />
+            <Icon name="dotsVertical" color="muted" size={20} />
           </View>
         )}
       </DropdownMenu.Trigger>
@@ -95,14 +95,14 @@ export function ClaimVerifierMenu({
         >
           {verifier.verified ? (
             <>
-              <Icon name="personRemove" color="negative_500" size={16} />
+              <Icon name="personRemove" color="danger" size={16} />
               <Text variant="secondary" fontWeight="bold" color="danger">
                 Remove verifier
               </Text>
             </>
           ) : (
             <>
-              <Icon name="close" color="neutral_500" size={16} />
+              <Icon name="close" color="muted" size={16} />
               <Text variant="secondary" fontWeight="bold" color="muted">
                 Cancel request
               </Text>

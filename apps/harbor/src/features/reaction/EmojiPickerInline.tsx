@@ -65,7 +65,7 @@ export default function EmojiPickerInline({
           hitSlop={Spacing.sm}
           highlightColor={theme.palette.neutral_100}
         >
-          <Icon name="dotsVertical" size={20} color="neutral_1000" />
+          <Icon name="dotsVertical" size={20} color="primary" />
         </EmojiLikeButton>
       )}
     </View>

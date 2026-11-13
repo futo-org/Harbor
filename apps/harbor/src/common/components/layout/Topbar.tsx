@@ -72,7 +72,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
               hitSlop={Spacing['lg']}
               style={({ pressed }) => [pressed && { opacity: 0.5 }]}
             >
-              <Icon name="chevronBack" size={24} color="neutral_900" />
+              <Icon name="chevronBack" size={24} color="primary" />
             </Pressable>
           ) : (
             <ProfileAvatar

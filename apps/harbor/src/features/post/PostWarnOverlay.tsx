@@ -53,7 +53,7 @@ export function PostWarnOverlay({
           Atoms.py_sm,
         ]}
       >
-        <Icon name="infoOutline" color="neutral_700" />
+        <Icon name="infoOutline" color="secondary" />
         <View style={[Atoms.flex_1]}>
           <Text variant="secondary" fontWeight="bold" color="secondary">
             Hidden for {labelNames(labels).toLowerCase()}

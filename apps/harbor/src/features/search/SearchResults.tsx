@@ -200,7 +200,7 @@ export function SearchPhraseRow({
         (hovered || pressed) && { backgroundColor: theme.palette.neutral_25 },
       ]}
     >
-      <Icon name="search" size={16} color="neutral_500" />
+      <Icon name="search" size={16} color="muted" />
       <Text fontWeight="bold" numberOfLines={1} style={Atoms.flex_1}>
         {phrase}
       </Text>

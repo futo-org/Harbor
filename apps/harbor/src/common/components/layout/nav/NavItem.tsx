@@ -11,7 +11,12 @@ import {
 import { useWindowDimensions, View } from 'react-native';
 
 import { Text } from '@/src/common/components/primitives';
-import { Atoms, Breakpoints, useTheme } from '@/src/common/theme';
+import {
+  Atoms,
+  Breakpoints,
+  type TextColor,
+  useTheme,
+} from '@/src/common/theme';
 import { flattenHref } from '@/src/utils/router';
 
 type NavItemProps = Omit<LinkProps, 'href' | 'children'> & {
@@ -56,8 +61,8 @@ export function NavItem({
     if (!iconNode) return null;
 
     const colored = isValidElement(iconNode)
-      ? cloneElement(iconNode as React.ReactElement<{ color?: string }>, {
-          color: theme.palette.neutral_900,
+      ? cloneElement(iconNode as React.ReactElement<{ color?: TextColor }>, {
+          color: 'primary',
         })
       : iconNode;
 

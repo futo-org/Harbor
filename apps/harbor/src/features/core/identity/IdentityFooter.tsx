@@ -96,7 +96,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
             ]}
           />
         ) : null}
-        <Icon name="chevronDown" size={18} color="neutral_1000" />
+        <Icon name="chevronDown" size={18} color="primary" />
       </Pressable>
     </View>
   );

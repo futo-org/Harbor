@@ -49,7 +49,7 @@ function SearchTopbar({ children }: { children: ReactNode }) {
           hitSlop={Spacing.lg}
           style={({ pressed }) => [pressed && { opacity: 0.5 }]}
         >
-          <Icon name="chevronBack" size={24} color="neutral_900" />
+          <Icon name="chevronBack" size={24} color="primary" />
         </Pressable>
       ) : null}
       <View style={Atoms.flex_1}>{children}</View>
@@ -112,7 +112,7 @@ export default function SearchScreen() {
 
   const input = (
     <SearchField onPress={() => inputRef.current?.focus()}>
-      <Icon name="search" size={16} color="neutral_500" />
+      <Icon name="search" size={16} color="muted" />
       <TextInput
         ref={inputRef}
         variant="plain"
@@ -138,7 +138,7 @@ export default function SearchScreen() {
           hitSlop={Spacing.sm}
           style={({ pressed }) => [pressed && { opacity: 0.5 }]}
         >
-          <Icon name="close" size={16} color="neutral_500" />
+          <Icon name="close" size={16} color="muted" />
         </Pressable>
       ) : null}
     </SearchField>

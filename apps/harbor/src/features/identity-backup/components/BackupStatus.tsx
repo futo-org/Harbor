@@ -13,7 +13,7 @@ export interface BackupStatusProps {
 /** Main content for a status screen showing either success or failure. */
 export function BackupStatus({ successful, message }: BackupStatusProps) {
   const iconName = successful ? 'checkmarkCircle' : 'closeCircle';
-  const iconColor = successful ? 'primary_500' : 'negative_500';
+  const iconColor = successful ? 'accent' : 'danger';
 
   return (
     <View style={[Atoms.py_2xl, Atoms.items_center, Atoms.gap_md]}>

@@ -56,7 +56,7 @@ export function ClaimActionRow({
             </Text>
           ) : null}
         </View>
-        <Icon name="chevronForward" size={28} color="neutral_400" />
+        <Icon name="chevronForward" size={28} color="muted" />
       </View>
     </Pressable>
   );

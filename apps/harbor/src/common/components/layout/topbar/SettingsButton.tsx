@@ -15,7 +15,7 @@ export function TopbarSettingsButton() {
       ]}
       hitSlop={Spacing['lg']}
     >
-      <Icon name="settings" size={20} color="neutral_800" />
+      <Icon name="settings" size={20} color="primary" />
     </Pressable>
   );
 }

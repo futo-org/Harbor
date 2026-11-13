@@ -45,7 +45,7 @@ export function SidebarSearch() {
   return (
     <View style={[Atoms.w_full, { zIndex: ZIndex.raised }]}>
       <SearchField>
-        <Icon name="search" size={16} color="neutral_500" />
+        <Icon name="search" size={16} color="muted" />
         <TextInput
           variant="plain"
           placeholder="Search"
@@ -63,7 +63,7 @@ export function SidebarSearch() {
             hitSlop={Spacing.sm}
             style={({ pressed }) => [pressed && { opacity: 0.5 }]}
           >
-            <Icon name="close" size={16} color="neutral_500" />
+            <Icon name="close" size={16} color="muted" />
           </Pressable>
         ) : null}
       </SearchField>

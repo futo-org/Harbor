@@ -1,5 +1,4 @@
 import { Button, Text } from '@/src/common/components';
-import Icon from '@/src/common/components/Icon';
 import { Atoms } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import * as DocumentPicker from 'expo-document-picker';
@@ -71,9 +70,7 @@ export function BackupFilePicker({
         variant="primary"
         fullWidth
         disabled={disabled}
-        icon={({ size, color }) => (
-          <Icon name="document" size={size} color={color} />
-        )}
+        icon="document"
         onPress={() => void onPress()}
       />
       {picked && (

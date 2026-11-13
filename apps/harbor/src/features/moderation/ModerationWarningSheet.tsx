@@ -88,7 +88,7 @@ export function ModerationWarningSheet() {
             { backgroundColor: theme.palette.neutral_25 },
           ]}
         >
-          <Icon name="infoOutline" size={24} color="neutral_700" />
+          <Icon name="infoOutline" size={24} color="secondary" />
           <View style={[Atoms.flex_1, Atoms.gap_2xs]}>
             <Text fontWeight="bold" color="secondary">
               Hidden for {names}

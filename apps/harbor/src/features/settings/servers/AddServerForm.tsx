@@ -46,7 +46,7 @@ export function AddServerForm({ isBusy, error, onSubmit }: AddServerFormProps) {
               <Icon
                 name="addOutline"
                 size={28}
-                color={url.trim() ? 'primary_500' : 'neutral_500'}
+                color={url.trim() ? 'accent' : 'muted'}
               />
             )}
             onPress={handleSubmit}

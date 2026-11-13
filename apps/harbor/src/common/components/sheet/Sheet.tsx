@@ -178,7 +178,7 @@ function SheetHeader({
         disabled={disabled}
         style={({ pressed }) => [(disabled || pressed) && { opacity: 0.5 }]}
       >
-        <Icon name={closeIcon} size={24} color="neutral_900" />
+        <Icon name={closeIcon} size={24} color="primary" />
       </Pressable>
     ));
   right = right ?? <View style={{ width: 40, height: 40 }} />;

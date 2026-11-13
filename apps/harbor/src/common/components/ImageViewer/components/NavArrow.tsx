@@ -34,7 +34,7 @@ export function NavArrow({
       <Icon
         name={side === 'left' ? 'chevronBack' : 'chevronForward'}
         size={28}
-        color="white"
+        color="light"
       />
     </Pressable>
   );

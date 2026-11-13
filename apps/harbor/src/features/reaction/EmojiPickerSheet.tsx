@@ -206,7 +206,7 @@ function EmojiSearchField() {
   return (
     <View style={[Atoms.px_lg, Atoms.py_sm]}>
       <SearchField onPress={() => inputRef.current?.focus()}>
-        <Icon name="search" size={16} color="neutral_500" />
+        <Icon name="search" size={16} color="muted" />
         <TextInput
           ref={inputRef}
           variant="plain"
@@ -226,7 +226,7 @@ function EmojiSearchField() {
             hitSlop={Spacing.sm}
             style={({ pressed }) => [pressed && { opacity: 0.5 }]}
           >
-            <Icon name="close" size={16} color="neutral_500" />
+            <Icon name="close" size={16} color="muted" />
           </Pressable>
         ) : null}
       </SearchField>
@@ -292,9 +292,7 @@ function EmojiCategoryRail({
               <Icon
                 name={cat.icon}
                 size={Math.round(categoryColWidth * CATEGORY_ICON_SCALE)}
-                color={
-                  cat.key === selectedCategory ? 'primary_500' : 'neutral_500'
-                }
+                color={cat.key === selectedCategory ? 'accent' : 'muted'}
               />
             </EmojiLikeButton>
           ))}

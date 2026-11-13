@@ -121,7 +121,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
             >
               {({ pressed }) => (
                 <>
-                  <Icon name="infoOutline" size={16} color="neutral_500" />
+                  <Icon name="infoOutline" size={16} color="muted" />
                   <Text
                     variant="small"
                     color="secondary"
@@ -180,7 +180,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
                   trailing={
                     shared ? (
                       <View style={Atoms.pr_md}>
-                        <Icon name="checkmark" size={22} color="positive_500" />
+                        <Icon name="checkmark" size={22} color="success" />
                       </View>
                     ) : undefined
                   }
@@ -254,7 +254,7 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
           <Icon
             name={justCopied ? 'checkmark' : 'copy'}
             size={16}
-            color={justCopied ? 'positive_500' : 'neutral_500'}
+            color={justCopied ? 'success' : 'muted'}
           />
         )}
         onPress={() => copyToClipboard(value)}

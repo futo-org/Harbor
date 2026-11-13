@@ -43,7 +43,7 @@ export function SelectChip({
           {typeof icon === 'function' ? (
             icon({ size: 16, color: tint })
           ) : (
-            <Icon name={icon} color={color} />
+            <Icon name={icon} customColor={tint} />
           )}
         </View>
       )}

@@ -3,7 +3,7 @@ import Icon, { type IconName } from '@/src/common/components/Icon';
 import {
   Atoms,
   BorderRadius,
-  type PaletteColorToken,
+  type TextColor,
   useTheme,
 } from '@/src/common/theme';
 import * as ToastPrimitive from '@rn-primitives/toast';
@@ -25,14 +25,11 @@ import {
 const ENTER_MS = 220;
 const EXIT_MS = 160;
 
-const VARIANTS: Record<
-  ToastVariant,
-  { icon: IconName; color: PaletteColorToken }
-> = {
-  info: { icon: 'notification', color: 'primary_500' },
-  success: { icon: 'checkmarkCircle', color: 'positive_500' },
-  error: { icon: 'ban', color: 'negative_500' },
-  warning: { icon: 'flag', color: 'warning_500' },
+const VARIANTS: Record<ToastVariant, { icon: IconName; color: TextColor }> = {
+  info: { icon: 'notification', color: 'accent' },
+  success: { icon: 'checkmarkCircle', color: 'success' },
+  error: { icon: 'ban', color: 'danger' },
+  warning: { icon: 'flag', color: 'warning' },
 };
 
 const shadow = {
@@ -134,7 +131,7 @@ export function Toast({ toast }: { toast: ToastData }) {
         )}
         <ToastPrimitive.Close asChild>
           <Pressable hitSlop={8} style={[Atoms.py_lg, Atoms.pr_lg]}>
-            <Icon name="close" color="neutral_500" size={18} />
+            <Icon name="close" color="muted" size={18} />
           </Pressable>
         </ToastPrimitive.Close>
       </ToastPrimitive.Root>

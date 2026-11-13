@@ -677,7 +677,7 @@ function NavSide({
     <Icon
       name={isNext ? 'chevronForward' : 'chevronBack'}
       size={18}
-      color="neutral_500"
+      color="muted"
     />
   );
 
@@ -929,7 +929,7 @@ function CopyIcon({
         <Icon
           name={copied ? 'checkmark' : 'copy'}
           size={16}
-          color={copied ? 'positive_500' : 'neutral_500'}
+          color={copied ? 'success' : 'muted'}
           style={pressed && PRESSED}
         />
       )}
@@ -956,7 +956,7 @@ function StatusChip({ label, tone }: { label: string; tone: StatusTone }) {
       <Icon
         name={tone === 'success' ? 'checkmarkCircle' : 'closeCircle'}
         size={14}
-        color={theme.colors[tone]}
+        color={tone}
       />
       <Text variant="small" fontWeight="semibold" color={tone}>
         {label}

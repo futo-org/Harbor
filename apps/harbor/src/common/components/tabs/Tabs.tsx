@@ -305,7 +305,7 @@ function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
             <Icon
               name="chevronDown"
               size={14}
-              color={active ? 'neutral_900' : 'neutral_500'}
+              color={active ? 'primary' : 'muted'}
               // The glyph's ink centers on the cap height; sink it to the
               // mostly-lowercase label's x-height center.
               style={{ transform: [{ translateY: 2 }] }}

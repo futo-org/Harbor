@@ -87,11 +87,7 @@ function ThemeSwitcher() {
       onPress={() => setThemePreference(next.preference)}
       style={({ pressed }) => [pressed && { opacity: 0.65 }]}
     >
-      <Icon
-        name={current.icon}
-        size={typography.fontSize.sm}
-        color="neutral_500"
-      />
+      <Icon name={current.icon} size={typography.fontSize.sm} color="muted" />
     </Pressable>
   );
 }

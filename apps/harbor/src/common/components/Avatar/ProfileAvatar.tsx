@@ -86,7 +86,7 @@ export function ProfileAvatar({
         >
           <Icon
             name="infoOutline"
-            color="neutral_500"
+            color="muted"
             size={Math.round(pixels / 2)}
           />
         </View>

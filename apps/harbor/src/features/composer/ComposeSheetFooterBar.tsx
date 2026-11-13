@@ -61,7 +61,7 @@ export function ComposeSheetFooterBar({
         { opacity: attachDisabled ? 0.4 : 1 },
       ]}
     >
-      <Icon name="image" size={22} color="neutral_700" />
+      <Icon name="image" size={22} color="secondary" />
     </Pressable>
   ) : null;
 
@@ -77,7 +77,7 @@ export function ComposeSheetFooterBar({
         { opacity: attachDisabled ? 0.4 : 1 },
       ]}
     >
-      <Icon name="camera" size={22} color="neutral_700" />
+      <Icon name="camera" size={22} color="secondary" />
     </Pressable>
   ) : null;
 

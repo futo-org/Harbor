@@ -117,7 +117,7 @@ export default function FeedScreen() {
           <Fab
             onPress={openCompose}
             accessibilityLabel="New post"
-            icon={() => <Icon name="add" size={32} color="white" />}
+            icon={() => <Icon name="add" size={32} color="light" />}
           />
         ) : null}
       </Screen.PrimaryColumn>
