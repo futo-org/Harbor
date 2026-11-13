@@ -1,14 +1,9 @@
-import { clampChroma, converter, formatHex, formatHex8, parse } from 'culori';
 import type { Palette } from './palette';
 import type { ThemeScheme } from './themes';
 
 const SUBTLE_BOX_OPACITY = 0.125;
 const SUBTLE_BOX_HOVER_OPACITY = 0.2;
 const SUBTLE_BORDER_OPACITY = 0.3;
-// border of the neutral boxes (page, cards), drawn in neutral_500
-const NEUTRAL_BORDER_OPACITY = 0.15;
-// OKLCH lightness; solid boxes darken on hover in both themes
-const HOVER_LIGHTNESS_SHIFT = -0.03;
 const DISABLED_OPACITY = 0.4;
 // offset and blur shared by all shadows
 const SHADOW_GEOMETRY = '0 6px 16px';
@@ -57,10 +52,6 @@ function buildColorAtoms(
   colors: ReturnType<typeof buildColors>,
 ) {
   const shadowOpacity = SHADOW_OPACITY[scheme];
-  const neutralBorder = withOpacity(
-    palette.neutral_500,
-    NEUTRAL_BORDER_OPACITY,
-  );
 
   return {
     primary: { color: colors.primary },
@@ -72,14 +63,23 @@ function buildColorAtoms(
     warning: { color: colors.warning },
     light: { color: colors.light },
     dark: { color: colors.dark },
+    // hover is the next palette step; the neutral boxes' border is too
     box: {
-      primary: buildBox(palette.neutral_0, neutralBorder),
-      secondary: buildBox(palette.neutral_25, neutralBorder),
-      neutral: buildBox(palette.neutral_500),
-      accent: buildBox(palette.primary_500),
-      danger: buildBox(palette.negative_500),
-      success: buildBox(palette.positive_500),
-      warning: buildBox(palette.warning_500),
+      primary: buildBox(
+        palette.neutral_0,
+        palette.neutral_25,
+        palette.neutral_25,
+      ),
+      secondary: buildBox(
+        palette.neutral_25,
+        palette.neutral_50,
+        palette.neutral_50,
+      ),
+      neutral: buildBox(palette.neutral_500, palette.neutral_600),
+      accent: buildBox(palette.primary_500, palette.primary_600),
+      danger: buildBox(palette.negative_500, palette.negative_600),
+      success: buildBox(palette.positive_500, palette.positive_600),
+      warning: buildBox(palette.warning_500, palette.warning_600),
     },
     overlay: {
       hover: { backgroundColor: withOpacity(palette.neutral_900, 0.06) },
@@ -110,10 +110,10 @@ function buildColorAtoms(
 
 // A hue box's solid border matches its fill, so it keeps the border width
 // without a visible outline.
-function buildBox(bg: string, border = bg) {
+function buildBox(bg: string, hover: string, border = bg) {
   return {
     bg: { backgroundColor: bg },
-    bg_hover: { backgroundColor: shiftLightness(bg, HOVER_LIGHTNESS_SHIFT) },
+    bg_hover: { backgroundColor: hover },
     bg_subtle: { backgroundColor: withOpacity(bg, SUBTLE_BOX_OPACITY) },
     bg_subtle_hover: {
       backgroundColor: withOpacity(bg, SUBTLE_BOX_HOVER_OPACITY),
@@ -123,22 +123,10 @@ function buildBox(bg: string, border = bg) {
   };
 }
 
-const toOklch = converter('oklch');
-
-function shiftLightness(color: string, shift: number): string {
-  const oklch = toOklch(parseColor(color));
-  const lightness = Math.min(1, Math.max(0, oklch.l + shift));
-  return formatHex(clampChroma({ ...oklch, l: lightness }, 'oklch'));
-}
-
+// palette colors are #RRGGBB, so the alpha is a hex suffix: 0.125 -> '20'
 function withOpacity(color: string, opacity: number): string {
-  return formatHex8({ ...parseColor(color), alpha: opacity });
-}
-
-function parseColor(color: string) {
-  const parsed = parse(color);
-  if (!parsed) {
-    throw new Error(`Invalid color: ${color}`);
-  }
-  return parsed;
+  const alpha = Math.round(opacity * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return color + alpha;
 }
