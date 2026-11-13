@@ -217,6 +217,8 @@ RETURN (
   )
   SELECT COALESCE(string_agg(transformed.term, ' & ')::TSQUERY, ''::TSQUERY) AS query
   FROM transformed
+  WHERE transformed.term != ''
+    AND transformed.term IS NOT NULL
 );
 ";
 
