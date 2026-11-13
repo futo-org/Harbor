@@ -53,8 +53,10 @@ EAS and submits them; `ios_e2e` runs the iOS suite on the store build.
 `browser-extension` builds the staging extension for Chrome, Edge, Firefox and
 Safari with the staging services packaged in, and keeps the store zips as the
 `browser-extension-staging` artifact; the mac runner wraps the Safari build in
-an unsigned macOS app (`browser-extension-safari-staging`). Nothing is
-submitted to a store. `docs`
+an unsigned macOS app (`browser-extension-safari-staging`). The Chrome, Firefox
+and Edge zips are submitted to the stores that have a listing set up (Firefox
+as unlisted), and every build is uploaded to the static bucket under
+`browser-extension/staging`, as the APK is. Safari is not submitted. `docs`
 deploys to Cloudflare Pages.
 
 `deploy-<component>-production.yml` moves the `staging` image and chart tags
@@ -63,7 +65,8 @@ commit instead; its image and chart must exist, and a commit has a chart only
 for the components deployed at it. `deploy-app-production.yml` builds the
 production apps from `develop`'s head and submits them.
 `deploy-browser-extension-production.yml` builds the production extension from
-`develop`'s head (`browser-extension-production` artifact).
+`develop`'s head (`browser-extension-production` artifact), then submits and
+uploads it the same way (`browser-extension/production`, Firefox as listed).
 
 `node .forgejo/scripts/deployed.mjs` prints the commit each chart's `staging`
 and `production` tag pins, no login needed.
@@ -92,6 +95,12 @@ Provisioned by harbor-infra (`futo-git/ci_values`, `ci_variables`).
 - `STATIC_S3_ENDPOINT`, `STATIC_S3_ACCESS_KEY_ID`,
   `STATIC_S3_SECRET_ACCESS_KEY`; variables `STATIC_S3_BUCKET`,
   `STATIC_PUBLIC_BASE_URL`.
+- Browser extension stores, each skipped until its listing is set. Chrome:
+  variables `CHROME_EXTENSION_ID_STAGING`, `CHROME_EXTENSION_ID_PRODUCTION`,
+  `CHROME_PUBLISHER_ID`, `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, secret
+  `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`. Firefox: `FIREFOX_JWT_ISSUER`,
+  `FIREFOX_JWT_SECRET`. Edge: variables `EDGE_PRODUCT_ID_STAGING`,
+  `EDGE_PRODUCT_ID_PRODUCTION`, `EDGE_CLIENT_ID`, secret `EDGE_API_KEY`.
 - `SCCACHE_R2_ENDPOINT`, `SCCACHE_R2_ACCESS_KEY_ID`,
   `SCCACHE_R2_SECRET_ACCESS_KEY`; variable `SCCACHE_R2_BUCKET`.
 - Variables `EXPO_PUBLIC_HARBOR_SEED_SERVERS`,

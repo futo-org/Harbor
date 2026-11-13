@@ -31,8 +31,14 @@ export default defineConfig({
     define: { __HARBOR_APP_URL__: JSON.stringify(HARBOR_APP_URL) },
   }),
   dev: { server: { port: 3010 } },
+  // Named by the manifest's version, not package.json's.
+  zip: { artifactTemplate: '{{name}}-{{version}}-{{browser}}.zip' },
   manifest: ({ browser }) => ({
     name: NAME,
+    // Stores only take a version above the last; CI sets one for each build.
+    ...(process.env.EXTENSION_VERSION && {
+      version: process.env.EXTENSION_VERSION,
+    }),
     description: 'Harbor on any page on the web.',
     icons: Object.fromEntries(
       [16, 32, 48, 128].map((size) => [size, `icon/${size}${ICON_SUFFIX}.png`]),
