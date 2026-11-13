@@ -1,4 +1,5 @@
 import Icon from '@/src/common/components/Icon';
+import { useIdentitySwitcher } from '@/src/features/core/identity/useIdentitySwitcher';
 import { Image } from 'expo-image';
 import { router, useIsFocused, useSegments } from 'expo-router';
 import { memo, useRef, type ReactNode } from 'react';
@@ -28,6 +29,7 @@ type TopbarProps = {
 function Topbar({ title, left, center, right }: TopbarProps) {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
+  const { open: openIdentitySwitcher } = useIdentitySwitcher();
 
   const segments = useSegments();
   const isFocused = useIsFocused();
@@ -79,15 +81,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
               identityKey={identityKey ?? ''}
               size="sm"
               containerProps={{ hitSlop: Spacing['lg'] }}
-              onPress={
-                identityKey
-                  ? () =>
-                      router.navigate({
-                        pathname: '/[identityId]',
-                        params: { identityId: identityKey },
-                      })
-                  : undefined
-              }
+              onPress={identityKey ? openIdentitySwitcher : undefined}
             />
           ))}
       </View>
