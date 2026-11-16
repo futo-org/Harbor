@@ -172,6 +172,7 @@ if [ "$CI_MODE" = true ]; then
 
   echo "==> Starting server and workers…"
   export HARBOR_MODERATION_IDENTITY="$MODERATOR_IDENTITY"
+  export HARBOR_TRACES_URL="${HARBOR_TRACES_URL:-http://127.0.0.1:4318}"
   export HARBOR_TRACES_SCHEDULE_DELAY_MS="${HARBOR_TRACES_SCHEDULE_DELAY_MS:-100}"
   # server-workers materializes notifications (the mention/reply integration
   # tests poll for them); it is behind the `push` profile in compose.yml.
@@ -234,8 +235,7 @@ else
   export HARBOR_VALKEY_URL="${HARBOR_VALKEY_URL:-redis://localhost:6379}"
   # The test crate reads this to know where to reach the server.
   export HARBOR_TEST_SERVER="${HARBOR_TEST_SERVER:-http://localhost:3000}"
-  export HARBOR_TRACES_URL="${HARBOR_TRACES_URL:-http://localhost:4318}"
-  export HARBOR_TEST_TRACES_URL="${HARBOR_TRACES_URL}"
+  export HARBOR_TRACES_URL="${HARBOR_TRACES_URL:-http://127.0.0.1:4318}"
   export HARBOR_TRACES_SCHEDULE_DELAY_MS="${HARBOR_TRACES_SCHEDULE_DELAY_MS:-100}"
 
   cargo run -p server &

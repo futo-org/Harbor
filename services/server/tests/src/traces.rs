@@ -4,6 +4,7 @@
 //! (traces_receiver.rs), see `.forgejo/scripts/integration-server.sh`.
 
 use std::collections::HashMap;
+use std::net::Ipv4Addr;
 use std::sync::Once;
 use std::time::{Duration, Instant};
 
@@ -27,8 +28,7 @@ async fn start_traces_receiver() {
         tokio::spawn(traces_receiver::run(port));
 
         tokio::spawn(async move {
-            let address = traces_url();
-            let address = address.strip_prefix("http://").unwrap_or(&address);
+            let address = (Ipv4Addr::LOCALHOST, port);
             for _ in 0..1000 {
                 if let Ok(_) = tokio::net::TcpStream::connect(&address).await {
                     _ = RUNNING.set(());
@@ -46,12 +46,6 @@ async fn start_traces_receiver() {
     }
 }
 
-/// Where the receiver answers. Override with `HARBOR_TEST_TRACES_URL`.
-fn traces_url() -> String {
-    std::env::var("HARBOR_TEST_TRACES_URL")
-        .unwrap_or_else(|_| format!("http://127.0.0.1:{}", trace_port()))
-}
-
 fn trace_port() -> u16 {
     std::env::var("HARBOR_TEST_TRACES_PORT")
         .ok()
@@ -61,12 +55,13 @@ fn trace_port() -> u16 {
 
 /// Every span the receiver has, each with its resource's `service.name`.
 async fn received() -> Vec<(Option<String>, Span)> {
-    let body = reqwest::get(format!("{}/v1/traces", traces_url()))
-        .await
-        .expect("traces receiver unreachable")
-        .bytes()
-        .await
-        .unwrap();
+    let body =
+        reqwest::get(format!("http://127.0.0.1:{}/v1/traces", trace_port()))
+            .await
+            .expect("traces receiver unreachable")
+            .bytes()
+            .await
+            .unwrap();
     let request = ExportTraceServiceRequest::decode(body)
         .expect("invalid OTLP trace request");
     let mut spans = Vec::new();
