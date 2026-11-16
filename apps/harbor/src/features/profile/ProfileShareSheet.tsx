@@ -41,7 +41,7 @@ export default function ProfileShareSheet({
             Atoms.rounded_lg,
             // White in both themes: the QR code needs a light background
             { backgroundColor: theme.colors.light },
-            theme.atoms_new.shadow.neutral,
+            theme.atoms.shadow.neutral,
             {
               width: QR_CARD_WIDTH,
               padding: QR_CODE_PADDING,

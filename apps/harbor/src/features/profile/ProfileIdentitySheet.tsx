@@ -62,7 +62,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
 
   const divider = (
     <View
-      style={[theme.atoms_new.box.neutral.border_subtle, { borderTopWidth: 1 }]}
+      style={[theme.atoms.box.neutral.border_subtle, { borderTopWidth: 1 }]}
     />
   );
 
@@ -95,7 +95,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
             Atoms.gap_md,
             Atoms.p_md,
             Atoms.rounded_md,
-            theme.atoms_new.box.neutral.bg_subtle,
+            theme.atoms.box.neutral.bg_subtle,
           ]}
         >
           <View style={Atoms.gap_xs}>
@@ -207,7 +207,7 @@ function SigningKeyRow({
             Atoms.px_sm,
             Atoms.py_xs,
             Atoms.rounded_full,
-            theme.atoms_new.box.accent.bg_subtle,
+            theme.atoms.box.accent.bg_subtle,
           ]}
         >
           <Text variant="small" color="accent">

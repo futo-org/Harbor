@@ -74,8 +74,8 @@ export function Tooltip({
           Atoms.pl_md,
           Atoms.pr_md,
           Atoms.rounded_md,
-          theme.atoms_new.box.secondary.bg,
-          theme.atoms_new.box.secondary.border,
+          theme.atoms.box.secondary.bg,
+          theme.atoms.box.secondary.border,
           { borderWidth: 1 },
         ]}
       >

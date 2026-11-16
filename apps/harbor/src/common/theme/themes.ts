@@ -7,7 +7,7 @@ export type ThemeScheme = 'light' | 'dark';
 export type Theme = {
   scheme: ThemeScheme;
   colors: ReturnType<typeof buildThemeColors>['colors'];
-  atoms_new: ReturnType<typeof buildThemeColors>['atoms_new'];
+  atoms: ReturnType<typeof buildThemeColors>['atoms'];
 };
 
 function createTheme(scheme: ThemeScheme, palette: Palette): Theme {

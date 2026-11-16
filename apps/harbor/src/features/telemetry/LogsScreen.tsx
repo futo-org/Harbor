@@ -71,7 +71,7 @@ function LogRow({
             borderRadius: DOT_SIZE / 2,
             marginTop: (LINE_HEIGHT - DOT_SIZE) / 2,
           },
-          dot && theme.atoms_new.box[dot].bg,
+          dot && theme.atoms.box[dot].bg,
         ]}
       />
       <View style={[Atoms.flex_1, Atoms.gap_xs]}>
@@ -98,7 +98,7 @@ function LogRow({
               Atoms.p_sm,
               Atoms.rounded_sm,
               Atoms.mt_xs,
-              theme.atoms_new.box.secondary.bg,
+              theme.atoms.box.secondary.bg,
             ]}
           >
             {JSON.stringify(entry.record, null, 2)}
@@ -151,7 +151,7 @@ export default function LogsScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.flex_1, theme.atoms_new.box.primary.bg]}>
+        <View style={[Atoms.flex_1, theme.atoms.box.primary.bg]}>
           <Topbar
             title="Logs"
             right={
@@ -199,10 +199,7 @@ export default function LogsScreen() {
             )}
             ItemSeparatorComponent={() => (
               <View
-                style={[
-                  theme.atoms_new.box.primary.border,
-                  { borderTopWidth: 1 },
-                ]}
+                style={[theme.atoms.box.primary.border, { borderTopWidth: 1 }]}
               />
             )}
             extraData={expandedIds}

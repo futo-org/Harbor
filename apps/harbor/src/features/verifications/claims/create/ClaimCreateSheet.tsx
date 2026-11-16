@@ -356,7 +356,7 @@ function OptionRow({
         Atoms.gap_md,
         Atoms.px_lg,
         Atoms.py_md,
-        (hovered || pressed) && theme.atoms_new.box.primary.bg_hover,
+        (hovered || pressed) && theme.atoms.box.primary.bg_hover,
       ]}
     >
       <View

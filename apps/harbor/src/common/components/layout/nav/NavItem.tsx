@@ -83,7 +83,7 @@ export function NavItem({
                 minWidth: 18,
                 height: 18,
               },
-              theme.atoms_new.box.accent.bg,
+              theme.atoms.box.accent.bg,
             ]}
           >
             <Text fontSize="xs" lineHeight={18} fontWeight="bold" color="light">
@@ -132,8 +132,8 @@ export function NavItem({
         !labelVisible && Atoms.pr_lg,
         Atoms.gap_md,
         isActive
-          ? theme.atoms_new.box.secondary.bg
-          : hovering && theme.atoms_new.box.secondary.bg_hover,
+          ? theme.atoms.box.secondary.bg
+          : hovering && theme.atoms.box.secondary.bg_hover,
       ]}
       {...props}
     >

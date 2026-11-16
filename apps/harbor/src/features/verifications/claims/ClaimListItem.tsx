@@ -46,7 +46,7 @@ export function ClaimListItem({
       style={({ hovered, pressed }) => [
         Atoms.flex_1,
         Atoms.flex_row,
-        (hovered || pressed) && theme.atoms_new.box.primary.bg_hover,
+        (hovered || pressed) && theme.atoms.box.primary.bg_hover,
       ]}
     >
       <View
@@ -55,8 +55,8 @@ export function ClaimListItem({
           Atoms.ml_xs,
           Atoms.p_sm,
           isVerified
-            ? theme.atoms_new.box.success.bg
-            : theme.atoms_new.box.neutral.bg_subtle,
+            ? theme.atoms.box.success.bg
+            : theme.atoms.box.neutral.bg_subtle,
         ]}
       >
         <Icon
@@ -71,7 +71,7 @@ export function ClaimListItem({
           Atoms.gap_sm,
           Atoms.px_lg,
           Atoms.py_md,
-          theme.atoms_new.box.primary.border,
+          theme.atoms.box.primary.border,
           { borderBottomWidth: 1 },
         ]}
       >

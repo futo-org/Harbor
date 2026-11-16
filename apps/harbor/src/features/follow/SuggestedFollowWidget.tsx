@@ -41,7 +41,7 @@ export function SuggestedFollowWidget() {
         Atoms.gap_md,
         Atoms.flex_shrink_1,
         Atoms.overflow_hidden,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.border,
         { borderWidth: 1 },
       ]}
     >

@@ -43,8 +43,8 @@ export function MentionSearchOverlay() {
             (inputPageY - insets.top),
           zIndex: ZIndex.raised,
         },
-        theme.atoms_new.box.primary.bg,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
         { borderTopWidth: 1 },
       ]}
     >

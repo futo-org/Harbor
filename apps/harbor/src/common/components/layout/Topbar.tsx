@@ -48,8 +48,8 @@ function Topbar({ title, left, center, right }: TopbarProps) {
         Atoms.py_sm,
         Atoms.gap_md,
         { height: TOPBAR_HEIGHT },
-        theme.atoms_new.box.primary.bg,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
         { borderBottomWidth: 1 },
       ]}
     >
@@ -68,7 +68,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
               accessibilityLabel="Go back"
               onPress={() => router.back()}
               hitSlop={Spacing['lg']}
-              style={({ pressed }) => [pressed && theme.atoms_new.faded]}
+              style={({ pressed }) => [pressed && theme.atoms.faded]}
             >
               <Icon name="chevronBack" size={24} color="primary" />
             </Pressable>

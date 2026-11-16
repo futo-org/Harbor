@@ -47,8 +47,8 @@ export function ProfileRow({
       style={({ hovered, pressed }) => [
         (hovered || pressed) &&
           activeStyle === 'highlight' &&
-          theme.atoms_new.box.primary.bg_hover,
-        disabled && theme.atoms_new.faded,
+          theme.atoms.box.primary.bg_hover,
+        disabled && theme.atoms.faded,
       ]}
     >
       <View

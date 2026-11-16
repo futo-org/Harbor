@@ -23,7 +23,7 @@ export function Chip({
         Atoms.pb_xs,
         Atoms.pl_md,
         Atoms.pr_md,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.border,
         { borderWidth: 1 },
         style,
       ]}

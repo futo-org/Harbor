@@ -797,7 +797,7 @@ function Section({
           Atoms.gap_md,
           Atoms.p_md,
           Atoms.rounded_md,
-          theme.atoms_new.box.neutral.bg_subtle,
+          theme.atoms.box.neutral.bg_subtle,
         ]}
       >
         {children}
@@ -943,7 +943,7 @@ function StatusChip({ label, tone }: { label: string; tone: StatusTone }) {
         Atoms.px_sm,
         Atoms.py_xs,
         Atoms.rounded_full,
-        theme.atoms_new.box[tone].bg_subtle,
+        theme.atoms.box[tone].bg_subtle,
       ]}
     >
       <Icon

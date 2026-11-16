@@ -118,7 +118,7 @@ jest.mock('@/src/common/theme', () => ({
   ...jest.requireActual('@/src/common/theme'),
   useTheme: () => ({
     theme: {
-      atoms_new: {
+      atoms: {
         box: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
       },
     },

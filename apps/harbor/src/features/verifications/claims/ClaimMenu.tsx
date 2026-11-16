@@ -48,7 +48,7 @@ export function ClaimMenu({
                 Atoms.p_xs,
                 Atoms.rounded_full,
                 Atoms.overflow_hidden,
-                (hovered || pressed) && theme.atoms_new.box.neutral.bg_subtle,
+                (hovered || pressed) && theme.atoms.box.neutral.bg_subtle,
               ]}
             >
               <Icon name={icon} color="muted" size={iconSize} />

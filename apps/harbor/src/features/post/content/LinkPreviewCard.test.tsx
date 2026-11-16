@@ -9,7 +9,7 @@ import { COMPACT_IMAGE_WIDTH, LinkPreviewCard } from './LinkPreviewCard';
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
     theme: {
-      atoms_new: {
+      atoms: {
         box: { neutral: { bg_subtle: {}, border_subtle: {} } },
         faded_subtle: {},
       },

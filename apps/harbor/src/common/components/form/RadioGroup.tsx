@@ -69,7 +69,7 @@ function RadioIndicator() {
       style={[
         Atoms.items_center,
         Atoms.justify_center,
-        theme.atoms_new.box.neutral.border,
+        theme.atoms.box.neutral.border,
         {
           width: Spacing['xl'],
           height: Spacing['xl'],
@@ -81,7 +81,7 @@ function RadioIndicator() {
       <RadioGroupPrimitive.Indicator>
         <View
           style={[
-            theme.atoms_new.box.accent.bg,
+            theme.atoms.box.accent.bg,
             {
               width: Spacing['md'],
               height: Spacing['md'],

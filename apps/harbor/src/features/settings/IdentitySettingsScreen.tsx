@@ -55,7 +55,7 @@ export function IdentitySettingsSheet({
             Atoms.gap_md,
             Atoms.p_md,
             Atoms.rounded_md,
-            theme.atoms_new.box.neutral.bg_subtle,
+            theme.atoms.box.neutral.bg_subtle,
           ]}
         >
           <View style={Atoms.gap_xs}>
@@ -69,7 +69,7 @@ export function IdentitySettingsSheet({
 
           <View
             style={[
-              theme.atoms_new.box.neutral.border_subtle,
+              theme.atoms.box.neutral.border_subtle,
               { borderTopWidth: 1 },
             ]}
           />

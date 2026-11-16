@@ -184,7 +184,7 @@ export function ComposerFields({
         <View
           style={[
             Atoms.p_md,
-            theme.atoms_new.box.danger.border,
+            theme.atoms.box.danger.border,
             { borderBottomWidth: 1, marginBottom: 10 },
           ]}
         >
@@ -387,7 +387,7 @@ function ComposerLinkPreview({
             Atoms.p_md,
             Atoms.rounded_md,
             Atoms.mt_md,
-            theme.atoms_new.box.neutral.border_subtle,
+            theme.atoms.box.neutral.border_subtle,
             { borderWidth: 1 },
           ]}
         >
@@ -403,8 +403,8 @@ function ComposerLinkPreview({
         accessibilityLabel="Remove link preview"
         hitSlop={6}
         style={[
-          theme.atoms_new.media_control.bg,
-          disabled && theme.atoms_new.faded,
+          theme.atoms.media_control.bg,
+          disabled && theme.atoms.faded,
           {
             position: 'absolute',
             // Below the card's own mt_md top margin (margins stay inside the
@@ -492,7 +492,7 @@ function AttachmentThumb({
   return (
     <View
       style={[
-        theme.atoms_new.box.neutral.bg_subtle,
+        theme.atoms.box.neutral.bg_subtle,
         { width, aspectRatio, borderRadius: 8, overflow: 'hidden' },
       ]}
     >
@@ -502,7 +502,7 @@ function AttachmentThumb({
         contentFit="cover"
         style={[
           { width: '100%', height: '100%' },
-          status !== 'ready' && theme.atoms_new.faded,
+          status !== 'ready' && theme.atoms.faded,
         ]}
       />
       {/* Loading / error overlay while the blobs are being processed+uploaded */}
@@ -533,8 +533,8 @@ function AttachmentThumb({
         accessibilityLabel="Remove attachment"
         hitSlop={6}
         style={[
-          theme.atoms_new.media_control.bg,
-          disabled && theme.atoms_new.faded,
+          theme.atoms.media_control.bg,
+          disabled && theme.atoms.faded,
           {
             position: 'absolute',
             top: 2,
@@ -566,6 +566,6 @@ const useStyles = createThemedStyles((theme, define) =>
       { pointerEvents: 'none' },
     ],
     // As the disabled input
-    webMirrorDisabled: theme.atoms_new.faded,
+    webMirrorDisabled: theme.atoms.faded,
   }),
 );

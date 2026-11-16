@@ -141,8 +141,8 @@ function ReportOption({ option }: { option: ReportOptions[string] }) {
         Atoms.pl_lg,
         Atoms.rounded_md,
         hovered
-          ? theme.atoms_new.box.secondary.bg_hover
-          : theme.atoms_new.box.secondary.bg,
+          ? theme.atoms.box.secondary.bg_hover
+          : theme.atoms.box.secondary.bg,
       ]}
     >
       <Text fontWeight="bold">{option.label}</Text>

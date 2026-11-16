@@ -76,7 +76,7 @@ function ProfileHeaderInner({ onBack, scrollY }: ProfileHeaderProps) {
   if (profile.isLoading && !profile.name) return undefined;
 
   return (
-    <View style={theme.atoms_new.box.primary.bg}>
+    <View style={theme.atoms.box.primary.bg}>
       <View style={{ position: 'relative' }}>
         <Animated.View
           style={[
@@ -86,7 +86,7 @@ function ProfileHeaderInner({ onBack, scrollY }: ProfileHeaderProps) {
               // Stretches from its bottom edge, keeping the top at the screen's.
               transformOrigin: 'bottom',
             },
-            theme.atoms_new.box.secondary.bg,
+            theme.atoms.box.secondary.bg,
             bannerStretchStyle,
           ]}
         />
@@ -325,8 +325,8 @@ function AliasLabel({
               borderRadius: 8,
               borderWidth: 1,
             },
-            theme.atoms_new.box.secondary.bg,
-            theme.atoms_new.box.secondary.border,
+            theme.atoms.box.secondary.bg,
+            theme.atoms.box.secondary.border,
           ]}
         >
           <Text variant="secondary" color="primary">

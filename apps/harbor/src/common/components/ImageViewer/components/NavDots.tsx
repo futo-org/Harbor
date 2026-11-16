@@ -25,7 +25,7 @@ export function NavDots({
         Atoms.rounded_lg,
         Atoms.flex_row,
         Atoms.gap_xs,
-        theme.atoms_new.media_control.bg,
+        theme.atoms.media_control.bg,
       ]}
     >
       {Array.from({ length: count }).map((_, index) => (

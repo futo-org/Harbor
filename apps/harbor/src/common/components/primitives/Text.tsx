@@ -120,7 +120,7 @@ export function Text({
           lineHeight: resolvedLineHeight,
           ...(isWeb ? { fontWeight: resolvedFontWeight } : {}),
         },
-        theme.atoms_new[color],
+        theme.atoms[color],
         style,
       ]}
       {...props}

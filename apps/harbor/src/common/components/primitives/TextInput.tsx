@@ -107,8 +107,8 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
         style={[
           baseStyle,
           disabled
-            ? [theme.atoms_new.muted, theme.atoms_new.faded]
-            : theme.atoms_new.primary,
+            ? [theme.atoms.muted, theme.atoms.faded]
+            : theme.atoms.primary,
           multilineStyle,
           style,
         ]}
@@ -138,10 +138,10 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
           styles.blurContainer,
           { borderRadius: BorderRadius[rounded] },
           error
-            ? theme.atoms_new.box.danger.border
+            ? theme.atoms.box.danger.border
             : isFocused
-              ? theme.atoms_new.box.neutral.border
-              : theme.atoms_new.box.neutral.border_subtle,
+              ? theme.atoms.box.neutral.border
+              : theme.atoms.box.neutral.border_subtle,
         ]}
       >
         {input}

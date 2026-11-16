@@ -44,8 +44,8 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
         Atoms.align_center,
         Atoms.rounded_full,
         Atoms.cursor_pointer,
-        hovered && theme.atoms_new.faded_subtle,
-        pressed && theme.atoms_new.faded,
+        hovered && theme.atoms.faded_subtle,
+        pressed && theme.atoms.faded,
       ]}
       hitSlop={16}
     >

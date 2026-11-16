@@ -55,7 +55,7 @@ export function Block({
     <View
       style={[
         { width, height, borderRadius: radius ?? height / 2 },
-        theme.atoms_new.box.neutral.bg_subtle,
+        theme.atoms.box.neutral.bg_subtle,
       ]}
     />
   );

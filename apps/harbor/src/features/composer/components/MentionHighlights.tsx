@@ -31,6 +31,6 @@ export function MentionHighlights({
 
 const useStyles = createThemedStyles((theme, define) =>
   define({
-    mention: theme.atoms_new.accent,
+    mention: theme.atoms.accent,
   }),
 );

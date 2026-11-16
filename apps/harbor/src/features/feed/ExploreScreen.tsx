@@ -81,8 +81,8 @@ export default function ExploreScreen({
           style={[
             Atoms.px_lg,
             Atoms.py_md,
-            theme.atoms_new.box.primary.bg,
-            theme.atoms_new.box.primary.border,
+            theme.atoms.box.primary.bg,
+            theme.atoms.box.primary.border,
             { borderBottomWidth: 1 },
           ]}
         >

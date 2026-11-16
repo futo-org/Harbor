@@ -41,7 +41,7 @@ export default function EmojiPickerInline({
     <View
       style={[
         Atoms.flex_row,
-        theme.atoms_new.box.secondary.bg,
+        theme.atoms.box.secondary.bg,
         Atoms.px_md,
         Atoms.py_sm,
         Atoms.gap_sm,

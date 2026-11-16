@@ -20,12 +20,12 @@ function DropdownMenuContent({
           // Typed as nullable, but flattening these objects never returns null
           style={
             StyleSheet.flatten([
-              theme.atoms_new.box.secondary.border,
+              theme.atoms.box.secondary.border,
               { borderWidth: 1 },
               Atoms.rounded_lg,
               { minWidth: 225 },
               Atoms.outline_none,
-              theme.atoms_new.box.secondary.bg,
+              theme.atoms.box.secondary.bg,
               Atoms.overflow_hidden,
               typeof style === 'function' ? undefined : style,
             ]) as ViewStyle
@@ -53,11 +53,11 @@ function DropdownMenuItem({
           style={[
             Atoms.py_md,
             Atoms.px_lg,
-            (pressed || hovered) && theme.atoms_new.box.secondary.bg_hover,
+            (pressed || hovered) && theme.atoms.box.secondary.bg_hover,
             Atoms.flex_row,
             Atoms.align_center,
             Atoms.gap_lg,
-            props.disabled && theme.atoms_new.faded,
+            props.disabled && theme.atoms.faded,
           ]}
         >
           {children}

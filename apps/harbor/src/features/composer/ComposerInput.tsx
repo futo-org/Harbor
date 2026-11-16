@@ -40,8 +40,8 @@ export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
         Atoms.gap_md,
         Atoms.px_md,
         Atoms.py_md,
-        theme.atoms_new.box.primary.bg,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
         { borderBottomWidth: 1 },
       ]}
     >
@@ -62,7 +62,7 @@ export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
         style={[
           Atoms.p_xs,
           Atoms.rounded_md,
-          attachHovered && theme.atoms_new.box.neutral.bg_subtle,
+          attachHovered && theme.atoms.box.neutral.bg_subtle,
         ]}
       >
         <Icon name="image" size={22} color="secondary" />

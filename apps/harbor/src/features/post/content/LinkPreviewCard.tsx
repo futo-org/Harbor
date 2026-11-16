@@ -58,12 +58,12 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
           compact
             ? [
                 Atoms.self_stretch,
-                theme.atoms_new.box.neutral.bg_subtle,
+                theme.atoms.box.neutral.bg_subtle,
                 { width: COMPACT_IMAGE_WIDTH },
               ]
             : [
                 Atoms.w_full,
-                theme.atoms_new.box.neutral.bg_subtle,
+                theme.atoms.box.neutral.bg_subtle,
                 { aspectRatio: OG_ASPECT },
               ]
         }
@@ -109,9 +109,9 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
         Atoms.mt_md,
         Atoms.overflow_hidden,
         compact && Atoms.flex_row,
-        theme.atoms_new.box.neutral.border_subtle,
+        theme.atoms.box.neutral.border_subtle,
         { borderWidth: 1 },
-        pressed && theme.atoms_new.faded_subtle,
+        pressed && theme.atoms.faded_subtle,
       ]}
     >
       {compact ? (

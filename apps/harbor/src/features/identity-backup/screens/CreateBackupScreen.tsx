@@ -184,7 +184,7 @@ export default function CreateBackupScreen() {
             Atoms.px_lg,
             Atoms.flex_1,
             Atoms.gap_md,
-            theme.atoms_new.box.primary.bg,
+            theme.atoms.box.primary.bg,
           ]}
         >
           <ScreenHeader
@@ -250,8 +250,8 @@ function BackupInfo({
               Atoms.p_md,
               Atoms.rounded_lg,
               Atoms.my_xs,
-              theme.atoms_new.box.danger.bg_subtle,
-              theme.atoms_new.box.danger.border_subtle,
+              theme.atoms.box.danger.bg_subtle,
+              theme.atoms.box.danger.border_subtle,
               { borderWidth: 1 },
             ]}
           >

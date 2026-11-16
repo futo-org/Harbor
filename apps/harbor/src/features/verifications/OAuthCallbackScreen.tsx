@@ -22,7 +22,7 @@ export default function OAuthCallbackScreen() {
   return (
     <View
       style={[
-        theme.atoms_new.box.primary.bg,
+        theme.atoms.box.primary.bg,
         Atoms.flex_1,
         Atoms.align_center,
         Atoms.justify_center,

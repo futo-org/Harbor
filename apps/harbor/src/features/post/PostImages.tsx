@@ -65,7 +65,7 @@ export const PostImages = memo(function PostImages({
           Atoms.w_full,
           Atoms.rounded_md,
           Atoms.mt_sm,
-          pressed && theme.atoms_new.faded_subtle,
+          pressed && theme.atoms.faded_subtle,
         ]}
       >
         <Image
@@ -80,7 +80,7 @@ export const PostImages = memo(function PostImages({
                 Math.max(sources[0].aspectRatio ?? 1, MIN_ASPECT_RATIO),
               ),
             },
-            theme.atoms_new.box.neutral.bg_subtle,
+            theme.atoms.box.neutral.bg_subtle,
           ]}
         />
       </Pressable>
@@ -95,7 +95,7 @@ export const PostImages = memo(function PostImages({
         Atoms.rounded_md,
         Atoms.overflow_hidden,
         Atoms.mt_sm,
-        theme.atoms_new.box.neutral.bg_subtle,
+        theme.atoms.box.neutral.bg_subtle,
         { aspectRatio: GRID_ASPECT, gap: GRID_GAP },
       ]}
     >
@@ -147,17 +147,13 @@ function GridTile({
       }}
       style={({ pressed }) => [
         Atoms.flex_1,
-        pressed && theme.atoms_new.faded_subtle,
+        pressed && theme.atoms.faded_subtle,
       ]}
     >
       <Image
         uris={uris}
         contentFit="cover"
-        style={[
-          Atoms.w_full,
-          Atoms.h_full,
-          theme.atoms_new.box.neutral.bg_subtle,
-        ]}
+        style={[Atoms.w_full, Atoms.h_full, theme.atoms.box.neutral.bg_subtle]}
       />
     </Pressable>
   );

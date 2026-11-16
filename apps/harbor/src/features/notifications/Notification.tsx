@@ -148,7 +148,7 @@ function InteractionNotification({
         Atoms.flex_row,
         Atoms.gap_md,
         Atoms.p_md,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.border,
         { borderBottomWidth: 1 },
       ]}
     >

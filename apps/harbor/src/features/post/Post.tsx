@@ -144,10 +144,10 @@ export const Post = memo(function Post({
         Atoms.w_full,
         Atoms.px_md,
         !hideBottomBorder && [
-          theme.atoms_new.box.primary.border,
+          theme.atoms.box.primary.border,
           { borderBottomWidth: 1 },
         ],
-        pressed && theme.atoms_new.box.primary.bg_hover,
+        pressed && theme.atoms.box.primary.bg_hover,
       ]}
       onPress={handlePress}
       disabled={disablePress}
@@ -188,7 +188,7 @@ export const Post = memo(function Post({
               <View
                 style={[
                   Atoms.flex_1,
-                  theme.atoms_new.box.neutral.border_subtle,
+                  theme.atoms.box.neutral.border_subtle,
                   { borderLeftWidth: 2 },
                 ]}
               />

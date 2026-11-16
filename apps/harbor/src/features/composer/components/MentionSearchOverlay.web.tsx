@@ -92,8 +92,8 @@ export function MentionSearchOverlay() {
           Atoms.rounded_lg,
           Atoms.overflow_hidden,
           placeMentionOverlay(anchor, win),
-          theme.atoms_new.box.primary.bg,
-          theme.atoms_new.box.primary.border,
+          theme.atoms.box.primary.bg,
+          theme.atoms.box.primary.border,
           { borderWidth: 1, zIndex: ZIndex.tooltipOverlay },
         ]}
       >
@@ -137,7 +137,7 @@ function MentionRow({
     <View
       ref={ref as RefObject<ViewInstance | null>}
       onPointerEnter={onHover}
-      style={selected && theme.atoms_new.box.primary.bg_hover}
+      style={selected && theme.atoms.box.primary.bg_hover}
     >
       <ProfileRow
         size="sm"
@@ -166,7 +166,7 @@ function MentionShortcutHint() {
         Atoms.gap_xs,
         Atoms.px_sm,
         Atoms.py_xs,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.border,
         { borderTopWidth: 1 },
       ]}
     >

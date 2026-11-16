@@ -183,7 +183,7 @@ export function ImageViewer({
           Atoms.items_center,
           Atoms.justify_center,
           Atoms.rounded_full,
-          theme.atoms_new.media_control.bg,
+          theme.atoms.media_control.bg,
           { top: insets.top, right: 16, width: 40, height: 40 },
         ]}
       >

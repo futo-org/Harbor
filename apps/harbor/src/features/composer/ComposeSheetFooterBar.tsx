@@ -58,7 +58,7 @@ export function ComposeSheetFooterBar({
       style={[
         Atoms.p_xs,
         Atoms.rounded_md,
-        attachDisabled && theme.atoms_new.faded,
+        attachDisabled && theme.atoms.faded,
       ]}
     >
       <Icon name="image" size={22} color="secondary" />
@@ -74,7 +74,7 @@ export function ComposeSheetFooterBar({
       style={[
         Atoms.p_xs,
         Atoms.rounded_md,
-        attachDisabled && theme.atoms_new.faded,
+        attachDisabled && theme.atoms.faded,
       ]}
     >
       <Icon name="camera" size={22} color="secondary" />
@@ -90,8 +90,8 @@ export function ComposeSheetFooterBar({
   );
 
   const surface = [
-    theme.atoms_new.box.primary.bg,
-    theme.atoms_new.box.primary.border,
+    theme.atoms.box.primary.bg,
+    theme.atoms.box.primary.border,
     { borderTopWidth: 1 },
   ];
 

@@ -48,7 +48,7 @@ export function ListItem({
           padding,
           // We assume that the container has drawn the background,
           // so we only handle tinting on hover.
-          hovered && theme.atoms_new.box.neutral.bg_subtle,
+          hovered && theme.atoms.box.neutral.bg_subtle,
         ]}
       >
         <View {...props}>{children}</View>

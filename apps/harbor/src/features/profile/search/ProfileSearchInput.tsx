@@ -84,10 +84,7 @@ export function ProfileSearchInput({
           <Fragment key={suggestion.identity}>
             {i > 0 && (
               <View
-                style={[
-                  theme.atoms_new.box.primary.border,
-                  { borderTopWidth: 1 },
-                ]}
+                style={[theme.atoms.box.primary.border, { borderTopWidth: 1 }]}
               />
             )}
             <SuggestionRow

@@ -39,7 +39,7 @@ export function PostWarnOverlay({
         Atoms.align_center,
         Atoms.rounded_md,
         Atoms.overflow_hidden,
-        theme.atoms_new.box.secondary.bg,
+        theme.atoms.box.secondary.bg,
       ]}
     >
       <View
@@ -80,8 +80,8 @@ export function PostWarnOverlay({
           Atoms.px_md,
           Atoms.self_stretch,
           Atoms.justify_center,
-          theme.atoms_new.box.secondary.bg_hover,
-          pressed && theme.atoms_new.faded,
+          theme.atoms.box.secondary.bg_hover,
+          pressed && theme.atoms.faded,
         ]}
       >
         <Text variant="secondary" fontWeight="bold" color="secondary">

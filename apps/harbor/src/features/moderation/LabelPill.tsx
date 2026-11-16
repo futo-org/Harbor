@@ -54,10 +54,10 @@ export function LabelPill({
         Atoms.max_w_full,
         Atoms.rounded_full,
         Atoms.overflow_hidden,
-        theme.atoms_new.box.secondary.bg,
+        theme.atoms.box.secondary.bg,
         // Native inline views sit on the baseline; drop to the middle.
         inline && !isWeb && { transform: [{ translateY: Spacing.xs }] },
-        pressed && theme.atoms_new.faded,
+        pressed && theme.atoms.faded,
       ]}
     >
       {action === 'Hide' ? null : (
@@ -105,7 +105,7 @@ export function LabelPill({
             inline ? { paddingVertical: Spacing['2xs'] } : Atoms.py_xs,
             Atoms.self_stretch,
             Atoms.justify_center,
-            theme.atoms_new.box.secondary.bg_hover,
+            theme.atoms.box.secondary.bg_hover,
           ]}
         >
           <Text

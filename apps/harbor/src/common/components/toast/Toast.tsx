@@ -98,9 +98,9 @@ export function Toast({ toast }: { toast: ToastData }) {
         style={[
           Atoms.flex_row,
           Atoms.items_center,
-          theme.atoms_new.box.primary.bg,
-          theme.atoms_new.box.primary.border,
-          theme.atoms_new.shadow.neutral,
+          theme.atoms.box.primary.bg,
+          theme.atoms.box.primary.border,
+          theme.atoms.shadow.neutral,
           { borderRadius: BorderRadius.full, borderWidth: 1 },
         ]}
       >

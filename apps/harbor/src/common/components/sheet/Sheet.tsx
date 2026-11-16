@@ -177,9 +177,7 @@ function SheetHeader({
         onPress={onClose}
         hitSlop={Spacing['lg']}
         disabled={disabled}
-        style={({ pressed }) => [
-          (disabled || pressed) && theme.atoms_new.faded,
-        ]}
+        style={({ pressed }) => [(disabled || pressed) && theme.atoms.faded]}
       >
         <Icon name={closeIcon} size={24} color="primary" />
       </Pressable>
@@ -220,7 +218,7 @@ export function SheetFooter({
       style={[
         Atoms.flex_row,
         { padding, paddingBottom: insets.bottom + padding },
-        !fadeTop && theme.atoms_new.box.primary.bg,
+        !fadeTop && theme.atoms.box.primary.bg,
         // The web footer sits below the scrolling body instead of over it, so
         // pull it up over the body's bottom padding for the fade to overlap.
         fadeTop && isWeb && { marginTop: -padding },
@@ -395,7 +393,7 @@ function NativeSheet({
         style={[
           Atoms.w_full,
           !sizesToContent && Atoms.flex_1,
-          theme.atoms_new.box.primary.bg,
+          theme.atoms.box.primary.bg,
           sideInsets,
         ]}
       >
@@ -507,7 +505,7 @@ function WebModal({
       >
         <Pressable
           accessibilityLabel="Dismiss"
-          style={[Atoms.fixed, Atoms.inset_0, theme.atoms_new.backdrop.modal]}
+          style={[Atoms.fixed, Atoms.inset_0, theme.atoms.backdrop.modal]}
           onPress={dismissible ? close : undefined}
         />
         <View
@@ -522,7 +520,7 @@ function WebModal({
             { maxWidth: 600, marginVertical: 'auto', marginHorizontal: 'auto' },
             compact && Atoms.max_w_full,
             maxWidth !== undefined && { maxWidth },
-            theme.atoms_new.box.primary.bg,
+            theme.atoms.box.primary.bg,
             { borderRadius: BorderRadius.xl },
           ]}
         >

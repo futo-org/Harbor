@@ -31,7 +31,7 @@ export function SearchField({
           height: 40,
           borderRadius: BorderRadius.full,
         },
-        theme.atoms_new.box.neutral.bg_subtle,
+        theme.atoms.box.neutral.bg_subtle,
       ]}
     >
       {children}

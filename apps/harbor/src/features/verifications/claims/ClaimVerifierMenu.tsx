@@ -75,7 +75,7 @@ export function ClaimVerifierMenu({
 
               Atoms.rounded_full,
               Atoms.overflow_hidden,
-              (hovered || pressed) && theme.atoms_new.box.neutral.bg_subtle,
+              (hovered || pressed) && theme.atoms.box.neutral.bg_subtle,
             ]}
           >
             {statusText}

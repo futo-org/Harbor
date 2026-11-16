@@ -33,7 +33,7 @@ export default function BrowserExtensionScreen() {
   }, []);
 
   return (
-    <View style={[Atoms.flex_1, theme.atoms_new.box.primary.bg]}>
+    <View style={[Atoms.flex_1, theme.atoms.box.primary.bg]}>
       <View
         style={[
           Atoms.flex_row,
@@ -41,7 +41,7 @@ export default function BrowserExtensionScreen() {
           Atoms.gap_sm,
           Atoms.px_md,
           { height: TOPBAR_HEIGHT },
-          theme.atoms_new.box.primary.border,
+          theme.atoms.box.primary.border,
           { borderBottomWidth: 1 },
         ]}
       >

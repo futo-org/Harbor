@@ -43,9 +43,9 @@ export function SelectChip({
       variant="tertiary"
       style={({ hovered }) => [
         hovered
-          ? theme.atoms_new.box.secondary.bg_hover
-          : theme.atoms_new.box.secondary.bg,
-        theme.atoms_new.box.secondary.border,
+          ? theme.atoms.box.secondary.bg_hover
+          : theme.atoms.box.secondary.bg,
+        theme.atoms.box.secondary.border,
         {
           paddingVertical: Spacing.sm,
           paddingHorizontal: Spacing.md,

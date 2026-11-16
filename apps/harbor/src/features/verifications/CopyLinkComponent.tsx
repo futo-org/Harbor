@@ -20,8 +20,8 @@ export function CopyLinkComponent({ link }: { link: string }) {
         Atoms.p_md,
         Atoms.rounded_md,
         hovered
-          ? theme.atoms_new.box.neutral.bg_subtle_hover
-          : theme.atoms_new.box.neutral.bg_subtle,
+          ? theme.atoms.box.neutral.bg_subtle_hover
+          : theme.atoms.box.neutral.bg_subtle,
       ]}
     >
       <Text

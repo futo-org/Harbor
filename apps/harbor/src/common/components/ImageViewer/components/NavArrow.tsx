@@ -21,7 +21,7 @@ export function NavArrow({
         Atoms.items_center,
         Atoms.justify_center,
         Atoms.rounded_full,
-        theme.atoms_new.media_control.bg,
+        theme.atoms.media_control.bg,
         {
           top: '50%',
           width: 44,

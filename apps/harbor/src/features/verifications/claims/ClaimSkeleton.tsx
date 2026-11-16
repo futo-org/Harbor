@@ -22,7 +22,7 @@ export function ClaimSkeleton() {
         Atoms.px_lg,
         Atoms.py_md,
         animatedStyle,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.border,
         { borderBottomWidth: 1 },
       ]}
     >

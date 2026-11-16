@@ -59,7 +59,7 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
           Atoms.px_sm,
           Atoms.py_sm,
           { borderRadius: BorderRadius.sm },
-          hovered && theme.atoms_new.box.primary.bg_hover,
+          hovered && theme.atoms.box.primary.bg_hover,
         ]}
       >
         <View style={[Atoms.flex_col, Atoms.flex_1]}>

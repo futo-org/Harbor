@@ -146,7 +146,7 @@ export function SearchResults({
   }: {
     dragProgress: SharedValue<number>;
   }) => (
-    <View style={theme.atoms_new.box.primary.bg}>
+    <View style={theme.atoms.box.primary.bg}>
       {topbar}
       <Tabs progress={dragProgress}>
         {SEARCH_TAB_VALUES.map((value) => (
@@ -196,9 +196,9 @@ export function SearchPhraseRow({
         Atoms.gap_md,
         Atoms.px_lg,
         Atoms.py_lg,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.border,
         { borderBottomWidth: 1 },
-        (hovered || pressed) && theme.atoms_new.box.primary.bg_hover,
+        (hovered || pressed) && theme.atoms.box.primary.bg_hover,
       ]}
     >
       <Icon name="search" size={16} color="muted" />
@@ -278,7 +278,7 @@ function UserRow({ identity }: { identity: string }) {
     <ProfileRow
       identity={identity}
       onPress={() => router.navigate(Routes.tabs.profile(identity))}
-      style={[theme.atoms_new.box.primary.border, { borderBottomWidth: 1 }]}
+      style={[theme.atoms.box.primary.border, { borderBottomWidth: 1 }]}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
     />
   );

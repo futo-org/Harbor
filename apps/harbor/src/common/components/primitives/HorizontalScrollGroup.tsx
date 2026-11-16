@@ -317,7 +317,7 @@ function EdgeChevron({
         animatedStyle,
       ]}
     >
-      <View style={[styles.chevronBackdrop, theme.atoms_new.box.secondary.bg]}>
+      <View style={[styles.chevronBackdrop, theme.atoms.box.secondary.bg]}>
         {/* Unmounted while hidden: the button's inner pressable re-enables
             pointer events and would steal clicks from the tab beneath. */}
         {visible && (

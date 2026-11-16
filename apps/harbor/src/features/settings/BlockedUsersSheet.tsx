@@ -39,7 +39,7 @@ export default function BlockedUsersSheet() {
               identity={identity}
               onPress={() => openProfile(identity)}
               style={[
-                theme.atoms_new.box.primary.border,
+                theme.atoms.box.primary.border,
                 { borderBottomWidth: index === blocked.length - 1 ? 0 : 1 },
               ]}
               trailing={

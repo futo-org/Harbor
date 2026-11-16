@@ -23,13 +23,13 @@ function ProgressBar({ progress }: { progress: number | null }) {
         Atoms.rounded_md,
         Atoms.overflow_hidden,
         { height: 6 },
-        theme.atoms_new.box.neutral.bg_subtle,
+        theme.atoms.box.neutral.bg_subtle,
       ]}
     >
       <View
         style={[
           { width: `${Math.round(progress * 100)}%`, height: '100%' },
-          theme.atoms_new.box.accent.bg,
+          theme.atoms.box.accent.bg,
         ]}
       />
     </View>

@@ -24,7 +24,7 @@ export function PostSkeleton() {
         Atoms.flex_row,
         Atoms.gap_md,
         animatedStyle,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.border,
         { borderBottomWidth: 1 },
       ]}
     >

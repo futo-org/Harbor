@@ -86,12 +86,8 @@ function RootStack() {
           // Web scrolls the document, so the scene grows with its content
           // instead of becoming a scroll port of its own.
           contentStyle: isWeb
-            ? [theme.atoms_new.box.primary.bg, Atoms.flex_grow_1]
-            : [
-                theme.atoms_new.box.primary.bg,
-                Atoms.flex_1,
-                Atoms.overflow_auto,
-              ],
+            ? [theme.atoms.box.primary.bg, Atoms.flex_grow_1]
+            : [theme.atoms.box.primary.bg, Atoms.flex_1, Atoms.overflow_auto],
           ...(isWeb
             ? { animation: 'none' as const }
             : {

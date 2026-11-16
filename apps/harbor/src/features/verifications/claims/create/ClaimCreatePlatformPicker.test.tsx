@@ -15,7 +15,7 @@ jest.mock('@/src/common/theme', () => ({
         muted: '#000',
         box: new Proxy({}, { get: () => ({ bg_subtle: '#000' }) }),
       },
-      atoms_new: {
+      atoms: {
         box: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
       },
     },

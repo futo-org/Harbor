@@ -106,7 +106,7 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
                 // overflow:hidden forces a rounded clip on native — without it
                 // the press background renders with square corners.
                 Atoms.overflow_hidden,
-                (hovered || pressed) && theme.atoms_new.box.neutral.bg_subtle,
+                (hovered || pressed) && theme.atoms.box.neutral.bg_subtle,
               ]}
             >
               <Icon name="dotsVertical" color="muted" size={20} />

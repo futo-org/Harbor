@@ -16,7 +16,7 @@ export type TextColor = keyof Pick<
 
 export function buildThemeColors(palette: Palette, scheme: ThemeScheme) {
   const colors = buildColors(palette, scheme);
-  return { colors, atoms_new: buildAtoms(palette, scheme, colors) };
+  return { colors, atoms: buildAtoms(palette, scheme, colors) };
 }
 
 // raw strings for consumers that can't take a style object

@@ -16,7 +16,7 @@ export function ListItemGroup({ label, children }: ListItemGroupProps) {
 
   if (items.length === 0) return null;
 
-  const surface = theme.atoms_new.box.neutral.bg_subtle;
+  const surface = theme.atoms.box.neutral.bg_subtle;
 
   return (
     <View style={Atoms.gap_sm}>

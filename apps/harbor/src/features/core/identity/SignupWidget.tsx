@@ -26,7 +26,7 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
       style={[
         Atoms.rounded_xl,
         Atoms.overflow_hidden,
-        theme.atoms_new.box.secondary.bg,
+        theme.atoms.box.secondary.bg,
       ]}
     >
       <Image
@@ -98,8 +98,8 @@ export function SignupBar() {
           borderTopWidth: 1,
           zIndex: ZIndex.raised,
         },
-        theme.atoms_new.box.primary.bg,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
       ]}
     >
       <View style={Atoms.flex_shrink_1}>

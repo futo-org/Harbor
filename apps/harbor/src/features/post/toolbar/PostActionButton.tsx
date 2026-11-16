@@ -66,7 +66,7 @@ export default function PostActionButton({
                 Atoms.rounded_full,
                 // overflow:hidden forces a rounded clip on native
                 Atoms.overflow_hidden,
-                isHighlighted && theme.atoms_new.box[variant].bg_subtle,
+                isHighlighted && theme.atoms.box[variant].bg_subtle,
               ]}
             >
               {emoji ? (

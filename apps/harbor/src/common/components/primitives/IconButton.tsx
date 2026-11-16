@@ -69,7 +69,7 @@ export function IconButton({
     color: iconColor,
   });
 
-  const { box } = theme.atoms_new;
+  const { box } = theme.atoms;
   const showChrome = !(variant === 'ghost' && compact);
   const surfaceFill =
     variant === 'ghost'
@@ -97,7 +97,7 @@ export function IconButton({
               ? ({ cursor: disabled ? 'default' : 'pointer' } as ViewStyle)
               : {}),
           },
-          hovered && theme.atoms_new.faded_subtle,
+          hovered && theme.atoms.faded_subtle,
         ]}
         {...props}
       >

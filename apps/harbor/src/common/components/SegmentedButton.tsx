@@ -71,8 +71,8 @@ export function SegmentedButton({
       style={[
         Atoms.flex_row,
         Atoms.rounded_full,
-        theme.atoms_new.box.secondary.bg,
-        theme.atoms_new.box.secondary.border,
+        theme.atoms.box.secondary.bg,
+        theme.atoms.box.secondary.border,
         { borderWidth: StyleSheet.hairlineWidth },
         style,
       ]}
@@ -169,7 +169,7 @@ function ActiveSegmentIndicator({
     <Animated.View
       style={[
         Atoms.absolute,
-        theme.atoms_new.box.accent.bg,
+        theme.atoms.box.accent.bg,
         {
           // Covers the track's top and bottom border.
           top: -StyleSheet.hairlineWidth,
@@ -243,7 +243,7 @@ function Segment({
         hovered && !active
           ? // A hovered segment stays below the indicator, so on web its
             // background can't cover the indicator's edge after pixel rounding.
-            theme.atoms_new.box.secondary.bg_hover
+            theme.atoms.box.secondary.bg_hover
           : { zIndex: ZIndex.raised },
         // Keeps the hover background inside the track's rounded ends.
         isFirst && LEFT_ROUNDED,
@@ -282,7 +282,7 @@ function StaticSegmentIndicator({
     <View
       style={[
         Atoms.absolute,
-        theme.atoms_new.box.accent.bg,
+        theme.atoms.box.accent.bg,
         {
           // Covers the separators and track border around the segment,
           // like `ActiveSegmentIndicator`.
@@ -305,7 +305,7 @@ function SegmentSeparator() {
   return (
     <View
       style={[
-        theme.atoms_new.box.secondary.border,
+        theme.atoms.box.secondary.border,
         { borderLeftWidth: StyleSheet.hairlineWidth },
       ]}
     />

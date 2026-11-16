@@ -2,7 +2,7 @@ jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
     theme: {
       colors: new Proxy({}, { get: () => '#000' }),
-      atoms_new: {
+      atoms: {
         box: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
       },
     },

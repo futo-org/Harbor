@@ -85,8 +85,8 @@ export function Tabs({
   const { theme } = useTheme();
 
   const surface = [
-    theme.atoms_new.box.primary.bg,
-    theme.atoms_new.box.primary.border,
+    theme.atoms.box.primary.bg,
+    theme.atoms.box.primary.border,
     { borderBottomWidth: 1 },
   ];
 
@@ -199,7 +199,7 @@ export function Tabs({
                 style={[
                   Atoms.absolute,
                   Atoms.rounded_full,
-                  theme.atoms_new.box.accent.bg,
+                  theme.atoms.box.accent.bg,
                   { left: 0, bottom: 0, height: INDICATOR_HEIGHT },
                   indicatorStyle,
                   restingStyle,
@@ -269,7 +269,7 @@ function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
           Atoms.flex_row,
           Atoms.align_center,
           Atoms.justify_center,
-          (pressed || hovered) && theme.atoms_new.box.primary.bg_hover,
+          (pressed || hovered) && theme.atoms.box.primary.bg_hover,
         ]}
         {...props}
       >
@@ -313,7 +313,7 @@ function Tab({ children, active = false, menu, onPress, ...props }: TabProps) {
                 Atoms.self_center,
                 Atoms.w_full,
                 Atoms.rounded_full,
-                theme.atoms_new.box.accent.bg,
+                theme.atoms.box.accent.bg,
                 { height: INDICATOR_HEIGHT, bottom: 0 },
               ]}
             />

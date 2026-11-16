@@ -38,7 +38,7 @@ function ThreadHeader() {
         <View
           style={[
             Atoms.flex_1,
-            theme.atoms_new.box.neutral.border_subtle,
+            theme.atoms.box.neutral.border_subtle,
             { borderLeftWidth: 2 },
           ]}
         />

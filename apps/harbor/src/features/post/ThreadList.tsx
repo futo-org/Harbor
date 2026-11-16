@@ -131,11 +131,7 @@ export function ThreadList({
       />
       {settling ? (
         <View
-          style={[
-            Atoms.absolute,
-            Atoms.inset_0,
-            theme.atoms_new.box.primary.bg,
-          ]}
+          style={[Atoms.absolute, Atoms.inset_0, theme.atoms.box.primary.bg]}
         >
           {renderNode(HeaderComponent)}
           <Post post={post} hideReplyingTo={true} focusedView disablePress />

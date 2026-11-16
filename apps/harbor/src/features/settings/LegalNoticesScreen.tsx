@@ -50,9 +50,7 @@ export default function LegalNoticesScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View
-          style={[Atoms.px_lg, Atoms.flex_1, theme.atoms_new.box.primary.bg]}
-        >
+        <View style={[Atoms.px_lg, Atoms.flex_1, theme.atoms.box.primary.bg]}>
           <ScreenHeader title="Legal notices" onBack={() => router.back()} />
           <ScrollView
             style={Atoms.flex_1}

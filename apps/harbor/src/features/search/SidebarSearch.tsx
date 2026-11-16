@@ -79,8 +79,8 @@ export function SidebarSearch() {
               borderWidth: 1,
               borderRadius: BorderRadius.lg,
             },
-            theme.atoms_new.box.primary.bg,
-            theme.atoms_new.box.primary.border,
+            theme.atoms.box.primary.bg,
+            theme.atoms.box.primary.border,
           ]}
         >
           <SearchPhraseRow phrase={phrase} onPress={submit} />

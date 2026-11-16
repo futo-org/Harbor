@@ -95,7 +95,7 @@ export function ProfileCompactHeader({
             height: insets.top,
             zIndex: ZIndex.raised,
           },
-          theme.atoms_new.box.primary.bg,
+          theme.atoms.box.primary.bg,
           statusBarCoverStyle,
         ]}
       />
@@ -109,7 +109,7 @@ export function ProfileCompactHeader({
             paddingTop: insets.top,
             zIndex: ZIndex.raised,
           },
-          theme.atoms_new.box.primary.bg,
+          theme.atoms.box.primary.bg,
           style,
         ]}
       >

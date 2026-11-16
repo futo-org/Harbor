@@ -40,7 +40,7 @@ function ModerationLabelRow({
         isWeb ? undefined : Atoms.gap_xs,
         Atoms.py_md,
         Atoms.px_lg,
-        theme.atoms_new.box.primary.border,
+        theme.atoms.box.primary.border,
         { borderBottomWidth: isLast ? 0 : 1 },
       ]}
     >

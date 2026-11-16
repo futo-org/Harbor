@@ -26,9 +26,7 @@ export function ReportItem({
   const { post, isLoading } = useModeratedPost(identity ? undefined : target);
 
   return (
-    <View
-      style={[theme.atoms_new.box.primary.border, { borderBottomWidth: 1 }]}
-    >
+    <View style={[theme.atoms.box.primary.border, { borderBottomWidth: 1 }]}>
       <ReportHeader report={report} />
       {identity ? (
         <ProfileRow identity={identity} fetchMode={FetchMode.Default} />

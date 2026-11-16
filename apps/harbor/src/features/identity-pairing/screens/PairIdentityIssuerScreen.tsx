@@ -102,9 +102,7 @@ export default function PairIdentityIssuerScreen() {
     <>
       <Screen>
         <Screen.PrimaryColumn>
-          <View
-            style={[Atoms.px_lg, Atoms.flex_1, theme.atoms_new.box.primary.bg]}
-          >
+          <View style={[Atoms.px_lg, Atoms.flex_1, theme.atoms.box.primary.bg]}>
             <ScreenHeader title="Pair Identity" onBack={exit} />
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -147,7 +145,7 @@ function PairingInfoCard({
         Atoms.p_lg,
         Atoms.rounded_lg,
         Atoms.my_3xl,
-        theme.atoms_new.box.secondary.bg,
+        theme.atoms.box.secondary.bg,
       ]}
     >
       <PairingQRCode link={link} />
@@ -240,16 +238,16 @@ function StatusDisplay({
     iconColor = 'accent';
     detailsColor = 'primary';
     detailsBox = [
-      theme.atoms_new.box.secondary.bg,
-      theme.atoms_new.box.secondary.border,
+      theme.atoms.box.secondary.bg,
+      theme.atoms.box.secondary.border,
     ];
   } else {
     iconName = 'closeCircle';
     iconColor = 'danger';
     detailsColor = 'danger';
     detailsBox = [
-      theme.atoms_new.box.danger.bg_subtle,
-      theme.atoms_new.box.danger.border_subtle,
+      theme.atoms.box.danger.bg_subtle,
+      theme.atoms.box.danger.border_subtle,
     ];
   }
 
@@ -396,8 +394,8 @@ function ApprovalSheet({
                 Atoms.gap_md,
                 Atoms.p_md,
                 Atoms.rounded_md,
-                theme.atoms_new.box.secondary.bg,
-                theme.atoms_new.box.secondary.border,
+                theme.atoms.box.secondary.bg,
+                theme.atoms.box.secondary.border,
                 { borderWidth: 1 },
               ]}
             >
@@ -413,11 +411,8 @@ function ApprovalSheet({
                     marginTop: 1,
                   },
                   asRotation
-                    ? [
-                        theme.atoms_new.box.accent.bg,
-                        theme.atoms_new.box.accent.border,
-                      ]
-                    : theme.atoms_new.box.neutral.border,
+                    ? [theme.atoms.box.accent.bg, theme.atoms.box.accent.border]
+                    : theme.atoms.box.neutral.border,
                 ]}
               >
                 {asRotation ? (

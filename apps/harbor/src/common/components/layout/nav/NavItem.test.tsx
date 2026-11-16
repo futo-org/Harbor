@@ -25,7 +25,7 @@ jest.mock('@/src/common/theme', () => ({
   Breakpoints: { xl: 1280 },
   useTheme: () => ({
     theme: {
-      atoms_new: {
+      atoms: {
         box: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
       },
     },

@@ -62,7 +62,7 @@ export default function SendFeedbackScreen() {
   return (
     <Screen keyboardAvoiding>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.flex_1, theme.atoms_new.box.primary.bg]}>
+        <View style={[Atoms.flex_1, theme.atoms.box.primary.bg]}>
           <Topbar
             title="Send feedback"
             right={

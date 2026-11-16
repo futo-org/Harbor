@@ -33,7 +33,7 @@ export function FollowingBadge({
           Atoms.rounded_full,
           { width: size, height: size },
           // Match FollowButton's Following state
-          theme.atoms_new.box.accent.bg,
+          theme.atoms.box.accent.bg,
         ]}
       >
         <Icon name="personCheck" size={glyphSize} color="light" />

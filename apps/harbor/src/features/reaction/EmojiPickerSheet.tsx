@@ -264,7 +264,7 @@ function EmojiCategoryRail({
         pointerEvents="none"
         style={[
           StyleSheet.absoluteFill,
-          theme.atoms_new.box.primary.bg,
+          theme.atoms.box.primary.bg,
           { height: windowHeight },
         ]}
       />
@@ -272,8 +272,8 @@ function EmojiCategoryRail({
         style={[
           Atoms.flex_row,
           Atoms.justify_center,
-          theme.atoms_new.box.primary.bg,
-          theme.atoms_new.box.primary.border,
+          theme.atoms.box.primary.bg,
+          theme.atoms.box.primary.border,
           { borderTopWidth: CATEGORY_RAIL_BORDER_WIDTH },
           hidden && Atoms.hidden,
         ]}

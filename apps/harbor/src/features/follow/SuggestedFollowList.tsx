@@ -82,7 +82,7 @@ function SuggestionRow({ identity }: { identity: string }) {
     <ProfileRow
       identity={identity}
       onPress={() => router.navigate(Routes.tabs.profile(identity))}
-      style={[theme.atoms_new.box.primary.border, { borderBottomWidth: 1 }]}
+      style={[theme.atoms.box.primary.border, { borderBottomWidth: 1 }]}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
     />
   );

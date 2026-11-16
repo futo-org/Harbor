@@ -59,8 +59,8 @@ export function AddServerForm({ isBusy, error, onSubmit }: AddServerFormProps) {
           style={[
             Atoms.p_md,
             Atoms.rounded_lg,
-            theme.atoms_new.box.danger.bg_subtle,
-            theme.atoms_new.box.danger.border_subtle,
+            theme.atoms.box.danger.bg_subtle,
+            theme.atoms.box.danger.border_subtle,
             { borderWidth: 1 },
           ]}
         >

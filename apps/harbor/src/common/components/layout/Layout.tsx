@@ -110,7 +110,7 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
           borderLeftWidth: 1,
           borderRightWidth: 1,
         },
-        isWeb && theme.atoms_new.box.primary.border,
+        isWeb && theme.atoms.box.primary.border,
       ]}
     >
       {children}
@@ -174,13 +174,10 @@ function Screen({
         // full scroll height, letting `position: sticky` pin them. Native
         // keeps a fixed viewport-height screen.
         isWeb ? { minHeight: '100%' } : Atoms.flex_1,
-        theme.atoms_new.box.primary.bg,
+        theme.atoms.box.primary.bg,
         !drawUnderStatusBar && { paddingTop: insets.top },
         { paddingLeft: insets.left, paddingRight: insets.right },
-        !isWeb && [
-          theme.atoms_new.box.primary.border,
-          { borderBottomWidth: 1 },
-        ],
+        !isWeb && [theme.atoms.box.primary.border, { borderBottomWidth: 1 }],
       ]}
       dir="ltr"
     >
@@ -223,7 +220,7 @@ function Screen({
               height: insets.top,
               zIndex: ZIndex.raised,
             },
-            theme.atoms_new.box.primary.bg,
+            theme.atoms.box.primary.bg,
           ]}
         />
       ) : null}
@@ -325,7 +322,7 @@ function SidebarDrawer({ onClose }: { onClose: () => void }) {
       ]}
     >
       <View
-        style={[{ width: 300, height: '100%' }, theme.atoms_new.box.primary.bg]}
+        style={[{ width: 300, height: '100%' }, theme.atoms.box.primary.bg]}
       >
         <RNScrollView
           showsVerticalScrollIndicator={false}
@@ -341,7 +338,7 @@ function SidebarDrawer({ onClose }: { onClose: () => void }) {
         accessibilityRole="button"
         accessibilityLabel="Close menu"
         onPress={onClose}
-        style={[Atoms.flex_1, theme.atoms_new.backdrop.modal]}
+        style={[Atoms.flex_1, theme.atoms.backdrop.modal]}
       />
     </View>
   );
