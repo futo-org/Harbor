@@ -81,6 +81,43 @@ message GetAttributionFeedRequest {
   repeated string omit_labels = 3;
 }
 
+message GetAttributedToFeedRequest {
+  // Identity of the caller to return relevant targets for
+  optional string identity = 1;
+  optional PageParams page_params = 2;
+  // Top: most posts first, decayed by age. Otherwise: latest post first.
+  optional SortPostsBy sort_by = 3;
+  // Only count posts made with these `Application.id`s. Empty allows all.
+  repeated string only_applications = 4;
+  // Do not count posts made with these `Application.id`s
+  repeated string omit_applications = 5;
+}
+
+message AttributedToFeedItem {
+  // The target, with the metadata of the latest post about it
+  AttributedTo attributed_to = 1;
+  // Recent posts attributed to the target
+  int64 post_count = 2;
+}
+
+message GetAttributedToFeedResponse {
+  repeated AttributedToFeedItem items = 1;
+  optional PageInfo page_info = 2;
+}
+
+message GetAttributedToStatsRequest {
+  AttributedTo attributed_to = 1;
+}
+
+message GetAttributedToStatsResponse {
+  // Posts attributed to the target
+  int64 post_count = 1;
+  // Positive reactions on the target
+  int64 upvote_count = 2;
+  // Negative reactions on the target
+  int64 downvote_count = 3;
+}
+
 /**
  * Curated feeds provided by servers
  */
@@ -101,4 +138,10 @@ service FeedsService {
   rpc GetPostThread(GetPostThreadRequest) returns (GetPostThreadResponse);
   // Posts attributed to the same target (e.g. all posts about a URL)
   rpc GetAttributionFeed(GetAttributionFeedRequest) returns (GetFeedResponse);
+  // Targets recent posts are attributed to (e.g. URLs), with post counts
+  rpc GetAttributedToFeed(GetAttributedToFeedRequest)
+      returns (GetAttributedToFeedResponse);
+  // Post and reaction counts of a target
+  rpc GetAttributedToStats(GetAttributedToStatsRequest)
+      returns (GetAttributedToStatsResponse);
 }

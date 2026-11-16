@@ -2,6 +2,44 @@
   "$schema": "https://turbo.build/schema.json",
   "extends": ["//"],
   "tasks": {
+    "generate": {
+      "inputs": [
+        "tools/generate-bindings.mjs",
+        "ubrn.config.yaml",
+        "package.json",
+        "$TURBO_ROOT$/packages/rs-core/src/**",
+        "$TURBO_ROOT$/packages/rs-core/build.rs",
+        "$TURBO_ROOT$/packages/rs-core/build/**",
+        "$TURBO_ROOT$/packages/rs-core/Cargo.toml",
+        "$TURBO_ROOT$/packages/rs-common/src/**",
+        "$TURBO_ROOT$/packages/rs-common/build.rs",
+        "$TURBO_ROOT$/packages/rs-common/Cargo.toml",
+        "$TURBO_ROOT$/protos/**",
+        "$TURBO_ROOT$/Cargo.toml",
+        "$TURBO_ROOT$/Cargo.lock"
+      ],
+      "outputs": [
+        "src/generated/**",
+        "src/NativeReactNative.ts",
+        "src/uniffi-init.tsx",
+        "cpp/**",
+        "ios/*.h",
+        "ios/*.mm",
+        "ReactNative.podspec",
+        "android/CMakeLists.txt",
+        "android/build.gradle",
+        "android/cpp-adapter.cpp",
+        "android/src/main/AndroidManifest.xml",
+        "android/src/main/java/**"
+      ]
+    },
+    "build": {
+      "dependsOn": ["generate", "^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["generate"],
+      "outputs": []
+    },
     "ubrn:android": {
       "cache": false
     },

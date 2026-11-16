@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { withIdentity } from '../lib/authGate';
 import type { PostData } from '../lib/polycentric-hooks';
+import { encodeAnywhereUrl } from '../util/anywhere-url';
 
 /** Query param carrying where onboarding should land the user afterwards. */
 export const RETURN_TO_PARAM = 'returnTo';
@@ -20,10 +21,12 @@ export type OpenComposeOptions = {
   quote?: PostData['id'];
   /** Immediately launch the image picker once the composer mounts. */
   attachImage?: boolean;
+  /** The address of the page the post is about. */
+  attributedTo?: string;
 };
 
 export function openCompose(options: OpenComposeOptions = {}) {
-  const { replyTo, quote, attachImage } = options;
+  const { replyTo, quote, attachImage, attributedTo } = options;
   const params = new URLSearchParams();
   if (replyTo) {
     params.set('replyTo', replyTo);
@@ -32,6 +35,8 @@ export function openCompose(options: OpenComposeOptions = {}) {
     params.set('quote', quote);
   }
   if (attachImage) params.set('attach', '1');
+  // The router decodes params once more than they were encoded.
+  if (attributedTo) params.set('about', attributedTo.replace(/%/g, '%25'));
   const queryString = params.toString();
   withIdentity(() =>
     router.navigate(
@@ -53,6 +58,17 @@ export const Routes = {
       index: '/explore',
       people: '/explore/people',
       search: '/explore/search',
+    },
+    anywhere: {
+      index: '/anywhere',
+      /** A web page and the posts about it. */
+      url: (url: string) => `/anywhere/u/${encodeAnywhereUrl(url)}` as const,
+      browserExtension: {
+        /** Where to get the browser extension. */
+        index: '/anywhere/browser-extension',
+        /** The screen the browser extension frames. */
+        panel: '/anywhere/browser-extension/panel',
+      },
     },
     claims: '/claims',
     profile: (identityId: string) => `/${identityId}` as const,

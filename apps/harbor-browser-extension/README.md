@@ -6,9 +6,10 @@ Browser extension for Chrome, Brave, Firefox and Safari, built with
 Clicking the toolbar icon opens Harbor in the browser's sidebar. Safari has no
 sidebar API for extensions, so there it opens as a popup.
 
-The extension has no UI of its own. It frames the Harbor app's `/browser-extension`
-route (`apps/harbor/src/features/browser-extension`) and tells it which page the active
-tab is on.
+The extension has no UI of its own. It frames the Harbor app's
+`/anywhere/browser-extension/panel` route (`apps/harbor/src/features/anywhere/browser-extension`) and tells it which page the active
+tab is on. It reads that page's canonical address, description and image
+(`src/page.ts`), which is why it asks for access to every site.
 
 ## Develop
 
@@ -20,7 +21,12 @@ pnpm dev:firefox   # builds dist/firefox-mv3-dev
 
 Load the `-dev` folder once as described under "Install a local build". Dev
 builds frame the Expo dev server, so app changes hot reload in the sidebar. Set
-`WXT_HARBOR_DEV_URL` if it is not on `http://localhost:8081`.
+`WXT_HARBOR_DEV_URL` if it is not on `http://127.0.0.1:8081`.
+
+The sidebar frames `127.0.0.1` while the Harbor tab is on `localhost`, so the
+two keep separate identities, as an installed extension and harbor.social do.
+Open the sidebar beside a signed-in `http://localhost:8081` tab to be asked to
+sign the extension in.
 
 ## Build
 

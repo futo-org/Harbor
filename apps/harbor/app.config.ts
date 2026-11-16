@@ -95,7 +95,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     permissions: [
       'android.permission.CAMERA',
       // Self-updater hands downloaded APKs to the system installer.
-      'android.permission.REQUEST_INSTALL_PACKAGES',
+      ...(DISTRIBUTION === 'store'
+        ? []
+        : ['android.permission.REQUEST_INSTALL_PACKAGES']),
     ],
     ...(HAS_GOOGLE_SERVICES && { googleServicesFile: GOOGLE_SERVICES_FILE }),
     ...(APP_LINK_HOST && {

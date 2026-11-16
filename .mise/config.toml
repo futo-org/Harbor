@@ -43,6 +43,7 @@ run = "pnpm dev --filter='!@polycentric/verifier-bot' --filter='!@polycentric/sc
 description = "Create the local k3d cluster (context k3d-harbor)"
 run = '''
 k3d cluster get harbor >/dev/null 2>&1 || k3d cluster create --config deploy/local/k3d.yaml
+k3d cluster start harbor
 kubectl --context k3d-harbor wait --for=condition=Ready nodes --all --timeout=120s
 '''
 

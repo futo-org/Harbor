@@ -62,13 +62,21 @@ cd harbor
 # Install the pinned Node.js version.
 nvm install
 
-# Install dependencies and build every package.
+# Install dependencies, generate bindings, and build every package.
 pnpm install
+pnpm generate
 pnpm build
 
 # Install the git pre-commit hooks (formatting and linting).
 pnpm prepare
 ```
+
+The React Native package's uniffi bindings are generated from `rs-core`.
+`pnpm generate` builds `rs-core` for your machine and runs
+`uniffi-bindgen-react-native` on it
+(`packages/react-native/tools/generate-bindings.mjs`), so it needs only the
+Rust toolchain, not the Android NDK or Xcode. Remember to re-generate after
+changes to `rs-core`, or typechecking will fail.
 
 `pnpm build` runs through [Turbo](https://turborepo.com) and covers the Rust
 core, the generated uniffi bindings for React Native and web, and the JavaScript
@@ -216,9 +224,10 @@ pnpm build
 ```
 
 If the generated uniffi bindings themselves are stale rather than just their
-cache, regenerate them:
+cache, delete and regenerate them:
 
 ```sh
 pnpm ubrn:clean
+pnpm generate
 pnpm build
 ```

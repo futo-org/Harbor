@@ -10,12 +10,16 @@ use crate::service::proto::feeds_service_server::{
     FeedsService, FeedsServiceServer,
 };
 use crate::service::proto::{
+    GetAttributedToFeedRequest, GetAttributedToFeedResponse,
+    GetAttributedToStatsRequest, GetAttributedToStatsResponse,
     GetAttributionFeedRequest, GetExploreFeedRequest, GetFeedResponse,
     GetFollowingFeedRequest, GetIdentityFeedRequest, GetPostRequest,
     GetPostResponse, GetPostThreadRequest, GetPostThreadResponse,
 };
 
 pub mod common;
+pub mod get_attributed_to_feed;
+pub mod get_attributed_to_stats;
 pub mod get_attribution_feed;
 pub mod get_explore_feed;
 pub mod get_following_feed;
@@ -97,6 +101,26 @@ impl FeedsService for FeedsServiceImpl {
         let ctx = self.ctx.public_ro(&request).await?;
         Ok(Response::new(
             get_attribution_feed::handle(ctx, request.into_inner()).await?,
+        ))
+    }
+
+    async fn get_attributed_to_feed(
+        &self,
+        request: Request<GetAttributedToFeedRequest>,
+    ) -> Result<Response<GetAttributedToFeedResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
+        Ok(Response::new(
+            get_attributed_to_feed::handle(ctx, request.into_inner()).await?,
+        ))
+    }
+
+    async fn get_attributed_to_stats(
+        &self,
+        request: Request<GetAttributedToStatsRequest>,
+    ) -> Result<Response<GetAttributedToStatsResponse>, Status> {
+        let ctx = self.ctx.public_ro(&request).await?;
+        Ok(Response::new(
+            get_attributed_to_stats::handle(ctx, request.into_inner()).await?,
         ))
     }
 }

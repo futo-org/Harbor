@@ -66,6 +66,7 @@ export const IconsMap = {
   flagAlt: defineIcon(MaterialCommunityIcons, 'flag-outline'),
   foodApple: defineIcon(MaterialCommunityIcons, 'food-apple-outline'),
   form: defineIcon(MaterialCommunityIcons, 'form-select'),
+  globe: defineIcon(Ionicons, 'globe-outline'),
   handWave: defineIcon(MaterialCommunityIcons, 'hand-wave-outline'),
   home: defineIcon(Ionicons, 'home-outline'),
   image: defineIcon(Ionicons, 'image-outline'),
