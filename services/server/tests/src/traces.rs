@@ -28,7 +28,7 @@ async fn start_traces_receiver() {
 
         tokio::spawn(async move {
             let address = traces_url();
-            let address = address.trim_prefix("http://");
+            let address = address.strip_prefix("http://").unwrap_or(&address);
             for _ in 0..1000 {
                 if let Ok(_) = tokio::net::TcpStream::connect(&address).await {
                     _ = RUNNING.set(());
