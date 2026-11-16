@@ -8,13 +8,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useCopyToClipboard } from '@/src/common/lib/useCopyToClipboard';
-import {
-  Atoms,
-  type TextColor,
-  type Theme,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
+import { Atoms, type Theme, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useIdentityState } from '@/src/features/profile/hooks/useIdentityState';
 import { ed25519 } from '@noble/curves/ed25519.js';
@@ -343,7 +337,7 @@ const CONFIRMATION_CHIPS: Record<
   { label: string; tone: StatusTone }
 > = {
   confirmed: { label: 'Confirmed', tone: 'success' },
-  missing: { label: 'Not found', tone: 'muted' },
+  missing: { label: 'Not found', tone: 'neutral' },
   unreachable: { label: 'Unreachable', tone: 'danger' },
 };
 
@@ -607,7 +601,7 @@ function linkStyle(theme: Theme): TextStyle {
   return {
     textDecorationLine: 'underline',
     textDecorationStyle: 'dotted',
-    textDecorationColor: theme.palette.neutral_300,
+    textDecorationColor: theme.colors.muted,
   };
 }
 
@@ -803,9 +797,7 @@ function Section({
           Atoms.gap_md,
           Atoms.p_md,
           Atoms.rounded_md,
-          {
-            backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-          },
+          theme.atoms_new.box.neutral.bg_subtle,
         ]}
       >
         {children}
@@ -937,10 +929,11 @@ function CopyIcon({
   );
 }
 
-type StatusTone = Extract<TextColor, 'success' | 'danger' | 'muted'>;
+type StatusTone = 'success' | 'danger' | 'neutral';
 
 function StatusChip({ label, tone }: { label: string; tone: StatusTone }) {
   const { theme } = useTheme();
+  const color = tone === 'neutral' ? 'muted' : tone;
   return (
     <View
       style={[
@@ -950,15 +943,15 @@ function StatusChip({ label, tone }: { label: string; tone: StatusTone }) {
         Atoms.px_sm,
         Atoms.py_xs,
         Atoms.rounded_full,
-        { backgroundColor: withHexOpacity(theme.colors[tone], '20') },
+        theme.atoms_new.box[tone].bg_subtle,
       ]}
     >
       <Icon
         name={tone === 'success' ? 'checkmarkCircle' : 'closeCircle'}
         size={14}
-        color={tone}
+        color={color}
       />
-      <Text variant="small" fontWeight="semibold" color={tone}>
+      <Text variant="small" fontWeight="semibold" color={color}>
         {label}
       </Text>
     </View>

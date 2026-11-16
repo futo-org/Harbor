@@ -26,7 +26,7 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
       style={[
         Atoms.rounded_xl,
         Atoms.overflow_hidden,
-        { backgroundColor: theme.palette.neutral_25 },
+        theme.atoms_new.box.secondary.bg,
       ]}
     >
       <Image
@@ -95,11 +95,11 @@ export function SignupBar() {
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: theme.palette.neutral_0,
           borderTopWidth: 1,
-          borderTopColor: theme.palette.neutral_25,
           zIndex: ZIndex.raised,
         },
+        theme.atoms_new.box.primary.bg,
+        theme.atoms_new.box.primary.border,
       ]}
     >
       <View style={Atoms.flex_shrink_1}>

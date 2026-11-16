@@ -2,7 +2,7 @@ import HARBOR_LOGO from '@/src/common/assets/images/harbor-logo-256.png';
 import { Text } from '@/src/common/components';
 import { TOPBAR_HEIGHT } from '@/src/common/components/metrics';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -33,7 +33,7 @@ export default function BrowserExtensionScreen() {
   }, []);
 
   return (
-    <View style={[Atoms.flex_1, theme.atoms.bg]}>
+    <View style={[Atoms.flex_1, theme.atoms_new.box.primary.bg]}>
       <View
         style={[
           Atoms.flex_row,
@@ -41,10 +41,8 @@ export default function BrowserExtensionScreen() {
           Atoms.gap_sm,
           Atoms.px_md,
           { height: TOPBAR_HEIGHT },
-          {
-            borderBottomWidth: 1,
-            borderBottomColor: withHexOpacity(theme.palette.neutral_500, '10'),
-          },
+          theme.atoms_new.box.primary.border,
+          { borderBottomWidth: 1 },
         ]}
       >
         <Image
