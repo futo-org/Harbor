@@ -40,10 +40,8 @@ function ModerationLabelRow({
         isWeb ? undefined : Atoms.gap_xs,
         Atoms.py_md,
         Atoms.px_lg,
-        {
-          borderBottomWidth: isLast ? 0 : 1,
-          borderColor: theme.palette.neutral_25,
-        },
+        theme.atoms_new.box.primary.border,
+        { borderBottomWidth: isLast ? 0 : 1 },
       ]}
     >
       <View style={[Atoms.flex_col, Atoms.flex_1]}>

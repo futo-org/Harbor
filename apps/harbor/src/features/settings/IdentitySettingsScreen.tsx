@@ -5,7 +5,7 @@ import {
   useCurrentIdentity,
   usePolycentric,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -55,9 +55,7 @@ export function IdentitySettingsSheet({
             Atoms.gap_md,
             Atoms.p_md,
             Atoms.rounded_md,
-            {
-              backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-            },
+            theme.atoms_new.box.neutral.bg_subtle,
           ]}
         >
           <View style={Atoms.gap_xs}>
@@ -70,10 +68,10 @@ export function IdentitySettingsSheet({
           </View>
 
           <View
-            style={{
-              height: 1,
-              backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-            }}
+            style={[
+              theme.atoms_new.box.neutral.border_subtle,
+              { borderTopWidth: 1 },
+            ]}
           />
 
           <View style={Atoms.gap_xs}>

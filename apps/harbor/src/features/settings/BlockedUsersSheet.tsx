@@ -38,10 +38,10 @@ export default function BlockedUsersSheet() {
               key={identity}
               identity={identity}
               onPress={() => openProfile(identity)}
-              style={{
-                borderBottomWidth: index === blocked.length - 1 ? 0 : 1,
-                borderColor: theme.palette.neutral_25,
-              }}
+              style={[
+                theme.atoms_new.box.primary.border,
+                { borderBottomWidth: index === blocked.length - 1 ? 0 : 1 },
+              ]}
               trailing={
                 <Button
                   title="Unblock"

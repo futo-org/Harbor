@@ -1,6 +1,6 @@
 import { IconButton, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -59,13 +59,8 @@ export function ServerRow({
     Atoms.pl_lg,
     Atoms.rounded_lg,
     status === 'suggested'
-      ? {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '40'),
-        }
-      : {
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
+      ? [theme.atoms_new.box.neutral.border_subtle, { borderWidth: 1 }]
+      : theme.atoms_new.box.neutral.bg_subtle,
   ];
 
   return status === 'suggested' && onAction ? (
