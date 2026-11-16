@@ -51,7 +51,7 @@ export default function FollowList({
           <View style={[Atoms.items_center, Atoms.p_lg]}>
             <ActivityIndicator
               size="small"
-              color={theme.palette.neutral_500}
+              color={theme.colors.muted}
               accessibilityLabel="Loading more"
             />
           </View>
@@ -83,7 +83,7 @@ function IdentityRow({ identity }: { identity: string }) {
     <ProfileRow
       identity={identity}
       onPress={() => router.navigate(Routes.tabs.profile(identity))}
-      style={{ borderBottomWidth: 1, borderColor: theme.palette.neutral_25 }}
+      style={[theme.atoms_new.box.primary.border, { borderBottomWidth: 1 }]}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
     />
   );

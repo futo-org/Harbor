@@ -62,7 +62,7 @@ export function ProfileSearchInput({
         <View style={[Atoms.align_center, Atoms.p_md]}>
           <ActivityIndicator
             size="small"
-            color={theme.palette.neutral_500}
+            color={theme.colors.muted}
             accessibilityLabel="Searching"
           />
         </View>
@@ -84,10 +84,10 @@ export function ProfileSearchInput({
           <Fragment key={suggestion.identity}>
             {i > 0 && (
               <View
-                style={{
-                  height: 1,
-                  backgroundColor: theme.palette.neutral_25,
-                }}
+                style={[
+                  theme.atoms_new.box.primary.border,
+                  { borderTopWidth: 1 },
+                ]}
               />
             )}
             <SuggestionRow
@@ -141,7 +141,7 @@ function SuggestionRow({
         pending ? (
           <ActivityIndicator
             size="small"
-            color={theme.palette.primary_500}
+            color={theme.colors.accent}
             accessibilityLabel="Working"
           />
         ) : undefined

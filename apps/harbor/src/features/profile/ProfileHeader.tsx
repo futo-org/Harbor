@@ -35,17 +35,12 @@ const BANNER_HEIGHT = 150;
 const HEADER_ROW_ICON_SIZE = 13;
 
 export interface ProfileHeaderProps {
-  bannerColors: [string, string];
   onBack: () => void;
   /** The showing page's scroll offset, which stretches the banner on overscroll. */
   scrollY: SharedValue<number>;
 }
 
-function ProfileHeaderInner({
-  bannerColors,
-  onBack,
-  scrollY,
-}: ProfileHeaderProps) {
+function ProfileHeaderInner({ onBack, scrollY }: ProfileHeaderProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { identityKey, isSelf } = useProfileContext();
@@ -81,35 +76,20 @@ function ProfileHeaderInner({
   if (profile.isLoading && !profile.name) return undefined;
 
   return (
-    <View style={{ backgroundColor: theme.palette.neutral_0 }}>
+    <View style={theme.atoms_new.box.primary.bg}>
       <View style={{ position: 'relative' }}>
         <Animated.View
           style={[
             {
               // Extends under the status bar; the screen draws under it.
               height: bannerHeight,
-              backgroundColor: bannerColors[1],
-              overflow: 'hidden',
               // Stretches from its bottom edge, keeping the top at the screen's.
               transformOrigin: 'bottom',
             },
+            theme.atoms_new.box.secondary.bg,
             bannerStretchStyle,
           ]}
-        >
-          <View
-            style={[
-              Atoms.absolute,
-              {
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: bannerColors[0],
-                opacity: 0.5,
-              },
-            ]}
-          />
-        </Animated.View>
+        />
         <View
           style={[
             Atoms.absolute,
@@ -344,9 +324,9 @@ function AliasLabel({
               maxWidth: 320,
               borderRadius: 8,
               borderWidth: 1,
-              borderColor: theme.palette.neutral_300,
-              backgroundColor: theme.palette.background_secondary,
             },
+            theme.atoms_new.box.secondary.bg,
+            theme.atoms_new.box.secondary.border,
           ]}
         >
           <Text variant="secondary" color="primary">

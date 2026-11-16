@@ -8,7 +8,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { useCopyToClipboard } from '@/src/common/lib/useCopyToClipboard';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
 import { ServerRow } from '@/src/features/settings/servers/ServerRow';
@@ -62,10 +62,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
 
   const divider = (
     <View
-      style={{
-        height: 1,
-        backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-      }}
+      style={[theme.atoms_new.box.neutral.border_subtle, { borderTopWidth: 1 }]}
     />
   );
 
@@ -98,9 +95,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
             Atoms.gap_md,
             Atoms.p_md,
             Atoms.rounded_md,
-            {
-              backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-            },
+            theme.atoms_new.box.neutral.bg_subtle,
           ]}
         >
           <View style={Atoms.gap_xs}>
@@ -212,9 +207,7 @@ function SigningKeyRow({
             Atoms.px_sm,
             Atoms.py_xs,
             Atoms.rounded_full,
-            {
-              backgroundColor: withHexOpacity(theme.palette.primary_500, '20'),
-            },
+            theme.atoms_new.box.accent.bg_subtle,
           ]}
         >
           <Text variant="small" color="accent">

@@ -94,8 +94,8 @@ export function ProfileCompactHeader({
             right: 0,
             height: insets.top,
             zIndex: ZIndex.raised,
-            backgroundColor: theme.palette.neutral_0,
           },
+          theme.atoms_new.box.primary.bg,
           statusBarCoverStyle,
         ]}
       />
@@ -108,8 +108,8 @@ export function ProfileCompactHeader({
             right: 0,
             paddingTop: insets.top,
             zIndex: ZIndex.raised,
-            backgroundColor: theme.palette.neutral_0,
           },
+          theme.atoms_new.box.primary.bg,
           style,
         ]}
       >

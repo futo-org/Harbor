@@ -46,10 +46,9 @@ export function ProfileRow({
       accessible={!trailing}
       style={({ hovered, pressed }) => [
         (hovered || pressed) &&
-          activeStyle === 'highlight' && {
-            backgroundColor: theme.palette.neutral_25,
-          },
-        disabled && { opacity: 0.5 },
+          activeStyle === 'highlight' &&
+          theme.atoms_new.box.primary.bg_hover,
+        disabled && theme.atoms_new.faded,
       ]}
     >
       <View

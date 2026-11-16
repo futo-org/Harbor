@@ -3,7 +3,7 @@ import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon, { type IconName } from '@/src/common/components/Icon';
 import { withIdentity } from '@/src/common/lib/authGate';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { COLLECTION } from '@polycentric/react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -106,12 +106,7 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
                 // overflow:hidden forces a rounded clip on native — without it
                 // the press background renders with square corners.
                 Atoms.overflow_hidden,
-                (hovered || pressed) && {
-                  backgroundColor: withHexOpacity(
-                    theme.palette.neutral_500,
-                    '14',
-                  ),
-                },
+                (hovered || pressed) && theme.atoms_new.box.neutral.bg_subtle,
               ]}
             >
               <Icon name="dotsVertical" color="muted" size={20} />
