@@ -172,10 +172,7 @@ impl ObjectStore {
 
     /// List objects in the bucket.
     #[tracing::instrument(name = "object_store.list_objects", skip_all)]
-    pub fn list_objects(
-        &self,
-        prefix: Option<String>,
-    ) -> impl Stream<Item = io::Result<Object>> + Unpin {
+    pub fn list_objects(&self) -> impl Stream<Item = io::Result<Object>> + Unpin {
         let mut stream = self
             .client
             .list_objects_v2()

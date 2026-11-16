@@ -33,7 +33,7 @@ pub(crate) async fn sync(
     let mut added = 0;
 
     tracing::debug!("listing blobs in content store");
-    let mut objects = filestore.list_objects(None /* No prefix. */);
+    let mut objects = filestore.list_objects();
     let mut buffer = Vec::with_capacity(BATCH_SIZE);
     loop {
         let object = match objects.next().await {

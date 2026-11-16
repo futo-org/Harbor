@@ -37,7 +37,7 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        let tx = manager.get_connection();
+        let _tx = manager.get_connection();
 
         // Not undoing the data migration.
 

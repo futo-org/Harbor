@@ -4,7 +4,7 @@ use sea_orm::entity::prelude::*;
 
 /// Index of blobs uploaded to the content store.
 ///
-/// Note that this may be out of data, the source of thruth in the content
+/// Note that this may be out of data, the source of thruth is the content
 /// store.
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
@@ -23,7 +23,7 @@ pub struct Model {
     pub digest_value: Vec<u8>,
     /// Size of the blob.
     pub size: i64,
-    /// Time at which the blobs was last modified.
+    /// Time at which the blob was last modified.
     pub last_modified: DateTimeWithTimeZone,
 }
 
