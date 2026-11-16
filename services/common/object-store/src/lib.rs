@@ -177,7 +177,6 @@ impl ObjectStore {
             .client
             .list_objects_v2()
             .bucket(&self.bucket)
-            .set_prefix(prefix)
             .into_paginator()
             .send();
         let mut page_objects = Vec::new();
