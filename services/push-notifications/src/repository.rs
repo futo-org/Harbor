@@ -1,20 +1,46 @@
-use polycentric_common::models::protos_v2::PublicKey;
+use crate::manager::PushService;
+use polycentric_common::models::protos_v2::{PublicKey, PushTarget};
 use push_notifications_entity::push_token_model as PushTokenModel;
-use sea_orm::sea_query::OnConflict;
+use sea_orm::sea_query::{Expr, ExprTrait};
 use sea_orm::*;
 use time::OffsetDateTime;
+
+/// Upper bound on the number of subscriptions that we allow for a push target.
+pub const MAX_SUBSCRIPTIONS: usize = 50;
+
+/// Query condition for whether a row's key is in `keys`.
+fn key_in(keys: &[PublicKey]) -> sea_orm::sea_query::Expr {
+    Expr::tuple([
+        Expr::col(PushTokenModel::Column::PublicKeyType),
+        Expr::col(PushTokenModel::Column::PublicKey),
+    ])
+    .in_tuples(keys.iter().map(|k| (k.key_type as i16, k.key.clone())))
+}
 
 pub struct Query;
 
 impl Query {
-    pub async fn token_for_public_key(
+    /// The distinct Expo tokens subscribed to `identity` by any of `keys`.
+    /// `keys` should be the list of authorized keys for `identity`.
+    pub async fn expo_tokens_for_identity(
         db: &DbConn,
-        public_key: &PublicKey,
-    ) -> Result<Option<PushTokenModel::Model>, DbErr> {
+        identity: &str,
+        keys: &[PublicKey],
+    ) -> Result<Vec<String>, DbErr> {
+        if keys.is_empty() {
+            return Ok(vec![]);
+        }
+
         PushTokenModel::Entity::find()
-            .filter(PushTokenModel::Column::PublicKeyType.eq(public_key.key_type as i16))
-            .filter(PushTokenModel::Column::PublicKey.eq(public_key.key.clone()))
-            .one(db)
+            .select_only()
+            .column(PushTokenModel::Column::Token)
+            .distinct()
+            .filter(PushTokenModel::Column::Identity.eq(identity))
+            .filter(PushTokenModel::Column::Service.eq(PushService::Expo.as_ref()))
+            .filter(key_in(keys))
+            .limit(MAX_SUBSCRIPTIONS as u64)
+            .into_tuple()
+            .all(db)
             .await
     }
 }
@@ -22,53 +48,71 @@ impl Query {
 pub struct Mutation;
 
 impl Mutation {
-    pub async fn register(
+    /// Unregister any subscriptions for `target` or with a public key in
+    /// `subscriptions`.
+    /// Then, register all of the subscriptions in `subscription`.
+    pub async fn replace_subscriptions(
         db: &DbConn,
-        public_key: &PublicKey,
-        service: String,
-        token: String,
+        target: &PushTarget,
+        subscriptions: &[(PublicKey, String)],
     ) -> Result<(), DbErr> {
-        let now = OffsetDateTime::now_utc();
+        let txn = db.begin().await?;
 
-        let active = PushTokenModel::ActiveModel {
-            public_key_type: Set(public_key.key_type as i16),
-            public_key: Set(public_key.key.clone()),
-            service: Set(service),
-            token: Set(token),
-            created_at: Set(now),
-            updated_at: Set(now),
-        };
-
-        PushTokenModel::Entity::insert(active)
-            .on_conflict(
-                OnConflict::columns([
-                    PushTokenModel::Column::PublicKeyType,
-                    PushTokenModel::Column::PublicKey,
-                ])
-                .update_columns([
-                    PushTokenModel::Column::Service,
-                    PushTokenModel::Column::Token,
-                    PushTokenModel::Column::UpdatedAt,
-                ])
-                .to_owned(),
-            )
-            .exec(db)
+        // Remove all subscriptions for `target`.
+        PushTokenModel::Entity::delete_many()
+            .filter(PushTokenModel::Column::Service.eq(&target.service))
+            .filter(PushTokenModel::Column::Token.eq(&target.token))
+            .exec(&txn)
             .await?;
 
-        Ok(())
+        if !subscriptions.is_empty() {
+            // Gather public keys
+            let mut signers: Vec<PublicKey> = vec![];
+            for (signer, _) in subscriptions {
+                if !signers.contains(signer) {
+                    signers.push(signer.clone());
+                }
+            }
+
+            // Delete existing subscriptions for each public key
+            PushTokenModel::Entity::delete_many()
+                .filter(key_in(&signers))
+                .exec(&txn)
+                .await?;
+
+            // Derive new subscriptions
+            let now = OffsetDateTime::now_utc();
+            let rows = subscriptions
+                .iter()
+                .map(|(signer, identity)| PushTokenModel::ActiveModel {
+                    public_key_type: Set(signer.key_type as i16),
+                    public_key: Set(signer.key.clone()),
+                    identity: Set(identity.clone()),
+                    service: Set(target.service.clone()),
+                    token: Set(target.token.clone()),
+                    created_at: Set(now),
+                    updated_at: Set(now),
+                });
+
+            // Register new subscriptions
+            PushTokenModel::Entity::insert_many(rows)
+                .exec_without_returning(&txn)
+                .await?;
+        }
+
+        txn.commit().await
     }
 
-    pub async fn unregister(
-        db: &DbConn,
-        public_key: &PublicKey,
-        service: &str,
-        token: &str,
-    ) -> Result<(), DbErr> {
+    /// Unregister every subscription where the service is `service` and the
+    /// token is in `tokens`.
+    pub async fn remove_tokens(db: &DbConn, service: &str, tokens: &[String]) -> Result<(), DbErr> {
+        if tokens.is_empty() {
+            return Ok(());
+        }
+
         PushTokenModel::Entity::delete_many()
-            .filter(PushTokenModel::Column::PublicKeyType.eq(public_key.key_type as i16))
-            .filter(PushTokenModel::Column::PublicKey.eq(public_key.key.clone()))
             .filter(PushTokenModel::Column::Service.eq(service))
-            .filter(PushTokenModel::Column::Token.eq(token))
+            .filter(PushTokenModel::Column::Token.is_in(tokens))
             .exec(db)
             .await?;
 

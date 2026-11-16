@@ -726,39 +726,52 @@ export class PolycentricClient {
   }
 
   /**
-   * Sign a `RegisterPushNotificationRequest` with the active key pair and
-   * deliver it to every configured server via gRPC-web. Per-server failures
-   * are logged but do not throw — registration is best-effort across the
-   * server set.
+   * Register push notifications from `servers` for the active identity to be
+   * sent to the push target specified.
    */
   async registerPushNotifications(
     servers: string[],
-    request: Proto.RegisterPushNotificationRequest,
+    target: Proto.PushTarget,
   ): Promise<void> {
-    if (!this.currentKeyPair) {
-      throw new Error('registerPushNotifications requires an active key pair');
+    const keyPair = this.currentKeyPair;
+    const identity = this.activeIdentityKey;
+
+    if (!keyPair || !identity) {
+      throw new Error(
+        'registerPushNotifications requires an active identity and key pair',
+      );
     }
 
-    const messageBytes =
-      Proto.RegisterPushNotificationRequest.toBinary(request);
+    // Derive a signed request using this device's key pair so that servers
+    // respect our request for push notifications.
+    const pushTargetBytes = Proto.PushTarget.toBinary(target);
+
     const signature = await this.crypto.sign(
-      this.currentKeyPair.privateKey.key,
-      messageBytes,
-      this.currentKeyPair.keyType,
+      keyPair.privateKey.key,
+      pushTargetBytes,
+      keyPair.keyType,
     );
-    const signedMessageBytes = Proto.SignedMessage.toBinary(
-      Proto.SignedMessage.create({
-        publicKey: this.currentKeyPair.publicKey,
-        signature,
-        messageBytes,
+
+    const requestBytes = Proto.RegisterPushNotificationRequest.toBinary(
+      Proto.RegisterPushNotificationRequest.create({
+        pushTarget: target,
+        subscriptions: [
+          {
+            pushTargetBytes,
+            signature,
+            signer: keyPair.publicKey,
+            identity,
+          },
+        ],
       }),
     );
 
+    // Send our request to notification servers.
     const results = await Promise.allSettled(
       servers.map((server) =>
         this.core.registerPushNotifications(
           server,
-          signedMessageBytes.buffer as ArrayBuffer,
+          requestBytes.buffer as ArrayBuffer,
         ),
       ),
     );

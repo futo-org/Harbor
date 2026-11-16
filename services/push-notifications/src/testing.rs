@@ -1,8 +1,8 @@
 //! Shared test fixtures: a mock polycentric gRPC backend, event-bundle
-//! builders, and push-token rows.
+//! builders, and push-token lookup rows.
 
 use crate::context::Context;
-use crate::manager::{NotificationManager, PushService};
+use crate::manager::NotificationManager;
 use crate::polycentric::PolycentricClient;
 use polycentric_common::models::{
     collections,
@@ -17,9 +17,8 @@ use polycentric_common::models::{
     },
 };
 use prost::Message;
-use push_notifications_entity::push_token_model as PushTokenModel;
 use sea_orm::DatabaseConnection;
-use time::OffsetDateTime;
+use std::collections::BTreeMap;
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{Request, Response, Status};
 
@@ -208,16 +207,10 @@ pub fn reply_post_bundle(author: &str) -> EventBundle {
     )
 }
 
-/// A registered Expo `push_token` row for `public_key`.
-pub fn token_row(public_key: &[u8], token: &str) -> PushTokenModel::Model {
-    PushTokenModel::Model {
-        public_key_type: KeyType::Ed25519 as i16,
-        public_key: public_key.to_vec(),
-        service: PushService::Expo.as_ref().to_string(),
-        token: token.to_string(),
-        created_at: OffsetDateTime::UNIX_EPOCH,
-        updated_at: OffsetDateTime::UNIX_EPOCH,
-    }
+/// A row of the token lookup in `send_to_identity`, which selects only the
+/// `token` column.
+pub fn token_row(token: &str) -> BTreeMap<&'static str, sea_orm::Value> {
+    BTreeMap::from([("token", token.into())])
 }
 
 pub fn test_public_key(byte: u8) -> PublicKey {

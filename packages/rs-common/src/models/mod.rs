@@ -45,6 +45,7 @@ pub mod post;
 pub mod post_reply;
 pub mod profile_update;
 pub mod public_key;
+pub mod push_subscription;
 pub mod query_engine_stats;
 pub mod reaction;
 pub mod report;

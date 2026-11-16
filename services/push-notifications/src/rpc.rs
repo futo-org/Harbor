@@ -2,7 +2,6 @@
 //! handler under `notifications/rpc/`.
 
 pub mod register_push_notifications;
-pub mod unregister_push_notifications;
 
 use crate::context::Context;
 use polycentric_common::models::protos_v2::notification_service_server::{
@@ -10,9 +9,8 @@ use polycentric_common::models::protos_v2::notification_service_server::{
 };
 use polycentric_common::models::protos_v2::{
     AcknowledgeNotificationsRequest, AcknowledgeNotificationsResponse, ListNotificationsRequest,
-    ListNotificationsResponse, RegisterPushNotificationResponse, SignedMessage,
+    ListNotificationsResponse, RegisterPushNotificationRequest, RegisterPushNotificationResponse,
     SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse,
-    UnregisterPushNotificationResponse,
 };
 use std::sync::Arc;
 use tonic::codegen::BoxStream;
@@ -58,19 +56,10 @@ impl NotificationService for NotificationServiceImpl {
 
     async fn register_push_notifications(
         &self,
-        request: Request<SignedMessage>,
+        request: Request<RegisterPushNotificationRequest>,
     ) -> Result<Response<RegisterPushNotificationResponse>, Status> {
         Ok(Response::new(
             register_push_notifications::handle(&self.ctx, request.into_inner()).await?,
-        ))
-    }
-
-    async fn unregister_push_notifications(
-        &self,
-        request: Request<SignedMessage>,
-    ) -> Result<Response<UnregisterPushNotificationResponse>, Status> {
-        Ok(Response::new(
-            unregister_push_notifications::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 }
@@ -86,181 +75,241 @@ mod tests {
     use super::*;
     use crate::manager::{NotificationManager, PushService};
     use crate::polycentric::PolycentricClient;
+    use crate::repository::MAX_SUBSCRIPTIONS;
     use ed25519_dalek::{Signer, SigningKey};
-    use polycentric_common::models::protos_v2::RegisterPushNotificationRequest;
-    use polycentric_common::models::protos_v2::{KeyType, PublicKey};
+    use polycentric_common::models::protos_v2::{KeyType, PublicKey, PushSubscription, PushTarget};
     use prost::Message;
-    use push_notifications_entity::push_token_model as PushTokenModel;
-    use sea_orm::{DbBackend, MockDatabase};
-    use time::OffsetDateTime;
+    use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, MockExecResult};
     use tonic::Code;
 
-    async fn impl_for_testing() -> NotificationServiceImpl {
-        let ctx = Arc::new(Context {
-            db: MockDatabase::new(DbBackend::Postgres).into_connection(),
-            ro_db: MockDatabase::new(DbBackend::Postgres).into_connection(),
-            notification_manager: NotificationManager::new(None),
-            polycentric: PolycentricClient::new(vec![]),
-            main_server: String::new(),
-        });
-        NotificationServiceImpl { ctx }
-    }
+    const TOKEN: &str = "ExponentPushToken[abc123]";
 
-    #[tokio::test]
-    async fn register_rejects_signed_message_without_public_key() {
-        let service = impl_for_testing().await;
-
-        let request = Request::new(SignedMessage {
-            public_key: None,
-            signature: vec![],
-            message_bytes: vec![],
-        });
-
-        let status = service
-            .register_push_notifications(request)
-            .await
-            .expect_err("expected an error for missing public_key");
-
-        assert_eq!(status.code(), Code::Unauthenticated);
-    }
-
-    #[tokio::test]
-    async fn register_rejects_signed_message_with_invalid_signature() {
-        let service = impl_for_testing().await;
-
-        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
-
-        let message_bytes = RegisterPushNotificationRequest {
-            service: PushService::Expo.as_ref().to_string(),
-            token: "ExponentPushToken[abc123]".to_string(),
-        }
-        .encode_to_vec();
-
-        let mut signature = signing_key.sign(&message_bytes).to_bytes().to_vec();
-        // Corrupt the signature so verification fails despite the body being valid.
-        signature[0] ^= 0xff;
-
-        let request = Request::new(SignedMessage {
-            public_key: Some(PublicKey {
-                key_type: KeyType::Ed25519.into(),
-                key: signing_key.verifying_key().to_bytes().to_vec(),
+    fn service_with_db(db: DatabaseConnection) -> NotificationServiceImpl {
+        NotificationServiceImpl {
+            ctx: Arc::new(Context {
+                db: db.clone(),
+                ro_db: db,
+                notification_manager: NotificationManager::new(None),
+                polycentric: PolycentricClient::new(vec![]),
+                main_server: String::new(),
             }),
-            signature,
-            message_bytes,
-        });
+        }
+    }
 
-        let status = service
-            .register_push_notifications(request)
+    /// A service whose database errors on any use, for requests that should
+    /// be rejected before touching it.
+    fn service() -> NotificationServiceImpl {
+        service_with_db(MockDatabase::new(DbBackend::Postgres).into_connection())
+    }
+
+    fn target(token: &str) -> PushTarget {
+        PushTarget {
+            service: PushService::Expo.as_ref().to_string(),
+            token: token.to_string(),
+        }
+    }
+
+    fn signer(key: &SigningKey) -> PublicKey {
+        PublicKey {
+            key_type: KeyType::Ed25519.into(),
+            key: key.verifying_key().to_bytes().to_vec(),
+        }
+    }
+
+    fn subscribe(key: &SigningKey, target: &PushTarget, identity: &str) -> PushSubscription {
+        let push_target_bytes = target.encode_to_vec();
+        PushSubscription {
+            signature: key.sign(&push_target_bytes).to_bytes().to_vec(),
+            push_target_bytes,
+            signer: Some(signer(key)),
+            identity: identity.to_string(),
+        }
+    }
+
+    fn request(
+        push_target: Option<PushTarget>,
+        subscriptions: Vec<PushSubscription>,
+    ) -> Request<RegisterPushNotificationRequest> {
+        Request::new(RegisterPushNotificationRequest {
+            subscriptions,
+            push_target,
+        })
+    }
+
+    async fn rejection(req: Request<RegisterPushNotificationRequest>) -> Code {
+        service()
+            .register_push_notifications(req)
             .await
-            .expect_err("expected an error for invalid signature");
+            .expect_err("expected the request to be rejected")
+            .code()
+    }
 
-        assert_eq!(status.code(), Code::Unauthenticated);
+    fn key(byte: u8) -> SigningKey {
+        SigningKey::from_bytes(&[byte; 32])
     }
 
     #[tokio::test]
-    async fn register_succeeds_with_valid_signed_message_and_token() {
-        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
-        let public_key_bytes = signing_key.verifying_key().to_bytes().to_vec();
+    async fn rejects_missing_target() {
+        let sub = subscribe(&key(1), &target(TOKEN), "id-a");
+        assert_eq!(
+            rejection(request(None, vec![sub])).await,
+            Code::InvalidArgument
+        );
+    }
 
+    #[tokio::test]
+    async fn rejects_too_many_subscriptions() {
+        let t = target(TOKEN);
+        let subs = (0..=MAX_SUBSCRIPTIONS)
+            .map(|i| subscribe(&key(1), &t, &format!("id-{i}")))
+            .collect();
+        assert_eq!(
+            rejection(request(Some(t), subs)).await,
+            Code::InvalidArgument
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_unsupported_service() {
+        let t = PushTarget {
+            service: "apns".to_string(),
+            token: TOKEN.to_string(),
+        };
+        let sub = subscribe(&key(1), &t, "id-a");
+        assert_eq!(
+            rejection(request(Some(t), vec![sub])).await,
+            Code::InvalidArgument
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_bad_signature() {
+        let t = target(TOKEN);
+        let mut sub = subscribe(&key(1), &t, "id-a");
+        sub.signature[0] ^= 0xff;
+        assert_eq!(
+            rejection(request(Some(t), vec![sub])).await,
+            Code::Unauthenticated
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_missing_signer() {
+        let t = target(TOKEN);
+        let mut sub = subscribe(&key(1), &t, "id-a");
+        sub.signer = None;
+        assert_eq!(
+            rejection(request(Some(t), vec![sub])).await,
+            Code::Unauthenticated
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_undecodable_target_bytes() {
+        let k = key(1);
+        // Field 1 specified with a length of 5 bytes but only 1 given.
+        let bytes = vec![0x0a, 0x05, b'a'];
+        let sub = PushSubscription {
+            signature: k.sign(&bytes).to_bytes().to_vec(),
+            push_target_bytes: bytes,
+            signer: Some(signer(&k)),
+            identity: "id-a".to_string(),
+        };
+        assert_eq!(
+            rejection(request(Some(target(TOKEN)), vec![sub])).await,
+            Code::InvalidArgument
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_mismatched_target() {
+        let sub = subscribe(&key(1), &target("ExponentPushToken[other]"), "id-a");
+        assert_eq!(
+            rejection(request(Some(target(TOKEN)), vec![sub])).await,
+            Code::InvalidArgument
+        );
+    }
+
+    #[tokio::test]
+    async fn rejects_duplicate_signer_and_identity() {
+        let t = target(TOKEN);
+        let subs = vec![
+            subscribe(&key(1), &t, "id-a"),
+            subscribe(&key(1), &t, "id-a"),
+        ];
+        assert_eq!(
+            rejection(request(Some(t), subs)).await,
+            Code::InvalidArgument
+        );
+    }
+
+    /// Two subscriptions: the target's rows and the signers' rows are wiped,
+    /// then the new rows are inserted, all in one transaction.
+    #[tokio::test]
+    async fn registers_subscriptions_in_one_transaction() {
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![PushTokenModel::Model {
-                public_key_type: KeyType::Ed25519 as i16,
-                public_key: public_key_bytes.clone(),
-                service: PushService::Expo.as_ref().to_string(),
-                token: "ExponentPushToken[abc123]".to_string(),
-                created_at: OffsetDateTime::now_utc(),
-                updated_at: OffsetDateTime::now_utc(),
-            }]])
+            .append_exec_results([
+                MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 1,
+                },
+                MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 1,
+                },
+                MockExecResult {
+                    last_insert_id: 0,
+                    rows_affected: 2,
+                },
+            ])
             .into_connection();
+        let svc = service_with_db(db.clone());
 
-        let ctx = Arc::new(Context {
-            db: db.clone(),
-            ro_db: db,
-            notification_manager: NotificationManager::new(None),
-            polycentric: PolycentricClient::new(vec![]),
-            main_server: String::new(),
-        });
-        let service = NotificationServiceImpl { ctx };
-
-        let message_bytes = RegisterPushNotificationRequest {
-            service: PushService::Expo.as_ref().to_string(),
-            token: "ExponentPushToken[abc123]".to_string(),
-        }
-        .encode_to_vec();
-
-        let signature = signing_key.sign(&message_bytes);
-
-        let request = Request::new(SignedMessage {
-            public_key: Some(PublicKey {
-                key_type: KeyType::Ed25519.into(),
-                key: public_key_bytes,
-            }),
-            signature: signature.to_bytes().to_vec(),
-            message_bytes,
-        });
-
-        service
-            .register_push_notifications(request)
+        let t = target(TOKEN);
+        let subs = vec![
+            subscribe(&key(1), &t, "id-a"),
+            subscribe(&key(2), &t, "id-b"),
+        ];
+        svc.register_push_notifications(request(Some(t), subs))
             .await
             .expect("expected registration to succeed");
+
+        drop(svc);
+        let log = db.into_transaction_log();
+        assert_eq!(log.len(), 1, "expected one transaction: {log:?}");
+        let sql = format!("{:?}", log[0]);
+        assert!(sql.contains("BEGIN"), "{sql}");
+        assert_eq!(
+            sql.matches("DELETE FROM \\\"push_token\\\"").count(),
+            2,
+            "{sql}"
+        );
+        assert!(sql.contains("INSERT INTO \\\"push_token\\\""), "{sql}");
+        assert!(sql.contains("COMMIT"), "{sql}");
     }
 
+    /// No subscriptions: only the target's rows are removed.
     #[tokio::test]
-    async fn register_rejects_unknown_service_identifier() {
-        let service = impl_for_testing().await;
+    async fn empty_subscriptions_remove_the_target() {
+        let db = MockDatabase::new(DbBackend::Postgres)
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 3,
+            }])
+            .into_connection();
+        let svc = service_with_db(db.clone());
 
-        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
-
-        let message_bytes = RegisterPushNotificationRequest {
-            service: "not-a-real-service".to_string(),
-            token: "some-token".to_string(),
-        }
-        .encode_to_vec();
-
-        let signature = signing_key.sign(&message_bytes);
-
-        let request = Request::new(SignedMessage {
-            public_key: Some(PublicKey {
-                key_type: KeyType::Ed25519.into(),
-                key: signing_key.verifying_key().to_bytes().to_vec(),
-            }),
-            signature: signature.to_bytes().to_vec(),
-            message_bytes,
-        });
-
-        let status = service
-            .register_push_notifications(request)
+        svc.register_push_notifications(request(Some(target(TOKEN)), vec![]))
             .await
-            .expect_err("expected an error for unknown service identifier");
+            .expect("expected unregistration to succeed");
 
-        assert_eq!(status.code(), Code::Unknown);
-    }
-
-    #[tokio::test]
-    async fn register_rejects_signed_message_with_undecodable_body() {
-        let service = impl_for_testing().await;
-
-        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
-
-        // Wire type 7 is reserved, so this byte never decodes as a valid
-        // protobuf message.
-        let message_bytes = vec![0xffu8];
-        let signature = signing_key.sign(&message_bytes);
-
-        let request = Request::new(SignedMessage {
-            public_key: Some(PublicKey {
-                key_type: KeyType::Ed25519.into(),
-                key: signing_key.verifying_key().to_bytes().to_vec(),
-            }),
-            signature: signature.to_bytes().to_vec(),
-            message_bytes,
-        });
-
-        let status = service
-            .register_push_notifications(request)
-            .await
-            .expect_err("expected an error for undecodable body");
-
-        assert_eq!(status.code(), Code::InvalidArgument);
+        drop(svc);
+        let sql = format!("{:?}", db.into_transaction_log());
+        assert_eq!(
+            sql.matches("DELETE FROM \\\"push_token\\\"").count(),
+            1,
+            "{sql}"
+        );
+        assert!(!sql.contains("INSERT"), "{sql}");
     }
 }

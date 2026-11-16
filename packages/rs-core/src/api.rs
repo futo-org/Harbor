@@ -7,8 +7,9 @@ use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
     AcknowledgeNotificationsRequest, ContentDigest, DeleteContentRequest, Event,
     GetAttributedToReactionCountsRequest, GetServerInfoRequest, Identity, ListEventsResponse,
-    PublicKey, PutEventsRequest, ResolveReportRequest, SetBanStatusRequest, SignedEvent,
-    SignedMessage, UploadBlobRequest, UrlInfoRequest, content_service_client::ContentServiceClient,
+    PublicKey, PutEventsRequest, RegisterPushNotificationRequest, ResolveReportRequest,
+    SetBanStatusRequest, SignedEvent, UploadBlobRequest, UrlInfoRequest,
+    content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     identity_service_client::IdentityServiceClient,
     moderation_service_client::ModerationServiceClient,
@@ -888,21 +889,27 @@ impl PolycentricCore {
         ))
     }
 
-    /// Register a push notification token. `signed_message_bytes` is a
-    /// serialized `SignedMessage` wrapping a
-    /// `RegisterPushNotificationRequest`.
+    /// Replace/update the push subscriptions of a push target.
+    /// `request_bytes` is a serialized `RegisterPushNotificationRequest`.
     pub async fn register_push_notifications(
         &self,
         server_url: String,
-        signed_message_bytes: Vec<u8>,
+        request_bytes: Vec<u8>,
     ) -> Result<(), CoreError> {
-        let signed = SignedMessage::decode(signed_message_bytes.as_slice())
-            .map_err(|e| CoreError::Decode(format!("Failed to decode SignedMessage: {e}")))?;
+        let request =
+            RegisterPushNotificationRequest::decode(request_bytes.as_slice()).map_err(|e| {
+                CoreError::Decode(format!(
+                    "Failed to decode RegisterPushNotificationRequest: {e}"
+                ))
+            })?;
+
         let mut client = NotificationServiceClient::new(channel(&server_url).await?);
+
         client
-            .register_push_notifications(signed)
+            .register_push_notifications(request)
             .await
             .map_err(|e| CoreError::Network(format!("register_push_notifications: {e}")))?;
+
         Ok(())
     }
 

@@ -4,9 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { NotificationService } from "./notifications";
-import type { UnregisterPushNotificationResponse } from "./notifications";
 import type { RegisterPushNotificationResponse } from "./notifications";
-import type { SignedMessage } from "./server";
+import type { RegisterPushNotificationRequest } from "./notifications";
 import type { SubscribeUnreadNotificationCountResponse } from "./notifications";
 import type { SubscribeUnreadNotificationCountRequest } from "./notifications";
 import type { ServerStreamingCall } from "@protobuf-ts/runtime-rpc";
@@ -47,17 +46,11 @@ export interface INotificationServiceClient {
      */
     subscribeUnreadNotificationCount(input: SubscribeUnreadNotificationCountRequest, options?: RpcOptions): ServerStreamingCall<SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse>;
     /**
-     * This endpoint expects a signed RegisterPushNotificationRequest message
+     * Set (overwrite) the push notification subscriptions for a client.
      *
      * @generated from protobuf rpc: RegisterPushNotifications
      */
-    registerPushNotifications(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, RegisterPushNotificationResponse>;
-    /**
-     * This endpoint expects a signed UnregisterPushNotificationRequest message
-     *
-     * @generated from protobuf rpc: UnregisterPushNotifications
-     */
-    unregisterPushNotifications(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, UnregisterPushNotificationResponse>;
+    registerPushNotifications(input: RegisterPushNotificationRequest, options?: RpcOptions): UnaryCall<RegisterPushNotificationRequest, RegisterPushNotificationResponse>;
 }
 /**
  * *
@@ -103,21 +96,12 @@ export class NotificationServiceClient implements INotificationServiceClient, Se
         return stackIntercept<SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse>("serverStreaming", this._transport, method, opt, input);
     }
     /**
-     * This endpoint expects a signed RegisterPushNotificationRequest message
+     * Set (overwrite) the push notification subscriptions for a client.
      *
      * @generated from protobuf rpc: RegisterPushNotifications
      */
-    registerPushNotifications(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, RegisterPushNotificationResponse> {
+    registerPushNotifications(input: RegisterPushNotificationRequest, options?: RpcOptions): UnaryCall<RegisterPushNotificationRequest, RegisterPushNotificationResponse> {
         const method = this.methods[3], opt = this._transport.mergeOptions(options);
-        return stackIntercept<SignedMessage, RegisterPushNotificationResponse>("unary", this._transport, method, opt, input);
-    }
-    /**
-     * This endpoint expects a signed UnregisterPushNotificationRequest message
-     *
-     * @generated from protobuf rpc: UnregisterPushNotifications
-     */
-    unregisterPushNotifications(input: SignedMessage, options?: RpcOptions): UnaryCall<SignedMessage, UnregisterPushNotificationResponse> {
-        const method = this.methods[4], opt = this._transport.mergeOptions(options);
-        return stackIntercept<SignedMessage, UnregisterPushNotificationResponse>("unary", this._transport, method, opt, input);
+        return stackIntercept<RegisterPushNotificationRequest, RegisterPushNotificationResponse>("unary", this._transport, method, opt, input);
     }
 }
