@@ -76,8 +76,8 @@ function RootStack() {
 
   const stack = (
     <>
-      <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
-      <NavigationBar style={theme.name === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
+      <NavigationBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenLayout={isWeb ? undefined : renderScreenWithSplashHide}
         screenOptions={{

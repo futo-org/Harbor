@@ -1,8 +1,3 @@
-/**
- * Core palette steps (`neutral_*`, `primary_*`, …) are solid `#RRGGBB` only.
- * Translucent colors are composed at call sites with `withHexOpacity(...)`.
- */
-
 export type Palette = {
   white: string;
   black: string;
@@ -82,13 +77,6 @@ export type Palette = {
   background_primary: string;
   background_secondary: string;
 };
-
-export type PaletteColorToken = keyof Palette;
-
-/** e.g. `#1EA3E5` + `80` = `#1EA3E580` */
-export function withHexOpacity(color: string, opacityHex: string): string {
-  return color + opacityHex;
-}
 
 export const lightPalette = {
   white: '#FFFFFF',

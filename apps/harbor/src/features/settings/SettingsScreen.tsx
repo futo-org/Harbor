@@ -44,7 +44,7 @@ function AppearanceSettingRow() {
       >
         <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
           <Icon
-            name={theme.name === 'dark' ? 'themeDark' : 'themeLight'}
+            name={theme.scheme === 'dark' ? 'themeDark' : 'themeLight'}
             size={22}
             // Gray in dark mode, unlike the other settings icons
             color={theme.scheme === 'dark' ? 'secondary' : 'accent'}
