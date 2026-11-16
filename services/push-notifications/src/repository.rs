@@ -5,9 +5,6 @@ use sea_orm::sea_query::{Expr, ExprTrait};
 use sea_orm::*;
 use time::OffsetDateTime;
 
-/// Upper bound on the number of subscriptions that we allow for a push target.
-pub const MAX_SUBSCRIPTIONS: usize = 50;
-
 /// Query condition for whether a row's key is in `keys`.
 fn key_in(keys: &[PublicKey]) -> sea_orm::sea_query::Expr {
     Expr::tuple([
@@ -38,7 +35,6 @@ impl Query {
             .filter(PushTokenModel::Column::Identity.eq(identity))
             .filter(PushTokenModel::Column::Service.eq(PushService::Expo.as_ref()))
             .filter(key_in(keys))
-            .limit(MAX_SUBSCRIPTIONS as u64)
             .into_tuple()
             .all(db)
             .await
@@ -96,6 +92,19 @@ impl Mutation {
 
             // Register new subscriptions
             PushTokenModel::Entity::insert_many(rows)
+                .on_conflict(
+                    sea_query::OnConflict::columns([
+                        PushTokenModel::Column::PublicKeyType,
+                        PushTokenModel::Column::PublicKey,
+                        PushTokenModel::Column::Identity,
+                    ])
+                    .update_columns([
+                        PushTokenModel::Column::Service,
+                        PushTokenModel::Column::Token,
+                        PushTokenModel::Column::UpdatedAt,
+                    ])
+                    .to_owned(),
+                )
                 .exec_without_returning(&txn)
                 .await?;
         }

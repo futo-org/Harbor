@@ -75,7 +75,7 @@ mod tests {
     use super::*;
     use crate::manager::{NotificationManager, PushService};
     use crate::polycentric::PolycentricClient;
-    use crate::repository::MAX_SUBSCRIPTIONS;
+    use crate::rpc::register_push_notifications::MAX_SUBSCRIPTIONS;
     use ed25519_dalek::{Signer, SigningKey};
     use polycentric_common::models::protos_v2::{KeyType, PublicKey, PushSubscription, PushTarget};
     use prost::Message;

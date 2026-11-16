@@ -6,7 +6,6 @@
 
 use crate::context::Context;
 use crate::manager::PushService;
-use crate::repository::MAX_SUBSCRIPTIONS;
 use polycentric_common::error::CoreError;
 use polycentric_common::models::protos_v2::{
     PublicKey, PushSubscription, PushTarget, RegisterPushNotificationRequest,
@@ -14,6 +13,9 @@ use polycentric_common::models::protos_v2::{
 };
 use std::collections::HashSet;
 use tonic::Status;
+
+/// Upper bound on the number of subscriptions that we allow for a push target.
+pub const MAX_SUBSCRIPTIONS: usize = 50;
 
 pub async fn handle(
     ctx: &Context,
