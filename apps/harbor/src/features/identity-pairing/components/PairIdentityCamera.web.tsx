@@ -144,7 +144,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
               Atoms.rounded_md,
               {
                 overflow: 'hidden',
-                backgroundColor: theme.palette.neutral_900,
+                backgroundColor: theme.colors.dark,
               },
             ]}
           >

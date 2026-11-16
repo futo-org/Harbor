@@ -184,7 +184,7 @@ export default function CreateBackupScreen() {
             Atoms.px_lg,
             Atoms.flex_1,
             Atoms.gap_md,
-            { backgroundColor: theme.atoms.bg.backgroundColor },
+            theme.atoms_new.box.primary.bg,
           ]}
         >
           <ScreenHeader
@@ -250,11 +250,9 @@ function BackupInfo({
               Atoms.p_md,
               Atoms.rounded_lg,
               Atoms.my_xs,
-              {
-                backgroundColor: theme.palette.negative_25,
-                borderWidth: 1,
-                borderColor: theme.palette.negative_100,
-              },
+              theme.atoms_new.box.danger.bg_subtle,
+              theme.atoms_new.box.danger.border_subtle,
+              { borderWidth: 1 },
             ]}
           >
             <Text variant="secondary" color="danger">

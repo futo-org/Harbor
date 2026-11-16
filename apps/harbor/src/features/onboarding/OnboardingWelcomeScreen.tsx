@@ -73,8 +73,8 @@ export default function OnboardingWelcomeScreen() {
           Atoms.w_full,
           Atoms.mt_auto,
           Atoms.p_lg,
+          theme.atoms_new.box.primary.bg,
           {
-            backgroundColor: theme.palette.neutral_0,
             paddingBottom: insets.bottom + Spacing.lg,
             paddingLeft: insets.left + Spacing.lg,
             paddingRight: insets.right + Spacing.lg,

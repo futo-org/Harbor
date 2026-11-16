@@ -14,7 +14,13 @@ import { usePairIdentityIssuer } from '@/src/features/identity-pairing/hooks/use
 import { EmojiFingerprint } from '@/src/features/identity-pairing/components/EmojiFingerprint';
 import { router } from 'expo-router';
 import { type ReactNode, useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { pairingLinkFrom } from '../pairingCode';
 import { useCountdown } from '../hooks/useCountdown';
@@ -97,11 +103,7 @@ export default function PairIdentityIssuerScreen() {
       <Screen>
         <Screen.PrimaryColumn>
           <View
-            style={[
-              Atoms.px_lg,
-              Atoms.flex_1,
-              { backgroundColor: theme.atoms.bg.backgroundColor },
-            ]}
+            style={[Atoms.px_lg, Atoms.flex_1, theme.atoms_new.box.primary.bg]}
           >
             <ScreenHeader title="Pair Identity" onBack={exit} />
             <ScrollView
@@ -145,7 +147,7 @@ function PairingInfoCard({
         Atoms.p_lg,
         Atoms.rounded_lg,
         Atoms.my_3xl,
-        { backgroundColor: theme.palette.neutral_50 },
+        theme.atoms_new.box.secondary.bg,
       ]}
     >
       <PairingQRCode link={link} />
@@ -167,17 +169,15 @@ function PairingQRCode({ link }: { link: string | null }) {
         Atoms.justify_center,
         Atoms.rounded_lg,
         Atoms.overflow_hidden,
-        {
-          backgroundColor: theme.palette.white,
-        },
+        { backgroundColor: theme.colors.light },
       ]}
     >
       {link ? (
         <QRCode
           value={link}
           size={PAIRING_BLOCK_WIDTH}
-          color={theme.palette.black}
-          backgroundColor={theme.palette.white}
+          color={theme.colors.dark}
+          backgroundColor={theme.colors.light}
           quietZone={32}
         />
       ) : (
@@ -233,21 +233,24 @@ function StatusDisplay({
   let iconName: IconProps['name'];
   let iconColor: IconProps['color'];
   let detailsColor: TextColor;
-  let detailsBg: string;
-  let detailsBorder: string;
+  let detailsBox: ViewStyle[];
 
   if (icon === 'success') {
     iconName = 'checkmarkCircle';
     iconColor = 'accent';
     detailsColor = 'primary';
-    detailsBg = theme.palette.neutral_25;
-    detailsBorder = theme.palette.neutral_100;
+    detailsBox = [
+      theme.atoms_new.box.secondary.bg,
+      theme.atoms_new.box.secondary.border,
+    ];
   } else {
     iconName = 'closeCircle';
     iconColor = 'danger';
     detailsColor = 'danger';
-    detailsBg = theme.palette.negative_25;
-    detailsBorder = theme.palette.negative_100;
+    detailsBox = [
+      theme.atoms_new.box.danger.bg_subtle,
+      theme.atoms_new.box.danger.border_subtle,
+    ];
   }
 
   return (
@@ -269,11 +272,8 @@ function StatusDisplay({
             Atoms.p_sm,
             Atoms.rounded_lg,
             Atoms.w_full,
-            {
-              backgroundColor: detailsBg,
-              borderWidth: 1,
-              borderColor: detailsBorder,
-            },
+            detailsBox,
+            { borderWidth: 1 },
           ]}
         >
           <Text variant="secondary" color={detailsColor}>
@@ -396,29 +396,29 @@ function ApprovalSheet({
                 Atoms.gap_md,
                 Atoms.p_md,
                 Atoms.rounded_md,
-                {
-                  backgroundColor: theme.palette.neutral_50,
-                  borderWidth: 1,
-                  borderColor: theme.palette.neutral_200,
-                },
+                theme.atoms_new.box.secondary.bg,
+                theme.atoms_new.box.secondary.border,
+                { borderWidth: 1 },
               ]}
             >
               <View
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 7,
-                  borderWidth: 1.5,
-                  borderColor: asRotation
-                    ? theme.palette.primary_500
-                    : theme.palette.neutral_300,
-                  backgroundColor: asRotation
-                    ? theme.palette.primary_500
-                    : 'transparent',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginTop: 1,
-                }}
+                style={[
+                  {
+                    width: 22,
+                    height: 22,
+                    borderRadius: 7,
+                    borderWidth: 1.5,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: 1,
+                  },
+                  asRotation
+                    ? [
+                        theme.atoms_new.box.accent.bg,
+                        theme.atoms_new.box.accent.border,
+                      ]
+                    : theme.atoms_new.box.neutral.border,
+                ]}
               >
                 {asRotation ? (
                   <Icon name="checkmark" size={14} color="light" />

@@ -47,7 +47,7 @@ export default function OnboardingLayout() {
       style={[
         Atoms.flex_1,
         Atoms.flex_row,
-        { backgroundColor: theme.palette.neutral_0 },
+        theme.atoms_new.box.primary.bg,
         { paddingLeft: insets.left, paddingRight: insets.right },
       ]}
     >

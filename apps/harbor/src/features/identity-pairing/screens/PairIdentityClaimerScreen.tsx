@@ -124,7 +124,7 @@ export default function PairIdentityClaimerScreen() {
     <View
       style={[
         Atoms.flex_1,
-        { backgroundColor: theme.atoms.bg.backgroundColor },
+        theme.atoms_new.box.primary.bg,
         ...(stage === 'unstarted' || stage === 'error'
           ? [Atoms.flex_col, Atoms.gap_lg]
           : []),
@@ -152,10 +152,8 @@ function PairingEmojiCard({
         Atoms.gap_md,
         Atoms.p_lg,
         Atoms.rounded_lg,
-        {
-          maxWidth: 350,
-          backgroundColor: theme.palette.neutral_50,
-        },
+        { maxWidth: 350 },
+        theme.atoms_new.box.secondary.bg,
       ]}
     >
       <Text variant="subtitle" style={{ textAlign: 'center' }}>

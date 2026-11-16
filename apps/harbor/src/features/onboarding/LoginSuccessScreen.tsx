@@ -31,7 +31,7 @@ export default function LoginSuccessScreen({
         Atoms.items_center,
         Atoms.justify_center,
         Atoms.gap_2xl,
-        { backgroundColor: theme.palette.neutral_0 },
+        theme.atoms_new.box.primary.bg,
       ]}
     >
       <View style={[Atoms.items_center, Atoms.gap_xs]}>

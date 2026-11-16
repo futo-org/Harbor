@@ -112,7 +112,7 @@ export default function CheckBackupScreen() {
             Atoms.px_lg,
             Atoms.flex_1,
             Atoms.gap_md,
-            { backgroundColor: theme.atoms.bg.backgroundColor },
+            theme.atoms_new.box.primary.bg,
           ]}
         >
           <ScreenHeader title="Test Backup" onBack={() => router.back()} />
