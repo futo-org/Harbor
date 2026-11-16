@@ -81,11 +81,9 @@ export default function ExploreScreen({
           style={[
             Atoms.px_lg,
             Atoms.py_md,
-            {
-              borderBottomWidth: 1,
-              borderBottomColor: theme.palette.neutral_25,
-              backgroundColor: theme.palette.neutral_0,
-            },
+            theme.atoms_new.box.primary.bg,
+            theme.atoms_new.box.primary.border,
+            { borderBottomWidth: 1 },
           ]}
         >
           <SearchBar />

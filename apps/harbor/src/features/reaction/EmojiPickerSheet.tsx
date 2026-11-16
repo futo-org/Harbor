@@ -126,7 +126,7 @@ export function EmojiPickerSheet() {
         emoji={item.emoji}
         selected={item.emoji === selectedEmoji}
         onSelect={onSelect}
-        highlightColor={theme.palette.neutral_100}
+        highlightColor={theme.colors.box.neutral.bg_subtle_hover}
         size={colWidth}
         isGridCell
       />
@@ -264,7 +264,7 @@ function EmojiCategoryRail({
         pointerEvents="none"
         style={[
           StyleSheet.absoluteFill,
-          theme.atoms.bg,
+          theme.atoms_new.box.primary.bg,
           { height: windowHeight },
         ]}
       />
@@ -272,11 +272,9 @@ function EmojiCategoryRail({
         style={[
           Atoms.flex_row,
           Atoms.justify_center,
-          theme.atoms.bg,
-          {
-            borderTopWidth: CATEGORY_RAIL_BORDER_WIDTH,
-            borderColor: theme.palette.neutral_25,
-          },
+          theme.atoms_new.box.primary.bg,
+          theme.atoms_new.box.primary.border,
+          { borderTopWidth: CATEGORY_RAIL_BORDER_WIDTH },
           hidden && Atoms.hidden,
         ]}
         onLayout={(e) => setRailWidth(e.nativeEvent.layout.width)}
@@ -287,7 +285,7 @@ function EmojiCategoryRail({
               key={cat.key}
               size={categoryColWidth}
               onPress={() => onSelect(cat.key)}
-              highlightColor={theme.palette.neutral_100}
+              highlightColor={theme.colors.box.neutral.bg_subtle_hover}
             >
               <Icon
                 name={cat.icon}

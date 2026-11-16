@@ -146,7 +146,7 @@ export function SearchResults({
   }: {
     dragProgress: SharedValue<number>;
   }) => (
-    <View style={{ backgroundColor: theme.palette.neutral_0 }}>
+    <View style={theme.atoms_new.box.primary.bg}>
       {topbar}
       <Tabs progress={dragProgress}>
         {SEARCH_TAB_VALUES.map((value) => (
@@ -196,8 +196,9 @@ export function SearchPhraseRow({
         Atoms.gap_md,
         Atoms.px_lg,
         Atoms.py_lg,
-        { borderBottomWidth: 1, borderColor: theme.palette.neutral_25 },
-        (hovered || pressed) && { backgroundColor: theme.palette.neutral_25 },
+        theme.atoms_new.box.primary.border,
+        { borderBottomWidth: 1 },
+        (hovered || pressed) && theme.atoms_new.box.primary.bg_hover,
       ]}
     >
       <Icon name="search" size={16} color="muted" />
@@ -240,7 +241,7 @@ function UserResults({
           <View style={[Atoms.items_center, Atoms.p_lg]}>
             <ActivityIndicator
               size="small"
-              color={theme.palette.neutral_500}
+              color={theme.colors.muted}
               accessibilityLabel="Searching"
             />
           </View>
@@ -253,7 +254,7 @@ function UserResults({
           <View style={[Atoms.items_center, Atoms.p_lg]}>
             <ActivityIndicator
               size="small"
-              color={theme.palette.neutral_500}
+              color={theme.colors.muted}
               accessibilityLabel="Loading more"
             />
           </View>
@@ -277,7 +278,7 @@ function UserRow({ identity }: { identity: string }) {
     <ProfileRow
       identity={identity}
       onPress={() => router.navigate(Routes.tabs.profile(identity))}
-      style={{ borderBottomWidth: 1, borderColor: theme.palette.neutral_25 }}
+      style={[theme.atoms_new.box.primary.border, { borderBottomWidth: 1 }]}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
     />
   );

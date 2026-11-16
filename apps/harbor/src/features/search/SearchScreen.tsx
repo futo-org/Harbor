@@ -3,7 +3,7 @@ import { Screen } from '@/src/common/components/layout';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { Text, TextInput } from '@/src/common/components/primitives';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -34,11 +34,9 @@ function SearchTopbar({ children }: { children: ReactNode }) {
         Atoms.py_sm,
         Atoms.gap_md,
         { height: TOPBAR_HEIGHT },
-        { backgroundColor: theme.palette.neutral_0 },
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '10'),
-        },
+        theme.atoms_new.box.primary.bg,
+        theme.atoms_new.box.primary.border,
+        { borderBottomWidth: 1 },
       ]}
     >
       {isWeb ? (

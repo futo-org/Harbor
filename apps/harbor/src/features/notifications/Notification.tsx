@@ -5,7 +5,7 @@ import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '@/src/features/post/Post';
 import { ClaimTypeChip } from '@/src/features/verifications/claims/toolbar/ClaimTypeChip';
 import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimById';
@@ -148,10 +148,8 @@ function InteractionNotification({
         Atoms.flex_row,
         Atoms.gap_md,
         Atoms.p_md,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
+        theme.atoms_new.box.primary.border,
+        { borderBottomWidth: 1 },
       ]}
     >
       <ProfileAvatar

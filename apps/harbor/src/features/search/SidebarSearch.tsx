@@ -76,11 +76,11 @@ export function SidebarSearch() {
               position: 'absolute',
               top: '100%',
               marginTop: Spacing.sm,
-              backgroundColor: theme.palette.neutral_0,
               borderWidth: 1,
-              borderColor: theme.palette.neutral_25,
               borderRadius: BorderRadius.lg,
             },
+            theme.atoms_new.box.primary.bg,
+            theme.atoms_new.box.primary.border,
           ]}
         >
           <SearchPhraseRow phrase={phrase} onPress={submit} />
