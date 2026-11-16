@@ -65,23 +65,46 @@ message SubscribeUnreadNotificationCountResponse {
   uint32 count = 1;
 }
 
-message RegisterPushNotificationRequest {
-  // Push provider the token belongs to. `expo` is the only provider
-  // currently supported.
+// Should only be used in `PushSubscription`.
+message PushTarget {
+  // Push provider the token belongs to.
+  // `expo` is the only provider currently supported.
   string service = 1;
+
   // Device token issued by the push provider.
   string token = 2;
 }
 
-message RegisterPushNotificationResponse {}
+// Represents a single push notification subscription requested by a client.
+// This includes a push target and an `(identity, signer)` filter for
+// the notifications to include.
+// A client will want to sign one of these for each identity on the device that
+// it wants notifications for.
+message PushSubscription {
+  // Serialized `PushToken` message.
+  bytes push_target_bytes = 1;
 
-message UnregisterPushNotificationRequest {
-  // Push provider the token belongs to, see RegisterPushNotificationRequest.
-  string service = 1;
-  string token = 2;
+  // Signature of `push_target_bytes` verifiable with `signer`.
+  bytes signature = 2;
+
+  // The public key to register push notifications for.
+  // Notifications will only be pushed for identities that list this key.
+  PublicKey signer = 3;
+
+  // Only send push notifications that are for this identity.
+  string identity = 4;
 }
 
-message UnregisterPushNotificationResponse {}
+message RegisterPushNotificationRequest {
+  // A list of push notification registrations to replace any existing
+  // subscriptions for the push target or any signing keys listed.
+  repeated PushSubscription subscriptions = 1;
+
+  // We require that each subscription use the same target.
+  PushToken push_target = 2;
+}
+
+message RegisterPushNotificationResponse {}
 
 /**
  * Notifications for an identity. ListNotifications, AcknowledgeNotifications
@@ -97,9 +120,6 @@ service NotificationService {
   // Streams the unread notification count of the authenticated identity,
   // now and whenever it changes
   rpc SubscribeUnreadNotificationCount(SubscribeUnreadNotificationCountRequest) returns (stream SubscribeUnreadNotificationCountResponse);
-  // This endpoint expects a signed RegisterPushNotificationRequest message
-  rpc RegisterPushNotifications(SignedMessage) returns (RegisterPushNotificationResponse);
-
-  // This endpoint expects a signed UnregisterPushNotificationRequest message
-  rpc UnregisterPushNotifications(SignedMessage) returns (UnregisterPushNotificationResponse);
+  // Set (ovewrite) the push notification subscriptions for a client.
+  rpc RegisterPushNotifications(RegisterPushNotificationRequest) returns (RegisterPushNotificationResponse);
 }
