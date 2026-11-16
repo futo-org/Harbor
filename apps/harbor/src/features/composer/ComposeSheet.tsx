@@ -113,7 +113,7 @@ export function ComposeSheet({
                 accessibilityLabel="Cancel"
                 onPress={composer.handleClose}
                 hitSlop={Spacing.lg}
-                style={({ pressed }) => [pressed && theme.atoms.faded]}
+                style={({ pressed }) => [pressed && Atoms.faded]}
               >
                 <Text color="muted">Cancel</Text>
               </Pressable>

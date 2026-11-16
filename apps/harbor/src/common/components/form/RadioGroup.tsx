@@ -10,11 +10,10 @@ import {
 import { Atoms, Spacing, useTheme } from '../../theme';
 
 function RadioGroup({ style, ...props }: RadioGroupPrimitive.RootProps) {
-  const { theme } = useTheme();
   return (
     <RadioGroupPrimitive.Root
       {...props}
-      style={StyleSheet.flatten([style, props.disabled && theme.atoms.faded])}
+      style={StyleSheet.flatten([style, props.disabled && Atoms.faded])}
     />
   );
 }

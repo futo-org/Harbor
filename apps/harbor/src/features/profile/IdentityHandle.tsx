@@ -1,5 +1,5 @@
 import { Text } from '@/src/common/components/primitives/Text';
-import { createThemedStyles } from '@/src/common/theme';
+import { Atoms, createThemedStyles } from '@/src/common/theme';
 import type { ComponentProps } from 'react';
 import Animated from 'react-native-reanimated';
 import { useIdentityHandle } from './hooks/useIdentityHandle';
@@ -42,7 +42,7 @@ export function IdentityHandle({
   );
 }
 
-const useStyles = createThemedStyles((theme, define) =>
+const useStyles = createThemedStyles((_theme, define) =>
   define({
     // Fades in on verification; no animation on the first render.
     handle: {
@@ -50,6 +50,6 @@ const useStyles = createThemedStyles((theme, define) =>
       transitionProperty: 'opacity',
       transitionDuration: 400,
     },
-    handlePending: theme.atoms.faded,
+    handlePending: Atoms.faded,
   }),
 );

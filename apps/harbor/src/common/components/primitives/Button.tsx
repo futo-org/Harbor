@@ -124,7 +124,7 @@ export function Button({
           ? [
               theme.atoms.box.neutral.bg_subtle,
               theme.atoms.box.neutral.border_subtle,
-              theme.atoms.faded,
+              Atoms.faded,
             ]
           : getVariantStyle(theme, variant),
         hoverStyle,

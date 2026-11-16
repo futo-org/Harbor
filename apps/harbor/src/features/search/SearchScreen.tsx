@@ -45,7 +45,7 @@ function SearchTopbar({ children }: { children: ReactNode }) {
           accessibilityLabel="Go back"
           onPress={goBack}
           hitSlop={Spacing.lg}
-          style={({ pressed }) => [pressed && theme.atoms.faded]}
+          style={({ pressed }) => [pressed && Atoms.faded]}
         >
           <Icon name="chevronBack" size={24} color="primary" />
         </Pressable>
@@ -57,7 +57,7 @@ function SearchTopbar({ children }: { children: ReactNode }) {
           accessibilityLabel="Cancel search"
           onPress={goBack}
           hitSlop={Spacing.lg}
-          style={({ pressed }) => [pressed && theme.atoms.faded]}
+          style={({ pressed }) => [pressed && Atoms.faded]}
         >
           <Text color="muted">Cancel</Text>
         </Pressable>
@@ -67,7 +67,6 @@ function SearchTopbar({ children }: { children: ReactNode }) {
 }
 
 export default function SearchScreen() {
-  const { theme } = useTheme();
   const params = useLocalSearchParams<{ q?: string; f?: string }>();
   const paramQuery = typeof params.q === 'string' ? params.q.trim() : '';
   usePageTitle(paramQuery ? `${paramQuery} - Search` : 'Search');
@@ -135,7 +134,7 @@ export default function SearchScreen() {
           accessibilityLabel="Clear search"
           onPress={clear}
           hitSlop={Spacing.sm}
-          style={({ pressed }) => [pressed && theme.atoms.faded]}
+          style={({ pressed }) => [pressed && Atoms.faded]}
         >
           <Icon name="close" size={16} color="muted" />
         </Pressable>

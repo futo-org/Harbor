@@ -57,7 +57,7 @@ export function LabelPill({
         theme.atoms.box.secondary.bg,
         // Native inline views sit on the baseline; drop to the middle.
         inline && !isWeb && { transform: [{ translateY: Spacing.xs }] },
-        pressed && theme.atoms.faded,
+        pressed && Atoms.faded,
       ]}
     >
       {action === 'Hide' ? null : (

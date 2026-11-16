@@ -57,7 +57,7 @@ function DropdownMenuItem({
             Atoms.flex_row,
             Atoms.align_center,
             Atoms.gap_lg,
-            props.disabled && theme.atoms.faded,
+            props.disabled && Atoms.faded,
           ]}
         >
           {children}

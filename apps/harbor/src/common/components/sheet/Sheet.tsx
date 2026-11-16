@@ -162,7 +162,6 @@ function SheetHeader({
   right,
   disabled,
 }: SheetHeaderProps) {
-  const { theme } = useTheme();
   // Native sheets dismiss by swiping down, so the close button is redundant
   // there — hide it. Web modals keep it, and back chevrons show everywhere.
   const hideDefault = !isWeb && closeIcon === 'close';
@@ -177,7 +176,7 @@ function SheetHeader({
         onPress={onClose}
         hitSlop={Spacing['lg']}
         disabled={disabled}
-        style={({ pressed }) => [(disabled || pressed) && theme.atoms.faded]}
+        style={({ pressed }) => [(disabled || pressed) && Atoms.faded]}
       >
         <Icon name={closeIcon} size={24} color="primary" />
       </Pressable>

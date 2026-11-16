@@ -83,9 +83,9 @@ function VerifiedPlatformPill({
   );
 }
 
-const useStyles = createThemedStyles((theme, define) =>
+const useStyles = createThemedStyles((_theme, define) =>
   define({
     list: [Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_xs],
-    pillPressed: theme.atoms.faded,
+    pillPressed: Atoms.faded,
   }),
 );

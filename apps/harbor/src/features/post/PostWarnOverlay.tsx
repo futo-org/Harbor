@@ -81,7 +81,7 @@ export function PostWarnOverlay({
           Atoms.self_stretch,
           Atoms.justify_center,
           theme.atoms.box.secondary.bg_hover,
-          pressed && theme.atoms.faded,
+          pressed && Atoms.faded,
         ]}
       >
         <Text variant="secondary" fontWeight="bold" color="secondary">

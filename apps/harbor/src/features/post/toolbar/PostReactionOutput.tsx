@@ -1,6 +1,6 @@
 import { EmojiImage } from '@/src/common/components/EmojiImage';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms } from '@/src/common/theme';
 import ReactionDetailsSheet from '@/src/features/reaction/ReactionDetailsSheet';
 import { previewOtherReactions } from '@/src/features/reaction/util';
 import { useMemo, useState } from 'react';
@@ -17,7 +17,6 @@ type PostReactionOutputProps = {
 };
 
 export default function PostReactionOutput({ post }: PostReactionOutputProps) {
-  const { theme } = useTheme();
   const myReaction = useReactions((s) => s.reactions.get(post.id));
   const myEmoji =
     myReaction?.positive && myReaction.emoji ? myReaction.emoji : undefined;
@@ -44,8 +43,8 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
         Atoms.align_center,
         Atoms.rounded_full,
         Atoms.cursor_pointer,
-        hovered && theme.atoms.faded_subtle,
-        pressed && theme.atoms.faded,
+        hovered && Atoms.faded_subtle,
+        pressed && Atoms.faded,
       ]}
       hitSlop={16}
     >

@@ -111,7 +111,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
         compact && Atoms.flex_row,
         theme.atoms.box.neutral.border_subtle,
         { borderWidth: 1 },
-        pressed && theme.atoms.faded_subtle,
+        pressed && Atoms.faded_subtle,
       ]}
     >
       {compact ? (

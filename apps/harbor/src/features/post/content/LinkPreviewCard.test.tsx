@@ -11,7 +11,6 @@ jest.mock('@/src/common/theme', () => ({
     theme: {
       atoms: {
         box: { neutral: { bg_subtle: {}, border_subtle: {} } },
-        faded_subtle: {},
       },
     },
   }),

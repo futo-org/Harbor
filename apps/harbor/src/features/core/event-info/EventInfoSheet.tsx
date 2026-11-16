@@ -648,7 +648,6 @@ function NavSide({
   result: SignedEventResult;
   onPress?: () => void;
 }) {
-  const { theme } = useTheme();
   const isNext = direction === 'next';
   const align = isNext ? Atoms.justify_end : Atoms.justify_start;
   const [checking, setChecking] = useState(false);
@@ -711,7 +710,7 @@ function NavSide({
             <Text
               variant="small"
               color="secondary"
-              style={[prefix != null && MONO, pressed && theme.atoms.faded]}
+              style={[prefix != null && MONO, pressed && Atoms.faded]}
             >
               {prefix ? `${prefix} (${sequence})` : 'Next'}
             </Text>
@@ -894,7 +893,7 @@ function LinkText({
       {({ pressed }) => (
         <Text
           {...text}
-          style={[style, linkStyle(theme), pressed && theme.atoms.faded]}
+          style={[style, linkStyle(theme), pressed && Atoms.faded]}
         >
           {children}
         </Text>
@@ -913,7 +912,6 @@ function CopyIcon({
   copied: boolean;
   onPress: () => void;
 }) {
-  const { theme } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -926,7 +924,7 @@ function CopyIcon({
           name={copied ? 'checkmark' : 'copy'}
           size={16}
           color={copied ? 'success' : 'muted'}
-          style={pressed && theme.atoms.faded}
+          style={pressed && Atoms.faded}
         />
       )}
     </Pressable>

@@ -55,11 +55,7 @@ export function ComposeSheetFooterBar({
       disabled={attachDisabled}
       hitSlop={10}
       accessibilityLabel="Attach image"
-      style={[
-        Atoms.p_xs,
-        Atoms.rounded_md,
-        attachDisabled && theme.atoms.faded,
-      ]}
+      style={[Atoms.p_xs, Atoms.rounded_md, attachDisabled && Atoms.faded]}
     >
       <Icon name="image" size={22} color="secondary" />
     </Pressable>
@@ -71,11 +67,7 @@ export function ComposeSheetFooterBar({
       disabled={attachDisabled}
       hitSlop={10}
       accessibilityLabel="Take photo"
-      style={[
-        Atoms.p_xs,
-        Atoms.rounded_md,
-        attachDisabled && theme.atoms.faded,
-      ]}
+      style={[Atoms.p_xs, Atoms.rounded_md, attachDisabled && Atoms.faded]}
     >
       <Icon name="camera" size={22} color="secondary" />
     </Pressable>

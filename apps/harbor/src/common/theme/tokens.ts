@@ -659,6 +659,16 @@ const atomStyles = {
   },
 
   /**
+   * Opacity
+   */
+  faded: {
+    opacity: 0.5,
+  },
+  faded_subtle: {
+    opacity: 0.8,
+  },
+
+  /**
    * Outline
    */
   // `outlineStyle: 'none'` is web-only and not in RN's ViewStyle union, so

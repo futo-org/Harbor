@@ -404,7 +404,7 @@ function ComposerLinkPreview({
         hitSlop={6}
         style={[
           theme.atoms.media_control.bg,
-          disabled && theme.atoms.faded,
+          disabled && Atoms.faded,
           {
             position: 'absolute',
             // Below the card's own mt_md top margin (margins stay inside the
@@ -502,7 +502,7 @@ function AttachmentThumb({
         contentFit="cover"
         style={[
           { width: '100%', height: '100%' },
-          status !== 'ready' && theme.atoms.faded,
+          status !== 'ready' && Atoms.faded,
         ]}
       />
       {/* Loading / error overlay while the blobs are being processed+uploaded */}
@@ -534,7 +534,7 @@ function AttachmentThumb({
         hitSlop={6}
         style={[
           theme.atoms.media_control.bg,
-          disabled && theme.atoms.faded,
+          disabled && Atoms.faded,
           {
             position: 'absolute',
             top: 2,
@@ -566,6 +566,6 @@ const useStyles = createThemedStyles((theme, define) =>
       { pointerEvents: 'none' },
     ],
     // As the disabled input
-    webMirrorDisabled: theme.atoms.faded,
+    webMirrorDisabled: Atoms.faded,
   }),
 );

@@ -68,7 +68,7 @@ export function AppFooter({
 }
 
 function ThemeSwitcher() {
-  const { theme, themePreference, setThemePreference } = useTheme();
+  const { themePreference, setThemePreference } = useTheme();
 
   const currentIndex = THEME_PREFERENCE_OPTIONS.findIndex(
     ({ preference }) => preference === themePreference,
@@ -85,7 +85,7 @@ function ThemeSwitcher() {
       accessibilityRole="button"
       hitSlop={8}
       onPress={() => setThemePreference(next.preference)}
-      style={({ pressed }) => [pressed && theme.atoms.faded]}
+      style={({ pressed }) => [pressed && Atoms.faded]}
     >
       <Icon name={current.icon} size={typography.fontSize.sm} color="muted" />
     </Pressable>

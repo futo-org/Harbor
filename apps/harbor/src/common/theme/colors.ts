@@ -123,8 +123,6 @@ function buildAtoms(
         boxShadow: `${shadowGeometry} ${withOpacity(palette.black, shadowOpacity)}`,
       },
     },
-    faded: { opacity: 0.5 },
-    faded_subtle: { opacity: 0.8 },
   };
 }
 

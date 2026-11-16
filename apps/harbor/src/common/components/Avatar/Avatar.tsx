@@ -152,8 +152,8 @@ const useStyles = createThemedStyles((theme, define) =>
       theme.atoms.box.secondary.bg,
     ],
     image: [Atoms.w_full, Atoms.h_full],
-    pressed: theme.atoms.faded,
-    hovered: theme.atoms.faded_subtle,
+    pressed: Atoms.faded,
+    hovered: Atoms.faded_subtle,
     safetyRing: [
       StyleSheet.absoluteFill,
       Atoms.rounded_full,

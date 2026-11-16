@@ -106,9 +106,7 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
         numberOfLines={numberOfLines}
         style={[
           baseStyle,
-          disabled
-            ? [theme.atoms.muted, theme.atoms.faded]
-            : theme.atoms.primary,
+          disabled ? [theme.atoms.muted, Atoms.faded] : theme.atoms.primary,
           multilineStyle,
           style,
         ]}

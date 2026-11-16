@@ -68,7 +68,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
               accessibilityLabel="Go back"
               onPress={() => router.back()}
               hitSlop={Spacing['lg']}
-              style={({ pressed }) => [pressed && theme.atoms.faded]}
+              style={({ pressed }) => [pressed && Atoms.faded]}
             >
               <Icon name="chevronBack" size={24} color="primary" />
             </Pressable>

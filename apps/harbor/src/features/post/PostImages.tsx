@@ -65,7 +65,7 @@ export const PostImages = memo(function PostImages({
           Atoms.w_full,
           Atoms.rounded_md,
           Atoms.mt_sm,
-          pressed && theme.atoms.faded_subtle,
+          pressed && Atoms.faded_subtle,
         ]}
       >
         <Image
@@ -145,10 +145,7 @@ function GridTile({
         e.stopPropagation?.();
         onOpen(index);
       }}
-      style={({ pressed }) => [
-        Atoms.flex_1,
-        pressed && theme.atoms.faded_subtle,
-      ]}
+      style={({ pressed }) => [Atoms.flex_1, pressed && Atoms.faded_subtle]}
     >
       <Image
         uris={uris}

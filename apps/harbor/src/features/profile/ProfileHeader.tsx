@@ -167,7 +167,7 @@ function ProfileHeaderInner({ onBack, scrollY }: ProfileHeaderProps) {
             Atoms.flex_row,
             Atoms.items_center,
             Atoms.gap_xs,
-            pressed && theme.atoms.faded,
+            pressed && Atoms.faded,
           ]}
         >
           <Icon name="key" size={HEADER_ROW_ICON_SIZE} color="muted" />
@@ -251,7 +251,6 @@ function FollowCounts({
   following: number;
   followers: number;
 }) {
-  const { theme } = useTheme();
   const counts: {
     label: string;
     count: number;
@@ -276,7 +275,7 @@ function FollowCounts({
           key={label}
           accessibilityRole="link"
           onPress={() => router.navigate(route)}
-          style={({ pressed }) => [pressed && theme.atoms.faded]}
+          style={({ pressed }) => [pressed && Atoms.faded]}
         >
           <Text variant="secondary" color="muted" selectable={false}>
             <Text variant="secondary" fontWeight="semibold">

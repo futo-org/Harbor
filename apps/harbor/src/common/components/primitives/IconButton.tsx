@@ -1,6 +1,7 @@
 import { usePressAnimation } from '@/src/common/lib/animation';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
+  Atoms,
   BorderRadius,
   useTheme,
   type BorderRadiusToken,
@@ -97,7 +98,7 @@ export function IconButton({
               ? ({ cursor: disabled ? 'default' : 'pointer' } as ViewStyle)
               : {}),
           },
-          hovered && theme.atoms.faded_subtle,
+          hovered && Atoms.faded_subtle,
         ]}
         {...props}
       >
