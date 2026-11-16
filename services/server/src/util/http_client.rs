@@ -7,8 +7,8 @@ pub fn client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()
-            .connect_timeout(Duration::from_secs(5))
-            .timeout(Duration::from_secs(60))
+            .connect_timeout(Duration::from_secs(2))
+            .timeout(Duration::from_secs(5))
             .build()
             .expect("failed to build HTTP client")
     })
