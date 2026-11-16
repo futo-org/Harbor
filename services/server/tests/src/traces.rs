@@ -34,7 +34,7 @@ async fn start_traces_receiver() {
                     _ = RUNNING.set(());
                     return;
                 }
-                tokio::task::yield_now().await;
+                tokio::time::sleep(Duration::from_millis(1)).await;
             }
         });
     });
