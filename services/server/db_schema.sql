@@ -188,21 +188,10 @@ CREATE TABLE public.ban (
 
 CREATE TABLE public.blob_index (
     key text NOT NULL,
-    digest_type smallint NOT NULL,
+    digest_type integer NOT NULL,
     digest_value bytea NOT NULL,
     size bigint NOT NULL,
     last_modified timestamp with time zone NOT NULL
-);
-
-
---
--- Name: blob_prune_prefix; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.blob_prune_prefix (
-    prefix text NOT NULL,
-    last_checked timestamp with time zone NOT NULL,
-    CONSTRAINT blob_prune_prefix_prefix_check CHECK (((octet_length(prefix) >= 1) AND (octet_length(prefix) <= 4)))
 );
 
 
@@ -801,14 +790,6 @@ ALTER TABLE ONLY public.ban
 
 ALTER TABLE ONLY public.blob_index
     ADD CONSTRAINT blob_index_pkey PRIMARY KEY (key);
-
-
---
--- Name: blob_prune_prefix blob_prune_prefix_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.blob_prune_prefix
-    ADD CONSTRAINT blob_prune_prefix_pkey PRIMARY KEY (prefix);
 
 
 --

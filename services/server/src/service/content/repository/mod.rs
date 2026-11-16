@@ -2,18 +2,15 @@
 //! `Mutation::save_content_child` dispatches each `ContentBody` variant
 //! to its own submodule, which owns that table's insert logic.
 
-use std::time::Duration;
-
 use entity::{
-    blob_index, blob_prune_prefix, content, content_blob, content_delete,
-    content_image, event,
+    blob_index, content, content_blob, content_delete, content_image, event,
 };
 use polycentric_common::models::protos_v2::ContentDigest;
 use sea_orm::entity::prelude::DateTimeWithTimeZone;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
-    CommonTableExpression, DeleteStatement, DynIden, Expr, ExprTrait, Order,
-    SelectStatement, SubQueryStatement, UnionType, UpdateStatement, WithClause,
+    DeleteStatement, DynIden, Expr, ExprTrait, SelectStatement,
+    SubQueryStatement, UnionType, WithClause,
 };
 use sea_orm::{ColumnTrait, DbErr};
 use tonic::Status;
@@ -93,198 +90,6 @@ impl Mutation {
 pub struct Query;
 
 impl Query {
-    pub(crate) async fn blob_prune_next_prefix<C: Connection>(
-        db: &mut C,
-        since_last_checked: Duration,
-        last_prefix: Option<&str>,
-    ) -> Result<Option<String>, DbErr> {
-        let mut query = SelectStatement::new();
-        query
-            .expr(Expr::col(blob_prune_prefix::Column::Prefix.as_column_ref()))
-            .from(blob_prune_prefix::Entity)
-            .and_where(
-                Expr::current_timestamp()
-                    .sub(Expr::col(
-                        blob_prune_prefix::Column::LastChecked.as_column_ref(),
-                    ))
-                    // SeaORM doesn't support passing Duration, so we need to do
-                    // it ourselves. Second precision is fine here.
-                    .gt(Expr::cust_with_values(
-                        "make_interval(secs => $1)",
-                        [since_last_checked.as_secs()],
-                    )),
-            )
-            .order_by(
-                blob_prune_prefix::Column::Prefix.as_column_ref(),
-                Order::Asc,
-            )
-            .limit(1);
-
-        if let Some(last_prefix) = last_prefix {
-            query.and_where(
-                Expr::col(blob_prune_prefix::Column::Prefix.as_column_ref())
-                    .gt(last_prefix),
-            );
-        }
-
-        match db.query_one(&query).await? {
-            Some(row) => Ok(Some(row.try_get_by(0)?)),
-            None => Ok(None),
-        }
-    }
-
-    /// Returns the timestamp of the blob prefix that is least recently run.
-    pub(crate) async fn blob_prune_least_recent_run<C: Connection>(
-        db: &mut C,
-    ) -> Result<Option<DateTimeWithTimeZone>, DbErr> {
-        let mut query = SelectStatement::new();
-        query
-            .expr(
-                Expr::col(
-                    blob_prune_prefix::Column::LastChecked.as_column_ref(),
-                )
-                .min(),
-            )
-            .from(blob_prune_prefix::Entity);
-        match db.query_one(&query).await? {
-            Some(row) => Ok(Some(row.try_get_by(0)?)),
-            None => Ok(None),
-        }
-    }
-
-    /// Mark the `prefix` as just processed.
-    pub(crate) async fn blob_prune_processed_prefix<C: Connection>(
-        db: &mut C,
-        prefix: &str,
-    ) -> Result<(), DbErr> {
-        let mut query = UpdateStatement::new();
-        query
-            .table(blob_prune_prefix::Entity)
-            .value(
-                blob_prune_prefix::Column::LastChecked,
-                Expr::current_timestamp(),
-            )
-            .and_where(blob_prune_prefix::Column::Prefix.eq(prefix));
-        db.execute(&query).await?;
-        Ok(())
-    }
-
-    /// Check if an non-deleted event exists that references a blob with the
-    /// given digest type and bytes.
-    pub(crate) async fn blob_has_event<C: Connection>(
-        db: &mut C,
-        digest_type: i32,
-        digest_bytes: &[u8],
-    ) -> Result<bool, DbErr> {
-        let mut select_content_image_id = SelectStatement::new();
-        select_content_image_id
-            .column(content_image::Column::ContentId)
-            .from(content_image::Entity)
-            .and_where(
-                Expr::col(
-                    content_image::Column::BlobDigestType.as_column_ref(),
-                )
-                .eq(Expr::Value(digest_type.into())),
-            )
-            .and_where(
-                Expr::col(
-                    content_image::Column::BlobDigestBytes.as_column_ref(),
-                )
-                .eq(Expr::Value(digest_bytes.into())),
-            );
-
-        let mut select_content_blob_id = SelectStatement::new();
-        select_content_blob_id
-            .column(content_blob::Column::ContentId)
-            .from(content_blob::Entity)
-            .and_where(
-                Expr::col(content_blob::Column::DigestType.as_column_ref())
-                    .eq(Expr::cust("$1")),
-            )
-            .and_where(
-                Expr::col(content_blob::Column::DigestBytes.as_column_ref())
-                    .eq(Expr::cust("$2")),
-            )
-            .union(UnionType::All, select_content_image_id);
-
-        let mut with = WithClause::new();
-        let mut cte = CommonTableExpression::new();
-        const BLOB_CONTENT: &str = "blob_content";
-        cte.table_name(BLOB_CONTENT).query(select_content_blob_id);
-        with.cte(cte);
-
-        let mut query = SelectStatement::new();
-        query
-            .expr_as(Expr::Constant(true.into()), "has_event")
-            .from(BLOB_CONTENT)
-            .left_join(
-                content::Entity,
-                Expr::col(content::Column::Id.as_column_ref()).eq(Expr::col((
-                    BLOB_CONTENT,
-                    content_image::Column::ContentId,
-                ))),
-            )
-            .left_join(
-                event::Entity,
-                Expr::col(event::Column::ContentDigestType.as_column_ref())
-                    .eq(Expr::col(content::Column::DigestType))
-                    .and(
-                        Expr::col(
-                            event::Column::ContentDigestBytes.as_column_ref(),
-                        )
-                        .eq(Expr::col(content::Column::DigestBytes)),
-                    ),
-            )
-            // Event is not deleted.
-            .left_join(
-                content_delete::Entity,
-                Expr::col(event::Column::Collection.as_column_ref())
-                    .eq(Expr::col(
-                        content_delete::Column::EventKeyCollection
-                            .as_column_ref(),
-                    ))
-                    .and(
-                        Expr::col(event::Column::Identity.as_column_ref()).eq(
-                            Expr::col(
-                                content_delete::Column::EventKeyIdentity
-                                    .as_column_ref(),
-                            ),
-                        ),
-                    )
-                    .and(
-                        Expr::col(event::Column::PublicKeyType.as_column_ref())
-                            .eq(Expr::col(
-                                content_delete::Column::EventKeyPublicKeyType
-                                    .as_column_ref(),
-                            )),
-                    )
-                    .and(
-                        Expr::col(event::Column::PublicKey.as_column_ref()).eq(
-                            Expr::col(
-                                content_delete::Column::EventKeyPublicKey
-                                    .as_column_ref(),
-                            ),
-                        ),
-                    )
-                    .and(
-                        Expr::col(event::Column::Sequence.as_column_ref()).eq(
-                            Expr::col(
-                                content_delete::Column::EventKeySequence
-                                    .as_column_ref(),
-                            ),
-                        ),
-                    ),
-            )
-            .and_where(Expr::col(content_delete::Entity).is_null());
-        let query = query.with(with);
-
-        let result = db.query_one(&query).await?;
-        let Some(row) = result else {
-            return Ok(false);
-        };
-        row.try_get_by(0)
-    }
-
     /// Returns the keys of blobs that are not used.
     pub(crate) async fn list_unused_blobs<C: Connection>(
         db: &mut C,
