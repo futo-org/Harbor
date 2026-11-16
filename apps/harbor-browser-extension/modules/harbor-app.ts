@@ -6,6 +6,27 @@ import { defineWxtModule } from 'wxt/modules';
 // for Windows to read (260 characters), so the store segment is dropped.
 const PNPM_STORE = /assets\/__node_modules\/\.pnpm\/[^/]+\/node_modules\//g;
 
+// Firefox Add-ons rejects an extension with a script over 5MB.
+const MAX_SCRIPT_LENGTH = 4_000_000;
+
+/**
+ * Splits a Metro bundle into scripts to run in order. Its modules are
+ * separate statements, each starting a line.
+ */
+function splitBundle(source: string): string[] {
+  const parts = [''];
+  for (const statement of source.split(/\n(?=__[dr]\()/)) {
+    const last = parts.length - 1;
+    if (
+      parts[last] &&
+      parts[last].length + statement.length > MAX_SCRIPT_LENGTH
+    )
+      parts.push(`${statement}\n`);
+    else parts[last] += `${statement}\n`;
+  }
+  return parts;
+}
+
 // Packages the Harbor web export (apps/harbor/dist) into the extension, with
 // its extension page as browser-extension.html. Dev frames the Expo dev server instead.
 const APP_ROUTE = '/anywhere/browser-extension/panel';
@@ -23,6 +44,8 @@ export default defineWxtModule((wxt) => {
       );
     }
 
+    // The parts of each script that was split, by its path in the page.
+    const splitScripts = new Map<string, string[]>();
     for (const entry of readdirSync(clientDir, {
       recursive: true,
       withFileTypes: true,
@@ -36,6 +59,18 @@ export default defineWxtModule((wxt) => {
       if (entry.name.endsWith('.js')) {
         const source = readFileSync(absoluteSrc, 'utf8');
         const contents = source.replace(PNPM_STORE, 'assets/');
+        if (contents.length > MAX_SCRIPT_LENGTH) {
+          const parts = splitBundle(contents).map((part, n) => ({
+            relativeDest: relativeDest.replace(/\.js$/, `.${n}.js`),
+            contents: part,
+          }));
+          files.push(...parts);
+          splitScripts.set(
+            `/${relativeDest}`,
+            parts.map((part) => `/${part.relativeDest}`),
+          );
+          continue;
+        }
         if (contents !== source) {
           files.push({ relativeDest, contents });
           continue;
@@ -77,6 +112,14 @@ export default defineWxtModule((wxt) => {
       relativeDest: 'browser-extension.html',
       contents: page
         .replaceAll('"/_expo/', '"/expo/')
+        .replace(
+          /<script([^>]*) src="([^"]+)"><\/script>/g,
+          (script, attributes, src) =>
+            splitScripts
+              .get(src)
+              ?.map((part) => `<script${attributes} src="${part}"></script>`)
+              .join('') ?? script,
+        )
         .replace(
           '<head>',
           '<head><script src="/browser-extension-route.js"></script>',
