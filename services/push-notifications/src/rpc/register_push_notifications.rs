@@ -15,7 +15,7 @@ use std::collections::HashSet;
 use tonic::Status;
 
 /// Upper bound on the number of subscriptions that we allow for a push target.
-pub const MAX_SUBSCRIPTIONS: usize = 50;
+pub const MAX_SUBSCRIPTIONS: usize = 100;
 
 pub async fn handle(
     ctx: &Context,
