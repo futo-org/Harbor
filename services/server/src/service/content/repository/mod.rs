@@ -5,13 +5,15 @@
 use std::time::Duration;
 
 use entity::{
-    blob_prune_prefix, content, content_blob, content_delete, content_image,
-    event,
+    blob_index, blob_prune_prefix, content, content_blob, content_delete,
+    content_image, event,
 };
+use polycentric_common::models::protos_v2::ContentDigest;
 use sea_orm::entity::prelude::DateTimeWithTimeZone;
+use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
-    CommonTableExpression, DynIden, Expr, ExprTrait, Order, SelectStatement,
-    SubQueryStatement, UnionType, UpdateStatement, WithClause,
+    CommonTableExpression, DeleteStatement, DynIden, Expr, ExprTrait, Order,
+    SelectStatement, SubQueryStatement, UnionType, UpdateStatement, WithClause,
 };
 use sea_orm::{ColumnTrait, DbErr};
 use tonic::Status;
@@ -72,6 +74,19 @@ impl Mutation {
             ContentBody::VerificationTarget(target) => return verification_target::add_query(with, target, content_id).map(|q| q.map(Into::into)),
             ContentBody::VerificationVerify(verify) => verification_verify::add_query(verify, content_id)?.into(),
         }))
+    }
+
+    /// Removes all blobs with a key in `keys` from the index.
+    pub(crate) async fn remove_blobs_from_index<C: Connection>(
+        db: &mut C,
+        keys: Vec<String>,
+    ) -> Result<(), DbErr> {
+        let mut query = DeleteStatement::new();
+        query.from_table(blob_index::Entity).and_where(
+            Expr::col(blob_index::Column::Key.as_column_ref()).eq_any(keys),
+        );
+        db.execute(&query).await?;
+        Ok(())
     }
 }
 
@@ -268,6 +283,149 @@ impl Query {
             return Ok(false);
         };
         row.try_get_by(0)
+    }
+
+    /// Returns the keys of blobs that are not used.
+    pub(crate) async fn list_unused_blobs<C: Connection>(
+        db: &mut C,
+    ) -> Result<Vec<(String, ContentDigest)>, DbErr> {
+        let mut select_content_image_id = SelectStatement::new();
+        select_content_image_id
+            .expr(Expr::col(content_image::Column::ContentId.as_column_ref()))
+            .expr(Expr::col(
+                content_image::Column::BlobDigestType.as_column_ref(),
+            ))
+            .expr(Expr::col(
+                content_image::Column::BlobDigestBytes.as_column_ref(),
+            ))
+            .from(content_image::Entity);
+
+        let mut select_content_blob_id = SelectStatement::new();
+        select_content_blob_id
+            .expr(Expr::col(content_blob::Column::ContentId.as_column_ref()))
+            .expr(Expr::col(content_blob::Column::DigestType.as_column_ref()))
+            .expr(Expr::col(content_blob::Column::DigestBytes.as_column_ref()))
+            .from(content_blob::Entity);
+
+        const BLOB_CONTENT: &str = "blob_content";
+        let mut live_blobs = SelectStatement::new();
+        live_blobs
+            .expr(Expr::col((BLOB_CONTENT, content_blob::Column::DigestType)))
+            .expr(Expr::col((BLOB_CONTENT, content_blob::Column::DigestBytes)))
+            .from_subquery(
+                {
+                    select_content_blob_id
+                        .union(UnionType::All, select_content_image_id);
+                    select_content_blob_id
+                },
+                BLOB_CONTENT,
+            )
+            .inner_join(
+                content::Entity,
+                Expr::col(content::Column::Id.as_column_ref()).eq(Expr::col((
+                    BLOB_CONTENT,
+                    content_blob::Column::ContentId,
+                ))),
+            )
+            .inner_join(
+                event::Entity,
+                Expr::col(event::Column::ContentDigestType.as_column_ref())
+                    .eq(Expr::col(content::Column::DigestType.as_column_ref()))
+                    .and(
+                        Expr::col(
+                            event::Column::ContentDigestBytes.as_column_ref(),
+                        )
+                        .eq(Expr::col(
+                            content::Column::DigestBytes.as_column_ref(),
+                        )),
+                    ),
+            )
+            // Event is not deleted.
+            .left_join(
+                content_delete::Entity,
+                Expr::col(event::Column::Collection.as_column_ref())
+                    .eq(Expr::col(
+                        content_delete::Column::EventKeyCollection
+                            .as_column_ref(),
+                    ))
+                    .and(
+                        Expr::col(event::Column::Identity.as_column_ref()).eq(
+                            Expr::col(
+                                content_delete::Column::EventKeyIdentity
+                                    .as_column_ref(),
+                            ),
+                        ),
+                    )
+                    .and(
+                        Expr::col(event::Column::PublicKeyType.as_column_ref())
+                            .eq(Expr::col(
+                                content_delete::Column::EventKeyPublicKeyType
+                                    .as_column_ref(),
+                            )),
+                    )
+                    .and(
+                        Expr::col(event::Column::PublicKey.as_column_ref()).eq(
+                            Expr::col(
+                                content_delete::Column::EventKeyPublicKey
+                                    .as_column_ref(),
+                            ),
+                        ),
+                    )
+                    .and(
+                        Expr::col(event::Column::Sequence.as_column_ref()).eq(
+                            Expr::col(
+                                content_delete::Column::EventKeySequence
+                                    .as_column_ref(),
+                            ),
+                        ),
+                    ),
+            )
+            .and_where(Expr::col(content_delete::Entity).is_null());
+
+        let mut query = SelectStatement::new();
+        query
+            .expr(Expr::col(blob_index::Column::Key.as_column_ref()))
+            .expr(Expr::col(blob_index::Column::DigestType.as_column_ref()))
+            .expr(Expr::col(blob_index::Column::DigestValue.as_column_ref()))
+            .from(blob_index::Entity)
+            .and_where(
+                Expr::tuple([
+                    Expr::col(blob_index::Column::DigestType.as_column_ref()),
+                    Expr::col(blob_index::Column::DigestValue.as_column_ref()),
+                ])
+                .not_in_subquery(live_blobs),
+            );
+
+        db.query_all(&query)
+            .await?
+            .into_iter()
+            .map(|row| {
+                Ok((
+                    row.try_get_by(0)?,
+                    ContentDigest {
+                        r#type: row.try_get_by(1)?,
+                        value: row.try_get_by(2)?,
+                    },
+                ))
+            })
+            .collect()
+    }
+
+    /// Returns the timestamp of the latest last modified timestamp.
+    pub(crate) async fn blob_recent_modified<C: Connection>(
+        db: &mut C,
+    ) -> Result<Option<DateTimeWithTimeZone>, DbErr> {
+        let mut query = SelectStatement::new();
+        query
+            .expr(
+                Expr::col(blob_index::Column::LastModified.as_column_ref())
+                    .max(),
+            )
+            .from(blob_index::Entity);
+        match db.query_one(&query).await? {
+            Some(row) => Ok(row.try_get_by(0)?),
+            None => Ok(None),
+        }
     }
 }
 

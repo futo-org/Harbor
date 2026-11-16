@@ -12,7 +12,7 @@ impl MigrationTrait for Migration {
             "
             CREATE TABLE IF NOT EXISTS blob_index (
               key           TEXT        PRIMARY KEY,
-              digest_type   SMALLINT    NOT NULL,
+              digest_type   INTEGER     NOT NULL,
               digest_value  BYTEA       NOT NULL,
               size          BIGINT      NOT NULL,
               last_modified TIMESTAMPTZ NOT NULL

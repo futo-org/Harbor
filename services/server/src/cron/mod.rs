@@ -91,19 +91,15 @@ impl Cron {
 struct AdvisoryLock(i64);
 
 const GRAVITY: i64 = 1 << 32;
-const BLOB_PRUNE: i64 = 1 << 32;
+const BLOB_PRUNE: i64 = 2 << 32;
 
 impl AdvisoryLock {
     pub(crate) const fn gravity() -> AdvisoryLock {
         AdvisoryLock(GRAVITY)
     }
 
-    pub(crate) fn blob_prune(prefix: &str) -> AdvisoryLock {
-        let mut bytes = [0; 4];
-        let len = prefix.len().min(bytes.len());
-        bytes[..len].copy_from_slice(&prefix.as_bytes()[..len]);
-        let key = i32::from_le_bytes(bytes) as i64;
-        AdvisoryLock(BLOB_PRUNE | key)
+    pub(crate) fn blob_prune() -> AdvisoryLock {
+        AdvisoryLock(BLOB_PRUNE)
     }
 
     /// Lock the key and run `f`.
