@@ -39,6 +39,38 @@ pnpm build:chrome  # only one browser, from the existing web export
 pnpm zip           # store upload zips for Chrome and Firefox
 ```
 
+## Reproduce a store build
+
+For store reviewers: the extension packages the Harbor web app
+(`apps/harbor`, bundled and minified by Expo's Metro) and its SDKs
+(`packages`, with rs-core compiled from Rust to WebAssembly), so it is built
+from the whole repository. `modules/harbor-app.ts` splits the app's bundle
+into scripts under 4MB.
+
+Needs Linux or macOS, the Node version in `.nvmrc`, the pnpm version in the
+root `package.json` (`packageManager`), and Rust with the
+`wasm32-unknown-unknown` target and `wasm-opt`.
+
+```sh
+pnpm install
+pnpm --filter @polycentric/rs-core-wasm build --profile wasm-release
+wasm=packages/rs-core-wasm/src/generated/wasm/polycentric_core.wasm
+wasm-opt -Oz -g "$wasm" -o "$wasm"
+pnpm --filter @polycentric/react-native generate
+pnpm --filter './packages/js-*' run build
+pnpm --filter @polycentric/react-native build
+
+cd apps/harbor
+APP_VARIANT=production npx expo export --platform web
+cd ../harbor-browser-extension
+APP_VARIANT=production EXTENSION_VERSION=<version> pnpm exec wxt zip -b firefox --mv3
+```
+
+`<version>` is the `version` in the submitted `manifest.json`. The services
+the build talks to are the `EXPO_PUBLIC_*` values of the `build` job in
+`.forgejo/workflows/deploy-browser-extension-production.yml`; set them for
+both the export and the zip.
+
 ## Install a local build
 
 - **Chrome / Brave**: open `chrome://extensions` (`brave://extensions`), turn on
