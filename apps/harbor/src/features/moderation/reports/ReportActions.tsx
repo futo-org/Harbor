@@ -58,7 +58,7 @@ export function ReportActions({
       ]}
     >
       {pending ? (
-        <ActivityIndicator size="small" color={theme.palette.primary_500} />
+        <ActivityIndicator size="small" color={theme.colors.accent} />
       ) : report.status === v2.ReportStatus.OPEN ? (
         <>
           {isPost ? (

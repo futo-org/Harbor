@@ -1,7 +1,7 @@
 import { Button, Text } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
 import { confirm } from '@/src/common/lib/dialogs/alert';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import useBanStatus from './hooks/useBanStatus';
@@ -44,7 +44,7 @@ export default function BanSheet({
         {isModeratorLoading || isLoading ? (
           <ActivityIndicator
             size="small"
-            color={theme.palette.primary_500}
+            color={theme.colors.accent}
             accessibilityLabel="Checking moderator status"
           />
         ) : servers.length === 0 ? (
@@ -106,9 +106,7 @@ function ServerBanRow({
         Atoms.gap_md,
         Atoms.p_md,
         Atoms.rounded_md,
-        {
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
+        theme.atoms_new.box.neutral.bg_subtle,
       ]}
     >
       <Text variant="secondary" monospace style={{ flex: 1 }} numberOfLines={1}>
@@ -117,7 +115,7 @@ function ServerBanRow({
       {isUpdating ? (
         <ActivityIndicator
           size="small"
-          color={theme.palette.primary_500}
+          color={theme.colors.accent}
           accessibilityLabel="Updating ban status"
         />
       ) : (

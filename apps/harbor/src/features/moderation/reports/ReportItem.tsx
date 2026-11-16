@@ -1,4 +1,4 @@
-import { useTheme, withHexOpacity } from '@/src/common/theme';
+import { useTheme } from '@/src/common/theme';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { COLLECTION, FetchMode, type v2 } from '@polycentric/react-native';
 import { View } from 'react-native';
@@ -27,10 +27,7 @@ export function ReportItem({
 
   return (
     <View
-      style={{
-        borderBottomWidth: 1,
-        borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-      }}
+      style={[theme.atoms_new.box.primary.border, { borderBottomWidth: 1 }]}
     >
       <ReportHeader report={report} />
       {identity ? (

@@ -28,7 +28,7 @@ export function ModeratedPost({
     return (
       <ActivityIndicator
         size="small"
-        color={theme.palette.primary_500}
+        color={theme.colors.accent}
         style={Atoms.p_lg}
       />
     );

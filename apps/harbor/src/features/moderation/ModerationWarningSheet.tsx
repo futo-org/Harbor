@@ -85,7 +85,7 @@ export function ModerationWarningSheet() {
             Atoms.gap_md,
             Atoms.p_md,
             Atoms.rounded_md,
-            { backgroundColor: theme.palette.neutral_25 },
+            theme.atoms_new.box.secondary.bg,
           ]}
         >
           <Icon name="infoOutline" size={24} color="secondary" />

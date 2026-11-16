@@ -56,7 +56,7 @@ export default function ReportsScreen() {
               <View style={[Atoms.items_center, Atoms.p_lg]}>
                 <ActivityIndicator
                   size="small"
-                  color={theme.palette.primary_500}
+                  color={theme.colors.accent}
                   accessibilityLabel="Loading reports"
                 />
               </View>

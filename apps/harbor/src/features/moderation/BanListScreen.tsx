@@ -3,7 +3,7 @@ import { Screen } from '@/src/common/components/layout';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { ScrollView } from '@/src/common/components/ScrollView';
 import { confirm } from '@/src/common/lib/dialogs/alert';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -63,7 +63,7 @@ export default function BanListScreen() {
                 <View style={[Atoms.items_center, Atoms.p_lg]}>
                   <ActivityIndicator
                     size="small"
-                    color={theme.palette.primary_500}
+                    color={theme.colors.accent}
                     accessibilityLabel="Loading ban list"
                   />
                 </View>
@@ -157,9 +157,7 @@ function BanListRow({
         Atoms.gap_md,
         Atoms.p_md,
         Atoms.rounded_md,
-        {
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
+        theme.atoms_new.box.neutral.bg_subtle,
       ]}
     >
       <Text
@@ -177,7 +175,7 @@ function BanListRow({
       {isUnbanning ? (
         <ActivityIndicator
           size="small"
-          color={theme.palette.primary_500}
+          color={theme.colors.accent}
           accessibilityLabel="Unbanning"
         />
       ) : (
