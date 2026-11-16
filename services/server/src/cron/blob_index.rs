@@ -97,10 +97,13 @@ async fn update_blob_index<C: Connection>(
 ) -> Result<(), String> {
     *processed += blobs.len() as u64;
     match Mutation::update_blob_index(db, blobs).await {
-        Ok(a) => Ok(*added += a),
+        Ok(a) => {
+            *added += a;
+            Ok(())
+        }
         Err(error) => {
             tracing::warn!(%error, "failed update blob index");
-            return Err(error.to_string());
+            Err(error.to_string())
         }
     }
 }
