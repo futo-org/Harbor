@@ -28,6 +28,13 @@ export const BorderRadius = {
 
 export type BorderRadiusToken = keyof typeof BorderRadius;
 
+// Fades for disabled and pressed elements; numbers for animated opacity,
+// `Atoms.faded*` for styles.
+export const Opacity = {
+  faded: 0.5,
+  faded_subtle: 0.8,
+} as const;
+
 /** Type scale (used by `Text` and inputs; import `typography` from `@/common/theme`). */
 export const typography = {
   fontSize: {
@@ -662,10 +669,10 @@ const atomStyles = {
    * Opacity
    */
   faded: {
-    opacity: 0.5,
+    opacity: Opacity.faded,
   },
   faded_subtle: {
-    opacity: 0.8,
+    opacity: Opacity.faded_subtle,
   },
 
   /**

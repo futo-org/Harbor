@@ -9,6 +9,7 @@ export {
   BorderRadius,
   BorderRadius as borderRadius,
   Breakpoints,
+  Opacity,
   Spacing,
   Spacing as spacing,
   typography,

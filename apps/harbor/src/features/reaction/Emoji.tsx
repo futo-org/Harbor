@@ -6,10 +6,9 @@ import type { Insets, ViewStyle } from 'react-native';
 import { Pressable, View } from 'react-native';
 import { EmojiGridImage } from './EmojiGridImage';
 
-// Scale/timing/opacity for the hover (on web) and press (on native) animations.
+// Scale/timing for the hover (on web) and press (on native) animations.
 export const EMOJI_POP_SCALE = 1.12;
 export const EMOJI_POP_MS = 120;
-export const EMOJI_PRESS_OPACITY = 0.6;
 /** Glyph size as a fraction of a numerically sized emoji cell. */
 export const EMOJI_IMAGE_SCALE = 0.62;
 
@@ -64,10 +63,7 @@ function EmojiLikePressable({
         hitSlop={hitSlop}
         style={({ pressed }) => [
           baseStyle,
-          pressed && {
-            opacity: EMOJI_PRESS_OPACITY,
-            transform: [{ scale: EMOJI_POP_SCALE }],
-          },
+          pressed && [Atoms.faded, { transform: [{ scale: EMOJI_POP_SCALE }] }],
         ]}
       >
         {children}

@@ -1,21 +1,16 @@
 import { useRef } from 'react';
 import { Animated } from 'react-native';
+import { Opacity } from '@/src/common/theme';
 
-type UsePressAnimationOptions = {
-  pressedOpacity?: number;
-  duration?: number;
-};
+const PRESS_ANIMATION_DURATION_MS = 150;
 
-export function usePressAnimation({
-  pressedOpacity = 0.7,
-  duration = 150,
-}: UsePressAnimationOptions = {}) {
+export function usePressAnimation() {
   const opacity = useRef(new Animated.Value(1)).current;
 
   const onPressIn = () => {
     Animated.timing(opacity, {
-      toValue: pressedOpacity,
-      duration,
+      toValue: Opacity.faded_subtle,
+      duration: PRESS_ANIMATION_DURATION_MS,
       useNativeDriver: true,
     }).start();
   };
@@ -23,7 +18,7 @@ export function usePressAnimation({
   const onPressOut = () => {
     Animated.timing(opacity, {
       toValue: 1,
-      duration,
+      duration: PRESS_ANIMATION_DURATION_MS,
       useNativeDriver: true,
     }).start();
   };
