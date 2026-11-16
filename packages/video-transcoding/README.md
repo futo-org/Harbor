@@ -19,7 +19,7 @@ header reader and frame decoder.
 ```ts
 import { transcode, TranscodeError } from '@polycentric/video-transcoding';
 
-const { uri, posterUri, width, height, durationMs, frameCount } =
+const { uri, thumbnailUri, width, height, durationMs, frameCount } =
   await transcode(gifUri, {
     limits: { maxOutputFrames: 200, maxOutputPixels: 1_000_000, maxOutputBytes: 5_000_000 },
   });

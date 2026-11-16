@@ -3,9 +3,10 @@ import { requireNativeModule } from 'expo';
 import { createTranscoder } from './src/transcode';
 import type { TranscodeBackend } from './src/types';
 
-export { TranscodeError, type TranscodeErrorCode } from './src/errors';
 export {
   DEFAULT_TRANSCODE_LIMITS,
+  TranscodeError,
+  type TranscodeErrorCode,
   type TranscodeLimits,
 } from './src/limits';
 export type { TranscodeOptions, TranscodeResult } from './src/types';

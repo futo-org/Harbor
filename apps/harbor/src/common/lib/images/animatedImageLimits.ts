@@ -8,7 +8,7 @@ import type { TranscodeLimits } from '@polycentric/video-transcoding';
  */
 export const ANIMATED_IMAGE_LIMITS: TranscodeLimits = {
   maxSourceBytes: 50_000_000,
-  maxSourcePixels: 16_000_000,
+  maxSourcePixels: 4_000_000,
   maxOutputFrames: 200,
   maxOutputPixels: 1_000_000,
   maxOutputBytes: 5_000_000,
