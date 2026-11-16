@@ -15,20 +15,19 @@ export type TextColor = keyof Pick<
 >;
 
 export function buildThemeColors(palette: Palette, scheme: ThemeScheme) {
-  const colors = buildColors(palette, scheme);
+  const colors = buildColors(palette);
   return { colors, atoms: buildAtoms(palette, scheme, colors) };
 }
 
 // raw strings for consumers that can't take a style object
-function buildColors(palette: Palette, scheme: ThemeScheme) {
+function buildColors(palette: Palette) {
   return {
-    primary: palette.neutral_900,
+    primary: palette.neutral_1000,
     secondary: palette.neutral_700,
     muted: palette.neutral_500,
     accent: palette.primary_500,
-    // the 500 steps are too dark for text on the dark background
-    danger: scheme === 'dark' ? palette.negative_600 : palette.negative_500,
-    success: scheme === 'dark' ? palette.positive_600 : palette.positive_500,
+    danger: palette.negative_500,
+    success: palette.positive_500,
     warning: palette.warning_500,
     // theme-independent, for text and icons on colored boxes and media
     light: palette.white,
@@ -38,13 +37,13 @@ function buildColors(palette: Palette, scheme: ThemeScheme) {
     box: {
       primary: buildBox(
         palette.neutral_0,
-        palette.neutral_25,
-        palette.neutral_25,
+        palette.neutral_50,
+        palette.neutral_50,
       ),
       secondary: buildBox(
-        palette.neutral_25,
         palette.neutral_50,
-        palette.neutral_50,
+        palette.neutral_100,
+        palette.neutral_100,
       ),
       neutral: buildBox(palette.neutral_500, palette.neutral_600),
       accent: buildBox(palette.primary_500, palette.primary_600),
@@ -117,7 +116,7 @@ function buildAtoms(
     },
     shadow: {
       accent: {
-        boxShadow: `${shadowGeometry} ${withOpacity(palette.primary_900, shadowOpacity)}`,
+        boxShadow: `${shadowGeometry} ${withOpacity(palette.primary_500, shadowOpacity)}`,
       },
       neutral: {
         boxShadow: `${shadowGeometry} ${withOpacity(palette.black, shadowOpacity)}`,
