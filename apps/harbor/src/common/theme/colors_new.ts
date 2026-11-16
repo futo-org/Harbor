@@ -1,4 +1,4 @@
-import type { Palette } from './palette_new';
+import { palette } from './palette_new';
 import type { ThemeScheme } from './themes';
 
 export type TextColor = keyof Pick<
@@ -14,42 +14,71 @@ export type TextColor = keyof Pick<
   | 'dark'
 >;
 
-export function buildThemeColors(palette: Palette, scheme: ThemeScheme) {
-  const colors = buildColors(palette);
-  return { colors, atoms: buildAtoms(palette, scheme, colors) };
+// What differs between the themes. Both pick from the one palette: text and
+// surfaces from opposite ends of the neutral scale, and a hover from the step
+// next to its fill, on the text color's side.
+const LIGHT_PICKS = {
+  primary: palette.neutral_1000,
+  secondary: palette.neutral_700,
+  muted: palette.neutral_600,
+  // the background, then two surfaces, each a step above the last
+  surface_0: palette.neutral_0,
+  surface_1: palette.neutral_50,
+  surface_2: palette.neutral_100,
+  hover: {
+    neutral: palette.neutral_650,
+    accent: palette.primary_600,
+    danger: palette.negative_700,
+    success: palette.positive_600,
+    warning: palette.warning_450,
+  },
+};
+
+const DARK_PICKS: typeof LIGHT_PICKS = {
+  primary: palette.neutral_150,
+  secondary: palette.neutral_400,
+  muted: palette.neutral_650,
+  surface_0: palette.neutral_1000,
+  surface_1: palette.neutral_950,
+  surface_2: palette.neutral_900,
+  hover: {
+    neutral: palette.neutral_550,
+    accent: palette.primary_500,
+    danger: palette.negative_600,
+    success: palette.positive_500,
+    warning: palette.warning_350,
+  },
+};
+
+export function buildThemeColors(scheme: ThemeScheme) {
+  const colors = buildColors(scheme === 'dark' ? DARK_PICKS : LIGHT_PICKS);
+  return { colors, atoms: buildAtoms(scheme, colors) };
 }
 
 // raw strings for consumers that can't take a style object
-function buildColors(palette: Palette) {
+function buildColors(picks: typeof LIGHT_PICKS) {
   return {
-    primary: palette.neutral_1000,
-    secondary: palette.neutral_700,
-    muted: palette.neutral_500,
-    accent: palette.primary_500,
-    danger: palette.negative_500,
-    success: palette.positive_500,
-    warning: palette.warning_500,
+    primary: picks.primary,
+    secondary: picks.secondary,
+    muted: picks.muted,
+    // each hue family's key color, the same in both themes
+    accent: palette.primary_550,
+    danger: palette.negative_650,
+    success: palette.positive_550,
+    warning: palette.warning_400,
     // theme-independent, for text and icons on colored boxes and media
     light: palette.white,
     dark: palette.black,
     transparent: 'transparent',
-    // hover is the next palette step; the neutral boxes' border is too
+    // a neutral box's hover and border are the next surface
     box: {
-      primary: buildBox(
-        palette.neutral_0,
-        palette.neutral_50,
-        palette.neutral_50,
-      ),
-      secondary: buildBox(
-        palette.neutral_50,
-        palette.neutral_100,
-        palette.neutral_100,
-      ),
-      neutral: buildBox(palette.neutral_500, palette.neutral_600),
-      accent: buildBox(palette.primary_500, palette.primary_600),
-      danger: buildBox(palette.negative_500, palette.negative_600),
-      success: buildBox(palette.positive_500, palette.positive_600),
-      warning: buildBox(palette.warning_500, palette.warning_600),
+      primary: buildBox(picks.surface_0, picks.surface_1, picks.surface_1),
+      secondary: buildBox(picks.surface_1, picks.surface_2, picks.surface_2),
+      neutral: buildBox(palette.neutral_600, picks.hover.neutral),
+      accent: buildBox(palette.primary_550, picks.hover.accent),
+      danger: buildBox(palette.negative_650, picks.hover.danger),
+      success: buildBox(palette.positive_550, picks.hover.success),
+      warning: buildBox(palette.warning_400, picks.hover.warning),
     },
     backdrop: {
       modal: withOpacity(palette.black, 0.45),
@@ -76,7 +105,6 @@ function buildBox(bg: string, hover: string, border = bg) {
 }
 
 function buildAtoms(
-  palette: Palette,
   scheme: ThemeScheme,
   colors: ReturnType<typeof buildColors>,
 ) {
@@ -116,7 +144,7 @@ function buildAtoms(
     },
     shadow: {
       accent: {
-        boxShadow: `${shadowGeometry} ${withOpacity(palette.primary_500, shadowOpacity)}`,
+        boxShadow: `${shadowGeometry} ${withOpacity(palette.primary_550, shadowOpacity)}`,
       },
       neutral: {
         boxShadow: `${shadowGeometry} ${withOpacity(palette.black, shadowOpacity)}`,

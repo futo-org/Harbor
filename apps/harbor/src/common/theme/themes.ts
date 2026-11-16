@@ -1,6 +1,10 @@
 import type { Palette } from './palette';
 import { darkPalette, lightPalette } from './palette';
 import { buildThemeColors } from './colors';
+import { buildThemeColors as buildThemeColorsNew } from './colors_new';
+
+// temporary: true runs the app on `colors_new`
+const USE_NEW_COLORS = true;
 
 export type ThemeScheme = 'light' | 'dark';
 
@@ -11,6 +15,7 @@ export type Theme = {
 };
 
 function createTheme(scheme: ThemeScheme, palette: Palette): Theme {
+  if (USE_NEW_COLORS) return { scheme, ...buildThemeColorsNew(scheme) };
   return { scheme, ...buildThemeColors(palette, scheme) };
 }
 

@@ -8,10 +8,7 @@ import {
 import { buildThemeColors, type TextColor } from '@/src/common/theme/colors';
 import { buildThemeColors as buildThemeColorsNew } from '@/src/common/theme/colors_new';
 import { darkPalette, lightPalette } from '@/src/common/theme/palette';
-import {
-  darkPalette as darkPaletteNew,
-  lightPalette as lightPaletteNew,
-} from '@/src/common/theme/palette_new';
+import { palette as paletteNew } from '@/src/common/theme/palette_new';
 import { Context as ThemeContext } from '@/src/common/theme/provider';
 import type { Theme, ThemeScheme } from '@/src/common/theme/themes';
 import { type ReactNode, useMemo, useState } from 'react';
@@ -208,8 +205,6 @@ function ThemeSwitcher() {
 }
 
 function PaletteSection({ palette }: { palette: Record<string, string> }) {
-  const { theme } = useTheme();
-
   // `neutral_500` goes to the `neutral` scale as `500`; unnumbered names to `other`.
   const scales = new Map<string, { step: string; value: string }[]>();
   for (const [name, value] of Object.entries(palette)) {
@@ -223,7 +218,7 @@ function PaletteSection({ palette }: { palette: Record<string, string> }) {
   const neutralSteps = scales.get('neutral')?.map(({ step }) => step) ?? [];
 
   return (
-    <Section title={`Palette (${theme.scheme})`}>
+    <Section title="Palette">
       {[...scales].map(([scale, steps]) => (
         <Row key={scale} label={scale}>
           {(scale === 'other'
@@ -356,16 +351,15 @@ function isDarkColor(hex: string) {
   return 0.299 * red + 0.587 * green + 0.114 * blue < 150;
 }
 
-// Each branch builds from its own file's palette, so the two can diverge.
+// `colors_new` picks both themes from one palette; `colors` has one per theme.
 function buildDemoTheme(
   source: ColorsSource,
   scheme: ThemeScheme,
 ): { theme: Theme; palette: Record<string, string> } {
   if (source === 'colors_new') {
-    const palette = scheme === 'dark' ? darkPaletteNew : lightPaletteNew;
     return {
-      palette,
-      theme: { scheme, ...buildThemeColorsNew(palette, scheme) },
+      palette: paletteNew,
+      theme: { scheme, ...buildThemeColorsNew(scheme) },
     };
   }
   const palette = scheme === 'dark' ? darkPalette : lightPalette;
