@@ -1,5 +1,5 @@
 name: browser-extension-submit
-description: Submits the browser-extension-<variant> artifact's zip to one store for review. `wxt submit` reads the store's CHROME_*, FIREFOX_* or EDGE_* settings from the job's env; a store with no listing set there is skipped.
+description: Submits the browser-extension-<variant> artifact's zip to one store for review. `wxt submit` reads the store's CHROME_*, FIREFOX_* or EDGE_* settings from the job's env (Infisical); a store with no listing set there is skipped.
 inputs:
   variant:
     description: APP_VARIANT (staging or production)
@@ -29,13 +29,17 @@ runs:
           edge) listing="$EDGE_PRODUCT_ID" ;;
           *) echo "unknown store $STORE"; exit 1 ;;
         esac
-        if [ -z "$listing" ]; then
+        # REPLACE_ME is what Infisical holds until a value is entered.
+        if [ -z "$listing" ] || [ "$listing" = REPLACE_ME ]; then
           echo "No $STORE listing is set up, nothing submitted"
           exit 0
         fi
         args=("--$STORE-zip" dist/*-"$STORE".zip)
-        # Firefox reviewers build the extension from its sources.
+        # Firefox reviewers build the extension from its sources, which are the
+        # whole repository: the extension packages the Harbor app and its SDKs.
+        # The steps are in apps/harbor-browser-extension/README.md.
         if [ "$STORE" = firefox ]; then
-          args+=(--firefox-sources-zip dist/*-sources.zip)
+          git -C ../.. archive --format=zip -o "$PWD/dist/repository-sources.zip" HEAD
+          args+=(--firefox-sources-zip dist/repository-sources.zip)
         fi
         pnpm exec wxt submit "${args[@]}"
