@@ -192,6 +192,7 @@ export function EmojiPickerSheet() {
 
 /** Search input with a clear button, writing to the picker store. */
 function EmojiSearchField() {
+  const { theme } = useTheme();
   const inputRef = useRef<TextInputInstance>(null);
   const rawQuery = useEmojiPickerStore((state) => state.rawQuery);
   const setRawQuery = useEmojiPickerStore((state) => state.setRawQuery);
@@ -224,7 +225,7 @@ function EmojiSearchField() {
             accessibilityLabel="Clear search"
             onPress={clearQuery}
             hitSlop={Spacing.sm}
-            style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+            style={({ pressed }) => [pressed && theme.atoms.faded]}
           >
             <Icon name="close" size={16} color="muted" />
           </Pressable>

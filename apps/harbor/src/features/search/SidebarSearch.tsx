@@ -61,7 +61,7 @@ export function SidebarSearch() {
             accessibilityLabel="Clear search"
             onPress={() => setQuery('')}
             hitSlop={Spacing.sm}
-            style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+            style={({ pressed }) => [pressed && theme.atoms.faded]}
           >
             <Icon name="close" size={16} color="muted" />
           </Pressable>

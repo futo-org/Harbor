@@ -273,6 +273,7 @@ function ListItemWrapper({
   children: React.ReactNode;
   onPress?: () => void;
 }) {
+  const { theme } = useTheme();
   return (
     <ListItem pressable={!!onPress} onPress={onPress}>
       <View
@@ -281,7 +282,7 @@ function ListItemWrapper({
           Atoms.items_center,
           Atoms.justify_between,
           Atoms.pl_xs,
-          !onPress && { opacity: 0.5 },
+          !onPress && theme.atoms.faded,
         ]}
       >
         {children}

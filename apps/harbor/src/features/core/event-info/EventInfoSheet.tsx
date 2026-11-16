@@ -33,7 +33,6 @@ import {
 } from './useSignedEvent';
 
 const MONO: TextStyle = { fontFamily: 'monospace' };
-const PRESSED: TextStyle = { opacity: 0.65 };
 
 const INFO_TITLES: Record<number, string> = {
   [COLLECTION.IDENTITY]: 'Identity info',
@@ -649,6 +648,7 @@ function NavSide({
   result: SignedEventResult;
   onPress?: () => void;
 }) {
+  const { theme } = useTheme();
   const isNext = direction === 'next';
   const align = isNext ? Atoms.justify_end : Atoms.justify_start;
   const [checking, setChecking] = useState(false);
@@ -711,7 +711,7 @@ function NavSide({
             <Text
               variant="small"
               color="secondary"
-              style={[prefix != null && MONO, pressed && PRESSED]}
+              style={[prefix != null && MONO, pressed && theme.atoms.faded]}
             >
               {prefix ? `${prefix} (${sequence})` : 'Next'}
             </Text>
@@ -892,7 +892,10 @@ function LinkText({
       style={Atoms.flex_1}
     >
       {({ pressed }) => (
-        <Text {...text} style={[style, linkStyle(theme), pressed && PRESSED]}>
+        <Text
+          {...text}
+          style={[style, linkStyle(theme), pressed && theme.atoms.faded]}
+        >
           {children}
         </Text>
       )}
@@ -910,6 +913,7 @@ function CopyIcon({
   copied: boolean;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -922,7 +926,7 @@ function CopyIcon({
           name={copied ? 'checkmark' : 'copy'}
           size={16}
           color={copied ? 'success' : 'muted'}
-          style={pressed && PRESSED}
+          style={pressed && theme.atoms.faded}
         />
       )}
     </Pressable>

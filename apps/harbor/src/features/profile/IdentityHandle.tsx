@@ -42,7 +42,7 @@ export function IdentityHandle({
   );
 }
 
-const useStyles = createThemedStyles((_theme, define) =>
+const useStyles = createThemedStyles((theme, define) =>
   define({
     // Fades in on verification; no animation on the first render.
     handle: {
@@ -50,6 +50,6 @@ const useStyles = createThemedStyles((_theme, define) =>
       transitionProperty: 'opacity',
       transitionDuration: 400,
     },
-    handlePending: { opacity: 0.4 },
+    handlePending: theme.atoms.faded,
   }),
 );

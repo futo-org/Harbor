@@ -120,7 +120,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
                   <Text
                     variant="small"
                     color="secondary"
-                    style={pressed && { opacity: 0.65 }}
+                    style={pressed && theme.atoms.faded}
                   >
                     Identity info
                   </Text>
