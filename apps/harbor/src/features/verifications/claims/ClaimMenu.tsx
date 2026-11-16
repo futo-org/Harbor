@@ -2,7 +2,7 @@ import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon, { type IconName } from '@/src/common/components/Icon';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -48,12 +48,7 @@ export function ClaimMenu({
                 Atoms.p_xs,
                 Atoms.rounded_full,
                 Atoms.overflow_hidden,
-                (hovered || pressed) && {
-                  backgroundColor: withHexOpacity(
-                    theme.palette.neutral_500,
-                    '14',
-                  ),
-                },
+                (hovered || pressed) && theme.atoms_new.box.neutral.bg_subtle,
               ]}
             >
               <Icon name={icon} color="muted" size={iconSize} />

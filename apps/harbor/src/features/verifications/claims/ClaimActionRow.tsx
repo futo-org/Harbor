@@ -19,9 +19,7 @@ export function ClaimActionRow({
       accessibilityRole="button"
       onPress={onPress}
       style={({ hovered, pressed }) => [
-        (hovered || pressed) && {
-          backgroundColor: theme.palette.neutral_25,
-        },
+        (hovered || pressed) && theme.atoms_new.box.primary.bg_hover,
       ]}
     >
       <View
@@ -33,7 +31,8 @@ export function ClaimActionRow({
           Atoms.pr_lg,
           Atoms.pt_md,
           Atoms.pb_md,
-          { borderBottomWidth: 1, borderColor: theme.palette.neutral_25 },
+          theme.atoms_new.box.primary.border,
+          { borderBottomWidth: 1 },
         ]}
       >
         <View style={Atoms.flex_1}>

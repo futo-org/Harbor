@@ -70,7 +70,7 @@ export function ClaimCreatePlatformPicker({
     return (
       <ActivityIndicator
         size="small"
-        color={theme.palette.primary_500}
+        color={theme.colors.accent}
         accessibilityLabel="Loading platforms"
       />
     );
@@ -86,7 +86,7 @@ export function ClaimCreatePlatformPicker({
           <SelectChip
             title={platform.name}
             icon={platform.logo}
-            color={platform.color}
+            tint={platform.tint}
             onPress={() => onSelect(platform, verifierType)}
           />
         </Animated.View>

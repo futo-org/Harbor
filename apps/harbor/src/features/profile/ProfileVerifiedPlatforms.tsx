@@ -77,7 +77,7 @@ function VerifiedPlatformPill({
         value={account}
         icon="verify"
         logo={platform.logo}
-        color={platform.color}
+        tint={platform.tint}
       />
     </Pressable>
   );

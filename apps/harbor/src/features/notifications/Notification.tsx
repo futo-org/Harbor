@@ -213,7 +213,7 @@ function ClaimSummary({ claim }: { claim: DecodedClaim }) {
         name={platform?.name ?? claim.schemaName}
         icon={claimType?.icon ?? 'verify'}
         logo={platform?.logo}
-        color={platform?.color ?? claimType?.color}
+        tint={platform?.tint ?? claimType?.tint}
       />
       <Text variant="secondary" color="muted" numberOfLines={1}>
         {title}

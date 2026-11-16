@@ -3,7 +3,7 @@ import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
 import { useToast } from '@/src/common/components/toast';
 import { confirm } from '@/src/common/lib/dialogs/alert';
-import { Atoms, useTheme, withHexOpacity, Spacing } from '@/src/common/theme';
+import { Atoms, useTheme, Spacing } from '@/src/common/theme';
 import { View } from 'react-native';
 import type { DecodedClaim } from '../hooks/useClaimById';
 import useRemoveVerifier from '../hooks/useRemoveVerifier';
@@ -75,12 +75,7 @@ export function ClaimVerifierMenu({
 
               Atoms.rounded_full,
               Atoms.overflow_hidden,
-              (hovered || pressed) && {
-                backgroundColor: withHexOpacity(
-                  theme.palette.neutral_500,
-                  '14',
-                ),
-              },
+              (hovered || pressed) && theme.atoms_new.box.neutral.bg_subtle,
             ]}
           >
             {statusText}

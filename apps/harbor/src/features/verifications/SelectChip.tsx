@@ -1,30 +1,25 @@
 import { Button } from '@/src/common/components';
 import Icon, { type IconName } from '@/src/common/components/Icon';
-import {
-  Atoms,
-  type PaletteColorToken,
-  Spacing,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import type { Tint } from './utils/tint';
 
 // A pill-style selectable chip: a colored icon/logo bubble plus a label.
 // Shared by the claim-type selector and the platform picker so they match.
 export function SelectChip({
   title,
   icon,
-  color,
+  tint,
   onPress,
 }: {
   title: string;
   icon: IconName | ((props: { size: number; color: string }) => ReactNode);
-  color?: PaletteColorToken;
+  tint: Tint;
   onPress: () => void;
 }) {
   const { theme } = useTheme();
-  const tint = color ? theme.palette[color] : theme.palette.neutral_1000;
+  const { fg, bg } = tint[theme.scheme];
 
   return (
     <Button
@@ -35,13 +30,13 @@ export function SelectChip({
             Atoms.rounded_full,
             Atoms.p_sm,
             Atoms.mr_xs,
-            { backgroundColor: withHexOpacity(tint, '25') },
+            { backgroundColor: bg },
           ]}
         >
           {typeof icon === 'function' ? (
-            icon({ size: 16, color: tint })
+            icon({ size: 16, color: fg })
           ) : (
-            <Icon name={icon} customColor={tint} />
+            <Icon name={icon} customColor={fg} />
           )}
         </View>
       )}

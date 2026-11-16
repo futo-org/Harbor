@@ -141,7 +141,7 @@ export default function ViewClaimScreen() {
                     name={platform?.name ?? claim.schemaName}
                     icon={claimType?.icon ?? 'verify'}
                     logo={platform?.logo}
-                    color={platform?.color ?? claimType?.color}
+                    tint={platform?.tint ?? claimType?.tint}
                   />
                   {/* Verified status */}
                   <StatusChip

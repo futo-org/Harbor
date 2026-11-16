@@ -171,7 +171,7 @@ function CreateClaimButton({ onPress }: { onPress: () => void }) {
       style={({ pressed }) => [
         Atoms.p_xs,
         Atoms.rounded_full,
-        pressed && { backgroundColor: theme.palette.neutral_25 },
+        pressed && theme.atoms_new.box.primary.bg_hover,
       ]}
     >
       <Icon name="add" size={24} color="primary" />
