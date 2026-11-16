@@ -15,7 +15,7 @@ use prost::Message;
 
 use crate::*;
 
-const TRACE_TIMEOUT: Duration = Duration::from_secs(30);
+const TRACE_TIMEOUT: Duration = Duration::from_secs(5);
 const SERVER_SPAN: &str = "polycentric.v2.EventSyncService/PutEvents";
 
 async fn start_traces_receiver() {
@@ -23,20 +23,18 @@ async fn start_traces_receiver() {
     static RUNNING: tokio::sync::SetOnce<()> =
         tokio::sync::SetOnce::const_new();
     START.call_once(|| {
-        let port: u16 = std::env::var("HARBOR_TEST_TRACES_PORT")
-            .ok()
-            .and_then(|p| p.parse().ok())
-            .unwrap_or(4318);
+        let port = trace_port();
         tokio::spawn(traces_receiver::run(port));
 
         tokio::spawn(async move {
+            let address = traces_url();
+            let address = address.trim_prefix("http://");
             for _ in 0..1000 {
-                tokio::task::yield_now().await;
-                let address = (std::net::Ipv4Addr::LOCALHOST, port);
-                if let Ok(_) = tokio::net::TcpStream::connect(address).await {
+                if let Ok(_) = tokio::net::TcpStream::connect(&address).await {
                     _ = RUNNING.set(());
                     return;
                 }
+                tokio::task::yield_now().await;
             }
         });
     });
@@ -51,7 +49,14 @@ async fn start_traces_receiver() {
 /// Where the receiver answers. Override with `HARBOR_TEST_TRACES_URL`.
 fn traces_url() -> String {
     std::env::var("HARBOR_TEST_TRACES_URL")
-        .unwrap_or_else(|_| "http://localhost:4318".to_string())
+        .unwrap_or_else(|_| format!("http://127.0.0.1:{}", trace_port()))
+}
+
+fn trace_port() -> u16 {
+    std::env::var("HARBOR_TEST_TRACES_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(4318)
 }
 
 /// Every span the receiver has, each with its resource's `service.name`.
@@ -146,7 +151,7 @@ async fn a_request_trace_is_exported_with_its_children() {
     assert!(response.errors.is_empty(), "response: {response:?}");
 
     let wanted = [SERVER_SPAN, "add_event", "kafka.publish"];
-    let deadline = Instant::now() + TRACE_TIMEOUT;
+    let start = Instant::now();
     let spans = loop {
         let spans: Vec<(Option<String>, Span)> = received()
             .await
@@ -154,8 +159,11 @@ async fn a_request_trace_is_exported_with_its_children() {
             .filter(|(_, s)| s.trace_id == client_trace_id)
             .collect();
         let has = |name: &str| spans.iter().any(|(_, s)| s.name == name);
-        if wanted.iter().all(|name| has(name)) || Instant::now() > deadline {
+        if wanted.iter().all(|name| has(name)) {
             break spans;
+        }
+        if start.elapsed() > TRACE_TIMEOUT {
+            panic!("timed out retrieving expected traces");
         }
         tokio::time::sleep(Duration::from_millis(100)).await;
     };
