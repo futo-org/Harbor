@@ -18,11 +18,34 @@ use crate::*;
 const TRACE_TIMEOUT: Duration = Duration::from_secs(30);
 const SERVER_SPAN: &str = "polycentric.v2.EventSyncService/PutEvents";
 
-fn start_traces_receiver() {
+async fn start_traces_receiver() {
     static START: Once = Once::new();
+    static RUNNING: tokio::sync::SetOnce<()> =
+        tokio::sync::SetOnce::const_new();
     START.call_once(|| {
-        tokio::spawn(traces_receiver::main());
+        let port: u16 = std::env::var("HARBOR_TEST_TRACES_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(4318);
+        tokio::spawn(traces_receiver::run(port));
+
+        tokio::spawn(async move {
+            for _ in 0..1000 {
+                tokio::task::yield_now().await;
+                let address = (std::net::Ipv4Addr::LOCALHOST, port);
+                if let Ok(_) = tokio::net::TcpStream::connect(address).await {
+                    _ = RUNNING.set(());
+                    return;
+                }
+            }
+        });
     });
+
+    if let Err(_) =
+        tokio::time::timeout(Duration::from_secs(1), RUNNING.wait()).await
+    {
+        panic!("failed to start traces receiver");
+    }
 }
 
 /// Where the receiver answers. Override with `HARBOR_TEST_TRACES_URL`.
@@ -95,7 +118,7 @@ fn descends_from(
 
 #[tokio::test]
 async fn a_request_trace_is_exported_with_its_children() {
-    start_traces_receiver();
+    start_traces_receiver().await;
 
     let mut client = TestClient::new().await;
     client.submit_events().await;

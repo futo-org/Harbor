@@ -19,11 +19,7 @@ use prost::Message;
 
 type Received = Arc<Mutex<Vec<ResourceSpans>>>;
 
-pub(crate) async fn main() {
-    let port: u16 = std::env::var("HARBOR_TEST_TRACES_PORT")
-        .ok()
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(4318);
+pub(crate) async fn run(port: u16) {
     let app = Router::new()
         .route("/v1/traces", post(receive).get(dump))
         .with_state(Received::default());
