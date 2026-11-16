@@ -81,7 +81,7 @@ message PushTarget {
 // A client will want to sign one of these for each identity on the device that
 // it wants notifications for.
 message PushSubscription {
-  // Serialized `PushToken` message.
+  // Serialized `PushTarget` message.
   bytes push_target_bytes = 1;
 
   // Signature of `push_target_bytes` verifiable with `signer`.
@@ -101,7 +101,7 @@ message RegisterPushNotificationRequest {
   repeated PushSubscription subscriptions = 1;
 
   // We require that each subscription use the same target.
-  PushToken push_target = 2;
+  PushTarget push_target = 2;
 }
 
 message RegisterPushNotificationResponse {}
@@ -120,6 +120,6 @@ service NotificationService {
   // Streams the unread notification count of the authenticated identity,
   // now and whenever it changes
   rpc SubscribeUnreadNotificationCount(SubscribeUnreadNotificationCountRequest) returns (stream SubscribeUnreadNotificationCountResponse);
-  // Set (ovewrite) the push notification subscriptions for a client.
+  // Set (overwrite) the push notification subscriptions for a client.
   rpc RegisterPushNotifications(RegisterPushNotificationRequest) returns (RegisterPushNotificationResponse);
 }
