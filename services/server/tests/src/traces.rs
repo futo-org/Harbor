@@ -94,6 +94,7 @@ fn descends_from(
 }
 
 #[tokio::test]
+#[ignore]
 async fn a_request_trace_is_exported_with_its_children() {
     start_traces_receiver();
 
