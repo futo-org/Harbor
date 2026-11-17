@@ -6,11 +6,11 @@ import {
   ScreenHeader,
   Text,
 } from '@/src/common/components';
-import { Routes } from '@/src/common/constants';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
 import { Atoms, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { ScrollView, View } from 'react-native';
+import { useAnywhereHomeRoute } from './hooks/useAnywhereHomeRoute';
 
 /** Each browser's store, with the extension's listing once it has one. */
 const STORES: { browser: string; store: string; url?: string }[] = [
@@ -24,6 +24,7 @@ const STORES: { browser: string; store: string; url?: string }[] = [
 export default function GetExtensionScreen() {
   usePageTitle('Browser extension');
   const { theme } = useTheme();
+  const homeRoute = useAnywhereHomeRoute();
 
   return (
     <Screen>
@@ -32,9 +33,7 @@ export default function GetExtensionScreen() {
           <ScreenHeader
             title="Browser extension"
             onBack={() =>
-              router.canGoBack()
-                ? router.back()
-                : router.replace(Routes.tabs.anywhere.index)
+              router.canGoBack() ? router.back() : router.replace(homeRoute)
             }
           />
           <ScrollView
