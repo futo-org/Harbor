@@ -4,7 +4,6 @@ package polycentric.v2;
 import "polycentric/v2/common.proto";
 import "polycentric/v2/event_key.proto";
 import "polycentric/v2/events.proto";
-import "polycentric/v2/keypair.proto";
 import "polycentric/v2/server.proto";
 
 enum NotificationKind {
@@ -66,7 +65,7 @@ message SubscribeUnreadNotificationCountResponse {
   uint32 count = 1;
 }
 
-// Should only be used in `PushSubscription`.
+// Contains the information needed to deliver a push notification to a client.
 message PushTarget {
   // Push provider the token belongs to.
   // `expo` is the only provider currently supported.
@@ -77,41 +76,28 @@ message PushTarget {
 }
 
 // Represents a single push notification subscription requested by a client.
-// This includes a push target and an `(identity, signer)` filter for
-// the notifications to include.
-// A client will want to sign one of these for each identity on the device that
-// it wants notifications for.
-message PushSubscription {
-  // Serialized `PushTarget` message.
-  bytes push_target_bytes = 1;
-
-  // Signature of `push_target_bytes` verifiable with `signer`.
-  bytes signature = 2;
-
-  // The public key to register push notifications for.
-  // Notifications will only be pushed for identities that list this key.
-  PublicKey signer = 3;
-
-  // Only send push notifications that are for this identity.
-  string identity = 4;
+// The push target should be shared separately as a part of the request.
+// The JWT both specifies the identity to listen to notifications for and
+// authenticates the client's identity and key pair.
+message AuthenticatedPushSource {
+  string jwt = 1;
 }
 
-message RegisterPushNotificationRequest {
-  // A list of push notification registrations to replace any existing
-  // subscriptions for the push target or any signing keys listed.
-  repeated PushSubscription subscriptions = 1;
+message SetDevicePushSubscriptionsRequest {
+  // Specifies how to deliver the relevant push notifications.
+  PushTarget push_target = 1;
 
-  // We require that each subscription use the same target.
-  PushTarget push_target = 2;
+  // Specifies which identities this device should receive push notifications for.
+  repeated AuthenticatedPushSource subscriptions = 2;
 }
 
-message RegisterPushNotificationResponse {}
+message SetDevicePushSubscriptionsResponse {}
 
 /**
  * Notifications for an identity. ListNotifications, AcknowledgeNotifications
  * and SubscribeUnreadNotificationCount are served by the server. The push
- * registration methods are served by a push-notifications service;
- * a server without one answers them with NOT_FOUND.
+ * subscription method is served by a push-notifications service;
+ * a server without one answers it with NOT_FOUND.
  */
 service NotificationService {
   // Returns notifications for a user
@@ -122,5 +108,9 @@ service NotificationService {
   // now and whenever it changes
   rpc SubscribeUnreadNotificationCount(SubscribeUnreadNotificationCountRequest) returns (stream SubscribeUnreadNotificationCountResponse);
   // Set (overwrite) the push notification subscriptions for a client.
-  rpc RegisterPushNotifications(RegisterPushNotificationRequest) returns (RegisterPushNotificationResponse);
+  // Any pre-existing push subscriptions for the specified push target or any
+  // key pairs used are removed.
+  // This means that all existing subscriptions can be removed by simply
+  // leaving the subscriptions list empty.
+  rpc SetDevicePushSubscriptions(SetDevicePushSubscriptionsRequest) returns (SetDevicePushSubscriptionsResponse);
 }

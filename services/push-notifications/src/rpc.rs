@@ -1,7 +1,7 @@
 //! gRPC `NotificationService` impl. Each method delegates to a
 //! handler under `notifications/rpc/`.
 
-pub mod register_push_notifications;
+pub mod set_device_push_subscriptions;
 
 use crate::context::Context;
 use polycentric_common::models::protos_v2::notification_service_server::{
@@ -9,8 +9,9 @@ use polycentric_common::models::protos_v2::notification_service_server::{
 };
 use polycentric_common::models::protos_v2::{
     AcknowledgeNotificationsRequest, AcknowledgeNotificationsResponse, ListNotificationsRequest,
-    ListNotificationsResponse, RegisterPushNotificationRequest, RegisterPushNotificationResponse,
-    SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse,
+    ListNotificationsResponse, SetDevicePushSubscriptionsRequest,
+    SetDevicePushSubscriptionsResponse, SubscribeUnreadNotificationCountRequest,
+    SubscribeUnreadNotificationCountResponse,
 };
 use std::sync::Arc;
 use tonic::codegen::BoxStream;
@@ -54,12 +55,12 @@ impl NotificationService for NotificationServiceImpl {
         ))
     }
 
-    async fn register_push_notifications(
+    async fn set_device_push_subscriptions(
         &self,
-        request: Request<RegisterPushNotificationRequest>,
-    ) -> Result<Response<RegisterPushNotificationResponse>, Status> {
+        request: Request<SetDevicePushSubscriptionsRequest>,
+    ) -> Result<Response<SetDevicePushSubscriptionsResponse>, Status> {
         Ok(Response::new(
-            register_push_notifications::handle(&self.ctx, request.into_inner()).await?,
+            set_device_push_subscriptions::handle(&self.ctx, request.into_inner()).await?,
         ))
     }
 }
@@ -75,10 +76,11 @@ mod tests {
     use super::*;
     use crate::manager::{NotificationManager, PushService};
     use crate::polycentric::PolycentricClient;
-    use crate::rpc::register_push_notifications::MAX_SUBSCRIPTIONS;
+    use crate::rpc::set_device_push_subscriptions::{ALLOWED_AUDIENCES, MAX_SUBSCRIPTIONS};
+    use base64::Engine;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
     use ed25519_dalek::{Signer, SigningKey};
-    use polycentric_common::models::protos_v2::{KeyType, PublicKey, PushSubscription, PushTarget};
-    use prost::Message;
+    use polycentric_common::models::protos_v2::{AuthenticatedPushSource, PushTarget};
     use sea_orm::{DatabaseConnection, DbBackend, MockDatabase, MockExecResult};
     use tonic::Code;
 
@@ -109,36 +111,52 @@ mod tests {
         }
     }
 
-    fn signer(key: &SigningKey) -> PublicKey {
-        PublicKey {
-            key_type: KeyType::Ed25519.into(),
-            key: key.verifying_key().to_bytes().to_vec(),
-        }
+    fn now() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
     }
 
-    fn subscribe(key: &SigningKey, target: &PushTarget, identity: &str) -> PushSubscription {
-        let push_target_bytes = target.encode_to_vec();
-        PushSubscription {
-            signature: key.sign(&push_target_bytes).to_bytes().to_vec(),
-            push_target_bytes,
-            signer: Some(signer(key)),
-            identity: identity.to_string(),
-        }
+    /// Mint a token matching js-core's `createServerJwt` format.
+    fn mint(key: &SigningKey, iss: &str, aud: &str, exp: u64) -> String {
+        let kid = hex::encode(key.verifying_key().to_bytes());
+        let header = format!(r#"{{"alg":"EdDSA","typ":"JWT","kid":"{kid}"}}"#);
+        let claims = format!(r#"{{"iss":"{iss}","aud":"{aud}","iat":0,"exp":{exp}}}"#);
+        let signing_input = format!(
+            "{}.{}",
+            URL_SAFE_NO_PAD.encode(header),
+            URL_SAFE_NO_PAD.encode(claims)
+        );
+        let signature = key.sign(signing_input.as_bytes());
+        format!(
+            "{signing_input}.{}",
+            URL_SAFE_NO_PAD.encode(signature.to_bytes())
+        )
+    }
+
+    fn source(jwt: String) -> AuthenticatedPushSource {
+        AuthenticatedPushSource { jwt }
+    }
+
+    /// A valid subscription for `identity`, signed by `key`.
+    fn subscribe(key: &SigningKey, identity: &str) -> AuthenticatedPushSource {
+        source(mint(key, identity, &ALLOWED_AUDIENCES[0], now() + 300))
     }
 
     fn request(
         push_target: Option<PushTarget>,
-        subscriptions: Vec<PushSubscription>,
-    ) -> Request<RegisterPushNotificationRequest> {
-        Request::new(RegisterPushNotificationRequest {
-            subscriptions,
+        subscriptions: Vec<AuthenticatedPushSource>,
+    ) -> Request<SetDevicePushSubscriptionsRequest> {
+        Request::new(SetDevicePushSubscriptionsRequest {
             push_target,
+            subscriptions,
         })
     }
 
-    async fn rejection(req: Request<RegisterPushNotificationRequest>) -> Code {
+    async fn rejection(req: Request<SetDevicePushSubscriptionsRequest>) -> Code {
         service()
-            .register_push_notifications(req)
+            .set_device_push_subscriptions(req)
             .await
             .expect_err("expected the request to be rejected")
             .code()
@@ -150,7 +168,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_missing_target() {
-        let sub = subscribe(&key(1), &target(TOKEN), "id-a");
+        let sub = subscribe(&key(1), "id-a");
         assert_eq!(
             rejection(request(None, vec![sub])).await,
             Code::InvalidArgument
@@ -159,12 +177,11 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_too_many_subscriptions() {
-        let t = target(TOKEN);
         let subs = (0..=MAX_SUBSCRIPTIONS)
-            .map(|i| subscribe(&key(1), &t, &format!("id-{i}")))
+            .map(|i| subscribe(&key(1), &format!("id-{i}")))
             .collect();
         assert_eq!(
-            rejection(request(Some(t), subs)).await,
+            rejection(request(Some(target(TOKEN)), subs)).await,
             Code::InvalidArgument
         );
     }
@@ -175,7 +192,7 @@ mod tests {
             service: "apns".to_string(),
             token: TOKEN.to_string(),
         };
-        let sub = subscribe(&key(1), &t, "id-a");
+        let sub = subscribe(&key(1), "id-a");
         assert_eq!(
             rejection(request(Some(t), vec![sub])).await,
             Code::InvalidArgument
@@ -184,61 +201,49 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_bad_signature() {
-        let t = target(TOKEN);
-        let mut sub = subscribe(&key(1), &t, "id-a");
-        sub.signature[0] ^= 0xff;
+        let mut jwt = mint(&key(1), "id-a", &ALLOWED_AUDIENCES[0], now() + 300);
+        // Swap the signature for one from a different key.
+        let other = mint(&key(2), "id-a", &ALLOWED_AUDIENCES[0], now() + 300);
+        jwt.truncate(jwt.rfind('.').unwrap());
+        jwt.push_str(&other[other.rfind('.').unwrap()..]);
         assert_eq!(
-            rejection(request(Some(t), vec![sub])).await,
+            rejection(request(Some(target(TOKEN)), vec![source(jwt)])).await,
             Code::Unauthenticated
         );
     }
 
     #[tokio::test]
-    async fn rejects_missing_signer() {
-        let t = target(TOKEN);
-        let mut sub = subscribe(&key(1), &t, "id-a");
-        sub.signer = None;
+    async fn rejects_wrong_audience() {
+        let jwt = mint(&key(1), "id-a", "https://elsewhere.example", now() + 300);
         assert_eq!(
-            rejection(request(Some(t), vec![sub])).await,
+            rejection(request(Some(target(TOKEN)), vec![source(jwt)])).await,
             Code::Unauthenticated
         );
     }
 
     #[tokio::test]
-    async fn rejects_undecodable_target_bytes() {
-        let k = key(1);
-        // Field 1 specified with a length of 5 bytes but only 1 given.
-        let bytes = vec![0x0a, 0x05, b'a'];
-        let sub = PushSubscription {
-            signature: k.sign(&bytes).to_bytes().to_vec(),
-            push_target_bytes: bytes,
-            signer: Some(signer(&k)),
-            identity: "id-a".to_string(),
-        };
+    async fn rejects_expired_token() {
+        let jwt = mint(&key(1), "id-a", &ALLOWED_AUDIENCES[0], now() - 1);
         assert_eq!(
-            rejection(request(Some(target(TOKEN)), vec![sub])).await,
-            Code::InvalidArgument
+            rejection(request(Some(target(TOKEN)), vec![source(jwt)])).await,
+            Code::Unauthenticated
         );
     }
 
     #[tokio::test]
-    async fn rejects_mismatched_target() {
-        let sub = subscribe(&key(1), &target("ExponentPushToken[other]"), "id-a");
+    async fn rejects_malformed_token() {
+        let jwt = "not-a-jwt".to_string();
         assert_eq!(
-            rejection(request(Some(target(TOKEN)), vec![sub])).await,
-            Code::InvalidArgument
+            rejection(request(Some(target(TOKEN)), vec![source(jwt)])).await,
+            Code::Unauthenticated
         );
     }
 
     #[tokio::test]
     async fn rejects_duplicate_signer_and_identity() {
-        let t = target(TOKEN);
-        let subs = vec![
-            subscribe(&key(1), &t, "id-a"),
-            subscribe(&key(1), &t, "id-a"),
-        ];
+        let subs = vec![subscribe(&key(1), "id-a"), subscribe(&key(1), "id-a")];
         assert_eq!(
-            rejection(request(Some(t), subs)).await,
+            rejection(request(Some(target(TOKEN)), subs)).await,
             Code::InvalidArgument
         );
     }
@@ -265,12 +270,8 @@ mod tests {
             .into_connection();
         let svc = service_with_db(db.clone());
 
-        let t = target(TOKEN);
-        let subs = vec![
-            subscribe(&key(1), &t, "id-a"),
-            subscribe(&key(2), &t, "id-b"),
-        ];
-        svc.register_push_notifications(request(Some(t), subs))
+        let subs = vec![subscribe(&key(1), "id-a"), subscribe(&key(2), "id-b")];
+        svc.set_device_push_subscriptions(request(Some(target(TOKEN)), subs))
             .await
             .expect("expected registration to succeed");
 
@@ -299,7 +300,7 @@ mod tests {
             .into_connection();
         let svc = service_with_db(db.clone());
 
-        svc.register_push_notifications(request(Some(target(TOKEN)), vec![]))
+        svc.set_device_push_subscriptions(request(Some(target(TOKEN)), vec![]))
             .await
             .expect("expected unregistration to succeed");
 

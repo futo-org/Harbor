@@ -7,8 +7,8 @@ use polycentric_common::models::identity::assemble_recovery_payload;
 use polycentric_common::models::protos_v2::{
     AcknowledgeNotificationsRequest, ContentDigest, DeleteContentRequest, Event,
     GetAttributedToReactionCountsRequest, GetServerInfoRequest, Identity, ListEventsResponse,
-    PublicKey, PutEventsRequest, RegisterPushNotificationRequest, ResolveReportRequest,
-    SetBanStatusRequest, SignedEvent, UploadBlobRequest, UrlInfoRequest,
+    PublicKey, PutEventsRequest, ResolveReportRequest, SetBanStatusRequest,
+    SetDevicePushSubscriptionsRequest, SignedEvent, UploadBlobRequest, UrlInfoRequest,
     content_service_client::ContentServiceClient,
     event_sync_service_client::EventSyncServiceClient,
     identity_service_client::IdentityServiceClient,
@@ -889,26 +889,26 @@ impl PolycentricCore {
         ))
     }
 
-    /// Replace/update the push subscriptions of a push target.
-    /// `request_bytes` is a serialized `RegisterPushNotificationRequest`.
-    pub async fn register_push_notifications(
+    /// Set (overwrite) the push subscriptions of a push target.
+    /// `request_bytes` is a serialized `SetDevicePushSubscriptionsRequest`.
+    pub async fn set_device_push_subscriptions(
         &self,
         server_url: String,
         request_bytes: Vec<u8>,
     ) -> Result<(), CoreError> {
         let request =
-            RegisterPushNotificationRequest::decode(request_bytes.as_slice()).map_err(|e| {
+            SetDevicePushSubscriptionsRequest::decode(request_bytes.as_slice()).map_err(|e| {
                 CoreError::Decode(format!(
-                    "Failed to decode RegisterPushNotificationRequest: {e}"
+                    "Failed to decode SetDevicePushSubscriptionsRequest: {e}"
                 ))
             })?;
 
         let mut client = NotificationServiceClient::new(channel(&server_url).await?);
 
         client
-            .register_push_notifications(request)
+            .set_device_push_subscriptions(request)
             .await
-            .map_err(|e| CoreError::Network(format!("register_push_notifications: {e}")))?;
+            .map_err(|e| CoreError::Network(format!("set_device_push_subscriptions: {e}")))?;
 
         Ok(())
     }

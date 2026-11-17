@@ -11,7 +11,6 @@ import { UnknownFieldHandler } from "@protobuf-ts/runtime";
 import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
-import { PublicKey } from "./keypair";
 import { EventKey } from "./event_key";
 import { PageInfo } from "./common";
 import { EventHint } from "./events";
@@ -129,7 +128,7 @@ export interface SubscribeUnreadNotificationCountResponse {
     count: number;
 }
 /**
- * Should only be used in `PushSubscription`.
+ * Contains the information needed to deliver a push notification to a client.
  *
  * @generated from protobuf message polycentric.v2.PushTarget
  */
@@ -150,62 +149,39 @@ export interface PushTarget {
 }
 /**
  * Represents a single push notification subscription requested by a client.
- * This includes a push target and an `(identity, signer)` filter for
- * the notifications to include.
- * A client will want to sign one of these for each identity on the device that
- * it wants notifications for.
+ * The push target should be shared separately as a part of the request.
+ * The JWT both specifies the identity to listen to notifications for and
+ * authenticates the client's identity and key pair.
  *
- * @generated from protobuf message polycentric.v2.PushSubscription
+ * @generated from protobuf message polycentric.v2.AuthenticatedPushSource
  */
-export interface PushSubscription {
+export interface AuthenticatedPushSource {
     /**
-     * Serialized `PushTarget` message.
-     *
-     * @generated from protobuf field: bytes push_target_bytes = 1
+     * @generated from protobuf field: string jwt = 1
      */
-    pushTargetBytes: Uint8Array;
-    /**
-     * Signature of `push_target_bytes` verifiable with `signer`.
-     *
-     * @generated from protobuf field: bytes signature = 2
-     */
-    signature: Uint8Array;
-    /**
-     * The public key to register push notifications for.
-     * Notifications will only be pushed for identities that list this key.
-     *
-     * @generated from protobuf field: polycentric.v2.PublicKey signer = 3
-     */
-    signer?: PublicKey;
-    /**
-     * Only send push notifications that are for this identity.
-     *
-     * @generated from protobuf field: string identity = 4
-     */
-    identity: string;
+    jwt: string;
 }
 /**
- * @generated from protobuf message polycentric.v2.RegisterPushNotificationRequest
+ * @generated from protobuf message polycentric.v2.SetDevicePushSubscriptionsRequest
  */
-export interface RegisterPushNotificationRequest {
+export interface SetDevicePushSubscriptionsRequest {
     /**
-     * A list of push notification registrations to replace any existing
-     * subscriptions for the push target or any signing keys listed.
+     * Specifies how to deliver the relevant push notifications.
      *
-     * @generated from protobuf field: repeated polycentric.v2.PushSubscription subscriptions = 1
-     */
-    subscriptions: PushSubscription[];
-    /**
-     * We require that each subscription use the same target.
-     *
-     * @generated from protobuf field: polycentric.v2.PushTarget push_target = 2
+     * @generated from protobuf field: polycentric.v2.PushTarget push_target = 1
      */
     pushTarget?: PushTarget;
+    /**
+     * Specifies which identities this device should receive push notifications for.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.AuthenticatedPushSource subscriptions = 2
+     */
+    subscriptions: AuthenticatedPushSource[];
 }
 /**
- * @generated from protobuf message polycentric.v2.RegisterPushNotificationResponse
+ * @generated from protobuf message polycentric.v2.SetDevicePushSubscriptionsResponse
  */
-export interface RegisterPushNotificationResponse {
+export interface SetDevicePushSubscriptionsResponse {
 }
 /**
  * @generated from protobuf enum polycentric.v2.NotificationKind
@@ -665,40 +641,26 @@ class PushTarget$Type extends MessageType<PushTarget> {
  */
 export const PushTarget = new PushTarget$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class PushSubscription$Type extends MessageType<PushSubscription> {
+class AuthenticatedPushSource$Type extends MessageType<AuthenticatedPushSource> {
     constructor() {
-        super("polycentric.v2.PushSubscription", [
-            { no: 1, name: "push_target_bytes", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 2, name: "signature", kind: "scalar", T: 12 /*ScalarType.BYTES*/ },
-            { no: 3, name: "signer", kind: "message", T: () => PublicKey },
-            { no: 4, name: "identity", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        super("polycentric.v2.AuthenticatedPushSource", [
+            { no: 1, name: "jwt", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
-    create(value?: PartialMessage<PushSubscription>): PushSubscription {
+    create(value?: PartialMessage<AuthenticatedPushSource>): AuthenticatedPushSource {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.pushTargetBytes = new Uint8Array(0);
-        message.signature = new Uint8Array(0);
-        message.identity = "";
+        message.jwt = "";
         if (value !== undefined)
-            reflectionMergePartial<PushSubscription>(this, message, value);
+            reflectionMergePartial<AuthenticatedPushSource>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PushSubscription): PushSubscription {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AuthenticatedPushSource): AuthenticatedPushSource {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* bytes push_target_bytes */ 1:
-                    message.pushTargetBytes = reader.bytes();
-                    break;
-                case /* bytes signature */ 2:
-                    message.signature = reader.bytes();
-                    break;
-                case /* polycentric.v2.PublicKey signer */ 3:
-                    message.signer = PublicKey.internalBinaryRead(reader, reader.uint32(), options, message.signer);
-                    break;
-                case /* string identity */ 4:
-                    message.identity = reader.string();
+                case /* string jwt */ 1:
+                    message.jwt = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -711,19 +673,10 @@ class PushSubscription$Type extends MessageType<PushSubscription> {
         }
         return message;
     }
-    internalBinaryWrite(message: PushSubscription, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* bytes push_target_bytes = 1; */
-        if (message.pushTargetBytes.length)
-            writer.tag(1, WireType.LengthDelimited).bytes(message.pushTargetBytes);
-        /* bytes signature = 2; */
-        if (message.signature.length)
-            writer.tag(2, WireType.LengthDelimited).bytes(message.signature);
-        /* polycentric.v2.PublicKey signer = 3; */
-        if (message.signer)
-            PublicKey.internalBinaryWrite(message.signer, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
-        /* string identity = 4; */
-        if (message.identity !== "")
-            writer.tag(4, WireType.LengthDelimited).string(message.identity);
+    internalBinaryWrite(message: AuthenticatedPushSource, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string jwt = 1; */
+        if (message.jwt !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.jwt);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -731,35 +684,35 @@ class PushSubscription$Type extends MessageType<PushSubscription> {
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.PushSubscription
+ * @generated MessageType for protobuf message polycentric.v2.AuthenticatedPushSource
  */
-export const PushSubscription = new PushSubscription$Type();
+export const AuthenticatedPushSource = new AuthenticatedPushSource$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class RegisterPushNotificationRequest$Type extends MessageType<RegisterPushNotificationRequest> {
+class SetDevicePushSubscriptionsRequest$Type extends MessageType<SetDevicePushSubscriptionsRequest> {
     constructor() {
-        super("polycentric.v2.RegisterPushNotificationRequest", [
-            { no: 1, name: "subscriptions", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => PushSubscription },
-            { no: 2, name: "push_target", kind: "message", T: () => PushTarget }
+        super("polycentric.v2.SetDevicePushSubscriptionsRequest", [
+            { no: 1, name: "push_target", kind: "message", T: () => PushTarget },
+            { no: 2, name: "subscriptions", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => AuthenticatedPushSource }
         ]);
     }
-    create(value?: PartialMessage<RegisterPushNotificationRequest>): RegisterPushNotificationRequest {
+    create(value?: PartialMessage<SetDevicePushSubscriptionsRequest>): SetDevicePushSubscriptionsRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.subscriptions = [];
         if (value !== undefined)
-            reflectionMergePartial<RegisterPushNotificationRequest>(this, message, value);
+            reflectionMergePartial<SetDevicePushSubscriptionsRequest>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RegisterPushNotificationRequest): RegisterPushNotificationRequest {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SetDevicePushSubscriptionsRequest): SetDevicePushSubscriptionsRequest {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* repeated polycentric.v2.PushSubscription subscriptions */ 1:
-                    message.subscriptions.push(PushSubscription.internalBinaryRead(reader, reader.uint32(), options));
-                    break;
-                case /* polycentric.v2.PushTarget push_target */ 2:
+                case /* polycentric.v2.PushTarget push_target */ 1:
                     message.pushTarget = PushTarget.internalBinaryRead(reader, reader.uint32(), options, message.pushTarget);
                     break;
+                case /* repeated polycentric.v2.AuthenticatedPushSource subscriptions */ 2:
+                    message.subscriptions.push(AuthenticatedPushSource.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -771,13 +724,13 @@ class RegisterPushNotificationRequest$Type extends MessageType<RegisterPushNotif
         }
         return message;
     }
-    internalBinaryWrite(message: RegisterPushNotificationRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* repeated polycentric.v2.PushSubscription subscriptions = 1; */
-        for (let i = 0; i < message.subscriptions.length; i++)
-            PushSubscription.internalBinaryWrite(message.subscriptions[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* polycentric.v2.PushTarget push_target = 2; */
+    internalBinaryWrite(message: SetDevicePushSubscriptionsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* polycentric.v2.PushTarget push_target = 1; */
         if (message.pushTarget)
-            PushTarget.internalBinaryWrite(message.pushTarget, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+            PushTarget.internalBinaryWrite(message.pushTarget, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* repeated polycentric.v2.AuthenticatedPushSource subscriptions = 2; */
+        for (let i = 0; i < message.subscriptions.length; i++)
+            AuthenticatedPushSource.internalBinaryWrite(message.subscriptions[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -785,21 +738,21 @@ class RegisterPushNotificationRequest$Type extends MessageType<RegisterPushNotif
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.RegisterPushNotificationRequest
+ * @generated MessageType for protobuf message polycentric.v2.SetDevicePushSubscriptionsRequest
  */
-export const RegisterPushNotificationRequest = new RegisterPushNotificationRequest$Type();
+export const SetDevicePushSubscriptionsRequest = new SetDevicePushSubscriptionsRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class RegisterPushNotificationResponse$Type extends MessageType<RegisterPushNotificationResponse> {
+class SetDevicePushSubscriptionsResponse$Type extends MessageType<SetDevicePushSubscriptionsResponse> {
     constructor() {
-        super("polycentric.v2.RegisterPushNotificationResponse", []);
+        super("polycentric.v2.SetDevicePushSubscriptionsResponse", []);
     }
-    create(value?: PartialMessage<RegisterPushNotificationResponse>): RegisterPushNotificationResponse {
+    create(value?: PartialMessage<SetDevicePushSubscriptionsResponse>): SetDevicePushSubscriptionsResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         if (value !== undefined)
-            reflectionMergePartial<RegisterPushNotificationResponse>(this, message, value);
+            reflectionMergePartial<SetDevicePushSubscriptionsResponse>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RegisterPushNotificationResponse): RegisterPushNotificationResponse {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: SetDevicePushSubscriptionsResponse): SetDevicePushSubscriptionsResponse {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -815,7 +768,7 @@ class RegisterPushNotificationResponse$Type extends MessageType<RegisterPushNoti
         }
         return message;
     }
-    internalBinaryWrite(message: RegisterPushNotificationResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: SetDevicePushSubscriptionsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -823,9 +776,9 @@ class RegisterPushNotificationResponse$Type extends MessageType<RegisterPushNoti
     }
 }
 /**
- * @generated MessageType for protobuf message polycentric.v2.RegisterPushNotificationResponse
+ * @generated MessageType for protobuf message polycentric.v2.SetDevicePushSubscriptionsResponse
  */
-export const RegisterPushNotificationResponse = new RegisterPushNotificationResponse$Type();
+export const SetDevicePushSubscriptionsResponse = new SetDevicePushSubscriptionsResponse$Type();
 /**
  * @generated ServiceType for protobuf service polycentric.v2.NotificationService
  */
@@ -833,5 +786,5 @@ export const NotificationService = new ServiceType("polycentric.v2.NotificationS
     { name: "ListNotifications", options: {}, I: ListNotificationsRequest, O: ListNotificationsResponse },
     { name: "AcknowledgeNotifications", options: {}, I: AcknowledgeNotificationsRequest, O: AcknowledgeNotificationsResponse },
     { name: "SubscribeUnreadNotificationCount", serverStreaming: true, options: {}, I: SubscribeUnreadNotificationCountRequest, O: SubscribeUnreadNotificationCountResponse },
-    { name: "RegisterPushNotifications", options: {}, I: RegisterPushNotificationRequest, O: RegisterPushNotificationResponse }
+    { name: "SetDevicePushSubscriptions", options: {}, I: SetDevicePushSubscriptionsRequest, O: SetDevicePushSubscriptionsResponse }
 ]);

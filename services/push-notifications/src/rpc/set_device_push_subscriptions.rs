@@ -1,15 +1,12 @@
-//! `register_push_notifications`: replace the push subscriptions of a push
-//! target and of every signer in the request. Each subscription is the
-//! target signed by a key, scoped to one identity. An empty subscription
-//! list removes the target's subscriptions (there is no unregister RPC).
-//! Mutation — no pipeline.
+//! `set_device_push_subscriptions`: replace the push subscriptions of a push
+//! target and of every signer in the request.
 
 use crate::context::Context;
 use crate::manager::PushService;
-use polycentric_common::error::CoreError;
+use polycentric_common::jwt::verify_jwt;
 use polycentric_common::models::protos_v2::{
-    PublicKey, PushSubscription, PushTarget, RegisterPushNotificationRequest,
-    RegisterPushNotificationResponse,
+    AuthenticatedPushSource, KeyType, PublicKey, SetDevicePushSubscriptionsRequest,
+    SetDevicePushSubscriptionsResponse,
 };
 use std::collections::HashSet;
 use tonic::Status;
@@ -19,12 +16,12 @@ pub const MAX_SUBSCRIPTIONS: usize = 100;
 
 pub async fn handle(
     ctx: &Context,
-    request: RegisterPushNotificationRequest,
-) -> Result<RegisterPushNotificationResponse, Status> {
+    request: SetDevicePushSubscriptionsRequest,
+) -> Result<SetDevicePushSubscriptionsResponse, Status> {
     // Extract input data from the request and doing basic checks
-    let RegisterPushNotificationRequest {
-        subscriptions,
+    let SetDevicePushSubscriptionsRequest {
         push_target,
+        subscriptions,
     } = request;
 
     let target = push_target.ok_or_else(|| Status::invalid_argument("missing push_target"))?;
@@ -44,10 +41,11 @@ pub async fn handle(
     }
 
     // Ensure that all of the subscriptions are valid
+    let now = now_secs();
     let subscriptions = subscriptions
-        .into_iter()
+        .iter()
         .enumerate()
-        .map(|(index, subscription)| open_subscription(index, subscription, &target))
+        .map(|(index, source)| authenticate_source(index, source, now))
         .collect::<Result<Vec<_>, Status>>()?;
 
     // Detect duplicates in subscriptions
@@ -67,28 +65,40 @@ pub async fn handle(
         .await
         .map_err(|err| Status::unknown(err.to_string()))?;
 
-    Ok(RegisterPushNotificationResponse {})
+    Ok(SetDevicePushSubscriptionsResponse {})
 }
 
-/// Validate a subscription's signature and target.
+/// Verify a subscription's JWT and return its `(signer, identity)`.
 /// `index` is just for the error message.
-fn open_subscription(
+fn authenticate_source(
     index: usize,
-    subscription: PushSubscription,
-    target: &PushTarget,
+    source: &AuthenticatedPushSource,
+    now: u64,
 ) -> Result<(PublicKey, String), Status> {
-    let (identity, signer, signed_target) = subscription.open().map_err(|err| match err {
-        CoreError::SignatureError(msg) => {
-            Status::unauthenticated(format!("subscription {index}: {msg}"))
-        }
-        other => Status::invalid_argument(format!("subscription {index}: {other}")),
-    })?;
+    // Error mapper
+    let unauthenticated = |err| Status::unauthenticated(format!("subscription {index}: {err}"));
 
-    if signed_target != *target {
-        return Err(Status::invalid_argument(format!(
-            "subscription {index}: signed push target does not match push_target"
-        )));
-    }
+    // Check the signature and decode the token.
+    let verified = verify_jwt(&source.jwt).map_err(unauthenticated)?;
 
-    Ok((signer, identity))
+    // Ensure the token is valid in this context
+    verified
+        // TODO: source the allowed audiences from somewhere reasonable
+        .validate(&vec!["http://localhost:3001".to_string()], now)
+        .map_err(unauthenticated)?;
+
+    // Extract and return fields
+    let signer = PublicKey {
+        key_type: KeyType::Ed25519.into(),
+        key: verified.signed_by,
+    };
+
+    Ok((signer, verified.claims.iss))
+}
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
 }

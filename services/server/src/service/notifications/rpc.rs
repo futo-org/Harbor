@@ -6,7 +6,7 @@ use std::sync::Arc;
 use polycentric_common::models::protos_v2::{
     AcknowledgeNotificationsRequest, AcknowledgeNotificationsResponse,
     ListNotificationsRequest, ListNotificationsResponse,
-    RegisterPushNotificationRequest, RegisterPushNotificationResponse,
+    SetDevicePushSubscriptionsRequest, SetDevicePushSubscriptionsResponse,
     SubscribeUnreadNotificationCountRequest,
 };
 use tonic::{Request, Response, Status};
@@ -68,10 +68,10 @@ impl NotificationService for NotificationServiceImpl {
         ))
     }
 
-    async fn register_push_notifications(
+    async fn set_device_push_subscriptions(
         &self,
-        _request: Request<RegisterPushNotificationRequest>,
-    ) -> Result<Response<RegisterPushNotificationResponse>, Status> {
+        _request: Request<SetDevicePushSubscriptionsRequest>,
+    ) -> Result<Response<SetDevicePushSubscriptionsResponse>, Status> {
         return Err(Status::not_found(
             "Not implemented here. Use a push service.",
         ));

@@ -4,8 +4,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { NotificationService } from "./notifications";
-import type { RegisterPushNotificationResponse } from "./notifications";
-import type { RegisterPushNotificationRequest } from "./notifications";
+import type { SetDevicePushSubscriptionsResponse } from "./notifications";
+import type { SetDevicePushSubscriptionsRequest } from "./notifications";
 import type { SubscribeUnreadNotificationCountResponse } from "./notifications";
 import type { SubscribeUnreadNotificationCountRequest } from "./notifications";
 import type { ServerStreamingCall } from "@protobuf-ts/runtime-rpc";
@@ -20,8 +20,8 @@ import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
  * *
  * Notifications for an identity. ListNotifications, AcknowledgeNotifications
  * and SubscribeUnreadNotificationCount are served by the server. The push
- * registration methods are served by a push-notifications service;
- * a server without one answers them with NOT_FOUND.
+ * subscription method is served by a push-notifications service;
+ * a server without one answers it with NOT_FOUND.
  *
  * @generated from protobuf service polycentric.v2.NotificationService
  */
@@ -47,17 +47,21 @@ export interface INotificationServiceClient {
     subscribeUnreadNotificationCount(input: SubscribeUnreadNotificationCountRequest, options?: RpcOptions): ServerStreamingCall<SubscribeUnreadNotificationCountRequest, SubscribeUnreadNotificationCountResponse>;
     /**
      * Set (overwrite) the push notification subscriptions for a client.
+     * Any pre-existing push subscriptions for the specified push target or any
+     * key pairs used are removed.
+     * This means that all existing subscriptions can be removed by simply
+     * leaving the subscriptions list empty.
      *
-     * @generated from protobuf rpc: RegisterPushNotifications
+     * @generated from protobuf rpc: SetDevicePushSubscriptions
      */
-    registerPushNotifications(input: RegisterPushNotificationRequest, options?: RpcOptions): UnaryCall<RegisterPushNotificationRequest, RegisterPushNotificationResponse>;
+    setDevicePushSubscriptions(input: SetDevicePushSubscriptionsRequest, options?: RpcOptions): UnaryCall<SetDevicePushSubscriptionsRequest, SetDevicePushSubscriptionsResponse>;
 }
 /**
  * *
  * Notifications for an identity. ListNotifications, AcknowledgeNotifications
  * and SubscribeUnreadNotificationCount are served by the server. The push
- * registration methods are served by a push-notifications service;
- * a server without one answers them with NOT_FOUND.
+ * subscription method is served by a push-notifications service;
+ * a server without one answers it with NOT_FOUND.
  *
  * @generated from protobuf service polycentric.v2.NotificationService
  */
@@ -97,11 +101,15 @@ export class NotificationServiceClient implements INotificationServiceClient, Se
     }
     /**
      * Set (overwrite) the push notification subscriptions for a client.
+     * Any pre-existing push subscriptions for the specified push target or any
+     * key pairs used are removed.
+     * This means that all existing subscriptions can be removed by simply
+     * leaving the subscriptions list empty.
      *
-     * @generated from protobuf rpc: RegisterPushNotifications
+     * @generated from protobuf rpc: SetDevicePushSubscriptions
      */
-    registerPushNotifications(input: RegisterPushNotificationRequest, options?: RpcOptions): UnaryCall<RegisterPushNotificationRequest, RegisterPushNotificationResponse> {
+    setDevicePushSubscriptions(input: SetDevicePushSubscriptionsRequest, options?: RpcOptions): UnaryCall<SetDevicePushSubscriptionsRequest, SetDevicePushSubscriptionsResponse> {
         const method = this.methods[3], opt = this._transport.mergeOptions(options);
-        return stackIntercept<RegisterPushNotificationRequest, RegisterPushNotificationResponse>("unary", this._transport, method, opt, input);
+        return stackIntercept<SetDevicePushSubscriptionsRequest, SetDevicePushSubscriptionsResponse>("unary", this._transport, method, opt, input);
     }
 }
