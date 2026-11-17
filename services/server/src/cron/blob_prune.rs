@@ -19,6 +19,8 @@ const TIME_BETWEEN_CHECKS: Duration = Duration::from_hours(6);
 /// Duration before we try again on error.
 const ERROR_RETRY: Duration = Duration::from_hours(1);
 
+// TODO(Thomas): fix.
+#[allow(dead_code)]
 pub(crate) fn run(
     cron: &Cron,
     db: DatabaseConnection,

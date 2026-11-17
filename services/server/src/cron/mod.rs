@@ -28,7 +28,10 @@ pub(crate) fn start_jobs(
     };
 
     gravity::update(&cron, db.clone());
+    /* TODO(Thomas): fix this.
     blob_prune::run(&cron, db.clone(), filestore);
+    */
+    _ = filestore;
 
     cron
 }
