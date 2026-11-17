@@ -18,7 +18,7 @@ jest.mock('@/src/common/components/toast/useToast', () => ({
 }));
 
 jest.mock('@/src/common/constants/routes', () => ({
-  Routes: { tabs: { settings: { servers: '/settings/servers' } } },
+  Routes: { tabs: { settings: { syncEvents: '/settings/sync-events' } } },
 }));
 
 import { showPushIssueToasts } from './pushIssueToasts';
@@ -92,6 +92,6 @@ describe('showPushIssueToasts', () => {
 
     const [, options] = mockToast.error.mock.calls[0];
     options.onPress();
-    expect(mockNavigate).toHaveBeenCalledWith('/settings/servers');
+    expect(mockNavigate).toHaveBeenCalledWith('/settings/sync-events');
   });
 });

@@ -2,8 +2,9 @@ import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
-import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Atoms, useTheme } from '@/src/common/theme';
+import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
+import { COLLECTION } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -48,11 +49,8 @@ export const Post = memo(function Post({
 
   const handlePress = useCallback(() => {
     if (disablePress) return;
-    const keyFingerprint = getKeyFingerprint(post.signedBy);
-    if (!keyFingerprint) return;
-    router.navigate(
-      Routes.tabs.post(post.identity, keyFingerprint, post.sequence),
-    );
+    const route = eventRoute({ ...post, collection: COLLECTION.FEED });
+    if (route) router.navigate(route);
   }, [disablePress, post]);
 
   const handleAuthorPress = useCallback(() => {

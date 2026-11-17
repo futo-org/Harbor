@@ -31,9 +31,9 @@ interface EventPushIssuesStore {
    * already stored for an event gets replaced.
    */
   record: (results: ServerPushResult[], now?: number) => EventPushIssue[];
-  dismiss: (identity: string, id: string) => void;
+  dismiss: (identityKey: string, id: string) => void;
   /** Clear all event push issues stored for an identity */
-  clearServer: (identity: string, server: string) => void;
+  clearServer: (identityKey: string, server: string) => void;
   clearAll: () => void;
 }
 
@@ -95,19 +95,19 @@ export const useEventPushIssuesStore = create<EventPushIssuesStore>(
       if (affected_identities.size > 0) set({ issues });
       return added;
     },
-    dismiss: (identity, id) =>
+    dismiss: (identityKey, id) =>
       set((s) => {
-        const { [id]: _, ...identityIssues } = s.issues[identity] ?? {};
-        return { issues: { ...s.issues, [identity]: identityIssues } };
+        const { [id]: _, ...identityIssues } = s.issues[identityKey] ?? {};
+        return { issues: { ...s.issues, [identityKey]: identityIssues } };
       }),
-    clearServer: (identity, server) =>
+    clearServer: (identityKey, server) =>
       set((s) => {
         const identityIssues = Object.fromEntries(
-          Object.entries(s.issues[identity] ?? {}).filter(
+          Object.entries(s.issues[identityKey] ?? {}).filter(
             ([, issue]) => issue.server !== server,
           ),
         );
-        return { issues: { ...s.issues, [identity]: identityIssues } };
+        return { issues: { ...s.issues, [identityKey]: identityIssues } };
       }),
     clearAll: () => set({ issues: {} }),
   }),
@@ -116,7 +116,7 @@ export const useEventPushIssuesStore = create<EventPushIssuesStore>(
 const NO_ISSUES: Record<string, EventPushIssue> = {};
 
 /** Get the store of event push issues for a specific identity. */
-export const useIdentityPushIssues = (identity: string | null) =>
+export const useIdentityPushIssues = (identityKey: string | null) =>
   useEventPushIssuesStore((s) =>
-    identity === null ? NO_ISSUES : (s.issues[identity] ?? NO_ISSUES),
+    identityKey === null ? NO_ISSUES : (s.issues[identityKey] ?? NO_ISSUES),
   );
