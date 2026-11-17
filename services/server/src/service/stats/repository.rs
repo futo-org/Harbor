@@ -2,13 +2,14 @@ use std::collections::HashMap;
 
 use entity::{attributed_to_reaction_summary, interaction_tally, reaction};
 use sea_orm::ActiveValue::Set;
+use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
     Asterisk, Expr, ExprTrait, Func, OnConflict, SelectStatement,
 };
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 
 use crate::data::EventId;
-use crate::db::{Connection, in_array};
+use crate::db::Connection;
 
 pub struct Query;
 
@@ -34,10 +35,10 @@ impl Query {
                 interaction_tally::Column::RepostCount,
                 interaction_tally::Column::QuoteCount,
             ])
-            .cond_where(in_array(
-                Expr::col(interaction_tally::Column::EventId.as_column_ref()),
-                event_ids,
-            ))
+            .cond_where(
+                Expr::col(interaction_tally::Column::EventId.as_column_ref())
+                    .eq_any(event_ids),
+            )
             .from(interaction_tally::Entity);
 
         let rows = db.query_all(&query).await?;
@@ -87,10 +88,10 @@ impl Query {
                 "positive",
             )
             .expr_as(Expr::from(Func::count(Expr::col(Asterisk))), "count")
-            .cond_where(in_array(
-                Expr::col(reaction::Column::OnPost.as_column_ref()),
-                event_ids,
-            ))
+            .cond_where(
+                Expr::col(reaction::Column::OnPost.as_column_ref())
+                    .eq_any(event_ids),
+            )
             .and_where(
                 Expr::col(reaction::Column::Emoji.as_column_ref())
                     .is_not_null(),
