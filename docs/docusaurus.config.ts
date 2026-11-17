@@ -133,6 +133,11 @@ const config: Config = {
           label: 'Code',
           position: 'right',
         },
+        {
+          href: 'https://store.harbor.social',
+          label: 'Merch',
+          position: 'right',
+        },
       ],
     },
     footer: {
@@ -173,6 +178,7 @@ const config: Config = {
               label: 'Forgejo',
               href: 'https://code.futo.org/harbor/harbor',
             },
+            { label: 'Merch', href: 'https://store.harbor.social' },
           ],
         },
       ],
