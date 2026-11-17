@@ -1,10 +1,4 @@
 jest.mock('@/src/common/theme', () => ({
-  useTheme: () => ({
-    theme: {
-      palette: new Proxy({}, { get: () => '#000' }),
-      atoms: new Proxy({}, { get: () => ({}) }),
-    },
-  }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
 }));

@@ -13,7 +13,7 @@ import {
   useIsFocused,
   useLocalSearchParams,
 } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { type SharedValue, useSharedValue } from 'react-native-reanimated';
 import useBlocks from '../block/hooks/useBlocks';
@@ -69,7 +69,6 @@ export default function ProfileScreen({
 }
 
 function ProfileScreenContent() {
-  const { theme } = useTheme();
   const { identityKey, activeFeed, setActiveFeed } = useProfileContext();
 
   // The screen's one network fetch; the headers and tabs read the shared cache.
@@ -104,28 +103,13 @@ function ProfileScreenContent() {
     router.back();
   }, []);
 
-  // Stabilise the props for `memo(ProfileHeader)` — otherwise a fresh
-  // array reference on every render defeats the memoisation.
-  const bannerColors = useMemo<[string, string]>(
-    () => [
-      theme.palette.background_secondary,
-      theme.palette.background_primary,
-    ],
-    [theme.palette.background_secondary, theme.palette.background_primary],
-  );
   // Drive the compact header's take-over once the full header has passed.
   const scrollY = useSharedValue(0);
   const [headerHeight, setHeaderHeight] = useState(0);
 
   const renderHeader = useCallback(
-    () => (
-      <ProfileHeader
-        bannerColors={bannerColors}
-        onBack={handleBack}
-        scrollY={scrollY}
-      />
-    ),
-    [bannerColors, handleBack, scrollY],
+    () => <ProfileHeader onBack={handleBack} scrollY={scrollY} />,
+    [handleBack, scrollY],
   );
 
   const renderTabBar = useCallback(
@@ -233,10 +217,8 @@ function AliasStatus({
             Atoms.p_lg,
           ]}
         >
-          {loading ? (
-            <ActivityIndicator color={theme.palette.primary_500} />
-          ) : null}
-          <Text variant="body" color="neutral_500">
+          {loading ? <ActivityIndicator color={theme.colors.accent} /> : null}
+          <Text variant="body" color="muted">
             {message}
           </Text>
         </View>

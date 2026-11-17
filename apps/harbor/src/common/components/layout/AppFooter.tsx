@@ -85,13 +85,9 @@ function ThemeSwitcher() {
       accessibilityRole="button"
       hitSlop={8}
       onPress={() => setThemePreference(next.preference)}
-      style={({ pressed }) => [pressed && { opacity: 0.65 }]}
+      style={({ pressed }) => [pressed && Atoms.faded]}
     >
-      <Icon
-        name={current.icon}
-        size={typography.fontSize.sm}
-        color="neutral_500"
-      />
+      <Icon name={current.icon} size={typography.fontSize.sm} color="muted" />
     </Pressable>
   );
 }
@@ -108,7 +104,7 @@ function FooterLink({ href, text }: FooterLinkProps) {
       href={href}
       target="_blank"
       accessibilityLabel={text}
-      style={theme.atoms.text_neutral_low}
+      style={theme.atoms.muted}
     >
       {text}
     </Link>

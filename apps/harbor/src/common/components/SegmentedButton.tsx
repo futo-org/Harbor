@@ -71,11 +71,9 @@ export function SegmentedButton({
       style={[
         Atoms.flex_row,
         Atoms.rounded_full,
-        {
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: theme.palette.neutral_50,
-          backgroundColor: theme.palette.neutral_25,
-        },
+        theme.atoms.box.secondary.bg,
+        theme.atoms.box.secondary.border,
+        { borderWidth: StyleSheet.hairlineWidth },
         style,
       ]}
       {...props}
@@ -171,11 +169,11 @@ function ActiveSegmentIndicator({
     <Animated.View
       style={[
         Atoms.absolute,
+        theme.atoms.box.accent.bg,
         {
           // Covers the track's top and bottom border.
           top: -StyleSheet.hairlineWidth,
           bottom: -StyleSheet.hairlineWidth,
-          backgroundColor: theme.palette.primary_500,
         },
         indicatorStyle,
       ]}
@@ -245,7 +243,7 @@ function Segment({
         hovered && !active
           ? // A hovered segment stays below the indicator, so on web its
             // background can't cover the indicator's edge after pixel rounding.
-            { backgroundColor: theme.palette.neutral_50 }
+            theme.atoms.box.secondary.bg_hover
           : { zIndex: ZIndex.raised },
         // Keeps the hover background inside the track's rounded ends.
         isFirst && LEFT_ROUNDED,
@@ -256,12 +254,12 @@ function Segment({
         <StaticSegmentIndicator isFirst={isFirst} isLast={isLast} />
       )}
       <Animated.View style={[contentStyle, inactiveContentStyle]}>
-        <SegmentContent label={label} icon={icon} color="neutral_500" />
+        <SegmentContent label={label} icon={icon} color="muted" />
       </Animated.View>
       <Animated.View
         style={[StyleSheet.absoluteFill, contentStyle, activeContentStyle]}
       >
-        <SegmentContent label={label} icon={icon} color="white" />
+        <SegmentContent label={label} icon={icon} color="light" />
       </Animated.View>
     </Pressable>
   );
@@ -284,6 +282,7 @@ function StaticSegmentIndicator({
     <View
       style={[
         Atoms.absolute,
+        theme.atoms.box.accent.bg,
         {
           // Covers the separators and track border around the segment,
           // like `ActiveSegmentIndicator`.
@@ -291,7 +290,6 @@ function StaticSegmentIndicator({
           bottom: -StyleSheet.hairlineWidth,
           left: -StyleSheet.hairlineWidth,
           right: -StyleSheet.hairlineWidth,
-          backgroundColor: theme.palette.primary_500,
         },
         isFirst && LEFT_ROUNDED,
         isLast && RIGHT_ROUNDED,
@@ -306,10 +304,10 @@ function SegmentSeparator() {
 
   return (
     <View
-      style={{
-        width: StyleSheet.hairlineWidth,
-        backgroundColor: theme.palette.neutral_50,
-      }}
+      style={[
+        theme.atoms.box.secondary.border,
+        { borderLeftWidth: StyleSheet.hairlineWidth },
+      ]}
     />
   );
 }
@@ -321,7 +319,7 @@ function SegmentContent({
 }: {
   label: string;
   icon?: IconName;
-  color: 'neutral_500' | 'white';
+  color: 'muted' | 'light';
 }) {
   return (
     <>

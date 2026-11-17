@@ -7,7 +7,7 @@ import {
   type PostData,
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -66,15 +66,10 @@ export default function PostMenu({ post }: PostMenuProps) {
                 // overflow:hidden forces a rounded clip on native — without it the
                 // press background renders with square corners.
                 Atoms.overflow_hidden,
-                (hovered || pressed) && {
-                  backgroundColor: withHexOpacity(
-                    theme.palette.neutral_500,
-                    '14',
-                  ),
-                },
+                (hovered || pressed) && theme.atoms.box.raised.bg,
               ]}
             >
-              <Icon name="more" color="neutral_500" size={16} />
+              <Icon name="more" color="muted" size={16} />
             </View>
           )}
         </DropdownMenu.Trigger>
@@ -83,14 +78,14 @@ export default function PostMenu({ post }: PostMenuProps) {
           <DropdownMenu.Item
             onPress={() => copyToClipboard(buildPostLink(post))}
           >
-            <Icon name="copy" color="neutral_500" size={16} />
+            <Icon name="copy" color="muted" size={16} />
             <Text variant="secondary" fontWeight="bold">
               Copy Link
             </Text>
           </DropdownMenu.Item>
           {/* Info */}
           <DropdownMenu.Item onPress={() => setShowInfoSheet(true)}>
-            <Icon name="infoOutline" color="neutral_500" size={16} />
+            <Icon name="infoOutline" color="muted" size={16} />
             <Text variant="secondary" fontWeight="bold">
               Post info
             </Text>
@@ -98,8 +93,8 @@ export default function PostMenu({ post }: PostMenuProps) {
           {/* Delete  */}
           {isPostAuthor && (
             <DropdownMenu.Item onPress={onDeletePress}>
-              <Icon name="trashBin" color="negative_500" size={16} />
-              <Text variant="secondary" fontWeight="bold" color="negative_500">
+              <Icon name="trashBin" color="danger" size={16} />
+              <Text variant="secondary" fontWeight="bold" color="danger">
                 Delete
               </Text>
             </DropdownMenu.Item>
@@ -109,7 +104,7 @@ export default function PostMenu({ post }: PostMenuProps) {
             <DropdownMenu.Item
               onPress={() => withIdentity(() => setShowReportSheet(true))}
             >
-              <Icon name="flag" color="neutral_500" size={16} />
+              <Icon name="flag" color="muted" size={16} />
               <Text variant="secondary" fontWeight="bold">
                 Report
               </Text>

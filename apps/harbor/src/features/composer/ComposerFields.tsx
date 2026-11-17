@@ -12,7 +12,6 @@ import {
   Spacing,
   typography,
   useTheme,
-  withHexOpacity,
 } from '@/src/common/theme';
 import { useCallback, useRef, useState } from 'react';
 import {
@@ -182,17 +181,11 @@ export function ComposerFields({
         <View
           style={[
             Atoms.p_md,
-            {
-              borderBottomWidth: 1,
-              borderBottomColor: withHexOpacity(
-                theme.palette.negative_500,
-                '80',
-              ),
-              marginBottom: 10,
-            },
+            theme.atoms.box.danger.border,
+            { borderBottomWidth: 1, marginBottom: 10 },
           ]}
         >
-          <Text variant="secondary" color="negative_500">
+          <Text variant="secondary" color="danger">
             {error}
           </Text>
         </View>
@@ -287,7 +280,7 @@ export function ComposerFields({
                 aria-hidden
                 fontSize="lg"
                 lineHeight="lg"
-                color={submitting ? 'neutral_500' : undefined}
+                color={submitting ? 'muted' : undefined}
                 style={[
                   styles.webMirror,
                   submitting && styles.webMirrorDisabled,
@@ -391,14 +384,12 @@ function ComposerLinkPreview({
             Atoms.p_md,
             Atoms.rounded_md,
             Atoms.mt_md,
-            {
-              borderWidth: 1,
-              borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-            },
+            theme.atoms.outline,
+            { borderWidth: 1 },
           ]}
         >
-          <ActivityIndicator size="small" color={theme.palette.neutral_500} />
-          <Text variant="secondary" color="neutral_500">
+          <ActivityIndicator size="small" color={theme.colors.muted} />
+          <Text variant="secondary" color="muted">
             Loading preview…
           </Text>
         </View>
@@ -408,22 +399,24 @@ function ComposerLinkPreview({
         disabled={disabled}
         accessibilityLabel="Remove link preview"
         hitSlop={6}
-        style={{
-          position: 'absolute',
-          // Below the card's own mt_md top margin (margins stay inside the
-          // wrapper, so the card's top edge is Spacing.md down from ours).
-          top: Spacing.md + 4,
-          right: 4,
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: withHexOpacity(theme.palette.black, 'b0'),
-          opacity: disabled ? 0.4 : 1,
-        }}
+        style={[
+          theme.atoms.media_control.bg,
+          disabled && Atoms.faded,
+          {
+            position: 'absolute',
+            // Below the card's own mt_md top margin (margins stay inside the
+            // wrapper, so the card's top edge is Spacing.md down from ours).
+            top: Spacing.md + 4,
+            right: 4,
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+        ]}
       >
-        <Icon name="close" size={14} color="white" />
+        <Icon name="close" size={14} color="light" />
       </Pressable>
     </View>
   );
@@ -433,7 +426,7 @@ const useStyles = createThemedStyles((theme, define) =>
   define({
     webTextareaUnderMirror: {
       color: 'transparent',
-      caretColor: theme.palette.neutral_900,
+      caretColor: theme.colors.primary,
     },
     webMirror: [
       StyleSheet.absoluteFill,
@@ -442,6 +435,6 @@ const useStyles = createThemedStyles((theme, define) =>
       { pointerEvents: 'none' },
     ],
     // As the disabled input
-    webMirrorDisabled: { opacity: 0.5 },
+    webMirrorDisabled: Atoms.faded,
   }),
 );

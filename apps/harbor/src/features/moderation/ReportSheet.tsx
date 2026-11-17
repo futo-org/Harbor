@@ -85,7 +85,7 @@ export default function ReportSheet({
             isPending ? (
               <ActivityIndicator
                 size="small"
-                color={theme.palette.primary_500}
+                color={theme.colors.accent}
                 accessibilityLabel="Posting"
               />
             ) : (
@@ -140,11 +140,9 @@ function ReportOption({ option }: { option: ReportOptions[string] }) {
         Atoms.p_md,
         Atoms.pl_lg,
         Atoms.rounded_md,
-        {
-          backgroundColor: hovered
-            ? theme.palette.neutral_50
-            : theme.palette.neutral_25,
-        },
+        hovered
+          ? theme.atoms.box.secondary.bg_hover
+          : theme.atoms.box.secondary.bg,
       ]}
     >
       <Text fontWeight="bold">{option.label}</Text>

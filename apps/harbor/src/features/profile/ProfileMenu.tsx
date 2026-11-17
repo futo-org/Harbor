@@ -3,7 +3,7 @@ import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon, { type IconName } from '@/src/common/components/Icon';
 import { withIdentity } from '@/src/common/lib/authGate';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { COLLECTION } from '@polycentric/react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -106,15 +106,10 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
                 // overflow:hidden forces a rounded clip on native — without it
                 // the press background renders with square corners.
                 Atoms.overflow_hidden,
-                (hovered || pressed) && {
-                  backgroundColor: withHexOpacity(
-                    theme.palette.neutral_500,
-                    '14',
-                  ),
-                },
+                (hovered || pressed) && theme.atoms.box.raised.bg,
               ]}
             >
-              <Icon name="dotsVertical" color="neutral_500" size={20} />
+              <Icon name="dotsVertical" color="muted" size={20} />
             </View>
           )}
         </DropdownMenu.Trigger>
@@ -123,13 +118,13 @@ export default function ProfileMenu({ onSharePress }: ProfileMenuProps) {
             <DropdownMenu.Item key={item.key} onPress={item.onPress}>
               <Icon
                 name={item.icon}
-                color={item.destructive ? 'negative_500' : 'neutral_500'}
+                color={item.destructive ? 'danger' : 'muted'}
                 size={16}
               />
               <Text
                 variant="secondary"
                 fontWeight="bold"
-                color={item.destructive ? 'negative_500' : undefined}
+                color={item.destructive ? 'danger' : undefined}
               >
                 {item.label}
               </Text>

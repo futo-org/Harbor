@@ -27,7 +27,6 @@ export function LabelPill({
   inline?: boolean;
 }) {
   const { theme } = useTheme();
-  const textColor = theme.palette.neutral_600;
   const openWarning = useModerationWarningStore((s) => s.openFor);
   // Showing goes through the sheet's confirm; hiding is immediate.
   const handlePress =
@@ -55,10 +54,10 @@ export function LabelPill({
         Atoms.max_w_full,
         Atoms.rounded_full,
         Atoms.overflow_hidden,
-        { backgroundColor: theme.palette.neutral_25 },
+        theme.atoms.box.secondary.bg,
         // Native inline views sit on the baseline; drop to the middle.
         inline && !isWeb && { transform: [{ translateY: Spacing.xs }] },
-        pressed && { opacity: 0.5 },
+        pressed && Atoms.faded,
       ]}
     >
       {action === 'Hide' ? null : (
@@ -80,10 +79,8 @@ export function LabelPill({
               fontSize="xs"
               lineHeight="xs"
               fontWeight="bold"
-              style={{
-                color: textColor,
-                transform: [{ translateY: Spacing['2xs'] }],
-              }}
+              color="secondary"
+              style={{ transform: [{ translateY: Spacing['2xs'] }] }}
             >
               *****
             </Text>
@@ -93,7 +90,8 @@ export function LabelPill({
               fontSize="xs"
               lineHeight="xs"
               numberOfLines={1}
-              style={[Atoms.flex_shrink_1, { color: textColor }]}
+              color="secondary"
+              style={Atoms.flex_shrink_1}
             >
               {labelNames(labels)}
             </Text>
@@ -107,7 +105,7 @@ export function LabelPill({
             inline ? { paddingVertical: Spacing['2xs'] } : Atoms.py_xs,
             Atoms.self_stretch,
             Atoms.justify_center,
-            { backgroundColor: theme.palette.neutral_50 },
+            theme.atoms.box.secondary.bg_hover,
           ]}
         >
           <Text
@@ -115,7 +113,7 @@ export function LabelPill({
             fontSize="xs"
             lineHeight="xs"
             fontWeight="bold"
-            style={{ color: textColor }}
+            color="secondary"
           >
             {action}
           </Text>

@@ -44,9 +44,10 @@ function AppearanceSettingRow() {
       >
         <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
           <Icon
-            name={theme.name === 'dark' ? 'themeDark' : 'themeLight'}
+            name={theme.scheme === 'dark' ? 'themeDark' : 'themeLight'}
             size={22}
-            color={theme.scheme === 'dark' ? 'neutral_600' : 'primary_600'}
+            // Gray in dark mode, unlike the other settings icons
+            color={theme.scheme === 'dark' ? 'secondary' : 'accent'}
           />
           <Text variant="body">Theme</Text>
         </View>
@@ -79,7 +80,7 @@ function LinkPreviewSettingRow() {
         ]}
       >
         <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
-          <Icon name="image" size={22} color="primary_600" />
+          <Icon name="image" size={22} color="accent" />
           <Text variant="body">Generate Link Previews</Text>
         </View>
         <Switch value={enabled} onValueChange={setEnabled} />
@@ -290,11 +291,11 @@ function ListItemWrapper({
           Atoms.items_center,
           Atoms.justify_between,
           Atoms.pl_xs,
-          !onPress && { opacity: 0.5 },
+          !onPress && Atoms.faded,
         ]}
       >
         {children}
-        <Icon name="chevronForward" size={18} color="neutral_500" />
+        <Icon name="chevronForward" size={18} color="muted" />
       </View>
     </ListItem>
   );
@@ -317,7 +318,7 @@ function VersionRow() {
         ]}
       >
         <Text variant="body">Version</Text>
-        <Text variant="body" color="neutral_500">
+        <Text variant="body" color="muted">
           {version ?? 'unknown'}
           {build ? ` (${build})` : ''}
         </Text>
@@ -350,7 +351,7 @@ function CheckForUpdatesRow() {
         ]}
       >
         <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_md]}>
-          <Icon name="download" size={22} color="primary_600" />
+          <Icon name="download" size={22} color="accent" />
           <Text variant="body">Check for updates</Text>
         </View>
         {checking ? <ActivityIndicator size="small" /> : null}

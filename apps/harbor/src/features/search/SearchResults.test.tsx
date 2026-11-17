@@ -1,14 +1,18 @@
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
     theme: {
-      palette: new Proxy({}, { get: () => '#000' }),
-      atoms: new Proxy({}, { get: () => ({}) }),
+      colors: { muted: '#000' },
+      atoms: new Proxy(
+        {},
+        {
+          get: () =>
+            new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
+        },
+      ),
     },
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
-  // The pager renders a post skeleton for pages it has not shown yet.
-  withHexOpacity: (color: string) => color,
   typography: { lineHeight: new Proxy({}, { get: () => 20 }) },
   ZIndex: { raised: 10 },
 }));
