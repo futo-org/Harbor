@@ -6,7 +6,7 @@ tilt = "0.37.9"
 # Node from .nvmrc; pnpm matches package.json.
 pnpm = "12.16.1"
 # For the rs-core wasm build; pinned as in the Dockerfiles, CI and Cargo.lock.
-rust = { version = "1.99.1", targets = "wasm32-unknown-unknown" }
+rust = { version = "1.100.0", targets = "wasm32-unknown-unknown" }
 protoc = "36.2"
 "cargo:wasm-bindgen-cli" = "0.2.130"
 
