@@ -43,8 +43,8 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
         Atoms.align_center,
         Atoms.rounded_full,
         Atoms.cursor_pointer,
-        hovered && { opacity: 0.8 },
-        pressed && { opacity: 0.6 },
+        hovered && Atoms.faded_subtle,
+        pressed && Atoms.faded,
       ]}
       hitSlop={16}
     >

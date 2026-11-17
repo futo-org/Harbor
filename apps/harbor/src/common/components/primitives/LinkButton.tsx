@@ -2,9 +2,8 @@ import { usePressAnimation } from '@/src/common/lib/animation';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
   Atoms,
-  useTheme,
   type FontWeightToken,
-  type PaletteColorToken,
+  type TextColor,
 } from '@/src/common/theme';
 import { type Href, Link, router } from 'expo-router';
 import {
@@ -15,15 +14,14 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Text, type TextVariant } from './Text';
-
-type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
+import { type IconName, type IconRenderFn, renderIcon } from '../Icon';
 
 interface LinkButtonProps extends Omit<PressableProps, 'style' | 'href'> {
   onPress?: () => void;
   href?: Href;
   title: string;
-  color?: PaletteColorToken;
-  icon?: IconRenderFn;
+  color?: TextColor;
+  icon?: IconName | IconRenderFn;
   style?: StyleProp<ViewStyle>;
   containerStyle?: StyleProp<ViewStyle>;
   variant?: TextVariant;
@@ -35,7 +33,7 @@ export function LinkButton({
   onPress,
   href,
   title,
-  color = 'primary_500',
+  color = 'accent',
   icon,
   style,
   containerStyle,
@@ -45,11 +43,8 @@ export function LinkButton({
   disabled,
   ...props
 }: LinkButtonProps) {
-  const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
-
-  const textColor = theme.palette[color];
 
   const linkHref = href && !disabled ? Link.resolveHref(href) : undefined;
   const handlePress = (event?: { preventDefault?: () => void }) => {
@@ -79,7 +74,7 @@ export function LinkButton({
         hitSlop={8}
         {...props}
       >
-        {icon && icon({ size: 14, color: textColor })}
+        {icon && renderIcon(icon, { size: 14, color })}
         <Text
           variant={variant}
           fontWeight={fontWeight}

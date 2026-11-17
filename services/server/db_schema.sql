@@ -43,11 +43,6 @@ CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
             FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
            WHERE (ts_token_type.alias = 'numword'::text)
           LIMIT 1
-         ), token_word AS (
-          SELECT ts_token_type.tokid AS id
-            FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
-           WHERE (ts_token_type.alias = 'word'::text)
-          LIMIT 1
          ), token_sfloat AS (
           SELECT ts_token_type.tokid AS id
             FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
@@ -59,20 +54,21 @@ CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
            WHERE (ts_token_type.alias = 'blank'::text)
           LIMIT 1
          ), parsed AS (
-          SELECT parsed.tokid,
+          SELECT
                  CASE
                      WHEN ((parsed.tokid = ( SELECT token_sfloat.id
                         FROM token_sfloat)) AND (lead(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_numword.id
                         FROM token_numword))) THEN (parsed.token || lead(parsed.token, 1, ''::text) OVER ())
                      WHEN ((parsed.tokid = ( SELECT token_numword.id
                         FROM token_numword)) AND (lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_sfloat.id
-                        FROM token_sfloat))) THEN ''::text
+                        FROM token_sfloat))) THEN NULL::text
                      WHEN ((parsed.tokid = ( SELECT token_blank.id
                         FROM token_blank)) AND ("right"(parsed.token, 1) = '#'::text)) THEN ('#'::text || lead(parsed.token, 1, ''::text) OVER ())
                      WHEN ((lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_blank.id
-                        FROM token_blank)) AND (lag("right"(parsed.token, 1), 1, NULL::text) OVER () = '#'::text)) THEN ''::text
+                        FROM token_blank)) AND (lag("right"(parsed.token, 1), 1, NULL::text) OVER () = '#'::text)) THEN NULL::text
                      WHEN ((parsed.token = '@'::text) AND (lag(parsed.token, 1, NULL::text) OVER () IS NOT NULL) AND (lead(parsed.token, 1, NULL::text) OVER () IS NOT NULL)) THEN ((lag(parsed.token, 1, ''::text) OVER () || '@'::text) || lead(parsed.token, 1, ''::text) OVER ())
-                     WHEN (parsed.token = '@'::text) THEN NULL::text
+                     WHEN (parsed.tokid = ( SELECT token_blank.id
+                        FROM token_blank)) THEN NULL::text
                      ELSE parsed.token
                  END AS token
             FROM ts_parse('default'::text, parse_for_search.text) parsed(tokid, token)
@@ -84,11 +80,10 @@ CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
                      ELSE ARRAY[parsed.token]
                  END))))) AS term
             FROM parsed
-           WHERE ((octet_length(parsed.token) <> 0) AND (parsed.token IS NOT NULL) AND ((parsed.tokid <> ( SELECT token_blank.id
-                    FROM token_blank)) OR ("left"(parsed.token, 1) = '#'::text) OR (parsed.token ~~ '%@%'::text)))
+           WHERE ((parsed.token <> ''::text) AND (parsed.token IS NOT NULL))
          )
   SELECT transformed.term
-    FROM ( SELECT ltrim(transformed_1.term, '#'::text) AS ltrim
+    FROM ( SELECT ltrim(transformed_1.term, '#'::text) AS term
             FROM transformed transformed_1) transformed(term)
    WHERE ((transformed.term IS NOT NULL) AND (transformed.term <> ''::text));
 END;
@@ -110,26 +105,6 @@ CREATE FUNCTION public.create_tsquery(query text) RETURNS tsquery
 CREATE FUNCTION public.create_tsvector(text text) RETURNS tsvector
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     RETURN (SELECT COALESCE(array_to_tsvector(array_agg(terms.term)), ''::tsvector) AS vector FROM public.parse_for_search(create_tsvector.text) terms(term) WHERE (terms.term <> ALL (ARRAY['@{'::text, '{'::text, '}'::text])));
-
-
---
--- Name: tsvector_agg(tsvector); Type: AGGREGATE; Schema: public; Owner: -
---
-
-CREATE AGGREGATE public.tsvector_agg(tsvector) (
-    SFUNC = tsvector_concat,
-    STYPE = tsvector,
-    INITCOND = ''
-);
-
-
---
--- Name: create_tsvector(regconfig, text, "char"); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char") RETURNS tsvector
-    LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN ((setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(array_to_tsvector(ARRAY(SELECT DISTINCT lower(m.m[1]) AS lower FROM regexp_matches(COALESCE(create_tsvector.text, ''::text), '([0-9a-fA-F]{64})'::text, 'g'::text) m(m))), weight)) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
 
 
 --
@@ -157,26 +132,6 @@ EXCEPTION
       RETURN (0)::numeric;
 END;
 $$;
-
-
---
--- Name: tsquery_agg(tsquery); Type: AGGREGATE; Schema: public; Owner: -
---
-
-CREATE AGGREGATE public.tsquery_agg(tsquery) (
-    SFUNC = tsquery_or,
-    STYPE = tsquery,
-    INITCOND = ''
-);
-
-
---
--- Name: search_query(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.search_query(query text) RETURNS tsquery
-    LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN ((COALESCE(to_tsquery('english'::regconfig, query), ''::tsquery) || COALESCE(to_tsquery('simple'::regconfig, query), ''::tsquery)) || (SELECT public.tsquery_agg((data.word)::tsquery) AS tsquery_agg FROM regexp_split_to_table(COALESCE(search_query.query, ''::text), '[[:space:]]'::text) data(word) WHERE ("left"(data.word, '-2'::integer) ~ '^([a-fA-F0-9])*$'::text)));
 
 
 SET default_tablespace = '';
@@ -230,6 +185,19 @@ CREATE TABLE public.ban (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     banned_by character varying
+);
+
+
+--
+-- Name: blob_index; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.blob_index (
+    key text NOT NULL,
+    digest_type integer NOT NULL,
+    digest_value bytea NOT NULL,
+    size bigint NOT NULL,
+    last_modified timestamp with time zone NOT NULL
 );
 
 
@@ -820,6 +788,14 @@ ALTER TABLE ONLY public.attributed_to_reaction_summaries
 
 ALTER TABLE ONLY public.ban
     ADD CONSTRAINT ban_pkey PRIMARY KEY (identity);
+
+
+--
+-- Name: blob_index blob_index_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.blob_index
+    ADD CONSTRAINT blob_index_pkey PRIMARY KEY (key);
 
 
 --

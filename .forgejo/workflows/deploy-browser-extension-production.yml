@@ -149,17 +149,14 @@ jobs:
           - store: edge
             label: Submit to Edge Add-ons
     env:
+      # The stores' ids and keys (CHROME_*, FIREFOX_JWT_*, EDGE_*) are this
+      # environment's in Infisical.
       CHROME_API_VERSION: v2
-      CHROME_EXTENSION_ID: ${{ vars.CHROME_EXTENSION_ID_PRODUCTION }}
-      CHROME_PUBLISHER_ID: ${{ vars.CHROME_PUBLISHER_ID }}
-      CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ vars.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
       # A build still in review gives way to this one.
       CHROME_CANCEL_PENDING: "true"
       # The gecko id in apps/harbor-browser-extension/wxt.config.ts
       FIREFOX_EXTENSION_ID: anywhere@harbor.social
       FIREFOX_CHANNEL: listed
-      EDGE_PRODUCT_ID: ${{ vars.EDGE_PRODUCT_ID_PRODUCTION }}
-      EDGE_CLIENT_ID: ${{ vars.EDGE_CLIENT_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.forgejo/actions/infisical-secrets

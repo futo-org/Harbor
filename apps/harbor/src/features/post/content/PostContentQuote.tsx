@@ -1,3 +1,4 @@
+import { ImageGrid } from '@/src/common/components/composites';
 import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
@@ -8,7 +9,7 @@ import {
   hexToBytes,
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
-import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { FetchMode, v2 } from '@polycentric/react-native';
 import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -17,7 +18,7 @@ import Animated from 'react-native-reanimated';
 import { usePostById } from '../hooks/usePostById';
 import { usePostModeration } from '../hooks/usePostModeration';
 import { PostAuthor } from '../PostAuthor';
-import { PostImages } from '../PostImages';
+import { openPostImage } from '../PostImageViewerScreen';
 import { PostWarnOverlay } from '../PostWarnOverlay';
 
 const QUOTE_PREVIEW_LIMIT = 200;
@@ -80,10 +81,8 @@ export function PostContentQuote({
         Atoms.p_md,
         Atoms.rounded_md,
         Atoms.mt_sm,
-        {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-        },
+        theme.atoms.outline,
+        { borderWidth: 1 },
       ]}
     >
       <AuthorRow post={post} />
@@ -108,14 +107,12 @@ function QuoteUnavailable() {
         Atoms.p_md,
         Atoms.rounded_md,
         Atoms.mt_sm,
-        {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-        },
+        theme.atoms.outline,
+        { borderWidth: 1 },
       ]}
     >
       <View style={[Atoms.justify_center, { height: PLACEHOLDER_HEIGHT }]}>
-        <Text variant="secondary" color="neutral_500">
+        <Text variant="secondary" color="muted">
           This post is unavailable.
         </Text>
       </View>
@@ -135,14 +132,10 @@ function AuthorRow({ post }: { post: PostData }) {
       <PostAuthor identity={post.identity} />
       {post.createdAt ? (
         <>
-          <Text variant="secondary" color="neutral_500" fontWeight="bold">
+          <Text variant="secondary" color="muted" fontWeight="bold">
             ·
           </Text>
-          <Text
-            variant="secondary"
-            color="neutral_500"
-            style={Atoms.flex_shrink_0}
-          >
+          <Text variant="secondary" color="muted" style={Atoms.flex_shrink_0}>
             <TimeAgo since={post.createdAt} />
           </Text>
         </>
@@ -153,7 +146,10 @@ function AuthorRow({ post }: { post: PostData }) {
 
 /** A preview of the post's content. */
 function PostBody({ post }: { post: PostData }) {
-  const { theme } = useTheme();
+  const openImage = useCallback(
+    (index: number) => openPostImage(post, index),
+    [post],
+  );
 
   const content = mentionsToPlainText(post.content ?? '');
   const preview =
@@ -164,17 +160,13 @@ function PostBody({ post }: { post: PostData }) {
   return (
     <>
       {preview ? (
-        <Text
-          variant="secondary"
-          numberOfLines={4}
-          style={[Atoms.mt_xs, theme.atoms.text_neutral_high]}
-        >
+        <Text variant="secondary" numberOfLines={4} style={Atoms.mt_xs}>
           {preview}
         </Text>
       ) : null}
       {post.images?.length > 0 ? (
         <View style={Atoms.mt_xs}>
-          <PostImages post={post} />
+          <ImageGrid images={post.images} onOpenImage={openImage} />
         </View>
       ) : null}
     </>
@@ -192,10 +184,8 @@ function QuoteSkeleton() {
         Atoms.rounded_md,
         Atoms.mt_sm,
         animatedStyle,
-        {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-        },
+        theme.atoms.outline,
+        { borderWidth: 1 },
       ]}
     >
       <View style={[Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}>

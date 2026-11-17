@@ -1,37 +1,31 @@
 import Icon, { type IconName } from '@/src/common/components/Icon';
-import {
-  Atoms,
-  type PaletteColorToken,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import type { TintColors } from '../../utils/tint';
 
 export function ChipIcon({
   name,
   render,
-  color = 'neutral_600',
+  tint,
 }: {
   name: IconName;
   // Custom glyph (e.g. a platform's brand logo) rendered instead of `name`.
   render?: (props: { size: number; color: string }) => ReactNode;
-  color?: PaletteColorToken;
+  tint?: TintColors;
 }) {
   const { theme } = useTheme();
+  const { fg, bg } = tint ?? {
+    fg: theme.colors.muted,
+    bg: theme.colors.box.raised.bg,
+  };
 
   return (
-    <View
-      style={[
-        Atoms.rounded_full,
-        Atoms.p_xs,
-        { backgroundColor: withHexOpacity(theme.palette[color], '25') },
-      ]}
-    >
+    <View style={[Atoms.rounded_full, Atoms.p_xs, { backgroundColor: bg }]}>
       {render ? (
-        render({ size: 12, color: theme.palette[color] })
+        render({ size: 12, color: fg })
       ) : (
-        <Icon name={name} color={color} size={12} />
+        <Icon name={name} customColor={fg} size={12} />
       )}
     </View>
   );

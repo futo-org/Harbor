@@ -111,6 +111,10 @@ external-secrets from their pinned charts, each service from its chart in
 `deploy/charts`), and [Tilt](https://tilt.dev) deploys it with images built
 from this checkout. The tools (k3d, kubectl, Helm, Tilt, pnpm, and the Rust
 toolchain for the wasm build) are pinned with [mise](https://mise.jdx.dev).
+Docker is the exception: k3d and Tilt need a running
+[Docker engine](https://docs.docker.com/engine/install/), which is a system
+service that mise cannot install, so install it with your package manager
+and add yourself to the `docker` group. `mise dev` checks for it first.
 
 Run the stack and the JS dev servers in two terminals:
 

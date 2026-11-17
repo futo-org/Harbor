@@ -11,11 +11,11 @@ export function TopbarSettingsButton() {
       style={({ pressed }) => [
         Atoms.p_xs,
         Atoms.rounded_full,
-        pressed && { backgroundColor: theme.palette.neutral_25 },
+        pressed && theme.atoms.box.primary.bg_hover,
       ]}
       hitSlop={Spacing['lg']}
     >
-      <Icon name="settings" size={20} color="neutral_800" />
+      <Icon name="settings" size={20} color="primary" />
     </Pressable>
   );
 }

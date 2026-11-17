@@ -5,7 +5,7 @@ use prost::Message;
 use crate::error::CoreError;
 use crate::models::content_body;
 use crate::models::protos_v2::Blob;
-use crate::models::protos_v2::content::ContentBody::{Post, ProfileUpdate};
+use crate::models::protos_v2::content::ContentBody::{Post, ProfileUpdate, VerificationClaim};
 use crate::models::protos_v2::{Content, Identity, SerializedContent, content::ContentBody};
 use crate::models::validate::Validate;
 
@@ -36,6 +36,9 @@ impl Content {
                     if let Some(ref banner) = update.banner {
                         image_sets.push(banner);
                     }
+                }
+                VerificationClaim(claim) => {
+                    image_sets.extend(&claim.images);
                 }
                 _ => {}
             }

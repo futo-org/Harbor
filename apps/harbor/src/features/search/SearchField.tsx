@@ -1,9 +1,4 @@
-import {
-  Atoms,
-  BorderRadius,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
+import { Atoms, BorderRadius, useTheme } from '@/src/common/theme';
 import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
 
@@ -35,8 +30,8 @@ export function SearchField({
         {
           height: 40,
           borderRadius: BorderRadius.full,
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
         },
+        theme.atoms.box.raised.bg,
       ]}
     >
       {children}

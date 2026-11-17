@@ -13,7 +13,7 @@ function RadioGroup({ style, ...props }: RadioGroupPrimitive.RootProps) {
   return (
     <RadioGroupPrimitive.Root
       {...props}
-      style={StyleSheet.flatten([style, props.disabled && { opacity: 0.5 }])}
+      style={StyleSheet.flatten([style, props.disabled && Atoms.faded])}
     />
   );
 }
@@ -69,23 +69,25 @@ function RadioIndicator() {
       style={[
         Atoms.items_center,
         Atoms.justify_center,
+        theme.atoms.outline_strong,
         {
           width: Spacing['xl'],
           height: Spacing['xl'],
           borderRadius: Spacing['md'],
           borderWidth: Spacing['2xs'],
-          borderColor: theme.palette.neutral_500,
         },
       ]}
     >
       <RadioGroupPrimitive.Indicator>
         <View
-          style={{
-            width: Spacing['md'],
-            height: Spacing['md'],
-            borderRadius: Spacing['sm'],
-            backgroundColor: theme.palette.primary_500,
-          }}
+          style={[
+            theme.atoms.box.accent.bg,
+            {
+              width: Spacing['md'],
+              height: Spacing['md'],
+              borderRadius: Spacing['sm'],
+            },
+          ]}
         />
       </RadioGroupPrimitive.Indicator>
     </View>

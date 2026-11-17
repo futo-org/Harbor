@@ -1,6 +1,6 @@
 import { toast } from '@/src/common/components/toast';
 import { isAndroid } from '@/src/common/util/platform';
-import { MAX_ATTACHMENTS } from '@/src/features/composer/hooks/useComposer';
+import { MAX_ATTACHMENTS } from '@/src/common/lib/images/useImageAttachments';
 import { Directory, File, Paths } from 'expo-file-system';
 import { Image } from 'expo-image';
 import {

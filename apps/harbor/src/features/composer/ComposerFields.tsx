@@ -1,4 +1,5 @@
 import Icon from '@/src/common/components/Icon';
+import { AttachmentGrid } from '@/src/common/components/composites/AttachmentGrid';
 import {
   ProfileAvatar,
   Text,
@@ -11,13 +12,11 @@ import {
   Spacing,
   typography,
   useTheme,
-  withHexOpacity,
 } from '@/src/common/theme';
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   codegenNativeCommands,
-  type LayoutChangeEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,11 +24,9 @@ import {
   type TextInputKeyPressEvent,
   View,
 } from 'react-native';
-import { Image } from 'expo-image';
 import ComposerPostEmbed from './ComposerPostEmbed';
 import { LinkPreviewCard } from '@/src/features/post/content/LinkPreviewCard';
 import type { v2 } from '@polycentric/react-native';
-import { singleImageAspectRatio } from './utils/attachmentLayout';
 import { MAX_POST_LENGTH, type useComposer } from './hooks/useComposer';
 import { isAndroid, isWeb } from '@/src/common/util/platform';
 
@@ -38,7 +35,6 @@ import { useComposerStore } from '@/src/features/composer/hooks/useComposerStore
 import { MentionHighlights } from '@/src/features/composer/components/MentionHighlights';
 import { useTutorialHintsStore } from '@/src/common/lib/useTutorialHintsStore';
 
-const ATTACHMENT_GAP = Spacing.sm;
 // Spare height below the text on Android, enough for one more line.
 const NEW_LINE_HEADROOM = typography.lineHeight.lg;
 
@@ -185,17 +181,11 @@ export function ComposerFields({
         <View
           style={[
             Atoms.p_md,
-            {
-              borderBottomWidth: 1,
-              borderBottomColor: withHexOpacity(
-                theme.palette.negative_500,
-                '80',
-              ),
-              marginBottom: 10,
-            },
+            theme.atoms.box.danger.border,
+            { borderBottomWidth: 1, marginBottom: 10 },
           ]}
         >
-          <Text variant="secondary" color="negative_500">
+          <Text variant="secondary" color="danger">
             {error}
           </Text>
         </View>
@@ -290,7 +280,7 @@ export function ComposerFields({
                 aria-hidden
                 fontSize="lg"
                 lineHeight="lg"
-                color={submitting ? 'neutral_500' : undefined}
+                color={submitting ? 'muted' : undefined}
                 style={[
                   styles.webMirror,
                   submitting && styles.webMirrorDisabled,
@@ -394,14 +384,12 @@ function ComposerLinkPreview({
             Atoms.p_md,
             Atoms.rounded_md,
             Atoms.mt_md,
-            {
-              borderWidth: 1,
-              borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-            },
+            theme.atoms.outline,
+            { borderWidth: 1 },
           ]}
         >
-          <ActivityIndicator size="small" color={theme.palette.neutral_500} />
-          <Text variant="secondary" color="neutral_500">
+          <ActivityIndicator size="small" color={theme.colors.muted} />
+          <Text variant="secondary" color="muted">
             Loading preview…
           </Text>
         </View>
@@ -411,154 +399,24 @@ function ComposerLinkPreview({
         disabled={disabled}
         accessibilityLabel="Remove link preview"
         hitSlop={6}
-        style={{
-          position: 'absolute',
-          // Below the card's own mt_md top margin (margins stay inside the
-          // wrapper, so the card's top edge is Spacing.md down from ours).
-          top: Spacing.md + 4,
-          right: 4,
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: withHexOpacity(theme.palette.black, 'b0'),
-          opacity: disabled ? 0.4 : 1,
-        }}
+        style={[
+          theme.atoms.media_control.bg,
+          disabled && Atoms.faded,
+          {
+            position: 'absolute',
+            // Below the card's own mt_md top margin (margins stay inside the
+            // wrapper, so the card's top edge is Spacing.md down from ours).
+            top: Spacing.md + 4,
+            right: 4,
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+        ]}
       >
-        <Icon name="close" size={14} color="white" />
-      </Pressable>
-    </View>
-  );
-}
-
-/**
- * Lays out 1–4 attachments: a single image spans the full width at its natural
- * (clamped) aspect ratio, while two or more wrap into a 50%-width square grid
- * (two per row → 2-up, 3+1, or 2x2).
- */
-function AttachmentGrid({
-  attachments,
-  disabled,
-  onRemoveAttachment,
-}: {
-  attachments: Attachment[];
-  disabled: boolean;
-  onRemoveAttachment: (id: string) => void;
-}) {
-  const [containerWidth, setContainerWidth] = useState(0);
-  const single = attachments.length === 1;
-
-  const onLayout = (e: LayoutChangeEvent) => {
-    setContainerWidth(e.nativeEvent.layout.width);
-  };
-
-  // Two columns: each item is half the row minus half the inter-item gap.
-  const gridItemWidth = containerWidth
-    ? (containerWidth - ATTACHMENT_GAP) / 2
-    : undefined;
-
-  return (
-    <View
-      onLayout={onLayout}
-      style={[Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_sm, Atoms.mt_sm]}
-    >
-      {/* Wait for the measured width: thumbs first rendered without it will stay at height 0 in Safari. */}
-      {(single || containerWidth > 0) &&
-        attachments.map((a) => (
-          <AttachmentThumb
-            key={a.id}
-            uri={a.uri}
-            status={a.status}
-            width={single ? '100%' : gridItemWidth}
-            aspectRatio={single ? singleImageAspectRatio(a) : 1}
-            disabled={disabled}
-            onRemove={() => onRemoveAttachment(a.id)}
-          />
-        ))}
-    </View>
-  );
-}
-
-function AttachmentThumb({
-  uri,
-  disabled,
-  onRemove,
-  width,
-  aspectRatio,
-  status,
-}: {
-  uri: string;
-  disabled: boolean;
-  onRemove: () => void;
-  width?: number | '100%';
-  aspectRatio: number;
-  status: Attachment['status'];
-}) {
-  const { theme } = useTheme();
-  return (
-    <View
-      style={{
-        width,
-        aspectRatio,
-        borderRadius: 8,
-        overflow: 'hidden',
-        backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-      }}
-    >
-      <Image
-        source={{ uri }}
-        recyclingKey={uri}
-        contentFit="cover"
-        style={{ width: '100%', height: '100%' }}
-      />
-      {/* Loading / error overlay while the blobs are being processed+uploaded */}
-      {status !== 'ready' && (
-        <View
-          style={[
-            Atoms.items_center,
-            Atoms.justify_center,
-            {
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-              backgroundColor: withHexOpacity(
-                status === 'error'
-                  ? theme.palette.negative_500
-                  : theme.palette.black,
-                '40',
-              ),
-            },
-          ]}
-        >
-          {status === 'error' ? (
-            <Icon name="ban" size={22} color="white" />
-          ) : (
-            <ActivityIndicator size="small" color="white" />
-          )}
-        </View>
-      )}
-      <Pressable
-        onPress={onRemove}
-        disabled={disabled}
-        accessibilityLabel="Remove attachment"
-        hitSlop={6}
-        style={{
-          position: 'absolute',
-          top: 2,
-          right: 2,
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: withHexOpacity(theme.palette.black, 'b0'),
-          opacity: disabled ? 0.4 : 1,
-        }}
-      >
-        <Icon name="close" size={14} color="white" />
+        <Icon name="close" size={14} color="light" />
       </Pressable>
     </View>
   );
@@ -568,7 +426,7 @@ const useStyles = createThemedStyles((theme, define) =>
   define({
     webTextareaUnderMirror: {
       color: 'transparent',
-      caretColor: theme.palette.neutral_900,
+      caretColor: theme.colors.primary,
     },
     webMirror: [
       StyleSheet.absoluteFill,
@@ -577,6 +435,6 @@ const useStyles = createThemedStyles((theme, define) =>
       { pointerEvents: 'none' },
     ],
     // As the disabled input
-    webMirrorDisabled: { opacity: 0.5 },
+    webMirrorDisabled: Atoms.faded,
   }),
 );

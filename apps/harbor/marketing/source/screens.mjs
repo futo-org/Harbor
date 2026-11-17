@@ -81,7 +81,7 @@ export const fontsCss = [
   fontFace('MaterialIcons', path.join(vendor, 'Fonts', 'MaterialIcons.ttf')),
 ].join('\n');
 
-const esc = (s) =>
+export const esc = (s) =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 function icon(set, name, size = 24, color = palette.n900) {
@@ -89,7 +89,7 @@ function icon(set, name, size = 24, color = palette.n900) {
   if (code === undefined) throw new Error(`Unknown ${set} icon ${name}`);
   return `<span class="ic ${set}" style="font-size:${size}px;width:${size}px;height:${size}px;color:${color}">&#${code};</span>`;
 }
-const ion = (n, s, c) => icon('ion', n, s, c);
+export const ion = (n, s, c) => icon('ion', n, s, c);
 const mci = (n, s, c) => icon('mci', n, s, c);
 const mi = (n, s, c) => icon('mi', n, s, c);
 
@@ -132,7 +132,7 @@ function faSvg(def, size, color) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${w} ${h}" style="flex-shrink:0">${paths.map((p) => `<path fill="${color}" d="${p}"/>`).join('')}</svg>`;
 }
 
-function avatar(id, size) {
+export function avatar(id, size) {
   const p = people[id];
   if (p.photo) {
     return `<img class="av" src="file://${path.join(photosDir, p.photo)}" style="width:${size}px;height:${size}px">`;
@@ -312,7 +312,7 @@ function tabsRow(tabs, active) {
     .join('')}</div>`;
 }
 
-function postCard(p, { replyingTo, threadBelow, threadAbove } = {}) {
+export function postCard(p, { replyingTo, threadBelow, threadAbove } = {}) {
   const a = people[p.author];
   const img = p.images?.length
     ? `<div class="img"><img src="file://${path.join(photosDir, p.images[0])}"></div>`

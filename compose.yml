@@ -188,7 +188,7 @@ services:
   victorialogs:
     profiles:
       - otlp
-    image: victoriametrics/victoria-logs:v1.53.0@sha256:251121fa882af99b95ba0c230a4a2f412ea602d2698c64a96c58dc9842bb755d
+    image: victoriametrics/victoria-logs:v1.54.0@sha256:ee4e820cac3721f5f5d91641b950c22439593adc4224f9655e5333d5a84c1dfe
     command: [ "-storageDataPath=/data" ]
     volumes:
       - victorialogs-data:/data
@@ -206,7 +206,7 @@ services:
       - ${HARBOR_VICTORIA_TRACES_PORT:-10428}:10428
 
   rustfs:
-    image: rustfs/rustfs:latest@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2
+    image: rustfs/rustfs:latest@sha256:ee717072290bec9b11abfc0365f8310b00df1cd9b3639943edae47bdef05044a
     volumes:
       - rustfs-data:/data
     ports:
@@ -305,7 +305,7 @@ services:
         condition: service_started
 
   kafka-ui:
-    image: docker.redpanda.com/redpandadata/console:latest@sha256:d72608f64c65a5631adca6c99b44d157cefb9edb0473ed58451f91affcfcfa1b
+    image: docker.redpanda.com/redpandadata/console:latest@sha256:5deb20e3ec84781d137231a23ebc3520e012e8e83d59bee25355f7fba1010a12
     environment:
       CONFIG_FILEPATH: /etc/console/config.yaml
       KAFKA_BROKERS: kafka:19092
