@@ -9,6 +9,11 @@ export type TranscodeLimits = {
    * video's resolution. Bounds memory overhead of transcoding.
    */
   maxSourcePixels: number;
+  /**
+   * Limits the number of frames in the input, checked while reading file headers. Bounds the memory
+   * overhead of reading a file.
+   */
+  maxSourceFrames: number;
   /** Limits the number of frames in the output video, after adusting for `maxFps`. */
   maxOutputFrames: number;
   /** Limits the nuumber of pixels in any given frame of the output video. */
@@ -22,6 +27,7 @@ export type TranscodeLimits = {
 export const DEFAULT_TRANSCODE_LIMITS: Readonly<TranscodeLimits> = {
   maxSourceBytes: 50_000_000, // 50MB input file size
   maxSourcePixels: 4_000_000, // fits 2560 x 1440 resolution or equivalent
+  maxSourceFrames: 500, // Extra headroom for GIFs whose frames get merged
   maxOutputFrames: 200, // Fits most social media GIFs
   maxOutputPixels: 1_000_000, // outputs 1280 x 720 resolution or equivalent
   maxOutputBytes: 5_000_000, // 5MB output file size
@@ -33,6 +39,8 @@ export type TranscodeErrorCode =
   | 'source-too-large'
   /** Frame resolution exceeds `limits.maxSourcePixels` */
   | 'source-canvas-too-large'
+  /** Frame count in the source exceeds `limits.maxSourceFrames` */
+  | 'source-too-many-frames'
   /** Frame count in video output exceeds `limits.maxOutputFrames` */
   | 'too-many-frames'
   /** The video output is over `limits.maxOutputBytes`, even after trying a lower bitrate */
@@ -64,7 +72,7 @@ export function calcOutputResolution(
   _canvasHeight: number,
   _maxOutputPixels: number,
 ): { width: number; height: number } {
-  throw new Error('chooseOutputSize: not implemented');
+  throw new Error('calcOutputResolution: not implemented');
 }
 
 /** Select a bitrate that stays under `maxOutputBytes` limits for most videos at `maxFps`. */
@@ -73,5 +81,5 @@ export function calcBitrate(
   _height: number,
   _fps: number,
 ): number {
-  throw new Error('chooseBitrate: not implemented');
+  throw new Error('calcBitrate: not implemented');
 }

@@ -14,9 +14,15 @@ import type { TranscodeLimits } from './limits';
  * If the video still exceeds size limits, the output will be rejected.
  */
 export type TranscodeBackend = {
-  readHeader(uri: string, maxSourceBytes: number): Promise<SourceHeader>;
+  readHeader(uri: string, limits: SourceLimits): Promise<SourceHeader>;
   encode(request: EncodeRequest): Promise<EncodeResult>;
 };
+
+/** Pick of the limits enforced by the header pass. */
+export type SourceLimits = Pick<
+  TranscodeLimits,
+  'maxSourceBytes' | 'maxSourceFrames'
+>;
 
 /** Frame size and timing, obtained from the source's video file headers. */
 export type SourceFrameInfo = {
@@ -42,7 +48,10 @@ export type ScheduledFrame = {
   durationUs: number;
 };
 
-/** Specifies desired destination URI, resolution, bitrate, and frame rates for an output video. */
+/**
+ * Specifies desired destination URI, resolution, bitrate, and frame rates for an output video. Note
+ * that `bitrate` is target average bits/sec for variable bitrate encoding.
+ */
 export type EncodeRequest = {
   uri: string;
   outputWidth: number;
@@ -58,7 +67,10 @@ export type EncodeResult = {
   byteSize: number;
 };
 
-/** Set transcode operation limits (see `TranscodeLimits`) or set a desired video bitrate. */
+/**
+ * Set transcode operation limits (see `TranscodeLimits`) or set a desired video bitrate. Note that
+ * `bitrate` is target average bits/sec for variable bitrate encoding.
+ */
 export type TranscodeOptions = {
   limits?: Partial<TranscodeLimits>;
   bitrate?: number;
