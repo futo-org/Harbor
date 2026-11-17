@@ -14,81 +14,96 @@ export type TextColor = keyof Pick<
   | 'dark'
 >;
 
-const LIGHT_PICKS = {
-  primary: palette.neutral_1000,
-  secondary: palette.neutral_700,
-  muted: palette.neutral_600,
-  surface_0: palette.neutral_0,
-  surface_1: palette.neutral_50,
-  surface_2: palette.neutral_100,
-  outline: palette.neutral_400,
-  hover: {
-    accent: palette.primary_600,
-    danger: palette.negative_700,
-    success: palette.positive_600,
-    warning: palette.warning_450,
-  },
-};
+// the same in both themes
+const SHARED_COLORS = {
+  accent: palette.primary_550,
+  danger: palette.negative_650,
+  success: palette.positive_550,
+  warning: palette.warning_400,
 
-const DARK_PICKS: typeof LIGHT_PICKS = {
-  primary: palette.neutral_150,
-  secondary: palette.neutral_400,
-  muted: palette.neutral_650,
-  surface_0: palette.neutral_1000,
-  surface_1: palette.neutral_950,
-  surface_2: palette.neutral_900,
-  outline: palette.neutral_600,
-  hover: {
-    accent: palette.primary_500,
-    danger: palette.negative_600,
-    success: palette.positive_500,
-    warning: palette.warning_350,
+  light: palette.white,
+  dark: palette.black,
+  transparent: 'transparent',
+
+  backdrop: {
+    modal: withOpacity(palette.black, 0.45),
+    media: withOpacity(palette.black, 0.92),
+  },
+  media_control: {
+    bg: withOpacity(palette.black, 0.69),
   },
 };
 
 export function buildThemeColors(scheme: ThemeScheme) {
-  const colors = buildColors(scheme === 'dark' ? DARK_PICKS : LIGHT_PICKS);
+  const colors = scheme === 'dark' ? buildDarkColors() : buildLightColors();
   return { colors, atoms: buildAtoms(scheme, colors) };
 }
 
 // raw strings for consumers that can't take a style object
-function buildColors(picks: typeof LIGHT_PICKS) {
+function buildLightColors() {
   return {
-    primary: picks.primary,
-    secondary: picks.secondary,
-    muted: picks.muted,
+    ...SHARED_COLORS,
+    primary: palette.neutral_1000,
+    secondary: palette.neutral_700,
+    muted: palette.neutral_600,
 
-    accent: palette.primary_550,
-    danger: palette.negative_650,
-    success: palette.positive_550,
-    warning: palette.warning_400,
-
-    light: palette.white,
-    dark: palette.black,
-    transparent: 'transparent',
-
-    outline: withOpacity(picks.outline, 0.3),
-    outline_strong: picks.outline,
+    outline: withOpacity(palette.neutral_400, 0.3),
+    outline_strong: palette.neutral_400,
 
     box: {
-      primary: buildBox(picks.surface_0, picks.surface_1, picks.surface_1),
-      secondary: buildBox(picks.surface_1, picks.surface_2, picks.surface_2),
-      raised: buildBox(
-        withOpacity(picks.outline, 0.125),
-        withOpacity(picks.outline, 0.2),
-        withOpacity(picks.outline, 0.3),
+      primary: buildBox(
+        palette.neutral_0,
+        palette.neutral_50,
+        palette.neutral_50,
       ),
-      accent: buildHueBox(palette.primary_550, picks.hover.accent),
-      danger: buildHueBox(palette.negative_650, picks.hover.danger),
-      success: buildHueBox(palette.positive_550, picks.hover.success),
-      warning: buildHueBox(palette.warning_400, picks.hover.warning),
+      secondary: buildBox(
+        palette.neutral_50,
+        palette.neutral_100,
+        palette.neutral_100,
+      ),
+      raised: buildBox(
+        withOpacity(palette.neutral_400, 0.125),
+        withOpacity(palette.neutral_400, 0.2),
+        withOpacity(palette.neutral_400, 0.3),
+      ),
+      accent: buildHueBox(SHARED_COLORS.accent, palette.primary_600),
+      danger: buildHueBox(SHARED_COLORS.danger, palette.negative_700),
+      success: buildHueBox(SHARED_COLORS.success, palette.positive_600),
+      warning: buildHueBox(SHARED_COLORS.warning, palette.warning_450),
     },
-    backdrop: {
-      modal: withOpacity(palette.black, 0.45),
-      media: withOpacity(palette.black, 0.92),
-    },
-    media_control: {
-      bg: withOpacity(palette.black, 0.69),
+  };
+}
+
+function buildDarkColors(): ReturnType<typeof buildLightColors> {
+  return {
+    ...SHARED_COLORS,
+    primary: palette.neutral_150,
+    secondary: palette.neutral_400,
+    muted: palette.neutral_650,
+
+    outline: withOpacity(palette.neutral_600, 0.3),
+    outline_strong: palette.neutral_600,
+
+    box: {
+      primary: buildBox(
+        palette.neutral_1000,
+        palette.neutral_950,
+        palette.neutral_950,
+      ),
+      secondary: buildBox(
+        palette.neutral_950,
+        palette.neutral_900,
+        palette.neutral_900,
+      ),
+      raised: buildBox(
+        withOpacity(palette.neutral_600, 0.125),
+        withOpacity(palette.neutral_600, 0.2),
+        withOpacity(palette.neutral_600, 0.3),
+      ),
+      accent: buildHueBox(SHARED_COLORS.accent, palette.primary_500),
+      danger: buildHueBox(SHARED_COLORS.danger, palette.negative_600),
+      success: buildHueBox(SHARED_COLORS.success, palette.positive_500),
+      warning: buildHueBox(SHARED_COLORS.warning, palette.warning_350),
     },
   };
 }
@@ -108,7 +123,7 @@ function buildHueBox(bg: string, hover: string) {
 
 function buildAtoms(
   scheme: ThemeScheme,
-  colors: ReturnType<typeof buildColors>,
+  colors: ReturnType<typeof buildLightColors>,
 ) {
   // shadows need more opacity to show on a dark background
   const shadowOpacity = scheme === 'dark' ? 0.25 : 0.16;
