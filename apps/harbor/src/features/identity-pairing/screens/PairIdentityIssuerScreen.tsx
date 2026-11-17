@@ -16,8 +16,8 @@ import { router } from 'expo-router';
 import { type ReactNode, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
+  Switch,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -383,14 +383,10 @@ function ApprovalSheet({
               />
             </View>
 
-            <Pressable
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: asRotation }}
-              onPress={() => setAsRotation(!asRotation)}
-              disabled={currentlyApproving}
+            <View
               style={[
                 Atoms.flex_row,
-                Atoms.items_start,
+                Atoms.items_center,
                 Atoms.gap_md,
                 Atoms.p_md,
                 Atoms.rounded_md,
@@ -399,26 +395,6 @@ function ApprovalSheet({
                 { borderWidth: 1 },
               ]}
             >
-              <View
-                style={[
-                  {
-                    width: 22,
-                    height: 22,
-                    borderRadius: 7,
-                    borderWidth: 1.5,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginTop: 1,
-                  },
-                  asRotation
-                    ? [theme.atoms.box.accent.bg, theme.atoms.box.accent.border]
-                    : theme.atoms.outline_strong,
-                ]}
-              >
-                {asRotation ? (
-                  <Icon name="checkmark" size={14} color="light" />
-                ) : null}
-              </View>
               <View style={[Atoms.flex_1, Atoms.gap_xs]}>
                 <Text variant="small" fontWeight="semibold">
                   Add as rotation key
@@ -427,7 +403,13 @@ function ApprovalSheet({
                   Gives this device management access.
                 </Text>
               </View>
-            </Pressable>
+              <Switch
+                value={asRotation}
+                onValueChange={setAsRotation}
+                disabled={currentlyApproving}
+                accessibilityLabel="Add as rotation key"
+              />
+            </View>
           </>
         ) : null}
       </Sheet.Content>
