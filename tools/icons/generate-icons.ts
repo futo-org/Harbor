@@ -226,9 +226,11 @@ function buildIconSvg(icon: Icon, size: number | string): string {
     (icon.text ? buildText(canvas, canvasHeight, icon.text) : '');
   if (icon.clip === 'circle') {
     const radius = canvas / 2;
+    // A mask, not a clipPath: librsvg anti-aliases a clip per shape, so the
+    // background bleeds through the tower's edge pixels
     content =
-      `<clipPath id="circle"><circle cx="${radius}" cy="${radius}" r="${radius}"/></clipPath>` +
-      `<g clip-path="url(#circle)">${content}</g>`;
+      `<mask id="circle"><circle cx="${radius}" cy="${radius}" r="${radius}" fill="#fff"/></mask>` +
+      `<g mask="url(#circle)">${content}</g>`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${canvas} ${canvasHeight}">${content}</svg>`;
 }
