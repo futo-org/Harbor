@@ -754,6 +754,31 @@ async fn regression_1658() {
     .await;
 }
 
+#[tokio::test]
+async fn query_parsing() {
+    for query in [
+        "@",
+        "hello @",
+        "hello @ there",
+        "a @",
+        "@ hello",
+        "@ hello",
+        "@! hello",
+        "@? hello",
+    ] {
+        expect_searched_users(
+            SearchUsersRequest {
+                query: query.to_owned(),
+                sort_by: None,
+                page_params: None,
+            },
+            // Only interested in the query being parsed correctly.
+            vec![],
+        )
+        .await;
+    }
+}
+
 async fn expect_searched_users(
     request: SearchUsersRequest,
     expected: Vec<ProfileUpdate>,

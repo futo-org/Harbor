@@ -772,6 +772,27 @@ async fn regression_1570() {
     .await;
 }
 
+#[tokio::test]
+async fn query_parsing() {
+    for query in [
+        "@",
+        "hello @",
+        "hello @ there",
+        "a @",
+        "@ hello",
+        "@ hello",
+        "@! hello",
+        "@? hello",
+    ] {
+        expect_searched_posts_contains(
+            query,
+            // Only interested in the query being parsed correctly.
+            vec![],
+        )
+        .await;
+    }
+}
+
 async fn expect_searched_posts(
     request: SearchPostsRequest,
     expected: Vec<Post>,
