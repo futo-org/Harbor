@@ -271,7 +271,7 @@ function StatusDisplay({
             Atoms.rounded_lg,
             Atoms.w_full,
             detailsBox,
-            { borderWidth: 1 },
+            Atoms.border,
           ]}
         >
           <Text variant="secondary" color={detailsColor}>
@@ -392,7 +392,7 @@ function ApprovalSheet({
                 Atoms.rounded_md,
                 theme.atoms.box.secondary.bg,
                 theme.atoms.box.secondary.border,
-                { borderWidth: 1 },
+                Atoms.border,
               ]}
             >
               <View style={[Atoms.flex_1, Atoms.gap_xs]}>

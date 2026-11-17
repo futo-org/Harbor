@@ -108,10 +108,8 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
         isWeb && Atoms.pb_lg,
         isWeb && {
           maxWidth: LAYOUT_SIZES.primaryColumnMaxWidth,
-          borderLeftWidth: 1,
-          borderRightWidth: 1,
         },
-        isWeb && theme.atoms.box.primary.border,
+        isWeb && [theme.atoms.box.primary.border, Atoms.border_x],
       ]}
     >
       {children}
@@ -180,7 +178,7 @@ function Screen({
         theme.atoms.box.primary.bg,
         !drawUnderStatusBar && { paddingTop: insets.top },
         { paddingLeft: insets.left, paddingRight: insets.right },
-        !isWeb && [theme.atoms.box.primary.border, { borderBottomWidth: 1 }],
+        !isWeb && [theme.atoms.box.primary.border, Atoms.border_b],
       ]}
       dir="ltr"
     >

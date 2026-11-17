@@ -21,7 +21,8 @@ export function Kbd({ children }: KbdProps) {
         Atoms.rounded_sm,
         theme.atoms.box.secondary.bg,
         theme.atoms.box.secondary.border,
-        { borderWidth: 1, transform: [{ translateY: KEY_BOX_DROP }] },
+        Atoms.border,
+        { transform: [{ translateY: KEY_BOX_DROP }] },
       ]}
     >
       <Text

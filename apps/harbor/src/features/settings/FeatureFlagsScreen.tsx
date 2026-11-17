@@ -70,10 +70,7 @@ export default function FeatureFlagsScreen() {
               <Fragment key={flag}>
                 {index > 0 && (
                   <View
-                    style={[
-                      theme.atoms.border_neutral_low,
-                      { borderTopWidth: 1 },
-                    ]}
+                    style={[theme.atoms.border_neutral_low, Atoms.border_t]}
                   />
                 )}
                 <FeatureFlagSettingRow flag={flag} />

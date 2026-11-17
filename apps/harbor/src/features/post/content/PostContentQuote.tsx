@@ -82,7 +82,7 @@ export function PostContentQuote({
         Atoms.rounded_md,
         Atoms.mt_sm,
         theme.atoms.outline,
-        { borderWidth: 1 },
+        Atoms.border,
       ]}
     >
       <AuthorRow post={post} />
@@ -108,7 +108,7 @@ function QuoteUnavailable() {
         Atoms.rounded_md,
         Atoms.mt_sm,
         theme.atoms.outline,
-        { borderWidth: 1 },
+        Atoms.border,
       ]}
     >
       <View style={[Atoms.justify_center, { height: PLACEHOLDER_HEIGHT }]}>
@@ -185,7 +185,7 @@ function QuoteSkeleton() {
         Atoms.mt_sm,
         animatedStyle,
         theme.atoms.outline,
-        { borderWidth: 1 },
+        Atoms.border,
       ]}
     >
       <View style={[Atoms.flex_row, Atoms.gap_xs, Atoms.align_center]}>

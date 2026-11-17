@@ -45,11 +45,11 @@ export function ExtensionLoginCode({
         Atoms.fixed,
         theme.atoms.box.primary.bg,
         theme.atoms.box.primary.border,
+        Atoms.border_t,
         {
           bottom: 0,
           left: 0,
           right: 0,
-          borderTopWidth: 1,
           zIndex: ZIndex.raised,
         },
       ]}

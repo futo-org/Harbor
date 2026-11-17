@@ -323,10 +323,10 @@ function AliasLabel({
             {
               maxWidth: 320,
               borderRadius: 8,
-              borderWidth: 1,
             },
             theme.atoms.box.secondary.bg,
             theme.atoms.box.secondary.border,
+            Atoms.border,
           ]}
         >
           <Text variant="secondary" color="primary">

@@ -197,7 +197,7 @@ export function SearchPhraseRow({
         Atoms.px_lg,
         Atoms.py_lg,
         theme.atoms.box.primary.border,
-        { borderBottomWidth: 1 },
+        Atoms.border_b,
         (hovered || pressed) && theme.atoms.box.primary.bg_hover,
       ]}
     >
@@ -278,7 +278,7 @@ function UserRow({ identity }: { identity: string }) {
     <ProfileRow
       identity={identity}
       onPress={() => router.navigate(Routes.tabs.profile(identity))}
-      style={[theme.atoms.box.primary.border, { borderBottomWidth: 1 }]}
+      style={[theme.atoms.box.primary.border, Atoms.border_b]}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
     />
   );

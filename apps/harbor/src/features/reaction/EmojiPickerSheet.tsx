@@ -274,7 +274,7 @@ function EmojiCategoryRail({
           Atoms.justify_center,
           theme.atoms.box.primary.bg,
           theme.atoms.box.primary.border,
-          { borderTopWidth: CATEGORY_RAIL_BORDER_WIDTH },
+          Atoms.border_t,
           hidden && Atoms.hidden,
         ]}
         onLayout={(e) => setRailWidth(e.nativeEvent.layout.width)}

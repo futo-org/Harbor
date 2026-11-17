@@ -158,7 +158,7 @@ const useStyles = createThemedStyles((theme, define) =>
       StyleSheet.absoluteFill,
       Atoms.rounded_full,
       theme.atoms.outline,
-      { borderWidth: 1 },
+      Atoms.border,
     ],
   }),
 );

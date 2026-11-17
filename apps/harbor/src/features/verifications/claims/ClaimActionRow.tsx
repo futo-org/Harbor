@@ -32,7 +32,7 @@ export function ClaimActionRow({
           Atoms.pt_md,
           Atoms.pb_md,
           theme.atoms.box.primary.border,
-          { borderBottomWidth: 1 },
+          Atoms.border_b,
         ]}
       >
         <View style={Atoms.flex_1}>

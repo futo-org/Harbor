@@ -70,7 +70,7 @@ export function ClaimListItem({
           Atoms.px_lg,
           Atoms.py_md,
           theme.atoms.box.primary.border,
-          { borderBottomWidth: 1 },
+          Atoms.border_b,
         ]}
       >
         <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}>

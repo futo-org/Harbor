@@ -60,7 +60,7 @@ export default function AnywhereScreen() {
                     Atoms.py_md,
                     theme.atoms.box.primary.bg,
                     theme.atoms.box.primary.border,
-                    { borderBottomWidth: 1 },
+                    Atoms.border_b,
                   ]}
                 >
                   <AnywhereUrlField />

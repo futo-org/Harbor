@@ -37,7 +37,7 @@ export function GetExtensionWidget() {
         Atoms.w_full,
         Atoms.gap_md,
         theme.atoms.box.primary.border,
-        { borderWidth: 1 },
+        Atoms.border,
       ]}
     >
       <View style={Atoms.gap_xs}>

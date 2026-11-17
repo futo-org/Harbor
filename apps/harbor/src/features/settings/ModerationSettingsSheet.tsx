@@ -41,7 +41,7 @@ function ModerationLabelRow({
         Atoms.py_md,
         Atoms.px_lg,
         theme.atoms.box.primary.border,
-        { borderBottomWidth: isLast ? 0 : 1 },
+        !isLast && Atoms.border_b,
       ]}
     >
       <View style={[Atoms.flex_col, Atoms.flex_1]}>
