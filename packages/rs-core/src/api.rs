@@ -1,6 +1,5 @@
 use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
-use crate::media::process_image;
 use crate::pairing;
 use crate::query::{QueryObserver, QueryResultFfi, QueryStatus};
 use crate::sync;
@@ -64,9 +63,6 @@ pub enum CoreError {
     #[error("Store: {0}")]
     Store(String),
 
-    #[error("Image: {0}")]
-    Image(String),
-
     #[error("Network: {0}")]
     Network(String),
 
@@ -115,6 +111,8 @@ pub enum Query {
     GetRecommendedFeed(crate::query::feed::GetFollowingFeedArgs),
     GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
     GetAttributionFeed(crate::query::feed::GetAttributionFeedArgs),
+    GetAttributedToFeed(crate::query::feed::GetAttributedToFeedArgs),
+    GetAttributedToStats(crate::query::feed::GetAttributedToStatsArgs),
     ListNotifications(crate::query::notification::ListNotificationsArgs),
     SubscribeUnreadNotificationCount(
         crate::query::notification::SubscribeUnreadNotificationCountArgs,
@@ -452,23 +450,6 @@ impl PolycentricCore {
         Ok(response.encode_to_vec())
     }
 
-    /// Decode `image`, resize to `width`x`height` per `mode` ("fill" or
-    /// "fit"), encode as JPEG.
-    pub fn process_image_to_jpeg(
-        &self,
-        image: Vec<u8>,
-        width: u32,
-        height: u32,
-        mode: String,
-    ) -> Result<process_image::ProcessedImage, CoreError> {
-        let mode = match mode.as_str() {
-            "fit" => process_image::ResizeMode::Fit,
-            _ => process_image::ResizeMode::Fill,
-        };
-        process_image::process_image(&image, width, height, mode)
-            .map_err(|e| CoreError::Image(format!("process_image failed: {e}")))
-    }
-
     // ── Network ops (gRPC / gRPC-web) ──────────────────────────────
 
     /// Unified entry point for every observable RPC.
@@ -511,6 +492,18 @@ impl PolycentricCore {
             Query::GetAttributionFeed(args) => {
                 crate::query::feed::get_attribution_feed(&self.query_client, query_key, args, opts)
             }
+            Query::GetAttributedToFeed(args) => crate::query::feed::get_attributed_to_feed(
+                &self.query_client,
+                query_key,
+                args,
+                opts,
+            ),
+            Query::GetAttributedToStats(args) => crate::query::feed::get_attributed_to_stats(
+                &self.query_client,
+                query_key,
+                args,
+                opts,
+            ),
             Query::ListNotifications(args) => crate::query::notification::list_notifications(
                 &self.query_client,
                 query_key,

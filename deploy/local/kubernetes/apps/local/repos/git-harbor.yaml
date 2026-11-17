@@ -1,0 +1,15 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: harbor
+  namespace: flux-system
+spec:
+  interval: 30m
+  url: https://code.futo.org/harbor/harbor.git
+  ref:
+    branch: develop
+  # Only the manifests and the charts they reference.
+  ignore: |
+    /*
+    !/deploy

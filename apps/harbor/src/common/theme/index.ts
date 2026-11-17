@@ -1,23 +1,15 @@
-export { darkPalette, lightPalette, withHexOpacity } from './palette';
-export type { Palette, PaletteColorToken } from './palette';
+export type { TextColor } from './colors';
 export { createThemedStyles } from './createThemedStyles';
 export { Context, ThemeProvider, useTheme } from './provider';
-export { createTheme, themes } from './themes';
+export { themes } from './themes';
 export { THEME_PREFERENCE_OPTIONS } from './themePreferenceOptions';
-export type {
-  Theme,
-  ThemeAtoms,
-  ThemeKey,
-  ThemeName,
-  ThemePreference,
-  ThemeScheme,
-  Themes,
-} from './themes';
+export type { Theme, ThemePreference, ThemeScheme } from './themes';
 export {
   Atoms,
   BorderRadius,
   BorderRadius as borderRadius,
   Breakpoints,
+  Opacity,
   Spacing,
   Spacing as spacing,
   typography,

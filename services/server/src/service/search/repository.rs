@@ -1,9 +1,9 @@
-use entity::{content, event, interaction_tally, profile};
+use entity::{content, event, follow, interaction_tally, profile};
 use sea_orm::sea_query::{Expr, Func, Order, Value};
 use sea_orm::{
-    ColumnTrait, EntityTrait, FromQueryResult, Iterable, JoinType, QueryFilter,
-    QueryOrder, QueryResult, QuerySelect, RelationTrait, TryGetError,
-    TryGetableMany,
+    ColumnTrait, EntityTrait, ExprTrait, FromQueryResult, Iterable, JoinType,
+    QueryFilter, QueryOrder, QueryResult, QuerySelect, QueryTrait,
+    RelationTrait, TryGetError, TryGetableMany,
 };
 use tonic::Status;
 
@@ -86,6 +86,7 @@ impl Query {
     #[tracing::instrument(skip_all)]
     pub(super) async fn search_users<C: Connection>(
         db: &mut C,
+        current_identity: Option<&str>,
         search_query: &str,
         sort_by: SortUsersBy,
         limit: u64,
@@ -103,9 +104,10 @@ impl Query {
             content::Column::iter(),
         );
         query = query
-            // TODO: we can use ts_rank_cd as well here.
             .expr_as(
-                Expr::cust("ts_rank(profile.search_data, search_query($1))"),
+                Expr::cust(
+                    "ts_rank(profile.search_data, create_tsquery($1), 16)",
+                ),
                 SEARCH_RANK_COLUMN,
             )
             .expr_as(
@@ -115,10 +117,32 @@ impl Query {
             .inner_join(event::Entity)
             .join(JoinType::InnerJoin, content_join())
             .filter(Expr::cust_with_values(
-                "profile.search_data @@ search_query($1)",
+                "profile.search_data @@ create_tsquery($1)",
                 [search_query],
             ));
 
+        // If the user is authenticated order the users they follow before
+        // anyone else.
+        if let Some(current_identity) = current_identity {
+            QueryTrait::query(&mut query)
+                .left_join(
+                    follow::Entity,
+                    Expr::col(follow::Column::Followee.as_column_ref())
+                        .eq(Expr::col(
+                            profile::Column::Identity.as_column_ref(),
+                        ))
+                        .and(
+                            Expr::col(follow::Column::Follower.as_column_ref())
+                                .eq(Expr::Value(current_identity.into())),
+                        ),
+                )
+                .order_by_expr(
+                    Expr::col(follow::Entity).is_not_null(),
+                    Order::Desc,
+                );
+        }
+
+        // NOTE: potentially ordering by following first (see above).
         let (column, order) = sort_users_by_column(sort_by);
         QueryOrder::query(&mut query)
             .order_by_expr(column, order.clone())
@@ -138,7 +162,7 @@ impl Query {
                             sorted_by: SortedUsersBy::Rank(rank),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, search_query($$1)), events.id) < ($1, $2)",
+                            "(ts_rank(search_data, create_tsquery($$1), 16), events.id) < ($1, $2)",
                             [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
@@ -166,7 +190,7 @@ impl Query {
                             sorted_by: SortedUsersBy::Rank(rank),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, search_query($$1)), events.id) > ($1, $2)",
+                            "(ts_rank(search_data, create_tsquery($$1), 16), events.id) > ($1, $2)",
                             [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
@@ -211,15 +235,14 @@ impl Query {
             content::Column::iter(),
         );
         query = query
-            // TODO: we can use ts_rank_cd as well here.
             .expr_as(
-                Expr::cust("ts_rank(search_data, search_query($1))"),
+                Expr::cust("ts_rank(search_data, create_tsquery($1), 16)"),
                 SEARCH_RANK_COLUMN,
             )
             .join(JoinType::InnerJoin, content_join())
             .join(JoinType::InnerJoin, content::Relation::ContentPost.def())
             .filter(Expr::cust_with_values(
-                "search_data @@ search_query($1)",
+                "search_data @@ create_tsquery($1)",
                 [search_query],
             ));
 

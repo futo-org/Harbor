@@ -70,7 +70,7 @@ export class ExpoFileStoreDriver implements IFileStoreDriver {
     try {
       const file = this.fileFor(path);
       file.parentDirectory.create({ intermediates: true, idempotent: true });
-      file.write(bytes);
+      await file.write(bytes);
     } catch (err) {
       throw toFileStoreError(err, path);
     }

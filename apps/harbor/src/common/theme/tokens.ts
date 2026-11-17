@@ -1,5 +1,4 @@
 import { StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
-import { isIOS } from '../util/platform';
 
 export const Spacing = {
   '0': 0,
@@ -27,6 +26,13 @@ export const BorderRadius = {
 } as const;
 
 export type BorderRadiusToken = keyof typeof BorderRadius;
+
+// Fades for disabled and pressed elements; numbers for animated opacity,
+// `Atoms.faded*` for styles.
+export const Opacity = {
+  faded: 0.5,
+  faded_subtle: 0.8,
+} as const;
 
 /** Type scale (used by `Text` and inputs; import `typography` from `@/common/theme`). */
 export const typography = {
@@ -658,6 +664,46 @@ const atomStyles = {
   },
   rounded_full: {
     borderRadius: BorderRadius.full,
+  },
+
+  /**
+   * Border width
+   */
+  border_0: {
+    borderWidth: 0,
+  },
+  border: {
+    borderWidth: 1,
+  },
+  border_t: {
+    borderTopWidth: 1,
+  },
+  border_b: {
+    borderBottomWidth: 1,
+  },
+  border_l: {
+    borderLeftWidth: 1,
+  },
+  border_r: {
+    borderRightWidth: 1,
+  },
+  border_x: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+  },
+  border_y: {
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+  },
+
+  /**
+   * Opacity
+   */
+  faded: {
+    opacity: Opacity.faded,
+  },
+  faded_subtle: {
+    opacity: Opacity.faded_subtle,
   },
 
   /**

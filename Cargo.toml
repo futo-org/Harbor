@@ -66,3 +66,10 @@ opentelemetry-prometheus = { version = "0.33", default-features = false }
 prometheus = { version = "0.14", default-features = false }
 time = { version = "0.3.55", default-features = false }
 base64 = { version = "0.23", default-features = false, features = ["alloc"] }
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = "debuginfo"

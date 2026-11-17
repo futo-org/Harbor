@@ -19,14 +19,15 @@ export function Kbd({ children }: KbdProps) {
       style={[
         Atoms.px_xs,
         Atoms.rounded_sm,
-        theme.atoms.bg_neutral_25,
-        theme.atoms.border_neutral_medium,
-        { borderWidth: 1, transform: [{ translateY: KEY_BOX_DROP }] },
+        theme.atoms.box.secondary.bg,
+        theme.atoms.box.secondary.border,
+        Atoms.border,
+        { transform: [{ translateY: KEY_BOX_DROP }] },
       ]}
     >
       <Text
         variant="small"
-        color="neutral_500"
+        color="muted"
         // Words stay on the neighboring text's baseline; single glyphs
         // (⌘, ⏎, ↑) have no baseline to keep and move with the box.
         style={isWord && { transform: [{ translateY: -KEY_BOX_DROP }] }}

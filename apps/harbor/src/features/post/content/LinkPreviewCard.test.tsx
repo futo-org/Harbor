@@ -9,12 +9,13 @@ import { COMPACT_IMAGE_WIDTH, LinkPreviewCard } from './LinkPreviewCard';
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
     theme: {
-      palette: { neutral_500: '#888888' },
-      atoms: { text_neutral_high: {} },
+      atoms: {
+        box: { raised: { bg: {} } },
+        outline: {},
+      },
     },
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
-  withHexOpacity: () => '#88888830',
 }));
 
 // Render the themed Text primitive as a plain RN Text so its content is

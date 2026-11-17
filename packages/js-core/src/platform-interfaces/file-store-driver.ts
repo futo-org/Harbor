@@ -65,6 +65,7 @@ export type FileStoreEntry = {
  * is applicable.
  */
 export type FileStoreErrorCode =
+  | 'invalid owner'
   /** Path does not pass the validation below. */
   | 'invalid path'
   /** A file was encountered when a directory was expected, or vice versa. */

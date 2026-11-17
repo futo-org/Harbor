@@ -9,7 +9,7 @@ import {
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
 import {
   Atoms,
-  type PaletteColorToken,
+  type TextColor,
   typography,
   useTheme,
 } from '@/src/common/theme';
@@ -37,19 +37,16 @@ const SEVERITY: Record<
   Severity,
   {
     icon: 'alertCircle' | 'warning';
-    color: PaletteColorToken;
-    background: PaletteColorToken;
+    color: TextColor & ('danger' | 'warning' | 'success');
   }
 > = {
   error: {
     icon: 'alertCircle',
-    color: 'negative_500',
-    background: 'negative_50',
+    color: 'danger',
   },
   warning: {
     icon: 'warning',
-    color: 'warning_500',
-    background: 'warning_50',
+    color: 'warning',
   },
 };
 
@@ -134,12 +131,11 @@ export function useSyncIssues(identityKey: string | null): SyncIssues {
 /** A pill that shows a warning if there are sync issues, or green if there are none */
 export function SyncIssuesChip({ issues }: { issues: SyncIssues }) {
   const { theme } = useTheme();
-  const { icon, color, background, label } = issues.severity
+  const { icon, color, label } = issues.severity
     ? { ...SEVERITY[issues.severity], label: plural(issues.count, 'issue') }
     : {
         icon: 'checkmarkCircle' as const,
-        color: 'positive_500' as const,
-        background: 'positive_50' as const,
+        color: 'success' as const,
         label: 'No issues',
       };
 
@@ -152,7 +148,7 @@ export function SyncIssuesChip({ issues }: { issues: SyncIssues }) {
         Atoms.px_sm,
         Atoms.py_xs,
         Atoms.rounded_full,
-        { backgroundColor: theme.palette[background] },
+        theme.atoms.box[color].bg_subtle,
       ]}
     >
       <Icon name={icon} size={14} color={color} />
@@ -221,12 +217,12 @@ function ErrorMessage({
             marginRight: DISMISS_OVERHANG_RIGHT,
           }}
           accessibilityLabel="Dismiss"
-          icon={() => <Icon name="close" size={16} color="neutral_500" />}
+          icon={() => <Icon name="close" size={16} color="muted" />}
           onPress={onDismiss}
         />
       </View>
       <Text
-        color="neutral_500"
+        color="muted"
         monospace
         fontSize="xs"
         lineHeight="logs"
@@ -275,7 +271,7 @@ function IssueItem({
     <Pressable
       onPress={route ? () => router.navigate(route) : undefined}
       accessibilityRole={route ? 'link' : undefined}
-      style={[Atoms.p_md, theme.atoms.border_neutral_low, DIVIDER]}
+      style={[Atoms.p_md, theme.atoms.box.primary.border, DIVIDER]}
     >
       <ErrorMessage
         severity={severityOf(issue)}
@@ -313,7 +309,7 @@ function FailureItem({
 }) {
   const { theme } = useTheme();
   return (
-    <View style={[Atoms.p_md, theme.atoms.border_neutral_low, DIVIDER]}>
+    <View style={[Atoms.p_md, theme.atoms.box.primary.border, DIVIDER]}>
       <ErrorMessage
         severity="error"
         label="Sync failed"

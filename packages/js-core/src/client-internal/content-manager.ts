@@ -27,7 +27,7 @@ export class ContentManager {
    * This is used so that blobs of an identity will eventually
    * persist on other devices in that identity.
    */
-  async pullBlobs(blobs: Proto.Blob[]): Promise<void> {
+  async pullBlobs(identity: string, blobs: Proto.Blob[]): Promise<void> {
     const digests = blobs.map((b) => b.digest).filter((d) => !!d);
 
     if (digests.length === 0) return;
@@ -35,10 +35,10 @@ export class ContentManager {
     await Promise.allSettled(
       digests.map(async (digest) => {
         try {
-          if (await this.client.fileStore.has(digest)) return;
+          if (await this.client.fileStore.has(identity, digest)) return;
           const bytes = await this.client.fetchBlobBytes(digest);
           if (!bytes) return;
-          await this.client.fileStore.put(digest, bytes);
+          await this.client.fileStore.put(identity, digest, bytes);
         } catch (err) {
           console.warn('pullBlobs failed:', err);
         }

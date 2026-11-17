@@ -32,7 +32,7 @@ function NoticeGroup({ notice }: { notice: LegalNotice }) {
             />
           </View>
           {notice.licenseText ? (
-            <Text variant="small" fontWeight="regular" color="neutral_600">
+            <Text variant="small" fontWeight="regular" color="secondary">
               {notice.licenseText}
             </Text>
           ) : null}
@@ -50,13 +50,7 @@ export default function LegalNoticesScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View
-          style={[
-            Atoms.px_lg,
-            Atoms.flex_1,
-            { backgroundColor: theme.atoms.bg.backgroundColor },
-          ]}
-        >
+        <View style={[Atoms.px_lg, Atoms.flex_1, theme.atoms.box.primary.bg]}>
           <ScreenHeader title="Legal notices" onBack={() => router.back()} />
           <ScrollView
             style={Atoms.flex_1}

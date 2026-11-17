@@ -1,0 +1,22 @@
+---
+# harbor-ops' cluster, one instance; the standard image has pgvector.
+# postgres-app, read by the services' ExternalSecrets.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.2-standard-trixie
+  storage:
+    size: 5Gi
+  postgresql:
+    shared_preload_libraries:
+      - pg_stat_statements
+      - vector
+    parameters:
+      max_connections: "200"
+  bootstrap:
+    initdb:
+      database: harbor
+      owner: harbor

@@ -1,0 +1,22 @@
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: harbor-server-events
+  labels:
+    strimzi.io/cluster: kafka
+spec:
+  topicName: harbor-server.events
+  partitions: 12
+  replicas: 1
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: harbor-server-notifications
+  labels:
+    strimzi.io/cluster: kafka
+spec:
+  topicName: harbor-server.notifications
+  partitions: 12
+  replicas: 1

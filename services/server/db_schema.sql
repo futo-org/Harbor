@@ -4,8 +4,6 @@
 
 \restrict harborServerDB
 
--- Dumped from database version 18.6 (Debian 18.6-1.pgdg13+2)
--- Dumped by pg_dump version 18.6 (Debian 18.6-1.pgdg12+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,23 +18,93 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: tsvector_agg(tsvector); Type: AGGREGATE; Schema: public; Owner: -
+-- Name: unaccent; Type: EXTENSION; Schema: -; Owner: -
 --
 
-CREATE AGGREGATE public.tsvector_agg(tsvector) (
-    SFUNC = tsvector_concat,
-    STYPE = tsvector,
-    INITCOND = ''
-);
+CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
 
 
 --
--- Name: create_tsvector(regconfig, text, "char"); Type: FUNCTION; Schema: public; Owner: -
+-- Name: EXTENSION unaccent; Type: COMMENT; Schema: -; Owner: -
 --
 
-CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char") RETURNS tsvector
+COMMENT ON EXTENSION unaccent IS 'text search dictionary that removes accents';
+
+
+--
+-- Name: parse_for_search(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN (setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
+    BEGIN ATOMIC
+ WITH token_numword AS (
+          SELECT ts_token_type.tokid AS id
+            FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
+           WHERE (ts_token_type.alias = 'numword'::text)
+          LIMIT 1
+         ), token_sfloat AS (
+          SELECT ts_token_type.tokid AS id
+            FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
+           WHERE (ts_token_type.alias = 'sfloat'::text)
+          LIMIT 1
+         ), token_blank AS (
+          SELECT ts_token_type.tokid AS id
+            FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
+           WHERE (ts_token_type.alias = 'blank'::text)
+          LIMIT 1
+         ), parsed AS (
+          SELECT
+                 CASE
+                     WHEN ((parsed.tokid = ( SELECT token_sfloat.id
+                        FROM token_sfloat)) AND (lead(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_numword.id
+                        FROM token_numword))) THEN (parsed.token || lead(parsed.token, 1, ''::text) OVER ())
+                     WHEN ((parsed.tokid = ( SELECT token_numword.id
+                        FROM token_numword)) AND (lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_sfloat.id
+                        FROM token_sfloat))) THEN NULL::text
+                     WHEN ((parsed.tokid = ( SELECT token_blank.id
+                        FROM token_blank)) AND ("right"(parsed.token, 1) = '#'::text)) THEN ('#'::text || lead(parsed.token, 1, ''::text) OVER ())
+                     WHEN ((lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_blank.id
+                        FROM token_blank)) AND (lag("right"(parsed.token, 1), 1, NULL::text) OVER () = '#'::text)) THEN NULL::text
+                     WHEN ((parsed.token = '@'::text) AND (lag(parsed.token, 1, NULL::text) OVER () IS NOT NULL) AND (lead(parsed.token, 1, NULL::text) OVER () IS NOT NULL)) THEN ((lag(parsed.token, 1, ''::text) OVER () || '@'::text) || lead(parsed.token, 1, ''::text) OVER ())
+                     WHEN (parsed.tokid = ( SELECT token_blank.id
+                        FROM token_blank)) THEN NULL::text
+                     ELSE parsed.token
+                 END AS token
+            FROM ts_parse('default'::text, parse_for_search.text) parsed(tokid, token)
+         ), transformed AS (
+          SELECT unnest(ts_lexize('english_stem'::regdictionary, public.unaccent(TRIM(BOTH '	
+ '::text FROM unnest(
+                 CASE
+                     WHEN (parsed.token ~~ '%@%'::text) THEN array_append(string_to_array(parsed.token, '@'::text), parsed.token)
+                     ELSE ARRAY[parsed.token]
+                 END))))) AS term
+            FROM parsed
+           WHERE ((parsed.token <> ''::text) AND (parsed.token IS NOT NULL))
+         )
+  SELECT transformed.term
+    FROM ( SELECT ltrim(transformed_1.term, '#'::text) AS term
+            FROM transformed transformed_1) transformed(term)
+   WHERE ((transformed.term IS NOT NULL) AND (transformed.term <> ''::text));
+END;
+
+
+--
+-- Name: create_tsquery(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_tsquery(query text) RETURNS tsquery
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    RETURN (WITH unique_terms AS (SELECT DISTINCT ON (terms.term) terms.term, terms.n FROM (SELECT row_number() OVER () AS n, ltrim(all_terms.term, '@'::text) AS term FROM public.parse_for_search(create_tsquery.query) all_terms(term)) terms), transformed AS (SELECT CASE WHEN ((terms.term ~~ '%@%'::text) AND (lag(terms.term, 1, NULL::text) OVER () IS NOT NULL) AND (lead(terms.term, 1, NULL::text) OVER () IS NOT NULL)) THEN ((((((('( '::text || lag(terms.term, 1, NULL::text) OVER ()) || ' | '::text) || terms.term) || ':*'::text) || ' | '::text) || lead(terms.term, 1, NULL::text) OVER ()) || ' )'::text) WHEN ((lead(terms.term, 1, NULL::text) OVER () ~~ '%@%'::text) OR (lag(terms.term, 1, NULL::text) OVER () ~~ '%@%'::text)) THEN NULL::text WHEN (lead(terms.term, 1, NULL::text) OVER () IS NULL) THEN (terms.term || ':*'::text) ELSE terms.term END AS term FROM (SELECT unique_terms.term FROM unique_terms ORDER BY unique_terms.n) terms) SELECT COALESCE((string_agg(transformed.term, ' & '::text))::tsquery, ''::tsquery) AS query FROM transformed WHERE ((transformed.term <> ''::text) AND (transformed.term IS NOT NULL)));
+
+
+--
+-- Name: create_tsvector(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_tsvector(text text) RETURNS tsvector
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    RETURN (SELECT COALESCE(array_to_tsvector(array_agg(terms.term)), ''::tsvector) AS vector FROM public.parse_for_search(create_tsvector.text) terms(term) WHERE (terms.term <> ALL (ARRAY['@{'::text, '{'::text, '}'::text])));
 
 
 --
@@ -64,26 +132,6 @@ EXCEPTION
       RETURN (0)::numeric;
 END;
 $$;
-
-
---
--- Name: tsquery_agg(tsquery); Type: AGGREGATE; Schema: public; Owner: -
---
-
-CREATE AGGREGATE public.tsquery_agg(tsquery) (
-    SFUNC = tsquery_or,
-    STYPE = tsquery,
-    INITCOND = ''
-);
-
-
---
--- Name: search_query(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.search_query(query text) RETURNS tsquery
-    LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN ((COALESCE(to_tsquery('english'::regconfig, query), ''::tsquery) || COALESCE(to_tsquery('simple'::regconfig, query), ''::tsquery)) || (SELECT public.tsquery_agg((data.word)::tsquery) AS tsquery_agg FROM regexp_split_to_table(COALESCE(search_query.query, ''::text), '[[:space:]]'::text) data(word) WHERE ("left"(data.word, '-2'::integer) ~ '^([a-fA-F0-9])*$'::text)));
 
 
 SET default_tablespace = '';
@@ -137,6 +185,19 @@ CREATE TABLE public.ban (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     banned_by character varying
+);
+
+
+--
+-- Name: blob_index; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.blob_index (
+    key text NOT NULL,
+    digest_type integer NOT NULL,
+    digest_value bytea NOT NULL,
+    size bigint NOT NULL,
+    last_modified timestamp with time zone NOT NULL
 );
 
 
@@ -302,7 +363,7 @@ CREATE TABLE public.content_post (
     quote_public_key_type smallint,
     quote_public_key bytea,
     quote_sequence bigint,
-    search_data tsvector GENERATED ALWAYS AS (public.create_tsvector('english'::regconfig, (text)::text, 'A'::"char")) STORED NOT NULL
+    search_data tsvector GENERATED ALWAYS AS (public.create_tsvector((text)::text)) STORED NOT NULL
 );
 
 
@@ -727,6 +788,14 @@ ALTER TABLE ONLY public.attributed_to_reaction_summaries
 
 ALTER TABLE ONLY public.ban
     ADD CONSTRAINT ban_pkey PRIMARY KEY (identity);
+
+
+--
+-- Name: blob_index blob_index_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.blob_index
+    ADD CONSTRAINT blob_index_pkey PRIMARY KEY (key);
 
 
 --

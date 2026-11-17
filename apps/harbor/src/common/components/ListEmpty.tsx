@@ -14,7 +14,7 @@ export function ListEmpty({ children }: { children: ReactNode }) {
       ]}
     >
       {typeof children === 'string' ? (
-        <Text variant="body" color="neutral_500">
+        <Text variant="body" color="muted">
           {children}
         </Text>
       ) : (

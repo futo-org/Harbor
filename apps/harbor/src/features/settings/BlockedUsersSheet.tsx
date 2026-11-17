@@ -29,7 +29,7 @@ export default function BlockedUsersSheet() {
       />
       <Sheet.Content style={[Atoms.p_0]}>
         {blocked.length === 0 ? (
-          <Text variant="secondary" color="neutral_500" style={[Atoms.p_lg]}>
+          <Text variant="secondary" color="muted" style={[Atoms.p_lg]}>
             {"You haven't blocked anyone"}
           </Text>
         ) : (
@@ -38,10 +38,10 @@ export default function BlockedUsersSheet() {
               key={identity}
               identity={identity}
               onPress={() => openProfile(identity)}
-              style={{
-                borderBottomWidth: index === blocked.length - 1 ? 0 : 1,
-                borderColor: theme.palette.neutral_25,
-              }}
+              style={[
+                theme.atoms.box.primary.border,
+                index < blocked.length - 1 && Atoms.border_b,
+              ]}
               trailing={
                 <Button
                   title="Unblock"

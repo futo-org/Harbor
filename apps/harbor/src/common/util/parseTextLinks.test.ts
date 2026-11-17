@@ -142,6 +142,20 @@ describe('parseTextLinks', () => {
       ]);
     });
 
+    it.each(['my-site.com', 'a-b.co.uk', 'xn--bcher-kva.de', 'sub.my-docs.io'])(
+      'detects hyphenated labels: %s',
+      (input) => {
+        expect(linkValues(input)).toEqual([input]);
+      },
+    );
+
+    it.each(['-bad.com', 'bad-.com', 'sub.-bad.com'])(
+      'does not linkify a label that starts or ends with a hyphen: %s',
+      (input) => {
+        expect(linkValues(input)).toEqual([]);
+      },
+    );
+
     it.each(['example.com:8080/x', 'example.com?q=1', 'example.com#frag'])(
       'keeps a port, query, or fragment on a bare domain: %s',
       (input) => {

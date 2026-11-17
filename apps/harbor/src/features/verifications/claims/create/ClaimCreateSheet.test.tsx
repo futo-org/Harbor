@@ -1,13 +1,20 @@
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
     theme: {
-      palette: new Proxy({}, { get: () => '#000' }),
-      atoms: new Proxy({}, { get: () => ({}) }),
+      scheme: 'light',
+      colors: {
+        accent: '#000',
+        success: '#000',
+        muted: '#000',
+        box: new Proxy({}, { get: () => ({ bg_subtle: '#000' }) }),
+      },
+      atoms: {
+        box: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
+      },
     },
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
-  withHexOpacity: (color: string) => color,
 }));
 
 jest.mock('@/src/common/components', () => {
@@ -37,15 +44,6 @@ jest.mock('@/src/common/components/Icon', () => ({
   __esModule: true,
   default: () => null,
 }));
-
-jest.mock('@/src/common/components/ScrollView', () => {
-  const react = require('react');
-  const { View } = require('react-native');
-  return {
-    ScrollView: ({ children }: { children?: unknown }) =>
-      react.createElement(View, null, children),
-  };
-});
 
 jest.mock('@/src/common/components/sheet', () => {
   const react = require('react');
@@ -100,10 +98,6 @@ jest.mock('react-native-reanimated', () => {
   return { __esModule: true, default: { View }, FadeInDown: chain };
 });
 
-jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
-}));
-
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({
   useCurrentIdentity: () => ({ identityKey: 'me' }),
 }));
@@ -114,6 +108,7 @@ const EXISTING_CLAIM: DecodedClaim = {
   id: 'aabb',
   schemaName: 'Freeform',
   fields: [],
+  images: [],
   identity: 'me',
   keyFingerprint: 'fp',
   sequence: 7n,

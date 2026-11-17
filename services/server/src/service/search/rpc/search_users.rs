@@ -25,7 +25,7 @@ pub async fn handle(
     req: SearchUsersRequest,
 ) -> Result<SearchUsersResponse, Status> {
     let sort_by = req.sort_by();
-    let common = rpc::Params::from_req_params(req.query, &req.page_params)?;
+    let common = rpc::Params::from_req_params(&req.query, &req.page_params)?;
     let params = Params { common, sort_by };
     let result =
         create_pipeline(&mut ctx, &params, fetch, hydrate, filter, view)
@@ -43,6 +43,7 @@ async fn fetch(
 ) -> Result<Fetched<SearchRow, SortedUsersBy>, Status> {
     let mut rows = Query::search_users(
         &mut ctx.db,
+        ctx.auth.as_deref(),
         &params.common.query,
         params.sort_by,
         params.common.limit + 1, // For pagination.

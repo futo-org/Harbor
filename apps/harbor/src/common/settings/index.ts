@@ -1,6 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import type {
+  FeatureFlag,
+  FeatureFlagValues,
+} from '@/src/common/feature-flags/lib/flags';
 import type { ThemePreference } from '@/src/common/theme/themes';
 import { IS_STORE_BUILD } from '@/src/common/util/application';
 import type { ModerationLabel } from './moderationLabels';
@@ -20,12 +24,15 @@ export interface SettingsState {
   theme: ThemePreference;
   linkPreviewsEnabled: boolean;
   moderation: ModerationPreferences;
+  /** Only the feature flags switched in settings; the rest follow defaults. */
+  featureFlags: FeatureFlagValues;
 }
 
 export interface SettingsActions {
   setTheme: (theme: ThemePreference) => void;
   setLinkPreviewsEnabled: (enabled: boolean) => void;
   setModeration: (prefs: Partial<ModerationPreferences>) => void;
+  setFeatureFlag: (flag: FeatureFlag, enabled: boolean) => void;
 }
 
 export type SettingsStore = SettingsState & SettingsActions;
@@ -76,6 +83,7 @@ export const useSettings = create<SettingsStore>()(
       theme: 'system',
       linkPreviewsEnabled: true,
       moderation: defaultModeration(),
+      featureFlags: {},
 
       setTheme: (theme) => set({ theme }),
       setLinkPreviewsEnabled: (enabled) =>
@@ -83,6 +91,10 @@ export const useSettings = create<SettingsStore>()(
       setModeration: (prefs) =>
         set((state) => ({
           moderation: { ...state.moderation, ...prefs },
+        })),
+      setFeatureFlag: (flag, enabled) =>
+        set((state) => ({
+          featureFlags: { ...state.featureFlags, [flag]: enabled },
         })),
     }),
     {

@@ -8,7 +8,7 @@ and the CI toolchain images (`images/`) all live here.
 
 | Workflow | Runs on | Does |
 |---|---|---|
-| `pr.yml` | pull requests | lint, package, image and docs builds, unit, integration and e2e tests, docs preview |
+| `pr.yml` | pull requests | lint, package, image, browser extension and docs builds, unit, integration and e2e tests, docs preview |
 | `pr-app.yml` | `PR / Build App` label on a PR, or `PR / Build App / Android APK`, `PR / Build App / Android AAB`, `PR / Build App / iOS` for one target | staging EAS builds |
 | `pr-docs-cleanup.yml` | PR closed | remove the docs preview |
 | `deploy-<component>-staging.yml` | push to `develop` touching the component, manual run | staging deploy |
@@ -21,8 +21,11 @@ plan: which jobs run, from the changed paths) and builds missing CI images.
 
 Rules:
 
-- A `pr.yml` job runs when its paths changed, or the workflow (or an action
-  or script it uses) changed. Tags build everything.
+- A `pr.yml` job runs when its paths changed, or an action or script it uses
+  changed. A change to the workflow, or to what plans it, runs every job.
+  Tags build everything.
+- Web e2e runs on every PR. It uses the run's web and server images where
+  the PR changed their sources, and the `staging` tag of each otherwise.
 - Images are pushed as `<image>:<sha>`; every run builds the ones it needs
   and BuildKit's registry cache decides what that costs.
 - The rs-core libraries (wasm, Android, iOS) are pushed as
@@ -38,7 +41,7 @@ Rules:
 ## Deploys
 
 Components: `server`, `moderation`, `push-notifications`, `grayjay-migrator`,
-`scraper`, `verifier-bot`, `web`, `app`, `docs`.
+`scraper`, `verifier-bot`, `web`, `app`, `browser-extension`, `docs`.
 
 `deploy-<component>-staging.yml` runs on a push to `develop` that touches the
 component's paths (or the workflow and the actions it uses), and manually. A
@@ -49,7 +52,14 @@ the component's chart as
 `<next patch>-<ref>.g<sha>` with the commit as `appVersion`, then moves the
 image and chart `staging` tags. helm-controller watches the chart tag. `web`
 also uploads its bundle to the static bucket. `app` builds the staging apps on
-EAS and submits them; `ios_e2e` runs the iOS suite on the store build. `docs`
+EAS and submits them; `ios_e2e` runs the iOS suite on the store build.
+`browser-extension` builds the staging extension for Chrome, Edge, Firefox and
+Safari with the staging services packaged in, and keeps the store zips as the
+`browser-extension-staging` artifact; the mac runner wraps the Safari build in
+an unsigned macOS app (`browser-extension-safari-staging`). The Chrome, Firefox
+and Edge zips are submitted to the stores that have a listing set up (Firefox
+as unlisted), and every build is uploaded to the static bucket under
+`browser-extension/staging`, as the APK is. Safari is not submitted. `docs`
 deploys to Cloudflare Pages.
 
 `deploy-<component>-production.yml` moves the `staging` image and chart tags
@@ -57,6 +67,9 @@ to `production`, so production gets what staging runs. `sha` deploys that
 commit instead; its image and chart must exist, and a commit has a chart only
 for the components deployed at it. `deploy-app-production.yml` builds the
 production apps from `develop`'s head and submits them.
+`deploy-browser-extension-production.yml` builds the production extension from
+`develop`'s head (`browser-extension-production` artifact), then submits and
+uploads it the same way (`browser-extension/production`, Firefox as listed).
 
 `node .forgejo/scripts/deployed.mjs` prints the commit each chart's `staging`
 and `production` tag pins, no login needed.
@@ -85,6 +98,13 @@ Provisioned by harbor-infra (`futo-git/ci_values`, `ci_variables`).
 - `STATIC_S3_ENDPOINT`, `STATIC_S3_ACCESS_KEY_ID`,
   `STATIC_S3_SECRET_ACCESS_KEY`; variables `STATIC_S3_BUCKET`,
   `STATIC_PUBLIC_BASE_URL`.
+- Browser extension stores, read from Infisical (`staging` and `prod`
+  `/ci/harbor`, entered in its UI) under the names `wxt submit` reads, each
+  store skipped until its listing is set. Chrome: `CHROME_EXTENSION_ID`,
+  `CHROME_PUBLISHER_ID`, `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`,
+  `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`. Firefox: `FIREFOX_JWT_ISSUER`,
+  `FIREFOX_JWT_SECRET`. Edge: `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`,
+  `EDGE_API_KEY`.
 - `SCCACHE_R2_ENDPOINT`, `SCCACHE_R2_ACCESS_KEY_ID`,
   `SCCACHE_R2_SECRET_ACCESS_KEY`; variable `SCCACHE_R2_BUCKET`.
 - Variables `EXPO_PUBLIC_HARBOR_SEED_SERVERS`,
@@ -135,3 +155,9 @@ publishes with the commit title.
 - An empty matrix creates no job and blocks anything that `needs` it.
 - No `workflow_run` event, so a deploy cannot follow a CI run; it checks the
   registry for the commit's image instead.
+- Cancelling a job (including through `concurrency: cancel-in-progress`)
+  doesn't stop it on an ephemeral runner: it runs every remaining step to the
+  end, side effects included, with its logs and artifacts dropped
+  ([forgejo#14589](https://codeberg.org/forgejo/forgejo/issues/14589)). A
+  step with side effects in a cancellable workflow checks its own run's status
+  first (`isRunCancelled` in `post-e2e-staging-outcome.mjs`).

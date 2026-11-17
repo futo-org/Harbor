@@ -7,7 +7,7 @@ import { openCompose } from '@/src/common/constants';
 import { useEagerLoad } from '@/src/common/lib/navigation/useEagerLoad';
 import { emitFocusedRefresh } from '@/src/common/lib/navigation/useFocusedRefresh';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import { isIOS, isWeb } from '@/src/common/util/platform';
+import { isWeb } from '@/src/common/util/platform';
 import { TabFilterSheet } from '@/src/common/components/tabs';
 import { ComposerInput } from '@/src/features/composer';
 import type { SharedValue } from 'react-native-reanimated';
@@ -48,8 +48,7 @@ function FollowingPage({
 }
 
 export default function FeedScreen() {
-  // iOS uses the detached native compose tab item (see app/(tabs)/_layout.tsx);
-  const showComposeFab = !isWeb && !isIOS;
+  const showComposeFab = !isWeb;
 
   usePageTitle('Home');
 
@@ -117,7 +116,7 @@ export default function FeedScreen() {
           <Fab
             onPress={openCompose}
             accessibilityLabel="New post"
-            icon={() => <Icon name="add" size={32} color="white" />}
+            icon={({ color }) => <Icon name="add" size={32} color={color} />}
           />
         ) : null}
       </Screen.PrimaryColumn>

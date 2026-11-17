@@ -32,7 +32,7 @@ export default function ServersSettingsScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.px_lg, Atoms.flex_1, theme.atoms.bg]}>
+        <View style={[Atoms.px_lg, Atoms.flex_1, theme.atoms.box.primary.bg]}>
           <ScreenHeader title="Servers" onBack={back} />
           <ScrollView
             style={Atoms.flex_1}
@@ -43,7 +43,7 @@ export default function ServersSettingsScreen() {
             ]}
           >
             {servers.length === 0 ? (
-              <Text variant="secondary" color="neutral_500">
+              <Text variant="secondary" color="muted">
                 No servers configured
               </Text>
             ) : (
@@ -63,7 +63,7 @@ export default function ServersSettingsScreen() {
 
             {suggestedServers.length > 0 && (
               <View style={Atoms.gap_sm}>
-                <Text variant="secondary" color="neutral_500">
+                <Text variant="secondary" color="muted">
                   Suggested servers
                 </Text>
                 {suggestedServers.map((server) => (

@@ -94,14 +94,14 @@ const FeedList = forwardRef<ListRef, FeedListProps>(function FeedList(
           <View style={[Atoms.items_center, Atoms.p_lg]}>
             <ActivityIndicator
               size="small"
-              color={theme.palette.neutral_500}
+              color={theme.colors.muted}
               accessibilityLabel="Loading more posts"
             />
           </View>
         ) : null}
       </View>
     ),
-    [showLoadingMore, insets.bottom, theme.palette.neutral_500],
+    [showLoadingMore, insets.bottom, theme.colors.muted],
   );
 
   return (

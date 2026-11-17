@@ -69,7 +69,7 @@ export default function NotificationsScreen() {
                   Atoms.p_lg,
                 ]}
               >
-                <Text color="neutral_500">You have no notifications</Text>
+                <Text color="muted">You have no notifications</Text>
               </View>
             )
           }

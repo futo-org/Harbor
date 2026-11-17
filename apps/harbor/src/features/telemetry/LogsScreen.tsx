@@ -1,15 +1,9 @@
 import { IconButton, Screen, Text } from '@/src/common/components';
-import Icon from '@/src/common/components/Icon';
 import Topbar from '@/src/common/components/layout/Topbar';
 import { Tabs } from '@/src/common/components/tabs';
 import { confirm } from '@/src/common/lib/dialogs/alert';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import {
-  Atoms,
-  type PaletteColorToken,
-  typography,
-  useTheme,
-} from '@/src/common/theme';
+import { Atoms, typography, useTheme } from '@/src/common/theme';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,9 +23,9 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'error', label: 'Errors' },
 ];
 
-const DOT_COLOR: Partial<Record<LogLevel, PaletteColorToken>> = {
-  warn: 'warning_500',
-  error: 'negative_500',
+const DOT_BOX: Partial<Record<LogLevel, 'warning' | 'danger'>> = {
+  warn: 'warning',
+  error: 'danger',
 };
 
 const COLLAPSED_LINES = 2;
@@ -58,7 +52,7 @@ function LogRow({
   onToggle: (id: number) => void;
 }) {
   const { theme } = useTheme();
-  const dot = DOT_COLOR[entry.level];
+  const dot = DOT_BOX[entry.level];
 
   return (
     <Pressable
@@ -68,13 +62,15 @@ function LogRow({
       accessibilityState={{ expanded }}
     >
       <View
-        style={{
-          width: DOT_SIZE,
-          height: DOT_SIZE,
-          borderRadius: DOT_SIZE / 2,
-          marginTop: (typography.lineHeight.logs - DOT_SIZE) / 2,
-          backgroundColor: dot ? theme.palette[dot] : 'transparent',
-        }}
+        style={[
+          {
+            width: DOT_SIZE,
+            height: DOT_SIZE,
+            borderRadius: DOT_SIZE / 2,
+            marginTop: (typography.lineHeight.logs - DOT_SIZE) / 2,
+          },
+          dot && theme.atoms.box[dot].bg,
+        ]}
       />
       <View style={[Atoms.flex_1, Atoms.gap_xs]}>
         <Text
@@ -86,12 +82,7 @@ function LogRow({
         >
           {entry.message}
         </Text>
-        <Text
-          fontSize={11}
-          lineHeight={14}
-          fontWeight="regular"
-          color="neutral_400"
-        >
+        <Text fontSize={11} lineHeight={14} fontWeight="regular" color="muted">
           {formatRowTime(entry.at)}
         </Text>
         {expanded ? (
@@ -99,13 +90,13 @@ function LogRow({
             monospace
             fontSize="xs"
             lineHeight="logs"
-            color="neutral_600"
+            color="secondary"
             selectable
             style={[
               Atoms.p_sm,
               Atoms.rounded_sm,
               Atoms.mt_xs,
-              { backgroundColor: theme.palette.neutral_50 },
+              theme.atoms.box.secondary.bg,
             ]}
           >
             {JSON.stringify(entry.record, null, 2)}
@@ -158,7 +149,7 @@ export default function LogsScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.flex_1, theme.atoms.bg]}>
+        <View style={[Atoms.flex_1, theme.atoms.box.primary.bg]}>
           <Topbar
             title="Logs"
             right={
@@ -167,7 +158,7 @@ export default function LogsScreen() {
                   size="sm"
                   variant="ghost"
                   accessibilityLabel="Clear logs"
-                  icon={(props) => <Icon name="trash" {...props} />}
+                  icon="trash"
                   disabled={entries.length === 0}
                   onPress={() => void onClear()}
                 />
@@ -175,7 +166,7 @@ export default function LogsScreen() {
                   size="sm"
                   variant="ghost"
                   accessibilityLabel="Share logs"
-                  icon={(props) => <Icon name="share" {...props} />}
+                  icon="share"
                   disabled={entries.length === 0}
                   onPress={() => void shareLogs(entries)}
                 />
@@ -205,9 +196,7 @@ export default function LogsScreen() {
               />
             )}
             ItemSeparatorComponent={() => (
-              <View
-                style={[theme.atoms.border_neutral_low, { borderTopWidth: 1 }]}
-              />
+              <View style={[theme.atoms.box.primary.border, Atoms.border_t]} />
             )}
             extraData={expandedIds}
             showsVerticalScrollIndicator={false}
@@ -226,7 +215,7 @@ export default function LogsScreen() {
                   Atoms.p_xl,
                 ]}
               >
-                <Text variant="secondary" color="neutral_500">
+                <Text variant="secondary" color="muted">
                   {entries.length === 0
                     ? 'No logs recorded yet.'
                     : 'No matching logs.'}

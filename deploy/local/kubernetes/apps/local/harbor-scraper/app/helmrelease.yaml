@@ -1,0 +1,15 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: harbor-scraper
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: deploy/charts/harbor-scraper
+      sourceRef:
+        kind: GitRepository
+        name: harbor
+  values:
+    replicaCount: 1

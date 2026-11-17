@@ -1,0 +1,29 @@
+url: ${MAESTRO_WEB_URL}
+name: A share link opens the composer with its text and URL filled in
+---
+- runFlow: ../elements/load.yaml
+- runFlow: ../steps/fresh-start.yaml
+- runFlow: ../steps/create-identity.yaml
+- openLink: ${MAESTRO_WEB_URL}/intent/compose?text=Shared%20title&url=https%3A%2F%2Fexample.com%2Farticle
+- extendedWaitUntil:
+    visible:
+      id: ${output.composer.submit}
+    timeout: 30000
+# The URL goes on its own line after the text
+- evalBrowserScript:
+    script: return document.querySelector('textarea').value
+    output: draft
+- assertTrue: ${draft === 'Shared title\nhttps://example.com/article'}
+# The share link's URL is replaced, so a reload doesn't fill the draft again
+- evalBrowserScript:
+    script: return location.pathname
+    output: pathname
+- assertTrue: ${pathname === '/feed/compose'}
+# Discarding the draft closes the composer
+- evalBrowserScript:
+    script: window.confirm = () => true; return true
+- pressKey: Escape
+- extendedWaitUntil:
+    notVisible:
+      id: ${output.composer.submit}
+    timeout: 30000

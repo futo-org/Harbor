@@ -5,7 +5,10 @@
 // Env: GITHUB_SERVER_URL, GITHUB_REPOSITORY (set by Forgejo), and what
 // post-e2e-staging-outcome.mjs needs to post a failure.
 
-import { postE2eStagingFailure } from './post-e2e-staging-outcome.mjs';
+import {
+  isRunCancelled,
+  postE2eStagingFailure,
+} from './post-e2e-staging-outcome.mjs';
 import { chartAt } from './registry-helpers.mjs';
 
 const SECOND = 1000;
@@ -31,6 +34,12 @@ const env = process.env;
 
 await waitForDeploys();
 await waitForRollout();
+// A newer push cancels this run, usually while it waits here, but the job
+// keeps going: stop it before the flows run against staging.
+if (await isRunCancelled()) {
+  console.log('Run cancelled, not running e2e');
+  process.exit(1);
+}
 
 async function waitForDeploys() {
   const deadline = Date.now() + DEPLOY_TIMEOUT_MS;

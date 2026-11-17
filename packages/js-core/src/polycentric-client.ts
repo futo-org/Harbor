@@ -202,6 +202,11 @@ export class PolycentricClient {
     // Ensures that rs-core has an updated server list even if we have no
     // active login.
     this.refreshServers();
+
+    // Start background task to ensure blobs are migrated.
+    this.fileStore.migrate({ storage: this.storageDriver }).catch((e) => {
+      console.error('migrating blobs failed:', e);
+    });
   }
 
   /** Blob URL for each configured server, in order, for fallback. */
@@ -721,33 +726,6 @@ export class PolycentricClient {
   }
 
   /**
-   * Decode an image, resize into `width` x `height` per `mode`, and
-   * encode as JPEG via the core. Returns the JPEG bytes plus the
-   * actual output dimensions.
-   *
-   * - `"fill"` (default): scale + center-crop, output is exactly `width` x `height`.
-   * - `"fit"`: preserve aspect ratio, output fits inside `width` x `height`.
-   */
-  processImageToJpeg(
-    image: Uint8Array,
-    width: number,
-    height: number,
-    mode: 'fill' | 'fit' = 'fill',
-  ): { bytes: Uint8Array; width: number; height: number } {
-    const result = this.core.processImageToJpeg(
-      image.buffer as ArrayBuffer,
-      width,
-      height,
-      mode,
-    );
-    return {
-      bytes: new Uint8Array(result.bytes),
-      width: result.width,
-      height: result.height,
-    };
-  }
-
-  /**
    * Sign a `RegisterPushNotificationRequest` with the active key pair and
    * deliver it to every configured server via gRPC-web. Per-server failures
    * are logged but do not throw — registration is best-effort across the
@@ -800,11 +778,16 @@ export class PolycentricClient {
    * `Blob` proto. Does not upload to servers.
    */
   async commitBlob(bytes: Uint8Array, mimeType: string): Promise<Proto.Blob> {
+    const identity = this.activeIdentityKey;
+    if (!identity) throw new Error('No active identity');
+
     const digest: Proto.ContentDigest = {
       type: Proto.ContentDigestType.SHA256,
       value: sha256(bytes),
     };
-    await this.fileStore.put(digest, bytes);
+
+    await this.fileStore.put(identity, digest, bytes);
+
     return Proto.Blob.create({
       digest,
       mimeType,
@@ -932,7 +915,7 @@ export class PolycentricClient {
     blobs = [...blobMap.values()];
 
     // Catch any of our own referenced blobs so they persist locally
-    await this.contentManager.pullBlobs(blobs);
+    await this.contentManager.pullBlobs(identity, blobs);
 
     if (bundles.length > 0) {
       this.events.emitPulled(identity);
@@ -1052,7 +1035,7 @@ export class PolycentricClient {
           response.requestedBlobs.map(async (blob) => {
             if (!blob.digest) return;
 
-            const blobData = await this.fileStore.get(blob.digest);
+            const blobData = await this.fileStore.get(identity, blob.digest);
             if (!blobData) return;
 
             await this.uploadBlob(blob, blobData, [server]);
@@ -1123,9 +1106,11 @@ export class PolycentricClient {
         do {
           again = false;
           if (this.activeIdentityKey !== identity) return;
-          await this.pull(true, this.localHeads(identity)).catch((err) => {
-            console.warn('Live sync pull failed:', err);
-          });
+          await this.localHeads(identity)
+            .then((heads) => this.pull(true, heads))
+            .catch((err) => {
+              console.warn('Live sync pull failed:', err);
+            });
         } while (again);
       } finally {
         pulling = false;
@@ -1140,7 +1125,13 @@ export class PolycentricClient {
           const remote = Proto.ListHeadsResponse.fromBinary(
             new Uint8Array(result.data),
           ).heads;
-          if (this.isBehind(identity, remote)) void pull();
+          void this.isBehind(identity, remote)
+            .then((behind) => {
+              if (behind) void pull();
+            })
+            .catch((err) => {
+              console.warn('Live sync heads check failed:', err);
+            });
         },
         // The core reconnects by itself.
         error: () => {},
@@ -1149,20 +1140,52 @@ export class PolycentricClient {
     return () => subscription.unsubscribe();
   }
 
-  /** Heads of the events loaded in this client, which may lag shared storage. */
-  private localHeads(identity: string): Proto.EventKey[] {
-    return Proto.ListHeadsResponse.fromBinary(
+  /**
+   * For each event stream, resolve the minimum sequence number known by
+   * rs-core and our local storage.
+   * This way, we don't create any gaps in either while pulling.
+   */
+  private async localHeads(identity: string): Promise<Proto.EventKey[]> {
+    const storedHeads = await this.storage.events.getHeads(identity);
+
+    // Map a stream to a head
+    const stored: Map<string, Proto.EventKey> = new Map(
+      storedHeads.map((key) => [streamId(key), key]),
+    );
+
+    const cachedHeads = Proto.ListHeadsResponse.fromBinary(
       new Uint8Array(this.core.localHeads(identity)),
     ).heads;
+
+    // Resolve the minimum sequence number for each stream.
+    // Omit the head entirely to pull in all events from that stream if either
+    // source has no head for that stream.
+    const resolvedHeads: Proto.EventKey[] = [];
+    for (const cached of cachedHeads) {
+      const persisted = stored.get(streamId(cached));
+      if (!persisted) continue;
+
+      const resolved =
+        persisted.sequence < cached.sequence ? persisted : cached;
+
+      resolvedHeads.push(resolved);
+    }
+
+    return resolvedHeads;
   }
 
   /** Whether any of `remote` is ahead of the local heads of `identity`. */
-  private isBehind(identity: string, remote: Proto.EventKey[]): boolean {
-    const local = new Map(
-      this.localHeads(identity).map((key) => [streamId(key), key.sequence]),
+  private async isBehind(
+    identity: string,
+    remote: Proto.EventKey[],
+  ): Promise<boolean> {
+    const localHeads = await this.localHeads(identity);
+    const localMap: Map<string, bigint> = new Map(
+      localHeads.map((key) => [streamId(key), key.sequence]),
     );
+
     return remote.some(
-      (head) => (local.get(streamId(head)) ?? -1n) < head.sequence,
+      (head) => (localMap.get(streamId(head)) ?? -1n) < head.sequence,
     );
   }
 
@@ -1195,6 +1218,7 @@ export class PolycentricClient {
       this.core.setActiveIdentity(undefined);
       this.activeIdentityKey = null;
       this.currentKeyPair = null;
+      this.events.emitKeyPairChanged(null);
       return;
     }
 

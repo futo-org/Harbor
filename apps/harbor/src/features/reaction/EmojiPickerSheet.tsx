@@ -126,7 +126,7 @@ export function EmojiPickerSheet() {
         emoji={item.emoji}
         selected={item.emoji === selectedEmoji}
         onSelect={onSelect}
-        highlightColor={theme.palette.neutral_100}
+        highlightColor={theme.colors.box.raised.bg_hover}
         size={colWidth}
         isGridCell
       />
@@ -206,7 +206,7 @@ function EmojiSearchField() {
   return (
     <View style={[Atoms.px_lg, Atoms.py_sm]}>
       <SearchField onPress={() => inputRef.current?.focus()}>
-        <Icon name="search" size={16} color="neutral_500" />
+        <Icon name="search" size={16} color="muted" />
         <TextInput
           ref={inputRef}
           variant="plain"
@@ -224,9 +224,9 @@ function EmojiSearchField() {
             accessibilityLabel="Clear search"
             onPress={clearQuery}
             hitSlop={Spacing.sm}
-            style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+            style={({ pressed }) => [pressed && Atoms.faded]}
           >
-            <Icon name="close" size={16} color="neutral_500" />
+            <Icon name="close" size={16} color="muted" />
           </Pressable>
         ) : null}
       </SearchField>
@@ -264,7 +264,7 @@ function EmojiCategoryRail({
         pointerEvents="none"
         style={[
           StyleSheet.absoluteFill,
-          theme.atoms.bg,
+          theme.atoms.box.primary.bg,
           { height: windowHeight },
         ]}
       />
@@ -272,11 +272,9 @@ function EmojiCategoryRail({
         style={[
           Atoms.flex_row,
           Atoms.justify_center,
-          theme.atoms.bg,
-          {
-            borderTopWidth: CATEGORY_RAIL_BORDER_WIDTH,
-            borderColor: theme.palette.neutral_25,
-          },
+          theme.atoms.box.primary.bg,
+          theme.atoms.box.primary.border,
+          Atoms.border_t,
           hidden && Atoms.hidden,
         ]}
         onLayout={(e) => setRailWidth(e.nativeEvent.layout.width)}
@@ -287,14 +285,12 @@ function EmojiCategoryRail({
               key={cat.key}
               size={categoryColWidth}
               onPress={() => onSelect(cat.key)}
-              highlightColor={theme.palette.neutral_100}
+              highlightColor={theme.colors.box.raised.bg_hover}
             >
               <Icon
                 name={cat.icon}
                 size={Math.round(categoryColWidth * CATEGORY_ICON_SCALE)}
-                color={
-                  cat.key === selectedCategory ? 'primary_500' : 'neutral_500'
-                }
+                color={cat.key === selectedCategory ? 'accent' : 'muted'}
               />
             </EmojiLikeButton>
           ))}

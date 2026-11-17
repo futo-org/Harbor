@@ -1,10 +1,4 @@
 jest.mock('@/src/common/theme', () => ({
-  useTheme: () => ({
-    theme: {
-      palette: new Proxy({}, { get: () => '#000' }),
-      atoms: new Proxy({}, { get: () => ({}) }),
-    },
-  }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
 }));
@@ -81,6 +75,7 @@ function claim(sequence: number, identity = 'profile-id'): DecodedClaim {
     id: `id-${sequence}`,
     schemaName: 'Freeform',
     fields: [],
+    images: [],
     identity,
     keyFingerprint: 'fp',
     sequence: BigInt(sequence),

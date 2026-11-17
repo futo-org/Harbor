@@ -95,7 +95,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     permissions: [
       'android.permission.CAMERA',
       // Self-updater hands downloaded APKs to the system installer.
-      'android.permission.REQUEST_INSTALL_PACKAGES',
+      ...(DISTRIBUTION === 'store'
+        ? []
+        : ['android.permission.REQUEST_INSTALL_PACKAGES']),
     ],
     ...(HAS_GOOGLE_SERVICES && { googleServicesFile: GOOGLE_SERVICES_FILE }),
     ...(APP_LINK_HOST && {
@@ -133,8 +135,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         backgroundColor: accentByVariant.production,
         dark: {
           image: './src/common/assets/images/app-icons/splash-icon-dark.png',
-          // darkPalette.neutral_0, the app's dark background
-          backgroundColor: '#0D1016',
+          // palette.neutral_1000, the app's dark background
+          backgroundColor: '#0E1015',
         },
       },
     ],
@@ -180,6 +182,26 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-sqlite',
     'expo-web-browser',
+    [
+      'expo-sharing',
+      {
+        // "Share to Harbor": what the share sheet offers Harbor for
+        ios: {
+          enabled: true,
+          activationRule: {
+            supportsText: true,
+            supportsWebUrlWithMaxCount: 1,
+            // MAX_ATTACHMENTS in the composer
+            supportsImageWithMaxCount: 4,
+          },
+        },
+        android: {
+          enabled: true,
+          singleShareMimeTypes: ['text/plain', 'image/*'],
+          multipleShareMimeTypes: ['image/*'],
+        },
+      },
+    ],
     [
       'expo-dev-client',
       {

@@ -1,1 +1,6 @@
-pnpm lint-staged
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm lint-staged
+else
+  # pnpm from mise, when the shell does not activate it.
+  mise exec -- pnpm lint-staged
+fi

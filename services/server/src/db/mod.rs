@@ -1,4 +1,4 @@
-use sea_orm::sea_query::{BinOper, Expr, Value, ValueType, Values};
+use sea_orm::sea_query::Values;
 use sea_orm::{DbErr, ExecResult, QueryResult, RuntimeErr, Statement};
 use sea_query_sqlx::SqlxValues;
 use sqlx::Executor;
@@ -12,9 +12,6 @@ pub(crate) mod fns;
 pub(crate) use sea_orm::ConnectionTrait as Connection;
 
 /// Database connection.
-///
-/// Prefer to use [`RwDbConn`] for queries that write and [`RoDbConn`] for
-/// queries that only read.
 // NOTE: we should only use the connection for one request, so this mutex should
 // never be contented, but its required for the ConnectionTrait implementation.
 pub(crate) struct DbConn(DbInner);
@@ -318,25 +315,4 @@ fn sqlx_query(
 
 fn into_seaorm_error(err: sqlx::Error) -> DbErr {
     DbErr::Query(RuntimeErr::SqlxError(err.into()))
-}
-
-/// `$value = ANY ($array)`.
-pub(crate) fn in_array<T>(
-    value: Expr,
-    array: impl ExactSizeIterator<Item = T>,
-) -> Expr
-where
-    T: ValueType + Into<Value>,
-{
-    Expr::Binary(
-        Box::new(value),
-        BinOper::Custom("= ANY"),
-        Box::new(Expr::cust_with_expr(
-            "($1)",
-            Expr::Value(Value::Array(
-                T::array_type(),
-                Some(Box::new(array.map(Into::into).collect())),
-            )),
-        )),
-    )
 }

@@ -38,7 +38,7 @@ export function EventSummary({
           <Text>
             {action ? ` ${action}` : null}
             {createdAt && createdAt > 0 ? (
-              <Text color="neutral_500">
+              <Text color="muted">
                 {' '}
                 · <TimeAgo since={createdAt} />
               </Text>
@@ -46,7 +46,7 @@ export function EventSummary({
           </Text>
         </View>
         {preview ? (
-          <Text variant="secondary" color="neutral_500" numberOfLines={2}>
+          <Text variant="secondary" color="muted" numberOfLines={2}>
             {preview}
           </Text>
         ) : null}

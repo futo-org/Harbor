@@ -1,5 +1,5 @@
 import type { IconName } from '@/src/common/components/Icon';
-import type { PaletteColorToken } from '@/src/common/theme';
+import { buildTint, type Tint } from './tint';
 
 // A single input in a claim form. `kind` is purely a UI concern (which widget
 // to render) — it does not appear in the verification schema.
@@ -17,7 +17,7 @@ export interface ClaimType {
   name: string;
   description: string;
   icon: IconName;
-  color?: PaletteColorToken;
+  tint: Tint;
   fields: FormField[];
   platform?: boolean;
 }
@@ -34,7 +34,7 @@ export const CLAIM_TYPES: ClaimType[] = [
     name: 'Freeform',
     description: 'Anything you want to claim, in your own words.',
     icon: 'form',
-    color: 'negative_300',
+    tint: buildTint('#E7677F', '#9A263A'),
     fields: [
       { key: 'name', label: 'Name', kind: 'text', required: true },
       DESCRIPTION,
@@ -44,7 +44,7 @@ export const CLAIM_TYPES: ClaimType[] = [
     name: 'Platform',
     description: 'Prove you own an account on another social platform.',
     icon: 'cardOutline',
-    color: 'neutral_600',
+    tint: buildTint('#5F6B7F', '#97999B'),
     fields: [],
     platform: true,
   },
@@ -52,7 +52,7 @@ export const CLAIM_TYPES: ClaimType[] = [
     name: 'Occupation',
     description: 'A job or position you hold or have held.',
     icon: 'briefcaseOutline',
-    color: 'positive_500',
+    tint: buildTint('#008000'),
     fields: [
       { key: 'job_title', label: 'Job Title', kind: 'text', required: true },
       { key: 'company', label: 'Company', kind: 'text', required: true },
@@ -66,7 +66,7 @@ export const CLAIM_TYPES: ClaimType[] = [
     name: 'Skill',
     description: 'A skill or expertise you have.',
     icon: 'bookOutline',
-    color: 'primary_400',
+    tint: buildTint('#FF731F'),
     fields: [
       { key: 'skill', label: 'Skill', kind: 'text', required: true },
       DESCRIPTION,
@@ -76,7 +76,7 @@ export const CLAIM_TYPES: ClaimType[] = [
     name: 'Education',
     description: 'A degree, certification, or course you completed.',
     icon: 'certificateOutline',
-    color: 'warning_500',
+    tint: buildTint('#E59400', '#FFA500'),
     fields: [
       {
         key: 'institution',

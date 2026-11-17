@@ -3,10 +3,9 @@ import {
   Breakpoints,
   Spacing,
   useTheme,
-  withHexOpacity,
   ZIndex,
 } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
+import { isBrowserExtension, isWeb } from '@/src/common/util/platform';
 import { Image } from 'expo-image';
 import { Link, usePathname } from 'expo-router';
 import {
@@ -33,9 +32,10 @@ import {
   SignupBar,
   SignupWidget,
 } from '@/src/features/core/identity/SignupWidget';
+import { GetExtensionWidget } from '@/src/features/anywhere/GetExtensionWidget';
 import { SidebarSearch } from '@/src/features/search/SidebarSearch';
 import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
-import { openCompose } from '../../constants';
+import { openCompose, Routes } from '../../constants';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
 import { Button } from '../primitives';
 import { AppFooter } from './AppFooter';
@@ -108,11 +108,8 @@ function PrimaryColumn({ children }: PrimaryColumnProps) {
         isWeb && Atoms.pb_lg,
         isWeb && {
           maxWidth: LAYOUT_SIZES.primaryColumnMaxWidth,
-          borderLeftColor: theme.palette.neutral_25,
-          borderLeftWidth: 1,
-          borderRightColor: theme.palette.neutral_25,
-          borderRightWidth: 1,
         },
+        isWeb && [theme.atoms.box.primary.border, Atoms.border_x],
       ]}
     >
       {children}
@@ -139,11 +136,13 @@ function Screen({
   const { width: deviceWidth } = useWindowDimensions();
   const { identity } = useCurrentIdentity();
 
-  showLeftSidebar = showLeftSidebar && isWeb;
+  // The browser extension has no navigation of its own.
+  showLeftSidebar = showLeftSidebar && isWeb && !isBrowserExtension;
 
   // On the smallest web viewports the left sidebar is replaced by a
   // topbar whose menu button opens it as a drawer.
-  const drawerMode = isWeb && deviceWidth <= Breakpoints.sm;
+  const drawerMode =
+    isWeb && !isBrowserExtension && deviceWidth <= Breakpoints.sm;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
 
@@ -176,13 +175,10 @@ function Screen({
         // full scroll height, letting `position: sticky` pin them. Native
         // keeps a fixed viewport-height screen.
         isWeb ? { minHeight: '100%' } : Atoms.flex_1,
-        { backgroundColor: theme.palette.neutral_0 },
+        theme.atoms.box.primary.bg,
         !drawUnderStatusBar && { paddingTop: insets.top },
         { paddingLeft: insets.left, paddingRight: insets.right },
-        !isWeb && {
-          borderBottomWidth: 1,
-          borderBottomColor: theme.palette.neutral_25,
-        },
+        !isWeb && [theme.atoms.box.primary.border, Atoms.border_b],
       ]}
       dir="ltr"
     >
@@ -196,7 +192,7 @@ function Screen({
                 onPress={() => setDrawerOpen(true)}
                 hitSlop={Spacing.lg}
               >
-                <Icon name="menu" size={24} color="neutral_900" />
+                <Icon name="menu" size={24} color="primary" />
               </Pressable>
             }
           />
@@ -223,9 +219,9 @@ function Screen({
               left: 0,
               right: 0,
               height: insets.top,
-              backgroundColor: theme.palette.neutral_0,
               zIndex: ZIndex.raised,
             },
+            theme.atoms.box.primary.bg,
           ]}
         />
       ) : null}
@@ -285,9 +281,7 @@ function SidebarContent({
               variant="primary"
               size="md"
               fullWidth={!narrow}
-              icon={({ size, color }) => (
-                <Icon name="add" size={size} color={color} />
-              )}
+              icon="add"
               onPress={() => openCompose()}
             />
           )}
@@ -329,11 +323,7 @@ function SidebarDrawer({ onClose }: { onClose: () => void }) {
       ]}
     >
       <View
-        style={{
-          width: 300,
-          height: '100%',
-          backgroundColor: theme.palette.neutral_0,
-        }}
+        style={[{ width: 300, height: '100%' }, theme.atoms.box.primary.bg]}
       >
         <RNScrollView
           showsVerticalScrollIndicator={false}
@@ -349,10 +339,7 @@ function SidebarDrawer({ onClose }: { onClose: () => void }) {
         accessibilityRole="button"
         accessibilityLabel="Close menu"
         onPress={onClose}
-        style={[
-          Atoms.flex_1,
-          { backgroundColor: withHexOpacity(theme.palette.black, '66') },
-        ]}
+        style={[Atoms.flex_1, theme.atoms.backdrop.modal]}
       />
     </View>
   );
@@ -420,6 +407,7 @@ export const RightSidebar = memo(function RightSidebar() {
     : LAYOUT_SIZES.rightSidebarWideMargin;
 
   const { identity } = useCurrentIdentity();
+  const onAnywhere = usePathname().startsWith(Routes.tabs.anywhere.index);
 
   return (
     <View style={{ width, marginRight, height: '100%' }}>
@@ -441,6 +429,8 @@ export const RightSidebar = memo(function RightSidebar() {
         >
           <View style={[Atoms.flex_1, Atoms.w_full, Atoms.pt_lg, Atoms.gap_md]}>
             <SidebarSearch />
+
+            {onAnywhere && <GetExtensionWidget />}
 
             {!identity && <SignupWidget />}
 

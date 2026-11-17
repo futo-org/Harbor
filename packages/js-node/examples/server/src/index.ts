@@ -161,26 +161,7 @@ route('POST', /^\/post$/, async (req, res) => {
   }
   const form = await readFormData(req);
   const text = String(form.get('text') ?? '').trim();
-  const file = form.get('image');
-  const imageSets: v2.ImageSet[] = [];
-  if (file instanceof File && file.size > 0) {
-    // Basic functionality for images in posts.
-    const raw = new Uint8Array(await file.arrayBuffer());
-    const { bytes, width, height } = client.processImageToJpeg(
-      raw,
-      800,
-      800,
-      'fit',
-    );
-    const blob = await client.commitBlob(bytes, 'image/jpeg');
-    await client.uploadBlob(blob, bytes);
-    imageSets.push(
-      v2.ImageSet.create({
-        images: [v2.Image.create({ blob, width, height })],
-      }),
-    );
-  }
-  if (!text && imageSets.length === 0) {
+  if (!text) {
     res.statusCode = 303;
     res.setHeader('Location', '/');
     res.end();
@@ -188,7 +169,7 @@ route('POST', /^\/post$/, async (req, res) => {
   }
   const content = client.contentManager.build({
     oneofKind: 'post',
-    post: v2.Post.create({ text, images: imageSets }),
+    post: v2.Post.create({ text }),
   });
   await client.createEvent({ collection: COLLECTION.FEED, content });
   await client.sync();

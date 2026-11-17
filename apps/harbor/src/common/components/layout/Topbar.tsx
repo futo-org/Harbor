@@ -5,7 +5,7 @@ import { memo, useRef, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import HARBOR_LOGO from '../../assets/images/harbor-logo-256.png';
 import { useCurrentIdentity } from '../../lib/polycentric-hooks';
-import { Atoms, Spacing, useTheme, withHexOpacity } from '../../theme';
+import { Atoms, Spacing, useTheme } from '../../theme';
 import { TOPBAR_HEIGHT } from '../metrics';
 import { ProfileAvatar, Text } from '../primitives';
 
@@ -48,11 +48,9 @@ function Topbar({ title, left, center, right }: TopbarProps) {
         Atoms.py_sm,
         Atoms.gap_md,
         { height: TOPBAR_HEIGHT },
-        { backgroundColor: theme.palette.neutral_0 },
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '10'),
-        },
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
+        Atoms.border_b,
       ]}
     >
       <View
@@ -70,9 +68,9 @@ function Topbar({ title, left, center, right }: TopbarProps) {
               accessibilityLabel="Go back"
               onPress={() => router.back()}
               hitSlop={Spacing['lg']}
-              style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+              style={({ pressed }) => [pressed && Atoms.faded]}
             >
-              <Icon name="chevronBack" size={24} color="neutral_900" />
+              <Icon name="chevronBack" size={24} color="primary" />
             </Pressable>
           ) : (
             <ProfileAvatar

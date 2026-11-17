@@ -120,7 +120,7 @@ function DefaultLoadingComponent() {
   return (
     <View
       style={[
-        theme.atoms.bg,
+        theme.atoms.box.primary.bg,
         Atoms.flex_1,
         Atoms.align_center,
         Atoms.justify_center,

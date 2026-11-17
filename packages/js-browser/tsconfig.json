@@ -1,6 +1,7 @@
 {
   "extends": "@polycentric/tsconfig/compiled-package.json",
   "include": ["src"],
+  "exclude": ["src/**/*.test.ts"],
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
     "emitDeclarationOnly": false

@@ -5,7 +5,7 @@ import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '@/src/features/post/Post';
 import { ClaimTypeChip } from '@/src/features/verifications/claims/toolbar/ClaimTypeChip';
 import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimById';
@@ -141,13 +141,7 @@ function InteractionNotification({
   return (
     <Pressable
       onPress={handlePress}
-      style={[
-        Atoms.p_md,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
-      ]}
+      style={[Atoms.p_md, theme.atoms.box.primary.border, Atoms.border_b]}
     >
       <EventSummary
         leading={
@@ -195,9 +189,9 @@ function ClaimSummary({ claim }: { claim: DecodedClaim }) {
         name={platform?.name ?? claim.schemaName}
         icon={claimType?.icon ?? 'verify'}
         logo={platform?.logo}
-        color={platform?.color ?? claimType?.color}
+        tint={platform?.tint ?? claimType?.tint}
       />
-      <Text variant="secondary" color="neutral_500" numberOfLines={1}>
+      <Text variant="secondary" color="muted" numberOfLines={1}>
         {title}
       </Text>
     </View>

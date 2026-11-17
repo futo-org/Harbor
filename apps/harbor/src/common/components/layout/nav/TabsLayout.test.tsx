@@ -38,7 +38,20 @@ jest.mock('@/src/common/lib/polycentric-hooks', () => ({
 }));
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
-    theme: { palette: new Proxy({}, { get: () => '#000' }) },
+    theme: {
+      colors: new Proxy(
+        {},
+        {
+          get: (_, key) =>
+            key === 'box'
+              ? new Proxy(
+                  {},
+                  { get: () => new Proxy({}, { get: () => '#000' }) },
+                )
+              : '#000',
+        },
+      ),
+    },
   }),
 }));
 jest.mock('@/src/common/util/platform', () => ({ isIOS: false, isWeb: false }));

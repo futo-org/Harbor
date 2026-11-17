@@ -106,8 +106,11 @@ function mockSource(srcWidth: number, srcHeight: number) {
   return sourceRef;
 }
 
+const IDENTITY = 'ab'.repeat(32);
+
 function makeClient() {
   return {
+    activeIdentityKey: IDENTITY,
     fileStore: { put: jest.fn(async () => undefined) },
     uploadBlob: jest.fn(async () => undefined),
     // biome-ignore lint/suspicious/noExplicitAny: test mock cast

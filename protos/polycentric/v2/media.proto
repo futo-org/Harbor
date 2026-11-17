@@ -1,0 +1,25 @@
+syntax = "proto3";
+package polycentric.v2;
+
+import "polycentric/v2/common.proto";
+
+// If an uploaded Blob is uploaded to the servers Object Storage and not
+// then attached added to the Content repository, the server will delete from Object Storage.
+message Blob {
+  // Digest/Checksum of the blob
+  ContentDigest digest = 1;
+  string mime_type = 2;
+  int64 size = 3;
+}
+
+// Single image with reference to the blob
+message Image {
+  Blob blob = 1;
+  int32 width = 2;
+  int32 height = 3;
+}
+
+// Collection of different variants of an image
+message ImageSet {
+  repeated Image images = 1;
+}

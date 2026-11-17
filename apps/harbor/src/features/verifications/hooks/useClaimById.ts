@@ -18,6 +18,7 @@ export interface DecodedClaim {
   id: string;
   schemaName: string;
   fields: ClaimField[];
+  images: v2.ImageSet[];
   identity: string;
   keyFingerprint: string;
   sequence: bigint;
@@ -57,6 +58,7 @@ export function decodeClaimBundle(bundle: v2.EventBundle): DecodedClaim | null {
       id: eventKeyId(ev.key),
       schemaName: schema.name,
       fields,
+      images: verificationClaim.images,
       identity: ev.key.identity,
       keyFingerprint: getKeyFingerprint(ev.key.signedBy) ?? '',
       sequence: ev.key.sequence,

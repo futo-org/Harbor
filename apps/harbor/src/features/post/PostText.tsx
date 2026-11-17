@@ -101,7 +101,7 @@ function ShowMoreToggle({ onPress }: { onPress: () => void }) {
     >
       <Text
         variant="body"
-        color="primary_500"
+        color="accent"
         style={hovered ? { textDecorationLine: 'underline' } : undefined}
       >
         Show more
@@ -132,7 +132,7 @@ function Segment({
         className="underlineOnHover"
         href={href}
         target={segment.type === 'link' ? '_blank' : undefined}
-        style={{ color: theme.palette.primary_500 }}
+        style={theme.atoms.accent}
         // Don't open the surrounding post card.
         onPress={(e) => e.stopPropagation?.()}
       >
@@ -144,7 +144,7 @@ function Segment({
   return (
     <Text
       variant="secondary"
-      color="primary_500"
+      color="accent"
       fontWeight="regular"
       {...size}
       onPress={(e) => {

@@ -50,7 +50,7 @@ export default function SyncEventsScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.flex_1, theme.atoms.bg]}>
+        <View style={[Atoms.flex_1, theme.atoms.box.primary.bg]}>
           <Topbar
             title="Sync events"
             // Custom back button which goes back to settings if there's no router history
@@ -62,7 +62,7 @@ export default function SyncEventsScreen() {
                 hitSlop={Spacing.lg}
                 style={({ pressed }) => [pressed && { opacity: 0.5 }]}
               >
-                <Icon name="chevronBack" size={24} color="neutral_900" />
+                <Icon name="chevronBack" size={24} color="primary" />
               </Pressable>
             }
             right={
@@ -86,7 +86,7 @@ export default function SyncEventsScreen() {
             {issues.servers.length === 0 || !identityKey ? (
               <Text
                 variant="secondary"
-                color="neutral_500"
+                color="muted"
                 style={[Atoms.px_lg, Atoms.pt_lg]}
               >
                 No servers have reported problems with your events.
@@ -95,7 +95,7 @@ export default function SyncEventsScreen() {
               <SyncIssuesList identityKey={identityKey} issues={issues} />
             )}
 
-            <Text variant="secondary" color="neutral_500" style={Atoms.p_md}>
+            <Text variant="secondary" color="muted" style={Atoms.p_md}>
               {lastSynced}
             </Text>
           </ScrollView>

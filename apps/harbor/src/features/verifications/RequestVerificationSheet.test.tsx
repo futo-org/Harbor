@@ -1,8 +1,16 @@
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
     theme: {
-      palette: new Proxy({}, { get: () => '#000' }),
-      atoms: new Proxy({}, { get: () => ({}) }),
+      scheme: 'light',
+      colors: {
+        accent: '#000',
+        success: '#000',
+        muted: '#000',
+        box: new Proxy({}, { get: () => ({ bg_subtle: '#000' }) }),
+      },
+      atoms: {
+        box: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
+      },
     },
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
@@ -15,15 +23,6 @@ jest.mock('@/src/common/components', () => {
   return {
     Text: ({ children }: { children?: unknown }) =>
       react.createElement(Text, null, children),
-  };
-});
-
-jest.mock('@/src/common/components/ScrollView', () => {
-  const react = require('react');
-  const { View } = require('react-native');
-  return {
-    ScrollView: ({ children }: { children?: unknown }) =>
-      react.createElement(View, null, children),
   };
 });
 
@@ -49,10 +48,6 @@ jest.mock('@/src/common/components/sheet', () => {
 const mockToast = { success: jest.fn(), error: jest.fn() };
 jest.mock('@/src/common/components/toast', () => ({
   useToast: () => mockToast,
-}));
-
-jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
 jest.mock('@/src/common/lib/polycentric-hooks', () => ({

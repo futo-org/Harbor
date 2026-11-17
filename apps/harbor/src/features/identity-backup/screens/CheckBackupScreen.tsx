@@ -112,7 +112,7 @@ export default function CheckBackupScreen() {
             Atoms.px_lg,
             Atoms.flex_1,
             Atoms.gap_md,
-            { backgroundColor: theme.atoms.bg.backgroundColor },
+            theme.atoms.box.primary.bg,
           ]}
         >
           <ScreenHeader title="Test Backup" onBack={() => router.back()} />
@@ -129,7 +129,7 @@ export default function CheckBackupScreen() {
             {stage === 'input' && (
               <View style={Atoms.gap_sm}>
                 <Text variant="title">Check your backup</Text>
-                <Text variant="body" color="neutral_500">
+                <Text variant="body" color="muted">
                   Check whether an identity backup file can correctly restore
                   this identity.
                 </Text>

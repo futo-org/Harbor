@@ -5,19 +5,19 @@ inputs:
     required: true
   natives:
     description: Native libraries to have in place besides wasm (the JS SDKs need it), from android ios
-    default: ''
+    default: ""
   wasm-artifact:
     description: Take rs-core-wasm-build from this run
-    default: 'false'
+    default: "false"
   android-artifact:
     description: Take rn-android-build from this run
-    default: 'false'
+    default: "false"
   ios-artifact:
     description: Take rn-ios-build from this run
-    default: 'false'
+    default: "false"
   rn-sdk:
     description: Also build and upload the react-native package
-    default: 'false'
+    default: "false"
   registry-user:
     required: true
   registry-token:
@@ -38,7 +38,7 @@ runs:
       uses: forgejo/download-artifact@v4
       with:
         name: rs-core-wasm-build
-        path: packages/rs-core-wasm
+        path: packages
     - if: inputs.android-artifact == 'true'
       uses: forgejo/download-artifact@v4
       with:
@@ -74,6 +74,18 @@ runs:
         path: |
           packages/rs-core-wasm/src/generated/wasm
           packages/rs-core-wasm/dist
+          packages/react-native/src/generated
+          packages/react-native/src/NativeReactNative.ts
+          packages/react-native/src/uniffi-init.tsx
+          packages/react-native/cpp
+          packages/react-native/ios/ReactNative.h
+          packages/react-native/ios/ReactNative.mm
+          packages/react-native/ReactNative.podspec
+          packages/react-native/android/CMakeLists.txt
+          packages/react-native/android/build.gradle
+          packages/react-native/android/cpp-adapter.cpp
+          packages/react-native/android/src/main/AndroidManifest.xml
+          packages/react-native/android/src/main/java
           packages/react-native/android/src/main/jniLibs
           packages/react-native/ios
           packages/react-native/PolycentricReactNativeFramework.xcframework

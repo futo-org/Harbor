@@ -9,11 +9,14 @@
 #
 # Env:
 #   MODERATION_SERVER   server to publish to (default: http://localhost:3000)
+#   ENV_FILE            env file to write (default: .env)
+#   IDENTITY_TOOL       polycentric-identity command (default: cargo run)
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
 SERVER="${MODERATION_SERVER:-http://localhost:3000}"
+ENV_FILE="${ENV_FILE:-.env}"
 
 # Holds the private keys, so it is discarded once the two values we need are
 # in .env.
@@ -21,16 +24,16 @@ DIR=$(mktemp -d)
 trap 'rm -rf "$DIR"' EXIT
 
 identity_tool() {
-  cargo run -q -p polycentric-identity -- --dir "$DIR" "$@"
+  ${IDENTITY_TOOL:-cargo run -q -p polycentric-identity --} --dir "$DIR" "$@"
 }
 
 upsert_env() {
   local key="$1" value="$2"
-  touch .env
-  if grep -q "^${key}=" .env; then
-    sed -i='' "s|^${key}=.*|${key}=${value}|" .env
+  touch "$ENV_FILE"
+  if grep -q "^${key}=" "$ENV_FILE"; then
+    sed -i='' "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
   else
-    printf '%s=%s\n' "$key" "$value" >>.env
+    printf '%s=%s\n' "$key" "$value" >>"$ENV_FILE"
   fi
 }
 
@@ -56,7 +59,7 @@ SIGNING_SEED=$(identity_tool private-key "$SIGNING_PUBLIC")
 upsert_env HARBOR_MODERATION_IDENTITY "$IDENTITY"
 upsert_env HARBOR_MODERATION_SIGNING_KEY "$SIGNING_SEED"
 
-echo "==> Wrote HARBOR_MODERATION_IDENTITY and HARBOR_MODERATION_SIGNING_KEY to .env"
+echo "==> Wrote HARBOR_MODERATION_IDENTITY and HARBOR_MODERATION_SIGNING_KEY to $ENV_FILE"
 echo "    identity: $IDENTITY"
 echo
 echo "Restart the server so it picks up the identity it should trust labels from,"

@@ -1,8 +1,6 @@
-import { Atoms, Spacing, useTheme } from '@/src/common/theme';
-import type { SheetDetent } from '@lodev09/react-native-true-sheet';
+import { Atoms, useTheme } from '@/src/common/theme';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RadioGroup from '../form/RadioGroup';
 import Icon, { type IconName } from '../Icon';
 import { Text } from '../primitives';
@@ -22,7 +20,6 @@ type TabFilterSheetProps<T extends string> = {
   options: readonly TabFilterOption<T>[];
   selected: T;
   onChange: (value: T) => void;
-  detents?: SheetDetent[];
   /** Rendered below the options, e.g. an action button. */
   children?: ReactNode;
 };
@@ -35,18 +32,14 @@ export function TabFilterSheet<T extends string>({
   options,
   selected,
   onChange,
-  detents = [0.3],
   children,
 }: TabFilterSheetProps<T>) {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
 
   return (
-    <Sheet open={open} onClose={onClose} detents={detents}>
+    <Sheet open={open} onClose={onClose} detents={['auto']} scrollable={false}>
       <Sheet.Header title={title} onClose={onClose} />
-      <Sheet.Content
-        style={[Atoms.p_0, { paddingBottom: insets.bottom + Spacing.lg }]}
-      >
+      <Sheet.Content scrollable={false} style={[Atoms.p_0, Atoms.pb_lg]}>
         <RadioGroup
           value={selected}
           onValueChange={(value) => onChange(value as T)}
@@ -61,24 +54,18 @@ export function TabFilterSheet<T extends string>({
                 Atoms.gap_md,
                 Atoms.py_lg,
                 Atoms.px_lg,
-                (hovered || pressed) && {
-                  backgroundColor: theme.palette.neutral_25,
-                },
+                (pressed || hovered) && theme.atoms.box.primary.bg_hover,
               ]}
             >
               {option.icon ? (
-                <Icon name={option.icon} size={24} color="neutral_900" />
+                <Icon name={option.icon} size={24} color="primary" />
               ) : null}
               <View style={Atoms.flex_1}>
                 <Text variant="title" fontWeight="regular">
                   {option.label}
                 </Text>
                 {option.subtitle ? (
-                  <Text
-                    variant="small"
-                    style={theme.atoms.text_neutral_medium}
-                    fontWeight="regular"
-                  >
+                  <Text variant="small" color="secondary" fontWeight="regular">
                     {option.subtitle}
                   </Text>
                 ) : null}

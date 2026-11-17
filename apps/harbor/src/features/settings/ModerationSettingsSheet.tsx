@@ -40,25 +40,15 @@ function ModerationLabelRow({
         isWeb ? undefined : Atoms.gap_xs,
         Atoms.py_md,
         Atoms.px_lg,
-        {
-          borderBottomWidth: isLast ? 0 : 1,
-          borderColor: theme.palette.neutral_25,
-        },
+        theme.atoms.box.primary.border,
+        !isLast && Atoms.border_b,
       ]}
     >
       <View style={[Atoms.flex_col, Atoms.flex_1]}>
-        <Text
-          variant="secondary"
-          fontWeight="semibold"
-          style={theme.atoms.text}
-        >
+        <Text variant="secondary" fontWeight="semibold">
           {entry.name}
         </Text>
-        <Text
-          variant="small"
-          fontWeight="regular"
-          style={theme.atoms.text_neutral_medium}
-        >
+        <Text variant="small" fontWeight="regular" color="secondary">
           {entry.description}
         </Text>
       </View>
@@ -74,15 +64,24 @@ function ModerationLabelRow({
   );
 }
 
-export default function ModerationSettingsSheet() {
+/** A route sheet by default; pass `open` to drive it inline. */
+export default function ModerationSettingsSheet({
+  open,
+  onClose,
+}: {
+  open?: boolean;
+  onClose?: () => void;
+} = {}) {
   const entries = getModerationLabelEntries();
+  const close = onClose ?? (() => router.canGoBack() && router.back());
+  const mode:
+    | { open?: undefined; onClose?: undefined }
+    | { open: boolean; onClose?: () => void } =
+    open === undefined ? {} : { open, onClose };
 
   return (
-    <Sheet detents={[0.5, 1]} dismissible>
-      <Sheet.Header
-        title="Content Moderation"
-        onClose={() => router.canGoBack() && router.back()}
-      />
+    <Sheet detents={[0.5, 1]} dismissible {...mode}>
+      <Sheet.Header title="Content Moderation" onClose={close} />
       <Sheet.Content style={[Atoms.p_0]}>
         {entries.map((entry, index) => (
           <ModerationLabelRow
@@ -97,7 +96,7 @@ export default function ModerationSettingsSheet() {
           accessibilityRole="link"
           style={[Atoms.px_lg, Atoms.py_md]}
         >
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             Content policy for the FUTO servers ↗
           </Text>
         </Link>

@@ -2,7 +2,7 @@ ARG RUST_IMAGE
 
 # Debian bookworm (the rust base) has no Compose v2 plugin in its repos, so
 # we copy the binaries from the official docker image, pinned by tag.
-FROM docker:29-cli@sha256:5e6baf67325a79f64ed3bed6863954d5e05d0f3d4e57cbdb14809346814bbfdb AS docker
+FROM docker:29-cli@sha256:34507eb5069d8be82c95dd3b6987d4250fd5fee49b82e2509b7d7a7030740d6d AS docker
 FROM ${RUST_IMAGE}
 
 COPY --from=docker /usr/local/bin/docker /usr/local/bin/docker

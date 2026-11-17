@@ -76,3 +76,7 @@ export function getModerationLabelEntries(): ModerationLabelEntry[] {
 export function moderationLabelName(label: string): string {
   return LABEL_ENTRIES.find((e) => e.key === label)?.name ?? label;
 }
+
+export function moderationLabelDescription(label: string): string | undefined {
+  return LABEL_ENTRIES.find((e) => e.key === label)?.description;
+}

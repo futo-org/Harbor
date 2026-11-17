@@ -24,6 +24,9 @@ export async function updateProfile(
   client: PolycentricClient,
   { name, description, avatarUri, avatar, banner, alias }: UpdateProfileInput,
 ): Promise<void> {
+  const identity = client.activeIdentityKey;
+  if (!identity) throw new Error('No active identity');
+
   // Build profile update event
   let avatarMeta: v2.ImageSet | undefined;
   let newAvatarVariants: ImageVariant[] = [];
@@ -53,7 +56,7 @@ export async function updateProfile(
   // Persist profile update locally
   await Promise.all(
     newAvatarVariants.map(({ digest, bytes }) =>
-      client.fileStore.put(digest, bytes),
+      client.fileStore.put(identity, digest, bytes),
     ),
   );
 

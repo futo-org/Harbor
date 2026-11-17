@@ -23,7 +23,8 @@ export function Chip({
         Atoms.pb_xs,
         Atoms.pl_md,
         Atoms.pr_md,
-        { borderWidth: 1, borderColor: theme.palette.neutral_25 },
+        theme.atoms.box.primary.border,
+        Atoms.border,
         style,
       ]}
     >

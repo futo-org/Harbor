@@ -3,8 +3,8 @@ import Icon from '@/src/common/components/Icon';
 import { Atoms, useTheme } from '@/src/common/theme';
 import type { PostLabel } from '@/src/common/lib/polycentric-hooks/helpers';
 import { labelNames } from '@/src/features/moderation/LabelPill';
-import { useIdentityHandle } from '@/src/features/profile/hooks/useIdentityHandle';
-import { useProfile } from '@/src/features/profile/hooks/useProfile';
+import { useLabeler } from '@/src/features/moderation/useLabeler';
+import { useModerationWarningStore } from '@/src/features/moderation/useModerationWarningStore';
 import { Pressable, View } from 'react-native';
 
 /**
@@ -22,17 +22,14 @@ export function PostWarnOverlay({
   onDismiss: () => void;
 }) {
   const { theme } = useTheme();
+  const openWarning = useModerationWarningStore((s) => s.openFor);
 
-  const labeledBy = labels.find((l) => l.labeledBy)?.labeledBy ?? null;
-  const byAuthor = labeledBy !== null && labeledBy === authorIdentity;
-  const labeler = byAuthor ? null : labeledBy;
-  const labelerProfile = useProfile(labeler);
-  const labelerHandle = useIdentityHandle(labeler);
-  const attribution = !labeledBy
+  const labeler = useLabeler(labels, authorIdentity);
+  const attribution = !labeler
     ? null
-    : byAuthor
+    : labeler.isSubject
       ? 'Applied by the author'
-      : `Applied by ${labelerProfile.name ?? labelerHandle.text}`;
+      : `Applied by ${labeler.name}`;
 
   return (
     <View
@@ -42,7 +39,7 @@ export function PostWarnOverlay({
         Atoms.align_center,
         Atoms.rounded_md,
         Atoms.overflow_hidden,
-        { backgroundColor: theme.palette.neutral_25 },
+        theme.atoms.box.secondary.bg,
       ]}
     >
       <View
@@ -56,13 +53,13 @@ export function PostWarnOverlay({
           Atoms.py_sm,
         ]}
       >
-        <Icon name="infoOutline" color="neutral_700" />
+        <Icon name="infoOutline" color="secondary" />
         <View style={[Atoms.flex_1]}>
-          <Text variant="secondary" fontWeight="bold" color="neutral_700">
+          <Text variant="secondary" fontWeight="bold" color="secondary">
             Hidden for {labelNames(labels).toLowerCase()}
           </Text>
           {attribution ? (
-            <Text variant="small" color="neutral_500" fontWeight="regular">
+            <Text variant="small" color="muted" fontWeight="regular">
               {attribution}
             </Text>
           ) : null}
@@ -71,16 +68,23 @@ export function PostWarnOverlay({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Show"
-        onPress={onDismiss}
+        onPress={() =>
+          openWarning({
+            labels,
+            identity: authorIdentity,
+            subject: 'post',
+            onConfirm: onDismiss,
+          })
+        }
         style={({ pressed }) => [
           Atoms.px_md,
           Atoms.self_stretch,
           Atoms.justify_center,
-          { backgroundColor: theme.palette.neutral_50 },
-          pressed && { opacity: 0.5 },
+          theme.atoms.box.secondary.bg_hover,
+          pressed && Atoms.faded,
         ]}
       >
-        <Text variant="secondary" fontWeight="bold" color="neutral_600">
+        <Text variant="secondary" fontWeight="bold" color="secondary">
           Show
         </Text>
       </Pressable>

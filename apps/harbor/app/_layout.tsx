@@ -4,18 +4,24 @@ import { AppUpdater } from '@/src/features/core/apk-update';
 import { installErrorReporter } from '@/src/features/telemetry/lib/error-reporter';
 import { installConsoleCapture } from '@/src/features/telemetry/lib/console';
 import { AuthGateSheet } from '@/src/features/core/identity/AuthGateSheet';
+import { ExtensionLoginSheet } from '@/src/features/anywhere/ExtensionLoginSheet';
+import { useExtensionNavigation } from '@/src/features/anywhere/hooks/useExtensionNavigation';
+import { extensionScreenLayout } from '@/src/features/anywhere/browser-extension/lib/extension-screen-layout';
 import { EmojiPickerSheet } from '@/src/features/reaction/EmojiPickerSheet';
+import { ModerationWarningSheet } from '@/src/features/moderation/ModerationWarningSheet';
+import { LoggedOutShareNotice } from '@/src/features/share-intake/LoggedOutShareNotice';
 import { LinkPreviewsProvider } from '@/src/common/link-previews';
 import {
   PolycentricProvider,
   usePolycentricContext,
 } from '@/src/common/lib/polycentric-hooks';
 import { renderScreenWithSplashHide } from '@/src/common/lib/renderScreenWithSplashHide';
-import { APP_NAME, Routes } from '@/src/common/constants';
+import { useResyncTitleOnPopstate } from '@/src/common/lib/navigation/useResyncTitleOnPopstate';
+import { Routes } from '@/src/common/constants';
 import ModerationStatusPrefetch from '@/src/features/moderation/ModerationStatusPrefetch';
 import { TelemetryIdentitySync } from '@/src/features/telemetry/TelemetryIdentitySync';
 import { Atoms, ThemeProvider, useTheme } from '@/src/common/theme';
-import { isWeb } from '@/src/common/util/platform';
+import { isBrowserExtension, isWeb } from '@/src/common/util/platform';
 import '@/src/common/util/react-native-screens-feature-flags';
 import { TrueSheetProvider } from '@lodev09/react-native-true-sheet';
 import { PortalHost } from '@rn-primitives/portal';
@@ -28,7 +34,6 @@ import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from 'react-native-safe-area-context';
-import Head from 'expo-router/head';
 
 // Otherwise expo-router hides the splash as soon as navigation mounts, before
 // the providers below have anything to show; the root stack hides it once a
@@ -49,6 +54,13 @@ const imageViewerScreenOptions = {
   ...(isWeb ? {} : { orientation: 'all' as const }),
 };
 
+// For screens that draw their own sheet, or nothing, over the screen below
+const transparentScreenOptions = {
+  presentation: 'transparentModal' as const,
+  animation: 'none' as const,
+  contentStyle: { backgroundColor: 'transparent' },
+};
+
 // Anchor the root stack on the tabs so that deep-linking directly
 // into a modal route (e.g. `/feed/compose`, `/settings/identity`)
 // mounts the tabs underneath — giving the modal something to sit on
@@ -67,18 +79,24 @@ function RootStack() {
 
   const stack = (
     <>
-      <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
-      <NavigationBar style={theme.name === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
+      <NavigationBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
-        screenLayout={isWeb ? undefined : renderScreenWithSplashHide}
+        screenLayout={
+          isBrowserExtension
+            ? extensionScreenLayout
+            : isWeb
+              ? undefined
+              : renderScreenWithSplashHide
+        }
         screenOptions={{
           headerShown: false,
           fullScreenGestureEnabled: !isWeb,
           // Web scrolls the document, so the scene grows with its content
           // instead of becoming a scroll port of its own.
           contentStyle: isWeb
-            ? [theme.atoms.bg, Atoms.flex_grow_1]
-            : [theme.atoms.bg, Atoms.flex_1, Atoms.overflow_auto],
+            ? [theme.atoms.box.primary.bg, Atoms.flex_grow_1]
+            : [theme.atoms.box.primary.bg, Atoms.flex_1, Atoms.overflow_auto],
           ...(isWeb
             ? { animation: 'none' as const }
             : {
@@ -124,11 +142,7 @@ function RootStack() {
           <Stack.Screen name="moderation" />
           <Stack.Screen
             name="[identityId]/edit"
-            options={{
-              presentation: 'transparentModal',
-              animation: 'none',
-              contentStyle: { backgroundColor: 'transparent' },
-            }}
+            options={transparentScreenOptions}
           />
           <Stack.Screen name="verifications/index" />
         </Stack.Protected>
@@ -148,14 +162,18 @@ function RootStack() {
 
         <Stack.Screen
           name="[identityId]/identity"
-          options={{
-            presentation: 'transparentModal',
-            animation: 'none',
-            contentStyle: { backgroundColor: 'transparent' },
-          }}
+          options={transparentScreenOptions}
+        />
+        <Stack.Screen
+          name="intent/compose"
+          options={transparentScreenOptions}
         />
         <Stack.Screen
           name="[identityId]/post/[keyFingerprint]/[sequence]/image/[index]"
+          options={imageViewerScreenOptions}
+        />
+        <Stack.Screen
+          name="[identityId]/verifications/[keyFingerprint]/[sequence]/image/[index]"
           options={imageViewerScreenOptions}
         />
         <Stack.Screen
@@ -170,11 +188,11 @@ function RootStack() {
 }
 
 export default function RootLayout() {
+  useResyncTitleOnPopstate();
+  useExtensionNavigation();
+
   return (
     <>
-      <Head>
-        <title>{APP_NAME}</title>
-      </Head>
       <GestureHandlerRootView style={Atoms.flex_1}>
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <ThemeProvider>
@@ -189,7 +207,10 @@ export default function RootLayout() {
                   <PortalHost />
                   <Toaster />
                   <AuthGateSheet />
+                  <LoggedOutShareNotice />
+                  {isWeb ? <ExtensionLoginSheet /> : null}
                   <EmojiPickerSheet />
+                  <ModerationWarningSheet />
                   <AppUpdater />
                 </TrueSheetProvider>
               </PolycentricProvider>

@@ -5,7 +5,7 @@ export function CharCount({ count, max }: { count: number; max: number }) {
   return (
     <Text
       variant="small"
-      color={count >= max ? 'negative_500' : 'neutral_500'}
+      color={count >= max ? 'danger' : 'muted'}
       style={Atoms.text_right}
     >
       {count}/{max}

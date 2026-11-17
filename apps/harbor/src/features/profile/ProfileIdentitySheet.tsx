@@ -8,7 +8,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks';
 import { useCopyToClipboard } from '@/src/common/lib/useCopyToClipboard';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { useProfile } from '@/src/features/profile/hooks/useProfile';
 import { Username } from '@/src/features/profile/Username';
 import { ServerRow } from '@/src/features/settings/servers/ServerRow';
@@ -60,14 +60,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
 
   const servers = state?.servers ?? [];
 
-  const divider = (
-    <View
-      style={{
-        height: 1,
-        backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-      }}
-    />
-  );
+  const divider = <View style={[theme.atoms.outline, Atoms.border_t]} />;
 
   return (
     <Sheet detents={[1]} dismissible>
@@ -98,13 +91,11 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
             Atoms.gap_md,
             Atoms.p_md,
             Atoms.rounded_md,
-            {
-              backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-            },
+            theme.atoms.box.raised.bg,
           ]}
         >
           <View style={Atoms.gap_xs}>
-            <Text variant="small" color="neutral_500">
+            <Text variant="small" color="muted">
               IDENTITY KEY
             </Text>
             <CopyableValue value={identityKey} label="identity key" />
@@ -121,11 +112,11 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
             >
               {({ pressed }) => (
                 <>
-                  <Icon name="infoOutline" size={16} color="neutral_500" />
+                  <Icon name="infoOutline" size={16} color="muted" />
                   <Text
                     variant="small"
-                    color="neutral_700"
-                    style={pressed && { opacity: 0.65 }}
+                    color="secondary"
+                    style={pressed && Atoms.faded}
                   >
                     Identity info
                   </Text>
@@ -137,13 +128,13 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
           {divider}
 
           <View style={Atoms.gap_sm}>
-            <Text variant="small" color="neutral_500">
+            <Text variant="small" color="muted">
               SIGNING KEYS
             </Text>
             {isLoading && keys.length === 0 ? (
               <ActivityIndicator style={Atoms.self_start} />
             ) : keys.length === 0 ? (
-              <Text variant="secondary" color="neutral_500">
+              <Text variant="secondary" color="muted">
                 No identity document found
               </Text>
             ) : (
@@ -155,13 +146,13 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
         </View>
 
         <View style={Atoms.gap_sm}>
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             SERVERS
           </Text>
           {isLoading && !state ? (
             <ActivityIndicator style={Atoms.self_start} />
           ) : servers.length === 0 ? (
-            <Text variant="secondary" color="neutral_500">
+            <Text variant="secondary" color="muted">
               No servers listed
             </Text>
           ) : (
@@ -180,7 +171,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
                   trailing={
                     shared ? (
                       <View style={Atoms.pr_md}>
-                        <Icon name="checkmark" size={22} color="positive_500" />
+                        <Icon name="checkmark" size={22} color="success" />
                       </View>
                     ) : undefined
                   }
@@ -212,12 +203,10 @@ function SigningKeyRow({
             Atoms.px_sm,
             Atoms.py_xs,
             Atoms.rounded_full,
-            {
-              backgroundColor: withHexOpacity(theme.palette.primary_500, '20'),
-            },
+            theme.atoms.box.accent.bg_subtle,
           ]}
         >
-          <Text variant="small" color="primary_500">
+          <Text variant="small" color="accent">
             This device
           </Text>
         </View>
@@ -254,7 +243,7 @@ function CopyableValue({ value, label }: { value: string; label: string }) {
           <Icon
             name={justCopied ? 'checkmark' : 'copy'}
             size={16}
-            color={justCopied ? 'positive_500' : 'neutral_500'}
+            color={justCopied ? 'success' : 'muted'}
           />
         )}
         onPress={() => copyToClipboard(value)}

@@ -1,0 +1,25 @@
+{
+  "name": "harbor-browser-extension",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:chrome": "APP_VARIANT=dev wxt",
+    "dev:firefox": "APP_VARIANT=dev wxt -b firefox --mv3",
+    "build:all": "pnpm build:app && pnpm build:chrome && pnpm build:firefox && pnpm build:safari",
+    "build:app": "pnpm --filter polycentric-app build:web",
+    "build:chrome": "wxt build",
+    "build:firefox": "wxt build -b firefox --mv3",
+    "build:safari": "wxt build -b safari --mv3",
+    "zip": "wxt zip && wxt zip -b firefox --mv3",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "wxt prepare"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vite": "^8.3.7",
+    "wxt": "^0.21.5"
+  }
+}

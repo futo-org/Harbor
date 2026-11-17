@@ -63,7 +63,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
 
         <View style={Atoms.gap_md}>
           <View style={Atoms.gap_xs}>
-            <Text variant="small" color="neutral_500">
+            <Text variant="small" color="muted">
               DISPLAY NAME
             </Text>
             <TextInput
@@ -78,7 +78,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
           </View>
 
           <View style={Atoms.gap_xs}>
-            <Text variant="small" color="neutral_500">
+            <Text variant="small" color="muted">
               BIO
             </Text>
             <TextInput
@@ -104,7 +104,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
                 { zIndex: ZIndex.raised },
               ]}
             >
-              <Text variant="small" color="neutral_500">
+              <Text variant="small" color="muted">
                 ALIAS
               </Text>
               <InfoTooltip text="An alias like you@yourdomain.com (or just yourdomain.com) that points to this profile. Your domain must be set up to link back here before it can be saved." />
@@ -119,7 +119,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               disabled={edit.saving}
             />
             {edit.aliasError ? (
-              <Text variant="small" color="negative_500">
+              <Text variant="small" color="danger">
                 {edit.aliasError}
               </Text>
             ) : null}
@@ -127,7 +127,7 @@ function EditProfileSheet({ identityKey }: { identityKey: string }) {
               href="https://join.harbor.social/docs/guides/setting-up-an-alias"
               accessibilityRole="link"
             >
-              <Text variant="small" color="neutral_500">
+              <Text variant="small" color="muted">
                 How to set up an alias ↗
               </Text>
             </Link>

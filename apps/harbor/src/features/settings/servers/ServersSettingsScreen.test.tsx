@@ -1,13 +1,17 @@
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
     theme: {
-      palette: new Proxy({}, { get: () => '#000' }),
-      atoms: new Proxy({}, { get: () => ({}) }),
+      atoms: new Proxy(
+        {},
+        {
+          get: () =>
+            new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
+        },
+      ),
     },
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 0 }),
-  withHexOpacity: (color: string) => color,
 }));
 
 jest.mock('@/src/common/lib/navigation/usePageTitle', () => ({

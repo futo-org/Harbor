@@ -1,14 +1,18 @@
-jest.mock('@/src/common/theme', () => ({
-  useTheme: () => ({
-    theme: {
-      palette: new Proxy({}, { get: () => '#000' }),
-      atoms: new Proxy({}, { get: () => ({}) }),
-    },
-  }),
-  Atoms: new Proxy({}, { get: () => ({}) }),
-  Spacing: new Proxy({}, { get: () => 0 }),
-  typography: { lineHeight: { md: 20 } },
-}));
+jest.mock('@/src/common/theme', () => {
+  // Any depth of `theme.atoms.*` resolves to an empty style.
+  const deepAtoms = (): object => new Proxy({}, { get: () => deepAtoms() });
+  return {
+    useTheme: () => ({
+      theme: {
+        colors: new Proxy({}, { get: () => '#000' }),
+        atoms: deepAtoms(),
+      },
+    }),
+    Atoms: new Proxy({}, { get: () => ({}) }),
+    Spacing: new Proxy({}, { get: () => 0 }),
+    typography: { lineHeight: { md: 20 } },
+  };
+});
 
 const mockConfirm = jest.fn(async () => true);
 jest.mock('@/src/common/lib/dialogs/alert', () => ({
