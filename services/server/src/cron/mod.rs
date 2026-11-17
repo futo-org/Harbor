@@ -6,22 +6,29 @@ use std::time::Duration;
 
 use sea_orm::sea_query::{Expr, PgFunc, SelectStatement};
 use sea_orm::{DatabaseConnection, DbErr};
-use tokio::time::{MissedTickBehavior, interval};
+use tokio::time::{MissedTickBehavior, interval, sleep};
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
 use crate::db::{Connection, DbTx};
+use crate::service::content::content_filestore::ContentFilestore;
 
+pub(crate) mod blob_index;
+mod blob_prune;
 mod gravity;
 
 /// Start all cron jobs.
-pub(crate) fn start_jobs(db: DatabaseConnection) -> Cron {
+pub(crate) fn start_jobs(
+    db: DatabaseConnection,
+    filestore: ContentFilestore,
+) -> Cron {
     let cron = Cron {
         tasks: TaskTracker::new(),
         cancel: CancellationToken::new(),
     };
 
     gravity::update(&cron, db.clone());
+    blob_prune::run(&cron, db.clone(), filestore);
 
     cron
 }
@@ -59,16 +66,42 @@ impl Cron {
                 }
             }));
     }
+
+    /// Run `f` then sleep for the returned duration and call `f` again.
+    fn repeated<F, Fut>(&self, mut f: F)
+    where
+        F: FnMut() -> Fut + Send + 'static,
+        Fut: Future<Output = ControlFlow<(), Duration>> + Send + 'static,
+    {
+        let cancel = self.cancel.clone();
+        self.tasks
+            .spawn(cancel.run_until_cancelled_owned(async move {
+                loop {
+                    let duration = match f().await {
+                        ControlFlow::Continue(duration) => duration,
+                        ControlFlow::Break(()) => break,
+                    };
+                    sleep(duration).await;
+                }
+            }));
+    }
 }
 
 /// Postgres lock.
-#[repr(u8)]
-#[derive(Copy, Clone, Debug)]
-enum AdvisoryLock {
-    Gravity = 0,
-}
+struct AdvisoryLock(i64);
+
+const GRAVITY: i64 = 1 << 32;
+const BLOB_PRUNE: i64 = 2 << 32;
 
 impl AdvisoryLock {
+    pub(crate) const fn gravity() -> AdvisoryLock {
+        AdvisoryLock(GRAVITY)
+    }
+
+    pub(crate) fn blob_prune() -> AdvisoryLock {
+        AdvisoryLock(BLOB_PRUNE)
+    }
+
     /// Lock the key and run `f`.
     ///
     /// In production/staging we run multiple instances of the server
@@ -88,10 +121,12 @@ impl AdvisoryLock {
     /// We could use row level locking as well, but then we lock all out all
     /// other users of the rows, which is not ideal for rows that are accessed a
     /// lot (especially if it's not needed).
-    async fn try_lock(self, tx: &mut DbTx<'_>) -> Result<bool, DbErr> {
-        let lock_key = self as i64;
+    pub(crate) async fn try_lock(
+        self,
+        tx: &mut DbTx<'_>,
+    ) -> Result<bool, DbErr> {
         let mut query = SelectStatement::new();
-        query.expr(PgFunc::try_advisory_lock(Expr::Constant(lock_key.into())));
+        query.expr(PgFunc::try_advisory_lock(Expr::Constant(self.0.into())));
         if tx
             .query_one(&query)
             .await?
