@@ -1,6 +1,6 @@
 [tools]
 k3d = "5.9.0"
-kubectl = "1.37.1"
+kubectl = "1.37.2"
 helm = "4.3.0"
 tilt = "0.37.8"
 # Node from .nvmrc; pnpm matches package.json.
