@@ -23,6 +23,7 @@ pub(crate) fn run(
     cron: &Cron,
     db: DatabaseConnection,
     filestore: ContentFilestore,
+    dry_run: bool,
 ) {
     cron.repeated(move || {
         let grace_period = config::get().blob_prune_grace;
@@ -87,7 +88,7 @@ pub(crate) fn run(
                 tracing::info!(%key, "pruning unused blob");
 
                 processed += 1;
-                if let Err(error) = filestore.delete_blob(&digest).await {
+                if !dry_run && let Err(error) = filestore.delete_blob(&digest).await {
                     tracing::warn!(%key, %error, "failed to delete unused blob");
                     failed += 1;
                 } else {
@@ -99,7 +100,7 @@ pub(crate) fn run(
             let next_run = next_run(&mut tx).await;
 
             if !delete_from_index.is_empty() {
-                if let Err(error) = Mutation::remove_blobs_from_index(&mut tx, delete_from_index).await {
+                if !dry_run && let Err(error) = Mutation::remove_blobs_from_index(&mut tx, delete_from_index).await {
                     tracing::warn!(%error, "failed remove unused blobs from database (already removed from content storage)");
                     if let Err(error) = tx.rollback().await {
                         tracing::warn!(%error, "failed to abort transaction for pruning blobs");
