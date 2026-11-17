@@ -4,8 +4,7 @@ use sea_orm::entity::prelude::*;
 
 /// Index of blobs uploaded to the content store.
 ///
-/// Note that this may be out of data, the source of thruth is the content
-/// store.
+/// Note that this may be out of date, the source of truth is the content store.
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "blob_index")]

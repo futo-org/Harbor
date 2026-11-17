@@ -21,6 +21,10 @@ const BATCH_SIZE: usize = 200;
 /// This one way sync, it only adds the blobs locally that are in the content
 /// store, but not in the local index. It doesn't remove blobs from the local
 /// index that aren't in the content store any more.
+///
+/// The [blob prune] job will remove any unused blobs from the content store.
+///
+/// [blob prune]: crate::cron::blob_prune
 pub(crate) async fn sync(
     mut db: DbConn,
     filestore: ContentFilestore,
@@ -35,14 +39,13 @@ pub(crate) async fn sync(
     tracing::debug!("listing blobs in content store");
     let mut objects = filestore.list_objects();
     let mut buffer = Vec::with_capacity(BATCH_SIZE);
-    loop {
-        let object = match objects.next().await {
-            Some(Ok(object)) => object,
-            Some(Err(error)) => {
+    while let Some(result) = objects.next().await {
+        let object = match result {
+            Ok(object) => object,
+            Err(error) => {
                 tracing::warn!(%error, "failed to list objects in content store");
                 return Err(error.to_string());
             }
-            None => break, // Processed all.
         };
 
         // Skip blob without a key (seems unlikely).

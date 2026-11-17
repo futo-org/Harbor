@@ -183,7 +183,7 @@ impl Mutation {
             last_modified: ActiveValue::Set(Utc::now().into()),
         })
         .on_conflict({
-            // Unlikely, but let's not stop now as the blob is uploaded.
+            // Unlikely, but let's ignore the error just in case.
             let mut c = OnConflict::new();
             c.do_nothing();
             c
