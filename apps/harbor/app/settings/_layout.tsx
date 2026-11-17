@@ -24,6 +24,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="legal-notices" />
       <Stack.Screen name="feedback" />
       <Stack.Screen name="logs" />
+      <Stack.Screen name="feature-flags" />
     </Stack>
   );
 }

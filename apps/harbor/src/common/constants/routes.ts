@@ -122,6 +122,7 @@ export const Routes = {
       legalNotices: '/settings/legal-notices',
       feedback: '/settings/feedback',
       logs: '/settings/logs',
+      featureFlags: '/settings/feature-flags',
       clientInformation: '/settings/client-information',
       reportBug: '/settings/report-bug',
     },

@@ -220,6 +220,16 @@ export default function SettingsTabScreen() {
                 <ErrorReportsSettingRow />
               </ListItemGroup>
 
+              <ListItemGroup label="Developer">
+                <ListItemWrapper
+                  onPress={() =>
+                    router.navigate(Routes.tabs.settings.featureFlags)
+                  }
+                >
+                  <Text variant="body">Feature flags</Text>
+                </ListItemWrapper>
+              </ListItemGroup>
+
               <ListItemGroup label="About">
                 <VersionRow />
                 {canSelfUpdate() ? <CheckForUpdatesRow /> : null}
