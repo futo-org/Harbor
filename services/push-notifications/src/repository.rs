@@ -1,6 +1,6 @@
 use crate::manager::PushService;
 use polycentric_common::models::protos_v2::{PublicKey, PushTarget};
-use push_notifications_entity::push_token_model as PushTokenModel;
+use push_notifications_entity::push_subscription_model as PushSubscriptionModel;
 use sea_orm::sea_query::{Expr, ExprTrait};
 use sea_orm::*;
 use time::OffsetDateTime;
@@ -8,8 +8,8 @@ use time::OffsetDateTime;
 /// Query condition for whether a row's key is in `keys`.
 fn key_in(keys: &[PublicKey]) -> sea_orm::sea_query::Expr {
     Expr::tuple([
-        Expr::col(PushTokenModel::Column::PublicKeyType),
-        Expr::col(PushTokenModel::Column::PublicKey),
+        Expr::col(PushSubscriptionModel::Column::PublicKeyType),
+        Expr::col(PushSubscriptionModel::Column::PublicKey),
     ])
     .in_tuples(keys.iter().map(|k| (k.key_type as i16, k.key.clone())))
 }
@@ -28,12 +28,12 @@ impl Query {
             return Ok(vec![]);
         }
 
-        PushTokenModel::Entity::find()
+        PushSubscriptionModel::Entity::find()
             .select_only()
-            .column(PushTokenModel::Column::Token)
+            .column(PushSubscriptionModel::Column::Token)
             .distinct()
-            .filter(PushTokenModel::Column::Identity.eq(identity))
-            .filter(PushTokenModel::Column::Service.eq(PushService::Expo.as_ref()))
+            .filter(PushSubscriptionModel::Column::Identity.eq(identity))
+            .filter(PushSubscriptionModel::Column::Service.eq(PushService::Expo.as_ref()))
             .filter(key_in(keys))
             .into_tuple()
             .all(db)
@@ -55,9 +55,9 @@ impl Mutation {
         let txn = db.begin().await?;
 
         // Remove all subscriptions for `target`.
-        PushTokenModel::Entity::delete_many()
-            .filter(PushTokenModel::Column::Service.eq(&target.service))
-            .filter(PushTokenModel::Column::Token.eq(&target.token))
+        PushSubscriptionModel::Entity::delete_many()
+            .filter(PushSubscriptionModel::Column::Service.eq(&target.service))
+            .filter(PushSubscriptionModel::Column::Token.eq(&target.token))
             .exec(&txn)
             .await?;
 
@@ -71,37 +71,38 @@ impl Mutation {
             }
 
             // Delete existing subscriptions for each public key
-            PushTokenModel::Entity::delete_many()
+            PushSubscriptionModel::Entity::delete_many()
                 .filter(key_in(&signers))
                 .exec(&txn)
                 .await?;
 
             // Derive new subscriptions
             let now = OffsetDateTime::now_utc();
-            let rows = subscriptions
-                .iter()
-                .map(|(signer, identity)| PushTokenModel::ActiveModel {
-                    public_key_type: Set(signer.key_type as i16),
-                    public_key: Set(signer.key.clone()),
-                    identity: Set(identity.clone()),
-                    service: Set(target.service.clone()),
-                    token: Set(target.token.clone()),
-                    created_at: Set(now),
-                    updated_at: Set(now),
-                });
+            let rows =
+                subscriptions
+                    .iter()
+                    .map(|(signer, identity)| PushSubscriptionModel::ActiveModel {
+                        public_key_type: Set(signer.key_type as i16),
+                        public_key: Set(signer.key.clone()),
+                        identity: Set(identity.clone()),
+                        service: Set(target.service.clone()),
+                        token: Set(target.token.clone()),
+                        created_at: Set(now),
+                        updated_at: Set(now),
+                    });
 
             // Register new subscriptions
-            PushTokenModel::Entity::insert_many(rows)
+            PushSubscriptionModel::Entity::insert_many(rows)
                 .on_conflict(
                     sea_query::OnConflict::columns([
-                        PushTokenModel::Column::PublicKeyType,
-                        PushTokenModel::Column::PublicKey,
-                        PushTokenModel::Column::Identity,
+                        PushSubscriptionModel::Column::PublicKeyType,
+                        PushSubscriptionModel::Column::PublicKey,
+                        PushSubscriptionModel::Column::Identity,
                     ])
                     .update_columns([
-                        PushTokenModel::Column::Service,
-                        PushTokenModel::Column::Token,
-                        PushTokenModel::Column::UpdatedAt,
+                        PushSubscriptionModel::Column::Service,
+                        PushSubscriptionModel::Column::Token,
+                        PushSubscriptionModel::Column::UpdatedAt,
                     ])
                     .to_owned(),
                 )
@@ -119,9 +120,9 @@ impl Mutation {
             return Ok(());
         }
 
-        PushTokenModel::Entity::delete_many()
-            .filter(PushTokenModel::Column::Service.eq(service))
-            .filter(PushTokenModel::Column::Token.is_in(tokens))
+        PushSubscriptionModel::Entity::delete_many()
+            .filter(PushSubscriptionModel::Column::Service.eq(service))
+            .filter(PushSubscriptionModel::Column::Token.is_in(tokens))
             .exec(db)
             .await?;
 

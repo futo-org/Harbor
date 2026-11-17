@@ -234,13 +234,13 @@ pub fn make_ctx(
     }
 }
 
-/// Whether the mock DB recorded a DELETE against `push_token`. Consumes
+/// Whether the mock DB recorded a DELETE against `push_subscription`. Consumes
 /// the connection (it drains the transaction log).
-pub fn saw_push_token_delete(db: DatabaseConnection) -> bool {
+pub fn saw_push_subscription_delete(db: DatabaseConnection) -> bool {
     db.into_transaction_log().iter().any(|tx| {
         tx.statements().iter().any(|stmt| {
             let sql = stmt.sql.to_ascii_uppercase();
-            sql.starts_with("DELETE") && sql.contains("PUSH_TOKEN")
+            sql.starts_with("DELETE") && sql.contains("PUSH_SUBSCRIPTION")
         })
     })
 }

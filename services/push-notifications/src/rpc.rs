@@ -281,11 +281,14 @@ mod tests {
         let sql = format!("{:?}", log[0]);
         assert!(sql.contains("BEGIN"), "{sql}");
         assert_eq!(
-            sql.matches("DELETE FROM \\\"push_token\\\"").count(),
+            sql.matches("DELETE FROM \\\"push_subscription\\\"").count(),
             2,
             "{sql}"
         );
-        assert!(sql.contains("INSERT INTO \\\"push_token\\\""), "{sql}");
+        assert!(
+            sql.contains("INSERT INTO \\\"push_subscription\\\""),
+            "{sql}"
+        );
         assert!(sql.contains("COMMIT"), "{sql}");
     }
 
@@ -307,7 +310,7 @@ mod tests {
         drop(svc);
         let sql = format!("{:?}", db.into_transaction_log());
         assert_eq!(
-            sql.matches("DELETE FROM \\\"push_token\\\"").count(),
+            sql.matches("DELETE FROM \\\"push_subscription\\\"").count(),
             1,
             "{sql}"
         );

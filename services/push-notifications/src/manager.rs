@@ -434,7 +434,7 @@ mod tests {
     }
 
     /// A `DeviceNotRegistered` ticket from Expo removes the token via a
-    /// DELETE on `push_token`.
+    /// DELETE on `push_subscription`.
     #[tokio::test]
     async fn unregisters_token_on_device_not_registered() {
         let mut expo_server = mockito::Server::new_async().await;
@@ -477,8 +477,8 @@ mod tests {
         send_mock.assert_async().await;
 
         assert!(
-            saw_push_token_delete(db),
-            "expected a remove_tokens DELETE on push_token"
+            saw_push_subscription_delete(db),
+            "expected a remove_tokens DELETE on push_subscription"
         );
     }
 
@@ -526,7 +526,7 @@ mod tests {
 
         send_mock.assert_async().await;
         assert!(
-            !saw_push_token_delete(db),
+            !saw_push_subscription_delete(db),
             "a ticket/token count mismatch must skip token cleanup"
         );
     }
@@ -570,7 +570,7 @@ mod tests {
 
         send_mock.assert_async().await;
         assert!(
-            !saw_push_token_delete(db),
+            !saw_push_subscription_delete(db),
             "non-DeviceNotRegistered errors must not unregister the token"
         );
     }
