@@ -11,6 +11,7 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 import { EventKey } from "./event_key";
+import { ImageSet } from "./media";
 import { ContentDigest } from "./common";
 /**
  * Schema that defines the verification
@@ -115,6 +116,12 @@ export interface VerificationClaim {
     fields: {
         [key: string]: Uint8Array;
     };
+    /**
+     * Images attached to the claim, outside the schema.
+     *
+     * @generated from protobuf field: repeated polycentric.v2.ImageSet images = 3
+     */
+    images: ImageSet[];
 }
 /**
  * Targets a claim at one or more identities. Separate from the claim so
@@ -392,12 +399,14 @@ class VerificationClaim$Type extends MessageType<VerificationClaim> {
     constructor() {
         super("polycentric.v2.VerificationClaim", [
             { no: 1, name: "schema", kind: "message", T: () => SerializedVerificationSchema },
-            { no: 2, name: "fields", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 12 /*ScalarType.BYTES*/ } }
+            { no: 2, name: "fields", kind: "map", K: 9 /*ScalarType.STRING*/, V: { kind: "scalar", T: 12 /*ScalarType.BYTES*/ } },
+            { no: 3, name: "images", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => ImageSet }
         ]);
     }
     create(value?: PartialMessage<VerificationClaim>): VerificationClaim {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.fields = {};
+        message.images = [];
         if (value !== undefined)
             reflectionMergePartial<VerificationClaim>(this, message, value);
         return message;
@@ -412,6 +421,9 @@ class VerificationClaim$Type extends MessageType<VerificationClaim> {
                     break;
                 case /* map<string, bytes> fields */ 2:
                     this.binaryReadMap2(message.fields, reader, options);
+                    break;
+                case /* repeated polycentric.v2.ImageSet images */ 3:
+                    message.images.push(ImageSet.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -447,6 +459,9 @@ class VerificationClaim$Type extends MessageType<VerificationClaim> {
         /* map<string, bytes> fields = 2; */
         for (let k of globalThis.Object.keys(message.fields))
             writer.tag(2, WireType.LengthDelimited).fork().tag(1, WireType.LengthDelimited).string(k).tag(2, WireType.LengthDelimited).bytes(message.fields[k]).join();
+        /* repeated polycentric.v2.ImageSet images = 3; */
+        for (let i = 0; i < message.images.length; i++)
+            ImageSet.internalBinaryWrite(message.images[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

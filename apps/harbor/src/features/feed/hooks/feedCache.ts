@@ -73,6 +73,8 @@ export const feedQueryKeys = {
   /** Omit `sort` for the partition covering every sort. */
   explore: (identity: string, sort?: FeedSortOption): string[] =>
     sort ? ['feed', 'explore', identity, sort] : ['feed', 'explore', identity],
+  /** Posts about a URL. */
+  attribution: (url: string): string[] => ['feed', 'attribution', url],
 };
 
 export function threadQueryKey(parentId: string, limit = 0): string[] {

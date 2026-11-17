@@ -7,7 +7,7 @@ okhttp = "5.3.2"
 bouncycastle = "1.86"
 junit = "4.13.2"
 robolectric = "4.17"
-androidx-test = "1.6.1"
+androidx-test = "1.7.0"
 # JSON parsing for moderation and JWT tests
 orgjson = "20240303"
 ktlint = "14.2.0"

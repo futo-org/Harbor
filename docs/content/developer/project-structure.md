@@ -1,4 +1,5 @@
 ---
+
 title: Project Structure
 sidebar_label: Project Structure
 sidebar_position: 2
@@ -13,47 +14,47 @@ scripts fan out across them.
 
 ## Top level
 
-| Path        | Contents                                                                                  |
-| ----------- | ----------------------------------------------------------------------------------------- |
-| `apps/`     | End-user applications.                                                                    |
-| `packages/` | Libraries and SDKs — the protocol core and its language bindings.                          |
-| `services/` | Server-side processes.                                                                    |
+| Path        | Contents                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/`     | End-user applications.                                                                                                                |
+| `packages/` | Libraries and SDKs — the protocol core and its language bindings.                                                                     |
+| `services/` | Server-side processes.                                                                                                                |
 | `protos/`   | Protobuf definitions for the [Polycentric Protocol](../protocol/overview.md). The Rust and TypeScript types are generated from these. |
-| `docs/`     | This documentation site (Docusaurus).                                                     |
-| `dev/`      | Developer tooling for testing |
+| `docs/`     | This documentation site (Docusaurus).                                                                                                 |
+| `dev/`      | Developer tooling for testing                                                                                                         |
 
 ## Apps
 
-| App           | Description                                                     |
-| ------------- | --------------------------------------------------------------- |
+| App           | Description                                                                   |
+| ------------- | ----------------------------------------------------------------------------- |
 | `apps/harbor` | The Harbor client — one Expo/React Native codebase for web, Android, and iOS. |
 
 ## Packages
 
-| Package                       | Description                                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------------------- |
-| `packages/rs-core`            | The Rust protocol core: event signing and validation, queries, sync, and the local store. Everything else is a binding over this. |
-| `packages/rs-common`          | Shared Rust code — protocol models and the generated protobuf types — used by `rs-core` and the services. |
-| `packages/rs-core-wasm`     | `uniffi-bindgen-react-native` bindings for `rs-core`: the shared TypeScript API plus a WASM build for web and Node. |
-| `packages/react-native`       | React Native SDK. The JSI TurboModule that wraps `rs-core` natively, over `rs-core-wasm` on web, plus the Expo storage drivers. |
-| `packages/js-core`            | Core JavaScript library holding the protocol logic and generated protobuf types.               |
-| `packages/js-browser`         | Browser SDK, storing data in SQLite WASM.                                                     |
-| `packages/js-node`            | Node.js SDK, storing data in sqlite3.                                                         |
-| `packages/js-storage-sqlite`  | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                  |
-| `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                             |
-| `packages/kt-core`            | Core library holding the protocol logic and generated protobuf types, for Android development. This is a Kotlin port of `js-core`. |
+| Package                        | Description                                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/rs-core`             | The Rust protocol core: event signing and validation, queries, sync, and the local store. Everything else is a binding over this.  |
+| `packages/rs-common`           | Shared Rust code — protocol models and the generated protobuf types — used by `rs-core` and the services.                          |
+| `packages/rs-core-wasm`        | `uniffi-bindgen-react-native` bindings for `rs-core`: the shared TypeScript API plus a WASM build for web and Node.                |
+| `packages/react-native`        | React Native SDK. The JSI TurboModule that wraps `rs-core` natively, over `rs-core-wasm` on web, plus the Expo storage drivers.    |
+| `packages/js-core`             | Core JavaScript library holding the protocol logic and generated protobuf types.                                                   |
+| `packages/js-browser`          | Browser SDK, storing data in SQLite WASM.                                                                                          |
+| `packages/js-node`             | Node.js SDK, storing data in sqlite3.                                                                                              |
+| `packages/js-storage-sqlite`   | Shared SQLite storage layer (Drizzle ORM) behind the JS SDKs.                                                                      |
+| `packages/js-storage-postgres` | PostgreSQL storage layer, used by the Node.js SDK.                                                                                 |
+| `packages/kt-core`             | Core library holding the protocol logic and generated protobuf types, for Android development. This is a Kotlin port of `js-core`. |
 
 ## Services
 
-| Service                       | Description                                                                                     |
-| ----------------------------- | ----------------------------------------------------------------------------------------------- |
-| `services/server`             | The Polycentric server: ingests events, serves feeds, search, and blobs. See [Running a Server](../guides/running-a-server.md). |
-| `services/moderation`         | Labels content pushed to FUTO-run servers and publishes a labelling feed other servers can poll. |
+| Service                       | Description                                                                                                                                                         |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `services/server`             | The Polycentric server: ingests events, serves feeds, search, and blobs. See [Running a Server](../guides/running-a-server.md).                                     |
+| `services/moderation`         | Labels content pushed to FUTO-run servers and publishes a labelling feed other servers can poll.                                                                    |
 | `services/push-notifications` | Consumes the server's `notifications` Kafka topic, delivers Expo push notifications, and serves the gRPC `NotificationService` clients register device tokens with. |
-| `services/grayjay-migrator`   | Re-signs legacy (v1) Grayjay systems as Harbor identities and serves the legacy key to identity lookup. |
-| `services/scraper`            | Fetches link metadata for link previews.                                                        |
-| `services/verifier-bot`       | Verifies platform claims. See [Verifiers](../protocol/verifiers.md).                             |
-| `services/common`             | Shared Rust crates for the services — `dotenv`, `kafka`, `object-store`, and `telemetry`.       |
+| `services/grayjay-migrator`   | Re-signs legacy (v1) Grayjay systems as Harbor identities and serves the legacy key to identity lookup.                                                             |
+| `services/scraper`            | Fetches link metadata for link previews.                                                                                                                            |
+| `services/verifier-bot`       | Verifies platform claims. See [Verifiers](../protocol/verifiers.md).                                                                                                |
+| `services/common`             | Shared Rust crates for the services — `dotenv`, `kafka`, `object-store`, and `telemetry`.                                                                           |
 
 ## Generated code
 
@@ -62,9 +63,12 @@ cause confusing build failures:
 
 - **Protobuf types** are generated from `protos/` at build time (`prost` and
   `tonic` for Rust, `protobuf-ts` for TypeScript).
-- **uniffi bindings** expose `rs-core` to TypeScript. The React Native
-  TurboModule bindings are committed under
-  `packages/react-native/src/generated/rn/`; the wasm bindings are built into
-  `packages/rs-core-wasm/src/generated/wasm/`. Regenerate them with
-  `pnpm ubrn:clean && pnpm build` — see
+- **uniffi bindings** expose `rs-core` to TypeScript. None are committed. The
+  React Native bindings are generated into `packages/react-native`
+  (`src/generated/rn/`, `cpp/`, `ios/`, the `android/` module sources and
+  `ReactNative.podspec`; see the `.gitignore`) by `pnpm generate`, which
+  `pnpm build` also runs. The wasm bindings are built into
+  `packages/rs-core-wasm/src/generated/wasm/`. In CI the wasm job generates
+  the React Native ones and passes them on with the wasm build. To regenerate
+  them from scratch, run `pnpm ubrn:clean && pnpm generate`; see
   [Clearing stale build caches](./setup.md#clearing-stale-build-caches).

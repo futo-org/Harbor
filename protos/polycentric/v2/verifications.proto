@@ -3,6 +3,7 @@ package polycentric.v2;
 
 import "polycentric/v2/common.proto";
 import "polycentric/v2/event_key.proto";
+import "polycentric/v2/media.proto";
 
 // Schema that defines the verification
 // These are self describing schemas and are intended to be specified in
@@ -54,6 +55,8 @@ message VerificationClaim {
   SerializedVerificationSchema schema = 1;
   // Values keyed by FieldDef.key, decoded per the schema's FieldKind.
   map<string, bytes> fields = 2;
+  // Images attached to the claim, outside the schema.
+  repeated ImageSet images = 3;
 }
 
 // Targets a claim at one or more identities. Separate from the claim so

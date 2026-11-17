@@ -62,13 +62,21 @@ cd harbor
 # Install the pinned Node.js version.
 nvm install
 
-# Install dependencies and build every package.
+# Install dependencies, generate bindings, and build every package.
 pnpm install
+pnpm generate
 pnpm build
 
 # Install the git pre-commit hooks (formatting and linting).
 pnpm prepare
 ```
+
+The React Native package's uniffi bindings are generated from `rs-core`.
+`pnpm generate` builds `rs-core` for your machine and runs
+`uniffi-bindgen-react-native` on it
+(`packages/react-native/tools/generate-bindings.mjs`), so it needs only the
+Rust toolchain, not the Android NDK or Xcode. Remember to re-generate after
+changes to `rs-core`, or typechecking will fail.
 
 `pnpm build` runs through [Turbo](https://turborepo.com) and covers the Rust
 core, the generated uniffi bindings for React Native and web, and the JavaScript
@@ -103,6 +111,10 @@ external-secrets from their pinned charts, each service from its chart in
 `deploy/charts`), and [Tilt](https://tilt.dev) deploys it with images built
 from this checkout. The tools (k3d, kubectl, Helm, Tilt, pnpm, and the Rust
 toolchain for the wasm build) are pinned with [mise](https://mise.jdx.dev).
+Docker is the exception: k3d and Tilt need a running
+[Docker engine](https://docs.docker.com/engine/install/), which is a system
+service that mise cannot install, so install it with your package manager
+and add yourself to the `docker` group. `mise dev` checks for it first.
 
 Run the stack and the JS dev servers in two terminals:
 
@@ -216,9 +228,10 @@ pnpm build
 ```
 
 If the generated uniffi bindings themselves are stale rather than just their
-cache, regenerate them:
+cache, delete and regenerate them:
 
 ```sh
 pnpm ubrn:clean
+pnpm generate
 pnpm build
 ```

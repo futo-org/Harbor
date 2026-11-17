@@ -13,19 +13,30 @@ if [ -z "${SCCACHE_R2_BUCKET:-}" ]; then
   exit 0
 fi
 url="$SCCACHE_R2_ENDPOINT/$SCCACHE_R2_BUCKET/cache/$key.tar.zst"
-sign=(--aws-sigv4 aws:amz:auto:s3 --user "$SCCACHE_R2_ACCESS_KEY_ID:$SCCACHE_R2_SECRET_ACCESS_KEY")
+# Credentials in a file, not on curl's command line.
+auth=$(mktemp)
+printf 'user = "%s:%s"\n' "$SCCACHE_R2_ACCESS_KEY_ID" "$SCCACHE_R2_SECRET_ACCESS_KEY" > "$auth"
+sign=(--aws-sigv4 aws:amz:auto:s3 --config "$auth")
 # S3 needs the payload hash header; the image's curl 7.88 does not add it.
 empty=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 tarball=$(mktemp)
 body=$(mktemp)
-trap 'rm -f "$tarball" "$body"' EXIT
+trap 'rm -f "$tarball" "$body" "$auth"' EXIT
 cd "$GITHUB_WORKSPACE"
 
 # request <curl args...>: prints the status (000 on a transport error) and
-# keeps the response in $body.
+# keeps the response in $body. Abort on a stalled transfer (under 100 KB/s
+# for 30s), or a download that takes more than 5 minutes.
 request() {
-  curl -sS --connect-timeout 15 --max-time 30 "${sign[@]}" -o "$body" -w '%{http_code}' "$@" "$url" || true
+  local status
+  if status=$(curl -sS --connect-timeout 15 --speed-limit 102400 --speed-time 30 --max-time 300 \
+    "${sign[@]}" -o "$body" -w '%{http_code}' "$@" "$url"); then
+    echo "$status"
+  else
+    echo 000
+  fi
 }
+
 report() {
   echo "r2-cache: $1 $2 for $key" >&2
   head -c 1000 "$body" >&2

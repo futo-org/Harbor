@@ -117,10 +117,11 @@ const verifierBot = touches(
   'services/verifier-bot/',
   CHARTS,
 );
-const app = touches(LOCK, 'apps/', CHARTS);
-const e2e = touches('e2e/');
-// Web e2e drives the web image (app and SDKs) against this run's server.
-const webE2e = app || e2e || jsSdk || rnSdk || rsCore || server;
+const app = touches(LOCK, 'apps/harbor/', CHARTS);
+// Packages the app's web export, so it is rebuilt with the app as well.
+const browserExtension = touches(LOCK, 'apps/harbor-browser-extension/');
+// What the web image is built from.
+const web = app || jsSdk || rnSdk || rsCore;
 const docs = touches('docs/', 'protos/polycentric/v2/', /^buf\.yaml$/);
 const charts = touches(
   CHARTS,
@@ -132,39 +133,55 @@ const charts = touches(
 );
 
 // CI rules ------------------------------------------------------------------
-// A workflow's jobs also rerun when the workflow, or an action or script it
-// uses, changes (GitLab: the job's include file), not on any .forgejo change.
+// A job also reruns when an action or script it uses changes, and every job
+// when the workflow or what plans it does (GitLab: the job's include file),
+// not on any .forgejo change.
 
-const ciFiles = (workflow) => {
+// The actions and scripts `text` uses, and those they use.
+const ciFiles = (text) => {
   const files = new Set();
-  const visit = (file) => {
-    if (files.has(file) || !existsSync(file)) return;
-    files.add(file);
-    const text = readFileSync(file, 'utf8');
+  const scan = (text) => {
     for (const [, name] of text.matchAll(/\.\/\.forgejo\/actions\/([\w-]+)/g)) {
-      visit(`.forgejo/actions/${name}/action.yml`);
+      const file = `.forgejo/actions/${name}/action.yml`;
+      if (files.has(file) || !existsSync(file)) continue;
+      files.add(file);
+      scan(readFileSync(file, 'utf8'));
     }
     for (const [, name] of text.matchAll(/\.forgejo\/scripts\/([\w.-]+)/g)) {
       files.add(`.forgejo/scripts/${name}`);
     }
   };
-  visit(`.forgejo/workflows/${workflow}.yml`);
+  scan(text);
   return [...files];
 };
-const ciChanged = (workflow) => touches(ciFiles(workflow));
-// The jobs of one workflow.
-const jobs = (workflow, flags) =>
+const PR_WORKFLOW = '.forgejo/workflows/pr.yml';
+const prWorkflow = readFileSync(PR_WORKFLOW, 'utf8');
+// One block of text for each job, starting at its id.
+const prJobs = prWorkflow
+  .slice(prWorkflow.search(/^jobs:$/m))
+  .split(/^(?= {2}[\w-]+:$)/m)
+  .slice(1);
+const planChanged = touches(
+  PR_WORKFLOW,
+  ciFiles(prJobs.find((job) => job.startsWith('  changes:')) ?? ''),
+);
+// Whether what the jobs gated on `flag` use has changed.
+const ciChanged = (flag) => {
+  const gated = new RegExp(`\\.flags\\.${flag}\\b`);
+  return (
+    planChanged ||
+    touches(prJobs.filter((job) => gated.test(job)).flatMap(ciFiles))
+  );
+};
+const withCi = (flags) =>
   Object.fromEntries(
-    Object.entries(flags).map(([name, on]) => [
-      name,
-      on || ciChanged(workflow),
-    ]),
+    Object.entries(flags).map(([name, on]) => [name, on || ciChanged(name)]),
   );
 
 // Jobs ----------------------------------------------------------------------
 
 const flags = {
-  ...jobs('pr', {
+  ...withCi({
     workflows: touches('.forgejo/'),
     scan: pr,
     rs_core_lint: rsCore,
@@ -175,7 +192,7 @@ const flags = {
     js_services_lint: scraper || verifierBot,
     charts_lint: charts,
     docs_lint: docs,
-    app_lint: app,
+    app_lint: app || browserExtension,
     generated_code: jsSdk || touches('protos/', /^buf\.gen\.yaml$/),
     rs_core: rsCore,
     js_sdk: jsSdk || rsCore,
@@ -190,13 +207,14 @@ const flags = {
     kt_core_build: ktCore,
     image_scraper: scraper,
     image_verifier_bot: verifierBot,
-    web_image: webE2e,
-    browser_extension: app || jsSdk || rnSdk || rsCore,
+    web_image: web,
+    browser_extension: app || browserExtension || jsSdk || rnSdk || rsCore,
     server_integration: serverIntegration,
     moderation_integration: moderationIntegration,
     scraper_integration: scraper,
     verifier_bot_tests: verifierBot,
-    web_e2e: webE2e,
+    // Every PR, on staging's web and server images where it builds none.
+    web_e2e: pr,
     docs,
     docs_preview: docs && pr,
   }),
@@ -211,8 +229,7 @@ const rustServices = [
     label: 'server',
     dockerfile: 'services/server',
     packages: 'server server-migration',
-    // Web e2e runs against this run's server image.
-    changed: server || webE2e,
+    changed: server,
   },
   {
     image: 'moderation-service',
@@ -246,7 +263,7 @@ const rustServices = [
 
 const matrix = {
   service_images: rustServices
-    .filter((s) => s.changed || ciChanged('pr'))
+    .filter((s) => s.changed || ciChanged('service_images'))
     .map(({ image, label, dockerfile, packages }) => ({
       image,
       label: `Build ${label} image`,
@@ -263,8 +280,19 @@ for (const [name, rows] of Object.entries(matrix)) {
 if (!flags.service_images) {
   matrix.service_images.include.push({ label: 'Build service images' });
 }
+// The tags web e2e runs: this run's image where it builds one, else staging's.
+const built = (build) => (build ? env.GITHUB_SHA : 'staging');
+const images = {
+  web: built(flags.web_image),
+  server: built(
+    matrix.service_images.include.some((r) => r.image === 'server'),
+  ),
+};
+// A job rerun for its CI files needs what it runs on.
+flags.docs ||= flags.docs_preview;
 // Jobs that download the SDK artifacts (sdk-artifacts action) need them built.
 flags.build_sdks ||=
+  flags.web_e2e ||
   flags.image_verifier_bot ||
   flags.verifier_bot_tests ||
   flags.web_image ||
@@ -284,4 +312,4 @@ out('registry', env.REGISTRY);
 // CI images are tagged by the content of .forgejo/images; unchanged inputs
 // mean an existing tag and no build.
 out('images_tag', git('rev-parse', 'HEAD:.forgejo/images').slice(0, 12));
-out('plan', { flags, matrix });
+out('plan', { flags, matrix, images });

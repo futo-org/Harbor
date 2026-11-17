@@ -52,6 +52,9 @@ pub struct Config {
     /// How much time events should be considered before their decayed reaction
     /// count is set to zero.
     pub feeds_gravity_expire: Duration,
+    /// Duration in which unused blobs are not yet pruned, with the assumption
+    /// that an event will be stored that uses the blob in this time.
+    pub blob_prune_grace: Duration,
     /// The commit this server was built from (`HARBOR_COMMIT`), set by the
     /// chart. Served on `/version`. `None` outside the cluster.
     pub commit: Option<String>,
@@ -125,6 +128,12 @@ pub fn init() -> &'static Config {
                     .ok()
                     .and_then(|s| s.trim().parse().ok())
                     .unwrap_or(7 * 24), // 1 week.
+            ),
+            blob_prune_grace: Duration::from_hours(
+                std::env::var("HARBOR_BLOB_PRUNE_GRACE_HOURS")
+                    .ok()
+                    .and_then(|s| s.trim().parse().ok())
+                    .unwrap_or(3 * 24), // 3 days.
             ),
             commit: std::env::var("HARBOR_COMMIT")
                 .ok()

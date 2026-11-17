@@ -14,18 +14,23 @@ runs:
       with:
         install-args: --filter polycentric-app... --filter harbor-browser-extension...
     - name: Export the web app
+      id: export
       shell: bash
       working-directory: apps/harbor
       env:
         APP_VARIANT: ${{ inputs.variant }}
       run: |
-        export APP_VERSION="$(node ../../tools/expo/resolve-version.js)+$(echo "$GITHUB_SHA" | cut -c1-8)"
+        VERSION="$(node ../../tools/expo/resolve-version.js)"
+        # Up to four numbers; the run number keeps each build above the last.
+        echo "extension_version=${VERSION%%-*}.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+        export APP_VERSION="$VERSION+$(echo "$GITHUB_SHA" | cut -c1-8)"
         npx expo export --platform web
     - name: Build the extensions
       shell: bash
       working-directory: apps/harbor-browser-extension
       env:
         APP_VARIANT: ${{ inputs.variant }}
+        EXTENSION_VERSION: ${{ steps.export.outputs.extension_version }}
       run: |
         for browser in chrome edge firefox safari; do
           pnpm exec wxt zip -b "$browser" --mv3

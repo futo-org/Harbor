@@ -1,5 +1,6 @@
 import { Button, Text } from '@/src/common/components/primitives';
 import { useIsStoragePersistent } from '@/src/common/lib/polycentric-hooks';
+import { Routes } from '@/src/common/constants';
 import { Atoms, Spacing, useTheme, ZIndex } from '@/src/common/theme';
 import { useOnboardingLinks } from '@/src/features/onboarding/hooks/useOnboardingLinks';
 import { Image } from 'expo-image';
@@ -73,7 +74,12 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
  * Fixed bottom signup bar for signed-out visitors on narrow web
  * viewports, where the right sidebar (and its SignupWidget) is hidden.
  */
-export function SignupBar() {
+export function SignupBar({
+  onNavigate,
+}: {
+  /** Takes over from in-app navigation to the given onboarding route. */
+  onNavigate?: (route: string) => void;
+} = {}) {
   const { theme } = useTheme();
   const isStoragePersistent = useIsStoragePersistent();
   const links = useOnboardingLinks(usePathname());
@@ -110,8 +116,20 @@ export function SignupBar() {
       </View>
       {isStoragePersistent ? (
         <View style={[Atoms.flex_row, Atoms.gap_sm]}>
-          <Button title="Sign up" variant="primary" href={links.signup} />
-          <Button title="Log in" variant="tertiary" href={links.login} />
+          <Button
+            title="Sign up"
+            variant="primary"
+            {...(onNavigate
+              ? { onPress: () => onNavigate(Routes.onboarding.signup.index) }
+              : { href: links.signup })}
+          />
+          <Button
+            title="Log in"
+            variant="tertiary"
+            {...(onNavigate
+              ? { onPress: () => onNavigate(Routes.onboarding.login) }
+              : { href: links.login })}
+          />
         </View>
       ) : null}
     </View>

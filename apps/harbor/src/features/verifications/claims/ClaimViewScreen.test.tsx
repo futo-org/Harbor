@@ -44,6 +44,9 @@ jest.mock('@/src/common/components', () => {
   };
 });
 
+jest.mock('@/src/common/components/composites', () => ({
+  ImageGrid: () => null,
+}));
 jest.mock('@/src/common/components/Icon', () => ({
   __esModule: true,
   default: () => null,
@@ -108,6 +111,7 @@ jest.mock('../hooks/useClaimById', () => ({
       id: 'aabb',
       schemaName: 'Freeform',
       fields: [],
+      images: [],
       identity: 'me',
       keyFingerprint: 'fp',
       sequence: 1n,
@@ -126,6 +130,10 @@ jest.mock('./ClaimAuthorLine', () => ({
 }));
 
 jest.mock('./ClaimMenu', () => ({ ClaimMenu: () => null }));
+// Its import chain loads the Polycentric client, which kills the Jest worker
+jest.mock('./ClaimImageViewerScreen', () => ({
+  openClaimImage: () => undefined,
+}));
 
 jest.mock('./toolbar/StatusChip', () => {
   const react = require('react');

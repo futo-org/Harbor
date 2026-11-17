@@ -2,3 +2,21 @@
 # which CI jobs upload so test results appear in GitLab merge requests.
 [profile.ci.junit]
 path = "junit.xml"
+
+# Server integration tests that sign events as the shared trusted moderator
+# (`TestClient::trusted_moderator()`, directly or via `set_ban_status`) must not
+# run concurrently. The static mutex in `trusted_moderator()` only serializes
+# them within one process, and nextest runs every test in its own process.
+# Overrides in the default profile also apply to the `ci` profile.
+[test-groups]
+trusted-moderator = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = '''
+package(integration-tests) & (
+  test(/^banning::/)
+  | test(/^feeds::.*label/)
+  | test(=search_posts::omit_labels)
+)
+'''
+test-group = "trusted-moderator"

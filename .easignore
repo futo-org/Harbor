@@ -1,9 +1,7 @@
 # EAS-only ignore list. When this file exists, EAS uses it instead of
 # `.gitignore` files for the upload bundle. Mirrors the root
-# `.gitignore` minus the wildcard in
-# `packages/rs-core-wasm-browser/.gitignore` — those wasm artifacts
-# aren't committed, but EAS can't run wasm-pack, so it needs the
-# prebuilt output uploaded.
+# `.gitignore` minus the generated code that EAS can't generate on its
+# own.
 
 # Dependencies
 node_modules/

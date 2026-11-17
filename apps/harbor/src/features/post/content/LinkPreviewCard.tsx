@@ -4,6 +4,7 @@ import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { Atoms, useTheme } from '@/src/common/theme';
 import type { v2 } from '@polycentric/react-native';
 import { Image } from '@/src/common/components/Image';
+import { urlHost } from '@/src/common/util/anywhere-url';
 import { Linking, Pressable, View } from 'react-native';
 
 /** Open-Graph standard image ratio (1200×630). */
@@ -14,7 +15,7 @@ export const COMPACT_IMAGE_WIDTH = 96;
 /**
  * Open-Graph style preview card for a `Link` attached to a post.
  * Tapping opens the URL; the tap is stopped from also triggering the surrounding
- * post-card press (same pattern as PostImages).
+ * post-card press (same pattern as ImageGrid).
  *
  * Metadata fields are best-effort — proto3 leaves unset strings empty, so each
  * is rendered only when present.
@@ -39,14 +40,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
     [client, link.image],
   );
 
-  const host = useMemo(() => {
-    try {
-      return new URL(link.url).hostname;
-    } catch {
-      // Fall back to the raw URL if it doesn't parse.
-      return link.url;
-    }
-  }, [link.url]);
+  const host = urlHost(link.url) ?? link.url;
 
   const image =
     imageUris.length > 0 ? (

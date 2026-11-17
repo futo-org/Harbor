@@ -229,7 +229,8 @@ async fn match_on_identity() {
 
 #[tokio::test]
 async fn match_on_identity_prefix() {
-    let mut client = TestClient::new().await;
+    let key = signing_key("match_on_identity_prefix");
+    let mut client = TestClient::new_with_identity(key).await;
 
     let post_text = format!("Post with identity '{}'", client.identity());
     client.post_text(&post_text, current_timestamp());
@@ -306,12 +307,21 @@ async fn match_on_mention() {
         "mark@futo",
         "mark",
         "mark@",
-        // NOTE: the following search don't work as Postgres
-        //"@futo.tech",
-        //"futo.tech",
-        //"@futo",
-        //"futo",
+        "@futo.tech",
+        "futo.tech",
+        "@futo",
+        "futo",
         client.identity(),
+        // Two words:
+        "mention mark@futo.tech",
+        "mention mark@futo",
+        "mention mark",
+        "mention mark@",
+        "mention @futo.tech",
+        "mention futo.tech",
+        "mention @futo",
+        "mention futo",
+        &format!("mention {}", client.identity()),
     ] {
         expect_searched_posts_contains(
             query,

@@ -309,6 +309,7 @@ impl Client {
         let claim = VerificationClaim {
             schema: Some(schema),
             fields,
+            images: Vec::new(),
         };
         self.verification_claim(claim, created_at)
     }

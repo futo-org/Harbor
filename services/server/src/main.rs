@@ -74,6 +74,7 @@ async fn main() {
         Some("workers") => run_workers(rest).await,
         Some("delete-events") => admin::delete_events(rest).await,
         Some("prune-content") => admin::prune_content(rest).await,
+        Some("sync-blob-index") => admin::sync_blob_index(rest).await,
         Some(other) => {
             // Startup CLI misuse — plain stderr, logging may not matter yet.
             eprintln!(
@@ -128,7 +129,7 @@ async fn run_server() {
     let filestore = ContentFilestore::new(filestore_cfg).await;
     let server_cfg = server_config();
 
-    let cron = cron::start_jobs(db.clone());
+    let cron = cron::start_jobs(db.clone(), filestore.clone());
 
     let grpc_router = build_grpc_router(
         db.clone(),
