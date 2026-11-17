@@ -240,6 +240,7 @@ async function publishClaim(
           },
         },
         fields: fieldBytes,
+        images: [],
       },
     },
   });

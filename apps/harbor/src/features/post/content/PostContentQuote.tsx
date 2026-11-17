@@ -1,3 +1,4 @@
+import { ImageGrid } from '@/src/common/components/composites';
 import { ProfileAvatar, Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
@@ -17,7 +18,7 @@ import Animated from 'react-native-reanimated';
 import { usePostById } from '../hooks/usePostById';
 import { usePostModeration } from '../hooks/usePostModeration';
 import { PostAuthor } from '../PostAuthor';
-import { PostImages } from '../PostImages';
+import { openPostImage } from '../PostImageViewerScreen';
 import { PostWarnOverlay } from '../PostWarnOverlay';
 
 const QUOTE_PREVIEW_LIMIT = 200;
@@ -154,6 +155,10 @@ function AuthorRow({ post }: { post: PostData }) {
 /** A preview of the post's content. */
 function PostBody({ post }: { post: PostData }) {
   const { theme } = useTheme();
+  const openImage = useCallback(
+    (index: number) => openPostImage(post, index),
+    [post],
+  );
 
   const content = mentionsToPlainText(post.content ?? '');
   const preview =
@@ -174,7 +179,7 @@ function PostBody({ post }: { post: PostData }) {
       ) : null}
       {post.images?.length > 0 ? (
         <View style={Atoms.mt_xs}>
-          <PostImages post={post} />
+          <ImageGrid images={post.images} onOpenImage={openImage} />
         </View>
       ) : null}
     </>

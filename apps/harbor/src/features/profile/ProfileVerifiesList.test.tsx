@@ -71,6 +71,7 @@ function claim(
     id: `id-${sequence}`,
     schemaName: 'Freeform',
     fields: [],
+    images: [],
     identity: 'owner',
     keyFingerprint: 'fp',
     sequence: BigInt(sequence),
