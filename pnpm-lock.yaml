@@ -965,7 +965,7 @@ importers:
         version: link:../../packages/js-node
       axios:
         specifier: ^1.18.1
-        version: 1.21.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
+        version: 1.21.1(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
       body-parser:
         specifier: ^2.3.0
         version: 2.4.0(supports-color@8.1.1)
@@ -6379,8 +6379,8 @@ packages:
   await-lock@2.2.2:
     resolution: {integrity: sha512-aDczADvlvTGajTDjcjpJMqRkOF6Qdz3YbPZm/PyW6tKPkx2hlYBzxMhEywM/tU72HrVZjgl5VCdRuMlA7pZ8Gw==}
 
-  axios@1.21.0:
-    resolution: {integrity: sha512-YCzXMB53Q9PZBsh7yN7wtapit4WepwcHS2fP8QhGsBxSz5YtgYobV7GGlWlAJi+RxfU77GQTQi2DSLUma42EYA==}
+  axios@1.21.1:
+    resolution: {integrity: sha512-6eI5Q/Y4u/Um9dDlsRoq5pY2rxnUTv+L4PpLitnbk/i4jb3MxLZ5CsN5Ih3IysbeRYK4pR+P7qfMsOQl9fwwFQ==}
 
   babel-jest@29.7.0:
     resolution: {integrity: sha512-BrvGY3xZSwEcCzKvKsCi2GgHqDqsYkOP4/by5xCgIwGXQxIEh+8ew3gmrE1y7XRR6LHZIj6yLYnUi/mm2KXKBg==}
@@ -8466,8 +8466,8 @@ packages:
     resolution: {integrity: sha512-O8QvQf/B3rBF+eagcc9/WMAjfJoaKckdgSd8PT/qvMIIe4ZjVKrSqV5SDnRFAKY0VrE8r5C4ADYgvYhmwkWADA==}
     engines: {node: '>=0.4.0'}
 
-  follow-redirects@1.16.1:
-    resolution: {integrity: sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==}
+  follow-redirects@1.16.3:
+    resolution: {integrity: sha512-toOSoqN6d51Wjf1aOFJYcoVv1aND9rj/CwjLU0Vz40oDuSpWDayCeKe4JpL5NL0WdFvoOOCI3BRo69HahjbR1A==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -20396,9 +20396,9 @@ snapshots:
 
   await-lock@2.2.2: {}
 
-  axios@1.21.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1):
+  axios@1.21.1(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1):
     dependencies:
-      follow-redirects: 1.16.1(debug@4.4.3(supports-color@8.1.1))
+      follow-redirects: 1.16.3(debug@4.4.3(supports-color@8.1.1))
       form-data: 4.0.6
       https-proxy-agent: 5.0.1(supports-color@8.1.1)
       proxy-from-env: 2.1.0
@@ -22869,7 +22869,7 @@ snapshots:
     dependencies:
       flow-estree: 0.336.0
 
-  follow-redirects@1.16.1(debug@4.4.3(supports-color@8.1.1)):
+  follow-redirects@1.16.3(debug@4.4.3(supports-color@8.1.1)):
     optionalDependencies:
       debug: 4.4.3(supports-color@8.1.1)
 
@@ -23398,7 +23398,7 @@ snapshots:
   http-proxy@1.18.1(debug@4.4.3(supports-color@8.1.1)):
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.16.1(debug@4.4.3(supports-color@8.1.1))
+      follow-redirects: 1.16.3(debug@4.4.3(supports-color@8.1.1))
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
