@@ -257,6 +257,6 @@ function buildColorVariables(colors: Theme['colors']) {
   return [
     `--sk-bg:${colors.box.primary.bg}`,
     `--sk-border:${colors.box.primary.border}`,
-    `--sk-bone:${colors.box.neutral.bg_subtle}`,
+    `--sk-bone:${colors.box.raised.bg}`,
   ].join(';');
 }

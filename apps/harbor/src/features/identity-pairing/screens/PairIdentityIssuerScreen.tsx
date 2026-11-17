@@ -412,7 +412,7 @@ function ApprovalSheet({
                   },
                   asRotation
                     ? [theme.atoms.box.accent.bg, theme.atoms.box.accent.border]
-                    : theme.atoms.box.neutral.border,
+                    : theme.atoms.outline_strong,
                 ]}
               >
                 {asRotation ? (

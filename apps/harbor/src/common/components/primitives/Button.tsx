@@ -122,8 +122,8 @@ export function Button({
         },
         isDisabled
           ? [
-              theme.atoms.box.neutral.bg_subtle,
-              theme.atoms.box.neutral.border_subtle,
+              theme.atoms.box.raised.bg,
+              theme.atoms.box.raised.border,
               Atoms.faded,
             ]
           : getVariantStyle(theme, variant),
@@ -191,14 +191,14 @@ function getVariantStyle(
   theme: Theme,
   variant: ButtonVariant,
 ): StyleProp<ViewStyle> {
-  const { box, shadow, transparent } = theme.atoms;
+  const { box, outline, shadow, transparent } = theme.atoms;
   switch (variant) {
     case 'primary':
       return [box.accent.bg, box.accent.border, shadow.accent];
     case 'secondary':
       return [box.accent.bg_subtle, box.accent.border_subtle];
     case 'tertiary':
-      return [transparent.bg, box.neutral.border_subtle];
+      return [transparent.bg, outline];
     case 'destructive':
       return [box.danger.bg_subtle, box.danger.border_subtle];
   }
@@ -215,7 +215,7 @@ function getHoverVariantStyle(
     case 'secondary':
       return box.accent.bg_subtle_hover;
     case 'tertiary':
-      return box.neutral.bg_subtle;
+      return box.raised.bg;
     case 'destructive':
       return box.danger.bg_subtle_hover;
   }

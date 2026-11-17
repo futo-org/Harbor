@@ -157,7 +157,7 @@ const useStyles = createThemedStyles((theme, define) =>
     safetyRing: [
       StyleSheet.absoluteFill,
       Atoms.rounded_full,
-      theme.atoms.box.neutral.border_subtle,
+      theme.atoms.outline,
       { borderWidth: 1 },
     ],
   }),

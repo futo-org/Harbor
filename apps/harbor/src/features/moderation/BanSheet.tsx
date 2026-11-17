@@ -106,7 +106,7 @@ function ServerBanRow({
         Atoms.gap_md,
         Atoms.p_md,
         Atoms.rounded_md,
-        theme.atoms.box.neutral.bg_subtle,
+        theme.atoms.box.raised.bg,
       ]}
     >
       <Text variant="secondary" monospace style={{ flex: 1 }} numberOfLines={1}>

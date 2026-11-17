@@ -60,11 +60,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
 
   const servers = state?.servers ?? [];
 
-  const divider = (
-    <View
-      style={[theme.atoms.box.neutral.border_subtle, { borderTopWidth: 1 }]}
-    />
-  );
+  const divider = <View style={[theme.atoms.outline, { borderTopWidth: 1 }]} />;
 
   return (
     <Sheet detents={[1]} dismissible>
@@ -95,7 +91,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
             Atoms.gap_md,
             Atoms.p_md,
             Atoms.rounded_md,
-            theme.atoms.box.neutral.bg_subtle,
+            theme.atoms.box.raised.bg,
           ]}
         >
           <View style={Atoms.gap_xs}>

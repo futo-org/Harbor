@@ -34,7 +34,10 @@ function buildColors(palette: Palette, scheme: ThemeScheme) {
     light: palette.white,
     dark: palette.black,
     transparent: 'transparent',
-    // hover is the next palette step; the neutral boxes' border is too
+    // for borders and dividers on any box
+    outline: withOpacity(palette.neutral_500, 0.3),
+    outline_strong: palette.neutral_500,
+    // hover is the next palette step; the gray boxes' border is too
     box: {
       primary: buildBox(
         palette.neutral_0,
@@ -46,11 +49,16 @@ function buildColors(palette: Palette, scheme: ThemeScheme) {
         palette.neutral_50,
         palette.neutral_50,
       ),
-      neutral: buildBox(palette.neutral_500, palette.neutral_600),
-      accent: buildBox(palette.primary_500, palette.primary_600),
-      danger: buildBox(palette.negative_500, palette.negative_600),
-      success: buildBox(palette.positive_500, palette.positive_600),
-      warning: buildBox(palette.warning_500, palette.warning_600),
+      // translucent, so it shows on the boxes under it
+      raised: buildBox(
+        withOpacity(palette.neutral_500, 0.125),
+        withOpacity(palette.neutral_500, 0.2),
+        withOpacity(palette.neutral_500, 0.3),
+      ),
+      accent: buildHueBox(palette.primary_500, palette.primary_600),
+      danger: buildHueBox(palette.negative_500, palette.negative_600),
+      success: buildHueBox(palette.positive_500, palette.positive_600),
+      warning: buildHueBox(palette.warning_500, palette.warning_600),
     },
     backdrop: {
       modal: withOpacity(palette.black, 0.45),
@@ -63,15 +71,17 @@ function buildColors(palette: Palette, scheme: ThemeScheme) {
   };
 }
 
+function buildBox(bg: string, hover: string, border: string) {
+  return { bg, bg_hover: hover, border };
+}
+
 // A hue box's solid border matches its fill, so it keeps the border width
 // without a visible outline.
-function buildBox(bg: string, hover: string, border = bg) {
+function buildHueBox(bg: string, hover: string) {
   return {
-    bg,
-    bg_hover: hover,
+    ...buildBox(bg, hover, bg),
     bg_subtle: withOpacity(bg, 0.125),
     bg_subtle_hover: withOpacity(bg, 0.2),
-    border,
     border_subtle: withOpacity(bg, 0.3),
   };
 }
@@ -98,11 +108,11 @@ function buildAtoms(
     box: {
       primary: buildBoxAtoms(colors.box.primary),
       secondary: buildBoxAtoms(colors.box.secondary),
-      neutral: buildBoxAtoms(colors.box.neutral),
-      accent: buildBoxAtoms(colors.box.accent),
-      danger: buildBoxAtoms(colors.box.danger),
-      success: buildBoxAtoms(colors.box.success),
-      warning: buildBoxAtoms(colors.box.warning),
+      raised: buildBoxAtoms(colors.box.raised),
+      accent: buildHueBoxAtoms(colors.box.accent),
+      danger: buildHueBoxAtoms(colors.box.danger),
+      success: buildHueBoxAtoms(colors.box.success),
+      warning: buildHueBoxAtoms(colors.box.warning),
     },
     backdrop: {
       modal: { backgroundColor: colors.backdrop.modal },
@@ -111,6 +121,8 @@ function buildAtoms(
     media_control: {
       bg: { backgroundColor: colors.media_control.bg },
     },
+    outline: { borderColor: colors.outline },
+    outline_strong: { borderColor: colors.outline_strong },
     transparent: {
       bg: { backgroundColor: colors.transparent },
       border: { borderColor: colors.transparent },
@@ -130,9 +142,15 @@ function buildBoxAtoms(box: ReturnType<typeof buildBox>) {
   return {
     bg: { backgroundColor: box.bg },
     bg_hover: { backgroundColor: box.bg_hover },
+    border: { borderColor: box.border },
+  };
+}
+
+function buildHueBoxAtoms(box: ReturnType<typeof buildHueBox>) {
+  return {
+    ...buildBoxAtoms(box),
     bg_subtle: { backgroundColor: box.bg_subtle },
     bg_subtle_hover: { backgroundColor: box.bg_subtle_hover },
-    border: { borderColor: box.border },
     border_subtle: { borderColor: box.border_subtle },
   };
 }

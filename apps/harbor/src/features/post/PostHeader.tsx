@@ -36,11 +36,7 @@ function ThreadHeader() {
     <View style={[Atoms.flex_row, Atoms.gap_md]}>
       <View style={[Atoms.align_center, { flexBasis: LEFT_COL_FLEX_BASIS }]}>
         <View
-          style={[
-            Atoms.flex_1,
-            theme.atoms.box.neutral.border_subtle,
-            { borderLeftWidth: 2 },
-          ]}
+          style={[Atoms.flex_1, theme.atoms.outline, { borderLeftWidth: 2 }]}
         />
       </View>
       <View style={[Atoms.flex_1, Atoms.pt_md]} />

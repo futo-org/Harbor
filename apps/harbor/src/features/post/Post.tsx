@@ -188,7 +188,7 @@ export const Post = memo(function Post({
               <View
                 style={[
                   Atoms.flex_1,
-                  theme.atoms.box.neutral.border_subtle,
+                  theme.atoms.outline,
                   { borderLeftWidth: 2 },
                 ]}
               />

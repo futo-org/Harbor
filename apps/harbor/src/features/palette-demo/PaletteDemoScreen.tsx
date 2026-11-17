@@ -38,8 +38,6 @@ const TEXT_COLORS: TextColor[] = [
   'dark',
 ];
 
-const BOX_FILLS = ['bg', 'bg_hover', 'bg_subtle', 'bg_subtle_hover'] as const;
-
 type ColorsSource = 'colors' | 'colors_new';
 
 export default function PaletteDemoScreen() {
@@ -126,38 +124,56 @@ function PaletteDemo({ source, onSourceChange, palette }: PaletteDemoProps) {
 
       <Section title="Boxes">
         {Object.entries(theme.colors.box).map(([name, box]) => {
+          const entries: [string, string][] = Object.entries(box);
           // the hue boxes' solid fills take light text
-          const isSolidHue = name !== 'primary' && name !== 'secondary';
+          const isSolidHue = !['primary', 'secondary', 'raised'].includes(name);
           return (
             <Row key={name} label={name}>
-              {BOX_FILLS.map((fill) => (
-                <Swatch
-                  key={fill}
-                  label={fill}
-                  color={
-                    isSolidHue && !fill.startsWith('bg_subtle')
-                      ? 'light'
-                      : 'primary'
-                  }
-                  style={{
-                    backgroundColor: box[fill],
-                    borderWidth: 1,
-                    borderColor: fill.startsWith('bg_subtle')
-                      ? box.border_subtle
-                      : box.border,
-                  }}
-                />
-              ))}
-              {(['border', 'border_subtle'] as const).map((border) => (
-                <Swatch
-                  key={border}
-                  label={border}
-                  style={{ borderColor: box[border], borderWidth: 2 }}
-                />
-              ))}
+              {entries
+                .filter(([key]) => key.startsWith('bg'))
+                .map(([fill, value]) => (
+                  <Swatch
+                    key={fill}
+                    label={fill}
+                    color={
+                      isSolidHue && !fill.startsWith('bg_subtle')
+                        ? 'light'
+                        : 'primary'
+                    }
+                    style={{
+                      backgroundColor: value,
+                      borderWidth: 1,
+                      borderColor: fill.startsWith('bg_subtle')
+                        ? ('border_subtle' in box && box.border_subtle) ||
+                          box.border
+                        : box.border,
+                    }}
+                  />
+                ))}
+              {entries
+                .filter(([key]) => key.startsWith('border'))
+                .map(([border, value]) => (
+                  <Swatch
+                    key={border}
+                    label={border}
+                    style={{ borderColor: value, borderWidth: 2 }}
+                  />
+                ))}
             </Row>
           );
         })}
+      </Section>
+
+      <Section title="Outlines">
+        <View style={[Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_sm]}>
+          {(['outline', 'outline_strong'] as const).map((outline) => (
+            <Swatch
+              key={outline}
+              label={outline}
+              style={[theme.atoms[outline], { borderWidth: 2 }]}
+            />
+          ))}
+        </View>
       </Section>
 
       <Section title="Overlays and shadows">

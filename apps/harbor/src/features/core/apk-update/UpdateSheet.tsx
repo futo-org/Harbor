@@ -23,7 +23,7 @@ function ProgressBar({ progress }: { progress: number | null }) {
         Atoms.rounded_md,
         Atoms.overflow_hidden,
         { height: 6 },
-        theme.atoms.box.neutral.bg_subtle,
+        theme.atoms.box.raised.bg,
       ]}
     >
       <View

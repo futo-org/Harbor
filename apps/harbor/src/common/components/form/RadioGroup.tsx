@@ -69,7 +69,7 @@ function RadioIndicator() {
       style={[
         Atoms.items_center,
         Atoms.justify_center,
-        theme.atoms.box.neutral.border,
+        theme.atoms.outline_strong,
         {
           width: Spacing['xl'],
           height: Spacing['xl'],

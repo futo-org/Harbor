@@ -17,7 +17,7 @@ export function ChipIcon({
   const { theme } = useTheme();
   const { fg, bg } = tint ?? {
     fg: theme.colors.muted,
-    bg: theme.colors.box.neutral.bg_subtle,
+    bg: theme.colors.box.raised.bg,
   };
 
   return (

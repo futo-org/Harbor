@@ -54,9 +54,7 @@ export function ClaimListItem({
           Atoms.my_xs,
           Atoms.ml_xs,
           Atoms.p_sm,
-          isVerified
-            ? theme.atoms.box.success.bg
-            : theme.atoms.box.neutral.bg_subtle,
+          isVerified ? theme.atoms.box.success.bg : theme.atoms.box.raised.bg,
         ]}
       >
         <Icon

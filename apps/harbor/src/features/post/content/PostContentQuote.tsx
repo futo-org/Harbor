@@ -80,7 +80,7 @@ export function PostContentQuote({
         Atoms.p_md,
         Atoms.rounded_md,
         Atoms.mt_sm,
-        theme.atoms.box.neutral.border_subtle,
+        theme.atoms.outline,
         { borderWidth: 1 },
       ]}
     >
@@ -106,7 +106,7 @@ function QuoteUnavailable() {
         Atoms.p_md,
         Atoms.rounded_md,
         Atoms.mt_sm,
-        theme.atoms.box.neutral.border_subtle,
+        theme.atoms.outline,
         { borderWidth: 1 },
       ]}
     >
@@ -178,7 +178,7 @@ function QuoteSkeleton() {
         Atoms.rounded_md,
         Atoms.mt_sm,
         animatedStyle,
-        theme.atoms.box.neutral.border_subtle,
+        theme.atoms.outline,
         { borderWidth: 1 },
       ]}
     >

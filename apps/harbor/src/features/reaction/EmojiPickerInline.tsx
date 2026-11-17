@@ -55,7 +55,7 @@ export default function EmojiPickerInline({
           onSelect={handleSelect}
           size={INLINE_SIZE}
           selected={selectedEmoji === emoji.emoji}
-          highlightColor={theme.colors.box.neutral.bg_subtle_hover}
+          highlightColor={theme.colors.box.raised.bg_hover}
         />
       ))}
       {onShowMore && (
@@ -63,7 +63,7 @@ export default function EmojiPickerInline({
           onPress={onShowMore}
           size={INLINE_SIZE}
           hitSlop={Spacing.sm}
-          highlightColor={theme.colors.box.neutral.bg_subtle_hover}
+          highlightColor={theme.colors.box.raised.bg_hover}
         >
           <Icon name="dotsVertical" size={20} color="primary" />
         </EmojiLikeButton>

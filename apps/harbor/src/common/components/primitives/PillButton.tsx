@@ -43,7 +43,7 @@ export function PillButton({
   const variantStyle = (() => {
     switch (variant) {
       case 'primary':
-        return theme.atoms.box.neutral.bg_subtle;
+        return theme.atoms.box.raised.bg;
       case 'secondary':
         return theme.atoms.box.accent.bg_subtle;
       case 'destructive':

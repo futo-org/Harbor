@@ -387,7 +387,7 @@ function ComposerLinkPreview({
             Atoms.p_md,
             Atoms.rounded_md,
             Atoms.mt_md,
-            theme.atoms.box.neutral.border_subtle,
+            theme.atoms.outline,
             { borderWidth: 1 },
           ]}
         >
@@ -492,7 +492,7 @@ function AttachmentThumb({
   return (
     <View
       style={[
-        theme.atoms.box.neutral.bg_subtle,
+        theme.atoms.box.raised.bg,
         { width, aspectRatio, borderRadius: 8, overflow: 'hidden' },
       ]}
     >

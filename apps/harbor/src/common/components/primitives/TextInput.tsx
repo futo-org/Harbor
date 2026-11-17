@@ -138,8 +138,8 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
           error
             ? theme.atoms.box.danger.border
             : isFocused
-              ? theme.atoms.box.neutral.border
-              : theme.atoms.box.neutral.border_subtle,
+              ? theme.atoms.outline_strong
+              : theme.atoms.outline,
         ]}
       >
         {input}

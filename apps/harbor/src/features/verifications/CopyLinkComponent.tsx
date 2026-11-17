@@ -19,9 +19,7 @@ export function CopyLinkComponent({ link }: { link: string }) {
         Atoms.gap_sm,
         Atoms.p_md,
         Atoms.rounded_md,
-        hovered
-          ? theme.atoms.box.neutral.bg_subtle_hover
-          : theme.atoms.box.neutral.bg_subtle,
+        hovered ? theme.atoms.box.raised.bg_hover : theme.atoms.box.raised.bg,
       ]}
     >
       <Text

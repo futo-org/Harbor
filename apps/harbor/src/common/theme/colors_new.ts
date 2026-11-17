@@ -14,19 +14,15 @@ export type TextColor = keyof Pick<
   | 'dark'
 >;
 
-// What differs between the themes. Both pick from the one palette: text and
-// surfaces from opposite ends of the neutral scale, and a hover from the step
-// next to its fill, on the text color's side.
 const LIGHT_PICKS = {
   primary: palette.neutral_1000,
   secondary: palette.neutral_700,
   muted: palette.neutral_600,
-  // the background, then two surfaces, each a step above the last
   surface_0: palette.neutral_0,
   surface_1: palette.neutral_50,
   surface_2: palette.neutral_100,
+  outline: palette.neutral_400,
   hover: {
-    neutral: palette.neutral_650,
     accent: palette.primary_600,
     danger: palette.negative_700,
     success: palette.positive_600,
@@ -41,8 +37,8 @@ const DARK_PICKS: typeof LIGHT_PICKS = {
   surface_0: palette.neutral_1000,
   surface_1: palette.neutral_950,
   surface_2: palette.neutral_900,
+  outline: palette.neutral_600,
   hover: {
-    neutral: palette.neutral_550,
     accent: palette.primary_500,
     danger: palette.negative_600,
     success: palette.positive_500,
@@ -61,45 +57,51 @@ function buildColors(picks: typeof LIGHT_PICKS) {
     primary: picks.primary,
     secondary: picks.secondary,
     muted: picks.muted,
-    // each hue family's key color, the same in both themes
+
     accent: palette.primary_550,
     danger: palette.negative_650,
     success: palette.positive_550,
     warning: palette.warning_400,
-    // theme-independent, for text and icons on colored boxes and media
+
     light: palette.white,
     dark: palette.black,
     transparent: 'transparent',
-    // a neutral box's hover and border are the next surface
+
+    outline: withOpacity(picks.outline, 0.3),
+    outline_strong: picks.outline,
+
     box: {
       primary: buildBox(picks.surface_0, picks.surface_1, picks.surface_1),
       secondary: buildBox(picks.surface_1, picks.surface_2, picks.surface_2),
-      neutral: buildBox(palette.neutral_600, picks.hover.neutral),
-      accent: buildBox(palette.primary_550, picks.hover.accent),
-      danger: buildBox(palette.negative_650, picks.hover.danger),
-      success: buildBox(palette.positive_550, picks.hover.success),
-      warning: buildBox(palette.warning_400, picks.hover.warning),
+      raised: buildBox(
+        withOpacity(picks.outline, 0.125),
+        withOpacity(picks.outline, 0.2),
+        withOpacity(picks.outline, 0.3),
+      ),
+      accent: buildHueBox(palette.primary_550, picks.hover.accent),
+      danger: buildHueBox(palette.negative_650, picks.hover.danger),
+      success: buildHueBox(palette.positive_550, picks.hover.success),
+      warning: buildHueBox(palette.warning_400, picks.hover.warning),
     },
     backdrop: {
       modal: withOpacity(palette.black, 0.45),
       media: withOpacity(palette.black, 0.92),
     },
-    // controls on images; the box rules don't apply over media
     media_control: {
       bg: withOpacity(palette.black, 0.69),
     },
   };
 }
 
-// A hue box's solid border matches its fill, so it keeps the border width
-// without a visible outline.
-function buildBox(bg: string, hover: string, border = bg) {
+function buildBox(bg: string, hover: string, border: string) {
+  return { bg, bg_hover: hover, border };
+}
+
+function buildHueBox(bg: string, hover: string) {
   return {
-    bg,
-    bg_hover: hover,
+    ...buildBox(bg, hover, bg),
     bg_subtle: withOpacity(bg, 0.125),
     bg_subtle_hover: withOpacity(bg, 0.2),
-    border,
     border_subtle: withOpacity(bg, 0.3),
   };
 }
@@ -125,11 +127,11 @@ function buildAtoms(
     box: {
       primary: buildBoxAtoms(colors.box.primary),
       secondary: buildBoxAtoms(colors.box.secondary),
-      neutral: buildBoxAtoms(colors.box.neutral),
-      accent: buildBoxAtoms(colors.box.accent),
-      danger: buildBoxAtoms(colors.box.danger),
-      success: buildBoxAtoms(colors.box.success),
-      warning: buildBoxAtoms(colors.box.warning),
+      raised: buildBoxAtoms(colors.box.raised),
+      accent: buildHueBoxAtoms(colors.box.accent),
+      danger: buildHueBoxAtoms(colors.box.danger),
+      success: buildHueBoxAtoms(colors.box.success),
+      warning: buildHueBoxAtoms(colors.box.warning),
     },
     backdrop: {
       modal: { backgroundColor: colors.backdrop.modal },
@@ -138,6 +140,8 @@ function buildAtoms(
     media_control: {
       bg: { backgroundColor: colors.media_control.bg },
     },
+    outline: { borderColor: colors.outline },
+    outline_strong: { borderColor: colors.outline_strong },
     transparent: {
       bg: { backgroundColor: colors.transparent },
       border: { borderColor: colors.transparent },
@@ -157,14 +161,19 @@ function buildBoxAtoms(box: ReturnType<typeof buildBox>) {
   return {
     bg: { backgroundColor: box.bg },
     bg_hover: { backgroundColor: box.bg_hover },
+    border: { borderColor: box.border },
+  };
+}
+
+function buildHueBoxAtoms(box: ReturnType<typeof buildHueBox>) {
+  return {
+    ...buildBoxAtoms(box),
     bg_subtle: { backgroundColor: box.bg_subtle },
     bg_subtle_hover: { backgroundColor: box.bg_subtle_hover },
-    border: { borderColor: box.border },
     border_subtle: { borderColor: box.border_subtle },
   };
 }
 
-// palette colors are #RRGGBB, so the alpha is a hex suffix: 0.125 -> '20'
 function withOpacity(color: string, opacity: number): string {
   const alpha = Math.round(opacity * 255)
     .toString(16)

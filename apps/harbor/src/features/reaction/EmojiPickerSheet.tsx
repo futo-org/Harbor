@@ -126,7 +126,7 @@ export function EmojiPickerSheet() {
         emoji={item.emoji}
         selected={item.emoji === selectedEmoji}
         onSelect={onSelect}
-        highlightColor={theme.colors.box.neutral.bg_subtle_hover}
+        highlightColor={theme.colors.box.raised.bg_hover}
         size={colWidth}
         isGridCell
       />
@@ -285,7 +285,7 @@ function EmojiCategoryRail({
               key={cat.key}
               size={categoryColWidth}
               onPress={() => onSelect(cat.key)}
-              highlightColor={theme.colors.box.neutral.bg_subtle_hover}
+              highlightColor={theme.colors.box.raised.bg_hover}
             >
               <Icon
                 name={cat.icon}

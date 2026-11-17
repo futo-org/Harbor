@@ -59,8 +59,8 @@ export function ServerRow({
     Atoms.pl_lg,
     Atoms.rounded_lg,
     status === 'suggested'
-      ? [theme.atoms.box.neutral.border_subtle, { borderWidth: 1 }]
-      : theme.atoms.box.neutral.bg_subtle,
+      ? [theme.atoms.outline, { borderWidth: 1 }]
+      : theme.atoms.box.raised.bg,
   ];
 
   return status === 'suggested' && onAction ? (

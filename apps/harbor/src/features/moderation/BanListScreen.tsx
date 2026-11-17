@@ -157,7 +157,7 @@ function BanListRow({
         Atoms.gap_md,
         Atoms.p_md,
         Atoms.rounded_md,
-        theme.atoms.box.neutral.bg_subtle,
+        theme.atoms.box.raised.bg,
       ]}
     >
       <Text

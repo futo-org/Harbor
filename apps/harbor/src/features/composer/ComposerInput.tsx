@@ -62,7 +62,7 @@ export function ComposerInput({ replyTo }: ComposerInputProps = {}) {
         style={[
           Atoms.p_xs,
           Atoms.rounded_md,
-          attachHovered && theme.atoms.box.neutral.bg_subtle,
+          attachHovered && theme.atoms.box.raised.bg,
         ]}
       >
         <Icon name="image" size={22} color="secondary" />

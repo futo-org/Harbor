@@ -74,10 +74,10 @@ export function IconButton({
   const showChrome = !(variant === 'ghost' && compact);
   const surfaceFill =
     variant === 'ghost'
-      ? hovered && box.neutral.bg_subtle
+      ? hovered && box.raised.bg
       : hovered
-        ? box.neutral.bg_subtle_hover
-        : box.neutral.bg_subtle;
+        ? box.raised.bg_hover
+        : box.raised.bg;
 
   return (
     <Animated.View pointerEvents="box-none" style={[animatedStyle, style]}>
@@ -106,7 +106,7 @@ export function IconButton({
           <View
             style={[
               styles.surface,
-              box.neutral.border_subtle,
+              box.raised.border,
               { borderWidth: 1, borderRadius: resolvedBorderRadius },
               surfaceFill,
             ]}
