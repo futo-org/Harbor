@@ -4,11 +4,13 @@
 use std::error::Error;
 use std::fmt::Write;
 use std::task::Poll;
+use std::time::Duration;
 use std::{env, io};
 
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::Client;
 use aws_sdk_s3::config::Credentials;
+use aws_sdk_s3::config::timeout::TimeoutConfig;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::Object;
@@ -102,8 +104,13 @@ impl ObjectStore {
         }
         let aws = loader.load().await;
 
+        let timeout_config = TimeoutConfig::builder()
+            .connect_timeout(Duration::from_secs(1))
+            .operation_timeout(Duration::from_secs(5))
+            .build();
         let s3_cfg = aws_sdk_s3::config::Builder::from(&aws)
             .force_path_style(cfg.force_path_style)
+            .timeout_config(timeout_config)
             .build();
 
         Self {
