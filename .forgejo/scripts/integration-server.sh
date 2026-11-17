@@ -263,19 +263,17 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "==> Running integration tests…"
-if [ "$CI_MODE" = true ]; then
-  set +e # Don't stop on test failure, want to print the server logs in that case.
 
-  # nextest's `ci` profile writes a JUnit report the CI job uploads to GitLab.
-  cargo nextest run -P ci -p integration-tests 2>&1
+set +e # Don't stop on test failure, want to print the server logs in that case.
+cargo test -p integration-tests 2>&1
 
-  if [ "$?" != 0 ]; then
-    cd "$REPO_ROOT"
-    docker compose logs server
-    exit 1
-  fi
-else
-  cargo test -p integration-tests 2>&1
+if [ "$?" != 0 ] && [ "$CI_MODE" = true ]; then
+  cd "$REPO_ROOT"
+  docker compose logs server
+  exit 1
 fi
+
+set -e
+
 echo ""
 echo "==> Tests completed"
