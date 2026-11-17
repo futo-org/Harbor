@@ -76,11 +76,11 @@ export function SidebarSearch() {
               position: 'absolute',
               top: '100%',
               marginTop: Spacing.sm,
-              borderWidth: 1,
               borderRadius: BorderRadius.lg,
             },
             theme.atoms.box.primary.bg,
             theme.atoms.box.primary.border,
+            Atoms.border,
           ]}
         >
           <SearchPhraseRow phrase={phrase} onPress={submit} />

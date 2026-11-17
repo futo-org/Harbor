@@ -42,7 +42,7 @@ export function SuggestedFollowWidget() {
         Atoms.flex_shrink_1,
         Atoms.overflow_hidden,
         theme.atoms.box.primary.border,
-        { borderWidth: 1 },
+        Atoms.border,
       ]}
     >
       <Text fontSize="lg" fontWeight="bold">

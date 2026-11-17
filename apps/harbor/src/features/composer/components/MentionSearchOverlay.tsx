@@ -45,7 +45,7 @@ export function MentionSearchOverlay() {
         },
         theme.atoms.box.primary.bg,
         theme.atoms.box.primary.border,
-        { borderTopWidth: 1 },
+        Atoms.border_t,
       ]}
     >
       <ScrollView

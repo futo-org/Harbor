@@ -29,7 +29,8 @@ export default function ComposerPostEmbed({
         Atoms.rounded_md,
         theme.atoms.box.secondary.bg,
         theme.atoms.box.secondary.border,
-        { minHeight: 64, borderBottomWidth: 1, marginBottom: 10 },
+        Atoms.border_b,
+        { minHeight: 64, marginBottom: 10 },
       ]}
     >
       <Text variant="small">

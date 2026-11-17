@@ -134,6 +134,7 @@ export const TextInput = forwardRef<TextInputInstance, TextInputProps>(
         tint={isDark ? 'dark' : 'light'}
         style={[
           styles.blurContainer,
+          Atoms.border,
           { borderRadius: BorderRadius[rounded] },
           error
             ? theme.atoms.box.danger.border
@@ -153,6 +154,5 @@ TextInput.displayName = 'TextInput';
 const styles = StyleSheet.create({
   blurContainer: {
     overflow: 'hidden',
-    borderWidth: 1,
   },
 });

@@ -149,7 +149,7 @@ function InteractionNotification({
         Atoms.gap_md,
         Atoms.p_md,
         theme.atoms.box.primary.border,
-        { borderBottomWidth: 1 },
+        Atoms.border_b,
       ]}
     >
       <ProfileAvatar

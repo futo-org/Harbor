@@ -198,9 +198,7 @@ export default function LogsScreen() {
               />
             )}
             ItemSeparatorComponent={() => (
-              <View
-                style={[theme.atoms.box.primary.border, { borderTopWidth: 1 }]}
-              />
+              <View style={[theme.atoms.box.primary.border, Atoms.border_t]} />
             )}
             extraData={expandedIds}
             showsVerticalScrollIndicator={false}

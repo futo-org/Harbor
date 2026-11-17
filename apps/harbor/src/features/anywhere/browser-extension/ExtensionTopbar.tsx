@@ -22,9 +22,9 @@ export function ExtensionTopbar() {
         {
           // As the app's Topbar.
           height: TOPBAR_HEIGHT,
-          borderBottomWidth: 1,
         },
         theme.atoms.box.primary.border,
+        Atoms.border_b,
       ]}
     >
       <Image

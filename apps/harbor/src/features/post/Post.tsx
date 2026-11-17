@@ -143,10 +143,7 @@ export const Post = memo(function Post({
       style={({ pressed }) => [
         Atoms.w_full,
         Atoms.px_md,
-        !hideBottomBorder && [
-          theme.atoms.box.primary.border,
-          { borderBottomWidth: 1 },
-        ],
+        !hideBottomBorder && [theme.atoms.box.primary.border, Atoms.border_b],
         pressed && theme.atoms.box.primary.bg_hover,
       ]}
       onPress={handlePress}
