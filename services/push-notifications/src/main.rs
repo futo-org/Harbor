@@ -64,6 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         notification_manager,
         polycentric,
         main_server: config.main_server.clone(),
+        allow_hosts: config.allow_hosts.clone(),
     });
 
     // Serve gRPC and consume Kafka concurrently. If either future returns,

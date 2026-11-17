@@ -45,7 +45,7 @@ pub async fn handle(
     let subscriptions = subscriptions
         .iter()
         .enumerate()
-        .map(|(index, source)| authenticate_source(index, source, now))
+        .map(|(index, source)| authenticate_source(index, source, &ctx.allow_hosts, now))
         .collect::<Result<Vec<_>, Status>>()?;
 
     // Detect duplicates in subscriptions
@@ -73,6 +73,7 @@ pub async fn handle(
 fn authenticate_source(
     index: usize,
     source: &AuthenticatedPushSource,
+    allowed_audiences: &[String],
     now: u64,
 ) -> Result<(PublicKey, String), Status> {
     // Error mapper
@@ -83,8 +84,7 @@ fn authenticate_source(
 
     // Ensure the token is valid in this context
     verified
-        // TODO: source the allowed audiences from somewhere reasonable
-        .validate(&vec!["http://localhost:3001".to_string()], now)
+        .validate(allowed_audiences, now)
         .map_err(unauthenticated)?;
 
     // Extract and return fields

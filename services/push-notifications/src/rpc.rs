@@ -76,7 +76,7 @@ mod tests {
     use super::*;
     use crate::manager::{NotificationManager, PushService};
     use crate::polycentric::PolycentricClient;
-    use crate::rpc::set_device_push_subscriptions::{ALLOWED_AUDIENCES, MAX_SUBSCRIPTIONS};
+    use crate::rpc::set_device_push_subscriptions::MAX_SUBSCRIPTIONS;
     use base64::Engine;
     use base64::engine::general_purpose::URL_SAFE_NO_PAD;
     use ed25519_dalek::{Signer, SigningKey};
@@ -85,6 +85,7 @@ mod tests {
     use tonic::Code;
 
     const TOKEN: &str = "ExponentPushToken[abc123]";
+    const AUDIENCE: &str = "http://localhost:3001";
 
     fn service_with_db(db: DatabaseConnection) -> NotificationServiceImpl {
         NotificationServiceImpl {
@@ -94,6 +95,7 @@ mod tests {
                 notification_manager: NotificationManager::new(None),
                 polycentric: PolycentricClient::new(vec![]),
                 main_server: String::new(),
+                allow_hosts: vec![AUDIENCE.to_string()],
             }),
         }
     }
@@ -141,7 +143,7 @@ mod tests {
 
     /// A valid subscription for `identity`, signed by `key`.
     fn subscribe(key: &SigningKey, identity: &str) -> AuthenticatedPushSource {
-        source(mint(key, identity, &ALLOWED_AUDIENCES[0], now() + 300))
+        source(mint(key, identity, AUDIENCE, now() + 300))
     }
 
     fn request(
@@ -201,9 +203,9 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_bad_signature() {
-        let mut jwt = mint(&key(1), "id-a", &ALLOWED_AUDIENCES[0], now() + 300);
+        let mut jwt = mint(&key(1), "id-a", AUDIENCE, now() + 300);
         // Swap the signature for one from a different key.
-        let other = mint(&key(2), "id-a", &ALLOWED_AUDIENCES[0], now() + 300);
+        let other = mint(&key(2), "id-a", AUDIENCE, now() + 300);
         jwt.truncate(jwt.rfind('.').unwrap());
         jwt.push_str(&other[other.rfind('.').unwrap()..]);
         assert_eq!(
@@ -223,7 +225,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_expired_token() {
-        let jwt = mint(&key(1), "id-a", &ALLOWED_AUDIENCES[0], now() - 1);
+        let jwt = mint(&key(1), "id-a", AUDIENCE, now() - 1);
         assert_eq!(
             rejection(request(Some(target(TOKEN)), vec![source(jwt)])).await,
             Code::Unauthenticated
