@@ -1,10 +1,4 @@
-import type { Palette } from './palette';
-import { darkPalette, lightPalette } from './palette';
 import { buildThemeColors } from './colors';
-import { buildThemeColors as buildThemeColorsNew } from './colors_new';
-
-// temporary: true runs the app on `colors_new`
-const USE_NEW_COLORS = true;
 
 export type ThemeScheme = 'light' | 'dark';
 
@@ -14,14 +8,13 @@ export type Theme = {
   atoms: ReturnType<typeof buildThemeColors>['atoms'];
 };
 
-function createTheme(scheme: ThemeScheme, palette: Palette): Theme {
-  if (USE_NEW_COLORS) return { scheme, ...buildThemeColorsNew(scheme) };
-  return { scheme, ...buildThemeColors(palette, scheme) };
+function createTheme(scheme: ThemeScheme): Theme {
+  return { scheme, ...buildThemeColors(scheme) };
 }
 
 export const themes = {
-  light: createTheme('light', lightPalette),
-  dark: createTheme('dark', darkPalette),
+  light: createTheme('light'),
+  dark: createTheme('dark'),
 } as const;
 
 export type ThemePreference = keyof typeof themes | 'system';

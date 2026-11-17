@@ -1,4 +1,4 @@
-import type { Palette } from './palette';
+import { palette } from './palette';
 import type { ThemeScheme } from './themes';
 
 export type TextColor = keyof Pick<
@@ -14,57 +14,79 @@ export type TextColor = keyof Pick<
   | 'dark'
 >;
 
-export function buildThemeColors(palette: Palette, scheme: ThemeScheme) {
-  const colors = buildColors(palette, scheme);
-  return { colors, atoms: buildAtoms(palette, scheme, colors) };
+const LIGHT_PICKS = {
+  primary: palette.neutral_1000,
+  secondary: palette.neutral_700,
+  muted: palette.neutral_600,
+  surface_0: palette.neutral_0,
+  surface_1: palette.neutral_50,
+  surface_2: palette.neutral_100,
+  outline: palette.neutral_400,
+  hover: {
+    accent: palette.primary_600,
+    danger: palette.negative_700,
+    success: palette.positive_600,
+    warning: palette.warning_450,
+  },
+};
+
+const DARK_PICKS: typeof LIGHT_PICKS = {
+  primary: palette.neutral_150,
+  secondary: palette.neutral_400,
+  muted: palette.neutral_650,
+  surface_0: palette.neutral_1000,
+  surface_1: palette.neutral_950,
+  surface_2: palette.neutral_900,
+  outline: palette.neutral_600,
+  hover: {
+    accent: palette.primary_500,
+    danger: palette.negative_600,
+    success: palette.positive_500,
+    warning: palette.warning_350,
+  },
+};
+
+export function buildThemeColors(scheme: ThemeScheme) {
+  const colors = buildColors(scheme === 'dark' ? DARK_PICKS : LIGHT_PICKS);
+  return { colors, atoms: buildAtoms(scheme, colors) };
 }
 
 // raw strings for consumers that can't take a style object
-function buildColors(palette: Palette, scheme: ThemeScheme) {
+function buildColors(picks: typeof LIGHT_PICKS) {
   return {
-    primary: palette.neutral_900,
-    secondary: palette.neutral_700,
-    muted: palette.neutral_500,
-    accent: palette.primary_500,
-    // the 500 steps are too dark for text on the dark background
-    danger: scheme === 'dark' ? palette.negative_600 : palette.negative_500,
-    success: scheme === 'dark' ? palette.positive_600 : palette.positive_500,
-    warning: palette.warning_500,
-    // theme-independent, for text and icons on colored boxes and media
+    primary: picks.primary,
+    secondary: picks.secondary,
+    muted: picks.muted,
+
+    accent: palette.primary_550,
+    danger: palette.negative_650,
+    success: palette.positive_550,
+    warning: palette.warning_400,
+
     light: palette.white,
     dark: palette.black,
     transparent: 'transparent',
-    // for borders and dividers on any box
-    outline: withOpacity(palette.neutral_500, 0.3),
-    outline_strong: palette.neutral_500,
-    // hover is the next palette step; the gray boxes' border is too
+
+    outline: withOpacity(picks.outline, 0.3),
+    outline_strong: picks.outline,
+
     box: {
-      primary: buildBox(
-        palette.neutral_0,
-        palette.neutral_25,
-        palette.neutral_25,
-      ),
-      secondary: buildBox(
-        palette.neutral_25,
-        palette.neutral_50,
-        palette.neutral_50,
-      ),
-      // translucent, so it shows on the boxes under it
+      primary: buildBox(picks.surface_0, picks.surface_1, picks.surface_1),
+      secondary: buildBox(picks.surface_1, picks.surface_2, picks.surface_2),
       raised: buildBox(
-        withOpacity(palette.neutral_500, 0.125),
-        withOpacity(palette.neutral_500, 0.2),
-        withOpacity(palette.neutral_500, 0.3),
+        withOpacity(picks.outline, 0.125),
+        withOpacity(picks.outline, 0.2),
+        withOpacity(picks.outline, 0.3),
       ),
-      accent: buildHueBox(palette.primary_500, palette.primary_600),
-      danger: buildHueBox(palette.negative_500, palette.negative_600),
-      success: buildHueBox(palette.positive_500, palette.positive_600),
-      warning: buildHueBox(palette.warning_500, palette.warning_600),
+      accent: buildHueBox(palette.primary_550, picks.hover.accent),
+      danger: buildHueBox(palette.negative_650, picks.hover.danger),
+      success: buildHueBox(palette.positive_550, picks.hover.success),
+      warning: buildHueBox(palette.warning_400, picks.hover.warning),
     },
     backdrop: {
       modal: withOpacity(palette.black, 0.45),
       media: withOpacity(palette.black, 0.92),
     },
-    // controls on images; the box rules don't apply over media
     media_control: {
       bg: withOpacity(palette.black, 0.69),
     },
@@ -75,8 +97,6 @@ function buildBox(bg: string, hover: string, border: string) {
   return { bg, bg_hover: hover, border };
 }
 
-// A hue box's solid border matches its fill, so it keeps the border width
-// without a visible outline.
 function buildHueBox(bg: string, hover: string) {
   return {
     ...buildBox(bg, hover, bg),
@@ -87,7 +107,6 @@ function buildHueBox(bg: string, hover: string) {
 }
 
 function buildAtoms(
-  palette: Palette,
   scheme: ThemeScheme,
   colors: ReturnType<typeof buildColors>,
 ) {
@@ -129,7 +148,7 @@ function buildAtoms(
     },
     shadow: {
       accent: {
-        boxShadow: `${shadowGeometry} ${withOpacity(palette.primary_900, shadowOpacity)}`,
+        boxShadow: `${shadowGeometry} ${withOpacity(palette.primary_550, shadowOpacity)}`,
       },
       neutral: {
         boxShadow: `${shadowGeometry} ${withOpacity(palette.black, shadowOpacity)}`,
@@ -155,7 +174,6 @@ function buildHueBoxAtoms(box: ReturnType<typeof buildHueBox>) {
   };
 }
 
-// palette colors are #RRGGBB, so the alpha is a hex suffix: 0.125 -> '20'
 function withOpacity(color: string, opacity: number): string {
   const alpha = Math.round(opacity * 255)
     .toString(16)

@@ -1,9 +1,9 @@
-// Writes the color scales to the app's `src/common/theme/palette_new.ts`.
+// Writes the color scales to the app's `src/common/theme/palette.ts`.
 //
 // One scale per family, from light to dark, shared by both themes. All steps
 // are evenly spaced in weight, so a step looks about equally strong anywhere on
 // any scale. A hue family's scale is shifted by under half a step so that its
-// key color is one of its steps. `colors_new.ts` picks each theme's colors from
+// key color is one of its steps. `colors.ts` picks each theme's colors from
 // the scales.
 import { writeFileSync } from 'node:fs';
 import { clampChroma, converter, formatHex, wcagLuminance } from 'culori';
@@ -30,7 +30,7 @@ const DARK_END_LIGHTNESS = 0.173;
 const WEIGHT_EXPONENT = 0.6;
 
 const outFile = new URL(
-  '../../apps/harbor/src/common/theme/palette_new.ts',
+  '../../apps/harbor/src/common/theme/palette.ts',
   import.meta.url,
 );
 

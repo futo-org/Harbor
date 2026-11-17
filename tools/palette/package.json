@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "node generate-palette.ts && biome format --write ../../apps/harbor/src/common/theme/palette_new.ts"
+    "generate": "node generate-palette.ts && biome format --write ../../apps/harbor/src/common/theme/palette.ts"
   },
   "dependencies": {
     "culori": "4.0.2"
