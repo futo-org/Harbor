@@ -15,7 +15,7 @@ catalog:
   puppeteer: ^25.1.0
   "@types/jest": ^30.0.0
   "@types/node": ^26.6.6
-  "@ubjs/core": 0.31.0-6
+  "@ubjs/core": 0.31.0-7
   "@ubjs/wasm": 0.31.0-6
   jest: ^30.5.2
   jest-junit: ^17.0.0
