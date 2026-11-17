@@ -188,7 +188,7 @@ services:
   victorialogs:
     profiles:
       - otlp
-    image: victoriametrics/victoria-logs:v1.53.0@sha256:251121fa882af99b95ba0c230a4a2f412ea602d2698c64a96c58dc9842bb755d
+    image: victoriametrics/victoria-logs:v1.54.0@sha256:ee4e820cac3721f5f5d91641b950c22439593adc4224f9655e5333d5a84c1dfe
     command: [ "-storageDataPath=/data" ]
     volumes:
       - victorialogs-data:/data
