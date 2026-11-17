@@ -1,5 +1,6 @@
 //! Operator commands. Without `--yes` they only report what would change.
 
+use crate::cron::blob_index;
 use crate::db::DbConn;
 use crate::db::client::build_db_clients;
 use crate::service::content::content_filestore::{
@@ -9,7 +10,8 @@ use crate::service::identity::repository::Query;
 use crate::service::identity::service as identity_service;
 
 pub const USAGE: &str = "usage: server delete-events (--identity <hex> | --public-key <hex>) [--yes]
-       server prune-content [--yes]";
+       server prune-content [--yes]
+       server sync-blob-index";
 
 pub async fn delete_events(args: Vec<String>) {
     let mut identity = None;
@@ -106,6 +108,17 @@ pub async fn prune_content(args: Vec<String>) {
         "deleted {} orphaned content rows and {} blobs",
         pruned.content, pruned.blobs
     );
+}
+
+pub async fn sync_blob_index(_: Vec<String>) {
+    let db = connect().await;
+    let Some(filestore) = filestore().await else {
+        return;
+    };
+
+    if let Err(err) = blob_index::sync(db, filestore).await {
+        eprintln!("failed to sync blob index: {err}");
+    }
 }
 
 /// No statement timeout: finding a key's identities scans every event.

@@ -1,4 +1,5 @@
 import { Routes } from '@/src/common/constants';
+import { useFeatureFlag } from '@/src/common/feature-flags';
 import { usePolycentricContext } from '@/src/common/lib/polycentric-hooks';
 import { useTheme } from '@/src/common/theme';
 import useUnreadNotificationCount, {
@@ -11,6 +12,7 @@ import { NativeTabs } from 'expo-router/native-tabs';
 export default function TabsLayout() {
   const { theme } = useTheme();
   const { currentIdentity, isLoading, isReady } = usePolycentricContext();
+  const anywhereEnabled = useFeatureFlag('anywhere');
   // The web sidebar subscribes itself.
   const unreadNotificationsLabel = unreadNotificationsBadgeLabel(
     useUnreadNotificationCount(!isWeb),
@@ -45,6 +47,7 @@ export default function TabsLayout() {
           <Stack.Screen name="claims" />
         </Stack.Protected>
         <Stack.Screen name="explore" />
+        {/* The flag only takes it out of the sidebar: its address still opens. */}
         <Stack.Screen name="anywhere" />
         <Stack.Screen name="search" />
       </Stack>
@@ -73,7 +76,7 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="anywhere">
+      <NativeTabs.Trigger name="anywhere" hidden={!anywhereEnabled}>
         <NativeTabs.Trigger.Label>Anywhere</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="globe" md="language" />
       </NativeTabs.Trigger>

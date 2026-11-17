@@ -101,6 +101,7 @@ const EXISTING_CLAIM: DecodedClaim = {
   id: 'aabb',
   schemaName: 'Freeform',
   fields: [],
+  images: [],
   identity: 'me',
   keyFingerprint: 'fp',
   sequence: 7n,
