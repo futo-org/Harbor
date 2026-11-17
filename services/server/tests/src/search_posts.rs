@@ -229,7 +229,8 @@ async fn match_on_identity() {
 
 #[tokio::test]
 async fn match_on_identity_prefix() {
-    let mut client = TestClient::new().await;
+    let key = signing_key("match_on_identity_prefix");
+    let mut client = TestClient::new_with_identity(key).await;
 
     let post_text = format!("Post with identity '{}'", client.identity());
     client.post_text(&post_text, current_timestamp());
