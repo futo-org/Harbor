@@ -87,6 +87,7 @@ mod m20261110_000002_update_search_data;
 mod m20261112_000002_search_alias_domain;
 mod m20261113_000001_update_search_data_again;
 mod m20261113_000002_blob_index;
+mod m20261117_000001_rm_old_search_functions;
 
 mod old_entity;
 
@@ -183,6 +184,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20261112_000002_search_alias_domain::Migration),
             Box::new(m20261113_000001_update_search_data_again::Migration),
             Box::new(m20261113_000002_blob_index::Migration),
+            Box::new(m20261117_000001_rm_old_search_functions::Migration),
         ]
     }
 }
