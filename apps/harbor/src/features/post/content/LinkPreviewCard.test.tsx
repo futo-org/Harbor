@@ -10,7 +10,8 @@ jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
     theme: {
       atoms: {
-        box: { neutral: { bg_subtle: {}, border_subtle: {} } },
+        box: { raised: { bg: {} } },
+        outline: {},
       },
     },
   }),
