@@ -135,8 +135,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         backgroundColor: accentByVariant.production,
         dark: {
           image: './src/common/assets/images/app-icons/splash-icon-dark.png',
-          // darkPalette.neutral_0, the app's dark background
-          backgroundColor: '#0D1016',
+          // palette.neutral_1000, the app's dark background
+          backgroundColor: '#0E1015',
         },
       },
     ],

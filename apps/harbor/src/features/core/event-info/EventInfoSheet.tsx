@@ -8,13 +8,7 @@ import {
 } from '@/src/common/lib/polycentric-hooks/helpers';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useCopyToClipboard } from '@/src/common/lib/useCopyToClipboard';
-import {
-  Atoms,
-  type PaletteColorToken,
-  type Theme,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
+import { Atoms, type Theme, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useIdentityState } from '@/src/features/profile/hooks/useIdentityState';
 import { ed25519 } from '@noble/curves/ed25519.js';
@@ -39,7 +33,6 @@ import {
 } from './useSignedEvent';
 
 const MONO: TextStyle = { fontFamily: 'monospace' };
-const PRESSED: TextStyle = { opacity: 0.65 };
 
 const INFO_TITLES: Record<number, string> = {
   [COLLECTION.IDENTITY]: 'Identity info',
@@ -114,7 +107,7 @@ function EventDetails({
   if (isLoading) return <ActivityIndicator style={Atoms.self_center} />;
   if (!signedEvent || !decodeEvent(signedEvent)) {
     return (
-      <Text variant="secondary" color="neutral_500">
+      <Text variant="secondary" color="muted">
         Event not found
       </Text>
     );
@@ -229,7 +222,7 @@ function LoadedEvent({
         <Row label="Signature" value={hexOrNone(signedEvent.signature)}>
           <StatusChip
             label={valid ? 'Valid' : 'Invalid'}
-            tone={valid ? 'positive_500' : 'negative_500'}
+            tone={valid ? 'success' : 'danger'}
           />
         </Row>
         <Row
@@ -321,7 +314,7 @@ function LoadedEvent({
           }
         />
         {clockWarning ? (
-          <Text variant="small" color="negative_500">
+          <Text variant="small" color="danger">
             {clockWarning}
           </Text>
         ) : null}
@@ -342,9 +335,9 @@ const CONFIRMATION_CHIPS: Record<
   Exclude<Confirmation, 'checking'>,
   { label: string; tone: StatusTone }
 > = {
-  confirmed: { label: 'Confirmed', tone: 'positive_500' },
-  missing: { label: 'Not found', tone: 'neutral_500' },
-  unreachable: { label: 'Unreachable', tone: 'negative_500' },
+  confirmed: { label: 'Confirmed', tone: 'success' },
+  missing: { label: 'Not found', tone: 'neutral' },
+  unreachable: { label: 'Unreachable', tone: 'danger' },
 };
 
 /** Asks the author's servers and ours for this event. */
@@ -385,7 +378,7 @@ function ServerConfirmations({ lookup }: { lookup: EventLookup }) {
 
   if (servers.length === 0) {
     return (
-      <Text variant="secondary" color="neutral_500">
+      <Text variant="secondary" color="muted">
         No servers known for this identity
       </Text>
     );
@@ -607,7 +600,7 @@ function linkStyle(theme: Theme): TextStyle {
   return {
     textDecorationLine: 'underline',
     textDecorationStyle: 'dotted',
-    textDecorationColor: theme.palette.neutral_300,
+    textDecorationColor: theme.colors.muted,
   };
 }
 
@@ -662,7 +655,7 @@ function NavSide({
   if (!onPress || (!isNext && !result.isLoading && !result.signedEvent)) {
     return (
       <View style={[Atoms.flex_1, Atoms.flex_row, Atoms.items_center, align]}>
-        <Text variant="small" color="neutral_500">
+        <Text variant="small" color="muted">
           {isNext ? 'Latest event' : 'First event'}
         </Text>
       </View>
@@ -677,7 +670,7 @@ function NavSide({
     <Icon
       name={isNext ? 'chevronForward' : 'chevronBack'}
       size={18}
-      color="neutral_500"
+      color="muted"
     />
   );
 
@@ -716,8 +709,8 @@ function NavSide({
           ) : (
             <Text
               variant="small"
-              color="neutral_700"
-              style={[prefix != null && MONO, pressed && PRESSED]}
+              color="secondary"
+              style={[prefix != null && MONO, pressed && Atoms.faded]}
             >
               {prefix ? `${prefix} (${sequence})` : 'Next'}
             </Text>
@@ -746,7 +739,7 @@ function RawBlock({
 
   if (!json) {
     return (
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         {loading ? `Loading ${label}…` : `No ${label} available`}
       </Text>
     );
@@ -758,7 +751,7 @@ function RawBlock({
         <LinkText
           variant="small"
           fontWeight="semibold"
-          color="neutral_700"
+          color="secondary"
           role="button"
           onPress={() => setOpen((o) => !o)}
         >
@@ -795,7 +788,7 @@ function Section({
   const { theme } = useTheme();
   return (
     <View style={Atoms.gap_sm}>
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         {title.toUpperCase()}
       </Text>
       <View
@@ -803,9 +796,7 @@ function Section({
           Atoms.gap_md,
           Atoms.p_md,
           Atoms.rounded_md,
-          {
-            backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-          },
+          theme.atoms.box.raised.bg,
         ]}
       >
         {children}
@@ -838,7 +829,7 @@ function Row({
   return (
     <View style={Atoms.gap_xs}>
       <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
-        <Text variant="small" color="neutral_500" style={Atoms.flex_1}>
+        <Text variant="small" color="muted" style={Atoms.flex_1}>
           {label}
         </Text>
         {children}
@@ -869,7 +860,7 @@ function Row({
         />
       </View>
       {note ? (
-        <Text variant="small" color="neutral_500">
+        <Text variant="small" color="muted">
           {note}
         </Text>
       ) : null}
@@ -900,7 +891,10 @@ function LinkText({
       style={Atoms.flex_1}
     >
       {({ pressed }) => (
-        <Text {...text} style={[style, linkStyle(theme), pressed && PRESSED]}>
+        <Text
+          {...text}
+          style={[style, linkStyle(theme), pressed && Atoms.faded]}
+        >
           {children}
         </Text>
       )}
@@ -929,21 +923,19 @@ function CopyIcon({
         <Icon
           name={copied ? 'checkmark' : 'copy'}
           size={16}
-          color={copied ? 'positive_500' : 'neutral_500'}
-          style={pressed && PRESSED}
+          color={copied ? 'success' : 'muted'}
+          style={pressed && Atoms.faded}
         />
       )}
     </Pressable>
   );
 }
 
-type StatusTone = Extract<
-  PaletteColorToken,
-  'positive_500' | 'negative_500' | 'neutral_500'
->;
+type StatusTone = 'success' | 'danger' | 'neutral';
 
 function StatusChip({ label, tone }: { label: string; tone: StatusTone }) {
   const { theme } = useTheme();
+  const color = tone === 'neutral' ? 'muted' : tone;
   return (
     <View
       style={[
@@ -953,15 +945,17 @@ function StatusChip({ label, tone }: { label: string; tone: StatusTone }) {
         Atoms.px_sm,
         Atoms.py_xs,
         Atoms.rounded_full,
-        { backgroundColor: withHexOpacity(theme.palette[tone], '20') },
+        tone === 'neutral'
+          ? theme.atoms.box.raised.bg
+          : theme.atoms.box[tone].bg_subtle,
       ]}
     >
       <Icon
-        name={tone === 'positive_500' ? 'checkmarkCircle' : 'closeCircle'}
+        name={tone === 'success' ? 'checkmarkCircle' : 'closeCircle'}
         size={14}
-        color={tone}
+        color={color}
       />
-      <Text variant="small" fontWeight="semibold" color={tone}>
+      <Text variant="small" fontWeight="semibold" color={color}>
         {label}
       </Text>
     </View>

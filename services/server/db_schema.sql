@@ -108,26 +108,6 @@ CREATE FUNCTION public.create_tsvector(text text) RETURNS tsvector
 
 
 --
--- Name: tsvector_agg(tsvector); Type: AGGREGATE; Schema: public; Owner: -
---
-
-CREATE AGGREGATE public.tsvector_agg(tsvector) (
-    SFUNC = tsvector_concat,
-    STYPE = tsvector,
-    INITCOND = ''
-);
-
-
---
--- Name: create_tsvector(regconfig, text, "char"); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_tsvector(config regconfig, text text, weight "char") RETURNS tsvector
-    LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN ((setweight((SELECT public.tsvector_agg(strip(to_tsvector('simple'::regconfig, data.word))) AS tsvector_agg FROM regexp_split_to_table(COALESCE(create_tsvector.text, ''::text), '[[:space:]]'::text) data(word) WHERE starts_with(data.word, '#'::text)), weight) || setweight(array_to_tsvector(ARRAY(SELECT DISTINCT lower(m.m[1]) AS lower FROM regexp_matches(COALESCE(create_tsvector.text, ''::text), '([0-9a-fA-F]{64})'::text, 'g'::text) m(m))), weight)) || setweight(strip(to_tsvector(config, COALESCE(text, ''::text))), weight));
-
-
---
 -- Name: decay_interaction_count(bigint, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -152,26 +132,6 @@ EXCEPTION
       RETURN (0)::numeric;
 END;
 $$;
-
-
---
--- Name: tsquery_agg(tsquery); Type: AGGREGATE; Schema: public; Owner: -
---
-
-CREATE AGGREGATE public.tsquery_agg(tsquery) (
-    SFUNC = tsquery_or,
-    STYPE = tsquery,
-    INITCOND = ''
-);
-
-
---
--- Name: search_query(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.search_query(query text) RETURNS tsquery
-    LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    RETURN ((COALESCE(to_tsquery('english'::regconfig, query), ''::tsquery) || COALESCE(to_tsquery('simple'::regconfig, query), ''::tsquery)) || (SELECT public.tsquery_agg((data.word)::tsquery) AS tsquery_agg FROM regexp_split_to_table(COALESCE(search_query.query, ''::text), '[[:space:]]'::text) data(word) WHERE ("left"(data.word, '-2'::integer) ~ '^([a-fA-F0-9])*$'::text)));
 
 
 SET default_tablespace = '';

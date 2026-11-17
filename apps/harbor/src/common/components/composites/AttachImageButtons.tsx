@@ -26,7 +26,7 @@ export function AttachImageButtons({
           accessibilityLabel="Attach image"
           style={[styles.button, disabled && styles.buttonDisabled]}
         >
-          <Icon name="image" size={22} color="neutral_700" />
+          <Icon name="image" size={22} color="secondary" />
         </Pressable>
       )}
       {onCaptureImage && (
@@ -37,7 +37,7 @@ export function AttachImageButtons({
           accessibilityLabel="Take photo"
           style={[styles.button, disabled && styles.buttonDisabled]}
         >
-          <Icon name="camera" size={22} color="neutral_700" />
+          <Icon name="camera" size={22} color="secondary" />
         </Pressable>
       )}
     </View>
@@ -48,6 +48,6 @@ const useStyles = createThemedStyles((_theme, define) =>
   define({
     row: [Atoms.flex_row, Atoms.items_center, Atoms.gap_sm],
     button: [Atoms.p_xs, Atoms.rounded_md],
-    buttonDisabled: { opacity: 0.4 },
+    buttonDisabled: Atoms.faded,
   }),
 );

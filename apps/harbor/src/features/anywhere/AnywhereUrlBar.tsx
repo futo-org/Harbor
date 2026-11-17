@@ -26,7 +26,7 @@ export function AnywhereUrlField({ url = '' }: { url?: string }) {
 
   return (
     <SearchField onPress={() => inputRef.current?.focus()}>
-      <Icon name="globe" size={16} color="neutral_500" />
+      <Icon name="globe" size={16} color="muted" />
       <TextInput
         ref={inputRef}
         variant="plain"
@@ -77,11 +77,9 @@ export function AnywhereUrlBar({ url }: { url?: string }) {
         // As the search bar on Explore.
         Atoms.px_lg,
         Atoms.py_md,
-        theme.atoms.bg,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: theme.palette.neutral_25,
-        },
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
+        { borderBottomWidth: 1 },
       ]}
     >
       <Pressable
@@ -91,9 +89,9 @@ export function AnywhereUrlBar({ url }: { url?: string }) {
           router.canGoBack() ? router.back() : router.replace(homeRoute)
         }
         hitSlop={Spacing.lg}
-        style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+        style={({ pressed }) => [pressed && Atoms.faded]}
       >
-        <Icon name="chevronBack" size={24} color="neutral_900" />
+        <Icon name="chevronBack" size={24} color="primary" />
       </Pressable>
       <View style={Atoms.flex_1}>
         <AnywhereUrlField url={url} />

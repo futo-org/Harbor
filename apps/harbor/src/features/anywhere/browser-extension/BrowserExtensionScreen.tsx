@@ -23,7 +23,7 @@ export default function BrowserExtensionScreen() {
   );
 
   return (
-    <View style={[Atoms.flex_1, theme.atoms.bg]}>
+    <View style={[Atoms.flex_1, theme.atoms.box.primary.bg]}>
       <ExtensionTopbar />
       {target?.kind === 'post' ? (
         // A thread has its own reply box.

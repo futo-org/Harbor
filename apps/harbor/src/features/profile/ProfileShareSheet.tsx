@@ -1,6 +1,6 @@
 import { Button, CopyButton, ProfileAvatar } from '@/src/common/components';
 import { Sheet } from '@/src/common/components/sheet';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { canShareUrl, nativeShareUrl } from '@/src/common/util/nativeShareUrl';
 import { StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -39,9 +39,10 @@ export default function ProfileShareSheet({
         <View
           style={[
             Atoms.rounded_lg,
+            // White in both themes: the QR code needs a light background
+            { backgroundColor: theme.colors.light },
+            theme.atoms.shadow.neutral,
             {
-              backgroundColor: theme.palette.white,
-              boxShadow: `0 12px 40px ${withHexOpacity(theme.palette.black, '1F')}`,
               width: QR_CARD_WIDTH,
               padding: QR_CODE_PADDING,
               gap: QR_CODE_PADDING,
@@ -67,7 +68,7 @@ export default function ProfileShareSheet({
                 style={[
                   Atoms.p_xs,
                   Atoms.rounded_full,
-                  { backgroundColor: theme.palette.white },
+                  { backgroundColor: theme.colors.light },
                 ]}
               >
                 <ProfileAvatar identityKey={identityKey} size="lg" />
@@ -81,7 +82,7 @@ export default function ProfileShareSheet({
               variant="title"
               fontWeight="bold"
               numberOfLines={2}
-              color="black"
+              color="dark"
               style={Atoms.text_center}
             />
           </View>

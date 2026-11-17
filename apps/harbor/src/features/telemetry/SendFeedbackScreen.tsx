@@ -62,7 +62,7 @@ export default function SendFeedbackScreen() {
   return (
     <Screen keyboardAvoiding>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.flex_1, theme.atoms.bg]}>
+        <View style={[Atoms.flex_1, theme.atoms.box.primary.bg]}>
           <Topbar
             title="Send feedback"
             right={
@@ -118,7 +118,7 @@ export default function SendFeedbackScreen() {
               testID="feedback-include-logs"
             />
 
-            <Text variant="small" color="neutral_500" fontWeight="regular">
+            <Text variant="small" color="muted" fontWeight="regular">
               App version, device details and your identity are always attached.
             </Text>
           </ScrollView>
@@ -152,7 +152,7 @@ function ToggleRow({
     >
       <View style={[Atoms.flex_1, Atoms.gap_xs]}>
         <Text variant="body">{label}</Text>
-        <Text variant="small" color="neutral_500" fontWeight="regular">
+        <Text variant="small" color="muted" fontWeight="regular">
           {description}
         </Text>
       </View>

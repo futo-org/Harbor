@@ -1,5 +1,5 @@
 import { Text } from '@/src/common/components/primitives/Text';
-import { createThemedStyles } from '@/src/common/theme';
+import { Atoms, createThemedStyles } from '@/src/common/theme';
 import type { ComponentProps } from 'react';
 import Animated from 'react-native-reanimated';
 import { useIdentityHandle } from './hooks/useIdentityHandle';
@@ -17,7 +17,7 @@ type IdentityHandleProps = Omit<
 export function IdentityHandle({
   identity,
   variant = 'secondary',
-  color = 'neutral_500',
+  color = 'muted',
   style,
   ...textProps
 }: IdentityHandleProps) {
@@ -50,6 +50,6 @@ const useStyles = createThemedStyles((_theme, define) =>
       transitionProperty: 'opacity',
       transitionDuration: 400,
     },
-    handlePending: { opacity: 0.4 },
+    handlePending: Atoms.faded,
   }),
 );

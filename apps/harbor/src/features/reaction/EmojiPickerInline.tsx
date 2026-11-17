@@ -41,7 +41,7 @@ export default function EmojiPickerInline({
     <View
       style={[
         Atoms.flex_row,
-        { backgroundColor: theme.palette.neutral_25 },
+        theme.atoms.box.secondary.bg,
         Atoms.px_md,
         Atoms.py_sm,
         Atoms.gap_sm,
@@ -55,7 +55,7 @@ export default function EmojiPickerInline({
           onSelect={handleSelect}
           size={INLINE_SIZE}
           selected={selectedEmoji === emoji.emoji}
-          highlightColor={theme.palette.neutral_100}
+          highlightColor={theme.colors.box.raised.bg_hover}
         />
       ))}
       {onShowMore && (
@@ -63,9 +63,9 @@ export default function EmojiPickerInline({
           onPress={onShowMore}
           size={INLINE_SIZE}
           hitSlop={Spacing.sm}
-          highlightColor={theme.palette.neutral_100}
+          highlightColor={theme.colors.box.raised.bg_hover}
         >
-          <Icon name="dotsVertical" size={20} color="neutral_1000" />
+          <Icon name="dotsVertical" size={20} color="primary" />
         </EmojiLikeButton>
       )}
     </View>

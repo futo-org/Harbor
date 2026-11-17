@@ -29,7 +29,7 @@ export default function GetExtensionScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.px_lg, Atoms.flex_1, theme.atoms.bg]}>
+        <View style={[Atoms.px_lg, Atoms.flex_1, theme.atoms.box.primary.bg]}>
           <ScreenHeader
             title="Browser extension"
             onBack={() =>
@@ -40,7 +40,7 @@ export default function GetExtensionScreen() {
             style={Atoms.flex_1}
             contentContainerStyle={[Atoms.gap_xl, Atoms.pb_2xl]}
           >
-            <Text color="neutral_500">
+            <Text color="muted">
               Harbor Anywhere opens Harbor beside the page you are on, to
               comment on it and read what others have said.
             </Text>

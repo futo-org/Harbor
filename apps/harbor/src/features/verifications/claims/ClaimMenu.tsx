@@ -2,7 +2,7 @@ import { Text } from '@/src/common/components';
 import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon, { type IconName } from '@/src/common/components/Icon';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Alert } from '@/src/common/util/Alert';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -48,29 +48,24 @@ export function ClaimMenu({
                 Atoms.p_xs,
                 Atoms.rounded_full,
                 Atoms.overflow_hidden,
-                (hovered || pressed) && {
-                  backgroundColor: withHexOpacity(
-                    theme.palette.neutral_500,
-                    '14',
-                  ),
-                },
+                (hovered || pressed) && theme.atoms.box.raised.bg,
               ]}
             >
-              <Icon name={icon} color="neutral_500" size={iconSize} />
+              <Icon name={icon} color="muted" size={iconSize} />
             </View>
           )}
         </DropdownMenu.Trigger>
         <DropdownMenu.Content>
           {isAuthor ? (
             <DropdownMenu.Item onPress={onDeletePress}>
-              <Icon name="trashBin" color="negative_500" size={16} />
-              <Text variant="secondary" fontWeight="bold" color="negative_500">
+              <Icon name="trashBin" color="danger" size={16} />
+              <Text variant="secondary" fontWeight="bold" color="danger">
                 Delete
               </Text>
             </DropdownMenu.Item>
           ) : (
             <DropdownMenu.Item onPress={() => setShowReportSheet(true)}>
-              <Icon name="flag" color="neutral_500" size={16} />
+              <Icon name="flag" color="muted" size={16} />
               <Text variant="secondary" fontWeight="bold">
                 Report
               </Text>

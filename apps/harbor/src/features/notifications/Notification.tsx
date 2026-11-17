@@ -5,7 +5,7 @@ import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '@/src/features/post/Post';
 import { ClaimTypeChip } from '@/src/features/verifications/claims/toolbar/ClaimTypeChip';
 import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimById';
@@ -148,10 +148,8 @@ function InteractionNotification({
         Atoms.flex_row,
         Atoms.gap_md,
         Atoms.p_md,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
+        theme.atoms.box.primary.border,
+        { borderBottomWidth: 1 },
       ]}
     >
       <ProfileAvatar
@@ -172,7 +170,7 @@ function InteractionNotification({
             {' '}
             {summary(notification)}
             {notification.createdAt > 0 ? (
-              <Text color="neutral_500">
+              <Text color="muted">
                 {' '}
                 · <TimeAgo since={notification.createdAt} />
               </Text>
@@ -183,7 +181,7 @@ function InteractionNotification({
         {/* The post the action was taken against, quoted. */}
         {quoted?.content ? (
           <View style={[]}>
-            <Text variant="secondary" color="neutral_500" numberOfLines={2}>
+            <Text variant="secondary" color="muted" numberOfLines={2}>
               {mentionsToPlainText(quoted.content)}
             </Text>
           </View>
@@ -213,9 +211,9 @@ function ClaimSummary({ claim }: { claim: DecodedClaim }) {
         name={platform?.name ?? claim.schemaName}
         icon={claimType?.icon ?? 'verify'}
         logo={platform?.logo}
-        color={platform?.color ?? claimType?.color}
+        tint={platform?.tint ?? claimType?.tint}
       />
-      <Text variant="secondary" color="neutral_500" numberOfLines={1}>
+      <Text variant="secondary" color="muted" numberOfLines={1}>
         {title}
       </Text>
     </View>

@@ -4,13 +4,7 @@ import { Sheet } from '@/src/common/components/sheet';
 import { useToast } from '@/src/common/components/toast';
 import { Routes } from '@/src/common/constants/routes';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import {
-  Atoms,
-  type PaletteColorToken,
-  Spacing,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
@@ -21,6 +15,7 @@ import type { ClaimRef } from '../../hooks/useCreateClaim';
 import useRequestVerification from '../../hooks/useRequestVerification';
 import { CLAIM_TYPES, type ClaimType } from '../../utils/forms';
 import type { Platform } from '../../utils/platforms';
+import type { TintColors } from '../../utils/tint';
 import { ClaimCreateProvider } from './ClaimCreateContext';
 import { ClaimCreateForm, type ClaimFormState } from './ClaimCreateForm';
 import { ClaimCreatePlatformLink } from './ClaimCreatePlatformLink';
@@ -181,7 +176,7 @@ export function ClaimCreateSheet({
               form?.isPending ? (
                 <ActivityIndicator
                   size="small"
-                  color={theme.palette.primary_500}
+                  color={theme.colors.accent}
                   accessibilityLabel="Creating claim"
                 />
               ) : (
@@ -196,7 +191,7 @@ export function ClaimCreateSheet({
             ) : step.kind === 'existing' && request.isPending ? (
               <ActivityIndicator
                 size="small"
-                color={theme.palette.primary_500}
+                color={theme.colors.accent}
                 accessibilityLabel="Requesting verification"
               />
             ) : undefined
@@ -222,14 +217,20 @@ export function ClaimCreateSheet({
                 <View style={{ marginTop: -Spacing['lg'] }}>
                   <OptionRow
                     icon="addCircleOutline"
-                    color="primary_500"
+                    tint={{
+                      fg: theme.colors.accent,
+                      bg: theme.colors.box.accent.bg_subtle,
+                    }}
                     title="New claim"
                     description="Create a new claim for them to verify."
                     onPress={() => push({ kind: 'type' })}
                   />
                   <OptionRow
                     icon="verify"
-                    color="positive_500"
+                    tint={{
+                      fg: theme.colors.success,
+                      bg: theme.colors.box.success.bg_subtle,
+                    }}
                     title="Existing claim"
                     description="Request verification of a claim you've already made."
                     onPress={() => push({ kind: 'existing' })}
@@ -248,11 +249,7 @@ export function ClaimCreateSheet({
                   ))}
                   {existingClaims.claims.length === 0 &&
                     !existingClaims.isLoading && (
-                      <Text
-                        variant="body"
-                        color="neutral_500"
-                        style={Atoms.px_lg}
-                      >
+                      <Text variant="body" color="muted" style={Atoms.px_lg}>
                         You haven&apos;t created any claims yet.
                       </Text>
                     )}
@@ -263,7 +260,8 @@ export function ClaimCreateSheet({
                 <>
                   <Text
                     variant="small"
-                    style={[theme.atoms.text_neutral_medium, Atoms.px_lg]}
+                    color="secondary"
+                    style={Atoms.px_lg}
                     fontWeight="semibold"
                   >
                     Select the type of claim to create
@@ -336,19 +334,18 @@ export function ClaimCreateSheet({
 // An option in a picker step.
 function OptionRow({
   icon,
-  color,
+  tint,
   title,
   description,
   onPress,
 }: {
   icon: IconName;
-  color?: PaletteColorToken;
+  tint: TintColors;
   title: string;
   description: string;
   onPress: () => void;
 }) {
   const { theme } = useTheme();
-  const tint = color ? theme.palette[color] : theme.palette.neutral_1000;
 
   return (
     <Pressable
@@ -360,39 +357,28 @@ function OptionRow({
         Atoms.gap_md,
         Atoms.px_lg,
         Atoms.py_md,
-        (hovered || pressed) && {
-          backgroundColor: theme.palette.neutral_25,
-        },
+        (hovered || pressed) && theme.atoms.box.primary.bg_hover,
       ]}
     >
       <View
-        style={[
-          Atoms.rounded_full,
-          Atoms.p_sm,
-          { backgroundColor: withHexOpacity(tint, '25') },
-        ]}
+        style={[Atoms.rounded_full, Atoms.p_sm, { backgroundColor: tint.bg }]}
       >
-        <Icon name={icon} size={20} color={color} />
+        <Icon name={icon} size={20} customColor={tint.fg} />
       </View>
       <View style={Atoms.flex_1}>
-        <Text
-          variant="secondary"
-          fontWeight="semibold"
-          style={theme.atoms.text}
-          selectable={false}
-        >
+        <Text variant="secondary" fontWeight="semibold" selectable={false}>
           {title}
         </Text>
         <Text
           variant="small"
-          style={theme.atoms.text_neutral_medium}
+          color="secondary"
           fontWeight="regular"
           selectable={false}
         >
           {description}
         </Text>
       </View>
-      <Icon name="chevronForward" size={18} color="neutral_500" />
+      <Icon name="chevronForward" size={18} color="muted" />
     </Pressable>
   );
 }
@@ -404,10 +390,11 @@ function ClaimTypeRow({
   claimType: ClaimType;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
   return (
     <OptionRow
       icon={claimType.icon}
-      color={claimType.color}
+      tint={claimType.tint[theme.scheme]}
       title={claimType.name}
       description={claimType.description}
       onPress={onPress}

@@ -1,13 +1,12 @@
 import { Text } from '@/src/common/components/primitives';
 import { memo, useMemo } from 'react';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import type { v2 } from '@polycentric/react-native';
 import { Image } from '@/src/common/components/Image';
 import { urlHost } from '@/src/common/util/anywhere-url';
 import { Linking, Pressable, View } from 'react-native';
 
-const IMAGE_BG = 'rgba(0,0,0,0.04)';
 /** Open-Graph standard image ratio (1200×630). */
 const OG_ASPECT = 1.91;
 /** Thumbnail width when `compact` places the image beside the text. */
@@ -53,11 +52,13 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
           compact
             ? [
                 Atoms.self_stretch,
-                { width: COMPACT_IMAGE_WIDTH, backgroundColor: IMAGE_BG },
+                theme.atoms.box.raised.bg,
+                { width: COMPACT_IMAGE_WIDTH },
               ]
             : [
                 Atoms.w_full,
-                { aspectRatio: OG_ASPECT, backgroundColor: IMAGE_BG },
+                theme.atoms.box.raised.bg,
+                { aspectRatio: OG_ASPECT },
               ]
         }
       />
@@ -65,7 +66,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
 
   const text = (
     <View style={[Atoms.p_md, compact && Atoms.flex_1]}>
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         {host}
       </Text>
       {link.title ? (
@@ -73,7 +74,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
           variant="secondary"
           fontWeight="bold"
           numberOfLines={2}
-          style={[Atoms.mt_xs, theme.atoms.text_neutral_high]}
+          style={Atoms.mt_xs}
         >
           {link.title}
         </Text>
@@ -81,7 +82,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
       {link.description ? (
         <Text
           variant="secondary"
-          color="neutral_500"
+          color="muted"
           numberOfLines={2}
           style={Atoms.mt_xs}
         >
@@ -102,11 +103,9 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
         Atoms.mt_md,
         Atoms.overflow_hidden,
         compact && Atoms.flex_row,
-        {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-        },
-        pressed && { opacity: 0.8 },
+        theme.atoms.outline,
+        { borderWidth: 1 },
+        pressed && Atoms.faded_subtle,
       ]}
     >
       {compact ? (

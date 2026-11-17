@@ -33,7 +33,7 @@ function FeatureFlagSettingRow({ flag }: { flag: FeatureFlag }) {
           <Text variant="body" fontWeight="semibold">
             {label}
           </Text>
-          <Text variant="small" fontWeight="regular" color="neutral_500">
+          <Text variant="small" fontWeight="regular" color="muted">
             {description}
           </Text>
         </View>
@@ -56,7 +56,7 @@ export default function FeatureFlagsScreen() {
   return (
     <Screen>
       <Screen.PrimaryColumn>
-        <View style={[Atoms.flex_1, theme.atoms.bg]}>
+        <View style={[Atoms.flex_1, theme.atoms.box.primary.bg]}>
           <Topbar title="Feature flags" />
           {/* The rows run edge to edge; their contents keep the usual inset. */}
           <ScrollView
@@ -71,7 +71,7 @@ export default function FeatureFlagsScreen() {
                 {index > 0 && (
                   <View
                     style={[
-                      theme.atoms.border_neutral_low,
+                      theme.atoms.box.primary.border,
                       { borderTopWidth: 1 },
                     ]}
                   />

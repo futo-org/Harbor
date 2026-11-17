@@ -77,7 +77,7 @@ function VerifiedPlatformPill({
         value={account}
         icon="verify"
         logo={platform.logo}
-        color={platform.color}
+        tint={platform.tint}
       />
     </Pressable>
   );
@@ -86,6 +86,6 @@ function VerifiedPlatformPill({
 const useStyles = createThemedStyles((_theme, define) =>
   define({
     list: [Atoms.flex_row, Atoms.flex_wrap, Atoms.gap_xs],
-    pillPressed: { opacity: 0.5 },
+    pillPressed: Atoms.faded,
   }),
 );

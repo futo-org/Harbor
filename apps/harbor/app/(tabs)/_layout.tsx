@@ -58,13 +58,13 @@ export default function TabsLayout() {
     <NativeTabs
       backBehavior="history"
       minimizeBehavior="never"
-      backgroundColor={theme.palette.neutral_0}
-      iconColor={theme.palette.neutral_900}
-      tintColor={theme.palette.neutral_900}
-      indicatorColor={theme.palette.neutral_25}
-      rippleColor={theme.palette.neutral_50}
-      badgeBackgroundColor={theme.palette.primary_500}
-      badgeTextColor={theme.palette.neutral_0}
+      backgroundColor={theme.colors.box.primary.bg}
+      iconColor={theme.colors.primary}
+      tintColor={theme.colors.primary}
+      indicatorColor={theme.colors.box.secondary.bg}
+      rippleColor={theme.colors.box.secondary.bg_hover}
+      badgeBackgroundColor={theme.colors.box.accent.bg}
+      badgeTextColor={theme.colors.light}
     >
       <NativeTabs.Trigger name="feed">
         <NativeTabs.Trigger.Label>Feed</NativeTabs.Trigger.Label>

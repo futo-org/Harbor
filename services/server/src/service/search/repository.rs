@@ -105,7 +105,9 @@ impl Query {
         );
         query = query
             .expr_as(
-                Expr::cust("ts_rank(profile.search_data, create_tsquery($1))"),
+                Expr::cust(
+                    "ts_rank(profile.search_data, create_tsquery($1), 16)",
+                ),
                 SEARCH_RANK_COLUMN,
             )
             .expr_as(
@@ -160,7 +162,7 @@ impl Query {
                             sorted_by: SortedUsersBy::Rank(rank),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, create_tsquery($$1)), events.id) < ($1, $2)",
+                            "(ts_rank(search_data, create_tsquery($$1), 16), events.id) < ($1, $2)",
                             [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
@@ -188,7 +190,7 @@ impl Query {
                             sorted_by: SortedUsersBy::Rank(rank),
                             event_id,
                         } => query.filter(Expr::cust_with_values(
-                            "(ts_rank(search_data, create_tsquery($$1)), events.id) > ($1, $2)",
+                            "(ts_rank(search_data, create_tsquery($$1), 16), events.id) > ($1, $2)",
                             [Value::from(rank), Value::from(event_id)],
                         )),
                         Marker {
@@ -234,7 +236,7 @@ impl Query {
         );
         query = query
             .expr_as(
-                Expr::cust("ts_rank(search_data, create_tsquery($1))"),
+                Expr::cust("ts_rank(search_data, create_tsquery($1), 16)"),
                 SEARCH_RANK_COLUMN,
             )
             .join(JoinType::InnerJoin, content_join())

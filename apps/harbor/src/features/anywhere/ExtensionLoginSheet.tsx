@@ -77,7 +77,7 @@ export function ExtensionLoginSheet() {
           <ProfileAvatar identityKey={identityKey} />
           <Username identity={identityKey} fontWeight="bold" />
         </View>
-        <Text variant="secondary" color="neutral_500">
+        <Text variant="secondary" color="muted">
           The Harbor Anywhere browser extension will be able to post and react
           as this identity.
         </Text>

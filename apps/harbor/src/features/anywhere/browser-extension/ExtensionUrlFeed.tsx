@@ -65,12 +65,12 @@ export function ExtensionUrlFeed({
         <View
           style={[
             Atoms.fixed,
+            theme.atoms.box.primary.border,
             {
               bottom: 0,
               left: 0,
               right: 0,
               borderTopWidth: 1,
-              borderTopColor: theme.palette.neutral_25,
               zIndex: ZIndex.raised,
             },
           ]}

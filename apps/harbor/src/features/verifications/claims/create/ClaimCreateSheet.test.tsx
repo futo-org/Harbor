@@ -1,13 +1,20 @@
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
     theme: {
-      palette: new Proxy({}, { get: () => '#000' }),
-      atoms: new Proxy({}, { get: () => ({}) }),
+      scheme: 'light',
+      colors: {
+        accent: '#000',
+        success: '#000',
+        muted: '#000',
+        box: new Proxy({}, { get: () => ({ bg_subtle: '#000' }) }),
+      },
+      atoms: {
+        box: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
+      },
     },
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
   Spacing: new Proxy({}, { get: () => 8 }),
-  withHexOpacity: (color: string) => color,
 }));
 
 jest.mock('@/src/common/components', () => {

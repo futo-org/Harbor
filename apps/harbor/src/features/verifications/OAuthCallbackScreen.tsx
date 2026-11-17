@@ -22,7 +22,7 @@ export default function OAuthCallbackScreen() {
   return (
     <View
       style={[
-        theme.atoms.bg,
+        theme.atoms.box.primary.bg,
         Atoms.flex_1,
         Atoms.align_center,
         Atoms.justify_center,
@@ -30,7 +30,7 @@ export default function OAuthCallbackScreen() {
     >
       <ActivityIndicator
         size="small"
-        color={theme.palette.primary_500}
+        color={theme.colors.accent}
         accessibilityLabel="Completing sign-in"
       />
     </View>

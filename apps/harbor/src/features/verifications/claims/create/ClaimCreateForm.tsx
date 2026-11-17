@@ -8,7 +8,7 @@ import {
   type ImageAttachmentStatus,
   useImageAttachments,
 } from '@/src/common/lib/images/useImageAttachments';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -37,7 +37,6 @@ export function ClaimCreateForm({
   onSubmitted: (ref: ClaimRef) => void;
   onFormState: (state: ClaimFormState | null) => void;
 }) {
-  const { theme } = useTheme();
   const { submit, isPending } = useCreateClaim();
   const [values, setValues] = useState<Record<string, string>>({});
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
@@ -150,7 +149,7 @@ export function ClaimCreateForm({
       />
 
       {error && (
-        <Text variant="body" style={{ color: theme.palette.negative_600 }}>
+        <Text variant="body" color="danger">
           {error}
         </Text>
       )}
@@ -171,17 +170,12 @@ function FieldInput({
   onChange: (text: string) => void;
   disabled?: boolean;
 }) {
-  const { theme } = useTheme();
   const multiline = field.kind === 'multiline';
   const isDate = field.kind === 'date';
 
   return (
     <View style={Atoms.gap_xs}>
-      <Text
-        variant="small"
-        style={theme.atoms.text_neutral_medium}
-        fontWeight="semibold"
-      >
+      <Text variant="small" color="secondary" fontWeight="semibold">
         {field.required ? `${field.label} *` : field.label}
       </Text>
       <TextInput

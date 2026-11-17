@@ -26,7 +26,7 @@ export function EmojiFingerprint({
         !bare && [
           Atoms.rounded_lg,
           Atoms.p_lg,
-          { backgroundColor: theme.palette.white },
+          { backgroundColor: theme.colors.light },
         ],
       ]}
     >

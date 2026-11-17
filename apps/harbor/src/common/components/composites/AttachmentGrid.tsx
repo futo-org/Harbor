@@ -5,7 +5,7 @@ import {
   Atoms,
   createThemedStyles,
   Spacing,
-  withHexOpacity,
+  useTheme,
 } from '@/src/common/theme';
 import { Image } from 'expo-image';
 import { useState } from 'react';
@@ -80,6 +80,7 @@ function AttachmentThumb({
   aspectRatio: number;
   status: ImageAttachment['status'];
 }) {
+  const { theme } = useTheme();
   const styles = useStyles();
   return (
     <View style={[styles.thumb, { width, aspectRatio }]}>
@@ -87,23 +88,16 @@ function AttachmentThumb({
         source={{ uri }}
         recyclingKey={uri}
         contentFit="cover"
-        style={styles.thumbImage}
+        style={[styles.thumbImage, status !== 'ready' && Atoms.faded]}
       />
 
       {/* Loading / error overlay while the blobs are being processed+uploaded */}
       {status !== 'ready' && (
-        <View
-          style={[
-            styles.statusOverlay,
-            status === 'error'
-              ? styles.statusOverlayError
-              : styles.statusOverlayProcessing,
-          ]}
-        >
+        <View style={styles.statusOverlay}>
           {status === 'error' ? (
-            <Icon name="ban" size={22} color="white" />
+            <Icon name="ban" size={22} color="light" />
           ) : (
-            <ActivityIndicator size="small" color="white" />
+            <ActivityIndicator size="small" color={theme.colors.light} />
           )}
         </View>
       )}
@@ -114,7 +108,7 @@ function AttachmentThumb({
         hitSlop={6}
         style={[styles.removeButton, disabled && styles.removeButtonDisabled]}
       >
-        <Icon name="close" size={14} color="white" />
+        <Icon name="close" size={14} color="light" />
       </Pressable>
     </View>
   );
@@ -128,19 +122,13 @@ const useStyles = createThemedStyles((theme, define) =>
       Atoms.mt_sm,
       { gap: ATTACHMENT_GAP },
     ],
-    thumb: [Atoms.rounded_md, Atoms.overflow_hidden, theme.atoms.bg_neutral_25],
+    thumb: [Atoms.rounded_md, Atoms.overflow_hidden, theme.atoms.box.raised.bg],
     thumbImage: [Atoms.w_full, Atoms.h_full],
     statusOverlay: [
       StyleSheet.absoluteFill,
       Atoms.items_center,
       Atoms.justify_center,
     ],
-    statusOverlayProcessing: {
-      backgroundColor: withHexOpacity(theme.palette.black, '40'),
-    },
-    statusOverlayError: {
-      backgroundColor: withHexOpacity(theme.palette.negative_500, '40'),
-    },
     removeButton: [
       Atoms.absolute,
       Atoms.rounded_full,
@@ -151,9 +139,9 @@ const useStyles = createThemedStyles((theme, define) =>
         right: 2,
         width: 22,
         height: 22,
-        backgroundColor: withHexOpacity(theme.palette.black, 'b0'),
       },
+      theme.atoms.media_control.bg,
     ],
-    removeButtonDisabled: { opacity: 0.4 },
+    removeButtonDisabled: Atoms.faded,
   }),
 );
