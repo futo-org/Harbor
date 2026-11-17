@@ -13,6 +13,7 @@ export const DOCS_URL = 'https://join.harbor.social/docs/';
 export const FAQ_URL = 'https://join.harbor.social/docs/faq/';
 export const SUPPORT_URL = 'https://join.harbor.social/docs/support/';
 export const ROADMAP_URL = 'https://join.harbor.social/docs/roadmap/';
+export const MERCH_URL = 'https://store.harbor.social';
 export const PRIVACY_POLICY_URL =
   'https://join.harbor.social/docs/privacy-policy/';
 /**
