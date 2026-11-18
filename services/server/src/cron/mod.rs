@@ -14,7 +14,7 @@ use crate::db::{Connection, DbTx};
 use crate::service::content::content_filestore::ContentFilestore;
 
 pub(crate) mod blob_index;
-mod blob_prune;
+pub(crate) mod blob_prune;
 mod gravity;
 
 /// Start all cron jobs.
@@ -28,10 +28,7 @@ pub(crate) fn start_jobs(
     };
 
     gravity::update(&cron, db.clone());
-    /* TODO(Thomas): fix this.
-    blob_prune::run(&cron, db.clone(), filestore);
-    */
-    _ = filestore;
+    blob_prune::start(&cron, db, filestore);
 
     cron
 }

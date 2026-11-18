@@ -26,8 +26,8 @@ const BATCH_SIZE: usize = 200;
 ///
 /// [blob prune]: crate::cron::blob_prune
 pub(crate) async fn sync(
-    mut db: DbConn,
-    filestore: ContentFilestore,
+    db: &mut DbConn,
+    filestore: &ContentFilestore,
 ) -> Result<(), String> {
     let start = Instant::now();
     tracing::info!("synchronising blob index with content store");
@@ -79,13 +79,12 @@ pub(crate) async fn sync(
 
         if buffer.len() == buffer.capacity() {
             let blobs = replace(&mut buffer, Vec::with_capacity(BATCH_SIZE));
-            update_blob_index(&mut db, blobs, &mut processed, &mut added)
-                .await?;
+            update_blob_index(db, blobs, &mut processed, &mut added).await?;
         }
     }
 
     if !buffer.is_empty() {
-        update_blob_index(&mut db, buffer, &mut processed, &mut added).await?;
+        update_blob_index(db, buffer, &mut processed, &mut added).await?;
     }
 
     tracing::info!(processed, skipped, added, elapsed = ?start.elapsed(), "synced blob index");
