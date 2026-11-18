@@ -12,8 +12,8 @@ import { useMemo, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import useReactions from '../../reaction/useReactions';
 
-/** Max number of stacked emojis shown in the expanded output. */
-const MAX_STACKED = 3;
+/** Max number of stacked emojis, and of emoji lines in the summary card. */
+const MAX_STACKED = 4;
 
 const EMOJI_SIZE = 18;
 
@@ -118,7 +118,11 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
             align="end"
             ready={!summaryReactions.isLoading && !summaryReactions.isError}
           >
-            <ReactionSummaryCard post={post} groups={summaryReactions.groups} />
+            <ReactionSummaryCard
+              post={post}
+              groups={summaryReactions.groups}
+              maxLines={MAX_STACKED}
+            />
           </HoverCard.Content>
         </HoverCard>
       ) : (

@@ -15,7 +15,6 @@ import {
   summarizeReactions,
 } from './util';
 
-const MAX_LINES = 4;
 const MAX_CARD_WIDTH = 280;
 const EMOJI_SIZE = 16;
 
@@ -23,9 +22,11 @@ const EMOJI_SIZE = 16;
 export function ReactionSummaryCard({
   post,
   groups,
+  maxLines,
 }: {
   post: PostData;
   groups: Map<string, ReactionGroup>;
+  maxLines: number;
 }) {
   const client = usePolycentric();
   const styles = useStyles();
@@ -37,9 +38,9 @@ export function ReactionSummaryCard({
         groups,
         countReactionsFrom(post),
         myIdentity,
-        MAX_LINES,
+        maxLines,
       ),
-    [groups, post, myIdentity],
+    [groups, post, myIdentity, maxLines],
   );
 
   return (
