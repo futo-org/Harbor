@@ -352,11 +352,12 @@ macro_rules! image_fn {
         )+
     };
     (_mime_type png) => { "image/png" };
+    (_mime_type jpg) => { "image/jpeg" };
     (_mime_type svg) => { "image/svg+xml" };
 }
 
 image_fn!(
-    avatar.png: 256, 256;
+    avatar.jpg: 256, 256;
     banner.svg: 2048, 2048;
     post0.png: 512, 512;
     post1.png: 512, 512;
