@@ -10,7 +10,6 @@ use tokio::time::{MissedTickBehavior, interval, sleep};
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
-use crate::config;
 use crate::db::{Connection, DbTx};
 use crate::service::content::content_filestore::ContentFilestore;
 
@@ -29,8 +28,7 @@ pub(crate) fn start_jobs(
     };
 
     gravity::update(&cron, db.clone());
-    let dry_run = config::get().blob_prune_dry_run;
-    blob_prune::run(&cron, db.clone(), filestore, dry_run);
+    blob_prune::start(&cron, db, filestore);
 
     cron
 }
