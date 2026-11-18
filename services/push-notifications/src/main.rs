@@ -64,6 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         notification_manager,
         polycentric,
         main_server: config.main_server.clone(),
+        allow_hosts: config.allow_hosts.clone(),
     });
 
     // Serve gRPC and consume Kafka concurrently. If either future returns,
@@ -80,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Serve the gRPC `NotificationService` (push-token register/unregister).
+/// Serve the gRPC `NotificationService` (push subscription registration).
 async fn serve_grpc(ctx: Arc<Context>, addr: SocketAddr) -> Result<(), tonic::transport::Error> {
     info!("NotificationService gRPC listening on {addr}");
     Server::builder()

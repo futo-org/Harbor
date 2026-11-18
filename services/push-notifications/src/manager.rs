@@ -5,7 +5,7 @@ use crate::{
     render,
 };
 use polycentric_common::models::protos_v2::{
-    Content, ContentDigest, Event, Notification, NotificationKind, PublicKey,
+    Content, ContentDigest, Event, Notification, NotificationKind, PublicKey, PushTarget,
 };
 use prost::Message;
 use sea_orm::{DbConn, DbErr, EnumIter};
@@ -27,7 +27,6 @@ impl AsRef<str> for PushService {
 
 #[derive(Debug)]
 pub enum NotificationError {
-    UnknownService(String),
     Database(DbErr),
     PushService(String),
 }
@@ -35,9 +34,6 @@ pub enum NotificationError {
 impl fmt::Display for NotificationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            NotificationError::UnknownService(s) => {
-                write!(f, "unknown push service: {s}")
-            }
             NotificationError::Database(e) => write!(f, "database error: {e}"),
             NotificationError::PushService(e) => {
                 write!(f, "push service error: {e}")
@@ -88,41 +84,23 @@ impl NotificationManager {
         }
     }
 
-    /// Registers a push token for a public key after verifying that the
-    /// service is supported and the token is well-formed.
+    /// Remove any existing registrations for `target` and for each public key
+    /// in `subscriptions`.
+    /// Then, register all of the subscriptions.
+    /// Assumes that `target` and `subscriptions` have already been validated.
     pub async fn register(
         &self,
         db: &DbConn,
-        public_key: &PublicKey,
-        service: String,
-        token: String,
+        target: &PushTarget,
+        subscriptions: &[(PublicKey, String)],
     ) -> Result<(), NotificationError> {
-        self.verify_token(&service, &token).await?;
-
-        token_repository::Mutation::register(db, public_key, service.clone(), token).await?;
+        token_repository::Mutation::replace_subscriptions(db, target, subscriptions).await?;
 
         tracing::info!(
-            key = crate::render::key_fingerprint(&public_key.key),
-            service,
-            "push token registered"
-        );
-        Ok(())
-    }
-
-    /// Remove a registered push token for `public_key`.
-    pub async fn unregister(
-        &self,
-        db: &DbConn,
-        public_key: &PublicKey,
-        service: &str,
-        token: &str,
-    ) -> Result<(), NotificationError> {
-        token_repository::Mutation::unregister(db, public_key, service, token).await?;
-
-        tracing::info!(
-            key = crate::render::key_fingerprint(&public_key.key),
-            service,
-            "push token unregistered"
+            token = crate::render::token_fingerprint(&target.token),
+            service = target.service,
+            subscriptions = subscriptions.len(),
+            "push subscriptions registered"
         );
         Ok(())
     }
@@ -216,34 +194,20 @@ impl NotificationManager {
     ) -> Result<ExpoPushResponse, NotificationError> {
         let authorized_keys = ctx.polycentric.authorized_keys(identity).await;
 
-        let mut rows = vec![];
-
-        for key in authorized_keys {
-            let token_res = token_repository::Query::token_for_public_key(&ctx.ro_db, &key).await?;
-            if let Some(token) = token_res {
-                rows.push(token);
-            }
-        }
-
-        let mut expo_tokens: Vec<(PublicKey, String)> = vec![];
-        for row in rows {
-            let public_key = PublicKey {
-                key: row.public_key,
-                key_type: row.public_key_type as i32,
-            };
-
-            expo_tokens.push((public_key, row.token));
-        }
+        let expo_tokens = token_repository::Query::expo_tokens_for_identity(
+            &ctx.ro_db,
+            identity,
+            &authorized_keys,
+        )
+        .await?;
 
         if expo_tokens.is_empty() {
             tracing::debug!(identity, "no registered push tokens");
             return Ok(ExpoPushResponse { data: vec![] });
         }
 
-        let expo_tokens_raw: Vec<String> = expo_tokens.iter().map(|item| item.1.clone()).collect();
-
         let expo_push_request = ExpoPushRequest {
-            to: expo_tokens_raw,
+            to: expo_tokens.clone(),
             title: notification.title,
             body: notification.body,
             collapse_id: Some(notification.collapse_id),
@@ -284,7 +248,7 @@ impl NotificationManager {
         &self,
         ctx: &Context,
         response: &ExpoPushResponse,
-        expo_tokens: Vec<(PublicKey, String)>,
+        expo_tokens: Vec<String>,
     ) -> Result<(), NotificationError> {
         if response.data.len() != expo_tokens.len() {
             warn!(
@@ -295,7 +259,8 @@ impl NotificationManager {
             return Ok(());
         }
 
-        for (key_and_token, ticket) in expo_tokens.iter().zip(response.data.iter()) {
+        let mut dead_tokens = vec![];
+        for (token, ticket) in expo_tokens.into_iter().zip(response.data.iter()) {
             if ticket.status != "error" {
                 continue;
             }
@@ -304,17 +269,12 @@ impl NotificationManager {
 
             if error == Some("DeviceNotRegistered") {
                 // The device's token is no longer valid — remove it.
-                token_repository::Mutation::unregister(
-                    &ctx.db,
-                    &key_and_token.0,
-                    PushService::Expo.as_ref(),
-                    &key_and_token.1,
-                )
-                .await?;
                 tracing::info!(
-                    key = crate::render::key_fingerprint(&key_and_token.0.key),
-                    "removed dead push token (DeviceNotRegistered)"
+                    token = crate::render::token_fingerprint(&token),
+                    "removing dead push token (DeviceNotRegistered)"
                 );
+
+                dead_tokens.push(token);
             } else {
                 warn!(
                     "expo push ticket error (token kept): {}",
@@ -323,6 +283,14 @@ impl NotificationManager {
             }
         }
 
+        token_repository::Mutation::remove_tokens(
+            &ctx.db,
+            PushService::Expo.as_ref(),
+            &dead_tokens,
+        )
+        .await?;
+
+        // TODO:
         // Polling expo.get_push_notification_receipts would have added too much complexity
         // to be worthwhile in this initial implementation
 
@@ -330,16 +298,6 @@ impl NotificationManager {
         // related to dead tokens
 
         Ok(())
-    }
-
-    /// Verifies that a token/service pair is valid and supported
-    /// Expo is the only currently supported notification service
-    async fn verify_token(&self, service: &str, _token: &str) -> Result<(), NotificationError> {
-        if service == PushService::Expo.as_ref() {
-            Ok(())
-        } else {
-            Err(NotificationError::UnknownService(service.to_string()))
-        }
     }
 }
 
@@ -429,8 +387,8 @@ mod tests {
         .await;
 
         let db = MockDatabase::new(DbBackend::Postgres)
-            // token_for_public_key(recipient's authorized key) → one token
-            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[abc123]")]])
+            // expo_tokens_for_identity(recipient, authorized keys) → one token
+            .append_query_results([vec![token_row("ExponentPushToken[abc123]")]])
             .into_connection();
 
         let ctx = make_ctx(db, expo_push_url, polycentric);
@@ -476,7 +434,7 @@ mod tests {
     }
 
     /// A `DeviceNotRegistered` ticket from Expo removes the token via a
-    /// DELETE on `push_token`.
+    /// DELETE on `push_subscription`.
     #[tokio::test]
     async fn unregisters_token_on_device_not_registered() {
         let mut expo_server = mockito::Server::new_async().await;
@@ -500,8 +458,8 @@ mod tests {
         .await;
 
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[dead-device]")]])
-            // unregister DELETE — sea-orm issues this as exec, not query.
+            .append_query_results([vec![token_row("ExponentPushToken[dead-device]")]])
+            // remove_tokens DELETE — sea-orm issues this as exec, not query.
             .append_exec_results([MockExecResult {
                 last_insert_id: 0,
                 rows_affected: 1,
@@ -519,8 +477,8 @@ mod tests {
         send_mock.assert_async().await;
 
         assert!(
-            saw_push_token_delete(db),
-            "expected an unregister DELETE on push_token"
+            saw_push_subscription_delete(db),
+            "expected a remove_tokens DELETE on push_subscription"
         );
     }
 
@@ -555,7 +513,7 @@ mod tests {
         // unregister were attempted, MockDatabase would error on the missing
         // exec result and the test would fail.
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[abc123]")]])
+            .append_query_results([vec![token_row("ExponentPushToken[abc123]")]])
             .into_connection();
 
         let ctx = make_ctx(db.clone(), expo_push_url, polycentric);
@@ -568,7 +526,7 @@ mod tests {
 
         send_mock.assert_async().await;
         assert!(
-            !saw_push_token_delete(db),
+            !saw_push_subscription_delete(db),
             "a ticket/token count mismatch must skip token cleanup"
         );
     }
@@ -599,7 +557,7 @@ mod tests {
 
         // No exec result queued: an erroneous unregister would error out.
         let db = MockDatabase::new(DbBackend::Postgres)
-            .append_query_results([vec![token_row(&pk.key, "ExponentPushToken[rate-limited]")]])
+            .append_query_results([vec![token_row("ExponentPushToken[rate-limited]")]])
             .into_connection();
 
         let ctx = make_ctx(db.clone(), expo_push_url, polycentric);
@@ -612,7 +570,7 @@ mod tests {
 
         send_mock.assert_async().await;
         assert!(
-            !saw_push_token_delete(db),
+            !saw_push_subscription_delete(db),
             "non-DeviceNotRegistered errors must not unregister the token"
         );
     }

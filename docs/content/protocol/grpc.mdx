@@ -30,8 +30,8 @@ reference for its own build at `/docs`, generated from gRPC reflection.
   gRPC-Web request from your browser to the selected server.
 - **Authentication.** Methods that act for an identity expect a JWT in the
   `authorization` header, see
-  [Server Authentication](./server-auth.md). Push notification registration
-  instead takes a `SignedMessage` envelope signed by the device's key pair.
+  [Server Authentication](./server-auth.md). Push notification subscription
+  instead embeds the JWTs in the gRPC request body.
 - **Reflection.** Servers enable gRPC reflection, so tools like
   [grpcurl](https://github.com/fullstorydev/grpcurl) can list and call methods
   without the proto files:

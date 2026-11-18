@@ -8,3 +8,4 @@ data:
   HARBOR_SERVER_HOST: localhost:3000
   HARBOR_SERVER_ALLOW_HOSTS: http://localhost:3000
   HARBOR_OTLP_HOST: localhost:3003
+  HARBOR_PUSH_NOTIFICATIONS_HOST: localhost:3001

@@ -726,47 +726,52 @@ export class PolycentricClient {
   }
 
   /**
-   * Sign a `RegisterPushNotificationRequest` with the active key pair and
-   * deliver it to every configured server via gRPC-web. Per-server failures
-   * are logged but do not throw — registration is best-effort across the
-   * server set.
+   * Set (overwrite) the push subscriptions of `target` on each of the push
+   * servers in `servers` listen for notifications for the active identity.
    */
-  async registerPushNotifications(
+  async setDevicePushSubscriptions(
     servers: string[],
-    request: Proto.RegisterPushNotificationRequest,
+    target: Proto.PushTarget,
   ): Promise<void> {
-    if (!this.currentKeyPair) {
-      throw new Error('registerPushNotifications requires an active key pair');
+    const keyPair = this.currentKeyPair;
+    const identity = this.activeIdentityKey;
+
+    if (!keyPair || !identity) {
+      throw new Error(
+        'setDevicePushSubscriptions requires an active identity and key pair',
+      );
     }
 
-    const messageBytes =
-      Proto.RegisterPushNotificationRequest.toBinary(request);
-    const signature = await this.crypto.sign(
-      this.currentKeyPair.privateKey.key,
-      messageBytes,
-      this.currentKeyPair.keyType,
-    );
-    const signedMessageBytes = Proto.SignedMessage.toBinary(
-      Proto.SignedMessage.create({
-        publicKey: this.currentKeyPair.publicKey,
-        signature,
-        messageBytes,
-      }),
-    );
-
+    // Assemble and send out each request
     const results = await Promise.allSettled(
-      servers.map((server) =>
-        this.core.registerPushNotifications(
+      servers.map(async (server) => {
+        const jwt = await createServerJwt({
+          keyPair,
+          iss: identity,
+          aud: server,
+          // Use a short expiration time since this token is only used for
+          // this one request.
+          expirySeconds: 5 * 60,
+        });
+
+        const requestBytes = Proto.SetDevicePushSubscriptionsRequest.toBinary(
+          Proto.SetDevicePushSubscriptionsRequest.create({
+            pushTarget: target,
+            subscriptions: [{ jwt }],
+          }),
+        );
+
+        await this.core.setDevicePushSubscriptions(
           server,
-          signedMessageBytes.buffer as ArrayBuffer,
-        ),
-      ),
+          requestBytes.buffer as ArrayBuffer,
+        );
+      }),
     );
 
     for (const result of results) {
       if (result.status === 'rejected') {
         console.error(
-          'registerPushNotifications failed for a server:',
+          'setDevicePushSubscriptions failed for a server:',
           result.reason,
         );
       }

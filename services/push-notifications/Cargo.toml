@@ -31,6 +31,7 @@ reqwest = { version = "0.13", default-features = false, features = ["json", "rus
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
+base64.workspace = true
 mockito = "1"
 sea-orm = { workspace = true, features = ["mock"] }
 tokio-stream = { version = "0.1", features = ["net"] }

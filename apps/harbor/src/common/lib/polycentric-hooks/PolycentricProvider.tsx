@@ -218,7 +218,7 @@ export function PolycentricProvider({
       try {
         const token = await registerForPushNotifications();
         if (!token) return;
-        await client.registerPushNotifications(DEFAULT_NOTIFICATION_SERVERS, {
+        await client.setDevicePushSubscriptions(DEFAULT_NOTIFICATION_SERVERS, {
           service: 'expo',
           token,
         });
