@@ -2,6 +2,8 @@
 //! `Mutation::save_content_child` dispatches each `ContentBody` variant
 //! to its own submodule, which owns that table's insert logic.
 
+use std::time::Duration;
+
 use entity::{
     blob_index, content, content_blob, content_delete, content_image, event,
 };
@@ -91,9 +93,14 @@ pub struct Query;
 
 impl Query {
     /// Returns the keys of blobs that are not used.
+    #[allow(unused)] // TODO(Thomas): remove.
     pub(crate) async fn list_unused_blobs<C: Connection>(
         db: &mut C,
+        grace_period: Duration,
     ) -> Result<Vec<(String, ContentDigest)>, DbErr> {
+        // NOTE: query below is broken.
+        return Ok(Vec::new());
+
         let mut select_content_image_id = SelectStatement::new();
         select_content_image_id
             .expr(Expr::col(content_image::Column::ContentId.as_column_ref()))
@@ -132,6 +139,7 @@ impl Query {
                     content_blob::Column::ContentId,
                 ))),
             )
+            // FIXME: this is broken.
             .inner_join(
                 event::Entity,
                 Expr::col(event::Column::ContentDigestType.as_column_ref())
