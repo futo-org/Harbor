@@ -2,6 +2,7 @@ import { EmojiImage } from '@/src/common/components/EmojiImage';
 import HoverCard, { type TriggerRef } from '@/src/common/components/HoverCard';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
 import { Atoms } from '@/src/common/theme';
+import { useTutorialHintsStore } from '@/src/common/lib/useTutorialHintsStore';
 import { hasPointerHover } from '@/src/common/util/platform';
 import ReactionDetailsSheet from '@/src/features/reaction/ReactionDetailsSheet';
 import { ReactionSummaryCard } from '@/src/features/reaction/ReactionSummaryCard';
@@ -35,6 +36,8 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
     [post, myEmoji],
   );
 
+  const dismissHint = useTutorialHintsStore((state) => state.dismissHint);
+
   // Reaction details sheet state
   const [open, setOpen] = useState(false);
   const summaryTriggerRef = useRef<TriggerRef>(null);
@@ -57,6 +60,7 @@ export default function PostReactionOutput({ post }: PostReactionOutputProps) {
       accessibilityLabel="View reactions"
       onPress={() => {
         summaryTriggerRef.current?.close();
+        dismissHint('showAllReactions');
         setOpen(true);
       }}
       style={({ pressed, hovered }) => [

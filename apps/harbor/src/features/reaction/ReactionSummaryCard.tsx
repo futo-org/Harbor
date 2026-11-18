@@ -1,5 +1,6 @@
 import { EmojiImage } from '@/src/common/components/EmojiImage';
 import { Text } from '@/src/common/components/primitives/Text';
+import { useIsTutorialHintShown } from '@/src/common/lib/useTutorialHintsStore';
 import {
   type PostData,
   usePolycentric,
@@ -43,15 +44,22 @@ export function ReactionSummaryCard({
     [groups, post, myIdentity, maxLines],
   );
 
+  // Shown until the user first opens the reaction details from the footer.
+  const isHintShown = useIsTutorialHintShown('showAllReactions');
+  const moreText =
+    morePeopleCount > 0 &&
+    `+${morePeopleCount} more ${morePeopleCount === 1 ? 'reaction' : 'reactions'}`;
+
   return (
     <View style={styles.card}>
       {lines.map((line) => (
         <SummaryLine key={line.emoji} line={line} />
       ))}
-      {morePeopleCount > 0 ? (
+      {moreText || isHintShown ? (
         <Text variant="small" color="muted">
-          +{morePeopleCount} more{' '}
-          {morePeopleCount === 1 ? 'reaction' : 'reactions'}
+          {[moreText, isHintShown && 'Click to see all']
+            .filter(Boolean)
+            .join(' · ')}
         </Text>
       ) : null}
     </View>
