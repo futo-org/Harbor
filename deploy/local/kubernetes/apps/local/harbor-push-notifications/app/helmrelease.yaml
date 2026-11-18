@@ -27,6 +27,8 @@ spec:
       # Must match the server's HARBOR_SERVER_NAME.
       - name: HARBOR_MAIN_SERVER
         value: http://${HARBOR_SERVER_HOST}
+      - name: HARBOR_NOTIFICATIONS_ALLOW_HOSTS
+        value: http://${HARBOR_PUSH_NOTIFICATIONS_HOST}
       - name: HARBOR_QUERY_SERVERS
         value: http://harbor-server.harbor-server.svc
       - name: HARBOR_KAFKA_BROKERS

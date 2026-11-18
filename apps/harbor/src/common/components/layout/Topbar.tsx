@@ -50,7 +50,7 @@ function Topbar({ title, left, center, right }: TopbarProps) {
         { height: TOPBAR_HEIGHT },
         theme.atoms.box.primary.bg,
         theme.atoms.box.primary.border,
-        { borderBottomWidth: 1 },
+        Atoms.border_b,
       ]}
     >
       <View

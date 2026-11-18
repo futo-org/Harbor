@@ -27,6 +27,9 @@ pub struct Config {
     /// gRPC server URLs to query for identity data
     /// (`HARBOR_QUERY_SERVERS`, comma delimited).
     pub query_servers: Vec<String>,
+    /// Accepted JWT audiences on push subscriptions
+    /// (`HARBOR_NOTIFICATIONS_ALLOW_HOSTS`, comma delimited).
+    pub allow_hosts: Vec<String>,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -53,6 +56,7 @@ pub fn init() -> Result<&'static Config, String> {
             .parse()
             .map_err(|e| format!("HARBOR_NOTIFICATIONS_GRPC_ADDR: {e}"))?,
         query_servers: required_list("HARBOR_QUERY_SERVERS")?,
+        allow_hosts: required_list("HARBOR_NOTIFICATIONS_ALLOW_HOSTS")?,
     };
     Ok(CONFIG.get_or_init(|| config))
 }

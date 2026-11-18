@@ -37,7 +37,7 @@ service ServerService {
 message SignedMessage {
   // Signature by `public_key` over `message_bytes`.
   bytes signature = 1;
-  // The serialized request message, e.g. a RegisterPushNotificationRequest.
+  // The serialized request message.
   bytes message_bytes = 2;
   PublicKey public_key = 3;
 }

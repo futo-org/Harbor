@@ -40,7 +40,7 @@ export default function BlockedUsersSheet() {
               onPress={() => openProfile(identity)}
               style={[
                 theme.atoms.box.primary.border,
-                { borderBottomWidth: index === blocked.length - 1 ? 0 : 1 },
+                index < blocked.length - 1 && Atoms.border_b,
               ]}
               trailing={
                 <Button

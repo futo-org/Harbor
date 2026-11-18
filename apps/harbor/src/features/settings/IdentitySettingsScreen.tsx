@@ -67,7 +67,7 @@ export function IdentitySettingsSheet({
             </Text>
           </View>
 
-          <View style={[theme.atoms.outline, { borderTopWidth: 1 }]} />
+          <View style={[theme.atoms.outline, Atoms.border_t]} />
 
           <View style={Atoms.gap_xs}>
             <Text variant="small" color="muted">

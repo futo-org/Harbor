@@ -21,7 +21,7 @@ function DropdownMenuContent({
           style={
             StyleSheet.flatten([
               theme.atoms.box.secondary.border,
-              { borderWidth: 1 },
+              Atoms.border,
               Atoms.rounded_lg,
               { minWidth: 225 },
               Atoms.outline_none,

@@ -83,7 +83,7 @@ function IdentityRow({ identity }: { identity: string }) {
     <ProfileRow
       identity={identity}
       onPress={() => router.navigate(Routes.tabs.profile(identity))}
-      style={[theme.atoms.box.primary.border, { borderBottomWidth: 1 }]}
+      style={[theme.atoms.box.primary.border, Atoms.border_b]}
       trailing={!isSelf ? <FollowButton identity={identity} /> : undefined}
     />
   );

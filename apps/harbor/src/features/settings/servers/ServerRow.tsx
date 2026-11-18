@@ -59,7 +59,7 @@ export function ServerRow({
     Atoms.pl_lg,
     Atoms.rounded_lg,
     status === 'suggested'
-      ? [theme.atoms.outline, { borderWidth: 1 }]
+      ? [theme.atoms.outline, Atoms.border]
       : theme.atoms.box.raised.bg,
   ];
 

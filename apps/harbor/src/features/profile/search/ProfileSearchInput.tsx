@@ -83,9 +83,7 @@ export function ProfileSearchInput({
         {suggestions.map((suggestion, i) => (
           <Fragment key={suggestion.identity}>
             {i > 0 && (
-              <View
-                style={[theme.atoms.box.primary.border, { borderTopWidth: 1 }]}
-              />
+              <View style={[theme.atoms.box.primary.border, Atoms.border_t]} />
             )}
             <SuggestionRow
               suggestion={suggestion}

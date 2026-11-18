@@ -7,7 +7,7 @@ use std::time::Duration;
 ///
 /// Connect to Postgres with the notifications schema as the search path,
 /// creating the schema if it does not yet exist. This service owns the
-/// `push_token` table that lives in that schema.
+/// `push_subscription` table that lives in that schema.
 pub async fn connect() -> Result<(DatabaseConnection, DatabaseConnection), DbErr> {
     let config = config::get();
     let schema = &config.database_schema;
