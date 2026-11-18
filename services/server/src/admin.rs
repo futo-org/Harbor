@@ -113,12 +113,12 @@ pub async fn prune_content(args: Vec<String>) {
 }
 
 pub async fn sync_blob_index(_: Vec<String>) {
-    let db = connect().await;
+    let mut db = connect().await;
     let Some(filestore) = filestore().await else {
         return;
     };
 
-    if let Err(err) = blob_index::sync(db, filestore).await {
+    if let Err(err) = blob_index::sync(&mut db, &filestore).await {
         eprintln!("failed to sync blob index: {err}");
     }
 }
