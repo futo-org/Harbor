@@ -39,7 +39,13 @@ export {
 export type { Repositories } from './data-store';
 
 export { PolycentricClient } from './polycentric-client';
-export type { PolycentricClientConfig, KeyPair } from './polycentric-client';
+export type {
+  PolycentricClientConfig,
+  KeyPair,
+  CreateEventArgs,
+  NewBlob,
+  CreatedEvent,
+} from './polycentric-client';
 export { FileStore } from './file-store';
 export { MemoryStorageDriver, MemoryFileStoreDriver } from './memory-storage';
 
