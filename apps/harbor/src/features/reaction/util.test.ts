@@ -2,22 +2,29 @@ import type { ReactionGroup } from './usePostReactions';
 import { summarizeReactions } from './util';
 
 describe('summarizeReactions', () => {
-  it('orders lines by groups, then tally-only emojis in tally order', () => {
+  it("orders lines by the user's emoji, then tally, then untallied emojis", () => {
     const groups = buildGroups([
-      ['😂', ['dave']],
+      ['😂', ['me', 'dave']],
+      ['🎉', ['erin']],
       ['👍', ['alice']],
     ]);
     const counts = [
-      { emoji: '👍', count: 1 },
       { emoji: '❤️', count: 4 },
-      { emoji: '😂', count: 1 },
       { emoji: '🔥', count: 2 },
+      { emoji: '😂', count: 2 },
+      { emoji: '👍', count: 1 },
     ];
 
     const { lines } = summarizeReactions(groups, counts, 'me', 10);
 
-    expect(lines.map((line) => line.emoji)).toEqual(['😂', '👍', '❤️', '🔥']);
-    expect(lines[2]).toEqual({
+    expect(lines.map((line) => line.emoji)).toEqual([
+      '😂',
+      '❤️',
+      '🔥',
+      '👍',
+      '🎉',
+    ]);
+    expect(lines[1]).toEqual({
       emoji: '❤️',
       includesMe: false,
       othersCount: 4,
@@ -69,15 +76,14 @@ describe('summarizeReactions', () => {
 
   it('cuts off lines past the limit and collects their emojis and people', () => {
     const groups = buildGroups([
+      ['😂', ['carol']],
       ['👍', ['alice']],
-      ['❤️', ['bob']],
-      ['😂', ['me', 'carol']],
     ]);
     const counts = [
-      { emoji: '👍', count: 1 },
-      { emoji: '❤️', count: 1 },
-      { emoji: '😂', count: 4 },
-      { emoji: '🔥', count: 3 },
+      { emoji: '👍', count: 5 },
+      { emoji: '❤️', count: 4 },
+      { emoji: '😂', count: 2 },
+      { emoji: '🔥', count: 1 },
     ];
 
     const { lines, moreEmojis, morePeopleCount } = summarizeReactions(
@@ -89,7 +95,7 @@ describe('summarizeReactions', () => {
 
     expect(lines.map((line) => line.emoji)).toEqual(['👍', '❤️']);
     expect(moreEmojis).toEqual(['😂', '🔥']);
-    expect(morePeopleCount).toBe(7);
+    expect(morePeopleCount).toBe(3);
   });
 });
 

@@ -68,8 +68,9 @@ export type ReactionSummaryLine = {
  * Condense the reactions to a post into one line per emoji, naming the user
  * and the most recent other reactor.
  *
- * Lines follow the order of `groups` (most recent reaction first, the user's
- * own first), then emojis that only have a tally, in tally order.
+ * Lines match the post's reaction preview: the user's emoji first, then the
+ * tallies (most popular first), then fetched emojis the tally hasn't caught up
+ * with yet.
  */
 export function summarizeReactions(
   groups: Map<string, ReactionGroup>,
@@ -85,29 +86,30 @@ export function summarizeReactions(
 } {
   const countByEmoji = new Map(counts.map((c) => [c.emoji, c.count]));
 
+  const myEmoji = [...groups.values()].find((group) =>
+    group.reactions.some((reaction) => reaction.identity === myIdentity),
+  )?.emoji;
+  // A set keeps the first position of each emoji.
+  const orderedEmojis = new Set<string>();
+  if (myEmoji) orderedEmojis.add(myEmoji);
+  for (const { emoji } of counts) orderedEmojis.add(emoji);
+  for (const emoji of groups.keys()) orderedEmojis.add(emoji);
+
   const allLines: ReactionSummaryLine[] = [];
-  for (const group of groups.values()) {
-    const includesMe = group.reactions.some(
-      (reaction) => reaction.identity === myIdentity,
-    );
-    const identity = group.reactions.find(
+  for (const emoji of orderedEmojis) {
+    const reactions = groups.get(emoji)?.reactions ?? [];
+    const includesMe = emoji === myEmoji;
+    const identity = reactions.find(
       (reaction) => reaction.identity !== myIdentity,
     )?.identity;
     // The tally can lag behind the fetched reactions.
-    const total = Math.max(
-      countByEmoji.get(group.emoji) ?? 0,
-      group.reactions.length,
-    );
+    const total = Math.max(countByEmoji.get(emoji) ?? 0, reactions.length);
     allLines.push({
-      emoji: group.emoji,
+      emoji,
       includesMe,
       identity,
       othersCount: total - Number(includesMe) - Number(identity !== undefined),
     });
-  }
-  for (const { emoji, count } of counts) {
-    if (groups.has(emoji)) continue;
-    allLines.push({ emoji, includesMe: false, othersCount: count });
   }
 
   const moreLines = allLines.slice(maxLines);
