@@ -21,3 +21,9 @@ const db = drizzle(new Database(path)) as unknown as SqliteDb;
 await migrate(db);
 const storageDriver = new DrizzleStorageDriver(db);
 ```
+
+## Docs
+See our docs for more info:
+
+- [Examples](https://join.harbor.social/docs/developer/examples)
+- [Project structure](https://join.harbor.social/docs/developer/project-structure)

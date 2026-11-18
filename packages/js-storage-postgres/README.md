@@ -18,3 +18,9 @@ const db = drizzle(new pg.Pool({ connectionString })) as PgDb;
 await migrate(db);
 const storageDriver = new DrizzlePgStorageDriver(db);
 ```
+
+## Docs
+See our docs for more info:
+
+- [Examples](https://join.harbor.social/docs/developer/examples)
+- [Project structure](https://join.harbor.social/docs/developer/project-structure)

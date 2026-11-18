@@ -17,3 +17,11 @@ submodule instead.
 - `uniffi`: derives `uniffi::Enum` on the validation error enums (exported
   as `<Type>ValidationError`, e.g. `PostValidationError`) and calls
   `uniffi::setup_scaffolding!()` in `lib.rs`.
+
+## Docs
+See our docs for more info:
+
+- [Data model](https://join.harbor.social/docs/protocol/data-model)
+- [Submitting events](https://join.harbor.social/docs/developer/submitting-events): the validation rules applied to events
+- [Verifiers](https://join.harbor.social/docs/protocol/verifiers)
+- [Server authentication](https://join.harbor.social/docs/protocol/server-auth)

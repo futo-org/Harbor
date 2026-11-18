@@ -17,3 +17,9 @@ The main consumer is `@polycentric/react-native`'s web build
 const storageDriver = await IndexedDBStorageDriver.create('polycentric');
 const filestoreDriver = await OpfsFileStoreDriver.create('polycentric-blobs');
 ```
+
+## Docs
+See our docs for more info:
+
+- [Examples](https://join.harbor.social/docs/developer/examples#creating-a-client): building a browser client with these drivers
+- [Project structure](https://join.harbor.social/docs/developer/project-structure)

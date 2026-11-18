@@ -91,3 +91,10 @@ The repo's pre-commit hook (set up by `pnpm prepare` at the repo root) runs
 `ktlint-staged.sh`, which runs `:core:ktlintFormat` on just the staged `*.kt` files
 (`-PktlintStagedFiles`). ktlint runs through Gradle, so committing `kt-core` changes needs
 JDK 17+ and the Android SDK.
+
+## Docs
+See our docs for more info:
+
+- [Examples](https://join.harbor.social/docs/developer/examples): includes Kotlin versions of each task
+- [Declaring your application](https://join.harbor.social/docs/developer/declaring-your-application)
+- [Data model](https://join.harbor.social/docs/protocol/data-model)

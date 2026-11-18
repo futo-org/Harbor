@@ -33,3 +33,12 @@ pnpm ubrn:android    # the same, plus the Android native libraries
 pnpm ubrn:ios        # the same, plus the iOS framework (macOS only)
 pnpm ubrn:clean      # delete everything generated
 ```
+
+## Docs
+See our docs for more info:
+
+- [Examples](https://join.harbor.social/docs/developer/examples)
+- [Declaring your application](https://join.harbor.social/docs/developer/declaring-your-application)
+- [Live sync](https://join.harbor.social/docs/developer/live-sync)
+- [Unread notifications](https://join.harbor.social/docs/developer/unread-notifications)
+- [Project structure](https://join.harbor.social/docs/developer/project-structure)

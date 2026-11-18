@@ -20,3 +20,13 @@ storeage/persistence, key storage, and signing. rs-core asks for signatures thro
 
 Builds are usually driven from the root `pnpm` workspace, but `cargo` or `just` can be used in this
 directory to run specific workflows.
+
+## Docs
+See our docs for more info:
+
+- [Protocol overview](https://join.harbor.social/docs/protocol/overview)
+- [Data model](https://join.harbor.social/docs/protocol/data-model)
+- [Feed paging](https://join.harbor.social/docs/developer/feed-paging)
+- [Live sync](https://join.harbor.social/docs/developer/live-sync)
+- [gRPC API](https://join.harbor.social/docs/protocol/grpc)
+- [Project structure](https://join.harbor.social/docs/developer/project-structure)
