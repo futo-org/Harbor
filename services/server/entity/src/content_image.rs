@@ -11,7 +11,13 @@ use sea_orm::entity::prelude::*;
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
 #[sea_orm(table_name = "content_image")]
 pub struct Model {
+    /// NOTE: not actually in the database, but SeaORM doesn't allow models
+    /// without a primary key:
+    /// * <https://github.com/SeaQL/sea-orm/issues/485>
+    /// * <https://github.com/SeaQL/sea-orm/issues/2141>
     #[sea_orm(primary_key, auto_increment = false)]
+    pub no_pk: i64,
+
     pub content_id: i64,
     #[sea_orm(belongs_to, from = "content_id", to = "id")]
     pub parent: HasOne<super::content::Entity>,

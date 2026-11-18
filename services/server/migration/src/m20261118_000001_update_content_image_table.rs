@@ -7,7 +7,7 @@ const DROP_TABLE: &str = "DROP TABLE IF EXISTS content_image";
 
 const NEW_TABLE: &str = "
 CREATE TABLE IF NOT EXISTS content_image (
-    content_id BIGINT PRIMARY KEY,
+    content_id BIGINT NOT NULL,
     digest_type INTEGER NOT NULL,
     digest_bytes BYTEA NOT NULL,
     size BIGINT NOT NULL,

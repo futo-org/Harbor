@@ -857,14 +857,6 @@ ALTER TABLE ONLY public.content_identity
 
 
 --
--- Name: content_image content_image_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.content_image
-    ADD CONSTRAINT content_image_pkey PRIMARY KEY (content_id);
-
-
---
 -- Name: content content_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
