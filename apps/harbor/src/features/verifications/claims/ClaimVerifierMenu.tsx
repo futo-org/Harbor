@@ -3,7 +3,7 @@ import DropdownMenu from '@/src/common/components/DropdownMenu';
 import Icon from '@/src/common/components/Icon';
 import { useToast } from '@/src/common/components/toast';
 import { confirm } from '@/src/common/lib/dialogs/alert';
-import { Atoms, useTheme, withHexOpacity, Spacing } from '@/src/common/theme';
+import { Atoms, useTheme, Spacing } from '@/src/common/theme';
 import { View } from 'react-native';
 import type { DecodedClaim } from '../hooks/useClaimById';
 import useRemoveVerifier from '../hooks/useRemoveVerifier';
@@ -75,16 +75,11 @@ export function ClaimVerifierMenu({
 
               Atoms.rounded_full,
               Atoms.overflow_hidden,
-              (hovered || pressed) && {
-                backgroundColor: withHexOpacity(
-                  theme.palette.neutral_500,
-                  '14',
-                ),
-              },
+              (hovered || pressed) && theme.atoms.box.raised.bg,
             ]}
           >
             {statusText}
-            <Icon name="dotsVertical" color="neutral_500" size={20} />
+            <Icon name="dotsVertical" color="muted" size={20} />
           </View>
         )}
       </DropdownMenu.Trigger>
@@ -95,15 +90,15 @@ export function ClaimVerifierMenu({
         >
           {verifier.verified ? (
             <>
-              <Icon name="personRemove" color="negative_500" size={16} />
-              <Text variant="secondary" fontWeight="bold" color="negative_500">
+              <Icon name="personRemove" color="danger" size={16} />
+              <Text variant="secondary" fontWeight="bold" color="danger">
                 Remove verifier
               </Text>
             </>
           ) : (
             <>
-              <Icon name="close" color="neutral_500" size={16} />
-              <Text variant="secondary" fontWeight="bold" color="neutral_500">
+              <Icon name="close" color="muted" size={16} />
+              <Text variant="secondary" fontWeight="bold" color="muted">
                 Cancel request
               </Text>
             </>

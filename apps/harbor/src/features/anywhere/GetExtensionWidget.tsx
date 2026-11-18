@@ -36,14 +36,15 @@ export function GetExtensionWidget() {
         Atoms.p_lg,
         Atoms.w_full,
         Atoms.gap_md,
-        { borderWidth: 1, borderColor: theme.palette.neutral_25 },
+        theme.atoms.box.primary.border,
+        Atoms.border,
       ]}
     >
       <View style={Atoms.gap_xs}>
         <Text fontSize="lg" fontWeight="bold">
           Browser extension
         </Text>
-        <Text variant="secondary" color="neutral_500">
+        <Text variant="secondary" color="muted">
           Comment on any page on the web, right beside it.
         </Text>
       </View>

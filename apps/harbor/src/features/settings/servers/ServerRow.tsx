@@ -1,6 +1,6 @@
 import { IconButton, Text } from '@/src/common/components';
 import Icon from '@/src/common/components/Icon';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -42,7 +42,7 @@ export function ServerRow({
             <Icon
               name={status === 'suggested' ? 'addOutline' : 'remove'}
               size={22}
-              color={status === 'suggested' ? 'primary_500' : 'negative_500'}
+              color={status === 'suggested' ? 'accent' : 'danger'}
             />
           )}
           onPress={onAction}
@@ -59,13 +59,8 @@ export function ServerRow({
     Atoms.pl_lg,
     Atoms.rounded_lg,
     status === 'suggested'
-      ? {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '40'),
-        }
-      : {
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
+      ? [theme.atoms.outline, Atoms.border]
+      : theme.atoms.box.raised.bg,
   ];
 
   return status === 'suggested' && onAction ? (

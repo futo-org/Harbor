@@ -1,5 +1,5 @@
 import { toast } from '@/src/common/components/toast';
-import { MAX_ATTACHMENTS } from '@/src/features/composer/hooks/useComposer';
+import { MAX_ATTACHMENTS } from '@/src/common/lib/images/useImageAttachments';
 import type { SharePayload } from 'expo-sharing';
 import { takeIncomingShare } from './takeIncomingShare';
 import { usePendingShareStore } from './usePendingShareStore';
@@ -10,8 +10,8 @@ jest.mock('@/src/common/components/toast', () => ({
   toast: { info: jest.fn(), error: jest.fn() },
 }));
 
-// The composer module pulls in the whole app; only the cap is needed
-jest.mock('@/src/features/composer/hooks/useComposer', () => ({
+// The hook module pulls in the Polycentric client; only the cap is needed
+jest.mock('@/src/common/lib/images/useImageAttachments', () => ({
   MAX_ATTACHMENTS: 4,
 }));
 

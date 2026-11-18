@@ -263,6 +263,20 @@ jobs:
           registry-user: ${{ vars.REGISTRY_USER }}
           registry-token: ${{ env.REGISTRY_TOKEN }}
           cosign-key: ${{ env.COSIGN_PRIVATE_KEY }}
+      # This build replaces the commit's image, which the staging and
+      # production charts may already pin: pods that pull it again serve HTML
+      # naming this build's files, so both environments need them.
+      - name: Publish the web bundle
+        env:
+          IMAGE: ${{ needs.changes.outputs.registry }}/web:${{ github.sha }}
+          STATIC_S3_BUCKET: ${{ vars.STATIC_S3_BUCKET }}
+          STATIC_PUBLIC_BASE_URL: ${{ vars.STATIC_PUBLIC_BASE_URL }}
+        run: |
+          for environment in staging production; do
+            rm -rf app
+            crane export "$IMAGE" - | tar -x app/dist/client
+            node .forgejo/scripts/publish-web-assets.mjs app/dist/client "web/$environment" "${STATIC_PUBLIC_BASE_URL%/}/web/$environment"
+          done
 
   # Apps ---------------------------------------------------------------------
 

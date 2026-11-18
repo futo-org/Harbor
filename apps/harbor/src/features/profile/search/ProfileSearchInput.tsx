@@ -62,7 +62,7 @@ export function ProfileSearchInput({
         <View style={[Atoms.align_center, Atoms.p_md]}>
           <ActivityIndicator
             size="small"
-            color={theme.palette.neutral_500}
+            color={theme.colors.muted}
             accessibilityLabel="Searching"
           />
         </View>
@@ -72,7 +72,8 @@ export function ProfileSearchInput({
         <Text
           variant="small"
           fontWeight="semibold"
-          style={[theme.atoms.text_neutral_medium, Atoms.px_lg]}
+          color="secondary"
+          style={Atoms.px_lg}
         >
           People you follow
         </Text>
@@ -82,12 +83,7 @@ export function ProfileSearchInput({
         {suggestions.map((suggestion, i) => (
           <Fragment key={suggestion.identity}>
             {i > 0 && (
-              <View
-                style={{
-                  height: 1,
-                  backgroundColor: theme.palette.neutral_25,
-                }}
-              />
+              <View style={[theme.atoms.box.primary.border, Atoms.border_t]} />
             )}
             <SuggestionRow
               suggestion={suggestion}
@@ -100,7 +96,7 @@ export function ProfileSearchInput({
       </View>
 
       {showEmpty && (
-        <Text variant="small" color="neutral_500" style={Atoms.px_lg}>
+        <Text variant="small" color="muted" style={Atoms.px_lg}>
           {trimmed
             ? 'No matches. Try a full alias (user@domain) or identity id.'
             : 'Not following anyone yet — enter an alias (user@domain) or identity id.'}
@@ -140,7 +136,7 @@ function SuggestionRow({
         pending ? (
           <ActivityIndicator
             size="small"
-            color={theme.palette.primary_500}
+            color={theme.colors.accent}
             accessibilityLabel="Working"
           />
         ) : undefined

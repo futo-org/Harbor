@@ -1,5 +1,7 @@
 //! Operator commands. Without `--yes` they only report what would change.
 
+use crate::config;
+use crate::cron::{blob_index, blob_prune};
 use crate::db::DbConn;
 use crate::db::client::build_db_clients;
 use crate::service::content::content_filestore::{
@@ -9,7 +11,9 @@ use crate::service::identity::repository::Query;
 use crate::service::identity::service as identity_service;
 
 pub const USAGE: &str = "usage: server delete-events (--identity <hex> | --public-key <hex>) [--yes]
-       server prune-content [--yes]";
+       server prune-content [--yes]
+       server sync-blob-index
+       server prune-blobs [--dry-run]";
 
 pub async fn delete_events(args: Vec<String>) {
     let mut identity = None;
@@ -106,6 +110,33 @@ pub async fn prune_content(args: Vec<String>) {
         "deleted {} orphaned content rows and {} blobs",
         pruned.content, pruned.blobs
     );
+}
+
+pub async fn sync_blob_index(_: Vec<String>) {
+    let mut db = connect().await;
+    let Some(filestore) = filestore().await else {
+        return;
+    };
+
+    if let Err(err) = blob_index::sync(&mut db, &filestore).await {
+        eprintln!("failed to sync blob index: {err}");
+    }
+}
+
+pub async fn blob_prune(args: Vec<String>) {
+    let grace_period = config::get().blob_prune_grace;
+    let dry_run = args.iter().any(|arg| arg == "--dry-run");
+
+    let mut db = connect().await;
+    let Some(filestore) = filestore().await else {
+        return;
+    };
+
+    if let Err(()) =
+        blob_prune::run(&mut db, &filestore, grace_period, dry_run).await
+    {
+        eprintln!("failed to sync blob index (see error logs above)");
+    }
 }
 
 /// No statement timeout: finding a key's identities scans every event.

@@ -1,13 +1,14 @@
 import { usePressAnimation } from '@/src/common/lib/animation';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
+  Atoms,
   BorderRadius,
   useTheme,
-  withHexOpacity,
   type BorderRadiusToken,
-  type PaletteColorToken,
+  type TextColor,
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
+import { type IconName, type IconRenderFn, renderIcon } from '../Icon';
 import {
   Animated,
   Pressable,
@@ -20,15 +21,13 @@ import {
 type IconButtonSize = 'sm' | 'md' | 'lg';
 type IconButtonVariant = 'filled' | 'ghost';
 
-type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
-
 interface IconButtonProps {
-  icon: IconRenderFn;
+  icon: IconName | IconRenderFn;
   onPress: () => void;
   disabled?: boolean;
   size?: IconButtonSize;
   variant?: IconButtonVariant;
-  iconColor?: PaletteColorToken;
+  iconColor?: TextColor;
   borderRadius?: BorderRadiusToken;
   style?: StyleProp<ViewStyle>;
   /** Remove container padding (ghost variant only) */
@@ -51,7 +50,7 @@ export function IconButton({
   disabled = false,
   size = 'md',
   variant = 'filled',
-  iconColor = 'neutral_1000',
+  iconColor = 'primary',
   borderRadius,
   style,
   compact = false,
@@ -62,32 +61,23 @@ export function IconButton({
   const { hovered, onHoverIn, onHoverOut } = useWebHover();
 
   const sizeConfig = SIZE_CONFIG[size];
-  const resolvedIconColor = theme.palette[iconColor];
   const resolvedBorderRadius = borderRadius
     ? BorderRadius[borderRadius]
     : sizeConfig.containerSize / 2;
 
-  const iconElement = icon({
+  const iconElement = renderIcon(icon, {
     size: sizeConfig.iconSize,
-    color: resolvedIconColor,
+    color: iconColor,
   });
 
-  const ghostFill = withHexOpacity(
-    theme.palette.neutral_500,
-    hovered ? '22' : '00',
-  );
-  const filledFill = withHexOpacity(
-    theme.palette.neutral_500,
-    hovered ? '22' : '10',
-  );
-
-  const chromeBorder = {
-    borderWidth: 1,
-    borderColor: withHexOpacity(theme.palette.neutral_500, '60'),
-  };
-
+  const { box } = theme.atoms;
   const showChrome = !(variant === 'ghost' && compact);
-  const surfaceBg = variant === 'ghost' ? ghostFill : filledFill;
+  const surfaceFill =
+    variant === 'ghost'
+      ? hovered && box.raised.bg
+      : hovered
+        ? box.raised.bg_hover
+        : box.raised.bg;
 
   return (
     <Animated.View pointerEvents="box-none" style={[animatedStyle, style]}>
@@ -108,7 +98,7 @@ export function IconButton({
               ? ({ cursor: disabled ? 'default' : 'pointer' } as ViewStyle)
               : {}),
           },
-          hovered && { opacity: 0.8 },
+          hovered && Atoms.faded_subtle,
         ]}
         {...props}
       >
@@ -116,11 +106,10 @@ export function IconButton({
           <View
             style={[
               styles.surface,
-              chromeBorder,
-              {
-                borderRadius: resolvedBorderRadius,
-                backgroundColor: surfaceBg,
-              },
+              box.raised.border,
+              Atoms.border,
+              { borderRadius: resolvedBorderRadius },
+              surfaceFill,
             ]}
           >
             {iconElement}

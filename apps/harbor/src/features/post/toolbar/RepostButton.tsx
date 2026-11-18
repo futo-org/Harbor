@@ -43,7 +43,7 @@ export default function RepostButton({ post }: RepostButtonProps) {
     <PostActionButton
       icon="repost"
       active={hasReposted}
-      color={'positive_500'}
+      variant="success"
       accessibilityLabel="Repost or quote"
       count={count}
     />
@@ -60,23 +60,20 @@ export default function RepostButton({ post }: RepostButtonProps) {
           <DropdownMenu.Item onPress={onRepostPress}>
             <Icon
               name="repost"
-              color={hasReposted ? 'negative_500' : 'neutral_500'}
+              color={hasReposted ? 'danger' : 'muted'}
               size={16}
             />
-            <Text
-              fontWeight="bold"
-              color={hasReposted ? 'negative_500' : 'neutral_900'}
-            >
+            <Text fontWeight="bold" color={hasReposted ? 'danger' : 'primary'}>
               {hasReposted ? 'Undo Repost' : 'Repost'}
             </Text>
           </DropdownMenu.Item>
           <DropdownMenu.Item onPress={onQuotePress}>
-            <Icon name="quote" color="neutral_500" size={16} />
+            <Icon name="quote" color="muted" size={16} />
             <Text fontWeight="bold">Quote</Text>
           </DropdownMenu.Item>
           {canShareUrl ? (
             <DropdownMenu.Item onPress={onSharePress}>
-              <Icon name="share" color="neutral_500" size={16} />
+              <Icon name="share" color="muted" size={16} />
               <Text fontWeight="bold">Share link</Text>
             </DropdownMenu.Item>
           ) : null}

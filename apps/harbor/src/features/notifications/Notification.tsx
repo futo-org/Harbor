@@ -1,11 +1,11 @@
 import { Text } from '@/src/common/components';
 import { ProfileAvatar } from '@/src/common/components/Avatar/ProfileAvatar';
 import { Routes } from '@/src/common/constants';
-import { TimeAgo } from '@/src/common/components/TimeAgo';
 import type { PostData } from '@/src/common/lib/polycentric-hooks';
+import { eventRoute } from '@/src/common/lib/navigation/eventRoute';
 import { getKeyFingerprint } from '@/src/common/lib/polycentric-hooks/helpers';
 import { mentionsToPlainText } from '@/src/common/util/parseTextLinks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Post } from '@/src/features/post/Post';
 import { ClaimTypeChip } from '@/src/features/verifications/claims/toolbar/ClaimTypeChip';
 import type { DecodedClaim } from '@/src/features/verifications/hooks/useClaimById';
@@ -13,6 +13,7 @@ import { CLAIM_TYPES } from '@/src/features/verifications/utils/forms';
 import { getPlatformFromClaim } from '@/src/features/verifications/utils/platforms';
 import { resolveClaimTitle } from '@/src/features/verifications/utils/render';
 import { Username } from '@/src/features/profile/Username';
+import { COLLECTION } from '@polycentric/react-native';
 import { type Href, router } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
@@ -22,20 +23,13 @@ import type {
   QuoteNotification,
   ReplyNotification,
 } from './utils';
+import { EventSummary } from './EventSummary';
 
 /** Notifications rendered as the actor's own post. */
 type PostNotification =
   | ReplyNotification
   | QuoteNotification
   | MentionNotification;
-
-/** Route to a post's thread, or `null` when its key can't be fingerprinted. */
-function postRoute(post: PostData) {
-  const fingerprint = getKeyFingerprint(post.signedBy);
-  return fingerprint
-    ? Routes.tabs.post(post.identity, fingerprint, post.sequence)
-    : null;
-}
 
 /** What the actor did, e.g. "reacted to your post". */
 function summary(
@@ -82,7 +76,10 @@ function notificationRoute(
     case 'reaction':
     case 'repost':
       return notification.targetPost
-        ? postRoute(notification.targetPost)
+        ? eventRoute({
+            ...notification.targetPost,
+            collection: COLLECTION.FEED,
+          })
         : null;
     case 'verificationRequest':
     case 'verificationComplete': {
@@ -144,58 +141,37 @@ function InteractionNotification({
   return (
     <Pressable
       onPress={handlePress}
-      style={[
-        Atoms.flex_row,
-        Atoms.gap_md,
-        Atoms.p_md,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
-      ]}
+      style={[Atoms.p_md, theme.atoms.box.primary.border, Atoms.border_b]}
     >
-      <ProfileAvatar
-        identityKey={notification.fromIdentity}
-        size="md"
-        onPress={openProfile}
-      />
-      <View style={[Atoms.flex_1, Atoms.gap_xs]}>
-        <View
-          style={[Atoms.flex_row, Atoms.items_center, { flexWrap: 'wrap' }]}
-        >
+      <EventSummary
+        leading={
+          <ProfileAvatar
+            identityKey={notification.fromIdentity}
+            size="md"
+            onPress={openProfile}
+          />
+        }
+        title={
           <Username
             identity={notification.fromIdentity}
             fontWeight="bold"
             onPress={openProfile}
           />
-          <Text>
-            {' '}
-            {summary(notification)}
-            {notification.createdAt > 0 ? (
-              <Text color="neutral_500">
-                {' '}
-                · <TimeAgo since={notification.createdAt} />
-              </Text>
-            ) : null}
-          </Text>
-        </View>
-
-        {/* The post the action was taken against, quoted. */}
-        {quoted?.content ? (
-          <View style={[]}>
-            <Text variant="secondary" color="neutral_500" numberOfLines={2}>
-              {mentionsToPlainText(quoted.content)}
-            </Text>
-          </View>
-        ) : null}
-
+        }
+        action={summary(notification)}
+        createdAt={notification.createdAt}
+        // The post the action was taken against, quoted.
+        preview={
+          quoted?.content ? mentionsToPlainText(quoted.content) : undefined
+        }
+      >
         {/* The claim in question: its type and title. */}
         {(notification.kind === 'verificationRequest' ||
           notification.kind === 'verificationComplete') &&
         notification.claim ? (
           <ClaimSummary claim={notification.claim} />
         ) : null}
-      </View>
+      </EventSummary>
     </Pressable>
   );
 }
@@ -213,9 +189,9 @@ function ClaimSummary({ claim }: { claim: DecodedClaim }) {
         name={platform?.name ?? claim.schemaName}
         icon={claimType?.icon ?? 'verify'}
         logo={platform?.logo}
-        color={platform?.color ?? claimType?.color}
+        tint={platform?.tint ?? claimType?.tint}
       />
-      <Text variant="secondary" color="neutral_500" numberOfLines={1}>
+      <Text variant="secondary" color="muted" numberOfLines={1}>
         {title}
       </Text>
     </View>

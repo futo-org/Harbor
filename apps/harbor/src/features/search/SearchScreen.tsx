@@ -3,7 +3,7 @@ import { Screen } from '@/src/common/components/layout';
 import { TOPBAR_HEIGHT } from '@/src/common/components/layout/Topbar';
 import { Text, TextInput } from '@/src/common/components/primitives';
 import { usePageTitle } from '@/src/common/lib/navigation/usePageTitle';
-import { Atoms, Spacing, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, Spacing, useTheme } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -34,11 +34,9 @@ function SearchTopbar({ children }: { children: ReactNode }) {
         Atoms.py_sm,
         Atoms.gap_md,
         { height: TOPBAR_HEIGHT },
-        { backgroundColor: theme.palette.neutral_0 },
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '10'),
-        },
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
+        Atoms.border_b,
       ]}
     >
       {isWeb ? (
@@ -47,9 +45,9 @@ function SearchTopbar({ children }: { children: ReactNode }) {
           accessibilityLabel="Go back"
           onPress={goBack}
           hitSlop={Spacing.lg}
-          style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+          style={({ pressed }) => [pressed && Atoms.faded]}
         >
-          <Icon name="chevronBack" size={24} color="neutral_900" />
+          <Icon name="chevronBack" size={24} color="primary" />
         </Pressable>
       ) : null}
       <View style={Atoms.flex_1}>{children}</View>
@@ -59,9 +57,9 @@ function SearchTopbar({ children }: { children: ReactNode }) {
           accessibilityLabel="Cancel search"
           onPress={goBack}
           hitSlop={Spacing.lg}
-          style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+          style={({ pressed }) => [pressed && Atoms.faded]}
         >
-          <Text color="neutral_500">Cancel</Text>
+          <Text color="muted">Cancel</Text>
         </Pressable>
       ) : null}
     </View>
@@ -112,7 +110,7 @@ export default function SearchScreen() {
 
   const input = (
     <SearchField onPress={() => inputRef.current?.focus()}>
-      <Icon name="search" size={16} color="neutral_500" />
+      <Icon name="search" size={16} color="muted" />
       <TextInput
         ref={inputRef}
         variant="plain"
@@ -136,9 +134,9 @@ export default function SearchScreen() {
           accessibilityLabel="Clear search"
           onPress={clear}
           hitSlop={Spacing.sm}
-          style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+          style={({ pressed }) => [pressed && Atoms.faded]}
         >
-          <Icon name="close" size={16} color="neutral_500" />
+          <Icon name="close" size={16} color="muted" />
         </Pressable>
       ) : null}
     </SearchField>

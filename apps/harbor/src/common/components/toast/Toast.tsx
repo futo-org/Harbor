@@ -3,7 +3,7 @@ import Icon, { type IconName } from '@/src/common/components/Icon';
 import {
   Atoms,
   BorderRadius,
-  type PaletteColorToken,
+  type TextColor,
   useTheme,
 } from '@/src/common/theme';
 import * as ToastPrimitive from '@rn-primitives/toast';
@@ -25,22 +25,11 @@ import {
 const ENTER_MS = 220;
 const EXIT_MS = 160;
 
-const VARIANTS: Record<
-  ToastVariant,
-  { icon: IconName; color: PaletteColorToken }
-> = {
-  info: { icon: 'notification', color: 'primary_500' },
-  success: { icon: 'checkmarkCircle', color: 'positive_500' },
-  error: { icon: 'ban', color: 'negative_500' },
-  warning: { icon: 'flag', color: 'warning_500' },
-};
-
-const shadow = {
-  shadowColor: '#000',
-  shadowOpacity: 0.12,
-  shadowRadius: 12,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 4,
+const VARIANTS: Record<ToastVariant, { icon: IconName; color: TextColor }> = {
+  info: { icon: 'notification', color: 'accent' },
+  success: { icon: 'checkmarkCircle', color: 'success' },
+  error: { icon: 'ban', color: 'danger' },
+  warning: { icon: 'flag', color: 'warning' },
 };
 
 export function Toast({ toast }: { toast: ToastData }) {
@@ -75,13 +64,13 @@ export function Toast({ toast }: { toast: ToastData }) {
       <Icon name={variant.icon} color={variant.color} size={20} />
       <View style={Atoms.flex_1}>
         <ToastPrimitive.Title asChild>
-          <Text variant="body" fontWeight="semibold" style={theme.atoms.text}>
+          <Text variant="body" fontWeight="semibold">
             {toast.title}
           </Text>
         </ToastPrimitive.Title>
         {toast.description ? (
           <ToastPrimitive.Description asChild>
-            <Text variant="small" style={theme.atoms.text_neutral_medium}>
+            <Text variant="small" color="secondary">
               {toast.description}
             </Text>
           </ToastPrimitive.Description>
@@ -109,13 +98,11 @@ export function Toast({ toast }: { toast: ToastData }) {
         style={[
           Atoms.flex_row,
           Atoms.items_center,
-          {
-            borderRadius: BorderRadius.full,
-            backgroundColor: theme.palette.neutral_0,
-            borderWidth: 1,
-            borderColor: theme.palette.neutral_50,
-            ...shadow,
-          },
+          theme.atoms.box.primary.bg,
+          theme.atoms.box.primary.border,
+          theme.atoms.shadow.neutral,
+          Atoms.border,
+          { borderRadius: BorderRadius.full },
         ]}
       >
         {toast.onPress ? (
@@ -134,7 +121,7 @@ export function Toast({ toast }: { toast: ToastData }) {
         )}
         <ToastPrimitive.Close asChild>
           <Pressable hitSlop={8} style={[Atoms.py_lg, Atoms.pr_lg]}>
-            <Icon name="close" color="neutral_500" size={18} />
+            <Icon name="close" color="muted" size={18} />
           </Pressable>
         </ToastPrimitive.Close>
       </ToastPrimitive.Root>

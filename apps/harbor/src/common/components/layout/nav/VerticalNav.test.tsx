@@ -19,6 +19,11 @@ jest.mock(
   }),
 );
 
+let mockAnywhereEnabled = false;
+jest.mock('@/src/common/feature-flags', () => ({
+  useFeatureFlag: () => mockAnywhereEnabled,
+}));
+
 jest.mock('@/src/common/components/Icon', () => ({
   __esModule: true,
   default: () => null,
@@ -43,7 +48,24 @@ import { VerticalNav } from './VerticalNav';
 beforeEach(() => {
   mockIdentity = { identityKey: 'me' };
   mockCount = 0;
+  mockAnywhereEnabled = false;
   mockUseUnreadNotificationCount.mockClear();
+});
+
+describe('VerticalNav Anywhere item', () => {
+  it('is left out while its feature flag is off', async () => {
+    const { queryByTestId } = await render(<VerticalNav />);
+
+    expect(queryByTestId('nav-Anywhere')).toBeNull();
+  });
+
+  it('is there once the flag is on', async () => {
+    mockAnywhereEnabled = true;
+
+    const { getByTestId } = await render(<VerticalNav />);
+
+    expect(getByTestId('nav-Anywhere')).toBeTruthy();
+  });
 });
 
 describe('VerticalNav notifications badge', () => {

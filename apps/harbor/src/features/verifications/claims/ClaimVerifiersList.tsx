@@ -1,7 +1,7 @@
 import { Text } from '@/src/common/components';
 import { Routes } from '@/src/common/constants/routes';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, Spacing, useTheme } from '@/src/common/theme';
+import { Atoms, Spacing } from '@/src/common/theme';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { router } from 'expo-router';
 import { View } from 'react-native';
@@ -18,7 +18,6 @@ export function ClaimVerifiersList({
   claim: DecodedClaim;
   verifiers: ClaimVerifier[];
 }) {
-  const { theme } = useTheme();
   const { identityKey } = useCurrentIdentity();
 
   const canRemoveVerifiers =
@@ -35,7 +34,8 @@ export function ClaimVerifiersList({
       <Text
         variant="small"
         fontWeight="semibold"
-        style={[theme.atoms.text_neutral_medium, Atoms.px_lg]}
+        color="secondary"
+        style={Atoms.px_lg}
       >
         Verifiers
       </Text>
@@ -66,7 +66,7 @@ function VerifierRow({
     <Text
       variant="small"
       fontWeight="semibold"
-      color={verifier.verified ? 'positive_500' : 'neutral_500'}
+      color={verifier.verified ? 'success' : 'muted'}
       selectable={false}
     >
       {verifier.verified ? 'Verified' : 'Requested'}

@@ -40,25 +40,15 @@ function ModerationLabelRow({
         isWeb ? undefined : Atoms.gap_xs,
         Atoms.py_md,
         Atoms.px_lg,
-        {
-          borderBottomWidth: isLast ? 0 : 1,
-          borderColor: theme.palette.neutral_25,
-        },
+        theme.atoms.box.primary.border,
+        !isLast && Atoms.border_b,
       ]}
     >
       <View style={[Atoms.flex_col, Atoms.flex_1]}>
-        <Text
-          variant="secondary"
-          fontWeight="semibold"
-          style={theme.atoms.text}
-        >
+        <Text variant="secondary" fontWeight="semibold">
           {entry.name}
         </Text>
-        <Text
-          variant="small"
-          fontWeight="regular"
-          style={theme.atoms.text_neutral_medium}
-        >
+        <Text variant="small" fontWeight="regular" color="secondary">
           {entry.description}
         </Text>
       </View>
@@ -106,7 +96,7 @@ export default function ModerationSettingsSheet({
           accessibilityRole="link"
           style={[Atoms.px_lg, Atoms.py_md]}
         >
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             Content policy for the FUTO servers ↗
           </Text>
         </Link>

@@ -35,17 +35,12 @@ const BANNER_HEIGHT = 150;
 const HEADER_ROW_ICON_SIZE = 13;
 
 export interface ProfileHeaderProps {
-  bannerColors: [string, string];
   onBack: () => void;
   /** The showing page's scroll offset, which stretches the banner on overscroll. */
   scrollY: SharedValue<number>;
 }
 
-function ProfileHeaderInner({
-  bannerColors,
-  onBack,
-  scrollY,
-}: ProfileHeaderProps) {
+function ProfileHeaderInner({ onBack, scrollY }: ProfileHeaderProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { identityKey, isSelf } = useProfileContext();
@@ -81,35 +76,20 @@ function ProfileHeaderInner({
   if (profile.isLoading && !profile.name) return undefined;
 
   return (
-    <View style={{ backgroundColor: theme.palette.neutral_0 }}>
+    <View style={theme.atoms.box.primary.bg}>
       <View style={{ position: 'relative' }}>
         <Animated.View
           style={[
             {
               // Extends under the status bar; the screen draws under it.
               height: bannerHeight,
-              backgroundColor: bannerColors[1],
-              overflow: 'hidden',
               // Stretches from its bottom edge, keeping the top at the screen's.
               transformOrigin: 'bottom',
             },
+            theme.atoms.box.secondary.bg,
             bannerStretchStyle,
           ]}
-        >
-          <View
-            style={[
-              Atoms.absolute,
-              {
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: bannerColors[0],
-                opacity: 0.5,
-              },
-            ]}
-          />
-        </Animated.View>
+        />
         <View
           style={[
             Atoms.absolute,
@@ -164,7 +144,7 @@ function ProfileHeaderInner({
               size="sm"
               accessibilityLabel="Share profile"
               variant="ghost"
-              icon={(props) => <Icon name="share" {...props} />}
+              icon="share"
               onPress={openShareSheet}
             />
           ) : null}
@@ -187,10 +167,10 @@ function ProfileHeaderInner({
             Atoms.flex_row,
             Atoms.items_center,
             Atoms.gap_xs,
-            pressed && { opacity: 0.5 },
+            pressed && Atoms.faded,
           ]}
         >
-          <Icon name="key" size={HEADER_ROW_ICON_SIZE} color="neutral_500" />
+          <Icon name="key" size={HEADER_ROW_ICON_SIZE} color="muted" />
           <IdentityKeyText value={displayKey} />
         </Pressable>
         {/* The full key is right above, so no hash fallback here. */}
@@ -202,7 +182,7 @@ function ProfileHeaderInner({
         ) : null}
         {profile.description && !obscured ? (
           <View style={Atoms.mt_sm}>
-            <Text variant="body" fontSize="sm" color="neutral_1000">
+            <Text variant="body" fontSize="sm" color="primary">
               {profile.description}
             </Text>
           </View>
@@ -235,7 +215,7 @@ function IdentityKeyText({ value }: { value: string }) {
     return (
       <Text
         variant="secondary"
-        color="neutral_500"
+        color="muted"
         numberOfLines={1}
         ellipsizeMode="middle"
         style={{ flexShrink: 1 }}
@@ -248,13 +228,13 @@ function IdentityKeyText({ value }: { value: string }) {
     <View style={[Atoms.flex_row, { flexShrink: 1, minWidth: 0 }]}>
       <Text
         variant="secondary"
-        color="neutral_500"
+        color="muted"
         numberOfLines={1}
         style={{ flexShrink: 1, minWidth: 0 }}
       >
         {value.slice(0, -KEY_TAIL_LENGTH)}
       </Text>
-      <Text variant="secondary" color="neutral_500" style={{ flexShrink: 0 }}>
+      <Text variant="secondary" color="muted" style={{ flexShrink: 0 }}>
         {value.slice(-KEY_TAIL_LENGTH)}
       </Text>
     </View>
@@ -295,9 +275,9 @@ function FollowCounts({
           key={label}
           accessibilityRole="link"
           onPress={() => router.navigate(route)}
-          style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+          style={({ pressed }) => [pressed && Atoms.faded]}
         >
-          <Text variant="secondary" color="neutral_500" selectable={false}>
+          <Text variant="secondary" color="muted" selectable={false}>
             <Text variant="secondary" fontWeight="semibold">
               {count}
             </Text>{' '}
@@ -332,7 +312,7 @@ function AliasLabel({
           accessibilityLabel={alias}
           style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_xs]}
         >
-          <Icon name="at" size={HEADER_ROW_ICON_SIZE} color="neutral_500" />
+          <Icon name="at" size={HEADER_ROW_ICON_SIZE} color="muted" />
           <IdentityHandle identity={identity} style={{ flexShrink: 1 }} />
         </Pressable>
       </HoverCard.Trigger>
@@ -343,13 +323,13 @@ function AliasLabel({
             {
               maxWidth: 320,
               borderRadius: 8,
-              borderWidth: 1,
-              borderColor: theme.palette.neutral_300,
-              backgroundColor: theme.palette.background_secondary,
             },
+            theme.atoms.box.secondary.bg,
+            theme.atoms.box.secondary.border,
+            Atoms.border,
           ]}
         >
-          <Text variant="secondary" color="neutral_900">
+          <Text variant="secondary" color="primary">
             {alias}
           </Text>
         </View>

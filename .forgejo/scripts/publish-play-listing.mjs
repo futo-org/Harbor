@@ -2,7 +2,7 @@
 //
 //   node .forgejo/scripts/publish-play-listing.mjs [--dry-run] [--skip-images]
 //
-// Env: PLAY_SERVICE_ACCOUNT_JSON (service account key file contents).
+// Env: GOOGLE_APIS_SERVICE_ACCOUNT_JSON (service account key file contents).
 
 import { createHash, createSign } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -20,9 +20,9 @@ const listing = JSON.parse(
   readFileSync(path.join(marketing, 'play-store/listing.json'), 'utf8'),
 );
 
-const accountJson = process.env.PLAY_SERVICE_ACCOUNT_JSON;
+const accountJson = process.env.GOOGLE_APIS_SERVICE_ACCOUNT_JSON;
 if (!accountJson) {
-  console.error('missing required env var PLAY_SERVICE_ACCOUNT_JSON');
+  console.error('missing required env var GOOGLE_APIS_SERVICE_ACCOUNT_JSON');
   process.exit(1);
 }
 const account = JSON.parse(accountJson);

@@ -87,6 +87,12 @@ pub(crate) fn key_fingerprint(signing_key: &[u8]) -> String {
     hex::encode(&signing_key[0..signing_key.len().min(8)])
 }
 
+/// Fingerprint derived from a push token that doesn't reveal the token's value.
+pub(crate) fn token_fingerprint(token: &str) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(&Sha256::digest(token.as_bytes())[..8])
+}
+
 /// Deep link to the post at `key`, mirroring the client's
 /// `Routes.tabs.post(identity, keyFingerprint, sequence)`. `None` when the
 /// key carries no signing key.

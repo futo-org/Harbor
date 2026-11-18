@@ -73,8 +73,8 @@ export default function OnboardingWelcomeScreen() {
           Atoms.w_full,
           Atoms.mt_auto,
           Atoms.p_lg,
+          theme.atoms.box.primary.bg,
           {
-            backgroundColor: theme.palette.neutral_0,
             paddingBottom: insets.bottom + Spacing.lg,
             paddingLeft: insets.left + Spacing.lg,
             paddingRight: insets.right + Spacing.lg,
@@ -97,7 +97,7 @@ export default function OnboardingWelcomeScreen() {
             />
           </>
         ) : (
-          <Text variant="small" color="neutral_500" style={Atoms.text_center}>
+          <Text variant="small" color="muted" style={Atoms.text_center}>
             {PRIVATE_BROWSING_NOTICE}
           </Text>
         )}

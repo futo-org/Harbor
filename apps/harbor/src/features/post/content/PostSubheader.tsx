@@ -79,7 +79,7 @@ function CommentedOnSubheader({ link }: { link: v2.Link }) {
     // One text run, so a long title wraps under "Commented on".
     <Text
       variant="secondary"
-      color="neutral_500"
+      color="muted"
       fontWeight="regular"
       style={Atoms.flex_shrink_1}
     >
@@ -90,7 +90,7 @@ function CommentedOnSubheader({ link }: { link: v2.Link }) {
         // Opens the page's posts, not the post it is on.
         onPress={(e) => e.stopPropagation()}
       >
-        <Text variant="secondary" color="primary_500" fontWeight="regular">
+        <Text variant="secondary" color="accent" fontWeight="regular">
           {/* A page with no known title is shown by its address. */}
           {link.title && host ? `${link.title} · ${host}` : link.url}
         </Text>
@@ -109,14 +109,14 @@ function ApplicationSubheader({
   url?: string;
 }) {
   const label = (
-    <Text variant="secondary" color="neutral_500" fontWeight="regular">
+    <Text variant="secondary" color="muted" fontWeight="regular">
       {name}
     </Text>
   );
 
   return (
     <View style={[Atoms.flex_row, Atoms.align_center, Atoms.flex_shrink_0]}>
-      <Text variant="secondary" color="neutral_500" fontWeight="regular">
+      <Text variant="secondary" color="muted" fontWeight="regular">
         {prefix}
       </Text>
       {url ? (
@@ -163,17 +163,13 @@ function ReplyingToSubheader({ parentId }: { parentId: string }) {
     >
       <Text
         variant="secondary"
-        color="neutral_500"
+        color="muted"
         fontWeight="regular"
         style={Atoms.flex_shrink_0}
       >
         Replying to{' '}
       </Text>
-      <Username
-        identity={parentIdentity}
-        variant="secondary"
-        color="primary_500"
-      />
+      <Username identity={parentIdentity} variant="secondary" color="accent" />
     </Pressable>
   );
 }

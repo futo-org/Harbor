@@ -6,6 +6,7 @@ import { parseAnywhereUrl } from '@/src/common/util/anywhere-url';
 import { isAndroid, isIOS, isWeb } from '@/src/common/util/platform';
 import { SearchField } from '@/src/features/search/SearchField';
 import { type Href, router } from 'expo-router';
+import { useAnywhereHomeRoute } from './hooks/useAnywhereHomeRoute';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, type TextInputInstance, View } from 'react-native';
 
@@ -25,7 +26,7 @@ export function AnywhereUrlField({ url = '' }: { url?: string }) {
 
   return (
     <SearchField onPress={() => inputRef.current?.focus()}>
-      <Icon name="globe" size={16} color="neutral_500" />
+      <Icon name="globe" size={16} color="muted" />
       <TextInput
         ref={inputRef}
         variant="plain"
@@ -64,6 +65,7 @@ export function AnywhereUrlField({ url = '' }: { url?: string }) {
 /** The top bar of a page's comments: a way back, and its address field. */
 export function AnywhereUrlBar({ url }: { url?: string }) {
   const { theme } = useTheme();
+  const homeRoute = useAnywhereHomeRoute();
 
   return (
     <View
@@ -75,25 +77,21 @@ export function AnywhereUrlBar({ url }: { url?: string }) {
         // As the search bar on Explore.
         Atoms.px_lg,
         Atoms.py_md,
-        theme.atoms.bg,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: theme.palette.neutral_25,
-        },
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
+        Atoms.border_b,
       ]}
     >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Go back"
         onPress={() =>
-          router.canGoBack()
-            ? router.back()
-            : router.replace(Routes.tabs.anywhere.index)
+          router.canGoBack() ? router.back() : router.replace(homeRoute)
         }
         hitSlop={Spacing.lg}
-        style={({ pressed }) => [pressed && { opacity: 0.5 }]}
+        style={({ pressed }) => [pressed && Atoms.faded]}
       >
-        <Icon name="chevronBack" size={24} color="neutral_900" />
+        <Icon name="chevronBack" size={24} color="primary" />
       </Pressable>
       <View style={Atoms.flex_1}>
         <AnywhereUrlField url={url} />

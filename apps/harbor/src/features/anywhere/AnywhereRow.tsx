@@ -2,7 +2,7 @@ import { Image } from '@/src/common/components/Image';
 import { Text } from '@/src/common/components/primitives';
 import { Routes } from '@/src/common/constants';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { urlHost } from '@/src/common/util/anywhere-url';
 import { type Href, router } from 'expo-router';
 import { useMemo } from 'react';
@@ -45,18 +45,16 @@ export function AnywhereRow({ link: known, postCount }: AnywhereFeedItem) {
         Atoms.gap_md,
         Atoms.px_lg,
         Atoms.py_md,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: theme.palette.neutral_25,
-        },
-        pressed && { opacity: 0.8 },
+        theme.atoms.box.primary.border,
+        Atoms.border_b,
+        pressed && Atoms.faded_subtle,
       ]}
     >
       <View style={[Atoms.flex_1, Atoms.gap_xs]}>
         <Text fontWeight="bold" numberOfLines={2}>
           {link.title || link.url}
         </Text>
-        <Text variant="secondary" color="neutral_500" numberOfLines={1}>
+        <Text variant="secondary" color="muted" numberOfLines={1}>
           {commentCountLabel(postCount)} · {urlHost(link.url) ?? link.url}
         </Text>
       </View>
@@ -67,7 +65,7 @@ export function AnywhereRow({ link: known, postCount }: AnywhereFeedItem) {
           {
             width: THUMBNAIL_SIZE,
             height: THUMBNAIL_SIZE,
-            backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
+            backgroundColor: theme.colors.box.raised.bg,
           },
         ]}
       >

@@ -7,27 +7,25 @@ import {
 import { Text } from './Text';
 import {
   useTheme,
-  withHexOpacity,
-  type PaletteColorToken,
+  type TextColor,
   type FontWeightToken,
 } from '@/src/common/theme';
 import { usePressAnimation } from '@/src/common/lib/animation';
+import { type IconName, type IconRenderFn, renderIcon } from '../Icon';
 
 type SmallButtonVariant = 'primary' | 'secondary' | 'destructive';
-
-type IconRenderFn = (props: { size: number; color: string }) => React.ReactNode;
 
 interface SmallButtonProps extends Omit<PressableProps, 'style'> {
   onPress: () => void;
   title: string;
   variant?: SmallButtonVariant;
-  icon?: IconRenderFn;
+  icon?: IconName | IconRenderFn;
 }
 
-const textColorMap: Record<SmallButtonVariant, PaletteColorToken> = {
-  primary: 'white',
-  secondary: 'primary_600',
-  destructive: 'negative_500',
+const textColorMap: Record<SmallButtonVariant, TextColor> = {
+  primary: 'light',
+  secondary: 'accent',
+  destructive: 'danger',
 };
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
@@ -42,22 +40,14 @@ export function PillButton({
   const { theme } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = usePressAnimation();
 
-  const textColor = theme.palette[textColorMap[variant]];
-
   const variantStyle = (() => {
     switch (variant) {
       case 'primary':
-        return {
-          backgroundColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        };
+        return theme.atoms.box.raised.bg;
       case 'secondary':
-        return {
-          backgroundColor: withHexOpacity(theme.palette.primary_500, '20'),
-        };
+        return theme.atoms.box.accent.bg_subtle;
       case 'destructive':
-        return {
-          backgroundColor: withHexOpacity(theme.palette.negative_500, '20'),
-        };
+        return theme.atoms.box.danger.bg_subtle;
     }
   })();
 
@@ -71,7 +61,7 @@ export function PillButton({
         hitSlop={8}
         {...props}
       >
-        {icon && icon({ size: 14, color: textColor })}
+        {icon && renderIcon(icon, { size: 14, color: textColorMap[variant] })}
         <Text
           variant="secondary"
           fontWeight={FONT_WEIGHT}

@@ -2,7 +2,7 @@ import { Text } from '@/src/common/components/primitives';
 import { TimeAgo } from '@/src/common/components/TimeAgo';
 import { Routes } from '@/src/common/constants';
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
 import { router } from 'expo-router';
@@ -36,13 +36,7 @@ function ThreadHeader() {
     <View style={[Atoms.flex_row, Atoms.gap_md]}>
       <View style={[Atoms.align_center, { flexBasis: LEFT_COL_FLEX_BASIS }]}>
         <View
-          style={[
-            Atoms.flex_1,
-            {
-              width: 2,
-              backgroundColor: withHexOpacity(theme.palette.neutral_500, '30'),
-            },
-          ]}
+          style={[Atoms.flex_1, theme.atoms.outline, { borderLeftWidth: 2 }]}
         />
       </View>
       <View style={[Atoms.flex_1, Atoms.pt_md]} />
@@ -76,19 +70,19 @@ function RepostHeader({
       ]}
     >
       <View style={[Atoms.items_end, { flexBasis: LEFT_COL_FLEX_BASIS }]}>
-        <Icon size={16} name="repost" color="neutral_500" />
+        <Icon size={16} name="repost" color="muted" />
       </View>
       <View style={[Atoms.flex_row, Atoms.align_center, Atoms.flex_shrink_1]}>
         <Username
           identity={identity}
           variant="small"
-          color="neutral_500"
+          color="muted"
           fontWeight="bold"
           style={hovered && Atoms.text_underline}
         />
         <Text
           variant="small"
-          color="neutral_500"
+          color="muted"
           fontWeight="bold"
           style={[Atoms.flex_shrink_0, hovered && Atoms.text_underline]}
         >

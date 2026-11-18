@@ -46,7 +46,7 @@ export function AddServerForm({ isBusy, error, onSubmit }: AddServerFormProps) {
               <Icon
                 name="addOutline"
                 size={28}
-                color={url.trim() ? 'primary_500' : 'neutral_500'}
+                color={url.trim() ? 'accent' : 'muted'}
               />
             )}
             onPress={handleSubmit}
@@ -59,22 +59,20 @@ export function AddServerForm({ isBusy, error, onSubmit }: AddServerFormProps) {
           style={[
             Atoms.p_md,
             Atoms.rounded_lg,
-            {
-              backgroundColor: theme.palette.negative_25,
-              borderWidth: 1,
-              borderColor: theme.palette.negative_100,
-            },
+            theme.atoms.box.danger.bg_subtle,
+            theme.atoms.box.danger.border_subtle,
+            Atoms.border,
           ]}
         >
-          <Text variant="secondary" color="negative_500">
+          <Text variant="secondary" color="danger">
             Could not add server.
-            <Text fontWeight="bold" color="negative_500">
+            <Text fontWeight="bold" color="danger">
               {' '}
               {showErrorLogs ? 'Hide logs' : 'Show logs'}.
             </Text>
           </Text>
           {showErrorLogs && (
-            <Text variant="secondary" color="neutral_500" monospace>
+            <Text variant="secondary" color="muted" monospace>
               {error.stack ?? error.message}
             </Text>
           )}

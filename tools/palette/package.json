@@ -1,0 +1,16 @@
+{
+  "name": "@polycentric/palette",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node generate-palette.ts && biome format --write ../../apps/harbor/src/common/theme/palette.ts"
+  },
+  "dependencies": {
+    "culori": "4.0.2"
+  },
+  "devDependencies": {
+    "@polycentric/tsconfig": "workspace:*",
+    "@types/culori": "4.0.1",
+    "@types/node": "catalog:"
+  }
+}

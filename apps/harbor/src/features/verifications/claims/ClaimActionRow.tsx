@@ -19,9 +19,7 @@ export function ClaimActionRow({
       accessibilityRole="button"
       onPress={onPress}
       style={({ hovered, pressed }) => [
-        (hovered || pressed) && {
-          backgroundColor: theme.palette.neutral_25,
-        },
+        (hovered || pressed) && theme.atoms.box.primary.bg_hover,
       ]}
     >
       <View
@@ -33,14 +31,15 @@ export function ClaimActionRow({
           Atoms.pr_lg,
           Atoms.pt_md,
           Atoms.pb_md,
-          { borderBottomWidth: 1, borderColor: theme.palette.neutral_25 },
+          theme.atoms.box.primary.border,
+          Atoms.border_b,
         ]}
       >
         <View style={Atoms.flex_1}>
           <Text
             variant="secondary"
             fontWeight="semibold"
-            color="primary_500"
+            color="accent"
             selectable={false}
           >
             {title}
@@ -48,7 +47,7 @@ export function ClaimActionRow({
           {subtitle ? (
             <Text
               variant="small"
-              style={theme.atoms.text_neutral_medium}
+              color="secondary"
               fontWeight="regular"
               selectable={false}
             >
@@ -56,7 +55,7 @@ export function ClaimActionRow({
             </Text>
           ) : null}
         </View>
-        <Icon name="chevronForward" size={28} color="neutral_400" />
+        <Icon name="chevronForward" size={28} color="muted" />
       </View>
     </Pressable>
   );

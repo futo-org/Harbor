@@ -12,7 +12,7 @@ function ProgressBar({ progress }: { progress: number | null }) {
   const { theme } = useTheme();
 
   if (progress == null) {
-    return <ActivityIndicator size="small" color={theme.palette.neutral_500} />;
+    return <ActivityIndicator size="small" color={theme.colors.muted} />;
   }
 
   return (
@@ -22,15 +22,15 @@ function ProgressBar({ progress }: { progress: number | null }) {
         Atoms.w_full,
         Atoms.rounded_md,
         Atoms.overflow_hidden,
-        { height: 6, backgroundColor: theme.palette.neutral_100 },
+        { height: 6 },
+        theme.atoms.box.raised.bg,
       ]}
     >
       <View
-        style={{
-          width: `${Math.round(progress * 100)}%`,
-          height: '100%',
-          backgroundColor: theme.palette.primary_500,
-        }}
+        style={[
+          { width: `${Math.round(progress * 100)}%`, height: '100%' },
+          theme.atoms.box.accent.bg,
+        ]}
       />
     </View>
   );
@@ -75,14 +75,8 @@ export function UpdateSheet() {
               </View>
             ) : phase === 'installing' ? (
               <View style={[Atoms.gap_md, Atoms.items_center]}>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.palette.neutral_500}
-                />
-                <Text
-                  variant="secondary"
-                  style={theme.atoms.text_neutral_medium}
-                >
+                <ActivityIndicator size="small" color={theme.colors.muted} />
+                <Text variant="secondary" color="secondary">
                   Waiting for the installer…
                 </Text>
               </View>
@@ -126,7 +120,7 @@ export function UpdateSheet() {
           </Text>
           {available.notes ? <ReleaseNotes notes={available.notes} /> : null}
           {phase === 'error' && error ? (
-            <Text variant="secondary" color="negative_500">
+            <Text variant="secondary" color="danger">
               {error}
             </Text>
           ) : null}

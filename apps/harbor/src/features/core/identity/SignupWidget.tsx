@@ -27,7 +27,7 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
       style={[
         Atoms.rounded_xl,
         Atoms.overflow_hidden,
-        { backgroundColor: theme.palette.neutral_25 },
+        theme.atoms.box.secondary.bg,
       ]}
     >
       <Image
@@ -39,7 +39,7 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
       <View style={[Atoms.p_md, Atoms.gap_md]}>
         <View>
           <Text fontWeight="bold">Join Harbor</Text>
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             Share to the world, not platforms.
           </Text>
         </View>
@@ -61,7 +61,7 @@ export function SignupWidget({ onAction }: SignupWidgetProps = {}) {
             />
           </View>
         ) : (
-          <Text variant="small" color="neutral_500">
+          <Text variant="small" color="muted">
             {PRIVATE_BROWSING_NOTICE}
           </Text>
         )}
@@ -101,16 +101,16 @@ export function SignupBar({
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: theme.palette.neutral_0,
-          borderTopWidth: 1,
-          borderTopColor: theme.palette.neutral_25,
           zIndex: ZIndex.raised,
         },
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
+        Atoms.border_t,
       ]}
     >
       <View style={Atoms.flex_shrink_1}>
         <Text fontWeight="bold">Join Harbor</Text>
-        <Text variant="small" color="neutral_500">
+        <Text variant="small" color="muted">
           Share to the world, not platforms.
         </Text>
       </View>

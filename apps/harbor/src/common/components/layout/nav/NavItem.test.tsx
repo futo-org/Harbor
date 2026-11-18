@@ -25,11 +25,8 @@ jest.mock('@/src/common/theme', () => ({
   Breakpoints: { xl: 1280 },
   useTheme: () => ({
     theme: {
-      palette: {
-        neutral_900: '#000',
-        neutral_25: '#eee',
-        neutral_50: '#ddd',
-        primary_200: '#f90',
+      atoms: {
+        box: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
       },
     },
   }),

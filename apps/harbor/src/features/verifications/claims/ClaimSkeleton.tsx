@@ -4,7 +4,7 @@ import {
   useShimmerOpacity,
 } from '@/src/common/components/skeletons';
 import { AVATAR_SIZE_MAP } from '@/src/common/components/Avatar/Avatar';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -22,10 +22,8 @@ export function ClaimSkeleton() {
         Atoms.px_lg,
         Atoms.py_md,
         animatedStyle,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-        },
+        theme.atoms.box.primary.border,
+        Atoms.border_b,
       ]}
     >
       <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}>

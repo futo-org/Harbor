@@ -1,22 +1,21 @@
+import {
+  type IconName,
+  type IconRenderFn,
+  renderIcon,
+} from '@/src/common/components/Icon';
 import { Button } from '@/src/common/components/primitives';
 import { TAB_BAR_HEIGHT } from '@/src/common/constants';
 import { isIOS } from '@/src/common/util/platform';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Platform, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 const GLASS = isIOS && isLiquidGlassAvailable();
 const GLASS_SIZE = 56;
 
-type IconRenderFn = (props: {
-  size: number;
-  color: string;
-  style?: object;
-}) => React.ReactNode;
-
 interface FabProps {
   onPress: () => void;
-  icon: IconRenderFn;
+  icon: IconName | IconRenderFn;
   title?: string;
   accessibilityLabel?: string;
 }
@@ -28,22 +27,6 @@ export function Fab({
   accessibilityLabel,
 }: FabProps) {
   const { theme } = useTheme();
-  const isLight = theme.scheme === 'light';
-  const shadow =
-    Platform.OS === 'web'
-      ? {
-          boxShadow: `0 6px 16px ${withHexOpacity(
-            theme.palette.primary_900,
-            isLight ? '28' : '40',
-          )}`,
-        }
-      : {
-          shadowColor: theme.palette.primary_900,
-          shadowOpacity: isLight ? 0.16 : 0.26,
-          shadowRadius: isLight ? 14 : 10,
-          shadowOffset: { width: 0, height: isLight ? 3 : 4 },
-          elevation: isLight ? 4 : 6,
-        };
 
   return (
     <View
@@ -56,7 +39,7 @@ export function Fab({
       {GLASS ? (
         <GlassView
           isInteractive
-          tintColor={theme.palette.primary_500}
+          tintColor={theme.colors.accent}
           colorScheme={theme.scheme}
           style={{
             width: GLASS_SIZE,
@@ -70,7 +53,7 @@ export function Fab({
             accessibilityLabel={accessibilityLabel}
             style={[Atoms.flex_1, Atoms.align_center, Atoms.justify_center]}
           >
-            {icon({ size: 32, color: 'white' })}
+            {renderIcon(icon, { size: 32, color: 'light' })}
           </Pressable>
         </GlassView>
       ) : (
@@ -81,12 +64,7 @@ export function Fab({
           variant="primary"
           size="md"
           icon={icon}
-          style={[
-            shadow,
-            isLight && {
-              borderWidth: 0,
-            },
-          ]}
+          style={theme.scheme === 'light' && Atoms.border_0}
         />
       )}
     </View>

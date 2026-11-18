@@ -15,10 +15,10 @@ inputs:
     required: true
   tag:
     description: Existing tag of the image to relabel (default GITHUB_SHA)
-    default: ''
+    default: ""
   web-assets:
     description: Upload the web bundle to the static bucket first (needs STATIC_* env)
-    default: 'false'
+    default: "false"
   registry-user:
     required: true
   registry-token:
@@ -49,7 +49,11 @@ runs:
         done
         if [ "$WEB_ASSETS" = true ]; then
           ASSETS_BASE_URL="${STATIC_PUBLIC_BASE_URL%/}/web/${ENVIRONMENT_TAG}"
-          crane export "$IMAGE_REF" - | tar -x app/dist/client
+          # The pods run the image the chart pins, its appVersion, which a
+          # release build of the same commit replaces: a moving tag can be
+          # the earlier build, whose files have other names.
+          PINNED=$(node -e 'import("./.forgejo/scripts/registry-helpers.mjs").then(async (m) => console.log((await m.chartAt(process.env.CHART, process.env.CHART_VERSION)).commit))')
+          crane export "$REGISTRY/$IMAGE:$PINNED" - | tar -x app/dist/client
           node .forgejo/scripts/publish-web-assets.mjs app/dist/client "web/${ENVIRONMENT_TAG}" "$ASSETS_BASE_URL"
         fi
         crane tag "$IMAGE_REF" "$ENVIRONMENT_TAG"

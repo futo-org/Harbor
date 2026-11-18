@@ -5,34 +5,27 @@ import {
   BorderRadius,
   Spacing,
   useTheme,
-  withHexOpacity,
   type BorderRadiusToken,
   type FontWeightToken,
-  type PaletteColorToken,
+  type TextColor,
   type Theme,
 } from '@/src/common/theme';
 import { type Href, Link, router } from 'expo-router';
 import {
   Animated,
-  Platform,
   Pressable,
   type PressableProps,
+  type StyleProp,
   StyleSheet,
   View,
   type ViewStyle,
 } from 'react-native';
 import { Text } from './Text';
-import Icon, { type IconName } from '../Icon';
+import Icon, { type IconName, type IconRenderFn } from '../Icon';
 
 type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'destructive';
 
 type ButtonSize = 'sm' | 'md' | 'lg';
-
-type IconRenderFn = (props: {
-  size: number;
-  color: string;
-  style?: object;
-}) => React.ReactNode;
 
 // `href` is redeclared as an expo-router Href; RNW types it as a string.
 interface ButtonProps extends Omit<PressableProps, 'style' | 'href'> {
@@ -95,12 +88,7 @@ export function Button({
     ? sizeConfig.paddingV
     : sizeConfig.paddingH;
   const isDisabled = !!disabled;
-  const iconColor = isDisabled
-    ? withHexOpacity(theme.palette.neutral_500, '80')
-    : theme.palette[textColorMap[variant]];
-  const surfaceStyle = isDisabled
-    ? getDisabledSurfaceStyle(theme)
-    : getVariantStyle(theme, variant);
+  const textColor = isDisabled ? 'muted' : textColorMap[variant];
   const hoverStyle =
     !isDisabled && hovered ? getHoverVariantStyle(theme, variant) : undefined;
 
@@ -125,6 +113,7 @@ export function Button({
       hitSlop={8}
       style={(state) => [
         styles.base,
+        Atoms.border,
         fullWidth && Atoms.w_full,
         !fullWidth && styles.fitContent,
         {
@@ -132,7 +121,13 @@ export function Button({
           paddingHorizontal,
           borderRadius,
         },
-        surfaceStyle,
+        isDisabled
+          ? [
+              theme.atoms.box.raised.bg,
+              theme.atoms.box.raised.border,
+              Atoms.faded,
+            ]
+          : getVariantStyle(theme, variant),
         hoverStyle,
         typeof style === 'function' ? style(state) : style,
       ]}
@@ -141,20 +136,15 @@ export function Button({
       <View style={[styles.content, iconOnly && styles.iconOnlyContent]}>
         {icon &&
           (typeof icon === 'function' ? (
-            icon({ size: sizeConfig.iconSize, color: iconColor })
+            icon({ size: sizeConfig.iconSize, color: textColor })
           ) : (
-            <Icon name={icon} size={sizeConfig.iconSize} color={iconColor} />
+            <Icon name={icon} size={sizeConfig.iconSize} color={textColor} />
           ))}
         {!iconOnly && (
           <Text
             fontSize={size}
             fontWeight={FONT_WEIGHT}
-            color={isDisabled ? 'neutral_1000' : textColorMap[variant]}
-            style={
-              isDisabled
-                ? { color: withHexOpacity(theme.palette.neutral_500, '80') }
-                : undefined
-            }
+            color={textColor}
             numberOfLines={1}
           >
             {title}
@@ -167,13 +157,10 @@ export function Button({
   return <Animated.View style={animatedStyle}>{pressable}</Animated.View>;
 }
 
-const BORDER_WIDTH = 1;
-
 const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: BORDER_WIDTH,
     borderColor: 'transparent',
   },
   fitContent: {
@@ -189,73 +176,45 @@ const styles = StyleSheet.create({
   },
 });
 
-export const textColorMap: Record<ButtonVariant, PaletteColorToken> = {
-  primary: 'white',
-  secondary: 'primary_600',
-  tertiary: 'neutral_1000',
-  destructive: 'negative_500',
+const textColorMap: Record<ButtonVariant, TextColor> = {
+  primary: 'light',
+  secondary: 'accent',
+  tertiary: 'primary',
+  destructive: 'danger',
 };
 
 const FONT_WEIGHT: FontWeightToken = 'semibold';
 
-export function getVariantStyle(theme: Theme, variant: ButtonVariant) {
+function getVariantStyle(
+  theme: Theme,
+  variant: ButtonVariant,
+): StyleProp<ViewStyle> {
+  const { box, outline, shadow, transparent } = theme.atoms;
   switch (variant) {
     case 'primary':
-      return {
-        backgroundColor: theme.palette.primary_500,
-        borderColor: theme.palette.primary_500,
-        shadowColor: theme.palette.primary_900,
-        shadowOpacity: 0.22,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-        elevation: Platform.OS === 'android' ? 4 : 0,
-      };
+      return [box.accent.bg, box.accent.border, shadow.accent];
     case 'secondary':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.primary_500, '20'),
-        borderColor: withHexOpacity(theme.palette.primary_500, '40'),
-      };
+      return [box.accent.bg_subtle, box.accent.border_subtle];
     case 'tertiary':
-      return {
-        backgroundColor: 'transparent',
-        borderColor: withHexOpacity(theme.palette.neutral_500, '60'),
-      };
+      return [transparent.bg, outline];
     case 'destructive':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.negative_500, '15'),
-        borderColor: withHexOpacity(theme.palette.negative_500, '80'),
-      };
+      return [box.danger.bg_subtle, box.danger.border_subtle];
   }
 }
 
-function getHoverVariantStyle(theme: Theme, variant: ButtonVariant): ViewStyle {
+function getHoverVariantStyle(
+  theme: Theme,
+  variant: ButtonVariant,
+): StyleProp<ViewStyle> {
+  const { box } = theme.atoms;
   switch (variant) {
     case 'primary':
-      return {
-        backgroundColor: theme.palette.primary_600,
-        borderColor: theme.palette.primary_700,
-      };
+      return box.accent.bg_hover;
     case 'secondary':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.primary_500, '32'),
-        borderColor: withHexOpacity(theme.palette.primary_500, '55'),
-      };
+      return box.accent.bg_subtle_hover;
     case 'tertiary':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.neutral_500, '14'),
-        borderColor: withHexOpacity(theme.palette.neutral_500, '78'),
-      };
+      return box.raised.bg;
     case 'destructive':
-      return {
-        backgroundColor: withHexOpacity(theme.palette.negative_500, '26'),
-        borderColor: withHexOpacity(theme.palette.negative_500, 'A0'),
-      };
+      return box.danger.bg_subtle_hover;
   }
-}
-
-function getDisabledSurfaceStyle(theme: Theme): ViewStyle {
-  return {
-    backgroundColor: withHexOpacity(theme.palette.neutral_500, '10'),
-    borderColor: withHexOpacity(theme.palette.neutral_500, '20'),
-  };
 }
