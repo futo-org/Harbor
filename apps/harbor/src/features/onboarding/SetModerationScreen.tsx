@@ -12,17 +12,17 @@ export default function SetModerationScreen() {
     <View style={[Atoms.flex_col, Atoms.flex_1]}>
       <View style={[Atoms.flex_1, Atoms.gap_sm, Atoms.min_h_0]}>
         <Text variant="title">Device content moderation</Text>
-        <Text variant="body" color="neutral_500">
+        <Text variant="body" color="muted">
           Content moderation only filters what you see on this device if you are
           using the default futo.org server.
         </Text>
-        <Text variant="body" color="neutral_500">
+        <Text variant="body" color="muted">
           You will still be able to create posts that violate these settings.
         </Text>
-        <Text variant="body" color="neutral_500">
+        <Text variant="body" color="muted">
           Polycentric will never block or censor content.
         </Text>
-        <Text variant="body" color="neutral_500">
+        <Text variant="body" color="muted">
           This setting can be changed at any time in your settings.
         </Text>
         <Link
@@ -30,11 +30,11 @@ export default function SetModerationScreen() {
           target="_blank"
           accessibilityRole="link"
         >
-          <Text variant="body" color="neutral_500">
+          <Text variant="body" color="muted">
             Content policy for the FUTO servers ↗
           </Text>
         </Link>
-        <Text variant="body" color="primary_500">
+        <Text variant="body" color="accent">
           dev note: Make this more succinct. maybe put some in an info window.
         </Text>
       </View>

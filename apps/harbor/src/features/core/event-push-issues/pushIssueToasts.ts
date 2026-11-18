@@ -14,14 +14,14 @@ const dedupIssueCount = (issues: EventPushIssue[]) =>
 
 /**
  * Show at most one toast for errors and one toast for warnings encountered when pushing to
- * servers. Pressing a toast opens the server list, where errors/warnings are displayed.
+ * servers. Pressing a toast opens the sync events page, which lists the errors/warnings.
  */
 export function showPushIssueToasts(added: EventPushIssue[]) {
   const errors = added.filter((i) => i.errors.length > 0);
   const warnings = added.filter(
     (i) => i.errors.length === 0 && i.warnings.length > 0,
   );
-  const onPress = () => router.navigate(Routes.tabs.settings.servers);
+  const onPress = () => router.navigate(Routes.tabs.settings.syncEvents);
 
   if (errors.length > 0) {
     toast.error(`${plural(dedupIssueCount(errors), 'event')} not saved`, {

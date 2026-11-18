@@ -46,9 +46,7 @@ export function ClaimListItem({
       style={({ hovered, pressed }) => [
         Atoms.flex_1,
         Atoms.flex_row,
-        (hovered || pressed) && {
-          backgroundColor: theme.palette.neutral_25,
-        },
+        (hovered || pressed) && theme.atoms.box.primary.bg_hover,
       ]}
     >
       <View
@@ -56,16 +54,12 @@ export function ClaimListItem({
           Atoms.my_xs,
           Atoms.ml_xs,
           Atoms.p_sm,
-          {
-            backgroundColor: isVerified
-              ? theme.palette.positive_300
-              : theme.palette.neutral_50,
-          },
+          isVerified ? theme.atoms.box.success.bg : theme.atoms.box.raised.bg,
         ]}
       >
         <Icon
           name="verify"
-          color={isVerified ? 'neutral_0' : 'neutral_600'}
+          color={isVerified ? 'light' : 'secondary'}
           size={24}
         />
       </View>
@@ -75,7 +69,8 @@ export function ClaimListItem({
           Atoms.gap_sm,
           Atoms.px_lg,
           Atoms.py_md,
-          { borderBottomWidth: 1, borderColor: theme.palette.neutral_25 },
+          theme.atoms.box.primary.border,
+          Atoms.border_b,
         ]}
       >
         <View style={[Atoms.flex_row, Atoms.align_center, Atoms.gap_sm]}>
@@ -87,7 +82,7 @@ export function ClaimListItem({
           </View>
           <ClaimMenu claim={claim} icon="more" iconSize={16} />
         </View>
-        <Text variant="body" style={theme.atoms.text} selectable={false}>
+        <Text variant="body" selectable={false}>
           {title}
         </Text>
         <View
@@ -102,7 +97,7 @@ export function ClaimListItem({
             name={platform?.name ?? claim.schemaName}
             icon={claimType?.icon ?? 'verify'}
             logo={platform?.logo}
-            color={platform?.color ?? claimType?.color}
+            tint={platform?.tint ?? claimType?.tint}
           />
           <StatusChip
             verifiedCount={claim.status?.verifiedCount}

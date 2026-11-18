@@ -43,13 +43,13 @@ export function ExtensionLoginCode({
         Atoms.gap_md,
         Atoms.p_lg,
         Atoms.fixed,
-        theme.atoms.bg,
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
+        Atoms.border_t,
         {
           bottom: 0,
           left: 0,
           right: 0,
-          borderTopWidth: 1,
-          borderTopColor: theme.palette.neutral_25,
           zIndex: ZIndex.raised,
         },
       ]}
@@ -59,7 +59,7 @@ export function ExtensionLoginCode({
         publicKey={myPublicKey ? publicKeyToString(myPublicKey) : undefined}
         bare
       />
-      <Text variant="small" color="neutral_500" style={Atoms.text_center}>
+      <Text variant="small" color="muted" style={Atoms.text_center}>
         Approve in the Harbor tab if it shows the same emoji.
       </Text>
       <Button title="Cancel" variant="tertiary" onPress={onCancel} />

@@ -1,16 +1,10 @@
 import { IdentityHandle } from '@/src/features/profile/IdentityHandle';
 import { ProfileAvatar } from '@/src/common/components/primitives';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { useWebHover } from '@/src/common/lib/useWebHover';
-import {
-  Atoms,
-  BorderRadius,
-  useTheme,
-  withHexOpacity,
-} from '@/src/common/theme';
+import { Atoms, BorderRadius, useTheme } from '@/src/common/theme';
 import { Username } from '@/src/features/profile/Username';
 import Icon from '@/src/common/components/Icon';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useIdentitySwitcher } from './useIdentitySwitcher';
 
 type IdentityFooterProps = {
@@ -21,7 +15,6 @@ type IdentityFooterProps = {
 export function IdentityFooter({ compact = false }: IdentityFooterProps) {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
-  const { hovered, onHoverIn, onHoverOut } = useWebHover();
   const { open: openIdentitySwitcher } = useIdentitySwitcher();
 
   // This component shouldn't mount if a current identity is not set.
@@ -29,11 +22,6 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
     console.warn('CurrIdentityHeader: missing current identity (unexpected)');
     return null;
   }
-
-  const identityRowHoverOverlay =
-    theme.scheme === 'light'
-      ? withHexOpacity(theme.palette.neutral_500, '14')
-      : withHexOpacity(theme.palette.black, '28');
 
   const avatar = <ProfileAvatar identityKey={currentIdentity.identityKey} />;
 
@@ -64,23 +52,11 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
             fallbackName=""
             fontSize="md"
             fontWeight="bold"
-            color="neutral_1000"
+            color="primary"
           />
           <IdentityHandle identity={currentIdentity.identityKey} />
         </View>
-        {hovered ? (
-          <View
-            pointerEvents="none"
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                borderRadius: BorderRadius.sm,
-                backgroundColor: identityRowHoverOverlay,
-              },
-            ]}
-          />
-        ) : null}
-        <Icon name="chevronDown" size={18} color="neutral_1000" />
+        <Icon name="chevronDown" size={18} color="primary" />
       </View>
     </View>
   );
@@ -88,11 +64,14 @@ export function IdentityFooter({ compact = false }: IdentityFooterProps) {
   return (
     <Pressable
       onPress={openIdentitySwitcher}
-      onHoverIn={onHoverIn}
-      onHoverOut={onHoverOut}
       hitSlop={10}
       accessibilityRole="button"
       accessibilityLabel="Switch identity"
+      style={({ hovered }) => [
+        Atoms.p_xs,
+        { borderRadius: BorderRadius.sm },
+        hovered && theme.atoms.box.primary.bg_hover,
+      ]}
     >
       {identityDisplay}
     </Pressable>

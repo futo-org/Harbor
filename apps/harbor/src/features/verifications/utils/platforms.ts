@@ -1,4 +1,3 @@
-import type { PaletteColorToken } from '@/src/common/theme';
 // Per-icon modules: importing from the package index would bundle every icon.
 import * as faDiscord from '@fortawesome/free-brands-svg-icons/faDiscord';
 import * as faGithub from '@fortawesome/free-brands-svg-icons/faGithub';
@@ -10,20 +9,21 @@ import * as faCirclePlay from '@fortawesome/free-solid-svg-icons/faCirclePlay';
 import * as faGlobe from '@fortawesome/free-solid-svg-icons/faGlobe';
 import { createElement, type ReactNode } from 'react';
 import Svg, { Path } from 'react-native-svg';
+import { buildTint, type Tint } from './tint';
 
 // Every platform claim shares one verification schema; which platform a claim
 // is for is carried by the verifier route it's sent to, not the schema.
 export const PLATFORM_SCHEMA_NAME = 'Platform';
 
 // A platform a claim can be verified against. `slug` is the platform's route
-// on the verifier bot; `logo` matches SelectChip's icon render-prop; `color`
-// tints the logo and its chip; `location` is where the pairing token goes
+// on the verifier bot; `logo` matches SelectChip's icon render-prop; `tint`
+// colors the logo and its chip; `location` is where the pairing token goes
 // (used in the instructions).
 export interface Platform {
   name: string;
   slug: string;
   logo: (props: { size: number; color: string }) => ReactNode;
-  color: PaletteColorToken;
+  tint: Tint;
   location: string;
   // Example profile URL shown in the input.
   placeholder: string;
@@ -63,7 +63,7 @@ export const PLATFORMS: Platform[] = [
     name: 'X',
     slug: 'x',
     logo: svgLogo(faXTwitter),
-    color: 'neutral_900',
+    tint: buildTint('#000000', '#FFFFFF'),
     location: 'bio',
     placeholder: 'x.com/futo',
     profileUrl: (account) => `https://x.com/${account}`,
@@ -72,7 +72,7 @@ export const PLATFORMS: Platform[] = [
     name: 'YouTube',
     slug: 'youtube',
     logo: svgLogo(faYoutube),
-    color: 'negative_500',
+    tint: buildTint('#FF0000'),
     location: 'channel description',
     // The verifier only accepts @handle or /channel/<id> URLs.
     placeholder: 'youtube.com/@futo_tech',
@@ -81,7 +81,7 @@ export const PLATFORMS: Platform[] = [
     name: 'GitHub',
     slug: 'github',
     logo: svgLogo(faGithub),
-    color: 'neutral_600',
+    tint: buildTint('#181717', '#FFFFFF'),
     location: 'profile bio',
     placeholder: 'github.com/futo-org',
   },
@@ -89,7 +89,7 @@ export const PLATFORMS: Platform[] = [
     name: 'Discord',
     slug: 'discord',
     logo: svgLogo(faDiscord),
-    color: 'primary_500',
+    tint: buildTint('#5865F2'),
     location: 'About Me',
     placeholder: 'discord.gg/futo',
   },
@@ -97,7 +97,8 @@ export const PLATFORMS: Platform[] = [
     name: 'Hacker News',
     slug: 'hacker-news',
     logo: svgLogo(faHackerNews),
-    color: 'warning_500',
+    // The site's header color
+    tint: buildTint('#FF6600'),
     location: 'about section',
     placeholder: 'news.ycombinator.com/user?id=futo',
   },
@@ -106,7 +107,7 @@ export const PLATFORMS: Platform[] = [
     name: 'Rumble',
     slug: 'rumble',
     logo: svgLogo(faCirclePlay),
-    color: 'positive_500',
+    tint: buildTint('#85C742'),
     location: 'channel description',
     placeholder: 'rumble.com/c/futo',
   },
@@ -114,7 +115,7 @@ export const PLATFORMS: Platform[] = [
     name: 'Twitch',
     slug: 'twitch',
     logo: svgLogo(faTwitch),
-    color: 'primary_400',
+    tint: buildTint('#9146FF'),
     location: 'bio',
     placeholder: 'twitch.tv/futo',
   },
@@ -122,7 +123,8 @@ export const PLATFORMS: Platform[] = [
     name: 'Other',
     slug: 'website',
     logo: svgLogo(faGlobe),
-    color: 'neutral_500',
+    // No brand; a gray that reads on both themes
+    tint: buildTint('#888888'),
     location: 'profile',
     placeholder: 'example.com',
     generic: true,

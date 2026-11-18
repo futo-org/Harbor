@@ -85,7 +85,7 @@ export default function PairIdentityClaimerScreen() {
     body = (
       <>
         <Text variant="title">Error</Text>
-        <Text variant="body" color="negative_500">
+        <Text variant="body" color="danger">
           {error}
         </Text>
         <Button
@@ -128,7 +128,7 @@ export default function PairIdentityClaimerScreen() {
     <View
       style={[
         Atoms.flex_1,
-        { backgroundColor: theme.atoms.bg.backgroundColor },
+        theme.atoms.box.primary.bg,
         ...(stage === 'unstarted' || stage === 'error'
           ? [Atoms.flex_col, Atoms.gap_lg]
           : []),
@@ -156,10 +156,8 @@ function PairingEmojiCard({
         Atoms.gap_md,
         Atoms.p_lg,
         Atoms.rounded_lg,
-        {
-          maxWidth: 350,
-          backgroundColor: theme.palette.neutral_50,
-        },
+        { maxWidth: 350 },
+        theme.atoms.box.secondary.bg,
       ]}
     >
       <Text variant="subtitle" style={{ textAlign: 'center' }}>
@@ -170,7 +168,7 @@ function PairingEmojiCard({
 
       <Text
         variant="small"
-        color="neutral_500"
+        color="muted"
         selectable
         monospace
         style={[
@@ -184,7 +182,7 @@ function PairingEmojiCard({
 
       <View style={[Atoms.flex_row, Atoms.items_center, Atoms.gap_sm]}>
         <ActivityIndicator size="small" />
-        <Text variant="small" color="neutral_500" style={Atoms.flex_shrink_1}>
+        <Text variant="small" color="muted" style={Atoms.flex_shrink_1}>
           Waiting for approval from other device
         </Text>
       </View>
@@ -273,7 +271,7 @@ function IssuerProfile({ identityKey }: { identityKey: string }) {
       />
       <Text
         variant="secondary"
-        color="neutral_500"
+        color="muted"
         selectable
         monospace
         style={[
@@ -311,11 +309,7 @@ function ApprovalLoadingBody() {
       </Text>
       <View style={[Atoms.items_center, Atoms.gap_xs]}>
         <Text variant="title">Approved!</Text>
-        <Text
-          variant="body"
-          color="neutral_500"
-          style={{ textAlign: 'center' }}
-        >
+        <Text variant="body" color="muted" style={{ textAlign: 'center' }}>
           Completing setup...
         </Text>
       </View>

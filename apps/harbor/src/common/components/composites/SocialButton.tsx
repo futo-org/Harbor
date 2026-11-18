@@ -1,5 +1,5 @@
 import { PillButton } from '@/src/common/components/primitives';
-import Icon, { type IconName } from '@/src/common/components/Icon';
+import type { IconName } from '@/src/common/components/Icon';
 
 type SocialAction = 'follow' | 'unfollow' | 'block' | 'unblock';
 
@@ -42,11 +42,6 @@ export function SocialButton({ action, onPress }: SocialButtonProps) {
   const { title, icon, variant } = CONFIG[action];
 
   return (
-    <PillButton
-      onPress={onPress}
-      title={title}
-      variant={variant}
-      icon={(props) => <Icon name={icon} {...props} />}
-    />
+    <PillButton onPress={onPress} title={title} variant={variant} icon={icon} />
   );
 }

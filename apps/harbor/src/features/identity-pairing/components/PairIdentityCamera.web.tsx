@@ -136,7 +136,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
     <>
       {canUseCamera ? (
         <>
-          <Text variant="body" color="neutral_500">
+          <Text variant="body" color="muted">
             On your other device, go to Settings {'->'} Pair Identity.
           </Text>
           <View
@@ -144,7 +144,7 @@ export const PairIdentityCamera: PairIdentityCameraComponent = ({
               Atoms.rounded_md,
               {
                 overflow: 'hidden',
-                backgroundColor: theme.palette.neutral_900,
+                backgroundColor: theme.colors.dark,
               },
             ]}
           >

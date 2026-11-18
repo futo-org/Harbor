@@ -1,4 +1,4 @@
-import { useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { ProfileRow } from '@/src/features/profile/ProfileRow';
 import { COLLECTION, FetchMode, type v2 } from '@polycentric/react-native';
 import { View } from 'react-native';
@@ -26,12 +26,7 @@ export function ReportItem({
   const { post, isLoading } = useModeratedPost(identity ? undefined : target);
 
   return (
-    <View
-      style={{
-        borderBottomWidth: 1,
-        borderBottomColor: withHexOpacity(theme.palette.neutral_500, '20'),
-      }}
-    >
+    <View style={[theme.atoms.box.primary.border, Atoms.border_b]}>
       <ReportHeader report={report} />
       {identity ? (
         <ProfileRow identity={identity} fetchMode={FetchMode.Default} />

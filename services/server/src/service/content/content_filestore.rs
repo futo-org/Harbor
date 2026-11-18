@@ -1,4 +1,4 @@
 pub use common_object_store::{
-    ObjectStore as ContentFilestore,
-    ObjectStoreConfig as ContentFilestoreConfig,
+    DateTime, ObjectStore as ContentFilestore,
+    ObjectStoreConfig as ContentFilestoreConfig, blob_key,
 };

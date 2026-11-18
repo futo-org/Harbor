@@ -31,6 +31,9 @@ const APPS = [
       'Download the APK directly. The app keeps itself up to date with new releases.',
     linkLabel: 'Download APK',
     href: 'https://static.harbor.social/apk/production/harbor-latest.apk',
+    altLabel: 'Or get it on Google Play',
+    altHref:
+      'https://play.google.com/store/apps/details?id=org.futo.polycentric.store',
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -85,6 +88,17 @@ export default function Apps() {
                 >
                   {app.linkLabel}
                 </Link>
+                {/* Every card keeps this row on desktop so the buttons line up. */}
+                {app.altHref ? (
+                  <Link
+                    className="mt-4 h-6 text-center text-neutral-300 underline hover:text-white"
+                    href={app.altHref}
+                  >
+                    {app.altLabel}
+                  </Link>
+                ) : (
+                  <div className="mt-4 hidden h-6 md:block" />
+                )}
               </div>
             ))}
           </div>

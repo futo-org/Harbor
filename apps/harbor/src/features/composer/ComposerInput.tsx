@@ -5,9 +5,9 @@ import {
   useCurrentIdentity,
 } from '@/src/common/lib/polycentric-hooks';
 import { useWebHover } from '@/src/common/lib/useWebHover';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import Icon from '@/src/common/components/Icon';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable } from 'react-native';
 
 interface ComposerInputProps {
   /** When set, opens the composer pre-filled to reply to this post. */
@@ -26,7 +26,6 @@ export function ComposerInput({
 }: ComposerInputProps = {}) {
   const { identity: currentIdentity } = useCurrentIdentity();
   const { theme } = useTheme();
-  const { hovered, onHoverIn, onHoverOut } = useWebHover();
   const {
     hovered: attachHovered,
     onHoverIn: onAttachHoverIn,
@@ -35,17 +34,10 @@ export function ComposerInput({
 
   if (!currentIdentity?.identityKey) return null;
 
-  const hoverOverlay =
-    theme.scheme === 'light'
-      ? withHexOpacity(theme.palette.neutral_500, '14')
-      : withHexOpacity(theme.palette.black, '28');
-
   return (
     <Pressable
       accessibilityLabel="New post"
       onPress={() => onCompose({})}
-      onHoverIn={onHoverIn}
-      onHoverOut={onHoverOut}
       style={[
         Atoms.flex_row,
         Atoms.items_center,
@@ -53,16 +45,13 @@ export function ComposerInput({
         Atoms.gap_md,
         Atoms.px_md,
         Atoms.py_md,
-        {
-          borderBottomWidth: 1,
-          borderBottomColor: theme.palette.neutral_25,
-          backgroundColor: theme.palette.neutral_0,
-          overflow: 'hidden',
-        },
+        theme.atoms.box.primary.bg,
+        theme.atoms.box.primary.border,
+        Atoms.border_b,
       ]}
     >
       <ProfileAvatar identityKey={currentIdentity.identityKey} size="md" />
-      <Text variant="body" color="neutral_500" style={Atoms.flex_1}>
+      <Text variant="body" color="muted" style={Atoms.flex_1}>
         {replyTo ? 'Post your reply' : "What's on your mind?"}
       </Text>
       <Pressable
@@ -78,21 +67,11 @@ export function ComposerInput({
         style={[
           Atoms.p_xs,
           Atoms.rounded_md,
-          {
-            backgroundColor: attachHovered
-              ? withHexOpacity(theme.palette.neutral_500, '20')
-              : 'transparent',
-          },
+          attachHovered && theme.atoms.box.raised.bg,
         ]}
       >
-        <Icon name="image" size={22} color="neutral_700" />
+        <Icon name="image" size={22} color="secondary" />
       </Pressable>
-      {hovered ? (
-        <View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: hoverOverlay }]}
-        />
-      ) : null}
     </Pressable>
   );
 }

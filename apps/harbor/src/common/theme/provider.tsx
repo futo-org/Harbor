@@ -66,7 +66,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   // moments where no surface has painted (splash dismissal, stack
   // transitions) don't flash the default white window.
   useEffect(() => {
-    void SystemUI.setBackgroundColorAsync(theme.palette.neutral_0);
+    void SystemUI.setBackgroundColorAsync(theme.colors.box.primary.bg);
   }, [theme]);
 
   const value = useMemo(
@@ -81,12 +81,12 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   const navTheme: typeof DefaultTheme = {
     dark: theme.scheme === 'dark',
     colors: {
-      primary: theme.palette.primary_500,
-      background: theme.palette.neutral_0,
-      card: theme.palette.neutral_25,
-      text: theme.palette.neutral_1000,
-      border: theme.palette.neutral_200,
-      notification: theme.palette.negative_500,
+      primary: theme.colors.accent,
+      background: theme.colors.box.primary.bg,
+      card: theme.colors.box.secondary.bg,
+      text: theme.colors.primary,
+      border: theme.colors.box.primary.border,
+      notification: theme.colors.box.danger.bg,
     },
     fonts: DefaultTheme.fonts,
   };

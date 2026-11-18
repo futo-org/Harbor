@@ -92,12 +92,10 @@ export function MentionSearchOverlay() {
           Atoms.rounded_lg,
           Atoms.overflow_hidden,
           placeMentionOverlay(anchor, win),
-          {
-            backgroundColor: theme.palette.neutral_0,
-            borderWidth: 1,
-            borderColor: theme.palette.neutral_50,
-            zIndex: ZIndex.tooltipOverlay,
-          },
+          theme.atoms.box.primary.bg,
+          theme.atoms.box.primary.border,
+          Atoms.border,
+          { zIndex: ZIndex.tooltipOverlay },
         ]}
       >
         <ScrollView keyboardShouldPersistTaps="handled">
@@ -140,7 +138,7 @@ function MentionRow({
     <View
       ref={ref as RefObject<ViewInstance | null>}
       onPointerEnter={onHover}
-      style={selected && { backgroundColor: theme.palette.neutral_25 }}
+      style={selected && theme.atoms.box.primary.bg_hover}
     >
       <ProfileRow
         size="sm"
@@ -169,23 +167,21 @@ function MentionShortcutHint() {
         Atoms.gap_xs,
         Atoms.px_sm,
         Atoms.py_xs,
-        {
-          borderTopWidth: 1,
-          borderTopColor: theme.palette.neutral_50,
-        },
+        theme.atoms.box.primary.border,
+        Atoms.border_t,
       ]}
     >
       <Kbd>↑</Kbd>
       <Kbd>↓</Kbd>
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         to choose,
       </Text>
       <Kbd>Tab</Kbd>
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         or
       </Text>
       <Kbd>{isApplePlatform ? '⏎' : 'Enter'}</Kbd>
-      <Text variant="small" color="neutral_500">
+      <Text variant="small" color="muted">
         to insert
       </Text>
     </View>

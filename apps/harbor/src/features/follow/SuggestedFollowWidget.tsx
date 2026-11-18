@@ -41,7 +41,8 @@ export function SuggestedFollowWidget() {
         Atoms.gap_md,
         Atoms.flex_shrink_1,
         Atoms.overflow_hidden,
-        { borderWidth: 1, borderColor: theme.palette.neutral_25 },
+        theme.atoms.box.primary.border,
+        Atoms.border,
       ]}
     >
       <Text fontSize="lg" fontWeight="bold">
@@ -52,7 +53,7 @@ export function SuggestedFollowWidget() {
         <View style={Atoms.p_lg}>
           <ActivityIndicator
             size="small"
-            color={theme.palette.neutral_500}
+            color={theme.colors.muted}
             accessibilityLabel="Loading suggestions"
           />
         </View>

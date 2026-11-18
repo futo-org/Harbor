@@ -20,7 +20,7 @@ export default function NotFoundScreen() {
             Atoms.gap_lg,
           ]}
         >
-          <Text color="neutral_500">This page doesn't exist</Text>
+          <Text color="muted">This page doesn't exist</Text>
           <Button title="Go home" variant="secondary" href="/" />
         </View>
       </Screen.PrimaryColumn>

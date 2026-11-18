@@ -1,4 +1,3 @@
-import Icon from '@/src/common/components/Icon';
 import { useHorizontalWheelScroll } from '@/src/common/lib/useHorizontalWheelScroll';
 import { useWebHover } from '@/src/common/lib/useWebHover';
 import {
@@ -6,7 +5,6 @@ import {
   BorderRadius,
   Spacing,
   useTheme,
-  withHexOpacity,
   ZIndex,
 } from '@/src/common/theme';
 import { isWeb } from '@/src/common/util/platform';
@@ -38,13 +36,6 @@ import { IconButton } from './IconButton';
 
 /** Keeps the chevrons off the very edge of the container. */
 const CHEVRON_INSET = Spacing.xs;
-
-/**
- * Hex string opacity of the chevron's backdrop.
- * Keep it high enough that it doesn't look noisy but still let the user see what
- * content is obscured by the chevron.
- */
-const CHEVRON_BACKDROP_OPACITY = 'E6';
 
 /**
  * Width of the gradient that indicates that there is more content to the left/right.
@@ -189,14 +180,7 @@ export const HorizontalScrollGroup = forwardRef(function HorizontalScrollGroup(
     },
   }));
 
-  const resolvedSurface = surfaceColor ?? theme.palette.neutral_0;
-
-  // We use a neutral color different from the background color so that
-  // it is easy to see but does not clash.
-  const chevronBackdrop = withHexOpacity(
-    theme.palette.neutral_50,
-    CHEVRON_BACKDROP_OPACITY,
-  );
+  const resolvedSurface = surfaceColor ?? theme.colors.box.primary.bg;
 
   return (
     <View
@@ -238,13 +222,11 @@ export const HorizontalScrollGroup = forwardRef(function HorizontalScrollGroup(
           <EdgeChevron
             side="left"
             visible={edges.canScrollLeft && hovered}
-            backgroundColor={chevronBackdrop}
             onPress={() => scrollByPage(-1)}
           />
           <EdgeChevron
             side="right"
             visible={edges.canScrollRight && hovered}
-            backgroundColor={chevronBackdrop}
             onPress={() => scrollByPage(1)}
           />
         </>
@@ -313,14 +295,13 @@ function EdgeFade({
 function EdgeChevron({
   side,
   visible,
-  backgroundColor,
   onPress,
 }: {
   side: Side;
   visible: boolean;
-  backgroundColor: string;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: withTiming(visible ? 1 : 0, { duration: FADE_DURATION }),
   }));
@@ -336,7 +317,7 @@ function EdgeChevron({
         animatedStyle,
       ]}
     >
-      <View style={[styles.chevronBackdrop, { backgroundColor }]}>
+      <View style={[styles.chevronBackdrop, theme.atoms.box.secondary.bg]}>
         {/* Unmounted while hidden: the button's inner pressable re-enables
             pointer events and would steal clicks from the tab beneath. */}
         {visible && (
@@ -346,13 +327,7 @@ function EdgeChevron({
             accessibilityLabel={
               side === 'left' ? 'Scroll left' : 'Scroll right'
             }
-            icon={({ size, color }) => (
-              <Icon
-                name={side === 'left' ? 'chevronBack' : 'chevronForward'}
-                size={size}
-                color={color}
-              />
-            )}
+            icon={side === 'left' ? 'chevronBack' : 'chevronForward'}
           />
         )}
       </View>

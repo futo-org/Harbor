@@ -3,7 +3,7 @@ import { Text } from '@/src/common/components';
 import { TOPBAR_HEIGHT } from '@/src/common/components/metrics';
 import { ProfileAvatar } from '@/src/common/components/primitives';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import { Image } from 'expo-image';
 import { View } from 'react-native';
 
@@ -22,9 +22,9 @@ export function ExtensionTopbar() {
         {
           // As the app's Topbar.
           height: TOPBAR_HEIGHT,
-          borderBottomWidth: 1,
-          borderBottomColor: withHexOpacity(theme.palette.neutral_500, '10'),
         },
+        theme.atoms.box.primary.border,
+        Atoms.border_b,
       ]}
     >
       <Image

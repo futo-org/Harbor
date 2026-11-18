@@ -94,7 +94,7 @@ export default function RecoverIdentityScreen() {
     innerContent = (
       <>
         <Text variant="title">Recover using backup</Text>
-        <Text variant="body" color="neutral_500">
+        <Text variant="body" color="muted">
           Recover your identity using a backup file exported from Harbor. Use
           this only if none of your devices are logged in to Harbor. Otherwise,
           use the pairing feature instead.

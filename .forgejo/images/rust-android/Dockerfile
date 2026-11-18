@@ -18,7 +18,7 @@ ENV PATH="/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin:${PATH}"
 
 # JDK 17 + Android SDK (for the kt-core AAR build).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jdk-headless \
+    openjdk-25-jdk-headless \
     && rm -rf /var/lib/apt/lists/*
 RUN curl -L -o /tmp/cmdline-tools.zip \
       "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" \

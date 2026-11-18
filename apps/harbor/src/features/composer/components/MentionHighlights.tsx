@@ -1,5 +1,5 @@
 import { Text as RNText } from 'react-native';
-import { createThemedStyles } from '@/src/common/theme';
+import { useTheme } from '@/src/common/theme';
 import type { MentionRange } from '../utils/applyTextChange';
 import { splitByMentionRanges } from '../utils/splitByMentionRanges';
 
@@ -14,7 +14,7 @@ export function MentionHighlights({
   text: string;
   mentionRanges: MentionRange[];
 }) {
-  const styles = useStyles();
+  const { theme } = useTheme();
   return splitByMentionRanges(text, mentionRanges).map((segment, i) => (
     // RN Text, not the primitive: a piece must inherit the input's font and
     // differ from it in color only, or the iOS input restyles typed text and
@@ -22,15 +22,9 @@ export function MentionHighlights({
     <RNText
       // biome-ignore lint/suspicious/noArrayIndexKey: segments are positional, derived from the text
       key={i}
-      style={segment.isMention && styles.mention}
+      style={segment.isMention && theme.atoms.accent}
     >
       {segment.text}
     </RNText>
   ));
 }
-
-const useStyles = createThemedStyles((theme, define) =>
-  define({
-    mention: { color: theme.palette.primary_500 },
-  }),
-);

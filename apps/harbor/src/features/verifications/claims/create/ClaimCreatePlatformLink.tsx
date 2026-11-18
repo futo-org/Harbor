@@ -2,7 +2,7 @@ import { Button, Text, TextInput } from '@/src/common/components';
 import { useToast } from '@/src/common/components/toast';
 import { HARBOR_APP_URL } from '@/src/common/constants';
 import { useCurrentIdentity } from '@/src/common/lib/polycentric-hooks';
-import { Atoms, useTheme } from '@/src/common/theme';
+import { Atoms } from '@/src/common/theme';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { CopyLinkComponent } from '../../CopyLinkComponent';
@@ -18,7 +18,6 @@ export function ClaimCreatePlatformLink({
   platform: Platform;
   onVerified: (ref: ClaimRef) => void;
 }) {
-  const { theme } = useTheme();
   const toast = useToast();
   const { identityKey } = useCurrentIdentity();
   const [profileUrl, setProfileUrl] = useState('');
@@ -39,11 +38,7 @@ export function ClaimCreatePlatformLink({
 
   return (
     <View style={Atoms.gap_md}>
-      <Text
-        variant="small"
-        style={theme.atoms.text_neutral_medium}
-        fontWeight="semibold"
-      >
+      <Text variant="small" color="secondary" fontWeight="semibold">
         {platform.generic ? 'Your website' : `Your ${platform.name} profile`}
       </Text>
       <TextInput
@@ -59,7 +54,7 @@ export function ClaimCreatePlatformLink({
 
       {/* Loop-back link the user adds to their profile. */}
       <CopyLinkComponent link={loopbackLink} />
-      <Text variant="small" style={theme.atoms.text_neutral_medium}>
+      <Text variant="small" color="secondary">
         {platform.generic
           ? 'Add this link anywhere on your website.'
           : // The verifier only reads the profile's text; a link placed in a

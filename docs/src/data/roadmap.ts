@@ -72,8 +72,10 @@ export const roadmap: (RoadmapItem | RoadmapPhase | RoadmapGap)[] = [
   },
   { phase: 'Pre-alpha' },
   {
+    date: '2026-11-17',
     title: 'Harbor merch store',
     description: 'Shirts and more, for anyone who wants to show their support.',
+    link: { label: 'store.harbor.social', to: 'https://store.harbor.social' },
   },
   {
     date: '2026-10-29',

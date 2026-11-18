@@ -80,8 +80,8 @@ function RootStack() {
 
   const stack = (
     <>
-      <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
-      <NavigationBar style={theme.name === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
+      <NavigationBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenLayout={
           isBrowserExtension
@@ -96,8 +96,8 @@ function RootStack() {
           // Web scrolls the document, so the scene grows with its content
           // instead of becoming a scroll port of its own.
           contentStyle: isWeb
-            ? [theme.atoms.bg, Atoms.flex_grow_1]
-            : [theme.atoms.bg, Atoms.flex_1, Atoms.overflow_auto],
+            ? [theme.atoms.box.primary.bg, Atoms.flex_grow_1]
+            : [theme.atoms.box.primary.bg, Atoms.flex_1, Atoms.overflow_auto],
           ...(isWeb
             ? { animation: 'none' as const }
             : {
@@ -171,6 +171,10 @@ function RootStack() {
         />
         <Stack.Screen
           name="[identityId]/post/[keyFingerprint]/[sequence]/image/[index]"
+          options={imageViewerScreenOptions}
+        />
+        <Stack.Screen
+          name="[identityId]/verifications/[keyFingerprint]/[sequence]/image/[index]"
           options={imageViewerScreenOptions}
         />
         <Stack.Screen

@@ -1,14 +1,33 @@
 jest.mock('@/src/common/theme', () => ({
   useTheme: () => ({
-    theme: { palette: new Proxy({}, { get: () => '#000' }) },
+    theme: {
+      atoms: new Proxy(
+        {},
+        {
+          get: () =>
+            new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }),
+        },
+      ),
+    },
   }),
   Atoms: new Proxy({}, { get: () => ({}) }),
-  withHexOpacity: (color: string) => color,
+  Spacing: new Proxy({}, { get: () => 0 }),
+}));
+
+jest.mock('@/src/common/lib/navigation/usePageTitle', () => ({
+  usePageTitle: () => {},
+}));
+
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
 jest.mock('@/src/common/components', () => {
   const react = require('react');
   const rn = require('react-native');
+  const Screen = ({ children }: { children?: unknown }) =>
+    react.createElement(rn.View, null, children);
+  Screen.PrimaryColumn = Screen;
   return {
     Text: ({ children, ...props }: { children?: unknown }) =>
       react.createElement(rn.Text, props, children),
@@ -20,6 +39,13 @@ jest.mock('@/src/common/components', () => {
       onPress?: () => void;
     }) => react.createElement(rn.Pressable, { onPress }, icon?.()),
     TextInput: (props: object) => react.createElement(rn.TextInput, props),
+    Screen,
+    ScreenHeader: ({ title, onBack }: { title: string; onBack: () => void }) =>
+      react.createElement(
+        rn.Pressable,
+        { onPress: onBack, accessibilityLabel: 'Back' },
+        react.createElement(rn.Text, null, title),
+      ),
   };
 });
 
@@ -33,23 +59,11 @@ jest.mock('@/src/common/components/Icon', () => {
   };
 });
 
-jest.mock('@/src/common/components/sheet', () => {
-  const react = require('react');
-  const { View } = require('react-native');
-  const Sheet = ({
-    header,
-    children,
-  }: {
-    header?: unknown;
-    children?: unknown;
-  }) => react.createElement(View, null, header, children);
-  Sheet.Header = () => null;
-  Sheet.Content = ({ children }: { children?: unknown }) =>
-    react.createElement(View, null, children);
-  return { Sheet };
-});
-
-const mockRouter = { canGoBack: jest.fn(() => true), back: jest.fn() };
+const mockRouter = {
+  canGoBack: jest.fn(() => true),
+  back: jest.fn(),
+  navigate: jest.fn(),
+};
 jest.mock('expo-router', () => ({
   get router() {
     return mockRouter;
@@ -124,6 +138,20 @@ describe('server list', () => {
 
     await fireEvent.press(screen.getAllByTestId('icon-remove')[1]);
     expect(mockHook.removeServer).toHaveBeenCalledWith('https://two.example');
+  });
+});
+
+describe('page', () => {
+  it('goes back, or to settings when there is no history', async () => {
+    const screen = await renderScreen();
+    expect(screen.getByText('Servers')).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(mockRouter.back).toHaveBeenCalled();
+
+    mockRouter.canGoBack.mockReturnValueOnce(false);
+    await fireEvent.press(screen.getByLabelText('Back'));
+    expect(mockRouter.navigate).toHaveBeenCalledWith('/settings');
   });
 });
 

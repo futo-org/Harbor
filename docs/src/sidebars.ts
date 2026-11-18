@@ -65,7 +65,12 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Policies',
-      items: ['privacy-policy', 'content-policy', 'content-policy-app-stores'],
+      items: [
+        'privacy-policy',
+        'content-policy',
+        'content-policy-app-stores',
+        'child-safety',
+      ],
     },
   ],
 };

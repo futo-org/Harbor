@@ -98,12 +98,13 @@ Provisioned by harbor-infra (`futo-git/ci_values`, `ci_variables`).
 - `STATIC_S3_ENDPOINT`, `STATIC_S3_ACCESS_KEY_ID`,
   `STATIC_S3_SECRET_ACCESS_KEY`; variables `STATIC_S3_BUCKET`,
   `STATIC_PUBLIC_BASE_URL`.
-- Browser extension stores, each skipped until its listing is set. Chrome:
-  variables `CHROME_EXTENSION_ID_STAGING`, `CHROME_EXTENSION_ID_PRODUCTION`,
-  `CHROME_PUBLISHER_ID`, `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`, secret
+- Browser extension stores, read from Infisical (`staging` and `prod`
+  `/ci/harbor`, entered in its UI) under the names `wxt submit` reads, each
+  store skipped until its listing is set. Chrome: `CHROME_EXTENSION_ID`,
+  `CHROME_PUBLISHER_ID`, `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`,
   `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`. Firefox: `FIREFOX_JWT_ISSUER`,
-  `FIREFOX_JWT_SECRET`. Edge: variables `EDGE_PRODUCT_ID_STAGING`,
-  `EDGE_PRODUCT_ID_PRODUCTION`, `EDGE_CLIENT_ID`, secret `EDGE_API_KEY`.
+  `FIREFOX_JWT_SECRET`. Edge: `EDGE_PRODUCT_ID`, `EDGE_CLIENT_ID`,
+  `EDGE_API_KEY`.
 - `SCCACHE_R2_ENDPOINT`, `SCCACHE_R2_ACCESS_KEY_ID`,
   `SCCACHE_R2_SECRET_ACCESS_KEY`; variable `SCCACHE_R2_BUCKET`.
 - Variables `EXPO_PUBLIC_HARBOR_SEED_SERVERS`,

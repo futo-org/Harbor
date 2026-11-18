@@ -58,11 +58,9 @@ export default function AnywhereScreen() {
                     // As the search bar on Explore.
                     Atoms.px_lg,
                     Atoms.py_md,
-                    theme.atoms.bg,
-                    {
-                      borderBottomWidth: 1,
-                      borderBottomColor: theme.palette.neutral_25,
-                    },
+                    theme.atoms.box.primary.bg,
+                    theme.atoms.box.primary.border,
+                    Atoms.border_b,
                   ]}
                 >
                   <AnywhereUrlField />
@@ -79,7 +77,6 @@ export default function AnywhereScreen() {
             pages.length > 0 ? (
               <Text
                 variant="title"
-                color="neutral_1000"
                 fontSize={24}
                 lineHeight="xl"
                 style={[Atoms.px_lg, Atoms.pt_lg, Atoms.pb_sm]}
@@ -92,14 +89,14 @@ export default function AnywhereScreen() {
           ListEmptyComponent={() =>
             !isLoading && (
               <ListEmpty>
-                <Text color="neutral_500" style={Atoms.text_center}>
+                <Text color="muted" style={Atoms.text_center}>
                   Enter a web address to comment on that page, or comment beside
                   the page itself with the{' '}
                   <Link
                     className="underlineOnHover"
                     href={Routes.tabs.anywhere.browserExtension.index}
                   >
-                    <Text color="primary_500">browser extension</Text>
+                    <Text color="accent">browser extension</Text>
                   </Link>
                 </Text>
               </ListEmpty>

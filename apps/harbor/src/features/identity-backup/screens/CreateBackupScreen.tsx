@@ -1,5 +1,4 @@
 import { Button, Screen, ScreenHeader, Text } from '@/src/common/components';
-import Icon from '@/src/common/components/Icon';
 import { showAlert } from '@/src/common/lib/dialogs';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks';
 import { useCurrentAuthorization } from '@/src/common/lib/polycentric-hooks/useCurrentAuthorization';
@@ -165,7 +164,7 @@ export default function CreateBackupScreen() {
 
   const continueHint =
     state.stage === 'ready' ? (
-      <Text variant="body" color="neutral_500">
+      <Text variant="body" color="muted">
         Press this once you have finished securely saving the backup file:
       </Text>
     ) : undefined;
@@ -185,7 +184,7 @@ export default function CreateBackupScreen() {
             Atoms.px_lg,
             Atoms.flex_1,
             Atoms.gap_md,
-            { backgroundColor: theme.atoms.bg.backgroundColor },
+            theme.atoms.box.primary.bg,
           ]}
         >
           <ScreenHeader
@@ -242,7 +241,7 @@ function BackupInfo({
       return (
         <>
           <Text variant="title">Before you continue</Text>
-          <Text variant="body" color="neutral_500">
+          <Text variant="body" color="muted">
             Your identity backup is a file that can restore your Harbor identity
             even if you are logged out on all of your devices.
           </Text>
@@ -251,27 +250,25 @@ function BackupInfo({
               Atoms.p_md,
               Atoms.rounded_lg,
               Atoms.my_xs,
-              {
-                backgroundColor: theme.palette.negative_25,
-                borderWidth: 1,
-                borderColor: theme.palette.negative_100,
-              },
+              theme.atoms.box.danger.bg_subtle,
+              theme.atoms.box.danger.border_subtle,
+              Atoms.border,
             ]}
           >
-            <Text variant="secondary" color="negative_500">
+            <Text variant="secondary" color="danger">
               The backup cannot be fully deactivated once it is created. Be
               absolutely sure to store it securely so that it will never leak or
               be discovered by anyone else.
             </Text>
           </View>
-          <Text variant="body" color="neutral_500">
+          <Text variant="body" color="muted">
             The next screen creates a new backup and lets you export it from
             Harbor as a file. Prepare a private and secure way to store it
             before you go on.
           </Text>
 
           {hasExisting ? (
-            <Text variant="secondary" color="warning_500">
+            <Text variant="secondary" color="warning">
               You already have an existing backup. Do not continue unless you
               have lost access to it.
             </Text>
@@ -283,7 +280,7 @@ function BackupInfo({
       return (
         <>
           <Text variant="title">Creating your backup</Text>
-          <Text variant="body" color="neutral_500">
+          <Text variant="body" color="muted">
             Generating and registering a new backup...
           </Text>
         </>
@@ -293,7 +290,7 @@ function BackupInfo({
       return (
         <>
           <Text variant="title">Save your backup file</Text>
-          <Text variant="body" color="neutral_500">
+          <Text variant="body" color="muted">
             The backup file can be used to restore your Harbor identity if you
             are ever logged out on all of your devices. Remember to store it
             somewhere safe and private. To use the backup file, press "I already
@@ -302,7 +299,7 @@ function BackupInfo({
           </Text>
 
           {hasExisting ? (
-            <Text variant="secondary" color="warning_500">
+            <Text variant="secondary" color="warning">
               The backup file below is now the active one. Save this instead of
               any older backup, but still do not share your old backup file with
               anyone.
@@ -322,16 +319,14 @@ function BackupInfo({
 function BackupContent({ onSave }: { onSave: () => void }) {
   return (
     <View style={[Atoms.gap_sm, Atoms.my_3xl]}>
-      <Text variant="body" color="neutral_500">
+      <Text variant="body" color="muted">
         Save this file somewhere safe:
       </Text>
       <Button
         title="Save backup file"
         variant="primary"
         fullWidth
-        icon={({ size, color }) => (
-          <Icon name="download" size={size} color={color} />
-        )}
+        icon="download"
         onPress={onSave}
       />
     </View>

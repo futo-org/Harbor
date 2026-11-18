@@ -1,5 +1,5 @@
 import { Block, useShimmerOpacity } from '@/src/common/components/skeletons';
-import { Atoms, useTheme, withHexOpacity } from '@/src/common/theme';
+import { Atoms, useTheme } from '@/src/common/theme';
 import {
   COMPACT_IMAGE_WIDTH,
   LinkPreviewCard,
@@ -32,7 +32,7 @@ export function AnywhereCard({
       ) : (
         <LinkPreviewCard link={link} compact={compact} />
       )}
-      <Text variant="secondary" color="neutral_500" style={Atoms.mt_md}>
+      <Text variant="secondary" color="muted" style={Atoms.mt_md}>
         {commentCount === undefined
           ? '\u00A0'
           : commentCountLabel(commentCount)}
@@ -44,7 +44,7 @@ export function AnywhereCard({
 function AnywhereCardSkeleton({ compact }: { compact?: boolean }) {
   const { theme } = useTheme();
   const animatedStyle = useShimmerOpacity();
-  const image = withHexOpacity(theme.palette.neutral_500, '20');
+  const image = theme.colors.box.raised.bg;
 
   return (
     <Animated.View
@@ -55,10 +55,8 @@ function AnywhereCardSkeleton({ compact }: { compact?: boolean }) {
         Atoms.overflow_hidden,
         compact && Atoms.flex_row,
         animatedStyle,
-        {
-          borderWidth: 1,
-          borderColor: withHexOpacity(theme.palette.neutral_500, '30'),
-        },
+        theme.atoms.outline,
+        Atoms.border,
       ]}
     >
       {compact ? null : (
