@@ -61,7 +61,7 @@ export function IdentitySwitcherSheet() {
           <Icon
             name="personOutline"
             size={20}
-            color="primary_500"
+            color="accent"
             accessibilityLabel="Active identity"
           />
         );
