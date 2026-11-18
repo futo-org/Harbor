@@ -3,7 +3,7 @@ import { toast } from '@/src/common/components/toast/useToast';
 import type { v2 } from '@polycentric/react-native';
 import { usePolycentric } from '@/src/common/lib/polycentric-hooks/context';
 import { invalidateQuery } from '@/src/common/query/hooks/useQuery';
-import { updateProfile } from '../lib/updateProfile';
+import { draftProfileUpdate } from '../lib/updateProfile';
 import { forceResolveAlias } from '../alias/useAliasResolutionStore';
 import { profileQueryKey } from './useProfile';
 import { formatImageImportErrorOrFallback } from '@/src/common/lib/images/ImageImportError';
@@ -70,6 +70,8 @@ export function useProfileEdit(
   const handleSave = useCallback(async (): Promise<boolean> => {
     setSaving(true);
     try {
+      const identity = client.activeIdentityKey;
+
       // Verify a non-empty alias actually points back to this identity before
       // committing — otherwise the saved alias would never verify on view, and
       // we'd be publishing an unusable alias. An empty
@@ -85,7 +87,7 @@ export function useProfileEdit(
         }
       }
 
-      await updateProfile(client, {
+      const profileUpdate = await draftProfileUpdate(client, {
         name: nameDraft,
         description: descriptionDraft,
         avatarUri,
@@ -93,6 +95,12 @@ export function useProfileEdit(
         banner: profile.banner,
         alias: aliasDraft,
       });
+
+      if (identity !== client.activeIdentityKey) {
+        throw new Error('Unexpected identity switch');
+      }
+
+      await client.createEvent(profileUpdate);
       await client.sync();
       invalidateQuery(client, profileQueryKey(client.activeIdentityKey));
       setEditing(false);
