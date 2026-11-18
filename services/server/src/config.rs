@@ -55,6 +55,14 @@ pub struct Config {
     /// Duration in which unused blobs are not yet pruned, with the assumption
     /// that an event will be stored that uses the blob in this time.
     pub blob_prune_grace: Duration,
+    /// Whether or not blob pruning should actually delete any blobs.
+    ///
+    /// If set to false the blobs will be removed from the content stored. If set
+    /// to true the blob that would be removed are not actually removed, but
+    /// are logged if they were.
+    ///
+    /// Defaults to true.
+    pub blob_prune_dry_run: bool,
     /// The commit this server was built from (`HARBOR_COMMIT`), set by the
     /// chart. Served on `/version`. `None` outside the cluster.
     pub commit: Option<String>,
@@ -135,6 +143,10 @@ pub fn init() -> &'static Config {
                     .and_then(|s| s.trim().parse().ok())
                     .unwrap_or(3 * 24), // 3 days.
             ),
+            blob_prune_dry_run: std::env::var("HARBOR_BLOB_PRUNE_DRY_RUN")
+                .ok()
+                .and_then(|s| s.trim().parse().ok())
+                .unwrap_or(true),
             commit: std::env::var("HARBOR_COMMIT")
                 .ok()
                 .map(|s| s.trim().to_string())

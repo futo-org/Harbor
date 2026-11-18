@@ -94,7 +94,8 @@ export function MentionSearchOverlay() {
           placeMentionOverlay(anchor, win),
           theme.atoms.box.primary.bg,
           theme.atoms.box.primary.border,
-          { borderWidth: 1, zIndex: ZIndex.tooltipOverlay },
+          Atoms.border,
+          { zIndex: ZIndex.tooltipOverlay },
         ]}
       >
         <ScrollView keyboardShouldPersistTaps="handled">
@@ -167,7 +168,7 @@ function MentionShortcutHint() {
         Atoms.px_sm,
         Atoms.py_xs,
         theme.atoms.box.primary.border,
-        { borderTopWidth: 1 },
+        Atoms.border_t,
       ]}
     >
       <Kbd>↑</Kbd>

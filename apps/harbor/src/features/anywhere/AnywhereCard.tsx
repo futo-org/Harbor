@@ -56,7 +56,7 @@ function AnywhereCardSkeleton({ compact }: { compact?: boolean }) {
         compact && Atoms.flex_row,
         animatedStyle,
         theme.atoms.outline,
-        { borderWidth: 1 },
+        Atoms.border,
       ]}
     >
       {compact ? null : (

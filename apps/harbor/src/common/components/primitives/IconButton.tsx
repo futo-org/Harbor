@@ -107,7 +107,8 @@ export function IconButton({
             style={[
               styles.surface,
               box.raised.border,
-              { borderWidth: 1, borderRadius: resolvedBorderRadius },
+              Atoms.border,
+              { borderRadius: resolvedBorderRadius },
               surfaceFill,
             ]}
           >

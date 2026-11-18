@@ -75,6 +75,7 @@ async fn main() {
         Some("delete-events") => admin::delete_events(rest).await,
         Some("prune-content") => admin::prune_content(rest).await,
         Some("sync-blob-index") => admin::sync_blob_index(rest).await,
+        Some("prune-blobs") => admin::blob_prune(rest).await,
         Some(other) => {
             // Startup CLI misuse — plain stderr, logging may not matter yet.
             eprintln!(

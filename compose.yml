@@ -154,6 +154,9 @@ services:
       - HARBOR_MAIN_SERVER=${HARBOR_SERVER_NAME:-http://localhost:3000}
       # Queried at push time for the sender's profile (name/avatar).
       - HARBOR_QUERY_SERVERS=${HARBOR_QUERY_SERVERS:-http://server:3000}
+      # Accepted JWT audiences: the URL the app uses in
+      # EXPO_PUBLIC_HARBOR_NOTIFICATION_SERVERS.
+      - HARBOR_NOTIFICATIONS_ALLOW_HOSTS=${HARBOR_NOTIFICATIONS_ALLOW_HOSTS:-http://localhost:3001}
     depends_on:
       postgres:
         condition: service_healthy

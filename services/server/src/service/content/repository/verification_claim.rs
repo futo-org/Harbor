@@ -1,4 +1,5 @@
-use crate::service::proto::{FieldKind, VerificationClaim, VerificationSchema};
+use std::collections::HashMap;
+
 use base64::prelude::*;
 use entity::{content_verification_claim, verification_schema};
 use prost::Message;
@@ -7,8 +8,10 @@ use sea_orm::sea_query::{
     SelectStatement, WithClause,
 };
 use sea_orm::{ActiveValue::Set, DbErr, EntityTrait, QueryTrait};
-use std::collections::HashMap;
 use tonic::Status;
+
+use crate::service::content::repository::Mutation;
+use crate::service::proto::{FieldKind, VerificationClaim, VerificationSchema};
 
 pub(super) fn add_query(
     with: &mut WithClause,
@@ -18,7 +21,7 @@ pub(super) fn add_query(
     let VerificationClaim {
         schema,
         fields,
-        images: _,
+        images,
     } = claim;
     let schema = schema.ok_or_else(|| {
         Status::invalid_argument("verification claim missing schema")
@@ -67,7 +70,7 @@ pub(super) fn add_query(
         .select_from({
             let mut q = SelectStatement::new();
             q.from(content_id.0.clone())
-                .expr(Expr::col(content_id))
+                .expr(Expr::col(content_id.clone()))
                 .expr(Expr::from(digest.r#type))
                 .expr(Expr::from(digest.value))
                 .expr(Expr::from(fields));
@@ -78,6 +81,17 @@ pub(super) fn add_query(
             tracing::error!(error = %err, "failed to create query to store verification claim content");
             Status::internal("internal server error")
         })?;
+
+    let result =  Mutation::store_image_sets(images, content_id)
+        .map_err(|error| {
+            tracing::error!(%error, "failed to create query to store verification claim images");
+            Status::internal("internal server error")
+        })?;
+    if let Some(query) = result {
+        let mut cte = CommonTableExpression::new();
+        cte.table_name("verification_claim_images").query(query);
+        with.cte(cte);
+    }
 
     Ok(query)
 }

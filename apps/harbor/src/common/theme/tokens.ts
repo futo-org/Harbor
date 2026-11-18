@@ -1,5 +1,4 @@
 import { StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
-import { isIOS } from '../util/platform';
 
 export const Spacing = {
   '0': 0,
@@ -55,6 +54,8 @@ export const typography = {
     md: 20,
     lg: 24,
     xl: 32,
+    /** Line height for monospace text at `xs` font size, used in Logs and Sync Issues screens */
+    logs: 17,
   } as const,
 };
 
@@ -663,6 +664,36 @@ const atomStyles = {
   },
   rounded_full: {
     borderRadius: BorderRadius.full,
+  },
+
+  /**
+   * Border width
+   */
+  border_0: {
+    borderWidth: 0,
+  },
+  border: {
+    borderWidth: 1,
+  },
+  border_t: {
+    borderTopWidth: 1,
+  },
+  border_b: {
+    borderBottomWidth: 1,
+  },
+  border_l: {
+    borderLeftWidth: 1,
+  },
+  border_r: {
+    borderRightWidth: 1,
+  },
+  border_x: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+  },
+  border_y: {
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
   },
 
   /**

@@ -31,6 +31,9 @@ const APPS = [
       'Download the APK directly. The app keeps itself up to date with new releases.',
     linkLabel: 'Download APK',
     href: 'https://static.harbor.social/apk/production/harbor-latest.apk',
+    altLabel: 'Or get it on Google Play',
+    altHref:
+      'https://play.google.com/store/apps/details?id=org.futo.polycentric.store',
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -60,9 +63,91 @@ const APPS = [
   },
 ];
 
+const EXTENSIONS = [
+  {
+    title: 'Chrome / Brave',
+    description:
+      'Harbor Anywhere opens Harbor beside the page you are on. Also installs in Edge and other Chromium browsers.',
+    linkLabel: 'Get the extension',
+    href: 'https://chromewebstore.google.com/detail/harbor-anywhere/cpjdenlifojmmddcigneiahgbkkbojlm',
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        className="h-10 w-10"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="11" />
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 8h10.2" />
+        <path d="M8.5 14 3.4 5.2" />
+        <path d="M15.5 14l-5.1 8.8" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Firefox',
+    description:
+      "Harbor Anywhere for Firefox, from Mozilla's add-ons site. Updates arrive automatically.",
+    linkLabel: 'Get the add-on',
+    href: 'https://addons.mozilla.org/firefox/addon/harbor-anywhere/',
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="h-10 w-10"
+        aria-hidden="true"
+      >
+        <path d="M4.5 6.5C2 10 2.3 15.5 5.5 19c3.5 3.8 9.5 4 13.2.5 3.3-3.2 4-8 2-12-.4 2-1.2 3-2.2 3.5.3-3.5-1.5-6.5-4.5-8 .5 2.5-.5 4-2 5-1.5 1-2.5 2.2-2.5 4" />
+        <path d="M9.5 12c-1.5.5-2.5 2-2 3.8.6 2 2.8 3 4.8 2.7" />
+      </svg>
+    ),
+  },
+];
+
+type AppLink = (typeof APPS)[number] | (typeof EXTENSIONS)[number];
+
+function AppCard({ app }: { app: AppLink }) {
+  const alt = 'altHref' in app ? app : undefined;
+  return (
+    <div className="flex flex-col rounded-2xl  p-8">
+      {app.icon}
+      <h3 className="mt-4 mb-3 text-2xl font-bold">{app.title}</h3>
+      <p className="m-0 grow text-neutral-300">{app.description}</p>
+      <Link
+        className="mt-8 rounded-full bg-primary-500 px-6 py-3 text-center font-bold text-white hover:bg-primary-400 hover:text-white hover:no-underline"
+        href={app.href}
+      >
+        {app.linkLabel}
+      </Link>
+      {/* Every card keeps this row on desktop so the buttons line up. */}
+      {alt ? (
+        <Link
+          className="mt-4 h-6 text-center text-neutral-300 underline hover:text-white"
+          href={alt.altHref}
+        >
+          {alt.altLabel}
+        </Link>
+      ) : (
+        <div className="mt-4 hidden h-6 md:block" />
+      )}
+    </div>
+  );
+}
+
 export default function Apps() {
   return (
-    <Layout title="Apps" description="Get Harbor on the web, Android, and iOS">
+    <Layout
+      title="Apps"
+      description="Get Harbor on the web, Android, iOS, and in your browser"
+    >
       <div className="landing-page bg-neutral-900 text-white">
         <header className="relative flex min-h-[50vh] flex-col items-center justify-center gap-6 bg-[linear-gradient(180deg,rgba(26,31,41,0)_55%,#1a1f29_100%),url('/img/harbor-splash-alt.svg')] bg-cover bg-center px-6 pt-28 pb-16 text-center text-white">
           <h1 className="m-0 text-5xl leading-[1.1] font-extrabold md:text-[4.25rem]">
@@ -75,17 +160,15 @@ export default function Apps() {
         <main className="mx-auto max-w-6xl px-6 py-20">
           <div className="grid gap-6 md:grid-cols-3">
             {APPS.map((app) => (
-              <div key={app.title} className="flex flex-col rounded-2xl  p-8">
-                {app.icon}
-                <h3 className="mt-4 mb-3 text-2xl font-bold">{app.title}</h3>
-                <p className="m-0 grow text-neutral-300">{app.description}</p>
-                <Link
-                  className="mt-8 rounded-full bg-primary-500 px-6 py-3 text-center font-bold text-white hover:bg-primary-400 hover:text-white hover:no-underline"
-                  href={app.href}
-                >
-                  {app.linkLabel}
-                </Link>
-              </div>
+              <AppCard key={app.title} app={app} />
+            ))}
+          </div>
+          <h2 className="mt-20 mb-6 px-8 text-3xl font-extrabold">
+            Browser extension
+          </h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            {EXTENSIONS.map((app) => (
+              <AppCard key={app.title} app={app} />
             ))}
           </div>
         </main>

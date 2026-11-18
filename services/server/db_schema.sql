@@ -43,11 +43,6 @@ CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
             FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
            WHERE (ts_token_type.alias = 'numword'::text)
           LIMIT 1
-         ), token_word AS (
-          SELECT ts_token_type.tokid AS id
-            FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
-           WHERE (ts_token_type.alias = 'word'::text)
-          LIMIT 1
          ), token_sfloat AS (
           SELECT ts_token_type.tokid AS id
             FROM ts_token_type('default'::text) ts_token_type(tokid, alias, description)
@@ -59,20 +54,21 @@ CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
            WHERE (ts_token_type.alias = 'blank'::text)
           LIMIT 1
          ), parsed AS (
-          SELECT parsed.tokid,
+          SELECT
                  CASE
                      WHEN ((parsed.tokid = ( SELECT token_sfloat.id
                         FROM token_sfloat)) AND (lead(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_numword.id
                         FROM token_numword))) THEN (parsed.token || lead(parsed.token, 1, ''::text) OVER ())
                      WHEN ((parsed.tokid = ( SELECT token_numword.id
                         FROM token_numword)) AND (lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_sfloat.id
-                        FROM token_sfloat))) THEN ''::text
+                        FROM token_sfloat))) THEN NULL::text
                      WHEN ((parsed.tokid = ( SELECT token_blank.id
                         FROM token_blank)) AND ("right"(parsed.token, 1) = '#'::text)) THEN ('#'::text || lead(parsed.token, 1, ''::text) OVER ())
                      WHEN ((lag(parsed.tokid, 1, NULL::integer) OVER () = ( SELECT token_blank.id
-                        FROM token_blank)) AND (lag("right"(parsed.token, 1), 1, NULL::text) OVER () = '#'::text)) THEN ''::text
+                        FROM token_blank)) AND (lag("right"(parsed.token, 1), 1, NULL::text) OVER () = '#'::text)) THEN NULL::text
                      WHEN ((parsed.token = '@'::text) AND (lag(parsed.token, 1, NULL::text) OVER () IS NOT NULL) AND (lead(parsed.token, 1, NULL::text) OVER () IS NOT NULL)) THEN ((lag(parsed.token, 1, ''::text) OVER () || '@'::text) || lead(parsed.token, 1, ''::text) OVER ())
-                     WHEN (parsed.token = '@'::text) THEN NULL::text
+                     WHEN (parsed.tokid = ( SELECT token_blank.id
+                        FROM token_blank)) THEN NULL::text
                      ELSE parsed.token
                  END AS token
             FROM ts_parse('default'::text, parse_for_search.text) parsed(tokid, token)
@@ -84,11 +80,10 @@ CREATE FUNCTION public.parse_for_search(text text) RETURNS SETOF text
                      ELSE ARRAY[parsed.token]
                  END))))) AS term
             FROM parsed
-           WHERE ((octet_length(parsed.token) <> 0) AND (parsed.token IS NOT NULL) AND ((parsed.tokid <> ( SELECT token_blank.id
-                    FROM token_blank)) OR ("left"(parsed.token, 1) = '#'::text) OR (parsed.token ~~ '%@%'::text)))
+           WHERE ((parsed.token <> ''::text) AND (parsed.token IS NOT NULL))
          )
   SELECT transformed.term
-    FROM ( SELECT ltrim(transformed_1.term, '#'::text) AS ltrim
+    FROM ( SELECT ltrim(transformed_1.term, '#'::text) AS term
             FROM transformed transformed_1) transformed(term)
    WHERE ((transformed.term IS NOT NULL) AND (transformed.term <> ''::text));
 END;
@@ -324,8 +319,10 @@ CREATE TABLE public.content_identity (
 
 CREATE TABLE public.content_image (
     content_id bigint NOT NULL,
-    blob_digest_type smallint NOT NULL,
-    blob_digest_bytes bytea NOT NULL,
+    digest_type integer NOT NULL,
+    digest_bytes bytea NOT NULL,
+    size bigint NOT NULL,
+    mime_type text NOT NULL,
     width integer NOT NULL,
     height integer NOT NULL
 );
@@ -857,14 +854,6 @@ ALTER TABLE ONLY public.content_follow
 
 ALTER TABLE ONLY public.content_identity
     ADD CONSTRAINT content_identity_pkey PRIMARY KEY (content_id);
-
-
---
--- Name: content_image content_image_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.content_image
-    ADD CONSTRAINT content_image_pkey PRIMARY KEY (content_id);
 
 
 --

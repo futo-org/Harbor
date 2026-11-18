@@ -14,8 +14,16 @@ import { useAnywhereHomeRoute } from './hooks/useAnywhereHomeRoute';
 
 /** Each browser's store, with the extension's listing once it has one. */
 const STORES: { browser: string; store: string; url?: string }[] = [
-  { browser: 'Chrome and Brave', store: 'Chrome Web Store' },
-  { browser: 'Firefox', store: 'Firefox Add-ons' },
+  {
+    browser: 'Chrome and Brave',
+    store: 'Chrome Web Store',
+    url: 'https://chromewebstore.google.com/detail/harbor-anywhere/cpjdenlifojmmddcigneiahgbkkbojlm',
+  },
+  {
+    browser: 'Firefox',
+    store: 'Firefox Add-ons',
+    url: 'https://addons.mozilla.org/firefox/addon/harbor-anywhere/',
+  },
   { browser: 'Edge', store: 'Edge Add-ons' },
   { browser: 'Safari', store: 'App Store' },
 ];

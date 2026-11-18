@@ -16,6 +16,7 @@ All service variables are read and validated once at startup by
 | `HARBOR_NOTIFICATIONS_DATABASE_SCHEMA` | `notifications` | Postgres schema owning this service's tables. |
 | `HARBOR_MAIN_SERVER` | _(required)_ | The server events must originate from for this service to fire notifications (prevents duplicates). |
 | `HARBOR_QUERY_SERVERS` | _(required)_ | Comma-separated gRPC server URLs to fetch identity/profile data from. |
+| `HARBOR_NOTIFICATIONS_ALLOW_HOSTS` | _(required)_ | Comma-separated JWT audiences accepted on push subscriptions: the URLs clients address this service by. |
 | `HARBOR_NOTIFICATIONS_GRPC_ADDR` | `0.0.0.0:3001` | Address the gRPC `NotificationService` listens on. |
 | `HARBOR_EXPO_ACCESS_TOKEN` | _(unset)_ | Expo access token; blank is treated as unset. Only needed for projects with enhanced push security. |
 

@@ -87,7 +87,7 @@ export function Tabs({
   const surface = [
     theme.atoms.box.primary.bg,
     theme.atoms.box.primary.border,
-    { borderBottomWidth: 1 },
+    Atoms.border_b,
   ];
 
   const groupRef = useRef<HorizontalScrollGroupRef>(null);

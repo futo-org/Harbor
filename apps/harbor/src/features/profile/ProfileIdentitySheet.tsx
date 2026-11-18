@@ -60,7 +60,7 @@ export function ProfileIdentitySheet({ identityKey }: { identityKey: string }) {
 
   const servers = state?.servers ?? [];
 
-  const divider = <View style={[theme.atoms.outline, { borderTopWidth: 1 }]} />;
+  const divider = <View style={[theme.atoms.outline, Atoms.border_t]} />;
 
   return (
     <Sheet detents={[1]} dismissible>

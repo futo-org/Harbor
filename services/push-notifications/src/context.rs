@@ -16,4 +16,6 @@ pub struct Context {
     /// The polycentric server this service expects
     /// events to originate from.
     pub main_server: String,
+    /// Accepted JWT audiences on push subscriptions.
+    pub allow_hosts: Vec<String>,
 }
