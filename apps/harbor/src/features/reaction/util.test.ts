@@ -67,16 +67,29 @@ describe('summarizeReactions', () => {
     expect(lines[0].othersCount).toBe(1);
   });
 
-  it('cuts off lines past the limit and counts them', () => {
-    const counts = ['👍', '❤️', '😂', '🔥', '🎉', '👀'].map((emoji) => ({
-      emoji,
-      count: 1,
-    }));
+  it('cuts off lines past the limit and collects their emojis and people', () => {
+    const groups = buildGroups([
+      ['👍', ['alice']],
+      ['❤️', ['bob']],
+      ['😂', ['me', 'carol']],
+    ]);
+    const counts = [
+      { emoji: '👍', count: 1 },
+      { emoji: '❤️', count: 1 },
+      { emoji: '😂', count: 4 },
+      { emoji: '🔥', count: 3 },
+    ];
 
-    const { lines, moreCount } = summarizeReactions(new Map(), counts, 'me', 4);
+    const { lines, moreEmojis, morePeopleCount } = summarizeReactions(
+      groups,
+      counts,
+      'me',
+      2,
+    );
 
-    expect(lines).toHaveLength(4);
-    expect(moreCount).toBe(2);
+    expect(lines.map((line) => line.emoji)).toEqual(['👍', '❤️']);
+    expect(moreEmojis).toEqual(['😂', '🔥']);
+    expect(morePeopleCount).toBe(7);
   });
 });
 
