@@ -8,7 +8,8 @@ import android.database.sqlite.SQLiteOpenHelper
 /**
  * Creates and versions the SQLite database backing the v2 storage driver.
  * Schema lives in [SqliteSchema]; future changes bump `SqliteSchema.VERSION`
- * and add branches to [onUpgrade].
+ * and add branches to [onUpgrade]. Foreign-key enforcement is turned on
+ * for every connection.
  */
 class PolycentricDbHelper(
     context: Context,

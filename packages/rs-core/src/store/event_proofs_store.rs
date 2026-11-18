@@ -1,13 +1,17 @@
+//! Event proofs by event key.
+
 use super::keys::EventKey;
 use polycentric_common::models::protos_v2::EventProof;
 use std::collections::BTreeMap;
 
+/// `EventProof`s received alongside events, keyed by event.
 #[derive(Debug, Default)]
 pub struct EventProofsStore {
     proofs: BTreeMap<EventKey, Vec<EventProof>>,
 }
 
 impl EventProofsStore {
+    /// Create an empty proofs store.
     pub fn new() -> Self {
         Self::default()
     }

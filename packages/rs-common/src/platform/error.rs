@@ -1,5 +1,9 @@
+//! [`PlatformError`] and its numeric [`ErrorCode`].
+
 use crate::error::Error as TopLevelError;
 
+/// Detailed error for key handling, signing, (de)serialization and
+/// binding/FFI failures. Usually wrapped in [`Error::Platform`](TopLevelError::Platform).
 #[derive(Debug, thiserror::Error)]
 pub enum PlatformError {
     #[error("Key has invalid type: expected {expected}, got {actual}")]
@@ -51,8 +55,13 @@ pub enum PlatformError {
     ServerError { server: String, error: String },
 }
 
+/// Result with [`PlatformError`].
 pub type PlatformResult<T> = std::result::Result<T, PlatformError>;
 
+/// Stable numeric code for an [`Error`](TopLevelError), derived via `From`.
+///
+/// Ranges: 0 success, 1xx model/core, 2xx IO, 3xx bindings. Codes are
+/// explicit, so do not renumber existing variants.
 #[repr(i32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorCode {

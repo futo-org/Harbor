@@ -1,8 +1,11 @@
+//! [`ContentDigest`] encoding, verification and validation.
+
 use std::fmt;
 
 use crate::models::protos_v2::{ContentDigest, ContentDigestType};
 use crate::models::validate::{self, SliceConfig, Validate};
 
+/// Why content bytes failed [`verify_digest`].
 #[derive(Debug)]
 pub enum DigestError {
     UnsupportedDigestType(i32),
@@ -97,6 +100,7 @@ impl Validate for ContentDigest {
     }
 }
 
+/// Why a [`ContentDigest`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "ContentDigestValidationError"))]

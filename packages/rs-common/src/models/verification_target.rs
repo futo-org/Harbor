@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`VerificationTarget`].
+
 use std::fmt;
 
 use crate::models::protos_v2::VerificationTarget;
@@ -42,6 +44,7 @@ impl Validate for VerificationTarget {
     }
 }
 
+/// Why a [`VerificationTarget`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "VerificationTargetValidationError"))]

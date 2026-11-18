@@ -18,10 +18,11 @@ export class EventStore {
   constructor(private readonly repository: IEventRepository) {}
 
   /**
-   * Try persisted a newly created event/content bundle.
+   * Try persisting a newly created event/content bundle.
    * This may fail if a concurrent session is also creating events.
    * This method does not do much validation since we trust that our client
-   * created the event correctly.
+   * created the event correctly (no signature or digest check).
+   * Throws `'already exists'` if the event key is taken.
    */
   async create(
     owner: string,
@@ -44,7 +45,9 @@ export class EventStore {
   /**
    * Try persisting the event and/or content that we have received from a
    * remote source.
-   * An existing event is never overwritten.
+   * New events have their signature and content digest verified; for an
+   * existing event, content is only added if it was `'absent'`. An existing
+   * event is never overwritten.
    */
   async persist(
     owner: string,
@@ -73,7 +76,9 @@ export class EventStore {
   }
 
   /**
-   * Persist content for an event that we already have.
+   * Persist content for an event that we already have, after checking it
+   * against the event's content digest.
+   * Throws `'not found'` if the event is not stored.
    */
   async addContent(
     owner: string,
@@ -90,21 +95,28 @@ export class EventStore {
     await this.addVerifiedContent(existing, serializedContent);
   }
 
+  /** Drop an event's content, keeping the event (status becomes `'omitted'`). */
   async deleteContent(owner: string, eventKey: EventKey): Promise<void> {
     assertIdentity(owner, invalidOwner);
     await this.repository.deleteContent(owner, eventKey);
   }
 
+  /** Look up one event and its content; `null` if not stored. */
   async get(owner: string, eventKey: EventKey): Promise<EventRow | null> {
     assertIdentity(owner, invalidOwner);
     return this.repository.get(owner, eventKey);
   }
 
+  /** Every stored event/content row for `owner`. Used to hydrate the core. */
   async getAll(owner: string): Promise<EventRow[]> {
     assertIdentity(owner, invalidOwner);
     return this.repository.getAll(owner);
   }
 
+  /**
+   * The highest-sequence stored event key per (collection, signer) stream of
+   * `owner`'s own identity. Used as the baseline for partial pulls.
+   */
   async getHeads(owner: string): Promise<EventKey[]> {
     assertIdentity(owner, invalidOwner);
     return this.repository.getHeads(owner);

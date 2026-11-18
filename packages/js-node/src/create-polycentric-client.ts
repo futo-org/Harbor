@@ -6,6 +6,7 @@ import { createNodePgStorageDriver } from './datastore/postgres/index.js';
 import { createNodeFileStoreDriver } from './filestore/fs/index.js';
 import { PolycentricCore, uniffiInitAsync } from './uniffi-init.js';
 
+/** Options for {@link createPolycentricNodeClient}. */
 export interface CreatePolycentricNodeClientConfig {
   /** Path to a sqlite file. Ignored when `databaseUrl` is set. */
   databasePath?: string;
@@ -14,10 +15,18 @@ export interface CreatePolycentricNodeClientConfig {
    * Append `?schema=<name>` to keep the tables under their own schema.
    */
   databaseUrl?: string;
+  /** Directory for blob/file storage; created if missing. */
   blobDirectory: string;
+  /** Server URLs passed to `PolycentricClient.create` as seed servers. */
   seedServers?: string[];
 }
 
+/**
+ * Create a ready-to-use `PolycentricClient` for Node.js, backed by Postgres
+ * (`databaseUrl`) or better-sqlite3 (`databasePath`).
+ *
+ * @throws {Error} if neither `databaseUrl` nor `databasePath` is given
+ */
 export async function createPolycentricNodeClient(
   config: CreatePolycentricNodeClientConfig,
 ): Promise<PolycentricClient> {

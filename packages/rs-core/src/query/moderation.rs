@@ -33,24 +33,36 @@ use prost::Message;
 use crate::client::PolycentricClient;
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
+/// Arguments for `Query::IsModerator`. Empty: the caller comes from the
+/// auth token.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct IsModeratorArgs {}
 
+/// Arguments for `Query::IsBanned`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct IsBannedArgs {
+    /// Identity to check.
     pub target_identity: String,
 }
 
+/// Arguments for `Query::ListBans`. Pin a single server via
+/// `QueryOpts.servers`, since the cursor is server-specific.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListBansArgs {
+    /// Max entries to return; the server clamps to its own bounds.
     pub limit: Option<u32>,
+    /// Opaque cursor from a previous response's `page_info.end_cursor`.
     pub after: Option<String>,
+    /// Case-insensitive identity prefix filter.
     pub query: Option<String>,
 }
 
+/// Arguments for `Query::ListReports`. Forward paging only.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListReportsArgs {
+    /// Max reports each server returns.
     pub limit: Option<i32>,
+    /// A previous response's `page_info.end_cursor`.
     pub forward_token: Option<String>,
     /// `ReportStatus` value; unspecified lists every status.
     pub status: i32,
@@ -195,6 +207,9 @@ pub fn list_bans(
     Arc::new(query_client.fetch(query_key, query_fn, merge_list_bans, opts))
 }
 
+/// Moderation reports from each configured server. Emits a JSON
+/// `{server_url: base64 ListReportsResponse}` map, since report cursors and
+/// statuses are per-server.
 pub fn list_reports(
     query_client: &QueryClient<Vec<u8>>,
     query_key: Option<QueryKey>,

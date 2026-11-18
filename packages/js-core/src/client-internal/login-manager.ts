@@ -22,10 +22,14 @@ import {
 
 /** Genesis info for a new identity still being created. */
 export type SignupInfo = {
+  /** The new identity key paired with the new public key. */
   login: LoginId;
   keyPair: KeyPair;
+  /** Signed sequence-1 identity event; not yet persisted. */
   genesisEvent: Proto.SignedEvent;
+  /** Content of the genesis event (the initial identity document). */
   identityContent: Proto.Content;
+  /** `identityContent` serialized, as its digest was computed over. */
   serializedContent: Proto.SerializedContent;
 };
 
@@ -34,9 +38,14 @@ export type PendingLogin = LoginDetails & {
   keyPair: KeyPair;
 };
 
+/**
+ * Login lifecycle: signup, pairing/claiming an existing identity, backup
+ * recovery and restoring the active login.
+ */
 export class LoginManager {
   constructor(private readonly client: PolycentricClient) {}
 
+  /** Generate a key pair (Ed25519 by default). Persists nothing. */
   async generateKeyPair(keyType?: KeyType): Promise<KeyPair> {
     if (!keyType) {
       keyType = KeyType.ED25519;
@@ -60,6 +69,8 @@ export class LoginManager {
   /**
    * Try restoring the active login from storage.
    * Returns whether a login was successfully restored.
+   * Called by `PolycentricClient.create`; throws if the stored login no
+   * longer exists.
    */
   async restore(): Promise<boolean> {
     const login = await this.client.storageDriver.getActiveLogin();
@@ -71,8 +82,9 @@ export class LoginManager {
 
   /**
    * Publish a new login event and mark the login as live.
-   * This method does not check that we are properly authorized to log in as
-   * this identity.
+   * The key must appear in `args` as a rotation or signing key (throws
+   * otherwise), but the identity chain itself is not checked here.
+   * Switches the client to the new login, then pushes.
    */
   async publishLogin(
     identityKey: string,
@@ -234,7 +246,10 @@ export class LoginManager {
   }
 
   /**
-   * Use the backup to authorize `keyPair` and log in.
+   * Use the backup to authorize `keyPair` as a rotation key and log in.
+   *
+   * @throws {Error} If the backup has no recovery key or valid chain, or its
+   *   recovery key no longer matches the identity's.
    */
   async recoverIdentity(
     keyPair: KeyPair,
@@ -337,7 +352,9 @@ export class LoginManager {
   }
 
   /**
-   * Generate a key pair and persist it as a pending signup.
+   * Generate a key pair and persist it as a `pendingSignup` login.
+   * The caller then commits `genesisEvent` (`client.commitEvent`), calls
+   * `finishSignup` and switches to the login with `client.loginAs`.
    */
   async beginSignup(): Promise<SignupInfo> {
     const keyPair = await this.generateKeyPair();
@@ -417,7 +434,8 @@ export class LoginManager {
   }
 
   /**
-   * Generate a new key pair and register it as a pending login.
+   * Generate a new key pair and register it as a `pendingPair` or
+   * `pendingRecovery` login for `identityKey`.
    */
   async beginLogin(
     identityKey: string,

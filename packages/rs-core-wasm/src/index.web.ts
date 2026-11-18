@@ -9,6 +9,10 @@ import { uniffiInitAsync as openWasmModule } from './generated/wasm/index';
 
 export * from './generated/wasm/index';
 
+/**
+ * Fetch and initialize the wasm module from the URL the bundler gave it.
+ * Await it once before using any binding.
+ */
 export function uniffiInitAsync(): Promise<void> {
   return openWasmModule(wasmSource);
 }

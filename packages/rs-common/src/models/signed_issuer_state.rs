@@ -1,3 +1,5 @@
+//! Decoding and signature checking for [`SignedIssuerState`] (device pairing).
+
 use prost::Message;
 
 use crate::error::{CoreError, CoreResult};

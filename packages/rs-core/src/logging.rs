@@ -25,10 +25,15 @@ use crate::lock::LockRecover;
 /// [`set_log_level`]; anything below it is dropped before crossing FFI.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
 pub enum LogLevel {
+    /// Very verbose diagnostics.
     Trace,
+    /// Debugging detail.
     Debug,
+    /// Normal operational messages (the default threshold).
     Info,
+    /// Recoverable problems, e.g. a server failing or invalid data dropped.
     Warn,
+    /// Failures, including caught panics.
     Error,
     /// Disables all logging.
     Off,
@@ -47,8 +52,11 @@ impl LogLevel {
     }
 }
 
+/// Host-implemented log sink, registered with [`set_logger`].
 #[uniffi::export(with_foreign)]
 pub trait Logger: Send + Sync {
+    /// Receive one already-filtered message. Called synchronously on the
+    /// logging thread, so implementations should not block.
     fn log(&self, message: String);
 }
 

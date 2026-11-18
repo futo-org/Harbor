@@ -1,3 +1,7 @@
+//! Pushing local events to servers: compare against a server's heads,
+//! bundle what it is missing, send `PutEvents`, and map the server's per-bundle
+//! errors/warnings back to event keys.
+
 use polycentric_common::models::{
     collections,
     protos_v2::{PutEventsRequest, PutEventsResponse},
@@ -21,6 +25,7 @@ use crate::{
 /// The server's complaints about a single pushed event.
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct EventPushIssues {
+    /// The event the issues refer to.
     pub key: FfiEventKey,
     /// If `errors` is not empty, the server did not store the event for the reasons listed.
     pub errors: Vec<String>,

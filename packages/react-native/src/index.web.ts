@@ -1,3 +1,9 @@
+/**
+ * Web entry of `@polycentric/react-native`. Mirrors `index.tsx` with the
+ * rs-core bindings from `@polycentric/rs-core-wasm`, plus `uniffiInitAsync`.
+ *
+ * @packageDocumentation
+ */
 import 'fast-text-encoding';
 
 // Re-export the ubrn web init as `uniffiInitAsync` — consumers must

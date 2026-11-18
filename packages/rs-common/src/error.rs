@@ -1,5 +1,7 @@
 use crate::platform::error::PlatformError;
 
+/// General error, used by [`Serializable`](crate::models::Serializable) and
+/// the v1 model helpers: an IO error or a [`PlatformError`].
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("IO error: {0}")]
@@ -9,6 +11,8 @@ pub enum Error {
     Platform(#[from] PlatformError),
 }
 
+/// Error for protocol operations such as opening signed events, resolving
+/// vector clocks and verifying merkle proofs.
 #[derive(Debug, thiserror::Error)]
 pub enum CoreError {
     #[error("Invalid event: {0}")]
@@ -33,5 +37,7 @@ pub enum CoreError {
     Unknown(String),
 }
 
+/// Result with [`Error`].
 pub type Result<T> = std::result::Result<T, Error>;
+/// Result with [`CoreError`].
 pub type CoreResult<T> = std::result::Result<T, CoreError>;

@@ -1,3 +1,5 @@
+//! Index from events to the label events targeting them.
+
 use super::keys::EventKey;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -9,6 +11,7 @@ pub struct LabelStore {
 }
 
 impl LabelStore {
+    /// Create an empty label index.
     pub fn new() -> Self {
         Self::default()
     }

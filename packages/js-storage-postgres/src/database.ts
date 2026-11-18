@@ -1,6 +1,7 @@
 import type { SQL } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
+/** A Drizzle `node-postgres` database, as accepted by this package. */
 // biome-ignore lint/suspicious/noExplicitAny: matches the untyped pg driver interface
 export type PgDb = NodePgDatabase<any>;
 

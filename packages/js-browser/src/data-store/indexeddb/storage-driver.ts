@@ -9,6 +9,7 @@ import { IndexedDBEventRepository } from './event-repository';
  */
 type ActiveLoginEntry = LoginId & { name: 'activeLogin' };
 
+/** IndexedDB-backed `IStorageDriver` for browsers. */
 export class IndexedDBStorageDriver implements IStorageDriver {
   private readonly database: IndexedDBDatabase;
 
@@ -19,20 +20,32 @@ export class IndexedDBStorageDriver implements IStorageDriver {
     this.database = new IndexedDBDatabase(databaseName);
   }
 
+  /**
+   * Open (creating and migrating if needed) the named IndexedDB database
+   * and return a driver for it.
+   *
+   * @throws {DatabaseError} if IndexedDB is unavailable or the open fails
+   */
   static async create(databaseName: string): Promise<IndexedDBStorageDriver> {
     const driver = new IndexedDBStorageDriver(databaseName);
     await driver.database.initialize();
     return driver;
   }
 
+  /** Event repository backed by the `events` object store. */
   createEventRepository() {
     return new IndexedDBEventRepository(this.database);
   }
 
+  /** Login repository backed by this driver's IndexedDB database. */
   createLoginRepository() {
     return new IndexedDBLoginRepository(this.database);
   }
 
+  /**
+   * Persist the active login. Throws `DatabaseError` if one is already stored
+   * (identity switching is not yet supported), even when clearing with `null`.
+   */
   async setActiveLogin(login: LoginId | null): Promise<void> {
     try {
       const store = this.loginStateStore('readwrite');
@@ -66,6 +79,7 @@ export class IndexedDBStorageDriver implements IStorageDriver {
     }
   }
 
+  /** The stored active login, or `null` if none has been set. */
   async getActiveLogin(): Promise<LoginId | null> {
     try {
       const store = this.loginStateStore('readonly');

@@ -8,11 +8,18 @@ import {
 } from '@polycentric/js-core';
 
 /**
- * Origin Private File System backed IFileStoreDriver.
+ * Origin Private File System backed IFileStoreDriver, rooted at one
+ * top-level OPFS directory.
  */
 export class OpfsFileStoreDriver implements IFileStoreDriver {
   private constructor(private readonly directory: FileSystemDirectoryHandle) {}
 
+  /**
+   * Open (creating if missing) the OPFS directory `directoryName` at the
+   * origin root and return a driver rooted there.
+   *
+   * @throws {FileStoreError} if OPFS is unavailable or access is denied
+   */
   static async create(directoryName: string): Promise<OpfsFileStoreDriver> {
     try {
       const root = await navigator.storage.getDirectory();
@@ -60,6 +67,7 @@ export class OpfsFileStoreDriver implements IFileStoreDriver {
     return dir;
   }
 
+  /** Whether a file (not a directory) exists at `path`. */
   async has(path: string): Promise<boolean> {
     try {
       const { dir, name } = await this.resolve(path, false);
@@ -71,6 +79,7 @@ export class OpfsFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /** Read the whole file into memory; `null` if missing. */
   async get(path: string): Promise<Uint8Array | null> {
     try {
       const { dir, name } = await this.resolve(path, false);
@@ -84,6 +93,10 @@ export class OpfsFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /**
+   * Write `bytes` to `path`, creating parent directories. A failed write
+   * leaves the previous contents in place.
+   */
   async put(path: string, bytes: Uint8Array): Promise<void> {
     try {
       const { dir, name } = await this.resolve(path, true);
@@ -103,6 +116,7 @@ export class OpfsFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /** Remove a file; `false` if nothing existed at `path`. */
   async delete(path: string): Promise<boolean> {
     try {
       const { dir, name } = await this.resolve(path, false);
@@ -117,6 +131,10 @@ export class OpfsFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /**
+   * List a directory's direct children (empty path = the root), skipping
+   * names that are not valid path segments; `null` if it does not exist.
+   */
   async list(path: string): Promise<FileStoreEntry[] | null> {
     try {
       const dir = await this.resolveDir(segmentsFromPath(path, true), false);
@@ -134,6 +152,7 @@ export class OpfsFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /** Recursively remove the directory at `path`; no-op if missing. */
   async deleteSubpath(path: string): Promise<void> {
     try {
       const { dir, name } = await this.resolve(path, false);

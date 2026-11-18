@@ -15,7 +15,9 @@ use std::collections::HashMap;
 /// `PostLabel`s are collected by clients for each post.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, uniffi::Record)]
 pub struct PostLabel {
+    /// The label value, e.g. a moderation label.
     pub value: String,
+    /// Identity that published the label event.
     pub labeled_by: String,
 }
 
@@ -29,7 +31,9 @@ impl PostLabel {
 /// Set of all labels applied to some target event.
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct LabelSet {
+    /// The labeled event.
     pub target: EventKey,
+    /// Distinct labels applied to it.
     pub labels: Vec<PostLabel>,
 }
 

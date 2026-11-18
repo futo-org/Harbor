@@ -1,3 +1,7 @@
+//! Event-sync RPCs surfaced as observables via `Query`: `ListEvents`,
+//! `GetEvent` and `GetPost`, plus the [`key`], [`labels`] and [`merge`]
+//! helpers shared by other query modules.
+
 pub mod key;
 pub mod labels;
 pub mod merge;
@@ -26,29 +30,51 @@ use crate::query::{
 use crate::rx::observable::Observable;
 use crate::store::keys::EventKey as StoreEventKey;
 
+/// Arguments for `Query::ListEvents`; mirrors `ListEventsRequest`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListEventsArgs {
+    /// Max events each server returns.
     pub size: Option<i32>,
+    /// Identity whose events to list.
     pub identity: String,
+    /// Only events in this collection.
     pub collection: Option<i32>,
+    /// Only events signed by this key.
     pub signed_by: Option<PublicKey>,
+    /// Only events with a sequence greater than this.
     pub sequence_gt: Option<i64>,
+    /// Only events with a sequence less than this.
     pub sequence_lt: Option<i64>,
+    /// Known heads: for a matching (identity, collection, signer), only
+    /// events with a higher sequence are returned.
     pub heads: Option<Vec<EventKey>>,
 }
 
+/// Arguments for `Query::GetEvent`. Answered from the local store when
+/// possible; emits a serialized `EventBundle` (empty bytes if not found).
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetEventArgs {
+    /// Author identity.
     pub identity: String,
+    /// Collection the event belongs to.
     pub collection: i32,
+    /// Event sequence number.
     pub sequence: u64,
+    /// Hex prefix of the signing key, to choose between events different
+    /// keys published at the same sequence.
     pub signer_key_prefix: Option<String>,
 }
 
+/// Arguments for `Query::GetPost`: a post (feed collection) identified by
+/// a partial key.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetPostArgs {
+    /// Author identity.
     pub identity: String,
+    /// Post sequence number.
     pub sequence: u64,
+    /// Hex prefix of the signing key, to choose between posts different
+    /// keys published at the same sequence.
     pub signer_key_prefix: Option<String>,
 }
 

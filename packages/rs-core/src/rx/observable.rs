@@ -1,13 +1,20 @@
 use crate::rx::subscription::Subscription;
 use std::sync::Arc;
 
+/// Generic foreign observer with string payloads. Exported for bindings;
+/// the query API uses [`crate::query::QueryObserver`] instead.
 #[uniffi::export(with_foreign)]
 pub trait Observer: Send + Sync {
+    /// A new value.
     fn next(&self, value: String);
+    /// An error occurred.
     fn error(&self, message: String);
+    /// No further values will be sent.
     fn complete(&self);
 }
 
+/// Producer-side handle passed to an [`Observable`]'s subscribe function.
+/// All methods become no-ops once the subscription is closed.
 pub struct Subscriber<T> {
     next: Box<dyn Fn(T) + Send + Sync>,
     error: Box<dyn Fn(String) + Send + Sync>,
@@ -16,6 +23,7 @@ pub struct Subscriber<T> {
 }
 
 impl<T> Subscriber<T> {
+    /// Emit a value.
     pub fn next(&self, value: T) {
         if self.subscription.is_closed() {
             return;
@@ -23,6 +31,7 @@ impl<T> Subscriber<T> {
         (self.next)(value);
     }
 
+    /// Emit an error. Does not close the subscription.
     pub fn error(&self, message: String) {
         if self.subscription.is_closed() {
             return;
@@ -30,6 +39,7 @@ impl<T> Subscriber<T> {
         (self.error)(message);
     }
 
+    /// Signal completion. Does not close the subscription.
     pub fn complete(&self) {
         if self.subscription.is_closed() {
             return;
@@ -37,22 +47,28 @@ impl<T> Subscriber<T> {
         (self.complete)();
     }
 
+    /// Whether the consumer has unsubscribed; producers should stop work.
     pub fn is_closed(&self) -> bool {
         self.subscription.is_closed()
     }
 }
 
+/// A cold observable: the subscribe function runs once per
+/// [`Observable::subscribe`] call.
 pub struct Observable<T> {
     subscribe: Box<dyn Fn(Subscriber<T>) + Send + Sync>,
 }
 
 impl<T: 'static> Observable<T> {
+    /// Create an observable from the function run on each subscription.
     pub fn new(subscribe: impl Fn(Subscriber<T>) + Send + Sync + 'static) -> Self {
         Self {
             subscribe: Box::new(subscribe),
         }
     }
 
+    /// Subscribe with the given callbacks. The subscribe function runs
+    /// synchronously before this returns.
     pub fn subscribe(
         &self,
         next: impl Fn(T) + Send + Sync + 'static,

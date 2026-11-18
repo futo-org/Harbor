@@ -1,3 +1,5 @@
+//! Identity-chain resolution over the local stores.
+
 use polycentric_common::{
     error::CoreError,
     models::{

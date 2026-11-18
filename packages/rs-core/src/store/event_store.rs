@@ -1,3 +1,5 @@
+//! Signed events by key, with range queries over identity/collection/signer.
+
 use super::keys::EventKey;
 use polycentric_common::{
     error::CoreError,
@@ -15,10 +17,14 @@ pub struct EventStore {
 }
 
 impl EventStore {
+    /// Create an empty event store.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Insert an event keyed by its decoded `EventKey`. Does not verify the
+    /// signature; an existing event at the same key is kept. Errors if the
+    /// event bytes or key cannot be decoded.
     pub fn insert(&mut self, signed_event: SignedEvent) -> Result<(), CoreError> {
         let event_key = EventKey::from_signed_event(&signed_event)?;
         self.insert_at(signed_event, event_key);

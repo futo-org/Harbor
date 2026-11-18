@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`Block`].
+
 use std::fmt;
 
 use crate::models::protos_v2::Block;
@@ -17,6 +19,8 @@ impl Validate for Block {
     }
 }
 
+/// Why a [`Block`] fails [`Validate`].
+/// `IdentitySelf` is only produced by the server.
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "BlockValidationError"))]

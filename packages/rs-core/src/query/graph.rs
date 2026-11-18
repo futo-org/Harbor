@@ -19,19 +19,29 @@ use crate::query::pagination::{FakeCursorToken, merge_page_info, prepare_page_in
 use crate::query::validation::{log_dropped, retain_validated_bundles, retain_validated_hints};
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
+/// Arguments for `Query::ListFollowing`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListFollowingArgs {
+    /// Identity whose follows to list.
     pub identity: String,
+    /// Max items each server returns for this page.
     pub limit: Option<i32>,
+    /// Cursor (from a previous emission's `page_info`) for the page before it.
     pub backward_token: Option<String>,
+    /// Cursor (from a previous emission's `page_info`) for the page after it.
     pub forward_token: Option<String>,
 }
 
+/// Arguments for `Query::ListFollowers`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListFollowersArgs {
+    /// Identity whose followers to list.
     pub identity: String,
+    /// Max items each server returns for this page.
     pub limit: Option<i32>,
+    /// Cursor (from a previous emission's `page_info`) for the page before it.
     pub backward_token: Option<String>,
+    /// Cursor (from a previous emission's `page_info`) for the page after it.
     pub forward_token: Option<String>,
 }
 
@@ -39,8 +49,11 @@ pub struct ListFollowersArgs {
 /// from the auth token rather than the args.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct SuggestFollowArgs {
+    /// Max items each server returns for this page.
     pub limit: Option<i32>,
+    /// Cursor (from a previous emission's `page_info`) for the page before it.
     pub backward_token: Option<String>,
+    /// Cursor (from a previous emission's `page_info`) for the page after it.
     pub forward_token: Option<String>,
 }
 

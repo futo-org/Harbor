@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`Reaction`].
+
 use std::fmt;
 
 use crate::models::event_key;
@@ -28,6 +30,7 @@ impl Validate for Reaction {
     }
 }
 
+/// Why a [`Reaction`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "ReactionValidationError"))]

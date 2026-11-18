@@ -10,12 +10,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::logging::log_warn;
 
+/// Aggregate cursor handed to callers in place of the per-server cursors it
+/// wraps. Encoded as base64 JSON; opaque to callers.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FakeCursorToken {
     /// Maps server url -> real cursor information
     pub map: BTreeMap<String, CursorInfo>,
 }
 
+/// One server's cursor within a [`FakeCursorToken`].
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CursorInfo {
     /// The opaque cursor token provided by the server.
@@ -32,6 +35,7 @@ pub struct CursorInfo {
 /// Easy enough for lists of events, but the opaque tokens need to be faked as
 /// an aggregate opaque token.
 impl FakeCursorToken {
+    /// Serialize to the opaque string form.
     pub fn encode(&self) -> Result<String, CoreError> {
         let bytes = serde_json::to_vec(self).map_err(|e| {
             CoreError::SerializationError(format!("Faking cursor token failed: {e}"))
@@ -41,6 +45,7 @@ impl FakeCursorToken {
         Ok(encoded)
     }
 
+    /// Parse a string produced by [`Self::encode`].
     pub fn decode(token: &str) -> Result<Self, CoreError> {
         let bytes = BASE64_STANDARD
             .decode(token)
@@ -50,6 +55,7 @@ impl FakeCursorToken {
             .map_err(|e| CoreError::DeserializationError(format!("Invalid fake cursor: {e}")))
     }
 
+    /// Add `other`'s per-server cursors, replacing any for the same server.
     pub fn extend(&mut self, other: FakeCursorToken) {
         self.map.extend(other.map);
     }
@@ -192,6 +198,8 @@ fn merge_cursors(t1: String, t2: String) -> (String, bool) {
     (merged.encode().unwrap_or(t1), more_data)
 }
 
+/// Merge two servers' (already faked) page info into one, combining their
+/// cursors and OR-ing the more-data flags.
 pub fn merge_page_info(i1: Option<PageInfo>, i2: Option<PageInfo>) -> Option<PageInfo> {
     match (i1, i2) {
         (None, None) => None,

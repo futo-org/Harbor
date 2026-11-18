@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`Labels`].
+
 use std::fmt;
 
 use crate::models::event_key;
@@ -45,6 +47,7 @@ impl Validate for Labels {
     }
 }
 
+/// Why a [`Labels`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "LabelsValidationError"))]

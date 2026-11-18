@@ -4,7 +4,12 @@ import {
   type v2Types,
 } from '@polycentric/js-core';
 
+/** Options for `createPolycentricClient`, shared by the native and web builds. */
 export interface CreatePolycentricClientConfig {
+  /**
+   * Names the SQLite database (native) or IndexedDB database (web); the blob
+   * store uses `${databaseName}-blobs`. Blank or omitted means `polycentric`.
+   */
   databaseName?: string;
   /** gRPC-web URLs the client should start with. */
   seedServers?: string[];
@@ -12,6 +17,7 @@ export interface CreatePolycentricClientConfig {
   application?: v2Types.Application;
 }
 
+/** Resolve `databaseName`, treating an omitted or blank name as `polycentric`. */
 export function normalizeDatabaseName(databaseName?: string) {
   return (databaseName ?? 'polycentric').trim() || 'polycentric';
 }
@@ -64,7 +70,8 @@ export function createBatchingLogSink(maxQueue = 1000): {
 }
 
 /**
- * Creates and publishes a new identity and sets it as active.
+ * Creates and publishes a new identity and sets it as active. Push failures
+ * are swallowed, so resolving does not mean the server has it.
  */
 export async function createIdentity(
   client: PolycentricClient,

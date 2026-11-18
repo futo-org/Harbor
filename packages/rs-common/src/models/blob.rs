@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`Blob`], a content-addressed binary attachment (max 100 MB).
+
 use std::fmt;
 
 use crate::models::content_digest;
@@ -43,6 +45,7 @@ impl Validate for Blob {
     }
 }
 
+/// Why a [`Blob`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "BlobValidationError"))]

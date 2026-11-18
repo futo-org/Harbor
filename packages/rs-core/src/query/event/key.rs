@@ -4,17 +4,25 @@
 use crate::query::event::merge::EventDedupKey;
 use polycentric_common::models::protos_v2 as proto;
 
+/// FFI mirror of the proto `PublicKey`.
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct PublicKey {
+    /// Key algorithm (e.g. Ed25519).
     pub key_type: i32,
+    /// Raw public key bytes.
     pub key: Vec<u8>,
 }
 
+/// FFI mirror of the proto `EventKey`, with a required signer.
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct EventKey {
+    /// Collection the event belongs to.
     pub collection: i32,
+    /// Author identity.
     pub identity: String,
+    /// Key that signed the event.
     pub signed_by: PublicKey,
+    /// Per-(identity, collection, signer) sequence number.
     pub sequence: u64,
 }
 

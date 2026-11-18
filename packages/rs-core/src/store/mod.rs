@@ -1,3 +1,7 @@
+//! In-memory stores backing [`crate::client::PolycentricClient`]. Nothing is
+//! persisted: each store lives as long as the `PolycentricCore` that owns it.
+//! All are keyed by [`keys::EventKey`] unless noted.
+
 pub mod content_store;
 pub mod event_proofs_store;
 pub mod event_store;

@@ -5,17 +5,28 @@ import { all, type PgDb } from './database.js';
 import { EventRepository } from './repositories/event-repository.js';
 import { LoginRepository } from './repositories/login-repository.js';
 
+/**
+ * Postgres-backed `IStorageDriver` built on Drizzle ORM. The database must
+ * already be migrated with {@link migrate}.
+ */
 export class DrizzlePgStorageDriver implements IStorageDriver {
+  /** @param db - A migrated Drizzle `node-postgres` database. */
   constructor(private readonly db: PgDb) {}
 
+  /** Event repository over the `events` table. */
   createEventRepository() {
     return new EventRepository(this.db);
   }
 
+  /** Login repository over the `logins` table. */
   createLoginRepository() {
     return new LoginRepository(this.db);
   }
 
+  /**
+   * Persist the active login. Throws `DatabaseError` if one is already stored
+   * (identity switching is not yet supported), even when clearing with `null`.
+   */
   async setActiveLogin(login: LoginId | null): Promise<void> {
     try {
       // TODO: remove this check and fix conflict behavior once we support
@@ -53,6 +64,7 @@ export class DrizzlePgStorageDriver implements IStorageDriver {
     }
   }
 
+  /** The stored active login, or `null` if none has been set. */
   async getActiveLogin(): Promise<LoginId | null> {
     try {
       const [row] = await all<{

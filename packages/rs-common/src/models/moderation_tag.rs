@@ -1,3 +1,5 @@
+//! Helpers and [`Serializable`] impl for the v1 [`ModerationTag`].
+
 use crate::error::{Error, Result};
 use crate::models::protos::ModerationTag;
 use crate::models::traits::Serializable;

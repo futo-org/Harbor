@@ -22,10 +22,14 @@ use crate::query::pagination::{FakeCursorToken, merge_page_info, prepare_page_in
 use crate::query::validation::retain_validated_hints;
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
+/// Order of post search results.
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
 pub enum SearchPostsSort {
+    /// By relevance.
     Default,
+    /// Top posts first.
     Top,
+    /// Newest first.
     Latest,
 }
 
@@ -39,9 +43,12 @@ impl From<SearchPostsSort> for SortPostsBy {
     }
 }
 
+/// Order of user search results.
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
 pub enum SearchUsersSort {
+    /// By relevance.
     Default,
+    /// Alphabetical by profile name.
     Alpha,
 }
 
@@ -54,22 +61,35 @@ impl From<SearchUsersSort> for SortUsersBy {
     }
 }
 
+/// Arguments for `Query::SearchPosts`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct SearchPostsArgs {
+    /// Search text.
     pub query: String,
+    /// Ordering; `None` sorts by relevance.
     pub sort_by: Option<SearchPostsSort>,
+    /// Max items each server returns for this page.
     pub limit: Option<i32>,
+    /// Cursor (from a previous emission's `page_info`) for the page before it.
     pub backward_token: Option<String>,
+    /// Cursor (from a previous emission's `page_info`) for the page after it.
     pub forward_token: Option<String>,
+    /// Label values whose content the requester does not want to see.
     pub omit_labels: Vec<String>,
 }
 
+/// Arguments for `Query::SearchUsers`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct SearchUsersArgs {
+    /// Search text.
     pub query: String,
+    /// Ordering; `None` sorts by relevance.
     pub sort_by: Option<SearchUsersSort>,
+    /// Max items each server returns for this page.
     pub limit: Option<i32>,
+    /// Cursor (from a previous emission's `page_info`) for the page before it.
     pub backward_token: Option<String>,
+    /// Cursor (from a previous emission's `page_info`) for the page after it.
     pub forward_token: Option<String>,
 }
 

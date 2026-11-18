@@ -3,7 +3,9 @@ import { DATABASE_VERSION, onUpgradeNeeded } from './migrations';
 import { requestAsPromise } from './request';
 
 /**
- * indexedDB database implementation
+ * Thin wrapper around a single IndexedDB database connection. Opening runs
+ * pending migrations; the connection closes itself when another context
+ * requests a version change.
  */
 export class IndexedDBDatabase {
   private readonly databaseName: string;
@@ -82,7 +84,9 @@ export class IndexedDBDatabase {
   /**
    * Creates and returns a transaction
    *
-   * This method serves as an async wrapper over the IDBDatabase.transaction method
+   * This method serves as a wrapper over the IDBDatabase.transaction method
+   *
+   * @throws {DatabaseError} if the database is not initialized
    */
   createTransaction(
     storeNames: string | Iterable<string>,
@@ -127,9 +131,12 @@ export class IndexedDBDatabase {
   }
 
   /**
-   * Delete a database file from OPFS
+   * Delete an IndexedDB database by name.
    *
-   * @param name - Name of the database to delete (without .sqlite3 extension)
+   * Waits until the deletion completes, which can stall while other
+   * connections to the database remain open.
+   *
+   * @param name - Name of the database to delete
    * @throws {DatabaseError} if database deletion fails
    */
   static async deleteDatabase(name: string): Promise<void> {

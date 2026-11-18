@@ -1,3 +1,5 @@
+//! Content bytes by digest.
+
 use polycentric_common::models::protos_v2::{Content, ContentDigest};
 use prost::Message;
 use std::collections::{BTreeMap, btree_map::Entry};
@@ -16,6 +18,7 @@ pub struct ContentStore {
 }
 
 impl ContentStore {
+    /// Create an empty content store.
     pub fn new() -> Self {
         Self::default()
     }

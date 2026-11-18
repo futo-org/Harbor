@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`Link`].
+
 use std::fmt;
 
 use crate::models::protos_v2::Link;
@@ -51,6 +53,7 @@ impl Validate for Link {
     }
 }
 
+/// Why a [`Link`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "LinkValidationError"))]

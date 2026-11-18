@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`AttributedToReaction`].
+
 use std::fmt;
 
 use crate::models::attributed_to;
@@ -29,6 +31,7 @@ impl Validate for AttributedToReaction {
     }
 }
 
+/// Why a [`AttributedToReaction`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(

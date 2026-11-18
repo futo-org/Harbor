@@ -3,8 +3,13 @@ import { all, type PgDb } from './database.js';
 import { migrations } from './migrations/index.js';
 
 /**
+ * Bring the database schema up to date. Call once before constructing a
+ * `DrizzlePgStorageDriver`.
+ *
  * Custom migrations, mirroring js-storage-sqlite. Each unapplied migration
- * runs in its own transaction.
+ * runs in its own transaction. Applied names are recorded in
+ * `__migrations`, created in the connection's current schema
+ * (`search_path`).
  */
 export async function migrate(db: PgDb): Promise<void> {
   await db.execute(sql`

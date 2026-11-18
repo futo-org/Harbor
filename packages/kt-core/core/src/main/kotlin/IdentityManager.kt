@@ -48,8 +48,11 @@ class IdentityState(
     val recoveryKey: PublicKey? = null,
 )
 
+/** Result of [IdentityManager.publish]. */
 class PublishResult(
+    /** The identity the document was published to (newly computed for a bootstrap). */
     val identityKey: String,
+    /** The committed Identity event. */
     val signedEvent: SignedEvent,
 )
 
@@ -67,6 +70,7 @@ class IdentityManager(
     companion object {
         private const val IDENTITY_CHAIN_FETCH_SIZE = 1000
 
+        /** Whether two public keys have the same type and bytes (protos compare by more than that). */
         fun keysEqual(
             a: PublicKey,
             b: PublicKey,
@@ -107,6 +111,13 @@ class IdentityManager(
      * Updates to an existing identity must be signed by one of its rotation
      * keys. [isLogin] skips that check for specific scenarios: a signing key
      * republishing the head document, or an identity recovery.
+     *
+     * Sets the client's active identity (so a bootstrap signs in) and adopts
+     * [servers] when given.
+     *
+     * @throws NoActiveKeyPairException if the client has no key pair.
+     * @throws IdentityNotFoundException if [identityKey] has no known valid chain.
+     * @throws UnauthorizedKeyException if the current key is not a rotation key.
      */
     suspend fun publish(
         identityKey: String?,
@@ -346,6 +357,10 @@ class IdentityManager(
         state.rotationKeys.any { keysEqual(it, myKey) } ||
             state.signingKeys.any { keysEqual(it, myKey) }
 
+    /**
+     * Whether [publicKey] is a rotation key of [identityKey]. Only checks
+     * the active identity: returns false for any other [identityKey].
+     */
     suspend fun isRotationKeyForIdentity(
         identityKey: String,
         publicKey: PublicKey,

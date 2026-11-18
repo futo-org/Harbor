@@ -1,3 +1,5 @@
+//! Helpers, [`Serializable`] and [`Validate`] impls for [`PublicKey`].
+
 use std::fmt;
 
 use base64::Engine;
@@ -129,6 +131,7 @@ impl Validate for PublicKey {
     }
 }
 
+/// Why a [`PublicKey`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "PublicKeyValidationError"))]

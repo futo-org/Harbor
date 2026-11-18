@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::signing::verify_ed25519_signature;
 
+/// Why a token was rejected by [`verify_jwt`] or [`VerifiedJwt::validate`].
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum JwtError {
     #[error("malformed token")]
@@ -29,13 +30,16 @@ struct Header {
     kid: String,
 }
 
+/// Claims carried by a server authentication JWT.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServerJwtClaims {
     /// The identity authenticating (its identity key).
     pub iss: String,
     /// The server the token authenticates against.
     pub aud: String,
+    /// Issued-at time, unix seconds. Not checked by [`VerifiedJwt::validate`].
     pub iat: u64,
+    /// Expiry time, unix seconds. The token is expired at `now >= exp`.
     pub exp: u64,
 }
 
@@ -44,6 +48,7 @@ pub struct ServerJwtClaims {
 ///
 /// [`validate`]: VerifiedJwt::validate
 pub struct VerifiedJwt {
+    /// The decoded, not yet validated, claims.
     pub claims: ServerJwtClaims,
     /// The ed25519 public key (the header's `kid`) that signed the token.
     pub signed_by: Vec<u8>,

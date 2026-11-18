@@ -17,7 +17,9 @@ const EXPIRY_MARGIN_SECONDS: u64 = 60;
 /// A bearer token and when it expires (seconds since the unix epoch).
 #[derive(uniffi::Record)]
 pub struct AuthToken {
+    /// The bearer token sent in the `authorization` header.
     pub token: String,
+    /// Expiry, in seconds since the unix epoch.
     pub expires_at: u64,
 }
 
@@ -79,7 +81,7 @@ impl tonic::service::Interceptor for AuthInterceptor {
 }
 
 /// The interceptor for a channel to `server_url`. Ensures a bearer for
-/// `server_url` is minted/cached first (see [`bearer_for`]).
+/// `server_url` is minted/cached first (see `bearer_for`).
 pub async fn interceptor_for(server_url: &str) -> AuthInterceptor {
     bearer_for(server_url).await;
     AuthInterceptor {

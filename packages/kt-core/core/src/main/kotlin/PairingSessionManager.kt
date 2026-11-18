@@ -13,6 +13,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import org.futo.polycentric.ffi.PublicKey as FfiPublicKey
 
+/** How long a newly created pairing session stays valid. */
 const val PAIRING_SESSION_TTL_MILLIS = 5 * 60 * 1000L
 private const val NONCE_BYTES = 32
 
@@ -25,9 +26,11 @@ private const val NONCE_BYTES = 32
 class PairingSessionManager(
     private val client: PolycentricClient,
 ) {
+    /** A pairing session as last seen on its server, with the issuer's state already decoded. */
     class PairingSession(
         /** Canonical serialized `PairingSessionDigest` for this session. */
         val digestBytes: ByteArray,
+        /** Decoded [digestBytes]: issuer identity and signer, nonce, timestamp, TTL. */
         val digest: PairingSessionDigest,
         /** Pairing session state verified to be from the issuer. */
         val issuerState: IssuerPairingState,
@@ -39,7 +42,14 @@ class PairingSessionManager(
         val pairingInfo: PairingInfo,
     )
 
-    /** Start a new pairing session and register it on [server]. */
+    /**
+     * Start a new pairing session for the active identity and register it on
+     * [server]. Share the returned [PairingSession.pairingInfo] with the
+     * device to pair.
+     *
+     * @throws NoActiveIdentityException if the client is logged out.
+     * @throws PolycentricException if the active identity's chain is not known locally.
+     */
     suspend fun createPairingSession(server: String): PairingSession {
         val keyPair = client.currentKeyPair ?: throw NoActiveKeyPairException()
         val identityKey = client.activeIdentityKey ?: throw NoActiveIdentityException()
@@ -56,7 +66,11 @@ class PairingSessionManager(
         return putState(server, digestBytes, sequence = 1L)
     }
 
-    /** Publish a new state for an existing session. */
+    /**
+     * Publish a new state for an existing session. [sequence] must be higher
+     * than the previous state's. Only the session's issuer (the active
+     * identity and key pair) may call this.
+     */
     suspend fun updatePairingSession(
         server: String,
         digestBytes: ByteArray,

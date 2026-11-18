@@ -1,3 +1,6 @@
+//! Vector-clock verification for events from identities with multiple
+//! signing keys.
+
 use polycentric_common::{
     error::CoreError,
     models::protos_v2::{EventKey, Identity, PublicKey, VectorClock},

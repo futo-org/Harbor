@@ -44,42 +44,54 @@ type CoreType = PolycentricCoreLike;
 const streamId = (key: Proto.EventKey): string =>
   `${key.collection}:${key.signedBy?.keyType}:${bytesToHex(key.signedBy?.key ?? new Uint8Array())}`;
 
+/** A signing key pair. All three key types are expected to match. */
 export interface KeyPair {
   keyType: Proto.KeyType;
   privateKey: Proto.PrivateKey;
   publicKey: Proto.PublicKey;
 }
 
+/** A signed event and, optionally, its serialized content. */
 export type LocalBundle = {
   signedEvent: Proto.SignedEvent;
   contentBytes?: Uint8Array;
 };
 
+/** Arguments for `PolycentricClient.buildEvent`. */
 export type BuildEventArgs = {
+  /** Identity the event belongs to. */
   identityKey: string;
   collection: Collection | number;
+  /** Key that will sign the event; must have an identity event of its own. */
   signer: Proto.PublicKey;
   content: Proto.Content;
 };
 
+/** Result of `PolycentricClient.buildEvent`: an unsigned event. */
 export type BuiltEvent = {
   event: Proto.Event;
   eventKey: Proto.EventKey;
+  /** Serialized `content`, as hashed into `event.contentDigest`. */
   contentBytes: Uint8Array;
 };
 
+/** Arguments for `PolycentricClient.commitEvent`. */
 export type CommitEventArgs = {
+  /** Identity whose local store the event is saved under. */
   owner: string;
   signedEvent: Proto.SignedEvent;
+  /** Decoded content, passed to `contentCreated` listeners. */
   content: Proto.Content;
   contentBytes: Uint8Array;
 };
 
+/** Arguments for `PolycentricClient.createEvent`. */
 export type CreateEventArgs = {
   collection: Collection | number;
   content: Proto.Content;
 };
 
+/** Everything derived while creating an event with `createEvent`. */
 export type CreatedEvent = {
   signedEvent: Proto.SignedEvent;
   event: Proto.Event;
@@ -95,12 +107,13 @@ export type CreatedEvent = {
  */
 export interface PolycentricClientConfig {
   /**
-   * The uniffi-generated `PolycentricCore` instance from
-   * `@polycentric/react-native`. Owns crypto, local stores, image
-   * processing, and gRPC client transport.
+   * A uniffi-generated `PolycentricCore` instance (wasm or React Native
+   * bindings).
    */
   core: CoreType;
+  /** Platform storage for events, logins and the active login. */
   storageDriver: IStorageDriver;
+  /** Platform file system access, wrapped by `client.fileStore` for blobs. */
   filestoreDriver: IFileStoreDriver;
   /**
    * gRPC-web URLs the client should start with. Used to seed
@@ -120,8 +133,10 @@ export interface PolycentricClientConfig {
 
 /**
  * PolycentricClient is the top level API for the Polycentric SDK.
+ * Construct it with {@link PolycentricClient.create}.
  */
 export class PolycentricClient {
+  /** Typed emitter for client lifecycle events. See {@link EventService}. */
   public readonly events = new EventService();
 
   public readonly loginManager = new LoginManager(this);
@@ -129,19 +144,30 @@ export class PolycentricClient {
   public readonly identityManager = new IdentityManager(this);
   public readonly pairingSessionManager = new PairingSessionManager(this);
 
+  /** The Rust core instance supplied in the config. */
   public readonly core: CoreType;
 
+  /** Key pair of the active login, or `null` when logged out. Set by `loginAs`. */
   public currentKeyPair: KeyPair | null = null;
   /** The identity key the current key pair is actively using. Set by publishIdentity or claimIdentity. */
   public activeIdentityKey: string | null = null;
+  /**
+   * Servers the client talks to: `seedServers` until replaced by the active
+   * identity's own list.
+   */
   public servers: string[] = ['http://localhost:3000'];
 
+  /** Used for signing; prefer the `crypto` getter. */
   public readonly cryptoManager: ICryptoManager = new CryptoManager();
 
+  /** Set during initialization; prefer the throwing `storage` getter. */
   public storageHandle: StorageHandle | undefined;
   public readonly storageDriver: IStorageDriver;
+  /** Locally persisted blobs, keyed by owner identity and digest. */
   public readonly fileStore: FileStore;
+  /** See {@link PolycentricClientConfig.persistentStorage}; defaults to true. */
   public readonly persistentStorage: boolean;
+  /** See {@link PolycentricClientConfig.application}. */
   public readonly application: Proto.Application | undefined;
 
   constructor(config: PolycentricClientConfig) {
@@ -181,6 +207,10 @@ export class PolycentricClient {
     this.core.setTraceparent(traceparent);
   }
 
+  /**
+   * Construct and initialize a client, restoring the persisted active login.
+   * Throws if that login cannot be restored.
+   */
   public static async create(
     config: PolycentricClientConfig,
   ): Promise<PolycentricClient> {
@@ -336,7 +366,8 @@ export class PolycentricClient {
   }
 
   /**
-   * Copy the events and content provided to rs-core.
+   * Copy the events and content provided to rs-core. Does not persist.
+   * Events that cannot be decoded or lack a content digest are skipped.
    * TODO: Add rs-core API to do this in one step instead of splitting them out.
    */
   copyBundles(bundles: LocalBundle[]): void {
@@ -371,8 +402,10 @@ export class PolycentricClient {
   }
 
   /**
-   * Helper function build an Event from a Content.
-   * Uses the current keypair and current identity.
+   * Build an unsigned Event for `content` at the next sequence of
+   * `(identityKey, collection)`, chaining it to the previous event and
+   * computing its vector clock from the core's state.
+   * Throws if `signer` has no identity event for the identity.
    */
   async buildEvent({
     identityKey,
@@ -434,7 +467,8 @@ export class PolycentricClient {
   }
 
   /**
-   * Sign an event using the provided key pair.
+   * Sign an event using the provided key pair. The core assembles the
+   * `SignedEvent`; the signature itself comes from `crypto`.
    */
   async signEvent(
     event: Proto.Event,
@@ -464,7 +498,9 @@ export class PolycentricClient {
   }
 
   /**
-   * Persist a new event with its content and mirror to rs-core.
+   * Persist a new event with its content and mirror to rs-core, then emit
+   * `contentCreated`. Throws if local persistence fails (e.g. the event key is
+   * already taken).
    */
   async commitEvent({
     owner,
@@ -540,6 +576,7 @@ export class PolycentricClient {
    * document from its local content store and computes the clock.
    * Requires the identity event and its content to already have been
    * copied into the core via `copy_events` / `copy_contents`.
+   * For an identity event, pass its own `identityContent`.
    */
   buildVectorClock(
     event: Proto.Event,
@@ -565,6 +602,7 @@ export class PolycentricClient {
    * Does not persist — callers decide what to do with the response.
    */
   async listEvents(options: {
+    /** Maximum number of events per server. */
     limit?: number | null;
     identity: string;
     collection?: number | null;
@@ -573,8 +611,11 @@ export class PolycentricClient {
     sequenceGt?: number | bigint | null;
     /** Exclusive upper bound on EventKey.sequence. */
     sequenceLt?: number | bigint | null;
+    /** Only return events past these per-stream heads. */
     heads?: Proto.EventKey[] | null;
+    /** Cache key for the core's query cache. */
     queryKey?: string[] | null;
+    /** Core query options, e.g. `servers` to override the server set. */
     queryOpts?: QueryOpts | null;
   }): Promise<Proto.EventBundle[]> {
     const sequenceGt =
@@ -727,7 +768,9 @@ export class PolycentricClient {
 
   /**
    * Set (overwrite) the push subscriptions of `target` on each of the push
-   * servers in `servers` listen for notifications for the active identity.
+   * servers in `servers` to listen for notifications for the active identity.
+   * Per-server failures are logged but do not throw — this is best-effort
+   * across the server set. Throws if there is no active identity or key pair.
    */
   async setDevicePushSubscriptions(
     servers: string[],
@@ -779,8 +822,9 @@ export class PolycentricClient {
   }
 
   /**
-   * Hash `bytes` and save to the local filestore. Returns the matching
-   * `Blob` proto. Does not upload to servers.
+   * Hash `bytes` and save to the local filestore under the active identity.
+   * Returns the matching `Blob` proto. Does not upload to servers.
+   * Throws if there is no active identity.
    */
   async commitBlob(bytes: Uint8Array, mimeType: string): Promise<Proto.Blob> {
     const identity = this.activeIdentityKey;
@@ -820,7 +864,7 @@ export class PolycentricClient {
   }
 
   /**
-   * Upload a blob body to all configured servers. The server verifies
+   * Upload a blob body to `servers` (default: all configured servers). The server verifies
    * that `body` hashes to `blob.digest` before persisting. Rejections
    * from individual servers are logged but do not throw.
    */
@@ -930,7 +974,7 @@ export class PolycentricClient {
   }
 
   /**
-   * Persist each event bundle in order.
+   * Persist each event bundle in order under `owner` via `saveBundle`.
    * Throws on the first malformed bundle or failed write.
    */
   async saveBundles(
@@ -943,7 +987,8 @@ export class PolycentricClient {
   }
 
   /**
-   * Try persisting this event bundle.
+   * Try persisting this event bundle under `owner`. The event store verifies
+   * the signature and content digest of new events.
    * Throws if anything goes wrong.
    */
   async saveBundle(owner: string, bundle: Proto.EventBundle): Promise<void> {
@@ -994,7 +1039,10 @@ export class PolycentricClient {
    * Sync events for the active identity between this client and
    * the remote servers. Throws only if the pull fails. Per-server push
    * outcomes, including events the servers responded with errors/warnings
-   * for, are emitted as `pushResults` on {@link events}.
+   * for, are emitted as `pushResults` on {@link events}. Returns 0 without
+   * doing anything when logged out.
+   *
+   * @param strategy - Defaults to `SyncStrategy.PARTIAL`.
    * @returns The number of events pulled
    */
   async sync(strategy?: SyncStrategy): Promise<number> {
@@ -1197,7 +1245,7 @@ export class PolycentricClient {
   /**
    * Derive `servers` from the active identity's latest Identity document.
    * Identities that have never configured a server list keep the current
-   * (seed) list.
+   * (seed) list. Always pushes the resulting list to the core.
    */
   public refreshServers(): void {
     if (this.activeIdentityKey) {
@@ -1211,6 +1259,10 @@ export class PolycentricClient {
 
   /**
    * Set our state to match this login and persist it as the active login.
+   * Passing `null` logs out. Emits `identityChanged`.
+   *
+   * @param persist - Also write the change via `storageDriver.setActiveLogin`.
+   * @throws {Error} If the login is not found in storage.
    */
   public async loginAs(
     login: LoginId | null,
@@ -1254,10 +1306,12 @@ export class PolycentricClient {
     this.events.emitKeyPairChanged(this.currentKeyPair);
   }
 
+  /** Public key of the active login. Only valid while logged in. */
   get currentSystem(): Proto.PublicKey {
     return this.currentKeyPair!.publicKey;
   }
 
+  /** The crypto manager used for signing. */
   get crypto(): ICryptoManager {
     if (!this.cryptoManager) {
       throw new Error('Crypto manager not initialized');
@@ -1265,6 +1319,7 @@ export class PolycentricClient {
     return this.cryptoManager;
   }
 
+  /** Validated event and login stores. Throws before initialization. */
   get storage(): StorageHandle {
     if (!this.storageHandle) {
       throw new Error('Storage handle not initialized');

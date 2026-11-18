@@ -3,10 +3,16 @@ import type { SqliteDb } from './database.js';
 import { migrations } from './migrations/index.js';
 
 /**
+ * Bring the database schema up to date. Call once before constructing a
+ * `DrizzleStorageDriver`.
+ *
  * Custom migrations.
  * `drizzle kit` migrations aren't a great fit
  * due to awkward compatibility between
  * Node.js and React Native environments.
+ * Each pending migration runs in its own transaction.
+ *
+ * @throws {Error} naming the migration that failed
  */
 export async function migrate(db: SqliteDb): Promise<void> {
   await db.run(sql`

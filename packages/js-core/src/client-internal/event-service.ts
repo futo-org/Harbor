@@ -4,6 +4,7 @@ import type { SignedEvent } from '../proto/polycentric/v2/events';
 import type { Content } from '../proto/polycentric/v2/content';
 import type { EventPushIssues } from '@polycentric/rs-core-wasm';
 
+/** Payload of the `contentCreated` event, emitted when an event is committed locally. */
 export type ContentCreatedPayload = {
   signedEvent: SignedEvent;
   /** Present when the commit included content. */
@@ -29,6 +30,16 @@ interface EventMap {
   pushResults: ServerPushResult[]; // One per server pushed to by a sync
 }
 
+/**
+ * Typed event emitter exposed as `client.events`. The client emits:
+ * - `identityChanged` (`onKeyPairChanged`): on login/logout/switch, with the
+ *   new key pair or `null`.
+ * - `contentCreated`: after an event is committed to local storage.
+ * - `pulled`: after a pull returned any events, with the identity key.
+ * - `pushResults`: after a sync that pushes, one result per server.
+ *
+ * The `emit*` methods are for the client's own use.
+ */
 export class EventService {
   private emitter = new EventEmitter();
 
@@ -51,54 +62,67 @@ export class EventService {
   }
 
   // KeyPair events
+  /** Emit `identityChanged`. */
   emitKeyPairChanged(identity: KeyPair | null) {
     this.emit('identityChanged', identity);
   }
+  /** Subscribe to active login changes (`null` on logout). */
   onKeyPairChanged(listener: (identity: KeyPair | null) => void) {
     this.on('identityChanged', listener);
   }
+  /** Unsubscribe a listener added with `onKeyPairChanged`. */
   offKeyPairChanged(listener: (identity: KeyPair | null) => void) {
     this.off('identityChanged', listener);
   }
 
   // Content events
+  /** Emit `contentCreated`. */
   emitContentCreated(payload: ContentCreatedPayload) {
     this.emit('contentCreated', payload);
   }
+  /** Subscribe to events committed locally by this client. */
   onContentCreated(listener: (payload: ContentCreatedPayload) => void) {
     this.on('contentCreated', listener);
   }
+  /** Unsubscribe a listener added with `onContentCreated`. */
   offContentCreated(listener: (payload: ContentCreatedPayload) => void) {
     this.off('contentCreated', listener);
   }
 
   // Pull events
+  /** Emit `pulled`. */
   emitPulled(identityKey: string) {
     this.emit('pulled', identityKey);
   }
+  /** Subscribe to pulls that returned events, keyed by identity. */
   onPulled(listener: (identityKey: string) => void) {
     this.on('pulled', listener);
   }
+  /** Unsubscribe a listener added with `onPulled`. */
   offPulled(listener: (identityKey: string) => void) {
     this.off('pulled', listener);
   }
 
   // Push events
+  /** Emit `pushResults`. */
   emitPushResults(results: ServerPushResult[]) {
     this.emit('pushResults', results);
   }
+  /** Subscribe to per-server push outcomes of each pushing sync. */
   onPushResults(listener: (results: ServerPushResult[]) => void) {
     this.on('pushResults', listener);
   }
+  /** Unsubscribe a listener added with `onPushResults`. */
   offPushResults(listener: (results: ServerPushResult[]) => void) {
     this.off('pushResults', listener);
   }
 
-  // Utility methods for cleanup
+  /** Remove every listener for every event. */
   public removeAllListeners() {
     this.emitter.removeAllListeners();
   }
 
+  /** Remove every listener for one event name. */
   public removeAllListenersForEvent<K extends keyof EventMap>(event: K) {
     this.emitter.removeAllListeners(event);
   }

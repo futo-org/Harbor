@@ -49,16 +49,21 @@ import java.util.logging.Logger
  * This class owns key custody, persistent storage, and control flow.
  */
 class PolycentricClient(
+    /** The UniFFI handle to rs-core; this client installs its auth-token provider. */
     val core: PolycentricCoreInterface,
     private val storageDriver: IStorageDriver,
+    /** Local blob store (images referenced by content). */
     val filestore: IFileStoreDriver,
+    /** Servers to use until the active identity publishes its own list. */
     seedServers: List<String> = emptyList(),
+    /** Signs events and JWTs; private keys only leave storage through it. */
     val crypto: ICryptoManager =
         org.futo.polycentric.core
             .Ed25519CryptoManager(),
     /** Stamped on every event this client builds. */
     val application: polycentric.v2.Application? = null,
 ) {
+    /** The device key pair used to sign; set by [initialize] and [setCurrentKeyPair]. */
     @Volatile
     var currentKeyPair: StoredKeyPair? = null
         internal set
@@ -68,18 +73,33 @@ class PolycentricClient(
     var activeIdentityKey: String? = null
         internal set
 
+    /** Servers the core fans queries and pushes out to; see [refreshServers] and [adoptServers]. */
     @Volatile
     var servers: List<String> = seedServers
         private set
 
+    /** Persistent event store. Writing to it directly bypasses the core; prefer [commitEvent]. */
     val events = storageDriver.createEventRepository()
+
+    /** Persistent content store, keyed by content digest. */
     val contents = storageDriver.createContentRepository()
+
+    /** Persistent store of this device's key pairs. */
     val keys = storageDriver.createKeysRepository()
+
+    /** Per-server ack store (unused by the SQLite driver). */
     val eventAcks = storageDriver.createEventAckRepository()
 
+    /** Identity lifecycle: publish, claim, key and server changes. */
     val identityManager = IdentityManager(this)
+
+    /** Content digests, local content saves, and blob pulls. */
     val contentManager = ContentManager(this)
+
+    /** Device key pair creation, listing, and removal. */
     val keyPairManager = KeyPairManager(this)
+
+    /** Device-pairing handshake. */
     val pairingSessionManager = PairingSessionManager(this)
 
     /**
@@ -88,10 +108,12 @@ class PolycentricClient(
      */
     val eventService = EventService()
 
+    /** The failure that put the client into [ClientState.ERROR], if any. */
     @Volatile
     var error: Throwable? = null
         private set
 
+    /** Whether [initialize] has completed successfully. */
     val isReady: Boolean
         get() = eventService.state.value == ClientState.READY
 
@@ -114,7 +136,11 @@ class PolycentricClient(
         }
     }
 
-    /** The active device public key as a proto (js-core `currentSystem`). */
+    /**
+     * The active device public key as a proto (js-core `currentSystem`).
+     *
+     * @throws IllegalArgumentException if no key pair is set.
+     */
     val currentSystem: PublicKey
         get() = requireNotNull(currentKeyPair) { "No keypair set" }.toPublicKeyProto()
 
@@ -142,7 +168,10 @@ class PolycentricClient(
     companion object {
         private val log = Logger.getLogger("PolycentricClient")
 
-        /** Construct and initialize in one step (js-core `PolycentricClient.create`). */
+        /**
+         * Construct and initialize in one step (js-core `PolycentricClient.create`).
+         * Rethrows any [initialize] failure.
+         */
         suspend fun create(
             core: PolycentricCoreInterface,
             storageDriver: IStorageDriver,
@@ -163,6 +192,9 @@ class PolycentricClient(
      * storage, restore (or create) a keypair, and push the server list
      * into the core. Mirrors js-core `initialize()` including its state
      * machine and progress/hydration signals.
+     *
+     * On failure, records [error], moves to [ClientState.ERROR], emits on
+     * [EventService.errors], and rethrows.
      */
     suspend fun initialize() {
         try {
@@ -244,6 +276,10 @@ class PolycentricClient(
      *
      * Note: proto uint64 fields surface as Long in Wire and ULong across
      * the FFI; conversions are lossless bit-reinterpretations.
+     *
+     * @throws IllegalArgumentException if there is no key pair or active identity.
+     * @throws IllegalStateException if the key pair has no identity event for
+     *   the active identity.
      */
     fun buildEvent(
         content: Content,
@@ -335,7 +371,10 @@ class PolycentricClient(
     /**
      * Persist a signed event (and its content) locally and mirror both
      * into the core so subsequent sequence/clock reads see them
-     * (js-core `commitEvent`).
+     * (js-core `commitEvent`), then emits [EventService.contentCreated].
+     *
+     * @throws CoreFailureException if the core rejects the event; nothing is
+     *   saved in that case.
      */
     suspend fun commitEvent(
         signedEvent: SignedEvent,
@@ -367,7 +406,11 @@ class PolycentricClient(
 
     // ── Queries (js-core: listEvents / listValidEvents) ────────────────
 
-    /** One-shot ListEvents across all configured servers. */
+    /**
+     * One-shot ListEvents across all configured servers. An event in the
+     * same (signer, collection) stream as one of [heads] is returned only if
+     * its sequence is higher. Empty when no server answers.
+     */
     suspend fun listEvents(
         identity: String,
         collection: Int? = null,
@@ -426,6 +469,8 @@ class PolycentricClient(
      * (optionally bounded by local heads) and persists new ones; push
      * delegates to the core's `pushLocalEvents`, then uploads any blobs
      * the server reports missing. Mirrors js-core `sync()`.
+     *
+     * Returns the number of new events pulled, or 0 when logged out.
      */
     suspend fun sync(strategy: SyncStrategy = SyncStrategy.PARTIAL): Int =
         coroutineScope {
@@ -600,6 +645,11 @@ class PolycentricClient(
     /** First server's blob URL, or null if no servers are configured. */
     fun blobUrl(digest: ContentDigest): String? = blobUrls(digest).firstOrNull()
 
+    /**
+     * Stores [bytes] in [filestore] under their sha256 digest and returns the
+     * [Blob] reference to embed in content. Does not upload; [sync] pushes
+     * blobs the servers request.
+     */
     suspend fun commitBlob(
         bytes: ByteArray,
         mimeType: String,
@@ -613,7 +663,10 @@ class PolycentricClient(
         return Blob(digest = digest, mime_type = mimeType, size = bytes.size.toLong())
     }
 
-    /** Plain-HTTP blob fetch with per-server fallback. */
+    /**
+     * Plain-HTTP blob fetch with per-server fallback, on [Dispatchers.IO].
+     * Returns null when no server has it. Does not verify the digest.
+     */
     suspend fun fetchBlobBytes(digest: ContentDigest): ByteArray? =
         withContext(Dispatchers.IO) {
             for (url in blobUrls(digest)) {
@@ -628,6 +681,10 @@ class PolycentricClient(
             null
         }
 
+    /**
+     * Uploads a blob to each of [targets]. Per-server failures are logged and
+     * absorbed, so this never throws for a failed upload.
+     */
     suspend fun uploadBlob(
         blob: Blob,
         body: ByteArray,
@@ -647,6 +704,11 @@ class PolycentricClient(
 
     // ── Key / identity state (js-core: setCurrentKeyPair etc.) ─────────
 
+    /**
+     * Switches to [keyPair] and signs in as the identity bound to it (or logs
+     * out when none is), persists that session, refreshes servers, and emits
+     * [EventService.keyPairChanged].
+     */
     suspend fun setCurrentKeyPair(keyPair: StoredKeyPair) {
         currentKeyPair = keyPair
         activeIdentityKey = storageDriver.loadActiveIdentityKey(keyPair.publicKey)
@@ -663,6 +725,11 @@ class PolycentricClient(
      */
     suspend fun getIdentityKeyFor(keyPair: StoredKeyPair): String? = storageDriver.loadActiveIdentityKey(keyPair.publicKey)
 
+    /**
+     * Signs in as [identityKey], or logs out with null. Clears cached server
+     * auth tokens and persists the session; on sign-in, also binds the
+     * current key pair to the identity. Does not refresh servers.
+     */
     suspend fun setActiveIdentityKey(identityKey: String?) {
         activeIdentityKey = identityKey
         // Tokens minted for the previous identity must not be reused.

@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`ContentBody`], which dispatches to the validator of each content kind.
+
 use std::fmt;
 
 use crate::models::protos_v2::content::ContentBody;
@@ -61,6 +63,7 @@ impl Validate for ContentBody {
     }
 }
 
+/// Why a [`ContentBody`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "ContentBodyValidationError"))]

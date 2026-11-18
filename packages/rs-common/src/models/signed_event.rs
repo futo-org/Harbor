@@ -1,3 +1,5 @@
+//! Signature checking, [`Serializable`] and `Debug` for [`SignedEvent`].
+
 use crate::error::{CoreError, Error, Result};
 use crate::models::protos_v2::{Event, SignedEvent};
 use crate::models::traits::Serializable;

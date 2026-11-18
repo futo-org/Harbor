@@ -1,3 +1,13 @@
+//! Protocol data types.
+//!
+//! [`protos`] and [`protos_v2`] are generated from the repo's `protos/`
+//! directory. Most other submodules add a [`Validate`] impl to one generated
+//! type.
+//!
+//! [`Validate`]: validate::Validate
+
+/// Generated v1 protocol types (`polycentric.proto`) and rs-core FFI
+/// messages (`rs-core-ffi.proto`).
 pub mod protos {
     include!(concat!(env!("OUT_DIR"), "/polycentric.rs"));
     include!(concat!(env!("OUT_DIR"), "/polycentric_ffi.rs"));
@@ -6,10 +16,14 @@ pub mod protos {
 // `large_enum_variant`: generated prost oneofs (e.g. Content.ContentBody) hold
 // their largest message variant inline; boxing would change the generated API
 // at every call site for no real benefit on deserialized-once messages.
+/// Generated v2 protocol types and tonic service code
+/// (`protos/polycentric/v2/*.proto`). Client transports need the `transport`
+/// feature.
 #[allow(dead_code, unused_attributes, clippy::large_enum_variant)]
 pub mod protos_v2 {
     tonic::include_proto!("polycentric.v2");
 
+    /// Encoded `FileDescriptorSet` of the v2 protos, e.g. for gRPC reflection.
     pub const FILE_DESCRIPTOR_SET: &[u8] =
         include_bytes!(concat!(env!("OUT_DIR"), "/polycentric_v2.bin"));
 }

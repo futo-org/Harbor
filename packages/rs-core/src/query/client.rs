@@ -1,3 +1,8 @@
+//! [`QueryClient`]: the keyed query cache and multi-server fan-out engine.
+//! Each query runs its fetch function against every configured server in
+//! parallel, stores per-server results under a [`QueryKey`], merges them with
+//! the query's [`MergeFn`] and emits through an [`Observable`].
+
 use futures::{FutureExt, Stream, StreamExt};
 use std::cmp::max;
 use std::collections::HashMap;
@@ -56,11 +61,15 @@ pub enum EmitMode {
 /// Options for the query such as the fetch mode or a list of servers
 #[derive(Clone, Debug, Default, uniffi::Record)]
 pub struct QueryOpts {
+    /// Cache/network policy. Defaults to [`FetchMode::Default`].
     pub fetch_mode: Option<FetchMode>,
+    /// How fetched data combines with cached data. Defaults to
+    /// [`UpdateMode::Replace`].
     pub update_mode: Option<UpdateMode>,
     /// Optional list of servers the query should call. `None` uses
     /// `client.servers()`.
     pub servers: Option<Vec<String>>,
+    /// When merged data is emitted. Defaults to [`EmitMode::Default`].
     pub emit_mode: Option<EmitMode>,
     /// How long to wait for each server before treating it as errored,
     /// in milliseconds. Defaults to 5000. Timeouts surface as `error`
@@ -257,6 +266,7 @@ impl<T> Default for QueryState<T> {
 }
 
 impl<T> QueryState<T> {
+    /// Empty state; same as [`Default::default`].
     pub fn new() -> Self {
         Self::default()
     }
@@ -346,6 +356,8 @@ impl<T> QueryClient<T>
 where
     T: Clone + Send + Sync + 'static,
 {
+    /// Create a query client with an empty cache over `client`'s stores and
+    /// server list.
     pub fn new(client: Arc<Mutex<PolycentricClient>>) -> Self {
         Self {
             client,

@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`VerificationVerify`].
+
 use std::fmt;
 
 use crate::models::protos_v2::VerificationVerify;
@@ -27,6 +29,7 @@ impl Validate for VerificationVerify {
     }
 }
 
+/// Why a [`VerificationVerify`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "VerificationVerifyValidationError"))]

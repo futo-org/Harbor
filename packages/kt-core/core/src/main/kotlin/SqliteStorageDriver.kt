@@ -18,6 +18,11 @@ import polycentric.v2.EventKey
  * [org.futo.polycentric.core.IFileStoreDriver] (e.g.
  * [org.futo.polycentric.core.AndroidFileStoreDriver]) when
  * constructing a client — blobs are deliberately not kept in SQLite.
+ *
+ * Repository and session methods run on [Dispatchers.IO]; the `create*`
+ * methods open (and migrate) the database on the calling thread.
+ *
+ * @param databaseName file name under the app's database directory.
  */
 class SqliteStorageDriver(
     context: Context,
@@ -102,6 +107,7 @@ class SqliteStorageDriver(
                 }
         }
 
+    /** Closes the underlying database. Repositories created earlier must not be used afterwards. */
     fun close() = helper.close()
 }
 

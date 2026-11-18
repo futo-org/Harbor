@@ -54,8 +54,10 @@ export interface IFileStoreDriver {
   deleteSubpath(path: string): Promise<void>;
 }
 
+/** One child of a directory, as returned by `IFileStoreDriver.list`. */
 export type FileStoreEntry = {
   kind: 'file' | 'dir';
+  /** Segment name, not the full path. */
   name: string;
 };
 
@@ -65,6 +67,7 @@ export type FileStoreEntry = {
  * is applicable.
  */
 export type FileStoreErrorCode =
+  /** Owner is not a well-formed identity key (raised by `FileStore`). */
   | 'invalid owner'
   /** Path does not pass the validation below. */
   | 'invalid path'
@@ -81,6 +84,7 @@ export type FileStoreErrorCode =
   /** Generic filesystem IO error. */
   | 'io';
 
+/** The only error type file store drivers and `FileStore` should throw. */
 export class FileStoreError extends Error {
   override readonly name = 'FileStoreError';
 
@@ -93,5 +97,7 @@ export class FileStoreError extends Error {
   }
 }
 
+/** Maximum length of a single path segment. */
 export const MAX_SEGMENT_BYTES = 128;
+/** Maximum length of a full path (segments joined with `/`). */
 export const MAX_PATH_BYTES = 1024;

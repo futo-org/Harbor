@@ -1,4 +1,5 @@
-//! Validation
+//! The [`Validate`] trait, the aggregate [`ValidationError`], and the shared
+//! string, int and slice checks the per-model validators are built from.
 
 use std::fmt;
 use std::sync::OnceLock;
@@ -15,6 +16,7 @@ use crate::models::{
 
 /// Validate a value.
 pub trait Validate {
+    /// Per-type error, convertible into the aggregate [`ValidationError`].
     type Error: Into<ValidationError>;
 
     /// Validate a value, returning all errors.
@@ -366,9 +368,7 @@ where
     }
 }
 
-/// Argument to [`validate::string`].
-///
-/// [`validate::string`]: string()
+/// Argument to `validate::string`.
 #[derive(Debug, Default)]
 #[non_exhaustive]
 pub(crate) struct StringConfig {
@@ -377,9 +377,7 @@ pub(crate) struct StringConfig {
     pub(crate) regex: Option<&'static Regex>,
 }
 
-/// Error returned by [`validate::string`].
-///
-/// [`validate::string`]: string()
+/// Error returned by `validate::string`.
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum StringError {
@@ -427,9 +425,7 @@ where
     }
 }
 
-/// Argument to [`validate::int`].
-///
-/// [`validate::int`]: int()
+/// Argument to `validate::int`.
 #[derive(Debug, Default)]
 #[non_exhaustive]
 pub(crate) struct IntConfig {
@@ -437,9 +433,7 @@ pub(crate) struct IntConfig {
     pub(crate) max: Option<i64>,
 }
 
-/// Error returned by [`validate::int`].
-///
-/// [`validate::int`]: int()
+/// Error returned by `validate::int`.
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum IntError {
@@ -494,11 +488,9 @@ where
 /// Validate a slice with per-item validation.
 ///
 /// Errors in an item are mapped with `map_item_err`, which also gets the
-/// item's index. If `validate` is not needed use [`validate::slice`].
+/// item's index. If `validate` is not needed use `validate::slice`.
 ///
 /// Returns true if an error was encountered (and added to `errors`).
-///
-/// [`validate::slice`]: slice()
 pub(crate) fn slice2<T, E, F, VE, M, V>(
     input: &[T],
     errors: &mut Vec<E>,
@@ -522,9 +514,7 @@ where
     errors.len() > start_len // Encountered an error.
 }
 
-/// Argument to [`validate::slice`].
-///
-/// [`validate::slice`]: slice()
+/// Argument to `validate::slice`.
 #[derive(Debug, Default)]
 #[non_exhaustive]
 pub(crate) struct SliceConfig {
@@ -532,9 +522,7 @@ pub(crate) struct SliceConfig {
     pub(crate) max_len: Option<u32>,
 }
 
-/// Error returned by [`validate::slice`].
-///
-/// [`validate::slice`]: slice()
+/// Error returned by `validate::slice`.
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum SliceError {

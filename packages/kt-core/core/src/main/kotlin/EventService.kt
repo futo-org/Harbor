@@ -40,6 +40,7 @@ class KeyPairChangedPayload(
     val identityKey: String?,
 )
 
+/** Emitted by [PolycentricClient.commitEvent] for every locally committed event. */
 class ContentCreatedPayload(
     val signedEvent: SignedEvent,
     /** Present when the commit included content. */
@@ -59,21 +60,36 @@ class ContentCreatedPayload(
  */
 class EventService {
     private val _state = MutableStateFlow(ClientState.UNINITIALIZED)
+
+    /** Lifecycle state of the client; see [PolycentricClient.awaitReady]. */
     val state: StateFlow<ClientState> = _state
 
     private val _progress = MutableStateFlow(InitializationStep.STARTING)
+
+    /** Latest step reached by [PolycentricClient.initialize], for progress UI. */
     val progress: StateFlow<InitializationStep> = _progress
 
     private val _hydrationStatus = MutableStateFlow(HydrationStatus.NOT_STARTED)
+
+    /** Status of replaying persisted events/content into the Rust core at startup. */
     val hydrationStatus: StateFlow<HydrationStatus> = _hydrationStatus
 
     private val _keyPairChanged = MutableSharedFlow<KeyPairChangedPayload?>(extraBufferCapacity = 16)
+
+    /**
+     * Fires when the current key pair is restored or switched; `null` means
+     * no key pair is set.
+     */
     val keyPairChanged: SharedFlow<KeyPairChangedPayload?> = _keyPairChanged
 
     private val _contentCreated = MutableSharedFlow<ContentCreatedPayload>(extraBufferCapacity = 64)
+
+    /** Fires for each event committed locally (not for events pulled from servers). */
     val contentCreated: SharedFlow<ContentCreatedPayload> = _contentCreated
 
     private val _errors = MutableSharedFlow<Throwable>(extraBufferCapacity = 16)
+
+    /** Fatal client errors, currently only a [PolycentricClient.initialize] failure. */
     val errors: SharedFlow<Throwable> = _errors
 
     internal fun emitStateChanged(state: ClientState) {

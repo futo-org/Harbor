@@ -1,3 +1,6 @@
+//! [`Validate`] impl for [`VerificationSchema`], and checking of claim field
+//! values against a schema.
+
 use std::{fmt, str};
 
 use crate::models::field_def;
@@ -52,6 +55,7 @@ impl VerificationSchema {
     }
 }
 
+/// Why a claim field value doesn't fit its [`VerificationSchema`] field.
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(
@@ -144,6 +148,7 @@ impl Validate for VerificationSchema {
     }
 }
 
+/// Why a [`VerificationSchema`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "VerificationSchemaValidationError"))]

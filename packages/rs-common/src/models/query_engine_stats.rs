@@ -1,9 +1,12 @@
+//! Construction and [`Serializable`] impl for the v1 [`QueryEngineStats`].
+
 use crate::error::{Error, Result};
 use crate::models::protos::QueryEngineStats;
 use crate::models::traits::Serializable;
 use prost::Message;
 
 impl QueryEngineStats {
+    /// Creates stats with no memory usage figure.
     pub fn new(total_events: u64, system_count: u64, process_count: u64) -> Self {
         Self {
             total_events,

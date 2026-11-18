@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`ImageSet`].
+
 use std::fmt;
 
 use crate::models::image;
@@ -26,6 +28,7 @@ impl Validate for ImageSet {
     }
 }
 
+/// Why a [`ImageSet`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "ImageSetValidationError"))]

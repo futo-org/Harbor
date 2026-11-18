@@ -19,6 +19,8 @@ object ServerJwt {
     /**
      * Create a JWT for [iss] against [aud], signed with [keyPair] via
      * [crypto] (private keys stay behind the ICryptoManager boundary).
+     *
+     * @throws PolycentricException if [keyPair] is not Ed25519.
      */
     suspend fun create(
         crypto: ICryptoManager,

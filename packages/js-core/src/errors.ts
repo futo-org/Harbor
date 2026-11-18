@@ -53,6 +53,10 @@ export class WrapperError extends Error {
  * ```
  */
 export class WasmError extends WrapperError {
+  /**
+   * @param message - Error message
+   * @param originalError - Optional original error that caused this error
+   */
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, WasmError.prototype);
@@ -291,6 +295,10 @@ export class QueryError extends WrapperError {
  * Error thrown when adding a server that is already on the identity document.
  */
 export class ServerAlreadyAddedError extends WrapperError {
+  /**
+   * @param message - Error message; defaults to `'Server already added'`
+   * @param originalError - Optional original error that caused this error
+   */
   constructor(message = 'Server already added', originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, ServerAlreadyAddedError.prototype);
@@ -305,6 +313,10 @@ export class ServerAlreadyAddedError extends WrapperError {
  * returns a non-200 status code.
  */
 export class HTTPError extends WrapperError {
+  /**
+   * @param message - Error message
+   * @param originalError - Optional original error that caused this error
+   */
   constructor(message: string, originalError?: unknown) {
     super(message, originalError);
     Object.setPrototypeOf(this, HTTPError.prototype);

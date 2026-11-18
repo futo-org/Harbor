@@ -7,8 +7,10 @@ use sha2::{Digest, Sha256};
 const LEAF_PREFIX: u8 = 0x00;
 const NODE_PREFIX: u8 = 0x01;
 
+/// A SHA-256 digest.
 pub type Hash = [u8; 32];
 
+/// Hash of a leaf: `SHA256(0x00 || data)`.
 pub fn leaf_hash(data: &[u8]) -> Hash {
     let mut h = Sha256::new();
     h.update([LEAF_PREFIX]);
@@ -16,6 +18,7 @@ pub fn leaf_hash(data: &[u8]) -> Hash {
     h.finalize().into()
 }
 
+/// Hash of an internal node: `SHA256(0x01 || left || right)`.
 pub fn node_hash(left: &Hash, right: &Hash) -> Hash {
     let mut h = Sha256::new();
     h.update([NODE_PREFIX]);

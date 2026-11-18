@@ -4,7 +4,9 @@ import type { KeyType, PrivateKey, PublicKey } from '../proto/v2';
  * Uniquely identifies a login.
  */
 export type LoginId = {
+  /** Identity key (lowercase hex). */
   identity: string;
+  /** Public half of the login's key pair. */
   publicKey: PublicKey;
 };
 
@@ -22,6 +24,7 @@ export type LoginDetails = LoginOverview & {
   privateKey: PrivateKey;
 };
 
+/** Where a login's private key is stored. Only inline (in the repository row) today. */
 // TODO: support expo secure storage option
 export type PrivateKeyLocation = 'inline';
 
@@ -163,6 +166,7 @@ export type LoginRepositoryErrorCode =
   /** Generic database error. */
   | 'db';
 
+/** The only error type login repositories and `LoginStore` should throw. */
 export class LoginRepositoryError extends Error {
   override readonly name = 'LoginRepositoryError';
 

@@ -1,3 +1,5 @@
+//! Helpers and [`Serializable`] impl for the v1 [`Pointer`].
+
 use crate::error::{Error, Result};
 use crate::models::protos::Pointer;
 use crate::models::traits::Serializable;

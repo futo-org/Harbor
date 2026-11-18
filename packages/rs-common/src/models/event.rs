@@ -1,3 +1,5 @@
+//! Construction, [`Serializable`] and [`Validate`] impls for [`Event`].
+
 use std::fmt;
 
 use prost::Message;
@@ -32,7 +34,8 @@ impl Event {
         }
     }
 
-    /// Validates that the event has all required fields
+    /// Currently a no-op that always returns `Ok`: the required-field checks
+    /// are commented out. Use the [`Validate`] impl for real validation.
     pub fn validate(&self) -> Result<(), Error> {
         // if self.system.is_none() {
         //     return Err(Error::Platform(PlatformError::DeserializationError(
@@ -147,6 +150,7 @@ impl Validate for Event {
     }
 }
 
+/// Why a [`Event`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "EventValidationError"))]

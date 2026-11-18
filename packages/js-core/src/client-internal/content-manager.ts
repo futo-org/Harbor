@@ -2,19 +2,18 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import type { PolycentricClient } from '../polycentric-client';
 import * as Proto from '../proto/v2';
 
+/**
+ * Content and blob helpers for `PolycentricClient` (`client.contentManager`).
+ */
 export class ContentManager {
   constructor(private readonly client: PolycentricClient) {}
 
-  /**
-   * Helper function to build content
-   */
+  /** Wrap a content body in a `Content` message. */
   build(contentBody: Proto.Content['contentBody']): Proto.Content {
     return Proto.Content.create({ contentBody });
   }
 
-  /**
-   * Builds ContentDigest from serialized content
-   */
+  /** SHA-256 `ContentDigest` of serialized content bytes. */
   buildDigest(contentBytes: Uint8Array) {
     return Proto.ContentDigest.create({
       type: Proto.ContentDigestType.SHA256,
@@ -26,6 +25,7 @@ export class ContentManager {
    * Download any blobs in the array that we don't have locally.
    * This is used so that blobs of an identity will eventually
    * persist on other devices in that identity.
+   * Failures are logged per blob and never thrown.
    */
   async pullBlobs(identity: string, blobs: Proto.Blob[]): Promise<void> {
     const digests = blobs.map((b) => b.digest).filter((d) => !!d);
@@ -47,7 +47,8 @@ export class ContentManager {
   }
 
   /**
-   * Collect all blobs referenced in a post or profile update
+   * Collect all blobs referenced in a post (image sets) or profile update
+   * (avatar and banner). Other content types yield an empty array.
    */
   static collectBlobs(content: Proto.Content): Proto.Blob[] {
     const out: Proto.Blob[] = [];

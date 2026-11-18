@@ -1,3 +1,5 @@
+//! Signature checking for [`SignedMessage`].
+
 use crate::models::protos_v2::{PublicKey, SignedMessage};
 
 impl SignedMessage {

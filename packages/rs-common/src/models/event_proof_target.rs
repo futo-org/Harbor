@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`EventProofTarget`].
+
 use std::fmt;
 
 use crate::models::protos_v2::EventProofTarget;
@@ -23,6 +25,7 @@ impl Validate for EventProofTarget {
     }
 }
 
+/// Why a [`EventProofTarget`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "EventProofTargetValidationError"))]

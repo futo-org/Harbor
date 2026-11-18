@@ -7,15 +7,19 @@ import {
   type PgDb,
 } from '@polycentric/js-storage-postgres';
 
+/** A Postgres storage driver together with the Drizzle database it wraps. */
 export interface NodePgStorage {
+  /** The `IStorageDriver` to hand to `PolycentricClient`. */
   driver: DrizzlePgStorageDriver;
+  /** The underlying Drizzle database, for direct queries. */
   db: PgDb;
 }
 
 /**
  * Storage driver backed by postgres. The connection string may carry a
  * `?schema=<name>` param (Prisma convention) — tables then live under that
- * schema instead of `public`.
+ * schema instead of `public`. The schema is created if missing and pending
+ * migrations are run before returning.
  */
 export async function createNodePgStorageDriver(
   connectionString: string,

@@ -42,6 +42,10 @@ enum class SyncStrategy {
 
     /** Push and pull only events believed to be missing. */
     PARTIAL,
+
+    /** Push only events believed to be missing; pull nothing. */
     PARTIAL_PUSH,
+
+    /** Pull only events past the local heads; push nothing. */
     PARTIAL_PULL,
 }

@@ -6,12 +6,14 @@ use polycentric_common::models::protos_v2::EventMetadata;
 
 use super::keys::EventKey;
 
+/// Server-supplied `EventMetadata` (reply/reaction counts etc.) by event.
 #[derive(Debug, Default)]
 pub struct MetaStore {
     meta_map: BTreeMap<EventKey, EventMetadata>,
 }
 
 impl MetaStore {
+    /// Create an empty metadata store.
     pub fn new() -> Self {
         Self::default()
     }

@@ -1,3 +1,9 @@
+/**
+ * React Native entry of `@polycentric/react-native`. Re-exports
+ * `@polycentric/js-core`, the rs-core bindings and the client factory.
+ *
+ * @packageDocumentation
+ */
 import 'fast-text-encoding';
 
 // Side-effect: ubrn-generated TurboModule install + uniffi version check.

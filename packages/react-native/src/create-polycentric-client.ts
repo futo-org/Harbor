@@ -17,6 +17,11 @@ function installConsoleLogger() {
   setLogger(createBatchingLogSink());
 }
 
+/**
+ * Create a `PolycentricClient` backed by the rs-core TurboModule, expo-sqlite
+ * and expo-file-system. Calls with the same `databaseName` share one SQLite
+ * connection.
+ */
 export async function createPolycentricClient(
   config: CreatePolycentricClientConfig = {},
 ): Promise<PolycentricClient> {

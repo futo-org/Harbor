@@ -1,3 +1,5 @@
+//! Construction, [`Serializable`] and [`Validate`] impls for [`EventKey`].
+
 use std::fmt;
 
 use prost::Message;
@@ -12,6 +14,8 @@ use crate::models::{Serializable, public_key};
 use crate::platform::error::PlatformError;
 
 impl EventKey {
+    /// Creates an event key for the `sequence`-th event in `collection` of
+    /// `identity`, signed by `signed_by`.
     pub fn new(collection: i32, identity: String, signed_by: PublicKey, sequence: u64) -> Self {
         Self {
             collection,
@@ -21,6 +25,8 @@ impl EventKey {
         }
     }
 
+    /// Minimal structural check: `identity` is non-empty and `signed_by` is set.
+    /// Shadows [`Validate::validate`], which does the full check.
     pub fn validate(&self) -> Result<(), Error> {
         if self.identity.is_empty() {
             return Err(Error::Platform(PlatformError::SerializationError(
@@ -104,6 +110,8 @@ impl Validate for EventKey {
     }
 }
 
+/// Why a [`EventKey`] fails [`Validate`].
+/// `CollectionInvalid` is only produced by content validators.
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "EventKeyValidationError"))]

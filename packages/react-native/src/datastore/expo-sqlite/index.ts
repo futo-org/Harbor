@@ -11,6 +11,11 @@ import {
  *  inside each other's transaction. */
 const drivers = new Map<string, Promise<DrizzleStorageDriver>>();
 
+/**
+ * Open (creating and migrating if needed) the expo-sqlite database
+ * `databaseName`. Calls for one name share a driver; a failed open is not
+ * cached.
+ */
 export function createReactNativeStorageDriver(
   databaseName: string,
 ): Promise<DrizzleStorageDriver> {

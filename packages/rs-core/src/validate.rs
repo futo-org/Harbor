@@ -1,3 +1,6 @@
+//! Stateless structural validation of `Event` and `Content` bytes, exported
+//! to the bindings so callers can check an event before signing it.
+
 use polycentric_common::models::protos_v2::{Content, Event};
 use polycentric_common::models::validate::Validate;
 use polycentric_common::models::{content, event};

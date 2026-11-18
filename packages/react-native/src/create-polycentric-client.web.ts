@@ -26,6 +26,11 @@ function installConsoleLogger() {
   setLogger(createBatchingLogSink());
 }
 
+/**
+ * Create a `PolycentricClient` backed by the rs-core wasm build (initialized
+ * here), IndexedDB and OPFS. Falls back to in-memory drivers
+ * (`persistentStorage: false`) if IndexedDB or OPFS can't be opened.
+ */
 export async function createPolycentricClient(
   config: CreatePolycentricClientConfig = {},
 ): Promise<PolycentricClient> {

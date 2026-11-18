@@ -79,7 +79,9 @@ pub fn copy_hints(client: &Arc<Mutex<PolycentricClient>>, hints: Vec<EventHint>)
 
 /// Responses carrying a flat `event_bundles` list.
 pub trait EventBundleResponse: Message + Default {
+    /// The response's primary event bundles.
     fn bundles_mut(&mut self) -> &mut Vec<EventBundle>;
+    /// The response's side-channel event hints.
     fn hints_mut(&mut self) -> &mut Vec<EventHint>;
 }
 

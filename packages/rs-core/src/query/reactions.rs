@@ -1,3 +1,5 @@
+//! Reactions to a post (`GetReactions`) surfaced as an observable via `Query`.
+
 use std::cmp::Reverse;
 use std::collections::HashSet;
 use std::mem;
@@ -16,12 +18,14 @@ use crate::query::event::merge::{merge_event_bundles, merge_event_hints};
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
+/// Arguments for `Query::GetReactions`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetReactionsArgs {
     /// Event key of the event whose reactions we want.
     pub target: EventKey,
     /// Filter out reactions that don't have this emoji, if provided.
     pub emoji_filter: Option<String>,
+    /// Max reactions each server returns.
     pub limit: Option<i32>,
 }
 

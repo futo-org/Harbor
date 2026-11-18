@@ -1,3 +1,6 @@
+//! Helpers for [`Content`], its [`Validate`] impl, and a `Debug` impl for
+//! [`SerializedContent`] that decodes the bytes.
+
 use std::fmt;
 
 use prost::Message;
@@ -10,6 +13,8 @@ use crate::models::protos_v2::{Content, Identity, SerializedContent, content::Co
 use crate::models::validate::Validate;
 
 impl Content {
+    /// The [`Identity`] body, or [`CoreError::InvalidEvent`] if this content is
+    /// anything else.
     pub fn as_identity(&self) -> Result<&Identity, CoreError> {
         match &self.content_body {
             Some(ContentBody::Identity(i)) => Ok(i),
@@ -89,6 +94,7 @@ impl Validate for Content {
     }
 }
 
+/// Why a [`Content`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "ContentValidationError"))]

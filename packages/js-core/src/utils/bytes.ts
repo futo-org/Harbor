@@ -1,3 +1,4 @@
+/** Whether two byte arrays have the same length and contents. Not constant-time. */
 export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {

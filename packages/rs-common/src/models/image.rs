@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`Image`].
+
 use std::fmt;
 
 use crate::models::blob;
@@ -24,6 +26,7 @@ impl Validate for Image {
     }
 }
 
+/// Why a [`Image`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "ImageValidationError"))]

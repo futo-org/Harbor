@@ -7,6 +7,10 @@ const ED25519_PRIVATE_KEY_LENGTH = 32;
 const ED25519_PUBLIC_KEY_LENGTH = 32;
 const ED25519_SIGNATURE_LENGTH = 64;
 
+/**
+ * Default `ICryptoManager`, backed by `@noble/curves`. Supports only
+ * `KEY_TYPE.ED25519`.
+ */
 export class CryptoManager implements ICryptoManager {
   async generateKeyPair(
     keyType: number,

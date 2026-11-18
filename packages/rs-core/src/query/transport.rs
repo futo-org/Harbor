@@ -22,6 +22,8 @@ type RawChannel = tonic_web_wasm_client::Client;
 #[cfg(all(not(target_arch = "wasm32"), feature = "native-transport"))]
 type RawChannel = tonic::transport::Channel;
 
+/// A platform gRPC channel wrapped in the auth interceptor. Cached per
+/// server URL by `channel`.
 #[cfg(any(target_arch = "wasm32", feature = "native-transport"))]
 pub type GrpcChannel = InterceptedService<RawChannel, auth::AuthInterceptor>;
 

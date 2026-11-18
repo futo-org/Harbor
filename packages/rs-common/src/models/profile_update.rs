@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`ProfileUpdate`].
+
 use std::fmt;
 
 use crate::models::image_set;
@@ -60,6 +62,7 @@ impl Validate for ProfileUpdate {
     }
 }
 
+/// Why a [`ProfileUpdate`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "ProfileUpdateValidationError"))]

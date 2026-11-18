@@ -7,8 +7,13 @@ import {
 const SEGMENT_PATTERN = /^[a-z0-9_.-]+$/;
 
 /**
- * Validate a path and split it into segments.
- * Throws an `'invalid path'` error for paths that don't pass the validation.
+ * Validate a file store path and split it into segments, ignoring empty
+ * segments (so leading, trailing and doubled `/` are tolerated).
+ *
+ * @param allowEmpty - Accept a path with no segments (the root) instead of
+ *   rejecting it.
+ * @throws {FileStoreError} `'invalid path'` if the path is empty (unless
+ *   `allowEmpty`), or a segment or the whole path is invalid or too long.
  */
 export function segmentsFromPath(
   path: string,
@@ -31,6 +36,7 @@ export function segmentsFromPath(
   return segments;
 }
 
+/** Whether `segment` is a single valid file store path segment (no `/`). */
 export function isValidPathSegment(segment: string): boolean {
   return segmentError(segment) === null;
 }

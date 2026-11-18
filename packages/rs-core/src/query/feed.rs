@@ -36,12 +36,19 @@ use crate::{
     },
 };
 
+/// Arguments for `Query::GetIdentityFeed`. Emits serialized `GetFeedResponse`
+/// bytes.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetIdentityFeedArgs {
+    /// Author whose posts to return.
     pub identity: String,
+    /// Max items each server returns for this page.
     pub limit: Option<i32>,
+    /// Cursor (from a previous emission's `page_info`) for the page before it.
     pub backward_token: Option<String>,
+    /// Cursor (from a previous emission's `page_info`) for the page after it.
     pub forward_token: Option<String>,
+    /// Label values whose content the requester does not want to see.
     pub omit_labels: Vec<String>,
     /// Posts the emission may carry; the rest is held back.
     pub window_size: Option<i32>,
@@ -51,8 +58,11 @@ pub struct GetIdentityFeedArgs {
 /// the others by creation time.
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
 pub enum FeedSort {
+    /// The server's default order.
     Default,
+    /// Most reactions first.
     Top,
+    /// Newest first.
     Latest,
 }
 
@@ -66,65 +76,98 @@ impl From<FeedSort> for SortPostsBy {
     }
 }
 
+/// Arguments for `Query::GetFollowingFeed` and `Query::GetRecommendedFeed`.
+/// Emits serialized `GetFeedResponse` bytes.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetFollowingFeedArgs {
+    /// Identity whose follows make up the feed.
     pub follower_identity: String,
+    /// Ordering; `None` uses the server default.
     pub sort_by: Option<FeedSort>,
+    /// Max items each server returns for this page.
     pub limit: Option<i32>,
+    /// Cursor (from a previous emission's `page_info`) for the page before it.
     pub backward_token: Option<String>,
+    /// Cursor (from a previous emission's `page_info`) for the page after it.
     pub forward_token: Option<String>,
+    /// Label values whose content the requester does not want to see.
     pub omit_labels: Vec<String>,
     /// Posts the emission may carry; the rest is held back.
     pub window_size: Option<i32>,
 }
 
+/// Arguments for `Query::GetExploreFeed`. Emits serialized `GetFeedResponse`
+/// bytes.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetExploreFeedArgs {
+    /// Caller to tailor results for; `None` for an anonymous feed.
     pub identity: Option<String>,
+    /// Ordering; `None` uses the server default.
     pub sort_by: Option<FeedSort>,
+    /// Max items each server returns for this page.
     pub limit: Option<i32>,
+    /// Cursor (from a previous emission's `page_info`) for the page before it.
     pub backward_token: Option<String>,
+    /// Cursor (from a previous emission's `page_info`) for the page after it.
     pub forward_token: Option<String>,
+    /// Label values whose content the requester does not want to see.
     pub omit_labels: Vec<String>,
     /// Posts the emission may carry; the rest is held back.
     pub window_size: Option<i32>,
 }
 
+/// Arguments for `Query::GetPostThread`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetPostThreadArgs {
+    /// Key of the parent post.
     pub event_key: EventKey,
+    /// Max replies each server returns.
     pub limit: i32,
+    /// Label values whose content the requester does not want to see.
     pub omit_labels: Vec<String>,
 }
 
+/// Arguments for `Query::GetAttributionFeed`. Emits serialized
+/// `GetFeedResponse` bytes.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetAttributionFeedArgs {
     /// Serialized `AttributedTo` proto to match posts against. Passed as
     /// bytes so the whole (future-extensible) message crosses the FFI
     /// intact; decoded server-side by URL for the link case.
     pub attributed_to: Vec<u8>,
+    /// Max items each server returns for this page.
     pub limit: Option<i32>,
+    /// Cursor (from a previous emission's `page_info`) for the page before it.
     pub backward_token: Option<String>,
+    /// Cursor (from a previous emission's `page_info`) for the page after it.
     pub forward_token: Option<String>,
+    /// Label values whose content the requester does not want to see.
     pub omit_labels: Vec<String>,
     /// Posts the emission may carry; the rest is held back.
     pub window_size: Option<i32>,
 }
 
+/// Arguments for `Query::GetAttributedToStats`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetAttributedToStatsArgs {
     /// Serialized `AttributedTo` proto to get the stats of.
     pub attributed_to: Vec<u8>,
 }
 
+/// Arguments for `Query::GetAttributedToFeed`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetAttributedToFeedArgs {
+    /// `Top`: most posts first, decayed by age. Otherwise latest post first.
     pub sort_by: Option<FeedSort>,
+    /// Max items each server returns for this page.
     pub limit: Option<i32>,
+    /// Cursor (from a previous emission's `page_info`) for the page before it.
     pub backward_token: Option<String>,
+    /// Cursor (from a previous emission's `page_info`) for the page after it.
     pub forward_token: Option<String>,
     /// `Application.id`s to count posts from. Empty allows all.
     pub only_applications: Vec<String>,
+    /// `Application.id`s whose posts are not counted.
     pub omit_applications: Vec<String>,
 }
 

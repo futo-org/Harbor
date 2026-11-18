@@ -17,8 +17,10 @@ use crate::query::event::merge::{EventDedupKey, event_dedup_key, merge_event_hin
 use crate::query::validation::retain_validated_hints;
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
+/// Arguments for `Query::ListNotifications`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListNotificationsArgs {
+    /// Identity whose notifications to list.
     pub identity: String,
     /// Return at most this many notifications.
     pub first: Option<u32>,
@@ -28,6 +30,8 @@ pub struct ListNotificationsArgs {
     pub omit_labels: Vec<String>,
 }
 
+/// Arguments for `Query::SubscribeUnreadNotificationCount`. Empty: the
+/// identity comes from the auth token.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct SubscribeUnreadNotificationCountArgs {}
 

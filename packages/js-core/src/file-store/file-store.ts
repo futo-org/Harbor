@@ -6,6 +6,8 @@ import { toDigestKey } from '../utils/hex';
 
 /**
  * Manage blobs that have been persisted locally by the client.
+ * Blobs are stored per owner identity; reads fall back to the legacy
+ * owner-less layout.
  */
 export class FileStore {
   constructor(private driver: IFileStoreDriver) {}
@@ -75,6 +77,7 @@ export class FileStore {
     return this.driver.get(this.legacyPathFor(digest));
   }
 
+  /** Delete the legacy (owner-less) file for `digest`, if any. */
   deleteLegacy(digest: Proto.ContentDigest): Promise<boolean> {
     return this.driver.delete(this.legacyPathFor(digest));
   }
@@ -82,7 +85,8 @@ export class FileStore {
   /**
    * Ensure that we have migrated legacy blobs.
    * Skips the migration work if a previous v2 migration has completed.
-   * Copies the legacy blobs without deleting them.
+   * Copies the legacy blobs under the active login's identity without
+   * deleting them. `PolycentricClient` runs this in the background on startup.
    *
    * TODO: more sophisticated migration logic once we have more than one.
    */
@@ -122,6 +126,7 @@ export class FileStore {
   }
 }
 
+/** Options for `FileStore.migrate`. */
 export type FileStoreMigrationOptions = {
   /**
    * Required so that we can read what the active login is.

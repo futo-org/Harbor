@@ -1,3 +1,5 @@
+//! Cache of resolved identity chains.
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -16,6 +18,7 @@ pub struct IdentityStore {
 }
 
 impl IdentityStore {
+    /// Create an empty identity-chain cache.
     pub fn new() -> Self {
         Self::default()
     }

@@ -1,5 +1,10 @@
+/**
+ * Numeric key type IDs used by `ICryptoManager`. `ED25519` matches
+ * `KeyType.ED25519` in the v2 proto; it is the only supported key type.
+ */
 export const KEY_TYPE = {
   ED25519: 1,
+  /** Not a signing key type; rejected by `CryptoManager`. */
   SHA256: 2,
 } as const;
 
@@ -18,6 +23,10 @@ export const COLLECTION = {
 /** A known COLLECTION value. Callers may also pass any number. */
 export type Collection = (typeof COLLECTION)[keyof typeof COLLECTION];
 
+/**
+ * Strategies for loading persisted events into the core. Not yet used by
+ * `PolycentricClient`.
+ */
 export enum HydrationStrategy {
   FULL = 'full',
   FULL_ASYNC = 'full-async',
@@ -50,6 +59,7 @@ export enum SyncStrategy {
   PARTIAL_PULL,
 }
 
+/** Library defaults. Not re-exported from the package entry point. */
 export const Defaults = {
   DB_NAME: 'polycentric-database',
   HYDRATION: {

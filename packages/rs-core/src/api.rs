@@ -1,3 +1,7 @@
+//! The uniffi-exported surface of the crate: [`PolycentricCore`] and the
+//! records, enums and callback traits it takes. Everything the TypeScript and
+//! Kotlin bindings call lives here.
+
 use crate::client::PolycentricClient;
 use crate::lock::LockRecover;
 use crate::pairing;
@@ -49,27 +53,36 @@ pub(crate) fn install_panic_hook() {
     LazyLock::force(&lazy);
 }
 
+/// Error returned across the FFI boundary. Flat: bindings see only the
+/// variant and its `Display` message.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 #[uniffi(flat_error)]
 pub enum CoreError {
+    /// Bytes could not be decoded (malformed protobuf, bad hex/base64, etc.).
     #[error("Decode: {0}")]
     Decode(String),
 
+    /// A value could not be encoded or serialized.
     #[error("Encode: {0}")]
     Encode(String),
 
+    /// Signature creation or verification failed.
     #[error("Crypto: {0}")]
     Crypto(String),
 
+    /// A local store operation failed or rejected the data.
     #[error("Store: {0}")]
     Store(String),
 
+    /// Channel setup, transport, or gRPC status failure talking to a server.
     #[error("Network: {0}")]
     Network(String),
 
+    /// A foreign (TS/Kotlin) callback failed or threw unexpectedly.
     #[error("Callback: {0}")]
     Callback(String),
 
+    /// The caller passed an argument that failed validation.
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 }
@@ -91,9 +104,12 @@ pub struct PushResult {
     pub event_issues: Vec<sync::EventPushIssues>,
 }
 
+/// A content blob paired with its digest, for [`PolycentricCore::copy_contents`].
 #[derive(uniffi::Record)]
 pub struct ContentEntry {
+    /// Serialized `ContentDigest` proto.
     pub digest_bytes: Vec<u8>,
+    /// Serialized content the digest refers to.
     pub content_bytes: Vec<u8>,
 }
 
@@ -103,37 +119,67 @@ pub struct ContentEntry {
 /// match arm in `fetch_query` — no new FFI method required.
 #[derive(uniffi::Enum)]
 pub enum Query {
+    /// Profile of an identity, local-first (see `query::profile::get_profile`). Emits serialized `GetProfileResponse` bytes.
     GetProfile(crate::query::profile::GetProfileArgs),
+    /// A single event by (possibly partial) key.
     GetEvent(crate::query::event::GetEventArgs),
+    /// Candidate posts matching a partial event key, with their hints. Emits serialized `GetPostResponse` bytes.
     GetPost(crate::query::event::GetPostArgs),
+    /// Replies under a post. Emits serialized `GetPostThreadResponse` bytes.
     GetPostThread(crate::query::feed::GetPostThreadArgs),
+    /// Posts authored by an identity.
     GetIdentityFeed(crate::query::feed::GetIdentityFeedArgs),
+    /// Posts from the identities a follower follows.
     GetFollowingFeed(crate::query::feed::GetFollowingFeedArgs),
+    /// Posts the follower or their follows created or interacted with. Shares the following feed's args.
     GetRecommendedFeed(crate::query::feed::GetFollowingFeedArgs),
+    /// Server-curated explore feed.
     GetExploreFeed(crate::query::feed::GetExploreFeedArgs),
+    /// Posts attributed to the same target (e.g. all posts about a URL).
     GetAttributionFeed(crate::query::feed::GetAttributionFeedArgs),
+    /// Targets recent posts are attributed to, with post counts.
     GetAttributedToFeed(crate::query::feed::GetAttributedToFeedArgs),
+    /// Post and reaction counts for one attribution target.
     GetAttributedToStats(crate::query::feed::GetAttributedToStatsArgs),
+    /// Notifications for an identity; carried events are persisted locally.
     ListNotifications(crate::query::notification::ListNotificationsArgs),
+    /// Live unread-notification count for the authenticated identity.
     SubscribeUnreadNotificationCount(
         crate::query::notification::SubscribeUnreadNotificationCountArgs,
     ),
+    /// Live heads of the authenticated identity from every server.
     SubscribeHeads(crate::query::heads::SubscribeHeadsArgs),
+    /// Events for an identity, optionally filtered by collection/signer/sequence range. Emits serialized `ListEventsResponse` bytes.
     ListEvents(crate::query::event::ListEventsArgs),
+    /// Verification claims made by an identity.
     ListVerificationClaims(crate::query::verifications::ListVerificationClaimsArgs),
+    /// Identities asked to verify a claim.
     ListVerificationTargets(crate::query::verifications::ListVerificationTargetsArgs),
+    /// Identities that have verified a claim.
     ListVerificationVerifies(crate::query::verifications::ListVerificationVerifiesArgs),
+    /// Claims whose owners asked an identity to verify them.
     ListTargetedVerificationClaims(crate::query::verifications::ListTargetedVerificationClaimsArgs),
+    /// Claims matching a schema and field values that a trusted identity has verified.
     ResolveVerifiedClaims(crate::query::verifications::ResolveVerifiedClaimsArgs),
+    /// Who an identity follows.
     ListFollowing(crate::query::graph::ListFollowingArgs),
+    /// Who follows an identity.
     ListFollowers(crate::query::graph::ListFollowersArgs),
+    /// Follow suggestions for the authenticated caller.
     SuggestFollow(crate::query::graph::SuggestFollowArgs),
+    /// Full-text post search.
     SearchPosts(crate::query::search::SearchPostsArgs),
+    /// Full-text profile search.
     SearchUsers(crate::query::search::SearchUsersArgs),
+    /// Per-server moderator status of the caller, as a JSON `{server_url: bool}` map.
     IsModerator(crate::query::moderation::IsModeratorArgs),
+    /// Per-server ban status of an identity, as a JSON `{server_url: bool}` map.
     IsBanned(crate::query::moderation::IsBannedArgs),
+    /// A page of banned identities from a single server.
     ListBans(crate::query::moderation::ListBansArgs),
+    /// Moderation reports per server, as a JSON `{server_url: base64 ListReportsResponse}` map.
     ListReports(crate::query::moderation::ListReportsArgs),
+    /// Reaction events targeting a post.
     GetReactions(crate::query::reactions::GetReactionsArgs),
 }
 
@@ -179,10 +225,16 @@ impl QueryObserver for FirstSuccessObserver {
 #[uniffi::export(with_foreign)]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
+/// Foreign signer used by [`PolycentricCore::sign_event`], so private keys
+/// never have to cross into Rust.
 pub trait SignBytesCallback: Send + Sync {
+    /// Sign `bytes` (a serialized `Event`) and return the raw signature.
     async fn sign(&self, bytes: Vec<u8>) -> Result<Vec<u8>, CoreError>;
 }
 
+/// The FFI entry point: owns the in-memory stores and the query engine.
+/// Bindings create one per app/session and call everything through it.
+/// Most arguments and return values are serialized protobuf bytes.
 #[derive(uniffi::Object)]
 pub struct PolycentricCore {
     client: Arc<Mutex<PolycentricClient>>,
@@ -192,6 +244,8 @@ pub struct PolycentricCore {
 #[cfg_attr(not(target_arch = "wasm32"), uniffi::export(async_runtime = "tokio"))]
 #[cfg_attr(target_arch = "wasm32", uniffi::export)]
 impl PolycentricCore {
+    /// Create a core with empty stores and no servers. Also installs a
+    /// panic hook that routes panics to the logger.
     #[uniffi::constructor]
     pub fn new() -> Arc<Self> {
         #[cfg(target_arch = "wasm32")]
@@ -253,10 +307,13 @@ impl PolycentricCore {
             .collect()
     }
 
+    /// Whether the active identity blocks `identity` (see [`Self::blocked_identities`]).
     pub fn is_blocked(&self, identity: String) -> bool {
         self.client.lock_recover().is_blocked(&identity)
     }
 
+    /// Sequence number for the next event in `(identity, collection)`:
+    /// `max + 1` over locally-held valid events, or 1 if there are none.
     pub fn next_sequence(&self, identity: String, collection: i32) -> u64 {
         self.client
             .lock_recover()

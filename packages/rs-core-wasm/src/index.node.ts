@@ -5,6 +5,10 @@ import { uniffiInitAsync as openWasmModule } from './generated/wasm/index';
 
 export * from './generated/wasm/index';
 
+/**
+ * Load and initialize the wasm module from this package's own
+ * `polycentric_core.wasm`. Await it once before using any binding.
+ */
 export function uniffiInitAsync(): Promise<void> {
   return openWasmModule(
     new URL(

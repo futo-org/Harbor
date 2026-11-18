@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+/// Cancellation handle for an observable subscription. Unsubscribing only
+/// sets a flag; in-flight work notices it and stops emitting.
 #[derive(uniffi::Object)]
 pub struct Subscription {
     closed: AtomicBool,
@@ -8,16 +10,19 @@ pub struct Subscription {
 
 #[uniffi::export]
 impl Subscription {
+    /// Stop receiving emissions. Idempotent.
     pub fn unsubscribe(&self) {
         self.closed.store(true, Ordering::SeqCst);
     }
 
+    /// Whether [`Self::unsubscribe`] has been called.
     pub fn is_closed(&self) -> bool {
         self.closed.load(Ordering::SeqCst)
     }
 }
 
 impl Subscription {
+    /// A new, open subscription.
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
             closed: AtomicBool::new(false),

@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`ServerList`].
+
 use std::fmt;
 
 use crate::models::protos_v2::ServerList;
@@ -25,6 +27,7 @@ impl Validate for ServerList {
     }
 }
 
+/// Why a [`ServerList`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "ServerListValidationError"))]

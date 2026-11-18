@@ -25,11 +25,15 @@ use crate::time;
 /// See other docs for where fields originate from and whether they can be
 /// trusted.
 pub struct SessionState {
+    /// The server's message as received.
     pub raw: PairingSessionState,
+    /// The decoded session digest, verified against the expected hash.
     pub digest: PairingSessionDigest,
+    /// The decoded issuer state, signature-checked against the digest's signer.
     pub issuer_state: IssuerPairingState,
 }
 
+/// Tuning for [`open_state`].
 #[derive(Default)]
 pub struct OpenOptions {
     /// The current time to use for expiration logic.
@@ -214,6 +218,9 @@ pub async fn put(
     Ok(state.raw.encode_to_vec())
 }
 
+/// Register `claimer_key` on the pairing session identified by
+/// `digest_sha256`, then validate the returned state and check the key is
+/// listed among its claimers.
 pub async fn join(
     client: &Mutex<PolycentricClient>,
     server_url: String,

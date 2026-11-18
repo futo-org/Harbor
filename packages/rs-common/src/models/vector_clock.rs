@@ -1,3 +1,8 @@
+//! [`VectorClock`] ordering helpers and [`Validate`] impl.
+//!
+//! A clock holds one sequence number per key in the referenced identity
+//! document, in [`Identity::deduplicated_keys`] order.
+
 use std::fmt;
 
 use crate::error::CoreError;
@@ -82,6 +87,7 @@ impl Validate for VectorClock {
     }
 }
 
+/// Why a [`VectorClock`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "VectorClockValidationError"))]

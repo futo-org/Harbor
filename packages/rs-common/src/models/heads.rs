@@ -1,3 +1,5 @@
+//! [`Heads`]: the latest known event key per collection and signer.
+
 use std::collections::BTreeMap;
 
 use crate::models::protos_v2::{EventKey, ListHeadsResponse};
@@ -29,6 +31,7 @@ impl Heads {
         changed
     }
 
+    /// All heads as a [`ListHeadsResponse`].
     pub fn to_response(&self) -> ListHeadsResponse {
         ListHeadsResponse {
             heads: self.0.values().cloned().collect(),

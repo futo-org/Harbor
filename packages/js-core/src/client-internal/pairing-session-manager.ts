@@ -37,7 +37,10 @@ export interface PairingSession {
 }
 
 /**
- * Wrappers over the rs-core's pairing API.
+ * Wrappers over rs-core's pairing API, which authorizes a new device's key
+ * for an existing identity: the issuer publishes a session, the claimer joins
+ * it, the issuer authorizes claimers, and the claimer then claims the
+ * identity (`LoginManager.claim`).
  */
 export class PairingSessionManager {
   constructor(private readonly client: PolycentricClient) {}
@@ -96,7 +99,8 @@ export class PairingSessionManager {
   }
 
   /**
-   * Start a new pairing session and register it on `server`.
+   * Start a new pairing session and register it on `server`, as the issuer.
+   * Throws if there is no active login or no local identity chain.
    */
   async createPairingSession(server: string): Promise<PairingSession> {
     const digestBytes = Proto.PairingSessionDigest.toBinary(
@@ -113,7 +117,9 @@ export class PairingSessionManager {
   }
 
   /**
-   * Publish a new state for an existing session.
+   * Publish a new state for an existing session with the next `sequence`
+   * (`issuerState.sequence + 1n`). Throws if the session's issuer is not the
+   * active identity and key pair.
    */
   async updatePairingSession(
     server: string,

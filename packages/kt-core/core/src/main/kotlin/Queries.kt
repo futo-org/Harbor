@@ -17,12 +17,14 @@ import polycentric.v2.GetProfileResponse
 import polycentric.v2.ListVerificationClaimsResponse
 import polycentric.v2.ResolveVerifiedClaimsResponse
 
-/**
+/*
  * Typed one-shot wrappers for the core `Query` variants this SDK uses. Each
  * fans out over the configured servers and resolves on the first `Success`
- * status via [awaitQuery].
+ * status via `awaitQuery`. Each suspends until a server answers, and
+ * throws [CoreFailureException] when the core reports an error.
  */
 
+/** The profile for [identity], or null when no server returned one. */
 suspend fun PolycentricClient.getProfile(identity: String): GetProfileResponse? =
     coreCall { core.awaitQuery(Query.GetProfile(GetProfileArgs(identity)), null, null) }
         ?.let { GetProfileResponse.ADAPTER.decode(it) }
@@ -43,6 +45,13 @@ suspend fun PolycentricClient.getEvent(
         )
     }?.let { EventBundle.ADAPTER.decode(it) }
 
+/**
+ * The thread under the parent post [postKey] (up to [limit] events),
+ * hiding content carrying any label in [omitLabels]. Null when no server
+ * returned it.
+ *
+ * @throws PolycentricException if [postKey] has no `signed_by`.
+ */
 suspend fun PolycentricClient.getPostThread(
     postKey: EventKey,
     limit: Int = 50,
@@ -51,6 +60,10 @@ suspend fun PolycentricClient.getPostThread(
     coreCall { core.awaitQuery(Query.GetPostThread(GetPostThreadArgs(postKey.toFfiOrThrow(), limit, omitLabels)), null, null) }
         ?.let { GetPostThreadResponse.ADAPTER.decode(it) }
 
+/**
+ * One page of [identity]'s posts. Pass the response's backward/forward
+ * token to page further. Null when no server returned a page.
+ */
 suspend fun PolycentricClient.getIdentityFeed(
     identity: String,
     limit: Int? = null,
@@ -100,6 +113,7 @@ suspend fun PolycentricClient.getAttributionFeed(
         )
     }?.let { GetFeedResponse.ADAPTER.decode(it) }
 
+/** Verification claims made by [claimedByIdentity], or null when no server returned them. */
 suspend fun PolycentricClient.listVerificationClaims(claimedByIdentity: String): ListVerificationClaimsResponse? =
     coreCall {
         core.awaitQuery(

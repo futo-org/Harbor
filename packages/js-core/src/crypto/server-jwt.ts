@@ -13,7 +13,9 @@ export interface ServerJwtClaims {
   iss: string;
   /** The server the token authenticates against. */
   aud: string;
+  /** Issued-at time, in Unix seconds. */
   iat: number;
+  /** Expiry time, in Unix seconds. */
   exp: number;
 }
 
@@ -21,6 +23,8 @@ export interface ServerJwtClaims {
  * Create a JWT authenticating `iss` (an identity key) against `aud` (a
  * server URL). EdDSA-signed with `keyPair`, signing key in the header's
  * `kid` as hex.
+ *
+ * @throws {Error} If `keyPair` is not an Ed25519 key pair.
  */
 export async function createServerJwt(options: {
   keyPair: KeyPair;

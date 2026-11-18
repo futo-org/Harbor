@@ -1,3 +1,5 @@
+//! Verification-claim RPCs surfaced as observables via `Query`.
+
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
@@ -21,26 +23,35 @@ use crate::query::event::merge::{
 use crate::query::validation::{retain_validated_bundles, retain_validated_hints};
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
+/// Arguments for `Query::ListVerificationClaims`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListVerificationClaimsArgs {
+    /// Identity whose claims to list.
     pub claimed_by_identity: String,
 }
 
+/// Arguments for `Query::ListVerificationTargets`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListVerificationTargetsArgs {
+    /// Key of the claim event.
     pub claim_event_key: EventKey,
 }
 
+/// Arguments for `Query::ListVerificationVerifies`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListVerificationVerifiesArgs {
+    /// Key of the claim event.
     pub claim_event_key: EventKey,
 }
 
+/// Arguments for `Query::ListTargetedVerificationClaims`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ListTargetedVerificationClaimsArgs {
+    /// Identity that was asked to verify.
     pub target_identity: String,
 }
 
+/// Arguments for `Query::ResolveVerifiedClaims`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct ResolveVerifiedClaimsArgs {
     /// Optional schema content-digest (sha256) bytes; scopes the search to

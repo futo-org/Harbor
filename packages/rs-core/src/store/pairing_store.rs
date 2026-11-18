@@ -1,3 +1,5 @@
+//! Highest-seen pairing session sequences, for rollback protection.
+
 use std::collections::HashMap;
 
 /// Tracks the highest issuer state sequence seen for each pairing session.
@@ -11,6 +13,7 @@ pub struct PairingStore {
 }
 
 impl PairingStore {
+    /// Create an empty pairing-sequence tracker.
     pub fn new() -> Self {
         Self::default()
     }

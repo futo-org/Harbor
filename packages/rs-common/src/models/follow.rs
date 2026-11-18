@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`Follow`].
+
 use std::fmt;
 
 use crate::models::protos_v2::Follow;
@@ -17,6 +19,8 @@ impl Validate for Follow {
     }
 }
 
+/// Why a [`Follow`] fails [`Validate`].
+/// `IdentitySelf` is only produced by the server.
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "FollowValidationError"))]

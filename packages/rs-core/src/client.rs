@@ -1,3 +1,7 @@
+//! [`PolycentricClient`]: the in-memory protocol state behind the FFI
+//! surface. Holds the stores, validates events and derives views over them
+//! (identity chains, heads, vector clocks, blocked identities).
+
 use polycentric_common::{
     error::CoreError,
     models::{
@@ -33,6 +37,8 @@ fn block_target(bundle: &EventBundle) -> Option<String> {
     }
 }
 
+/// The local protocol state: configured servers, the active identity and the
+/// in-memory stores. Does no I/O.
 #[derive(Default)]
 pub struct PolycentricClient {
     servers: Mutex<Vec<String>>,
@@ -48,6 +54,7 @@ pub struct PolycentricClient {
 }
 
 impl PolycentricClient {
+    /// Create a client with empty stores and no servers.
     pub fn new() -> Self {
         Self::default()
     }
@@ -69,6 +76,7 @@ impl PolycentricClient {
         self.blocked_identities.lock_recover().take();
     }
 
+    /// The identity set by [`Self::set_active_identity`], if any.
     pub fn active_identity(&self) -> Option<String> {
         self.active_identity.lock_recover().clone()
     }
@@ -96,6 +104,7 @@ impl PolycentricClient {
         blocked
     }
 
+    /// Whether `identity` is in [`Self::blocked_identities`].
     pub fn is_blocked(&self, identity: &str) -> bool {
         self.blocked_identities().contains(identity)
     }
@@ -208,6 +217,7 @@ impl PolycentricClient {
             .collect()
     }
 
+    /// Look up content in the content store by its digest.
     pub fn find_content_from_digest(&self, digest: &ContentDigest) -> Option<SerializedContent> {
         self.content_store
             .get(digest)
@@ -326,6 +336,9 @@ impl PolycentricClient {
         }
     }
 
+    /// Locally-held events for `(identity, collection, signer)` with
+    /// sequence greater than `sequence_gt`, in sequence order. Unvalidated;
+    /// used to work out what to push to a server.
     pub fn get_sync_events(
         &self,
         identity: &str,

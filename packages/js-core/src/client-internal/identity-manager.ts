@@ -34,23 +34,30 @@ export interface IdentityState {
  * Arguments for publishing an update to an existing identity.
  */
 export interface PublishArgs {
+  /** Full replacement list of rotation keys. */
   rotationKeys: Proto.PublicKey[];
+  /** Full replacement list of signing keys. */
   signingKeys: Proto.PublicKey[];
+  /** Server list; `null`/omitted leaves the identity without one. */
   servers?: string[] | null;
   revocationBounds?: Proto.RevocationBound[];
   recoveryKey?: Proto.PublicKey | null;
+  /** Signature by the recovery key, when recovering an identity. */
   recoverySignature?: Uint8Array | null;
 }
 
 /** Information about a published identity event. */
 export interface IdentityUpdate {
+  /** The identity the event was published to. */
   identityKey: string;
   signedEvent: Proto.SignedEvent;
 }
 
 /** New, unpublished identity content. */
 export interface IdentityDraft {
+  /** The identity document. */
   identity: Proto.Identity;
+  /** `identity` wrapped as `Content`, ready to build an event from. */
   content: Proto.Content;
 }
 
@@ -59,6 +66,7 @@ export interface IdentityDraft {
  * rotation — and the authorization checks that go with them.
  */
 export class IdentityManager {
+  /** Whether two public keys have the same type and bytes. */
   static keysEqual(a: Proto.PublicKey, b: Proto.PublicKey): boolean {
     return a.keyType === b.keyType && bytesEqual(a.key, b.key);
   }
@@ -122,6 +130,12 @@ export class IdentityManager {
 
   /**
    * Publish an update to the current identity state.
+   * The new document replaces the old one wholesale, so callers should spread
+   * the current `IdentityState` and override fields. Push errors are
+   * reported via `pushResults`, not thrown.
+   *
+   * @throws {Error} If not logged in, the identity has no local chain, or the
+   *   current key pair is not a rotation key of the identity.
    */
   async publishUpdate(args: PublishArgs): Promise<IdentityUpdate> {
     // Require an active login
@@ -162,6 +176,7 @@ export class IdentityManager {
     return { identityKey, signedEvent };
   }
 
+  /** Whether `publicKey` is a rotation key in the identity's latest known state. */
   isRotationKeyForIdentity(
     identityKey: string,
     publicKey: Proto.PublicKey,
@@ -203,6 +218,7 @@ export class IdentityManager {
 
   /**
    * Adds a rotation key to the current identity and publishes the updated document.
+   * Throws if the key is already a rotation key.
    */
   async addRotationKey(publicKey: Proto.PublicKey): Promise<Proto.SignedEvent> {
     const state = this.resolveIdentity();
@@ -245,6 +261,7 @@ export class IdentityManager {
   /**
    * Adds a server to the current identity document and publishes the update.
    * Calls the server's `GetInfo` first — an unreachable server is not added.
+   * Throws `ServerAlreadyAddedError` if `url` is already listed.
    */
   async addServer(url: string): Promise<Proto.SignedEvent> {
     const state = this.resolveIdentity();
@@ -268,7 +285,7 @@ export class IdentityManager {
 
   /**
    * Removes a server from the current identity document and publishes the
-   * update.
+   * update. Throws if `url` is not listed.
    */
   async removeServer(url: string): Promise<Proto.SignedEvent> {
     const state = this.resolveIdentity();

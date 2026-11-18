@@ -10,11 +10,17 @@ import {
 } from '@polycentric/js-core';
 
 /**
- * Node.js filesystem-backed IFileStoreDriver.
+ * Node.js filesystem-backed IFileStoreDriver, rooted at one directory.
  */
 export class NodeFileStoreDriver implements IFileStoreDriver {
   private constructor(private readonly directory: string) {}
 
+  /**
+   * Create `directory` (recursively) if needed and return a driver rooted
+   * there.
+   *
+   * @throws {FileStoreError} if the directory cannot be created
+   */
   static async create(directory: string): Promise<NodeFileStoreDriver> {
     try {
       await fs.mkdir(directory, { recursive: true });
@@ -29,6 +35,7 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
     return path.join(this.directory, ...segmentsFromPath(p, allowEmpty));
   }
 
+  /** Whether a regular file (not a directory) exists at `p`. */
   async has(p: string): Promise<boolean> {
     try {
       const stats = await fs.stat(this.pathFor(p));
@@ -39,6 +46,7 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /** Read the whole file into memory; `null` if missing. */
   async get(p: string): Promise<Uint8Array | null> {
     try {
       const buf = await fs.readFile(this.pathFor(p));
@@ -49,6 +57,10 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /**
+   * Write `bytes` to `p`, creating parent directories. Writes in place, so
+   * a failed write may leave a partial file.
+   */
   async put(p: string, bytes: Uint8Array): Promise<void> {
     try {
       const final = this.pathFor(p);
@@ -59,6 +71,7 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /** Remove a file; `false` if nothing existed at `p`. */
   async delete(p: string): Promise<boolean> {
     try {
       await fs.unlink(this.pathFor(p));
@@ -69,6 +82,10 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /**
+   * List a directory's direct files and subdirectories (empty path = the
+   * root); `null` if it does not exist.
+   */
   async list(p: string): Promise<FileStoreEntry[] | null> {
     try {
       const dirents = await fs.readdir(this.pathFor(p, true), {
@@ -92,6 +109,11 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /**
+   * Recursively remove the directory at `p`; no-op if missing.
+   *
+   * @throws {FileStoreError} `path conflict` if `p` is not a directory
+   */
   async deleteSubpath(p: string): Promise<void> {
     try {
       const target = this.pathFor(p);
@@ -108,6 +130,7 @@ export class NodeFileStoreDriver implements IFileStoreDriver {
   }
 }
 
+/** Convenience alias for {@link NodeFileStoreDriver.create}. */
 export async function createNodeFileStoreDriver(
   directory: string,
 ): Promise<NodeFileStoreDriver> {

@@ -1,3 +1,5 @@
+//! Profile-service RPC (`GetProfile`) surfaced as an observable via `Query`.
+
 use std::sync::Arc;
 
 use polycentric_common::models::collections;
@@ -15,8 +17,10 @@ use crate::query::{
 use crate::rx::observable::Observable;
 use crate::store::keys::EventKey as StoreEventKey;
 
+/// Arguments for `Query::GetProfile`.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct GetProfileArgs {
+    /// Identity whose profile to fetch.
     pub identity: String,
 }
 

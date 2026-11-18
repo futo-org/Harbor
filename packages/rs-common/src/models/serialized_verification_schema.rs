@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`SerializedVerificationSchema`].
+
 use std::fmt;
 
 use prost::Message;
@@ -61,6 +63,7 @@ impl Validate for SerializedVerificationSchema {
     }
 }
 
+/// Why a [`SerializedVerificationSchema`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(

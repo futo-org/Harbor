@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`RevocationBound`].
+
 use std::fmt;
 
 use crate::models::protos_v2::RevocationBound;
@@ -34,6 +36,7 @@ impl Validate for RevocationBound {
     }
 }
 
+/// Why a [`RevocationBound`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "RevocationBoundValidationError"))]

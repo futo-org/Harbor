@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`AttributedTo`].
+
 use std::fmt;
 
 use crate::models::protos_v2::AttributedTo;
@@ -20,6 +22,7 @@ impl Validate for AttributedTo {
     }
 }
 
+/// Why a [`AttributedTo`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "AttributedToValidationError"))]

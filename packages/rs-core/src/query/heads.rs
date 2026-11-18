@@ -13,6 +13,8 @@ use prost::Message;
 use crate::client::PolycentricClient;
 use crate::query::{QueryClient, QueryKey, QueryObservable, QueryOpts, channel};
 
+/// Arguments for `Query::SubscribeHeads`. Empty: the identity comes from the
+/// auth token.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct SubscribeHeadsArgs {}
 

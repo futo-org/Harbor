@@ -297,6 +297,8 @@ class FakeCore(
 
     override fun setAuthTokenProvider(provider: AuthTokenProvider) {}
 
+    override fun setTraceparent(traceparent: String?) {}
+
     override fun clearAuthTokens() {
         clearAuthTokensCount++
     }

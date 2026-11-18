@@ -1,3 +1,8 @@
+//! Rust core of the Polycentric protocol (crate `polycentric-core`).
+//!
+//! Holds an in-memory replica of events, syncs them with servers and serves
+//! multi-server queries. The FFI surface is [`api::PolycentricCore`].
+
 // Disallow `unwrap` and `expect`, such that we ensure potential panic
 // conditions are not introduced
 #![cfg_attr(not(test), warn(clippy::unwrap_used, clippy::expect_used))]

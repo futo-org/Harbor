@@ -10,10 +10,13 @@ import {
 /**
  * expo-file-system-backed IFileStoreDriver.
  * Paths are resolved under `${Paths.document}/${subdir}/`.
+ * Failures surface as `FileStoreError` (`'too big'` for `RangeError`,
+ * otherwise `'io'`, or `'path conflict'` when a directory is a file).
  */
 export class ExpoFileStoreDriver implements IFileStoreDriver {
   private constructor(private readonly directory: Directory) {}
 
+  /** Open the store, creating `${Paths.document}/${subdir}` if needed. */
   static async create(subdir: string): Promise<ExpoFileStoreDriver> {
     try {
       const directory = new Directory(Paths.document, subdir);
@@ -48,6 +51,7 @@ export class ExpoFileStoreDriver implements IFileStoreDriver {
     return dir;
   }
 
+  /** Whether a file exists at `path`. */
   async has(path: string): Promise<boolean> {
     try {
       return this.fileFor(path).exists;
@@ -56,6 +60,7 @@ export class ExpoFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /** Read the file at `path`, or `null` if there is none. */
   async get(path: string): Promise<Uint8Array | null> {
     try {
       const file = this.fileFor(path);
@@ -66,6 +71,7 @@ export class ExpoFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /** Write `bytes` to `path`, creating parent directories and replacing any existing file. */
   async put(path: string, bytes: Uint8Array): Promise<void> {
     try {
       const file = this.fileFor(path);
@@ -76,6 +82,7 @@ export class ExpoFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /** Delete the file at `path`. Resolves `false` if it was already gone. */
   async delete(path: string): Promise<boolean> {
     // Ensure the path is valid and access the file.
     let file: File;
@@ -97,6 +104,10 @@ export class ExpoFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /**
+   * List the files and directories directly under `path` (root if empty),
+   * skipping names that aren't valid path segments. `null` if it doesn't exist.
+   */
   async list(path: string): Promise<FileStoreEntry[] | null> {
     try {
       const dir = this.dirFor(path, segmentsFromPath(path, true));
@@ -118,6 +129,7 @@ export class ExpoFileStoreDriver implements IFileStoreDriver {
     }
   }
 
+  /** Recursively delete the directory at `path`; a no-op if it doesn't exist. */
   async deleteSubpath(path: string): Promise<void> {
     // Ensure the path is valid and access the directory.
     let dir: Directory | null;
@@ -139,6 +151,7 @@ export class ExpoFileStoreDriver implements IFileStoreDriver {
   }
 }
 
+/** Open an `ExpoFileStoreDriver` rooted at `${Paths.document}/${subdir}`. */
 export async function createReactNativeFileStoreDriver(
   subdir: string,
 ): Promise<ExpoFileStoreDriver> {

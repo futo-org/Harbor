@@ -1,7 +1,9 @@
 import type * as Proto from '../proto/v2';
 
+/** A v2 `EventKey` with every field (notably `signedBy`) present. */
 export type EventKey = Required<Proto.EventKey>;
 
+/** Local persistence state of an event's content. */
 export type ContentStatus =
   /** We have this content. */
   | 'present'
@@ -12,11 +14,19 @@ export type ContentStatus =
 
 /** Persisted event/content fields. */
 export type EventRow = {
+  /**
+   * Identity key (lowercase hex) whose local store holds this row. Usually
+   * but not necessarily the event's own identity.
+   */
   owner: string;
+  /** Decoded key of the event; the row's unique key within an owner. */
   eventKey: EventKey;
+  /** Serialized `Event` exactly as signed. */
   eventBytes: Uint8Array;
+  /** Signature over `eventBytes`. */
   eventSignature: Uint8Array;
   contentStatus: ContentStatus;
+  /** Serialized `Content`; present only when `contentStatus` is `'present'`. */
   contentBytes?: Uint8Array;
 };
 
@@ -93,6 +103,7 @@ export type EventRepositoryErrorCode =
   /** Generic database error. */
   | 'db';
 
+/** The only error type event repositories and `EventStore` should throw. */
 export class EventRepositoryError extends Error {
   override readonly name = 'EventRepositoryError';
 

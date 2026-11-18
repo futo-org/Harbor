@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`FieldDef`], one field of a verification schema.
+
 use std::fmt;
 
 use crate::models::protos_v2::{FieldDef, FieldKind};
@@ -69,6 +71,7 @@ impl Validate for FieldDef {
     }
 }
 
+/// Why a [`FieldDef`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "FieldDefValidationError"))]

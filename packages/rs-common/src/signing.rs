@@ -1,10 +1,15 @@
 use std::fmt;
 
+/// Why [`verify_ed25519_signature`] rejected its input.
 #[derive(Debug)]
 pub enum SignatureError {
+    /// The public key was not 32 bytes.
     PublicKeyLength,
+    /// The bytes are not a valid ed25519 public key.
     PublicKey,
+    /// The signature was not 64 bytes.
     SignatureLength,
+    /// The signature does not verify (strict verification).
     Signature,
 }
 

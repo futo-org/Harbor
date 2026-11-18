@@ -1,3 +1,5 @@
+//! [`Validate`] impl for [`VerificationClaim`].
+
 use std::fmt;
 
 use prost::Message;
@@ -99,6 +101,7 @@ impl Validate for VerificationClaim {
     }
 }
 
+/// Why a [`VerificationClaim`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "VerificationClaimValidationError"))]

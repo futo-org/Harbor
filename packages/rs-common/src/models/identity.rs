@@ -138,6 +138,7 @@ impl Validate for Identity {
     }
 }
 
+/// Why an [`Identity`] fails [`Validate`].
 #[derive(Debug)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 #[cfg_attr(feature = "uniffi", uniffi(name = "IdentityValidationError"))]
@@ -203,12 +204,17 @@ pub struct IdentityCandidate<'a> {
 /// Information extracted from an identity candidate.
 pub struct IdentityEvent {
     // Extracted event key fields:
+    /// Sequence number from the event key; the genesis document is 1.
     pub sequence: u64,
+    /// Key that signed the event, from the event key.
     pub signer: PublicKey,
     // Identity content:
+    /// The identity document carried by the event's content.
     pub document: Identity,
 }
 
+/// A verified identity chain, from genesis to the latest valid document.
+/// Built by [`resolve_chain`].
 pub struct IdentityChain {
     /// The full identity chain with the genesis element at index 0 with sequence = 1,
     /// and each successor identity event following.
